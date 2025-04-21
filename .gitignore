@@ -1,0 +1,26 @@
+*/config/development/*
+*/logs/log-*.php
+!*/logs/index.html
+*/cache/*
+!system/cache/*
+!*/cache/index.html
+!*/cache/.htaccess
+
+/manifest.json
+/assets/manifest-icon/
+
+#codeigniter 3
+.vscode/*
+application/config
+application/logs/*
+application/config/development/*
+application/config/database.php
+application/config/constants.php
+!application/logs/index.html
+!application/logs/.htaccess
+
+#/vendor/
+/uploads/*
+/assets/files/*
+/assets/expense/*
+/assets/pr/*

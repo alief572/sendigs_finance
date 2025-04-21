@@ -1,0 +1,191 @@
+
+<style type="text/css">
+thead input {
+	width: 100%;
+}
+</style>
+<div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css')?>">
+
+<div class="box">
+	<div class="box-header">
+      	<div class="form-group row">
+			<div class="col-md-2">
+				<select name='sales_order' id='sales_order' class='form-control input-sm chosen-select'>
+					<option value='0'>All Sales Order</option>
+					<?php
+					foreach ($listSO as $key => $value) {
+						echo "<option value='".$value['so_number']."'>".$value['so_number']."</option>";
+					}
+					?>
+				</select>
+			</div>
+			<div class="col-md-2">
+				<select name='code_lv1' id='code_lv1' class='form-control input-sm chosen-select'>
+					<option value='0'>All Type</option>
+					<?php
+					foreach ($listType as $key => $value) {
+						echo "<option value='".$value['code_lv1']."'>".$value['nama']."</option>";
+					}
+					?>
+				</select>
+			</div>
+			<div class="col-md-8">
+				<a class="btn btn-default btn-sm" style='float:right; margin-left:5px;' href="<?= base_url('plan_mixing/reprint_spk_new') ?>" title="Re-Print SPK">Re-Print SPK Parsial</a>
+				<a class="btn btn-primary btn-sm" style='float:right;' href="<?= base_url('plan_mixing/reprint_spk') ?>" title="Re-Print SPK">Re-Print SPK</a>
+			</div>
+      	</div>
+	</div>
+	<!-- /.box-header -->
+	<div class="box-body">
+		<table id="example1" class="table table-bordered table-striped" width='100%'>
+  		<thead>
+    		<tr>
+    			<th class='text-center'>#</th>
+    			<th class='text-center'>Product</th>
+    			<th class='text-center'>Sales Order</th>
+				<th class='text-center'>No SPK</th>
+				<th class='text-center'>Plan Date</th>
+				<th class='text-center'>Costcenter</th>
+				<th class='text-center'>Qty</th>
+				<th class='text-center'>By</th>
+				<th class='text-center'>Dated</th>
+				<th class='text-center no-sort'>Status</th>
+				<th class='text-center no-sort' width='7%'>Option</th>
+    		</tr>
+  		</thead>
+  		<tbody></tbody>
+		</table>
+	</div>
+	<!-- /.box-body -->
+</div>
+
+
+<div class="modal modal-default fade" id="dialog-popup" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" style='width:90%; '>
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel"><span class="fa fa-users"></span>&nbsp;Detail Data</h4>
+      </div>
+      <div class="modal-body" id="ModalView">
+		...
+      </div>
+  </div>
+</div>
+
+<!-- DataTables -->
+<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js')?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js')?>"></script>
+<script src="<?= base_url('assets/js/autoNumeric.js')?>"></script>
+
+<!-- page script -->
+<script type="text/javascript">
+
+	$(document).ready(function(){
+		var sales_order     = $("#sales_order").val();
+		var code_lv1     = $("#code_lv1").val();
+		DataTables(sales_order,code_lv1);
+
+		$(document).on('change','#sales_order, #code_lv1', function(){
+			var sales_order     = $("#sales_order").val();
+			var code_lv1     = $("#code_lv1").val();
+			DataTables(sales_order,code_lv1);
+		});
+	});
+
+	$(document).on('keyup', '.changeQty', function(e){
+		e.preventDefault();
+
+		let id 			= $(this).data('id')
+		let qty_sisa 	= getNum($('#sisa_'+id).text().split(",").join(""))
+		let qty 		= getNum($(this).val().split(",").join(""))
+
+		if(qty > qty_sisa){
+			$(this).val(qty_sisa)
+		}
+
+	});
+
+	$(document).on('click', '.request', function(e){
+		e.preventDefault();
+
+		let id 		= $(this).data('id')
+		
+		swal({
+				title: "Are you sure?",
+				text: "Request to Subgudang!",
+				type: "warning",
+				showCancelButton: true,
+				confirmButtonClass: "btn-danger",
+				confirmButtonText: "Yes, Process it!",
+				cancelButtonText: "No, cancel process!",
+				closeOnConfirm: false,
+				closeOnCancel: false
+			},
+			function(isConfirm) {
+				if (isConfirm) {
+					// loading_spinner();
+					var baseurl = base_url + active_controller +'/request_to_subgudang';
+					$.ajax({
+						url			: baseurl,
+						type		: "POST",
+						data		: {
+							id : id
+						},
+						cache		: false,
+						dataType	: 'json',
+						success		: function(data){
+							window.open(base_url + active_controller+'/print_spk/'+data.kode_det,'_blank');
+							window.location.href = base_url + active_controller
+						},
+						error: function() {
+							swal({
+								title				: "Error Message !",
+								text				: 'An Error Occured During Process. Please try again..',
+								type				: "warning",
+								timer				: 3000
+							});
+						}
+					});
+				} else {
+				swal("Cancelled", "Data can be process again :)", "error");
+				return false;
+				}
+		});
+	});
+
+    function DataTables(sales_order = null, code_lv1=null){
+  		var dataTable = $('#example1').DataTable({
+  			"processing" : true,
+  			"serverSide": true,
+  			"stateSave" : true,
+  			"autoWidth": false,
+  			"destroy": true,
+			"searching": true,
+  			"responsive": true,
+  			"aaSorting": [[ 1, "desc" ]],
+  			"columnDefs": [ {
+  				"targets": 'no-sort',
+  				"orderable": false,
+  			}],
+  			"sPaginationType": "simple_numbers",
+  			"iDisplayLength": 10,
+  			"aLengthMenu": [[10, 20, 50, 100, 150], [10, 20, 50, 100, 150]],
+  			"ajax":{
+  				url : siteurl+active_controller+'data_side_spk_material',
+  				type: "post",
+          	data: function(d){
+           	 	d.sales_order = sales_order,
+           	 	d.code_lv1 = code_lv1
+  			},
+  				cache: false,
+  				error: function(){
+  					$(".my-grid-error").html("");
+  					$("#my-grid").append('<tbody class="my-grid-error"><tr><th colspan="3">No data found in the server</th></tr></tbody>');
+  					$("#my-grid_processing").css("display","none");
+  				}
+  			}
+  		});
+  	}
+</script>

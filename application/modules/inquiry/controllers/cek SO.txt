@@ -1,0 +1,2 @@
+Sales Order, 
+1. Waktu Edit Grand Total belum dikurangi diskon toko

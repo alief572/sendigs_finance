@@ -1,0 +1,13 @@
+1. dashboard belum dibuat
+2. diskon
+3. diskon add
+4. diskon edit
+5. diskon hapus
+6. forecast controller tidak ada, view = customer
+7. view giro belum ada
+8. hutang controller dan index tidak sesuai
+9. pending SO belum ada 
+10.update ar limit belum sesuai antara controller dan view
+
+
+baru sampai --kurs--

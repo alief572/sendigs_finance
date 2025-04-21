@@ -1,0 +1,45 @@
+/*Menu Editor*/
+.sortable li.mjs-nestedSortable-leaf div {
+    background: transparent -moz-linear-gradient(center top , #FFF 0%, #F6F6F6 85%, #BCCCBC 100%) repeat scroll 0% 0% !important;
+}
+
+/*Login Page*/
+.login-page{
+	background-image: url("../images/bg_login.png");
+}
+
+.login-logo a{
+	color: #008d4c;
+}
+
+/*Ajax Loading image*/
+
+.ajax_loader {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    background-color: rgba(0, 0, 0, 0.2);
+    z-index: 99999999;
+}
+
+.ajax_loader img {
+    position: fixed;
+    z-index: 99999999;
+    overflow: show;
+    margin: auto;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    pointer-events: none;
+	background-color: #ffffffe6;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 1px 3px 12px 1px #6e6e6e;
+}
