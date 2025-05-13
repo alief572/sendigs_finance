@@ -171,8 +171,9 @@ endforeach;
                         <?php
                         foreach ($data as $item_kasbon) :
                             if ($item_kasbon->tipe == 'kasbon') {
+                                $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item_kasbon->no_doc))->row();
                                 echo '<tr>';
-                                echo '<td>' . $item_kasbon->no_doc . '</td>';
+                                echo '<td>' . $get_kasbon->no_kasbon_consultant . '</td>';
                                 echo '<td>' . $item_kasbon->nama . '</td>';
                                 echo '<td>' . $item_kasbon->tgl_doc . '</td>';
                                 echo '<td>' . $item_kasbon->keperluan . '</td>';
@@ -198,12 +199,15 @@ endforeach;
                                 echo '</td>';
                                 echo '<td>';
                                 // if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) :
-                                if ($ENABLE_MANAGE) : ?>
+                                if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '0') : ?>
                                     <div class="text-center">
                                         <a href="<?= base_url($this->uri->segment(1) . '/approval_payment_checker/?type=' . $item_kasbon->tipe . '&id=' . $item_kasbon->id . '&nilai=' . $item_kasbon->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>
                                     </div>
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_kasbon->id ?>"> -->
                         <?php endif;
+                                if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '1') :
+                                    echo '<a href="'.base_url('approval_request_payment/approval_payment_checker/'. str_replace('/', '|', $get_kasbon->no_kasbon_consultant)).'" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
+                                endif;
                                 echo '</td>';
                                 echo '</tr>';
                             }

@@ -49,7 +49,7 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 <form action="<?= $this->uri->uri_string() ?>" id="frm_data" name="frm_data" class="form-horizontal" enctype="multipart/form-data">
 	<div class="box">
 		<div class="box-body">
-			<div class="col-md-12">
+			<!-- <div class="col-md-12">
 				<div class="row">
 					<div class="col-md-2">
 						<div class="form-group">
@@ -82,14 +82,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 						</button>
 					</div>
 				</div>
-			</div>
+			</div> -->
 			<input type="hidden" name="" class="actived_tab" value="transport">
 			<ul class="nav nav-tabs" role="tablist">
-				<li role="presentation" class="transport_tab tab_pin active"><a href="javascript:void();" onclick="change_tab('transport')">Transportasi</a></li>
-				<li role="presentation" class="kasbon_tab tab_pin"><a href="javascript:void();" onclick="change_tab('kasbon')">Kasbon</a></li>
+				<li role="presentation" class="kasbon_tab tab_pin active"><a href="javascript:void();" onclick="change_tab('kasbon')">Kasbon</a></li>
 				<li role="presentation" class="expense_tab tab_pin"><a href="javascript:void();" onclick="change_tab('expense')">Expense</a></li>
-				<li role="presentation" class="periodik_tab tab_pin"><a href="javascript:void();" onclick="change_tab('periodik')">Periodik</a></li>
-				<li role="presentation" class="pembayaran_po_tab tab_pin"><a href="javascript:void();" onclick="change_tab('pembayaran_po')">Pembayaran PO</a></li>
 			</ul>
 			<div class="table-container col-md-12" style="margin-top: 10px;">
 				<table id="" class="table table-bordered">
@@ -98,10 +95,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							<th>#</th>
 							<th>No.</th>
 							<th style="min-width: 150px;">No. Invoice / No. Dokumen</th>
-							<th style="min-width: 150px;">Supplier</th>
 							<th style="min-width: 100px;">Tanggal</th>
 							<th style="min-width: 150px;">Keperluan</th>
-							<th>Currency</th>
 							<th>Nilai Pengajuan</th>
 							<th>Status</th>
 							<th style="min-width: 360px;"></th>
@@ -112,8 +107,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					</tbody>
 					<tbody>
 						<tr class="exclass">
-							<td colspan=7 align=right>Total</td>
-							<td colspan=2><input type="text" class="form-control divide input-sm text-right" name="total_req" id="total_req" value="0" readonly></td>
+							<td colspan="5" class="text-right">Total</td>
+							<td colspan="2"><input type="text" class="form-control divide input-sm text-right" name="total_req" id="total_req" value="0" readonly></td>
 						</tr>
 					</tbody>
 				</table>
@@ -133,7 +128,9 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 <script type="text/javascript">
 	load_all_party();
 
-	change_tab('transport');
+	$(document).ready(function() {
+		change_tab('kasbon');
+	})
 
 	function load_all_party() {
 		$(".divide").autoNumeric('init');
@@ -157,12 +154,10 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 			if (this.checked) {
 				var ids = $(this).val();
 				total_req += Number($("#jumlah_" + ids).val());
-
 			}
 		});
 		$("#total_req").autoNumeric('set', total_req);
 	}
-
 	var url_save = siteurl + 'request_payment/save_request/';
 
 
