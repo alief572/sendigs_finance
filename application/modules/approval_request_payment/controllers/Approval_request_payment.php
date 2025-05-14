@@ -207,14 +207,18 @@ class Approval_request_payment extends Admin_Controller
 	##########
 	*/
 
-	public function approval_payment($id = null)
+	public function approval_payment()
 	{
-		$id = urldecode($id);
+		$id = urldecode($_GET['id_cons']);
 		$id = str_replace('|', '/', $id);
+
+		$id_sendigs = urldecode($_GET['id_sendigs']);
+		$id_sendigs = str_replace('|', '/', $id_sendigs);
 
 		$get_kasbon_header = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $id))->row();
 
 		if (!empty($get_kasbon_header)) {
+			$type = 'kasbon';
 			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
 
 			$get_spk_penawaran = $this->db->get_where(DBCNL.'.kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
@@ -262,6 +266,8 @@ class Approval_request_payment extends Admin_Controller
 				'tipe' => $tipe
 			];
 		} else {
+			$type = 'expense';
+
 			$this->db->select('a.*, b.id_spk_penawaran');
 			$this->db->from(DBCNL.'.kons_tr_expense_report_project_header a');
 			$this->db->join(DBCNL.'.kons_tr_kasbon_project_header b', 'b.id = a.id_header');
@@ -353,6 +359,8 @@ class Approval_request_payment extends Admin_Controller
 		}
 
 		
+
+		
 		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
 
 		$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
@@ -363,6 +371,7 @@ class Approval_request_payment extends Admin_Controller
 		$this->template->title('Approval Request Payment Direktur');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
+		$this->template->set('id_sendigs', $id_sendigs);
 		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
 		
 		$this->template->render('detail_approve');

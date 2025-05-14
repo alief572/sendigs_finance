@@ -205,7 +205,7 @@ endforeach;
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_kasbon->id ?>"> -->
                         <?php endif;
                                 if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '1') :
-                                    echo '<a href="' . base_url('approval_request_payment/approval_payment/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
+                                    echo '<a href="' . base_url('approval_request_payment/approval_payment/?id_cons=' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '&id_sendigs='.$item_kasbon->no_doc.'" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
                                 endif;
                                 echo '</td>';
                                 echo '</tr>';
