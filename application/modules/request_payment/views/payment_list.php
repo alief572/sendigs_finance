@@ -103,7 +103,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 											}
 											if ($get_request_payment->status == '1' || $get_request_payment->status == '2') {
 												$get_payment_approve = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc])->row();
-												if ($get_payment_approve->status == '2') {
+												if (!empty($get_payment_approve) && $get_payment_approve->status == '2') {
 													echo '<div class="badge bg-green text-light">Paid</div>';
 												} else {
 													echo '<div class="badge bg-yellow text-light">Approved</div>';

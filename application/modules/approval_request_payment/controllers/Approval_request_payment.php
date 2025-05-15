@@ -209,11 +209,16 @@ class Approval_request_payment extends Admin_Controller
 
 	public function approval_payment()
 	{
-		$id = urldecode($_GET['id_cons']);
+		$id = urldecode($this->input->get('id_exp_consultant'));
 		$id = str_replace('|', '/', $id);
 
-		$id_sendigs = urldecode($_GET['id_sendigs']);
-		$id_sendigs = str_replace('|', '/', $id_sendigs);
+		$id_expense = (isset($_GET['id_expense'])) ? $this->input->get('id_expense') : '';
+
+		$id_sendigs = '';
+		if(isset($_GET['id_sendigs'])) {
+			$id_sendigs = urldecode($_GET['id_sendigs']);
+			$id_sendigs = str_replace('|', '/', $id_sendigs);
+		}
 
 		$get_kasbon_header = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $id))->row();
 
@@ -359,28 +364,33 @@ class Approval_request_payment extends Admin_Controller
 		}
 
 		
+		if(!empty($get_kasbon_header)) {
+			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon->no_doc))->row();
+		} else {
+			$get_expense = $this->db->get_where('tr_expense', ['no_expense_consultant' => $id])->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_expense->no_doc))->row();
+		}
 
-		
-		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+		$no_doc_sendigs = $id;
 
-		$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
-		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon->no_doc))->row();
-
-		$no_doc_sendigs = (!empty($get_kasbon)) ? $get_kasbon->no_doc : '';
 
 		$this->template->title('Approval Request Payment Direktur');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
 		$this->template->set('id_sendigs', $id_sendigs);
+		$this->template->set('id_expense', $id_expense);
 		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
 		
 		$this->template->render('detail_approve');
 	}
 
-	public function approval_payment_checker($id)
+	public function approval_payment_checker()
 	{
-		$id = urldecode($id);
+		$id = urldecode($this->input->get('id_exp_consultant'));
 		$id = str_replace('|', '/', $id);
+
+		$id_expense = (isset($_GET['id_expense'])) ? $this->input->get('id_expense') : '';
 
 		$get_kasbon_header = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $id))->row();
 
@@ -522,15 +532,21 @@ class Approval_request_payment extends Admin_Controller
 			];
 		}
 		
-		$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
-		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon->no_doc))->row();
+		if(!empty($get_kasbon_header)) {
+			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon->no_doc))->row();
+		} else {
+			$get_expense = $this->db->get_where('tr_expense', ['no_expense_consultant' => $id])->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_expense->no_doc))->row();
+		}
 
-		$no_doc_sendigs = (!empty($get_kasbon)) ? $get_kasbon->no_doc : '';
+		$no_doc_sendigs = $id;
 
 		$this->template->title('Approval Request Payment Finance');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
 		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
+		$this->template->set('id_expense', $id_expense);
 		$this->template->render('detail_approve_checker');
 	}
 

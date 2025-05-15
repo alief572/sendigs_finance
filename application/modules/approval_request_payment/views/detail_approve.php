@@ -476,6 +476,7 @@ if ($tipe == 'Expense') {
 </div>
 
 <input type="hidden" name="no_doc_sendigs" value="<?= $id_sendigs ?>">
+<input type="hidden" name="id_expense" value="<?= $id_expense ?>">
 
 <a href="<?= base_url('request_payment/list_approve_management') ?>" class="btn btn-sm btn-danger">
 	<i class="fa fa-arrow-left"></i> Back
@@ -520,13 +521,15 @@ if ($tipe == 'Expense') {
 				if (isConfirm) {
 					var id = $('input[name="id"]').val();
 					var no_doc_sendigs = $('input[name="no_doc_sendigs"]').val();
+					var id_expense = $('input[name="id_expense"]').val();
 					$.ajax({
 						url: url_save,
 						dataType: "json",
 						type: 'POST',
 						data: {
 							'id': id,
-							'no_doc_sendigs': no_doc_sendigs
+							'no_doc_sendigs': no_doc_sendigs,
+							'id_expense': id_expense
 						},
 						dataType: 'json',
 						success: function(msg) {

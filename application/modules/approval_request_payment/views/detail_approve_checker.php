@@ -408,7 +408,6 @@ if ($tipe == 'Expense') {
 						$nominal_kasbon = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['nominal_kasbon'] : 0;
 						$qty_expense = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['qty_expense'] : 0;
 						$nominal_expense = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['nominal_expense'] : 0;
-	
 					?>
 	
 						<tr>
@@ -480,6 +479,7 @@ if ($tipe == 'Expense') {
 </div>
 
 <input type="hidden" name="no_doc_sendigs" value="<?= $no_doc_sendigs ?>">
+<input type="hidden" name="id_expense" value="<?= $id_expense ?>">
 
 <a href="<?= base_url('approval_request_payment/list_approve_checker') ?>" class="btn btn-sm btn-danger">
 	<i class="fa fa-arrow-left"></i> Back
@@ -525,13 +525,15 @@ if ($tipe == 'Expense') {
 				if (isConfirm) {
 					var id = $('input[name="id"]').val();
 					var no_doc_sendigs = $('input[name="no_doc_sendigs"]').val();
+					var id_expense = $('input[name="id_expense"]').val();
 					$.ajax({
 						url: url_save,
 						dataType: "json",
 						type: 'POST',
 						data: {
 							'id': id,
-							'no_doc_sendigs': no_doc_sendigs
+							'no_doc_sendigs': no_doc_sendigs,
+							'id_expense': id_expense
 						},
 						success: function(msg) {
 							if (msg['save'] == '1') {
@@ -605,7 +607,7 @@ if ($tipe == 'Expense') {
 										timer: 1500,
 										showConfirmButton: false
 									});
-									location.href = siteurl + active_controller + 'list_approve_checker';
+									location.href = siteurl + 'request_payment/list_approve_checker';
 								} else {
 									swal({
 										title: "Gagal!",

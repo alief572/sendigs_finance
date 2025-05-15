@@ -205,7 +205,7 @@ endforeach;
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_kasbon->id ?>"> -->
                         <?php endif;
                                 if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '1') :
-                                    echo '<a href="' . base_url('approval_request_payment/approval_payment/?id_cons=' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '&id_sendigs='.$item_kasbon->no_doc.'" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
+                                    echo '<a href="' . base_url('approval_request_payment/approval_payment/?id_cons=' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '&id_sendigs=' . $item_kasbon->no_doc . '" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
                                 endif;
                                 echo '</td>';
                                 echo '</tr>';
@@ -270,10 +270,21 @@ endforeach;
                                     }
                                     echo '</td>';
                                     echo '<td>';
-                                    if ($ENABLE_MANAGE or $get_sts_payment['status'] < 1) : ?>
-                                        <div class="text-center"><a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_expense->tipe . '&id=' . $item_expense->id . '&nilai=' . $item_expense->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a></div>
-                                        <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_expense->id ?>"> -->
-                        <?php endif;
+                                    if ($ENABLE_MANAGE or $get_sts_payment['status'] < 1) {
+                                        if ($get_expense['project_consultant'] == '1') {
+                                            echo '
+                                                <div class="text-center">
+                                                    <a href="' . base_url('approval_request_payment/approval_payment/?id_exp_consultant=' . urlencode(str_replace('/', '|', $get_expense['no_expense_consultant']))) . '&id_expense=' . $item_expense->no_doc . '" class="btn btn-sm btn-primary"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>
+                                                </div>
+                                            ';
+                                        } else {
+                                            echo '
+                                                <div class="text-center">
+                                                    <a href="' . base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_expense->tipe . '&id=' . $item_expense->id . '&nilai=' . $item_expense->jumlah) . '" class="btn btn-sm btn-primary"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>
+                                                </div>
+                                            ';
+                                        }
+                                    }
                                     echo '</td>';
                                     echo '</tr>';
                                 }
