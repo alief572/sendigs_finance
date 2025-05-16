@@ -2291,10 +2291,10 @@ class Request_payment extends Admin_Controller
 				'app_checker_by' => $this->auth->user_id(),
 				'app_checker_date' => date('Y-m-d H:i:s')
 			], [
-				'no_doc' => $post['no_doc_sendigs'],
+				'no_doc' => $post['id_kasbon'],
 				'ids' => $get_kasbon->id
 			]);
-			$this->db->update('tr_kasbon', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['no_doc_sendigs']]);
+			$this->db->update('tr_kasbon', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['id_kasbon']]);
 			// if ($post['tipe'] == "kasbon") {
 			// }
 		}
