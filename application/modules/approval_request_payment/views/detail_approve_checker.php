@@ -480,8 +480,9 @@ if ($tipe == 'Expense') {
 
 <input type="hidden" name="no_doc_sendigs" value="<?= $no_doc_sendigs ?>">
 <input type="hidden" name="id_expense" value="<?= $id_expense ?>">
+<input type="hidden" name="id_kasbon" value="<?= $id_kasbon ?>">
 
-<a href="<?= base_url('approval_request_payment/list_approve_checker') ?>" class="btn btn-sm btn-danger">
+<a href="<?= base_url('request_payment/list_approve_checker') ?>" class="btn btn-sm btn-danger">
 	<i class="fa fa-arrow-left"></i> Back
 </a>
 <button type="button" class="btn btn-sm btn-danger" id="reject">

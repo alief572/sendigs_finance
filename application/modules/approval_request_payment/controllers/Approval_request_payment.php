@@ -209,8 +209,15 @@ class Approval_request_payment extends Admin_Controller
 
 	public function approval_payment()
 	{
-		$id = urldecode($this->input->get('id_exp_consultant'));
-		$id = str_replace('|', '/', $id);
+		$id = '';
+		if(isset($_GET['id_cons'])) {
+			$id = urldecode($this->input->get('id_cons'));
+			$id = str_replace('|', '/', $id);
+		}
+		if(isset($_GET['id_exp_consultant'])) {
+			$id = urldecode($this->input->get('id_exp_consultant'));
+			$id = str_replace('|', '/', $id);
+		}
 
 		$id_expense = (isset($_GET['id_expense'])) ? $this->input->get('id_expense') : '';
 
@@ -391,6 +398,7 @@ class Approval_request_payment extends Admin_Controller
 		$id = str_replace('|', '/', $id);
 
 		$id_expense = (isset($_GET['id_expense'])) ? $this->input->get('id_expense') : '';
+		$id_kasbon = (isset($_GET['id_kasbon'])) ? $this->input->get('id_kasbon') : '';
 
 		$get_kasbon_header = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $id))->row();
 
@@ -530,7 +538,9 @@ class Approval_request_payment extends Admin_Controller
 				'title_expense' => $title_expense,
 				'list_detail_expense_detail' => $list_detail_expense_detail
 			];
+
 		}
+		$no_doc_sendigs = $id;
 		
 		if(!empty($get_kasbon_header)) {
 			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
@@ -539,14 +549,14 @@ class Approval_request_payment extends Admin_Controller
 			$get_expense = $this->db->get_where('tr_expense', ['no_expense_consultant' => $id])->row();
 			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_expense->no_doc))->row();
 		}
-
-		$no_doc_sendigs = $id;
+		
 
 		$this->template->title('Approval Request Payment Finance');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
 		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
 		$this->template->set('id_expense', $id_expense);
+		$this->template->set('id_kasbon', $id_kasbon);
 		$this->template->render('detail_approve_checker');
 	}
 
