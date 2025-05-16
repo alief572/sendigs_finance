@@ -527,6 +527,7 @@ if ($tipe == 'Expense') {
 					var id = $('input[name="id"]').val();
 					var no_doc_sendigs = $('input[name="no_doc_sendigs"]').val();
 					var id_expense = $('input[name="id_expense"]').val();
+					var id_kasbon = $('input[name="id_kasbon"]').val();
 					$.ajax({
 						url: url_save,
 						dataType: "json",
