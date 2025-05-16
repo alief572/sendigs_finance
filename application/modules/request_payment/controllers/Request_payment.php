@@ -2282,7 +2282,7 @@ class Request_payment extends Admin_Controller
 			]);
 		}
 		if ($tipe == "kasbon") {
-			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $post['no_doc_sendigs']))->row();
+			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $post['id_kasbon']))->row();
 
 			$this->db->update(DBCNL . '.kons_tr_kasbon_project_header a', array('sts_reject' => null, 'sts_reject_manage' => null, 'reject_reason' => null), array('id' => $post['id']));
 

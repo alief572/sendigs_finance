@@ -534,7 +534,8 @@ if ($tipe == 'Expense') {
 						data: {
 							'id': id,
 							'no_doc_sendigs': no_doc_sendigs,
-							'id_expense': id_expense
+							'id_expense': id_expense,
+							'id_kasbon': id_kasbon
 						},
 						success: function(msg) {
 							if (msg['save'] == '1') {
