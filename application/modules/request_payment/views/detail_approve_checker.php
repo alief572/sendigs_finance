@@ -133,7 +133,8 @@ if ($type == 'expense') {
 					if (!empty($details)) {
 						$n = $gTotal = 0;
 						foreach ($details as $dtl) : $n++;
-							$nm_coa = (isset($list_coa[$dtl->coa]) && $dtl->coa !== '') ? $list_coa[$dtl->coa] : '';
+							$coa = (isset($dtl->coa)) ? $dtl->coa : '';
+							$nm_coa = (isset($list_coa[$coa]) && $coa !== '') ? $list_coa[$coa] : '';
 							if ($type == 'expense') :
 								$harga  = $dtl->harga;
 								if (isset($dtl->id_kasbon) && $dtl->id_kasbon !== '') {
@@ -145,7 +146,7 @@ if ($type == 'expense') {
 								$gTotal += ($data_req_payment['jumlah'] + $data_req_payment['admin_bank'] - $data_req_payment['total_pph']); ?>
 								<tr>
 									<td><?= $n; ?></td>
-									<td><?= $dtl->coa . ' - ' . $nm_coa; ?></td>
+									<td><?= $coa . ' - ' . $nm_coa; ?></td>
 									<td><?= $dtl->deskripsi; ?> <?= (isset($dtl->id_kasbon) && $dtl->id_kasbon !== '') ? "<b>(Kasbon)</b>" : null ?></td>
 									<td><?= $dtl->tanggal; ?></td>
 									<td><?= $dtl->qty; ?></td>
@@ -217,7 +218,7 @@ if ($type == 'expense') {
 
 									<tr>
 										<td><?= $n; ?></td>
-										<td><?= $dtl->coa . ' - ' . $nm_coa; ?></td>
+										<td><?= $coa . ' - ' . $nm_coa; ?></td>
 										<td><?= $dtl->keperluan; ?></td>
 										<td><?= $dtl->tgl_doc; ?></td>
 										<td>-</td>
@@ -261,7 +262,7 @@ if ($type == 'expense') {
 
 									<tr>
 										<td><?= $n; ?></td>
-										<td><?= $dtl->coa . ' - ' . $nm_coa; ?></td>
+										<td><?= $coa . ' - ' . $nm_coa; ?></td>
 										<td><?= $dtl->keperluan; ?></td>
 										<td><?= $dtl->tgl_doc; ?></td>
 										<td>1</td>
@@ -380,7 +381,7 @@ if ($type == 'expense') {
 								$gTotal += ($dtl->total_request + $data_req_payment['admin_bank'] - $data_req_payment['total_pph']); ?>
 								<tr>
 									<td><?= $n; ?></td>
-									<td><?= $dtl->coa . ' - ' . $nm_coa; ?></td>
+									<td><?= $coa . ' - ' . $nm_coa; ?></td>
 									<td><?= $dtl->deskripsi; ?></td>
 									<td><?= $dtl->tgl_pr; ?></td>
 									<td>1</td>
@@ -435,7 +436,7 @@ if ($type == 'expense') {
 								$gTotal += ($data_req_payment['jumlah'] + $data_req_payment['admin_bank'] - $data_req_payment['total_pph']); ?>
 								<tr>
 									<td><?= $n; ?></td>
-									<td><?= $dtl->coa . ' - ' . $nm_coa; ?></td>
+									<td><?= $coa . ' - ' . $nm_coa; ?></td>
 									<td><?= $dtl->keterangan; ?></td>
 									<td><?= $dtl->tanggal; ?></td>
 									<td>1</td>
