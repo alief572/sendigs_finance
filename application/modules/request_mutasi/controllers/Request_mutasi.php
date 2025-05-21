@@ -68,8 +68,8 @@ class Request_mutasi extends Admin_Controller
         $ke     = $post['ke'];
 
         $kode_mutasi   = $this->Request_mutasi_model->generate_nopn($tgl);
-        $bank_asal     = $this->db->query("SELECT * FROM gl_sendigs_manufaktur.coa_master WHERE no_perkiraan='$dari'")->row();
-        $bank_tujuan   = $this->db->query("SELECT * FROM gl_sendigs_manufaktur.coa_master WHERE no_perkiraan='$ke'")->row();
+        $bank_asal     = $this->db->query("SELECT * FROM " . DBACC . ".coa_master WHERE no_perkiraan='$dari'")->row();
+        $bank_tujuan   = $this->db->query("SELECT * FROM " . DBACC . ".coa_master WHERE no_perkiraan='$ke'")->row();
 
         $this->db->trans_begin();
         $data = array(
