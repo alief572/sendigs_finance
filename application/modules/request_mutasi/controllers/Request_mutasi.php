@@ -42,7 +42,7 @@ class Request_mutasi extends Admin_Controller
         $pphpenjualan       = $this->Acc_model->combo_pph_penjualan();
         $datacoa            = $this->Acc_model->GetCoaCombo();
         $template           = $this->Acc_model->GetTemplate();
-        $data_coa_bank      = $this->All_model->GetCoaCombo('5', " a.no_perkiraan like '1101%'");
+        $data_coa_bank      = $this->All_model->GetCoaCombo('5', " a.kode_bank IS NOT NULL");
         $matauang           = $this->All_model->GetKursCombo();
         $data = [
             'result'        => $getInv,
