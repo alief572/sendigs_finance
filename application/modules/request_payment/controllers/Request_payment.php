@@ -35,8 +35,6 @@ class Request_payment extends Admin_Controller
 
 		$this->db->select('a.*');
 		$this->db->from(DBACC . '.coa_master a')
-			->where('a.no_perkiraan LIKE', '%1101-02%')
-			->where('a.kode_bank <>', '')
 			->where('a.kode_bank <>', '');
 		$list_coa = $this->db->get()->result_array();
 
@@ -185,6 +183,9 @@ class Request_payment extends Admin_Controller
 	{
 		$data = $this->Request_payment_model->GetListDataApproval('a.status <> 2 AND a.app_checker IS NULL');
 
+		$data_kasbon = $this->Request_payment_model->GetListDataApproval('1 = 1');
+		$data_expense = $this->Request_payment_model->GetListDataApproval('1 = 1');
+
 		$list_no_invoice = [];
 		$this->db->select('id, invoice_no');
 		$this->db->from('tr_invoice_po');
@@ -195,6 +196,8 @@ class Request_payment extends Admin_Controller
 
 		$this->template->set('tingkat_approval', 1);
 		$this->template->set('data', $data);
+		$this->template->set('data_kasbon', $data_kasbon);
+		$this->template->set('data_expense', $data_expense);
 		$this->template->set('list_no_invoice', $list_no_invoice);
 		$this->template->title('Request Payment Approval Checker');
 		$this->template->render('list_approve_checker');
@@ -596,7 +599,7 @@ class Request_payment extends Admin_Controller
 		$update_request_payment = $this->db->update('request_payment', ['status' => 2], ['no_doc' => $no_doc_sendigs]);
 		$update_request_payment = $this->db->update('request_payment', ['status' => 2], ['no_doc' => $id_expense]);
 
-		if($this->db->trans_status() === false) {
+		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
 
 			$valid = 0;
@@ -2291,9 +2294,9 @@ class Request_payment extends Admin_Controller
 				'app_checker_by' => $this->auth->user_id(),
 				'app_checker_date' => date('Y-m-d H:i:s')
 			], [
-				'no_doc' => $post['id_kasbon'],
-				'ids' => $get_kasbon->id
+				'no_doc' => $post['id_kasbon']
 			]);
+
 			$this->db->update('tr_kasbon', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['id_kasbon']]);
 			// if ($post['tipe'] == "kasbon") {
 			// }

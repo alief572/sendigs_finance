@@ -173,6 +173,12 @@ endforeach;
                             if ($item_kasbon->tipe == 'kasbon') {
                                 $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item_kasbon->no_doc))->row();
 
+                                $get_kasbon_sendigs = $this->db->get_where('tr_kasbon', ['no_doc' => $item_kasbon->no_doc])->row();
+
+                                $no_kasbon_consultant = (!empty($get_kasbon_sendigs)) ? $get_kasbon_sendigs->no_kasbon_consultant : '';
+
+                                $get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $no_kasbon_consultant))->row();
+
                                 echo '<tr>';
                                 echo '<td>' . $item_kasbon->no_doc . '</td>';
                                 echo '<td>' . $item_kasbon->nama . '</td>';
@@ -206,6 +212,17 @@ endforeach;
                         <?php endif;
                                 if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '1') :
                                     echo '<a href="' . base_url('approval_request_payment/approval_payment/?id_cons=' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '&id_sendigs=' . $item_kasbon->no_doc . '" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i> Approve</a>';
+
+                                    if ($get_kasbon_header->tipe == '1') {
+                                        $link_view = base_url('kasbon_project/view_kasbon_subcont/' . urlencode(str_replace('/', '|', $get_kasbon->no_kasbon_consultant)));
+                                    }
+                                    if ($get_kasbon_header->tipe == '2') {
+                                        $link_view = base_url('kasbon_project/view_kasbon_akomodasi/' . urlencode(str_replace('/', '|', $get_kasbon->no_kasbon_consultant)));
+                                    }
+                                    if ($get_kasbon_header->tipe == '3') {
+                                        $link_view = base_url('kasbon_project/view_kasbon_others/' . urlencode(str_replace('/', '|', $get_kasbon->no_kasbon_consultant)));
+                                    }
+                                    echo ' <a href="' . $link_view . '" class="btn btn-sm btn-info" title="View Kasbon" target="_blank"><i class="fa fa-eye"></i></a>';
                                 endif;
                                 echo '</td>';
                                 echo '</tr>';

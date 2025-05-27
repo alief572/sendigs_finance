@@ -38,32 +38,34 @@ header("Content-Disposition: attachment; filename=Approval Request Payment Kasbo
 
                 $get_kasbon_header = $this->db->get_where('kons_tr_kasbon_project_header', array('id' => $item_kasbon->no_doc))->row();
 
-                $get_spk_penawaran = $this->db->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $get_kasbon_header->id_spk_penawaran))->row();
-
-                $tipe = '';
                 if (!empty($get_kasbon_header)) {
-                    if ($get_kasbon_header->tipe == '1') {
-                        $tipe = 'Kasbon Subcont';
+                    $get_spk_penawaran = $this->db->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $get_kasbon_header->id_spk_penawaran))->row();
+
+                    $tipe = '';
+                    if (!empty($get_kasbon_header)) {
+                        if ($get_kasbon_header->tipe == '1') {
+                            $tipe = 'Kasbon Subcont';
+                        }
+                        if ($get_kasbon_header->tipe == '2') {
+                            $tipe = 'Kasbon Akomodasi';
+                        }
+                        if ($get_kasbon_header->tipe == '3') {
+                            $tipe = 'Kasbon Others';
+                        }
                     }
-                    if ($get_kasbon_header->tipe == '2') {
-                        $tipe = 'Kasbon Akomodasi';
-                    }
-                    if ($get_kasbon_header->tipe == '3') {
-                        $tipe = 'Kasbon Others';
-                    }
+
+                    echo '<tr>';
+                    echo '<td>' . $item_kasbon->no_doc . '</td>';
+                    echo '<td>' . $item_kasbon->nama . '</td>';
+                    echo '<td>' . $item_kasbon->tgl_doc . '</td>';
+                    echo '<td>' . $item_kasbon->keperluan . '</td>';
+                    echo '<td>' . $tipe . '</td>';
+                    echo '<td>' . $get_spk_penawaran->nm_customer . ', ' . $get_kasbon_header->id_spk_penawaran . ', ' . $tipe . '</td>';
+                    echo '<td align="right">' . number_format($item_kasbon->jumlah) . '</td>';
+                    echo '</tr>';
+
+                    $ttl_kasbon += $item_kasbon->jumlah;
                 }
-
-                echo '<tr>';
-                echo '<td>' . $item_kasbon->no_doc . '</td>';
-                echo '<td>' . $item_kasbon->nama . '</td>';
-                echo '<td>' . $item_kasbon->tgl_doc . '</td>';
-                echo '<td>' . $item_kasbon->keperluan . '</td>';
-                echo '<td>' . $tipe . '</td>';
-                echo '<td>' . $get_spk_penawaran->nm_customer . ', ' . $get_kasbon_header->id_spk_penawaran . ', ' . $tipe . '</td>';
-                echo '<td align="right">' . number_format($item_kasbon->jumlah) . '</td>';
-                echo '</tr>';
-
-                $ttl_kasbon += $item_kasbon->jumlah;
             endforeach;
             ?>
         </tbody>
