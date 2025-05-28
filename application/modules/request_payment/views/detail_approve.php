@@ -44,6 +44,14 @@ if ($type == 'expense') {
 	$bank_id = $header->bank_id;
 	$accnumber = $header->accnumber;
 	$accname = $header->accname;
+} elseif ($type == 'direct_payment') {
+	$keterangan = $header->deskripsi;
+	$no_doc = $header->no_doc;
+	$tgl_doc = $header->tgl_doc;
+
+	$bank_id = $header->bank;
+	$accnumber = $header->bank_number;
+	$accname = $header->bank_account;
 }
 
 ?>
@@ -132,7 +140,8 @@ if ($type == 'expense') {
 					if (!empty($details)) {
 						$n = $gTotal = 0;
 						foreach ($details as $dtl) : $n++;
-							$nm_coa = (isset($list_coa[$dtl->coa]) && $dtl->coa !== '') ? $list_coa[$dtl->coa] : '';
+							$coa = (isset($dtl->coa)) ? $dtl->coa : '';
+							$nm_coa = (isset($list_coa[$coa]) && $coa !== '') ? $list_coa[$coa] : '';
 							if ($type == 'expense') :
 								$harga  = $dtl->harga;
 								if (isset($dtl->id_kasbon) && $dtl->id_kasbon !== '') {
@@ -482,7 +491,36 @@ if ($type == 'expense') {
 
 									</td>
 								</tr>
-					<?php endif;
+							<?php endif;
+							if ($type == 'direct_payment') {
+							?>
+
+								<tr>
+									<td><?= $n; ?></td>
+									<td><?= $coa . ' - ' . $nm_coa; ?></td>
+									<td><?= $dtl->deskripsi; ?></td>
+									<td><?= $dtl->tgl_doc; ?></td>
+									<td><?= number_format($dtl->grand_total, 2) ?></td>
+									<td><?= $data_req_payment['currency']; ?></td>
+									<td class="text-right"><?= number_format($dtl->grand_total, 2) ?></td>
+
+									<td class="text-center"><a href="<?= base_url('assets/expense/') . $data_req_payment['link_doc']; ?>" target="_blank"><i class="fa fa-download"></i></a></td>
+									<td>
+										<?php if ($dtl->sts == '2') : ?>
+											<input type="checkbox" checked value="<?= $dtl->id; ?>" name="item[<?= $n; ?>][id]" class="check_item" id="check_<?= $dtl->id; ?>">
+										<?php elseif ($dtl->sts == '3') : ?>
+											<label for="" class="label bg-maroon">Process</label>
+										<?php elseif ($dtl->sts == '4') : ?>
+											<label for="" class="label bg-green">PAID</label>
+										<?php else : ?>
+											<label for="" class="label bg-gray"><span class="text-muted">Undefined</span></label>
+										<?php endif; ?>
+									</td>
+								</tr>
+
+					<?php
+								$gTotal += $dtl->grand_total;
+							}
 						endforeach;
 					}  ?>
 				</tbody>

@@ -487,4 +487,9 @@ class Setting extends Admin_Controller
             return $dataArr;
         }
     }
+
+    public function update_user_permission()
+    {
+        $this->permissions_model->update_user_permission();
+    }
 }

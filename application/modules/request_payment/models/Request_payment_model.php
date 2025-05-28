@@ -89,6 +89,21 @@ class Request_payment_model extends BF_Model
             if ($tab == 'periodik') {
                 $data = $this->db->query(" SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname, b.sts_reject, b.sts_reject_manage, b.reject_reason FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc left join users c on a.created_by = c.id_user WHERE a.status='1' and (b.id_payment='0' OR b.id_payment IS NULL)" . $where_date3)->result();
             }
+            if ($tab == 'direct_payment') {
+                $this->db->select('a.ids, a.no_doc, b.nm_lengkap as nama, a.tgl_doc, a.deskripsi as keperluan, "direct_payment" as tipe, a.grand_total as jumlah, "" as tgl, a.no_doc as id, a.bank as bank_id, a.bank_number as accnumber, a.bank_account as accname, a.sts_reject, a.sts_reject_manage, a.reject_reason');
+                $this->db->from('tr_direct_payment a');
+                $this->db->join('users b', 'b.id_user = a.created_by', 'left');
+                $this->db->where('a.sts', 1);
+                $this->db->where('a.grand_total >', 0);
+                $this->db->group_start();
+                $this->db->where('a.metode_pembayaran', 1);
+                $this->db->or_where('a.metode_pembayaran IS NULL');
+                $this->db->group_end();
+                $data = $this->db->get()->result();
+
+                // print_r($this->db->last_query());
+                // exit;
+            }
         } else {
             $data    = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,'Transportasi' as keperluan, 'transportasi' as tipe,(SELECT IF(SUM(aa.jumlah_kasbon) IS NULL, 0, SUM(aa.jumlah_kasbon)) FROM tr_transport aa WHERE aa.no_req = a.no_doc AND aa.req_payment = 0) as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname, a.sts_reject, a.sts_reject_manage, a.reject_reason FROM tr_transport_req a WHERE a.status = 1 " . $where_date1 . "
             GROUP BY no_doc

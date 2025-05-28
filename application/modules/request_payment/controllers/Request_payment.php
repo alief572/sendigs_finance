@@ -146,6 +146,9 @@ class Request_payment extends Admin_Controller
 				if ($tipe == 'periodik') {
 					$this->All_model->dataUpdate('tr_pengajuan_rutin_detail', array('id_payment' => $idreq), array('no_doc' => $no_doc, 'id' => $this->input->post("ids_" . $val)));
 				}
+				if ($tipe == 'direct_payment') {
+					$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $this->input->post('no_doc_' . $val)]);
+				}
 			}
 		}
 		if ($this->db->trans_status() === FALSE) {
@@ -279,6 +282,12 @@ class Request_payment extends Admin_Controller
 			$data_detail	= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->result();
 		}
 
+		// Direct Payment
+		if (isset($type) && $type == 'direct_payment') {
+			$data 			= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->row();
+			$data_detail	= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->result();
+		}
+
 		// $data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		// $data_pc 		= $this->All_model->GetPettyCashCombo();
 
@@ -354,6 +363,12 @@ class Request_payment extends Admin_Controller
 		if (isset($type) && $type == 'periodik') {
 			$data 			= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->row();
 			$data_detail	= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->result();
+		}
+
+		// Direct Payment
+		if (isset($type) && $type == 'direct_payment') {
+			$data 			= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->row();
+			$data_detail	= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->result();
 		}
 
 		// $data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
@@ -623,6 +638,9 @@ class Request_payment extends Admin_Controller
 	{
 		$Data		= $this->input->post();
 		$header 	= $this->db->get_where('request_payment', ['no_doc' => $Data['no_doc'], 'tipe' => $Data['tipe'], 'ids' => $Data['id']])->row_array();
+		if ($Data['tipe'] == 'direct_payment') {
+			$header 	= $this->db->get_where('request_payment', ['no_doc' => $Data['no_doc'], 'tipe' => $Data['tipe']])->row_array();
+		}
 		// $Id 		= $this->_getIdPayment(str_replace('/', '-', $Data['date']));
 
 		$no_coa_bank = explode(' - ', $header['bank_name']);
@@ -821,6 +839,34 @@ class Request_payment extends Admin_Controller
 				$Harga[] 		= $dtl->nilai;
 			}
 
+			if ($Data['tipe'] == 'direct_payment') {
+				$dtl = $this->db->get_where('tr_direct_payment', ['id' => $detail['id']])->row();
+				$data_request_payment = $this->db->get_where('request_payment', ['no_doc' => $dtl->no_doc])->row();
+
+				$nilai = $dtl->grand_total;
+
+				$ArrDetail[] 		= [
+					'id' 			=> $id_detail,
+					'payment_id' 	=> $Id,
+					'no_doc' 		=> $dtl->no_doc,
+					'tgl_doc' 		=> $dtl->tgl_doc,
+					'deskripsi' 	=> $dtl->deskripsi,
+					'qty' 			=> '1',
+					'harga' 		=> $nilai,
+					'total' 		=> $nilai,
+					'keterangan' 	=> $dtl->deskripsi,
+					'doc_file' 		=> $data_request_payment->link_doc,
+					'coa' 			=> '',
+					'created_by' 	=> $this->auth->user_name(),
+					'created_on' 	=> date("Y-m-d h:i:s"),
+				];
+				$updateDetail[] = [
+					'id' 			=> $dtl->id,
+					'sts' 		=> '3'
+				];
+				$Harga[] 		= $nilai;
+			}
+
 			$id_detail++;
 		}
 
@@ -964,6 +1010,18 @@ class Request_payment extends Admin_Controller
 				// 	print_r($this->db->error()['message']);
 				// 	exit;
 				// }
+			}
+
+			if ($Data['tipe'] == 'direct_payment') {
+				$this->db->insert_batch('payment_approve_details', $ArrDetail);
+				$this->db->update_batch('tr_direct_payment', $updateDetail, 'id');
+
+				// Update request_payment
+				$get_kasbon = $this->db->get_where('tr_direct_payment', ['id' => $Data['id']])->row_array();
+
+				$data_request_payment = $this->db->select('id')->get_where('request_payment', ['no_doc' => $get_kasbon['no_doc']])->row_array();
+
+				$this->db->update('request_payment', ['status' => '2'], ['id' => $data_request_payment['id']]);
 			}
 		}
 
