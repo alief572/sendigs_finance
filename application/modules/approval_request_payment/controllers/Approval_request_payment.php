@@ -381,13 +381,15 @@ class Approval_request_payment extends Admin_Controller
 
 		$no_doc_sendigs = $id;
 
+		$tgl_approve_direktur = (!empty($get_request_payment)) ? $get_request_payment->created_on : '';
+
 
 		$this->template->title('Approval Request Payment Direktur');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
 		$this->template->set('id_sendigs', $id_sendigs);
 		$this->template->set('id_expense', $id_expense);
-		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
+		$this->template->set('tgl_approve_direktur', $tgl_approve_direktur);
 
 		$this->template->render('detail_approve');
 	}
@@ -549,11 +551,13 @@ class Approval_request_payment extends Admin_Controller
 			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_expense->no_doc))->row();
 		}
 
+		$tgl_approve_direktur = (!empty($get_request_payment)) ? $get_request_payment->created_on : '';
+
 
 		$this->template->title('Approval Request Payment Finance');
 		$this->template->set($data);
 		$this->template->set('no_doc_sendigs', $no_doc_sendigs);
-		$this->template->set('tgl_approve_direktur', $get_request_payment->created_on);
+		$this->template->set('tgl_approve_direktur', $tgl_approve_direktur);
 		$this->template->set('id_expense', $id_expense);
 		$this->template->set('id_kasbon', $id_kasbon);
 		$this->template->render('detail_approve_checker');
