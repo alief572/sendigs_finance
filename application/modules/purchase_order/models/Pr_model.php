@@ -65,7 +65,7 @@ class Pr_model extends BF_Model
 
 	function generate_code($tgl)
 	{
-		$query = $this->db->query("SELECT MAX(no_po) as max_id FROM tr_purchase_order WHERE no_po LIKE '%P".date('y', strtotime($tgl))."%'");
+		$query = $this->db->query("SELECT MAX(no_po) as max_id FROM tr_purchase_order WHERE no_po LIKE '%P" . date('y', strtotime($tgl)) . "%'");
 		$row = $query->row_array();
 		$thn = date('y', strtotime($tgl));
 		$max_id = $row['max_id'];
@@ -336,7 +336,9 @@ class Pr_model extends BF_Model
 				(SELECT COUNT(x.id) as hitung FROM material_planning_base_on_produksi_detail x WHERE x.so_number = a.so_number ) > 0 AND 
 				a.metode_pembelian = "1" AND 
 				a.close_pr IS NULL
+
 			UNION ALL
+			
 			SELECT 
 				a.no_pengajuan as so_number,
 				a.no_pr as no_pr,
@@ -350,7 +352,9 @@ class Pr_model extends BF_Model
 				a.sts_app = "Y" AND
 				a.metode_pembelian = "1" AND
 				a.close_pr IS NULL
+
 			UNION ALL
+
 			SELECT 
 				a.id as so_number,
 				a.no_pr as no_pr,
@@ -364,6 +368,21 @@ class Pr_model extends BF_Model
 				a.app_status_3 = "Y" AND
 				a.metode_pembelian = "1" AND
 				a.close_pr IS NULL
+
+			UNION ALL
+
+			SELECT
+				a.id as so_number,
+				a.id as no_pr,
+				DATE_FORMAT(a.created_date, "%Y-%m-%d") as tgl_so,
+				b.nm_lengkap as nama_user,
+				"project consultant" as tipe_pe
+			FROM
+				' . DBCNL . '.kons_tr_kasbon_project_header a
+				LEFT JOIN ' . DBCNL . '.users b ON b.id_user = a.created_by
+			WHERE
+				a.metode_pembayaran = 3 AND
+				a.sts = 1
 		')->result();
 
 		// $query = $this->db->get();

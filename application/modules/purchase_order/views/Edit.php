@@ -269,6 +269,11 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 
 												$total = $value->hargasatuan * $value->qty;
 
+												$readonly_cons = '';
+												if ($value->tipe_pr == 'project consultant') {
+													$readonly_cons = 'readonly';
+												}
+
 
 												// if ($value->status_app !== 'Y') {
 
@@ -331,7 +336,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 														</td>
 												<td hidden><input type='text' class='form-control input-sm autoNumeric3' id='dt_alloyprice_" . $key . "' " . $disabled . " data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' name='dt[" . $key . "][alloyprice]' onkeyup='HitAmmount(" . $key . ")'></td>
 												<td hidden><input type='text' class='form-control input-sm autoNumeric3' id='dt_fabcost_" . $key . "' " . $disabled . " name='dt[" . $key . "][fabcost]' onkeyup='HitAmmount(" . $key . ")'></td>
-												<td><input type='text' class='form-control input-sm autoNumeric3' id='dt_hargasatuan_" . $key . "' name='dt[" . $key . "][hargasatuan]' onkeyup='HitAmmount(" . $key . ")' value='" . $value->hargasatuan . "'></td>
+												<td><input type='text' class='form-control input-sm autoNumeric3' id='dt_hargasatuan_" . $key . "' name='dt[" . $key . "][hargasatuan]' onkeyup='HitAmmount(" . $key . ")' value='" . $value->hargasatuan . "' " . $readonly_cons . "></td>
 											  <td>
 													<select class='form-control input-sm' id='dt_ppn_" . $key . "' name='dt[" . $key . "][ppn]' onchange='CariPPN(" . $key . ")'>
 														<option value=''>SELECT</option>

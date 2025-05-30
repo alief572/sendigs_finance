@@ -254,6 +254,16 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 
 													$total = $harga_beli * $po;
 
+													$harga_cons = 0;
+													$readonly_cons = 0;
+													if ($value->tipe_pr == 'project consultant') {
+														$get_harga_cons = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header a', ['id' => $value->id])->row();
+
+														$harga_cons = (!empty($get_harga_cons)) ? $get_harga_cons->grand_total : 0;
+														$readonly_cons = 'readonly';
+														$total = $harga_cons;
+													}
+
 
 													// if ($value->status_app !== 'Y') {
 
@@ -316,7 +326,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 															</td>
 													<td hidden><input type='text' class='form-control input-sm autoNumeric3' id='dt_alloyprice_" . $key . "' " . $disabled . " data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' name='dt[" . $key . "][alloyprice]' onkeyup='HitAmmount(" . $key . ")'></td>
 													<td hidden><input type='text' class='form-control input-sm autoNumeric3' id='dt_fabcost_" . $key . "' " . $disabled . " name='dt[" . $key . "][fabcost]' onkeyup='HitAmmount(" . $key . ")'></td>
-													<td><input type='text' class='form-control input-sm autoNumeric3' id='dt_hargasatuan_" . $key . "' name='dt[" . $key . "][hargasatuan]' onkeyup='HitAmmount(" . $key . ")' value=''></td>
+													<td><input type='text' class='form-control input-sm autoNumeric3' id='dt_hargasatuan_" . $key . "' name='dt[" . $key . "][hargasatuan]' onkeyup='HitAmmount(" . $key . ")' value='" . number_format($harga_cons, 2) . "' " . $readonly_cons . "></td>
 												  <td>
 														<select class='form-control input-sm' id='dt_ppn_" . $key . "' name='dt[" . $key . "][ppn]' onchange='CariPPN(" . $key . ")'>
 															<option value=''>SELECT</option>
@@ -327,7 +337,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 													<td hidden><input type='text' class='form-control input-sm autoNumeric pajak' id='dt_pajak_" . $key . "' name='dt[" . $key . "][pajak]' onkeyup='HitAmmount(" . $key . ")'></td>
 													<td hidden><input type='text' class='form-control input-sm autoNumeric3' id='dt_diskon_" . $key . "' " . $disabled . " name='dt[" . $key . "][diskon]' onkeyup='HitAmmount(" . $key . ")'></td>
 												
-												  <td><input type='text' class='form-control input-sm ch_jumlah_ex' id='dt_jumlahharga_" . $key . "' readonly name='dt[" . $key . "][jumlahharga]' value='" . $total . "'></td>
+												  <td><input type='text' class='form-control input-sm ch_jumlah_ex' id='dt_jumlahharga_" . $key . "' readonly name='dt[" . $key . "][jumlahharga]' value='" . number_format($total, 2) . "'></td>
 													<td>
 														<input type='text' name='dt[" . $key . "][disc_persen]' class='form-control form-control-sm auto_num disc_persen' id='disc_persen_" . $key . "' placeholder='Discount (%)' data-key='" . $key . "'>
 														<br>
@@ -335,7 +345,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 													</td>
 													<td><input type='text' class='form-control auto_num input-sm ch_ppn cng_nilai_ppn' id='dt_nilai_ppn_" . $key . "' name='dt[" . $key . "][nilai_ppn]' data-key='" . $key . "' placeholder='Nilai PPN' readonly>
 													<input type='text' class='form-control input-sm ch_per_ppn cng_persen_ppn' id='dt_persen_ppn_" . $key . "' name='dt[" . $key . "][persen_ppn]' data-key='" . $key . "' placeholder='Persen PPN' readonly></td>
-													<td><input type='text' class='form-control input-sm ch_jumlah_ex2' id='dt_totalharga_" . $key . "' readonly name='dt[" . $key . "][totalharga]' value='" . $total . "'></td>
+													<td><input type='text' class='form-control input-sm ch_jumlah_ex2' id='dt_totalharga_" . $key . "' readonly name='dt[" . $key . "][totalharga]' value='" . number_format($total, 2) . "'></td>
 													<td><input type='text' class='form-control input-sm' id='dt_note_" . $key . "' name='dt[" . $key . "][note]'></td>
 											 </tr>
 													";

@@ -258,6 +258,40 @@ class Purchase_order extends Admin_Controller
 			WHERE
 				a.no_po IN ('" . str_replace(",", "','", $no_po) . "') AND 
 				a.tipe = 'pr asset'
+			
+			UNION ALL
+
+			SELECT
+				a.id as id,
+				a.idpr as idpr,
+				a.no_po as no_po,
+				'' as idmaterial,
+				a.qty as qty,
+				a.hargasatuan as hargasatuan,
+				a.jumlahharga as jumlahharga,
+				a.kode_barang as kode_barang,
+				a.ppn as ppn,
+				a.ppn_persen as ppn_persen,
+				a.harga_total as harga_total,
+				a.tipe as tipe_pr,
+				a.keterangan as keterangan,
+				'0' AS avl_stock, 
+				a.kode_barang as code, 
+				'' as code1, 
+				a.namamaterial as nm_material, 
+				'' as nm_material1,
+				a.persen_disc as persen_disc,
+				a.nilai_disc as nilai_disc, 
+				a.qty as propose_purchase,
+				'Item' as packing_unit,
+				'' as packing_unit2,
+				'Item' as unit_measure
+			FROM 	
+				dt_trans_po a
+				LEFT JOIN " . DBCNL . ".kons_tr_kasbon_project_header e ON e.id = a.idpr
+			WHERE
+				a.no_po IN ('" . str_replace(",", "','", $no_po) . "') AND 
+				a.tipe = 'project consultant'
 			GROUP BY id
 		")->result();
 
@@ -291,7 +325,7 @@ class Purchase_order extends Admin_Controller
 			'karyawan' => $karyawan,
 			'mata_uang' => $mata_uang,
 			// 'matauang' => $matauang,
-			
+
 			// 'headerso' => $getso,
 			'get_po' => $get_po,
 			'getitemso' => $getitemso,
@@ -1433,6 +1467,7 @@ class Purchase_order extends Admin_Controller
 
 		$po_pr_depart = 0;
 		$po_pr_asset = 0;
+		$po_project_consultant = 0;
 		foreach ($_POST['dt'] as $used) {
 			// if ($po_pr_depart == '0') {
 			if ($used['tipe_pr'] == 'pr depart') {
@@ -1441,6 +1476,9 @@ class Purchase_order extends Admin_Controller
 			// }
 			if ($used['tipe_pr'] == 'pr asset') {
 				$po_pr_asset = '1';
+			}
+			if ($used['tipe_pr'] == 'project consultant') {
+				$po_project_consultant = '1';
 			}
 		}
 		if ($po_pr_depart == '1') {
@@ -1504,6 +1542,37 @@ class Purchase_order extends Admin_Controller
 				'created_on'		=> date('Y-m-d H:i:s'),
 				'created_by'		=> $this->auth->user_id(),
 				'tipe'		=> 'pr asset'
+			];
+		} else if ($po_project_consultant == 1) {
+			$data = [
+				'no_po'				=> $code,
+				'no_surat'			=> $no_surat,
+				'id_suplier'		=> $post['supplier'],
+				'loi'				=> $post['loi'],
+				'nominal_kurs'		=> 1,
+				'tanggal'			=> $post['tanggal'],
+				'expect_tanggal'	=> date('Y-m-d', strtotime($post['expect_tanggal'])),
+				'term'				=> $post['term'],
+				'cif'				=> $post['cif'],
+				'note'				=> $post['note_ket'],
+				'no_pr'				=> $post['no_pr'],
+				'matauang'			=> $post['matauang'],
+				'hargatotal'		=> str_replace(',', '', $post['hargatotal']),
+				'diskontotal'		=> str_replace(',', '', $post['diskontotal']),
+				'taxtotal'			=> str_replace(',', '', $post['kirim']),
+				'subtotal'			=> str_replace(',', '', $post['subtotal']),
+				'total_ppn'			=> str_replace(',', '', $post['totalppn']),
+				'total_barang'		=> str_replace(',', '', $post['hargatotal']),
+				'status'			=> '1',
+				'total_ppn_persen'	=> str_replace(',', '', $post['persenppn']),
+				'persen_disc' => str_replace(',', '', $post['persendisc']),
+				'nilai_disc' => str_replace(',', '', $post['totaldisc']),
+				'note' => $post['note'],
+				'delivery_date' => $post['delivery_date'],
+				'id_dept' => implode(',', $post['dept']),
+				'created_on'		=> date('Y-m-d H:i:s'),
+				'created_by'		=> $this->auth->user_id(),
+				'tipe'		=> 'project consultant'
 			];
 		} else {
 			$data = [
@@ -1595,7 +1664,7 @@ class Purchase_order extends Admin_Controller
 					'status_po'				=> 'CLS',
 				];
 
-				if ($valid_qty == 1) {
+				if ($valid_qty == 1 && $used['tipe_pr'] !== 'project consultant') {
 					$get_other_po_brg = $this->db->query("SELECT IF(SUM(a.qty) IS NOT NULL, SUM(a.qty), 0) AS other_qty FROM dt_trans_po a WHERE a.idpr = '" . $used['idpr'] . "' AND a.tipe = '" . $used['tipe_pr'] . "'")->row();
 
 					if ($used['tipe_pr'] == 'pr depart') {
@@ -1717,7 +1786,7 @@ class Purchase_order extends Admin_Controller
 
 		$this->db->trans_begin();
 
-		$get_po = $this->db->get_where('tr_purchase_order', ['no_po' => $post['no_po']]);
+		$get_po = $this->db->get_where('tr_purchase_order', ['no_po' => $post['no_po']])->row();
 
 		$data = [
 			'id_suplier'		=> $post['supplier'],
@@ -1767,7 +1836,7 @@ class Purchase_order extends Admin_Controller
 				'note'					=> $used['note']
 			);
 
-			if ($valid_qty == 1) {
+			if ($valid_qty == 1 && $used['tipe_pr'] !== 'project consultant') {
 				$get_other_po_brg = $this->db->query("SELECT IF(SUM(a.qty) IS NOT NULL, SUM(a.qty), 0) AS other_qty FROM dt_trans_po a WHERE a.idpr = '" . $used['idpr'] . "' AND a.tipe = '" . $used['tipe_pr'] . "'")->row();
 
 				if ($used['tipe_pr'] == 'pr depart') {
@@ -2931,7 +3000,30 @@ class Purchase_order extends Admin_Controller
 				asset_planning a 
 			WHERE
 				a.code_plan IN ('" . str_replace(",", "','", implode(',', $getparam)) . "')
+
+			UNION ALL
+
+			SELECT
+				a.id as id,
+				a.id as so_number,
+				'' as id_material,
+				1 as propose_purchase,
+				0 as avl_stock,
+				'' as code,
+				'' as code1,
+				a.deskripsi as nm_material,
+				'project consultant' as tipe_pr,
+				'Item' as packing_unit,
+				'' as packing_unit2,
+				'Item' as unit_measure
+			FROM
+				" . DBCNL . ".kons_tr_kasbon_project_header a
+			WHERE
+				a.id IN ('" . str_replace(",", "','", implode('m', $getparam)) . "')
 		")->result();
+
+		// print_r($this->db->last_query());
+		// exit;
 
 
 		// $getitemso = $this->db->get()->result();
@@ -3215,13 +3307,46 @@ class Purchase_order extends Admin_Controller
 				a.no_po IN ('" . str_replace(",", "','", $no_po) . "') AND 
 				a.tipe = 'pr asset'
 
+			UNION ALL
+
+			SELECT
+				a.id as id,
+				a.idpr as idpr,
+				a.no_po as no_po,
+				'' as id_material,
+				a.qty as qty,
+				a.hargasatuan as hargasatuan,
+				a.jumlahharga as jumlahharga,
+				a.kode_barang as kode_barang,
+				a.ppn as ppn,
+				a.ppn_persen as ppn_persen,
+				a.harga_total as harga_total,
+				a.tipe as tipe_pr,
+				a.keterangan as keterangan,
+				'0' AS avl_stock,
+				'' as code,
+				'' as code1,
+				a.namamaterial as nm_material, 
+				'' as nm_material1,
+				a.persen_disc as persen_disc,
+				a.nilai_disc as nilai_disc, 
+				a.qty as propose_purchase,
+				'Item' as packing_unit,
+				'' as packing_unit2,
+				'Item' as unit_measure
+			FROM
+				dt_trans_po a
+				LEFT JOIN " . DBCNL . ".kons_tr_kasbon_project_header e ON e.id = a.idpr
+			WHERE
+				a.no_po IN ('" . str_replace(",", "','", $no_po) . "') AND 
+				a.tipe = 'project consultant'
 			GROUP BY id
 		")->result();
 
 
 		// $getitemso = $this->db->get()->result();
 
-		// print_r($getitemso);
+		// print_r($this->db->last_query());
 		// exit;
 
 		$aktif = 'active';
