@@ -381,8 +381,8 @@ class Pr_model extends BF_Model
 				' . DBCNL . '.kons_tr_kasbon_project_header a
 				LEFT JOIN ' . DBCNL . '.users b ON b.id_user = a.created_by
 			WHERE
-				a.metode_pembayaran = 3 AND
-				a.sts = 1
+				a.metode_pembayaran = "3" AND
+				a.sts = "1"
 		')->result();
 
 		// $query = $this->db->get();
