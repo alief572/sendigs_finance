@@ -10,7 +10,7 @@ $box_kasbon_others = 'd-none';
 $box_expense = 'd-none';
 
 $tipe2 = $tipe;
-if($tipe !== 'Expense') {
+if ($tipe !== 'Expense') {
 	$tipe2 = 'Kasbon';
 }
 
@@ -401,15 +401,15 @@ if ($tipe == 'Expense') {
 				<?php $no = 0;
 				$ttl_kasbon_exp = 0;
 				$ttl_exp = 0;
-				if(isset($list_expense_detail)) {
+				if (isset($list_expense_detail)) {
 
 					foreach ($list_expense_detail as $item) : $no++;
 						$qty_kasbon = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['qty_kasbon'] : 0;
 						$nominal_kasbon = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['nominal_kasbon'] : 0;
 						$qty_expense = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['qty_expense'] : 0;
 						$nominal_expense = (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['nominal_expense'] : 0;
-					?>
-	
+				?>
+
 						<tr>
 							<td class="text-center"><?= $no ?></td>
 							<td class="text-left"><?= (!empty($list_detail_expense_detail[$item->id])) ? $list_detail_expense_detail[$item->id]['nama_expense'] : '' ?></td>
@@ -418,8 +418,8 @@ if ($tipe == 'Expense') {
 							<td class="text-center"><?= number_format($qty_expense, 2) ?></td>
 							<td class="text-center"><?= number_format($nominal_expense, 2) ?></td>
 						</tr>
-	
-					<?php
+
+				<?php
 						if ($qty_kasbon > 0 && $qty_kasbon < 1) {
 							$ttl_kasbon_exp += $nominal_kasbon;
 						} else {
@@ -434,7 +434,7 @@ if ($tipe == 'Expense') {
 								$ttl_exp += ($nominal_expense * $qty_expense);
 							}
 						}
-					endforeach; 
+					endforeach;
 				}
 				?>
 			</tbody>
@@ -470,7 +470,7 @@ if ($tipe == 'Expense') {
 					<th>Tgl Approve <br> <?= $tipe2 ?> oleh Direktur</th>
 					<th>:</th>
 					<th>
-						<?= date('d F Y H:i:s', strtotime($tgl_approve_direktur)) ?>
+						<?= ($tgl_approve_direktur !== '') ? date('d F Y H:i:s', strtotime($tgl_approve_direktur)) : '' ?>
 					</th>
 				</tr>
 			</table>
@@ -508,7 +508,7 @@ if ($tipe == 'Expense') {
 
 	//Save
 	$(document).on('click', '#approve', function(e) {
-		
+
 		var errors = "";
 		if ($("#bank_coa").val() == "0") errors = "Bank tidak boleh kosong";
 

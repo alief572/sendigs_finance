@@ -90,7 +90,7 @@ if ($tipe == 'Expense') {
 		/* Align with left edge */
 	}
 
-	.d-none { 
+	.d-none {
 		display: none;
 	}
 </style>
@@ -467,7 +467,7 @@ if ($tipe == 'Expense') {
 					<th>Tgl Approve <br> <?= $tipe2 ?> oleh Direktur</th>
 					<th>:</th>
 					<th>
-						<?= date('d F Y H:i:s', strtotime($tgl_approve_direktur)) ?>
+						<?= ($tgl_approve_direktur !== '') ? date('d F Y H:i:s', strtotime($tgl_approve_direktur)) : '' ?>
 					</th>
 				</tr>
 			</table>
