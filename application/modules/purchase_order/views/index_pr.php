@@ -161,7 +161,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 								}
 							}
 						} else {
-							if (($no_materil > $no_materil_po && $record->tipe_pr !== 'project consultant') || ($record->tipe_pr == 'project consultant' && $no_materil_po > 0)) {
+							if (($no_materil > $no_materil_po && $record->tipe_pr !== 'project consultant') || ($record->tipe_pr == 'project consultant' && $no_materil_po < 1)) {
 								$numb++;
 								$stat = 1;
 								$status = '<div class="badge bg-red">Outstanding</div>';
