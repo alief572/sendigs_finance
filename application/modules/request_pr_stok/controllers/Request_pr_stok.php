@@ -1,6 +1,10 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+require_once 'vendor/autoload.php';
+
+use Mpdf\Mpdf;
+
 class Request_pr_stok extends Admin_Controller
 {
   //Permission
@@ -12,7 +16,7 @@ class Request_pr_stok extends Admin_Controller
   public function __construct()
   {
     parent::__construct();
-    $this->load->library(array('Mpdf', 'upload', 'Image_lib'));
+    $this->load->library(array('upload', 'Image_lib'));
 
     $this->load->model(array('Request_pr_stok/request_pr_stok_model'));
     date_default_timezone_set('Asia/Bangkok');
@@ -468,6 +472,7 @@ class Request_pr_stok extends Admin_Controller
 
   public function PrintH2()
   {
+
     ob_clean();
     ob_start();
     // $this->auth->restrict($this->managePermission);
@@ -660,7 +665,8 @@ class Request_pr_stok extends Admin_Controller
     ]);
   }
 
-  public function close_pr_modal(){
+  public function close_pr_modal()
+  {
     $so_number = $this->input->post('so_number');
 
     $get_no_pr = $this->db->get_where('material_planning_base_on_produksi', ['so_number' => $so_number])->row();
@@ -670,7 +676,8 @@ class Request_pr_stok extends Admin_Controller
     $this->template->render('close_pr_modal');
   }
 
-  public function close_pr() {
+  public function close_pr()
+  {
     $so_number = $this->input->post('so_number');
     $close_pr_reason = $this->input->post('close_pr_reason');
 
@@ -678,7 +685,7 @@ class Request_pr_stok extends Admin_Controller
 
     $update_close_pr = $this->db->update('material_planning_base_on_produksi', ['close_pr' => 1, 'close_pr_desc' => $close_pr_reason], ['so_number' => $so_number]);
 
-    if($this->db->trans_status() === false) {
+    if ($this->db->trans_status() === false) {
       $this->db->trans_rollback();
 
       $valid = 0;
