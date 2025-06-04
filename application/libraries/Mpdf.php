@@ -1798,7 +1798,7 @@ function Close() {
 }
 
 /*-- BACKGROUNDS --*/
-function _resizeBackgroundImage($imw, $imh, $cw, $ch, $resize=0, $repx, $repy, $pba=array(), $size=array()) {	// mPDF 5.6.10
+function _resizeBackgroundImage($imw, $imh, $cw, $ch, $repx, $resize=0, $repy, $pba=array(), $size=array()) {	// mPDF 5.6.10
 	// pba is background positioning area (from CSS background-origin) may not always be set [x,y,w,h]
 	// size is from CSS3 background-size - takes precendence over old resize
 	//	$w - absolute length or % or auto or cover | contain
