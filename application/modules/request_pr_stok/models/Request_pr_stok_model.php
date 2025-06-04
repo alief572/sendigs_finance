@@ -437,7 +437,7 @@ class Request_pr_stok_model extends BF_Model
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
       $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
-      $nestedData[]  = "<div align='right'>" . number_format(($kebutuhnMonth * 1.5)) . "</div>";
+      $nestedData[]  = "<div align='right'>" . number_format($row['max_stok']) . "</div>";
       $purchase = ($kebutuhnMonth * 1.5) - $stock_oke2;
       $purchase2x = ($purchase < 0) ? 0 : $purchase;
       $purchase2 = (!empty($row['request'])) ? $row['request'] : $purchase2x;
