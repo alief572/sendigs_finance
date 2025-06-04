@@ -81,7 +81,7 @@ class Request_pr_stok_model extends BF_Model
 
         if (!empty($get_stok_data)) {
           $nm_detail = $nm_detail . $get_stok_data->stock_name . '<br>';
-          $qty_detail = $qty_detail . number_format($item->propose_purchase, 2).' '.ucfirst($get_stok_data->code).'<br>';
+          $qty_detail = $qty_detail . number_format($item->propose_purchase, 2) . ' ' . ucfirst($get_stok_data->code) . '<br>';
         }
       }
 
@@ -93,13 +93,13 @@ class Request_pr_stok_model extends BF_Model
       $this->db->where('a.so_number', $row['so_number']);
       $this->db->group_by('c.id');
       $get_kategori_pr = $this->db->get()->result();
-      foreach($get_kategori_pr as $item_kategori_pr) {
+      foreach ($get_kategori_pr as $item_kategori_pr) {
         $kategori_pr[] = $item_kategori_pr->kategori;
       }
 
-      if(!empty($kategori_pr)) {
+      if (!empty($kategori_pr)) {
         $kategori_pr = implode(', ', $kategori_pr);
-      }else{
+      } else {
         $kategori_pr = '';
       }
 
@@ -150,8 +150,8 @@ class Request_pr_stok_model extends BF_Model
       }
 
       $nestedData[]    = "<div align='left'><span class='badge' style='background-color: " . $warna . ";'>" . $sts . "</span></div>";
-      $nestedData[]    = "<div align='center'>".$row['request_by']."</div>";
-      $nestedData[]    = "<div align='center'>".$row['request_date']."</div>";
+      $nestedData[]    = "<div align='center'>" . $row['request_by'] . "</div>";
+      $nestedData[]    = "<div align='center'>" . $row['request_date'] . "</div>";
 
       $approve  = "";
       $view  = "<a href='" . site_url($this->uri->segment(1)) . '/detail_planning/' . $row['so_number'] . "' class='btn btn-sm btn-warning' title='Detail PR' data-role='qtip'><i class='fa fa-eye'></i></a>";
@@ -207,8 +207,8 @@ class Request_pr_stok_model extends BF_Model
               OR a.so_number LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR a.project LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-              OR d.stock_name LIKE '%".$this->db->escape_like_str($like_value)."%'
-              OR e.nm_lengkap LIKE '%".$this->db->escape_like_str($like_value)."%'
+              OR d.stock_name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+              OR e.nm_lengkap LIKE '%" . $this->db->escape_like_str($like_value) . "%'
             )
             GROUP BY a.so_number
             ";

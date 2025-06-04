@@ -86,6 +86,6 @@ defined('EXIT__AUTO_MAX')      or define('EXIT__AUTO_MAX', 125); // highest auto
 
 define('DBHRIS', 'hr_sentral');
 define('DBERP', 'db_sendigs_ss');
-define('DBACC', 'gl_sendigs_gl_ss');
+define('DBACC', 'db_sendigs_gl_ss');
 define('DBCNL', 'db_consultant_new');
 define('FILE_ALLOW', 'doc|docx|xls|xlsx|ppt|pptx|7z|zip|rar|jpeg|jpg|gif|bmp|png');
