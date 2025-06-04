@@ -42,7 +42,7 @@ class Request_mutasi extends Admin_Controller
         $pphpenjualan       = $this->Acc_model->combo_pph_penjualan();
         $datacoa            = $this->Acc_model->GetCoaCombo();
         $template           = $this->Acc_model->GetTemplate();
-        $data_coa_bank      = $this->All_model->GetCoaCombo('5', " a.no_perkiraan like '1101%'");
+        $data_coa_bank      = $this->All_model->GetCoaCombo('5', " a.kode_bank IS NOT NULL");
         $matauang           = $this->All_model->GetKursCombo();
         $data = [
             'result'        => $getInv,
@@ -68,8 +68,8 @@ class Request_mutasi extends Admin_Controller
         $ke     = $post['ke'];
 
         $kode_mutasi   = $this->Request_mutasi_model->generate_nopn($tgl);
-        $bank_asal     = $this->db->query("SELECT * FROM gl_sendigs_manufaktur.coa_master WHERE no_perkiraan='$dari'")->row();
-        $bank_tujuan   = $this->db->query("SELECT * FROM gl_sendigs_manufaktur.coa_master WHERE no_perkiraan='$ke'")->row();
+        $bank_asal     = $this->db->query("SELECT * FROM " . DBACC . ".coa_master WHERE no_perkiraan='$dari'")->row();
+        $bank_tujuan   = $this->db->query("SELECT * FROM " . DBACC . ".coa_master WHERE no_perkiraan='$ke'")->row();
 
         $this->db->trans_begin();
         $data = array(

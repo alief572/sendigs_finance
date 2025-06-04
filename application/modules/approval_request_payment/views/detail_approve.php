@@ -90,7 +90,7 @@ if ($tipe == 'Expense') {
 		/* Align with left edge */
 	}
 
-	.d-none { 
+	.d-none {
 		display: none;
 	}
 </style>
@@ -467,7 +467,7 @@ if ($tipe == 'Expense') {
 					<th>Tgl Approve <br> <?= $tipe2 ?> oleh Direktur</th>
 					<th>:</th>
 					<th>
-						<?= date('d F Y H:i:s', strtotime($tgl_approve_direktur)) ?>
+						<?= ($tgl_approve_direktur !== '') ? date('d F Y H:i:s', strtotime($tgl_approve_direktur)) : '' ?>
 					</th>
 				</tr>
 			</table>
@@ -475,7 +475,10 @@ if ($tipe == 'Expense') {
 	</div>
 </div>
 
-<a href="<?= base_url('approval_request_payment/list_approve_management') ?>" class="btn btn-sm btn-danger">
+<input type="hidden" name="no_doc_sendigs" value="<?= $id_sendigs ?>">
+<input type="hidden" name="id_expense" value="<?= $id_expense ?>">
+
+<a href="<?= base_url('request_payment/list_approve_management') ?>" class="btn btn-sm btn-danger">
 	<i class="fa fa-arrow-left"></i> Back
 </a>
 <button type="button" class="btn btn-sm btn-danger" id="reject">
@@ -487,7 +490,7 @@ if ($tipe == 'Expense') {
 
 <script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
 <script type="text/javascript">
-	var url_save = siteurl + 'request_payment/save_approval';
+	var url_save = siteurl + 'request_payment/save_approval_cons';
 	var url_reject = siteurl + 'request_payment/reject_approval';
 	$('.divide').divide();
 
@@ -517,15 +520,20 @@ if ($tipe == 'Expense') {
 			function(isConfirm) {
 				if (isConfirm) {
 					var id = $('input[name="id"]').val();
+					var no_doc_sendigs = $('input[name="no_doc_sendigs"]').val();
+					var id_expense = $('input[name="id_expense"]').val();
 					$.ajax({
 						url: url_save,
 						dataType: "json",
 						type: 'POST',
 						data: {
-							'id': id
+							'id': id,
+							'no_doc_sendigs': no_doc_sendigs,
+							'id_expense': id_expense
 						},
+						dataType: 'json',
 						success: function(msg) {
-							if (msg['save'] == '1') {
+							if (msg.status == '1') {
 								swal({
 									title: "Sukses!",
 									text: "Data Berhasil Di Approve",
@@ -533,7 +541,7 @@ if ($tipe == 'Expense') {
 									timer: 1500,
 									showConfirmButton: false
 								});
-								location.href = siteurl + active_controller + 'list_approve_management';
+								location.href = siteurl + 'request_payment/list_approve_management';
 							} else {
 								swal({
 									title: "Gagal!",
@@ -596,7 +604,7 @@ if ($tipe == 'Expense') {
 										timer: 1500,
 										showConfirmButton: false
 									});
-									location.href = siteurl + active_controller + 'list_approve_management';
+									location.href = siteurl + 'request_payment/list_approve_management';
 								} else {
 									swal({
 										title: "Gagal!",

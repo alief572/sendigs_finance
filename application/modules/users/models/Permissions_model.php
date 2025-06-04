@@ -64,4 +64,51 @@ class Permissions_model extends BF_Model
     {
         parent::__construct();
     }
+
+    public function update_user_permission()
+    {
+        $this->db->trans_begin();
+
+        $this->db->where('id_user <>', '7');
+        $reset_permissions = $this->db->delete('user_permissions');
+
+        $this->db->select('a.*');
+        $this->db->from('users a');
+        $this->db->where('a.id_user <>', '7');
+        $get_users = $this->db->get()->result();
+
+        $arr_insert_permissions = [];
+
+        foreach ($get_users as $item_users) :
+            $this->db->select('a.id_permission');
+            $this->db->from('user_permissions a');
+            $this->db->where('a.id_user', '7');
+            $get_si_itu = $this->db->get()->result();
+
+            foreach ($get_si_itu as $item_itu) :
+                $arr_insert_permissions[] = [
+                    'id_user' => $item_users->id_user,
+                    'id_permission' => $item_itu->id_permission
+                ];
+            endforeach;
+        endforeach;
+
+        if (!empty($arr_insert_permissions)) {
+            $this->db->insert_batch('user_permissions', $arr_insert_permissions);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+        } else {
+            $this->db->trans_commit();
+
+            $valid = 1;
+        }
+
+        echo json_encode([
+            'status' => $valid
+        ]);
+    }
 }

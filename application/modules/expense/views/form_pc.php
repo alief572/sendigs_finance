@@ -396,7 +396,7 @@ foreach($data_budget as $keys=>$val){
 			echo "getcoabudget('" . $datacombocoa . "');
 	";
 		} ?>
-		$('#pettycash').blur(function() {
+		$('#pettycash').change(function() {
 			tipe = $(this).val();
 			budgets = $(this).find(':selected').data('budget');
 			approval = $(this).find(':selected').data('approval');

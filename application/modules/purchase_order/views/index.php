@@ -85,6 +85,16 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 							WHERE
 								a.id IN (SELECT aa.idpr FROM dt_trans_po aa WHERE aa.no_po = '" . $record->no_po . "' AND aa.tipe = 'pr asset')
 							GROUP BY a.no_pr
+
+							UNION ALL
+
+							SELECT
+								a.id as no_pr
+							FROM
+								" . DBCNL . ".kons_tr_kasbon_project_header a 
+							WHERE
+								a.id IN (SELECT aa.idpr FROM dt_trans_po aa WHERE aa.no_po = '" . $record->no_po . "' AND aa.tipe = 'project consultant')
+							GROUP BY a.id
 						")->result();
 						foreach ($get_no_pr as $item_pr) {
 							$no_pr[] = $item_pr->no_pr;

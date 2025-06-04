@@ -90,6 +90,7 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				<li role="presentation" class="expense_tab tab_pin"><a href="javascript:void();" onclick="change_tab('expense')">Expense</a></li>
 				<li role="presentation" class="periodik_tab tab_pin"><a href="javascript:void();" onclick="change_tab('periodik')">Periodik</a></li>
 				<li role="presentation" class="pembayaran_po_tab tab_pin"><a href="javascript:void();" onclick="change_tab('pembayaran_po')">Pembayaran PO</a></li>
+				<li role="presentation" class="pembayaran_direct_payment tab_pin"><a href="javascript:void();" onclick="change_tab('direct_payment')">Direct Payment</a></li>
 			</ul>
 			<div class="table-container col-md-12" style="margin-top: 10px;">
 				<table id="" class="table table-bordered">
@@ -108,7 +109,7 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 						</tr>
 					</thead>
 					<tbody class="list_req_payment">
-						
+
 					</tbody>
 					<tbody>
 						<tr class="exclass">

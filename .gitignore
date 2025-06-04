@@ -11,11 +11,11 @@
 
 #codeigniter 3
 .vscode/*
-# application/config
+application/config
 application/logs/*
-# application/config/development/*
-# application/config/database.php
-# application/config/constants.php
+application/config/development/*
+application/config/database.php
+application/config/constants.php
 !application/logs/index.html
 !application/logs/.htaccess
 

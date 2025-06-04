@@ -35,8 +35,6 @@ class Request_payment extends Admin_Controller
 
 		$this->db->select('a.*');
 		$this->db->from(DBACC . '.coa_master a')
-			->where('a.no_perkiraan LIKE', '%1101-02%')
-			->where('a.kode_bank <>', '')
 			->where('a.kode_bank <>', '');
 		$list_coa = $this->db->get()->result_array();
 
@@ -148,6 +146,9 @@ class Request_payment extends Admin_Controller
 				if ($tipe == 'periodik') {
 					$this->All_model->dataUpdate('tr_pengajuan_rutin_detail', array('id_payment' => $idreq), array('no_doc' => $no_doc, 'id' => $this->input->post("ids_" . $val)));
 				}
+				if ($tipe == 'direct_payment') {
+					$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $this->input->post('no_doc_' . $val)]);
+				}
 			}
 		}
 		if ($this->db->trans_status() === FALSE) {
@@ -185,6 +186,9 @@ class Request_payment extends Admin_Controller
 	{
 		$data = $this->Request_payment_model->GetListDataApproval('a.status <> 2 AND a.app_checker IS NULL');
 
+		$data_kasbon = $this->Request_payment_model->GetListDataApproval('1 = 1');
+		$data_expense = $this->Request_payment_model->GetListDataApproval('1 = 1');
+
 		$list_no_invoice = [];
 		$this->db->select('id, invoice_no');
 		$this->db->from('tr_invoice_po');
@@ -195,6 +199,8 @@ class Request_payment extends Admin_Controller
 
 		$this->template->set('tingkat_approval', 1);
 		$this->template->set('data', $data);
+		$this->template->set('data_kasbon', $data_kasbon);
+		$this->template->set('data_expense', $data_expense);
 		$this->template->set('list_no_invoice', $list_no_invoice);
 		$this->template->title('Request Payment Approval Checker');
 		$this->template->render('list_approve_checker');
@@ -276,6 +282,12 @@ class Request_payment extends Admin_Controller
 			$data_detail	= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->result();
 		}
 
+		// Direct Payment
+		if (isset($type) && $type == 'direct_payment') {
+			$data 			= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->row();
+			$data_detail	= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->result();
+		}
+
 		// $data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		// $data_pc 		= $this->All_model->GetPettyCashCombo();
 
@@ -351,6 +363,12 @@ class Request_payment extends Admin_Controller
 		if (isset($type) && $type == 'periodik') {
 			$data 			= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->row();
 			$data_detail	= $this->db->get_where('tr_pengajuan_rutin_detail', ['id' => $id])->result();
+		}
+
+		// Direct Payment
+		if (isset($type) && $type == 'direct_payment') {
+			$data 			= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->row();
+			$data_detail	= $this->db->get_where('tr_direct_payment', ['no_doc' => $get_id->no_doc])->result();
 		}
 
 		// $data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
@@ -447,10 +465,182 @@ class Request_payment extends Admin_Controller
 		return  $count;
 	}
 
+	public function save_approval_cons()
+	{
+		$id = $this->input->post('id');
+		$no_doc_sendigs = $this->input->post('no_doc_sendigs');
+		$id_expense = $this->input->post('id_expense');
+
+		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $no_doc_sendigs))->row();
+
+		$get_user = $this->db->get_where('users', array('id_user' => $this->auth->user_id()))->row();
+
+		if (!empty($get_request_payment)) {
+			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $no_doc_sendigs))->row();
+
+			$no_coa_bank = explode(' - ', $get_request_payment->bank_name);
+			$no_coa_bank = $no_coa_bank[0];
+
+			$kode_bank = '';
+			$get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
+			if (!empty($get_kode_bank)) {
+				$kode_bank = $get_kode_bank->kode_bank;
+			}
+
+			$Id = $this->Request_payment_model->generate_id_payment($kode_bank);
+
+			$header = [
+				'id' => $Id,
+				'no_doc' => $no_doc_sendigs,
+				'nama' => $get_user->nm_lengkap,
+				'tgl_doc' => $get_kasbon->tgl_doc,
+				'keperluan' => $get_kasbon->keperluan,
+				'tipe' => 'kasbon',
+				'jumlah' => $get_kasbon->jumlah_kasbon,
+				'status' => '1',
+				'tanggal' => date('Y-m-d'),
+				'created_by' => $get_user->nm_lengkap,
+				'created_on' => date('Y-m-d H:i:s'),
+				'bank_id' => $get_kasbon->bank_id,
+				'accnumber' => $get_kasbon->accnumber,
+				'accname' => $get_kasbon->accname,
+				'ids' => $get_kasbon->id,
+				'currency' => $get_request_payment->currency,
+				'bank_name' => $get_request_payment->bank_name,
+				'link_doc' => $get_request_payment->link_doc
+			];
+
+			$id_detail = $this->Request_payment_model->generate_id_detail(1);
+
+			$detail = [
+				'id' => $id_detail,
+				'payment_id' => $Id,
+				'no_doc' => $no_doc_sendigs,
+				'tgl_doc' => $get_kasbon->tgl_doc,
+				'deskripsi' => $get_kasbon->keterangan,
+				'qty' => 1,
+				'harga' => $get_kasbon->jumlah_kasbon,
+				'total' => $get_kasbon->jumlah_kasbon,
+				'keterangan' => $get_kasbon->keterangan,
+				'created_by' => $get_user->nm_lengkap,
+				'created_on' => date('Y-m-d H:i:s')
+			];
+		} else {
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id_expense))->row();
+
+			$get_expense = $this->db->get_where('tr_expense', array('no_doc' => $id_expense))->row();
+
+			$no_coa_bank = explode(' - ', $get_request_payment->bank_name);
+			$no_coa_bank = $no_coa_bank[0];
+
+			$kode_bank = '';
+			$get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
+			if (!empty($get_kode_bank)) {
+				$kode_bank = $get_kode_bank->kode_bank;
+			}
+
+			$Id = $this->Request_payment_model->generate_id_payment($kode_bank);
+
+			$header = [
+				'id' => $Id,
+				'no_doc' => $id_expense,
+				'nama' => $get_user->nm_lengkap,
+				'tgl_doc' => $get_expense->tgl_doc,
+				'keperluan' => $get_expense->informasi,
+				'tipe' => 'expense',
+				'jumlah' => $get_expense->jumlah,
+				'status' => '1',
+				'tanggal' => date('Y-m-d'),
+				'created_by' => $get_user->nm_lengkap,
+				'created_on' => date('Y-m-d H:i:s'),
+				'bank_id' => $get_expense->bank_id,
+				'accnumber' => $get_expense->accnumber,
+				'accname' => $get_expense->accname,
+				'ids' => $get_expense->id,
+				'currency' => $get_request_payment->currency,
+				'bank_name' => $get_request_payment->bank_name,
+				'link_doc' => $get_request_payment->link_doc
+			];
+
+			$id_detail = $this->Request_payment_model->generate_id_detail(1);
+
+			$detail = [
+				'id' => $id_detail,
+				'payment_id' => $Id,
+				'no_doc' => $id_expense,
+				'tgl_doc' => $get_expense->tgl_doc,
+				'deskripsi' => $get_expense->informasi,
+				'qty' => 1,
+				'harga' => $get_expense->jumlah,
+				'total' => $get_expense->jumlah,
+				'keterangan' => $get_expense->informasi,
+				'created_by' => $get_user->nm_lengkap,
+				'created_on' => date('Y-m-d H:i:s')
+			];
+		}
+
+		$this->db->trans_begin();
+
+		$insert_payment = $this->db->insert('payment_approve', $header);
+		if (!$insert_payment) {
+			$this->db->trans_rollback();
+
+			print_r($this->db->last_query());
+			exit;
+		}
+
+		$insert_payment_detail = $this->db->insert('payment_approve_details', $detail);
+		if (!$insert_payment_detail) {
+			$this->db->trans_rollback();
+
+			print_r($this->db->last_query());
+			exit;
+		}
+
+		if ($get_request_payment->tipe == 'kasbon') {
+			$arr_update_kasbon = [
+				'status' => 3
+			];
+
+			$update_kasbon = $this->db->update('tr_kasbon', $arr_update_kasbon, array('no_doc' => $no_doc_sendigs));
+		} else {
+			$arr_update_expense = [
+				'status' => 3
+			];
+
+			$update_expense = $this->db->update('tr_expense', $arr_update_expense, array('no_doc' => $id_expense));
+		}
+
+		$update_request_payment = $this->db->update('request_payment', ['status' => 2], ['no_doc' => $no_doc_sendigs]);
+		$update_request_payment = $this->db->update('request_payment', ['status' => 2], ['no_doc' => $id_expense]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+
+			$valid = 0;
+			$msg = 'Please, try again later !';
+		} else {
+			$this->db->trans_commit();
+
+			$valid = 1;
+			$msg = 'Data has been approved !';
+		}
+
+		$hasil = [
+			'status' => $valid,
+			'msg' => $msg
+		];
+
+		echo json_encode($hasil);
+	}
+
 	public function save_approval()
 	{
 		$Data		= $this->input->post();
 		$header 	= $this->db->get_where('request_payment', ['no_doc' => $Data['no_doc'], 'tipe' => $Data['tipe'], 'ids' => $Data['id']])->row_array();
+		if ($Data['tipe'] == 'direct_payment') {
+			$header 	= $this->db->get_where('request_payment', ['no_doc' => $Data['no_doc'], 'tipe' => $Data['tipe']])->row_array();
+		}
 		// $Id 		= $this->_getIdPayment(str_replace('/', '-', $Data['date']));
 
 		$no_coa_bank = explode(' - ', $header['bank_name']);
@@ -649,6 +839,34 @@ class Request_payment extends Admin_Controller
 				$Harga[] 		= $dtl->nilai;
 			}
 
+			if ($Data['tipe'] == 'direct_payment') {
+				$dtl = $this->db->get_where('tr_direct_payment', ['id' => $detail['id']])->row();
+				$data_request_payment = $this->db->get_where('request_payment', ['no_doc' => $dtl->no_doc])->row();
+
+				$nilai = $dtl->grand_total;
+
+				$ArrDetail[] 		= [
+					'id' 			=> $id_detail,
+					'payment_id' 	=> $Id,
+					'no_doc' 		=> $dtl->no_doc,
+					'tgl_doc' 		=> $dtl->tgl_doc,
+					'deskripsi' 	=> $dtl->deskripsi,
+					'qty' 			=> '1',
+					'harga' 		=> $nilai,
+					'total' 		=> $nilai,
+					'keterangan' 	=> $dtl->deskripsi,
+					'doc_file' 		=> $data_request_payment->link_doc,
+					'coa' 			=> '',
+					'created_by' 	=> $this->auth->user_name(),
+					'created_on' 	=> date("Y-m-d h:i:s"),
+				];
+				$updateDetail[] = [
+					'id' 			=> $dtl->id,
+					'sts' 		=> '3'
+				];
+				$Harga[] 		= $nilai;
+			}
+
 			$id_detail++;
 		}
 
@@ -792,6 +1010,18 @@ class Request_payment extends Admin_Controller
 				// 	print_r($this->db->error()['message']);
 				// 	exit;
 				// }
+			}
+
+			if ($Data['tipe'] == 'direct_payment') {
+				$this->db->insert_batch('payment_approve_details', $ArrDetail);
+				$this->db->update_batch('tr_direct_payment', $updateDetail, 'id');
+
+				// Update request_payment
+				$get_kasbon = $this->db->get_where('tr_direct_payment', ['id' => $Data['id']])->row_array();
+
+				$data_request_payment = $this->db->select('id')->get_where('request_payment', ['no_doc' => $get_kasbon['no_doc']])->row_array();
+
+				$this->db->update('request_payment', ['status' => '2'], ['id' => $data_request_payment['id']]);
 			}
 		}
 
@@ -1691,8 +1921,7 @@ class Request_payment extends Admin_Controller
 						<td>
 							<select name="tipe_pph_' . $numb . '" id="" class="form-control form-control-sm select_pph_' . $numb . '">
 								<option value="">- Select PPh -</option>
-								<option value="1">PPh 23</option>
-								<option value="2">PPh 22</option>
+								<option value="1">PPh 21</option>
 							</select>
 						</td>
 						<td class="text-center">:</td>
@@ -1973,8 +2202,7 @@ class Request_payment extends Admin_Controller
 						<td>
 							<select name="tipe_pph_' . $numb . '" id="" class="form-control form-control-sm select_pph_' . $numb . '">
 								<option value="">- Select PPh -</option>
-								<option value="1">PPh 23</option>
-								<option value="2">PPh 22</option>
+								<option value="1">PPh 21</option>
 							</select>
 						</td>
 						<td class="text-center">:</td>
@@ -2094,7 +2322,7 @@ class Request_payment extends Admin_Controller
 			'app_checker' => null
 		]);
 
-		$check_kasbon = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $post['id']))->num_rows();
+		$check_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $post['id']))->num_rows();
 
 		if ($check_kasbon > 0) {
 			$tipe = 'kasbon';
@@ -2105,21 +2333,29 @@ class Request_payment extends Admin_Controller
 		if ($tipe == "expense") {
 			$this->db->update('tr_expense', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['id']]);
 			$this->db->update('tr_expense_detail', ['req_payment' => 1], ['id' => $post['id']]);
-		}
-		if ($tipe == "kasbon") {
-			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $post['no_doc_sendigs']))->row();
-
-			$this->db->update(DBCNL.'.kons_tr_kasbon_project_header a', array('sts_reject' => null, 'sts_reject_manage' => null, 'reject_reason' => null), array('id' => $post['id']));
 
 			$this->db->update('request_payment', [
 				'app_checker' => 1,
 				'app_checker_by' => $this->auth->user_id(),
 				'app_checker_date' => date('Y-m-d H:i:s')
 			], [
-				'no_doc' => $post['no_doc_sendigs'],
-				'ids' => $get_kasbon->id
+				'no_doc' => $post['id_expense']
 			]);
-			$this->db->update('tr_kasbon', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['no_doc_sendigs']]);
+		}
+		if ($tipe == "kasbon") {
+			$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $post['id_kasbon']))->row();
+
+			$this->db->update(DBCNL . '.kons_tr_kasbon_project_header a', array('sts_reject' => null, 'sts_reject_manage' => null, 'reject_reason' => null), array('id' => $post['id']));
+
+			$this->db->update('request_payment', [
+				'app_checker' => 1,
+				'app_checker_by' => $this->auth->user_id(),
+				'app_checker_date' => date('Y-m-d H:i:s')
+			], [
+				'no_doc' => $post['id_kasbon']
+			]);
+
+			$this->db->update('tr_kasbon', ['sts_reject' => 0, 'sts_reject_manage' => 0], ['no_doc' => $post['id_kasbon']]);
 			// if ($post['tipe'] == "kasbon") {
 			// }
 		}
@@ -2150,7 +2386,7 @@ class Request_payment extends Admin_Controller
 		$no_coa_bank = $no_coa_bank[0];
 
 		$kode_bank = '';
-		$get_kode_bank = $this->db->get_where(DBACC.'.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
+		$get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
 		if (count($get_kode_bank) > 0) {
 			$kode_bank = $get_kode_bank->kode_bank;
 		}
@@ -2159,7 +2395,7 @@ class Request_payment extends Admin_Controller
 
 		$ArrDetail 			= [];
 
-		$check_kasbon = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', array('id' => $id))->num_rows();
+		$check_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $id))->num_rows();
 
 		if ($check_kasbon > 0) {
 			$tipe = 'kasbon';
@@ -2170,7 +2406,7 @@ class Request_payment extends Admin_Controller
 
 		if ($tipe == 'expense') {
 			$id_detail = $this->Approval_request_payment_model->generate_id_detail(1);
-			$dtl = $this->db->get_where(DBCNL.'.kons_tr_expense_report_project_header', ['id' => $id])->row();
+			$dtl = $this->db->get_where(DBCNL . '.kons_tr_expense_report_project_header', ['id' => $id])->row();
 
 			$harga = $dtl->selisih;
 			$total = $dtl->selisih;
@@ -2272,10 +2508,10 @@ class Request_payment extends Admin_Controller
 				// $this->db->update_batch('tr_kasbon', $updateDetail, 'id');
 
 				// Update request_payment
-				$countData 		= $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', ['id' => $id])->num_rows();
-				$actualPayment 	= $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', ['id' => $id])->num_rows();
+				$countData 		= $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', ['id' => $id])->num_rows();
+				$actualPayment 	= $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', ['id' => $id])->num_rows();
 
-				$get_kasbon = $this->db->get_where(DBCNL.'.kons_tr_kasbon_project_header', ['id' => $id])->row_array();
+				$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', ['id' => $id])->row_array();
 
 				$data_request_payment = $this->db->select('id')->get_where('request_payment', ['no_doc' => $get_kasbon['id']])->row_array();
 

@@ -283,7 +283,7 @@ class All_model extends BF_Model
 		$aMenu[0] = 'Select An Option';
 		$this->db->select('a.no_perkiraan, a.nama');
 		$this->db->from(DBACC . '.coa_master a');
-		$this->db->where('a.level', $level);
+		// $this->db->where('a.level', $level);
 		if ($custom_where !== null) {
 			$this->db->where($custom_where);
 		}

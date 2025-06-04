@@ -88,6 +88,15 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 									$no_materil_po += $get_po_materil_qty->qty_materil;
 								}
 							}
+						} else if ($record->tipe_pr == 'project consultant') {
+							// $get_materil = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', ['no_pr' => $record->no_pr])->result();
+
+							$no_materil = 1;
+
+							$get_po_materil = $this->db->get_where('dt_trans_po', ['idpr' => $materil->id, 'tipe' => 'project consultant'])->num_rows();
+							if ($get_po_materil > 0) {
+								$no_materil_po += 1;
+							}
 						} else {
 							$get_materil = $this->db->get_where('material_planning_base_on_produksi_detail', ['so_number' => $record->so_number, 'status_app' => 'Y'])->result();
 
@@ -152,7 +161,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 								}
 							}
 						} else {
-							if ($no_materil > $no_materil_po) {
+							if (($no_materil > $no_materil_po && $record->tipe_pr !== 'project consultant') || ($record->tipe_pr == 'project consultant' && $no_materil_po < 1)) {
 								$numb++;
 								$stat = 1;
 								$status = '<div class="badge bg-red">Outstanding</div>';
