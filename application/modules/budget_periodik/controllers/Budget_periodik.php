@@ -136,16 +136,18 @@ class Budget_periodik extends Admin_Controller
 		$coa_alokasi	= $this->input->post("coa_alokasi");
 		$nilai_alokasi	= $this->input->post("nilai_alokasi");
 		$this->All_model->dataDelete('ms_budget_rutin_alokasi', array('departement' => $departement));
-		for ($x = 0; $x < count($kode_detail); $x++) {
-			$dataalokasi =  array(
-				'kode' => $kode_detail[$x],
-				'coa' => $coa_alokasi[$x],
-				'nilai' => $nilai_alokasi[$x],
-				'departement' => $departement,
-				'created_by' => $this->auth->user_id(),
-				'created_on' => date('Y-m-d H:i:s')
-			);
-			$this->All_model->dataSave('ms_budget_rutin_alokasi', $dataalokasi);
+		if (isset($kode_detail)) {
+			for ($x = 0; $x < count($kode_detail); $x++) {
+				$dataalokasi =  array(
+					'kode' => $kode_detail[$x],
+					'coa' => $coa_alokasi[$x],
+					'nilai' => $nilai_alokasi[$x],
+					'departement' => $departement,
+					'created_by' => $this->auth->user_id(),
+					'created_on' => date('Y-m-d H:i:s')
+				);
+				$this->All_model->dataSave('ms_budget_rutin_alokasi', $dataalokasi);
+			}
 		}
 
 		if ($this->db->trans_status()) {
