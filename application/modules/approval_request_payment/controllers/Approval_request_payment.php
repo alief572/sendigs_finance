@@ -1,6 +1,7 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 require_once 'vendor/autoload.php';
+
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022
@@ -2181,7 +2182,7 @@ class Approval_request_payment extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		// $this->load->library(array('Mpdf'));
-		$mpdf = new \Mpdf\Mpdf([
+		$mpdf = new Mpdf([
 			'mode' => 'utf-8',
 			'format' => 'A4',
 			'margin_top' => 10,
@@ -2321,7 +2322,7 @@ class Approval_request_payment extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		// $this->load->library(array('Mpdf'));
-		$mpdf = new \Mpdf\Mpdf([
+		$mpdf = new Mpdf([
 			'mode' => 'utf-8',
 			'format' => 'A4',
 			'margin_top' => 10,
