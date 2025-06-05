@@ -1,5 +1,6 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
-require 'vendor/autoload.php';
+
+require_once 'vendor/autoload.php';
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022
@@ -7,7 +8,7 @@ require 'vendor/autoload.php';
  * This is controller for Request Payment
  */
 
-
+use Mpdf\Mpdf;
 
 $status = array();
 class Approval_request_payment extends Admin_Controller
@@ -2180,19 +2181,26 @@ class Approval_request_payment extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		// $this->load->library(array('Mpdf'));
-		$mpdf = new Mpdf('', '', '', '', '', '', '', '', '', '');
-		$mpdf->SetImportUse();
+		$mpdf = new \Mpdf\Mpdf([
+			'mode' => 'utf-8',
+			'format' => 'A4',
+			'margin_top' => 10,
+			'margin_bottom' => 10,
+			'margin_left' => 15,
+			'margin_right' => 15
+		]);
+		// $mpdf->SetImportUse();
 		$mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_kasbon', $data);
-		$this->mpdf->AddPage('L', 'A4', 'en');
+		// $mpdf->AddPage();
 		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id . '';
 		// $mpdf->SetWatermarkText('ORI Group');
 		$mpdf->showWatermarkText = true;
 		$mpdf->SetTitle($id . "/" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
-		$this->mpdf->WriteHTML($show);
-		$this->mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', 'D');
+		$mpdf->WriteHTML($show);
+		$mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', \Mpdf\Output\Destination::INLINE);
 	}
 
 	public function print_expense($id)
@@ -2313,19 +2321,26 @@ class Approval_request_payment extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		// $this->load->library(array('Mpdf'));
-		$mpdf = new Mpdf('', '', '', '', '', '', '', '', '', '');
-		$mpdf->SetImportUse();
+		$mpdf = new \Mpdf\Mpdf([
+			'mode' => 'utf-8',
+			'format' => 'A4',
+			'margin_top' => 10,
+			'margin_bottom' => 10,
+			'margin_left' => 15,
+			'margin_right' => 15
+		]);
+		// $mpdf->SetImportUse();
 		$mpdf->RestartDocTemplate();
 		// $show = $this->load->view('print_expense', $data);
 		$show = $this->template->load_view('print_expense', $data);
-		$this->mpdf->AddPage('L', 'A4', 'en');
+		// $mpdf->AddPage('L', 'A4', 'en');
 		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id . '';
-		$mpdf->SetWatermarkText('ORI Group');
+		// $mpdf->SetWatermarkText('ORI Group');
 		$mpdf->showWatermarkText = true;
 		$mpdf->SetTitle($id . "/" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
-		$this->mpdf->WriteHTML($show);
-		$this->mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', 'D');
+		$mpdf->WriteHTML($show);
+		$mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', \Mpdf\Output\Destination::INLINE);
 	}
 }
