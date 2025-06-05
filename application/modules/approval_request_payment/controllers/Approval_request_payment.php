@@ -1,11 +1,13 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
-
+require 'vendor/autoload.php';
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022
  *
  * This is controller for Request Payment
  */
+
+
 
 $status = array();
 class Approval_request_payment extends Admin_Controller
@@ -2069,6 +2071,8 @@ class Approval_request_payment extends Admin_Controller
 
 			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
 
+			$tgl_approve_direktur = (!empty($get_request_payment)) ? $get_request_payment->created_on : '';
+
 			$data = [
 				'id' => $id,
 				'id_spk_penawaran' => $id_spk_penawaran,
@@ -2078,7 +2082,7 @@ class Approval_request_payment extends Admin_Controller
 				'data_kasbon_akomodasi' => $get_kasbon_akomodasi,
 				'data_kasbon_others' => $get_kasbon_others,
 				'tipe' => $tipe,
-				'tgl_approve_direktur' => $get_request_payment->created_on
+				'tgl_approve_direktur' => $tgl_approve_direktur
 			];
 		} else {
 			$this->db->select('a.*, b.id_spk_penawaran');
@@ -2175,8 +2179,8 @@ class Approval_request_payment extends Admin_Controller
 
 		$today = date('l, d F Y [H:i:s]');
 
-		$this->load->library(array('Mpdf'));
-		$mpdf = new mPDF('', '', '', '', '', '', '', '', '', '');
+		// $this->load->library(array('Mpdf'));
+		$mpdf = new Mpdf('', '', '', '', '', '', '', '', '', '');
 		$mpdf->SetImportUse();
 		$mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_kasbon', $data);
@@ -2308,8 +2312,8 @@ class Approval_request_payment extends Admin_Controller
 
 		$today = date('l, d F Y [H:i:s]');
 
-		$this->load->library(array('Mpdf'));
-		$mpdf = new mPDF('', '', '', '', '', '', '', '', '', '');
+		// $this->load->library(array('Mpdf'));
+		$mpdf = new Mpdf('', '', '', '', '', '', '', '', '', '');
 		$mpdf->SetImportUse();
 		$mpdf->RestartDocTemplate();
 		// $show = $this->load->view('print_expense', $data);
