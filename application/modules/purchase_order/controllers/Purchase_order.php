@@ -1404,7 +1404,7 @@ class Purchase_order extends Admin_Controller
 			$kurs	= $this->db->query("SELECT AVG(nominal) as nominal FROM perubahan_kurs WHERE MONTH(tanggal_ubah) =  '$blnkmrn' AND YEAR(tanggal_ubah) = '$yearkemaren' AND kode_kurs='IDR' ")->result();
 			$nominal = $kurs[0]->nominal;
 		} else {
-			$noinal = '1';
+			$nominal = '1';
 		}
 		$code = $post['no_penawaran'];
 		$dolar = $post['harga_penawaran'] / $nominal;

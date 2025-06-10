@@ -4,12 +4,16 @@ if (!defined('BASEPATH')) {
 	exit('No direct script access allowed');
 }
 
+require_once 'vendor/autoload.php';
+
 /*
  * @author Syamsudin
  * @copyright Copyright (c) 2022, Syamsudin
  *
  * This is controller for Purchase Order Payment
  */
+
+use Mpdf\Mpdf;
 
 class Purchase_order_payment extends Admin_Controller
 {
@@ -22,7 +26,7 @@ class Purchase_order_payment extends Admin_Controller
 	public function __construct()
 	{
 		parent::__construct();
-		$this->load->library(array('Mpdf', 'upload', 'Image_lib'));
+		$this->load->library(array('upload', 'Image_lib'));
 		$this->load->model(array(
 			'Purchase_order_payment/Pr_model',
 			'Purchase_order_payment/Jurnal_model',
