@@ -1708,7 +1708,7 @@ class Purchase_order extends Admin_Controller
 		$this->db->select('*');
 		$this->db->from('rutin_non_planning_header');
 		$this->db->where_in('no_pengajuan', explode(',', $post['so_number']));
-		$countDept = $this->db->get()->row_array();
+		$countDept = $this->db->get()->result();
 		if (count($countDept) > 0) {
 			$update_rutin_non_planning = $this->db->where_in('no_pengajuan', explode(',', $post['so_number']))->update('rutin_non_planning_header', ['po_number' => $code, 'po_date' => date('Y-m-d')]);
 			if (!$update_rutin_non_planning) {
