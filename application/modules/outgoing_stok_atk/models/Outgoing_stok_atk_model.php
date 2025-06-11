@@ -31,7 +31,7 @@ class Outgoing_stok_atk_model extends BF_Model
     $data  = array();
     $urut1  = 1;
     $urut2  = 0;
-    $GET_STOCK = getStokBarang(21); //17 kode warehouse
+    $GET_STOCK = getStokBarang(1); //17 kode warehouse
     foreach ($query->result_array() as $row) {
       $total_data     = $totalData;
       $start_dari     = $requestData['start'];
@@ -54,9 +54,9 @@ class Outgoing_stok_atk_model extends BF_Model
                         <input type='hidden' class='satuan' name='detailx[" . $nomor . "][unit_satuan]' value='" . strtoupper($row['unit_satuan']) . "'>
                         <input type='hidden' class='konversi' name='detailx[" . $nomor . "][konversi]' value='" . $row['konversi'] . "'>
                         <input type='hidden' class='nm_category' name='detailx[" . $nomor . "][nm_category]' value='" . strtoupper($row['nm_category']) . "'>
-                        <input type='hidden' class='stock_qty' name='detailx[".$nomor."][stock_qty]' value='".$stock."'>
+                        <input type='hidden' class='stock_qty' name='detailx[" . $nomor . "][stock_qty]' value='" . $stock . "'>
                       </div>";
-      
+
       $nestedData[]  = "<div align='left'>" . strtoupper($row['id_stock']) . "</div>";
       $nestedData[]  = "<div align='left'>" . strtoupper($row['stock_name']) . "</div>";
       $nestedData[]  = "<div align='left'>" . strtoupper($row['nm_category']) . "</div>";
@@ -100,7 +100,7 @@ class Outgoing_stok_atk_model extends BF_Model
               LEFT JOIN ms_satuan c ON b.id_unit_gudang=c.id
               LEFT JOIN ms_satuan d ON b.id_unit=d.id,
               (SELECT @row:=0) r
-            WHERE b.deleted_date IS NULL AND z.outgoing = 'atk'
+            WHERE b.deleted_date IS NULL AND z.nm_category = 'ATK'
             AND(
               b.id_stock LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR b.stock_name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
@@ -162,7 +162,6 @@ class Outgoing_stok_atk_model extends BF_Model
       $nestedData[]  = "<div align='center'>" . strtoupper($row['kode_trans']) . "</div>";
       $nestedData[]  = "<div align='center'>" . date('d-M-Y', strtotime($row['tanggal'])) . "</div>";
       $nestedData[]  = "<div align='left'>" . strtoupper($row['nm_department']) . "</div>";
-      $nestedData[]  = "<div align='left'>" . strtoupper($row['nama_costcenter']) . "</div>";
       $nestedData[]  = "<div align='center'>" . number_format($row['qty_unit'], 2) . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['pic'] . "</div>";
       $username = (!empty($GET_USER[$row['created_by']]['nama'])) ? $GET_USER[$row['created_by']]['nama'] : '-';
@@ -188,7 +187,7 @@ class Outgoing_stok_atk_model extends BF_Model
       if ($row['sts_confirm'] == 'N') {
         $print  = "&nbsp;<a href='" . base_url('outgoing_stok_hrga/print_spk_request/' . $row['kode_trans']) . "' target='_blank' class='btn btn-sm btn-info' title='Print SPK Permintaan Material' data-role='qtip'><i class='fa fa-print'></i></a>";
       }
-      if($this->auth->user_name() == 'RamaSS'){
+      if ($this->auth->user_name() == 'RamaSS') {
         // $release = '&nbsp;<button type="button" class="btn btn-sm btn-danger kurang_stock" data-kode_trans="'.$row['kode_trans'].'"><i class="fa fa-close"></i></button>';
       }
       $nestedData[]  = "<div align='center'>" . $view . $edit . $print . $release . "</div>";
@@ -235,6 +234,7 @@ class Outgoing_stok_atk_model extends BF_Model
               OR d.nm_gudang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR c.nm_gudang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
             )
+              GROUP BY a.kode_trans
             ";
     // echo $sql; exit;
 
