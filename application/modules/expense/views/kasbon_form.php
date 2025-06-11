@@ -16,7 +16,9 @@ if (!isset($data->departement)) {
 
 $data_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
 
-$metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
+$metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
+
+
 
 ?>
 
@@ -78,21 +80,21 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 					</div>
 
 					<div class="form-group">
-						<label class="col-sm-2 control-label">Metode Pembayaran</label>
+						<!-- <label class="col-sm-2 control-label">Metode Pembayaran</label>
 						<div class="col-sm-4">
 							<select name="metode_pembayaran" id="" class="form-control metode_pembayaran" required>
 								<option value="">- Metode Pembayaran -</option>
 								<option value="1" <?= ($metode_pembayaran == 1) ? 'selected' : null ?>>Request Payment</option>
 								<option value="2" <?= ($metode_pembayaran == 2) ? 'selected' : null ?>>Pettycash Finance</option>
 							</select>
-						</div>
+						</div> -->
 						<label class="col-sm-2 control-label">Keterangan</label>
 						<div class="col-sm-4">
 							<textarea class="form-control" id="keterangan" name="keterangan" placeholder="Keterangan" required><?php echo (isset($data->keterangan) ? $data->keterangan : ''); ?></textarea>
 
 							<?php
 							if (isset($data->st_reject)) {
-								if ($data->st_reject != '') {
+								if ($data->st_reject !== '') {
 									echo '
 							  <div class="alert alert-danger alert-dismissible">
 								<h4><i class="icon fa fa-ban"></i> Alasan Penolakan!</h4>
@@ -104,7 +106,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 						</div>
 					</div>
 
-					<div class="transfer_ke_cont" style="display: none;">
+					<div class="transfer_ke_cont">
 						<h4>Transfer ke</h4>
 						<div class="form-group ">
 							<label class="col-md-1 control-label">Bank</label>
@@ -259,6 +261,14 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 <script type="text/javascript">
 	var url_save = siteurl + 'expense/kasbon_save/';
 	var url_approve = siteurl + 'expense/kasbon_approve/';
+
+	var mod = '<?= $mod ?>';
+	if (mod !== '') {
+		$('input').attr('readonly', true);
+		$('textarea').attr('readonly', true);
+		$('input[type="file"]').prop('disabled', true);
+	}
+
 	$('.divide').divide();
 
 	$('.autonum').autoNumeric('init');
@@ -300,21 +310,21 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 			}
 		}
 
-		var metode_pembayaran = $('.metode_pembayaran').val();
+		// var metode_pembayaran = $('.metode_pembayaran').val();
 
 		if ($("#jumlah_kasbon").val() == "0") errors = "Jumlah Kasbon tidak boleh kosong";
 		if ($("#keperluan").val() == "") errors = "keperluan tidak boleh kosong";
 		if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
-		if (metode_pembayaran == "") errors = "Pilih metode pembayaran";
-		if (metode_pembayaran == 1) {
-			var bank_id = $('#bank_id').val();
-			var accnumber = $('#accnumber').val();
-			var accname = $('#accname').val();
+		// if (metode_pembayaran == "") errors = "Pilih metode pembayaran";
+		// if (metode_pembayaran == 1) {
+		// 	var bank_id = $('#bank_id').val();
+		// 	var accnumber = $('#accnumber').val();
+		// 	var accname = $('#accname').val();
 
-			if (bank_id == '' || accnumber == '' || accname == '') {
-				errors = "Pastikan data transfer terisi";
-			}
-		}
+		// 	if (bank_id == '' || accnumber == '' || accname == '') {
+		// 		errors = "Pastikan data transfer terisi";
+		// 	}
+		// }
 
 		var price_no_input = 0;
 		$('.price_input').each(function() {
