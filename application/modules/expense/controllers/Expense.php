@@ -123,7 +123,7 @@ class Expense extends Admin_Controller
 		$project			= $this->input->post("project");
 		$no_pr				= $this->input->post("no_pr");
 		$tipe_pr			= $this->input->post("tipe_pr");
-		$metode_pembayaran	= $this->input->post('metode_pembayaran');
+		$metode_pembayaran	= 1;
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
