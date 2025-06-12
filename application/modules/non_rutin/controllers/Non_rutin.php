@@ -306,8 +306,6 @@ class Non_rutin extends Admin_Controller
 									'reason' 		=> $reason,
 									'app_2_by'	=> $this->auth->user_id(),
 									'app_2_date'	=> $dateTime,
-									'keterangan_1' => $data['keterangan_1'],
-									'keterangan_2' => $data['keterangan_2'],
 									'keterangan_3' => $data['keterangan_3'],
 									'app_post' => '3'
 								);
@@ -320,8 +318,6 @@ class Non_rutin extends Admin_Controller
 									'reason' 		=> $reason,
 									'app_1_by'	=> $this->auth->user_id(),
 									'app_1_date'	=> $dateTime,
-									'keterangan_1' => $data['keterangan_1'],
-									'keterangan_2' => $data['keterangan_2'],
 									'keterangan_3' => $data['keterangan_3'],
 									'app_post' => '2'
 								);
@@ -336,8 +332,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject' . $tingkat_approval . '_date' => date('Y-m-d H:i:s'),
 								'no_pr' => null,
 								'sts_app' => 0,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'app_post' => null,
 								'rejected' => 1
@@ -355,8 +349,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject3' 		=> null,
 								'app_3_by'	=> $this->auth->user_id(),
 								'app_3_date'	=> $dateTime,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'app_post' => 4
 							);
@@ -370,8 +362,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject3_date' => date('Y-m-d H:i:s'),
 								'no_pr' => null,
 								'sts_app' => 0,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'reject_reason' . $tingkat_approval => $reason,
 								'app_post' => null,
@@ -426,8 +416,6 @@ class Non_rutin extends Admin_Controller
 						'sts_reject3_date' => null,
 						'rejected' => null,
 						'app_post' => null,
-						'keterangan_1' 		=> $data['keterangan_1'],
-						'keterangan_2' 		=> $data['keterangan_2'],
 						'keterangan_3' 		=> $data['keterangan_3'],
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
@@ -625,7 +613,7 @@ class Non_rutin extends Admin_Controller
 		$data_Group			= $this->db->get('groups')->result();
 		$tanda				= $this->uri->segment(2);
 		$data = array(
-			'title'			=> 'Approval PR Departemen - Management',
+			'title'			=> 'Approval PR Departemen',
 			'action'		=> 'index',
 			'row_group'		=> $data_Group,
 			'tanda'			=> $tanda
