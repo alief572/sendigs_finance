@@ -71,7 +71,7 @@ class Expense extends Admin_Controller
 
 		// $this->template->set('list_pr_non_po', $list_pr_non_po);
 		$list_pr_non_po = [];
-		$this->db->select('b.no_pr')
+		$this->db->select('b.no_pr, b.category')
 			->from('material_planning_base_on_produksi_detail a')
 			->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number')
 			->join('new_inventory_4 c', 'c.code_lv4 = a.id_material', 'left')
@@ -83,10 +83,13 @@ class Expense extends Admin_Controller
 			->group_by('b.no_pr');
 		$get_detail_pr_stok_material = $this->db->get()->result_array();
 		foreach ($get_detail_pr_stok_material as $item) {
-			$list_pr_non_po[] = $item['no_pr'];
+			$list_pr_non_po[] = [
+				'no_pr' => $item['no_pr'],
+				'keterangan' => strtoupper($item['category'])
+			];
 		}
 
-		$this->db->select('b.no_pr')
+		$this->db->select('b.no_pr, b.project_name')
 			->from('rutin_non_planning_detail a')
 			->join('rutin_non_planning_header b', 'b.no_pr = a.no_pr', 'left')
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
@@ -95,7 +98,10 @@ class Expense extends Admin_Controller
 			->group_by('b.no_pr');
 		$get_detail_pr_departemen = $this->db->get()->result_array();
 		foreach ($get_detail_pr_departemen as $item) {
-			$list_pr_non_po[] = $item['no_pr'];
+			$list_pr_non_po[] = [
+				'no_pr' => $item['no_pr'],
+				'keterangan' => $item['project_name']
+			];
 		}
 
 
