@@ -9,7 +9,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 	<div class="box box-primary">
 		<div class="box-header">
 			<h3 class="box-title"><?php echo $title; ?></h3>
-			
+
 		</div>
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
