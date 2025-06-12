@@ -135,13 +135,13 @@ $ENABLE_DELETE = has_permission('PR_Asset.Delete');
 		var reason = $('#reason_' + nomor).val();
 
 		var link_after = '';
-		if(tipe_approve == 'approval_head'){
+		if (tipe_approve == 'approval_head') {
 			var link_after = base_url + active_controller + 'pr/approval_head';
 		}
-		if(tipe_approve == 'approval_cost_control'){
+		if (tipe_approve == 'approval_cost_control') {
 			var link_after = base_url + active_controller + 'pr/approval_cost_control';
 		}
-		if(tipe_approve == 'approval_management'){
+		if (tipe_approve == 'approval_management') {
 			var link_after = base_url + active_controller + 'pr/approval_management';
 		}
 

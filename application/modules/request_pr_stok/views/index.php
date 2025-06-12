@@ -129,23 +129,20 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 							$warna = "red";
 							$sts = "Rejected By Management";
 						endif;
+
+						$warna = 'red';
+						$sts = 'Rejected';
 					} else {
 						if ($row->app_1 == null && $row->app_2 == null && $row->app_3 == null) :
 							$warna = "blue";
-							$sts = "Waiting Approval Head";
-						elseif ($row->app_1 !== null && $row->app_2 == null && $row->app_3 == null) :
-							$warna = "blue";
-							$sts = "Waiting Approval Cost Control";
-						elseif ($row->app_1 !== null && $row->app_2 !== null && $row->app_3 == null) :
-							$warna = "blue";
-							$sts = "Waiting Approval Management";
+							$sts = "Waiting Approval";
 						else :
 							if ($row->sts_app == "Y") :
 								$warna = "green";
 								$sts = "Approved";
 							else :
 								$warna = "blue";
-								$sts = "Waiting Approval Head";
+								$sts = "Waiting Approval";
 							endif;
 						endif;
 					}
