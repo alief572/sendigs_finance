@@ -142,7 +142,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 									<option value="">- No PR -</option>
 									<?php
 									foreach ($list_pr_non_po as $item_pr_non_po) {
-										echo '<option value="' . $item_pr_non_po . '">' . $item_pr_non_po . '</option>';
+										echo '<option value="' . $item_pr_non_po['no_pr'] . '">' . $item_pr_non_po['no_pr'] . ' - ' . $item_pr_non_po['keterangan'] . '</option>';
 									}
 									?>
 								</select>
