@@ -22,5 +22,4 @@ application/config/constants.php
 #/vendor/
 /uploads/*
 /assets/files/*
-/assets/expense/*
 /assets/pr/*
