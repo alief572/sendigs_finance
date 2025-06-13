@@ -1,6 +1,9 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+require_once 'vendor/autoload.php';
+
+use Mpdf\Mpdf;
 
 class Non_rutin extends Admin_Controller
 {
@@ -625,8 +628,6 @@ class Non_rutin extends Admin_Controller
 	public function print_pengajuan_non_rutin()
 	{
 
-
-
 		ob_clean();
 		ob_start();
 
@@ -655,20 +656,20 @@ class Non_rutin extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		history('Print pengajuan non rutin ' . $kode_trans);
-		$this->load->library(array('Mpdf'));
-		$mpdf = new mPDF('', '', '', '', '', '', '', '', '', '');
-		$mpdf->SetImportUse();
-		$mpdf->RestartDocTemplate();
+		// $this->load->library(array('Mpdf'));
+		$mpdf = new Mpdf();
+		// $mpdf->SetImportUse();
+		// $mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_pengajuan_non_rutin', $data);
-		$this->mpdf->AddPage('L', 'A4', 'en');
+		// $this->mpdf->AddPage('L', 'A4', 'en');
 		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $kode_trans . '';
 		// $mpdf->SetWatermarkText('ORI Group');
 		$mpdf->showWatermarkText = true;
 		$mpdf->SetTitle($kode_trans . "/" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
-		$this->mpdf->WriteHTML($show);
-		$this->mpdf->Output('tanda terima rutin ' . $kode_trans . '/' . date('ymdhis') . '.pdf', 'D');
+		$mpdf->WriteHTML($show);
+		$mpdf->Output('tanda terima rutin ' . $kode_trans . '/' . date('ymdhis') . '.pdf', 'D');
 
 		// $this->load->view('print_pengajuan_non_rutin', $data);
 		// $html = ob_get_contents();
