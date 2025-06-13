@@ -114,7 +114,7 @@ if ($header[0]->sts_app == 'Y') $sts_app = 'Y';
 
 	<table class="gridtable2" border='1' width='100%' cellpadding='2'>
 		<tr>
-			<td align='center'><b>PT ORIGA</b></td>
+			<td align='center'><b>PT SENTRAL SISTEM</b></td>
 		</tr>
 		<tr>
 			<td align='center'><b>
