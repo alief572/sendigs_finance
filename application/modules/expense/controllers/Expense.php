@@ -1808,7 +1808,7 @@ class Expense extends Admin_Controller
 
 	public function get_list_req_transport($nama, $departement, $date1, $date2)
 	{
-		$data	= $this->db->query("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and departement='" . $departement . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc")->result();
+		$data	= $this->db->query("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc")->result();
 
 		// print_r("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and departement='" . $departement . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc");
 		echo json_encode($data);
@@ -2358,7 +2358,7 @@ class Expense extends Admin_Controller
 	{
 		$no_pr = $this->input->post('no_pr');
 
-		$this->db->select('if(c.nama IS NULL, e.stock_name, c.nama) as material_name, a.propose_purchase as qty, if(d.code IS NULL, f.code, d.code) as unit, b.category as tipe_pr, a.id')
+		$this->db->select('if(c.nama IS NULL, e.stock_name, c.nama) as material_name, a.propose_purchase as qty, if(d.code IS NULL, f.code, d.code) as unit, b.category as tipe_pr, a.id, a.price_ref')
 			->from('material_planning_base_on_produksi_detail a')
 			->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number')
 			->join('new_inventory_4 c', 'c.code_lv4 = a.id_material', 'left')
@@ -2370,7 +2370,7 @@ class Expense extends Admin_Controller
 			->where('a.kasbon_created', null);
 		$get_detail_pr_stok_material = $this->db->get()->result_array();
 
-		$this->db->select('a.id, a.nm_barang as material_name, a.qty, c.code as unit, a.harga as price, (a.qty * a.harga) as total_price,"pr departemen" as tipe_pr')
+		$this->db->select('a.id, a.nm_barang as material_name, a.qty, c.code as unit, a.harga as price, (a.qty * a.harga) as total_price,"pr departemen" as tipe_pr, 0 as price_ref')
 			->from('rutin_non_planning_detail a')
 			->join('rutin_non_planning_header b', 'b.no_pr = a.no_pr', 'left')
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
@@ -2396,13 +2396,15 @@ class Expense extends Admin_Controller
 						$tipe_pr = $detail_pr['tipe_pr'];
 					}
 
+					$price_ref = $detail_pr['price_ref'];
+
 					$hasil .= '<tr class="detail_pr_' . $detail_pr['id'] . '">';
 					$hasil .= '<td class="text-center">' . $no . '</td>';
 					$hasil .= '<td class="text-center">' . $detail_pr['material_name'] . '</td>';
 					$hasil .= '<td class="text-center">' . number_format($detail_pr['qty']) . ' <input type="hidden" class="qty_' . $detail_pr['id'] . '" value="' . $detail_pr['qty'] . '"></td>';
 					$hasil .= '<td class="text-center">' . $detail_pr['unit'] . '</td>';
-					$hasil .= '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '"></td>';
-					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum"></td>';
+					$hasil .= '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '" value="' . $price_ref . '"></td>';
+					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . ($price_ref * $detail_pr['qty']) . '"></td>';
 					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
 					$hasil .= '</tr>';
 					$no++;

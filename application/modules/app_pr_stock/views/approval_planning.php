@@ -109,8 +109,12 @@ if (!empty($header)) {
 								<th class='text-center th'>Min Stock</th>
 								<th class='text-center th'>Max Stock</th>
 								<th class='text-center th'>Min Order</th>
-								<th class='text-center th'>Qty PR</th>
-								<th class='text-center th'>Qty Rev</th>
+								<th class='text-center th'>Qty PR (Pack)</th>
+								<th class='text-center th'>Qty Rev (Pack)</th>
+								<th class='text-center th'>Konversi</th>
+								<th class='text-center th'>Qty (Unit)</th>
+								<th class='text-center th'>Price Ref</th>
+								<th class='text-center th'>Total Ref</th>
 								<th class='text-center th'>#</th>
 							</tr>
 						</thead>
@@ -123,6 +127,10 @@ if (!empty($header)) {
 								$use_stock 		= $value['use_stock'];
 								$sisa_free 		= $stock_free - $use_stock;
 								$propose 		= $value['propose_purchase'];
+
+								$get_material = $this->db->get_where('accessories', ['id' => $value['id_material']])->row();
+
+								$konversi = (!empty($get_material) && $get_material->konversi > 0) ? $get_material->konversi : 1;
 
 								echo "<tr>";
 								if ($value['status_app'] == 'N') {
@@ -148,9 +156,13 @@ if (!empty($header)) {
 								} else {
 									echo "<td class='text-center'>" . number_format($value['propose_rev'], 2) . "</td>";
 								}
+								echo '<td class="text-right">' . number_format($konversi, 2) . '</td>';
+								echo '<td class="text-right">' . number_format($propose * $konversi, 2) . '</td>';
+								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
+								echo '<td class="text-right">' . number_format($value['price_ref'] * ($propose), 2) . '</td>';
 								if ($value['status_app'] == 'N') {
 									echo "	<td align='center'>
-											<button type='button' class='btn btn-sm btn-success processSatuan' data-id=" . $value['id'] . " data-action='approve'><i class='fa fa-check'></i></button>
+											<button type='button' class='btn btn-sm btn-success processSatuan' data-id=" . $value['id'] . " data-action='approve' style='display: none;'><i class='fa fa-check'></i></button>
 											<button type='button' class='btn btn-sm btn-danger processSatuan' data-id=" . $value['id'] . " data-action='reject'><i class='fa fa-times'></i></button>
 										</td>";
 								}
