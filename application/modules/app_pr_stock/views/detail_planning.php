@@ -51,14 +51,24 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								<th class='text-center th'>Min Stock</th>
 								<th class='text-center th'>Max Stock</th>
 								<th class='text-center th'>Min Order</th>
-								<th class='text-center th'>Qty PR</th>
-								<th class='text-center th'>Qty Rev</th>
+								<th class='text-center th'>Qty PR (Pack)</th>
+								<th class='text-center th'>Unit Pack</th>
+								<th class='text-center th'>Qty</th>
+								<th class='text-center th'>Unit Measurement</th>
+								<th class='text-center th'>Price Ref</th>
+								<th class='text-center th'>Total Price</th>
 								<th class='text-center th'>#</th>
 							</tr>
 						</thead>
 						<tbody>
 							<?php
 							foreach ($detail as $key => $value) {
+								$get_material = $this->db->get_where('accessories', ['id' => $value['id_material']])->row();
+								$get_satuan_pack = $this->db->get_where('ms_satuan', ['id' => $get_material->id_unit_gudang])->row();
+								$get_satuan = $this->db->get_where('ms_satuan', ['id' => $get_material->id_unit])->row();
+
+								$konversi = (!empty($get_material) && $get_material->konversi > 0) ? $get_material->konversi : 1;
+
 								$key++;
 								$nm_material 	= $value['nm_material'];
 								$stock_free 	= $value['stock_free'];
@@ -81,7 +91,11 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								echo "<td class='text-right max_stok'>" . number_format($value['max_stok'], 2) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format(0, 2) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose, 2) . "</td>";
-								echo "<td class='text-center'>" . number_format($value['propose_rev'], 2) . "</td>";
+								echo "<td class='text-center'>" . strtoupper($get_satuan_pack->code) . "</td>";
+								echo '<td class="text-right">' . number_format($propose * $konversi, 2) . '</td>';
+								echo '<td class="text-center">' . strtoupper($get_satuan->code) . '</td>';
+								echo "<td class='text-right'>" . number_format($value['price_ref'], 2) . "</td>";
+								echo "<td class='text-right'>" . number_format($value['price_ref'] * ($propose), 2) . "</td>";
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><span class='badge bg-blue text-bold'>Waiting Process</span></td>";
 								}
@@ -142,7 +156,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 
 			//back
 			$(document).on('click', '#back', function() {
-				window.location.href = base_url + active_controller
+				window.location.href = base_url + active_controller + '/approval_management'
 			});
 		});
 	</script>

@@ -101,7 +101,7 @@
 								echo "<td class='text-center'>" . number_format($propose * $konversi, 2) . "</td>";
 								echo "<td class='text-center'>" . strtoupper($get_stock->satuan) . "</td>";
 								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
-								echo '<td class="text-right">' . number_format(($value['price_ref'] * ($propose * $konversi)), 2) . '</td>';
+								echo '<td class="text-right">' . number_format(($value['price_ref'] * ($propose)), 2) . '</td>';
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><span class='badge bg-blue text-bold'>Waiting Process</span></td>";
 								}
