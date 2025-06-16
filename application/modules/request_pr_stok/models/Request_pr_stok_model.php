@@ -482,6 +482,7 @@ class Request_pr_stok_model extends BF_Model
       // $nestedData[]	= 	"<div align='center'>
       // 					".$approve."
       // 					</div>";
+      $nestedData[] = number_format($row['price_ref_high']);
       $data[] = $nestedData;
       $urut1++;
       $urut2++;

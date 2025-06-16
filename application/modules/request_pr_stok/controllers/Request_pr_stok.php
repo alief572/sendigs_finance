@@ -191,6 +191,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request_pack'];
+      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref_high'];
     }
 
     $ArrSaveHeader = array(
@@ -619,17 +620,26 @@ class Request_pr_stok extends Admin_Controller
   public function add_stok()
   {
     $post = $this->input->post();
+    $get_material = $this->db->get_where('accessories', ['id' => $post['id']])->row();
+
+    $price_ref = (!empty($get_material) && $get_material->price_ref_high !== null) ? $get_material->price_ref_high : 0;
 
     $this->db->trans_begin();
+
 
     $ArrData = [
       'so_number' => $post['so_number'],
       'id_material' => $post['id'],
       'propose_purchase' => $post['qty'],
       'status_app' => 'N',
-      'note' => $post['notes']
+      'note' => $post['notes'],
+      'price_ref' => $price_ref
     ];
-    $this->db->insert('material_planning_base_on_produksi_detail', $ArrData);
+    $insert = $this->db->insert('material_planning_base_on_produksi_detail', $ArrData);
+    if (!$insert) {
+      print_r($this->db->error($insert));
+      exit;
+    }
 
     if ($this->db->trans_status() === FALSE) {
       $this->db->trans_rollback();
