@@ -550,20 +550,31 @@ if (!empty($header)) {
 						'notes': notes
 					},
 					cache: false,
+					dataType: 'json',
 					beforeSend: function() {
 						$('.add_stock_' + id).html('<i class="fa fa-spin fa-spinner"></i>');
 						$('.add_stock_' + id).prop('disabled', true);
 					},
 					success: function(result) {
-						location.reload();
+						if (result.status == '1') {
+							swal({
+								type: 'success',
+								title: 'Success !',
+							}, function(next) {
+								location.reload();
+							});
+						} else {
+							swal({
+								type: 'warning',
+								title: 'Failed !'
+							});
+						}
 					},
 					error: function(result) {
 						swal({
 							type: 'error',
 							title: 'Error !',
 							text: 'Please try again later !'
-						}, function(isConfirm) {
-							location.reload();
 						});
 					}
 				})

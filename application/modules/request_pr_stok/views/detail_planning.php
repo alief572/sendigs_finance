@@ -63,6 +63,8 @@
 								<th class="text-center th">Unit Pack</th>
 								<th class='text-center th'>Qty</th>
 								<th class="text-center th">Unit Measurement</th>
+								<th class="text-center th">Price Ref</th>
+								<th class="text-center th">Total Price</th>
 								<th class='text-center th'>#</th>
 							</tr>
 						</thead>
@@ -95,9 +97,11 @@
 								echo "<td class='text-right max_stok'>" . number_format($value['max_stok'], 2) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format(0, 2) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose, 2) . "</td>";
-								echo "<td class='text-center'>".strtoupper($get_stock->satuan_pack)."</td>";
+								echo "<td class='text-center'>" . strtoupper($get_stock->satuan_pack) . "</td>";
 								echo "<td class='text-center'>" . number_format($propose * $konversi, 2) . "</td>";
-								echo "<td class='text-center'>".strtoupper($get_stock->satuan)."</td>";
+								echo "<td class='text-center'>" . strtoupper($get_stock->satuan) . "</td>";
+								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
+								echo '<td class="text-right">' . number_format(($value['price_ref'] * ($propose * $konversi)), 2) . '</td>';
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><span class='badge bg-blue text-bold'>Waiting Process</span></td>";
 								}
