@@ -804,7 +804,8 @@ class Metode_pembelian_model extends BF_Model
 					LEFT JOIN users b ON b.id_user = a.created_by
 				WHERE
 						a.metode_pembelian IS NULL AND
-						a.close_pr IS NULL
+						a.close_pr IS NULL AND 
+						a.no_pr IS NOT NULL
 						AND (
 							a.no_pr LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
 							a.created_date LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
@@ -918,6 +919,7 @@ class Metode_pembelian_model extends BF_Model
 				WHERE
 						a.metode_pembelian IS NULL AND
 						a.close_pr IS NULL AND
+						a.no_pr IS NOT NULL AND
 						(
 							a.no_pr LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
 							a.created_date LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
