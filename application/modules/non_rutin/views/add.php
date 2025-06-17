@@ -79,7 +79,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 							if ($departement->id == $id_dept) {
 								$selected = 'selected';
 							}
-							echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->nama) . "</option>";
+							echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->name . ' - ' . $departement->nm_company) . "</option>";
 						}
 						?>
 					</select>

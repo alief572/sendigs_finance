@@ -28,6 +28,7 @@ class Non_rutin extends Admin_Controller
 	protected $managePermission3 = 'Approval_PR_Depart_Management.Manage';
 	protected $deletePermission3 = 'Approval_PR_Depart_Management.Delete';
 
+	protected $hris;
 
 	public function __construct()
 	{
@@ -36,6 +37,8 @@ class Non_rutin extends Admin_Controller
 		$this->load->model('non_rutin_model');
 
 		// $this->load->library(array('Mpdf'));
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	//===============================================================================================================================
@@ -44,16 +47,18 @@ class Non_rutin extends Admin_Controller
 
 	public function index()
 	{
-
-
 		$data_Group			= $this->db->get('groups')->result();
 		$tanda				= $this->uri->segment(2);
-		$get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+		// $get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
 
-		$get_list_data = $this->db->select('a.*, b.nama')
+		$this->hris->select('a.id, a.name, b.name as nm_company');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_department = $this->hris->get()->result();
+
+		$get_list_data = $this->db->select('a.*')
 			->from('rutin_non_planning_detail z')
 			->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
-			->join('ms_department b', 'b.id = a.id_dept', 'left')
 			->where('a.status_id', 1)
 			->where('a.close_pr', null)
 			->group_by('z.no_pengajuan')
@@ -520,7 +525,13 @@ class Non_rutin extends Admin_Controller
 
 			$get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
 
-			$get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+
+			$this->hris->select('a.id, a.name, b.name as nm_company');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$get_department = $this->hris->get()->result();
+
 			$data = array(
 				'title'				=> $tanda . ' PR Departemen ' . $title_tingkat,
 				'action'		=> strtolower($tanda),
@@ -530,7 +541,7 @@ class Non_rutin extends Admin_Controller
 				'satuan'		=> $satuan,
 				'approve'		=> $approve,
 				'id'			=> $id,
-				'list_departement' => $get_departement,
+				'list_departement' => $get_department,
 				'tingkat_approval'			=> $tingkat_approval,
 				'list_coa' => $get_list_coa
 			);
@@ -635,7 +646,7 @@ class Non_rutin extends Admin_Controller
 		$data_session	= $this->session->userdata;
 		$printby		= $this->auth->user_id();
 
-		$header 	= $this->db->query("SELECT a.*, b.nama as nm_dept, c.nm_lengkap as nm_user, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN ms_department b ON b.id = a.id_dept LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
+		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
 		$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $kode_trans . "' ")->result_array();
 		$datacoa 	= $this->db->query("SELECT * FROM coa_category WHERE tipe='NONRUTIN' ")->result_array();
 

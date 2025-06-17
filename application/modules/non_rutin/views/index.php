@@ -30,7 +30,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					<option value="">- Department -</option>
 					<?php
 					foreach ($list_department as $item) {
-						echo '<option value="' . $item->id . '">' . strtoupper($item->nama) . '</option>';
+						echo '<option value="' . $item->id . '">' . strtoupper($item->name) . ' - ' . strtoupper($item->nm_company) . '</option>';
 					}
 					?>
 				</select>
@@ -56,6 +56,14 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 						<?php
 						$no = 1;
 						foreach ($result as $item) {
+							$this->hris = $this->load->database('hris', true);
+
+							$this->hris->select('a.id, a.name, b.name as nm_company');
+							$this->hris->from('departments a');
+							$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+							$this->hris->where('a.id', $item->id_dept);
+							$get_department = $this->hris->get()->row();
+
 							echo '<tr>';
 							echo '<td class="text-center">' . $no . '</td>';
 							if (!empty($item->no_pr)) {
@@ -63,7 +71,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							} else {
 								echo '<td><span class="text-red">' . $item->no_pengajuan . '</span></td>';
 							}
-							echo '<td>' . strtoupper($item->nama) . '</td>';
+							echo '<td>' . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . '</td>';
 
 							$list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $item->no_pengajuan))->result_array();
 							$arr_nmbarang = array();
