@@ -2386,6 +2386,7 @@ class Expense extends Admin_Controller
 		// exit;
 		$valid = 1;
 		$hasil = '';
+		$grand_total = 0;
 		if (count($get_detail_pr_stok_material) < 1 && count($get_detail_pr_departemen) < 1) {
 			$valid = 0;
 		} else {
@@ -2408,6 +2409,8 @@ class Expense extends Admin_Controller
 					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
 					$hasil .= '</tr>';
 					$no++;
+
+					$grand_total += ($price_ref * $detail_pr['qty']);
 				endforeach;
 			}
 
@@ -2426,6 +2429,8 @@ class Expense extends Admin_Controller
 					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . $detail_pr['total_price'] . '"></td>';
 					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
 					$hasil .= '</tr>';
+
+					$grand_total += ($detail_pr['total_price']);
 					$no++;
 				endforeach;
 			}
@@ -2440,7 +2445,8 @@ class Expense extends Admin_Controller
 			'sts' => $valid,
 			'hasil' => $hasil,
 			'pesan' => $pesan,
-			'tipe_pr' => $tipe_pr
+			'tipe_pr' => $tipe_pr,
+			'grand_total' => $grand_total
 		]);
 	}
 

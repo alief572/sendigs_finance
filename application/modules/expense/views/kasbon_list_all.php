@@ -103,3 +103,4 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 	});
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script>
