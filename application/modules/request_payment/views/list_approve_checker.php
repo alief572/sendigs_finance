@@ -188,6 +188,7 @@ endforeach;
                     foreach ($data_kasbon as $item_kasbon) :
                         if ($item_kasbon->tipe == 'kasbon') {
                             $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item_kasbon->no_doc))->row();
+                            $get_req_payment = $this->db->get_where('request_payment', ['no_doc' => $item_kasbon->no_doc])->result();
                             $no_kasbon = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : $item_kasbon->no_doc;
                             echo '<tr>';
                             echo '<td>' . $no_kasbon . '</td>';
@@ -217,7 +218,7 @@ endforeach;
                             echo '<td>';
                             // if ($ENABLE_MANAGE) :
                             if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '0') : ?>
-                                <?php if ($item_kasbon->status !== '2') : ?>
+                                <?php if ($item_kasbon->status !== '2' && $get_req_payment->num_rows() > 0) : ?>
                                     <div class="text-center">
                                         <a href="<?= base_url($this->uri->segment(1) . '/approval_payment_checker/?type=' . $item_kasbon->tipe . '&id=' . $item_kasbon->id . '&nilai=' . $item_kasbon->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>
                                     </div>
