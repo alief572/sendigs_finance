@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
 <div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
     <div class="box-header">
@@ -6,7 +6,7 @@
         <button type="button" class="btn btn-sm btn-danger clear_choosed_payment"><i class="fa fa-close"></i> Clear Checked Payment</button>
     </div>
     <div class="box-body">
-        <table class="table table-bordered">
+        <table class="table table-bordered" id="table_list_req_payment">
             <thead>
                 <tr>
                     <th class="text-center">No</th>
@@ -96,7 +96,7 @@
     </div>
 </div>
 
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
 
 <!-- page script -->
 <script>
@@ -189,20 +189,59 @@
     });
 
     $(document).on('click', '.proses_payment', function() {
-        
+
         check_choosed_payment().done(function(data) {
             var choosed_payment = data.count_choosed_payment;
 
-            if(choosed_payment > 0) {
+            if (choosed_payment > 0) {
                 window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + data.arr_choosed_payment;
-            }else{
+            } else {
                 swal({
                     title: 'Warning !',
                     text: 'Please check at least 1 payment data !',
                     type: 'warning'
                 });
             }
-        }).fail(function(data) {
-        });
+        }).fail(function(data) {});
     });
+
+    function DataTables() {
+        var DataTables = $('#table_list_req_payment').dataTable({
+            serverSide: true,
+            processing: true,
+            destroy: true,
+            paging: true,
+            stateSave: true,
+            ajax: {
+                type: 'post',
+                url: siteurl + active_controller + 'get_list_req_payment',
+                dataType: 'json'
+            },
+            columns: [{
+                    data: 'no'
+                },
+                {
+                    data: 'no_dokumen'
+                },
+                {
+                    data: 'tgl'
+                },
+                {
+                    data: 'keperluan'
+                },
+                {
+                    data: 'currency'
+                },
+                {
+                    data: 'supplier'
+                },
+                {
+                    data: 'total_invoice'
+                },
+                {
+                    data: 'option'
+                }
+            ]
+        });
+    }
 </script>
