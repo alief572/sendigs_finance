@@ -218,7 +218,7 @@ endforeach;
                             echo '<td>';
                             // if ($ENABLE_MANAGE) :
                             if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '0') : ?>
-                                <?php if ($item_kasbon->status !== '2' && count($get_req_payment) > 0) : ?>
+                                <?php if ($item_kasbon->status !== '2' && count($get_req_payment) > 0 && $get_req_payment[0]->app_checker === null) : ?>
                                     <div class="text-center">
                                         <a href="<?= base_url($this->uri->segment(1) . '/approval_payment_checker/?type=' . $item_kasbon->tipe . '&id=' . $item_kasbon->id . '&nilai=' . $item_kasbon->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>
                                     </div>
