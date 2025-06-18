@@ -301,6 +301,7 @@ endforeach;
                         if ($item_expense->tipe == 'expense') {
                             $tipe = ucfirst($item_expense->tipe);
                             $get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_expense->no_doc])->row_array();
+                            $get_req_payment = $this->db->get_where('request_payment', ['no_doc' => $item_kasbon->no_doc])->result();
                             if ($get_expense['exp_inv_po'] == '1') {
                                 $tipe = 'Pembayaran PO';
                             }
@@ -335,7 +336,7 @@ endforeach;
                                 echo '</td>';
                                 echo '<td>';
                                 // if ($ENABLE_MANAGE) : 
-                                if ($ENABLE_MANAGE or $get_sts_payment['status'] < 1) {
+                                if ($ENABLE_MANAGE or $get_sts_payment['status'] < 1 && count($get_req_payment) > 0 && $get_req_payment->app_checker === null) {
 
                                     if ($get_expense['project_consultant'] == '1') {
                                         echo '
