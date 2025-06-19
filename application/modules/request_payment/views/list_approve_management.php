@@ -154,7 +154,7 @@ endforeach;
                                 }
                                 echo '</td>';
                                 echo '<td>';
-                                if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) : ?>
+                                if ($ENABLE_MANAGE) : ?>
                                     <div class="text-center"><a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_transportasi->tipe . '&id=' . $item_transportasi->id . '&nilai=' . $item_transportasi->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a></div>
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_transportasi->id ?>"> -->
                         <?php endif;
@@ -220,7 +220,7 @@ endforeach;
                                 }
                                 echo '</td>';
                                 echo '<td>';
-                                // if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) 
+                                // if ($ENABLE_MANAGE) 
                                 if ($ENABLE_MANAGE && $get_kasbon->project_consultant == '0') : ?>
                                     <div class="text-center"><a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_kasbon->tipe . '&id=' . $item_kasbon->id . '&nilai=' . $item_kasbon->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a></div>
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_kasbon->id ?>"> -->
@@ -372,7 +372,7 @@ endforeach;
                                 }
                                 echo '</td>';
                                 echo '<td>';
-                                if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) : ?>
+                                if ($ENABLE_MANAGE) : ?>
                                     <div class="text-center"><a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_periodik->tipe . '&id=' . $item_periodik->id . '&nilai=' . $item_periodik->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a></div>
                                     <!-- <input type="checkbox" name="status[]" id="status_<?= $numb ?>" value="<?= $item_periodik->id ?>"> -->
                         <?php endif;
@@ -460,7 +460,7 @@ endforeach;
                                     }
                                     echo '</td>';
                                     echo '<td>';
-                                    if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) : ?>
+                                    if ($ENABLE_MANAGE) : ?>
                                         <a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_expense->tipe . '&id=' . $item_expense->id . '&nilai=' . $item_expense->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o"></i></a>
 
                                         <a href="javascript:void(0);" class="btn btn-sm btn-info view_receive_invoice" data-id_invoice="<?= $item_expense->no_doc ?>"><i class="fa fa-eye"></i></a>
@@ -522,7 +522,7 @@ endforeach;
                                 }
                                 echo '</td>';
                                 echo '<td>';
-                                // if ($ENABLE_MANAGE && $get_sts_payment['status'] < 1) 
+                                // if ($ENABLE_MANAGE) 
                                 if ($ENABLE_MANAGE) : ?>
                                     <div class="text-center"><a href="<?= base_url($this->uri->segment(1) . '/approval_payment/?type=' . $item_dp->tipe . '&id=' . $item_dp->id . '&nilai=' . $item_dp->jumlah); ?>" name="save" class="btn btn-primary btn-sm"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a></div>
                         <?php
