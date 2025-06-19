@@ -749,6 +749,16 @@ class Metode_pembelian_model extends BF_Model
 			$nestedData[]	= "<div align='center'>" . date('d F Y', strtotime($row['tgl_pr'])) . "</div>";
 			$nestedData[]	= "<div align='center'>" . strtoupper($row['request_by']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i:s', strtotime($row['request_date'])) . "</div>";
+
+			$doc_link = '';
+			if ($category == 'departemen') {
+				$get_departemen = $this->db->get_where('rutin_non_planning_header', array('no_pr' => $row['no_pr']))->row();
+
+				if (file_exists('./assets/pr/' . $get_departemen->document)) {
+					$doc_link = '<a href="' . base_url('assets/pr/' . $get_departemen->document) . '" class="btn btn-sm btn-primary" title="Download Document" download><i class="fa fa-download"></i></a>';
+				}
+			}
+			$nestedData[]	= $doc_link;
 			$data[] = $nestedData;
 			$urut1++;
 			$urut2++;
