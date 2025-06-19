@@ -69,6 +69,7 @@
 							<th class="text-center" width='10%'>Dibutuhkan</th>
 							<th class="text-center" width='9%'>Request By</th>
 							<th class="text-center" width='10%'>Request Date</th>
+							<th class="text-center" width='10%'>Document</th>
 						</tr>
 					</thead>
 					<tbody></tbody>
