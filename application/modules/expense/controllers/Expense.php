@@ -19,6 +19,9 @@ class Expense extends Admin_Controller
 	protected $addPermission  	= 'Expense.Add';
 	protected $managePermission = 'Expense.Manage';
 	protected $deletePermission = 'Expense.Delete';
+
+	protected $status;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -1722,6 +1725,9 @@ class Expense extends Admin_Controller
 
 		// print_r($tgl_doc);
 
+		$valid_photo = 1;
+		$msg = '';
+
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
 		$config['allowed_types'] = '*';
@@ -1739,69 +1745,84 @@ class Expense extends Admin_Controller
 			if ($this->upload->do_upload('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
+			} else {
+				$valid_photo = 0;
+				$msg = $this->upload->display_errors();
 			}
 			// else {
 			// 	print_r($this->upload->display_errors());
 			// 	exit;
 			// }
 		}
-		if ($id !== "") {
-			$result = $this->db->update('tr_transport', [
-				'tgl_doc' => $tgl_doc,
-				'departement' => $departement,
-				'keperluan' => $keperluan,
-				'nama' => $nama,
-				'rute' => $rute,
-				'km_awal' => $km_awal,
-				'km_akhir' => $km_akhir,
-				'nopol' => $nopol,
-				'bensin' => $bensin,
-				'tol' => $tol,
-				'lainnya' => $lainnya,
-				'keterangan' => $keterangan,
-				'parkir' => $parkir,
-				'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
-				'doc_file' => $filenames,
-				'modified_by' => $this->auth->user_name(),
-				'modified_on' => date("Y-m-d h:i:s")
-			], ['id' => $id]);
-		} else {
-			$no_doc = $this->All_model->GetAutoGenerate('format_transport');
-			$data =  array(
-				'no_doc' => $no_doc,
-				'tgl_doc' => $tgl_doc,
-				'departement' => $departement,
-				'keperluan' => $keperluan,
-				'nama' => $nama,
-				'rute' => $rute,
-				'km_awal' => $km_awal,
-				'km_akhir' => $km_akhir,
-				'nopol' => $nopol,
-				'bensin' => $bensin,
-				'tol' => $tol,
-				'parkir' => $parkir,
-				'lainnya' => $lainnya,
-				'keterangan' => $keterangan,
-				'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
-				'doc_file' => $filenames,
-				'status' => 0,
-				'created_by' => $this->auth->user_name(),
-				'created_on' => date("Y-m-d h:i:s"),
-			);
-			$id = $this->All_model->dataSave('tr_transport', $data);
-		}
 
-		if ($this->db->trans_status() === FALSE) {
+		if ($valid_photo == 1) {
+			if ($id !== "") {
+				$result = $this->db->update('tr_transport', [
+					'tgl_doc' => $tgl_doc,
+					'departement' => $departement,
+					'keperluan' => $keperluan,
+					'nama' => $nama,
+					'rute' => $rute,
+					'km_awal' => $km_awal,
+					'km_akhir' => $km_akhir,
+					'nopol' => $nopol,
+					'bensin' => $bensin,
+					'tol' => $tol,
+					'lainnya' => $lainnya,
+					'keterangan' => $keterangan,
+					'parkir' => $parkir,
+					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
+					'doc_file' => $filenames,
+					'modified_by' => $this->auth->user_name(),
+					'modified_on' => date("Y-m-d h:i:s")
+				], ['id' => $id]);
+			} else {
+				$no_doc = $this->All_model->GetAutoGenerate('format_transport');
+				$data =  array(
+					'no_doc' => $no_doc,
+					'tgl_doc' => $tgl_doc,
+					'departement' => $departement,
+					'keperluan' => $keperluan,
+					'nama' => $nama,
+					'rute' => $rute,
+					'km_awal' => $km_awal,
+					'km_akhir' => $km_akhir,
+					'nopol' => $nopol,
+					'bensin' => $bensin,
+					'tol' => $tol,
+					'parkir' => $parkir,
+					'lainnya' => $lainnya,
+					'keterangan' => $keterangan,
+					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
+					'doc_file' => $filenames,
+					'status' => 0,
+					'created_by' => $this->auth->user_name(),
+					'created_on' => date("Y-m-d h:i:s"),
+				);
+				$id = $this->All_model->dataSave('tr_transport', $data);
+			}
+
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				$result = FALSE;
+
+				$msg = 'Data gagal di simpan !';
+			} else {
+				$this->db->trans_commit();
+				$result = TRUE;
+
+				$msg = 'Data berhasil di simpan !';
+			}
+		} else {
 			$this->db->trans_rollback();
 			$result = FALSE;
-		} else {
-			$this->db->trans_commit();
-			$result = TRUE;
 		}
+
 
 		$param = array(
 			'save' => $result,
-			'id' => $id
+			'id' => $id,
+			'msg' => $msg
 		);
 		echo json_encode($param);
 	}

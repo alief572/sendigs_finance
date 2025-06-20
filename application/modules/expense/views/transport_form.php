@@ -163,7 +163,7 @@
 									if (msg['save'] == '1') {
 										swal({
 											title: "Sukses!",
-											text: "Data Berhasil Di Simpan",
+											text: msg['msg'],
 											type: "success",
 											timer: 1500,
 											showConfirmButton: false
@@ -172,7 +172,7 @@
 									} else {
 										swal({
 											title: "Gagal!",
-											text: "Data Gagal Di Simpan",
+											text: msg['msg'],
 											type: "error",
 											timer: 1500,
 											showConfirmButton: false
