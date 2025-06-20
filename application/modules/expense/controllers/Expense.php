@@ -1694,9 +1694,9 @@ class Expense extends Admin_Controller
 	// transport create
 	public function transport_create()
 	{
-		$data_departement = $this->All_model->GetDeptCombo();
-		$this->template->title('Pengajuan Transport');
-		$this->template->set('data_departement', $data_departement);
+		// $data_departement = $this->All_model->GetDeptCombo();
+		// $this->template->title('Pengajuan Transport');
+		// $this->template->set('data_departement', $data_departement);
 		$this->template->render('transport_form');
 	}
 
