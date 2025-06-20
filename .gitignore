@@ -11,7 +11,7 @@
 
 #codeigniter 3
 .vscode/*
-application/config
+application/config/*
 application/logs/*
 application/config/development/*
 application/config/database.php
@@ -23,3 +23,5 @@ application/config/constants.php
 /uploads/*
 /assets/files/*
 /assets/pr/*
+/docker/*
+docker-compose.yml

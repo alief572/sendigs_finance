@@ -620,6 +620,33 @@ class Request_payment_model extends BF_Model
         foreach ($get_data->result() as $item) {
             $no++;
 
+            $nmuser = $item->request_by;
+            if ($item->kategori == 'Kasbon') {
+                $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item->no_dokumen))->row();
+                $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
+                if (count($check_detail)) {
+                    if ($get_kasbon->tipe_pr == 'pr departemen') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('rutin_non_planning_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
+
+                    if ($get_kasbon->tipe_pr == 'pr stok') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('material_planning_base_on_produksi a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
+                }
+            }
+
             $check_added = $this->db->get_where('tr_added_req_payment', ['no_doc' => $item->no_dokumen])->result();
 
             $checked = (count($check_added) > 0) ? 'checked' : '';
@@ -633,7 +660,7 @@ class Request_payment_model extends BF_Model
             $hasil[] = [
                 'no' => $no,
                 'no_dokumen' => $item->no_dokumen,
-                'request_by' => $item->request_by,
+                'request_by' => $nmuser,
                 'tanggal' => date('d F Y', strtotime($item->tanggal)),
                 'keperluan' => $item->keperluan,
                 'kategori' => $item->kategori,
