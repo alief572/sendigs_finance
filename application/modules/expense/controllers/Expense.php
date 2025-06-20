@@ -593,7 +593,7 @@ class Expense extends Admin_Controller
 		$this->template->set('list_detail_pr_kasbon', $get_pr_detail_kasbon);
 		$this->template->title('Kasbon Form');
 		$this->template->page_icon('fa fa-list');
-		$this->template->render('kasbon_form');
+		$this->template->render('kasbon_form_detail');
 	}
 	// kasbon approval
 	public function kasbon_fin()
