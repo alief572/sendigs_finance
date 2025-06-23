@@ -30,7 +30,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					<option value="">- Department -</option>
 					<?php
 					foreach ($list_department as $item) {
-						echo '<option value="' . $item->id . '">' . strtoupper($item->nama) . '</option>';
+						echo '<option value="' . $item->id . '">' . strtoupper($item->name) . ' - ' . strtoupper($item->nm_company) . '</option>';
 					}
 					?>
 				</select>
@@ -56,6 +56,14 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 						<?php
 						$no = 1;
 						foreach ($result as $item) {
+							$this->hris = $this->load->database('hris', true);
+
+							$this->hris->select('a.id, a.name, b.name as nm_company');
+							$this->hris->from('departments a');
+							$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+							$this->hris->where('a.id', $item->id_dept);
+							$get_department = $this->hris->get()->row();
+
 							echo '<tr>';
 							echo '<td class="text-center">' . $no . '</td>';
 							if (!empty($item->no_pr)) {
@@ -63,7 +71,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							} else {
 								echo '<td><span class="text-red">' . $item->no_pengajuan . '</span></td>';
 							}
-							echo '<td>' . strtoupper($item->nama) . '</td>';
+							echo '<td>' . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . '</td>';
 
 							$list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $item->no_pengajuan))->result_array();
 							$arr_nmbarang = array();
@@ -108,35 +116,18 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							}
 
 							if (($item->sts_reject1 !== null || $item->sts_reject2 !== null || $item->sts_reject3 !== null) && $item->rejected == 1) {
-								if ($item->sts_reject1 == "1") :
-									$warna = "red";
-									$sts = "Rejected By Head Department";
-								elseif ($item->sts_reject2 == "1") :
-									$warna = "red";
-									$sts = "Rejected By Cost Control";
-								elseif ($item->sts_reject3 == "1") :
-									$warna = "red";
-									$sts = "Rejected By Management";
-								endif;
+								$warna = 'red';
+								$sts = 'Rejected';
 							} else {
-								if ($item->app_1 == null && $item->app_2 == null && $item->app_3 == null) :
-									$warna = "blue";
-									$sts = "Waiting Approval Head Department";
-								elseif ($item->app_1 !== null && $item->app_2 == null && $item->app_3 == null) :
-									$warna = "blue";
-									$sts = "Waiting Approval Cost Control";
-								elseif ($item->app_1 !== null && $item->app_2 !== null && $item->app_3 == null) :
-									$warna = "blue";
-									$sts = "Waiting Approval Management";
-								else :
-									if ($item->sts_app == "Y") :
+								if ($item->app_3 == null) {
+									$warna = 'blue';
+									$sts = 'Waiting Approval';
+								} else {
+									if ($item->sts_app == 'Y') {
 										$warna = "green";
 										$sts = "Approved";
-									else :
-										$warna = "blue";
-										$sts = "Waiting Approval Head Department";
-									endif;
-								endif;
+									}
+								}
 							}
 
 							echo '<td><span class="badge" style="background-color: ' . $warna . '">' . $sts . '</span></td>';

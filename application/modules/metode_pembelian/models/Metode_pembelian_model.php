@@ -749,6 +749,16 @@ class Metode_pembelian_model extends BF_Model
 			$nestedData[]	= "<div align='center'>" . date('d F Y', strtotime($row['tgl_pr'])) . "</div>";
 			$nestedData[]	= "<div align='center'>" . strtoupper($row['request_by']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i:s', strtotime($row['request_date'])) . "</div>";
+
+			$doc_link = '';
+			if ($category == 'departemen') {
+				$get_departemen = $this->db->get_where('rutin_non_planning_header', array('no_pr' => $row['no_pr']))->row();
+
+				if (file_exists('./assets/pr/' . $get_departemen->document)) {
+					$doc_link = '<a href="' . base_url('assets/pr/' . $get_departemen->document) . '" class="btn btn-sm btn-primary" title="Download Document" download><i class="fa fa-download"></i></a>';
+				}
+			}
+			$nestedData[]	= $doc_link;
 			$data[] = $nestedData;
 			$urut1++;
 			$urut2++;
@@ -804,7 +814,8 @@ class Metode_pembelian_model extends BF_Model
 					LEFT JOIN users b ON b.id_user = a.created_by
 				WHERE
 						a.metode_pembelian IS NULL AND
-						a.close_pr IS NULL
+						a.close_pr IS NULL AND 
+						a.no_pr IS NOT NULL
 						AND (
 							a.no_pr LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
 							a.created_date LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
@@ -918,6 +929,7 @@ class Metode_pembelian_model extends BF_Model
 				WHERE
 						a.metode_pembelian IS NULL AND
 						a.close_pr IS NULL AND
+						a.no_pr IS NOT NULL AND
 						(
 							a.no_pr LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR
 							a.created_date LIKE "%' . $this->db->escape_like_str($like_value) . '%" OR

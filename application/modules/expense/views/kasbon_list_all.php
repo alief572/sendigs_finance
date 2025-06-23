@@ -27,12 +27,38 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 					if (!empty($results)) {
 						$numb = 0;
 						foreach ($results as $record) {
+
+							$nmuser = $record->nmuser;
+
+							$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
+							if (count($check_detail)) {
+								if ($record->tipe_pr == 'pr departemen') {
+									$this->db->select('b.nm_lengkap');
+									$this->db->from('rutin_non_planning_header a');
+									$this->db->join('users b', 'b.id_user = a.created_by');
+									$this->db->where('a.no_pr', $record->id_pr);
+									$get_single_detail = $this->db->get()->row();
+
+									$nmuser = $get_single_detail->nm_lengkap;
+								}
+
+								if ($record->tipe_pr == 'pr stok') {
+									$this->db->select('b.nm_lengkap');
+									$this->db->from('material_planning_base_on_produksi a');
+									$this->db->join('users b', 'b.id_user = a.created_by');
+									$this->db->where('a.no_pr', $record->id_pr);
+									$get_single_detail = $this->db->get()->row();
+
+									$nmuser = $get_single_detail->nm_lengkap;
+								}
+							}
+
 							$numb++; ?>
 							<tr>
 								<td><?= $numb; ?></td>
 								<td><?= $record->no_doc ?></td>
 								<td><?= $record->tgl_doc ?></td>
-								<td><?= $record->nmuser ?></td>
+								<td><?= $nmuser ?></td>
 								<td><?= $record->approved_on ?></td>
 								<td>
 									<?php
@@ -103,3 +129,4 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 	});
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script>

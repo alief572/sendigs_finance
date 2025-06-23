@@ -3,9 +3,11 @@
 // require_once 'mpdf/src/autoload.php'; // Load dependencies
 // require_once 'mpdf/src/Mpdf.php';         // Load mPDF manually
 
-foreach (glob('mpdf/src/*.php') as $file) {
-	require_once $file;
-}
+require_once 'vendor/autoload.php';
+
+// foreach (glob('mpdf/src/*.php') as $file) {
+// 	require_once $file;
+// }
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022

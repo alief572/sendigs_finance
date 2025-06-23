@@ -19,26 +19,6 @@ $tgl_appre_2 = '';
 $status3 = '';
 $tgl_appre_3 = '';
 if (!empty($header)) {
-	if ($header[0]['app_1'] == '1') {
-		$status1 = '<div class="badge bg-green">Approved</div>';
-		$tgl_appre_1 = date('d F Y', strtotime($header[0]['app_1_date']));
-	} else {
-		if ($header[0]['sts_reject1'] == '1') {
-			$status1 = '<div class="badge bg-red">Rejected</div>';
-			$tgl_appre_1 = date('d F Y', strtotime($header[0]['sts_reject1_date']));
-		}
-	}
-
-	if ($header[0]['app_2'] == '1') {
-		$status2 = '<div class="badge bg-green">Approved</div>';
-		$tgl_appre_2 = date('d F Y', strtotime($header[0]['app_2_date']));
-	} else {
-		if ($header[0]['sts_reject2'] == '1') {
-			$status2 = '<div class="badge bg-red">Rejected</div>';
-			$tgl_appre_2 = date('d F Y', strtotime($header[0]['sts_reject2_date']));
-		}
-	}
-
 	if ($header[0]['app_3'] == '1') {
 		$status3 = '<div class="badge bg-green">Approved</div>';
 		$tgl_appre_3 = date('d F Y', strtotime($header[0]['app_3_date']));
@@ -97,36 +77,6 @@ if (!empty($header)) {
 						</thead>
 						<tbody>
 							<tr>
-								<td class="text-center">Departement Head</td>
-								<td class="text-center">
-									<?= $status1 ?>
-								</td>
-								<td class="text-center">
-									<?= $tgl_appre_1 ?>
-								</td>
-								<td>
-									<input type="text" name="reject_reason1" id="" class="form-control" value="<?= $alasan_reject1 ?>" readonly>
-								</td>
-								<td>
-									<input type="text" name="keterangan_1" id="" class="form-control" value="<?= $keterangan_1 ?>">
-								</td>
-							</tr>
-							<tr>
-								<td class="text-center">Cost Control</td>
-								<td class="text-center">
-									<?= $status2 ?>
-								</td>
-								<td class="text-center">
-									<?= $tgl_appre_2 ?>
-								</td>
-								<td>
-									<input type="text" name="reject_reason2" id="" class="form-control" value="<?= $alasan_reject2 ?>" readonly>
-								</td>
-								<td>
-									<input type="text" name="keterangan_2" id="" class="form-control" value="<?= $keterangan_2 ?>">
-								</td>
-							</tr>
-							<tr>
 								<td class="text-center">Management</td>
 								<td class="text-center">
 									<?= $status3 ?>
@@ -159,8 +109,12 @@ if (!empty($header)) {
 								<th class='text-center th'>Min Stock</th>
 								<th class='text-center th'>Max Stock</th>
 								<th class='text-center th'>Min Order</th>
-								<th class='text-center th'>Qty PR</th>
-								<th class='text-center th'>Qty Rev</th>
+								<th class='text-center th'>Qty PR (Pack)</th>
+								<th class='text-center th'>Qty Rev (Pack)</th>
+								<th class='text-center th'>Konversi</th>
+								<th class='text-center th'>Qty (Unit)</th>
+								<th class='text-center th'>Price Ref</th>
+								<th class='text-center th'>Total Ref</th>
 								<th class='text-center th'>#</th>
 							</tr>
 						</thead>
@@ -173,6 +127,10 @@ if (!empty($header)) {
 								$use_stock 		= $value['use_stock'];
 								$sisa_free 		= $stock_free - $use_stock;
 								$propose 		= $value['propose_purchase'];
+
+								$get_material = $this->db->get_where('accessories', ['id' => $value['id_material']])->row();
+
+								$konversi = (!empty($get_material) && $get_material->konversi > 0) ? $get_material->konversi : 1;
 
 								echo "<tr>";
 								if ($value['status_app'] == 'N') {
@@ -198,9 +156,13 @@ if (!empty($header)) {
 								} else {
 									echo "<td class='text-center'>" . number_format($value['propose_rev'], 2) . "</td>";
 								}
+								echo '<td class="text-right">' . number_format($konversi, 2) . '</td>';
+								echo '<td class="text-right">' . number_format($propose * $konversi, 2) . '</td>';
+								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
+								echo '<td class="text-right">' . number_format($value['price_ref'] * ($propose), 2) . '</td>';
 								if ($value['status_app'] == 'N') {
 									echo "	<td align='center'>
-											<button type='button' class='btn btn-sm btn-success processSatuan' data-id=" . $value['id'] . " data-action='approve'><i class='fa fa-check'></i></button>
+											<button type='button' class='btn btn-sm btn-success processSatuan' data-id=" . $value['id'] . " data-action='approve' style='display: none;'><i class='fa fa-check'></i></button>
 											<button type='button' class='btn btn-sm btn-danger processSatuan' data-id=" . $value['id'] . " data-action='reject'><i class='fa fa-times'></i></button>
 										</td>";
 								}

@@ -105,12 +105,12 @@ class Expense_model extends BF_Model
 	// list data transport request
 	public function GetListDataTransportRequestAll($id_user = '', $where = '')
 	{
-		$this->db->select('a.*, b.name as nmuser,c.tgl_doc as tgl_trans,c.keperluan');
+		$this->db->select('a.*, b.nm_lengkap as nmuser,c.tgl_doc as tgl_trans,c.keperluan');
 		$this->db->from('tr_transport_req a');
 		$this->db->join('tr_transport c', 'a.no_doc=c.no_req', 'left');
-		$this->db->join('(select users.username,employees.name from users join employees on users.employee_id=employees.id)b', 'a.created_by=b.username', 'left');
-		if ($id_user != '') $this->db->where('a.created_by', $id_user);
-		if ($where != '') $this->db->where($where);
+		$this->db->join('users b', 'b.id_user = a.created_by', 'left');
+		if ($id_user !== '') $this->db->where('a.created_by', $id_user);
+		if ($where !== '') $this->db->where($where);
 		$this->db->order_by('a.id', 'desc');
 		$query = $this->db->get();
 		if ($query->num_rows() != 0) {

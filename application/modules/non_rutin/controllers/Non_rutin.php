@@ -1,6 +1,9 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+require_once 'vendor/autoload.php';
+
+use Mpdf\Mpdf;
 
 class Non_rutin extends Admin_Controller
 {
@@ -25,6 +28,7 @@ class Non_rutin extends Admin_Controller
 	protected $managePermission3 = 'Approval_PR_Depart_Management.Manage';
 	protected $deletePermission3 = 'Approval_PR_Depart_Management.Delete';
 
+	protected $hris;
 
 	public function __construct()
 	{
@@ -33,6 +37,8 @@ class Non_rutin extends Admin_Controller
 		$this->load->model('non_rutin_model');
 
 		// $this->load->library(array('Mpdf'));
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	//===============================================================================================================================
@@ -41,16 +47,18 @@ class Non_rutin extends Admin_Controller
 
 	public function index()
 	{
-
-
 		$data_Group			= $this->db->get('groups')->result();
 		$tanda				= $this->uri->segment(2);
-		$get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+		// $get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
 
-		$get_list_data = $this->db->select('a.*, b.nama')
+		$this->hris->select('a.id, a.name, b.name as nm_company');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_department = $this->hris->get()->result();
+
+		$get_list_data = $this->db->select('a.*')
 			->from('rutin_non_planning_detail z')
 			->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
-			->join('ms_department b', 'b.id = a.id_dept', 'left')
 			->where('a.status_id', 1)
 			->where('a.close_pr', null)
 			->group_by('z.no_pengajuan')
@@ -306,8 +314,6 @@ class Non_rutin extends Admin_Controller
 									'reason' 		=> $reason,
 									'app_2_by'	=> $this->auth->user_id(),
 									'app_2_date'	=> $dateTime,
-									'keterangan_1' => $data['keterangan_1'],
-									'keterangan_2' => $data['keterangan_2'],
 									'keterangan_3' => $data['keterangan_3'],
 									'app_post' => '3'
 								);
@@ -320,8 +326,6 @@ class Non_rutin extends Admin_Controller
 									'reason' 		=> $reason,
 									'app_1_by'	=> $this->auth->user_id(),
 									'app_1_date'	=> $dateTime,
-									'keterangan_1' => $data['keterangan_1'],
-									'keterangan_2' => $data['keterangan_2'],
 									'keterangan_3' => $data['keterangan_3'],
 									'app_post' => '2'
 								);
@@ -336,8 +340,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject' . $tingkat_approval . '_date' => date('Y-m-d H:i:s'),
 								'no_pr' => null,
 								'sts_app' => 0,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'app_post' => null,
 								'rejected' => 1
@@ -355,8 +357,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject3' 		=> null,
 								'app_3_by'	=> $this->auth->user_id(),
 								'app_3_date'	=> $dateTime,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'app_post' => 4
 							);
@@ -370,8 +370,6 @@ class Non_rutin extends Admin_Controller
 								'sts_reject3_date' => date('Y-m-d H:i:s'),
 								'no_pr' => null,
 								'sts_app' => 0,
-								'keterangan_1' => $data['keterangan_1'],
-								'keterangan_2' => $data['keterangan_2'],
 								'keterangan_3' => $data['keterangan_3'],
 								'reject_reason' . $tingkat_approval => $reason,
 								'app_post' => null,
@@ -426,8 +424,6 @@ class Non_rutin extends Admin_Controller
 						'sts_reject3_date' => null,
 						'rejected' => null,
 						'app_post' => null,
-						'keterangan_1' 		=> $data['keterangan_1'],
-						'keterangan_2' 		=> $data['keterangan_2'],
 						'keterangan_3' 		=> $data['keterangan_3'],
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
@@ -529,7 +525,13 @@ class Non_rutin extends Admin_Controller
 
 			$get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
 
-			$get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+
+			$this->hris->select('a.id, a.name, b.name as nm_company');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$get_department = $this->hris->get()->result();
+
 			$data = array(
 				'title'				=> $tanda . ' PR Departemen ' . $title_tingkat,
 				'action'		=> strtolower($tanda),
@@ -539,7 +541,7 @@ class Non_rutin extends Admin_Controller
 				'satuan'		=> $satuan,
 				'approve'		=> $approve,
 				'id'			=> $id,
-				'list_departement' => $get_departement,
+				'list_departement' => $get_department,
 				'tingkat_approval'			=> $tingkat_approval,
 				'list_coa' => $get_list_coa
 			);
@@ -625,7 +627,7 @@ class Non_rutin extends Admin_Controller
 		$data_Group			= $this->db->get('groups')->result();
 		$tanda				= $this->uri->segment(2);
 		$data = array(
-			'title'			=> 'Approval PR Departemen - Management',
+			'title'			=> 'Approval PR Departemen',
 			'action'		=> 'index',
 			'row_group'		=> $data_Group,
 			'tanda'			=> $tanda
@@ -637,8 +639,6 @@ class Non_rutin extends Admin_Controller
 	public function print_pengajuan_non_rutin()
 	{
 
-
-
 		ob_clean();
 		ob_start();
 
@@ -646,7 +646,7 @@ class Non_rutin extends Admin_Controller
 		$data_session	= $this->session->userdata;
 		$printby		= $this->auth->user_id();
 
-		$header 	= $this->db->query("SELECT a.*, b.nama as nm_dept, c.nm_lengkap as nm_user, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN ms_department b ON b.id = a.id_dept LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
+		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
 		$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $kode_trans . "' ")->result_array();
 		$datacoa 	= $this->db->query("SELECT * FROM coa_category WHERE tipe='NONRUTIN' ")->result_array();
 
@@ -667,20 +667,20 @@ class Non_rutin extends Admin_Controller
 		$today = date('l, d F Y [H:i:s]');
 
 		history('Print pengajuan non rutin ' . $kode_trans);
-		$this->load->library(array('Mpdf'));
-		$mpdf = new mPDF('', '', '', '', '', '', '', '', '', '');
-		$mpdf->SetImportUse();
-		$mpdf->RestartDocTemplate();
+		// $this->load->library(array('Mpdf'));
+		$mpdf = new Mpdf();
+		// $mpdf->SetImportUse();
+		// $mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_pengajuan_non_rutin', $data);
-		$this->mpdf->AddPage('L', 'A4', 'en');
+		// $this->mpdf->AddPage('L', 'A4', 'en');
 		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $kode_trans . '';
 		// $mpdf->SetWatermarkText('ORI Group');
 		$mpdf->showWatermarkText = true;
 		$mpdf->SetTitle($kode_trans . "/" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
-		$this->mpdf->WriteHTML($show);
-		$this->mpdf->Output('tanda terima rutin ' . $kode_trans . '/' . date('ymdhis') . '.pdf', 'D');
+		$mpdf->WriteHTML($show);
+		$mpdf->Output('tanda terima rutin ' . $kode_trans . '/' . date('ymdhis') . '.pdf', 'D');
 
 		// $this->load->view('print_pengajuan_non_rutin', $data);
 		// $html = ob_get_contents();

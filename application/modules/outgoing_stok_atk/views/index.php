@@ -67,7 +67,6 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 						<th class='text-center'>No Trans</th>
 						<th class='text-center'>Tanggal</th>
 						<th class='text-left'>Department</th>
-						<th class='text-left'>Costcenter</th>
 						<th class='text-center'>Qty Unit</th>
 						<th class='text-left'>PIC</th>
 						<th class='text-center'>By</th>
@@ -269,8 +268,8 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 				}
 			});
 	});
-	
-	$(document).on('click', '.kurang_stock', function(){
+
+	$(document).on('click', '.kurang_stock', function() {
 		var kode_trans = $(this).data('kode_trans');
 
 		$.ajax({
@@ -281,13 +280,13 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 			},
 			cache: false,
 			success: function(result) {
-				if(result == 1) {
+				if (result == 1) {
 					swal({
 						title: 'Success !',
 						text: 'Kurang Stock Berhasil !',
 						type: 'success'
 					});
-				}else{
+				} else {
 					swal({
 						title: 'Error !',
 						text: 'Kurang stock error !',

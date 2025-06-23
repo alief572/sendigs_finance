@@ -410,4 +410,271 @@ class Request_payment_model extends BF_Model
 
         return $kodecollect;
     }
+
+    public function get_data_req_payment()
+    {
+        $draw = $this->input->post('draw');
+        $length = $this->input->post('length');
+        $start = $this->input->post('start');
+        $search = $this->input->post('search');
+
+        $sql = '
+            SELECT
+                z.no_dokumen,
+                z.request_by,
+                z.tanggal,
+                z.keperluan,
+                z.kategori,
+                z.nilai_pengajuan
+            FROM
+                (
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        b.keperluan as keperluan,
+                        "Transport" as kategori,
+                        a.jumlah_expense as nilai_pengajuan
+                    FROM
+                        tr_transport_req a
+                        LEFT JOIN tr_transport b ON b.no_req = a.no_doc
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            b.keperluan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah_expense LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.keperluan as keperluan,
+                        "Kasbon" as kategori,
+                        a.jumlah_kasbon as nilai_pengajuan
+                    FROM
+                        tr_kasbon a 
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.keperluan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah_kasbon LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT  
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.informasi as keperluan,
+                        "Expense" as kategori,
+                        a.jumlah as nilai_pengajuan
+                    FROM
+                        tr_expense a
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.informasi LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        c.nm_lengkap as request_by,
+                        a.tanggal_doc as tgl_doc,
+                        a.keterangan as keperluan,
+                        "Periodik" as tipe,
+                        a.nilai_total as nilai_pengajuan
+                    FROM
+                        tr_pengajuan_rutin a 
+                        JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc
+                        LEFT JOIN users c ON c.id_user = a.created_by
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            c.nm_lengkap LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tanggal_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.keterangan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                ) z
+                GROUP BY z.no_dokumen
+            ORDER BY z.tanggal DESC
+            LIMIT ' . $length . ' OFFSET ' . $start . '
+        ';
+
+        $get_data = $this->db->query($sql);
+
+        $sql_all = '
+            SELECT
+                z.no_dokumen,
+                z.request_by,
+                z.tanggal,
+                z.keperluan,
+                z.kategori,
+                z.nilai_pengajuan
+            FROM
+                (
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        b.keperluan as keperluan,
+                        "Transport" as kategori,
+                        a.jumlah_expense as nilai_pengajuan
+                    FROM
+                        tr_transport_req a
+                        LEFT JOIN tr_transport b ON b.no_req = a.no_doc
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            b.keperluan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah_expense LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.keperluan as keperluan,
+                        "Kasbon" as kategori,
+                        a.jumlah_kasbon as nilai_pengajuan
+                    FROM
+                        tr_kasbon a 
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.keperluan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah_kasbon LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT  
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.informasi as keperluan,
+                        "Expense" as kategori,
+                        a.jumlah as nilai_pengajuan
+                    FROM
+                        tr_expense a
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.informasi LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.jumlah LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.no_doc as no_dokumen,
+                        c.nm_lengkap as request_by,
+                        a.tanggal_doc as tgl_doc,
+                        a.keterangan as keperluan,
+                        "Periodik" as tipe,
+                        a.nilai_total as nilai_pengajuan
+                    FROM
+                        tr_pengajuan_rutin a 
+                        JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc
+                        LEFT JOIN users c ON c.id_user = a.created_by
+                    WHERE
+                        a.status = "1" AND (
+                            a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            c.nm_lengkap LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.tanggal_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.keterangan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
+                ) z
+                GROUP BY z.no_dokumen
+            ORDER BY z.tanggal DESC
+            
+        ';
+
+        $get_data_all = $this->db->query($sql_all);
+
+        $no = ($start + 0);
+        $hasil = [];
+
+        foreach ($get_data->result() as $item) {
+            $no++;
+
+            $nmuser = $item->request_by;
+            if ($item->kategori == 'Kasbon') {
+                $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item->no_dokumen))->row();
+                $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
+                if (count($check_detail)) {
+                    if ($get_kasbon->tipe_pr == 'pr departemen') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('rutin_non_planning_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
+
+                    if ($get_kasbon->tipe_pr == 'pr stok') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('material_planning_base_on_produksi a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
+                }
+            }
+
+            $check_added = $this->db->get_where('tr_added_req_payment', ['no_doc' => $item->no_dokumen])->result();
+
+            $checked = (count($check_added) > 0) ? 'checked' : '';
+
+            $input_tanggal_pembayaran = '<input type="date" class="form-control form-control-sm" name="tanggal_pembayaran_' . $item->no_dokumen . '">';
+
+            $action = '<input type="checkbox" class="pilih_data" name="pilih[]" value="' . $item->no_dokumen . '" data-kategori="' . $item->kategori . '" ' . $checked . '>';
+            $action .= '<input type="hidden" name="kategori_' . $item->no_dokumen . '" value="' . $item->kategori . '">';
+            $action .= '<input type="hidden" name="nilai_pengajuan_' . $item->no_dokumen . '" value="' . $item->nilai_pengajuan . '">';
+
+            $hasil[] = [
+                'no' => $no,
+                'no_dokumen' => $item->no_dokumen,
+                'request_by' => $nmuser,
+                'tanggal' => date('d F Y', strtotime($item->tanggal)),
+                'keperluan' => $item->keperluan,
+                'kategori' => $item->kategori,
+                'nilai_pengajuan' => number_format($item->nilai_pengajuan, 2),
+                'tanggal_pembayaran' => $input_tanggal_pembayaran,
+                'action' => $action
+            ];
+        }
+
+        echo json_encode([
+            'draw' => intval($draw),
+            'recordsFiltered' => $get_data_all->num_rows(),
+            'recordsTotal' => $get_data_all->num_rows(),
+            'data' => $hasil
+        ]);
+    }
 }

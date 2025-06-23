@@ -2539,4 +2539,194 @@ class Request_payment extends Admin_Controller
 
 		echo json_encode($param);
 	}
+
+	public function get_data_req_payment()
+	{
+		$this->Request_payment_model->get_data_req_payment();
+	}
+
+	public function added_pilih_data()
+	{
+		$post = $this->input->post();
+
+		$id = $post['id'];
+		$kategori = $post['kategori'];
+		$wdo = $post['wdo'];
+
+		$this->db->trans_begin();
+		if ($wdo == 1) {
+			$arr_insert = [
+				'no_doc' => $id,
+				'tipe' => $kategori,
+				'created_by' => $this->auth->user_name(),
+				'created_date' => date('Y-m-d H:i:s')
+			];
+			$this->db->insert('tr_added_req_payment', $arr_insert);
+		} else {
+			$this->db->delete('tr_added_req_payment', ['no_doc' => $id]);
+		}
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+		} else {
+			$this->db->trans_commit();
+		}
+	}
+
+	public function save_request_payment()
+	{
+		$post = $this->input->post();
+
+		$this->db->trans_begin();
+
+		$arr_insert = [];
+
+		$get_added = $this->db->get('tr_added_req_payment')->result();
+
+		if (!empty($get_added)) {
+			foreach ($get_added as $item) {
+				$tanggal_pembayaran = $post['tanggal_pembayaran_' . $item->no_doc];
+				$kategori = $post['kategori_' . $item->no_doc];
+				$nilai_pengajuan = $post['nilai_pengajuan_' . $item->no_doc];
+
+				if ($item->tipe == 'Kasbon') {
+
+					$this->db->select('a.created_by, a.tgl_doc, a.keperluan, a.jumlah_kasbon, a.bank_id, a.accnumber, a.accname, a.id');
+					$this->db->from('tr_kasbon a');
+					$this->db->where('a.no_doc', $item->no_doc);
+					$get_kasbon = $this->db->get()->row();
+
+					$arr_insert[] = [
+						'no_doc' => $item->no_doc,
+						'nama' => $get_kasbon->created_by,
+						'tgl_doc' => $get_kasbon->tgl_doc,
+						'keperluan' => $get_kasbon->keperluan,
+						'tipe' => 'kasbon',
+						'jumlah' => $nilai_pengajuan,
+						'status' => 0,
+						'tanggal' => $tanggal_pembayaran,
+						'created_by' => $this->auth->user_name(),
+						'created_on' => date('Y-m-d H:i:s'),
+						'bank_id' => $get_kasbon->bank_id,
+						'accnumber' => $get_kasbon->accnumber,
+						'accname' => $get_kasbon->accname,
+						'ids' => $get_kasbon->id,
+						'currency' => 'IDR',
+						'admin_bank' => 0,
+						'total_pph' => 0
+					];
+
+					$this->db->update('tr_kasbon', ['status' => 2], ['no_doc' => $item->no_doc]);
+				}
+
+				if ($item->tipe == 'Expense') {
+					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.bank_id, a.accnumber, a.accname, a.id, a.informasi');
+					$this->db->from('tr_expense a');
+					$this->db->where('a.no_doc', $item->no_doc);
+					$get_expense = $this->db->get()->row();
+
+					$arr_insert[] = [
+						'no_doc' => $item->no_doc,
+						'nama' => $get_expense->nama,
+						'tgl_doc' => $get_expense->tgl_doc,
+						'keperluan' => $get_expense->informasi,
+						'tipe' => 'expense',
+						'jumlah' => $nilai_pengajuan,
+						'status' => 0,
+						'tanggal' => $tanggal_pembayaran,
+						'created_by' => $this->auth->user_name(),
+						'created_on' => date('Y-m-d H:i:s'),
+						'bank_id' => $get_expense->bank_id,
+						'accnumber' => $get_expense->accnumber,
+						'accname' => $get_expense->accname,
+						'ids' => $get_expense->id,
+						'currency' => 'IDR',
+						'admin_bank' => 0,
+						'total_pph' => 0
+					];
+
+					$this->db->update('tr_expense', ['status' => 2], ['no_doc' => $item->no_doc]);
+				}
+
+				if ($item->tipe == 'Transport') {
+					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.jumlah_kasbon, a.keterangan, b.bank_id, b.accnumber, b.accname, b.id');
+					$this->db->from('tr_transport a');
+					$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req', 'left');
+					$this->db->where('a.no_req', $item->no_doc);
+					$get_transport = $this->db->get()->row();
+
+					$arr_insert[] = [
+						'no_doc' => $item->no_doc,
+						'nama' => $get_transport->nama,
+						'tgl_doc' => $get_transport->tgl_doc,
+						'keperluan' => $get_transport->keterangan,
+						'tipe' => 'transport',
+						'jumlah' => $nilai_pengajuan,
+						'status' => 0,
+						'tanggal' => $tanggal_pembayaran,
+						'created_by' => $this->auth->user_name(),
+						'created_on' => date('Y-m-d H:i:s'),
+						'bank_id' => $get_transport->bank_id,
+						'accnumber' => $get_transport->accnumber,
+						'accname' => $get_transport->accname,
+						'ids' => $get_transport->id,
+						'currency' => 'IDR',
+						'admin_bank' => 0,
+						'total_pph' => 0
+					];
+
+					$this->db->update('tr_transport_req', ['status' => 2], ['no_doc' => $item->no_doc]);
+				}
+
+				if ($item->tipe == 'Periodik') {
+				}
+			}
+		}
+
+		if (!empty($arr_insert)) {
+			$insert_req_payment = $this->db->insert_batch('request_payment', $arr_insert);
+			if (!$insert_req_payment) {
+				$this->db->trans_rollback();
+
+				print_r($this->db->error($insert_req_payment));
+				exit;
+			} else {
+				$this->db->from('tr_added_req_payment');
+				$this->db->where('no_doc IS NOT NULL');
+				$this->db->delete();
+			}
+		}
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+
+			$valid = 0;
+			$msg = 'Please try again later !';
+		} else {
+			$this->db->trans_commit();
+
+			$valid = 1;
+			$msg = 'Data has been processed !';
+		}
+
+		echo json_encode([
+			'status' => $valid,
+			'msg' => $msg
+		]);
+	}
+
+	public function reset_choosed_req_payment()
+	{
+		$this->db->trans_begin();
+
+		$this->db->from('tr_added_req_payment');
+		$this->db->where('no_doc IS NOT NULL');
+		$this->db->delete();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+		} else {
+			$this->db->trans_commit();
+		}
+	}
 }

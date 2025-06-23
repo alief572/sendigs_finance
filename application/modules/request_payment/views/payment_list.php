@@ -72,6 +72,33 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 						$numb = 0;
 						foreach ($data as $record) {
 
+							$nmuser = $record->nama;
+							if ($record->tipe == 'kasbon') {
+								$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $record->no_doc))->row();
+								$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
+								if (count($check_detail)) {
+									if ($get_kasbon->tipe_pr == 'pr departemen') {
+										$this->db->select('b.nm_lengkap');
+										$this->db->from('rutin_non_planning_header a');
+										$this->db->join('users b', 'b.id_user = a.created_by');
+										$this->db->where('a.no_pr', $get_kasbon->id_pr);
+										$get_single_detail = $this->db->get()->row();
+
+										$nmuser = $get_single_detail->nm_lengkap;
+									}
+
+									if ($get_kasbon->tipe_pr == 'pr stok') {
+										$this->db->select('b.nm_lengkap');
+										$this->db->from('material_planning_base_on_produksi a');
+										$this->db->join('users b', 'b.id_user = a.created_by');
+										$this->db->where('a.no_pr', $get_kasbon->id_pr);
+										$get_single_detail = $this->db->get()->row();
+
+										$nmuser = $get_single_detail->nm_lengkap;
+									}
+								}
+							}
+
 							$tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
 
 							$tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pembayaran'] : '';
@@ -84,7 +111,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 							<tr>
 								<td><?= $numb; ?></td>
 								<td><?= $record->no_doc ?></td>
-								<td><?= $record->nama ?></td>
+								<td><?= $nmuser ?></td>
 								<td><?= $record->tgl_doc ?></td>
 								<td><?= $record->keperluan ?></td>
 								<td><?= $record->tipe ?></td>

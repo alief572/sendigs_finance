@@ -4,6 +4,16 @@ date_default_timezone_set('Asia/Jakarta');
 $today = date('l, d F Y [H:i:s]');
 $sts_app = '';
 if ($header[0]->sts_app == 'Y') $sts_app = 'Y';
+
+$this->hris = $this->load->database('hris', true);
+
+$this->hris->select('a.id, a.name, b.name as nm_company');
+$this->hris->from('departments a');
+$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+$this->hris->where('a.id', $header[0]->id_dept);
+$get_department = $this->hris->get()->row();
+
+$nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -114,7 +124,7 @@ if ($header[0]->sts_app == 'Y') $sts_app = 'Y';
 
 	<table class="gridtable2" border='1' width='100%' cellpadding='2'>
 		<tr>
-			<td align='center'><b>PT ORIGA</b></td>
+			<td align='center'><b>PT SENTRAL SISTEM</b></td>
 		</tr>
 		<tr>
 			<td align='center'><b>
@@ -137,7 +147,7 @@ if ($header[0]->sts_app == 'Y') $sts_app = 'Y';
 			<tr>
 				<td class="mid" width='15%'>Department</td>
 				<td class="mid" width='2%'>:</td>
-				<td class="mid" width='33%'><?= $header[0]->nm_dept; ?></td>
+				<td class="mid" width='33%'><?= $nm_department; ?></td>
 				<td colspan="3"></td>
 			</tr>
 			<tr>

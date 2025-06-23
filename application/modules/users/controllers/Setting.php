@@ -22,6 +22,8 @@ class Setting extends Admin_Controller
     protected $managePermission = "Users.Manage";
     protected $deletePermission = "Users.Delete";
 
+    protected $hris;
+
     public function __construct()
     {
         parent::__construct();
@@ -36,6 +38,8 @@ class Setting extends Admin_Controller
         ));
 
         $this->template->page_icon('fa fa-users');
+
+        $this->hris = $this->load->database('hris', true);
     }
 
     public function index()
@@ -145,7 +149,8 @@ class Setting extends Admin_Controller
         }
 
         $cabang = $this->Cabang_model->find_all();
-        $department = $this->db->get_where('ms_department', array('deleted_date' => NULL))->result_array();
+        $department = $this->hris->select('a.id, a.name as nama')->get(DBHRIS . '.departments a')->result_array();
+
         $this->template->set('cabang', $cabang);
         $this->template->set('department', $department);
         $this->template->title(lang('users_new_title'));
@@ -180,7 +185,7 @@ class Setting extends Admin_Controller
 
         //$cabang = $this->Cabang_model->find_all();
         //$this->template->set('cabang', $cabang);
-        $department = $this->db->get_where('ms_department', array('deleted_date' => NULL))->result_array();
+        $department = $this->hris->select('a.id, a.name as nama')->get(DBHRIS . '.departments a')->result_array();
         $this->template->set('department', $department);
         $this->template->set('data', $data);
         $this->template->title(lang('users_edit_title'));

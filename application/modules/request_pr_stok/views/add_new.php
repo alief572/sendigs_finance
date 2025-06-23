@@ -57,6 +57,7 @@
 						<th class="text-center no-sort" width='5%'>Unit Packing</th>
 						<th class="text-center no-sort" width='8%'>Spec</th>
 						<th class="text-center no-sort" width='8%'>Info</th>
+						<th class="text-center no-sort" width='8%'>Price Reference</th>
 					</tr>
 				</thead>
 				<tbody></tbody>

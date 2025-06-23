@@ -34,23 +34,12 @@
 				</div>
 			</div>
 			<div class="form-group row">
-				<div class="col-md-2 text-bold">Costcenter</div>
-				<div class="col-md-4">
-					<select name='id_costcenter' id='id_costcenter' class='form-control input-sm chosen-select'>
-						<!-- <option value='0'>Select Costcenter</option> -->
-						<?php
-						foreach ($listGudangKe as $key => $value) {
-							echo "<option value='" . $value['id'] . "'>" . strtoupper($value['nm_gudang']) . "</option>";
-						}
-						?>
-					</select>
-				</div>
+
 				<div class="col-md-2 text-bold">PIC Request</div>
 				<div class="col-md-4">
 					<input type="text" name='pic' id='pic' class='form-control input-sm'>
 				</div>
-			</div>
-			<div class="form-group row">
+
 				<div class="col-md-2 text-bold">Keterangan</div>
 				<div class="col-md-4">
 					<textarea name="keterangan" id="keterangan" class='form-control input-sm' rows="3"></textarea>

@@ -19,6 +19,9 @@ class Expense extends Admin_Controller
 	protected $addPermission  	= 'Expense.Add';
 	protected $managePermission = 'Expense.Manage';
 	protected $deletePermission = 'Expense.Delete';
+
+	protected $status;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -71,7 +74,7 @@ class Expense extends Admin_Controller
 
 		// $this->template->set('list_pr_non_po', $list_pr_non_po);
 		$list_pr_non_po = [];
-		$this->db->select('b.no_pr')
+		$this->db->select('b.no_pr, b.category')
 			->from('material_planning_base_on_produksi_detail a')
 			->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number')
 			->join('new_inventory_4 c', 'c.code_lv4 = a.id_material', 'left')
@@ -83,10 +86,13 @@ class Expense extends Admin_Controller
 			->group_by('b.no_pr');
 		$get_detail_pr_stok_material = $this->db->get()->result_array();
 		foreach ($get_detail_pr_stok_material as $item) {
-			$list_pr_non_po[] = $item['no_pr'];
+			$list_pr_non_po[] = [
+				'no_pr' => $item['no_pr'],
+				'keterangan' => strtoupper($item['category'])
+			];
 		}
 
-		$this->db->select('b.no_pr')
+		$this->db->select('b.no_pr, b.project_name')
 			->from('rutin_non_planning_detail a')
 			->join('rutin_non_planning_header b', 'b.no_pr = a.no_pr', 'left')
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
@@ -95,7 +101,10 @@ class Expense extends Admin_Controller
 			->group_by('b.no_pr');
 		$get_detail_pr_departemen = $this->db->get()->result_array();
 		foreach ($get_detail_pr_departemen as $item) {
-			$list_pr_non_po[] = $item['no_pr'];
+			$list_pr_non_po[] = [
+				'no_pr' => $item['no_pr'],
+				'keterangan' => $item['project_name']
+			];
 		}
 
 
@@ -123,7 +132,7 @@ class Expense extends Admin_Controller
 		$project			= $this->input->post("project");
 		$no_pr				= $this->input->post("no_pr");
 		$tipe_pr			= $this->input->post("tipe_pr");
-		$metode_pembayaran	= $this->input->post('metode_pembayaran');
+		$metode_pembayaran	= 1;
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
@@ -584,7 +593,7 @@ class Expense extends Admin_Controller
 		$this->template->set('list_detail_pr_kasbon', $get_pr_detail_kasbon);
 		$this->template->title('Kasbon Form');
 		$this->template->page_icon('fa fa-list');
-		$this->template->render('kasbon_form');
+		$this->template->render('kasbon_form_detail');
 	}
 	// kasbon approval
 	public function kasbon_fin()
@@ -1688,9 +1697,9 @@ class Expense extends Admin_Controller
 	// transport create
 	public function transport_create()
 	{
-		$data_departement = $this->All_model->GetDeptCombo();
-		$this->template->title('Pengajuan Transport');
-		$this->template->set('data_departement', $data_departement);
+		// $data_departement = $this->All_model->GetDeptCombo();
+		// $this->template->title('Pengajuan Transport');
+		// $this->template->set('data_departement', $data_departement);
 		$this->template->render('transport_form');
 	}
 
@@ -1716,9 +1725,13 @@ class Expense extends Admin_Controller
 
 		// print_r($tgl_doc);
 
+		$valid_photo = 1;
+		$msg = '';
+
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
 		$config['allowed_types'] = '*';
+		$config['max_size'] = 2048000;
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
 		$filenames = $filename;
@@ -1733,76 +1746,91 @@ class Expense extends Admin_Controller
 			if ($this->upload->do_upload('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
+			} else {
+				$valid_photo = 0;
+				$msg = $this->upload->display_errors();
 			}
 			// else {
 			// 	print_r($this->upload->display_errors());
 			// 	exit;
 			// }
 		}
-		if ($id !== "") {
-			$result = $this->db->update('tr_transport', [
-				'tgl_doc' => $tgl_doc,
-				'departement' => $departement,
-				'keperluan' => $keperluan,
-				'nama' => $nama,
-				'rute' => $rute,
-				'km_awal' => $km_awal,
-				'km_akhir' => $km_akhir,
-				'nopol' => $nopol,
-				'bensin' => $bensin,
-				'tol' => $tol,
-				'lainnya' => $lainnya,
-				'keterangan' => $keterangan,
-				'parkir' => $parkir,
-				'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
-				'doc_file' => $filenames,
-				'modified_by' => $this->auth->user_name(),
-				'modified_on' => date("Y-m-d h:i:s")
-			], ['id' => $id]);
-		} else {
-			$no_doc = $this->All_model->GetAutoGenerate('format_transport');
-			$data =  array(
-				'no_doc' => $no_doc,
-				'tgl_doc' => $tgl_doc,
-				'departement' => $departement,
-				'keperluan' => $keperluan,
-				'nama' => $nama,
-				'rute' => $rute,
-				'km_awal' => $km_awal,
-				'km_akhir' => $km_akhir,
-				'nopol' => $nopol,
-				'bensin' => $bensin,
-				'tol' => $tol,
-				'parkir' => $parkir,
-				'lainnya' => $lainnya,
-				'keterangan' => $keterangan,
-				'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
-				'doc_file' => $filenames,
-				'status' => 0,
-				'created_by' => $this->auth->user_name(),
-				'created_on' => date("Y-m-d h:i:s"),
-			);
-			$id = $this->All_model->dataSave('tr_transport', $data);
-		}
 
-		if ($this->db->trans_status() === FALSE) {
+		if ($valid_photo == 1) {
+			if ($id !== "") {
+				$result = $this->db->update('tr_transport', [
+					'tgl_doc' => $tgl_doc,
+					'departement' => $departement,
+					'keperluan' => $keperluan,
+					'nama' => $nama,
+					'rute' => $rute,
+					'km_awal' => $km_awal,
+					'km_akhir' => $km_akhir,
+					'nopol' => $nopol,
+					'bensin' => $bensin,
+					'tol' => $tol,
+					'lainnya' => $lainnya,
+					'keterangan' => $keterangan,
+					'parkir' => $parkir,
+					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
+					'doc_file' => $filenames,
+					'modified_by' => $this->auth->user_name(),
+					'modified_on' => date("Y-m-d h:i:s")
+				], ['id' => $id]);
+			} else {
+				$no_doc = $this->All_model->GetAutoGenerate('format_transport');
+				$data =  array(
+					'no_doc' => $no_doc,
+					'tgl_doc' => $tgl_doc,
+					'departement' => $departement,
+					'keperluan' => $keperluan,
+					'nama' => $nama,
+					'rute' => $rute,
+					'km_awal' => $km_awal,
+					'km_akhir' => $km_akhir,
+					'nopol' => $nopol,
+					'bensin' => $bensin,
+					'tol' => $tol,
+					'parkir' => $parkir,
+					'lainnya' => $lainnya,
+					'keterangan' => $keterangan,
+					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
+					'doc_file' => $filenames,
+					'status' => 0,
+					'created_by' => $this->auth->user_name(),
+					'created_on' => date("Y-m-d h:i:s"),
+				);
+				$id = $this->All_model->dataSave('tr_transport', $data);
+			}
+
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				$result = FALSE;
+
+				$msg = 'Data gagal di simpan !';
+			} else {
+				$this->db->trans_commit();
+				$result = TRUE;
+
+				$msg = 'Data berhasil di simpan !';
+			}
+		} else {
 			$this->db->trans_rollback();
 			$result = FALSE;
-		} else {
-			$this->db->trans_commit();
-			$result = TRUE;
 		}
+
 
 		$param = array(
 			'save' => $result,
-			'id' => $id
+			'id' => $id,
+			'msg' => $msg
 		);
 		echo json_encode($param);
 	}
 
 	public function get_list_req_transport($nama, $departement, $date1, $date2)
 	{
-		$data	= $this->db->query("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and departement='" . $departement . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc")->result();
+		$data	= $this->db->query("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc")->result();
 
 		// print_r("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and departement='" . $departement . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc");
 		echo json_encode($data);
@@ -2352,7 +2380,7 @@ class Expense extends Admin_Controller
 	{
 		$no_pr = $this->input->post('no_pr');
 
-		$this->db->select('if(c.nama IS NULL, e.stock_name, c.nama) as material_name, a.propose_purchase as qty, if(d.code IS NULL, f.code, d.code) as unit, b.category as tipe_pr, a.id')
+		$this->db->select('if(c.nama IS NULL, e.stock_name, c.nama) as material_name, a.propose_purchase as qty, if(d.code IS NULL, f.code, d.code) as unit, b.category as tipe_pr, a.id, a.price_ref')
 			->from('material_planning_base_on_produksi_detail a')
 			->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number')
 			->join('new_inventory_4 c', 'c.code_lv4 = a.id_material', 'left')
@@ -2364,7 +2392,7 @@ class Expense extends Admin_Controller
 			->where('a.kasbon_created', null);
 		$get_detail_pr_stok_material = $this->db->get()->result_array();
 
-		$this->db->select('a.id, a.nm_barang as material_name, a.qty, c.code as unit, a.harga as price, (a.qty * a.harga) as total_price,"pr departemen" as tipe_pr')
+		$this->db->select('a.id, a.nm_barang as material_name, a.qty, c.code as unit, a.harga as price, (a.qty * a.harga) as total_price,"pr departemen" as tipe_pr, 0 as price_ref')
 			->from('rutin_non_planning_detail a')
 			->join('rutin_non_planning_header b', 'b.no_pr = a.no_pr', 'left')
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
@@ -2380,6 +2408,7 @@ class Expense extends Admin_Controller
 		// exit;
 		$valid = 1;
 		$hasil = '';
+		$grand_total = 0;
 		if (count($get_detail_pr_stok_material) < 1 && count($get_detail_pr_departemen) < 1) {
 			$valid = 0;
 		} else {
@@ -2390,16 +2419,20 @@ class Expense extends Admin_Controller
 						$tipe_pr = $detail_pr['tipe_pr'];
 					}
 
+					$price_ref = $detail_pr['price_ref'];
+
 					$hasil .= '<tr class="detail_pr_' . $detail_pr['id'] . '">';
 					$hasil .= '<td class="text-center">' . $no . '</td>';
 					$hasil .= '<td class="text-center">' . $detail_pr['material_name'] . '</td>';
 					$hasil .= '<td class="text-center">' . number_format($detail_pr['qty']) . ' <input type="hidden" class="qty_' . $detail_pr['id'] . '" value="' . $detail_pr['qty'] . '"></td>';
 					$hasil .= '<td class="text-center">' . $detail_pr['unit'] . '</td>';
-					$hasil .= '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '"></td>';
-					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum"></td>';
+					$hasil .= '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '" value="' . $price_ref . '"></td>';
+					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . ($price_ref * $detail_pr['qty']) . '"></td>';
 					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
 					$hasil .= '</tr>';
 					$no++;
+
+					$grand_total += ($price_ref * $detail_pr['qty']);
 				endforeach;
 			}
 
@@ -2418,6 +2451,8 @@ class Expense extends Admin_Controller
 					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . $detail_pr['total_price'] . '"></td>';
 					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
 					$hasil .= '</tr>';
+
+					$grand_total += ($detail_pr['total_price']);
 					$no++;
 				endforeach;
 			}
@@ -2432,7 +2467,8 @@ class Expense extends Admin_Controller
 			'sts' => $valid,
 			'hasil' => $hasil,
 			'pesan' => $pesan,
-			'tipe_pr' => $tipe_pr
+			'tipe_pr' => $tipe_pr,
+			'grand_total' => $grand_total
 		]);
 	}
 

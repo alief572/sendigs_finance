@@ -237,10 +237,9 @@ class Incoming_stok extends Admin_Controller
 
             $get_stock_barang = $this->db->get_where('warehouse_stock', ['id_material' => $valx['id_barang'], 'id_gudang' => $id_gudang])->row();
             $stock_barang = 0;
-            if(!empty($get_stock_barang)) {
+            if (!empty($get_stock_barang)) {
               $stock_barang = ($get_stock_barang->qty_stock);
             }
-            
           }
         }
       }
@@ -456,7 +455,6 @@ class Incoming_stok extends Admin_Controller
                   WHERE
                     a.no_po IN ('" . str_replace(",", "','", $no_po) . "')
                     AND a.qty_in < a.qty
-                    AND c.outgoing = '" . $categoryGudang . "'
                 ")->result_array();
     // print_r($detail);
     // echo $this->db->last_query();

@@ -26,26 +26,6 @@ $tgl_appre_2 = '';
 $status3 = '';
 $tgl_appre_3 = '';
 if (!empty($header)) {
-	if ($header[0]->app_1 == '1') {
-		$status1 = '<div class="badge bg-green">Approved</div>';
-		$tgl_appre_1 = date('d F Y', strtotime($header[0]->app_1_date));
-	} else {
-		if ($header[0]->sts_reject1 == '1') {
-			$status1 = '<div class="badge bg-red">Rejected</div>';
-			$tgl_appre_1 = date('d F Y', strtotime($header[0]->sts_reject1_date));
-		}
-	}
-
-	if ($header[0]->app_2 == '1') {
-		$status2 = '<div class="badge bg-green">Approved</div>';
-		$tgl_appre_2 = date('d F Y', strtotime($header[0]->app_2_date));
-	} else {
-		if ($header[0]->sts_reject2 == '1') {
-			$status2 = '<div class="badge bg-red">Rejected</div>';
-			$tgl_appre_2 = date('d F Y', strtotime($header[0]->sts_reject2_date));
-		}
-	}
-
 	if ($header[0]->app_3 == '1') {
 		$status3 = '<div class="badge bg-green">Approved</div>';
 		$tgl_appre_3 = date('d F Y', strtotime($header[0]->app_3_date));
@@ -99,7 +79,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 							if ($departement->id == $id_dept) {
 								$selected = 'selected';
 							}
-							echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->nama) . "</option>";
+							echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->name . ' - ' . $departement->nm_company) . "</option>";
 						}
 						?>
 					</select>
@@ -159,36 +139,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 							</tr>
 						</thead>
 						<tbody>
-							<tr>
-								<td class="text-center">Departement Head</td>
-								<td class="text-center">
-									<?= $status1 ?>
-								</td>
-								<td class="text-center">
-									<?= $tgl_appre_1 ?>
-								</td>
-								<td>
-									<input type="text" name="reject_reason1" id="" class="form-control" value="<?= $alasan_reject1 ?>" readonly>
-								</td>
-								<td>
-									<input type="text" name="keterangan_1" id="" class="form-control" value="<?= $keterangan_1 ?>">
-								</td>
-							</tr>
-							<tr>
-								<td class="text-center">Cost Control</td>
-								<td class="text-center">
-									<?= $status2 ?>
-								</td>
-								<td class="text-center">
-									<?= $tgl_appre_2 ?>
-								</td>
-								<td>
-									<input type="text" name="reject_reason2" id="" class="form-control" value="<?= $alasan_reject2 ?>" readonly>
-								</td>
-								<td>
-									<input type="text" name="keterangan_2" id="" class="form-control" value="<?= $keterangan_2 ?>">
-								</td>
-							</tr>
+
 							<tr>
 								<td class="text-center">Management</td>
 								<td class="text-center">

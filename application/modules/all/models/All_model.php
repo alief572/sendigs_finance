@@ -8,9 +8,12 @@
 
 class All_model extends BF_Model
 {
+	protected $hris;
 	public function __construct()
 	{
 		parent::__construct();
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	// save data
@@ -359,18 +362,16 @@ class All_model extends BF_Model
 	function GetDeptCombo($key = '')
 	{
 		$aCombo		= array();
-		$this->db->select('a.id, UPPER(a.nama) AS nm_dept');
-		$this->db->from('ms_department a');
-		$this->db->where('a.deleted_by', null);
-		if ($key != '') $this->db->where('a.id', $key);
-		//		$this->db->where('a.company_id','COM003');
-		$this->db->order_by('a.nama', 'asc');
+		$this->hris->select('a.id, a.name');
+		$this->hris->from('departments a');
+		if ($key != '') $this->hris->where('a.id', $key);
+		$this->hris->order_by('a.name', 'asc');
 		$query = $this->db->get();
 		$results	= $query->result_array();
 		if ($key == '') $aCombo[]	= '';
 		if ($results) {
 			foreach ($results as $key => $vals) {
-				$aCombo[$vals['id']]	= $vals['nm_dept'];
+				$aCombo[$vals['id']]	= $vals['name'];
 			}
 		}
 		return $aCombo;

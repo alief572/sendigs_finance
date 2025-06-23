@@ -16,7 +16,9 @@ if (!isset($data->departement)) {
 
 $data_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
 
-$metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
+$metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
+
+
 
 ?>
 
@@ -78,21 +80,21 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 					</div>
 
 					<div class="form-group">
-						<label class="col-sm-2 control-label">Metode Pembayaran</label>
+						<!-- <label class="col-sm-2 control-label">Metode Pembayaran</label>
 						<div class="col-sm-4">
 							<select name="metode_pembayaran" id="" class="form-control metode_pembayaran" required>
 								<option value="">- Metode Pembayaran -</option>
 								<option value="1" <?= ($metode_pembayaran == 1) ? 'selected' : null ?>>Request Payment</option>
 								<option value="2" <?= ($metode_pembayaran == 2) ? 'selected' : null ?>>Pettycash Finance</option>
 							</select>
-						</div>
+						</div> -->
 						<label class="col-sm-2 control-label">Keterangan</label>
 						<div class="col-sm-4">
 							<textarea class="form-control" id="keterangan" name="keterangan" placeholder="Keterangan" required><?php echo (isset($data->keterangan) ? $data->keterangan : ''); ?></textarea>
 
 							<?php
 							if (isset($data->st_reject)) {
-								if ($data->st_reject != '') {
+								if ($data->st_reject !== '') {
 									echo '
 							  <div class="alert alert-danger alert-dismissible">
 								<h4><i class="icon fa fa-ban"></i> Alasan Penolakan!</h4>
@@ -104,7 +106,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 						</div>
 					</div>
 
-					<div class="transfer_ke_cont" style="display: none;">
+					<div class="transfer_ke_cont">
 						<h4>Transfer ke</h4>
 						<div class="form-group ">
 							<label class="col-md-1 control-label">Bank</label>
@@ -140,7 +142,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 									<option value="">- No PR -</option>
 									<?php
 									foreach ($list_pr_non_po as $item_pr_non_po) {
-										echo '<option value="' . $item_pr_non_po . '">' . $item_pr_non_po . '</option>';
+										echo '<option value="' . $item_pr_non_po['no_pr'] . '">' . $item_pr_non_po['no_pr'] . ' - ' . $item_pr_non_po['keterangan'] . '</option>';
 									}
 									?>
 								</select>
@@ -162,12 +164,13 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 									<th class="text-center">Qty</th>
 									<th class="text-center">Unit</th>
 									<th class="text-center">Harga Satuan</th>
-									<th class="text-center">Grand Total</th>
+									<th class="text-center">Total</th>
 									<th class="text-center">Action</th>
 								</tr>
 							</thead>
 							<tbody class="list_barang_pr">
 								<?php
+								$grand_total_non_pr = 0;
 								if (isset($list_detail_pr_kasbon)) {
 									$no = 1;
 									foreach ($list_detail_pr_kasbon as $detail_pr) :
@@ -191,11 +194,20 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 										}
 										echo '</td>';
 										echo '</tr>';
+
+										$grand_total_non_pr += $detail_pr['total_harga'];
 										$no++;
 									endforeach;
 								}
 								?>
 							</tbody>
+							<tfoot>
+								<tr>
+									<th class="text-right" colspan="5">Grand Total</th>
+									<th class="text-right grand_total_non_pr"><?= number_format($grand_total_non_pr, 2) ?></th>
+									<th></th>
+								</tr>
+							</tfoot>
 						</table>
 					</div>
 				</div>
@@ -232,18 +244,22 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 						</iframe>
 						<br />' . $data->no_doc . '</div>';
 							} else {
-								echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
+								if (file_exists('assets/expense' . $data->doc_file)) {
+									echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
+								}
 							}
 						}
 						if ($data->doc_file_2 != '') {
 							if (strpos($data->doc_file_2, 'pdf', 0) > 1) {
 								echo '<div class="col-md-12">
-						<iframe src="' . base_url('assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+						<iframe src="' . base_url('./assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
 								 <a href="' . base_url('assets/expense/' . $data->doc_file_2) . '">Download PDF</a>
 						</iframe>
 						<br />' . $data->no_doc . '</div>';
 							} else {
-								echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
+								if (file_exists('./assets/expense' . $data->doc_file2)) {
+									echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
+								}
 							}
 						}
 					}
@@ -256,9 +272,18 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 
 <script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script>
 <script type="text/javascript">
 	var url_save = siteurl + 'expense/kasbon_save/';
 	var url_approve = siteurl + 'expense/kasbon_approve/';
+
+	var mod = '<?= $mod ?>';
+	if (mod !== '') {
+		$('input').attr('readonly', true);
+		$('textarea').attr('readonly', true);
+		$('input[type="file"]').prop('disabled', true);
+	}
+
 	$('.divide').divide();
 
 	$('.autonum').autoNumeric('init');
@@ -300,21 +325,21 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 			}
 		}
 
-		var metode_pembayaran = $('.metode_pembayaran').val();
+		// var metode_pembayaran = $('.metode_pembayaran').val();
 
 		if ($("#jumlah_kasbon").val() == "0") errors = "Jumlah Kasbon tidak boleh kosong";
 		if ($("#keperluan").val() == "") errors = "keperluan tidak boleh kosong";
 		if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
-		if (metode_pembayaran == "") errors = "Pilih metode pembayaran";
-		if (metode_pembayaran == 1) {
-			var bank_id = $('#bank_id').val();
-			var accnumber = $('#accnumber').val();
-			var accname = $('#accname').val();
+		// if (metode_pembayaran == "") errors = "Pilih metode pembayaran";
+		// if (metode_pembayaran == 1) {
+		// 	var bank_id = $('#bank_id').val();
+		// 	var accnumber = $('#accnumber').val();
+		// 	var accname = $('#accname').val();
 
-			if (bank_id == '' || accnumber == '' || accname == '') {
-				errors = "Pastikan data transfer terisi";
-			}
-		}
+		// 	if (bank_id == '' || accnumber == '' || accname == '') {
+		// 		errors = "Pastikan data transfer terisi";
+		// 	}
+		// }
 
 		var price_no_input = 0;
 		$('.price_input').each(function() {
@@ -393,6 +418,30 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 		}
 	});
 
+	function number_format(number, decimals, dec_point, thousands_sep) {
+		// Strip all characters but numerical ones.
+		number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+		var n = !isFinite(+number) ? 0 : +number,
+			prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+			sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+			dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+			s = '',
+			toFixedFix = function(n, prec) {
+				var k = Math.pow(10, prec);
+				return '' + Math.round(n * k) / k;
+			};
+		// Fix for IE parseFloat(0.55).toFixed(0) = 0;
+		s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+		if (s[0].length > 3) {
+			s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+		}
+		if ((s[1] || '').length < prec) {
+			s[1] = s[1] || '';
+			s[1] += new Array(prec - s[1].length + 1).join('0');
+		}
+		return s.join(dec);
+	}
+
 	$(document).on('change', '#search_pr_non_po', function(e) {
 		// e.preventDefault();
 		const no_pr = $(this).val();
@@ -416,6 +465,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 					$('.list_barang_pr').html(result.hasil);
 					$('#tipe_pr').val(result.tipe_pr);
 					$('.autonum').autoNumeric();
+					$('.grand_total_non_pr').html(number_format(result.grand_total, 2));
 				} else {
 					swal({
 						title: 'Error !',
@@ -458,7 +508,32 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : '';
 		var total = parseFloat(nilai * qty);
 
 		$('.grand_total_' + no).autoNumeric('set', total);
+
+		hitung_grand_total_non_pr();
 	})
+
+	function getNum(val) {
+		if (isNaN(val) || val == '') {
+			return 0;
+		}
+		return parseFloat(val);
+	}
+
+	function hitung_grand_total_non_pr() {
+		var grand_total = 0;
+		$('.price_input').each(function() {
+			var value = $(this).val();
+			value = value.replace(/,/g, '');
+			value = parseFloat(value);
+
+			var no = $(this).data('no');
+			var qty = $('.qty_' + no).val();
+
+			grand_total += (value * qty);
+		});
+
+		$('.grand_total_non_pr').html(number_format(grand_total, 2));
+	}
 
 	$(function() {
 		$(".tanggal").datepicker({

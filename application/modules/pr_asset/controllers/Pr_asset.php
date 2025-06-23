@@ -2104,7 +2104,8 @@ class Pr_asset extends Admin_Controller
 		echo json_encode($Arr_Data);
 	}
 
-	public function edit_asset() {
+	public function edit_asset()
+	{
 		$post = $this->input->post();
 
 		$this->db->trans_start();
@@ -2125,7 +2126,7 @@ class Pr_asset extends Admin_Controller
 		];
 
 		$update_asset = $this->db->update('asset_planning', $data_update, ['no_pr' => $post['no_pr']]);
-		if(!$update_asset) {
+		if (!$update_asset) {
 			print_r($this->db->error($update_asset));
 			exit;
 		}
@@ -2136,16 +2137,16 @@ class Pr_asset extends Admin_Controller
 			'nilai_pr' => str_replace(',', '', $post['budget'])
 		];
 		$update_pr_detail = $this->db->update('tran_pr_detail', $data_update2, ['no_pr' => $post['no_pr']]);
-		if(!$update_pr_detail) {
+		if (!$update_pr_detail) {
 			print_r($this->db->error($update_pr_detail));
 			exit;
 		}
 
-		if($this->db->trans_status() === false) {
+		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
 
 			$valid = 0;
-		}else{
+		} else {
 			$this->db->trans_commit();
 
 			$valid = 1;

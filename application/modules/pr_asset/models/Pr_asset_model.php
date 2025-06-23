@@ -333,7 +333,7 @@ class Pr_asset_model extends BF_model
 				$where = " AND b.app_status_1 = 'Y' AND (b.app_status_2 = '' OR b.app_status_2 IS NULL)";
 			}
 			if ($tanda == 'approval_management') {
-				$where = " AND b.app_status_1 = 'Y' AND b.app_status_2 = 'Y' AND (b.app_status_3 = '' OR b.app_status_3 IS NULL)";
+				$where = " AND b.app_status_3 IS NULL";
 			}
 		}
 
@@ -510,43 +510,15 @@ class Pr_asset_model extends BF_model
 				($row['app_status_2'] == '' || $row['app_status_2'] == null) &&
 				($row['app_status_3'] == '' || $row['app_status_3'] == null)
 			) {
-				$status = 'Waiting Approval Head';
+				$status = 'Waiting Approval';
 				$color = 'blue';
 			}
 			if (
-				$row['app_status_1'] == 'D'
-			) {
-				$status = 'Rejected by Head';
-				$color = 'red';
-			}
-
-			if (
-				($row['app_status_1'] == 'Y') &&
-				($row['app_status_2'] == '' || $row['app_status_2'] == null) &&
-				($row['app_status_3'] == '' || $row['app_status_3'] == null)
-			) {
-				$status = 'Waiting Approval Cost Control';
-				$color = 'blue';
-			}
-			if (
-				$row['app_status_2'] == 'D'
-			) {
-				$status = 'Rejected by Cost Control';
-				$color = 'red';
-			}
-
-			if (
-				($row['app_status_1'] == 'Y') &&
-				($row['app_status_2'] == 'Y') &&
-				($row['app_status_3'] == '' || $row['app_status_3'] == null)
-			) {
-				$status = 'Waiting Approval Management';
-				$color = 'blue';
-			}
-			if (
+				$row['app_status_1'] == 'D' ||
+				$row['app_status_2'] == 'D' ||
 				$row['app_status_3'] == 'D'
 			) {
-				$status = 'Rejected by Management';
+				$status = 'Rejected';
 				$color = 'red';
 			}
 
@@ -562,7 +534,7 @@ class Pr_asset_model extends BF_model
 			}
 			$nestedData[]	= "<div align='left'><span class='badge bg-" . $color . "'>" . strtoupper($status) . "</span></div>";
 			$view = '';
-			if($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
+			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
 				$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-check'></i></button>";
 			}
 			$print			= "&nbsp;<button type='button'class='btn btn-sm btn-info print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
@@ -587,7 +559,7 @@ class Pr_asset_model extends BF_model
 			}
 
 			//detail
-			if($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
+			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
 				$nestedData2 	= array();
 				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>$('.prtCh_" . $nomor . "').parent().parent().attr('class','child-" . $nomor . "');$('.child-" . $nomor . "').hide()</script>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
 				$nestedData2[]	= "<div align='left'></div>";
@@ -595,13 +567,13 @@ class Pr_asset_model extends BF_model
 				$nestedData2[]	= "<div align='right'><b>NILAI PR</b></br>" . number_format($row['nilai_pr']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>TGL DIBUTUHKAN</b></br>" . date('d F Y', strtotime($row['tgl_dibutuhkan'])) . "</div>";
 				$approve = "<button type='button' class='btn btn-sm btn-success approve' title='Approve' data-id='" . $nomor . "' data-tipe_approve='" . $tipe_approve . "' data-role='qtip'><i class='fa fa-check'></i></button>";
-	
+
 				$app_by = '';
 				$app_date = '';
 				if ($row['app_reason_1'] !== '' || $row['app_reason_1'] !== null) {
 					$app_reason = $row['app_reason_1'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_1']));
-	
+
 					$get_create_by = $this->db->get_where('users', ['id_user' => $row['app_by_1']])->row();
 					if (!empty($get_create_by)) {
 						$app_by = $get_create_by->nm_lengkap;
@@ -609,7 +581,7 @@ class Pr_asset_model extends BF_model
 				} else if ($row['app_reason_2'] !== '' || $row['app_reason_2'] !== null) {
 					$app_reason = $row['app_reason_2'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_2']));
-	
+
 					$get_create_by = $this->db->get_where('users', ['id_user' => $row['app_by_2']])->row();
 					if (!empty($get_create_by)) {
 						$app_by = $get_create_by->nm_lengkap;
@@ -617,7 +589,7 @@ class Pr_asset_model extends BF_model
 				} else if ($row['app_reason_3'] !== '' || $row['app_reason_3'] !== null) {
 					$app_reason = $row['app_reason_3'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_3']));
-	
+
 					$get_create_by = $this->db->get_where('users', ['id_user' => $row['app_by_3']])->row();
 					if (!empty($get_create_by)) {
 						$app_by = $get_create_by->nm_lengkap;
@@ -678,7 +650,7 @@ class Pr_asset_model extends BF_model
 				$where = " AND b.app_status_1 = 'Y' AND (b.app_status_2 = '' OR b.app_status_2 IS NULL)";
 			}
 			if ($tanda == 'approval_management') {
-				$where = " AND b.app_status_1 = 'Y' AND b.app_status_2 = 'Y' AND (b.app_status_3 = '' OR b.app_status_3 IS NULL)";
+				$where = " AND b.app_status_3 IS NULL";
 			}
 		}
 
@@ -695,7 +667,7 @@ class Pr_asset_model extends BF_model
 				LEFT JOIN tran_pr_header b ON a.no_pr = b.no_pr
 				LEFT JOIN users c ON c.id_user = b.created_by,
 				(SELECT @row:=0) r
-		    WHERE  1=1 " . $where . " AND a.category = 'asset' AND(
+		    WHERE  1=1 " . $where . " AND a.category = 'asset' AND (
 				a.id LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.nm_barang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'

@@ -69,10 +69,10 @@ class App_pr_stock_model extends BF_Model
       }
 
       $tingkat_approval = 1;
-      if($requestData['tanda'] == 'cost_control') {
+      if ($requestData['tanda'] == 'cost_control') {
         $tingkat_approval = 2;
       }
-      if($requestData['tanda'] == 'management') {
+      if ($requestData['tanda'] == 'management') {
         $tingkat_approval = 3;
       }
       $nestedData   = array();
@@ -103,20 +103,14 @@ class App_pr_stock_model extends BF_Model
       } else {
         if ($row['app_1'] == null && $row['app_2'] == null && $row['app_3'] == null) :
           $warna = "blue";
-          $sts = "Waiting Approval Head";
-        elseif ($row['app_1'] !== null && $row['app_2'] == null && $row['app_3'] == null) :
-          $warna = "blue";
-          $sts = "Waiting Approval Cost Control";
-        elseif ($row['app_1'] !== null && $row['app_2'] !== null && $row['app_3'] == null) :
-          $warna = "blue";
-          $sts = "Waiting Approval Management";
+          $sts = "Waiting Approval";
         else :
           if ($row['sts_app'] == "Y") :
             $warna = "green";
             $sts = "Approved";
           else :
             $warna = "blue";
-            $sts = "Waiting Approval Head";
+            $sts = "Waiting Approval";
           endif;
         endif;
       }
@@ -127,7 +121,7 @@ class App_pr_stock_model extends BF_Model
       $approve  = "";
       $view  = "<a href='" . site_url($this->uri->segment(1)) . '/detail_planning/' . $row['so_number'] . "' class='btn btn-sm btn-warning' title='Detail PR' data-role='qtip'><i class='fa fa-eye'></i></a>";
       if ($this->ENABLE_MANAGE and COUNT($getCheck) > 0) {
-        $approve  = "<a href='" . site_url($this->uri->segment(1)) . '/approval_planning/' . $row['so_number'] . "/".$tingkat_approval."' class='btn btn-sm btn-success' title='Approval PR' data-role='qtip'><i class='fa fa-check'></i></a>";
+        $approve  = "<a href='" . site_url($this->uri->segment(1)) . '/approval_planning/' . $row['so_number'] . "/" . $tingkat_approval . "' class='btn btn-sm btn-success' title='Approval PR' data-role='qtip'><i class='fa fa-check'></i></a>";
       }
       $nestedData[]  = "<div align='left'>" . $view . " " . $approve . "</div>";
       $data[] = $nestedData;
@@ -160,15 +154,15 @@ class App_pr_stock_model extends BF_Model
     // }
 
     $filter_approval = '';
-    if ($tanda == 'head') {
-      $filter_approval = ' AND a.app_post IS NULL';
-    }
-    if ($tanda == 'cost_control') {
-      $filter_approval = ' AND a.app_post = 2';
-    }
-    if ($tanda == 'management') {
-      $filter_approval = ' AND a.app_post = 3';
-    }
+    // if ($tanda == 'head') {
+    //   $filter_approval = ' AND a.app_post IS NULL';
+    // }
+    // if ($tanda == 'cost_control') {
+    //   $filter_approval = ' AND a.app_post = 2';
+    // }
+    // if ($tanda == 'management') {
+    //   $filter_approval = ' AND a.app_post = 3';
+    // }
 
     $sql = "SELECT
               (@row:=@row+1) AS nomor,
