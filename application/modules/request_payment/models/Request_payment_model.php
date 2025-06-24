@@ -402,7 +402,11 @@ class Request_payment_model extends BF_Model
     {
         $generate_id = $this->db->query("SELECT MAX(id) AS max_id FROM payment_approve WHERE id LIKE '%BK-" . $kode_bank . "-" . date('my-') . "%'")->row();
         $kodeBarang = $generate_id->max_id;
-        $urutan = (int) substr($kodeBarang, 16, 4);
+        if ($kode_bank == null) {
+            $urutan = (int) substr($kodeBarang, 9, 4);
+        } else {
+            $urutan = (int) substr($kodeBarang, 16, 4);
+        }
         $urutan++;
         $tahun = date('my-');
         $huruf = "BK-" . $kode_bank . "-";
