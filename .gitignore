@@ -25,3 +25,5 @@ application/config/constants.php
 /assets/pr/*
 /docker/*
 docker-compose.yml
+application/config/constants.php
+application/config/config.php

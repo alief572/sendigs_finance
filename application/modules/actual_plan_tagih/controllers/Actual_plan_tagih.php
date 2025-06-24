@@ -4,10 +4,12 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Actual_plan_tagih extends Admin_Controller
 {
-    protected $viewPermission     = 'Plan_Tagih.View';
-    protected $addPermission      = 'Plan_Tagih.Add';
-    protected $managePermission = 'Plan_Tagih.Manage';
-    protected $deletePermission = 'Plan_Tagih.Delete';
+    protected $viewPermission     = 'Actual_Plan_Tagih.View';
+    protected $addPermission      = 'Actual_Plan_Tagih.Add';
+    protected $managePermission = 'Actual_Plan_Tagih.Manage';
+    protected $deletePermission = 'Actual_Plan_Tagih.Delete';
+
+    protected $consultant;
 
     public function __construct()
     {
@@ -20,6 +22,8 @@ class Actual_plan_tagih extends Admin_Controller
         $this->template->page_icon('fa fa-building-o');
 
         date_default_timezone_set('Asia/Bangkok');
+
+        $this->consultant = $this->load->database('consultant', true);
     }
 
     public function index()
@@ -35,16 +39,16 @@ class Actual_plan_tagih extends Admin_Controller
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $get_spk_penawaran = $this->db->get()->row();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $get_spk_penawaran = $this->consultant->get()->row();
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran_payment a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $this->db->order_by('a.dibuat_tgl', 'asc');
-        $get_top_spk_penawaran = $this->db->get()->result();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran_payment a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $data = [
             'data_spk_penawaran' => $get_spk_penawaran,
@@ -64,7 +68,7 @@ class Actual_plan_tagih extends Admin_Controller
 
         $macet = '';
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $id))->result();
-        if (!empty($get_actual_plan_tagih) && $get_actual_plan_tagih->tagih_mundur == '3') {
+        if (!empty($get_actual_plan_tagih) && $get_actual_plan_tagih[0]->tagih_mundur == '3') {
             $macet = '1';
         }
 

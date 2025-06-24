@@ -267,7 +267,7 @@ class Request_payment extends Admin_Controller
 		/* Transportasi */
 		if (isset($type) && $type == 'transportasi') {
 			$data 			= $this->db->get_where('tr_transport_req', ['id' => $id])->row();
-			$data_detail	= $this->db->get_where('tr_transport', ['no_req' => $data->no_doc, 'req_payment' => 1])->result();
+			$data_detail	= $this->db->get_where('tr_transport', ['no_req' => $data->no_doc])->result();
 		}
 
 		/* NON PO */
@@ -350,7 +350,7 @@ class Request_payment extends Admin_Controller
 		/* Transportasi */
 		if (isset($type) && $type == 'transportasi') {
 			$data 			= $this->db->get_where('tr_transport_req', ['id' => $id])->row();
-			$data_detail	= $this->db->get_where('tr_transport', ['no_req' => $data->no_doc, 'req_payment' => 0])->result();
+			$data_detail	= $this->db->get_where('tr_transport', ['no_req' => $data->no_doc])->result();
 		}
 
 		/* NON PO */

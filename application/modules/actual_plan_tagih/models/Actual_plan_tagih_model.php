@@ -14,6 +14,13 @@ class Actual_plan_tagih_model extends BF_Model
     protected $managePermission = 'Actual_Plan_Tagih.Manage';
     protected $deletePermission = 'Actual_Plan_Tagih.Delete';
 
+    protected $consultant;
+
+    public function __construct()
+    {
+        $this->consultant = $this->load->database('consultant', true);
+    }
+
     public function generate_id()
     {
         $Ym             = date('ym');
@@ -36,10 +43,9 @@ class Actual_plan_tagih_model extends BF_Model
         $search = $this->input->post('search');
         $bulan = $this->input->post('bulan');
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, c.nm_sales');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader,');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
-        $this->db->join('kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
@@ -55,7 +61,6 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
-            $this->db->or_like('b.nm_sales', $search['value'], 'both');
             $this->db->end_start();
         }
         $this->db->order_by('a.id', 'desc');
@@ -66,10 +71,9 @@ class Actual_plan_tagih_model extends BF_Model
         // print_r($this->db->last_query());
         // exit;
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, c.nm_sales');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
-        $this->db->join('kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
@@ -85,7 +89,6 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
-            $this->db->or_like('b.nm_sales', $search['value'], 'both');
             $this->db->end_start();
         }
         $this->db->order_by('a.id', 'desc');
@@ -98,9 +101,25 @@ class Actual_plan_tagih_model extends BF_Model
         foreach ($get_data->result() as $item) {
             $no++;
 
+            $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $item->id_spk_penawaran])->row();
+            $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran->nm_sales : '';
+
+            $nm_company = '';
+            if (!empty($get_spk_penawaran)) {
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
+
+                $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+            }
+
             $status = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
             if ($bulan == 'macet') {
                 $status = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
+            }
+
+            $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 2])->result();
+            if (count($check_aktual_telat) > 0) {
+                $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
             }
 
             if ($bulan == 'macet') {
@@ -111,12 +130,12 @@ class Actual_plan_tagih_model extends BF_Model
 
             $hasil[] = [
                 'no' => $no,
-                'company' => '',
+                'company' => $nm_company,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,
                 'project' => $item->nm_project,
                 'project_leader' => $item->nm_project_leader,
-                'sales' => $item->nm_sales,
+                'sales' => $nm_sales,
                 'status' => $status,
                 'option' => $option
             ];
