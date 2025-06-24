@@ -9,6 +9,8 @@ class Plan_tagih extends Admin_Controller
     protected $managePermission = 'Plan_Tagih.Manage';
     protected $deletePermission = 'Plan_Tagih.Delete';
 
+    protected $consultant;
+
     public function __construct()
     {
         parent::__construct();
@@ -20,6 +22,8 @@ class Plan_tagih extends Admin_Controller
         $this->template->page_icon('fa fa-building-o');
 
         date_default_timezone_set('Asia/Bangkok');
+
+        $this->consultant = $this->load->database('consultant', true);
     }
 
     public function index()
@@ -35,16 +39,16 @@ class Plan_tagih extends Admin_Controller
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $get_spk_penawaran = $this->db->get()->row();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $get_spk_penawaran = $this->consultant->get()->row();
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran_payment a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $this->db->order_by('a.dibuat_tgl', 'asc');
-        $get_top_spk_penawaran = $this->db->get()->result();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran_payment a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $data = [
             'data_spk_penawaran' => $get_spk_penawaran,
@@ -61,16 +65,16 @@ class Plan_tagih extends Admin_Controller
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $get_spk_penawaran = $this->db->get()->row();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $get_spk_penawaran = $this->consultant->get()->row();
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran_payment a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $this->db->order_by('a.dibuat_tgl', 'asc');
-        $get_top_spk_penawaran = $this->db->get()->result();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran_payment a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $this->db->select('a.keterangan_penagihan');
         $this->db->from('kons_tr_plan_tagih_header a ');
@@ -107,16 +111,16 @@ class Plan_tagih extends Admin_Controller
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $get_spk_penawaran = $this->db->get()->row();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $get_spk_penawaran = $this->consultant->get()->row();
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran_payment a');
-        $this->db->where('a.id_spk_penawaran', $id_spk);
-        $this->db->order_by('a.dibuat_tgl', 'asc');
-        $get_top_spk_penawaran = $this->db->get()->result();
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran_payment a');
+        $this->consultant->where('a.id_spk_penawaran', $id_spk);
+        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $this->db->select('a.id, a.keterangan_penagihan');
         $this->db->from('kons_tr_plan_tagih_header a ');
@@ -175,7 +179,7 @@ class Plan_tagih extends Admin_Controller
         $no_detail = 0;
         foreach ($post['dt'] as $item) {
             $no_detail++;
-            $data_top = $this->db->get_where('kons_tr_spk_penawaran_payment', array('id' => $item['id']))->row();
+            $data_top = $this->consultant->get_where('kons_tr_spk_penawaran_payment', array('id' => $item['id']))->row();
 
             $arr_detail[] = [
                 'id_spk_penawaran' => $post['id_spk_penawaran'],
@@ -243,7 +247,7 @@ class Plan_tagih extends Admin_Controller
         $no_detail = 0;
         foreach ($post['dt'] as $item) {
             $no_detail++;
-            $data_top = $this->db->get_where('kons_tr_spk_penawaran_payment', array('id' => $item['id']))->row();
+            $data_top = $this->consultant->get_where('kons_tr_spk_penawaran_payment', array('id' => $item['id']))->row();
 
             $arr_update_detail[] = [
                 'id' => $item['id_plan_tagih'],
