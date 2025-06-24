@@ -14,6 +14,13 @@ class Plan_tagih_model extends BF_Model
     protected $managePermission = 'Plan_Tagih.Manage';
     protected $deletePermission = 'Plan_Tagih.Delete';
 
+    protected $consultant;
+
+    public function __construct()
+    {
+        $this->consultant = $this->load->database('consultant', true);
+    }
+
     public function generate_id()
     {
         $Ym             = date('ym');
@@ -35,38 +42,41 @@ class Plan_tagih_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.sts_spk', 1);
+        $this->consultant->select('a.*, b.nm_company');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->join('kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
+        $this->consultant->where('a.sts_spk', 1);
         if (!empty($search['value'])) {
-            $this->db->group_start();
-            $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
-            $this->db->or_like('a.nm_customer', $search['value'], 'both');
-            $this->db->or_like('a.nm_project', $search['value'], 'both');
-            $this->db->or_like('a.nm_project_leader', $search['value'], 'both');
-            $this->db->or_like('a.nm_sales', $search['value'], 'both');
-            $this->db->end_start();
+            $this->consultant->group_start();
+            $this->consultant->like('a.id_spk_penawaran', $search['value'], 'both');
+            $this->consultant->or_like('b.nm_company', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_customer', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_project', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_project_leader', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_sales', $search['value'], 'both');
+            $this->consultant->end_start();
         }
-        $this->db->order_by('a.id_spk_penawaran', 'desc');
-        $this->db->limit($length, $start);
+        $this->consultant->order_by('a.id_spk_penawaran', 'desc');
+        $this->consultant->limit($length, $start);
 
-        $get_data = $this->db->get();
+        $get_data = $this->consultant->get();
 
-        $this->db->select('a.*');
-        $this->db->from('kons_tr_spk_penawaran a');
-        $this->db->where('a.sts_spk', 1);
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_spk_penawaran a');
+        $this->consultant->where('a.sts_spk', 1);
         if (!empty($search['value'])) {
-            $this->db->group_start();
-            $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
-            $this->db->or_like('a.nm_customer', $search['value'], 'both');
-            $this->db->or_like('a.nm_project', $search['value'], 'both');
-            $this->db->or_like('a.nm_project_leader', $search['value'], 'both');
-            $this->db->or_like('a.nm_sales', $search['value'], 'both');
-            $this->db->end_start();
+            $this->consultant->group_start();
+            $this->consultant->like('a.id_spk_penawaran', $search['value'], 'both');
+            $this->consultant->or_like('b.nm_company', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_customer', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_project', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_project_leader', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_sales', $search['value'], 'both');
+            $this->consultant->end_start();
         }
-        $this->db->order_by('a.id_spk_penawaran', 'desc');
+        $this->consultant->order_by('a.id_spk_penawaran', 'desc');
 
-        $get_data_all = $this->db->get();
+        $get_data_all = $this->consultant->get();
 
         $no = (0 + $start);
         $hasil = [];
@@ -96,7 +106,7 @@ class Plan_tagih_model extends BF_Model
 
             $hasil[] = [
                 'no' => $no,
-                'company' => '',
+                'company' => $item->nm_company,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,
                 'project' => $item->nm_project,
