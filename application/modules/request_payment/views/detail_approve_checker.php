@@ -138,9 +138,9 @@ if ($type == 'expense') {
 				</thead>
 				<tbody>
 					<?php
+					$n = 0;
+					$gTotal = 0;
 					if (!empty($details)) {
-						$n = 0;
-						$gTotal = 0;
 						foreach ($details as $dtl) : $n++;
 							$coa = (isset($dtl->coa)) ? $dtl->coa : '';
 							$nm_coa = (isset($list_coa[$coa]) && $coa !== '') ? $list_coa[$coa] : '';
