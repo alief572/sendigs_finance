@@ -165,17 +165,16 @@
 											title: "Sukses!",
 											text: msg['msg'],
 											type: "success",
-											timer: 1500,
-											showConfirmButton: false
+											timer: 1500
+										}, function(lanjut) {
+											window.location = siteurl + 'expense/transport';
 										});
-										window.location = siteurl + 'expense/transport';
 									} else {
 										swal({
 											title: "Gagal!",
 											text: msg['msg'],
 											type: "error",
-											timer: 1500,
-											showConfirmButton: false
+											timer: 1500
 										});
 									};
 									console.log(msg);
@@ -185,8 +184,7 @@
 										title: "Gagal!",
 										text: "Ajax Data Gagal Di Proses",
 										type: "error",
-										timer: 1500,
-										showConfirmButton: false
+										timer: 1500
 									});
 									console.log(msg);
 								}
@@ -242,8 +240,7 @@
 										title: "Sukses!",
 										text: "Data Berhasil Di Update",
 										type: "success",
-										timer: 1500,
-										showConfirmButton: false
+										timer: 1500
 									});
 									window.location.reload();
 								} else {
@@ -251,8 +248,7 @@
 										title: "Gagal!",
 										text: "Data Gagal Di Update",
 										type: "error",
-										timer: 1500,
-										showConfirmButton: false
+										timer: 1500
 									});
 								};
 								console.log(msg);
