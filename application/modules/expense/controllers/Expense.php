@@ -1730,7 +1730,7 @@ class Expense extends Admin_Controller
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
-		$config['allowed_types'] = '*';
+		$config['allowed_types'] = 'jpg|jpeg|png|gif|heic|heif';
 		$config['max_size'] = 51200;
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
