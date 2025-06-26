@@ -1730,8 +1730,8 @@ class Expense extends Admin_Controller
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
-		$config['allowed_types'] = 'jpg|jpeg|png|gif|heic|heif';
-		$config['max_size'] = 51200;
+		$config['allowed_types'] = '*';
+		// $config['max_size'] = 51200;
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
 		$filenames = $filename;
@@ -1745,7 +1745,24 @@ class Expense extends Admin_Controller
 			$this->upload->initialize($config);
 			if ($this->upload->do_upload('file')) {
 				$uploadData = $this->upload->data();
-				$filenames = $uploadData['file_name'];
+
+				$config['image_library'] = 'gd2';
+				$config['source_image'] = $uploadData['full_path'];
+				$config['maintain_ratio'] = TRUE;
+				$config['quality'] = '30%'; // Reduce quality to compress
+				$config['width'] = $uploadData['image_width']; // Keep original size
+				$config['height'] = $uploadData['image_height'];
+				$config['overwrite'] = TRUE;
+
+				$this->load->library('image_lib', $config);
+				if (!$this->image_lib->resize()) {
+					print_r($this->image_lib->display_errors());
+					exit;
+				} else {
+					$this->image_lib->resize();
+
+					$filenames = $uploadData['file_name'];
+				}
 			} else {
 				$valid_photo = 0;
 				$msg = $this->upload->display_errors();
