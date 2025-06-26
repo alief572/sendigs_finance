@@ -153,6 +153,7 @@
 					closeOnCancel: true
 				}, async function(isConfirm) {
 					if (isConfirm) {
+						$('.ajax_loader').show();
 						try {
 							const imageInput = document.getElementById('doc_file');
 							const imageFile = imageInput.files[0];
