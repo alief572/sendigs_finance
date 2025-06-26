@@ -162,34 +162,40 @@
 								return false;
 							}
 
-							// 🧠 Compress image
+							// Detect mobile devices
+							const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+							// Compression settings
 							const options = {
 								maxSizeMB: 1,
-								maxWidthOrHeight: 1024,
-								useWebWorker: true
+								maxWidthOrHeight: isMobile ? 1024 : 2000,
+								useWebWorker: !isMobile // Disable worker on mobile if needed
 							};
+
+							// 🧠 Compress the image
+							console.log("Original size:", imageFile.size / 1024, "KB");
+
 							const compressedFile = await imageCompression(imageFile, options);
 
-							// 📦 Create NEW FormData and manually append other fields
+							console.log("Compressed size:", compressedFile.size / 1024, "KB");
+
+							// Build new FormData and append compressed image
 							const formdata = new FormData();
 							formdata.append('doc_file', compressedFile, compressedFile.name);
-							// formdata.append('filename', $('#filename').val());
-							// formdata.append('tgl_doc', $('#tgl_doc').val());
-							// formdata.append('title', $('#title').val());
 
-							// Add any other fields manually here
-							// formdata.append('fieldname', $('#fieldname').val());
-
+							// Append all other form fields except file
 							$('#frm_data').find('input, select, textarea').each(function() {
-								const type = $(this).attr('type');
-								const name = $(this).attr('name');
+								const $el = $(this);
+								const type = $el.attr('type');
+								const name = $el.attr('name');
+								if (!name || type === 'file') return;
 
-								// Skip file input (we already appended compressed version)
-								if (type === 'file' || !name) return;
+								if ((type === 'checkbox' || type === 'radio') && !$el.is(':checked')) return;
 
-								formdata.append(name, $(this).val());
+								formdata.append(name, $el.val());
 							});
 
+							// 🚀 Send the AJAX request
 							$.ajax({
 								url: url_save,
 								dataType: "json",
@@ -228,7 +234,7 @@
 							});
 						} catch (error) {
 							console.error("Compression failed:", error);
-							alert("Image compression failed.");
+							alert("Image compression failed. Coba gunakan gambar dengan ukuran lebih kecil.");
 						}
 					}
 				});
@@ -237,6 +243,7 @@
 				return false;
 			}
 		});
+
 		<?php if (isset($stsview)) {
 			if ($stsview == 'view') {
 		?>
