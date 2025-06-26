@@ -132,100 +132,106 @@
 		$('.divide').divide();
 		$('#frm_data').on('submit', async function(e) {
 			e.preventDefault();
-			var errors = "";
+			let errors = "";
+
 			if ($("#filename").val() == "") {
 				if ($('#doc_file').get(0).files.length === 0) {
 					errors = "Dokumen harus diupload";
 				}
 			}
 			if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
+
 			if (errors == "") {
 				swal({
-						title: "Anda Yakin?",
-						text: "Data Akan Disimpan!",
-						type: "info",
-						showCancelButton: true,
-						confirmButtonText: "Ya, simpan!",
-						cancelButtonText: "Tidak!",
-						closeOnConfirm: false,
-						closeOnCancel: true
-					},
-					async function(isConfirm) {
-						if (isConfirm) {
-							const formdata = new FormData($('#frm_data')[0]);
-
+					title: "Anda Yakin?",
+					text: "Data Akan Disimpan!",
+					type: "info",
+					showCancelButton: true,
+					confirmButtonText: "Ya, simpan!",
+					cancelButtonText: "Tidak!",
+					closeOnConfirm: false,
+					closeOnCancel: true
+				}, async function(isConfirm) {
+					if (isConfirm) {
+						try {
 							const imageInput = document.getElementById('doc_file');
-							const title = $('#title').val();
+							const imageFile = imageInput.files[0];
 
-							if (imageInput.files.length === 0) {
+							if (!imageFile) {
 								alert('Please select an image!');
 								return false;
 							}
 
-							const imageFile = imageInput.files[0];
-
-							// 🧠 Compression options
+							// 🧠 Compress image
 							const options = {
-								maxSizeMB: 1, // Max size (e.g., 1MB)
-								maxWidthOrHeight: 1024, // Resize if larger
-								useWebWorker: true // Use worker thread
+								maxSizeMB: 1,
+								maxWidthOrHeight: 1024,
+								useWebWorker: true
 							};
+							const compressedFile = await imageCompression(imageFile, options);
 
-							try {
-								const compressedFile = await imageCompression(imageFile, options);
+							// 📦 Create NEW FormData and manually append other fields
+							const formdata = new FormData();
+							formdata.append('doc_file', compressedFile, compressedFile.name);
+							// formdata.append('filename', $('#filename').val());
+							// formdata.append('tgl_doc', $('#tgl_doc').val());
+							// formdata.append('title', $('#title').val());
 
-								// 📦 Create FormData and append compressed image
+							// Add any other fields manually here
+							// formdata.append('fieldname', $('#fieldname').val());
 
-								formdata.append('title', title);
-								formdata.append('doc_file', compressedFile, compressedFile.name);
+							$('#frm_data').find('input, select, textarea').each(function() {
+								const type = $(this).attr('type');
+								const name = $(this).attr('name');
 
-								$.ajax({
-									url: url_save,
-									dataType: "json",
-									type: 'POST',
-									data: formdata,
-									processData: false,
-									contentType: false,
-									success: function(msg) {
-										if (msg['save'] == '1') {
-											swal({
-												title: "Sukses!",
-												text: msg['msg'],
-												type: "success",
-												timer: 1500
-											}, function(lanjut) {
-												window.location = siteurl + 'expense/transport';
-											});
-										} else {
-											swal({
-												title: "Gagal!",
-												text: msg['msg'],
-												type: "error",
-												timer: 1500
-											});
-										};
-										console.log(msg);
-									},
-									error: function(msg) {
+								// Skip file input (we already appended compressed version)
+								if (type === 'file' || !name) return;
+
+								formdata.append(name, $(this).val());
+							});
+
+							$.ajax({
+								url: url_save,
+								dataType: "json",
+								type: 'POST',
+								data: formdata,
+								processData: false,
+								contentType: false,
+								success: function(msg) {
+									if (msg['save'] == '1') {
+										swal({
+											title: "Sukses!",
+											text: msg['msg'],
+											type: "success",
+											timer: 1500
+										}, function() {
+											window.location = siteurl + 'expense/transport';
+										});
+									} else {
 										swal({
 											title: "Gagal!",
-											text: "Ajax Data Gagal Di Proses",
+											text: msg['msg'],
 											type: "error",
 											timer: 1500
 										});
-										console.log(msg);
 									}
-								});
-							} catch (error) {
-								console.error("Compression failed:", error);
-								alert("Image compression failed.");
-							}
-
-
+								},
+								error: function(msg) {
+									swal({
+										title: "Gagal!",
+										text: "Ajax Data Gagal Di Proses",
+										type: "error",
+										timer: 1500
+									});
+									console.log(msg);
+								}
+							});
+						} catch (error) {
+							console.error("Compression failed:", error);
+							alert("Image compression failed.");
 						}
-					});
-
-				//			data_save();
+					}
+				});
 			} else {
 				swal(errors);
 				return false;
