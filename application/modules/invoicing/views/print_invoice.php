@@ -133,7 +133,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="3" rowspan="3" style="border-top: 1px solid black;">
+            <td colspan="3" rowspan="4" style="border-top: 1px solid black;">
                 <p>Keterangan</p>
                 <p>Pembayaran harus dilakukan paling lambat 30 hari <br> setelah Invoice diterima</p>
                 <br>
@@ -143,8 +143,13 @@
                 <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
             </td>
             <td colspan="2" style="border-top: 1px solid black; text-align: center;">
-                <b style="font-size: 14px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b> <br>
-                <span style="color: #ccc; text-align: left !important;">
+                <b style="font-size: 14px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td colspan="2" style="text-align: left;">
+                <span style="color: #ccc; text-align: left !important; font-size: 10px;">
                     Digitally Signned By : <br>
                     Imanuel Iman <br>
                     PT. Sentral Tehnologi Managemen <br>
