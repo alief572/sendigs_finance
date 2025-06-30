@@ -1,11 +1,11 @@
 <?php
 $total_nominal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
 $dpp_nilai_lain = ($total_nominal * 11 / 12);
-$pajak = ($dpp_nilai_lain * 11 / 100);
+$pajak = ($dpp_nilai_lain * 12 / 100);
 $total_akhir = ($total_nominal + $pajak);
 
 $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$ppn = ($total_nominal_jurnal * 11 / 100);
+$ppn = ($total_nominal_jurnal * 12 / 100);
 $pph = ($total_nominal_jurnal * 2 / 100);
 $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 ?>
