@@ -280,10 +280,7 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 		if (approve !== '') {
 			var status = $('#status').val();
 
-			alert(status);
-			return false;
-
-			if (status == '' || status.length < 1) {
+			if (status == '0') {
 				swal({
 					type: 'warning',
 					title: 'Warning !',
