@@ -276,6 +276,8 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 		$('#save').prop('disabled', true);
 
 		var approve = "<?= $approve ?>";
+		alert(approve);
+		return false;
 		if (approve !== '') {
 			var status = $('#status').val();
 
