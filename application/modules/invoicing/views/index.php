@@ -44,6 +44,36 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     </div>
     <!-- /.box-body -->
 </div>
+<div class="modal" id="modal_print" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-print"></span> Print Invoice</h4>
+            </div>
+            <div class="modal-body" id="MyModalBody">
+                <div class="form-group">
+                    <input type="hidden" class="id_inv">
+                    <label for="">Company</label>
+                    <select name="company" id="" class="form-control form-control-sm company">
+                        <option value="">- Company -</option>
+                        <?php
+                        foreach ($data_company as $item) :
+                            echo '<option value="' . $item->id . '">' . $item->nm_company . '</option>';
+                        endforeach;
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success confirm_jenis_header"><i class="fa fa-check"></i> Proses</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">
+                    <span class="glyphicon glyphicon-remove"></span> Batal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="form-data"></div>
 <!-- DataTables -->
 <!-- <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
@@ -55,6 +85,29 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     $(document).ready(function() {
         DataTables();
     });
+
+    $(document).on('click', '.pilih_print_inv', function() {
+        var id_inv = $(this).data('id_inv');
+
+        $('.id_inv').val(id_inv);
+    })
+
+    $(document).on('click', '.confirm_jenis_header', function() {
+        var company = $('.company').val();
+        var id_inv = $('.id_inv').val();
+
+        if (company == '') {
+            swal({
+                type: 'warning',
+                title: 'Warning !',
+                text: 'Company cannot be empty !'
+            });
+
+            return false;
+        } else {
+            window.open(siteurl + active_controller + 'print_invoicing/' + id_inv + '/' + company, '_blank')
+        }
+    })
 
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();
