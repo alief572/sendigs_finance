@@ -1,8 +1,8 @@
-<?php 
-	$ENABLE_VIEW = has_permission('Rencana_Pembelian_Asset.View');
-	$ENABLE_ADD = has_permission('Rencana_Pembelian_Asset.Add');
-	$ENABLE_MANAGE = has_permission('Rencana_Pembelian_Asset.Manage');
-	$ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
+<?php
+$ENABLE_VIEW = has_permission('Rencana_Pembelian_Asset.View');
+$ENABLE_ADD = has_permission('Rencana_Pembelian_Asset.Add');
+$ENABLE_MANAGE = has_permission('Rencana_Pembelian_Asset.Manage');
+$ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
 <form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data">
@@ -11,13 +11,13 @@
 			<h3 class="box-title"><?php echo $title; ?></h3>
 			<div class="box-tool pull-right">
 				<?php
-					if($ENABLE_ADD && $label == '') {
-						echo '
-							<a href="'.base_url("asset_planning/add_asset").'" class="btn btn-sm btn-success" id="btn-add">
+				if ($ENABLE_ADD && $label == '') {
+					echo '
+							<a href="' . base_url("asset_planning/add_asset") . '" class="btn btn-sm btn-success" id="btn-add">
 								<i class="fa fa-plus"></i> &nbsp;&nbsp;Add Budget
 							</a>
 						';
-					}
+				}
 				?>
 			</div>
 		</div>
@@ -28,9 +28,7 @@
 				<thead>
 					<tr class='bg-blue'>
 						<th class="text-center">#</th>
-						<th class="text-center">Category</th>
 						<th class="text-center">Department</th>
-						<th class="text-center">Costcenter</th>
 						<th class="text-center">Nama Asset</th>
 						<th class="text-center">Qty</th>
 						<th class="text-center">Budget</th>

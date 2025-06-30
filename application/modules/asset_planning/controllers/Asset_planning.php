@@ -4,6 +4,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Asset_planning extends Admin_Controller
 {
 
+	protected $hris;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -12,6 +14,8 @@ class Asset_planning extends Admin_Controller
 		$this->load->model('budget_asset_model');
 		// $this->db2 = $this->load->database('gl', TRUE);
 		// Your own constructor code
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	//================================================================================================================
@@ -258,7 +262,13 @@ class Asset_planning extends Admin_Controller
 			$datacoa = $this->db->like('no_perkiraan', '13', 'after')->get_where(DBACC . '.coa_master', array('level' => '5', 'no_perkiraan not like ' => '1309%'))->result_array();
 			$penyusutan = $this->db->query("SELECT * FROM " . DBACC . ".coa_master WHERE `level`='5' AND (nama LIKE 'DEPRECIATION%') ORDER BY no_perkiraan ASC")->result_array();
 			$tanda 			= (!empty($header)) ? 'Edit' : 'Add';
-			$list_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
+			// $list_department = $this->db->get(DBHRIS . '.departments')->result_array();
+
+			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$list_department = $this->hris->get()->result_array();
+
 			$list_costcenter = $this->db->get_where('ms_costcenter', ['deleted_by' => null])->result_array();
 			$data = array(
 				'title'			=> $tanda . ' Asset_planning Asset',
