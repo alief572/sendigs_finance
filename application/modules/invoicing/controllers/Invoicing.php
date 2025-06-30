@@ -99,6 +99,33 @@ class Invoicing extends Admin_Controller
         $this->template->render('edit_invoice');
     }
 
+    public function print_invoicing($id_invoicing)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id_invoicing);
+        $get_invoicing = $this->db->get()->row();
+
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
+        $get_actual_plan_tagih = $this->db->get()->row();
+
+        $this->auth->restrict($this->viewPermission);
+
+        $data = [
+            'id_invoicing' => $id_invoicing,
+            'data_invoice' => $get_invoicing,
+            'data_actual_plan_tagih' => $get_actual_plan_tagih
+        ];
+
+        // $this->template->title('Print Invoice');
+        // $this->template->set($data);
+        // $this->template->render('edit_invoice');
+
+        $this->load->view('print_invoice', $data);
+    }
+
     public function save_invoice()
     {
         $post = $this->input->post();

@@ -95,9 +95,11 @@ class Invoicing_model extends BF_Model
             } else {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id_actual_plan_tagih' => $item->id])->row();
 
-                $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-info" title="View Invoice"><i class="fa fa-eye"></i></a>';
+                $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
 
                 $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
+
+                $option .= ' <a href="' . base_url('invoicing/print_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-info" title="Print Invoice" target="_blank"><i class="fa fa-print"></i></a>';
             }
 
             $hasil[] = [
