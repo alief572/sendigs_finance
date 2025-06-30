@@ -275,6 +275,22 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 		e.preventDefault();
 		$('#save').prop('disabled', true);
 
+		var approve = "<?= $approve ?>";
+
+		if (approve !== '') {
+			var status = $('#status').val();
+
+			if (status == '0') {
+				swal({
+					type: 'warning',
+					title: 'Warning !',
+					text: 'Approve status must be choosen !'
+				});
+
+				return false;
+			}
+		}
+
 		var department = $('#department').val();
 
 		if (department == '0') {
