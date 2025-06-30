@@ -23,6 +23,11 @@ class Invoicing extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_company a');
+        $get_company = $this->consultant->get()->result();
+
+        $this->template->set('data_company', $get_company);
         $this->template->title('Invoicing');
         $this->template->render('index');
     }
@@ -99,7 +104,7 @@ class Invoicing extends Admin_Controller
         $this->template->render('edit_invoice');
     }
 
-    public function print_invoicing($id_invoicing)
+    public function print_invoicing($id_invoicing, $id_company = 1)
     {
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -116,7 +121,8 @@ class Invoicing extends Admin_Controller
         $data = [
             'id_invoicing' => $id_invoicing,
             'data_invoice' => $get_invoicing,
-            'data_actual_plan_tagih' => $get_actual_plan_tagih
+            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'id_company' => $id_company
         ];
 
         // $this->template->title('Print Invoice');
