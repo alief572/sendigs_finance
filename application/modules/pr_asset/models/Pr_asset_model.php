@@ -3,9 +3,13 @@
 class Pr_asset_model extends BF_model
 {
 
+	protected $hris;
+
 	public function __construct()
 	{
 		parent::__construct();
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	public function getList($table)
@@ -719,11 +723,19 @@ class Pr_asset_model extends BF_model
 				$nomor = ($total_data - $start_dari) - $urut2;
 			}
 
+			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$this->hris->where('a.id', $row['id_dept']);
+			$get_department = $this->hris->get()->row();
+
+			$nm_dept = (!empty($get_department)) ? $get_department->nm_dept : '';
+			$nm_comp = (!empty($get_department)) ? $get_department->nm_comp : '';
+
 			$nestedData 	= array();
 			$nestedData[]	= "<div class='prt_" . $nomor . "' align='center'>" . $nomor . "</div><script type='text/javascript'>$('.prt_" . $nomor . "').parent().parent().attr('id','" . $nomor . "');</script>";
 			$nestedData[]	= "<div align='left'>" . strtoupper($row['nama_asset']) . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_dept']) . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_costcenter']) . "</div>";
+			$nestedData[]	= "<div align='left'>" . strtoupper($nm_dept . ' - ' . $nm_comp) . "</div>";
 			$nestedData[]	= "<div align='center'>" . $row['qty'] . "</div>";
 			$nestedData[]	= "<div align='center'>" . strtolower($row['app_by']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['app_date'])) . "</div>";
@@ -738,7 +750,6 @@ class Pr_asset_model extends BF_model
 			//detail
 			$nestedData2 	= array();
 			$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>$('.prtCh_" . $nomor . "').parent().parent().attr('class','child-" . $nomor . "');$('.child-" . $nomor . "').hide()</script>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
-			$nestedData2[]	= "<div align='left'></div>";
 			$nestedData2[]	= "<div align='right'><b>BUDGET</b><br>" . number_format($row['budget']) . "<br><b>SISA BUDGET PO</b><br>" . number_format($row['budget_po']) . "<br><b>SISA BUDGET PR</b></br>" . number_format($row['budget_pr']) . "</div>";
 			$nestedData2[]	= "<div align='right'><b>RENCANA BELI</b><br>" . date('F Y', strtotime($row['tahun'] . '-' . $row['bulan'] . '-01')) . "<br><b>KETERANGAN</b><br>" . strtoupper($row['keterangan']) . "</div>";
 			$nestedData2[]	= "<div align='right'><b>QTY</b><input type='text' id='qty_rev_" . $nomor . "' class='form-control input-sm text-center maskM' placeholder='Qty Rev' value='" . number_format($row['qty']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></div>";
@@ -776,18 +787,12 @@ class Pr_asset_model extends BF_model
 		$sql = "
 			SELECT
 				(@row:=@row+1) AS nomor,
-				a.*,
-				b.nama as nm_dept,
-				c.nama_costcenter as nm_costcenter
+				a.*
 			FROM
-				asset_planning a
-				LEFT JOIN ms_department b ON a.id_dept = b.id
-				LEFT JOIN ms_costcenter c ON a.id_costcenter = c.id,
+				asset_planning a,
 				(SELECT @row:=0) r
 		    WHERE  a.deleted='N' AND a.status='Y' AND a.no_pr IS NULL AND (
 				a.id LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-				OR b.nama LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-				OR c.nama_costcenter LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
 		";
 		// echo $sql; exit;

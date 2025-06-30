@@ -2,11 +2,15 @@
 class Budget_asset_model extends BF_Model
 {
 
+	protected $hris;
+
 	public function __construct()
 	{
 		parent::__construct();
 		// $this->load->database();
 		// $this->db2 = $this->load->database('gl', TRUE);
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	public function index()
@@ -121,11 +125,18 @@ class Budget_asset_model extends BF_Model
 
 			$tanda = $requestData['tanda'];
 
+			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$this->hris->where('a.id', $row['id_dept']);
+			$get_department = $this->hris->get()->row();
+
+			$nm_dept = (!empty($get_department)) ? $get_department->nm_dept : '';
+			$nm_comp = (!empty($get_department)) ? $get_department->nm_comp : '';
+
 			$nestedData 	= array();
 			$nestedData[]	= "<div align='center'>" . $nomor . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['coa'] . ' | ' . $row['nama']) . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_dept']) . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_costcenter']) . "</div>";
+			$nestedData[]	= "<div align='left'>" . strtoupper($nm_dept . ' - ' . $nm_comp) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper($row['nama_asset']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . $row['qty'] . "</div>";
 			$nestedData[]	= "<div align='right'>" . number_format($row['budget']) . "</div>";
@@ -195,19 +206,16 @@ class Budget_asset_model extends BF_Model
 			SELECT
 				(@row:=@row+1) AS nomor,
 				a.*,
-				b.nama as nm_dept,
-				c.nama_costcenter as nm_costcenter,
+				b.name as nm_dept,
 				d.nama
 			FROM
 				asset_planning a
-				LEFT JOIN ms_department b ON a.id_dept = b.id
-				LEFT JOIN ".DBACC.".coa_master d ON a.coa = d.no_perkiraan
-				LEFT JOIN ms_costcenter c ON a.id_costcenter = c.id,
+				LEFT JOIN " . DBHRIS . ".departments b ON a.id_dept = b.id
+				LEFT JOIN " . DBACC . ".coa_master d ON a.coa = d.no_perkiraan,
 				(SELECT @row:=0) r
 		    WHERE  a.deleted='N' " . $where . " AND(
 				a.id LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-				OR b.nama LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-				OR c.nama_costcenter LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+				OR b.name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
 		";
 		// echo $sql; exit;
@@ -218,12 +226,11 @@ class Budget_asset_model extends BF_Model
 			0 => 'nomor',
 			1 => 'id',
 			2 => 'nm_dept',
-			3 => 'nm_costcenter',
-			4 => 'nama_asset',
-			5 => 'qty',
-			6 => 'budget',
-			7 => 'budget_pr',
-			8 => 'budget_po'
+			3 => 'nama_asset',
+			4 => 'qty',
+			5 => 'budget',
+			6 => 'budget_pr',
+			7 => 'budget_po'
 		);
 
 		$sql .= " ORDER BY " . $columns_order_by[$column_order] . " " . $column_dir . " ";
