@@ -14,7 +14,6 @@
 						<th class="text-center" width='5%'>#</th>
 						<th class="text-center">Nama Barang</th>
 						<th class="text-center" width='15%'>Department</th>
-						<th class="text-center" width='15%'>Costcenter</th>
 						<th class="text-center" width='8%'>Qty</th>
 						<th class="text-center" width='13%'>Created By</th>
 						<th class="text-center" width='13%'>Created Date</th>
@@ -61,7 +60,7 @@
 		$(document).on('click', '.look_hide', function() {
 			var idOfParent = $(this).data('id');
 			$('.child-' + idOfParent).toggle('slow');
-		});	
+		});
 
 		$(document).on('click', '#back', function(e) {
 			window.location.href = base_url + active_controller + 'pr';
@@ -114,7 +113,7 @@
 				},
 				function(isConfirm) {
 					if (isConfirm) {
-						
+
 						$.ajax({
 							url: base_url + active_controller + 'add_pr',
 							type: "POST",
