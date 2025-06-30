@@ -163,4 +163,8 @@
         </tr>
     </tbody>
 </table>
-<table></table>
+
+
+<script>
+    window.print();
+</script>
