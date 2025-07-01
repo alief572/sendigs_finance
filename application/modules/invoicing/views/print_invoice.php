@@ -193,7 +193,7 @@
                     if ($id_company == '3') {
                     ?>
                         <b>PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
-                        <b>OCBC NISP Acc. No 7788.0000.0417</b>
+                        <b>BCA Tebet Barat Acc. No 436.400.0300</b>
                         <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
                     <?php
                     } else if ($id_company == '4') {
