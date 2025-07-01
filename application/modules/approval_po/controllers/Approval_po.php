@@ -9,6 +9,8 @@ class Approval_po extends Admin_Controller
   protected $managePermission = 'Approval_PO.Manage';
   protected $deletePermission = 'Approval_PO.Delete';
 
+  protected $hris;
+
   public function __construct()
   {
     parent::__construct();
@@ -18,6 +20,8 @@ class Approval_po extends Admin_Controller
 
     // $this->id_user  = $this->auth->user_id();
     // $this->datetime = date('Y-m-d H:i:s');
+
+    $this->hris = $this->load->database('hris', true);
   }
 
   public function index()
@@ -481,6 +485,12 @@ class Approval_po extends Admin_Controller
     $karyawan = $this->db->get_where('ms_karyawan', ['deleted_by' => null])->result();
     $mata_uang = $this->db->get_where('mata_uang', ['deleted' => null])->result();
     $list_supplier = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
+
+    $this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+    $this->hris->from('departments a');
+    $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+    $list_department = $this->hris->get()->result();
+
     $list_group_top = $this->db->get_where('list_help', ['group_by' => 'top', 'sts' => 'Y'])->result();
     $list_top = $this->db->get_where('tr_top_po', ['no_po' => $no_po])->result();
     $num_top = count($list_top);
@@ -488,10 +498,9 @@ class Approval_po extends Admin_Controller
     // $matauang = $this->db->get_where('matauang')->result();
 
     $header_po = $this->db->get_where('tr_purchase_order', ['no_po' => $no_po])->row();
-    $data_department = $this->db->select('if(nama IS NULL, "", nama) as nm_department')->get_where('ms_department', ['id' => $header_po->id_dept])->row();
+    $data_department = $this->hris->select('if(name IS NULL, "", name) as nm_department')->get_where('departments', ['id' => $header_po->id_dept])->row();
 
-    $nm_depart = [];
-    $get_nm_depart = $this->db->query("SELECT nama FROM ms_department WHERE id IN ('" . str_replace(",", "','", $header_po->id_dept) . "')")->result();
+    $get_nm_depart = $this->hris->query("SELECT a.name as nama FROM departments a JOIN companies b ON b.id = a.company_id WHERE a.id IN ('" . str_replace(",", "','", $header_po->id_dept) . "')")->result();
     if (!empty($get_nm_depart)) {
       foreach ($get_nm_depart as $item_depart) {
         $nm_depart[] = strtoupper($item_depart->nama);
@@ -512,6 +521,7 @@ class Approval_po extends Admin_Controller
       'list_supplier' => $list_supplier,
       'header_po' => $header_po,
       'data_department' => $data_department,
+      'list_department' => $list_department,
       'nm_depart' => $nm_depart,
       'list_top' => $list_top,
       'list_group_top' => $list_group_top,

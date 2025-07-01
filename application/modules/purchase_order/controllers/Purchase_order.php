@@ -19,6 +19,8 @@ class Purchase_order extends Admin_Controller
 	protected $managePermission = 'Purchase_Order.Manage';
 	protected $deletePermission = 'Purchase_Order.Delete';
 
+	protected $hris;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -31,6 +33,8 @@ class Purchase_order extends Admin_Controller
 		$this->template->page_icon('fa fa-building-o');
 
 		date_default_timezone_set('Asia/Bangkok');
+
+		$this->hris = $this->load->database('hris', true);
 	}
 	public function index()
 	{
@@ -311,7 +315,13 @@ class Purchase_order extends Admin_Controller
 		$karyawan = $this->db->get_where('ms_karyawan', ['deleted_by' => null])->result();
 		$mata_uang = $this->db->get_where('mata_uang', ['deleted' => null])->result();
 		$list_supplier = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
-		$list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+		// $list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id');
+		$list_department = $this->hris->get()->result();
+
 		// $matauang = $this->db->get_where('matauang')->result();
 		$list_group_top = $this->db->get_where('list_help', ['group_by' => 'top', 'sts' => 'Y'])->result();
 		$list_top = $this->db->get_where('tr_top_po', ['no_po' => $no_po])->result();
@@ -1506,7 +1516,6 @@ class Purchase_order extends Admin_Controller
 				'persen_disc' => str_replace(',', '', $post['persendisc']),
 				'nilai_disc' => str_replace(',', '', $post['totaldisc']),
 				'note' => $post['note'],
-				'delivery_date' => $post['delivery_date'],
 				'id_dept' => implode(',', $post['dept']),
 				'created_on'		=> date('Y-m-d H:i:s'),
 				'created_by'		=> $this->auth->user_id(),
@@ -1537,7 +1546,6 @@ class Purchase_order extends Admin_Controller
 				'persen_disc' => str_replace(',', '', $post['persendisc']),
 				'nilai_disc' => str_replace(',', '', $post['totaldisc']),
 				'note' => $post['note'],
-				'delivery_date' => $post['delivery_date'],
 				'id_dept' => implode(',', $post['dept']),
 				'created_on'		=> date('Y-m-d H:i:s'),
 				'created_by'		=> $this->auth->user_id(),
@@ -1568,7 +1576,6 @@ class Purchase_order extends Admin_Controller
 				'persen_disc' => str_replace(',', '', $post['persendisc']),
 				'nilai_disc' => str_replace(',', '', $post['totaldisc']),
 				'note' => $post['note'],
-				'delivery_date' => $post['delivery_date'],
 				'id_dept' => implode(',', $post['dept']),
 				'created_on'		=> date('Y-m-d H:i:s'),
 				'created_by'		=> $this->auth->user_id(),
@@ -1599,7 +1606,6 @@ class Purchase_order extends Admin_Controller
 				'persen_disc' => str_replace(',', '', $post['persendisc']),
 				'nilai_disc' => str_replace(',', '', $post['totaldisc']),
 				'note' => $post['note'],
-				'delivery_date' => $post['delivery_date'],
 				'id_dept' => implode(',', $post['dept']),
 				'created_on'		=> date('Y-m-d H:i:s'),
 				'created_by'		=> $this->auth->user_id()
@@ -1664,13 +1670,13 @@ class Purchase_order extends Admin_Controller
 					'status_po'				=> 'CLS',
 				];
 
-				if ($valid_qty == 1 && $used['tipe_pr'] !== 'project consultant') {
+				if ($valid_qty == 1 && ($used['tipe_pr'] !== 'project consultant' || $used['tipe_pr'] !== 'pr asset')) {
 					$get_other_po_brg = $this->db->query("SELECT IF(SUM(a.qty) IS NOT NULL, SUM(a.qty), 0) AS other_qty FROM dt_trans_po a WHERE a.idpr = '" . $used['idpr'] . "' AND a.tipe = '" . $used['tipe_pr'] . "'")->row();
 
 					if ($used['tipe_pr'] == 'pr depart') {
 						$get_data_pr = $this->db->query("SELECT IF(qty IS NOT NULL, qty, 0) AS qty_pr FROM rutin_non_planning_detail WHERE id = '" . $used['idpr'] . "'")->row();
 					} else if ($used['tipe_pr'] == 'pr asset') {
-						$get_data_pr = $this->db->query("SELECT IF(rev_qty IS NOT NULL, rev_qty, 0) AS qty_pr FROM asset_planning WHERE id = '" . $used['idpr'] . "'")->row();
+						$get_data_pr = $this->db->query("SELECT rev_qty AS qty_pr FROM asset_planning WHERE id = '" . $used['idpr'] . "'")->row();
 					} else {
 						$get_data_pr = $this->db->query("SELECT IF(propose_purchase IS NOT NULL, propose_purchase, 0) AS qty_pr FROM material_planning_base_on_produksi_detail WHERE id = '" . $used['idpr'] . "'")->row();
 					}
@@ -1694,7 +1700,7 @@ class Purchase_order extends Admin_Controller
 		$this->db->select('*');
 		$this->db->from('material_planning_base_on_produksi');
 		$this->db->where_in('so_number', explode(',', $post['so_number']));
-		$countMat = $this->db->get()->row_array();
+		$countMat = $this->db->get()->result();
 		if (count($countMat) > 0) {
 			$update_material_planning = $this->db->where_in('so_number', explode(',', $post['so_number']))->update('material_planning_base_on_produksi', ['po_number' => $code, 'po_date' => date('Y-m-d')]);
 
@@ -1812,7 +1818,6 @@ class Purchase_order extends Admin_Controller
 			'persen_disc'	=> str_replace(',', '', $post['persendisc']),
 			'nilai_disc'	=> str_replace(',', '', $post['totaldisc']),
 			'id_dept' => implode(',', $post['dept']),
-			'delivery_date' => $post['delivery_date'],
 			'note' => $post['note']
 		];
 		//Add Data
@@ -1836,7 +1841,7 @@ class Purchase_order extends Admin_Controller
 				'note'					=> $used['note']
 			);
 
-			if ($valid_qty == 1 && $used['tipe_pr'] !== 'project consultant') {
+			if ($valid_qty == 1 && ($used['tipe_pr'] !== 'project consultant' || $used['tipe_pr'] !== 'pr asset')) {
 				$get_other_po_brg = $this->db->query("SELECT IF(SUM(a.qty) IS NOT NULL, SUM(a.qty), 0) AS other_qty FROM dt_trans_po a WHERE a.idpr = '" . $used['idpr'] . "' AND a.tipe = '" . $used['tipe_pr'] . "'")->row();
 
 				if ($used['tipe_pr'] == 'pr depart') {
@@ -3040,7 +3045,13 @@ class Purchase_order extends Admin_Controller
 		$karyawan = $this->db->get_where('ms_karyawan', ['deleted_by' => null])->result();
 		$mata_uang = $this->db->get_where('mata_uang', ['deleted' => null])->result();
 		$list_supplier = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
-		$list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+		// $list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$list_department = $this->hris->get()->result();
+
 		// $matauang = $this->db->get_where('matauang')->result();
 		$data = [
 			// 'supplier' => $supplier,
@@ -3358,14 +3369,26 @@ class Purchase_order extends Admin_Controller
 		$karyawan = $this->db->get_where('ms_karyawan', ['deleted_by' => null])->result();
 		$mata_uang = $this->db->get_where('mata_uang', ['deleted' => null])->result();
 		$list_supplier = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
-		$list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+		// $list_department = $this->db->select('id, nama')->get_where('ms_department', ['deleted_by' => null])->result();
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$list_department = $this->hris->get()->result();
 		// $matauang = $this->db->get_where('matauang')->result();
 		$list_group_top = $this->db->get_where('list_help', ['group_by' => 'top', 'sts' => 'Y'])->result();
 		$list_top = $this->db->get_where('tr_top_po', ['no_po' => $no_po])->result();
 		$num_top = count($list_top);
 
 		$nm_depart = [];
-		$get_nm_depart = $this->db->query("SELECT nama FROM ms_department WHERE id IN ('" . str_replace(",", "','", $get_po->id_dept) . "')")->result();
+
+		// $this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		// $this->hris->from('departments a');
+		// $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		// $this->hris->where_in('a.id', str_replace(",", "','", $get_po->id_dept));
+		// $get_nm_depart = $this->hris->get()->result();
+
+		$get_nm_depart = $this->hris->query("SELECT a.name as nama FROM departments a JOIN companies b ON b.id = a.company_id WHERE a.id IN ('" . str_replace(",", "','", $get_po->id_dept) . "')")->result();
 		if (!empty($get_nm_depart)) {
 			foreach ($get_nm_depart as $item_depart) {
 				$nm_depart[] = strtoupper($item_depart->nama);
