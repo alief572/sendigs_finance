@@ -226,17 +226,24 @@
             <tr>
                 <td></td>
                 <td colspan="2" style="text-align: left;">
-                    <span style="color: #ccc; text-align: center !important; font-size: 10px;">
-                        Digitally Signned By : <br>
-                        Imanuel Iman <br>
-                        <?php
-                        if ($id_company == '3' || $id_company == '4') {
-                            echo 'PT. Vuca Strategi Bisnis <br>';
-                        } else {
-                            echo 'PT. Sentral Tehnologi Managemen <br>';
-                        }
-                        ?>
-                    </span>
+                    <?php
+                    if ($id_company !== '3') {
+                    ?>
+                        <span style="color: #ccc; text-align: center !important; font-size: 10px;">
+                            Digitally Signned By : <br>
+                            Imanuel Iman <br>
+                            <?php
+                            if ($id_company == '4') {
+                                echo 'PT. Vuca Strategi Bisnis <br>';
+                            } else {
+                                echo 'PT. Sentral Tehnologi Managemen <br>';
+                            }
+                            ?>
+                        </span>
+                    <?php
+                    }
+                    ?>
+
                 </td>
             </tr>
             <tr>
@@ -333,7 +340,7 @@
                         Digitally Signned By : <br>
                         Imanuel Iman <br>
                         <?php
-                        if ($id_company == '3' || $id_company == '4') {
+                        if ($id_company == '4') {
                             echo 'PT. Vuca Strategi Bisnis <br>';
                         } else {
                             echo 'PT. Sentral Tehnologi Managemen <br>';
