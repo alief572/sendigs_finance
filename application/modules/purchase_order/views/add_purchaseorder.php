@@ -54,7 +54,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 										<select id="select_department" name="dept[]" class="form-control select2" multiple required>
 											<?php
 											foreach ($results['list_department'] as $item) {
-												echo '<option value="' . $item->id . '">' . strtoupper($item->nama) . '</option>';
+												echo '<option value="' . $item->id . '">' . strtoupper($item->nm_dept . ' - ' . $item->nm_comp) . '</option>';
 											}
 											?>
 										</select>
@@ -77,13 +77,30 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 							<div class="col-sm-6">
 								<div class="form-group row">
 									<div class="col-md-4">
+										<label for="id_customer">Currency</label>
+									</div>
+									<div class="col-md-8">
+										<select id="select_curr" name="matauang" class='form-control input-md' required>
+											<option value="">- Currency -</option>
+											<?php foreach ($results['mata_uang'] as $mata_uang) {
+												$selected = '';
+											?>
+												<option value="<?= $mata_uang->kode ?>" <?= $selected; ?>><?= strtoupper(strtolower($mata_uang->kode)) ?></option>
+											<?php } ?>
+										</select>
+									</div>
+								</div>
+							</div>
+							<!-- <div class="col-sm-6">
+								<div class="form-group row">
+									<div class="col-md-4">
 										<label for="customer">Delivery Date</label>
 									</div>
 									<div class="col-md-8">
 										<input type="date" name="delivery_date" id="" class="form-control delivery_date">
 									</div>
 								</div>
-							</div>
+							</div> -->
 						</div>
 						<div class="col-sm-12">
 							<div class="col-sm-6">
@@ -99,15 +116,15 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 							<div class="col-sm-6">
 								<div class="form-group row">
 									<div class="col-md-4">
-										<label for="id_customer">Currency</label>
+										<label for="id_customer">Supplier</label>
 									</div>
 									<div class="col-md-8">
-										<select id="select_curr" name="matauang" class='form-control input-md' required>
-											<option value="">- Currency -</option>
-											<?php foreach ($results['mata_uang'] as $mata_uang) {
+										<select id="supplier" name="supplier" class='form-control input-md' required>
+											<option value="">- Supplier -</option>
+											<?php foreach ($results['list_supplier'] as $supplier) {
 												$selected = '';
 											?>
-												<option value="<?= $mata_uang->kode ?>" <?= $selected; ?>><?= strtoupper(strtolower($mata_uang->kode)) ?></option>
+												<option value="<?= $supplier->kode_supplier ?>" <?= $selected; ?>><?= strtoupper(strtolower($supplier->nama)) ?></option>
 											<?php } ?>
 										</select>
 									</div>
@@ -137,23 +154,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 									</div>
 								</div>
 							</div>
-							<div class="col-sm-6">
-								<div class="form-group row">
-									<div class="col-md-4">
-										<label for="id_customer">Supplier</label>
-									</div>
-									<div class="col-md-8">
-										<select id="supplier" name="supplier" class='form-control input-md' required>
-											<option value="">- Supplier -</option>
-											<?php foreach ($results['list_supplier'] as $supplier) {
-												$selected = '';
-											?>
-												<option value="<?= $supplier->kode_supplier ?>" <?= $selected; ?>><?= strtoupper(strtolower($supplier->nama)) ?></option>
-											<?php } ?>
-										</select>
-									</div>
-								</div>
-							</div>
+
 							<div class="col-sm-6" hidden>
 								<div class="form-group row">
 									<div class="col-md-4">
@@ -768,9 +769,6 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 				return false;
 			} else if (select_department == '' || select_department == null) {
 				swal("Warning", "Department tidak boleh kosong  :)", "error");
-				return false;
-			} else if (delivery_date == '' || delivery_date == null) {
-				swal("Warning", "Delivery Date tidak boleh kosong  :)", "error");
 				return false;
 			} else if (currency == '' || currency == null) {
 				swal("Warning", "Currency tidak boleh kosong  :)", "error");

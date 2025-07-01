@@ -4,6 +4,9 @@ $ENABLE_MANAGE  = has_permission('Purchase_Request.Manage');
 $ENABLE_VIEW    = has_permission('Purchase_Request.View');
 $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 ?>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
 <div class="box box-primary">
 	<div class="box-body">
 		<form id="data-form" method="post">
@@ -51,7 +54,22 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 										<label for="">Department</label>
 									</div>
 									<div class="col-md-8" id="">
-										<input type="text" name="" id="" class="form-control" value="<?= $results['nm_depart'] ?>" readonly>
+										<select id="select_department" name="dept[]" class="form-control" multiple disabled>
+											<option value="">--Pilih--</option>
+											<?php
+											foreach ($results['list_department'] as $item) {
+												$selected = '';
+												if ($results['header_po']->id_dept !== '') {
+													foreach (explode(',', $results['header_po']->id_dept) as $data_po_dept) {
+														if ($data_po_dept == $item->id) {
+															$selected = 'selected';
+														}
+													}
+												}
+												echo '<option value="' . $item->id . '" ' . $selected . '>' . strtoupper($item->nm_dept . ' - ' . $item->nm_comp) . '</option>';
+											}
+											?>
+										</select>
 									</div>
 								</div>
 							</div>
@@ -70,13 +88,23 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 									</div>
 								</div>
 							</div>
-							<div class="col-sm-6" id="">
+							<div class="col-sm-6">
 								<div class="form-group row">
 									<div class="col-md-4">
-										<label for="customer">Delivery Date</label>
+										<label for="id_customer">Mata Uang</label>
 									</div>
 									<div class="col-md-8">
-										<input type="date" name="" id="" class="form-control" value="<?= $results['header_po']->delivery_date ?>" readonly>
+										<select id="matauang" name="matauang" class='form-control input-md chosen-select' disabled>
+											<option value="">- Mata Uang -</option>
+											<?php foreach ($results['mata_uang'] as $mata_uang) {
+												$selected = '';
+												if (isset($results['header_po']) && $mata_uang->kode == $results['header_po']->matauang) {
+													$selected = 'selected';
+												}
+											?>
+												<option value="<?= $mata_uang->kode ?>" <?= $selected; ?>><?= strtoupper(strtolower($mata_uang->kode)) ?></option>
+											<?php } ?>
+										</select>
 									</div>
 								</div>
 							</div>
@@ -95,18 +123,18 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 							<div class="col-sm-6">
 								<div class="form-group row">
 									<div class="col-md-4">
-										<label for="id_customer">Mata Uang</label>
+										<label for="id_customer">Supplier</label>
 									</div>
 									<div class="col-md-8">
-										<select id="matauang" name="matauang" class='form-control input-md chosen-select' disabled>
-											<option value="">- Mata Uang -</option>
-											<?php foreach ($results['mata_uang'] as $mata_uang) {
+										<select id="supplier" name="supplier" class='form-control input-md chosen-select' disabled>
+											<option value="">- Supplier -</option>
+											<?php foreach ($results['list_supplier'] as $supplier) {
 												$selected = '';
-												if (isset($results['header_po']) && $mata_uang->kode == $results['header_po']->matauang) {
+												if (isset($results['header_po']) && $supplier->kode_supplier == $results['header_po']->id_suplier) {
 													$selected = 'selected';
 												}
 											?>
-												<option value="<?= $mata_uang->kode ?>" <?= $selected; ?>><?= strtoupper(strtolower($mata_uang->kode)) ?></option>
+												<option value="<?= $supplier->kode_supplier ?>" <?= $selected; ?>><?= strtoupper(strtolower($supplier->nama)) ?></option>
 											<?php } ?>
 										</select>
 									</div>
@@ -136,26 +164,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 									</div>
 								</div>
 							</div>
-							<div class="col-sm-6">
-								<div class="form-group row">
-									<div class="col-md-4">
-										<label for="id_customer">Supplier</label>
-									</div>
-									<div class="col-md-8">
-										<select id="supplier" name="supplier" class='form-control input-md chosen-select' disabled>
-											<option value="">- Supplier -</option>
-											<?php foreach ($results['list_supplier'] as $supplier) {
-												$selected = '';
-												if (isset($results['header_po']) && $supplier->kode_supplier == $results['header_po']->id_suplier) {
-													$selected = 'selected';
-												}
-											?>
-												<option value="<?= $supplier->kode_supplier ?>" <?= $selected; ?>><?= strtoupper(strtolower($supplier->nama)) ?></option>
-											<?php } ?>
-										</select>
-									</div>
-								</div>
-							</div>
+
 							<div class="col-sm-6" hidden>
 								<div class="form-group row">
 									<div class="col-md-4">
@@ -471,7 +480,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 							</div>
 						</div>
 					</div>
-					
+
 					<div class="col-sm-12">
 						<div class="col-sm-6">
 							<div class="form-group row">
@@ -494,7 +503,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 						<div class="row">
 							<div class="col-sm-12">
 								<input type="hidden" name="num_top" class="num_top" value="<?= $results['num_po'] ?>">
-								
+
 								<table class="table table-bordered">
 									<thead class="bg-blue">
 										<tr>
@@ -555,10 +564,12 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 	</div>
 </div>
 
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script type="text/javascript">
 	//$('#input-kendaraan').hide();
+	$('#select_department').chosen();
+
 	var base_url = '<?php echo base_url(); ?>';
 	var active_controller = '<?php echo ($this->uri->segment(1)); ?>';
 	$(document).ready(function() {
