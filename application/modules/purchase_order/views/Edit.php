@@ -63,7 +63,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 														}
 													}
 												}
-												echo '<option value="' . $item->id . '" ' . $selected . '>' . strtoupper($item->nama) . '</option>';
+												echo '<option value="' . $item->id . '" ' . $selected . '>' . strtoupper($item->nm_dept . ' - ' . $item->nm_comp) . '</option>';
 											}
 											?>
 										</select>
@@ -82,28 +82,6 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 									</div>
 									<div class="col-md-8">
 										<input type="text" class="form-control" id="no_surat" required name="no_surat" readonly placeholder="No.PO" value="<?= $results['get_po']->no_surat ?>">
-									</div>
-								</div>
-							</div>
-							<div class="col-sm-6">
-								<div class="form-group row">
-									<div class="col-md-4">
-										<label for="customer">Delivery Date</label>
-									</div>
-									<div class="col-md-8">
-										<input type="date" name="delivery_date" id="" class="form-control" value="<?= $results['get_po']->delivery_date ?>" required>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-sm-12">
-							<div class="col-sm-6">
-								<div class="form-group row">
-									<div class="col-md-4">
-										<label for="customer">Tanggal PO</label>
-									</div>
-									<div class="col-md-8">
-										<input type="text" class="form-control" id="tanggal" value="<?= $results['get_po']->tanggal ?>" onkeyup required name="tanggal">
 									</div>
 								</div>
 							</div>
@@ -133,26 +111,14 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 								</div>
 							</div>
 						</div>
-						<!-- <div class="col-sm-12">
-		<div class="col-sm-6">
-		<div class="form-group row">
-			<div class="col-md-4">
-				<label for="customer">Expect Date</label>
-			</div>
-			<div class="col-md-8">
-				<input type="date" class="form-control" id="expect_tanggal" required name="expect_tanggal"  >
-			</div>
-		</div>
-		</div>
-		</div> -->
 						<div class="col-sm-12">
 							<div class="col-sm-6">
 								<div class="form-group row">
 									<div class="col-md-4">
-										<label for="customer">Payment Term</label>
+										<label for="customer">Tanggal PO</label>
 									</div>
 									<div class="col-md-8">
-										<input type="text" class="form-control" id="term" onkeyup required name="term" value="<?= $results['get_po']->term ?>">
+										<input type="text" class="form-control" id="tanggal" value="<?= $results['get_po']->tanggal ?>" onkeyup required name="tanggal">
 									</div>
 								</div>
 							</div>
@@ -173,6 +139,30 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 												<option value="<?= $supplier->kode_supplier ?>" <?= $selected; ?>><?= strtoupper(strtolower($supplier->nama)) ?></option>
 											<?php } ?>
 										</select>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- <div class="col-sm-12">
+		<div class="col-sm-6">
+		<div class="form-group row">
+			<div class="col-md-4">
+				<label for="customer">Expect Date</label>
+			</div>
+			<div class="col-md-8">
+				<input type="date" class="form-control" id="expect_tanggal" required name="expect_tanggal"  >
+			</div>
+		</div>
+		</div>
+		</div> -->
+						<div class="col-sm-12">
+							<div class="col-sm-6">
+								<div class="form-group row">
+									<div class="col-md-4">
+										<label for="customer">Payment Term</label>
+									</div>
+									<div class="col-md-8">
+										<input type="text" class="form-control" id="term" onkeyup required name="term" value="<?= $results['get_po']->term ?>">
 									</div>
 								</div>
 							</div>
