@@ -61,7 +61,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
-            $this->db->end_start();
+            $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
         $this->db->limit($length, $start);
@@ -71,7 +71,7 @@ class Actual_plan_tagih_model extends BF_Model
         // print_r($this->db->last_query());
         // exit;
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader,');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
@@ -89,7 +89,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
-            $this->db->end_start();
+            $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
 
