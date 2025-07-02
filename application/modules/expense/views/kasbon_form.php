@@ -257,7 +257,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 						</iframe>
 						<br />' . $data->no_doc . '</div>';
 							} else {
-								if (file_exists('./assets/expense' . $data->doc_file2)) {
+								if (file_exists('./assets/expense' . $data->doc_file_2)) {
 									echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
 								}
 							}
