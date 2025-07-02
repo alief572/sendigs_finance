@@ -72,6 +72,16 @@
 			var nil_pr = $('#nil_pr_' + nomor).val().split(",").join("");
 			var tgl_butuh = $('#tgl_butuh_' + nomor).val();
 			var code_plan = $('#code_plan_' + nomor).val();
+			var dokumen_pendukung = $('#dokumen_pendukung')[0].files[0];
+
+			if (!dokumen_pendukung) {
+				swal({
+					type: 'warning',
+					title: 'Warning !',
+					text: 'Dokumen Pendukung tidak boleh kosong !'
+				});
+				return false;
+			}
 
 			if (qty_rev == '' || qty_rev == '0') {
 				swal({
@@ -113,7 +123,6 @@
 				},
 				function(isConfirm) {
 					if (isConfirm) {
-
 						$.ajax({
 							url: base_url + active_controller + 'add_pr',
 							type: "POST",
@@ -127,25 +136,88 @@
 							dataType: 'json',
 							success: function(data) {
 								if (data.status == 1) {
-									swal({
-										title: "Save Success!",
-										text: data.pesan,
-										type: "success",
-										timer: 7000,
-										showCancelButton: false,
-										showConfirmButton: false,
-										allowOutsideClick: false
+									var formdata = new FormData();
+									var fileInput = $('#dokumen_pendukung')[0];
+
+									formdata.append('id_pr', data.id_pr);
+									formdata.append('dokumen_pendukung', fileInput.files[0]);
+
+									$.ajax({
+										type: 'post',
+										url: siteurl + active_controller + 'upload_dokumen_pendukung',
+										data: formdata,
+										dataType: 'json',
+										contentType: false,
+										processData: false,
+										cache: false,
+										success: function(result2) {
+											if (result2.status == '1') {
+												swal({
+													title: "Save Success!",
+													text: "Data has been saved !",
+													type: "success",
+													timer: 7000,
+													showCancelButton: false,
+													showConfirmButton: false,
+													allowOutsideClick: false
+												}, function(lanjut) {
+													window.location.href = base_url + active_controller + 'add_pr';
+												});
+											} else {
+												swal({
+													title: "Save Failed!",
+													text: "Data has not been saved !",
+													type: "warning",
+													showCancelButton: false,
+													allowOutsideClick: false
+												}, function(lanjut_fail) {
+													$.ajax({
+														type: 'post',
+														url: siteurl + active_controller + 'reset_pr_asset',
+														data: {
+															'id_pr': result2.id_pr
+														},
+														cache: false,
+														success: function(result_rst) {
+
+														}
+													});
+												});
+
+
+											}
+										},
+										error: function(result) {
+											swal({
+												title: "Error Message !",
+												text: 'An Error Occured During Process. Please try again..',
+												type: "warning",
+												timer: 7000,
+												showCancelButton: false,
+												showConfirmButton: false,
+												allowOutsideClick: false
+											});
+										}
 									});
-									window.location.href = base_url + active_controller + 'add_pr';
 								} else if (data.status == 0) {
 									swal({
 										title: "Save Failed!",
 										text: data.pesan,
 										type: "warning",
-										timer: 7000,
 										showCancelButton: false,
-										showConfirmButton: false,
 										allowOutsideClick: false
+									}, function(lanjut_fail) {
+										$.ajax({
+											type: 'post',
+											url: siteurl + active_controller + 'reset_pr_asset',
+											data: {
+												'id_pr': data.id_pr
+											},
+											cache: false,
+											success: function(result_rst) {
+
+											}
+										});
 									});
 								}
 							},
@@ -161,6 +233,7 @@
 								});
 							}
 						});
+
 					} else {
 						swal("Cancelled", "Data can be process again :)", "error");
 						return false;

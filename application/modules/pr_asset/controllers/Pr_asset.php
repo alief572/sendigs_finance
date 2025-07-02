@@ -715,6 +715,11 @@ class Pr_asset extends Admin_Controller
 		$this->Pr_asset_model->add_pr();
 	}
 
+	public function upload_dokumen_pendukung()
+	{
+		$this->Pr_asset_model->upload_dokumen_pendukung();
+	}
+
 	public function server_side_add_pr_asset()
 	{
 		$this->Pr_asset_model->get_data_json_add_pr_asset();
@@ -723,6 +728,11 @@ class Pr_asset extends Admin_Controller
 	public function approve_pr()
 	{
 		$this->Pr_asset_model->approve_pr();
+	}
+
+	public function reset_pr_asset()
+	{
+		$this->Pr_asset_model->reset_pr_asset();
 	}
 
 	public function print_pr_asset()
