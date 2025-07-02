@@ -20,6 +20,9 @@ class Pengajuan_rutin extends Admin_Controller
 	protected $addPermission  	= 'Pengajuan_Pembayaran_Rutin.Add';
 	protected $managePermission = 'Pengajuan_Pembayaran_Rutin.Manage';
 	protected $deletePermission = 'Pengajuan_Pembayaran_Rutin.Delete';
+
+	protected $hris;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -28,6 +31,8 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->template->page_icon('fa fa-cubes');
 		date_default_timezone_set('Asia/Bangkok');
 		$this->waktu = array("bulan" => "bulan", "tahun" => "tahun");
+
+		$this->hris = $this->load->database('hris', true);
 	}
 
 	public function index()
@@ -37,19 +42,34 @@ class Pengajuan_rutin extends Admin_Controller
 		$datauser = $this->All_model->GetInfoUser($this->auth->user_id());
 		//		if($datauser) $departemen=$datauser->department_id;
 		// $data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.created_by' => $this->auth->user_id()));
-		
-		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total, c.nama as nm_dept');
+
+		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('ms_department c', 'c.id = a.departement', 'left');
 		$this->db->where('a.created_by', $this->auth->user_id());
 		$this->db->group_by('a.no_doc');
 		$data = $this->db->get()->result();
 
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_departments = $this->hris->get()->result();
+
+		$arr_dept = [];
+		foreach ($get_departments as $item) {
+			$arr_dept[$item->id] = [
+				'id' => $item->id,
+				'nm_dept' => $item->nm_dept,
+				'nm_comp' => $item->nm_comp
+			];
+		}
+
 		$datdept  = $this->All_model->GetDeptCombo($departemen);
+
 		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll(array('a.created_by' => $this->auth->user_id()));
 		$this->template->set('datdept', $datdept);
 		$this->template->set('results', $data);
+		$this->template->set('dept', $arr_dept);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->title('Pengajuan Pembayaran Periodik');
 		$this->template->render('list');
@@ -349,7 +369,8 @@ class Pengajuan_rutin extends Admin_Controller
 			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
 		}
 		$param = array(
-			'save' => $result, 'id' => $id
+			'save' => $result,
+			'id' => $id
 		);
 		echo json_encode($param);
 	}
@@ -374,7 +395,8 @@ class Pengajuan_rutin extends Admin_Controller
 			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
 		}
 		$param = array(
-			'save' => $result, 'id' => $id
+			'save' => $result,
+			'id' => $id
 		);
 		echo json_encode($param);
 	}
