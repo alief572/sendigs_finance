@@ -47,10 +47,14 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 					if (!empty($results)) {
 						$numb = 0;
 						foreach ($results as $record) {
-							$numb++; ?>
+							$numb++;
+
+							$nm_dept = (isset($dept[$record->department])) ? $dept[$record->department]['nm_dept'] : '';
+							$nm_comp = (isset($dept[$record->department])) ? $dept[$record->department]['nm_comp'] : '';
+					?>
 							<tr>
 								<td><?= $numb; ?></td>
-								<td><?= strtoupper($record->nm_dept) ?></td>
+								<td><?= strtoupper($nm_dept . ' - ' . $nm_comp) ?></td>
 								<td><?= $record->no_doc ?></td>
 								<td class="text-right"><?= number_format($record->nilai_total, 2) ?></td>
 								<td><?= $record->tanggal_doc ?></td>
@@ -112,10 +116,13 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 					if (!empty($data_detail)) {
 						$numb = 0;
 						foreach ($data_detail as $record) {
+							$nm_dept = (isset($dept[$record->department])) ? $dept[$record->department]['nm_dept'] : '';
+							$nm_comp = (isset($dept[$record->department])) ? $dept[$record->department]['nm_comp'] : '';
+
 							$numb++; ?>
 							<tr>
 								<td><?= $numb; ?></td>
-								<td><?= strtoupper($record->nm_dept) ?></td>
+								<td><?= strtoupper($nm_dept . ' - ' . $nm_comp) ?></td>
 								<td><?= $record->no_doc ?></td>
 								<td><?= $record->tanggal_doc ?></td>
 								<td><?= $record->nama ?></td>
