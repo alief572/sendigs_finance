@@ -114,9 +114,8 @@ class Pengajuan_rutin_model extends BF_Model
 
 	public function GetDataPengajuanRutinAll($where = '')
 	{
-		$this->db->select('a.*, c.nilai, b.nama as nm_dept,c.nama,c.tanggal');
+		$this->db->select('a.*, c.nilai, c.nama,c.tanggal');
 		$this->db->from($this->table_name . ' a');
-		$this->db->join('ms_department b', 'a.departement=b.id');
 		$this->db->join('tr_pengajuan_rutin_detail c', 'a.no_doc=c.no_doc');
 		if ($where != '') $this->db->where($where);
 		$this->db->order_by('a.no_doc', 'desc');
