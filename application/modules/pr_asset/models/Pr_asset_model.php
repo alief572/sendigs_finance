@@ -452,7 +452,8 @@ class Pr_asset_model extends BF_model
 				$this->db->trans_commit();
 				$Arr_Data	= array(
 					'pesan'		=> 'Save process success. Thanks ...',
-					'status'	=> 1
+					'status'	=> 1,
+					'id_pr' => $no_pr
 				);
 				history('Create PR asset ' . $no_pr);
 			}
@@ -460,11 +461,72 @@ class Pr_asset_model extends BF_model
 		} else {
 			$data = array(
 				'title'			=> 'Add PR Assets',
-				'action'		=> 'asset',
+				'action'		=> 'asset'
 			);
 			$this->template->set($data);
 			$this->template->render('add_pr');
 		}
+	}
+
+	public function upload_dokumen_pendukung()
+	{
+		$post = $this->input->post();
+
+		$config['upload_path'] = './assets/pr/';
+		$config['allowed_types'] = '*';
+		$config['remove_spaces'] = TRUE;
+		$config['encrypt_name'] = TRUE;
+
+		$this->db->trans_begin();
+
+		$file_name = '';
+		$this->load->library('upload');
+		$this->upload->initialize($config);
+		if ($this->upload->do_upload('dokumen_pendukung')) {
+			$uploadData = $this->upload->data();
+			$file_name = $uploadData['file_name'];
+
+			$valid_upload = 1;
+		} else {
+			$valid_upload = 0;
+		}
+
+		if ($valid_upload == '1') {
+			$arr_update = [
+				'dokumen_pendukung' => $file_name
+			];
+
+			$this->db->update('tran_pr_header', $arr_update, array('no_pr' => $post['id_pr']));
+
+			if ($this->db->trans_status() === FALSE || $valid_upload !== 1) {
+				$this->db->trans_rollback();
+				$Arr_Data	= array(
+					'pesan'		=> 'Save process failed. Please try again later ...',
+					'status'	=> 0,
+					'id_pr' => $post['id_pr']
+				);
+			} else {
+				$this->db->trans_commit();
+				$Arr_Data	= array(
+					'pesan'		=> 'Save process success. Thanks ...',
+					'status'	=> 1,
+				);
+			}
+		} else {
+			$this->db->delete('tran_pr_header', ['no_pr' => $post['id_pr']]);
+			$this->db->delete('tran_pr_detail', ['no_pr' => $post['id_pr']]);
+			$this->db->update('asset_planning', ['no_pr' => null], ['no_pr' => $post['id']]);
+
+
+			$this->db->trans_commit();
+			$Arr_Data	= array(
+				'pesan'		=> 'Save process success. Thanks ...',
+				'status'	=> 1,
+			);
+		}
+
+
+		echo json_encode($Arr_Data);
 	}
 
 	public function get_data_json_pr_asset()
@@ -737,7 +799,7 @@ class Pr_asset_model extends BF_model
 			$nestedData[]	= "<div align='left'>" . strtoupper($row['nama_asset']) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper($nm_dept . ' - ' . $nm_comp) . "</div>";
 			$nestedData[]	= "<div align='center'>" . $row['qty'] . "</div>";
-			$nestedData[]	= "<div align='center'>" . strtolower($row['app_by']) . "</div>";
+			$nestedData[]	= "<div align='center'>" . strtolower($row['nm_user']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['app_date'])) . "</div>";
 
 			$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-plus'></i></button>";
@@ -754,10 +816,13 @@ class Pr_asset_model extends BF_model
 			$nestedData2[]	= "<div align='right'><b>RENCANA BELI</b><br>" . date('F Y', strtotime($row['tahun'] . '-' . $row['bulan'] . '-01')) . "<br><b>KETERANGAN</b><br>" . strtoupper($row['keterangan']) . "</div>";
 			$nestedData2[]	= "<div align='right'><b>QTY</b><input type='text' id='qty_rev_" . $nomor . "' class='form-control input-sm text-center maskM' placeholder='Qty Rev' value='" . number_format($row['qty']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></div>";
 			$nestedData2[]	= "<div align='right'><b>NILAI PR</b><input type='text' id='nil_pr_" . $nomor . "' class='form-control input-sm text-right maskM' placeholder='Nilai PR' value='" . number_format($row['budget']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></div>";
-			$nestedData2[]	= "<div align='right'><b>TGL DIBUTUHKAN</b>
+			$nestedData2[]	= "<div align='right'>
+			<b>TGL DIBUTUHKAN</b>
 								<input type='date' class='form-control input-sm text-center' id='tgl_butuh_" . $nomor . "'>
-								
 								<input type='hidden' id='code_plan_" . $nomor . "' class='form-control input-sm' value='" . $row['code_plan'] . "'>
+								<br>
+								<b>DOKUMEN PENDUKUNG</b>
+								<input type='file' class='form-control input-sm' name='dokumen_pendukung' id='dokumen_pendukung'>
 								</div>
 								<style>.datepicker{cursor:pointer;}</style>
 								";
@@ -786,11 +851,11 @@ class Pr_asset_model extends BF_model
 
 		$sql = "
 			SELECT
-				(@row:=@row+1) AS nomor,
-				a.*
+				a.*,
+				b.nm_lengkap as nm_user
 			FROM
-				asset_planning a,
-				(SELECT @row:=0) r
+				asset_planning a
+			LEFT JOIN users b ON b.id_user = a.app_by 
 		    WHERE  a.deleted='N' AND a.status='Y' AND a.no_pr IS NULL AND (
 				a.id LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
@@ -1186,5 +1251,22 @@ class Pr_asset_model extends BF_model
 
 		$data['query'] = $this->db->query($sql);
 		return $data;
+	}
+
+	public function reset_pr_asset()
+	{
+		$post = $this->input->post();
+
+		$this->db->trans_begin();
+
+		$this->db->delete('tran_pr_header', ['no_pr' => $post['id_pr']]);
+		$this->db->delete('tran_pr_detail', ['no_pr' => $post['id_pr']]);
+		$this->db->update('asset_planning', ['no_pr' => null], ['no_pr' => $post['id_pr']]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+		} else {
+			$this->db->trans_commit();
+		}
 	}
 }
