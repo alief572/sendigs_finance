@@ -133,12 +133,20 @@ class Actual_plan_tagih_model extends BF_Model
                 }
             }
 
+            $this->consultant->select('b.nm_paket');
+            $this->consultant->from('kons_tr_spk_penawaran a');
+            $this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+            $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            $get_spk = $this->consultant->get()->row();
+
+            $nm_project = ($item->nm_project == '' && $item->nm_project == null) ? $get_spk->nm_paket : $item->nm_project;
+
             $hasil[] = [
                 'no' => $no,
                 'company' => $nm_company,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,
-                'project' => $item->nm_project,
+                'project' => $nm_project,
                 'project_leader' => $item->nm_project_leader,
                 'sales' => $nm_sales,
                 'status' => $status,
