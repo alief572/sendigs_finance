@@ -161,7 +161,8 @@ class Asset_model extends BF_Model
 				a.lokasi_asset,
 				a.kdcab
 			FROM
-				asset a LEFT JOIN asset_nilai b ON a.kd_asset = b.kd_asset
+				asset a 
+				LEFT JOIN asset_nilai b ON a.kd_asset = b.kd_asset
 			WHERE 1=1
 				AND a.deleted = 'N'
 				AND (
