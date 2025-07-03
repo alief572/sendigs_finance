@@ -33,30 +33,39 @@
 					foreach ($list_dept as $val => $valx) {
 						// $sexd	= ($valx['nm_dept'] == 'UMUM')?'selected':'';
 						$sexd	= "";
-						echo "<option value='" . $valx['id'] . "' " . $sexd . ">" . strtoupper($valx['nama']) . "</option>";
+						echo "<option value='" . $valx['id'] . "' " . $sexd . ">" . strtoupper($valx['nm_dept'] . ' - ' . $valx['nm_comp']) . "</option>";
 					}
 					?>
 				</select>
 			</div>
-			<label class='label-control col-sm-2'><b>Cost Center <span class='text-red'>*</span></b></label>
+
+			<label class='label-control col-sm-2'><b>Company <span class='text-red'>*</span></b></label>
 			<div class='col-sm-4'>
-				<select name='cost_center' id='cost_center' class='form-control input-md chosen-select'>
-					<option value="">- Cost Center -</option>
-					<?php 
-						foreach($list_costcenter as $item_costcenter) {
-							echo '<option value="'.$item_costcenter['id'].'">'.strtoupper($item_costcenter['nm_gudang']).'</option>';
-						}
+				<select name='company_asset' id='company_asset' class='form-control input-md chosen-select'>
+					<option value='0'>Pilih Company</option>
+					<?php
+					foreach ($list_comp as $val => $valx) {
+						// $sexd	= ($valx['nm_dept'] == 'UMUM')?'selected':'';
+						$sexd	= "";
+						echo "<option value='" . $valx['id'] . "' " . $sexd . ">" . strtoupper($valx['nm_company']) . "</option>";
+					}
 					?>
 				</select>
 			</div>
 		</div>
-		<div class='form-group row'>
-			<label class='label-control col-sm-2'><b>Nilai Asset <span class='text-red'>*</span></b></label>
+		<div class="form-group row">
+			<label class='label-control col-sm-2'><b>Cost Center <span class='text-red'>*</span></b></label>
 			<div class='col-sm-4'>
-				<?php
-				echo form_input(array('id' => 'nilai_asset', 'name' => 'nilai_asset', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Nilai Asset', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false));
-				?>
+				<select name='cost_center' id='cost_center' class='form-control input-md chosen-select'>
+					<option value="">- Cost Center -</option>
+					<?php
+					foreach ($list_costcenter as $item_costcenter) {
+						echo '<option value="' . $item_costcenter['id'] . '">' . strtoupper($item_costcenter['nm_gudang']) . '</option>';
+					}
+					?>
+				</select>
 			</div>
+
 			<label class='label-control col-sm-2'><b>Jangka Waktu <span class='text-red'>*</span></b></label>
 			<div class='col-sm-4'>
 				<select name='depresiasi' id='depresiasi' class='form-control input-md chosen-select'>
@@ -72,11 +81,10 @@
 			</div>
 		</div>
 		<div class='form-group row'>
-
-			<label class='label-control col-sm-2'><b>Qty <span class='text-red'>*</span></b></label>
+			<label class='label-control col-sm-2'><b>Nilai Asset <span class='text-red'>*</span></b></label>
 			<div class='col-sm-4'>
 				<?php
-				echo form_input(array('id' => 'qty', 'name' => 'qty', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Qty Assets', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false));
+				echo form_input(array('id' => 'nilai_asset', 'name' => 'nilai_asset', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Nilai Asset', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false));
 				?>
 			</div>
 			<label class='label-control col-sm-2'><b>Dipresiasi Perbulan</b></label>
@@ -85,6 +93,16 @@
 				echo form_input(array('id' => 'value', 'name' => 'value', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Dipresiasi Perbulan', 'readonly' => 'readonly', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false));
 				?>
 			</div>
+		</div>
+		<div class='form-group row'>
+
+			<label class='label-control col-sm-2'><b>Qty <span class='text-red'>*</span></b></label>
+			<div class='col-sm-4'>
+				<?php
+				echo form_input(array('id' => 'qty', 'name' => 'qty', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Qty Assets', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false));
+				?>
+			</div>
+
 		</div>
 		<div class='form-group row'>
 			<label class='label-control col-sm-2'><b>Tanggal Perolehan <span class='text-red'>*</span></b></label>
@@ -189,6 +207,7 @@
 		var nilai_asset = $('#nilai_asset').val();
 		var qty = $('#qty').val();
 		var tanggal = $('#tanggal').val();
+		var company_asset = $('#company_asset').val();
 
 		if (nm_asset == '' || nm_asset == null) {
 			// $("#error").html("Nama asset masih kosong !!!");
@@ -213,10 +232,10 @@
 			return false;
 		}
 
-		if (lokasi_asset == '' || lokasi_asset == null || lokasi_asset == 0) {
+		if (company_asset.length < 1) {
 			swal({
 				title: "Error Message!",
-				text: 'Department belum dipilih ...',
+				text: 'Company belum dipilih ...',
 				type: "warning"
 			});
 
@@ -224,16 +243,28 @@
 			return false;
 		}
 
-		if (cost_center == '' || cost_center == null || cost_center == 0) {
-			swal({
-				title: "Error Message!",
-				text: 'Cost Center belum dipilih ...',
-				type: "warning"
-			});
 
-			$('#simpan-bro').prop('disabled', false);
-			return false;
-		}
+		// if (lokasi_asset == '' || lokasi_asset == null || lokasi_asset == 0) {
+		// 	swal({
+		// 		title: "Error Message!",
+		// 		text: 'Department belum dipilih ...',
+		// 		type: "warning"
+		// 	});
+
+		// 	$('#simpan-bro').prop('disabled', false);
+		// 	return false;
+		// }
+
+		// if (cost_center == '' || cost_center == null || cost_center == 0) {
+		// 	swal({
+		// 		title: "Error Message!",
+		// 		text: 'Cost Center belum dipilih ...',
+		// 		type: "warning"
+		// 	});
+
+		// 	$('#simpan-bro').prop('disabled', false);
+		// 	return false;
+		// }
 
 		if (depresiasi == '' || depresiasi == null || depresiasi == 0) {
 			swal({
