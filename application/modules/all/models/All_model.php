@@ -365,7 +365,7 @@ class All_model extends BF_Model
 		$this->hris->select('a.id, a.name, b.name as nm_comp');
 		$this->hris->from('departments a');
 		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-		// if ($key != '') $this->hris->where('a.id', $key);
+		if ($key != '') $this->hris->where('a.id', $key);
 		$this->hris->order_by('a.name', 'asc');
 		$this->hris->group_by('a.id');
 		$query = $this->hris->get();

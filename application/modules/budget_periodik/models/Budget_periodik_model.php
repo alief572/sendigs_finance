@@ -59,9 +59,9 @@ class Budget_periodik_model extends BF_Model
 	// list data
 	public function GetBudgetRutinGroup($key = '')
 	{
-		$sql = "select a.departement,b.nama as nm_dept from " . $this->table_name . " a left join ms_department b on a.departement=b.id ";
+		$sql = "select a.departement from " . $this->table_name . " a  ";
 		if ($key != '') $sql .= " where a.departement='" . $key . "' ";
-		$sql .= " group by a.departement, b.nama order by b.nama ";
+		$sql .= " group by a.departement ";
 		$query = $this->db->query($sql);
 		if ($query->num_rows() != 0) {
 			return $query->result();
