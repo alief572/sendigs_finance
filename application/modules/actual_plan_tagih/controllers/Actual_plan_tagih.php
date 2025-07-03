@@ -155,26 +155,7 @@ class Actual_plan_tagih extends Admin_Controller
             }
         } else {
             $id = $this->Actual_plan_tagih_model->generate_id();
-            $arr_insert = [
-                'id' => $id,
-                'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
-                'id_top' => $post['id_top'],
-                'id_spk_penawaran' => $post['id_spk_penawaran'],
-                'id_penawaran' => $post['id_penawaran'],
-                'term_payment' => $post['term_payment'],
-                'persen_payment' => $post['persen_payment'],
-                'nominal_payment' => $post['nominal_payment'],
-                'desc_payment' => $post['desc_payment'],
-                'tgl_plan_tagih' => $post['tgl_plan_tagih'],
-                'urutan' => $post['urutan'],
-                'tanggal_actual_plan_tagih' => $post['tanggal_actual'],
-                'tagih_mundur' => $post['tagih_mundur'],
-                'alasan_mundur' => $post['alasan_mundur'],
-                'file_surat_mundur' => $file_surat_mundur,
-                'file_laporan_progress' => $file_laporan_progress,
-                'created_by' => $this->auth->user_id(),
-                'created_date' => date('Y-m-d H:i:s')
-            ];
+
             if ($post['tagih_mundur'] == '3') {
                 $arr_insert = [
                     'id' => $id,
@@ -197,6 +178,14 @@ class Actual_plan_tagih extends Admin_Controller
                     'created_by' => $this->auth->user_id(),
                     'created_date' => date('Y-m-d H:i:s')
                 ];
+
+                $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
+                if (!$insert_actual_plan) {
+                    $this->db->trans_rollback();
+
+                    print_r($this->db->last_query());
+                    exit;
+                }
             } else {
                 $arr_insert = [
                     'id' => $id,
@@ -218,14 +207,28 @@ class Actual_plan_tagih extends Admin_Controller
                     'created_by' => $this->auth->user_id(),
                     'created_date' => date('Y-m-d H:i:s')
                 ];
-            }
 
-            $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
-            if (!$insert_actual_plan) {
-                $this->db->trans_rollback();
+                $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
+                if (!$insert_actual_plan) {
+                    $this->db->trans_rollback();
 
-                print_r($this->db->last_query());
-                exit;
+                    print_r($this->db->last_query());
+                    exit;
+                }
+
+                if ($post['tagih_mundur'] == '2') {
+                    $arr_update = [
+                        'tgl_plan_tagih' => $post['tanggal_actual']
+                    ];
+
+                    $update_tgl_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, array('id' => $post['id_detail_plan_tagih']));
+                    if (!$update_tgl_plan_tagih) {
+                        $this->db->trans_rollback();
+
+                        print_r($this->db->last_query());
+                        exit;
+                    }
+                }
             }
         }
 

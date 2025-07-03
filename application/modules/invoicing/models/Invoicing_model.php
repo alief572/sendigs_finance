@@ -41,7 +41,7 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
-        $this->db->where_in('a.tagih_mundur', [1, 2]);
+        $this->db->where('a.tagih_mundur', 1);
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
@@ -63,7 +63,7 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
-        $this->db->where_in('a.tagih_mundur', [1, 2]);
+        $this->db->where('a.tagih_mundur', 1);
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
