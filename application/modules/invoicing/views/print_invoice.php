@@ -186,7 +186,7 @@
             <tr>
                 <td colspan="4" rowspan="4" style="border-top: 1px solid black;">
                     <p>Keterangan</p>
-                    <p>Pembayaran harus dilakukan paling lambat 30 hari <br> setelah Invoice diterima</p>
+                    <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
                     <br>
                     <p>Pembayaran di Transfer ke :</p>
                     <?php
@@ -304,7 +304,7 @@
             <tr>
                 <td colspan="3" rowspan="4" style="border-top: 1px solid black;">
                     <p>Keterangan</p>
-                    <p>Pembayaran harus dilakukan paling lambat 30 hari <br> setelah Invoice diterima</p>
+                    <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
                     <br>
                     <p>Pembayaran di Transfer ke :</p>
                     <?php
