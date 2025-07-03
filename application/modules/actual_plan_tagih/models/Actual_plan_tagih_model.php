@@ -109,7 +109,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
                 $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
 
-                $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+                $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
             }
 
             $status = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
