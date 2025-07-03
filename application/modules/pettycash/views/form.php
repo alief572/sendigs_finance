@@ -36,9 +36,9 @@ if (isset($data->id)) $readonly = " readonly"; ?>
 							foreach ($data_approval as $record) {
 								$selected = '';
 								if (isset($data->approval)) {
-									if ($record->username == $data->approval) $selected = ' selected';
+									if ($record->id_user == $data->approval) $selected = ' selected';
 								}
-								echo '<option value="' . $record->username . '" ' . $selected . '>' . $record->nama_karyawan . '</option>';
+								echo '<option value="' . $record->id_user . '" ' . $selected . '>' . $record->nm_lengkap . '</option>';
 							}
 							?>
 						</select>
