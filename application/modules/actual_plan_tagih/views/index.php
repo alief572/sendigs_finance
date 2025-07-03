@@ -259,15 +259,22 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             swal({
                                 type: 'success',
                                 title: 'Success !',
-                                text: result.msg
+                                text: result.msg,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                allowOutsideClick: false
                             }, function(lanjut) {
                                 location.reload();
                             });
+
                         } else {
                             swal({
                                 type: 'warning',
                                 title: 'Warning !',
-                                text: result.msg
+                                text: result.msg,
+                                showConfirmButton: false,
+                                allowOutsideClick: false,
+                                timer: 3000
                             });
                         }
                     },
@@ -275,7 +282,10 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                         swal({
                             type: 'error',
                             title: 'Error !',
-                            text: 'Please try again later !'
+                            text: 'Please try again later !',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            timer: 3000
                         });
                     }
                 });

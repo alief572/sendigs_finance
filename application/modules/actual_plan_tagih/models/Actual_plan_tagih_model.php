@@ -53,7 +53,6 @@ class Actual_plan_tagih_model extends BF_Model
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
-            $this->db->where('d.id', null);
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -64,6 +63,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
+        $this->db->group_by('a.id');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get();
@@ -81,7 +81,6 @@ class Actual_plan_tagih_model extends BF_Model
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
-            $this->db->where('d.id', null);
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -92,6 +91,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
+        $this->db->group_by('a.id');
 
         $get_data_all = $this->db->get();
 
@@ -126,6 +126,11 @@ class Actual_plan_tagih_model extends BF_Model
                 $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" title="Penagihan Tagihan Macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
             } else {
                 $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" title="Aktual Tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+
+                $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1))->result();
+                if (count($get_actual_plan_tagih)) {
+                    $option = '';
+                }
             }
 
             $hasil[] = [
