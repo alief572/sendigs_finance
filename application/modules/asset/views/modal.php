@@ -71,7 +71,7 @@
 				<select name='depresiasi' id='depresiasi' class='form-control input-md chosen-select'>
 					<option value='0'>Pilih Jangka Waktu</option>
 					<?php
-					for ($a = 1; $a <= 16; $a++) {
+					for ($a = 1; $a <= 20; $a++) {
 						// $sexd	= ($a == 4)?'selected':'';
 						$sexd	= "";
 						echo "<option value='" . $a . "' " . $sexd . ">" . $a . " Tahun</option>";

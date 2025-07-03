@@ -33,8 +33,10 @@ class Budget_periodik extends Admin_Controller
 	public function index()
 	{
 		$this->auth->restrict($this->viewPermission);
+
 		$data = $this->Budget_periodik_model->GetBudgetRutinGroup();
 		$datdept  = $this->All_model->GetDeptCombo();
+
 		$this->template->set('datdept', $datdept);
 		$this->template->set('results', $data);
 		$this->template->title('Master Pembayaran Periodik');

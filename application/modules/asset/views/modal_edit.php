@@ -98,7 +98,7 @@ $costcenter	= $this->db->query($QUERY)->result_array();
 			<div class='col-sm-4'>
 				<select name='depresiasi' id='depresiasi' class='form-control input-md' disabled>
 					<?php
-					for ($a = 1; $a <= 8; $a++) {
+					for ($a = 1; $a <= 20; $a++) {
 						$selx = ($dataD[0]['depresiasi'] == $a) ? 'selected' : '';
 						echo "<option value='" . $a . "' " . $selx . ">" . $a . " Tahun</option>";
 					}

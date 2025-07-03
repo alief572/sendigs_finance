@@ -52,7 +52,7 @@ $ENABLE_DELETE  = has_permission('Pembayaran_Periodik.Delete');
 							$numb++; ?>
 							<tr>
 								<td><?= $numb; ?></td>
-								<td><?= strtoupper($record->nm_dept) ?></td>
+								<td><?= strtoupper($datdept[$record->departement]) ?></td>
 								<td>
 									<?php if ($ENABLE_VIEW) : ?>
 										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="new_data('<?= $record->departement ?>')"><i class="fa fa-eye"></i></a>
