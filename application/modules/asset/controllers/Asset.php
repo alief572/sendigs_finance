@@ -10,6 +10,9 @@ class Asset extends Admin_Controller
 	protected $managePermission = 'Assets.Manage';
 	protected $deletePermission = 'Assets.Delete';
 
+	protected $hris;
+	protected $consultant;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -21,6 +24,9 @@ class Asset extends Admin_Controller
 
 		date_default_timezone_set('Asia/Bangkok');
 		$this->template->page_icon('fa fa-table');
+
+		$this->hris = $this->load->database('hris', true);
+		$this->consultant = $this->load->database('consultant', true);
 	}
 
 	public function index()
@@ -56,7 +62,21 @@ class Asset extends Admin_Controller
 
 	public function modal_edit()
 	{
-		$this->load->view('modal_edit');
+		$this->consultant->select('a.*');
+		$this->consultant->from('kons_tr_company a');
+		$get_company = $this->consultant->get()->result_array();
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_dept = $this->hris->get()->result_array();
+
+		$data = [
+			'list_company' => $get_company,
+			'list_dept' => $get_dept
+		];
+
+		$this->load->view('modal_edit', $data);
 	}
 
 	public function modal_jurnal()
@@ -66,15 +86,35 @@ class Asset extends Admin_Controller
 
 	public function modal_view()
 	{
-		$this->load->view('modal_view');
+
+		$this->consultant->select('a.*');
+		$this->consultant->from('kons_tr_company a');
+		$get_company = $this->consultant->get()->result_array();
+
+		$data = [
+			'list_company' => $get_company
+		];
+
+		$this->load->view('modal_view', $data);
 	}
 
 	public function modal()
 	{
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_dept = $this->hris->get()->result_array();
+
+		$this->consultant->select('a.id, a.nm_company');
+		$this->consultant->from('kons_tr_company a');
+		$get_company = $this->consultant->get()->result_array();
+
 		$dataArr = array(
-			'list_dept' => $this->db->get_where('ms_department', ['deleted_by' => null])->result_array(),
+			'list_dept' => $get_dept,
 			'list_catg' => $this->Asset_model->getList('asset_category'),
-			'list_costcenter' => $this->db->get_where('warehouse', ['desc' => 'costcenter'])->result_array()
+			'list_costcenter' => $this->db->get_where('warehouse', ['desc' => 'costcenter'])->result_array(),
+			'list_comp' => $get_company
 		);
 
 		$this->template->render('modal', $dataArr);
@@ -342,6 +382,7 @@ class Asset extends Admin_Controller
 			$detailData[$lopp]['kdcab'] 		= $session['kdcab'];
 			$detailData[$lopp]['lokasi_asset'] 	= $data['lokasi_asset'];
 			$detailData[$lopp]['cost_center'] 	= $data['cost_center'];
+			$detailData[$lopp]['id_company'] 	= $data['company_asset'];
 			$detailData[$lopp]['created_by'] 	= $this->session->userdata['app_session']['username'];
 			$detailData[$lopp]['created_date'] 	= date('Y-m-d h:i:s');
 
@@ -412,72 +453,6 @@ class Asset extends Admin_Controller
 		));
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	public function edit()
 	{
 		$Arr_Kembali	= array();
@@ -527,6 +502,7 @@ class Asset extends Admin_Controller
 				$detailData[$lopp]['kdcab'] 		= $session['kdcab'];
 				$detailData[$lopp]['lokasi_asset'] 	= $data['lokasi_asset'];
 				$detailData[$lopp]['cost_center'] 	= $data['cost_center'];
+				$detailData[$lopp]['id_company'] 	= $data['company_asset'];
 				$detailData[$lopp]['created_by'] 	= $this->session->userdata['app_session']['username'];
 				$detailData[$lopp]['created_date'] 	= date('Y-m-d h:i:s');
 			}
@@ -542,10 +518,12 @@ class Asset extends Admin_Controller
 			$idx			= $data['id'];
 			$lokasi_asset	= $data['lokasi_asset'];
 			$cost_center	= $data['cost_center'];
+			$company_asset	= $data['company_asset'];
 
 			$Data_Update	= array(
 				'lokasi_asset' 	=> $lokasi_asset,
 				'cost_center' 	=> $cost_center,
+				'id_company' 	=> $company_asset,
 				'modified_by' 	=> $this->session->userdata['app_session']['username'],
 				'modified_date' => date('Y-m-d h:i:s')
 			);
