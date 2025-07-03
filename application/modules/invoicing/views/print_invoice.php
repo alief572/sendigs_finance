@@ -298,7 +298,7 @@
             </tr>
             <tr>
                 <td colspan="5">
-                    <?= terbilang($data_invoice->total_akhir) ?>
+                    <?= terbilang($data_invoice->total_akhir) . ' Rupiah' ?>
                 </td>
             </tr>
             <tr>
