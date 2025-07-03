@@ -183,6 +183,9 @@ class Invoicing extends Admin_Controller
         if (!$insert_invoicing) {
             $this->db->trans_rollback();
 
+            print_r($this->db->last_query());
+            exit;
+
             $valid = 0;
             $msg = $this->db->error($insert_invoicing)['message'];
         }
@@ -192,6 +195,9 @@ class Invoicing extends Admin_Controller
 
             if (!$update_actual_plan_tagih) {
                 $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
 
                 $valid = 0;
                 $msg = $this->db->error($update_actual_plan_tagih)['message'];
