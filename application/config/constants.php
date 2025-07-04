@@ -85,7 +85,7 @@ defined('EXIT__AUTO_MIN')      or define('EXIT__AUTO_MIN', 9); // lowest automat
 defined('EXIT__AUTO_MAX')      or define('EXIT__AUTO_MAX', 125); // highest automatically-assigned error code
 
 define('DBHRIS', 'hr_sentral');
-define('DBERP', 'db_sendigs_ss_dev');
-define('DBACC', 'db_sendigs_gl_ss_dev');
-define('DBCNL', 'db_consultant_new_dev');
+define('DBERP', 'db_sendigs_ss');
+define('DBACC', 'db_sendigs_gl_ss');
+define('DBCNL', 'db_consultant_new');
 define('FILE_ALLOW', 'doc|docx|xls|xlsx|ppt|pptx|7z|zip|rar|jpeg|jpg|gif|bmp|png');

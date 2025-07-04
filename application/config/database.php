@@ -119,9 +119,9 @@ $db['accounting'] = array(
 
 $db['consultant'] = array(
 	'dsn'	=> '',
-	'hostname' => '203.160.58.170',
+	'hostname' => 'localhost',
 	'username' => 'alief',
-	'password' => 'alief@ssc',
+	'password' => 'Alief@ssc1',
 	'database' => 'db_consultant_new',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
