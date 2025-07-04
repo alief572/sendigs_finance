@@ -98,7 +98,7 @@ class Actual_plan_tagih extends Admin_Controller
         $file_surat_mundur = '';
         if (!empty($_FILES['upload_surat_mundur'])) {
             $config['upload_path']   = './uploads/surat_mundur';
-            $config['allowed_types'] = '*';
+            $config['allowed_types'] = 'jpg|jpeg|png|pdf';
             $config['max_size']      = 999999999999; // In KB
             $config['encrypt_name']  = TRUE; // Optional: encrypt the filename
             $config['remove_spaces']  = TRUE; // Optional: encrypt the filename
