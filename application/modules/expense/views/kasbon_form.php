@@ -147,6 +147,10 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 									?>
 								</select>
 
+								<input type="hidden" name="file_name" class="file_name">
+								<input type="hidden" name="doc_pr" class="doc_pr">
+								<input type="hidden" name="to_doc_pr" class="to_doc_pr">
+
 							<?php
 							}
 							?>
@@ -319,7 +323,11 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 	$('#frm_data').on('submit', function(e) {
 		e.preventDefault();
 		var errors = "";
-		if ($("#filename").val() == "") {
+
+		var doc_pr = $('.doc_pr').val();
+		var to_doc_pr = $('.to_doc_pr').val();
+
+		if ($("#filename").val() == "" && (doc_pr == '' && to_doc_file == '')) {
 			if ($('#doc_file').get(0).files.length === 0) {
 				errors = "Dokumen 1 harus diupload";
 			}
@@ -479,6 +487,28 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 					title: 'Error !',
 					text: 'Error occured, please try again later !',
 					type: 'error'
+				});
+			}
+		});
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'copy_pr_doc',
+			data: {
+				'no_pr': no_pr
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.file_name').val(result.file_name);
+				$('.doc_pr').val(result.doc_file);
+				$('.to_doc_pr').val(result.to_doc_file);
+			},
+			error: function(result) {
+				swal({
+					type: 'error',
+					title: 'Error !',
+					text: ''
 				});
 			}
 		});
