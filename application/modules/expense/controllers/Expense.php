@@ -132,6 +132,9 @@ class Expense extends Admin_Controller
 		$project			= $this->input->post("project");
 		$no_pr				= $this->input->post("no_pr");
 		$tipe_pr			= $this->input->post("tipe_pr");
+		$file_name			= $this->input->post("file_name");
+		$doc_pr			= $this->input->post("doc_pr");
+		$to_doc_pr			= $this->input->post("to_doc_pr");
 		$metode_pembayaran	= 1;
 
 		$this->db->trans_begin();
@@ -180,7 +183,11 @@ class Expense extends Admin_Controller
 			}
 		}
 
+		if (!empty($file_name)) {
+			$filenames = $file_name;
 
+			copy('' . $doc_pr . '', '' . $to_doc_pr . '');
+		}
 
 		if ($id != "") {
 			$data = array(
@@ -2642,5 +2649,46 @@ class Expense extends Admin_Controller
 		$this->db->delete('tr_expense_detail', ['id' => $id_detail]);
 
 		$this->db->trans_commit();
+	}
+
+	public function copy_pr_doc()
+	{
+		$post = $this->input->post();
+
+		$no_pr = $post['no_pr'];
+
+		$this->db->select('a.id, a.no_pr, a.document');
+		$this->db->from('rutin_non_planning_header a');
+		$this->db->where('a.no_pr', $no_pr);
+		$get_pr_dept = $this->db->get()->row();
+
+		$this->db->select('a.no_pr, a.dokumen_pendukung');
+		$this->db->from('tran_pr_header a');
+		$this->db->where('a.no_pr', $no_pr);
+		$get_pr_asset = $this->db->get()->row();
+
+		$file_name = '';
+		$doc_file = '';
+		$to_doc_file = '';
+		if (!empty($get_pr_dept)) {
+			if (!empty($get_pr_dept->document)) {
+				$doc_file = 'assets/pr/' . $get_pr_dept->document;
+				$to_doc_file = 'assets/expense/' . $get_pr_dept->document;
+				$file_name = $get_pr_dept->document;
+			}
+		}
+		if (!empty($get_pr_asset)) {
+			if (!empty($get_pr_asset->dokumen_pendukung)) {
+				$doc_file = 'uploads/pr_asset/' . $get_pr_asset->dokumen_pendukung;
+				$to_doc_file = 'assets/expense/' . $get_pr_asset->dokumen_pendukung;
+				$file_name = $get_pr_asset->dokumen_pendukung;
+			}
+		}
+
+		echo json_encode([
+			'file_name' => $file_name,
+			'doc_file' => $doc_file,
+			'to_doc_file' => $to_doc_file
+		]);
 	}
 }
