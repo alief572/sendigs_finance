@@ -118,7 +118,7 @@ class Actual_plan_tagih extends Admin_Controller
         $file_laporan_progress = '';
         if (!empty($_FILES['upload_laporan_progress']['filename'])) {
             $config2['upload_path']   = './uploads/laporan_progress';
-            $config2['allowed_types'] = '*';
+            $config2['allowed_types'] = 'jpg|jpeg|png|pdf';
             $config2['max_size']      = 999999999999; // In KB
             $config2['encrypt_name']  = TRUE; // Optional: encrypt the filename 
             $config2['remove_spaces']  = TRUE; // Optional: encrypt the filename 
