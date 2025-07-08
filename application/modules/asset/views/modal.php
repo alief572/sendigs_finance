@@ -137,7 +137,10 @@
 		$('#qty').maskMoney();
 
 		$('#tanggal').datepicker({
-			format: 'yyyy-mm-dd'
+			format: 'yyyy-mm-dd',
+			changeMonth: true,
+			changeYear: true,
+			yearRange: "1900:2100"
 			// minDate: 0
 		});
 	});
