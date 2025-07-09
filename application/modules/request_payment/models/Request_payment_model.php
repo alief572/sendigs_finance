@@ -415,6 +415,25 @@ class Request_payment_model extends BF_Model
         return $kodecollect;
     }
 
+    public function generate_id_payment2($kode_bank = null, $no_tambah = 0)
+    {
+        $generate_id = $this->db->query("SELECT MAX(id) AS max_id FROM payment_approve WHERE id LIKE '%BK-" . $kode_bank . "-" . date('my-') . "%'")->row();
+        $kodeBarang = $generate_id->max_id;
+        if ($kode_bank == null) {
+            $urutan = (int) substr($kodeBarang, 9, 4);
+        } else {
+            $urutan = (int) substr($kodeBarang, 16, 4);
+        }
+        $urutan++;
+
+        $urutan = ($urutan + $no_tambah);
+        $tahun = date('my-');
+        $huruf = "BK-" . $kode_bank . "-";
+        $kodecollect = $huruf . $tahun . sprintf("%04s", $urutan);
+
+        return $kodecollect;
+    }
+
     public function get_data_req_payment()
     {
         $draw = $this->input->post('draw');
@@ -680,5 +699,321 @@ class Request_payment_model extends BF_Model
             'recordsTotal' => $get_data_all->num_rows(),
             'data' => $hasil
         ]);
+    }
+
+    public function copy_to_payment()
+    {
+
+        $arr_header = [];
+        $arr_detail = [];
+        $updateDetail = [];
+        $updateExpense = [];
+        $arr_update_req_payment = [];
+
+        $this->db->select('a.*');
+        $this->db->from('request_payment a');
+        $this->db->join('payment_approve b', 'b.no_doc = a.no_doc', 'left');
+        $this->db->where('b.no_doc IS NULL');
+        $this->db->where('a.tipe <>', 'direct_payment');
+        $get_request_payment = $this->db->get()->result_array();
+
+        $no = 0;
+        $no2 = 1;
+        foreach ($get_request_payment as $item) {
+            $no_coa_bank = explode(' - ', $item['bank_name']);
+            $no_coa_bank = $no_coa_bank[0];
+
+            $kode_bank = '';
+            $get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
+            if (!empty($get_kode_bank)) {
+                $kode_bank = $get_kode_bank->kode_bank;
+            }
+
+            $Id = $this->generate_id_payment2($kode_bank, $no);
+
+            $arr_header[] = [
+                'id' => $Id,
+                'no_doc' => $item['no_doc'],
+                'nama' => $item['nama'],
+                'tgl_doc' => $item['tgl_doc'],
+                'keperluan' => $item['keperluan'],
+                'tipe' => $item['tipe'],
+                'jumlah' => $item['jumlah'],
+                'status' => 1,
+                'tanggal' => $item['tanggal'],
+                'bank_coa' => $item['bank_coa'],
+                'bank_nilai' => $item['bank_nilai'],
+                'bank_admin' => $item['bank_admin'],
+                'keterangan' => $item['keterangan'],
+                'created_by' => $item['created_by'],
+                'created_on' => $item['created_on'],
+                'approved_by' => $this->auth->user_name(),
+                'approved_on' => date('Y-m-d H:i:s'),
+                'pay_by' => $item['pay_by'],
+                'pay_on' => $item['pay_on'],
+                'doc_file' => $item['doc_file'],
+                'doc_file_2' => $item['doc_file_2'],
+                'bank_id' => $item['bank_id'],
+                'accnumber' => $item['accnumber'],
+                'accname' => $item['accname'],
+                'ids' => $item['ids'],
+                'no_request' => $item['no_request'],
+                'app_checker' => $item['app_checker'],
+                'app_checker_by' => $item['app_checker_by'],
+                'app_checker_date' => $item['app_checker_date'],
+                'currency' => $item['currency'],
+                'bank_name' => $item['bank_name'],
+                'admin_bank' => $item['admin_bank'],
+                'link_doc' => $item['link_doc'],
+                'tipe_pph' => $item['tipe_pph'],
+                'total_pph' => $item['total_pph']
+            ];
+
+            $arr_update_req_payment[] = [
+                'no_doc' => $item['no_doc'],
+                'status' => 2
+            ];
+
+            if ($item['tipe'] == 'expense') {
+                $get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $item['no_doc']])->result_array();
+
+                foreach ($get_expense_detail as $item_expense) {
+
+                    $id_detail = $this->Request_payment_model->generate_id_detail($no2);
+
+                    if ($item_expense['id_kasbon'] != null) {
+                        $harga = $item_expense['kurang_bayar'];
+                        $total = $item_expense['kurang_bayar'];
+                    } else {
+                        $harga = $item_expense['harga'];
+                        $total = $item_expense['total_harga'];
+                        if ($item_expense['kasbon'] > 0) {
+                            $harga = ($item_expense['kasbon'] * -1);
+                            $total = ($item_expense['kasbon'] * -1);
+                        }
+                    }
+
+                    $arr_detail[]         = [
+                        'id'             => $id_detail,
+                        'payment_id'     => $Id,
+                        'no_doc'         => $item_expense['no_doc'],
+                        'tgl_doc'         => $item_expense['tanggal'],
+                        'deskripsi'     => $item_expense['deskripsi'],
+                        'qty'             => $item_expense['qty'],
+                        'harga'         => $harga,
+                        'total'         => $total,
+                        'keterangan'     => $item_expense['keterangan'],
+                        'doc_file'         => $item_expense['doc_file'],
+                        'coa'             => $item_expense['coa'],
+                        'created_by'     => $this->auth->user_name(),
+                        'created_on'     => date("Y-m-d h:i:s"),
+                    ];
+
+                    $updateDetail[] = [
+                        'id'             => $item_expense['id'],
+                        'status'         => '2',
+                        'modified_by'     => $this->auth->user_name(),
+                        'modified_on'     => date("Y-m-d h:i:s"),
+                    ];
+
+                    $updateExpense[] = [
+                        'id'             => $item_expense['id'],
+                        'status'         => '3',
+                        'modified_by'     => $this->auth->user_name(),
+                        'modified_on'     => date("Y-m-d h:i:s"),
+                    ];
+
+                    // if ($item_expense['id_kasbon'] != null) {
+                    //     $Harga[]            = $item_expense['kurang_bayar'];
+                    // } else {
+                    //     if ($item_expense['id_kasbon'] == '') {
+                    //         $Harga[]         = ($item_expense['harga'] * $item_expense['qty']);
+                    //     } else {
+                    //         $Harga[]         = ($item_expense['kasbon'] * -1);
+                    //     }
+                    // }
+
+                    $no2++;
+                }
+            }
+
+            if ($item['tipe'] == 'kasbon') {
+                $Id = $this->generate_id_payment2($kode_bank, $no);
+
+                $dtl                 = $this->db->get_where('tr_kasbon', ['no_doc' => $item['no_doc']])->row();
+
+                if ($dtl->kurang_bayar != null) {
+                    $nilai = $dtl->kurang_bayar;
+                } else {
+                    $nilai = $dtl->jumlah_kasbon;
+                }
+
+                $id_detail = $this->Request_payment_model->generate_id_detail($no2);
+
+                $arr_detail[]         = [
+                    'id'             => $id_detail,
+                    'payment_id'     => $Id,
+                    'no_doc'         => $dtl->no_doc,
+                    'tgl_doc'         => $dtl->tgl_doc,
+                    'deskripsi'     => $dtl->keperluan,
+                    'qty'             => '1',
+                    'harga'         => $nilai,
+                    'total'         => $nilai,
+                    'keterangan'     => $dtl->keperluan,
+                    'doc_file'         => $dtl->doc_file,
+                    'coa'             => $dtl->coa,
+                    'created_by'     => $this->auth->user_name(),
+                    'created_on'     => date("Y-m-d h:i:s"),
+                ];
+                $updateDetail[] = [
+                    'id'             => $dtl->id,
+                    'status'         => '3',
+                    'modified_by'     => $this->auth->user_name(),
+                    'modified_on'     => date("Y-m-d h:i:s"),
+                ];
+
+                $no2++;
+            }
+
+            if ($item['tipe'] == 'transportasi') {
+                $id_detail = $this->Request_payment_model->generate_id_detail($no2);
+
+                $dtl                 = $this->db->get_where('tr_transport', ['no_doc' => $item['no_doc']])->row();
+
+                $ArrDetail[]         = [
+                    'id'             => $id_detail,
+                    'payment_id'     => $Id,
+                    'no_doc'         => $dtl->no_req,
+                    'tgl_doc'         => $dtl->tgl_doc,
+                    'deskripsi'     => $dtl->keperluan,
+                    'qty'             => '1',
+                    'harga'         => $dtl->jumlah_kasbon,
+                    'total'         => $dtl->jumlah_kasbon,
+                    'keterangan'     => $dtl->keperluan,
+                    'doc_file'         => $dtl->doc_file,
+                    'coa'             => null,
+                    'created_by'     => $this->auth->user_name(),
+                    'created_on'     => date("Y-m-d h:i:s"),
+                ];
+
+                $updateDetail[] = [
+                    'id'             => $dtl->id,
+                    'status'         => '2',
+                    'modified_by'     => $this->auth->user_name(),
+                    'modified_on'     => date("Y-m-d h:i:s"),
+                ];
+                // $Harga[]         = $dtl->jumlah_kasbon;
+
+                $no2++;
+            }
+
+            if ($item['tipe'] == 'nonpo') {
+
+
+                $dtl_get = $this->db->get_where('tr_non_po_detail', ['no_doc' => $item['no_doc']])->row();
+
+                foreach ($dtl_get as $dtl) {
+                    $id_detail = $this->Request_payment_model->generate_id_detail($no2);
+                    $ArrDetail[]         = [
+                        'id'             => $id_detail,
+                        'payment_id'     => $Id,
+                        'no_doc'         => $dtl->no_doc,
+                        'tgl_doc'         => $dtl->tgl_pr,
+                        'deskripsi'     => $dtl->deskripsi,
+                        'qty'             => '1',
+                        'harga'         => $dtl->nilai_satuan_request,
+                        'total'         => $dtl->total_request,
+                        'keterangan'     => $dtl->keterangan,
+                        // 'doc_file' 		=> $dtl->doc_file,
+                        'coa'             => null,
+                        'created_by'     => $this->auth->user_name(),
+                        'created_on'     => date("Y-m-d h:i:s"),
+                    ];
+
+                    $updateDetail[] = [
+                        'id'             => $dtl->id,
+                        'status'         => '1',
+                        'modified_by'     => $this->auth->user_name(),
+                        'modified_on'     => date("Y-m-d h:i:s"),
+                    ];
+                    // $Harga[]         = $dtl->total_request;
+
+                    $no2++;
+                }
+            }
+
+            if ($item['tipe'] == 'periodik') {
+
+                $dtl_get                 = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item['no_doc']])->result_array();
+
+                foreach ($dtl_get as $dtl) {
+                    $id_detail = $this->Request_payment_model->generate_id_detail($no2);
+                    $ArrDetail[]         = [
+                        'id'             => $id_detail,
+                        'payment_id'     => $Id,
+                        'no_doc'         => $dtl['no_doc'],
+                        'tgl_doc'         => $dtl['tanggal'],
+                        'deskripsi'     => $dtl['keterangan'],
+                        'qty'             => '1',
+                        'harga'         => $dtl['nilai'],
+                        'total'         => $dtl['nilai'],
+                        'keterangan'     => $dtl['keterangan'],
+                        'doc_file'         => $dtl['doc_file'],
+                        'coa'             => $dtl['coa'],
+                        'created_by'     => $this->auth->user_name(),
+                        'created_on'     => date("Y-m-d h:i:s"),
+                    ];
+
+                    $updateDetail[] = [
+                        'id'             => $dtl['id'],
+                        'status'         => '1',
+                        'modified_by'     => $this->auth->user_name(),
+                        'modified_on'     => date("Y-m-d h:i:s"),
+                    ];
+                    $no2++;
+                }
+
+                // $Harga[] 		= $dtl->nilai;
+
+            }
+
+            $no++;
+        }
+
+        $this->db->trans_begin();
+
+        if (!empty($arr_header)) {
+            $insert_payment_approve = $this->db->insert_batch('payment_approve', $arr_header);
+            if (!$insert_payment_approve) {
+                print_r($this->db->error()['message']);
+                exit;
+            }
+        }
+
+        if (!empty($arr_detail)) {
+            $this->db->insert_batch('payment_approve_details', $arr_detail);
+        }
+
+        if (!empty($updateDetail)) {
+            $this->db->update_batch('tr_expense', $updateExpense, 'id');
+        }
+
+        if (!empty($updateDetail)) {
+            $this->db->update_batch('tr_expense_detail', $updateDetail, 'id');
+        }
+
+        if (!empty($arr_update_req_payment)) {
+            $this->db->update_batch('request_payment', $arr_update_req_payment);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+
+            print_r($this->db->_error_message());
+            print_r($this->db->_error_number());
+            exit;
+        } else {
+            $this->db->trans_commit();
+        }
     }
 }

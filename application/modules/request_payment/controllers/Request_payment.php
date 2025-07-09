@@ -17,6 +17,8 @@ class Request_payment extends Admin_Controller
 	protected $managePermission = "Request_Payment.Manage";
 	protected $deletePermission = "Request_Payment.Delete";
 
+	protected $status;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -2705,6 +2707,8 @@ class Request_payment extends Admin_Controller
 		} else {
 			$this->db->trans_commit();
 
+			$this->Request_payment_model->copy_to_payment();
+
 			$valid = 1;
 			$msg = 'Data has been processed !';
 		}
@@ -2728,5 +2732,10 @@ class Request_payment extends Admin_Controller
 		} else {
 			$this->db->trans_commit();
 		}
+	}
+
+	public function copy_to_payment()
+	{
+		$this->Request_payment_model->copy_to_payment();
 	}
 }
