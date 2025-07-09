@@ -1,12 +1,4 @@
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-<<<<<<< HEAD
 RewriteRule ^(.*)$ index.php/$1 [L]
-
-php_value upload_max_filesize 50M
-php_value post_max_size 60M
-php_value memory_limit 128M
-=======
-RewriteRule ^(.*)$ index.php/$1 [L]
->>>>>>> d89563d403ad9577423236d29469c3ba6df3c9ef
