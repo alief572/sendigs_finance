@@ -187,7 +187,8 @@
                                 type: 'success',
                                 title: 'Success !',
                                 text: result.msg,
-                                timer: 3000
+                                allowOutsideClick: false,
+                                confirmButtonShow: false
                             }, function(lanjut) {
                                 location.reload();
                             });

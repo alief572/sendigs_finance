@@ -335,18 +335,31 @@ class Alokasi extends Admin_Controller
 
             $disabled = '';
             if ($selected1 !== '' || $selected2 !== '' || $selected3 !== '' || $selected4 !== '' || $selected5 !== '' || $selected6 !== '') {
-                $disabled = 'disabled';
+                $disabled = 'readonly';
             }
 
             $action = '<select class="form-control form-control-sm" name="action_' . $item['id'] . '" ' . $disabled . '>';
-
-            $action .= '<option value="">- Select Option -</option>';
-            $action .= '<option value="1" ' . $selected1 . '>Penerimaan Piutang</option>';
-            $action .= '<option value="2" ' . $selected2 . '>Unlocated Penerimaan</option>';
-            $action .= '<option value="3" ' . $selected3 . '>Pengembalian Kasbon</option>';
-            $action .= '<option value="4" ' . $selected4 . '>Mutasi</option>';
-            $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
-            $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
+            if ($selected1 !== '') {
+                $action .= '<option value="1" ' . $selected1 . '>Penerimaan Piutang</option>';
+            } else if ($selected2 !== '') {
+                $action .= '<option value="2" ' . $selected2 . '>Unlocated Penerimaan</option>';
+            } else if ($selected3 !== '') {
+                $action .= '<option value="3" ' . $selected3 . '>Pengembalian Kasbon</option>';
+            } else if ($selected4 !== '') {
+                $action .= '<option value="4" ' . $selected4 . '>Mutasi</option>';
+            } else if ($selected5 !== '') {
+                $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
+            } else if ($selected6) {
+                $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
+            } else {
+                $action .= '<option value="">- Select Option -</option>';
+                $action .= '<option value="1" ' . $selected1 . '>Penerimaan Piutang</option>';
+                $action .= '<option value="2" ' . $selected2 . '>Unlocated Penerimaan</option>';
+                $action .= '<option value="3" ' . $selected3 . '>Pengembalian Kasbon</option>';
+                $action .= '<option value="4" ' . $selected4 . '>Mutasi</option>';
+                $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
+                $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
+            }
 
             $action .= '</select>';
 
@@ -382,10 +395,10 @@ class Alokasi extends Admin_Controller
 
             $sts = 0;
             if (isset($post['action_' . $item['id']])) {
-                $sts = ($post['action_' . $item['id']] == '') ? 0 : $post['action_' . $item['id']];
+                $sts = $post['action_' . $item['id']];
             }
 
-            if ($sts !== '0') {
+            if ($sts !== '' && $sts !== '' && $sts !== '0') {
                 $arr_detail[] = [
                     'id' => $item['id'],
                     'sts' => $sts
