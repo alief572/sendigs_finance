@@ -86,6 +86,24 @@ class Asset_model extends BF_Model
 				$nomor = ($total_data - $start_dari) - $urut2;
 			}
 
+			$tgl_perolehan = $row['tgl_perolehan'];
+			$start = new DateTime(date('Y-m-d', strtotime('+' . ($row['depresiasi'] * 12) . ' months', strtotime($row['tgl_perolehan']))));
+			$end = new DateTime(); // today
+
+			$diff = $start->diff($end);
+
+			// Total month difference (year * 12 + months)
+			$month_difference = ($diff->y * 12) + $diff->m;
+			if ($end > $start) {
+				$month_difference = 0;
+			}
+
+			$pembagi = ($month_difference / ($row['depresiasi'] * 12));
+
+			$nilai_akumulasi = ($month_difference < 1) ? $row['nilai_asset'] : ($row['nilai_asset'] * $pembagi);
+
+			$nilai_buku = ($row['nilai_asset'] - $nilai_akumulasi);
+
 			$nestedData 	= array();
 			$nestedData[]	= "<div align='center'>" . $nomor . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['kd_asset'])) . "</div>";
@@ -94,7 +112,8 @@ class Asset_model extends BF_Model
 			$nestedData[]	= "<div align='center'>" . $row['depresiasi'] . " Tahun</div>";
 			$nestedData[]	= number_format($row['nilai_asset']);
 			$nestedData[]	= number_format($row['value']);
-			$nestedData[]	= number_format($row['sisa_nilai']);
+			$nestedData[]	= number_format($nilai_akumulasi);
+			$nestedData[]	= number_format($nilai_buku);
 
 			$update = "";
 			$delete = "";
@@ -156,6 +175,7 @@ class Asset_model extends BF_Model
 				a.nm_category,
 				a.nilai_asset,
 				a.depresiasi,
+				a.tgl_perolehan,
 				a.`value`,
 				b.sisa_nilai,
 				a.lokasi_asset,
