@@ -58,7 +58,8 @@ $ENABLE_DELETE = has_permission('Assets.Delete');
 						<th class="text-center">Depresiasi</th>
 						<th class="text-center">Nilai&nbsp;Perolehan</th>
 						<th class="text-center">Penyusutan</th>
-						<th class="text-center">Nilai&nbsp;Asset</th>
+						<th class="text-center">Akumulasi</th>
+						<th class="text-center">Nilai Buku</th>
 						<th class="text-center" class='no-sort'>#</th>
 					</tr>
 				</thead>
