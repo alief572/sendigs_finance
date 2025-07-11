@@ -443,6 +443,7 @@ class Request_payment_model extends BF_Model
 
         $sql = '
             SELECT
+                z.id,
                 z.no_dokumen,
                 z.request_by,
                 z.tanggal,
@@ -452,6 +453,7 @@ class Request_payment_model extends BF_Model
             FROM
                 (
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -473,6 +475,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -493,6 +496,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT  
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -513,6 +517,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         c.nm_lengkap as request_by,
                         a.tanggal_doc as tgl_doc,
@@ -541,6 +546,7 @@ class Request_payment_model extends BF_Model
 
         $sql_all = '
             SELECT
+                z.id,
                 z.no_dokumen,
                 z.request_by,
                 z.tanggal,
@@ -550,6 +556,7 @@ class Request_payment_model extends BF_Model
             FROM
                 (
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -571,6 +578,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -591,6 +599,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT  
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         a.created_by as request_by,
                         a.tgl_doc as tanggal,
@@ -611,6 +620,7 @@ class Request_payment_model extends BF_Model
                     UNION ALL
 
                     SELECT
+                        a.id as id,
                         a.no_doc as no_dokumen,
                         c.nm_lengkap as request_by,
                         a.tanggal_doc as tgl_doc,
@@ -680,9 +690,20 @@ class Request_payment_model extends BF_Model
             $action .= '<input type="hidden" name="kategori_' . $item->no_dokumen . '" value="' . $item->kategori . '">';
             $action .= '<input type="hidden" name="nilai_pengajuan_' . $item->no_dokumen . '" value="' . $item->nilai_pengajuan . '">';
 
+            $btn_print = '';
+            if ($item->kategori == 'Kasbon') {
+                $btn_print = ' <a href="' . base_url('expense/kasbon_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Transport') {
+                $btn_print = ' <a href="' . base_url('expense/transport_req_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Expense') {
+                $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+
             $hasil[] = [
                 'no' => $no,
-                'no_dokumen' => $item->no_dokumen,
+                'no_dokumen' => $item->no_dokumen . ' ' . $btn_print,
                 'request_by' => $nmuser,
                 'tanggal' => date('d F Y', strtotime($item->tanggal)),
                 'keperluan' => $item->keperluan,
