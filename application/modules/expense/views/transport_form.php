@@ -154,89 +154,128 @@
 				}, async function(isConfirm) {
 					if (isConfirm) {
 						$('.ajax_loader').show();
-						try {
-							const imageInput = document.getElementById('doc_file');
-							const imageFile = imageInput.files[0];
 
-							if (!imageFile) {
-								alert('Please select an image!');
-								return false;
-							}
+						var formdata = new FormData($('#frm_data')[0]);
 
-							// Detect mobile devices
-							const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-							// Compression settings
-							const options = {
-								maxSizeMB: 1,
-								maxWidthOrHeight: isMobile ? 1024 : 2000,
-								useWebWorker: !isMobile // Disable worker on mobile if needed
-							};
-
-							// 🧠 Compress the image
-							console.log("Original size:", imageFile.size / 1024, "KB");
-
-							const compressedFile = await imageCompression(imageFile, options);
-
-							console.log("Compressed size:", compressedFile.size / 1024, "KB");
-
-							// Build new FormData and append compressed image
-							const formdata = new FormData();
-							formdata.append('doc_file', compressedFile, compressedFile.name);
-
-							// Append all other form fields except file
-							$('#frm_data').find('input, select, textarea').each(function() {
-								const $el = $(this);
-								const type = $el.attr('type');
-								const name = $el.attr('name');
-								if (!name || type === 'file') return;
-
-								if ((type === 'checkbox' || type === 'radio') && !$el.is(':checked')) return;
-
-								formdata.append(name, $el.val());
-							});
-
-							// 🚀 Send the AJAX request
-							$.ajax({
-								url: url_save,
-								dataType: "json",
-								type: 'POST',
-								data: formdata,
-								processData: false,
-								contentType: false,
-								success: function(msg) {
-									if (msg['save'] == '1') {
-										swal({
-											title: "Sukses!",
-											text: msg['msg'],
-											type: "success",
-											timer: 1500
-										}, function() {
-											window.location = siteurl + 'expense/transport';
-										});
-									} else {
-										swal({
-											title: "Gagal!",
-											text: msg['msg'],
-											type: "error",
-											timer: 1500
-										});
-									}
-								},
-								error: function(msg) {
+						$.ajax({
+							url: url_save,
+							dataType: "json",
+							type: 'POST',
+							data: formdata,
+							processData: false,
+							contentType: false,
+							success: function(msg) {
+								if (msg['save'] == '1') {
+									swal({
+										title: "Sukses!",
+										text: msg['msg'],
+										type: "success",
+										timer: 1500
+									}, function() {
+										window.location = siteurl + 'expense/transport';
+									});
+								} else {
 									swal({
 										title: "Gagal!",
-										text: "Ajax Data Gagal Di Proses",
+										text: msg['msg'],
 										type: "error",
 										timer: 1500
 									});
-									console.log(msg);
 								}
-							});
-						} catch (error) {
-							console.error("Compression failed:", error);
-							alert("Image compression failed. Coba gunakan gambar dengan ukuran lebih kecil.");
-						}
+							},
+							error: function(msg) {
+								swal({
+									title: "Gagal!",
+									text: "Ajax Data Gagal Di Proses",
+									type: "error",
+									timer: 1500
+								});
+								console.log(msg);
+							}
+						});
+						// try {
+						// 	const imageInput = document.getElementById('doc_file');
+						// 	const imageFile = imageInput.files[0];
+
+						// 	if (!imageFile) {
+						// 		alert('Please select an image!');
+						// 		return false;
+						// 	}
+
+						// 	// Detect mobile devices
+						// 	const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+						// 	// Compression settings
+						// 	const options = {
+						// 		maxSizeMB: 1,
+						// 		maxWidthOrHeight: isMobile ? 1024 : 2000,
+						// 		useWebWorker: !isMobile // Disable worker on mobile if needed
+						// 	};
+
+						// 	// 🧠 Compress the image
+						// 	console.log("Original size:", imageFile.size / 1024, "KB");
+
+						// 	const compressedFile = await imageCompression(imageFile, options);
+
+						// 	console.log("Compressed size:", compressedFile.size / 1024, "KB");
+
+						// 	// Build new FormData and append compressed image
+						// 	const formdata = new FormData();
+						// 	// formdata.append('doc_file', compressedFile, compressedFile.name);
+
+						// 	// Append all other form fields except file
+						// 	$('#frm_data').find('input, select, textarea').each(function() {
+						// 		const $el = $(this);
+						// 		const type = $el.attr('type');
+						// 		const name = $el.attr('name');
+						// 		if (!name || type === 'file') return;
+
+						// 		if ((type === 'checkbox' || type === 'radio') && !$el.is(':checked')) return;
+
+						// 		formdata.append(name, $el.val());
+						// 	});
+
+						// 	// 🚀 Send the AJAX request
+						// 	$.ajax({
+						// 		url: url_save,
+						// 		dataType: "json",
+						// 		type: 'POST',
+						// 		data: formdata,
+						// 		processData: false,
+						// 		contentType: false,
+						// 		success: function(msg) {
+						// 			if (msg['save'] == '1') {
+						// 				swal({
+						// 					title: "Sukses!",
+						// 					text: msg['msg'],
+						// 					type: "success",
+						// 					timer: 1500
+						// 				}, function() {
+						// 					window.location = siteurl + 'expense/transport';
+						// 				});
+						// 			} else {
+						// 				swal({
+						// 					title: "Gagal!",
+						// 					text: msg['msg'],
+						// 					type: "error",
+						// 					timer: 1500
+						// 				});
+						// 			}
+						// 		},
+						// 		error: function(msg) {
+						// 			swal({
+						// 				title: "Gagal!",
+						// 				text: "Ajax Data Gagal Di Proses",
+						// 				type: "error",
+						// 				timer: 1500
+						// 			});
+						// 			console.log(msg);
+						// 		}
+						// 	});
+						// } catch (error) {
+						// 	console.error("Compression failed:", error);
+						// 	alert("Image compression failed. Coba gunakan gambar dengan ukuran lebih kecil.");
+						// }
 					}
 				});
 			} else {
