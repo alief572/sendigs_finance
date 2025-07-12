@@ -139,7 +139,9 @@ class Actual_plan_tagih_model extends BF_Model
             $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
             $get_spk = $this->consultant->get()->row();
 
-            $nm_project = ($item->nm_project == '' && $item->nm_project == null) ? $get_spk->nm_paket : $item->nm_project;
+            $nm_paket = (!empty($get_spk)) ? $get_spk->nm_paket : '';
+
+            $nm_project = ($item->nm_project == '' && $item->nm_project == null) ? $nm_paket : $item->nm_project;
 
             $hasil[] = [
                 'no' => $no,
