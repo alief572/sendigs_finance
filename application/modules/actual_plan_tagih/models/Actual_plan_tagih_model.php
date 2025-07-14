@@ -53,6 +53,10 @@ class Actual_plan_tagih_model extends BF_Model
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
+            $this->db->group_start();
+            $this->db->where_in('d.tagih_mundur', ['2', '3']);
+            $this->db->or_where('d.id', null);
+            $this->db->group_end();
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -81,6 +85,10 @@ class Actual_plan_tagih_model extends BF_Model
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
+            $this->db->group_start();
+            $this->db->where_in('d.tagih_mundur', ['2', '3']);
+            $this->db->or_where('d.id', null);
+            $this->db->group_end();
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -120,6 +128,11 @@ class Actual_plan_tagih_model extends BF_Model
             $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 2])->result();
             if (count($check_aktual_telat) > 0) {
                 $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
+            }
+
+            $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1])->result();
+            if (count($check_aktual_tagih) > 0) {
+                $status = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
             }
 
             if ($bulan == 'macet') {
