@@ -65,7 +65,7 @@ foreach ($results['result_payment'] as $item) {
 					<td width="15%" style="">Tgl Bayar</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
-						<input type="date" name="tgl_bayar" id="" class="form-control form-control-sm tgl_bayar" required>
+						<input type="date" name="tgl_bayar" id="" class="form-control form-control-sm tgl_bayar" value="<?= date('Y-m-d') ?>">
 					</td>
 					<td width="15%" style="">Supplier</td>
 					<td width="5%" class="text-center">:</td>
@@ -92,7 +92,7 @@ foreach ($results['result_payment'] as $item) {
 					<td width="15%" style="">Pilih Bank</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
-						<select name="bank" id="" class="form-control form-control-sm bank" required>
+						<select name="bank" id="" class="form-control form-control-sm bank">
 							<option value="">- Bank -</option>
 							<?php
 							foreach ($results['list_bank'] as $item_bank) {
@@ -106,7 +106,7 @@ foreach ($results['result_payment'] as $item) {
 					<td width="15%" style="">Mata Uang</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
-						<select name="mata_uang" id="" class="form-control form-control-sm mata_uang" required>
+						<select name="mata_uang" id="" class="form-control form-control-sm mata_uang">
 							<option value="">- Mata Uang -</option>
 							<?php
 							foreach ($results['list_mata_uang'] as $item_mata_uang) {
@@ -540,6 +540,10 @@ foreach ($results['result_payment'] as $item) {
 			kontrol = parseFloat(kontrol);
 		}
 
+		var mata_uang = $('select[name="mata_uang"]').val();
+		var bank = $('select[name="bank"]').val();
+		var kurs_payment = $('input[name="kurs_payment"]').val();
+
 		var payment_bank = $('.input_payment_bank').val();
 		if (payment_bank !== '') {
 			payment_bank = payment_bank.split(',').join('');
@@ -547,99 +551,134 @@ foreach ($results['result_payment'] as $item) {
 		} else {
 			payment_bank = 0;
 		}
+
 		if (kontrol > 0 || kontrol < 0) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Pastikan Kontrol harus 0 sebelum data dibayarkan!',
 				type: 'warning'
 			});
-		} else if (payment_bank <= 0) {
+
+			return false;
+		}
+		if (payment_bank <= 0) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Payment bank harus diisi dan tidak boleh 0!',
 				type: 'warning'
 			});
-		} else {
+
+			return false;
+		}
+		if (bank == '') {
 			swal({
-					title: "Are you sure?",
-					text: "You will not be able to process again this data!",
-					type: "warning",
-					showCancelButton: true,
-					confirmButtonClass: "btn-danger",
-					confirmButtonText: "Yes, Process it!",
-					cancelButtonText: "No, cancel process!",
-					closeOnConfirm: true,
-					closeOnCancel: false
-				},
-				function(isConfirm) {
-					if (isConfirm) {
+				title: 'Warning !',
+				text: 'Maaf, Bank wajib diisi!',
+				type: 'warning'
+			});
 
-						var formData = new FormData($('#frm-data')[0]);
-						var baseurl = siteurl + active_controller + 'save_payment';
-						$.ajax({
-							url: baseurl,
-							type: "POST",
-							data: formData,
-							cache: false,
-							dataType: 'json',
-							processData: false,
-							contentType: false,
-							success: function(data) {
-								if (data.status == 1) {
-									swal({
-										title: "Save Success!",
-										text: data.pesan,
-										type: "success",
-										timer: 5000,
-										showCancelButton: false,
-										showConfirmButton: false,
-										allowOutsideClick: false
-									});
-									window.location.href = base_url + active_controller + 'payment_list';
-								} else {
+			return false;
+		}
 
-									if (data.status == 2) {
-										swal({
-											title: "Save Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 5000,
-											showCancelButton: false,
-											showConfirmButton: false,
-											allowOutsideClick: false
-										});
-									} else {
-										swal({
-											title: "Save Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 5000,
-											showCancelButton: false,
-											showConfirmButton: false,
-											allowOutsideClick: false
-										});
-									}
+		if (mata_uang == '') {
+			swal({
+				title: 'Warning !',
+				text: 'Maaf, Mata Uang tidak boleh kosong!',
+				type: 'warning'
+			});
 
-								}
-							},
-							error: function() {
+			return false;
+		}
 
+		if (kurs_payment == '') {
+			swal({
+				title: 'Warning !',
+				text: 'Maaf, Kurs payment tidak bbisa kosong!',
+				type: 'warning'
+			});
+
+			return false;
+		}
+
+		swal({
+				title: "Are you sure?",
+				text: "You will not be able to process again this data!",
+				type: "warning",
+				showCancelButton: true,
+				confirmButtonClass: "btn-danger",
+				confirmButtonText: "Yes, Process it!",
+				cancelButtonText: "No, cancel process!",
+				closeOnConfirm: true,
+				closeOnCancel: false
+			},
+			function(isConfirm) {
+				if (isConfirm) {
+
+					var formData = new FormData($('#frm-data')[0]);
+					var baseurl = siteurl + active_controller + 'save_payment';
+					$.ajax({
+						url: baseurl,
+						type: "POST",
+						data: formData,
+						cache: false,
+						dataType: 'json',
+						processData: false,
+						contentType: false,
+						success: function(data) {
+							if (data.status == 1) {
 								swal({
-									title: "Error Message !",
-									text: 'An Error Occured During Process. Please try again..',
-									type: "warning",
+									title: "Save Success!",
+									text: data.pesan,
+									type: "success",
 									timer: 5000,
 									showCancelButton: false,
 									showConfirmButton: false,
 									allowOutsideClick: false
 								});
+								window.location.href = base_url + active_controller + 'payment_list';
+							} else {
+
+								if (data.status == 2) {
+									swal({
+										title: "Save Failed!",
+										text: data.pesan,
+										type: "warning",
+										timer: 5000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
+									});
+								} else {
+									swal({
+										title: "Save Failed!",
+										text: data.pesan,
+										type: "warning",
+										timer: 5000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
+									});
+								}
+
 							}
-						});
-					} else {
-						swal("Cancelled", "Data can be process again :)", "error");
-						return false;
-					}
-				});
-		}
+						},
+						error: function() {
+
+							swal({
+								title: "Error Message !",
+								text: 'An Error Occured During Process. Please try again..',
+								type: "warning",
+								timer: 5000,
+								showCancelButton: false,
+								showConfirmButton: false,
+								allowOutsideClick: false
+							});
+						}
+					});
+				} else {
+					swal("Cancelled", "Data can be process again :)", "error");
+					return false;
+				}
+			});
 	});
 </script>
