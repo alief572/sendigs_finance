@@ -42,6 +42,10 @@ class Pembayaran_material_model extends BF_Model
 		if ($kode_bank == null) {
 			$urutan = (int) substr($kodeBarang, 9, 4);
 		}
+
+		if($urutan == '') {
+			$urutan = 0;
+		}
 		$urutan++;
 		$tahun = date('my-', strtotime($tanggal));
 		$huruf = "BK-" . $kode_bank . "-";
