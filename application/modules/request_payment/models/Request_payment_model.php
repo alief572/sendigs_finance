@@ -901,16 +901,30 @@ class Request_payment_model extends BF_Model
 
                 $dtl                 = $this->db->get_where('tr_transport', ['no_doc' => $item['no_doc']])->row();
 
+                $arr_keperluan = [];
+                $this->db->select('a.keperluan');
+                $this->db->from('tr_transport a');
+                $this->db->where('a.no_doc', $item['no_doc']);
+                $this->db->group_by('a.keperluan');
+                $get_keperluan = $this->db->get()->result_array();
+
+                foreach ($get_keperluan as $itemm) {
+                    $arr_keperluan[] = $itemm['keperluan'];
+                }
+
+                $keperluan = implode(', ', $arr_keperluan);
+
+
                 $ArrDetail[]         = [
                     'id'             => $id_detail,
                     'payment_id'     => $Id,
                     'no_doc'         => $dtl->no_req,
                     'tgl_doc'         => $dtl->tgl_doc,
-                    'deskripsi'     => $dtl->keperluan,
+                    'deskripsi'     => $keperluan,
                     'qty'             => '1',
                     'harga'         => $dtl->jumlah_kasbon,
                     'total'         => $dtl->jumlah_kasbon,
-                    'keterangan'     => $dtl->keperluan,
+                    'keterangan'     => $keperluan,
                     'doc_file'         => $dtl->doc_file,
                     'coa'             => null,
                     'created_by'     => $this->auth->user_name(),

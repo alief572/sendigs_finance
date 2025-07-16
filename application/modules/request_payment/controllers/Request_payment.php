@@ -31,30 +31,30 @@ class Request_payment extends Admin_Controller
 
 	public function index()
 	{
-		$data = $this->Request_payment_model->GetListDataRequestNew();
-		$list_mata_uang = $this->db->get('mata_uang')->result_array();
-		// $list_coa = $this->db->get_where(DBACC.'.coa_master', ['no_perkirran'])->result_array();
+		// $data = $this->Request_payment_model->GetListDataRequestNew();
+		// $list_mata_uang = $this->db->get('mata_uang')->result_array();
+		// // $list_coa = $this->db->get_where(DBACC.'.coa_master', ['no_perkirran'])->result_array();
 
-		$this->db->select('a.*');
-		$this->db->from(DBACC . '.coa_master a')
-			->where('a.kode_bank <>', '');
-		$list_coa = $this->db->get()->result_array();
+		// $this->db->select('a.*');
+		// $this->db->from(DBACC . '.coa_master a')
+		// 	->where('a.kode_bank <>', '');
+		// $list_coa = $this->db->get()->result_array();
 
-		$list_no_invoice = [];
-		$this->db->select('id, invoice_no');
-		$this->db->from('tr_invoice_po');
-		$get_invoice_no = $this->db->get()->result();
-		foreach ($get_invoice_no as $item_no_invoice) {
-			$list_no_invoice[$item_no_invoice->id] = $item_no_invoice->invoice_no;
-		}
+		// $list_no_invoice = [];
+		// $this->db->select('id, invoice_no');
+		// $this->db->from('tr_invoice_po');
+		// $get_invoice_no = $this->db->get()->result();
+		// foreach ($get_invoice_no as $item_no_invoice) {
+		// 	$list_no_invoice[$item_no_invoice->id] = $item_no_invoice->invoice_no;
+		// }
 
-		$get_vendor = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
+		// $get_vendor = $this->db->get_where('new_supplier', ['deleted_by' => null])->result();
 
-		$this->template->set('data', $data);
-		$this->template->set('list_curr', $list_mata_uang);
-		$this->template->set('list_coa', $list_coa);
-		$this->template->set('list_no_invoice', $list_no_invoice);
-		$this->template->set('list_vendor', $get_vendor);
+		// $this->template->set('data', $data);
+		// $this->template->set('list_curr', $list_mata_uang);
+		// $this->template->set('list_coa', $list_coa);
+		// $this->template->set('list_no_invoice', $list_no_invoice);
+		// $this->template->set('list_vendor', $get_vendor);
 		$this->template->title('Request Payment');
 		$this->template->render('index');
 	}
