@@ -587,6 +587,7 @@ function getStokBarangAll()
 										')
 		->group_by('a.id_material')
 		->join('accessories b', 'a.id_material=b.id')
+		->where('a.id_gudang', 1)
 		->get('warehouse_stock a')
 		->result_array();
 	$ArrGetCategory 	= [];
