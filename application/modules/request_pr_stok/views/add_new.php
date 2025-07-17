@@ -48,7 +48,8 @@
 						<th class="text-center">Kode Barang</th>
 						<th class="text-center">Nama Barang</th>
 						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Packing)</th>
-						<th class="text-center no-sort" width='7%'>Stock</th>
+						<th class="text-center no-sort" width='7%'>Stock (Konversi)</th>
+						<th class="text-center no-sort" width='7%'>Stock (Packing)</th>
 						<th class="text-center no-sort" width='7%'>Max Stock</th>
 						<th class="text-center no-sort" width='7%'>Konversi</th>
 						<th class="text-center no-sort" width='8%'>Propose Purchase <br> (Konversi)</th>
