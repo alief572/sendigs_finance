@@ -47,11 +47,11 @@
 						<th class="text-center" width='4%'>#</th>
 						<th class="text-center">Kode Barang</th>
 						<th class="text-center">Nama Barang</th>
-						<th class="text-center" width='10%'>Inventory Type</th>
+						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Packing)</th>
 						<th class="text-center no-sort" width='7%'>Stock</th>
-						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan</th>
 						<th class="text-center no-sort" width='7%'>Max Stock</th>
-						<th class="text-center no-sort" width='8%'>Propose Purchase</th>
+						<th class="text-center no-sort" width='7%'>Konversi</th>
+						<th class="text-center no-sort" width='8%'>Propose Purchase <br> (Konversi)</th>
 						<th class="text-center no-sort" width='8%'>Unit</th>
 						<th class="text-center no-sort" width='8%'>Propose Purchase (Packing)</th>
 						<th class="text-center no-sort" width='5%'>Unit Packing</th>
