@@ -428,16 +428,16 @@ class Request_pr_stok_model extends BF_Model
       $nestedData[]  = "<div align='center'>" . $nomor . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['id_stock'] . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['stock_name'] . "</div>";
-      $nestedData[]  = "<div align='left'>" . strtoupper($row['category_type']) . "</div>";
 
       $STOCK_WRH    = (!empty($GET_WAREHOUSE_STOCK[$row['id']]['stok'])) ? $GET_WAREHOUSE_STOCK[$row['id']]['stok'] : 0;
       $stock_oke     = (!empty($STOCK_WRH)) ? number_format($STOCK_WRH) : '-';
       $stock_oke2   = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
-      $nestedData[]  = "<div align='right'>" . $stock_oke . "</div>";
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
       $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
+      $nestedData[]  = "<div align='right'>" . $stock_oke . "</div>";
       $nestedData[]  = "<div align='right'>" . number_format($row['max_stok']) . "</div>";
+      $nestedData[]  = "<div align='right'>" . number_format($row['konversi']) . "</div>";
       $purchase = ($kebutuhnMonth * 1.5) - $stock_oke2;
       $purchase2x = ($purchase < 0) ? 0 : $purchase;
       $purchase2 = (!empty($row['request'])) ? $row['request'] : $purchase2x;
