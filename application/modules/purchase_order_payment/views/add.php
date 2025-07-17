@@ -90,7 +90,7 @@
     <div class="col-md-6">
         <div class="form-group">
             <label for="">Nomor Faktur Pajak</label>
-            <input type="text" name="nomor_faktur_pajak" id="" class="form-control form-control-sm nomor_faktur_pajak" >
+            <input type="text" name="nomor_faktur_pajak" id="" class="form-control form-control-sm nomor_faktur_pajak">
         </div>
     </div>
     <div class="col-md-6">

@@ -21,10 +21,10 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 		<b>Receive Invoice</b>
 		<p>Select Request Payment</p>
 
-		<input type="radio" name="checkbx" id="" class="checkbx" value="dp"> Receive Invoice DP <br>
-		<input type="radio" name="checkbx" id="" class="checkbx" value="inc"> Receive Invoice Incoming <br>
+		<input type="radio" name="checkbx" id="" class="checkbx" value="dp" checked> Receive Invoice <br>
+		<!-- <input type="radio" name="checkbx" id="" class="checkbx" value="inc"> Receive Invoice Incoming <br>
 		<input type="radio" name="checkbx" id="" class="checkbx" value="pro"> Receive Invoice Progress <br>
-		<input type="radio" name="checkbx" id="" class="checkbx" value="ret"> Receive Invoice Retensi <br>
+		<input type="radio" name="checkbx" id="" class="checkbx" value="ret"> Receive Invoice Retensi <br> -->
 
 		<div class="dic">
 
@@ -67,18 +67,15 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <!-- page script -->
 <script>
-	
+	$(document).ready(function() {
+		checkbx('tipe');
+	});
 
 	$(document).on('click', '.checkbx', function() {
+		checkbx();
+	});
 
-		var tipe = '';
-		$('.checkbx').each(function() {
-			var val = $(this).val();
-			if ($(this).is(':checked')) {
-				tipe = val;
-			}
-		});
-
+	function checkbx(tipe) {
 		$('.dic').html('');
 
 		$.ajax({
@@ -99,7 +96,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 				});
 			}
 		});
-	});
+	}
 
 	$(document).on('click', '.req_app', function() {
 		var no_surat = $(this).data('no_po');
@@ -116,13 +113,13 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 			},
 			cache: false,
 			success: function(result) {
-				if(tipe == 'dp') {
+				if (tipe == 'dp') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Down Payment (DP)');
 				}
-				if(tipe == 'pro') {
+				if (tipe == 'pro') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Progress');
 				}
-				if(tipe == 'ret') {
+				if (tipe == 'ret') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Retensi');
 				}
 				$('.save_btn_modal').show();
@@ -166,7 +163,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 		});
 	});
 
-	$(document).on('click', '.view', function(){
+	$(document).on('click', '.view', function() {
 		var id = $(this).data('id');
 		var id_top = $(this).data('id_top');
 		var tipe = $(this).data('tipe');
@@ -180,21 +177,21 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 				'tipe': tipe
 			},
 			cache: false,
-			success: function(result){
-				if(tipe == 'dp') {
+			success: function(result) {
+				if (tipe == 'dp') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Down Payment (DP)');
 				}
-				if(tipe == 'pro') {
+				if (tipe == 'pro') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Progress');
 				}
-				if(tipe == 'ret') {
+				if (tipe == 'ret') {
 					$('.modal-title').html('<i class="fa fa-users"></i> Receive Invoice Retensi');
 				}
 				$('.save_btn_modal').hide();
 				$('#ModalView').html(result);
 				$('#dialog-popup').modal('show');
 			},
-			error: function(result){
+			error: function(result) {
 				swal({
 					title: 'Error !',
 					text: 'Please try again later !',
@@ -204,7 +201,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 		});
 	});
 
-	$(document).on('click', '.view_inc', function(){
+	$(document).on('click', '.view_inc', function() {
 		var id = $(this).data('id');
 
 		$.ajax({
@@ -214,7 +211,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 				'id': id
 			},
 			cache: false,
-			success: function(result){
+			success: function(result) {
 
 				$('.modal-title').html('Receive Invoice Incoming');
 
@@ -222,7 +219,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 				$('#ModalView').html(result);
 				$('#dialog-popup').modal('show');
 			},
-			error: function(result){
+			error: function(result) {
 				swal({
 					title: 'Error !',
 					text: 'Please try again later !',
@@ -232,7 +229,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 		});
 	});
 
-	$(document).on('click', '.list_dp', function(){
+	$(document).on('click', '.list_dp', function() {
 		var no_po = $(this).data('no_po');
 
 		$.ajax({
@@ -243,10 +240,10 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 			},
 			cache: false,
 			dataType: "JSON",
-			success: function(result){
-				
+			success: function(result) {
+
 			},
-			error: function(result){
+			error: function(result) {
 
 			}
 		})
