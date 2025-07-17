@@ -442,7 +442,7 @@ class Request_pr_stok extends Admin_Controller
       $max_stok = (!empty($get_konversi)) ? $get_konversi['max_stok'] : 1;
 
       $stock_oke   = (!empty($get_stock[0]->stock)) ? $get_stock[0]->stock : 0;
-      $purchase   = (($max_stok * $konversi) - $stock_oke) + ((($max_stok * $konversi) - $stock_oke) * 0.5);
+      $purchase   = (($max_stok - ($stock_oke / $konversi)) * 0.5);
       $purchase2   = ($purchase < 0) ? 0 : ceil($purchase);
 
       $ArrUpdate[$key]['id'] = $value['id'];
