@@ -436,12 +436,13 @@ class Request_pr_stok extends Admin_Controller
     foreach ($get_rutin as $key => $value) {
       $get_kebutuhan   = $this->db->select('SUM(kebutuhan_month) AS sum_keb')->get_where('budget_rutin_detail', array('id_barang' => $value['id']))->result();
       $get_stock     = $this->db->select('SUM(qty_stock) AS stock')->where('id_gudang', 1)->get_where('warehouse_stock', array('id_material' => $value['id'], 'id_gudang' => 1))->result();
-      $get_konversi = $this->db->select('a.konversi')->get_where('accessories a', ['a.id' => $value['id']])->row_array();
+      $get_konversi = $this->db->select('a.konversi, a.max_stok')->get_where('accessories a', ['a.id' => $value['id']])->row_array();
 
       $konversi = (!empty($get_konversi)) ? $get_konversi['konversi'] : 1;
+      $max_stok = (!empty($get_konversi)) ? $get_konversi['max_stok'] : 1;
 
       $stock_oke   = (!empty($get_stock[0]->stock)) ? $get_stock[0]->stock : 0;
-      $purchase   = (($get_kebutuhan[0]->sum_keb * $konversi) * 1.5) - $stock_oke;
+      $purchase   = (($max_stok * $konversi) - $stock_oke) + ((($max_stok * $konversi) - $stock_oke) * 0.5);
       $purchase2   = ($purchase < 0) ? 0 : ceil($purchase);
 
       $ArrUpdate[$key]['id'] = $value['id'];
