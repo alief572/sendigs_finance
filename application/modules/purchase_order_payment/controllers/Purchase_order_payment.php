@@ -404,7 +404,7 @@ class Purchase_order_payment extends Admin_Controller
 			$link_doc = 'uploads/invoice/' . $data_upload_po['file_name'];
 		}
 
-		$no_po = $post['no_po'];
+		$no_po = $post['nomor_po'];
 		$no_po1 = $post['nomor_po'];
 
 		// print_r($no_po);
@@ -1012,7 +1012,7 @@ class Purchase_order_payment extends Admin_Controller
 			'kdcab'				=> '101',
 			'jenis'			    => 'JV',
 			'keterangan'		=> $keterangan,
-			'user_id'			=> $Username,
+			'user_id'			=> $this->auth->user_name(),
 			'ho_valid'			=> '',
 		);
 		$insert_javh = $this->db->insert(DBACC . '.javh', $dataJVhead);
