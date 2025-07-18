@@ -560,8 +560,10 @@ class Non_rutin extends Admin_Controller
 		$d_Header = "";
 		$d_Header .= "<tr class='header_" . $id . "'>";
 		$d_Header .= "<td align='center'>" . $id . "</td>";
-		$d_Header .= "<td align='left'><input type='text' name='detail[" . $id . "][nm_barang]' class='form-control input-md'></td>";
-		$d_Header .= "<td align='left'><input type='text' name='detail[" . $id . "][spec]' class='form-control input-md'></td>";
+		$d_Header .= "<td align='left'><textarea name='detail[" . $id . "][nm_barang]' class='form-control input-md'></textarea></td>";
+		$d_Header .= "<td align='left'>";
+		$d_Header .= "<textarea class='form-control input-nm' name='detail[" . $id . "][spec]'></textarea>";
+		$d_Header .= "</td>";
 		$d_Header .= "<td align='left'><input type='text' id='qty_" . $id . "' name='detail[" . $id . "][qty]' class='form-control input-md text-center autoNumeric2 sum_tot'></td>";
 		$d_Header .= "<td align='left'><select name='detail[" . $id . "][satuan]' class='form-control chosen_select wajib' required>";
 		$d_Header .= "<option value='0'>Pilih</option>";
@@ -572,7 +574,7 @@ class Non_rutin extends Admin_Controller
 		$d_Header .= "<td align='left'><input type='text' id='harga_" . $id . "' name='detail[" . $id . "][harga]' class='form-control input-md text-right maskM sum_tot' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
 		$d_Header .= "<td align='left'><input type='text' id='total_harga_" . $id . "' name='detail[" . $id . "][total_harga]' class='form-control input-md text-right maskM jumlah_all' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
 		$d_Header .= "<td align='left'><input type='text' name='detail[" . $id . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan' readonly></td>";
-		$d_Header .= "<td align='left'><input type='text' name='detail[" . $id . "][keterangan]' class='form-control input-md'></td>";
+		$d_Header .= "<td align='left'><textarea class='form-control input-md' name='detail[" . $id . "][keterangan]'></textarea></td>";
 		$d_Header .= "<td align='center'>";
 		$d_Header .= "&nbsp;<button type='button' class='btn btn-sm btn-danger delPart' title='Delete Part'><i class='fa fa-close'></i></button>";
 		$d_Header .= "</td>";
