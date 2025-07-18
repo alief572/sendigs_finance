@@ -38,9 +38,9 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 					<th>Harga PO</th>
 					<th>Revisi</th>
 					<th>Keterangan</th>
+					<th>Reject Reason</th>
 					<th>Dibuat Oleh</th>
 					<th>Dibuat Tgl</th>
-					<th>Reject Reason</th>
 					<?php if ($ENABLE_MANAGE) : ?>
 						<th>Action</th>
 					<?php endif; ?>
@@ -165,9 +165,9 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 							<td class="text-right"><?= number_format($record->total_barang - $record->nilai_disc + $record->total_ppn + $record->taxtotal) ?></td>
 							<td class="text-center"><?= $record->revisi ?></td>
 							<td><?= $record->note ?></td>
+							<td><?= $record->reject_reason ?></td>
 							<td><?= ucfirst($record->nm_create) ?></td>
 							<td><?= date('d F Y H:i:s', strtotime($record->created_on)) ?></td>
-							<td><?= $record->reject_reason ?></td>
 							<td style="padding-left:20px">
 								<?php if ($ENABLE_VIEW) : ?>
 									<a class="btn btn-warning btn-sm" href="<?= base_url('/purchase_order/view_po/' . $record->no_po) ?>" title="View" data-no_po="<?= $record->no_po ?>"><i class="fa fa-eye"></i></a>
