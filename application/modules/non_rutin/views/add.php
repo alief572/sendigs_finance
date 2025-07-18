@@ -212,8 +212,12 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 							$nomor++;
 							echo "<tr class='header_" . $nomor . "'>";
 							echo "<td align='center'>" . $nomor . "<input type='hidden' name='detail[" . $nomor . "][id]' value='" . $valx['id'] . "'></td>";
-							echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][nm_barang]' class='form-control input-md nm_barang_" . $nomor . "' value='" . strtoupper($valx['nm_barang']) . "'></td>";
-							echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][spec]' class='form-control input-md spec_" . $nomor . "' value='" . strtoupper($valx['spec']) . "'></td>";
+							echo "<td align='left'>
+								<textarea class='form-control input-md nm_barang_" . $nomor . "' name='detail[" . $nomor . "][nm_barang]' " . $disabled3 . ">" . strtoupper($valx['nm_barang']) . "</textarea>
+							</td>";
+							echo "<td align='left'>
+								<textarea class='form-control input-md spec_" . $nomor . "' name='detail[" . $nomor . "][spec]' " . $disabled3 . ">" . strtoupper($valx['spec']) . "</textarea>
+							</td>";
 							echo "<td align='left'><input type='text' " . $disabled2 . " id='qty_" . $nomor . "' name='detail[" . $nomor . "][qty]' class='form-control input-md text-right autoNumeric2 sum_tot qty_" . $nomor . "' value='" . $valx['qty'] . "'></td>";
 							echo "<td align='left'>
 									<select name='detail[" . $nomor . "][satuan]' class='form-control wajib satuan_" . $nomor . "' " . $disabled2 . " required>";
@@ -227,7 +231,9 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 							echo "<td align='left'><input type='text' " . $disabled2 . " id='harga_" . $nomor . "' name='detail[" . $nomor . "][harga]' class='form-control input-md text-right maskM sum_tot harga_" . $nomor . "' value='" . number_format($valx['harga']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
 							echo "<td align='left'><input type='text' " . $disabled2 . " id='total_harga_" . $nomor . "' name='detail[" . $nomor . "][total_harga]' class='form-control input-md text-right maskM jumlah_all total_harga_" . $nomor . "' value='" . number_format($valx['qty'] * $valx['harga']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
 							echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan tanggal_" . $nomor . "' readonly value='" . strtoupper($valx['tanggal']) . "'></td>";
-							echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][keterangan]' class='form-control input-md keterangan_" . $nomor . "' value='" . strtoupper($valx['keterangan']) . "'></td>";
+							echo "<td align='left'>
+								<textarea class='form-control input-md keterangan_" . $nomor . "' name='detail[" . $nomor . "][keterangan]' " . $disabled3 . ">" . strtoupper($valx['keterangan']) . "</textarea>
+							</td>";
 							if (empty($approve)) {
 								echo "<td align='center'><button type='button' class='btn btn-sm btn-warning edit_detail edit_detail_" . $nomor . "' data-id='" . $valx['id'] . "' data-nomor='" . $nomor . "' style='margin-right: 0.5em;'><i class='fa fa-pencil'></i>
 								</button><button type='button' class='btn btn-sm btn-danger delPart' title='Delete Part'><i class='fa fa-close'></i></button></td>";
