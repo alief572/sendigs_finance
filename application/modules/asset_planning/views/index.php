@@ -30,12 +30,15 @@ $ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 						<th class="text-center">#</th>
 						<th class="text-center">Department</th>
 						<th class="text-center">Nama Asset</th>
+						<th class="text-center">Keterangan</th>
 						<th class="text-center">Qty</th>
 						<th class="text-center">Budget</th>
 						<th class="text-center">Sisa Budget PR</th>
 						<th class="text-center">Sisa Budget PO</th>
 						<th class="text-center no-sort">Planning</th>
 						<th class="text-center no-sort">Status</th>
+						<th class="text-center no-sort">Dibuat Oleh</th>
+						<th class="text-center no-sort">Dibuat Tgl</th>
 						<th class="text-center no-sort">Option</th>
 					</tr>
 				</thead>
@@ -213,7 +216,7 @@ $ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 				}
 			},
 			"aaSorting": [
-				[1, "desc"]
+				[0, "asc"]
 			],
 			"columnDefs": [{
 				"targets": 'no-sort',

@@ -134,10 +134,13 @@ class Budget_asset_model extends BF_Model
 			$nm_dept = (!empty($get_department)) ? $get_department->nm_dept : '';
 			$nm_comp = (!empty($get_department)) ? $get_department->nm_comp : '';
 
+			$keterangan = (!empty($row['rev_keterangan'])) ? $row['rev_keterangan'] : $row['keterangan'];
+
 			$nestedData 	= array();
 			$nestedData[]	= "<div align='center'>" . $nomor . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper($nm_dept . ' - ' . $nm_comp) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper($row['nama_asset']) . "</div>";
+			$nestedData[]	= "<div align='left'>" . strtoupper($keterangan) . "</div>";
 			$nestedData[]	= "<div align='center'>" . $row['qty'] . "</div>";
 			$nestedData[]	= "<div align='right'>" . number_format($row['budget']) . "</div>";
 			$nestedData[]	= "<div align='right'>" . number_format($row['budget_pr']) . "</div>";
@@ -173,6 +176,8 @@ class Budget_asset_model extends BF_Model
 			if ($row['status'] != 'N') {
 				$view = "<a href='" . site_url($this->uri->segment(1)) . '/add_asset/' . $row['code_plan'] . "/view' class='btn btn-sm btn-warning' title='Detail Data' data-role='qtip'><i class='fa fa-eye'></i></a>";
 			}
+			$nestedData[]	= "<div align='center'>" . $row['nm_lengkap'] . "</div>";
+			$nestedData[]	= "<div align='center'>" . date('d F Y H:i:s', strtotime($row['created_date'])) . "</div>";
 			$nestedData[]	= "	<div align='left'>
 									" . $view . "
                                     " . $edit . "
@@ -207,18 +212,24 @@ class Budget_asset_model extends BF_Model
 				(@row:=@row+1) AS nomor,
 				a.*,
 				b.name as nm_dept,
-				d.nama
+				d.nama,
+				e.nm_lengkap
 			FROM
 				asset_planning a
 				LEFT JOIN " . DBHRIS . ".departments b ON a.id_dept = b.id
-				LEFT JOIN " . DBACC . ".coa_master d ON a.coa = d.no_perkiraan,
+				LEFT JOIN " . DBACC . ".coa_master d ON a.coa = d.no_perkiraan
+				LEFT JOIN users e ON e.id_user = a.created_by,
 				(SELECT @row:=0) r
 		    WHERE  a.deleted='N' " . $where . " AND(
 				a.id LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR b.name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+				OR e.nm_lengkap LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+				OR a.keterangan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+				OR a.rev_keterangan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
 		";
-		// echo $sql; exit;
+		// echo $sql;
+		// exit;
 
 		$data['totalData'] = $this->db->query($sql)->num_rows();
 		$data['totalFiltered'] = $this->db->query($sql)->num_rows();
