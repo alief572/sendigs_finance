@@ -35,7 +35,6 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 					<th>Tanggal PO</th>
 					<th>Progress PO</th>
 					<th>PO</th>
-					<th>Vendor</th>
 					<th>Harga PO</th>
 					<th>Revisi</th>
 					<th>Reject Reason</th>
@@ -160,7 +159,6 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 								echo $sts;
 							}
 							?>
-							<td><?= $record->nm_supplier ?></td>
 							<td class="text-right"><?= number_format($record->total_barang - $record->nilai_disc + $record->total_ppn + $record->taxtotal) ?></td>
 							<td class="text-center"><?= $record->revisi ?></td>
 							<td><?= $record->reject_reason ?></td>
