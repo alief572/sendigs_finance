@@ -287,6 +287,7 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 					text: 'Approve status must be choosen !'
 				});
 
+				$('#save').attr('disabled', false);
 				return false;
 			}
 		}
@@ -300,7 +301,7 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 				type: "warning"
 			});
 
-			$('#save').prop('disabled', false);
+			$('#save').attr('disabled', false);
 			return false;
 		}
 
