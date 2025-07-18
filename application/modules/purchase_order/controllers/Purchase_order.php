@@ -49,7 +49,8 @@ class Purchase_order extends Admin_Controller
 			f.no_pr as no_pr_material,
 			e.no_pr as no_pr_depart,
 			h.nama as nm_supplier,
-			IF(SUM(j.jumlahharga) IS NULL, 0, SUM(j.jumlahharga)) as harga_po
+			IF(SUM(j.jumlahharga) IS NULL, 0, SUM(j.jumlahharga)) as harga_po,
+			k.nm_lengkap,
 		FROM 
 			tr_purchase_order as a 
 			LEFT JOIN users b ON b.id_user = a.created_by 
@@ -60,6 +61,7 @@ class Purchase_order extends Admin_Controller
 			LEFT JOIN rutin_non_planning_header g ON g.no_pengajuan = e.no_pengajuan
 			LEFT JOIN new_supplier h ON h.kode_supplier = a.id_suplier
 			LEFT JOIN dt_trans_po j ON j.no_po = a.no_po
+			LEFT JOIN users k ON k.id_user = a.created_by
 		WHERE
 			a.close_po IS NULL AND
 			(SELECT COUNT(aa.id) FROM dt_trans_po aa WHERE aa.no_po = a.no_po) > 0
