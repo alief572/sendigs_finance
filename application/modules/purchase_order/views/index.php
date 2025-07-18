@@ -165,7 +165,7 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 							<td class="text-right"><?= number_format($record->total_barang - $record->nilai_disc + $record->total_ppn + $record->taxtotal) ?></td>
 							<td class="text-center"><?= $record->revisi ?></td>
 							<td><?= $record->note ?></td>
-							<td><?= ucfirst($record->nm_lengkap) ?></td>
+							<td><?= ucfirst($record->nm_create) ?></td>
 							<td><?= date('d F Y H:i:s', strtotime($record->created_on)) ?></td>
 							<td><?= $record->reject_reason ?></td>
 							<td style="padding-left:20px">
