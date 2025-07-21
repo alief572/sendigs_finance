@@ -68,11 +68,11 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 <!-- page script -->
 <script>
 	$(document).ready(function() {
-		checkbx('tipe');
+		checkbx('dp');
 	});
 
 	$(document).on('click', '.checkbx', function() {
-		checkbx();
+		checkbx('dp');
 	});
 
 	function checkbx(tipe) {
