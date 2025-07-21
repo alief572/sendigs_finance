@@ -1,7 +1,19 @@
+<?php
+$id_dept = [];
+foreach ($result as $val => $valx) {
+    if (isset($list_departments[$valx['id_dept']]['id_dept'])) {
+        $id_dept[] = $list_departments[$valx['id_dept']]['id_dept'];
+    }
+}
+
+$id_dept = array_unique($id_dept);
+$id_dept = implode(',', $id_dept);
+?>
 <form action="#" method="POST" id="form_adjustment" enctype="multipart/form-data" autocomplete='off'>
     <div class="box-body">
         <input type="hidden" name='no_po' id='no_po' value='<?= implode(',', $no_po); ?>'>
         <input type="hidden" name='tanggal' id='tanggal' value='<?= $tanggal_trans; ?>'>
+        <input type="hidden" name='id_dept' id='id_dept' value='<?= $id_dept; ?>'>
         <input type="hidden" name='pic' id='pic' value='<?= $pic; ?>'>
         <input type="hidden" name='note' id='note' value='<?= $note; ?>'>
         <input type="hidden" name='adjustment' id='adjustment' value='IN'>
@@ -61,6 +73,8 @@
                             $incoming_qty = $get_incoming_qty['qty_incoming'];
                         }
 
+                        $nm_dept = (!empty($list_departments[$valx['id_dept']]['nm_dept'])) ? strtoupper($list_departments[$valx['id_dept']]['nm_dept']) : '';
+
                         $Qty_kurang = ($valx['qty'] - $incoming_qty);
                         echo "<tr>";
                         echo "<td align='center'>" . $No . "
@@ -72,7 +86,7 @@
                             <input type='hidden' name='addInMat[$No][tipe_po]' value='" . $valx['tipe_po'] . "'>
                             <input type='hidden' name='' class='max_qty_" . $valx['id'] . "' value='" . $Qty_kurang . "'>
                         </td>";
-                        echo "<td>" . strtoupper($valx['nm_department']) . "</td>";
+                        echo "<td>" . $nm_dept . "</td>";
                         echo "<td>" . strtoupper($valx['namamaterial']) . "</td>";
                         echo "<td>" . strtoupper($valx['spec']) . "</td>";
                         echo "<td align='center'>" . number_format($valx['qty'], 2) . "</td>";
