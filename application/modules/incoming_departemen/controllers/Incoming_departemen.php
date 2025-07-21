@@ -1,6 +1,10 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+require_once 'vendor/autoload.php';
+
+use Mpdf\Mpdf;
+
 class Incoming_departemen extends Admin_Controller
 {
 	protected $viewPermission 	= 'Incoming_Departemen.View';
@@ -8,13 +12,17 @@ class Incoming_departemen extends Admin_Controller
 	protected $managePermission = 'Incoming_Departemen.Manage';
 	protected $deletePermission = 'Incoming_Departemen.Delete';
 
+	protected $dbhris;
+
 	public function __construct()
 	{
 		parent::__construct();
 		$this->load->model('master_model');
-		$this->load->library(array('Mpdf', 'upload', 'Image_lib'));
-		$this->template->title('Manage Data Supplier');
+		$this->load->library(array('upload', 'Image_lib'));
+		$this->template->title('Incoming Departemen');
 		$this->template->page_icon('fa fa-building-o');
+
+		$this->dbhris = $this->load->database('hris', true);
 
 		date_default_timezone_set('Asia/Bangkok');
 	}
@@ -205,38 +213,49 @@ class Incoming_departemen extends Admin_Controller
 		// print_r($no_po);
 		// exit;
 
-		$this->db->select('a.id as id, a.namamaterial as namamaterial, a.qty as qty, c.spec as spec, a.no_po as no_po, e.nama as nm_department, "PO" as tipe_po');
+		$this->db->select('a.id as id, a.namamaterial as namamaterial, a.qty as qty, c.spec as spec, a.no_po as no_po, d.id_dept, "PO" as tipe_po');
 		$this->db->from('dt_trans_po a');
 		$this->db->join('tr_purchase_order b', 'b.no_po = a.no_po');
 		$this->db->join('rutin_non_planning_detail c', 'c.id = a.idpr');
 		$this->db->join('rutin_non_planning_header d', 'd.no_pr = c.no_pr', 'left');
-		$this->db->join('ms_department e', 'e.id = d.id_dept', 'left');
 		$this->db->where_in('b.no_surat', $no_po);
 		$query1 = $this->db->get_compiled_select();
 
 		$this->db->reset_query();
-		$this->db->select('b.id as id, b.nm_barang as namamaterial, b.qty as qty, b.spec as spec, a.no_doc as no_po, d.nama as nm_department, "NON-PO" as tipe_po');
+		$this->db->select('b.id as id, b.nm_barang as namamaterial, b.qty as qty, b.spec as spec, a.no_doc as no_po, c.id_dept, "NON-PO" as tipe_po');
 		$this->db->from('tr_kasbon a');
 		$this->db->join('rutin_non_planning_detail b', 'b.no_pr = a.id_pr');
 		$this->db->join('rutin_non_planning_header c', 'c.no_pr = a.id_pr');
-		$this->db->join('ms_department d', 'd.id = c.id_dept', 'left');
 		$this->db->where_in('a.no_doc', $no_po);
 		$query2 = $this->db->get_compiled_select();
 
 		$sql = $query1 . ' UNION ALL ' . $query2;
 
+		// print_r($sql);
+		// exit;
+
 		$result = $this->db->query($sql)->result_array();
 
+		$this->dbhris->select('a.id, a.name, b.name as nm_comp');
+		$this->dbhris->from('departments a');
+		$this->dbhris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_departments = $this->dbhris->get()->result_array();
 
-		// print_r($this->db->last_query());
-		// exit;
+		$arr_list_dept = [];
+		foreach ($get_departments as $item) {
+			$arr_list_dept[$item['id']] = [
+				'id_dept' => $item['id'],
+				'nm_dept' => $item['name'] . ' - ' . $item['nm_comp']
+			];
+		}
 
 		$data = array(
 			'no_po' => $no_po,
 			'tanggal_trans' => $tanggal_trans,
 			'pic' 	=> $pic,
 			'note' 	=> $note,
-			'result' => $result
+			'result' => $result,
+			'list_departments' => $arr_list_dept
 		);
 
 		$this->template->render('modal_incoming', $data);
@@ -247,9 +266,9 @@ class Incoming_departemen extends Admin_Controller
 		$data 			= $this->input->post();
 		$data_session	= $this->session->userdata;
 		$no_po			= $data['no_po'];
-		$inventory		= $data['inventory'];
+		$inventory		= $data['adjustment'];
 		$id_dept		= $data['id_dept'];
-		$id_costcenter	= $data['id_costcenter'];
+		$id_costcenter	= '';
 		$pic			= $data['pic'];
 		$note			= $data['note'];
 		$tanggal		= $data['tanggal'];
