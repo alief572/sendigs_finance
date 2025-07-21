@@ -56,7 +56,7 @@
     <div class="col-md-6">
         <div class="form-group">
             <label for="">Value DP</label>
-            <input type="text" name="value_dp" id="" class="form-control form-control-sm text-right value_dp" value="<?= number_format($get_top->nilai) ?>" readonly>
+            <input type="text" name="value_dp" id="" class="form-control form-control-sm text-right value_dp" value="<?= number_format($nilai_top) ?>" readonly>
         </div>
     </div>
     <div class="col-md-6">
@@ -69,10 +69,10 @@
         <div class="form-group">
             <label for="">Upload Invoice</label>
             <input type="file" name="upload_invoice" id="" class="form-control form-control-sm upload_invoice">
-            <?php 
-                if(file_exists($data_invoice['link_doc']) && $data_invoice['link_doc'] !== '' && $data_invoice['link_doc'] !== null){
-                    echo '<a href="'.base_url($data_invoice['link_doc']).'" class="btn btn-sm btn-primary" target="_blank"><i class="fa fa-download"></i> Download</a>';
-                }
+            <?php
+            if (file_exists($data_invoice['link_doc']) && $data_invoice['link_doc'] !== '' && $data_invoice['link_doc'] !== null) {
+                echo '<a href="' . base_url($data_invoice['link_doc']) . '" class="btn btn-sm btn-primary" target="_blank"><i class="fa fa-download"></i> Download</a>';
+            }
             ?>
         </div>
     </div>
