@@ -430,7 +430,7 @@ class Request_pr_stok_model extends BF_Model
       $nestedData[]  = "<div align='left'>" . $row['stock_name'] . "</div>";
 
       $STOCK_WRH    = (!empty($GET_WAREHOUSE_STOCK[$row['id']]['stok'])) ? $GET_WAREHOUSE_STOCK[$row['id']]['stok'] : 0;
-      $stock_oke     = (!empty($STOCK_WRH)) ? number_format($STOCK_WRH) : 0;
+      $stock_oke     = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
       $stock_oke2   = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
