@@ -3,6 +3,13 @@
 class Outgoing_stok_atk_model extends BF_Model
 {
 
+  protected $ENABLE_ADD;
+  protected $ENABLE_MANAGE;
+  protected $ENABLE_VIEW;
+  protected $ENABLE_DELETE;
+
+  protected $dbhris;
+
   public function __construct()
   {
     parent::__construct();
@@ -11,6 +18,8 @@ class Outgoing_stok_atk_model extends BF_Model
     $this->ENABLE_MANAGE  = has_permission('Outgoing_Stok_ATK.Manage');
     $this->ENABLE_VIEW    = has_permission('Outgoing_Stok_ATK.View');
     $this->ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
+
+    $this->dbhris = $this->load->database('hris', true);
   }
 
   //request material add
@@ -157,11 +166,19 @@ class Outgoing_stok_atk_model extends BF_Model
         $nomor = $urut1 + $start_dari;
       }
 
+      $this->dbhris->select('a.name as nm_dept, b.name as nm_comp');
+      $this->dbhris->from('departments a');
+      $this->dbhris->join('companies b', 'b.id = a.company_id', 'left');
+      $this->dbhris->where('a.id', $row['id_dept']);
+      $get_dept = $this->dbhris->get()->row_array();
+
+      $nm_department = (!empty($get_dept)) ? strtoupper($get_dept['nm_dept']) . ' - ' . strtoupper($get_dept['nm_comp']) : '';
+
       $nestedData   = array();
       $nestedData[]  = "<div align='center'>" . $nomor . "</div>";
       $nestedData[]  = "<div align='center'>" . strtoupper($row['kode_trans']) . "</div>";
       $nestedData[]  = "<div align='center'>" . date('d-M-Y', strtotime($row['tanggal'])) . "</div>";
-      $nestedData[]  = "<div align='left'>" . strtoupper($row['nm_department']) . "</div>";
+      $nestedData[]  = "<div align='left'>" . $nm_department . "</div>";
       $nestedData[]  = "<div align='center'>" . number_format($row['qty_unit'], 2) . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['pic'] . "</div>";
       $username = (!empty($GET_USER[$row['created_by']]['nama'])) ? $GET_USER[$row['created_by']]['nama'] : '-';
@@ -180,17 +197,17 @@ class Outgoing_stok_atk_model extends BF_Model
       $release  = "";
       $print    = "";
       $edit    = "";
-      $view  = "<button type='button' data-kode_trans='" . $row['kode_trans'] . "' data-tanda='detail' class='btn btn-sm btn-warning detail' title='Detail' data-role='qtip'><i class='fa fa-eye'></i></button>";
+      $view  = "<button type='button' data-kode_trans='" . $row['kode_trans'] . "' data-tanda='detail' class='btn btn-sm btn-info detail' title='Detail' data-role='qtip'><i class='fa fa-eye'></i></button>";
       // if($row['sts_confirm'] == 'N'  AND $this->ENABLE_MANAGE){
       //   $edit	= "&nbsp;<button type='button' data-kode_trans='".$row['kode_trans']."' data-tanda='edit' class='btn btn-sm btn-primary detail' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></button>";
       // }
       if ($row['sts_confirm'] == 'N') {
-        $print  = "&nbsp;<a href='" . base_url('outgoing_stok_hrga/print_spk_request/' . $row['kode_trans']) . "' target='_blank' class='btn btn-sm btn-info' title='Print SPK Permintaan Material' data-role='qtip'><i class='fa fa-print'></i></a>";
+        $print  = "&nbsp;<a href='" . base_url('outgoing_stok_hrga/print_spk_request/' . $row['kode_trans']) . "' target='_blank' class='btn btn-sm btn-primary' title='Print SPK Permintaan Material' data-role='qtip'><i class='fa fa-print'></i></a>";
       }
       if ($this->auth->user_name() == 'RamaSS') {
         // $release = '&nbsp;<button type="button" class="btn btn-sm btn-danger kurang_stock" data-kode_trans="'.$row['kode_trans'].'"><i class="fa fa-close"></i></button>';
       }
-      $nestedData[]  = "<div align='center'>" . $view . $edit . $print . $release . "</div>";
+      $nestedData[]  = "<div align='center'>" . $view . $edit . $release . "</div>";
       $data[] = $nestedData;
       $urut1++;
       $urut2++;
@@ -212,7 +229,6 @@ class Outgoing_stok_atk_model extends BF_Model
     $sql = "SELECT
               (@row:=@row+1) AS nomor,
               a.kode_trans,
-              e.nama AS nm_department,
               a.pic,
               a.id_dept,
               a.tanggal,
@@ -226,17 +242,17 @@ class Outgoing_stok_atk_model extends BF_Model
             FROM
               warehouse_adjustment a
               LEFT JOIN warehouse c ON a.id_gudang_ke=c.id
-              LEFT JOIN warehouse d ON a.id_gudang_dari=d.id
-              LEFT JOIN ms_department e ON a.id_dept=e.id,
+              LEFT JOIN warehouse d ON a.id_gudang_dari=d.id,
               (SELECT @row:=0) r
-            WHERE a.deleted_date IS NULL AND a.category='outgoing stok atk' AND (
+            WHERE a.deleted_date IS NULL AND a.category='outgoing stok' AND (
               a.kode_trans LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR d.nm_gudang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR c.nm_gudang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
             )
               GROUP BY a.kode_trans
             ";
-    // echo $sql; exit;
+    // echo $sql;
+    // exit;
 
     $data['totalData'] = $this->db->query($sql)->num_rows();
     $data['totalFiltered'] = $this->db->query($sql)->num_rows();

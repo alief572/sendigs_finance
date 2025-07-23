@@ -9,6 +9,9 @@
     protected $managePermission = 'Outgoing_Stok_ATK.Manage';
     protected $deletePermission = 'Outgoing_Stok_ATK.Delete';
 
+    protected $id_user;
+    protected $datetime;
+
     protected $hris;
 
     public function __construct()
@@ -113,7 +116,7 @@
 
         $ArrInsert = array(
           'kode_trans'       => $kode_trans,
-          'category'         => 'outgoing stok atk',
+          'category'         => 'outgoing stok',
           'jumlah_mat'       => $SUM_MAT,
           // 'jumlah_mat_packing' 	=> $SUM_PACK,
           'tanggal'         => $tanggal,
@@ -359,9 +362,11 @@
         $qry_department = '
           SELECT
             a.id as id,
-            a.name as nama
+            a.name as nama,
+            b.name as nm_comp
           FROM
             departments a
+            LEFT JOIN companies b ON b.id = a.company_id
         ';
         $listDepartment = $this->hris->query($qry_department)->result_array();
 
@@ -462,13 +467,23 @@
           $tanda      = 'detail';
         }
         $getDataDetail  = $this->db->get_where('warehouse_adjustment_detail a', array('a.kode_trans' => $kode_trans))->result_array();
+
+        $this->hris->select('a.name as nm_dept, b.name as nm_comp');
+        $this->hris->from('departments a');
+        $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+        $this->hris->where('a.id', $getData[0]['id_dept']);
+        $get_dept = $this->hris->get()->row_array();
+
+        $nm_dept = (!empty($get_dept)) ? strtoupper($get_dept['nm_dept']) . ' - ' . strtoupper($get_dept['nm_comp']) : '';
+
         $data = array(
           'tanda' => $tanda,
           'getData' => $getData,
           'getDataDetail' => $getDataDetail,
           'GET_MATERIAL' => get_accessories(),
           'GET_SATUAN' => get_list_satuan(),
-          'kode' => $kode_trans
+          'kode' => $kode_trans,
+          'nm_dept' => $nm_dept
         );
 
         $this->load->view('modal_request_edit', $data);
@@ -480,7 +495,7 @@
       $kode_trans  = $this->uri->segment(3);
       $data_session  = $this->session->userdata;
       $session        = $this->session->userdata('app_session');
-      $printby    = get_name('users', 'nm_lengkap', 'id_user', $session['id_user']);
+      $printby    = get_name('users', 'nm_lengkap', 'id_user', $this->auth->user_id());
 
       $data_url    = base_url();
       $Split_Beda    = explode('/', $data_url);
@@ -643,7 +658,7 @@
       $kode  = $this->uri->segment(3);
       $data_session  = $this->session->userdata;
       $session        = $this->session->userdata('app_session');
-      $printby    = get_name('users', 'nm_lengkap', 'id_user', $session['id_user']);
+      $printby    = get_name('users', 'nm_lengkap', 'id_user', $this->auth->user_id());
 
       $data_url    = base_url();
       $Split_Beda    = explode('/', $data_url);
