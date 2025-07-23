@@ -23,7 +23,7 @@
 						<option value='0'>Select Department</option>
 						<?php
 						foreach ($listDepartment as $key => $value) {
-							echo "<option value='" . $value['id'] . "'>" . strtoupper($value['nama']) . "</option>";
+							echo "<option value='" . $value['id'] . "'>" . strtoupper($value['nama'] . ' - ' . strtoupper($value['nm_comp'])) . "</option>";
 						}
 						?>
 					</select>

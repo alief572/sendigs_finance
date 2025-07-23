@@ -1,6 +1,10 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+require_once('vendor/autoload.php');
+
+
+
 class Outgoing_stok_hrga extends Admin_Controller
 {
   //Permission
@@ -69,7 +73,7 @@ class Outgoing_stok_hrga extends Admin_Controller
       if (!empty($data['detail'])) {
         foreach ($detail as $val => $valx) {
           $konversi     = (!empty($GET_DETAIL_MAT[$valx['id']]['konversi'])) ? $GET_DETAIL_MAT[$valx['id']]['konversi'] : 1;
-          if($konversi <= 0) {
+          if ($konversi <= 0) {
             $konversi = 1;
           }
           $qty_packing   = str_replace(',', '', $valx['sudah_request']);
@@ -423,7 +427,7 @@ class Outgoing_stok_hrga extends Admin_Controller
       $this->db->trans_complete();
 
 
-       if ($this->db->trans_status() === FALSE) {
+      if ($this->db->trans_status() === FALSE) {
         $this->db->trans_rollback();
 
         $msg = 'Save gagal disimpan ...';
