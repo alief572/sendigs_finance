@@ -13,7 +13,7 @@
 			<tr>
 				<td class="text-left" style='vertical-align:middle;'>Department</td>
 				<td class="text-left" style='vertical-align:middle;'>:</td>
-				<td class="text-left" style='vertical-align:middle;'><?= strtoupper(get_name('ms_department', 'nama', 'id', $getData[0]['id_dept'])); ?></td>
+				<td class="text-left" style='vertical-align:middle;'><?= $nm_dept ?></td>
 				<td class="text-left" style='vertical-align:middle;'>Tanggal Outgoing</td>
 				<td class="text-left" style='vertical-align:middle;'>:</td>
 				<td class="text-left" style='vertical-align:middle;'><?= tgl_indo($getData[0]['tanggal']); ?></td>
