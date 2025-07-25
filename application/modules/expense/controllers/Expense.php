@@ -189,7 +189,7 @@ class Expense extends Admin_Controller
 			copy('' . $doc_pr . '', '' . $to_doc_pr . '');
 		}
 
-		if ($id != "") {
+		if ($id !== "") {
 			$data = array(
 				'tgl_doc' => date('Y-m-d', strtotime($tgl_doc)),
 				'departement' => $departement,
@@ -210,7 +210,7 @@ class Expense extends Admin_Controller
 				'modified_by' => $this->auth->user_name(),
 				'modified_on' => date("Y-m-d h:i:s"),
 			);
-			$this->db->delete('tr_pr_detail_kasbon', ['id_kasbon' => $id]);
+			$this->db->delete('tr_pr_detail_kasbon', ['id_kasbon' => $no_doc]);
 
 			if (!empty($no_pr)) {
 				if ($tipe_pr == 'pr departemen') {
@@ -220,7 +220,7 @@ class Expense extends Admin_Controller
 					foreach ($get_detail_pr as $detail_pr) :
 						if (isset($_POST['price_input_' . $detail_pr['id']])) {
 							$arrInsertDetail[] = [
-								'id_detail' => $detail_pr['id'],
+								'id' => $detail_pr['id'],
 								'id_kasbon' => $no_doc,
 								'no_pr' => $no_pr,
 								'nm_material' => $detail_pr['nm_barang'],
@@ -258,7 +258,7 @@ class Expense extends Admin_Controller
 					foreach ($get_detail_pr as $detail_pr) :
 						if (isset($_POST['price_input_' . $detail_pr['id']])) {
 							$arrInsertDetail[] = [
-								'id_detail' => $detail_pr['id'],
+								'id' => $detail_pr['id'],
 								'id_kasbon' => $no_doc,
 								'no_pr' => $no_pr,
 								'id_material' => $detail_pr['id_material'],
