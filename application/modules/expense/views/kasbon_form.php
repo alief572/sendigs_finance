@@ -182,18 +182,18 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 										if (($mod == '_fin' || $mod == '_mgt')) {
 											$readonly = 'readonly';
 										}
-										echo '<tr class="detail_pr_' . $detail_pr['id'] . '">';
+										echo '<tr class="detail_pr_' . $detail_pr['id_detail'] . '">';
 										echo '<td class="text-center">' . $no . '</td>';
 										echo '<td class="text-center">' . $detail_pr['nm_material'] . '</td>';
-										echo '<td class="text-center">' . number_format($detail_pr['qty']) . ' <input type="hidden" class="qty_' . $detail_pr['id'] . '" value="' . $detail_pr['qty'] . '"></td>';
+										echo '<td class="text-center">' . number_format($detail_pr['qty']) . ' <input type="hidden" class="qty_' . $detail_pr['id_detail'] . '" value="' . $detail_pr['qty'] . '"></td>';
 										echo '<td class="text-center">' . $detail_pr['satuan'] . '</td>';
-										echo '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '" value="' . $detail_pr['harga'] . '" ' . $readonly . '></td>';
-										echo '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . $detail_pr['total_harga'] . '" ' . $readonly . '></td>';
+										echo '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id_detail'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id_detail'] . ' autonum" data-no="' . $detail_pr['id_detail'] . '" value="' . $detail_pr['harga'] . '" ' . $readonly . '></td>';
+										echo '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id_detail'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id_detail'] . ' autonum" value="' . $detail_pr['total_harga'] . '" ' . $readonly . '></td>';
 										echo '<td class="text-center">';
 										if (($mod == '_fin' || $mod == '_mgt')) {
 										} else {
 											if (!isset($stsview) || $stsview == '') {
-												echo '<button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button>';
+												echo '<button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id_detail'] . '"><i class="fa fa-trash"></i></button>';
 											}
 										}
 										echo '</td>';
