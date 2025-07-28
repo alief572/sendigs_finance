@@ -156,7 +156,7 @@
         <div class="col-md-4">
             <button type="button" class="btn btn-sm btn-primary search_data"><i class="fa fa-search"></i> Search</button>
             <button type="button" class="btn btn-sm btn-danger clear_data"><i class="fa fa-refresh"></i> Reset</button>
-            <button type="button" class="btn btn-sm btn-warning btn_print"><i class="fa fa-print"></i> Print</button>
+            <!-- <button type="button" class="btn btn-sm btn-warning btn_print"><i class="fa fa-print"></i> Print</button> -->
             <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#dialog-popup"><i class="fa fa-plus"></i> Upload Rekening Koran</button>
         </div>
     </div>
