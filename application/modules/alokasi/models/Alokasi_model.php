@@ -38,77 +38,97 @@ class Alokasi_model extends BF_Model
         $length = $this->input->post('length');
         $start = $this->input->post('start');
         $search = $this->input->post('search');
+        $startDate = $this->input->post('startDate');
+        $endDate = $this->input->post('endDate');
+        $bank = $this->input->post('bank');
 
-
-        $this->db->select('a.id, a.tipe_bank, a.tanggal_transaksi_from, a.tanggal_transaksi_to, a.saldo_awal, a.total_debit, a.total_credit, a.saldo_akhir, a.status_alokasi');
-        $this->db->from('tr_alokasi a');
-        $this->db->where('a.deleted', '0');
+        $this->db->select('a.id, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, a.sts, b.nama_bank, c.rekening, c.nama');
+        $this->db->from('tr_alokasi_detail a');
+        $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
+        $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
+        if (!empty($startDate)) {
+            $this->db->where('a.tanggal_transaksi >=', $startDate);
+        }
+        if (!empty($endDate)) {
+            $this->db->where('a.tanggal_transaksi <=', $endDate);
+        }
+        if (!empty($bank)) {
+            $this->db->where('a.tipe_bank', $bank);
+        }
         if (!empty($search['value'])) {
             $this->db->group_start();
-            $this->db->like('a.tanggal_transaksi_from', $search['value'], 'both');
-            $this->db->or_like('a.tanggal_transaksi_to', $search['value'], 'both');
-            $this->db->or_like('a.total_debit', $search['value'], 'both');
-            $this->db->or_like('a.total_credit', $search['value'], 'both');
-            $this->db->or_like('a.saldo_akhir', $search['value'], 'both');
+            $this->db->like('a.tanggal_transaksi', $search['value'], 'both');
+            $this->db->or_like('b.nama_bank', $search['value'], 'both');
+            $this->db->or_like('c.rekening', $search['value'], 'both');
+            $this->db->or_like('c.nama', $search['value'], 'both');
+            $this->db->or_like('a.nominal_debit', $search['value'], 'both');
+            $this->db->or_like('a.nominal_kredit', $search['value'], 'both');
+            $this->db->or_like('a.saldo', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->order_by('a.created_date', 'desc');
+        $this->db->group_by('a.id');
+
+        $db_clone = clone $this->db;
+        $count_all = $db_clone->count_all_results();
+
         $this->db->limit($length, $start);
-
-        $get_data = $this->db->get();
-
-        $this->db->select('a.id');
-        $this->db->from('tr_alokasi a');
-        $this->db->where('a.deleted', '0');
-        if (!empty($search['value'])) {
-            $this->db->group_start();
-            $this->db->like('a.tanggal_transaksi_from', $search['value'], 'both');
-            $this->db->or_like('a.tanggal_transaksi_to', $search['value'], 'both');
-            $this->db->or_like('a.total_debit', $search['value'], 'both');
-            $this->db->or_like('a.total_credit', $search['value'], 'both');
-            $this->db->or_like('a.saldo_akhir', $search['value'], 'both');
-            $this->db->group_end();
-        }
-        $this->db->order_by('a.created_date', 'desc');
-
-        $get_data_all = $this->db->get();
+        $get_data = $this->db->get()->result_array();
 
         $hasil = [];
 
-        $no = (0 + $start);
-
-        foreach ($get_data->result_array() as $item) {
+        $no = ($start + 0);
+        foreach ($get_data as $item) {
             $no++;
 
             $status = '<button type="button" class="btn btn-sm btn-primary">Open</button>';
+            if ($item['sts'] !== '0') {
+                $txt = '';
+                if ($item['sts'] == '1') {
+                    $txt = 'Penerimaan Piutang';
+                } else if ($item['sts'] == '2') {
+                    $txt = 'Unlocated Penerimaan';
+                } else if ($item['sts'] == '3') {
+                    $txt = 'Pengembalian Kasbon';
+                } else if ($item['sts'] == '4') {
+                    $txt = 'Mutasi';
+                } else if ($item['sts'] == '5') {
+                    $txt = 'Transaksi Bank';
+                } else if ($item['sts'] == '6') {
+                    $txt = 'Pembayaran';
+                }
+                $status = '<button type="button" class="btn btn-sm btn-success">' . strtoupper($txt) . '</button>';
+            }
+
             $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
-            if ($item['status_alokasi'] == '2') {
-                $status = '<button type="button" class="btn btn-sm btn-success">Closed</button>';
+            if ($item['sts'] !== '0') {
                 $btn_alokasi = '';
             }
 
-            $nm_bank = ($item['tipe_bank'] == '1') ? "Bank BCA" : "Bank OCBC";
+            $tanggal_transaksi = date('d-F-Y', strtotime($item['tanggal_transaksi']));
+            if ($item['tanggal_transaksi'] == '0000-00-00') {
+                $tanggal_transaksi = 'PEND';
+            }
 
             $hasil[] = [
                 'no' => $no,
-                'tanggal_transaksi_bank' => date('d F Y', strtotime($item['tanggal_transaksi_from'])) . ' - ' . date('d F Y', strtotime($item['tanggal_transaksi_to'])),
-                'bank' => $nm_bank,
-                'total_debit' => 'Rp. ' . number_format($item['total_debit']),
-                'total_kredit' => 'Rp. ' . number_format($item['total_credit']),
-                'saldo_akhir' => 'Rp. ' . number_format($item['saldo_akhir']),
+                'tanggal_transaksi' => $tanggal_transaksi,
+                'bank' => $item['nama_bank'],
+                'debit' => number_format($item['nominal_debit'], 2),
+                'kredit' => number_format($item['nominal_kredit'], 2),
+                'saldo' => number_format($item['saldo'], 2),
                 'status_alokasi' => $status,
                 'action' => $btn_alokasi
             ];
         }
 
-        $json = [
+        $response = [
             'draw' => intval($draw),
-            'recordsTotal' => $get_data_all->num_rows(),
-            'recordsFiltered' => $get_data_all->num_rows(),
+            'recordsTotal' => $count_all,
+            'recordsFiltered' => $count_all,
             'data' => $hasil
         ];
 
-        echo json_encode($json);
+        echo json_encode($response);
     }
 
     public function update_alokasi_header($id)
