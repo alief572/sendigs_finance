@@ -112,7 +112,7 @@ class Alokasi_model extends BF_Model
             $hasil[] = [
                 'no' => $no,
                 'tanggal_transaksi' => $tanggal_transaksi,
-                'bank' => $item['nama_bank'],
+                'bank' => $item['nama_bank'] . ' - ' . $item['rekening'] . ' - ' . $item['nama'],
                 'debit' => number_format($item['nominal_debit'], 2),
                 'kredit' => number_format($item['nominal_kredit'], 2),
                 'saldo' => number_format($item['saldo'], 2),
