@@ -19,8 +19,15 @@ class Alokasi extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
+        $this->db->select('a.*, b.nama_bank');
+        $this->db->from('ms_bank a');
+        $this->db->join('list_bank b', 'b.id = a.bank');
+        $this->db->where('a.deleted', '0');
+        $get_bank = $this->db->get()->result_array();
+
+        $data['data_bank'] = $get_bank;
         $this->template->title('Alokasi');
-        $this->template->render('index');
+        $this->template->render('index', $data);
     }
 
     public function upload_rekening_koran()
@@ -60,7 +67,7 @@ class Alokasi extends Admin_Controller
 
                     // $insertData = array_combine($header, $item);
 
-                    if ($post['bank'] == '1') {
+                    if ($post['jenis_bank'] == '7') {
                         $no++;
                         if (isset($item[0]) && strpos($item[0], 'No. rekening : ') !== false && $account_no == '') {
                             $account_no = str_replace('No. rekening : ', '', $item[0]);
@@ -116,6 +123,7 @@ class Alokasi extends Admin_Controller
                                 $arr_detail[] = [
                                     'id_header' => $id_header,
                                     'tipe_bank' => $post['bank'],
+                                    'jenis_bank' => $post['jenis_bank'],
                                     'tanggal_transaksi' => $tanggal_transaksi,
                                     'keterangan' => $item[1],
                                     'cabang' => $item[2],
@@ -132,7 +140,7 @@ class Alokasi extends Admin_Controller
                         // print_r($account_no);
                     }
 
-                    if ($post['bank'] == '2') {
+                    if ($post['jenis_bank'] == '22') {
                         $no++;
 
                         // print_r($no . '<br>');
@@ -170,6 +178,7 @@ class Alokasi extends Admin_Controller
                             $arr_detail[] = [
                                 'id_header' => $id_header,
                                 'tipe_bank' => $post['bank'],
+                                'jenis_bank' => $post['jenis_bank'],
                                 'tanggal_transaksi' => $tanggal_transaksi,
                                 'keterangan' => $item[4],
                                 'cabang' => '',
@@ -193,6 +202,7 @@ class Alokasi extends Admin_Controller
                 $arr_header = [
                     'id' => $id_header,
                     'tipe_bank' => $post['bank'],
+                    'jenis_bank' => $post['jenis_bank'],
                     'account_no' => $account_no,
                     'tanggal_transaksi_from' => $periode_from,
                     'tanggal_transaksi_to' => $periode_to,
@@ -299,7 +309,7 @@ class Alokasi extends Admin_Controller
 
         $this->db->select('a.*');
         $this->db->from('tr_alokasi_detail a');
-        $this->db->where('a.id_header', $id);
+        $this->db->where('a.id', $id);
         $this->db->order_by('a.id', 'asc');
         $get_data = $this->db->get()->result_array();
 
@@ -386,7 +396,7 @@ class Alokasi extends Admin_Controller
 
         $this->db->select('a.*');
         $this->db->from('tr_alokasi_detail a');
-        $this->db->where('a.id_header', $post['id']);
+        $this->db->where('a.id', $post['id']);
         $get_alokasi_detail = $this->db->get()->result_array();
 
         $arr_detail = [];
@@ -426,6 +436,19 @@ class Alokasi extends Admin_Controller
         }
 
         echo json_encode($json);
+    }
+
+    public function get_jenis_bank()
+    {
+        $bank = $this->input->post('bank');
+
+        $get_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row_array();
+
+        $response = [
+            'jenis_bank' => $get_bank['bank']
+        ];
+
+        echo json_encode($response);
     }
 
     public function get_alokasi()
