@@ -80,7 +80,7 @@ class Alokasi_model extends BF_Model
         foreach ($get_data as $item) {
             $no++;
 
-            $status = '<button type="button" class="btn btn-sm btn-primary">Open</button>';
+            $status = '<span class="badge bg-blue">Open</span>';
             if ($item['sts'] !== '0') {
                 $txt = '';
                 if ($item['sts'] == '1') {
@@ -96,7 +96,7 @@ class Alokasi_model extends BF_Model
                 } else if ($item['sts'] == '6') {
                     $txt = 'Pembayaran';
                 }
-                $status = '<button type="button" class="btn btn-sm btn-success">' . strtoupper($txt) . '</button>';
+                $status = '<span class="badge bg-green">' . strtoupper($txt) . '</span>';
             }
 
             $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
