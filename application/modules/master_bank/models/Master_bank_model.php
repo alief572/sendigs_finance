@@ -10,9 +10,13 @@
 class Master_bank_model extends BF_Model
 {
 
+    protected $accounting;
+
     public function __construct()
     {
         parent::__construct();
+
+        $this->accounting = $this->load->database('accounting', true);
     }
 
     public function get_data_bank()
@@ -27,7 +31,7 @@ class Master_bank_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
 
-        $this->db->select('a.id, a.bank, a.rekening, a.nama, b.nama_bank');
+        $this->db->select('a.id, a.bank, a.rekening, a.nama, a.coa_bank, b.nama_bank');
         $this->db->from('ms_bank a');
         $this->db->join('list_bank b', 'b.id = a.bank', 'left');
         $this->db->where('a.deleted', '0');
@@ -63,9 +67,17 @@ class Master_bank_model extends BF_Model
 
             $action = $delete_btn . ' ' . $edit_btn;
 
+            $this->accounting->select('a.nama');
+            $this->accounting->from('coa_master a');
+            $this->accounting->where('a.no_perkiraan', $item['coa_bank']);
+            $get_coa_bank = $this->accounting->get()->row_array();
+
+            $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nama'] : '';
+
             $hasil[] = [
                 'no' => $no,
                 'bank' => $item['nama_bank'],
+                'coa_bank' => $item['coa_bank'] . ' - ' . $nm_coa_bank,
                 'account_number' => $item['rekening'],
                 'account_name' => $item['nama'],
                 'action' => $action
