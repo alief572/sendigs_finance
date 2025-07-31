@@ -107,6 +107,20 @@ class Expense extends Admin_Controller
 			];
 		}
 
+		$this->db->select('b.no_pr, b.nama_asset');
+		$this->db->from('tran_pr_header a');
+		$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
+		$this->db->where('a.metode_pembelian', 2);
+		$this->db->where('a.kasbon_created', null);
+		$this->db->group_by('b.no_pr');
+		$get_pr_asset = $this->db->get()->result_array();
+		foreach ($get_pr_asset as $item) {
+			$list_pr_non_po[] = [
+				'no_pr' => $item['no_pr'],
+				'keterangan' => strtoupper($item['nama_asset'])
+			];
+		}
+
 
 		$this->template->set('list_pr_non_po', $list_pr_non_po);
 		$this->template->set('mod', '');
@@ -186,7 +200,9 @@ class Expense extends Admin_Controller
 		if (!empty($file_name)) {
 			$filenames = $file_name;
 
-			copy('' . $doc_pr . '', '' . $to_doc_pr . '');
+			if (file_exists($doc_pr)) {
+				copy('' . $doc_pr . '', '' . $to_doc_pr . '');
+			}
 		}
 
 		if ($id !== "") {
@@ -242,6 +258,40 @@ class Expense extends Admin_Controller
 
 					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
 					$this->db->update_batch('rutin_non_planning_detail', $arrUpdateDetail, 'id');
+				} else if ($tipe_pr == 'pr asset') {
+					$this->db->select('a.*, b.nama_asset as nm_barang, "Pcs" as satuan, b.qty');
+					$this->db->from('tran_pr_header a');
+					$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
+					$this->db->where('a.no_pr', $no_pr);
+					$get_detail_pr = $this->db->get()->result_array();
+					$arrInsertDetail = [];
+					$arrUpdateDetail = [];
+					foreach ($get_detail_pr as $detail_pr) :
+						if (isset($_POST['price_input_' . $detail_pr['id']])) {
+							$arrInsertDetail[] = [
+								'id_detail' => $detail_pr['id'],
+								'id_kasbon' => $no_doc,
+								'no_pr' => $no_pr,
+								'id_material' => $detail_pr['id'],
+								'nm_material' => $detail_pr['nm_barang'],
+								'qty' => $detail_pr['qty'],
+								'unit' => $detail_pr['satuan'],
+								'harga' => str_replace(',', '', $this->input->post('price_input_' . $detail_pr['id'])),
+								'total_harga' => str_replace(',', '', $this->input->post('grand_total_' . $detail_pr['id'])),
+								'created_by' => $this->auth->user_id(),
+								'tipe_pr' => $tipe_pr,
+								'created_date' => date('Y-m-d H:i:s')
+							];
+
+							$arrUpdateDetail[] = [
+								'id' => $detail_pr['id'],
+								'kasbon_created' => 1
+							];
+						}
+					endforeach;
+
+					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
+					$this->db->update_batch('tran_pr_header', $arrUpdateDetail, 'id');
 				} else {
 					// $get_detail_pr = $this->db->get_where('material_planning_base_on_produksi_detail', ['no_pr' => $no_pr])->result_array();
 					$this->db->select('a.*, if(c.nama IS NULL, e.stock_name, c.nama) as nm_barang, if(d.code IS NULL, f.code, d.code) as satuan');
@@ -351,6 +401,40 @@ class Expense extends Admin_Controller
 
 					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
 					$this->db->update_batch('rutin_non_planning_detail', $arrUpdateDetail, 'id');
+				} else if ($tipe_pr == 'pr asset') {
+					$this->db->select('a.*, b.nama_asset as nm_barang, "Pcs" as satuan, b.qty');
+					$this->db->from('tran_pr_header a');
+					$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
+					$this->db->where('a.no_pr', $no_pr);
+					$get_detail_pr = $this->db->get()->result_array();
+					$arrInsertDetail = [];
+					$arrUpdateDetail = [];
+					foreach ($get_detail_pr as $detail_pr) :
+						if (isset($_POST['price_input_' . $detail_pr['id']])) {
+							$arrInsertDetail[] = [
+								'id_detail' => $detail_pr['id'],
+								'id_kasbon' => $no_doc,
+								'no_pr' => $no_pr,
+								'id_material' => $detail_pr['id'],
+								'nm_material' => $detail_pr['nm_barang'],
+								'qty' => $detail_pr['qty'],
+								'unit' => $detail_pr['satuan'],
+								'harga' => str_replace(',', '', $this->input->post('price_input_' . $detail_pr['id'])),
+								'total_harga' => str_replace(',', '', $this->input->post('grand_total_' . $detail_pr['id'])),
+								'created_by' => $this->auth->user_id(),
+								'tipe_pr' => $tipe_pr,
+								'created_date' => date('Y-m-d H:i:s')
+							];
+
+							$arrUpdateDetail[] = [
+								'id' => $detail_pr['id'],
+								'kasbon_created' => 1
+							];
+						}
+					endforeach;
+
+					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
+					$this->db->update_batch('tran_pr_header', $arrUpdateDetail, 'id');
 				} else {
 					$this->db->select('a.*, if(c.nama IS NULL, e.stock_name, c.nama) as nm_barang, if(d.code IS NULL, f.code, d.code) as satuan');
 					$this->db->from('material_planning_base_on_produksi_detail a');
@@ -2408,6 +2492,14 @@ class Expense extends Admin_Controller
 			->where('a.kasbon_created', null);
 		$get_detail_pr_departemen = $this->db->get()->result_array();
 
+		$this->db->select('a.id, b.nama_asset as material_name, b.qty, "Pcs" as unit, b.budget as price, (b.budget * b.qty) as total_price, "pr asset" as tipe_pr, 0 as price_ref');
+		$this->db->from('tran_pr_header a');
+		$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
+		$this->db->where('a.no_pr', $no_pr);
+		$this->db->where('a.metode_pembelian', '2');
+		$this->db->where('a.kasbon_created', null);
+		$get_detail_pr_asset = $this->db->get()->result_array();
+
 		$tipe_pr = '';
 
 		// print_r(count($get_detail_pr_stok_material));
@@ -2416,7 +2508,7 @@ class Expense extends Admin_Controller
 		$valid = 1;
 		$hasil = '';
 		$grand_total = 0;
-		if (count($get_detail_pr_stok_material) < 1 && count($get_detail_pr_departemen) < 1) {
+		if (count($get_detail_pr_stok_material) < 1 && count($get_detail_pr_departemen) < 1 && count($get_detail_pr_asset) < 1) {
 			$valid = 0;
 		} else {
 			$no = 1;
@@ -2445,6 +2537,27 @@ class Expense extends Admin_Controller
 
 			if (count($get_detail_pr_departemen) > 0) {
 				foreach ($get_detail_pr_departemen as $detail_pr) :
+					if ($tipe_pr == '') {
+						$tipe_pr = $detail_pr['tipe_pr'];
+					}
+
+					$hasil .= '<tr class="detail_pr_' . $detail_pr['id'] . '">';
+					$hasil .= '<td class="text-center">' . $no . '</td>';
+					$hasil .= '<td class="text-center">' . $detail_pr['material_name'] . '</td>';
+					$hasil .= '<td class="text-center">' . number_format($detail_pr['qty']) . ' <input type="hidden" class="qty_' . $detail_pr['id'] . '" value="' . $detail_pr['qty'] . '"></td>';
+					$hasil .= '<td class="text-center">' . $detail_pr['unit'] . '</td>';
+					$hasil .= '<td class="text-center"><input type="text" name="price_input_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right price_input price_input_' . $detail_pr['id'] . ' autonum" data-no="' . $detail_pr['id'] . '" value="' . $detail_pr['price'] . '"></td>';
+					$hasil .= '<td class="text-center"><input type="text" name="grand_total_' . $detail_pr['id'] . '" class="form-control form-control-sm text-right grand_total_' . $detail_pr['id'] . ' autonum" value="' . $detail_pr['total_price'] . '"></td>';
+					$hasil .= '<td class="text-center"><button type="button" class="btn btn-sm btn-danger del_detail" data-no="' . $detail_pr['id'] . '"><i class="fa fa-trash"></i></button></td>';
+					$hasil .= '</tr>';
+
+					$grand_total += ($detail_pr['total_price']);
+					$no++;
+				endforeach;
+			}
+
+			if (count($get_detail_pr_asset)) {
+				foreach ($get_detail_pr_asset as $detail_pr) :
 					if ($tipe_pr == '') {
 						$tipe_pr = $detail_pr['tipe_pr'];
 					}

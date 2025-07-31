@@ -29,6 +29,7 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 				<tr>
 					<th>#</th>
 					<th>Bank</th>
+					<th>COA Bank</th>
 					<th>Account Number</th>
 					<th>Account Name</th>
 					<th>Action</th>
@@ -55,8 +56,8 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 					<div class="box-body">
 						<!-- <form id="data_form" autocomplete="off"> -->
 						<div class="form-group">
-							<label for="bank">Bank</label>
-							<select class="form-control form-control-sm list_bank" name="bank">
+							<label for="bank">Bank <span class="text-red">*</span></label>
+							<select class="form-control form-control-sm list_bank" name="bank" required>
 								<option value="">- Pilih Bank -</option>
 								<?php
 								foreach ($list_bank as $item) :
@@ -66,12 +67,23 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 							</select>
 						</div>
 						<div class="form-group">
-							<label for="no_rek">No. Rekening</label>
-							<input type="text" name="no_rek" id="no_rek" class="form-control form-control-sm">
+							<label for="no_rek">No. Rekening <span class="text-red">*</span></label>
+							<input type="text" name="no_rek" id="no_rek" class="form-control form-control-sm" required>
 						</div>
 						<div class="form-group">
-							<label for="nama_rek">Nama Rekening</label>
-							<input type="text" name="nama_rek" id="nama_rek" class="form-control form-control-sm">
+							<label for="nama_rek">Nama Rekening <span class="text-red">*</span></label>
+							<input type="text" name="nama_rek" id="nama_rek" class="form-control form-control-sm" required>
+						</div>
+						<div class="form-group">
+							<label for="coa_bank">COA Bank <span class="text-red">*</span></label>
+							<select class="form-control form-control-sm" name="coa_bank" id="coa_bank" required>
+								<option value="">- Pilih COA Bank</option>
+								<?php
+								foreach ($list_coa_bank as $item) {
+									echo '<option value="' . $item['no_perkiraan'] . '">' . $item['no_perkiraan'] . ' - ' . $item['nama'] . '</option>';
+								}
+								?>
+							</select>
 						</div>
 						<!-- </form> -->
 					</div>
@@ -101,15 +113,20 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 		$('.list_bank').chosen({
 			width: '100%'
 		});
+		$('#coa_bank').chosen({
+			width: '100%'
+		});
 	});
 
 	$(document).on('click', '.add', function() {
 		$('#id').val('');
 		$('.list_bank').val('');
+		$('#coa_bank').val('');
 		$('#no_rek').val('');
 		$('#nama_rek').val('');
 
 		$('.list_bank').trigger('chosen:updated');
+		$('#coa_bank').trigger('chosen:updated');
 		$('#dialog-popup').modal('show');
 	})
 
@@ -240,10 +257,12 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 			success: function(result) {
 				$('#id').val(result.id);
 				$('.list_bank').val(result.bank);
+				$('#coa_bank').val(result.coa_bank);
 				$('#no_rek').val(result.no_rek);
 				$('#nama_rek').val(result.nama_rek);
 
 				$('.list_bank').trigger('chosen:updated');
+				$('#coa_bank').trigger('chosen:updated');
 
 				$('#dialog-popup').modal('show');
 			},
@@ -277,6 +296,9 @@ $ENABLE_DELETE  = has_permission('Master_Bank.Delete');
 				},
 				{
 					data: 'bank'
+				},
+				{
+					data: 'coa_bank'
 				},
 				{
 					data: 'account_number'

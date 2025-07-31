@@ -11,6 +11,8 @@ class Master_bank extends Admin_Controller
 	protected $managePermission = 'Master_Bank.Manage';
 	protected $deletePermission = 'Master_Bank.Delete';
 
+	protected $accounting;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -21,6 +23,8 @@ class Master_bank extends Admin_Controller
 		$this->template->page_icon('fa fa-building-o');
 
 		date_default_timezone_set('Asia/Bangkok');
+
+		$this->accounting = $this->load->database('accounting', true);
 	}
 
 	public function index()
@@ -34,8 +38,14 @@ class Master_bank extends Admin_Controller
 		$this->db->from('list_bank a');
 		$get_list_bank = $this->db->get()->result();
 
+		$this->accounting->select('a.no_perkiraan, a.nama');
+		$this->accounting->from('coa_master a');
+		$this->accounting->where('a.kode_bank IS NOT NULL');
+		$get_coa_bank = $this->accounting->get()->result_array();
+
 		history("View data bank");
 		$this->template->set('list_bank', $get_list_bank);
+		$this->template->set('list_coa_bank', $get_coa_bank);
 		$this->template->title('Master Bank');
 		$this->template->render('index');
 	}
@@ -61,6 +71,7 @@ class Master_bank extends Admin_Controller
 				'bank' => $post['bank'],
 				'rekening' => $post['no_rek'],
 				'nama' => $post['nama_rek'],
+				'coa_bank' => $post['coa_bank'],
 				'updated_by' => $this->auth->user_id(),
 				'updated_date' => date('Y-m-d H:i:s')
 			];
@@ -77,6 +88,7 @@ class Master_bank extends Admin_Controller
 				'bank' => $post['bank'],
 				'rekening' => $post['no_rek'],
 				'nama' => $post['nama_rek'],
+				'coa_bank' => $post['coa_bank'],
 				'created_by' => $this->auth->user_id(),
 				'created_date' => date('Y-m-d H:i:s')
 			];
