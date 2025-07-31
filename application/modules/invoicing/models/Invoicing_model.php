@@ -28,6 +28,20 @@ class Invoicing_model extends BF_Model
         return $kode_trans;
     }
 
+    public function generate_id_invoice_jurnal($nomor)
+    {
+        $Ym             = date('ym');
+        $srcMtr            = "SELECT MAX(id) as maxP FROM tr_jurnal WHERE no_jurnal LIKE '%" . int_to_roman(date('m')) . "-" . date('-y') . "%' ";
+        $resultMtr        = $this->db->query($srcMtr)->result_array();
+        $angkaUrut2        = $resultMtr[0]['maxP'];
+        $urutan2        = (int)substr($angkaUrut2, 0, 5);
+        $urutan2 = $urutan2 + $nomor;
+        $urut2            = sprintf('%05s', $urutan2);
+        $kode_trans        = $urut2 . '-AJV-' . int_to_roman(date('m')) . '-' . date('y');
+
+        return $kode_trans;
+    }
+
     public function get_data_spk()
     {
         $draw = $this->input->post('draw');
