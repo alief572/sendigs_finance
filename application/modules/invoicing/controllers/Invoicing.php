@@ -293,6 +293,7 @@ class Invoicing extends Admin_Controller
                 'kredit' => $kredit,
                 'keterangan' => $keterangan,
                 'sts' => 0,
+                'no_transaksi' => $id,
                 'jenis_transaksi' => 'Invoicing',
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
