@@ -124,6 +124,13 @@
     }
 </style>
 
+<input type="hidden" name="no_inv" value="<?= $no_inv ?>">
+<input type="hidden" name="id_alokasi" value="<?= $id_alokasi ?>">
+<input type="hidden" name="id_customer" value="<?= $id_customer ?>">
+<input type="hidden" name="ppn_dipotong" value="<?= $ppn_dipotong ?>">
+<input type="hidden" name="pph23_dipotong" value="<?= $pph23_dipotong ?>">
+<input type="hidden" name="nominal_penerimaan_bank" value="<?= $nominal_penerimaan_bank ?>">
+
 <table class="table table-striped">
     <thead>
         <tr>
@@ -194,6 +201,19 @@
     <tbody>
         <?= $hasil_jurnal ?>
     </tbody>
+    <tbody>
+        <tr>
+            <th colspan="4" class="text-center">Grand Total</th>
+            <td class="text-center td_total_debit_jurnal">
+                <?= number_format($total_debit) ?>
+                <input type="hidden" name="total_debit" value="<?= $total_debit ?>">
+            </td>
+            <td class="text-center td_total_kredit_jurnal">
+                <?= number_format($total_kredit) ?>
+                <input type="hidden" name="total_kredit" value="<?= $total_kredit ?>">
+            </td>
+        </tr>
+    </tbody>
 </table>
 
 <script>
@@ -208,10 +228,40 @@
         return nilai;
     }
 
+    function number_format(number, decimals, dec_point, thousands_sep) {
+        // Strip all characters but numerical ones.
+        number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+        var n = !isFinite(+number) ? 0 : +number,
+            prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+            sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+            dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+            s = '',
+            toFixedFix = function(n, prec) {
+                var k = Math.pow(10, prec);
+                return '' + Math.round(n * k) / k;
+            };
+        // Fix for IE parseFloat(0.55).toFixed(0) = 0;
+        s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+        if (s[0].length > 3) {
+            s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+        }
+        if ((s[1] || '').length < prec) {
+            s[1] = s[1] || '';
+            s[1] += new Array(prec - s[1].length + 1).join('0');
+        }
+        return s.join(dec);
+    }
+
     function hitungAll() {
         var no = '<?= $no_inv ?>';
 
         var uang_masuk = get_num($('#uang_masuk').val());
+
+        var ttl_debit_jurnal = 0;
+        var ttl_kredit_jurnal = 0;
+
+        ttl_debit_jurnal += get_num($('input[name="debit_bank_debit"]').val());
+        ttl_kredit_jurnal += get_num($('input[name="kredit_bank_debit"]').val());
 
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
@@ -219,8 +269,31 @@
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
 
+            var coa_jurnal = ['1030-10-1', '7010-20-5'];
+            $.each(coa_jurnal, function(index, value) {
+                index = index + 1;
+                if (value == '1030-10-1') {
+                    var resp_piutang = number_format(penerimaan);
+                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + penerimaan + '">';
+
+                    $('.td_kredit_' + value + '_' + i).html(resp_piutang);
+                }
+                if (value == '7010-20-5') {
+                    var resp_admin = number_format(biaya_admin);
+                    resp_admin += '<input type="hidden" name="debit_' + value + '_' + i + '" value="' + biaya_admin + '">';
+
+                    $('.td_debit_' + value + '_' + i).html(resp_admin);
+                }
+
+                ttl_debit_jurnal += get_num($('input[name="debit_' + value + '_' + i + '"]').val());
+                ttl_kredit_jurnal += get_num($('input[name="kredit_' + value + '_' + i + '"]').val());
+            });
+
+
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
+
+
         }
 
         var grand_total = (ttl_penerimaan - ttl_biaya_admin);
@@ -231,6 +304,14 @@
         $('input[name="grand_total"]').autoNumeric('set', grand_total);
         $('input[name="kontrol"]').val(kontrol);
 
+        var resp_ttl_debit_jurnal = number_format(ttl_debit_jurnal);
+        resp_ttl_debit_jurnal += '<input type="hidden" name="total_debit_jurnal" value="' + ttl_debit_jurnal + '">';
+
+        var resp_ttl_kredit_jurnal = number_format(ttl_kredit_jurnal);
+        resp_ttl_kredit_jurnal += '<input type="hidden" name="total_kredit_jurnal" value="' + ttl_kredit_jurnal + '">';
+
+        $('.td_total_debit_jurnal').html(resp_ttl_debit_jurnal);
+        $('.td_total_kredit_jurnal').html(resp_ttl_kredit_jurnal);
 
     }
 </script>
