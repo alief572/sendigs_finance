@@ -111,6 +111,17 @@ class Dashboard extends Admin_Controller
 
 		// echo $rest_fg1[0]->qty_stock;
 
+		$check_ga_secret = 1;
+
+		$this->db->select('a.ga_secret');
+		$this->db->from('users a');
+		$this->db->where('a.id_user', $this->auth->user_id());
+		$get_users = $this->db->get()->row_array();
+
+		if ($get_users['ga_secret'] == '' || $get_users['ga_secret'] == null) {
+			$check_ga_secret = 0;
+		}
+
 		$data = array(
 			'qty_order1' => $qty_order1,
 			'qty_order2' => $qty_order2,
@@ -125,7 +136,8 @@ class Dashboard extends Admin_Controller
 			'no_so' => $no_so,
 			'no_so2' => $no_so2,
 			'over1' => $over1,
-			'over2' => $over2
+			'over2' => $over2,
+			'check_ga_secret' => $check_ga_secret
 		);
 
 		$this->template->render('index', $data);
@@ -1257,18 +1269,18 @@ class Dashboard extends Admin_Controller
 					->like('a.no_po', $item->kode_trans, 'both')
 					->get()
 					->result();
-				foreach($get_id_inv_inc as $item_id) {
+				foreach ($get_id_inv_inc as $item_id) {
 					$list_invoice .= '<a href="javascript:void(0);" class="view_invoice" data-id="' . $item_id->id . '" data-tipe="(Incoming)">No. ' . $item_id->id . ' (Incoming)</a> <br><br>';
 				}
 			}
 
 			$get_kode_trans_inc_stok = $this->db->select('a.kode_trans')
-			->from('warehouse_adjustment a')
-			->join('tr_purchase_order b', 'b.no_po = a.no_ipp')
-			->where('b.no_surat', $item_po->no_surat)
-			->where('a.category', 'incoming stok')
-			->get()
-			->result();
+				->from('warehouse_adjustment a')
+				->join('tr_purchase_order b', 'b.no_po = a.no_ipp')
+				->where('b.no_surat', $item_po->no_surat)
+				->where('a.category', 'incoming stok')
+				->get()
+				->result();
 
 			foreach ($get_kode_trans_inc_stok as $item) {
 				$get_id_inv_inc = $this->db->select('a.id')
@@ -1276,18 +1288,18 @@ class Dashboard extends Admin_Controller
 					->like('a.no_po', $item->kode_trans, 'both')
 					->get()
 					->result();
-				foreach($get_id_inv_inc as $item_id) {
+				foreach ($get_id_inv_inc as $item_id) {
 					$list_invoice .= '<a href="javascript:void(0);" class="view_invoice" data-id="' . $item_id->id . '" data-tipe="(Incoming)">No. ' . $item_id->id . ' (Incoming)</a> <br><br>';
 				}
 			}
 
 			$get_kode_trans_inc_non_rutin = $this->db->select('a.kode_trans')
-			->from('warehouse_adjustment a')
-			->join('tr_purchase_order b', 'b.no_surat = a.no_ipp')
-			->where('b.no_surat', $item_po->no_surat)
-			->where('a.category', 'incoming non rutin')
-			->get()
-			->result();
+				->from('warehouse_adjustment a')
+				->join('tr_purchase_order b', 'b.no_surat = a.no_ipp')
+				->where('b.no_surat', $item_po->no_surat)
+				->where('a.category', 'incoming non rutin')
+				->get()
+				->result();
 
 			foreach ($get_kode_trans_inc_non_rutin as $item) {
 				$get_id_inv_inc = $this->db->select('a.id')
@@ -1295,7 +1307,7 @@ class Dashboard extends Admin_Controller
 					->like('a.no_po', $item->kode_trans, 'both')
 					->get()
 					->result();
-				foreach($get_id_inv_inc as $item_id) {
+				foreach ($get_id_inv_inc as $item_id) {
 					$list_invoice .= '<a href="javascript:void(0);" class="view_invoice" data-id="' . $item_id->id . '" data-tipe="(Incoming)">No. ' . $item_id->id . ' (Incoming)</a> <br><br>';
 				}
 			}
