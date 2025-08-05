@@ -207,6 +207,7 @@ class Invoicing extends Admin_Controller
             'id_company' => $id_company
         ];
 
+
         // $this->template->title('Print Invoice');
         // $this->template->set($data);
         // $this->template->render('edit_invoice');
@@ -388,6 +389,38 @@ class Invoicing extends Admin_Controller
                 $valid = 1;
                 $msg = 'Data has been updated !';
             }
+        }
+
+        echo json_encode([
+            'status' => $valid,
+            'msg' => $msg
+        ]);
+    }
+
+    public function save_keterangan_print()
+    {
+        $post = $this->input->post();
+
+        $this->db->trans_begin();
+
+        $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+        if (!$update_inv) {
+            $this->db->trans_rollback();
+
+            print_r($this->db->last_query());
+            exit;
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = 'Please try again later !';
+        } else {
+            $this->db->trans_commit();
+
+            $valid = 1;
+            $msg = 'Data has been updated !';
         }
 
         echo json_encode([

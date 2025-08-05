@@ -208,7 +208,7 @@ class Users extends Front_Controller
 
         if (!$otp) {
             $this->session->set_flashdata('error', 'Kode OTP tidak boleh kosong.');
-            $this->template->render('users/verify_2fa   ');
+            $this->template->render('users/verify_2fa');
         }
 
         // Verifikasi kode OTP
@@ -221,7 +221,7 @@ class Users extends Front_Controller
             // Jika verifikasi gagal, tampilkan pesan error
             $this->session->set_userdata('2fa_verified', false);
             $this->session->set_flashdata('error', 'Kode OTP salah');
-            $this->template->render('users/verify_2fa   ');
+            $this->template->render('users/verify_2fa');
         }
     }
 }
