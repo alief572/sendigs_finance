@@ -64,6 +64,10 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         ?>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="keterangan_print">Keterangan Print</label>
+                    <textarea name="keterangan_print" id="keterangan_print" class="form-control form-control-sm"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-success confirm_jenis_header"><i class="fa fa-check"></i> Proses</button>
@@ -95,6 +99,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     $(document).on('click', '.confirm_jenis_header', function() {
         var company = $('.company').val();
         var id_inv = $('.id_inv').val();
+        var keterangan_print = $('#keterangan_print').val();
 
         if (company == '') {
             swal({
@@ -105,7 +110,31 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
             return false;
         } else {
-            window.open(siteurl + active_controller + 'print_invoicing/' + id_inv + '/' + company, '_blank')
+            $.ajax({
+                type: 'post',
+                url: siteurl + active_controller + 'save_keterangan_print',
+                data: {
+                    'id': id_inv,
+                    'keterangan_print': keterangan_print
+                },
+                cache: false,
+                dataType: 'json',
+                success: function(result) {
+                    window.open(siteurl + active_controller + 'print_invoicing/' + id_inv + '/' + company, '_blank')
+                },
+                error: function(result) {
+                    swal({
+                        type: 'error',
+                        title: 'Error !',
+                        text: 'Please try again later !',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
+            });
+
+
         }
     })
 
