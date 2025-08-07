@@ -40,6 +40,7 @@ class Request_pr_stok extends Admin_Controller
       ->where('a.booking_date <>', null)
       ->where('a.close_pr', null)
       ->group_by('a.so_number')
+      ->order_by('a.created_date', 'desc')
       ->get()
       ->result();
 
@@ -127,10 +128,13 @@ class Request_pr_stok extends Admin_Controller
 
     $id_material  = $data['id_material'];
     $purchase     = str_replace(',', '', $data['purchase']);
-    $purchase_pack     = str_replace(',', '', $data['purchase_pack']);
+    // $purchase_pack     = str_replace(',', '', $data['purchase_pack']);
     $tanggal      = $data['tanggal'];
     $spec         = $data['spec'];
     $info         = $data['info'];
+
+    $get_accessories = $this->db->get_where('accessories', ['id' => $id_material])->row();
+    $purchase_pack = ($purchase / $get_accessories->konversi);
 
 
     $ArrHeader = array(
@@ -442,7 +446,7 @@ class Request_pr_stok extends Admin_Controller
       $max_stok = (!empty($get_konversi)) ? $get_konversi['max_stok'] : 1;
 
       $stock_oke   = (!empty($get_stock[0]->stock)) ? $get_stock[0]->stock : 0;
-      $purchase   = (($max_stok - ($stock_oke / $konversi)) * $konversi) + ((($max_stok - ($stock_oke / $konversi)) * $konversi) * 0.5);
+      $purchase   = (($max_stok - ($stock_oke / $konversi)) * $konversi);
       // $purchase2   = ($purchase < 0) ? 0 : ceil($purchase);
       if (($max_stok * $konversi) > $stock_oke) {
         $purchase2 = ceil($purchase);
