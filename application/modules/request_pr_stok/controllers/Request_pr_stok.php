@@ -454,7 +454,7 @@ class Request_pr_stok extends Admin_Controller
       //   $purchase2 = (($max_stok * $konversi) * 0.5);
       // } else {
       //   $purchase2 = 0;
-      }
+      // }
 
       $ArrUpdate[$key]['id'] = $value['id'];
       $ArrUpdate[$key]['request'] = $purchase2;
