@@ -144,16 +144,98 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
 
-        $this->db->select('a.*');
+        $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
         $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
         $this->auth->restrict($this->viewPermission);
 
+        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+
+        $hasil_jurnal = '';
+
+        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+        $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+        $get_coa_jurnal = $this->accounting->get()->result_array();
+
+        $no_coa_jurnal = 0;
+
+        $total_debit = 0;
+        $total_kredit = 0;
+        foreach ($get_coa_jurnal as $item_coa_jurnal) {
+            $no_coa_jurnal++;
+
+            $debit = 0;
+            $kredit = 0;
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1030-10-1') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $debit = ($total_nominal + $ppn);
+            }
+            if ($item_coa_jurnal['no_perkiraan'] == '4010-10-1') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $kredit = $total_nominal;
+            }
+            if ($item_coa_jurnal['no_perkiraan'] == '2010-30-6') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+
+                $kredit = $ppn;
+            }
+
+            $hasil_jurnal .= '<tr>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= date('d-F-Y', strtotime($get_invoicing->created_date));
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($get_invoicing->created_date)) . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['no_perkiraan'];
+            $hasil_jurnal .= '<input type="hidden" name="coa_jurnal_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['no_perkiraan'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
+            $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($debit);
+            $hasil_jurnal .= '<input type="hidden" name="debit_' . $no_coa_jurnal . '" value="' . $debit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($kredit);
+            $hasil_jurnal .= '<input type="hidden" name="kredit_' . $no_coa_jurnal . '" value="' . $kredit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '</tr>';
+
+            $total_debit += $debit;
+            $total_kredit += $kredit;
+        }
+
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_actual_plan_tagih' => $get_actual_plan_tagih
+            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'hasil_jurnal' => $hasil_jurnal,
+            'total_debit' => $total_debit,
+            'total_kredit' => $total_kredit
         ];
 
         $this->template->title('View Invoice');
