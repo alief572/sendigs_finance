@@ -35,7 +35,7 @@
     }
 
     td {
-        font-size: 12px;
+        font-size: 13px;
     }
 </style>
 <table width="100%" border="0">
