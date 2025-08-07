@@ -70,7 +70,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
         <div class="box-body">
             <table class="table table-bordered">
                 <tr>
-                    <th width="10%">Total Nominal</th>
+                    <th width="10%">DPP</th>
                     <td class="text-right">
                         Rp. <?= number_format($total_nominal, 2) ?>
                         <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
