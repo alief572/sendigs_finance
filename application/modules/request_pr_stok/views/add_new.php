@@ -45,15 +45,15 @@
 				<thead>
 					<tr class='bg-blue'>
 						<th class="text-center" width='4%'>#</th>
-						<th class="text-center">Nama Barang</th>
+						<th class="text-center no-sort" width="18%">Nama Barang</th>
 						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Konversi)</th>
 						<th class="text-center no-sort" width='7%'>Stock (Konversi)</th>
 						<th class="text-center no-sort" width='7%'>Max Stock (Konversi)</th>
 						<th class="text-center no-sort" width='8%'>Propose Purchase <br> (Konversi)</th>
 						<th class="text-center no-sort" width='8%'>Unit Konversi</th>
-						<th class="text-center no-sort" width='8%'>Spec</th>
-						<th class="text-center no-sort" width='8%'>Info</th>
+						<th class="text-center no-sort" width='15%'>Keterangan</th>
 						<th class="text-center no-sort" width='8%'>Price Reference</th>
+						<th class="text-center no-sort" width='8%'>Grand Total</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -268,7 +268,7 @@
 		// var tanggal 	= $('#tanggal_'+nomor).val();
 		var tanggal = $('#tgl_butuh').val();
 		var satuan = $('#satuan_' + nomor).val();
-		var spec = $('#spec_' + nomor).val();
+		// var spec = $('#spec_' + nomor).val();
 		var info = $('#info_' + nomor).val();
 
 		$.ajax({
@@ -278,7 +278,6 @@
 				"id_material": id_material,
 				"purchase": purchase,
 				"tanggal": tanggal,
-				"spec": spec,
 				"info": info,
 				"satuan": satuan
 			},
