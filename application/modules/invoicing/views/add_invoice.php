@@ -6,7 +6,7 @@ $total_akhir = ($total_nominal + $pajak);
 $dpp_lain_lain = ($total_nominal * 11 / 12);
 
 $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$ppn = ($dpp_nilai_lain * 12 / 100);
+$ppn = ($dpp_lain_lain * 12 / 100);
 $pph = ($total_nominal * 2 / 100);
 $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 ?>
@@ -84,7 +84,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">Pajak</th>
+                    <th width="10%">PPn 12% dari DPP Lain</th>
                     <td class="text-right">
                         Rp. <?= number_format($pajak, 2) ?>
                         <input type="hidden" name="pajak" value="<?= $pajak ?>">

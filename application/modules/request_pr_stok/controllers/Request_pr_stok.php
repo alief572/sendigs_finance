@@ -130,7 +130,6 @@ class Request_pr_stok extends Admin_Controller
     $purchase     = str_replace(',', '', $data['purchase']);
     // $purchase_pack     = str_replace(',', '', $data['purchase_pack']);
     $tanggal      = $data['tanggal'];
-    $spec         = $data['spec'];
     $info         = $data['info'];
 
     $get_accessories = $this->db->get_where('accessories', ['id' => $id_material])->row();
@@ -138,7 +137,6 @@ class Request_pr_stok extends Admin_Controller
 
 
     $ArrHeader = array(
-      'spec_pr'          => $spec,
       'info_pr'          => $info,
       'request'       => $purchase,
       'request_pack' => $purchase_pack,

@@ -331,4 +331,86 @@ class Expense_model extends BF_Model
 			return $dataArr;
 		}
 	}
+
+	public function get_data_transport_input()
+	{
+		$draw = $this->input->post('draw');
+		$length = $this->input->post('length');
+		$start = $this->input->post('start');
+		$search = $this->input->post('search');
+
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.nama, a.keperluan, a.nopol, a.status, a.created_by as nmuser');
+		$this->db->from('tr_transport a');
+		$this->db->where('a.created_by', $this->auth->user_name());
+		if (!empty($search['value'])) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search['value'], 'both');
+			$this->db->or_like('a.tgl_doc', $search['value'], 'both');
+			$this->db->or_like('a.nama', $search['value'], 'both');
+			$this->db->group_end();
+		}
+		$this->db->order_by('a.id', 'desc');
+
+		$db_clone = clone $this->db;
+		$count_all = $db_clone->count_all_results();
+
+		$this->db->limit($length, $start);
+		$get_data = $this->db->get()->result();
+
+		$hasil = [];
+
+		$no = (0 + $start);
+
+		foreach ($get_data as $item) {
+			$no++;
+
+			$status = '<span class="badge bg-yellow">Baru</span>';
+			if ($item->status == '1') {
+				$status = '<span class="badge bg-green">Disetujui</span>';
+			}
+			if ($item->status == '2') {
+				$status = '<span class="badge bg-green">Disetujui Management</span>';
+			}
+			if ($item->status == '3') {
+				$status = '<span class="badge bg-blue">Selesai</span>';
+			}
+			if ($item->status == '9') {
+				$status = '<span class="badge bg-red">Ditolak</span>';
+			}
+
+			$action = '';
+
+			if (has_permission('Transportasi.View')) {
+				$action .= '<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item->id . ')"><i class="fa fa-eye"></i></a>';
+			}
+
+			if (has_permission('Transportasi.Manage') && $item->status == 0) {
+				$action .= ' <a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit(' . $item->id . ')"><i class="fa fa-edit"></i></a>';
+			}
+
+			if (has_permission('Transportasi.Delete') && $item->status == 0) {
+				$action .= ' <a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete(' . $item->id . ')"><i class="fa fa-trash"></i></a>';
+			}
+
+			$hasil[] = [
+				'no' => $no,
+				'id_pengajuan' => $item->no_doc,
+				'tanggal' => date('d F Y', strtotime($item->tgl_doc)),
+				'nama' => $item->nama,
+				'keperluan' => $item->keperluan,
+				'no_polisi' => $item->nopol,
+				'status' => $status,
+				'action' => $action
+			];
+		}
+
+		$response = [
+			'draw' => intval($draw),
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_all,
+			'data' => $hasil
+		];
+
+		echo json_encode($response);
+	}
 }

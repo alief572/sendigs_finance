@@ -2804,4 +2804,9 @@ class Expense extends Admin_Controller
 			'to_doc_file' => $to_doc_file
 		]);
 	}
+
+	public function get_data_transport_input()
+	{
+		$this->Expense_model->get_data_transport_input();
+	}
 }
