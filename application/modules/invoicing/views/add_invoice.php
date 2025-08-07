@@ -13,7 +13,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 <div class="box">
     <form action="" method="post" id="frm-data">
         <input type="hidden" name="id" value="<?= $data_actual->id ?>">
-        <div class=" box-body">
+        <div class="box-body">
             <div class="col-6">
                 <table width="100%" border="0">
                     <tr>
@@ -67,7 +67,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
             </table>
         </div>
 
-        <div class="box-body">
+        <!-- <div class="box-body">
             <table class="table table-bordered">
                 <tr>
                     <th width="10%">DPP</th>
@@ -98,7 +98,12 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                     </td>
                 </tr>
             </table>
-        </div>
+        </div> -->
+
+        <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
+        <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
+        <input type="hidden" name="pajak" value="<?= $pajak ?>">
+        <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
 
         <div class="box-body">
             <table class="table table-bordered">
