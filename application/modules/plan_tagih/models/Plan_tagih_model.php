@@ -56,32 +56,18 @@ class Plan_tagih_model extends BF_Model
             $this->consultant->or_like('a.nm_sales', $search['value'], 'both');
             $this->consultant->group_end();
         }
+
+        $db_clone = clone $this->consultant;
+        $count_all = $db_clone->count_all_results();
+
         $this->consultant->order_by('a.id_spk_penawaran', 'desc');
         $this->consultant->limit($length, $start);
 
-        $get_data = $this->consultant->get();
-
-        $this->consultant->select('a.*, b.nm_company');
-        $this->consultant->from('kons_tr_spk_penawaran a');
-        $this->consultant->join('kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
-        $this->consultant->where('a.sts_spk', 1);
-        if (!empty($search['value'])) {
-            $this->consultant->group_start();
-            $this->consultant->like('a.id_spk_penawaran', $search['value'], 'both');
-            $this->consultant->or_like('b.nm_company', $search['value'], 'both');
-            $this->consultant->or_like('a.nm_customer', $search['value'], 'both');
-            $this->consultant->or_like('a.nm_project', $search['value'], 'both');
-            $this->consultant->or_like('a.nm_project_leader', $search['value'], 'both');
-            $this->consultant->or_like('a.nm_sales', $search['value'], 'both');
-            $this->consultant->group_end();
-        }
-        $this->consultant->order_by('a.id_spk_penawaran', 'desc');
-
-        $get_data_all = $this->consultant->get();
+        $get_data = $this->consultant->get()->result();
 
         $no = (0 + $start);
         $hasil = [];
-        foreach ($get_data->result() as $item) {
+        foreach ($get_data as $item) {
             $no++;
 
             $status = '<button class="btn btn-sm btn-warning">Draft</button>';
@@ -101,7 +87,7 @@ class Plan_tagih_model extends BF_Model
                 } else {
                     $option .= '<a href="' . base_url('plan_tagih/view_plan_tagih/' . urlencode(str_replace('/', '|', $item->id_spk_penawaran))) . '" class="btn btn-sm btn-info" title="View Plan Tagih"><i class="fa fa-eye"></i></a>';
 
-                    $option .= '<a href="' . base_url('plan_tagih/edit_plan_tagih/' . urlencode(str_replace('/', '|', $item->id_spk_penawaran))) . '" class="btn btn-sm btn-success" title="Revisi Plan Tagih"><i class="fa fa-pencil"></i></a>';
+                    // $option .= '<a href="' . base_url('plan_tagih/edit_plan_tagih/' . urlencode(str_replace('/', '|', $item->id_spk_penawaran))) . '" class="btn btn-sm btn-success" title="Revisi Plan Tagih"><i class="fa fa-pencil"></i></a>';
                 }
             }
 
@@ -120,8 +106,8 @@ class Plan_tagih_model extends BF_Model
 
         echo json_encode([
             'draw' => intval($draw),
-            'recordsTotal' => $get_data_all->num_rows(),
-            'recordsFiltered' => $get_data_all->num_rows(),
+            'recordsTotal' => $count_all,
+            'recordsFiltered' => $count_all,
             'data' => $hasil
         ]);
     }

@@ -213,7 +213,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                             swal({
                                 type: 'success',
                                 title: 'Success !',
-                                text: result.msg
+                                text: result.msg,
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                timer: 3000
                             }, function(lanjut) {
                                 window.location.href = siteurl + active_controller;
                             });
@@ -221,7 +224,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                             swal({
                                 type: 'warning',
                                 title: 'Failed !',
-                                text: result.msg
+                                text: result.msg,
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                timer: 3000
                             });
                         }
                     },
@@ -229,7 +235,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                         swal({
                             type: 'error',
                             title: 'Error !',
-                            text: 'Please try again later !'
+                            text: 'Please try again later !',
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            timer: 3000
                         });
                     }
                 });
