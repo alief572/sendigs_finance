@@ -383,7 +383,7 @@ class Penerimaan_uang extends Admin_Controller
         $no_jurnal = 0;
         for ($i = 1; $i <= $post['no_inv']; $i++) {
 
-            $this->db->select('a.id_penawaran, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.tagihan_ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.saldo_piutang, a.created_date');
+            $this->db->select('a.*');
             $this->db->from('tr_invoicing a');
             $this->db->where('a.id', $post['id_inv_' . $i]);
             $get_inv = $this->db->get()->row_array();
@@ -395,7 +395,9 @@ class Penerimaan_uang extends Admin_Controller
             $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
 
             $dpp = (!empty($get_inv)) ? $get_inv['total_nominal_jurnal'] : 0;
+            $dpp_lain = (!empty($get_inv)) ? $get_inv['dpp_lain_lain_jurnal'] : 0;
             $ppn = (!empty($get_inv)) ? $get_inv['ppn_jurnal'] : 0;
+            $tagihan_ppn = (!empty($get_inv)) ? $get_inv['tagihan_ppn_jurnal'] : 0;
             $pph = (!empty($get_inv)) ? $get_inv['pph_jurnal'] : 0;
             $total = (!empty($get_inv)) ? $get_inv['total_akhir_jurnal'] : 0;
             $saldo_piutang = (!empty($get_inv)) ? $get_inv['saldo_piutang'] : 0;
@@ -415,7 +417,9 @@ class Penerimaan_uang extends Admin_Controller
                 'id_customer' => $post['id_customer'],
                 'nm_customer' => $nm_customer,
                 'dpp' => $dpp,
+                'dpp_lain' => $dpp_lain,
                 'ppn' => $ppn,
+                'tagihan_ppn' => $tagihan_ppn,
                 'pph23' => $pph,
                 'total' => $total,
                 'penerimaan' => $penerimaan,
