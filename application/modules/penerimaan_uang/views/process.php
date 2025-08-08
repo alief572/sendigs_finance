@@ -122,6 +122,14 @@
             margin-bottom: 10px;
         }
     }
+
+    td {
+        font-size: 13px;
+    }
+
+    input {
+        font-size: 13px !important;
+    }
 </style>
 
 <input type="hidden" name="no_inv" value="<?= $no_inv ?>">
@@ -134,12 +142,14 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th class="text-center">Tgl Inv</th>
-            <th class="text-center">Nomor Inv</th>
-            <th class="text-center">Total Invoice</th>
+            <th class="text-center">Tgl invoice</th>
+            <th class="text-center">Nomor Invoice</th>
             <th class="text-center">DPP</th>
+            <th class="text-center">DPP Lain</th>
             <th class="text-center">PPN</th>
             <th class="text-center">PPH 23</th>
+            <th class="text-center">Tagihan + Ppn</th>
+            <th class="text-center">Tagihan + Ppn + Pph</th>
             <th class="text-center">Piutang</th>
             <th class="text-center">Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
@@ -150,7 +160,7 @@
     </tbody>
     <tbody>
         <tr>
-            <td colspan="6" class="text-right">Total</td>
+            <td colspan="8" class="text-right">Total</td>
             <td>
                 <input type="text" name="total_piutang" id="total_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
             </td>
@@ -162,21 +172,21 @@
             </td>
         </tr>
         <tr>
-            <td colspan="7" class="text-right">Grand Total</td>
+            <td colspan="9" class="text-right">Grand Total</td>
             <td>
                 <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" readonly>
             </td>
             <td></td>
         </tr>
         <tr>
-            <td colspan="7" class="text-right">Uang Masuk</td>
+            <td colspan="9" class="text-right">Uang Masuk</td>
             <td>
                 <input type="text" name="uang_masuk" class="form-control form-control-sm autonum text-right" id="uang_masuk" value="<?= $uang_masuk ?>" readonly>
             </td>
             <td></td>
         </tr>
         <tr>
-            <td colspan="7" class="text-right">Kontrol</td>
+            <td colspan="9" class="text-right">Kontrol</td>
             <td>
                 <input type="text" name="kontrol" class="form-control form-control-sm autonum text-right" id="kontrol" readonly>
             </td>

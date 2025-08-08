@@ -176,13 +176,14 @@
                     <table class="table table-striped table_list">
                         <thead>
                             <tr>
-                                <th class="text-center">Tgl Inv</th>
-                                <th class="text-center">No Invoice</th>
-                                <th class="text-center">Customer</th>
+                                <th class="text-center">Tgl Invoice</th>
+                                <th class="text-center">Nomor Invoice</th>
                                 <th class="text-center">DPP</th>
+                                <th class="text-center">DPP Lain</th>
                                 <th class="text-center">PPN</th>
                                 <th class="text-center">PPH 23</th>
-                                <th class="text-center">Total</th>
+                                <th class="text-center">Tagihan + Ppn</th>
+                                <th class="text-center">Tagihan + Ppn + Pph</th>
                                 <th class="text-center">Saldo Piutang</th>
                                 <th class="text-center">Action</th>
                             </tr>

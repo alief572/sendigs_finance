@@ -57,7 +57,7 @@ class Penerimaan_uang extends Admin_Controller
     {
         $id_customer = $this->input->post('id');
 
-        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.saldo_piutang');
+        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id_customer', $id_customer);
         $this->db->where('a.saldo_piutang >', 0);
@@ -73,10 +73,11 @@ class Penerimaan_uang extends Admin_Controller
 
                 $hasil .= '<td class="text-center">' . $no . '</td>';
                 $hasil .= '<td class="text-center">' . $item['no_inv'] . '</td>';
-                $hasil .= '<td class="text-left">' . $item['nm_customer'] . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['total_nominal_jurnal']) . '</td>';
+                $hasil .= '<td class="text-right">' . number_format($item['dpp_lain_lain_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['ppn_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['pph_jurnal']) . '</td>';
+                $hasil .= '<td class="text-right">' . number_format($item['tagihan_ppn_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['total_akhir_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['saldo_piutang']) . '</td>';
                 $hasil .= '<td class="text-center">';
@@ -142,9 +143,11 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">' . $get_inv['id'] . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_nominal_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">' . number_format($get_inv['total_nominal_jurnal']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($get_inv['dpp_lain_lain_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($get_inv['saldo_piutang']) . '</td>';
             $hasil .= '<td class="text-right">';
             $hasil .= number_format($get_inv['total_akhir_jurnal']);
             $hasil .= '<input type="hidden" name="piutang_' . $no . '" value="' . $get_inv['total_akhir_jurnal'] . '">';
