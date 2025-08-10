@@ -33,6 +33,10 @@
             background-color: #ccc;
         }
     }
+
+    td {
+        font-size: 13px;
+    }
 </style>
 <table width="100%" border="0">
     <?php
@@ -46,7 +50,7 @@
         </tr>
 
     <?php
-    } else if ($id_company == '4') {
+    } else if ($id_company == '4' || $id_company == '5') {
     ?>
 
         <tr>
@@ -87,51 +91,48 @@
         </th>
     </tr>
     <tr>
-        <td>Kepada</td>
+        <td width="80">Kepada</td>
         <td style="text-align: center;">:</td>
-        <td style="font-weight: bold;"><?= $data_invoice->nm_customer ?></td>
-        <td>Tanggal Invoice</td>
+        <td style="font-weight: bold;" width="230"><?= $data_invoice->nm_customer ?></td>
+        <td width="110">Tanggal Invoice</td>
         <td style="text-align: center;">:</td>
-        <td><?= date('d F Y', strtotime($data_invoice->tanggal_invoice)) ?></td>
+        <td width="200"><?= date('d F Y', strtotime($data_invoice->tanggal_invoice)) ?></td>
     </tr>
     <tr>
-        <td>Alamat</td>
+        <td width="80">Alamat</td>
         <td style="text-align: center;">:</td>
-        <td><?= $data_invoice->address ?></td>
-        <td>Nomor Invoice</td>
+        <td width="230"><?= $data_invoice->address ?></td>
+        <td width="110">Nomor Invoice</td>
         <td style="text-align: center;">:</td>
-        <td><?= $data_invoice->no_invoice ?></td>
+        <td width="200"><?= $data_invoice->no_invoice ?></td>
     </tr>
     <tr>
-        <td>Up</td>
+        <td width="80">Up</td>
         <td style="text-align: center;">:</td>
-        <td>Finance Dept.</td>
-        <td>No. PO</td>
+        <td width="230">Finance Dept.</td>
+        <td width="110">No. PO</td>
         <td style="text-align: center;">:</td>
-        <td><?= $data_invoice->no_po ?></td>
+        <td width="200"><?= $data_invoice->no_po ?></td>
     </tr>
 </table>
 <table class="table_list_barang">
     <thead>
         <?php
-        if ($id_company == '3' || $id_company == '4') {
+        if ($id_company == '3' || $id_company == '4' || $id_company == '5') {
             echo '<tr>';
-
-            echo '<th>Nama Barang / Pesanan</th>';
-            echo '<th>Jumlah</th>';
-            echo '<th>Harga @</th>';
-            echo '<th>Disc.</th>';
-            echo '<th>Subtotal</th>';
-            echo '<th>Pajak</th>';
-
+            echo '<th style="font-size: 15px">Nama Barang / Pesanan</th>';
+            echo '<th style="font-size: 15px">Jumlah</th>';
+            echo '<th style="font-size: 15px">Harga @</th>';
+            echo '<th style="font-size: 15px">Disc</th>';
+            echo '<th style="font-size: 15px">Sub Total</th>';
             echo '</tr>';
         } else {
             echo '<tr>';
-            echo '<th>Nama Barang / Pesanan</th>';
-            echo '<th>Jumlah</th>';
-            echo '<th>Harga @</th>';
-            echo '<th>Disc</th>';
-            echo '<th>Sub Total</th>';
+            echo '<th style="font-size: 15px">Nama Barang / Pesanan</th>';
+            echo '<th style="font-size: 15px">Jumlah</th>';
+            echo '<th style="font-size: 15px">Harga @</th>';
+            echo '<th style="font-size: 15px">Disc</th>';
+            echo '<th style="font-size: 15px">Sub Total</th>';
             echo '</tr>';
         }
         ?>
@@ -139,49 +140,43 @@
     </thead>
     <tbody>
         <?php
-        if ($id_company == '3' || $id_company == '4') {
+        if ($id_company == '3' || $id_company == '4' || $id_company == '5') {
         ?>
             <tr>
-                <td style="text-align: center; height: 200px; vertical-align: top;"><?= ucfirst($data_actual_plan_tagih->desc_payment) ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top;">1</td>
                 <td style="text-align: center; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top;"></td>
-                <td style="text-align: center; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top;">0%</td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="2"></td>
-                <td style="border-top: 1px solid black;">Discount Final</td>
-                <td style="text-align: center; border-top: 1px solid black;">:</td>
-                <td style="text-align: right; border-top: 1px solid black;">-</td>
-                <td style="text-align: center; border-top: 1px solid black;"></td>
+                <td style="border-top: 1px solid black;" width="150">DPP</td>
+                <td style="text-align: center; border-top: 1px solid black;" width="150">:</td>
+                <td style="text-align: right; border-top: 1px solid black;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
-                <td style="" colspan="2"></td>
-                <td style="">Pajak</td>
-                <td style="text-align: center; ">:</td>
-                <td style="text-align: right; ">-</td>
-                <td style="text-align: center; "></td>
+                <td colspan="2"></td>
+                <td width="150">DPP Lain-lain</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
             </tr>
             <tr>
-                <td style="" colspan="2"></td>
-                <td style="">Biaya Pengiriman</td>
-                <td style="text-align: center; ">:</td>
-                <td style="text-align: right; ">-</td>
-                <td style="text-align: center; "></td>
+                <td colspan="2"></td>
+                <td width="150">PPN 12% dari DPP lain</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_invoice->pajak) ?></td>
             </tr>
             <tr>
-                <td style="" colspan="2"></td>
-                <td style="">
-                    <span style="font-weight: bold;">Total</span>
+                <td colspan="2"></td>
+                <td style="font-weight: bold;" width="150">Total Tagihan + PPN</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?></td>
+            </tr>
+            <tr>
+                <td colspan="5" style="height: 50px; vertical-align: middle">
+                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
                 </td>
-                <td style="text-align: center; ">:</td>
-                <td style="text-align: right; ">
-                    <span style="font-weight: bold;">
-                        <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
-                    </span>
-                </td>
-                <td style="text-align: center; "></td>
             </tr>
             <tr>
                 <td colspan="4" rowspan="4" style="border-top: 1px solid black;">
@@ -196,7 +191,7 @@
                         <b>BCA Tebet Barat Acc. No 436.400.0300</b>
                         <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
                     <?php
-                    } else if ($id_company == '4') {
+                    } else if ($id_company == '4' || $id_company == '5') {
                     ?>
                         <b>PT. VUCA STRATEGI BISNIS</b><br>
                         <b>OCBC NISP Acc. No 7788.0000.0417</b>
@@ -215,7 +210,7 @@
                     <?php
                     if ($id_company == '3') {
                         echo '<b style="font-size: 14px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b>';
-                    } else if ($id_company == '4') {
+                    } else if ($id_company == '4' || $id_company == '5') {
                         echo '<b style="font-size: 14px;">PT. VUCA STRATEGI BISNIS</b>';
                     } else {
                         echo '<b style="font-size: 14px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>';
@@ -224,8 +219,7 @@
                 </td>
             </tr>
             <tr>
-                <td></td>
-                <td colspan="2" style="text-align: left;">
+                <td colspan="3" style="text-align: center;">
                     <?php
                     if ($id_company !== '3') {
                     ?>
@@ -266,39 +260,39 @@
         } else {
         ?>
             <tr>
-                <td style="text-align: center; height: 200px; vertical-align: top;"><?= $data_actual_plan_tagih->desc_payment ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top;">1</td>
                 <td style="text-align: center; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top;"></td>
-                <td style="text-align: center; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="2"></td>
-                <td style="border-top: 1px solid black;">Total</td>
-                <td style="text-align: center; border-top: 1px solid black;">:</td>
-                <td style="text-align: right; border-top: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="border-top: 1px solid black;" width="150">DPP</td>
+                <td style="text-align: center; border-top: 1px solid black;" width="150">:</td>
+                <td style="text-align: right; border-top: 1px solid black;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td>DPP Nilai Lain</td>
-                <td style="text-align: center;">:</td>
-                <td style="text-align: right;"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
+                <td width="150">DPP Lain-lain</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td>Pajak 12%</td>
-                <td style="text-align: center;">:</td>
-                <td style="text-align: right;"><?= number_format($data_invoice->pajak) ?></td>
+                <td width="150">PPN 12% dari DPP lain</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_invoice->pajak) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td style="font-weight: bold;">TOTAL</td>
-                <td style="text-align: center;">:</td>
-                <td style="text-align: right;"><?= number_format($data_invoice->total_akhir) ?></td>
+                <td style="font-weight: bold;" width="150">Total Tagihan + PPN</td>
+                <td style="text-align: center;" width="150">:</td>
+                <td style="text-align: right;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?></td>
             </tr>
             <tr>
-                <td colspan="5">
-                    <?= terbilang($data_invoice->total_akhir) . ' Rupiah' ?>
+                <td colspan="5" style="height: 50px; vertical-align: middle">
+                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
                 </td>
             </tr>
             <tr>
@@ -314,7 +308,7 @@
                         <b>OCBC NISP Acc. No 7788.0000.0417</b>
                         <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
                     <?php
-                    } else if ($id_company == '4') {
+                    } else if ($id_company == '4' || $id_company == '5') {
                     ?>
                         <b>PT. VUCA STRATEGI BISNIS</b><br>
                         <b>OCBC NISP Acc. No 7788.0000.0417</b>
@@ -334,8 +328,7 @@
                 </td>
             </tr>
             <tr>
-                <td></td>
-                <td colspan="2" style="text-align: left;">
+                <td colspan="3" style="text-align: center;">
                     <span style="color: #ccc; text-align: left !important; font-size: 10px;">
                         Digitally Signned By : <br>
                         Imanuel Iman <br>
