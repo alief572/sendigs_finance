@@ -17,9 +17,19 @@ class Admin_Controller extends Base_Controller
         $this->load->model('identitas_model');
 
         /*Check If user has logged in*/
-        if (!$this->auth->is_login())
-        {
+        if (!$this->auth->is_login()) {
             redirect('login');
+        }
+
+        if ($this->auth->userdata()->ga_secret && !$this->session->userdata('2fa_verified')) {
+            $this->session->set_flashdata('2FA belum diverifikasi. Silakan verifikasi terlebih dahulu.', 'danger');
+            redirect('users/verify_2fa');
+        } else if (!$this->session->userdata('2fa_verified')) {
+            $message = '<h3><strong>Penting!</strong></h3>
+            <p>Untuk meningkatkan keamanan akun, mulai per tanggal 1 Juli 2025 di berlakukan pengamanan <storng>Two Factor Authentication (2FA)</storng>. Untuk itu harap meng-aktifkan 2FA pada masing-masing akun. 
+             <a href="' . base_url('users/confirm_setup_2fa') . '"><i class="fa fa-key" aria-hidden="true"></i> Akftikan 2FA</a> lihat  <a target="_blank" href="' . base_url('user_guide') . '"><i class="fa fa-book" aria-hidden="true"></i> Panduan</a>. </p>';
+
+            $this->template->set_message($message, 'warning');
         }
 
         $idt         = $this->identitas_model->find(1);
@@ -54,12 +64,11 @@ class Admin_Controller extends Base_Controller
         $this->template->set_theme('admin');
         $this->template->set_layout('index');
         //Overwrite if the request is ajax
-        if($this->input->is_ajax_request())
-        {
+        if ($this->input->is_ajax_request()) {
             $this->template->set_layout('ajax');
         }
-        
-        $this->form_validation->set_error_delimiters('<p>','</p>');
+
+        $this->form_validation->set_error_delimiters('<p>', '</p>');
     }
 }
 /* End of file Admin_Controller.php */

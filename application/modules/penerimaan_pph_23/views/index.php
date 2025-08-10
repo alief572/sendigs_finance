@@ -135,11 +135,11 @@
             <thead>
                 <tr>
                     <th class="text-center">No.</th>
-                    <th class="text-center">Tanggal Transaksi</th>
-                    <th class="text-center">Reference No.</th>
-                    <th class="text-center">Bank</th>
-                    <th class="text-center">Keterangan</th>
-                    <th class="text-center">Nominal</th>
+                    <th class="text-center">No. Invoice</th>
+                    <th class="text-center">Customer</th>
+                    <th class="text-center">Project</th>
+                    <th class="text-center">Keterangan Invoice</th>
+                    <th class="text-center">Nilai PPh</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Action</th>
                 </tr>
@@ -194,26 +194,26 @@
             paging: true,
             ajax: {
                 type: 'post',
-                url: siteurl + active_controller + 'get_alokasi_penerimaan',
+                url: siteurl + active_controller + 'get_alokasi_penerimaan_pph23',
                 dataType: 'json'
             },
             columns: [{
                     data: 'no'
                 },
                 {
-                    data: 'tgl_transaksi_bank'
+                    data: 'no_invoice'
                 },
                 {
-                    data: 'reference_no'
+                    data: 'nm_customer'
                 },
                 {
-                    data: 'bank'
+                    data: 'nm_project'
                 },
                 {
-                    data: 'keterangan'
+                    data: 'keterangan_invoice'
                 },
                 {
-                    data: 'nominal'
+                    data: 'nilai_pph'
                 },
                 {
                     data: 'status'
