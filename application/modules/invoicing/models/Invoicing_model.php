@@ -111,7 +111,7 @@ class Invoicing_model extends BF_Model
 
                 $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
 
-                $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
+                // $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
 
                 $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
 

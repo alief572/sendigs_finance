@@ -65,23 +65,24 @@ class Auth
     public function login($username = "", $password = "")
     {
         if ($this->is_login()) {
-            redirect('Dashboard');
+            redirect('/');
+            // redirect('https://sentral.dutastudy.com/metalsindo_dev/');
         }
 
         $user     = $this->ci->users_model->find_by(array('username' => $username));
 
         if (!$user) {
-            $this->ci->template->set_message(lang('users_login_fail'), 'error');
+            $this->ci->template->set_message(lang('users_login_fail'), 'danger');
             return FALSE;
         }
 
         if ($user->deleted == 1) {
-            $this->ci->template->set_message(lang('users_already_deleted'), 'error');
+            $this->ci->template->set_message(lang('users_already_deleted'), 'danger');
             return FALSE;
         }
 
         if ($user->st_aktif == 0) {
-            $this->ci->template->set_message(lang('users_not_active'), 'error');
+            $this->ci->template->set_message(lang('users_not_active'), 'danger');
             return FALSE;
         }
 
@@ -95,19 +96,28 @@ class Auth
             $this->ci->session->set_userdata('app_session', $array);
             //Set User Data
             $this->user = $this->ci->session->userdata('app_session');
+
             //Update Login Terakhir
             $ip_address = ($this->ci->input->ip_address()) == "::1" ? "127.0.0.1" : $this->ci->input->ip_address();
+            $check_last_login = $this->ci->users_model->find($this->user_id());
+            $msg = "Halo, Selamat datang <strong>$check_last_login->nm_lengkap</strong>, Ini pertama kalinya kamu login di CSJ ERP sistem. <br>" . '<i>"' . $this->quot_msg($check_last_login) . '"</i>';
+            if ($check_last_login->login_terakhir) {
+                $msg = "Hai <strong>$check_last_login->nm_lengkap</strong>, Selamat datang kembali. <br>" . '<i>"' . $this->quot_msg($check_last_login) . '"</i>';
+            }
+
+            $this->ci->template->set_message($msg, 'info');
             $this->ci->users_model->update($this->user_id(), array('login_terakhir' => date('Y-m-d H:i:s'), 'ip' => $ip_address));
 
             $requested_page = $this->ci->session->userdata('requested_page');
             if ($requested_page != '') {
-                redirect("dashboard");
+                //redirect($requested_page);
+                redirect("/");
             }
 
-            redirect("dashboard");
+            redirect("/");
         }
 
-        $this->ci->template->set_message(lang('users_wrong_password'), 'error');
+        $this->ci->template->set_message(lang('users_wrong_password'), 'danger');
         $this->ci->template->message();
         return FALSE;
     }
@@ -213,5 +223,30 @@ class Auth
         // Inform the user of the lack of permission and redirect.
         $this->ci->template->set_message(lang('users_no_permission'), 'error');
         redirect($uri);
+    }
+
+    function quot_msg($data)
+    {
+        $ArrMsg = [
+            "Majulah dan lakukan yang terbaik hari ini, Semangat!!",
+            "Sebuah tindakan adalah dasar untuk mencapai kesuksesan. Kerja, kerja, kerja, hingga sukses ada di depan mata.",
+            "Kerja keras, kerja cerdas, dan kerja ikhlas untuk mencapai kesuksesan. Selamat bekerja, Kawan.",
+            "Happy working! Semangat terus kerjanya! Semoga pekerjaanmu dilancarkan, diberi rejeki yang melimpah dan berkah. Keep spirit!",
+            "Selamat pagi semesta. Terima apa yang sudah terjadi, ikhlaskan apa yang tidak bisa diubah, bentuklah apa yang masih bisa diperbaiki. Happy working ",
+            "Selamat pagi dunia. Aku selalu siap menerima tantangan yang Kamu berikan di hari yang cerah ini. Selamat beraktivitas!",
+            "Selamat pagi all. Mari jemput rezeki dengan sepenuh hati. Jangan lupa ngopi biar lupa rasanya sakit hati. Ahay, semangat kerja!",
+            "Jangan buang waktumu dengan melakukan hal yang kurang perlu. Fokuslah pada hal yang mampu membuatmu bertumbuh jadi lebih baik. Selamat bekerja! Fighting!",
+            "Jangan remehkan kekuatan doa. Seperti putaran kayuh sepeda, doa akan mengantarkanmu ke tujuan. Selamat pagi, selamat beraktivitas!",
+            "Selamat pagi, selamat bekerja, tetap semangat, jangan lupa bersyukur!",
+            "Kita dapat sukses apabila kita belajar dari kesalahan. Kerja keras dan berdoalah.",
+            "Jangan takut melangkah, ikuti tujuanmu dan kamu pasti akan bisa mencapainya. Selamat bekerja.",
+            "Formula dari sebuah kesuksesan adalah kerja keras dan tidak pernah menyerah.",
+            "Sukses tidak diukur menggunakan kekayaan, sukses adalah sebuah pencapaian yang kita inginkan. Selamat bekerja.",
+            "Untuk mendapatkan kesuksesan, keberanianmu harus lebih besar daripada ketakutanmu. Semangat dan kerja keras dengan tujuanmu.",
+            "Kesuksesan selalu disertai dengan kegagalan. Tumbuh dan berkembang untuk pekerjaanmu",
+
+        ];
+        $m = rand(0, 15);
+        return $ArrMsg[$m];
     }
 }

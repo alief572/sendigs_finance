@@ -149,8 +149,8 @@
                     <div class="form-group">
                         <label for="pph23_dipotong">PPH23 Dipotong <span class="text-red">*</span></label>
                         <select class="form-control form-control-sm" name="pph23_dipotong" id="pph23_dipotong">
-                            <option value="1">Ya</option>
-                            <option value="2">Tidak</option>
+                            <option value="Y">Ya</option>
+                            <option value="N">Tidak</option>
                         </select>
                     </div>
                 </div>
@@ -159,8 +159,8 @@
                         <div class="form-group">
                             <label for="customer">PPN Dipotong <span class="text-red">*</span></label>
                             <select class="form-control form-control-sm" name="ppn_dipotong" id="ppn_dipotong">
-                                <option value="1">Ya</option>
-                                <option value="2">Tidak</option>
+                                <option value="Y">Ya</option>
+                                <option value="N">Tidak</option>
                             </select>
                         </div>
                     </div>
@@ -176,13 +176,14 @@
                     <table class="table table-striped table_list">
                         <thead>
                             <tr>
-                                <th class="text-center">Tgl Inv</th>
-                                <th class="text-center">No Invoice</th>
-                                <th class="text-center">Customer</th>
+                                <th class="text-center">Tgl Invoice</th>
+                                <th class="text-center">Nomor Invoice</th>
                                 <th class="text-center">DPP</th>
+                                <th class="text-center">DPP Lain</th>
                                 <th class="text-center">PPN</th>
                                 <th class="text-center">PPH 23</th>
-                                <th class="text-center">Total</th>
+                                <th class="text-center">Tagihan + Ppn</th>
+                                <th class="text-center">Tagihan + Ppn + Pph</th>
                                 <th class="text-center">Saldo Piutang</th>
                                 <th class="text-center">Action</th>
                             </tr>
@@ -198,6 +199,9 @@
                 <br><br>
 
                 <div class="col-md-12">
+                    <a href="<?= base_url('penerimaan_uang') ?>" class="btn btn-sm btn-danger">
+                        <i class="fa fa-arrow-left"></i> Back
+                    </a>
                     <button type="submit" class="btn btn-sm btn-success btn_submit_process">
                         <i class="fa fa-refresh"></i> Process
                     </button>
@@ -211,7 +215,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-money"></span>&nbsp;Upload Rekening Koran</h4>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-money"></span>&nbsp;Penerimaan Piutang</h4>
             </div>
             <form action="" id="frm_data" enctype="multipart/form-data">
                 <div class="modal-body" id="MyModalBody">
@@ -315,6 +319,20 @@
         var ppn_dipotong = $('#ppn_dipotong').val();
         var nominal_penerimaan_bank = $('#nominal_penerimaan_bank').val();
 
+        var check_data = $('input[name="choose_inv\\[\\]"]:checked').length;
+        if (check_data < 1) {
+            swal({
+                type: 'warning',
+                title: 'Warning !',
+                text: 'Pilih data yang akan diproses !',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 3000
+            });
+
+            return false;
+        }
+
         if (customer == '') {
             swal({
                 type: 'warning',
@@ -377,4 +395,89 @@
             }
         });
     });
+
+    $(document).on('submit', '#frm_data', function(e) {
+        e.preventDefault();
+
+        var kontrol = get_num($('input[name="kontrol"]').val());
+
+        if (kontrol > 0) {
+            swal({
+                type: 'warning',
+                title: 'Warning !',
+                text: 'Kontrol tidak boleh lebih dari 0 !',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 3000
+            });
+
+            return false;
+        }
+
+        swal({
+            type: 'warning',
+            title: 'Are you sure ?',
+            text: 'Data yang sudah diproses tidak dapat diubah !',
+            showConfirmButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            confirmButtonColor: '#3085d6',
+        }, function(next) {
+            if (next) {
+                var data = $('#frm_data').serialize();
+                $.ajax({
+                    type: 'post',
+                    url: siteurl + active_controller + 'save_penerimaan_piutang',
+                    data: data,
+                    cache: false,
+                    dataType: 'json',
+                    success: function(result) {
+                        if (result.status == '1') {
+                            swal({
+                                type: 'success',
+                                title: 'Success !',
+                                text: result.message,
+                                showConfirmButton: false,
+                                allowOutsideClick: false,
+                                timer: 3000
+                            }, function(lanjut) {
+                                window.location.href = siteurl + active_controller;
+                            });
+                        } else {
+                            swal({
+                                type: 'warning',
+                                title: 'Warning !',
+                                text: result.message,
+                                showConfirmButton: false,
+                                allowOutsideClick: false,
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function(result) {
+                        swal({
+                            type: 'error',
+                            title: 'Error !',
+                            text: 'Please try again later !',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            timer: 3000
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    function get_num(nilai = null) {
+        if (nilai !== '' && nilai !== null) {
+            nilai = nilai.split(',').join('');
+            nilai = parseFloat(nilai);
+        } else {
+            nilai = 0;
+        }
+
+        return nilai;
+    }
 </script>

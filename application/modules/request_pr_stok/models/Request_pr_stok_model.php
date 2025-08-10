@@ -426,25 +426,25 @@ class Request_pr_stok_model extends BF_Model
 
       $nestedData   = array();
       $nestedData[]  = "<div align='center'>" . $nomor . "</div>";
-      $nestedData[]  = "<div align='left'>" . $row['id_stock'] . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['stock_name'] . "</div>";
 
       $STOCK_WRH    = (!empty($GET_WAREHOUSE_STOCK[$row['id']]['stok'])) ? $GET_WAREHOUSE_STOCK[$row['id']]['stok'] : 0;
       $stock_oke     = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
       $stock_oke2   = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
 
+      $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
+
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
-      $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
+      $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth * $konversi) . "</div>";
       $nestedData[]  = "<div align='right'>" . number_format($stock_oke, 2) . "</div>";
-      $nestedData[]  = "<div align='right'>" . number_format($stock_oke / $row['konversi'], 2) . "</div>";
       $nestedData[]  = "<div align='right'>" . number_format($row['max_stok']) . "</div>";
-      $nestedData[]  = "<div align='right'>" . number_format($row['konversi']) . "</div>";
-      $purchase = ($kebutuhnMonth * 1.5) - $stock_oke2;
+      $purchase = ($kebutuhnMonth) - $stock_oke2;
       $purchase2x = ($purchase < 0) ? 0 : $purchase;
       $purchase2 = (!empty($row['request'])) ? $row['request'] : $purchase2x;
 
       $purchase_value = ($purchase2 > 0) ? number_format($purchase2, 2) : '';
-      $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
+
+      $grand_total_val = ($purchase_value !== '') ? number_format($row['price_ref_high'] * $purchase2) : '';
 
       $purchase_value_pack = ($row['request_pack'] > 0) ? number_format($row['request_pack'], 2) : '';
 
@@ -454,21 +454,16 @@ class Request_pr_stok_model extends BF_Model
       $nestedData[]  = "<div align='right'>
 									<input type='text' name='purchase_" . $nomor . "' id='purchase_" . $nomor . "' value='" . $purchase_value . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' data-konversi='" . $row['konversi'] . "' class='form-control input-md text-right input_qty_satuan maskM changeSave purchase_" . $row['id'] . "' style='width:100%;'>
 								  </div><script type='text/javascript'>$('.maskM').autoNumeric('init', {mDec: '2', aPad: false});</script>";
+
       $nestedData[]  = "<div align='left'>
 									<select id='satuan_" . $nomor . "' class='chosen_select form-control input-md'><option value='" . $row['id_unit'] . "'>" . strtoupper($unit_sat) . "</option></select>	
 									<input type='hidden' name='tanggal_" . $nomor . "' id='tanggal_" . $nomor . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' class='form-control input-md tgl changeSave' style='width:100%;' readonly value='" . $tgl_next_month . "'></div>";
 
       $unit_packing   = get_name('ms_satuan', 'code', 'id', $row['id_unit_gudang']);
       $unit_pack = ($unit_packing != '0') ? $unit_packing : '';
-      $nestedData[]  = "<div align='right'>
-									<input type='text' name='purchase_pack_" . $nomor . "' id='purchase_pack_" . $nomor . "' value='" . ($purchase_value_pack) . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' data-konversi='" . $row['konversi'] . "' class='form-control input-md text-right input_qty_packing purchase_pack_" . $row['id'] . " maskM changeSave' style='width:100%;'>
-								  </div><script type='text/javascript'>$('.maskM').autoNumeric('init', {mDec: '2', aPad: false});</script>";
-      $nestedData[]  = "<div align='center'>" . strtoupper($unit_pack) . "</div>";
 
       $nestedData[]  = "<div align='left'>
-									<input type='text' name='spec_" . $nomor . "' id='spec_" . $nomor . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' class='form-control input-md changeSave' style='width:100%;' placeholder='Spec' value='" . $spec_pr . "'></div>";
-      $nestedData[]  = "<div align='left'>
-									<input type='text' name='info_" . $nomor . "' id='info_" . $nomor . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' class='form-control input-md changeSave' style='width:100%;' placeholder='Info' value='" . $info_pr . "'></div>
+									<input type='text' name='info_" . $nomor . "' id='info_" . $nomor . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' class='form-control input-md changeSave' style='width:100%;' placeholder='- Keterangan -' value='" . $info_pr . "'></div>
 									<style>.tgl{cursor:pointer;}</style>
 									<script type='text/javascript'>
 									$('.chosen_select').select2({width: '100%'});
@@ -479,11 +474,9 @@ class Request_pr_stok_model extends BF_Model
 										minDate : 0
 									});
 									</script>";
-      // $approve 		= "&nbsp;<button type='button' class='btn btn-sm btn-success save_pr' title='Save PR'  data-id='".$row['id']."' data-no='".$nomor."'><i class='fa fa-check'></i></button>";
-      // $nestedData[]	= 	"<div align='center'>
-      // 					".$approve."
-      // 					</div>";
+
       $nestedData[] = number_format($row['price_ref_high']);
+      $nestedData[] = '<div align="right">' . $grand_total_val . '</div>';
       $data[] = $nestedData;
       $urut1++;
       $urut2++;

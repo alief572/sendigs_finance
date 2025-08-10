@@ -96,7 +96,7 @@ class Alokasi_model extends BF_Model
                 } else if ($item['sts'] == '6') {
                     $txt = 'Pembayaran';
                 }
-                $status = '<span class="badge bg-green">' . strtoupper($txt) . '</span>';
+                $status = '<span class="badge bg-green">' . $txt . '</span>';
             }
 
             $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';

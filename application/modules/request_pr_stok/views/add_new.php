@@ -45,20 +45,15 @@
 				<thead>
 					<tr class='bg-blue'>
 						<th class="text-center" width='4%'>#</th>
-						<th class="text-center">Kode Barang</th>
-						<th class="text-center">Nama Barang</th>
-						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Packing)</th>
+						<th class="text-center no-sort" width="18%">Nama Barang</th>
+						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Konversi)</th>
 						<th class="text-center no-sort" width='7%'>Stock (Konversi)</th>
-						<th class="text-center no-sort" width='7%'>Stock (Packing)</th>
-						<th class="text-center no-sort" width='7%'>Max Stock</th>
-						<th class="text-center no-sort" width='7%'>Konversi</th>
+						<th class="text-center no-sort" width='7%'>Max Stock (Konversi)</th>
 						<th class="text-center no-sort" width='8%'>Propose Purchase <br> (Konversi)</th>
-						<th class="text-center no-sort" width='8%'>Unit</th>
-						<th class="text-center no-sort" width='8%'>Propose Purchase (Packing)</th>
-						<th class="text-center no-sort" width='5%'>Unit Packing</th>
-						<th class="text-center no-sort" width='8%'>Spec</th>
-						<th class="text-center no-sort" width='8%'>Info</th>
+						<th class="text-center no-sort" width='8%'>Unit Konversi</th>
+						<th class="text-center no-sort" width='15%'>Keterangan</th>
 						<th class="text-center no-sort" width='8%'>Price Reference</th>
+						<th class="text-center no-sort" width='8%'>Grand Total</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -243,37 +238,37 @@
 	$(document).on('change', '.changeSave', function() {
 		var id = $(this).data('id');
 		var qty_satuan = $(this).val();
-		if (qty_satuan == '' || qty_satuan == null) {
-			qty_satuan = 0;
-		} else {
-			qty_satuan = qty_satuan.split(',').join('');
-			qty_satuan = parseFloat(qty_satuan);
-		}
+		// if (qty_satuan == '' || qty_satuan == null) {
+		// 	qty_satuan = 0;
+		// } else {
+		// 	qty_satuan = qty_satuan.split(',').join('');
+		// 	qty_satuan = parseFloat(qty_satuan);
+		// }
 
-		var konversi = $(this).data('konversi');
-		if (konversi == '' || konversi == 0 || konversi == null) {
-			konversi = 1;
-		}
+		// var konversi = $(this).data('konversi');
+		// if (konversi == '' || konversi == 0 || konversi == null) {
+		// 	konversi = 1;
+		// }
 
-		var nilai = (qty_satuan / konversi);
+		// var nilai = (qty_satuan / konversi);
 
-		var qty = $('.purchase_' + id).val().split(",").join("");
+		// var qty = $('.purchase_' + id).val().split(",").join("");
 
 		var nomor = $(this).data('no');
 		var id_material = $(this).data('id');
-		var input_pack = $('#purchase_pack_' + nomor).val().split(",").join("");
+		// var input_pack = $('#purchase_pack_' + nomor).val().split(",").join("");
 		var purchase = $('#purchase_' + nomor).val().split(",").join("");
-		if ($(this).hasClass('input_qty_packing')) {
-			purchase = (input_pack * konversi);
-		}
-		var purchase_pack = $('#purchase_pack_' + nomor).val().split(",").join("");
-		if ($(this).hasClass('input_qty_satuan')) {
-			purchase_pack = (purchase / konversi);
-		}
+		// if ($(this).hasClass('input_qty_packing')) {
+		// 	purchase = (input_pack * konversi);
+		// }
+		// var purchase_pack = $('#purchase_pack_' + nomor).val().split(",").join("");
+		// if ($(this).hasClass('input_qty_satuan')) {
+		// 	purchase_pack = (purchase / konversi);
+		// }
 		// var tanggal 	= $('#tanggal_'+nomor).val();
 		var tanggal = $('#tgl_butuh').val();
 		var satuan = $('#satuan_' + nomor).val();
-		var spec = $('#spec_' + nomor).val();
+		// var spec = $('#spec_' + nomor).val();
 		var info = $('#info_' + nomor).val();
 
 		$.ajax({
@@ -282,9 +277,7 @@
 			data: {
 				"id_material": id_material,
 				"purchase": purchase,
-				"purchase_pack": purchase_pack,
 				"tanggal": tanggal,
-				"spec": spec,
 				"info": info,
 				"satuan": satuan
 			},

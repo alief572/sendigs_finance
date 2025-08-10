@@ -6,14 +6,14 @@ $total_akhir = ($total_nominal + $pajak);
 $dpp_lain_lain = ($total_nominal * 11 / 12);
 
 $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$ppn = ($dpp_nilai_lain * 12 / 100);
+$ppn = ($dpp_lain_lain * 12 / 100);
 $pph = ($total_nominal * 2 / 100);
 $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 ?>
 <div class="box">
     <form action="" method="post" id="frm-data">
         <input type="hidden" name="id" value="<?= $data_actual->id ?>">
-        <div class=" box-body">
+        <div class="box-body">
             <div class="col-6">
                 <table width="100%" border="0">
                     <tr>
@@ -67,10 +67,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
             </table>
         </div>
 
-        <div class="box-body">
+        <!-- <div class="box-body">
             <table class="table table-bordered">
                 <tr>
-                    <th width="10%">Total Nominal</th>
+                    <th width="10%">DPP</th>
                     <td class="text-right">
                         Rp. <?= number_format($total_nominal, 2) ?>
                         <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
@@ -84,7 +84,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">Pajak</th>
+                    <th width="10%">PPn 12% dari DPP Lain</th>
                     <td class="text-right">
                         Rp. <?= number_format($pajak, 2) ?>
                         <input type="hidden" name="pajak" value="<?= $pajak ?>">
@@ -98,7 +98,12 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                     </td>
                 </tr>
             </table>
-        </div>
+        </div> -->
+
+        <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
+        <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
+        <input type="hidden" name="pajak" value="<?= $pajak ?>">
+        <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
 
         <div class="box-body">
             <table class="table table-bordered">
@@ -208,7 +213,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                             swal({
                                 type: 'success',
                                 title: 'Success !',
-                                text: result.msg
+                                text: result.msg,
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                timer: 3000
                             }, function(lanjut) {
                                 window.location.href = siteurl + active_controller;
                             });
@@ -216,7 +224,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                             swal({
                                 type: 'warning',
                                 title: 'Failed !',
-                                text: result.msg
+                                text: result.msg,
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                timer: 3000
                             });
                         }
                     },
@@ -224,7 +235,10 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                         swal({
                             type: 'error',
                             title: 'Error !',
-                            text: 'Please try again later !'
+                            text: 'Please try again later !',
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            timer: 3000
                         });
                     }
                 });
