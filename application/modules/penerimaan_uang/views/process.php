@@ -306,7 +306,7 @@
 
         }
 
-        var grand_total = (ttl_penerimaan - ttl_biaya_admin);
+        var grand_total = (ttl_penerimaan + ttl_biaya_admin);
         var kontrol = (grand_total - uang_masuk);
 
         $('input[name="total_penerimaan"]').autoNumeric('set', ttl_penerimaan);
