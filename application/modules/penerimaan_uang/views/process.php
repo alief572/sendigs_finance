@@ -284,7 +284,7 @@
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1030-10-1') {
-                    var resp_piutang = number_format(penerimaan);
+                    var resp_piutang = number_format(piutang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
