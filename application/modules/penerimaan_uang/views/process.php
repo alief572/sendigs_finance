@@ -276,6 +276,7 @@
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
         for (i = 1; i <= no; i++) {
+            var piutang = get_num($('input[name="piutang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
 
@@ -284,7 +285,7 @@
                 index = index + 1;
                 if (value == '1030-10-1') {
                     var resp_piutang = number_format(penerimaan);
-                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + penerimaan + '">';
+                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
                 }
