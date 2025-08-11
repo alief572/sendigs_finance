@@ -190,7 +190,7 @@
                         </thead>
                         <tbody class="tbody_list">
                             <tr>
-                                <td colspan="" class="text-center">No Data Found</td>
+                                <td colspan="10" class="text-center">No Data Found</td>
                             </tr>
                         </tbody>
                     </table>
@@ -211,7 +211,7 @@
     </div>
 </div>
 <div class="modal" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg" style="width: 95% !important;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
