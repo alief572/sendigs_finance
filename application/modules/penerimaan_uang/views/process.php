@@ -279,8 +279,6 @@
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
 
-            penerimaan = (penerimaan + biaya_admin);
-
             var coa_jurnal = ['1030-10-1', '7010-20-5'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;

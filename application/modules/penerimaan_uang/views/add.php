@@ -190,7 +190,7 @@
                         </thead>
                         <tbody class="tbody_list">
                             <tr>
-                                <td colspan="9" class="text-center">No Data Found</td>
+                                <td colspan="" class="text-center">No Data Found</td>
                             </tr>
                         </tbody>
                     </table>
@@ -305,7 +305,7 @@
             });
         } else {
             var hasil = '<tr>';
-            hasil += '<td colspan="9" class="text-center">No Data Found</td>';
+            hasil += '<td colspan="10" class="text-center">No Data Found</td>';
             hasil += '</tr>';
         }
     });
