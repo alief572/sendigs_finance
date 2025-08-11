@@ -160,8 +160,8 @@
     </tbody>
     <tbody>
         <tr>
-            <td colspan="8" class="text-right">Total</td>
-            <td>
+            <td colspan="7" class="text-right">Total</td>
+            <td colspan="2">
                 <input type="text" name="total_piutang" id="total_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
             </td>
             <td>
