@@ -160,8 +160,8 @@
     </tbody>
     <tbody>
         <tr>
-            <td colspan="8" class="text-right">Total</td>
-            <td>
+            <td colspan="7" class="text-right">Total</td>
+            <td colspan="2">
                 <input type="text" name="total_piutang" id="total_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
             </td>
             <td>
@@ -276,6 +276,7 @@
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
         for (i = 1; i <= no; i++) {
+            var piutang = get_num($('input[name="piutang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
 
@@ -283,8 +284,8 @@
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1030-10-1') {
-                    var resp_piutang = number_format(penerimaan);
-                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + penerimaan + '">';
+                    var resp_piutang = number_format(piutang);
+                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
                 }
@@ -306,7 +307,7 @@
 
         }
 
-        var grand_total = (ttl_penerimaan - ttl_biaya_admin);
+        var grand_total = (ttl_penerimaan + ttl_biaya_admin);
         var kontrol = (grand_total - uang_masuk);
 
         $('input[name="total_penerimaan"]').autoNumeric('set', ttl_penerimaan);
