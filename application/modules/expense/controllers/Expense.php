@@ -1609,9 +1609,6 @@ class Expense extends Admin_Controller
 	// list finance transport
 	public function transport_req_fin()
 	{
-		$data = $this->Expense_model->GetListDataTransportRequest('', array('a.status' => '0'));
-		$this->template->set('results', $data);
-		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengecekan Finance Penggantian Transport');
 		$this->template->render('transport_req_fin_list');
@@ -2808,5 +2805,13 @@ class Expense extends Admin_Controller
 	public function get_data_transport_input()
 	{
 		$this->Expense_model->get_data_transport_input();
+	}
+	public function get_data_transport_req_fin_list()
+	{
+		$this->Expense_model->get_data_transport_req_fin_list();
+	}
+	public function get_data_transport_req()
+	{
+		$this->Expense_model->get_data_transport_req();
 	}
 }

@@ -2510,34 +2510,7 @@ class Pembayaran_material extends Admin_Controller
 
 	public function list_request_payment($jenis_payment)
 	{
-		if ($jenis_payment == 1) {
-			$results = $this->db
-				->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan')
-				->from('payment_approve a')
-				->join('tr_expense b', 'b.no_doc = a.no_doc')
-				->where('a.status <>', 2)
-				->where('b.exp_inv_po', 1)
-				->group_by('a.id')
-				->order_by('a.created_on', 'DESC')
-				->get()
-				->result();
-		} else {
-			$results = $this->db
-				->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan')
-				->from('payment_approve a')
-				->join('tr_expense b', 'b.no_doc = a.no_doc', 'left')
-				->where('a.status <>', 2)
-				->group_start()
-				->where('b.exp_inv_po <>', 1)
-				->or_where('b.exp_inv_po', null)
-				->group_end()
-				->group_by('a.id')
-				->order_by('a.created_on', 'DESC')
-				->get()
-				->result();
-		}
-
-		$this->template->set('results', $results);
+		$this->template->set('jenis_payment', $jenis_payment);
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');
 	}
@@ -2891,5 +2864,10 @@ class Pembayaran_material extends Admin_Controller
 		} else {
 			$this->db->trans_commit();
 		}
+	}
+
+	public function get_list_req_payment()
+	{
+		$this->Pembayaran_material_model->get_list_req_payment();
 	}
 }
