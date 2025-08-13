@@ -1123,7 +1123,7 @@ class Expense extends Admin_Controller
 									'doc_file' => $filenames,
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => $id_expense_detail[$keys],
+									'id_expense_detail' => (!empty($id_expense_detail[$keys])) ? $id_expense_detail[$keys] : '',
 									'kasbon_pr_non_po_pett' => $post['kasbon_pr_non_po_' . $detail_id[$keys]]
 								);
 
@@ -1145,7 +1145,7 @@ class Expense extends Admin_Controller
 									'doc_file' => $filenames,
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => $id_expense_detail[$keys],
+									'id_expense_detail' => (!empty($id_expense_detail[$keys])) ? $id_expense_detail[$keys] : '',
 									'id_expense_bayar_sisa' => $post['pengembalian_expense_' . $detail_id[$keys]]
 								);
 
@@ -1181,7 +1181,7 @@ class Expense extends Admin_Controller
 									'id_kasbon' => (($id_kasbon[$keys]) ? $id_kasbon[$keys] : null),
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => (($id_expense_detail[$keys]) ? $id_expense_detail[$keys] : null)
+									'id_expense_detail' => (!empty($id_expense_detail[$keys]) ? $id_expense_detail[$keys] : null)
 								);
 							}
 							$this->db->update('tr_expense_detail', $data_detail, ['id' => $id_detail[$keys]]);
@@ -1228,7 +1228,7 @@ class Expense extends Admin_Controller
 									'created_on' => date("Y-m-d h:i:s"),
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => $id_expense_detail[$keys],
+									'id_expense_detail' => (!empty($id_expense_detail[$keys])) ? $id_expense_detail[$keys] : '',
 									'kasbon_pr_non_po_pett' => $post['kasbon_pr_non_po_' . $detail_id[$keys]]
 								);
 
@@ -1252,7 +1252,7 @@ class Expense extends Admin_Controller
 									'created_on' => date("Y-m-d h:i:s"),
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => $id_expense_detail[$keys],
+									'id_expense_detail' => (!empty($id_expense_detail[$keys])) ? $id_expense_detail[$keys] : '',
 									'id_expense_bayar_sisa' => $post['pengembalian_expense_' . $detail_id[$keys]]
 								);
 
@@ -1289,7 +1289,7 @@ class Expense extends Admin_Controller
 									'created_on' => date("Y-m-d h:i:s"),
 									'modified_by' => $this->auth->user_name(),
 									'modified_on' => date("Y-m-d h:i:s"),
-									'id_expense_detail' => $id_expense_detail[$keys]
+									'id_expense_detail' => (!empty($id_expense_detail[$keys])) ? $id_expense_detail[$keys] : ''
 								);
 							}
 							$this->All_model->dataSave('tr_expense_detail', $data_detail);
