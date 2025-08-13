@@ -99,6 +99,9 @@ class Penerimaan_uang extends Admin_Controller
     {
         $post = $this->input->post();
 
+        $pph23_dipotong = $post['pph23_dipotong'];
+        $ppn_dipotong = $post['ppn_dipotong'];
+
         $get_alokasi = $this->db->get_where('tr_alokasi_detail', ['id' => $post['id_alokasi']])->row_array();
 
         $uang_masuk = ($get_alokasi['nominal_debit'] < 0) ? $get_alokasi['nominal_kredit'] : $get_alokasi['nominal_debit'];
@@ -136,6 +139,11 @@ class Penerimaan_uang extends Admin_Controller
             $coa_bank = (!empty($get_bank)) ? $get_bank['coa_bank'] : '';
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
+            $saldo_piutang = $get_inv['saldo_piutang'];
+            if ($pph23_dipotong == 'N') {
+                $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
+            }
+
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
             $hasil .= date('d-F-Y', strtotime($get_inv['created_date']));
@@ -147,10 +155,10 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">' . number_format($get_inv['saldo_piutang']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">';
-            $hasil .= number_format($get_inv['total_akhir_jurnal']);
-            $hasil .= '<input type="hidden" name="piutang_' . $no . '" value="' . $get_inv['total_akhir_jurnal'] . '">';
+            $hasil .= number_format($saldo_piutang);
+            $hasil .= '<input type="hidden" name="piutang_' . $no . '" value="' . $saldo_piutang . '">';
             $hasil .= '</td>';
             $hasil .= '<td class="text-left">';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" onkeyup="hitungAll()">';
@@ -160,7 +168,7 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            $total_piutang += ($get_inv['total_akhir_jurnal']);
+            $total_piutang += ($saldo_piutang);
 
             if ($no == 1) {
                 $hasil_jurnal .= '<tr>';
