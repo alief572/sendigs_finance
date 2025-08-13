@@ -1495,7 +1495,7 @@ class Expense extends Admin_Controller
 								'coa' => (isset($coa[$keys]) ? $coa[$keys] : ""),
 								'created_by' => $this->auth->user_name(),
 								'created_on' => date("Y-m-d h:i:s"),
-								'id_expense_detail' => (($id_expense_detail[$keys]) ? $id_expense_detail[$keys] : null)
+								'id_expense_detail' => (!empty($id_expense_detail[$keys]) ? $id_expense_detail[$keys] : null)
 							);
 						}
 
