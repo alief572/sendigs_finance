@@ -339,7 +339,7 @@ class Expense_model extends BF_Model
 		$start = $this->input->post('start');
 		$search = $this->input->post('search');
 
-		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.nama, a.keperluan, a.nopol, a.status, a.created_by as nmuser');
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.nama, a.keperluan, a.nopol, a.status, (a.bensin + a.tol + a.parkir + a.lainnya) as ttl_transport, a.created_by as nmuser');
 		$this->db->from('tr_transport a');
 		$this->db->where('a.created_by', $this->auth->user_name());
 		if (!empty($search['value'])) {
@@ -349,6 +349,7 @@ class Expense_model extends BF_Model
 			$this->db->or_like('a.nama', $search['value'], 'both');
 			$this->db->group_end();
 		}
+		$this->db->group_by('a.id');
 		$this->db->order_by('a.id', 'desc');
 
 		$db_clone = clone $this->db;
@@ -399,6 +400,7 @@ class Expense_model extends BF_Model
 				'nama' => $item->nama,
 				'keperluan' => $item->keperluan,
 				'no_polisi' => $item->nopol,
+				'total' => number_format($item->ttl_transport),
 				'status' => $status,
 				'action' => $action
 			];
@@ -570,8 +572,9 @@ class Expense_model extends BF_Model
 				'no_transport' => $item->no_doc,
 				'tanggal' => date('d F Y', strtotime($item->tgl_doc)),
 				'nama' => $item->nmuser,
+				'total' => number_format($item->jumlah_expense),
 				'status' => $status,
-				'action' => $action,
+				'action' => $action
 			];
 		}
 
