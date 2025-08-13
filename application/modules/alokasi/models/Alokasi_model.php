@@ -42,7 +42,7 @@ class Alokasi_model extends BF_Model
         $endDate = $this->input->post('endDate');
         $bank = $this->input->post('bank');
 
-        $this->db->select('a.id, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, a.sts, b.nama_bank, c.rekening, c.nama');
+        $this->db->select('a.id, a.keterangan, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, a.sts, b.nama_bank, c.rekening, c.nama');
         $this->db->from('tr_alokasi_detail a');
         $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
         $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
@@ -113,6 +113,7 @@ class Alokasi_model extends BF_Model
                 'no' => $no,
                 'tanggal_transaksi' => $tanggal_transaksi,
                 'bank' => $item['nama_bank'] . ' - ' . $item['rekening'] . ' - ' . $item['nama'],
+                'keterangan' => $item['keterangan'],
                 'debit' => number_format($item['nominal_debit'], 2),
                 'kredit' => number_format($item['nominal_kredit'], 2),
                 'saldo' => number_format($item['saldo'], 2),
