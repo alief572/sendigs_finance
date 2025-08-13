@@ -1630,9 +1630,6 @@ class Expense extends Admin_Controller
 	// list pengajuan transport
 	public function transport_req()
 	{
-		$data = $this->Expense_model->GetListDataTransportRequest($this->auth->user_name());
-		$this->template->set('results', $data);
-		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengajuan Penggantian Transport');
 		$this->template->render('transport_req_list');
@@ -1773,10 +1770,6 @@ class Expense extends Admin_Controller
 	// list transport
 	public function transport()
 	{
-		$data = $this->Expense_model->GetListDataTransport($this->auth->user_name());
-		$this->template->set('results', $data);
-		$dt_status = array("0" => "Baru", "1" => "Diajukan", "2" => "Disetujui Management", "3" => "Selesai");
-		$this->template->set('status', $dt_status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Transportasi');
 		$this->template->render('transport_list');
