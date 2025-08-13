@@ -167,6 +167,7 @@
                     <th class="text-center">No.</th>
                     <th class="text-center">Tanggal Transaksi Bank</th>
                     <th class="text-center">Bank</th>
+                    <th class="text-center">Keterangan</th>
                     <th class="text-center">Total Debit</th>
                     <th class="text-center">Total Credit</th>
                     <th class="text-center">Saldo Akhir</th>
@@ -507,6 +508,9 @@
                 },
                 {
                     data: 'bank'
+                },
+                {
+                    data: 'keterangan'
                 },
                 {
                     data: 'debit'
