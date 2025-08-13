@@ -338,6 +338,7 @@ class Invoicing extends Admin_Controller
             'pph_jurnal' => $post['pph_jurnal'],
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
+            'saldo_piutang_tanpa_pph' => $post['total_tagihan_ppn'],
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s')
         ];
