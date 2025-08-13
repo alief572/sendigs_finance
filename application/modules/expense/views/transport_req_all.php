@@ -17,6 +17,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 						<th>Tanggal</th>
 						<th>Nama</th>
 						<th>Approval Date</th>
+						<th>Total Transport</th>
 						<th>Status</th>
 						<th width="120">Action</th>
 					</tr>
@@ -33,6 +34,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 								<td><?= $record->tgl_doc ?></td>
 								<td><?= $record->nmuser ?></td>
 								<td><?= $record->approved_on ?></td>
+								<td class="text-right"><?= number_format($record->jumlah_expense) ?></td>
 								<td><?= $status[$record->status] ?></td>
 								<td>
 									<?php if ($ENABLE_VIEW) : ?>
@@ -59,6 +61,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 						<th>Pemohon</th>
 						<th>Keperluan</th>
 						<th>Tanggal Transaksi</th>
+						<th>Total Transport</th>
 						<th>Status</th>
 						<th>Tanggal ACC</th>
 						<th width="120">Action</th>
@@ -77,6 +80,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 								<td><?= $record->nmuser ?></td>
 								<td><?= $record->keperluan ?></td>
 								<td><?= $record->tgl_trans ?></td>
+								<td class="text-right"><?= number_format($record->jumlah_expense) ?></td>
 								<td><?= $status[$record->status] ?></td>
 								<td><?= $record->approved_on ?></td>
 								<td>

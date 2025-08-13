@@ -28,6 +28,7 @@ $ENABLE_DELETE  = has_permission('Transportasi.Delete');
 						<th>Nama</th>
 						<th>Keperluan</th>
 						<th>No. Polisi</th>
+						<th>Total Transport</th>
 						<th>Status</th>
 						<th width="120">Action</th>
 					</tr>
@@ -81,6 +82,9 @@ $ENABLE_DELETE  = has_permission('Transportasi.Delete');
 				},
 				{
 					data: 'no_polisi'
+				},
+				{
+					data: 'total'
 				},
 				{
 					data: 'status'
