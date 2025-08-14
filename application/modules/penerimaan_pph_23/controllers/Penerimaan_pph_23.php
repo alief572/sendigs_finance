@@ -37,7 +37,7 @@ class Penerimaan_pph_23 extends Admin_Controller
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
-        $this->db->where('c.pph23_dipotong', 'N');
+        $this->db->where('c.pph23_dipotong', 'Y');
         $this->db->where('a.id', $id_penerimaan_piutang);
         $get_data_penerimaan = $this->db->get()->row_array();
 
