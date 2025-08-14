@@ -130,7 +130,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
-        $this->db->where('c.pph23_dipotong', 'N');
+        $this->db->where('c.pph23_dipotong', 'Y');
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_inv', $search['value'], 'both');
