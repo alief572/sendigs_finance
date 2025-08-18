@@ -149,8 +149,8 @@
                     <div class="form-group">
                         <label for="pph23_dipotong">PPH23 Dipotong <span class="text-red">*</span></label>
                         <select class="form-control form-control-sm" name="pph23_dipotong" id="pph23_dipotong">
-                            <option value="Y">Ya</option>
-                            <option value="N">Tidak</option>
+                            <option value="Y">Dipotong PPH</option>
+                            <option value="N">Tidak Dipotong PPH</option>
                         </select>
                     </div>
                 </div>
@@ -159,8 +159,8 @@
                         <div class="form-group">
                             <label for="customer">PPN Dipotong <span class="text-red">*</span></label>
                             <select class="form-control form-control-sm" name="ppn_dipotong" id="ppn_dipotong">
-                                <option value="Y">Ya</option>
-                                <option value="N">Tidak</option>
+                                <option value="Y">Dipotong PPN</option>
+                                <option value="N">Tidak Dipotong PPN</option>
                             </select>
                         </div>
                     </div>
