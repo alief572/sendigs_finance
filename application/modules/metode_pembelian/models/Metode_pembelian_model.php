@@ -387,12 +387,12 @@ class Metode_pembelian_model extends BF_Model
 					b.nm_lengkap as by_name,
 					a.created_date as tgl_buat
 				FROM
-					material_planning_base_on_produksi a
-					LEFT JOIN users b ON b.id_user = a.created_by
-					JOIN material_planning_base_on_produksi_detail c ON c.so_number = a.so_number AND c.status_app = 'Y'
+					db_sendigs_ss.material_planning_base_on_produksi a
+					LEFT JOIN db_sendigs_ss.users b ON b.id_user = a.created_by
+					JOIN db_sendigs_ss.material_planning_base_on_produksi_detail c ON c.so_number = a.so_number AND c.status_app = 'Y'
 				WHERE
 					a.category IN ('pr material', 'pr stok') AND
-					a.metode_pembelian IS NULL AND
+					a.metode_pembelian IS NOT NULL AND
 					(
 						a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
 						a.tgl_so LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
@@ -407,27 +407,28 @@ class Metode_pembelian_model extends BF_Model
 				SELECT
 					a.no_pr as no_pr,
 					a.created_date as tgl_pr,
-					b.nama as departemen,
+					b.name as departemen,
 					'Department' as category,
 					c.nm_lengkap as by_name,
 					a.created_date as tgl_buat
 				FROM
-					rutin_non_planning_header a
-					LEFT JOIN ms_department b ON b.id = a.id_dept
-					LEFT JOIN users c ON c.id_user = a.created_by
+					db_sendigs_ss.rutin_non_planning_header a
+					LEFT JOIN hr_sentral.departments b ON b.id = a.id_dept
+					LEFT JOIN db_sendigs_ss.users c ON c.id_user = a.created_by
 				WHERE
 					a.sts_app = 'Y' AND 
-					a.metode_pembelian IS NULL AND (
+					a.metode_pembelian IS NOT NULL AND (
 						a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
 						a.created_date LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
-						b.nama LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
+						b.name LIKE '%" . $this->db->escape_like_str($like_value) . "%' OR
 						c.nm_lengkap LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 					)
 				GROUP BY a.no_pr
 			";
 		}
 
-		// echo $sql; exit;
+		// echo $sql;
+		// exit;
 
 		$data['totalData'] = $this->db->query($sql)->num_rows();
 		$data['totalFiltered'] = $this->db->query($sql)->num_rows();
