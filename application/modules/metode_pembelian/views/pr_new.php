@@ -1,10 +1,10 @@
-<?php 
+<?php
 $ENABLE_ADD     = has_permission('Metode_Pembelian.Add');
 $ENABLE_MANAGE  = has_permission('Metode_Pembelian.Manage');
 $ENABLE_VIEW    = has_permission('Metode_Pembelian.View');
 $ENABLE_DELETE  = has_permission('Metode_Pembelian.Delete');
 ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.5/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css">
 <form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data">
 	<div class="box box-primary">
 		<div class="box-header">
@@ -67,7 +67,7 @@ $ENABLE_DELETE  = has_permission('Metode_Pembelian.Delete');
 	</div>
 </form>
 
-<script src="https://cdn.datatables.net/2.0.5/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 
 <script>
 	$(document).ready(function() {
@@ -87,7 +87,7 @@ $ENABLE_DELETE  = has_permission('Metode_Pembelian.Delete');
 			$.ajax({
 				type: 'POST',
 				url: base_url + active_controller + '/modal_detail_pr/',
-				data : {
+				data: {
 					'no_pr_group': $(this).data('no_pr_group'),
 					'tipe_pr': $(this).data('tipe_pr')
 				},
