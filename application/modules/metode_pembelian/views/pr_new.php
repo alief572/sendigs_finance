@@ -37,6 +37,7 @@ $ENABLE_DELETE  = has_permission('Metode_Pembelian.Delete');
 						<th class="text-center">Tgl PR</th>
 						<th class="text-center">Departemen</th>
 						<th class="text-center">Category</th>
+						<th class="text-center">Metode Pembelian</th>
 						<th class="text-center">By</th>
 						<th class="text-center">Date</th>
 						<th class="text-center">#</th>

@@ -254,7 +254,14 @@ class Metode_pembelian_model extends BF_Model
 				$category = 'departemen';
 			}
 
+			if ($row['metode_pembelian'] == '1') {
+				$metode_pembelian = '<span class="badge" style="background-color: #ff3300;">PO</span>';
+			} else {
+				$metode_pembelian = '<span class="badge" style="background-color: #0066ff;">NON PO</span>';
+			}
+
 			$nestedData[]	= "<div align='center'><span class='badge' style='background-color: " . $warna . ";'>" . strtoupper($category) . "</span></div>";
+			$nestedData[]	= "<div align='center'>" . $metode_pembelian . "</div>";
 			$nestedData[]	= "<div align='center'>" . strtoupper($row['by_name']) . "</div>";
 			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i:s', strtotime($row['tgl_buat'])) . "</div>";
 			$nestedData[]	= "<div align='center'>
@@ -315,6 +322,7 @@ class Metode_pembelian_model extends BF_Model
 						'Department' as category,
 						c.nm_lengkap as by_name,
 						a.created_date as tgl_buat
+						a.metode_pembelian as metode_pembelian
 					FROM
 						rutin_non_planning_header a
 						LEFT JOIN ms_department b ON b.id = a.id_dept
@@ -336,7 +344,8 @@ class Metode_pembelian_model extends BF_Model
 						'PPIC' as departemen,
 						a.category as category,
 						b.nm_lengkap as by_name,
-						a.created_date as tgl_buat
+						a.created_date as tgl_buat,
+						a.metode_pembelian as metode_pembelian
 					FROM
 						material_planning_base_on_produksi a
 						LEFT JOIN users b ON b.id_user = a.created_by
@@ -360,7 +369,8 @@ class Metode_pembelian_model extends BF_Model
 						'PPIC' as departemen,
 						a.category as category,
 						b.nm_lengkap as by_name,
-						a.created_date as tgl_buat
+						a.created_date as tgl_buat,
+						a.metode_pembelian as metode_pembelian
 					FROM
 						material_planning_base_on_produksi a
 						LEFT JOIN users b ON b.id_user = a.created_by
@@ -385,7 +395,8 @@ class Metode_pembelian_model extends BF_Model
 					'PPIC' as departemen,
 					a.category as category,
 					b.nm_lengkap as by_name,
-					a.created_date as tgl_buat
+					a.created_date as tgl_buat,
+					a.metode_pembelian as metode_pembelian
 				FROM
 					db_sendigs_ss.material_planning_base_on_produksi a
 					LEFT JOIN db_sendigs_ss.users b ON b.id_user = a.created_by
@@ -410,7 +421,8 @@ class Metode_pembelian_model extends BF_Model
 					b.name as departemen,
 					'Department' as category,
 					c.nm_lengkap as by_name,
-					a.created_date as tgl_buat
+					a.created_date as tgl_buat,
+					a.metode_pembelian as metode_pembelian
 				FROM
 					db_sendigs_ss.rutin_non_planning_header a
 					LEFT JOIN hr_sentral.departments b ON b.id = a.id_dept
