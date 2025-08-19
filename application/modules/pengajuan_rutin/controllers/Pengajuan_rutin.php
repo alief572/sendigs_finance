@@ -82,6 +82,19 @@ class Pengajuan_rutin extends Admin_Controller
 		//		if($datauser) $departemen=$datauser->departemen;
 		$data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.status' => 0));
 		$datdept  = $this->All_model->GetDeptCombo();
+
+		$arr_dept = [];
+
+		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		$get_dept = $this->hris->get()->result();
+
+		foreach ($get_dept as $item_dept) {
+			$arr_dept[$item_dept->id] = $item_dept->nm_dept . ' - ' . $item_dept->nm_comp;
+		}
+
+		$this->template->set('arr_dept', $arr_dept);
 		$this->template->set('datdept', $datdept);
 		$this->template->set('results', $data);
 		$this->template->title('Pengajuan Pembayaran Periodik');
