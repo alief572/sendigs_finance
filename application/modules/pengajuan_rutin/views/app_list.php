@@ -29,10 +29,14 @@ $ENABLE_DELETE  = has_permission('Approval_Pengajuan_Pembayaran_Rutin.Delete');
 					if (!empty($results)) {
 						$numb = 0;
 						foreach ($results as $record) {
-							$numb++; ?>
+							$numb++;
+
+							$nm_department = (isset($arr_dept[$record->departement])) ? $arr_dept[$record->departement] : '';
+
+					?>
 							<tr>
 								<td><?= $numb; ?></td>
-								<td><?= strtoupper($record->nm_dept) ?></td>
+								<td><?= strtoupper($nm_department) ?></td>
 								<td><?= $record->no_doc ?></td>
 								<td><?= $record->tanggal_doc ?></td>
 								<td>
