@@ -106,7 +106,7 @@ class Alokasi extends Admin_Controller
                             $debit = 0;
                             $kredit = 0;
 
-                            if (strpos($item[3], 'CR') !== false) {
+                            if (isset($item[3]) && strpos($item[3], 'CR') !== false) {
                                 $debit = str_replace('CR', '', $item[3]);
                                 $debit = str_replace(',', '', $item[3]);
                                 $debit = floatval($debit);
