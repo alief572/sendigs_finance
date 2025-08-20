@@ -111,13 +111,19 @@ class Alokasi extends Admin_Controller
                                 $debit = str_replace(',', '', $item[3]);
                                 $debit = floatval($debit);
                             } else {
-                                $kredit = str_replace('DB', '', $item[3]);
-                                $kredit = str_replace(',', '', $item[3]);
-                                $kredit = floatval($kredit);
+                                if (isset($item[3])) {
+                                    $kredit = str_replace('DB', '', $item[3]);
+                                    $kredit = str_replace(',', '', $item[3]);
+                                    $kredit = floatval($kredit);
+                                }
                             }
 
-                            $saldo = str_replace(',', '', $item[4]);
-                            $saldo = floatval($saldo);
+                            $saldo = 0;
+
+                            if (isset($item[4])) {
+                                $saldo = str_replace(',', '', $item[4]);
+                                $saldo = floatval($saldo);
+                            }
 
                             if ($debit > 0 || $kredit > 0) {
                                 $arr_detail[] = [
