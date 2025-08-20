@@ -46,10 +46,10 @@
 					<tr class='bg-blue'>
 						<th class="text-center" width='4%'>#</th>
 						<th class="text-center no-sort" width="18%">Nama Barang</th>
-						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan (Konversi)</th>
-						<th class="text-center no-sort" width='7%'>Stock (Konversi)</th>
-						<th class="text-center no-sort" width='7%'>Max Stock (Konversi)</th>
-						<th class="text-center no-sort" width='8%'>Propose Purchase <br> (Konversi)</th>
+						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan </th>
+						<th class="text-center no-sort" width='7%'>Stock </th>
+						<th class="text-center no-sort" width='7%'>Max Stock </th>
+						<th class="text-center no-sort" width='8%'>Propose Purchase</th>
 						<th class="text-center no-sort" width='8%'>Unit Konversi</th>
 						<th class="text-center no-sort" width='15%'>Keterangan</th>
 						<th class="text-center no-sort" width='8%'>Price Reference</th>
