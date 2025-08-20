@@ -57,22 +57,7 @@ class Expense extends Admin_Controller
 	// kasbon create
 	public function kasbon_create()
 	{
-		// $this->db->select('a.no_pr AS no_pr');
-		// $this->db->from('material_planning_base_on_produksi a');
-		// $this->db->where('a.metode_pembelian', '2');
-		// $this->db->where('(SELECT COUNT(aa.id) AS count_er FROM material_planning_base_on_produksi_detail aa WHERE aa.so_number = a.so_number AND aa.kasbon_created IS NULL) > 0');
-		// $get_pr_stok_material = $this->db->get();
 
-		// $this->db->select('b.no_pr AS no_pr');
-		// $this->db->from('rutin_non_planning_header b');
-		// $this->db->where('b.metode_pembelian', '2');
-		// $this->db->where('(SELECT COUNT(bb.id) FROM rutin_non_planning_detail bb WHERE bb.no_pr = b.no_pr AND bb.kasbon_created IS NULL) > 0');
-		// $get_pr_departemen = $this->db->get();
-
-		// $union_query = $this->db->query($get_pr_stok_material->_compile_union_all($get_pr_departemen));
-		// $list_pr_non_po = $union_query->result_array();
-
-		// $this->template->set('list_pr_non_po', $list_pr_non_po);
 		$list_pr_non_po = [];
 		$this->db->select('b.no_pr, b.category')
 			->from('material_planning_base_on_produksi_detail a')
@@ -659,10 +644,35 @@ class Expense extends Admin_Controller
 	public function kasbon_print($id)
 	{
 		$results = $this->Expense_model->GetDataKasbon($id);
+
+		$nmuser = $results->created_by;
+		if ($results->tipe_pr !== '') {
+			if ($results->tipe_pr == 'pr departemen') {
+				$this->db->select('b.nm_lengkap');
+				$this->db->from('rutin_non_planning_header a');
+				$this->db->join('users b', 'b.id_user = a.created_by');
+				$this->db->where('a.no_pr', $results->id_pr);
+				$get_single_detail = $this->db->get()->row();
+
+				$nmuser = $get_single_detail->nm_lengkap;
+			}
+
+			if ($results->tipe_pr == 'pr stok') {
+				$this->db->select('b.nm_lengkap');
+				$this->db->from('material_planning_base_on_produksi a');
+				$this->db->join('users b', 'b.id_user = a.created_by');
+				$this->db->where('a.no_pr', $results->id_pr);
+				$get_single_detail = $this->db->get()->row();
+
+				$nmuser = $get_single_detail->nm_lengkap;
+			}
+		}
+
 		$data = array(
 			'title'			=> 'Print Kasbon',
 			'stsview'		=> 'print',
-			'data'			=> $results
+			'data'			=> $results,
+			'nmuser'			=> $nmuser
 		);
 		$this->load->view('kasbon_print', $data);
 	}
