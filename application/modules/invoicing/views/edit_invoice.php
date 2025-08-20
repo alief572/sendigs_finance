@@ -5,8 +5,11 @@ $pajak = $data_invoice->pajak;
 $total_akhir = $data_invoice->total_akhir;
 
 $total_nominal_jurnal = $data_invoice->total_nominal_jurnal;
+$dpp = $data_invoice->total_nominal_jurnal;
+$dpp_lain_lain = $data_invoice->dpp_lain_lain_jurnal;
 $ppn = $data_invoice->ppn_jurnal;
 $pph = $data_invoice->pph_jurnal;
+$tagihan_ppn = $data_invoice->tagihan_ppn_jurnal;
 $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 ?>
 <div class="box">
@@ -69,50 +72,31 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
         <div class="box-body">
             <table class="table table-bordered">
                 <tr>
-                    <th width="10%">Total Nominal</th>
+                    <th width="10%">DPP</th>
                     <td class="text-right">
-                        Rp. <?= number_format($total_nominal, 2) ?>
-                        <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
+                        Rp. <?= number_format($dpp, 2) ?>
+                        <input type="hidden" name="total_nominal_jurnal" value="<?= $dpp ?>">
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">DPP Nilai Lain</th>
+                    <th width="10%">DPP Lain-lain</th>
                     <td class="text-right">
-                        Rp. <?= number_format($dpp_nilai_lain, 2) ?>
-                        <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
+                        Rp. <?= number_format($dpp_lain_lain, 2) ?>
+                        <input type="hidden" name="dpp_lain_lain_jurnal" value="<?= $dpp_lain_lain ?>">
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">Pajak</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($pajak, 2) ?>
-                        <input type="hidden" name="pajak" value="<?= $pajak ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">Total Akhir</th>
-                    <td class="text-right">
-                        <span style="font-weight: bold">Rp. <?= number_format($total_akhir, 2) ?></span>
-                        <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="box-body">
-            <table class="table table-bordered">
-                <tr>
-                    <th width="10%">Total Nominal</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($total_nominal, 2) ?>
-                        <input type="hidden" name="total_nominal_jurnal" value="<?= $total_nominal ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">PPn 12%</th>
+                    <th width="10%">PPn 12% dari DPP Lain</th>
                     <td class="text-right">
                         Rp. <?= number_format($ppn, 2) ?>
                         <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
+                    </td>
+                </tr>
+                <tr>
+                    <th width="10%">Total Tagihan + PPN</th>
+                    <td class="text-right">
+                        Rp. <?= number_format($tagihan_ppn, 2) ?>
+                        <input type="hidden" name="tagihan_ppn_jurnal" value="<?= $tagihan_ppn ?>">
                     </td>
                 </tr>
                 <tr>
@@ -129,6 +113,35 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <input type="hidden" name="total_akhir_jurnal" value="<?= $total_akhir_jurnal ?>">
                     </td>
                 </tr>
+            </table>
+
+            <br><br>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th class="text-center">Tanggal Jurnal</th>
+                        <th class="text-center">COA</th>
+                        <th class="text-center">Nama Company</th>
+                        <th class="text-center">Nama Account</th>
+                        <th class="text-center">Debit</th>
+                        <th class="text-center">Credit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?= $hasil_jurnal ?>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="4" class="text-center">Balancing</th>
+                        <th class="text-right th_total_debit">
+                            <?= number_format($total_debit) ?>
+                        </th>
+                        <th class="text-right th_total_kredit">
+                            <?= number_format($total_kredit) ?>
+                        </th>
+                    </tr>
+                </tbody>
             </table>
 
             <br><br>
