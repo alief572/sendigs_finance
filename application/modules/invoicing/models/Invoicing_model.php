@@ -97,11 +97,14 @@ class Invoicing_model extends BF_Model
 
                 $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
 
-                $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->row();
-                if (empty($get_jurnal)) {
+                $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->result();
+                $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_inv' => $get_invoicing->id])->result();
+                if (empty($get_jurnal) && empty($get_penerimaan)) {
                     $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
                 } else {
-                    $status2 = '<span class="badge bg-red">Journaled</span>';
+                    if (!empty($get_jurnal)) {
+                        $status2 = '<span class="badge bg-red">Journaled</span>';
+                    }
                 }
 
                 $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
