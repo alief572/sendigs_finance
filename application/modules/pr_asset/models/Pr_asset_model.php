@@ -589,8 +589,6 @@ class Pr_asset_model extends BF_model
 			}
 
 			if (
-				$row['app_status_1'] == 'Y' &&
-				$row['app_status_2'] == 'Y' &&
 				$row['app_status_3'] == 'Y'
 			) {
 				$status = 'Approved';
@@ -599,16 +597,18 @@ class Pr_asset_model extends BF_model
 				$approve_stat = 1;
 			}
 			$nestedData[]	= "<div align='left'><span class='badge bg-" . $color . "'>" . strtoupper($status) . "</span></div>";
-			$view = '';
-			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
-				$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-check'></i></button>";
-			}
-			$print			= "&nbsp;<button type='button'class='btn btn-sm btn-info print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
+			// $view = '';
+			// if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
+			// 	$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-check'></i></button>";
+			// }
+			$print			= "&nbsp;<button type='button'class='btn btn-sm btn-primary print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
 
 			$edit = "&nbsp;<a href='" . base_url('pr_asset/edit/' . $row['id']) . "' class='btn btn-sm btn-warning'><i class='fa fa-pencil'></i></a>";
 			if ($approve_stat == '1') {
 				$edit = '';
 			}
+
+			$view = "<a href='" . base_url('pr_asset/view/' . $row['id']) . "' class='btn btn-sm btn-info'><i class='fa fa-eye'></i></a>";
 
 			$nestedData[]	= "<div align='center'>" . $view . "" . $print . "" . $edit . "</div>";
 			$data[] = $nestedData;
