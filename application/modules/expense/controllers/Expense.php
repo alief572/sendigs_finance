@@ -666,6 +666,16 @@ class Expense extends Admin_Controller
 
 				$nmuser = $get_single_detail->nm_lengkap;
 			}
+
+			if ($results->tipe_pr == 'pr asset') {
+				$this->db->select('b.nm_lengkap');
+				$this->db->from('tran_pr_header a');
+				$this->db->join('users b', 'b.id_user = a.created_by');
+				$this->db->where('a.no_pr', $results->id_pr);
+				$get_single_detail = $this->db->get()->row();
+
+				$nmuser = $get_single_detail->nm_lengkap;
+			}
 		}
 
 		$data = array(
