@@ -467,7 +467,7 @@ foreach ($results['result_payment'] as $item) {
 			bank_charge = parseFloat(bank_charge);
 		}
 
-		var kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph - bank_charge);
+		var kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph + bank_charge);
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
