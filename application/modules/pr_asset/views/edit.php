@@ -42,8 +42,8 @@ $no_pr = (!empty($data_asset)) ? $data_asset[0]->no_pr : '';
 						<option value='0'>Select An Department</option>
 						<?php
 						foreach ($list_department as $val => $valx) {
-							$dept = ($valx['id'] == $id_dept) ? 'selected' : '';
-							echo "<option value='" . $valx['id'] . "' " . $dept . ">" . strtoupper($valx['nama']) . "</option>";
+							$dept = ($valx['id_dept'] == $id_dept) ? 'selected' : '';
+							echo "<option value='" . $valx['id_dept'] . "' " . $dept . ">" . strtoupper($valx['nm_dept'] . ' - ' . $valx['nm_comp']) . "</option>";
 						}
 						?>
 					</select>
