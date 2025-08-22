@@ -627,7 +627,7 @@ class Pr_asset_model extends BF_model
 			//detail
 			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
 				$nestedData2 	= array();
-				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>$('.prtCh_" . $nomor . "').parent().parent().attr('class','child-" . $nomor . "');$('.child-" . $nomor . "').hide()</script>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
+				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
 				$nestedData2[]	= "<div align='left'></div>";
 				$nestedData2[]	= "<div align='right'><b>QTY BARANG</b><br>" . number_format($row['qty']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>NILAI PR</b></br>" . number_format($row['nilai_pr']) . "</div>";
