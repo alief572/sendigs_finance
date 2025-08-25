@@ -19,75 +19,105 @@
     </thead>
     <tbody>
         <?php
-        $no = 1;
-        foreach ($data_payment_list as $item) {
-            $tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pengajuan'] : '';
+        $numb = 0;
+        foreach ($data_payment_list as $record) {
 
-            $tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pembayaran'] : '';
+            $nmuser = $record->nama;
+            if ($record->tipe == 'kasbon') {
+                $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $record->no_doc))->row();
+                $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
+                if (count($check_detail)) {
+                    if ($get_kasbon->tipe_pr == 'pr departemen') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('rutin_non_planning_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
 
-            $diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['diajukan_oleh'] : '';
-
-            $dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['dibayar_oleh'] : '';
-
-            echo '<tr>';
-            echo '<td class="text-center">' . $no . '</td>';
-            echo '<td class="text-left">' . $item->no_doc . '</td>';
-            echo '<td class="text-left">' . $item->nama . '</td>';
-            echo '<td class="text-left">' . $item->tgl_doc . '</td>';
-            echo '<td class="text-left">' . $item->keperluan . '</td>';
-            echo '<td class="text-left">' . $item->tipe . '</td>';
-            echo '<td class="text-right">' . number_format($item->jumlah) . '</td>';
-            echo '<td class="text-center">' . $diajukan_oleh . '</td>';
-            echo '<td class="text-center">' . $tgl_pengajuan . '</td>';
-            echo '<td class="text-center">' . $dibayar_oleh . '</td>';
-            echo '<td class="text-center">' . $tgl_pembayaran . '</td>';
-            echo '<td class="text-center">';
-            $get_request_payment = $this->db->get_where('request_payment', ['no_doc' => $item->no_doc])->row();
-            if (!empty($get_request_payment)) {
-                if ($get_request_payment->status == '0') {
-                    echo '<div class="badge bg-yellow text-light">Process</div>';
-                }
-                if ($get_request_payment->status == '1' || $get_request_payment->status == '2') {
-                    $get_payment_approve = $this->db->get_where('payment_approve', ['no_doc' => $item->no_doc])->row();
-                    if (count($get_payment_approve) > 0) {
-                        if ($get_payment_approve->status == '2') {
-                            echo '<div class="badge bg-green text-light">Paid</div>';
-                        } else {
-                            echo '<div class="badge bg-yellow text-light">Approved</div>';
-                        }
-                    } else {
-                        echo '<div class="badge bg-yellow text-light">Approved</div>';
+                        $nmuser = $get_single_detail->nm_lengkap;
                     }
-                }
-            } else {
-                $get_sts_reject = '';
-                if ($item->tipe == 'transportasi') {
-                    $get_sts_reject = $this->db->get_where('tr_transport_req', ['no_doc' => $item->no_doc])->row();
-                }
-                if ($item->tipe == 'kasbon') {
-                    $get_sts_reject = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_doc])->row();
-                }
-                if ($item->tipe == 'expense') {
-                    $get_sts_reject = $this->db->get_where('tr_expense', ['no_doc' => $item->no_doc])->row();
-                }
-                if ($item->tipe == 'periodik') {
-                    $get_sts_reject = $this->db->get_where('tr_expense', ['no_doc' => $item->no_doc])->row();
-                }
 
-                if (!empty($get_sts_reject)) {
-                    if ($get_sts_reject->sts_reject == '1') {
-                        echo '<div class="badge bg-red text-light">Rejected</div>';
-                    } else {
-                        echo '<div class="badge bg-blue text-light">New</div>';
+                    if ($get_kasbon->tipe_pr == 'pr stok') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('material_planning_base_on_produksi a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
                     }
-                } else {
-                    echo '<div class="badge bg-blue text-light">New</div>';
+
+                    if ($get_kasbon->tipe_pr == 'pr asset') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('tran_pr_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
                 }
             }
-            echo '</td>';
-            echo '</tr>';
 
-            $no++;
+            $tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
+
+            $tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pembayaran'] : '';
+
+            $diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
+
+            $dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['dibayar_oleh'] : '';
+
+            $numb++; ?>
+            <tr>
+                <td><?= $numb; ?></td>
+                <td><?= $record->no_doc ?></td>
+                <td><?= $nmuser ?></td>
+                <td><?= $record->tgl_doc ?></td>
+                <td><?= $record->keperluan ?></td>
+                <td><?= $record->tipe ?></td>
+                <td><?= (($record->tipe == 'expense' and $record->kurang_bayar > 0) ? number_format($record->kurang_bayar) : number_format($record->jumlah)) ?></td>
+                <td class="text-center"><?= $diajukan_oleh ?></td>
+                <td class="text-center"><?= $tgl_pengajuan ?></td>
+                <td class="text-center"><?= $dibayar_oleh ?></td>
+                <td class="text-center"><?= $tgl_pembayaran ?></td>
+                <td>
+                    <?php
+                    $get_request_payment = $this->db->get_where('request_payment', ['no_doc' => $record->no_doc])->row();
+                    if (!empty($get_request_payment)) {
+                        if ($record->sts_reject !== '1' && $record->sts_reject_manage !== '1') {
+                            if ($get_request_payment->status == '0') {
+                                echo '<div class="badge bg-blue">Open</div>';
+                            }
+                            if ($get_request_payment->status == '1' || $get_request_payment->status == '2') {
+                                $get_payment_approve = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc])->row();
+                                if (!empty($get_payment_approve) && $get_payment_approve->status == '2') {
+                                    echo '<div class="badge bg-green text-light">Paid</div>';
+                                } else {
+                                    echo '<div class="badge bg-blue">Open</div>';
+                                }
+                            }
+                        } else {
+                            if ($record->sts_reject == '1') {
+                                echo '<div class="badge bg-red">Rejected by Checker</div>';
+                            } else if ($record->sts_reject_manage == '1') {
+                                echo '<div class="badge bg-red">Rejected by Management</div>';
+                            } else {
+                                echo '<div class="badge bg-blue">Open</div>';
+                            }
+                        }
+                    } else {
+                        if ($record->sts_reject == '1') {
+                            echo '<div class="badge bg-red">Rejected by Checker</div>';
+                        } else if ($record->sts_reject_manage == '1') {
+                            echo '<div class="badge bg-red">Rejected by Management</div>';
+                        } else {
+                            echo '<div class="badge bg-blue">Open</div>';
+                        }
+                    }
+                    ?>
+                </td>
+            </tr>
+        <?php
         }
         ?>
     </tbody>
