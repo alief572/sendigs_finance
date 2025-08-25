@@ -117,11 +117,17 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 
 							$tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
 
-							$tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pembayaran'] : '';
-
 							$diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
 
-							$dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['dibayar_oleh'] : '';
+							$this->db->select('c.nm_lengkap, a.created_on');
+							$this->db->from('tr_payment_paid a');
+							$this->db->join('payment_approve b', 'b.id_payment = a.id', 'left');
+							$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+							$this->db->where('b.no_doc', $record->no_doc);
+							$get_payment_details = $this->db->get()->row();
+
+							$dibayar_oleh = (!empty($get_payment_details)) ? $get_payment_details->nm_lengkap : '';
+							$tgl_pembayaran = (!empty($get_payment_details)) ? $get_payment_details->created_on : '';
 
 							$numb++; ?>
 							<tr>
@@ -138,7 +144,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 								<td class="text-center"><?= $tgl_pembayaran ?></td>
 								<td>
 									<?php
-									$get_payment = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc])->result();
+									$get_payment = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc, 'tgl_bayar <>' => null])->result();
 
 									if (!empty($get_payment)) {
 										echo '<div class="badge bg-green text-light">Paid</div>';

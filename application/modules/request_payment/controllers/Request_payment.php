@@ -40,7 +40,7 @@ class Request_payment extends Admin_Controller
 		$data = $this->Request_payment_model->GetListDataPaymentList();
 
 		$list_tgl_pengajuan_pembayaran = [];
-		$get_payment_approve = $this->db->select('no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(created_on, "%d %M %Y")) as tgl_pembayaran')->get('payment_approve')->result();
+		$get_payment_approve = $this->db->select('no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(tgl_bayar, "%d %M %Y")) as tgl_pembayaran')->get_where('payment_approve', ['tgl_bayar <>' => null])->result();
 		foreach ($get_payment_approve as $item_payment) {
 			$list_tgl_pengajuan_pembayaran[$item_payment->no_doc] = [
 				'diajukan_oleh' => $item_payment->created_by,
