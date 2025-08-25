@@ -601,12 +601,13 @@ class Pr_asset_model extends BF_model
 			// if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
 			// 	$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-check'></i></button>";
 			// }
-			$print			= "&nbsp;<button type='button'class='btn btn-sm btn-primary print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
+			// $print			= "&nbsp;<button type='button'class='btn btn-sm btn-primary print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
+			$print = '';
 
 			$edit = "&nbsp;<a href='" . base_url('pr_asset/edit/' . $row['id']) . "' class='btn btn-sm btn-warning'><i class='fa fa-pencil'></i></a>";
-			if ($approve_stat == '1') {
-				$edit = '';
-			}
+			// if ($approve_stat == '1') {
+			$edit = '';
+			// }
 
 			$view = "<a href='" . base_url('pr_asset/view/' . $row['id']) . "' class='btn btn-sm btn-info'><i class='fa fa-eye'></i></a>";
 
