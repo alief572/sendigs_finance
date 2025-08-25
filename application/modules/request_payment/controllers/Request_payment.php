@@ -40,17 +40,23 @@ class Request_payment extends Admin_Controller
 		$data = $this->Request_payment_model->GetListDataPaymentList();
 
 		$list_tgl_pengajuan_pembayaran = [];
-		$get_payment_approve = $this->db->select('no_doc, created_by, pay_by, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(pay_on IS NULL, "", DATE_FORMAT(pay_on, "%d %M %Y")) as tgl_pembayaran')->get('payment_approve')->result();
+		$get_payment_approve = $this->db->select('no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(created_on, "%d %M %Y")) as tgl_pembayaran')->get('payment_approve')->result();
 		foreach ($get_payment_approve as $item_payment) {
 			$list_tgl_pengajuan_pembayaran[$item_payment->no_doc] = [
 				'diajukan_oleh' => $item_payment->created_by,
-				'dibayar_oleh' => $item_payment->pay_by,
+				'dibayar_oleh' => $item_payment->by_pay,
 				'tgl_pengajuan' => $item_payment->tgl_pengajuan,
 				'tgl_pembayaran' => $item_payment->tgl_pembayaran
 			];
 		}
 
-		$data_bank = $this->db->select('no_perkiraan, nama')->get_where(DBACC . '.coa_master', ['nama LIKE' => '%bank%'])->result();
+		// $data_bank = $this->db->select('no_perkiraan, nama')->get_where(DBACC . '.coa_master', ['nama <>' => null])->result();
+
+		$this->db->select('a.no_perkiraan, a.nama');
+		$this->db->from(DBACC . '.coa_master a');
+		$this->db->where('kode_bank IS NOT NULL');
+		$data_bank = $this->db->get()->result();
+
 		$this->template->set('data', $data);
 		$this->template->set('data_bank', $data_bank);
 		$this->template->set('list_tgl_pengajuan_pembayaran', $list_tgl_pengajuan_pembayaran);
