@@ -625,7 +625,7 @@ class Expense extends Admin_Controller
 	{
 		$data = $this->Expense_model->GetDataKasbon($id);
 
-		$this->db->select('a.*, b.code as satuan');
+		$this->db->select('a.*, IF(b.code IS NULL, a.unit, b.code) as satuan');
 		$this->db->from('tr_pr_detail_kasbon a');
 		$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
 		$this->db->where('a.id_kasbon', $data->no_doc);
