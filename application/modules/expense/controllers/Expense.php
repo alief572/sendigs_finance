@@ -482,7 +482,7 @@ class Expense extends Admin_Controller
 
 	public function get_kasbon($nama = '', $departement = '')
 	{
-		$data = $this->db->query("SELECT * FROM tr_kasbon WHERE status = 3 AND id_pr IS NOT NULL")->result();
+		$data = $this->db->query("SELECT * FROM tr_kasbon WHERE status = 3")->result();
 		$query1 = $this->db->query("
 			SELECT
 				a.id as id, 
