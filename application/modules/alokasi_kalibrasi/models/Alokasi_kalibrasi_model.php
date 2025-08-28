@@ -1,6 +1,6 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class Alokasi_model extends BF_Model
+class Alokasi_kalibrasi_model extends BF_Model
 {
 
     protected $ENABLE_ADD;
@@ -46,6 +46,7 @@ class Alokasi_model extends BF_Model
         $this->db->from('tr_alokasi_detail a');
         $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
         $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
+        $this->db->where('a.sts', '7');
         if (!empty($startDate)) {
             $this->db->where('a.tanggal_transaksi >=', $startDate);
         }
@@ -101,10 +102,10 @@ class Alokasi_model extends BF_Model
                 $status = '<span class="badge bg-green">' . $txt . '</span>';
             }
 
-            $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
-            if ($item['sts'] !== '0') {
-                $btn_alokasi = '';
-            }
+            // $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
+            // if ($item['sts'] !== '0') {
+            $btn_alokasi = '';
+            // }
 
             $tanggal_transaksi = date('d-F-Y', strtotime($item['tanggal_transaksi']));
             if ($item['tanggal_transaksi'] == '0000-00-00') {
@@ -118,9 +119,7 @@ class Alokasi_model extends BF_Model
                 'keterangan' => $item['keterangan'],
                 'debit' => number_format($item['nominal_debit'], 2),
                 'kredit' => number_format($item['nominal_kredit'], 2),
-                'saldo' => number_format($item['saldo'], 2),
-                'status_alokasi' => $status,
-                'action' => $btn_alokasi
+                'saldo' => number_format($item['saldo'], 2)
             ];
         }
 
