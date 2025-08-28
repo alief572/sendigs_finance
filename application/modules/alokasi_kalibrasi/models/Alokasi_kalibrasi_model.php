@@ -112,14 +112,14 @@ class Alokasi_kalibrasi_model extends BF_Model
                 $tanggal_transaksi = 'PEND';
             }
 
+            $nominal = ($item['nominal_debit'] > 0) ? $item['nominal_debit'] : $item['nominal_kredit'];
+
             $hasil[] = [
                 'no' => $no,
                 'tanggal_transaksi' => $tanggal_transaksi,
                 'bank' => $item['nama_bank'] . ' - ' . $item['rekening'] . ' - ' . $item['nama'],
                 'keterangan' => $item['keterangan'],
-                'debit' => number_format($item['nominal_debit'], 2),
-                'kredit' => number_format($item['nominal_kredit'], 2),
-                'saldo' => number_format($item['saldo'], 2)
+                'nominal' => $nominal
             ];
         }
 

@@ -512,13 +512,7 @@
                     data: 'keterangan'
                 },
                 {
-                    data: 'debit'
-                },
-                {
-                    data: 'kredit'
-                },
-                {
-                    data: 'saldo'
+                    data: 'nominal'
                 }
             ]
         });
