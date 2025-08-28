@@ -165,13 +165,12 @@
         <table class="table table-bordered" id="table_list">
             <thead>
                 <tr>
-                    <th class="text-center">No.</th>
-                    <th class="text-center">Tanggal Transaksi Bank</th>
-                    <th class="text-center">Bank</th>
-                    <th class="text-center">Keterangan</th>
-                    <th class="text-center">Total Debit</th>
-                    <th class="text-center">Total Credit</th>
-                    <th class="text-center">Saldo Akhir</th>
+                    <th class="text-center" width="100">No</th>
+                    <th class="text-center" width="100">Tanggal Transaksi</th>
+                    <th class="text-center" width="100">Reference No</th>
+                    <th class="text-center" width="90">Bank</th>
+                    <th class="text-center" width="90">Keterangan</th>
+                    <th class="text-center" width="120">Nominal</th>
                 </tr>
             </thead>
             <tbody>
@@ -243,13 +242,12 @@
                         <table class="table table-bordered" width="100%">
                             <thead>
                                 <tr>
+                                    <th class="text-center" width="100">No</th>
                                     <th class="text-center" width="100">Tanggal Transaksi</th>
                                     <th class="text-center" width="100">Reference No</th>
-                                    <th class="text-center" width="90">Description</th>
-                                    <th class="text-center" width="120">Credit</th>
-                                    <th class="text-center" width="120">Debit</th>
-                                    <th class="text-center" width="120">Balance</th>
-                                    <th class="text-center" width="200">Action</th>
+                                    <th class="text-center" width="90">Bank</th>
+                                    <th class="text-center" width="90">Keterangan</th>
+                                    <th class="text-center" width="120">Nominal</th>
                                 </tr>
                             </thead>
                             <tbody class="list_balance_alokasi">
@@ -504,6 +502,9 @@
                 },
                 {
                     data: 'tanggal_transaksi'
+                },
+                {
+                    data: 'reference_no'
                 },
                 {
                     data: 'bank'
