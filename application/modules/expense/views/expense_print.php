@@ -1,3 +1,13 @@
+<?php
+$gambar = '';
+if ($data->bon_bukti !== '') {
+	if (strpos($data->bon_bukti, 'pdf', 0) > 1) {
+		$gambar .= '<iframe src="' . base_url($data->bon_bukti) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
+	} else {
+		$gambar .= '<img src="' . base_url($data->bon_bukti) . '" width="500"><br />';
+	}
+}
+?>
 <html>
 
 <head>
@@ -41,7 +51,7 @@
 					$total_km = 0;
 					$grand_total = 0;
 					$i = 0;
-					$gambar = "";
+					// $gambar = "";
 					if (!empty($data_detail)) {
 						foreach ($data_detail as $record) {
 							$i++; ?>
@@ -56,13 +66,7 @@
 								<td align="right"><?= number_format($record->expense); ?></td>
 							</tr>
 					<?php
-							if ($record->doc_file != '') {
-								if (strpos($record->doc_file, 'pdf', 0) > 1) {
-									$gambar .= '<iframe src="' . base_url('assets/expense/' . $record->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
-								} else {
-									$gambar .= '<img src="' . base_url() . 'assets/expense/' . $record->doc_file . '" width="500"><br />';
-								}
-							}
+
 							$total_expense = ($total_expense + ($record->expense));
 							$idd++;
 						}

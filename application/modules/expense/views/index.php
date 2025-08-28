@@ -72,50 +72,6 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 			</table>
 		</div>
 
-		<h3>Detail Expense</h3>
-		<div class="table-responsive col-md-12">
-			<table id="mytabledata2" class="table table-bordered table-striped">
-				<thead>
-					<tr>
-						<th width="5">#</th>
-						<th>No Dokumen</th>
-						<th>Tanggal</th>
-						<th>Pemohon</th>
-						<th>Barang/Jasa&Keterangan</th>
-						<th>Tanggal Transaksi</th>
-						<th>Status</th>
-						<th>Tanggal ACC</th>
-						<th width="120">Action</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					if (!empty($data_detail)) {
-						$numb = 0;
-						foreach ($data_detail as $record) {
-							$numb++; ?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= $record->no_doc ?></td>
-								<td><?= $record->tgl_doc ?></td>
-								<td><?= $record->nmuser ?></td>
-								<td><?= $record->deskripsi ?></td>
-								<td><?= $record->tanggal ?></td>
-								<td><?= $status[$record->status] ?></td>
-								<td><?= $record->approved_on ?></td>
-								<td>
-									<?php if ($ENABLE_VIEW) : ?>
-										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
-									<?php endif; ?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
-				</tbody>
-			</table>
-		</div>
-
 	</div>
 	<!-- /.box-body -->
 </div>
