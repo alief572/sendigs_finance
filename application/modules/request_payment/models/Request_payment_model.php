@@ -485,7 +485,7 @@ class Request_payment_model extends BF_Model
                     FROM
                         tr_kasbon a 
                     WHERE
-                        a.status = "1" AND (
+                        a.status IN ("1","2") AND (
                             a.no_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.created_by LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.tgl_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
