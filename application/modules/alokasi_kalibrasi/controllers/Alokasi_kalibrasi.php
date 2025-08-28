@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Alokasi extends Admin_Controller
+class Alokasi_kalibrasi extends Admin_Controller
 {
     protected $viewPermission = 'Alokasi.View';
     protected $managePermission = 'Alokasi.Manage';
@@ -12,7 +12,7 @@ class Alokasi extends Admin_Controller
     {
         parent::__construct();
 
-        $this->load->model(array('Alokasi/Alokasi_model'));
+        $this->load->model(array('Alokasi_kalibrasi/Alokasi_kalibrasi_model'));
     }
 
     public function index()
@@ -26,7 +26,7 @@ class Alokasi extends Admin_Controller
         $get_bank = $this->db->get()->result_array();
 
         $data['data_bank'] = $get_bank;
-        $this->template->title('Alokasi');
+        $this->template->title('Alokasi Kalibrasi');
         $this->template->render('index', $data);
     }
 
@@ -50,7 +50,7 @@ class Alokasi extends Admin_Controller
                 $csvData = array_map("str_getcsv", file($filePath));
                 // $header = array_shift($csvData); // remove and store header
 
-                $id_header = $this->Alokasi_model->generate_id();
+                $id_header = $this->Alokasi_kalibrasi_model->generate_id();
 
                 $account_no = '';
                 $periode_from = '';
@@ -329,7 +329,6 @@ class Alokasi extends Admin_Controller
             $selected4 = '';
             $selected5 = '';
             $selected6 = '';
-            $selected7 = '';
 
             if ($item['sts'] == '1') {
                 $selected1 = 'selected';
@@ -349,12 +348,9 @@ class Alokasi extends Admin_Controller
             if ($item['sts'] == '6') {
                 $selected6 = 'selected';
             }
-            if ($item['sts'] == '7') {
-                $selected7 = 'selected';
-            }
 
             $disabled = '';
-            if ($selected1 !== '' || $selected2 !== '' || $selected3 !== '' || $selected4 !== '' || $selected5 !== '' || $selected6 !== '' || $selected7 !== '') {
+            if ($selected1 !== '' || $selected2 !== '' || $selected3 !== '' || $selected4 !== '' || $selected5 !== '' || $selected6 !== '') {
                 $disabled = 'readonly';
             }
 
@@ -371,8 +367,6 @@ class Alokasi extends Admin_Controller
                 $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
             } else if ($selected6) {
                 $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
-            } else if ($selected7) {
-                $action .= '<option value="7" ' . $selected7 . '>Alokasi Kalibrasi</option>';
             } else {
                 $action .= '<option value="">- Select Option -</option>';
                 $action .= '<option value="1" ' . $selected1 . '>Penerimaan Piutang</option>';
@@ -381,7 +375,6 @@ class Alokasi extends Admin_Controller
                 $action .= '<option value="4" ' . $selected4 . '>Mutasi</option>';
                 $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
                 $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
-                $action .= '<option value="7" ' . $selected7 . '>Alokasi Kalibrasi</option>';
             }
 
             $action .= '</select>';
@@ -441,7 +434,7 @@ class Alokasi extends Admin_Controller
         } else {
             $this->db->trans_commit();
 
-            $this->Alokasi_model->update_alokasi_header($post['id']);
+            $this->Alokasi_kalibrasi_model->update_alokasi_header($post['id']);
             $json = [
                 'status' => 1,
                 'msg' => 'Save Success !'
@@ -466,6 +459,6 @@ class Alokasi extends Admin_Controller
 
     public function get_alokasi()
     {
-        $this->Alokasi_model->get_alokasi();
+        $this->Alokasi_kalibrasi_model->get_alokasi();
     }
 }
