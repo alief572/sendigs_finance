@@ -95,6 +95,8 @@ class Alokasi_model extends BF_Model
                     $txt = 'Transaksi Bank';
                 } else if ($item['sts'] == '6') {
                     $txt = 'Pembayaran';
+                } else if ($item['sts'] == '7') {
+                    $txt = 'Alokasi Kalibrasi';
                 }
                 $status = '<span class="badge bg-green">' . $txt . '</span>';
             }

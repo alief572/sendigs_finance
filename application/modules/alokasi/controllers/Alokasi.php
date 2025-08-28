@@ -329,6 +329,7 @@ class Alokasi extends Admin_Controller
             $selected4 = '';
             $selected5 = '';
             $selected6 = '';
+            $selected7 = '';
 
             if ($item['sts'] == '1') {
                 $selected1 = 'selected';
@@ -348,9 +349,12 @@ class Alokasi extends Admin_Controller
             if ($item['sts'] == '6') {
                 $selected6 = 'selected';
             }
+            if ($item['sts'] == '7') {
+                $selected7 = 'selected';
+            }
 
             $disabled = '';
-            if ($selected1 !== '' || $selected2 !== '' || $selected3 !== '' || $selected4 !== '' || $selected5 !== '' || $selected6 !== '') {
+            if ($selected1 !== '' || $selected2 !== '' || $selected3 !== '' || $selected4 !== '' || $selected5 !== '' || $selected6 !== '' || $selected7 !== '') {
                 $disabled = 'readonly';
             }
 
@@ -367,6 +371,8 @@ class Alokasi extends Admin_Controller
                 $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
             } else if ($selected6) {
                 $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
+            } else if ($selected7) {
+                $action .= '<option value="7" ' . $selected7 . '>Alokasi Kalibrasi</option>';
             } else {
                 $action .= '<option value="">- Select Option -</option>';
                 $action .= '<option value="1" ' . $selected1 . '>Penerimaan Piutang</option>';
@@ -375,6 +381,7 @@ class Alokasi extends Admin_Controller
                 $action .= '<option value="4" ' . $selected4 . '>Mutasi</option>';
                 $action .= '<option value="5" ' . $selected5 . '>Transaksi Bank</option>';
                 $action .= '<option value="6" ' . $selected6 . '>Pembayaran</option>';
+                $action .= '<option value="7" ' . $selected7 . '>Alokasi Kalibrasi</option>';
             }
 
             $action .= '</select>';
