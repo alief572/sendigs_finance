@@ -95,7 +95,9 @@ class Invoicing_model extends BF_Model
             } else {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id_actual_plan_tagih' => $item->id])->row();
 
-                $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
+                if (!empty($get_invoicing)) {
+                    $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
+                }
 
                 $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->result();
                 $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_inv' => $get_invoicing->id])->result();
