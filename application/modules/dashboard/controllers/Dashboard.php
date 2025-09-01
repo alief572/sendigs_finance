@@ -21,126 +21,14 @@ class Dashboard extends Admin_Controller
 	public function index()
 	{
 		$this->template->title('Dashboard');
-		$no_so = $this->uri->segment(3);
-		$no_so2 = $this->uri->segment(4);
-		// echo $no_so;
-		if (empty($no_so)) {
-			$sql_beet = $this->db->query("SELECT no_so FROM sales_order_header WHERE delivery_date >= DATE(NOW()) LIMIT 1")->result();
-			if (!empty($sql_beet)) {
-				$no_so = $sql_beet[0]->no_so;
-			}
-		}
-		if (empty($no_so2)) {
-			$sql_beet = $this->db->query("SELECT no_so FROM sales_order_header WHERE delivery_date >= DATE(NOW()) LIMIT 1")->result();
-			if (!empty($sql_beet)) {
-				$no_so2 = $sql_beet[0]->no_so;
-			}
-		}
 
-		// $no_so = 'SO200022';
+		$get_ttl = $this->dashboard_model->all_ttl();
 
-		$sql_order1 	= "SELECT SUM(a.qty_propose - a.qty_delivery) AS qty_order FROM sales_order_detail a LEFT JOIN ms_inventory_category2 b ON a.product=b.id_category2 WHERE a.no_so = '" . $no_so . "' AND b.id_category1 <> 'I2000002'";
-		$rest_order1 	= $this->db->query($sql_order1)->result();
-
-		$sql_order2 	= "SELECT SUM(a.qty_propose - a.qty_delivery) AS qty_order FROM sales_order_detail a LEFT JOIN ms_inventory_category2 b ON a.product=b.id_category2 WHERE a.no_so = '" . $no_so2 . "' AND b.id_category1 = 'I2000002'";
-		$rest_order2 	= $this->db->query($sql_order2)->result();
-
-		$sql_propose1 	= "SELECT SUM(a.qty_order - a.qty_delivery) AS qty_propose FROM sales_order_detail a LEFT JOIN ms_inventory_category2 b ON a.product=b.id_category2 WHERE a.no_so = '" . $no_so . "' AND b.id_category1 <> 'I2000002'";
-		$rest_propose1 	= $this->db->query($sql_propose1)->result();
-
-		$sql_propose2 	= "SELECT SUM(a.qty_order - a.qty_delivery) AS qty_propose FROM sales_order_detail a LEFT JOIN ms_inventory_category2 b ON a.product=b.id_category2 WHERE a.no_so = '" . $no_so2 . "' AND b.id_category1 = 'I2000002'";
-		$rest_propose2 	= $this->db->query($sql_propose2)->result();
-
-		$sql_fg1 	= "SELECT
-									SUM( IF(a.qty_stock > c.qty_order,c.qty_order,a.qty_stock ) ) AS qty_stock,
-									SUM(a.qty_stock) AS qty_over
-								FROM
-									warehouse_product a
-									LEFT JOIN ms_inventory_category2 b ON a.id_product = b.id_category2
-									LEFT JOIN sales_order_detail c ON a.id_product = c.product
-								WHERE
-									a.category = 'product'
-									AND b.id_category1 <> 'I2000002'
-									AND c.qty_order > 0
-									AND c.no_so = '" . $no_so . "'";
-		$rest_fg1 	= $this->db->query($sql_fg1)->result();
-
-		$sql_fg2 	= "SELECT
-									SUM( IF(a.qty_stock > c.qty_order,c.qty_order,a.qty_stock ) ) AS qty_stock,
-									SUM(a.qty_stock) AS qty_over
-								FROM
-									warehouse_product a
-									LEFT JOIN ms_inventory_category2 b ON a.id_product = b.id_category2
-									LEFT JOIN sales_order_detail c ON a.id_product = c.product
-								WHERE
-									a.category = 'product'
-									AND b.id_category1 = 'I2000002'
-									AND c.qty_order > 0
-									AND c.no_so = '" . $no_so2 . "'";
-		$rest_fg2 	= $this->db->query($sql_fg2)->result();
-
-		$qty_order1 = ($rest_order1[0]->qty_order > 0) ? $rest_order1[0]->qty_order : 0;
-		$qty_order2 = ($rest_order2[0]->qty_order > 0) ? $rest_order2[0]->qty_order : 0;
-
-		$qty_propose1 = ($rest_propose1[0]->qty_propose > 0) ? $rest_propose1[0]->qty_propose : 0;
-		$qty_propose2 = ($rest_propose2[0]->qty_propose > 0) ? $rest_propose2[0]->qty_propose : 0;
-
-		$qtyfg1 = ($rest_fg1[0]->qty_stock > 0) ? $rest_fg1[0]->qty_stock : 0;
-		$qtyfg2 = ($rest_fg2[0]->qty_stock > 0) ? $rest_fg2[0]->qty_stock : 0;
-
-		$qtybal1 = $qty_propose1 - $qtyfg1;
-		$qtybal2 = $qty_propose2 - $qtyfg2;
-
-		$progres1 = 0;
-		$progres2 = 0;
-		if ($qtyfg1 > 0 and $qty_propose1 > 0) {
-			$progres1 = ($qtyfg1 / $qty_propose1) * 100;
-		}
-		if ($qtyfg2 > 0 and $qty_propose2 > 0) {
-			$progres2 = ($qtyfg2 / $qty_propose2) * 100;
-		}
-
-		$over1 = $rest_fg1[0]->qty_over - $qty_propose1;
-		$over2 = $rest_fg2[0]->qty_over - $qty_propose2;
-		if ($rest_fg1[0]->qty_over - $qty_propose1 < 0) {
-			$over1 = 0;
-		}
-		if ($rest_fg2[0]->qty_over - $qty_propose2 < 0) {
-			$over2 = 0;
-		}
-
-		// echo $rest_fg1[0]->qty_stock;
-
-		$check_ga_secret = 1;
-
-		$this->db->select('a.ga_secret');
-		$this->db->from('users a');
-		$this->db->where('a.id_user', $this->auth->user_id());
-		$get_users = $this->db->get()->row_array();
-
-		if ($get_users['ga_secret'] == '' || $get_users['ga_secret'] == null) {
-			$check_ga_secret = 0;
-		}
-
-		$data = array(
-			'qty_order1' => $qty_order1,
-			'qty_order2' => $qty_order2,
-			'qty_propose1' => $qty_propose1,
-			'qty_propose2' => $qty_propose2,
-			'qtyfg1' => $qtyfg1,
-			'qtyfg2' => $qtyfg2,
-			'qtybal1' => $qtybal1,
-			'qtybal2' => $qtybal2,
-			'progres1' => $progres1,
-			'progres2' => $progres2,
-			'no_so' => $no_so,
-			'no_so2' => $no_so2,
-			'over1' => $over1,
-			'over2' => $over2,
-			'check_ga_secret' => $check_ga_secret
-		);
-
-		$this->template->render('index', $data);
+		$data = [
+			'all_ttl' => $get_ttl
+		];
+		$this->template->set($data);
+		$this->template->render('index');
 	}
 
 	public function purchase()

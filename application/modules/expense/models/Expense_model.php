@@ -432,7 +432,7 @@ class Expense_model extends BF_Model
 
 		$this->db->select('a.*, a.created_by as nmuser');
 		$this->db->from('tr_transport_req a');
-		$this->db->where('a.created_by', $this->auth->user_name());
+		// $this->db->where('a.created_by', $this->auth->user_name());
 		$this->db->where('a.status', 0);
 		if (!empty($search['value'])) {
 			$this->db->group_start();
