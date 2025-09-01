@@ -2,9 +2,15 @@
 class Pembayaran_material_model extends BF_Model
 {
 
+	protected $consultant;
+	protected $accounting;
+
 	public function __construct()
 	{
 		parent::__construct();
+
+		$this->consultant = $this->load->database('consultant', true);
+		$this->accounting = $this->load->database('accounting', true);
 	}
 	public function get_data_json_request_payment_header($sqlwhere = '')
 	{
@@ -230,5 +236,307 @@ class Pembayaran_material_model extends BF_Model
 		];
 
 		echo json_encode($response);
+	}
+
+	public function set_jurnal()
+	{
+		$post = $this->input->post();
+
+		$id_payment = $post['id_payment'];
+		$payment_bank = str_replace(',', '', $post['payment_bank']);
+		$bank_charge = str_replace(',', '', $post['bank_charge']);
+		$bank = $post['bank'];
+
+		$coa_bank = '';
+		if (!empty($bank)) {
+			$get_coa_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
+
+			$coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank->coa_bank : '';
+		}
+
+		$arr_coa_jurnal = ['1030-29-9', '7010-20-5'];
+		if (!empty($bank)) {
+			$get_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
+
+			array_push($arr_coa_jurnal, $get_bank->coa_bank);
+		}
+
+		$this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
+		$this->accounting->from('coa_master a');
+		$this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+		$get_coa_jurnal = $this->accounting->get()->result();
+
+		// print_r($get_coa_jurnal);
+		// exit;
+
+		$hasil_jurnal = '';
+		$ttl_debit = 0;
+		$ttl_kredit = 0;
+
+		$no_jurnal = 1;
+		foreach ($get_coa_jurnal as $item_coa) :
+			$debit = 0;
+			$kredit = 0;
+			if ($item_coa->no_coa == '1030-29-9') {
+				$id_company = '';
+				$nm_company = '';
+
+				$this->db->select('a.*');
+				$this->db->from('payment_approve a');
+				$this->db->where_in('a.id', explode(',', $id_payment));
+				$get_payment = $this->db->get()->result();
+
+				foreach ($get_payment as $item_payment) :
+					$debit = $item_payment->jumlah;
+
+					if ($item_payment->tipe == 'kasbon') {
+						$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
+
+						$id_kasbon_consultant = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : '';
+
+						if (!empty($id_kasbon_consultant)) {
+							$this->consultant->select('a.id as id_company, a.nm_company');
+							$this->consultant->from('kons_tr_company a');
+							$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+							$this->consultant->join('kons_tr_kasbon_project_header c', 'c.id_penawaran = b.id_quotation', 'left');
+							$this->consultant->where('c.id', $id_kasbon_consultant);
+							$get_company = $this->consultant->get()->row();
+
+							$id_company = (!empty($get_company)) ? $get_company->id_company : '';
+							$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						}
+					}
+
+					$hasil_jurnal .= '<tr>';
+
+					$hasil_jurnal .= '<td class="text-center">';
+					$hasil_jurnal .= date('d F Y');
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-center">';
+					$hasil_jurnal .= $item_coa->no_coa;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][coa]" value="' . $item_coa->no_coa . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-center">';
+					$hasil_jurnal .= $nm_company;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_company]" value="' . $id_company . '">';
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-center">';
+					$hasil_jurnal .= $item_coa->nm_coa;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_coa]" value="' . $item_coa->nm_coa . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-center">';
+					$hasil_jurnal .= $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][keterangan]" value="' . $item_coa->nm_coa . ' - ' . $item_payment->no_doc . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-right">';
+					$hasil_jurnal .= number_format($debit);
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][debit]" value="' . $debit . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '<td class="text-right">';
+					$hasil_jurnal .= number_format($kredit);
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][kredit]" value="' . $kredit . '">';
+					$hasil_jurnal .= '</td>';
+
+					$hasil_jurnal .= '</tr>';
+
+					$ttl_debit += $debit;
+					$ttl_kredit += $kredit;
+					$no_jurnal++;
+				endforeach;
+			} else {
+				if ($item_coa->no_coa == '7010-20-5') {
+					$id_company = '';
+					$nm_company = '';
+
+					$this->db->select('a.*');
+					$this->db->from('payment_approve a');
+					$this->db->where_in('a.id', explode(',', $id_payment));
+					$get_payment = $this->db->get()->result();
+
+					foreach ($get_payment as $item_payment) :
+						if ($item_payment->tipe == 'kasbon') {
+							$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
+
+							$id_kasbon_consultant = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : '';
+
+							if (!empty($id_kasbon_consultant)) {
+								$this->consultant->select('a.id as id_company, a.nm_company');
+								$this->consultant->from('kons_tr_company a');
+								$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+								$this->consultant->join('kons_tr_kasbon_project_header c', 'c.id_penawaran = b.id_quotation', 'left');
+								$this->consultant->where('c.id', $id_kasbon_consultant);
+								$get_company = $this->consultant->get()->row();
+
+								$id_company = (!empty($get_company)) ? $get_company->id_company : '';
+								$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+							}
+						}
+					endforeach;
+
+					if ($bank_charge > 0) {
+						$kredit = $bank_charge;
+						$hasil_jurnal .= '<tr>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->no_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][coa]" value="' . $item_coa->no_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $nm_company;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_company]" value="' . $id_company . '">';
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->nm_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_coa]" value="' . $item_coa->nm_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->nm_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][keterangan]" value="' . $item_coa->nm_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-right">';
+						$hasil_jurnal .= number_format($debit);
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][debit]" value="' . $debit . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-right">';
+						$hasil_jurnal .= number_format($kredit);
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][kredit]" value="' . $kredit . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '</tr>';
+
+						$ttl_debit += $debit;
+						$ttl_kredit += $kredit;
+
+						$no_jurnal++;
+					}
+				} else {
+					if (!empty($coa_bank) && $coa_bank == $item_coa->no_coa) {
+						$kredit = $payment_bank;
+
+						$id_company = '';
+						$nm_company = '';
+
+						$this->db->select('a.*');
+						$this->db->from('payment_approve a');
+						$this->db->where_in('a.id', explode(',', $id_payment));
+						$get_payment = $this->db->get()->result();
+
+						foreach ($get_payment as $item_payment) :
+							if ($item_payment->tipe == 'kasbon') {
+								$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
+
+								$id_kasbon_consultant = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : '';
+
+								if (!empty($id_kasbon_consultant)) {
+									$this->consultant->select('a.id as id_company, a.nm_company');
+									$this->consultant->from('kons_tr_company a');
+									$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+									$this->consultant->join('kons_tr_kasbon_project_header c', 'c.id_penawaran = b.id_quotation', 'left');
+									$this->consultant->where('c.id', $id_kasbon_consultant);
+									$get_company = $this->consultant->get()->row();
+
+									$id_company = (!empty($get_company)) ? $get_company->id_company : '';
+									$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+								}
+							}
+						endforeach;
+
+						$this->db->select('a.rekening, a.nama, b.nama_bank');
+						$this->db->from('ms_bank a');
+						$this->db->join('list_bank b', 'b.id = a.bank', 'left');
+						$this->db->where('a.id', $bank);
+						$get_bank = $this->db->get()->row();
+
+						$nm_bank = (!empty($get_bank)) ? $get_bank->rekening . ' - ' . $get_bank->nama_bank . ' - ' . $get_bank->nama : '';
+
+						$hasil_jurnal .= '<tr>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->no_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][coa]" value="' . $item_coa->no_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $nm_company;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_company]" value="' . $id_company . '">';
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->nm_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_coa]" value="' . $item_coa->nm_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-center">';
+						$hasil_jurnal .= $item_coa->nm_coa;
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][keterangan]" value="' . $item_coa->nm_coa . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-right">';
+						$hasil_jurnal .= number_format($debit);
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][debit]" value="' . $debit . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '<td class="text-right">';
+						$hasil_jurnal .= number_format($kredit);
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][kredit]" value="' . $kredit . '">';
+						$hasil_jurnal .= '</td>';
+
+						$hasil_jurnal .= '</tr>';
+
+						$ttl_debit += $debit;
+						$ttl_kredit += $kredit;
+						$no_jurnal++;
+					}
+				}
+			}
+
+		endforeach;
+
+		$response = [
+			'hasil_jurnal' => $hasil_jurnal,
+			'ttl_debit' => $ttl_debit,
+			'ttl_kredit' => $ttl_kredit
+		];
+
+		echo json_encode($response);
+	}
+
+	public function generate_id_invoice_jurnal($nomor)
+	{
+		$Ym             = date('ym');
+		$srcMtr            = "SELECT MAX(id) as maxP FROM tr_jurnal WHERE no_jurnal LIKE '%" . int_to_roman(date('m')) . "-" . date('-y') . "%' ";
+		$resultMtr        = $this->db->query($srcMtr)->result_array();
+		$angkaUrut2        = $resultMtr[0]['maxP'];
+		$urutan2        = (int)substr($angkaUrut2, 0, 5);
+		$urutan2 = $urutan2 + $nomor;
+		$urut2            = sprintf('%05s', $urutan2);
+		$kode_trans        = $urut2 . '-AJV-' . int_to_roman(date('m')) . '-' . date('y');
+
+		return $kode_trans;
 	}
 }
