@@ -96,7 +96,7 @@ foreach ($results['result_payment'] as $item) {
 							<option value="">- Bank -</option>
 							<?php
 							foreach ($results['list_bank'] as $item_bank) {
-								echo '<option value="' . $item_bank->no_perkiraan . '">' . $item_bank->nama . '</option>';
+								echo '<option value="' . $item_bank->id . '">(' . $item_bank->rekening . ' a/n ' . $item_bank->nama . ') - ' . $item_bank->nama_bank . '</option>';
 							}
 							?>
 						</select>
@@ -352,6 +352,32 @@ foreach ($results['result_payment'] as $item) {
 					<input type="file" class="form-control form-control-sm" name="upload_doc" id="" style="margin-top: 15px;">
 				</div>
 			</div>
+
+			<br><br>
+
+			<div class="col-md-12">
+				<table class="table table-bordered">
+					<thead class="bg-primary">
+						<tr>
+							<th class="text-center">Tanggal Jurnal</th>
+							<th class="text-center">COA</th>
+							<th class="text-center">Nama Company</th>
+							<th class="text-center">Nama Account</th>
+							<th class="text-center">Keterangan</th>
+							<th class="text-center">Debit</th>
+							<th class="text-center">Kredit</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_jurnal"></tbody>
+					<tfoot class="bg-primary">
+						<tr>
+							<th colspan="5" class="text-center">Balancing</th>
+							<th class="text-right th_ttl_debit_jurnal">0</th>
+							<th class="text-right th_ttl_kredit_jurnal">0</th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
 		</div>
 		<!-- <div class="box-footer">
 		<input type="hidden" name="total" id="total" value="<?= round($total); ?>" />
@@ -408,6 +434,8 @@ foreach ($results['result_payment'] as $item) {
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 
 <script>
+	set_jurnal();
+
 	$(document).ready(function() {
 		// $('.supplier').chosen();
 		$('.bank').chosen();
@@ -416,15 +444,22 @@ foreach ($results['result_payment'] as $item) {
 
 		$('.auto_num').autoNumeric();
 
-		$.ajax({
-			type: "POST",
-			url: siteurl + active_controller + 'used_choosed_payment',
-			cache: false,
-			success: function(result) {
+		// $.ajax({
+		// 	type: "POST",
+		// 	url: siteurl + active_controller + 'used_choosed_payment',
+		// 	cache: false,
+		// 	success: function(result) {
 
-			}
-		});
+		// 	}
+		// });
 	});
+
+	function getNum(val) {
+		if (isNaN(val) || val == '') {
+			return 0;
+		}
+		return parseFloat(val);
+	}
 
 	function number_format(number, decimals, dec_point, thousands_sep) {
 		// Strip all characters but numerical ones.
@@ -471,6 +506,31 @@ foreach ($results['result_payment'] as $item) {
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
+	}
+
+	function set_jurnal() {
+		var id_payment = $('.id_payment').val();
+		var payment_bank = $('.input_payment_bank').val()
+		var bank_charge = $('.bank_charge').val();
+		var bank = $('.bank').val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'set_jurnal',
+			data: {
+				'id_payment': id_payment,
+				'payment_bank': payment_bank,
+				'bank_charge': bank_charge,
+				'bank': bank
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.tbody_jurnal').html(result.hasil_jurnal);
+				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit));
+				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
+			}
+		})
 	}
 
 	$(document).on('change', '.change_nilai_pph', function() {
@@ -524,11 +584,16 @@ foreach ($results['result_payment'] as $item) {
 		$('.selisih_col').html(number_format(selisih, 2));
 
 		hitung_kontrol();
+		set_jurnal();
 	});
 
 	$(document).on('change', '.bank_charge', function() {
 		hitung_kontrol();
+		set_jurnal();
 	});
+	$(document).on('change', '.bank', function() {
+		set_jurnal();
+	})
 
 	$(document).on('submit', '#frm-data', function(e) {
 		e.preventDefault();
