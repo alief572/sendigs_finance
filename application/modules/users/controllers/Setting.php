@@ -149,7 +149,9 @@ class Setting extends Admin_Controller
         }
 
         $cabang = $this->Cabang_model->find_all();
-        $department = $this->hris->select('a.id, a.name as nama')->get(DBHRIS . '.departments a')->result_array();
+        $department = $this->users_model->get_list_department();
+
+
 
         $this->template->set('cabang', $cabang);
         $this->template->set('department', $department);
@@ -183,11 +185,25 @@ class Setting extends Admin_Controller
             }
         }
 
+        $list_titles = '';
+        if (!empty($data->department_id)) {
+            $get_list_titles = $this->users_model->get_titles($data->department_id);
+
+            foreach ($get_list_titles as $item) :
+                $selected = '';
+                if ($item['id'] == $data->title_id) {
+                    $selected = 'selected';
+                }
+                $list_titles .= '<option value="' . $item['id'] . '" ' . $selected . '>' . strtoupper($item['nm_title']) . '</option>';
+            endforeach;
+        }
+
         //$cabang = $this->Cabang_model->find_all();
         //$this->template->set('cabang', $cabang);
-        $department = $this->hris->select('a.id, a.name as nama')->get(DBHRIS . '.departments a')->result_array();
+        $department = $this->users_model->get_list_department();
         $this->template->set('department', $department);
         $this->template->set('data', $data);
+        $this->template->set('list_titles', $list_titles);
         $this->template->title(lang('users_edit_title'));
         $this->template->page_icon('fa fa-user');
         $this->template->render('users_form');
@@ -371,6 +387,7 @@ class Setting extends Admin_Controller
         $st_aktif   = $this->input->post('st_aktif');
         $kdcab      = $this->input->post('kdcab');
         $department_id    = $this->input->post('department_id');
+        $title    = $this->input->post('title');
 
         /**
          * This code will benchmark your server to determine how high of a cost you can
@@ -385,14 +402,13 @@ class Setting extends Admin_Controller
         do {
             $cost++;
             $start = microtime(true);
-            password_hash("test", PASSWORD_BCRYPT, ["cost" => $cost]);
+            password_hash("test", PASSWORD_BCRYPT, ["cost" => 12]);
             $end = microtime(true);
         } while (($end - $start) < $timeTarget);
         //End finding cost
 
         $options = [
-            'cost' => $cost,
-            'salt' => bin2hex(openssl_random_pseudo_bytes(22))
+            'cost' => 12
         ];
 
         $password = password_hash($password, PASSWORD_BCRYPT, $options);
@@ -409,7 +425,8 @@ class Setting extends Admin_Controller
                 'ip'        => $this->input->ip_address(),
                 'st_aktif' => $st_aktif,
                 'kdcab'     => $kdcab,
-                'department_id'    => $department_id
+                'department_id'    => $department_id,
+                'title_id' => $title
             );
 
             $result = $this->users_model->insert($data_insert);
@@ -444,9 +461,10 @@ class Setting extends Admin_Controller
                 'ip'        => $this->input->ip_address(),
                 'st_aktif' => $st_aktif,
                 'kdcab'     => $kdcab,
-                'department_id'    => $department_id
+                'department_id'    => $department_id,
+                'title_id' => $title
             );
-            if (isset($_POST['password'])) {
+            if (isset($_POST['password']) && $_POST['password'] !== '') {
                 $data_insert['password'] = $password;
             }
 
@@ -496,5 +514,24 @@ class Setting extends Admin_Controller
     public function update_user_permission()
     {
         $this->permissions_model->update_user_permission();
+    }
+
+    public function get_titles()
+    {
+        $post = $this->input->post();
+        $department_id = $post['department_id'];
+
+        $get_titles = $this->users_model->get_titles($department_id);
+
+        $hasil = '<option value=""> - Title - </option>';
+        foreach ($get_titles as $item) :
+            $hasil .= '<option value="' . $item['id'] . '">' . strtoupper($item['nm_title']) . '</option>';
+        endforeach;
+
+        $response = [
+            'hasil' => $hasil
+        ];
+
+        echo json_encode($response);
     }
 }
