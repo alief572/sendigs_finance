@@ -60,8 +60,33 @@ class Users_model extends BF_Model
     /**
      * Function construct used to load some library, do some actions, etc.
      */
+
+    protected $hris;
+
     public function __construct()
     {
         parent::__construct();
+
+        $this->hris = $this->load->database('hris', true);
+    }
+
+    public function get_list_department()
+    {
+        $this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+        $this->hris->from('departments a');
+        $this->hris->join('companies b', 'b.id = a.company_id');
+        $get_list_department = $this->hris->get();
+
+        return $get_list_department->result_array();
+    }
+
+    public function get_titles($department_id = null)
+    {
+        $this->hris->select('a.id, a.name as nm_title');
+        $this->hris->from('titles a');
+        $this->hris->where('a.department_id', $department_id);
+        $get_titles = $this->hris->get()->result_array();
+
+        return $get_titles;
     }
 }
