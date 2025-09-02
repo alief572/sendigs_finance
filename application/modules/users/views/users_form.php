@@ -1,3 +1,4 @@
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <div class="box box-primary">
 	<!-- form start -->
 	<?= form_open($this->uri->uri_string(), array('id' => 'frm_users', 'name' => 'frm_users', 'role' => 'form', 'class' => 'form-horizontal')) ?>
@@ -83,10 +84,23 @@
 				$deptid = (!empty($data->department_id)) ? $data->department_id : 0;
 				$departmentx[0] = 'Select An Department';
 				foreach ($department as $key => $value) {
-					$departmentx[$value['id']] = strtoupper($value['nama']);
+					$departmentx[$value['id']] = strtoupper($value['nm_dept'] . ' - ' . strtoupper($value['nm_comp']));
 				}
 				echo form_dropdown('department_id', $departmentx, $deptid, array('id' => 'department_id', 'class' => 'form-control input-md', 'required' => 'required'));
 				?>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="col-md-2 control-label"><b>Title</b></label>
+			<div class='col-sm-3'>
+				<select class="form-control input-md list_title" name="title">
+					<option value="">- Title -</option>
+					<?php
+					if (isset($list_titles) && !empty($list_titles)) {
+						echo $list_titles;
+					}
+					?>
+				</select>
 			</div>
 		</div>
 		<div class="box-footer">
@@ -102,3 +116,26 @@
 	</div>
 	<?= form_close() ?>
 </div><!-- /.box -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+	$(document).ready(function() {
+		$('#department_id').select2({
+			width: '100%'
+		});
+	});
+	$(document).on('change', '#department_id', function() {
+		var department_id = $(this).val();
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + '/setting/' + 'get_titles',
+			data: {
+				'department_id': department_id
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.list_title').html(result.hasil);
+			}
+		});
+	});
+</script>
