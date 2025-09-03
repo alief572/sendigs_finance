@@ -146,10 +146,10 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
-            $hasil .= date('d-F-Y', strtotime($get_inv['created_date']));
+            $hasil .= date('d-F-Y', strtotime($get_inv['tanggal_invoice']));
             $hasil .= '<input type="hidden" name="id_inv_' . $no . '" value="' . $item . '">';
             $hasil .= '</td>';
-            $hasil .= '<td class="text-center">' . $get_inv['id'] . '</td>';
+            $hasil .= '<td class="text-center">' . $get_inv['no_invoice'] . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_nominal_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['dpp_lain_lain_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
