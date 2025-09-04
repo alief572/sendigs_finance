@@ -3,7 +3,7 @@ $gambar = '';
 foreach ($data_detail as $item_detail) {
 	if ($item_detail->doc_file !== '') {
 		if (strpos($item_detail->doc_file, 'pdf', 0) > 1) {
-			$gambar .= '<iframe src="asset/expense/' . base_url($item_detail->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
+			$gambar .= '<iframe src="asset/expense/' . base_url($item_detail->doc_file) . '" #toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
 		} else {
 			$gambar .= '<img src="asset/expense/' . base_url($item_detail->doc_file) . '" width="500"><br />';
 		}
