@@ -2500,6 +2500,7 @@ class Expense extends Admin_Controller
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
 			->where('a.no_pr', $no_pr)
 			->where('b.metode_pembelian', '2')
+			->where('a.sts_app', 'Y')
 			->where('a.kasbon_created', null);
 		$get_detail_pr_departemen = $this->db->get()->result_array();
 
