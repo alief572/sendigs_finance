@@ -1051,4 +1051,21 @@ class Request_payment_model extends BF_Model
             $this->db->trans_commit();
         }
     }
+
+    public function get_payment_paid()
+    {
+        $get_payment_approve = $this->db->select('no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(tgl_bayar, "%d %M %Y")) as tgl_pembayaran')->get_where('payment_approve', ['tgl_bayar <>' => null])->result();
+
+        $list_tgl_pengajuan_pembayaran = [];
+        foreach ($get_payment_approve as $item_payment) {
+            $list_tgl_pengajuan_pembayaran[$item_payment->no_doc] = [
+                'diajukan_oleh' => $item_payment->created_by,
+                'dibayar_oleh' => $item_payment->by_pay,
+                'tgl_pengajuan' => $item_payment->tgl_pengajuan,
+                'tgl_pembayaran' => $item_payment->tgl_pembayaran
+            ];
+        }
+
+        return $list_tgl_pengajuan_pembayaran;
+    }
 }

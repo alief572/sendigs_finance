@@ -16,31 +16,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 		<!-- <div class="col-md-6"> -->
 		<!-- <div class="form-inline"> -->
 		<div class="row">
-			<!-- <div class="col-md-3">
-				<div class="form-group">
-					<input type="date" name="tgl_from" id="" class="form-control form-control-sm tgl_from">
-				</div>
-			</div>
-			<div class="col-md-1 text-center">
-				<p>S/D</p>
-			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<input type="date" name="tgl_to" id="" class="form-control form-control-sm tgl_to">
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<select name="bank" id="" class="form-control form-control-sm bank select2">
-						<option value="">- Pilih Bank -</option>
-						<?php
-						foreach ($data_bank as $item) {
-							echo '<option value="' . $item->no_perkiraan . ' - ' . $item->nama . '">' . $item->no_perkiraan . ' - ' . $item->nama . '</option>';
-						}
-						?>
-					</select>
-				</div>
-			</div> -->
+
 			<div class="col-md-2">
 				<!-- <button type="button" class="btn btn-sm btn-primary search_data"><i class="fa fa-search"></i> Search</button> -->
 				<button type="button" class="btn btn-sm btn-success excel_data"><i class="fa fa-download"></i> Excel</button>

@@ -230,6 +230,13 @@ class Pembayaran_material extends Admin_Controller
 		// history('Form Payment');
 		// $this->load->view('Pembayaran_material/form_payment_new.php', $data);
 
+		$check_transpoty_driver = $this->Pembayaran_material_model->check_transport_payment($id_payment);
+
+		$jurnal_refill_petty_cash = '';
+		if ($check_transpoty_driver > 0) {
+			$jurnal_refill_petty_cash = $this->Pembayaran_material_model->jurnal_refill_petty_cash($id_payment);
+		}
+
 		$get_payment = $this->db
 			->select('a.*')
 			->from('payment_approve a')
@@ -247,15 +254,13 @@ class Pembayaran_material extends Admin_Controller
 		$this->db->where('a.deleted', '0');
 		$get_bank = $this->db->get()->result();
 
-		// print_r($this->db->last_query());
-		// exit;
-
 		$data = [
 			'id_payment' => implode(',', $id_payment),
 			'result_payment' => $get_payment,
 			'list_supplier' => $get_supplier,
 			'list_bank' => $get_bank,
-			'list_mata_uang' => $get_mata_uang
+			'list_mata_uang' => $get_mata_uang,
+			'jurnal_refill_petty_cash' => $jurnal_refill_petty_cash
 		];
 		$this->template->set('results', $data);
 		$this->template->render('form_payment_new');
@@ -1385,10 +1390,10 @@ class Pembayaran_material extends Admin_Controller
 		}
 
 		$arr_jurnal = [];
+		$no_jurnal = 1;
 		if (isset($post['jurnal_ls'])) {
 			// print_r($post['jurnal_ls']);
 			// exit;
-			$no_jurnal = 1;
 			foreach ($post['jurnal_ls'] as $item_jurnal) {
 				// if (isset($item_jurnal['tanggal_jurnal'])) {
 				$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
@@ -1405,6 +1410,36 @@ class Pembayaran_material extends Admin_Controller
 					'keterangan' => $item_jurnal['keterangan'],
 					'no_transaksi' => $id_payment_paid,
 					'jenis_transaksi' => 'Payment',
+					'id_divisi' => $item_jurnal['id_divisi'],
+					'nm_divisi' => $item_jurnal['nm_divisi'],
+					'created_by' => $this->auth->user_id(),
+					'created_date' => date('Y-m-d')
+				];
+
+				$no_jurnal++;
+				// }
+			}
+		}
+
+		if (isset($post['jurnal_refill_pettycash'])) {
+			foreach ($post['jurnal_refill_pettycash'] as $item_jurnal) {
+				// if (isset($item_jurnal['tanggal_jurnal'])) {
+				$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+
+				$arr_jurnal[] = [
+					'no_jurnal' => $id_jurnal,
+					'tgl_jurnal' => date('Y-m-d'),
+					'coa' => $item_jurnal['no_coa'],
+					'id_company' => $item_jurnal['id_company'],
+					'nm_company' => $item_jurnal['nm_company'],
+					'nm_coa' => $item_jurnal['nm_coa'],
+					'debit' => $item_jurnal['debit'],
+					'kredit' => $item_jurnal['kredit'],
+					'keterangan' => $item_jurnal['keterangan'],
+					'no_transaksi' => $id_payment_paid,
+					'jenis_transaksi' => 'Refill Pettycash',
+					'id_divisi' => $item_jurnal['id_divisi'],
+					'nm_divisi' => $item_jurnal['nm_divisi'],
 					'created_by' => $this->auth->user_id(),
 					'created_date' => date('Y-m-d')
 				];
@@ -1630,5 +1665,10 @@ class Pembayaran_material extends Admin_Controller
 	public function set_jurnal()
 	{
 		$this->Pembayaran_material_model->set_jurnal();
+	}
+
+	public function set_jurnal_refill()
+	{
+		$this->Pembayaran_material_model->set_jurnal_refill();
 	}
 }

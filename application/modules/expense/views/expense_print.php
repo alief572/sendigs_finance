@@ -1,10 +1,12 @@
 <?php
 $gambar = '';
-if ($data->bon_bukti !== '') {
-	if (strpos($data->bon_bukti, 'pdf', 0) > 1) {
-		$gambar .= '<iframe src="' . base_url($data->bon_bukti) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
-	} else {
-		$gambar .= '<img src="' . base_url($data->bon_bukti) . '" width="500"><br />';
+foreach ($data_detail as $item_detail) {
+	if ($item_detail->doc_file !== '') {
+		if (strpos($item_detail->doc_file, 'pdf', 0) > 1) {
+			$gambar .= '<iframe src="asset/expense/' . base_url($item_detail->doc_file) . '" #toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
+		} else {
+			$gambar .= '<img src="asset/expense/' . base_url($item_detail->doc_file) . '" width="500"><br />';
+		}
 	}
 }
 ?>
@@ -139,7 +141,17 @@ if ($data->bon_bukti !== '') {
 	<em>STM/FR02/09/01/00</em>
 
 	<br />
-	<?= $gambar ?>
+	<?php
+	foreach ($data_detail as $item_detail) {
+		if (!empty($item_detail->doc_file)) {
+			if (strpos($item_detail->doc_file, 'pdf', 0) > 1) {
+				echo '<iframe src="' . base_url('assets/expense/' . $item_detail->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
+			} else {
+				echo '<img src="' . base_url('assets/expense/' . $item_detail->doc_file) . '" width="500"><br />';
+			}
+		}
+	}
+	?>
 </body>
 
 </html>

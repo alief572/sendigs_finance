@@ -1,6 +1,14 @@
 <?php
+$hide_table_jurnal_petty_cash = 'd-none';
+if (!empty($results['jurnal_refill_petty_cash'])) {
+	$hide_table_jurnal_petty_cash = '';
+}
+
 $kode_supplier = [];
 $nm_supplier = [];
+
+
+
 foreach ($results['result_payment'] as $item) {
 
 
@@ -55,6 +63,10 @@ foreach ($results['result_payment'] as $item) {
 	td {
 		padding: 5px 5px 5px 5px;
 	}
+
+	.d-none {
+		display: none;
+	}
 </style>
 <form action="" id="frm-data" enctype="multipart/form-data">
 	<input type="hidden" name="id_payment" class="id_payment" value="<?= $results['id_payment'] ?>">
@@ -92,7 +104,7 @@ foreach ($results['result_payment'] as $item) {
 					<td width="15%" style="">Pilih Bank</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
-						<select name="bank" id="" class="form-control form-control-sm bank">
+						<select name="bank" id="" class="form-control form-control-sm bank" onchange="set_jurnal_refill('<?= $results['id_payment'] ?>')">
 							<option value="">- Bank -</option>
 							<?php
 							foreach ($results['list_bank'] as $item_bank) {
@@ -356,12 +368,14 @@ foreach ($results['result_payment'] as $item) {
 			<br><br>
 
 			<div class="col-md-12">
-				<table class="table table-bordered">
+				<h3>Jurnal</h3>
+				<table class="table table-striped">
 					<thead class="bg-primary">
 						<tr>
 							<th class="text-center">Tanggal Jurnal</th>
-							<th class="text-center">COA</th>
 							<th class="text-center">Nama Company</th>
+							<th class="text-center">Divisi</th>
+							<th class="text-center">COA</th>
 							<th class="text-center">Nama Account</th>
 							<th class="text-center">Keterangan</th>
 							<th class="text-center">Debit</th>
@@ -371,9 +385,99 @@ foreach ($results['result_payment'] as $item) {
 					<tbody class="tbody_jurnal"></tbody>
 					<tfoot class="bg-primary">
 						<tr>
-							<th colspan="5" class="text-center">Balancing</th>
+							<th colspan="6" class="text-center">Balancing</th>
 							<th class="text-right th_ttl_debit_jurnal">0</th>
 							<th class="text-right th_ttl_kredit_jurnal">0</th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+
+			<br><br>
+
+			<div class="col-md-12 <?= $hide_table_jurnal_petty_cash ?>">
+				<h3>Jurnal Refill Pettycash</h3>
+				<table class="table table-striped">
+					<thead class="bg-primary">
+						<tr>
+							<th class="text-center">Tanggal Jurnal</th>
+							<th class="text-center">Nama Company</th>
+							<th class="text-center">Divisi</th>
+							<th class="text-center">COA</th>
+							<th class="text-center">Nama Account</th>
+							<th class="text-center">Keterangan</th>
+							<th class="text-center">Debit</th>
+							<th class="text-center">Kredit</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_jurnal_refill_pettycash">
+						<?php
+						$ttl_debit_jurnal_refill = 0;
+						$ttl_kredit_jurnal_refill = 0;
+						if (!empty($results['jurnal_refill_petty_cash'])) {
+							$no_jurnal_refill_pettycash = 0;
+							foreach ($results['jurnal_refill_petty_cash'] as $item) {
+								$no_jurnal_refill_pettycash++;
+
+								$get_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => '1010-10-2'])->row();
+
+								$id_coa = (!empty($get_coa)) ? $get_coa->no_perkiraan : '';
+								$nm_coa = (!empty($get_coa)) ? $get_coa->nama : '';
+
+								echo '<tr>';
+
+								echo '<td class="text-center">';
+								echo date('d F Y');
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
+								echo '</td>';
+
+								echo '<td class="text-center">';
+								echo 'Vuca';
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][id_company]" value="4">';
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . ']nm_company]" value="Vuca">';
+								echo '</td>';
+
+								echo '<td class="text-center">';
+								echo 'Driver';
+								echo '</td>';
+
+								echo '<td class="text-center">';
+								echo $id_coa;
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][coa]" value="' . $id_coa . '">';
+								echo '</td>';
+
+								echo '<td class="text-center">';
+								echo $nm_coa;
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][nm_account]" value="' . $nm_coa . '">';
+								echo '</td>';
+
+								echo '<td class="text-center">';
+								echo 'Refill Pettycash - ' . $item->no_doc . '';
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][deskripsi]" value="Refill Pettycash - ' . $item->no_doc . '">';
+								echo '</td>';
+
+								echo '<td class="text-right">';
+								echo number_format($item->jumlah);
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][debit]" value="' . $item->jumlah . '">';
+								echo '</td>';
+
+								echo '<td class="text-right">';
+								echo 0;
+								echo '<input type="hidden" name="jurnal_refill_pettycash[' . $no_jurnal_refill_pettycash . '][kredit]" value="0">';
+								echo '</td>';
+
+								echo '</tr>';
+
+								$ttl_debit_jurnal_refill += $item->jumlah;
+							}
+						}
+						?>
+					</tbody>
+					<tfoot class="bg-primary">
+						<tr>
+							<th colspan="6" class="text-center">Balancing</th>
+							<th class="text-right ttl_debit_refill"><?= number_format($ttl_debit_jurnal_refill) ?></th>
+							<th class="text-right ttl_kredit_refill"><?= number_format($ttl_kredit_jurnal_refill) ?></th>
 						</tr>
 					</tfoot>
 				</table>
@@ -435,6 +539,7 @@ foreach ($results['result_payment'] as $item) {
 
 <script>
 	set_jurnal();
+	set_jurnal_refill();
 
 	$(document).ready(function() {
 		// $('.supplier').chosen();
@@ -531,6 +636,27 @@ foreach ($results['result_payment'] as $item) {
 				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
 			}
 		})
+	}
+
+	function set_jurnal_refill() {
+		var id_payment = $('.id_payment').val();
+		var bank = $('.bank').val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'set_jurnal_refill',
+			data: {
+				'id_payment': id_payment,
+				'bank': bank
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.tbody_jurnal_refill_pettycash').html(result.hasil);
+				$('.ttl_debit_refill').html(number_format(result.ttl_debit));
+				$('.ttl_kredit_refill').html(number_format(result.ttl_kredit));
+			}
+		});
 	}
 
 	$(document).on('change', '.change_nilai_pph', function() {
