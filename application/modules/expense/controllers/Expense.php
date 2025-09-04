@@ -1751,6 +1751,7 @@ class Expense extends Admin_Controller
 	{
 		$data = $this->Expense_model->GetDataTransportReq($id);
 		$data_detail = $this->Expense_model->GetDataTransportInReq($data->no_doc);
+
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
