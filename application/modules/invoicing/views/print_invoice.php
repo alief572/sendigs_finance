@@ -120,19 +120,19 @@
         <?php
         if ($id_company == '3' || $id_company == '4' || $id_company == '5') {
             echo '<tr>';
-            echo '<th style="font-size: 15px">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px">Jumlah</th>';
-            echo '<th style="font-size: 15px">Harga @</th>';
-            echo '<th style="font-size: 15px">Disc</th>';
-            echo '<th style="font-size: 15px">Sub Total</th>';
+            echo '<th style="font-size: 15px;" width="400px">Nama Barang / Pesanan</th>';
+            echo '<th style="font-size: 15px;" width="100px">Jumlah</th>';
+            echo '<th style="font-size: 15px;" width="100px">Harga @</th>';
+            echo '<th style="font-size: 15px;" width="150px">Disc</th>';
+            echo '<th style="font-size: 15px;" width="150px">Sub Total</th>';
             echo '</tr>';
         } else {
             echo '<tr>';
-            echo '<th style="font-size: 15px">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px">Jumlah</th>';
-            echo '<th style="font-size: 15px">Harga @</th>';
-            echo '<th style="font-size: 15px">Disc</th>';
-            echo '<th style="font-size: 15px">Sub Total</th>';
+            echo '<th style="font-size: 15px;" width="400px">Nama Barang / Pesanan</th>';
+            echo '<th style="font-size: 15px;" width="100px">Jumlah</th>';
+            echo '<th style="font-size: 15px;" width="100px">Harga @</th>';
+            echo '<th style="font-size: 15px;" width="150px">Disc</th>';
+            echo '<th style="font-size: 15px;" width="150px">Sub Total</th>';
             echo '</tr>';
         }
         ?>
@@ -323,8 +323,8 @@
                     }
                     ?>
                 </td>
-                <td colspan="2" style="border-top: 1px solid black; text-align: center;">
-                    <b style="font-size: 14px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
+                <td colspan="2" style="border-top: 1px solid black; text-align: center;" width="400px">
+                    <b style="font-size: 13px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
                 </td>
             </tr>
             <tr>
