@@ -187,7 +187,7 @@
                     <?php
                     if ($id_company == '3') {
                     ?>
-                        <b>PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
+                        <b style="font-size: 13px !important;">PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
                         <b>BCA Tebet Barat Acc. No 436.400.0300</b>
                         <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
                     <?php
@@ -206,7 +206,7 @@
                     }
                     ?>
                 </td>
-                <td colspan="2" style="border-top: 1px solid black; text-align: center;">
+                <td colspan="2" style="border-top: 1px solid black; text-align: center;width: 400px !important;">
                     <?php
                     if ($id_company == '3') {
                         echo '<b style="font-size: 14px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b>';
@@ -241,7 +241,7 @@
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="text-align: center; ">
+                <td colspan="2" style="text-align: center; vertical-align: bottom;">
                     <?php
                     if ($id_company == '3') {
                         echo '<span style="text-decoration: underline; font-weight: bold;">Cahyadi</span>';
@@ -304,7 +304,7 @@
                     <?php
                     if ($id_company == '3') {
                     ?>
-                        <b>PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
+                        <b style="font-size: 15px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
                         <b>OCBC NISP Acc. No 7788.0000.0417</b>
                         <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
                     <?php
