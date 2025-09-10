@@ -464,7 +464,13 @@ class Pembayaran_material_model extends BF_Model
 							}
 						} else {
 							if (!empty($coa_bank) && $coa_bank == $item_coa->no_coa) {
+								$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
+								$get_users = $this->db->get_where('users', ['nm_lengkap' => $get_kasbon->created_by])->row();
+
 								$kredit = $payment_bank;
+								if ($payment_bank > $get_kasbon->jumlah_kasbon) {
+									$kredit = $get_kasbon->jumlah_kasbon;
+								}
 
 								$id_company = '';
 								$nm_company = '';
