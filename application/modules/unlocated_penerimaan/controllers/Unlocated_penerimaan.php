@@ -3,10 +3,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Unlocated_penerimaan extends Admin_Controller
 {
-    protected $viewPermission = 'Alokasi.View';
-    protected $managePermission = 'Alokasi.Manage';
-    protected $addPermission = 'Alokasi.Add';
-    protected $deletePermission = 'Alokasi.Delete';
+    protected $viewPermission = 'Unlocated_Penerimaan.View';
+    protected $managePermission = 'Unlocated_Penerimaan.Manage';
+    protected $addPermission = 'Unlocated_Penerimaan.Add';
+    protected $deletePermission = 'Unlocated_Penerimaan.Delete';
 
     public function __construct()
     {
