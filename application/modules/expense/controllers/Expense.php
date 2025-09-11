@@ -201,7 +201,7 @@ class Expense extends Admin_Controller
 				'jumlah_kasbon' => $jumlah_kasbon,
 				'doc_file' => $filenames,
 				'doc_file_2' => $filenames2,
-				'status' => 0,
+				'status' => '0',
 				'bank_id' => $bank_id,
 				'accnumber' => $accnumber,
 				'accname' => $accname,
@@ -221,7 +221,7 @@ class Expense extends Admin_Controller
 					foreach ($get_detail_pr as $detail_pr) :
 						if (isset($_POST['price_input_' . $detail_pr['id']])) {
 							$arrInsertDetail[] = [
-								'id' => $detail_pr['id'],
+								'id_detail' => $detail_pr['id'],
 								'id_kasbon' => $no_doc,
 								'no_pr' => $no_pr,
 								'nm_material' => $detail_pr['nm_barang'],
@@ -235,14 +235,26 @@ class Expense extends Admin_Controller
 							];
 
 							$arrUpdateDetail[] = [
-								'id' => $detail_pr['id'],
 								'kasbon_created' => 1
 							];
+
+							$update_rutin_non_planning_detail = $this->db->update('rutin_non_planning_detail', ['kasbon_created' => 1], ['id' => $detail_pr['id']]);
+							if (!$update_rutin_non_planning_detail) {
+								$this->db->trans_rollback();
+
+								print_r($this->db->last_query());
+								exit;
+							}
 						}
 					endforeach;
 
-					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
-					$this->db->update_batch('rutin_non_planning_detail', $arrUpdateDetail, 'id');
+					$insert_pr_detail_kasbon = $this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
+					if (!$insert_pr_detail_kasbon) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
 				} else if ($tipe_pr == 'pr asset') {
 					$this->db->select('a.*, b.nama_asset as nm_barang, "Pcs" as satuan, b.qty');
 					$this->db->from('tran_pr_header a');
@@ -272,11 +284,24 @@ class Expense extends Admin_Controller
 								'id' => $detail_pr['id'],
 								'kasbon_created' => 1
 							];
+
+							$update_tran_pr_header = $this->db->update('tran_pr_header', ['kasbon_created' => '1'], ['id' => $detail_pr['id']]);
+							if (!$update_tran_pr_header) {
+								$this->db->trans_rollback();
+
+								print_r($this->db->last_query());
+								exit;
+							}
 						}
 					endforeach;
 
-					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
-					$this->db->update_batch('tran_pr_header', $arrUpdateDetail, 'id');
+					$update_pr_detail_kasbon = $this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
+					if (!$update_pr_detail_kasbon) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
 				} else {
 					// $get_detail_pr = $this->db->get_where('material_planning_base_on_produksi_detail', ['no_pr' => $no_pr])->result_array();
 					$this->db->select('a.*, if(c.nama IS NULL, e.stock_name, c.nama) as nm_barang, if(d.code IS NULL, f.code, d.code) as satuan');
@@ -293,7 +318,7 @@ class Expense extends Admin_Controller
 					foreach ($get_detail_pr as $detail_pr) :
 						if (isset($_POST['price_input_' . $detail_pr['id']])) {
 							$arrInsertDetail[] = [
-								'id' => $detail_pr['id'],
+								'id_detail' => $detail_pr['id'],
 								'id_kasbon' => $no_doc,
 								'no_pr' => $no_pr,
 								'id_material' => $detail_pr['id_material'],
@@ -311,19 +336,42 @@ class Expense extends Admin_Controller
 								'id' => $detail_pr['id'],
 								'kasbon_created' => 1
 							];
+
+							$update_planning_detail = $this->db->update('material_planning_base_on_produksi_detail', ['kasbon_created' => '1'], ['id' => $detail_pr['id']]);
+							if (!$update_planning_detail) {
+								$this->db->trans_rollback();
+
+								print_r($this->db->last_query());
+								exit;
+							}
 						}
 					endforeach;
 
-					$this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
-					$this->db->update_batch('material_planning_base_on_produksi_detail', $arrUpdateDetail, 'id');
+					$update_pr_detail_kasbon = $this->db->insert_batch('tr_pr_detail_kasbon', $arrInsertDetail);
+					if (!$update_pr_detail_kasbon) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
 				}
 			}
 
-			$result = $this->db->update('tr_kasbon', $data, array('id' => $id));
+			$update_kasbon = $this->db->update('tr_kasbon', $data, ['id' => $id]);
+			if (!$update_kasbon) {
+				$this->db->trans_rollback();
+
+				print_r($this->db->last_query());
+				exit;
+			}
+			// print_r($this->db->last_query());
+			// exit;
 			if ($this->db->trans_status() === FALSE) {
 				$this->db->trans_rollback();
+				$result = false;
 			} else {
 				$this->db->trans_commit();
+				$result = true;
 			}
 		} else {
 			$rec = $this->db->query("select no_perkiraan from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='BUK030' and menu='kasbon'")->row();
