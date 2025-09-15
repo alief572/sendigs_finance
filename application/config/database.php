@@ -74,11 +74,11 @@ $active_group = 'default';
 $query_builder = TRUE;
 
 $db['default'] = array(
-	'dsn'	=> '',
+	'dsn'    => '',
 	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => 'sentral2022**',
-	'database' => 'db_sendigs_manufaktur',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'database' => 'db_sendigs_ss',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -96,11 +96,96 @@ $db['default'] = array(
 );
 
 $db['accounting'] = array(
-	'dsn'	=> '',
+	'dsn'    => '',
 	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => 'sentral2022**',
-	'database' => 'gl_sendigs_manufaktur',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => (ENVIRONMENT !== 'development'),
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => TRUE
+);
+
+$db['accounting_vuca'] = array(
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => (ENVIRONMENT !== 'development'),
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => TRUE
+);
+
+$db['accounting_sustain'] = array(
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => (ENVIRONMENT !== 'development'),
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => TRUE
+);
+
+$db['hris'] = array(
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'database' => 'hr_sentral',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => (ENVIRONMENT !== 'development'),
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => TRUE
+);
+
+$db['consultant'] = array(
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
+	'database' => 'db_consultant_new',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
