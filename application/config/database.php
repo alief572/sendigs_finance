@@ -141,9 +141,9 @@ $db['consultant'] = array(
 
 $db['hris'] = array(
 	'dsn'	=> '',
-	'hostname' => '203.160.58.170',
-	'username' => 'root',
-	'password' => 'sentral2022**',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'database' => 'hr_sentral',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
