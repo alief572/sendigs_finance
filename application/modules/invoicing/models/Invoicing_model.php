@@ -54,8 +54,13 @@ class Invoicing_model extends BF_Model
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
+<<<<<<< HEAD
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran','left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project','left');
+=======
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project', 'left');
+>>>>>>> a68365b9e5f4b09604066a2d67cd98f52ba55f20
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
         $this->db->where('a.tagih_mundur', 1);
         if (!empty($search['value'])) {
