@@ -51,6 +51,7 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 <form action="<?= $this->uri->uri_string() ?>" id="frm_data" name="frm_data" class="form-horizontal" enctype="multipart/form-data">
 	<div class="box">
 		<div class="box-header text-right">
+			<a href="<?= base_url('request_payment/download_excel_request_payment') ?>" class="btn btn-sm btn-success"><i class="fa fa-download"></i> Excel</a>
 			<button type="button" class="btn btn-sm btn-danger" onclick="reset_data();"><i class="fa fa-refresh"></i> Reset</button>
 		</div>
 		<div class="box-body">
@@ -81,8 +82,17 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					</thead>
 					<tbody></tbody>
 				</table>
+				<!-- <div class="pull-left"> -->
+				<div class="col-md-6">
+					<div class="form-group">
+						<label for="">Reject Reason</label>
+						<textarea name="reject_reason" id="reject_reason" class="form-control form-control-sm"></textarea>
+					</div>
+				</div>
+				<!-- </div> -->
 				<div class="pull-right">
 					<!-- <button type="button" id="btnxls" class="btn btn-default">Export Excel</button>  -->
+					<button type="button" class="btn btn-sm btn-danger" onclick="reject_req_payment()"><i class="fa fa-close"></i> Reject</button>
 					<button type="submit" name="save" class="btn btn-success btn-sm" id="submit"><i class="fa fa-save">&nbsp;</i>Update</button>
 				</div>
 			</div>
@@ -190,6 +200,83 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 			cache: false,
 			success: function(result) {
 				DataTables();
+			}
+		});
+	}
+
+	function reject_req_payment() {
+		var reject_reason = $('#reject_reason').val();
+
+		if (reject_reason == '') {
+			swal({
+				type: 'warning',
+				title: 'Warning !',
+				text: 'Reject Reason masih kosong !',
+				showCancelButton: false,
+				timer: 3000
+			});
+
+			return false;
+		}
+
+		swal({
+			type: 'warning',
+			title: 'Are you sure ?',
+			text: 'Selected data will be rejected !',
+			showCancelButton: true
+		}, function(next) {
+			if (next) {
+				$.ajax({
+					type: 'post',
+					url: siteurl + active_controller + 'reject_req_payment',
+					cache: false,
+					data: {
+						'reject_reason': reject_reason
+					},
+					dataType: 'json',
+					success: function(result) {
+						if (result.status == '1') {
+							swal({
+								type: 'success',
+								title: 'Success !',
+								text: result.msg,
+								timer: 3000,
+								showConfirmButton: false
+							}, function(lanjut) {
+								swal.close();
+								DataTables();
+							});
+						} else {
+							swal({
+								type: 'warning',
+								title: 'Failed !',
+								text: result.msg,
+								timer: 3000,
+								showConfirmButton: false
+							});
+						}
+					},
+					error: function(result) {
+						swal({
+							type: 'error',
+							title: 'Error !',
+							text: 'Please try again later !',
+							timer: 3000,
+							showConfirmButton: false
+						});
+					}
+				});
+			} else {
+				swal({
+					type: 'success',
+					title: 'Success !',
+					text: 'Selected data did not reject !',
+					timer: 3000,
+					showConfirmButton: false
+				}, function(next) {
+					swal.close();
+					DataTables();
+				});
 			}
 		});
 	}
