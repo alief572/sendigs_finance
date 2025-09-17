@@ -87,7 +87,7 @@ defined('EXIT__AUTO_MAX')      or define('EXIT__AUTO_MAX', 125); // highest auto
 define('DBHRIS', 'hr_sentral');
 define('DBERP', 'db_sendigs_ss_dev');
 define('DBACC', 'db_sendigs_gl_ss_dev');
-define('DBACC_VUCA', 'db_sendigs_gl_ss_vuca_dev');
-define('DBACC_SUST', 'db_sendigs_gl_ss_sustain_dev');
+define('DBACC_VUCA', 'db_sendigs_ss_vuca_dev');
+define('DBACC_SUST', 'db_sendigs_ss_sustain_dev');
 define('DBCNL', 'db_consultant_new_dev');
 define('FILE_ALLOW', 'doc|docx|xls|xlsx|ppt|pptx|7z|zip|rar|jpeg|jpg|gif|bmp|png');
