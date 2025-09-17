@@ -2702,4 +2702,118 @@ class Request_payment extends Admin_Controller
 	{
 		$this->Request_payment_model->copy_to_payment();
 	}
+
+	public function reject_req_payment()
+	{
+		$list_added_req_payment = $this->Request_payment_model->list_added_req_payment();
+
+		$reject_reason = $this->input->post('reject_reason');
+
+		$this->db->trans_begin();
+
+		if (count($list_added_req_payment) > 0) {
+			foreach ($list_added_req_payment as $item) {
+				if ($item->tipe == 'Kasbon') {
+					$data_reject = [
+						'status' => '9',
+						'st_reject' => $reject_reason
+					];
+
+					$update_reject_kasbon = $this->db->update('tr_kasbon', $data_reject, ['no_doc' => $item->no_doc]);
+					if (!$update_reject_kasbon) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
+				}
+
+				if ($item->tipe == 'Transport') {
+					$data_reject = [
+						'status' => '9',
+						'st_reject' => $reject_reason
+					];
+
+					$update_reject_transport = $this->db->update('tr_transport_req', $data_reject, ['no_doc' => $item->no_doc]);
+					if (!$update_reject_transport) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
+				}
+
+				if ($item->tipe == 'Expense') {
+					$data_reject = [
+						'status' => '9',
+						'st_reject' => $reject_reason
+					];
+
+					$update_reject_expense = $this->db->update('tr_expense', $data_reject, ['no_doc' => $item->no_doc]);
+					if (!$update_reject_expense) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
+				}
+
+				if ($item->tipe == 'Periodik') {
+					$data_reject = [
+						'status' => '9',
+						'sts_reject' => '1',
+						'reject_ket' => $reject_reason
+					];
+
+					$update_reject_periodik = $this->db->update('tr_pengajuan_rutin', $data_reject, ['no_doc' => $item->no_doc]);
+					if (!$update_reject_periodik) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
+				}
+
+				if ($this->db->trans_status() === false) {
+					$this->db->trans_rollback();
+
+					$valid = 0;
+					$msg = 'Please try again later !';
+				} else {
+					$this->db->trans_commit();
+
+					$valid = 1;
+					$msg = 'Data has been rejected !';
+				}
+
+				$response = [
+					'status' => $valid,
+					'msg' => $msg
+				];
+
+				echo json_encode($response);
+			}
+		} else {
+			$valid = 0;
+			$msg = 'Belum ada data request payment yang dipilih !';
+
+			$response = [
+				'status' => $valid,
+				'msg' => $msg
+			];
+
+			echo json_encode($response);
+		}
+	}
+
+	public function download_excel_request_payment()
+	{
+		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment();
+
+		$data = [
+			'list_all_request_payment' => $list_all_request_payment
+		];
+
+		$this->load->view('download_excel', $data);
+	}
 }

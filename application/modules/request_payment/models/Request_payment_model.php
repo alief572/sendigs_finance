@@ -1068,4 +1068,95 @@ class Request_payment_model extends BF_Model
 
         return $list_tgl_pengajuan_pembayaran;
     }
+
+    public function list_added_req_payment()
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_added_req_payment a');
+        $get_list = $this->db->get()->result();
+
+        return $get_list;
+    }
+
+    public function list_all_request_payment()
+    {
+        $sql_all = '
+            SELECT
+                z.id,
+                z.no_dokumen,
+                z.request_by,
+                z.tanggal,
+                z.keperluan,
+                z.kategori,
+                z.nilai_pengajuan
+            FROM
+                (
+                    SELECT
+                        a.id as id,
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        b.keperluan as keperluan,
+                        "Transport" as kategori,
+                        a.jumlah_expense as nilai_pengajuan
+                    FROM
+                        tr_transport_req a
+                        LEFT JOIN tr_transport b ON b.no_req = a.no_doc
+                    WHERE
+                        a.status = "1"
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.id as id,
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.keperluan as keperluan,
+                        "Kasbon" as kategori,
+                        a.jumlah_kasbon as nilai_pengajuan
+                    FROM
+                        tr_kasbon a 
+                    WHERE
+                        a.status = "1"
+                    
+                    UNION ALL
+
+                    SELECT  
+                        a.id as id,
+                        a.no_doc as no_dokumen,
+                        a.created_by as request_by,
+                        a.tgl_doc as tanggal,
+                        a.informasi as keperluan,
+                        "Expense" as kategori,
+                        a.jumlah as nilai_pengajuan
+                    FROM
+                        tr_expense a
+                    WHERE
+                        a.status = "1"
+                    
+                    UNION ALL
+
+                    SELECT
+                        a.id as id,
+                        a.no_doc as no_dokumen,
+                        c.nm_lengkap as request_by,
+                        a.tanggal_doc as tgl_doc,
+                        a.keterangan as keperluan,
+                        "Periodik" as tipe,
+                        a.nilai_total as nilai_pengajuan
+                    FROM
+                        tr_pengajuan_rutin a 
+                        JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc
+                        LEFT JOIN users c ON c.id_user = a.created_by
+                    WHERE
+                        a.status = "1"
+                ) z
+                GROUP BY z.no_dokumen
+            ORDER BY z.tanggal DESC
+        ';
+        $get_list_all_request_payment = $this->db->query($sql_all)->result();
+
+        return $get_list_all_request_payment;
+    }
 }
