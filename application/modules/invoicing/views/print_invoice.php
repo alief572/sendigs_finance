@@ -1,15 +1,21 @@
 <style>
+    body {
+        font-family: times-new-roman;
+    }
+
     .table_invoice {
         border: 1px solid black;
         /* Outer border */
         border-collapse: collapse;
+        margin-top: 1rem;
     }
 
     .table_invoice td,
     th {
-        border: none;
+        border: 1px sodid black;
         /* No inner borders */
-        padding: 8px;
+        padding-top: 8px;
+        padding-left: 5px;
         vertical-align: top;
     }
 
@@ -73,9 +79,7 @@
         </tr>
         <tr>
             <td style="text-align: center;">
-                <p style="font-size: 14px;">Jl. MT. Haryono Kav. 10, Jakarta Timur 13330</p>
-                <p style="font-size: 14px;">Telp. (021) 29067201, 29067202 Fax. (021) 29067204</p>
-                <p style="font-size: 14px;">Email : sspm@sentralsistem.com Website : www.sentralsistem.com</p>
+                <p style="font-size: 14px;">Jl. MT. Haryono Kav. 10, Jakarta Timur 13330 <br> Telp. (021) 29067201, 29067202 Fax. (021) 29067204 <br> Email : sspm@sentralsistem.com Website : www.sentralsistem.com</p>
             </td>
         </tr>
 
@@ -92,27 +96,27 @@
     </tr>
     <tr>
         <td width="80">Kepada</td>
-        <td style="text-align: center;">:</td>
+        <td style="text-align: center; width: 5px;">:</td>
         <td style="font-weight: bold;" width="230"><?= $data_invoice->nm_customer ?></td>
-        <td width="110">Tanggal Invoice</td>
-        <td style="text-align: center;">:</td>
+        <td width="110" style="padding-left: 28px;">Tanggal Invoice</td>
+        <td style="text-align: center; width: 5px;">:</td>
         <td width="200"><?= date('d F Y', strtotime($data_invoice->tanggal_invoice)) ?></td>
     </tr>
     <tr>
         <td width="80">Alamat</td>
-        <td style="text-align: center;">:</td>
+        <td style="text-align: center; width: 5px;">:</td>
         <td width="230"><?= $data_invoice->address ?></td>
-        <td width="110">Nomor Invoice</td>
-        <td style="text-align: center;">:</td>
-        <td width="200"><?= $data_invoice->no_invoice ?></td>
+        <td width="110" style="padding-left: 28px;">Nomor Invoice <br><br> No. PO</td>
+        <td style="text-align: center;">: <br><br> :</td>
+        <td width="200"><?= $data_invoice->no_invoice ?> <br><br> <?= $data_invoice->no_po ?></td>
     </tr>
     <tr>
         <td width="80">Up</td>
-        <td style="text-align: center;">:</td>
+        <td style="text-align: center; width: 5px;">:</td>
         <td width="230">Finance Dept.</td>
-        <td width="110">No. PO</td>
-        <td style="text-align: center;">:</td>
-        <td width="200"><?= $data_invoice->no_po ?></td>
+        <td width="110"></td>
+        <td style="text-align: center;"></td>
+        <td width="200"></td>
     </tr>
 </table>
 <table class="table_list_barang">
@@ -123,16 +127,16 @@
             echo '<th style="font-size: 15px;" width="400px">Nama Barang / Pesanan</th>';
             echo '<th style="font-size: 15px;" width="100px">Jumlah</th>';
             echo '<th style="font-size: 15px;" width="100px">Harga @</th>';
-            echo '<th style="font-size: 15px;" width="150px">Disc</th>';
-            echo '<th style="font-size: 15px;" width="150px">Sub Total</th>';
+            echo '<th style="font-size: 15px;" width="100px">Disc</th>';
+            echo '<th style="font-size: 15px;" width="100px">Sub Total</th>';
             echo '</tr>';
         } else {
             echo '<tr>';
-            echo '<th style="font-size: 15px;" width="400px">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px;" width="100px">Jumlah</th>';
-            echo '<th style="font-size: 15px;" width="100px">Harga @</th>';
-            echo '<th style="font-size: 15px;" width="150px">Disc</th>';
-            echo '<th style="font-size: 15px;" width="150px">Sub Total</th>';
+            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="400px">Nama Barang / Pesanan</th>';
+            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Jumlah</th>';
+            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Harga @</th>';
+            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Disc</th>';
+            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Sub Total</th>';
             echo '</tr>';
         }
         ?>
@@ -151,27 +155,27 @@
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="2"></td>
-                <td style="border-top: 1px solid black;" width="150">DPP</td>
-                <td style="text-align: center; border-top: 1px solid black;" width="150">:</td>
-                <td style="text-align: right; border-top: 1px solid black;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="border-top: 1px solid black;" width="10">DPP</td>
+                <td style="text-align: center; border-top: 1px solid black;">:</td>
+                <td style="text-align: right; border-top: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td width="150">DPP Lain-lain</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
+                <td>DPP Lain-lain</td>
+                <td style="text-align: center;">:</td>
+                <td style="text-align: right;"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td width="150">PPN 12% dari DPP lain</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_invoice->pajak) ?></td>
+                <td>PPN 12% dari DPP lain</td>
+                <td style="text-align: center;">:</td>
+                <td style="text-align: right;"><?= number_format($data_invoice->pajak) ?></td>
             </tr>
             <tr>
                 <td colspan="2"></td>
-                <td style="font-weight: bold;" width="150">Total Tagihan + PPN</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?></td>
+                <td style="font-weight: bold;">Total Tagihan + PPN</td>
+                <td style="text-align: center;">:</td>
+                <td style="text-align: right;"><?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?></td>
             </tr>
             <tr>
                 <td colspan="5" style="height: 50px; vertical-align: middle">
@@ -267,36 +271,69 @@
                 <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
             </tr>
             <tr>
-                <td style="border-top: 1px solid black;" colspan="2"></td>
-                <td style="border-top: 1px solid black;" width="150">DPP</td>
-                <td style="text-align: center; border-top: 1px solid black;" width="150">:</td>
-                <td style="text-align: right; border-top: 1px solid black;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td width="150">DPP Lain-lain</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td width="150">PPN 12% dari DPP lain</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_invoice->pajak) ?></td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td style="font-weight: bold;" width="150">Total Tagihan + PPN</td>
-                <td style="text-align: center;" width="150">:</td>
-                <td style="text-align: right;" width="150"><?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?></td>
-            </tr>
-            <tr>
-                <td colspan="5" style="height: 50px; vertical-align: middle">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
+                <td style="border-top: 1px solid black;" colspan="3"></td>
+                <td style="border-top: 1px solid black;">DPP</td>
+                <td style="text-align: right; border-top: 1px solid black;">
+                    <table border="0" style="width: 100%">
+                        <tr>
+                            <td style="text-align: center;" width="100">:</td>
+                            <td style="text-align: right;">
+                                <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
             <tr>
-                <td colspan="3" rowspan="4" style="border-top: 1px solid black;">
+                <td style="" colspan="3"></td>
+                <td style="">DPP Lain-lain</td>
+                <td style="text-align: right; ">
+                    <table border="0" style="width: 100%">
+                        <tr>
+                            <td style="text-align: center;" width="100">:</td>
+                            <td style="text-align: right;">
+                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="" colspan="3"></td>
+                <td style="">Pajak 12%</td>
+                <td style="text-align: right; ">
+                    <table border="0" style="width: 100%">
+                        <tr>
+                            <td style="text-align: center;" width="100">:</td>
+                            <td style="text-align: right;">
+                                <?= number_format($data_invoice->pajak) ?>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="" colspan="3"></td>
+                <td style="font-weight: bold;">TOTAL</td>
+                <td style="text-align: right; ">
+                    <table border="0" style="width: 100%">
+                        <tr>
+                            <td style="text-align: center;" width="100">:</td>
+                            <td style="text-align: right;">
+                                <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="height: 50px; vertical-align: middle; padding:8px;">
+                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
+                </td>
+                <td colspan="2"></td>
+            </tr>
+            <tr>
+                <td colspan="3" rowspan="4" style="border-top: 1px solid black; padding: 8px;">
                     <p>Keterangan</p>
                     <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
                     <br>
@@ -323,8 +360,8 @@
                     }
                     ?>
                 </td>
-                <td colspan="2" style="border-top: 1px solid black; text-align: center;" width="400px">
-                    <b style="font-size: 13px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
+                <td colspan="2" style="border-top: 1px solid black; text-align: center; padding: 8px;" width="400px">
+                    <b style="font-size: 12px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
                 </td>
             </tr>
             <tr>
@@ -346,12 +383,12 @@
                 <td colspan="2" style="text-align: center; ">
                     <?php
                     if ($id_company == '3') {
-                        echo '<span style="text-decoration: underline; font-weight: bold;">Cahyadi</span>';
+                        echo '<span style="font-weight: bold;">Cahyadi</span>';
                     } else {
-                        echo '<span style="text-decoration: underline; font-weight: bold;">Imanuel Iman</span>';
+                        echo '<span style="font-weight: bold;">Imanuel Iman</span>';
                     }
                     ?>
-                    <br>
+                    <hr style="width: 300px;">
                     <span>Direktur</span>
                 </td>
             </tr>
