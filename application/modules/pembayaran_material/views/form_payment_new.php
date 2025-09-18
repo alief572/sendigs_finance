@@ -297,9 +297,11 @@ foreach ($results['result_payment'] as $item) {
 						echo '<td>';
 						echo '<input type="hidden" class="nilai_utuh_' . $item->id . '" value="' . $nilai_utuh . '">';
 						echo '<input type="hidden" class="persen_progress_' . $item->id . '" value="' . $persen_progress . '">';
-						echo '<input type="text" class="form-control form-control-sm auto_num nilai_pph change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '">';
+						echo '<input type="text" class="form-control form-control-sm text-right auto_num nilai_pph nilai_pph_' . $item->id . ' change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '">';
 						echo '</td>';
-						echo '<td class="text-right"><input type="hidden" name="dt[' . $no . '][nilai_ppn]" class="nilai_ppn_' . $item->id . '" value="' . $nilai_ppn . '">' . number_format($nilai_ppn, 2) . '</td>';
+						echo '<td class="text-right">';
+						echo '<input type="text" name="dt[' . $no . '][nilai_ppn]" class="form-control form-control-sm text-right auto_num change_nilai_ppn nilai_ppn nilai_ppn_' . $item->id . '" data-id="' . $item->id . '" value="' . $nilai_ppn . '">';
+						echo '</td>';
 						echo '<td class="text-right payment_col_' . $item->id . '">' . number_format($item->jumlah - $nilai_ppn, 2) . '</td>';
 						echo '</tr>';
 
@@ -344,7 +346,7 @@ foreach ($results['result_payment'] as $item) {
 					<tr>
 						<td colspan="5"></td>
 						<td>PPn</td>
-						<td class="text-right"><?= number_format($total_ppn, 2) ?></td>
+						<td class="text-right total_ppn_col"><?= number_format($total_ppn, 2) ?></td>
 					</tr>
 					<tr>
 						<td colspan="5"></td>
@@ -663,6 +665,12 @@ foreach ($results['result_payment'] as $item) {
 		var id = $(this).data('id');
 		var payment_bank = $('.payment_bank_' + id).val();
 		var nilai_ppn = $('.nilai_ppn_' + id).val();
+		if (nilai_ppn !== '') {
+			nilai_ppn = nilai_ppn.split(',').join('');
+			nilai_ppn = parseFloat(nilai_ppn);
+		} else {
+			nilai_ppn = 0;
+		}
 
 		var nilai_pph = $(this).val();
 		if (nilai_pph !== '') {
@@ -687,7 +695,48 @@ foreach ($results['result_payment'] as $item) {
 		$('.total_pph').val(ttl_pph);
 		$('.total_pph_col').html(number_format(ttl_pph, 2));
 
-		var nilai_payment = (payment_bank - nilai_ppn);
+		var nilai_payment = (payment_bank - nilai_pph + nilai_ppn);
+
+		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
+
+		hitung_kontrol();
+	});
+
+	$(document).on('change', '.change_nilai_ppn', function() {
+		var id = $(this).data('id');
+		var payment_bank = $('.payment_bank_' + id).val();
+		var nilai_pph = $('.nilai_pph_' + id).val();
+		if (nilai_pph !== '') {
+			nilai_pph = nilai_pph.split(',').join('');
+			nilai_pph = parseFloat(nilai_pph);
+		} else {
+			nilai_pph = 0;
+		}
+
+		var nilai_ppn = $(this).val();
+		if (nilai_ppn !== '') {
+			nilai_ppn = nilai_ppn.split(',').join('');
+			nilai_ppn = parseFloat(nilai_ppn);
+		} else {
+			nilai_ppn = 0;
+		}
+
+		var ttl_ppn = 0;
+		$('.nilai_ppn').each(function() {
+			var ppn = $(this).val();
+			if (ppn !== '') {
+				ppn = ppn.split(',').join('');
+				ppn = parseFloat(ppn);
+			} else {
+				ppn = 0;
+			}
+
+			ttl_ppn += ppn;
+		});
+		$('.total_ppn').val(ttl_ppn);
+		$('.total_ppn_col').html(number_format(ttl_ppn, 2));
+
+		var nilai_payment = (payment_bank - nilai_pph + nilai_ppn);
 
 		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
 
