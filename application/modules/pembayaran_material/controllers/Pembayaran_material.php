@@ -8,6 +8,8 @@ class Pembayaran_material extends Admin_Controller
 	protected $managePermission = 'Incoming_Stok.Manage';
 	protected $deletePermission = 'Incoming_Stok.Delete';
 
+	protected $data_status;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -39,41 +41,7 @@ class Pembayaran_material extends Admin_Controller
 		history('View Request Payment');
 		$this->load->view('Pembayaran_material/index_request_payment', $data);
 	}
-	function delete_request($id, $tipetrans)
-	{
-		$controller			= ucfirst(strtolower($this->uri->segment(1)));
-		$Arr_Akses			= getAcccesmenu($controller);
-		if ($Arr_Akses['delete'] != '1') {
-			$param = array(
-				'save' => false
-			);
-			echo json_encode($param);
-			die();
-		}
-		$this->db->trans_begin();
-		if ($tipetrans == "2") {
-			$data = $this->db->query("select * from purchase_order_request_payment_nm where id='" . $id . "'")->row();
-			$this->db->query("delete from purchase_order_request_payment_nm where id='" . $id . "'");
-			$this->All_model->DataUpdate('tran_po_detail', array('status_pay' => ''), array('status_pay' => $data->no_request));
-		} else {
-			$data = $this->db->query("select * from purchase_order_request_payment where id='" . $id . "'")->row();
-			$this->db->query("delete from purchase_order_request_payment where id='" . $id . "'");
-			$this->All_model->DataUpdate('tran_material_po_detail', array('status_pay' => ''), array('status_pay' => $data->no_request));
-		}
-		if ($data->id_top != '') $this->All_model->DataUpdate('billing_top', array('proses_inv' => '0'), array('id' => $data->id_top));
-		$this->db->trans_complete();
-		if ($this->db->trans_status()) {
-			$this->db->trans_commit();
-			$result         = TRUE;
-		} else {
-			$this->db->trans_rollback();
-			$result = FALSE;
-		}
-		$param = array(
-			'save' => $result
-		);
-		echo json_encode($param);
-	}
+
 
 	public function request_payment_save()
 	{
