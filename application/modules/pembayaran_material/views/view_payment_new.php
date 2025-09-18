@@ -96,8 +96,8 @@ foreach ($results['result_payment'] as $item) {
 							<option value="">- Bank -</option>
 							<?php
 							foreach ($results['list_bank'] as $item_bank) {
-                                $selected = ($item_bank->no_perkiraan == $results['result_header']->coa_bank) ? 'selected' : '';
-								echo '<option value="' . $item_bank->no_perkiraan . '" '.$selected.'>' . $item_bank->nama . '</option>';
+								$selected = ($item_bank->no_perkiraan == $results['result_header']->coa_bank) ? 'selected' : '';
+								echo '<option value="' . $item_bank->no_perkiraan . '" ' . $selected . '>' . $item_bank->nama . '</option>';
 							}
 							?>
 						</select>
@@ -111,8 +111,8 @@ foreach ($results['result_payment'] as $item) {
 							<option value="">- Mata Uang -</option>
 							<?php
 							foreach ($results['list_mata_uang'] as $item_mata_uang) {
-                                $selected = ($item_mata_uang->kode == $results['result_header']->mata_uang) ? 'selected' : '';
-								echo '<option value="' . $item_mata_uang->kode . '" '.$selected.'>' . $item_mata_uang->kode . '</option>';
+								$selected = ($item_mata_uang->kode == $results['result_header']->mata_uang) ? 'selected' : '';
+								echo '<option value="' . $item_mata_uang->kode . '" ' . $selected . '>' . $item_mata_uang->kode . '</option>';
 							}
 							?>
 						</select>
@@ -151,6 +151,7 @@ foreach ($results['result_payment'] as $item) {
 					$total_ppn = 0;
 					$total_pph = 0;
 					$total_payment_bank = 0;
+					$total_selisih = 0;
 					$no = 1;
 					foreach ($results['result_payment'] as $item) {
 
@@ -235,42 +236,43 @@ foreach ($results['result_payment'] as $item) {
 						$nm_supplier = implode(', ', $nm_supplier);
 
 						$nilai_ppn = (($nilai_utuh * $persen_progress / 100) * 11 / 100);
-						// if($nilai_ppn <= 0) {
-						// 	$nilai_ppn = ($item->jumlah * 11 / 100);
-						// }
+						if ($nilai_ppn <= 0) {
+							$nilai_ppn = $item->total_ppn;
+						}
 
-                        $nilai_pph = $item->total_pph;
+						$nilai_pph = $item->total_pph;
 
-                        $selected_pph_23 = ($item->tipe_pph == 'PPH 23') ? 'selected' : '';
-                        $selected_pph_22 = ($item->tipe_pph == 'PPH 22') ? 'selected' : '';
+						$selected_pph_23 = ($item->tipe_pph == 'PPH 23') ? 'selected' : '';
+						$selected_pph_22 = ($item->tipe_pph == 'PPH 22') ? 'selected' : '';
 
 						echo '<tr>';
 						echo '<td class="text-center">' . $nm_supplier . '</td>';
-						echo '<td class="text-center"><input type="hidden" name="dt['.$no.'][id_payment]" value="'.$item->id.'">' . $item->no_doc . '</td>';
+						echo '<td class="text-center"><input type="hidden" name="dt[' . $no . '][id_payment]" value="' . $item->id . '">' . $item->no_doc . '</td>';
 						echo '<td class="text-right">
 					<input type="hidden" class="jumlah_col_' . $item->id . '">
 					<input type="hidden" class="payment_bank_' . $item->id . '" value="' . $item->jumlah . '">
 					' . number_format($item->jumlah, 2) . '
 					</td>';
 						echo '<td>';
-						echo '<select name="dt['.$no.'][tipe_pph]" class="form-control form-control-sm" disabled>';
-						echo '<option value="1"'.$selected_pph_23.'>PPH 23</option>';
-						echo '<option value="2" '.$selected_pph_22.'>PPH 22</option>';
+						echo '<select name="dt[' . $no . '][tipe_pph]" class="form-control form-control-sm" disabled>';
+						echo '<option value="1"' . $selected_pph_23 . '>PPH 23</option>';
+						echo '<option value="2" ' . $selected_pph_22 . '>PPH 22</option>';
 						echo '</select>';
 						echo '</td>';
 						echo '<td>';
 						echo '<input type="hidden" class="nilai_utuh_' . $item->id . '" value="' . $nilai_utuh . '">';
 						echo '<input type="hidden" class="persen_progress_' . $item->id . '" value="' . $persen_progress . '">';
-						echo '<input type="text" class="form-control form-control-sm" name="dt['.$no.'][nilai_pph]" data-id="' . $item->id . '" value="'.number_format($item->total_pph, 2).'" readonly>';
+						echo '<input type="text" class="form-control form-control-sm" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '" value="' . number_format($item->total_pph, 2) . '" readonly>';
 						echo '</td>';
-						echo '<td class="text-right"><input type="hidden" name="dt['.$no.'][nilai_ppn]" class="nilai_ppn_' . $item->id . '" value="' . $nilai_ppn . '">' . number_format($nilai_ppn, 2) . '</td>';
-						echo '<td class="text-right payment_col_' . $item->id . '">' . number_format($item->jumlah - $nilai_ppn + $nilai_pph, 2) . '</td>';
+						echo '<td class="text-right"><input type="hidden" name="dt[' . $no . '][nilai_ppn]" class="nilai_ppn_' . $item->id . '" value="' . $nilai_ppn . '">' . number_format($nilai_ppn, 2) . '</td>';
+						echo '<td class="text-right payment_col_' . $item->id . '">' . number_format($item->jumlah - $nilai_pph + $nilai_ppn, 2) . '</td>';
 						echo '</tr>';
 
-						$total_payment += ($item->jumlah - $nilai_ppn);
+						$total_payment += ($item->jumlah - $nilai_pph + $nilai_ppn);
 						$total_ppn += ($nilai_ppn);
 						$total_payment_bank += ($item->jumlah);
-                        $total_pph += ($item->total_pph);
+						$total_pph += ($item->total_pph);
+						$total_selisih += $item->selisih;
 
 						$no++;
 					}
@@ -287,7 +289,7 @@ foreach ($results['result_payment'] as $item) {
 					<tr>
 						<td colspan="5"></td>
 						<td>Selisih</td>
-						<td class="text-right selisih_col"><?= number_format($total_payment - $results['result_header']->payment_bank, 2) ?></td>
+						<td class="text-right selisih_col"><?= number_format($total_selisih, 2) ?></td>
 					</tr>
 					<tr>
 						<td colspan="5"></td>
@@ -311,7 +313,7 @@ foreach ($results['result_payment'] as $item) {
 					<tr>
 						<td colspan="5"></td>
 						<td>Kontrol</td>
-						<td class="text-right kontrol_col"><?= number_format($results['result_header']->payment_bank - $total_payment - $results['bank_charge'] - $total_ppn + $total_pph, 2) ?></td>
+						<td class="text-right kontrol_col"><?= number_format($results['result_header']->payment_bank - $total_payment, 2) ?></td>
 					</tr>
 				</tbody>
 			</table>
@@ -322,11 +324,11 @@ foreach ($results['result_payment'] as $item) {
 			<input type="hidden" name="kontrol" class="kontrol" value="<?= ($results['result_header']->payment_bank - $total_payment - $results['bank_charge'] - $total_ppn + $total_pph) ?>">
 
 			<div class="col-md-4">
-				<?php 
-                    if(file_exists('assets/expense/'.$results['result_header']->link_doc) && $results['result_header']->link_doc !== '') {
-                        echo '<a href="'.base_url('assets/expense/'.$results['result_header']->link_doc).'" class="btn btn-sm btn-primary" target="_blank"><i class="fa fa-download"></i> Download</a>';
-                    }
-                ?>
+				<?php
+				if (file_exists('assets/expense/' . $results['result_header']->link_doc) && $results['result_header']->link_doc !== '') {
+					echo '<a href="' . base_url('assets/expense/' . $results['result_header']->link_doc) . '" class="btn btn-sm btn-primary" target="_blank"><i class="fa fa-download"></i> Download</a>';
+				}
+				?>
 			</div>
 		</div>
 		<!-- <div class="box-footer">
@@ -508,96 +510,96 @@ foreach ($results['result_payment'] as $item) {
 	$(document).on('submit', '#frm-data', function(e) {
 		e.preventDefault();
 		var kontrol = $('.kontrol').val();
-		if(kontrol !== '' ) {
+		if (kontrol !== '') {
 
 		}
-		if(kontrol > 0) {
+		if (kontrol > 0) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Pastikan Kontrol harus 0 sebelum data dibayarkan!',
 				type: 'warning'
 			});
-		}else{
+		} else {
 			swal({
-				title: "Are you sure?",
-				text: "You will not be able to process again this data!",
-				type: "warning",
-				showCancelButton: true,
-				confirmButtonClass: "btn-danger",
-				confirmButtonText: "Yes, Process it!",
-				cancelButtonText: "No, cancel process!",
-				closeOnConfirm: true,
-				closeOnCancel: false
-			},
-			function(isConfirm) {
-				if (isConfirm) {
+					title: "Are you sure?",
+					text: "You will not be able to process again this data!",
+					type: "warning",
+					showCancelButton: true,
+					confirmButtonClass: "btn-danger",
+					confirmButtonText: "Yes, Process it!",
+					cancelButtonText: "No, cancel process!",
+					closeOnConfirm: true,
+					closeOnCancel: false
+				},
+				function(isConfirm) {
+					if (isConfirm) {
 
-					var formData = new FormData($('#frm-data')[0]);
-					var baseurl = siteurl + active_controller + 'save_payment';
-					$.ajax({
-						url: baseurl,
-						type: "POST",
-						data: formData,
-						cache: false,
-						dataType: 'json',
-						processData: false,
-						contentType: false,
-						success: function(data) {
-							if (data.status == 1) {
+						var formData = new FormData($('#frm-data')[0]);
+						var baseurl = siteurl + active_controller + 'save_payment';
+						$.ajax({
+							url: baseurl,
+							type: "POST",
+							data: formData,
+							cache: false,
+							dataType: 'json',
+							processData: false,
+							contentType: false,
+							success: function(data) {
+								if (data.status == 1) {
+									swal({
+										title: "Save Success!",
+										text: data.pesan,
+										type: "success",
+										timer: 5000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
+									});
+									window.location.href = base_url + active_controller + 'payment_list';
+								} else {
+
+									if (data.status == 2) {
+										swal({
+											title: "Save Failed!",
+											text: data.pesan,
+											type: "warning",
+											timer: 5000,
+											showCancelButton: false,
+											showConfirmButton: false,
+											allowOutsideClick: false
+										});
+									} else {
+										swal({
+											title: "Save Failed!",
+											text: data.pesan,
+											type: "warning",
+											timer: 5000,
+											showCancelButton: false,
+											showConfirmButton: false,
+											allowOutsideClick: false
+										});
+									}
+
+								}
+							},
+							error: function() {
+
 								swal({
-									title: "Save Success!",
-									text: data.pesan,
-									type: "success",
+									title: "Error Message !",
+									text: 'An Error Occured During Process. Please try again..',
+									type: "warning",
 									timer: 5000,
 									showCancelButton: false,
 									showConfirmButton: false,
 									allowOutsideClick: false
 								});
-								window.location.href = base_url + active_controller + 'payment_list';
-							} else {
-
-								if (data.status == 2) {
-									swal({
-										title: "Save Failed!",
-										text: data.pesan,
-										type: "warning",
-										timer: 5000,
-										showCancelButton: false,
-										showConfirmButton: false,
-										allowOutsideClick: false
-									});
-								} else {
-									swal({
-										title: "Save Failed!",
-										text: data.pesan,
-										type: "warning",
-										timer: 5000,
-										showCancelButton: false,
-										showConfirmButton: false,
-										allowOutsideClick: false
-									});
-								}
-
 							}
-						},
-						error: function() {
-
-							swal({
-								title: "Error Message !",
-								text: 'An Error Occured During Process. Please try again..',
-								type: "warning",
-								timer: 5000,
-								showCancelButton: false,
-								showConfirmButton: false,
-								allowOutsideClick: false
-							});
-						}
-					});
-				} else {
-					swal("Cancelled", "Data can be process again :)", "error");
-					return false;
-				}
-			});
+						});
+					} else {
+						swal("Cancelled", "Data can be process again :)", "error");
+						return false;
+					}
+				});
 		}
 	});
 </script>
