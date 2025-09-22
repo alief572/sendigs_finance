@@ -22,6 +22,7 @@ class Pengajuan_rutin extends Admin_Controller
 	protected $deletePermission = 'Pengajuan_Pembayaran_Rutin.Delete';
 
 	protected $hris;
+	protected $waktu;
 
 	public function __construct()
 	{
@@ -46,7 +47,7 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->where('a.created_by', $this->auth->user_id());
+		// $this->db->where('a.created_by', $this->auth->user_id());
 		$this->db->group_by('a.no_doc');
 		$data = $this->db->get()->result();
 
@@ -66,7 +67,7 @@ class Pengajuan_rutin extends Admin_Controller
 
 		$datdept  = $this->All_model->GetDeptCombo($departemen);
 
-		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll(array('a.created_by' => $this->auth->user_id()));
+		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll();
 		$this->template->set('datdept', $datdept);
 		$this->template->set('results', $data);
 		$this->template->set('dept', $arr_dept);
