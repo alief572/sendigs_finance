@@ -1,8 +1,8 @@
 <?php
-$permission_app_pr_depart = 'Approval_PR_Department.View';
-$permission_app_pr_stock = 'Approval_PR_Stock_Managemenet.View';
+$permission_app_pr_depart = 'Approval_PR_Depart_Management.View';
+$permission_app_pr_stock = 'Approval_PR_Stock_Management.View';
 $permission_app_pr_asset = 'Approval_PR_Asset_Management.View';
-$permission_app_transport = 'Pengajuan_Transport_Approval.View';
+$permission_app_transport = 'Pengajuan_Transportasi_Approval.View';
 $permission_app_kasbon = 'Kasbon_Approval.View';
 $permission_app_expense = 'Expense_Approval.View';
 $permission_app_pembayaran_periodik = 'Approval_Pengajuan_Pembayaran_Rutin.View';
