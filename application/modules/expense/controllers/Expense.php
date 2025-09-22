@@ -1865,7 +1865,13 @@ class Expense extends Admin_Controller
 		$rute			= $this->input->post("rute");
 		$nopol			= $this->input->post("nopol");
 		$km_awal		= $this->input->post("km_awal");
+		if ($km_awal == '') {
+			$km_awal = 0;
+		}
 		$km_akhir		= $this->input->post("km_akhir");
+		if ($km_akhir == '') {
+			$km_akhir = 0;
+		}
 		$bensin			= $this->input->post("bensin");
 		$tol			= $this->input->post("tol");
 		$parkir			= $this->input->post("parkir");
