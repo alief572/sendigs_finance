@@ -49,8 +49,8 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 						foreach ($results as $record) {
 							$numb++;
 
-							$nm_dept = (isset($dept[$record->department])) ? $dept[$record->department]['nm_dept'] : '';
-							$nm_comp = (isset($dept[$record->department])) ? $dept[$record->department]['nm_comp'] : '';
+							$nm_dept = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_dept'] : '';
+							$nm_comp = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_comp'] : '';
 					?>
 							<tr>
 								<td><?= $numb; ?></td>
@@ -116,8 +116,8 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 					if (!empty($data_detail)) {
 						$numb = 0;
 						foreach ($data_detail as $record) {
-							$nm_dept = (isset($dept[$record->department])) ? $dept[$record->department]['nm_dept'] : '';
-							$nm_comp = (isset($dept[$record->department])) ? $dept[$record->department]['nm_comp'] : '';
+							$nm_dept = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_dept'] : '';
+							$nm_comp = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_comp'] : '';
 
 							$numb++; ?>
 							<tr>
