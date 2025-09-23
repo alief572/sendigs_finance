@@ -91,21 +91,7 @@
                         cache: false,
                         dataType: 'json',
                         success: function(data) {
-                            if (data.status == 1) {
-                                swal({
-                                    title: "Clear Success!",
-                                    text: "Clear choosed payment success !",
-                                    type: "success"
-                                }, function(isSuccess) {
-                                    location.reload(true);
-                                });
-                            } else {
-                                swal({
-                                    title: 'Clear Failed !',
-                                    text: 'Clear choosed Payment Failed !',
-                                    type: 'warning'
-                                });
-                            }
+                            location.reload(true);
                         },
                         error: function() {
                             swal({
