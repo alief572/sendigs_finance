@@ -41,19 +41,30 @@
 					</select>
 				</div>
 			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<label for="">Budget</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right autoNumeric0 nilai_budget" value="" readonly>
+				</div>
+				<div class="col-md-6">
+					<label for="">Pengajuan</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right nilai_pengajuan" value="" readonly>
+				</div>
+			</div>
+			<br><br>
 			<table class="table table-bordered table-striped" id="example1" width='100%'>
 				<thead>
 					<tr class='bg-blue'>
 						<th class="text-center" width='4%'>#</th>
-						<th class="text-center no-sort" width="18%">Nama Barang</th>
-						<th class="text-center no-sort" width='7%'>Kebutuhan 1 Bulan </th>
-						<th class="text-center no-sort" width='7%'>Stock </th>
-						<th class="text-center no-sort" width='7%'>Max Stock </th>
-						<th class="text-center no-sort" width='8%'>Propose Purchase</th>
-						<th class="text-center no-sort" width='8%'>Unit Konversi</th>
-						<th class="text-center no-sort" width='15%'>Keterangan</th>
-						<th class="text-center no-sort" width='8%'>Price Reference</th>
-						<th class="text-center no-sort" width='8%'>Grand Total</th>
+						<th class="text-center">Nama Barang</th>
+						<th class="text-center">Kebutuhan 1 Bulan (Konversi)</th>
+						<th class="text-center">Stock (Konversi)</th>
+						<th class="text-center">Max Stock (Konversi)</th>
+						<th class="text-center">Propose Purhcase (Konversi)</th>
+						<th class="text-center">Unit Konversi</th>
+						<th class="text-center">Keterangan</th>
+						<th class="text-center">Price Reference</th>
+						<th class="text-center">Total Price</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -83,6 +94,8 @@
 		var category = $("#category").val();
 		DataTables(category);
 
+
+
 		$(document).on('click', '#back', function() {
 			window.location.href = siteurl + active_controller;
 		});
@@ -90,6 +103,8 @@
 		$(document).on('change', '#category', function() {
 			var category = $("#category").val();
 			DataTables(category);
+			hitungBudget();
+			hitungPengajuan();
 		});
 
 		$('.autoNumeric2').autoNumeric('init', {
@@ -101,6 +116,9 @@
 			changeMonth: true,
 			changeYear: true,
 		});
+
+		hitungBudget();
+		hitungPengajuan();
 	});
 
 	$(document).on('click', '#autoUpdate', function() {
@@ -143,6 +161,7 @@
 								});
 								// window.location.href = base_url + active_controller + 'add_new';
 								DataTables(inventory);
+								hitungPengajuan();
 							} else if (data.status == 0) {
 								swal({
 									title: "Save Failed!",
@@ -208,6 +227,8 @@
 								});
 								// window.location.href = base_url + active_controller + 'add_new';
 								DataTables(id_category);
+								hitungBudget();
+								hitungPengajuan();
 							} else if (data.status == 0) {
 								swal({
 									title: "Save Failed!",
@@ -237,6 +258,7 @@
 
 	$(document).on('change', '.changeSave', function() {
 		var id = $(this).data('id');
+		var inventory = $('#category').val();
 		var qty_satuan = $(this).val();
 		// if (qty_satuan == '' || qty_satuan == null) {
 		// 	qty_satuan = 0;
@@ -284,7 +306,8 @@
 			cache: false,
 			dataType: 'json',
 			success: function(data) {
-				console.log(data.pesan)
+				DataTables(inventory);
+				hitungPengajuan();
 			},
 			error: function() {
 				console.log('error connection serve !')
@@ -318,6 +341,32 @@
 	$(document).on('click', '#saveRequest', function() {
 		var category = $('#category').val();
 		var tingkat_pr = $('.tingkat_pr').val();
+
+		var nilai_budget = $('.nilai_budget').val();
+		if (nilai_budget !== '') {
+			nilai_budget = nilai_budget.split(',').join('');
+			nilai_budget = parseFloat(nilai_budget);
+		} else {
+			nilai_budget = 0;
+		}
+
+		var nilai_pengajuan = $('.nilai_pengajuan').val();
+		if (nilai_pengajuan !== '') {
+			nilai_pengajuan = nilai_pengajuan.split(',').join('');
+			nilai_pengajuan = parseFloat(nilai_pengajuan);
+		} else {
+			nilai_pengajuan = 0;
+		}
+
+		if (nilai_pengajuan > nilai_budget) {
+			swal({
+				type: 'warning',
+				title: 'Warning !',
+				text: 'Nominal pengajuan tidak boleh melebihi budget !'
+			});
+
+			return false;
+		}
 
 		if (category == '0') {
 			swal({
@@ -472,6 +521,40 @@
 
 		$('.purchase_pack_' + id).val(nilai.toLocaleString());
 	});
+
+	function hitungBudget() {
+		var category = $('#category').val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'hitung_budget',
+			data: {
+				'category': category
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.nilai_budget').val(number_format(result.nilai_budget));
+			}
+		});
+	}
+
+	function hitungPengajuan() {
+		var category = $('#category').val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'hitung_pengajuan',
+			data: {
+				'category': category
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.nilai_pengajuan').val(number_format(result.nilai_pengajuan));
+			}
+		});
+	}
 
 	function DataTables(category = null) {
 		var dataTable = $('#example1').DataTable({

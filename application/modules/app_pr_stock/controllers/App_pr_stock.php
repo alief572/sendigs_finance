@@ -24,6 +24,9 @@ class App_pr_stock extends Admin_Controller
   protected $managePermission3 = 'Approval_PR_Stock_Management.Manage';
   protected $deletePermission3 = 'Approval_PR_Stock_Management.Delete';
 
+  protected $id_user;
+  protected $datetime;
+
   public function __construct()
   {
     parent::__construct();

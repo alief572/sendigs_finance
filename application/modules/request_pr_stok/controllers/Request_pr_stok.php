@@ -13,6 +13,9 @@ class Request_pr_stok extends Admin_Controller
   protected $managePermission = 'PR_Stok.Manage';
   protected $deletePermission = 'PR_Stok.Delete';
 
+  protected $id_user;
+  protected $datetime;
+
   public function __construct()
   {
     parent::__construct();
@@ -43,8 +46,6 @@ class Request_pr_stok extends Admin_Controller
       ->order_by('a.created_date', 'desc')
       ->get()
       ->result();
-
-
 
     history("View index request pr stok");
     $this->template->set('result', $get_data);
@@ -135,12 +136,17 @@ class Request_pr_stok extends Admin_Controller
     $get_accessories = $this->db->get_where('accessories', ['id' => $id_material])->row();
     $purchase_pack = ($purchase / $get_accessories->konversi);
 
+    $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $id_material])->row();
+
+    $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
+
 
     $ArrHeader = array(
       'info_pr'          => $info,
       'request'       => $purchase,
       'request_pack' => $purchase_pack,
-      'tgl_dibutuhkan' => $tanggal
+      'tgl_dibutuhkan' => $tanggal,
+      'price_ref_high' => $price_ref
     );
     // print_r($ArrHeader);
     // exit;
@@ -436,12 +442,15 @@ class Request_pr_stok extends Admin_Controller
     $ArrUpdate = [];
 
     foreach ($get_rutin as $key => $value) {
-      $get_kebutuhan   = $this->db->select('SUM(kebutuhan_month) AS sum_keb')->get_where('budget_rutin_detail', array('id_barang' => $value['id']))->result();
+      $get_kebutuhan   = $this->db->select('SUM(kebutuhan_month) AS sum_keb')->get_where('budget_rutin_detail', array('id_barang' => $value['id']))->row();
       $get_stock     = $this->db->select('SUM(qty_stock) AS stock')->where('id_gudang', 1)->get_where('warehouse_stock', array('id_material' => $value['id'], 'id_gudang' => 1))->result();
       $get_konversi = $this->db->select('a.konversi, a.max_stok')->get_where('accessories a', ['a.id' => $value['id']])->row_array();
 
       $konversi = (!empty($get_konversi)) ? $get_konversi['konversi'] : 1;
-      $max_stok = (!empty($get_konversi)) ? $get_konversi['max_stok'] : 1;
+      $max_stok = ($get_kebutuhan->sum_keb * 1.5);
+
+      $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $value['id']])->row();
+      $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
 
       $stock_oke   = (!empty($get_stock[0]->stock)) ? $get_stock[0]->stock : 0;
       $purchase   = ($max_stok - $stock_oke);
@@ -460,6 +469,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrUpdate[$key]['tgl_dibutuhkan'] = $tgl_next_month;
       $ArrUpdate[$key]['spec_pr'] = null;
       $ArrUpdate[$key]['info_pr'] = null;
+      $ArrUpdate[$key]['price_ref_high'] = $price_ref;
     }
 
     $this->db->trans_start();
@@ -722,5 +732,49 @@ class Request_pr_stok extends Admin_Controller
     echo json_encode([
       'status' => $valid
     ]);
+  }
+
+  public function hitung_budget()
+  {
+    $category = $this->input->post('category');
+
+    $this->db->select('a.kebutuhan_month, a.price_reference');
+    $this->db->from('budget_rutin_detail a');
+    $this->db->join('accessories b', 'b.id = a.id_barang');
+    $this->db->where('b.id_category', $category);
+    $get_hitung_budget = $this->db->get()->result();
+
+    $nilai_budget = 0;
+    foreach ($get_hitung_budget as $item_budget) {
+      $nilai_budget += ($item_budget->kebutuhan_month * $item_budget->price_reference);
+    }
+
+    $response = [
+      'nilai_budget' => $nilai_budget
+    ];
+
+    echo json_encode($response);
+  }
+
+  public function hitung_pengajuan()
+  {
+    $category = $this->input->post('category');
+
+    $this->db->select('a.request, a.price_ref_high');
+    $this->db->from('accessories a');
+    $this->db->where('a.id_category', $category);
+    $this->db->where('a.request >', 0);
+    $get_hitung_pengajuan = $this->db->get()->result();
+
+    $nilai_pengajuan = 0;
+    foreach ($get_hitung_pengajuan as $item) {
+      $nilai_pengajuan += ($item->request * $item->price_ref_high);
+    }
+
+    $response = [
+      'nilai_pengajuan' => $nilai_pengajuan
+    ];
+
+    echo json_encode($response);
   }
 }

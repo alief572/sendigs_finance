@@ -99,23 +99,13 @@ if (!empty($header)) {
 						<thead class='thead'>
 							<tr class='bg-blue'>
 								<th class='text-center th'><input type="checkbox" name="chk_all" id="chk_all"></th>
-								<th class='text-center th'>Material Name</th>
-								<?php if ($pembeda == 'S') { ?>
-									<th class='text-center th'>Estimasi (Kg)</th>
-									<th class='text-center th'>Stock Free (Kg)</th>
-									<th class='text-center th'>Use Stock (Kg)</th>
-									<th class='text-center th'>Sisa Stock Free (Kg)</th>
-								<?php } ?>
-								<th class='text-center th'>Min Stock</th>
-								<th class='text-center th'>Max Stock</th>
-								<th class='text-center th'>Min Order</th>
-								<th class='text-center th'>Qty PR (Pack)</th>
-								<th class='text-center th'>Qty Rev (Pack)</th>
-								<th class='text-center th'>Konversi</th>
-								<th class='text-center th'>Qty (Unit)</th>
-								<th class='text-center th'>Price Ref</th>
-								<th class='text-center th'>Total Ref</th>
-								<th class='text-center th'>#</th>
+								<th class='text-center th'>Barang</th>
+								<th class='text-center th'>Kebutuhan 1 Bulan</th>
+								<th class='text-center th'>Max</th>
+								<th class='text-center th'>Stock</th>
+								<th class='text-center th'>Propose</th>
+								<th class='text-center th'>Price Reference</th>
+								<th class='text-center th'>Total Price</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -129,49 +119,28 @@ if (!empty($header)) {
 								$propose 		= $value['propose_purchase'];
 
 								$get_material = $this->db->get_where('accessories', ['id' => $value['id_material']])->row();
+								$get_kebutuhan = $this->db->get_where('budget_rutin_detail', ['id_barang' => $value['id_material']])->row();
+								$get_stock = $this->db->get_where('warehouse_stock', ['id_material' => $value['id_material']])->row();
+
+								$kebutuhan = (!empty($get_kebutuhan)) ? $get_kebutuhan->kebutuhan_month : 0;
+								$stock = (!empty($get_stock)) ? $get_stock->qty_stock : 0;
 
 								$konversi = (!empty($get_material) && $get_material->konversi > 0) ? $get_material->konversi : 1;
 
 								echo "<tr>";
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><input type='checkbox' name='check[" . $value['id'] . "]' class='chk_personal' value='" . $value['id'] . "'></td>";
-								} else {
-									echo "<td></td>";
 								}
 								echo "<td class='text-left'>" . $nm_material . "
 										<input type='hidden' name='detail[" . $key . "][id]' value='" . $value['id'] . "'>
 										</td>";
-								if ($pembeda == 'S') {
-									echo "<td class='text-right qty_order'>" . number_format($value['qty_order'], 5) . "</td>";
-									echo "<td class='text-right stock_free'>" . number_format($stock_free, 5) . "</td>";
-									echo "<td class='text-right stock_free'>" . number_format($use_stock, 5) . "</td>";
-									echo "<td class='text-right sisa_free'>" . number_format($sisa_free, 5) . "</td>";
-								}
-								echo "<td class='text-right min_stok'>" . number_format($value['min_stok'], 2) . "</td>";
-								echo "<td class='text-right max_stok'>" . number_format($value['max_stok'], 2) . "</td>";
-								echo "<td class='text-right min_order'>" . number_format(0, 2) . "</td>";
-								echo "<td class='text-right'>" . number_format($propose, 2) . "</td>";
-								if ($value['status_app'] == 'N') {
-									echo "<td align='center'><input type='text' class='form-control input-sm text-center autoNumeric5 propose' style='width: 100px;' id='pr_rev_" . $value['id'] . "' name='pr_rev_" . $value['id'] . "' value='" . $propose . "'></td>";
-								} else {
-									echo "<td class='text-center'>" . number_format($value['propose_rev'], 2) . "</td>";
-								}
-								echo '<td class="text-right">' . number_format($konversi, 2) . '</td>';
-								echo '<td class="text-right">' . number_format($propose * $konversi, 2) . '</td>';
-								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
-								echo '<td class="text-right">' . number_format($value['price_ref'] * ($propose), 2) . '</td>';
-								if ($value['status_app'] == 'N') {
-									echo "	<td align='center'>
-											<button type='button' class='btn btn-sm btn-success processSatuan' data-id=" . $value['id'] . " data-action='approve' style='display: none;'><i class='fa fa-check'></i></button>
-											<button type='button' class='btn btn-sm btn-danger processSatuan' data-id=" . $value['id'] . " data-action='reject'><i class='fa fa-times'></i></button>
-										</td>";
-								}
-								if ($value['status_app'] == 'Y') {
-									echo "<td class='text-center'><span class='badge bg-green text-bold'>Approved</span></td>";
-								}
-								if ($value['status_app'] == 'D') {
-									echo "<td class='text-center'><span class='badge bg-red text-bold'>Rejected</span></td>";
-								}
+								echo "<td class='text-right min_stok'>" . number_format($kebutuhan) . "</td>";
+								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
+								echo "<td class='text-right min_order'>" . number_format($stock, 2) . "</td>";
+								echo "<td class='text-right'>" . number_format($propose * $konversi, 2) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format($get_material->price_ref_high) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
+
 								echo "</tr>";
 							}
 							?>
