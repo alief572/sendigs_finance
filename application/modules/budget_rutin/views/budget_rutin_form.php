@@ -54,7 +54,9 @@
 									<th class='text-center' style='width: 30%;'>Nama Barang</th>
 									<th class='text-center'>Spesifikasi</th>
 									<th class='text-center' style='width: 15%;'>Kebutuhan 1 Bulan</th>
-									<th class='text-center' style='width: 15%;'>Satuan Packing</th>
+									<th class='text-center' style='width: 15%;'>Satuan Product</th>
+									<th class='text-center' style='width: 15%;'>Price Reference</th>
+									<th class='text-center' style='width: 15%;'>Total Price</th>
 									<th class='text-center' style='width: 5%;'>#</th>
 								</tr>
 							</thead>
@@ -87,7 +89,9 @@
 									<th class='text-center' style='width: 30%;'>Nama Barang</th>
 									<th class='text-center'>Spesifikasi</th>
 									<th class='text-center' style='width: 15%;'>Kebutuhan 1 Bulan</th>
-									<th class='text-center' style='width: 15%;'>Satuan Packing</th>
+									<th class='text-center' style='width: 15%;'>Satuan Product</th>
+									<th class='text-center' style='width: 15%;'>Price Reference</th>
+									<th class='text-center' style='width: 15%;'>Total Price</th>
 									<th class='text-center' style='width: 5%;'>#</th>
 								</tr>
 							</thead>
@@ -110,8 +114,10 @@
 							<td class="text-center">' . $nojenis . '<input type="hidden" name="jenis_barang[]" value="' . $key->jenis_barang . '"></td>
 							<td><input type="hidden" name="id_barang[]" value="' . $key->id_barang . '">' . $key->id_barang . ' - ' . $key->nama_barang . '</td>
 							<td>' . $key->spec1 . '</td>
-							<td><input type="text" class="form-control input-md text-center autoNumeric0" name="kebutuhan_month[]" value="' . $key->kebutuhan_month . '"></td>
+							<td><input type="text" class="form-control input-md text-center autoNumeric0" name="kebutuhan_month[]" id="kebutuhan_month_' . $totals . '" onchange="hitungPrice(' . $totals . ')" value="' . $key->kebutuhan_month . '"></td>
 							<td class="text-center"><input type="hidden" name="satuan[]" value="' . $key->id_satuan . '">' . $key->nm_satuan . '</td>
+							<td class="text-center"><input type="text" name="price_reference[]" class="form-control form-control-sm text-right autoNumeric0" id="price_reference_' . $totals . '" onchange="hitungPrice(' . $totals . ')" value="' . $key->price_reference . '"></td>
+							<td class="text-center"><input type="text" name="total_price[]" class="form-control form-control-sm text-right autoNumeric0" id="total_price_' . $totals . '" onchange="hitungPrice(' . $totals . ')" value="' . $key->total_price . '" readonly></td>
 							<td class="text-center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td>
 						  </tr>';
 									$nojenis++;
@@ -158,7 +164,7 @@
 					row++;
 					options += '<option value=' + data[i].id + ' data-id_spec="' + data[i].spec + '">' + data[i].stock_name + '</option>';
 				}
-				$('#tbl_' + jenis_barang + ' tr:last').after('<tr><td align="center">#<input type="hidden" name="jenis_barang[]" value="' + jenis_barang + '"></td><td><select id="id_barang' + row + '" name="id_barang[]" class="form-control select2 input-md" required onchange="getsatuan(' + row + ')">' + options + '</select></td><td id="spek' + row + '"></td><td><input type="text" class="form-control input-md text-center autoNumeric0" name="kebutuhan_month[]"></td><td><select id="satuan' + row + '" name="satuan[]" class="form-control input-md select2 text-center" required></select></td><td align="center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td></tr>');
+				$('#tbl_' + jenis_barang + ' tr:last').after('<tr><td align="center">#<input type="hidden" name="jenis_barang[]" value="' + jenis_barang + '"></td><td><select id="id_barang' + row + '" name="id_barang[]" class="form-control select2 input-md" required onchange="getsatuan(' + row + ')">' + options + '</select></td><td id="spek' + row + '"></td><td><input type="text" class="form-control input-md text-center autoNumeric0" name="kebutuhan_month[]" id="kebutuhan_month_' + row + '" onchange="hitungPrice(' + row + ')"></td><td><select id="satuan' + row + '" name="satuan[]" class="form-control input-md select2 text-center" required></select></td><td class="text-center"><input type="text" class="form-control form-control-sm text-right autoNumeric0" name="price_reference[]" id="price_reference_' + row + '" onchange="hitungPrice(' + row + ')"></td><td class="text-center"><input type="text" class="form-control form-control-sm autoNumeric0 text-right" name="total_price[]" id="total_price_' + row + '" readonly></td><td align="center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td></tr>');
 				$(".select2").select2();
 				$(".autoNumeric0").autoNumeric('init', {
 					mDec: '0',
@@ -271,6 +277,23 @@
 			}
 		});
 	});
+
+	function hitungPrice(id) {
+		var kebutuhan_month = $('#kebutuhan_month_' + id).val();
+		if (kebutuhan_month !== '') {
+			var kebutuhan_month = kebutuhan_month.split(',').join('');
+			var kebutuhan_month = parseFloat(kebutuhan_month);
+		}
+		var price_reference = $('#price_reference_' + id).val();
+		if (price_reference !== '') {
+			var price_reference = price_reference.split(',').join('');
+			var price_reference = parseFloat(price_reference);
+		}
+
+		var total_price = (kebutuhan_month * price_reference);
+
+		$('#total_price_' + id).autoNumeric('set', total_price);
+	}
 
 	function cancel() {
 		window.location.reload();

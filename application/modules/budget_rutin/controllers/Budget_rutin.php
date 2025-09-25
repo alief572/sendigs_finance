@@ -47,7 +47,7 @@ class Budget_rutin extends Admin_Controller
     public function get_satuan($id_material)
     {
         $getSatuan = $this->db->get_where('accessories', array('id' => $id_material))->result_array();
-        $id_satuan = (!empty($getSatuan[0]['id_unit_gudang'])) ? $getSatuan[0]['id_unit_gudang'] : 0;
+        $id_satuan = (!empty($getSatuan[0]['id_unit'])) ? $getSatuan[0]['id_unit'] : 0;
         $data = $this->All_model->GetOneTable('ms_satuan', array('id' => $id_satuan));
         echo json_encode($data);
         die();
@@ -101,6 +101,8 @@ class Budget_rutin extends Admin_Controller
         $id_barang        = $this->input->post("id_barang");
         $kebutuhan_month = $this->input->post("kebutuhan_month");
         $satuan           = $this->input->post("satuan");
+        $price_reference = $this->input->post('price_reference');
+        $total_price = $this->input->post('total_price');
         $this->db->trans_begin();
         if ($type == "edit") {
             $data = array(
@@ -137,6 +139,8 @@ class Budget_rutin extends Admin_Controller
                         'id_barang' => $id_barang[$i],
                         'kebutuhan_month' => str_replace(',', '', $kebutuhan_month[$i]),
                         'satuan' => $satuan[$i],
+                        'price_reference' => str_replace(',', '', $price_reference[$i]),
+                        'total_price' => str_replace(',', '', $total_price[$i])
                     );
                     $this->All_model->dataSave('budget_rutin_detail', $data_detail);
                 }
