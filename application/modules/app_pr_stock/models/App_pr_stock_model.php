@@ -3,6 +3,11 @@
 class App_pr_stock_model extends BF_Model
 {
 
+  protected $ENABLE_ADD;
+  protected $ENABLE_MANAGE;
+  protected $ENABLE_VIEW;
+  protected $ENABLE_DELETE;
+
   public function __construct()
   {
     parent::__construct();
