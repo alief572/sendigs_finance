@@ -9,6 +9,9 @@ class Accessories extends Admin_Controller
   protected $managePermission = 'Master_Indirect.Manage';
   protected $deletePermission = 'Master_Indirect.Delete';
 
+  protected $id_user;
+  protected $datetime;
+
   public function __construct()
   {
     parent::__construct();
@@ -64,9 +67,10 @@ class Accessories extends Admin_Controller
       $konversi         = str_replace(',', '', $data['konversi']);
       $id_unit          = $data['id_unit'];
       $status           = (!empty($id)) ? $data['status'] : 1;
+      $min_order = $data['min_order'];
 
-      $max_stok         = str_replace(',', '', $data['max_stok']);
-      $min_stok         = str_replace(',', '', $data['min_stok']);
+      // $max_stok         = str_replace(',', '', $data['max_stok']);
+      // $min_stok         = str_replace(',', '', $data['min_stok']);
 
       $created_by   = 'updated_by';
       $created_date = 'updated_date';
@@ -83,8 +87,7 @@ class Accessories extends Admin_Controller
         'konversi'      => $konversi,
         'id_unit'        => $id_unit,
         'status'        => $status,
-        'max_stok'        => $max_stok,
-        'min_stok'        => $min_stok,
+        'min_order' => $min_order,
         $created_by      => $this->id_user,
         $created_date    => $this->datetime
       );
