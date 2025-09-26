@@ -3,6 +3,11 @@
 class Request_pr_stok_model extends BF_Model
 {
 
+  protected $ENABLE_ADD;
+  protected $ENABLE_MANAGE;
+  protected $ENABLE_VIEW;
+  protected $ENABLE_DELETE;
+
   public function __construct()
   {
     parent::__construct();
@@ -434,17 +439,20 @@ class Request_pr_stok_model extends BF_Model
 
       $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
 
+      $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
+      $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
+
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
-      $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth * $konversi) . "</div>";
+      $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
       $nestedData[]  = "<div align='right'>" . number_format($stock_oke) . "</div>";
-      $nestedData[]  = "<div align='right'>" . number_format($row['max_stok']) . "</div>";
+      $nestedData[]  = "<div align='right'>" . number_format(($kebutuhnMonth * 1.5)) . "</div>";
       $purchase = ($kebutuhnMonth) - $stock_oke2;
       $purchase2x = ($purchase < 0) ? 0 : $purchase;
       $purchase2 = (!empty($row['request'])) ? $row['request'] : $purchase2x;
 
       $purchase_value = ($purchase2 > 0) ? number_format($purchase2, 2) : '';
 
-      $grand_total_val = ($purchase_value !== '') ? number_format($row['price_ref_high'] * $purchase2) : '';
+      $grand_total_val = ($purchase_value !== '') ? number_format($price_ref * $purchase2) : '';
 
       $purchase_value_pack = ($row['request_pack'] > 0) ? number_format($row['request_pack'], 2) : '';
 
@@ -475,7 +483,7 @@ class Request_pr_stok_model extends BF_Model
 									});
 									</script>";
 
-      $nestedData[] = number_format($row['price_ref_high']);
+      $nestedData[] = number_format($price_ref);
       $nestedData[] = '<div align="right">' . $grand_total_val . '</div>';
       $data[] = $nestedData;
       $urut1++;
