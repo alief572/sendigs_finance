@@ -81,11 +81,11 @@ class Budget_rutin_model extends BF_Model
     }
     function GetBudgetRutinDetail($code_budget)
     {
-        $this->db->select('a.*, b.stock_name nama_barang, b.spec spec1, c.nm_category nama_jenis, c.id AS id_type, b.id_unit_gudang AS id_satuan, z.code AS nm_satuan');
+        $this->db->select('a.*, b.stock_name nama_barang, b.spec spec1, c.nm_category nama_jenis, c.id AS id_type, b.id_unit AS id_satuan, z.code AS nm_satuan');
         $this->db->from("(select * from budget_rutin_detail where code_budget='" . $code_budget . "') a");
         $this->db->join('accessories b', 'a.id_barang=b.id', 'left');
         $this->db->join('accessories_category c', 'a.jenis_barang=c.id', 'right');
-        $this->db->join('ms_satuan z', 'b.id_unit_gudang=z.id', 'left');
+        $this->db->join('ms_satuan z', 'b.id_unit=z.id', 'left');
         // $this->db->where("c.id_type != 'I2000001'");
         $this->db->order_by('c.nm_category', 'asc');
         $query = $this->db->get();

@@ -205,6 +205,42 @@
 					//					console.log(data);
 				}
 			});
+
+			$.ajax({
+				type: 'post',
+				url: siteurl + active_controller + 'getPriceRef',
+				data: {
+					'id_barang': idbarang
+				},
+				cache: false,
+				dataType: 'json',
+				success: function(result) {
+					var price_ref = result.nilai_price_ref;
+					var kebutuhan_month = $('#kebutuhan_month_' + id).val();
+					if (kebutuhan_month !== '') {
+						kebutuhan_month = kebutuhan_month.split(',').join('');
+						kebutuhan_month = parseFloat(kebutuhan_month);
+					} else {
+						kebutuhan_month = 0;
+					}
+
+					var total_price = (price_ref * kebutuhan_month);
+
+					$('#price_reference_' + id).autoNumeric('set', price_ref);
+					$('#total_price_' + id).autoNumeric('set', total_price);
+				},
+				error: function(result) {
+					swal({
+						type: 'error',
+						title: 'Error !',
+						text: 'Please try again later !',
+						allowOutsideClick: false,
+						showCancelButton: false,
+						showConfirmButton: false,
+						timer: 3000
+					});
+				}
+			});
 		} else {
 			$('#satuan').html('');
 		}
