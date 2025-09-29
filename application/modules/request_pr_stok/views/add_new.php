@@ -57,17 +57,23 @@
 					<tr class='bg-blue'>
 						<th class="text-center" width='4%'>#</th>
 						<th class="text-center">Nama Barang</th>
-						<th class="text-center">Kebutuhan 1 Bulan (Konversi)</th>
-						<th class="text-center">Stock (Konversi)</th>
-						<th class="text-center">Max Stock (Konversi)</th>
-						<th class="text-center">Propose Purhcase (Konversi)</th>
-						<th class="text-center">Unit Konversi</th>
+						<th class="text-center">Kebutuhan 1 Bulan</th>
+						<th class="text-center">Stock</th>
+						<th class="text-center">Max Stock</th>
+						<th class="text-center">Propose Purhcase</th>
+						<th class="text-center">Unit</th>
 						<th class="text-center">Keterangan</th>
 						<th class="text-center">Price Reference</th>
 						<th class="text-center">Total Price</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
+				<tfoot>
+					<tr class="bg-blue">
+						<th colspan="9" class="text-center">Total Price Pengajuan</th>
+						<th class="text-right total-price">0</th>
+					</tr>
+				</tfoot>
 			</table><br>
 			<?php
 			echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-danger', 'style' => 'min-width:100px; float:right; margin: 5px 5px 5px 5px;', 'content' => 'Back', 'id' => 'back')) . ' ';
@@ -259,12 +265,25 @@
 	$(document).on('change', '.changeSave', function() {
 		var id = $(this).data('id');
 		var inventory = $('#category').val();
+		var max_propose = $(this).data('max_propose');
 		var qty_satuan = $(this).val();
 		// if (qty_satuan == '' || qty_satuan == null) {
 		// 	qty_satuan = 0;
 		// } else {
 		// 	qty_satuan = qty_satuan.split(',').join('');
 		// 	qty_satuan = parseFloat(qty_satuan);
+		// }
+
+		// if (qty_satuan > max_propose) {
+		// 	swal({
+		// 		type: 'warning',
+		// 		title: 'Peringatan !',
+		// 		text: 'Nilai propose tidak boleh lebih dari Max Stock !',
+		// 		showCancelButton: false,
+		// 		allowoOutsideClick: false
+		// 	});
+
+		// 	qty_satuan = max_propose;
 		// }
 
 		// var konversi = $(this).data('konversi');
@@ -280,6 +299,17 @@
 		var id_material = $(this).data('id');
 		// var input_pack = $('#purchase_pack_' + nomor).val().split(",").join("");
 		var purchase = $('#purchase_' + nomor).val().split(",").join("");
+		if (purchase > max_propose) {
+			swal({
+				type: 'warning',
+				title: 'Peringatan !',
+				text: 'Nilai propose tidak boleh lebih dari Max Stock !',
+				showCancelButton: false,
+				allowoOutsideClick: false
+			});
+
+			purchase = max_propose;
+		}
 		// if ($(this).hasClass('input_qty_packing')) {
 		// 	purchase = (input_pack * konversi);
 		// }
@@ -356,16 +386,6 @@
 			nilai_pengajuan = parseFloat(nilai_pengajuan);
 		} else {
 			nilai_pengajuan = 0;
-		}
-
-		if (nilai_pengajuan > nilai_budget) {
-			swal({
-				type: 'warning',
-				title: 'Warning !',
-				text: 'Nominal pengajuan tidak boleh melebihi budget !'
-			});
-
-			return false;
 		}
 
 		if (category == '0') {
@@ -504,12 +524,17 @@
 
 	$(document).on('change', '.input_qty_satuan', function() {
 		var id = $(this).data('id');
+		var max_propose = $(this).data('max_propose');
 		var qty_satuan = $(this).val();
 		if (qty_satuan == '' || qty_satuan == null) {
 			qty_satuan = 0;
 		} else {
 			qty_satuan = qty_satuan.split(',').join('');
 			qty_satuan = parseFloat(qty_satuan);
+		}
+
+		if (qty_satuan > max_propose) {
+			qty_satuan = max_propose;
 		}
 
 		var konversi = $(this).data('konversi');
@@ -584,6 +609,15 @@
 					d.category = category
 				},
 				cache: false,
+				dataSrc: function(json) {
+					var total_price = json.total_price;
+
+					// Menampilkan total harga di footer
+					$('#example1 tfoot .total-price').text(number_format(total_price));
+
+					// Mengembalikan data untuk DataTable
+					return json.data;
+				},
 				error: function() {
 					$(".my-grid-error").html("");
 					$("#my-grid").append('<tbody class="my-grid-error"><tr><th colspan="3">No data found in the server</th></tr></tbody>');
