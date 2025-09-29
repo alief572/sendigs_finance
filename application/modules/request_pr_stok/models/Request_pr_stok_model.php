@@ -412,7 +412,17 @@ class Request_pr_stok_model extends BF_Model
     $GET_KEBUTUHAN_PER_MONTH = get_kebutuhanPerMonth();
     $GET_WAREHOUSE_STOCK = getStokBarangAll();
 
-    $total_price = 0;
+
+
+    $this->db->select('SUM(a.request * a.price_ref_high) as total_price');
+    $this->db->from('accessories a');
+    if (!empty($requestData['category'])) {
+      $this->db->where('a.id_category', $requestData['category']);
+    }
+    $get_total_price = $this->db->get()->row();
+
+    $total_price = (!empty($get_total_price)) ? $get_total_price->total_price : 0;
+
     foreach ($query->result_array() as $row) {
       $total_data     = $totalData;
       $start_dari     = $requestData['start'];
@@ -441,8 +451,8 @@ class Request_pr_stok_model extends BF_Model
 
       $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
 
-      $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
-      $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
+      // $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
+      $price_ref = $row['price_ref_high'];
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
       $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
@@ -492,7 +502,7 @@ class Request_pr_stok_model extends BF_Model
       $urut1++;
       $urut2++;
 
-      $total_price += $grand_total_val2;
+      // $total_price += $grand_total_val2;
     }
 
     $json_data = array(
