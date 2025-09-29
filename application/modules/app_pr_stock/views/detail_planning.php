@@ -52,6 +52,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 						</thead>
 						<tbody>
 							<?php
+							$grand_total_price = 0;
 							$key = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
@@ -79,15 +80,23 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 										</td>";
 								echo "<td class='text-right min_stok'>" . number_format($kebutuhan) . "</td>";
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
-								echo "<td class='text-right min_order'>" . number_format($stock, 2) . "</td>";
-								echo "<td class='text-right'>" . number_format($propose * $konversi, 2) . "</td>";
+								echo "<td class='text-right min_order'>" . number_format($stock) . "</td>";
+								echo "<td class='text-right'>" . number_format($propose * $konversi) . "</td>";
 								echo "<td class='text-right'>Rp. " . number_format($get_material->price_ref_high) . "</td>";
 								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
 
 								echo "</tr>";
+
+								$grand_total_price += (($propose * $konversi) * $get_material->price_ref_high);
 							}
 							?>
 						</tbody>
+						<tfoot>
+							<tr class="bg-blue">
+								<th colspan="7" class="text-center">Total Price Pengajuan</th>
+								<th class="text-right">Rp. <?= number_format($grand_total_price) ?></th>
+							</tr>
+						</tfoot>
 					</table>
 				</div>
 			</div>

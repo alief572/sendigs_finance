@@ -110,6 +110,7 @@ if (!empty($header)) {
 						</thead>
 						<tbody>
 							<?php
+							$grand_total_price = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
 								$nm_material 	= $value['nm_material'];
@@ -142,9 +143,17 @@ if (!empty($header)) {
 								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
 
 								echo "</tr>";
+
+								$grand_total_price += (($propose * $konversi) * $get_material->price_ref_high);
 							}
 							?>
 						</tbody>
+						<tfoot>
+							<tr class="bg-blue">
+								<th colspan="7" class="text-center">Total Price Pengajuan</th>
+								<th class="text-right">Rp. <?= number_format($grand_total_price) ?></th>
+							</tr>
+						</tfoot>
 					</table>
 				</div>
 			</div>
