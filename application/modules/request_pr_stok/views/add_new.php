@@ -413,12 +413,30 @@
 					},
 					function(isConfirm) {
 						if (isConfirm) {
+							var nilai_budget = $('.nilai_budget').val();
+							if (nilai_budget !== '') {
+								nilai_budget = nilai_budget.split(',').join('');
+								nilai_budget = parseFloat(nilai_budget);
+							} else {
+								nilai_budget = 0;
+							}
+
+							var nilai_pengajuan = $('.nilai_pengajuan').val();
+							if (nilai_pengajuan !== '') {
+								nilai_pengajuan = nilai_pengajuan.split(',').join('');
+								nilai_pengajuan = parseFloat(nilai_pengajuan);
+							} else {
+								nilai_pengajuan = 0;
+							}
+
 							$.ajax({
 								url: base_url + active_controller + '/save_reorder_all',
 								type: "POST",
 								data: {
 									'category': category,
-									'tingkat_pr': tingkat_pr
+									'tingkat_pr': tingkat_pr,
+									'nilai_budget': nilai_budget,
+									'nilai_pengajuan': nilai_pengajuan
 								},
 								cache: false,
 								dataType: 'json',

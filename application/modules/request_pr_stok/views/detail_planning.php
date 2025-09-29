@@ -50,7 +50,17 @@
 						</tr>
 					</table>
 				</div>
+				<div class="col-md-6">
+					<label for="">Nilai Budget</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_budget']) ?>" readonly>
+				</div>
+				<div class="col-md-6">
+					<label for="">Nilai Pengajuan</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_pengajuan']) ?>" readonly>
+				</div>
+				<br><br>
 				<div class="col-md-12">
+					<br><br>
 					<table class='table table-striped table-bordered table-hover table-condensed' width='100%'>
 						<thead class='thead'>
 							<tr class='bg-blue'>
