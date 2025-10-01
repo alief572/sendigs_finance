@@ -376,7 +376,7 @@ class Pr_model extends BF_Model
 				a.id as no_pr,
 				DATE_FORMAT(a.created_date, "%Y-%m-%d") as tgl_so,
 				b.nm_lengkap as nama_user,
-				"project consultant" as tipe_pe
+				"project consultant" as tipe_pr
 			FROM
 				' . DBCNL . '.kons_tr_kasbon_project_header a
 				LEFT JOIN ' . DBCNL . '.users b ON b.id_user = a.created_by
