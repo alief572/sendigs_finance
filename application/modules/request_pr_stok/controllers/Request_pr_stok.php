@@ -199,7 +199,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request_pack'];
-      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref_high'];
+      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref'];
     }
 
     $ArrSaveHeader = array(
