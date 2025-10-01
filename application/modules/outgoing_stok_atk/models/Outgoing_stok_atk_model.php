@@ -69,7 +69,7 @@ class Outgoing_stok_atk_model extends BF_Model
       $nestedData[]  = "<div align='left'>" . strtoupper($row['id_stock']) . "</div>";
       $nestedData[]  = "<div align='left'>" . strtoupper($row['stock_name']) . "</div>";
       $nestedData[]  = "<div align='left'>" . strtoupper($row['nm_category']) . "</div>";
-      $nestedData[]  = "<div align='center'>" . number_format($stock, 2) . "</div>";
+      $nestedData[]  = "<div align='center'>" . number_format($stock) . "</div>";
       $nestedData[]  = "<div align='center'>" . strtoupper($row['unit_satuan']) . "</div>";
       $nestedData[]  = "<div align='left'><input type='text' style='width:100%' name='detailx[" . $nomor . "][sudah_request]' data-no='" . $nomor . "'class='form-control input-sm text-center autoNumeric4 sudah_request'><script type='text/javascript'>$('.autoNumeric4').autoNumeric('init', {mDec: '4', aPad: false});;</script></div>";
       $nestedData[]  = "<div align='left'><input type='text' style='width:100%' name='detailx[" . $nomor . "][ket_request]' data-no='" . $nomor . "' class='form-control input-sm text-left ket_request'></div>";
@@ -109,7 +109,7 @@ class Outgoing_stok_atk_model extends BF_Model
               LEFT JOIN ms_satuan c ON b.id_unit_gudang=c.id
               LEFT JOIN ms_satuan d ON b.id_unit=d.id,
               (SELECT @row:=0) r
-            WHERE b.deleted_date IS NULL AND z.nm_category = 'ATK'
+            WHERE b.deleted_date IS NULL
             AND(
               b.id_stock LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR b.stock_name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
@@ -179,7 +179,7 @@ class Outgoing_stok_atk_model extends BF_Model
       $nestedData[]  = "<div align='center'>" . strtoupper($row['kode_trans']) . "</div>";
       $nestedData[]  = "<div align='center'>" . date('d-M-Y', strtotime($row['tanggal'])) . "</div>";
       $nestedData[]  = "<div align='left'>" . $nm_department . "</div>";
-      $nestedData[]  = "<div align='center'>" . number_format($row['qty_unit'], 2) . "</div>";
+      $nestedData[]  = "<div align='center'>" . number_format($row['qty_unit']) . "</div>";
       $nestedData[]  = "<div align='left'>" . $row['pic'] . "</div>";
       $username = (!empty($GET_USER[$row['created_by']]['nama'])) ? $GET_USER[$row['created_by']]['nama'] : '-';
       $nestedData[]  = "<div align='left'>" . $username . "</div>";
