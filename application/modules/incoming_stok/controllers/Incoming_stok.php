@@ -9,6 +9,9 @@ class Incoming_stok extends Admin_Controller
   protected $managePermission = 'Incoming_Stok.Manage';
   protected $deletePermission = 'Incoming_Stok.Delete';
 
+  protected $id_user;
+  protected $datetime;
+
   public function __construct()
   {
     parent::__construct();
@@ -260,10 +263,32 @@ class Incoming_stok extends Admin_Controller
         'created_date'     => $this->datetime
       );
 
-      // print_r($ArrInsert);
-      // print_r($ArrInsertDetail);
-      // print_r($ArrUpdatePO);
-      // exit;
+      $ArrInsertJurnal = [];
+      if (!empty($data['jurnal'])) {
+        $no_jurnal = 0;
+        foreach ($data['jurnal'] as $item_jurnal) {
+          $no_jurnal++;
+
+          $no_jurn = $this->incoming_stok_model->generate_id_invoice_jurnal($no_jurnal);
+          $ArrInsertJurnal[] = [
+            'no_jurnal' => $no_jurn,
+            'tgl_jurnal' => $item_jurnal['tanggal_jurnal'],
+            'coa' => $item_jurnal['no_coa'],
+            'id_company' => $item_jurnal['id_company'],
+            'nm_company' => $item_jurnal['nm_company'],
+            'nm_coa' => $item_jurnal['nm_coa'],
+            'debit' => $item_jurnal['debit'],
+            'kredit' => $item_jurnal['kredit'],
+            'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $kode_trans,
+            'no_transaksi' => $kode_trans,
+            'jenis_transaksi' => 'Incoming',
+            'id_divisi' => $item_jurnal['id_div'],
+            'nm_divisi' => $item_jurnal['nm_div'],
+            'created_by' => $this->id_user,
+            'created_date' => $this->datetime
+          ];
+        }
+      }
 
       $this->db->trans_start();
       if (!empty($ArrInsertDetail)) {
@@ -272,6 +297,10 @@ class Incoming_stok extends Admin_Controller
       }
       if (!empty($ArrUpdatePO)) {
         $this->db->update_batch('dt_trans_po', $ArrUpdatePO, 'id');
+      }
+
+      if (!empty($ArrInsertJurnal)) {
+        $this->db->insert_batch('tr_jurnal', $ArrInsertJurnal);
       }
       $this->db->trans_complete();
 
@@ -451,7 +480,7 @@ class Incoming_stok extends Admin_Controller
                     dt_trans_po a
                     LEFT JOIN accessories b ON a.idmaterial = b.id
                     LEFT JOIN accessories_category c ON b.id_category = c.id
-                    LEFT JOIN ms_satuan d ON d.id = b.id_unit_gudang
+                    LEFT JOIN ms_satuan d ON d.id = b.id_unit
                   WHERE
                     a.no_po IN ('" . str_replace(",", "','", $no_po) . "')
                     AND a.qty_in < a.qty
@@ -530,7 +559,8 @@ class Incoming_stok extends Admin_Controller
             'b.status' => '2',
             'a.idmaterial !=' => '',
             'SUBSTRING(a.idmaterial, 1, 1) !=' => 'M',
-            'b.id_suplier' => $kode_supplier
+            'b.id_suplier' => $kode_supplier,
+            'b.close_po' => null
           )
         )
         ->result();
@@ -579,5 +609,10 @@ class Incoming_stok extends Admin_Controller
     }
 
     echo $hasil;
+  }
+
+  public function set_jurnal()
+  {
+    $this->incoming_stok_model->set_jurnal();
   }
 }

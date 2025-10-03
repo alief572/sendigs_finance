@@ -22,9 +22,9 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 		<p>Select Request Payment</p>
 
 		<input type="radio" name="checkbx" id="" class="checkbx" value="dp" checked> Receive Invoice <br>
-		<!-- <input type="radio" name="checkbx" id="" class="checkbx" value="inc"> Receive Invoice Incoming <br>
+		<!-- <input type="radio" name="checkbx" id="" class="checkbx" value="inc"> Receive Invoice Incoming <br> -->
 		<input type="radio" name="checkbx" id="" class="checkbx" value="pro"> Receive Invoice Progress <br>
-		<input type="radio" name="checkbx" id="" class="checkbx" value="ret"> Receive Invoice Retensi <br> -->
+		<input type="radio" name="checkbx" id="" class="checkbx" value="ret"> Receive Invoice Retensi <br>
 
 		<div class="dic">
 
@@ -72,7 +72,8 @@ $ENABLE_DELETE  = has_permission('Purchase_Order.Delete');
 	});
 
 	$(document).on('click', '.checkbx', function() {
-		checkbx('dp');
+		var val = $(this).val();
+		checkbx(val);
 	});
 
 	function checkbx(tipe) {

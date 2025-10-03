@@ -112,6 +112,89 @@
             <input type="text" name="nm_acc_bank" id="" class="form-control form-control-sm" placeholder="- Nama Acc Bank -">
         </div>
     </div>
+    <br>
+    <div class="col-md-12">
+        <h4>Jurnal Receive Invoice DP</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th class="text-center">Tanggal Jurnal</th>
+                    <th class="text-center">Company</th>
+                    <th class="text-center">Divisi</th>
+                    <th class="text-center">COA</th>
+                    <th class="text-center">Deskripsi</th>
+                    <th class="text-center">Debit</th>
+                    <th class="text-center">Kredit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                // print_r($hasil_jurnal);
+                // exit;
+                $ttl_debit = 0;
+                $ttl_kredit = 0;
+                if (isset($hasil_jurnal) && !empty($hasil_jurnal)) {
+                    $no_jurnal = 0;
+                    foreach ($hasil_jurnal as $item_jurnal) {
+                        $no_jurnal++;
+
+                        echo '<tr>';
+
+                        echo '<td class="text-center">';
+                        echo date('d F Y', strtotime($item_jurnal['tanggal_jurnal']));
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][tanggal_jurnal]" value="' . $item_jurnal['tanggal_jurnal'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-center">';
+                        echo $item_jurnal['nm_company'];
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $item_jurnal['id_company'] . '">';
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $item_jurnal['nm_company'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-center">';
+                        echo $item_jurnal['nm_div'];
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_divisi]" value="' . $item_jurnal['id_div'] . '">';
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_divisi]" value="' . $item_jurnal['nm_div'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-left">';
+                        echo $item_jurnal['nm_coa'];
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_coa]" value="' . $item_jurnal['id_coa'] . '">';
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $item_jurnal['nm_coa'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-left">';
+                        echo $item_jurnal['deskripsi'];
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $item_jurnal['deskripsi'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-right">';
+                        echo number_format($item_jurnal['debit']);
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $item_jurnal['debit'] . '">';
+                        echo '</td>';
+
+                        echo '<td class="text-right">';
+                        echo number_format($item_jurnal['kredit']);
+                        echo '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $item_jurnal['kredit'] . '">';
+                        echo '</td>';
+
+                        echo '</tr>';
+
+                        $ttl_debit += $item_jurnal['debit'];
+                        $ttl_kredit += $item_jurnal['kredit'];
+                    }
+                }
+                ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th class="text-center" colspan="5">Balancing</th>
+                    <th class="text-right"><?= number_format($ttl_debit) ?></th>
+                    <th class="text-right"><?= number_format($ttl_kredit) ?></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

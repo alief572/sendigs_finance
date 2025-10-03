@@ -75,8 +75,8 @@
 								<th class="text-center" width='5%'>ID</th>
 								<th class="text-center" width='10%'>Kode Barang</th>
 								<th class="text-center">Nama Barang</th>
-								<th class="text-center" width='8%'>Qty PO (Pack)</th>
-								<th class="text-center" width='8%'>Unit Pack</th>
+								<th class="text-center" width='8%'>Qty PO</th>
+								<th class="text-center" width='8%'>Unit</th>
 								<th class="text-center" width='8%'>Qty IN</th>
 								<th class="text-center" width='8%'>Qty Outsanding</th>
 								<th class="text-center" width='8%'>Qty Diterima</th>
@@ -88,6 +88,36 @@
 								<td colspan='8'>Empty data incoming.</td>
 							</tr>
 						</tbody>
+					</table>
+				</div>
+			</div>
+			<h4>Jurnal Incoming</h4>
+			<div class="form-group row">
+				<div class="col-md-12">
+					<table class="table table-striped table-bordered table-hover table-condensed" width="100%">
+						<thead class="bg-blue">
+							<tr>
+								<th class="text-center">Tanggal Jurnal</th>
+								<th class="text-center">Company</th>
+								<th class="text-center">Divisi</th>
+								<th class="text-center">COA</th>
+								<th class="text-center">Nama Company</th>
+								<th class="text-center">Nama Account</th>
+								<th class="text-center">Deskripsi</th>
+								<th class="text-center">Debit</th>
+								<th class="text-center">Credit</th>
+							</tr>
+						</thead>
+						<tbody class="tbody_list_jurnal">
+
+						</tbody>
+						<tfoot>
+							<tr class="bg-blue">
+								<th class="text-center" colspan="7">Balancing</th>
+								<th class="text-right ttl_debit_jurnal"></th>
+								<th class="text-right ttl_kredit_jurnal"></th>
+							</tr>
+						</tfoot>
 					</table>
 				</div>
 			</div>
@@ -280,6 +310,8 @@
 						})
 					}
 				})
+
+				set_jurnal(no_po, id_gudang);
 			}
 		});
 
@@ -340,5 +372,34 @@
 			s[1] += new Array(prec - s[1].length + 1).join('0');
 		}
 		return s.join(dec);
+	}
+
+	function set_jurnal(no_po, id_gudang) {
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + '/set_jurnal',
+			data: {
+				'no_po': no_po,
+				'id_gudang': id_gudang
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('.tbody_list_jurnal').html(result.hasil_jurnal);
+				$('.ttl_debit_jurnal').text(number_format(result.ttl_debit));
+				$('.ttl_kredit_jurnal').text(number_format(result.ttl_kredit));
+			},
+			error: function(result) {
+				swal({
+					type: 'error',
+					title: 'Error !',
+					text: 'Please try again later !',
+					allowOutsideClick: false,
+					showConfirmButton: false,
+					showCancelButton: false,
+					timer: 3000
+				});
+			}
+		});
 	}
 </script>

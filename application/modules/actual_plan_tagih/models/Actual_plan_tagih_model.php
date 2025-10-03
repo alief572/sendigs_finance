@@ -75,7 +75,7 @@ class Actual_plan_tagih_model extends BF_Model
         // print_r($this->db->last_query());
         // exit;
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader,');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');

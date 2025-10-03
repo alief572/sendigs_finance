@@ -2883,4 +2883,9 @@ class Expense extends Admin_Controller
 	{
 		$this->Expense_model->get_data_transport_req();
 	}
+
+	public function get_data_transport_req_all()
+	{
+		$this->Expense_model->get_data_transport_req_all();
+	}
 }

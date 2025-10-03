@@ -536,6 +536,8 @@ class Request_payment_model extends BF_Model
                             a.keterangan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
                         )
+                    
+                    
                 ) z
                 GROUP BY z.no_dokumen
             ORDER BY z.tanggal DESC

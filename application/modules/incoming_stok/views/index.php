@@ -43,7 +43,6 @@ $ENABLE_DELETE  = has_permission('Incoming_Stok.Delete');
 						<th class='text-left'>PIC</th>
 						<th class='text-center'>By</th>
 						<th class='text-center'>Dated</th>
-						<!-- <th class='text-center no-sort'>Status</th> -->
 						<th class='text-center no-sort'>Option</th>
 					</tr>
 				</thead>
