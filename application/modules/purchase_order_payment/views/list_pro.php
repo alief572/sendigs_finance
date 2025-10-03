@@ -79,9 +79,14 @@
                     $view_btn = '';
                     $req_pay_btn = '<button type="button" class="btn btn-sm btn-primary req_app" style="margin-left: 0.5rem" title="Request Payment" data-no_po="' . $item['no_surat'] . '" data-id_top="' . $item['id_top'] . '" data-tipe="pro"><i class="fa fa-arrow-up"></i></button>';
                     if ($close == 1) {
-                        $get_invoice = $this->db->select('id')->get_where('tr_invoice_po', ['no_po' => $item['no_surat']])->row_array();
+                        $get_invoice = $this->db->select('id, id_top')->get_where('tr_invoice_po', ['no_po' => $item['no_surat']])->row();
 
-                        $view_btn = '<button type="button" class="btn btn-sm btn-info view" data-id="' . $get_invoice['id'] . '" data-id_top="' . $get_invoice['id_top'] . '"  data-tipe="pro" title="view"><i class="fa fa-eye"></i></button>';
+                        if (!empty($get_invoice)) {
+                            $view_btn = '<button type="button" class="btn btn-sm btn-info view" data-id="' . $get_invoice->id . '" data-id_top="' . $get_invoice->id_top . '"  data-tipe="pro" title="view"><i class="fa fa-eye"></i></button>';
+                        } else {
+                            $view_btn = '';
+                        }
+
                         $req_pay_btn = '';
                     }
 
@@ -99,21 +104,21 @@
                         ->like('a.no_po', $item['no_surat'])
                         ->get()
                         ->result();
-                    
+
                     foreach ($get_invoice as $item_invoice) {
                         $no_purchase_invoice[] = str_replace(',', '', $item_invoice->id);
                         $no_invoice[] = str_replace(',', '', $item_invoice->invoice_no);
                     }
 
-                    if(!empty($no_purchase_invoice)) {
+                    if (!empty($no_purchase_invoice)) {
                         $no_purchase_invoice = implode(', ', $no_purchase_invoice);
-                    }else{
+                    } else {
                         $no_purchase_invoice = '';
                     }
 
-                    if(!empty($no_invoice)) {
+                    if (!empty($no_invoice)) {
                         $no_invoice = implode(', ', $no_invoice);
-                    }else{
+                    } else {
                         $no_invoice = '';
                     }
 
@@ -127,10 +132,10 @@
 
                     echo '<tr>';
                     echo '<td class="text-center">' . $no . '</td>';
-                    echo '<td class="text-center">'.$item['no_surat'].'</td>';
+                    echo '<td class="text-center">' . $item['no_surat'] . '</td>';
                     echo '<td class="text-center">' . $no_purchase_invoice . '</td>';
                     echo '<td class="text-center">' . $no_invoice . '</td>';
-                    echo '<td class="text-center">'.$no_payment.'</td>';
+                    echo '<td class="text-center">' . $no_payment . '</td>';
                     echo '<td class="text-center">' . $item['nm_supplier'] . '</td>';
                     echo '<td class="text-center">' . date('d F Y', strtotime($item['tanggal'])) . '</td>';
                     echo '<td class="text-center">' . $item['keterangan_top'] . '</td>';

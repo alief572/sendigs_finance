@@ -127,7 +127,7 @@
 
                     echo '<tr>';
                     echo '<td class="text-center">' . $no . '</td>';
-                    echo '<td class="text-center">'.$item['no_surat'].'</td>';
+                    echo '<td class="text-center">' . $item['no_surat'] . '</td>';
                     echo '<td class="text-center">' . $no_purchase_invoice . '</td>';
                     echo '<td class="text-center">' . $no_invoice . '</td>';
                     echo '<td class="text-center">' . $no_payment . '</td>';
