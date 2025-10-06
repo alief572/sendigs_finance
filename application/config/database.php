@@ -74,10 +74,10 @@ $active_group = 'default';
 $query_builder = TRUE;
 
 $db['default'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'database' => 'db_sendigs_ss',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
@@ -96,11 +96,10 @@ $db['default'] = array(
 );
 
 $db['accounting'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
-	'database' => 'db_gl_sendigs_ss',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -118,11 +117,10 @@ $db['accounting'] = array(
 );
 
 $db['accounting_vuca'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
-	'database' => 'db_sendigs_ss_vuca',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -140,11 +138,10 @@ $db['accounting_vuca'] = array(
 );
 
 $db['accounting_sustain'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
-	'database' => 'db_sendigs_ss_sustain',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -162,10 +159,10 @@ $db['accounting_sustain'] = array(
 );
 
 $db['hris'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'database' => 'hr_sentral',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
@@ -184,10 +181,10 @@ $db['hris'] = array(
 );
 
 $db['consultant'] = array(
-	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'alief',
+	'password' => 'Alief@ssc1',
 	'database' => 'db_consultant_new',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
