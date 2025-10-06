@@ -94,7 +94,16 @@ if (!empty($header)) {
 						</tbody>
 					</table>
 				</div>
+				<div class="col-md-6">
+					<label for="">Nilai Budget</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_budget']) ?>" readonly>
+				</div>
+				<div class="col-md-6">
+					<label for="">Nilai Pengajuan</label>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_pengajuan']) ?>" readonly>
+				</div>
 				<div class="col-md-12">
+					<br><br>
 					<table class='table table-striped table-bordered table-hover table-condensed' width='100%'>
 						<thead class='thead'>
 							<tr class='bg-blue'>
@@ -110,6 +119,7 @@ if (!empty($header)) {
 						</thead>
 						<tbody>
 							<?php
+							$grand_total_price = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
 								$nm_material 	= $value['nm_material'];
@@ -142,9 +152,17 @@ if (!empty($header)) {
 								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
 
 								echo "</tr>";
+
+								$grand_total_price += (($propose * $konversi) * $get_material->price_ref_high);
 							}
 							?>
 						</tbody>
+						<tfoot>
+							<tr class="bg-blue">
+								<th colspan="7" class="text-center">Total Price Pengajuan</th>
+								<th class="text-right">Rp. <?= number_format($grand_total_price) ?></th>
+							</tr>
+						</tfoot>
 					</table>
 				</div>
 			</div>

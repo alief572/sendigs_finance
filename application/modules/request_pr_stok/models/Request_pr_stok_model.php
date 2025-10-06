@@ -411,6 +411,18 @@ class Request_pr_stok_model extends BF_Model
     $urut2  = 0;
     $GET_KEBUTUHAN_PER_MONTH = get_kebutuhanPerMonth();
     $GET_WAREHOUSE_STOCK = getStokBarangAll();
+
+
+
+    $this->db->select('SUM(a.request * a.price_ref) as total_price');
+    $this->db->from('accessories a');
+    if (!empty($requestData['category'])) {
+      $this->db->where('a.id_category', $requestData['category']);
+    }
+    $get_total_price = $this->db->get()->row();
+
+    $total_price = (!empty($get_total_price)) ? $get_total_price->total_price : 0;
+
     foreach ($query->result_array() as $row) {
       $total_data     = $totalData;
       $start_dari     = $requestData['start'];
@@ -439,8 +451,8 @@ class Request_pr_stok_model extends BF_Model
 
       $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
 
-      $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
-      $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
+      // $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
+      $price_ref = $row['price_ref'];
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
       $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
@@ -453,6 +465,7 @@ class Request_pr_stok_model extends BF_Model
       $purchase_value = ($purchase2 > 0) ? number_format($purchase2, 2) : '';
 
       $grand_total_val = ($purchase_value !== '') ? number_format($price_ref * $purchase2) : '';
+      $grand_total_val2 = ($purchase_value !== '') ? ($price_ref * $purchase2) : 0;
 
       $purchase_value_pack = ($row['request_pack'] > 0) ? number_format($row['request_pack'], 2) : '';
 
@@ -460,7 +473,7 @@ class Request_pr_stok_model extends BF_Model
       $unit_sat = ($unit_satuan != '0') ? $unit_satuan : '';
 
       $nestedData[]  = "<div align='right'>
-									<input type='text' name='purchase_" . $nomor . "' id='purchase_" . $nomor . "' value='" . $purchase_value . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' data-konversi='" . $row['konversi'] . "' class='form-control input-md text-right input_qty_satuan maskM changeSave purchase_" . $row['id'] . "' style='width:100%;'>
+									<input type='text' name='purchase_" . $nomor . "' id='purchase_" . $nomor . "' value='" . $purchase_value . "' data-id='" . $row['id'] . "' data-no='" . $nomor . "' data-konversi='" . $row['konversi'] . "' class='form-control input-md text-right input_qty_satuan maskM changeSave purchase_" . $row['id'] . "' style='width:100%;' data-max_propose='" . ceil($kebutuhnMonth * 1.5) . "'>
 								  </div><script type='text/javascript'>$('.maskM').autoNumeric('init', {mDec: '2', aPad: false});</script>";
 
       $nestedData[]  = "<div align='left'>
@@ -488,13 +501,16 @@ class Request_pr_stok_model extends BF_Model
       $data[] = $nestedData;
       $urut1++;
       $urut2++;
+
+      // $total_price += $grand_total_val2;
     }
 
     $json_data = array(
       "draw"              => intval($requestData['draw']),
       "recordsTotal"      => intval($totalData),
       "recordsFiltered"   => intval($totalFiltered),
-      "data"              => $data
+      "data"              => $data,
+      "total_price" => $total_price
     );
 
     echo json_encode($json_data);
