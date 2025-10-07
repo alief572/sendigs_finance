@@ -25,6 +25,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     </div>
     <!-- /.box-header -->
     <div class="box-body">
+        <button type="button" class="btn btn-sm btn-primary" onclick="fix_company()">Fix Company</button>
         <table id="table_penawaran" class="table table-bordered table-striped">
             <thead>
                 <tr>
@@ -155,6 +156,43 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         });
 
 
+    }
+
+    function fix_company() {
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'fix_company',
+            cache: false,
+            dataType: 'json',
+            success: function(result) {
+                if (result.status == '1') {
+                    swal({
+                        type: 'success',
+                        title: 'Success !',
+                        text: 'Company fixed !',
+                        allowOutsideClick: false,
+                        timer: 3000
+                    });
+                } else {
+                    swal({
+                        type: 'warning',
+                        title: 'Failed !',
+                        text: 'Please try again later !',
+                        allowOutsideClick: false,
+                        timer: 3000
+                    });
+                }
+            },
+            error: function(result) {
+                swal({
+                    type: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !',
+                    allowOutsideClick: false,
+                    timer: 3000
+                });
+            }
+        });
     }
 
     function DataTables() {
