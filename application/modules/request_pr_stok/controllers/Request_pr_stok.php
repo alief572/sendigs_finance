@@ -199,7 +199,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request_pack'];
-      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref_high'];
+      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref'];
     }
 
     $ArrSaveHeader = array(
@@ -215,7 +215,9 @@ class Request_pr_stok extends Admin_Controller
       'created_date'    => $this->datetime,
       'booking_by'      => $this->id_user,
       'booking_date'    => $this->datetime,
-      'tingkat_pr' => $data['tingkat_pr']
+      'tingkat_pr' => $data['tingkat_pr'],
+      'nilai_budget' => $data['nilai_budget'],
+      'nilai_pengajuan' => $data['nilai_pengajuan']
     );
 
     // print_r($ArrSaveHeader);

@@ -525,7 +525,6 @@ class Expense_model extends BF_Model
 			$this->db->or_like('a.created_by', $search['value'], 'both');
 			$this->db->group_end();
 		}
-		$this->db->order_by('a.no_doc', 'desc');
 
 		$db_clone = clone $this->db;
 		$count_all = $db_clone->count_all_results();
@@ -582,6 +581,104 @@ class Expense_model extends BF_Model
 			'draw' => intval($draw),
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_all,
+			'data' => $hasil
+		];
+
+		echo json_encode($response);
+	}
+
+	public function get_data_transport_req_all()
+	{
+		$post = $this->input->post();
+
+		$draw = $post['draw'];
+		$length = $post['length'];
+		$start = $post['start'];
+		$search = $post['search'];
+		$order = $post['order'];
+
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.date1, a.date2, a.jumlah_expense, a.status, a.nama, a.approved_on, a.status');
+		$this->db->from('tr_transport_req a');
+		if (!empty($search['value'])) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search['value'], 'both');
+			$this->db->or_like('a.tgl_doc', $search['value'], 'both');
+			$this->db->or_like('a.nama', $search['value'], 'both');
+			$this->db->or_like('a.approved_on', $search['value'], 'both');
+			$this->db->or_like('a.jumlah_expense', $search['value'], 'both');
+			$this->db->group_end();
+		}
+
+		$db_clone = clone $this->db;
+		$count_all = $db_clone->count_all_results();
+
+		$column_order = [
+			1 => 'no_doc',
+			2 => 'tgl_doc',
+			3 => 'nama',
+			4 => 'approved_on',
+			5 => 'jumlah_expense',
+			6 => 'status'
+		]; // List of columns to sort by
+		$column_index = $order[0]['column']; // Column index from the order parameter
+		$column_dir = $order[0]['dir']; // Ascending or Descending direction
+
+		// Apply order by dynamically
+		if (isset($column_order[$column_index])) {
+			$this->db->order_by($column_order[$column_index], $column_dir);
+		} else {
+			$this->db->order_by('a.tgl_doc', 'desc');  // Default sorting
+		}
+
+		$this->db->limit($length, $start);
+
+
+		$get_data = $this->db->get()->result();
+
+		$hasil = [];
+		$no = (0 + $start);
+
+		foreach ($get_data as $item) {
+			$no++;
+
+			$tgl_doc = ($item->tgl_doc !== '0000-00-00') ? date('d F Y', strtotime($item->tgl_doc)) : '';
+			$approval_date = ($item->approved_on !== null) ? date('d F Y H:i:s', strtotime($item->approved_on)) : '';
+
+			$status = '<span class="badge bg-yellow">Baru</span>';
+			if ($item->status == '1') {
+				$status = '<span class="badge bg-blue">Disetujui</span>';
+			}
+			if ($item->status == '2') {
+				$status = '<span class="badge bg-green">Selesai</span>';
+			}
+			if ($item->status == '3') {
+				$status = '<span class="badge bg-green">Selesai</span>';
+			}
+			if ($item->status == '9') {
+				$status = '<span class="badge bg-red">Ditolak</span>';
+			}
+
+			$action = '
+				<a class="btn btn-default btn-sm print" href="' . base_url('expense/transport_req_print/' . $item->id) . '" target="transport_req_print" title="Print"><i class="fa fa-print"></i> </a>
+				<a class="btn btn-warning btn-sm view" href="' . base_url('expense/transport_req_view/' . $item->id . '/_all') . '" title="View"><i class="fa fa-eye"></i></a>
+			';
+
+			$hasil[] = [
+				'no' => $no,
+				'no_doc' => $item->no_doc,
+				'tanggal' => $tgl_doc,
+				'nama' => $item->nama,
+				'approval_date' => $approval_date,
+				'total_transport' => number_format($item->jumlah_expense),
+				'status' => $status,
+				'action' => $action
+			];
+		}
+
+		$response = [
+			'draw' => intval($draw),
+			'recordsTotal' => intval($count_all),
+			'recordsFiltered' => intval($count_all),
 			'data' => $hasil
 		];
 

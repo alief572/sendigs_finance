@@ -263,6 +263,21 @@ $ENABLE_DELETE  = has_permission('Purchase_Request.Delete');
 														$harga_cons = (!empty($get_harga_cons)) ? $get_harga_cons->grand_total : 0;
 														$readonly_cons = 'readonly';
 														$total = $harga_cons;
+													} else {
+														if ($value->tipe_pr == 'pr depart') {
+															$get_harga_cons = $this->db->get_where('rutin_non_planning_detail', ['id' => $value->id])->row();
+
+															$harga_cons = (!empty($get_harga_cons)) ? $get_harga_cons->harga : 0;
+															$readonly_cons = 'readonly';
+															$total = ($harga_cons * $get_harga_cons->qty);
+														}
+														if ($value->tipe_pr == '') {
+															$get_harga_cons = $this->db->get_where('material_planning_base_on_produksi_detail', ['id' => $value->id])->row();
+
+															$harga_cons = (!empty($get_harga_cons)) ? $get_harga_cons->price_ref : 0;
+															$readonly_cons = 'readonly';
+															$total = ($harga_cons * $get_harga_cons->propose_purchase);
+														}
 													}
 
 

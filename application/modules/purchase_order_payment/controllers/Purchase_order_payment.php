@@ -23,6 +23,10 @@ class Purchase_order_payment extends Admin_Controller
 	protected $managePermission = 'Purchase_Order.Manage';
 	protected $deletePermission = 'Purchase_Order.Delete';
 
+	protected $dbhris;
+	protected $consultant;
+	protected $gl;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -30,11 +34,16 @@ class Purchase_order_payment extends Admin_Controller
 		$this->load->model(array(
 			'Purchase_order_payment/Pr_model',
 			'Purchase_order_payment/Jurnal_model',
+			'Purchase_order_payment/Purchase_order_payment_model'
 		));
 		$this->template->title('Receive Invoice');
 		$this->template->page_icon('fa fa-building-o');
 
 		date_default_timezone_set('Asia/Bangkok');
+
+		$this->dbhris = $this->load->database('hris', true);
+		$this->consultant = $this->load->database('consultant', true);
+		$this->gl = $this->load->database('accounting', true);
 	}
 	public function index()
 	{
@@ -64,7 +73,7 @@ class Purchase_order_payment extends Admin_Controller
 			$this->db->join('new_supplier c', 'c.kode_supplier = a.id_suplier', 'left');
 			$this->db->join('tr_top_po e', 'e.no_po = a.no_po');
 			$this->db->join('tr_invoice_po d', 'd.no_po = a.no_surat AND d.id_top = e.id', 'left');
-			$this->db->where('e.group_top', 76);
+			$this->db->where('e.group_top', 75);
 			$this->db->where('a.status', '2');
 			$this->db->group_by('e.id');
 			$this->db->order_by('a.created_on', 'desc');
@@ -84,7 +93,7 @@ class Purchase_order_payment extends Admin_Controller
 			$this->db->join('new_supplier c', 'c.kode_supplier = a.id_suplier', 'left');
 			$this->db->join('tr_top_po e', 'e.no_po = a.no_po');
 			$this->db->join('tr_invoice_po d', 'd.no_po = a.no_surat AND d.id_top = e.id', 'left');
-			$this->db->where('e.group_top', 77);
+			$this->db->where('e.group_top', 76);
 			$this->db->where('a.status', '2');
 			$this->db->group_by('e.id');
 			$this->db->order_by('a.created_on', 'desc');
@@ -102,7 +111,7 @@ class Purchase_order_payment extends Admin_Controller
 			$this->db->join('new_supplier c', 'c.kode_supplier = a.id_suplier', 'left');
 			$this->db->join('tr_top_po e', 'e.no_po = a.no_po');
 			$this->db->join('tr_invoice_po d', 'd.no_po = a.no_surat AND d.id_top = e.id', 'left');
-			$this->db->where('e.group_top', 78);
+			$this->db->where('e.group_top', 98);
 			$this->db->where('a.status', '2');
 			$this->db->group_by('e.id');
 			$this->db->order_by('a.created_on', 'desc');
@@ -162,10 +171,177 @@ class Purchase_order_payment extends Admin_Controller
 		$this->template->set('nilai_disc', $nilai_disc);
 		$this->template->set('progress', $progress);
 
+		$hasil_jurnal = [];
+
 		if ($tipe == 'dp') {
+			if ($get_po['tipe'] !== 'project consultant') {
+				if ($get_po['tipe'] == 'pr depart') {
+					$this->db->select('a.created_by');
+					$this->db->from('rutin_non_planning_detail a');
+					$this->db->join('dt_trans_po b', 'b.idpr = a.id');
+					$this->db->join('tr_purchase_order c', 'c.no_po = b.no_po');
+					$this->db->where('c.no_po', $get_po['no_po']);
+					$this->db->group_by('a.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['1050-30-1', '1050-40-6', '2010-10-0'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '1050-30-1') {
+								$debit = ($get_po['hargatotal'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = $get_top->nilai;
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
+				}
+			}
+
+			$this->template->set('hasil_jurnal', $hasil_jurnal);
 			$this->template->render('add');
 		}
 		if ($tipe == 'pro') {
+
+			if ($get_po['tipe'] !== 'project consultant') {
+				if ($get_po['tipe'] == 'pr depart') {
+					$this->db->select('a.created_by');
+					$this->db->from('rutin_non_planning_detail a');
+					$this->db->join('dt_trans_po b', 'b.idpr = a.id');
+					$this->db->join('tr_purchase_order c', 'c.no_po = b.no_po');
+					$this->db->where('c.no_po', $get_po['no_po']);
+					$this->db->group_by('a.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['2010-10-0', '1050-40-6', '2010-10-2'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '2010-10-2') {
+								$debit = ($get_po['hargatotal'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = ($get_po['subtotal'] * $progress / 100);
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
+				}
+			}
+
+			$this->template->set('hasil_jurnal', $hasil_jurnal);
 			$this->template->render('add_pro');
 		}
 		if ($tipe == 'ret') {
@@ -496,7 +672,7 @@ class Purchase_order_payment extends Admin_Controller
 			$get_supplier = $this->db->get_where('new_supplier', ['kode_supplier' => $get_po->id_suplier])->row();
 
 			$get_top = $this->db->get_where('tr_top_po', ['id' => $post['id_top']])->row();
-			if ($get_top->group_top == 76) {
+			if ($get_top->group_top == 75) {
 				$insert_expense = $this->db->insert('tr_expense', [
 					'no_doc' => $no_invoice,
 					'tgl_doc' => $post['invoice_date'],
@@ -551,7 +727,7 @@ class Purchase_order_payment extends Admin_Controller
 				$update_uang_muka1 = $this->db->update('tr_purchase_order', ['uang_muka' => $dpp_dp], ['no_surat' => $no_po1]);
 				$update_kurs       = $this->db->update('tr_purchase_order', ['kurs_terima_invoice' => $kurs], ['no_surat' => $no_po1]);
 			}
-			if ($get_top->group_top == 77) {
+			if ($get_top->group_top == 76) {
 				$insert_expense = $this->db->insert('tr_expense', [
 					'no_doc' => $no_invoice,
 					'tgl_doc' => $post['invoice_date'],
@@ -605,7 +781,7 @@ class Purchase_order_payment extends Admin_Controller
 				$update_uang_muka1 = $this->db->update('tr_purchase_order', ['uang_muka' => $dpp_dp], ['no_surat' => $no_po1]);
 				$update_kurs       = $this->db->update('tr_purchase_order', ['kurs_terima_invoice' => $kurs], ['no_surat' => $no_po1]);
 			}
-			if ($get_top->group_top == 78) {
+			if ($get_top->group_top == 98) {
 				$insert_expense = $this->db->insert('tr_expense', [
 					'no_doc' => $no_invoice,
 					'tgl_doc' => $post['invoice_date'],
@@ -666,9 +842,9 @@ class Purchase_order_payment extends Admin_Controller
 
 			$check_po = $this->db->get_where('tr_purchase_order', ['no_surat' => $no_po])->result();
 			if (count($check_po) < 1) {
-				$update_kurs       = $this->db->update('rutin_non_planning_header', ['kurs_terima_invoice_progress' => $kurs], ['no_pr' => $no_po]);
+				$update_kurs       = $this->db->update('rutin_non_planning_header', ['kurs_terima_invoice_progress' => str_replace(',', '', $post['kurs'])], ['no_pr' => $no_po]);
 			} else {
-				$update_kurs       = $this->db->update('tr_purchase_order', ['kurs_terima_invoice_progress' => $kurs], ['no_surat' => $no_po]);
+				$update_kurs       = $this->db->update('tr_purchase_order', ['kurs_terima_invoice_progress' => str_replace(',', '', $post['kurs'])], ['no_surat' => $no_po]);
 			}
 
 
@@ -749,316 +925,44 @@ class Purchase_order_payment extends Admin_Controller
 			}
 		}
 
-		//tambahan syam 16/07/2024
+		$data_jurnal = [];
 
-		$totalunbill = 0;
-		$totalap = 0;
-		$coaunbill = '';
-		$coaap = '';
+		if (isset($post['jurnal'])) {
+			$no_jurnal = 0;
+			foreach ($post['jurnal'] as $item) {
+				$no_jurnal++;
 
+				$jurnal_no = $this->Purchase_order_payment_model->generate_id_jurnal($no_jurnal);
 
-		if ($post['tipe_req'] == 'dp') {
-			$get_supplier = $this->db->get_where('new_supplier', ['kode_supplier' => $get_po->id_suplier])->row();
-			if ($post['currency'] == 'IDR') {
-				$kurs  = 1;
-				$jenis_jurnal = 'JV001';
-			} else {
-				$kurs  = str_replace(',', '', $post['kurs']);
-				$jenis_jurnal = 'JV004';
-			}
-
-			$nilai_invoice = str_replace(',', '', $post['total_pembelian']) * $kurs;
-			$nilai_ppn = str_replace(',', '', $post['nilai_ppn']) * $kurs;
-			$kode_supplier = $get_supplier->kode_supplier;
-			$nama = $get_supplier->nama;
-		} else {
-
-			if ($post['currency'] == 'IDR') {
-				$kurs  = 1;
-				$jenis_jurnal = 'JV003';
-			} else {
-				$kurs  = str_replace(',', '', $post['kurs']);
-				$jenis_jurnal = 'JV006';
-			}
-
-			$nilai_invoice = str_replace(',', '', $post['total_invoice']) * $kurs;
-			$nilai_ppn = str_replace(',', '', $post['nilai_ppn']) * $kurs;
-			$kode_supplier = implode(', ', $arr_id_suplier);
-			$nama = implode(', ', $arr_nm_supplier);
-		}
-
-		// print_r($jenis_jurnal);
-		// exit;
-
-		$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' order by parameter_no")->result();
-		$data_po     = $this->db->query("select * from tr_purchase_order WHERE no_surat='$no_po'")->row();
-
-		// print_r($data_po);
-		// exit;
-
-		$unbill      = $data_po->hutang_idr;
-		$kurs_unbill = $data_po->kurs_terima_barang;
-		$kurs_um     = $data_po->kurs_terima_invoice;
-		$um          = $data_po->uang_muka;
-		$umidr       = $data_po->uang_muka_idr;
-		if ($data_po->matauang == 'IDR') {
-			$kurs_unbill = 1;
-			$kurs_um = 1;
-		}
-
-		$selisih_um  = (($nilai_invoice) - ($unbill - $umidr));
-
-		if ($selisih_um < 0) {
-			$selisihdebet  = 0;
-			$selisihkredit = $selisih_um * (-1);
-		} elseif ($selisih_um > 0) {
-			$selisihdebet  = $selisih_um;
-			$selisihkredit = 0;
-		}
-
-		$hutangimport = $nilai_invoice;
-
-		$nomor_jurnal = $jenis_jurnal . $no_po . rand(100, 999);
-		$payment_date = $post['invoice_date']; //date("Y-m-d");
-		$det_Jurnaltes1 = array();
-		//			$total=($data->nilai_terima_barang_kurs);
-		if ($post['tipe_req'] == 'dp') {
-			if ($nilai_invoice > 0) {
-				foreach ($datajurnal1 as $rec) {
-					if ($rec->parameter_no == "1") {
-
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => $nilai_invoice,
-							'kredit' => 0,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-						$totalunbill = $nilai_invoice;
-						$coaunbill = $rec->no_perkiraan;
-					}
-					if ($rec->parameter_no == "2") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => 0,
-							'kredit' => $nilai_invoice + $nilai_ppn,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-						$totalap = $nilai_invoice + $nilai_ppn;
-						$coaap = $rec->no_perkiraan;
-					}
-					if ($rec->parameter_no == "3") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => $nilai_ppn,
-							'kredit' => 0,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-					}
-				}
-			}
-		} else {
-			if ($nilai_invoice > 0) {
-				foreach ($datajurnal1 as $rec) {
-					if ($rec->parameter_no == "1") {
-
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => $unbill,
-							'kredit' => 0,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-						$totalunbill = $unbill;
-						$coaunbill = $rec->no_perkiraan;
-					}
-					if ($rec->parameter_no == "2") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => 0,
-							'kredit' => $hutangimport + $nilai_ppn,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-						$totalap = $hutangimport;
-						$coaap = $rec->no_perkiraan;
-					}
-					if ($rec->parameter_no == "3") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => $nilai_ppn,
-							'kredit' => 0,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-					}
-					if ($rec->parameter_no == "4") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => 0,
-							'kredit' => $umidr,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-					}
-					if ($rec->parameter_no == "5") {
-						$det_Jurnaltes1[] = array(
-							'nomor' => $nomor_jurnal,
-							'tanggal' => $payment_date,
-							'tipe' => 'JV',
-							'no_perkiraan' => $rec->no_perkiraan,
-							'keterangan' => 'PO ' . $post['nomor_po'] . ', FP:' . $post['nomor_faktur_pajak'] . ', Sup:' . $nama,
-							'no_reff' => $post['nomor_invoice'],
-							'debet' => $selisihdebet,
-							'kredit' => $selisihkredit,
-							'no_request' => $post['nomor_po'],
-							'jenis_jurnal' => $jenis_jurnal,
-							'nocust' => $kode_supplier,
-							'stspos' => '1'
-						);
-					}
-				}
+				$data_jurnal[] = [
+					'no_jurnal' => $jurnal_no,
+					'tgl_jurnal' => $item['tanggal_jurnal'],
+					'coa' => $item['id_coa'],
+					'id_company' => $item['id_company'],
+					'nm_company' => $item['nm_company'],
+					'nm_coa' => $item['nm_coa'],
+					'debit' => $item['debit'],
+					'kredit' => $item['kredit'],
+					'keterangan' => $item['deskripsi'],
+					'jenis_transaksi' => 'Receive Invoice',
+					'id_divisi' => $item['id_divisi'],
+					'nm_divisi' => $item['nm_divisi'],
+					'no_transaksi' => $no_invoice,
+					'created_by' => $this->auth->user_id(),
+					'created_date' => date('Y-m-d H:i:s')
+				];
 			}
 		}
-		$insert_jurnaltras = $this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
-		if (!$insert_jurnaltras) {
-			print_r($this->db->error($insert_jurnaltras));
-			exit;
-		}
 
-		//auto jurnal
-
-		$tanggal = $post['invoice_date_real'];
-		$Bln	= substr($tanggal, 5, 2);
-		$Thn	= substr($tanggal, 0, 4);
-		$total	= 0;
-		$Nomor_JV = $this->Jurnal_model->get_Nomor_Jurnal_Sales('101', $tanggal);
-		foreach ($det_Jurnaltes1 as $vals) {
-			$datadetail = array(
-				'tipe'			=> 'JV',
-				'nomor'			=> $Nomor_JV,
-				'tanggal'		=> $tanggal,
-				'no_perkiraan'	=> $vals['no_perkiraan'],
-				'keterangan'	=> $vals['keterangan'],
-				'no_reff'		=> $vals['no_reff'],
-				'debet'			=> $vals['debet'],
-				'kredit'		=> $vals['kredit'],
-			);
-			$total = ($total + $vals['debet']);
-			$insert_jurnal = $this->db->insert(DBACC . '.jurnal', $datadetail);
+		if (!empty($data_jurnal)) {
+			$insert_jurnal = $this->db->insert_batch('tr_jurnal', $data_jurnal);
 			if (!$insert_jurnal) {
-				print_r($this->db->error($insert_jurnal));
+				$this->db->trans_rollback();
+
+				print_r($this->db->last_query());
 				exit;
 			}
 		}
-		$keterangan		= 'Receive Invoice ' . $no_invoice;
-		$dataJVhead = array(
-			'nomor' 	    	=> $Nomor_JV,
-			'tgl'	         	=> $tanggal,
-			'jml'	            => $total,
-			'bulan'	            => $Bln,
-			'tahun'	            => $Thn,
-			'kdcab'				=> '101',
-			'jenis'			    => 'JV',
-			'keterangan'		=> $keterangan,
-			'user_id'			=> $this->auth->user_name(),
-			'ho_valid'			=> '',
-		);
-		$insert_javh = $this->db->insert(DBACC . '.javh', $dataJVhead);
-		if (!$insert_javh) {
-			print_r($this->db->error($insert_javh));
-			exit;
-		}
-		$datahutang = array(
-			'tipe'       	 => 'JV',
-			'nomor'       	 => $Nomor_JV,
-			'tanggal'        => $tanggal,
-			'no_perkiraan'   => $coaunbill,
-			'keterangan'     => $keterangan,
-			'no_reff'     	 => $post['nomor_po'],
-			'kredit'      	 => 0,
-			'debet'          => $totalunbill,
-			'id_supplier'    => $kode_supplier,
-			'nama_supplier'  => $nama,
-			'no_request'     => $post['nomor_invoice'],
-		);
-		$insert_kartu_hutang = $this->db->insert('tr_kartu_hutang', $datahutang);
-		if (!$insert_kartu_hutang) {
-			print_r($this->db->error($insert_kartu_hutang));
-			exit;
-		}
-		$datahutang = array(
-			'tipe'       	 => 'JV',
-			'nomor'       	 => $Nomor_JV,
-			'tanggal'        => $tanggal,
-			'no_perkiraan'   => $coaap,
-			'keterangan'     => $keterangan,
-			'no_reff'     	 => $post['nomor_po'],
-			'kredit'      	 => $totalap,
-			'debet'          => 0,
-			'id_supplier'    => $kode_supplier,
-			'nama_supplier'  => $nama,
-			'no_request'     => $post['nomor_invoice'],
-		);
-		$insert_kartu_hutang = $this->db->insert('tr_kartu_hutang', $datahutang);
-		if (!$insert_kartu_hutang) {
-			print_r($this->db->error($insert_kartu_hutang));
-			exit;
-		}
-		//end auto jurnal
-
-
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
