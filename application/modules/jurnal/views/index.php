@@ -25,7 +25,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     </div>
     <!-- /.box-header -->
     <div class="box-body">
-        <button type="button" class="btn btn-sm btn-primary" onclick="fix_company()">Fix Company</button>
+        <!-- <button type="button" class="btn btn-sm btn-primary" onclick="fix_company()">Fix Company</button> -->
         <table id="table_penawaran" class="table table-bordered table-striped">
             <thead>
                 <tr>
