@@ -514,6 +514,9 @@ class Non_rutin extends Admin_Controller
 				$tanda 		= ($approve == 'view') ? 'View' : 'Approve';
 			}
 
+			$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
+			$coa_pr_dept = explode(';', $get_coa_pr_dept->coa);
+
 			$title_tingkat = '';
 			if ($tingkat_approval == '1') :
 				$title_tingkat = 'Head Department';
@@ -523,14 +526,19 @@ class Non_rutin extends Admin_Controller
 				$title_tingkat = 'Management';
 			endif;
 
-			$get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
+			// $get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
 
-			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
+			$this->db->select('*');
+			$this->db->from(DBACC . '.coa_master');
+			$this->db->where_in('no_perkiraan', $coa_pr_dept);
+			$get_list_coa = $this->db->get()->result_array();
+
+			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
 
 			$this->hris->select('a.id, a.name, b.name as nm_company');
 			$this->hris->from('departments a');
 			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-			$get_department = $this->hris->get()->result();
+			$get_department = $this->hris->get()->result_array();
 
 			$data = array(
 				'title'				=> $tanda . ' PR Departemen ' . $title_tingkat,
