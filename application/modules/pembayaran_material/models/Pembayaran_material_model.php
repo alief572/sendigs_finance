@@ -179,7 +179,6 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->or_like('a.keperluan', $search['value'], 'both');
 				$this->db->or_like('a.currency', $search['value'], 'both');
 				$this->db->or_like('a.jumlah', $search['value'], 'both');
-				$this->db->or_like('a.created_by', $search['value'], 'both');
 				$this->db->or_like('b.created_by', $search['value'], 'both');
 				$this->db->or_like('c.created_by', $search['value'], 'both');
 				$this->db->or_like('d.created_by', $search['value'], 'both');
