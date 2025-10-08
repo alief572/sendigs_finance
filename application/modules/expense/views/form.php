@@ -422,11 +422,11 @@ if (!isset($data->departement)) {
 			if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
 
 			// Validasi selisih
-			if (grandTotal > 0) {
-				errors = "Selisih harus 0!";
-			} else if (grandTotal < 0 && totalExpense <= totalKasbon) {
-				errors = "Selisih minus hanya diperbolehkan jika Total Expense lebih besar dari Total Kasbon!";
-			}
+			// if (grandTotal > 0) {
+			// 	errors = "Selisih harus 0!";
+			// } else if (grandTotal < 0 && totalExpense <= totalKasbon) {
+			// 	errors = "Selisih minus hanya diperbolehkan jika Total Expense lebih besar dari Total Kasbon!";
+			// }
 
 			// Jika ada error, tampilkan SweetAlert dan hentikan submit
 			if (errors !== "") {
