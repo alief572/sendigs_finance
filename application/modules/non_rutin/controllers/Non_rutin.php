@@ -536,9 +536,9 @@ class Non_rutin extends Admin_Controller
 			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
 
 			$this->hris->select('a.id, a.name, b.name as nm_company');
-			$this->hris->from('departments a');
-			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-			$get_department = $this->hris->get()->result_array();
+			$this->hris->from(HRIS . '.departments a');
+			$this->hris->join(HRIS . '.companies b', 'b.id = a.company_id', 'left');
+			$get_department = $this->hris->get()->result();
 
 			$data = array(
 				'title'				=> $tanda . ' PR Departemen ' . $title_tingkat,
