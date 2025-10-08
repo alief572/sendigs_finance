@@ -252,6 +252,163 @@ class Purchase_order_payment extends Admin_Controller
 							];
 						}
 					}
+				} else if ($get_po['tipe'] == 'pr asset') {
+
+					$this->db->select('a.created_by');
+					$this->db->from('tran_pr_detail a');
+					$this->db->join('dt_trans_po b', 'b.idpr = a.id');
+					$this->db->join('tr_purchase_order c', 'c.no_po = b.no_po');
+					$this->db->where('c.no_po', $get_po['no_po']);
+					$this->db->group_by('a.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['1050-30-1', '1050-40-6', '2010-10-0'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '1050-30-1') {
+								$debit = ($get_po['hargatotal'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = $get_top->nilai;
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
+				} else {
+
+					$this->db->select('b.created_by');
+					$this->db->from('material_planning_base_on_produksi_detail a');
+					$this->db->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number');
+					$this->db->join('dt_trans_po c', 'c.idpr = a.id');
+					$this->db->join('tr_purchase_order d', 'd.no_po = c.no_po');
+					$this->db->where('d.no_po', $get_po['no_po']);
+					$this->db->group_by('b.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['1050-30-1', '1050-40-6', '2010-10-0'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '1050-30-1') {
+								$debit = ($get_po['hargatotal'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $get_top->progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = $get_top->nilai;
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
 				}
 			}
 
@@ -268,6 +425,161 @@ class Purchase_order_payment extends Admin_Controller
 					$this->db->join('tr_purchase_order c', 'c.no_po = b.no_po');
 					$this->db->where('c.no_po', $get_po['no_po']);
 					$this->db->group_by('a.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['2010-10-0', '1050-40-6', '2010-10-2'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '2010-10-2') {
+								$debit = ($get_po['hargatotal'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = ($get_po['subtotal'] * $progress / 100);
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
+				} else if ($get_po['tipe'] == 'pr asset') {
+					$this->db->select('a.created_by');
+					$this->db->from('tran_pr_detail a');
+					$this->db->join('dt_trans_po b', 'b.idpr = a.id');
+					$this->db->join('tr_purchase_order c', 'c.no_po = b.no_po');
+					$this->db->where('c.no_po', $get_po['no_po']);
+					$this->db->group_by('a.created_by');
+					$get_user_create_pr = $this->db->get()->row();
+
+					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();
+
+					$department_id = (!empty($get_user)) ? $get_user->department_id : '';
+					if (!empty($department_id)) {
+						$this->dbhris->select('a.id, c.id as id_div');
+						$this->dbhris->from('companies a');
+						$this->dbhris->join('departments b', 'b.company_id = a.id');
+						$this->dbhris->join('divisions c', 'c.id = b.division_id');
+						$this->dbhris->where('b.id', $department_id);
+						$get_id_comp = $this->dbhris->get()->row();
+
+						$id_comp = (!empty($get_id_comp)) ? $get_id_comp->id : '';
+						$id_div = (!empty($get_id_comp)) ? $get_id_comp->id_div : '';
+
+						if ($id_comp = 'COM003') {
+							$id_company = '1';
+						}
+						if ($id_comp == 'COM004') {
+							$id_company = '2';
+						}
+						if ($id_comp == 'COM006') {
+							$id_company = '3';
+						}
+						if ($id_comp == 'COM012') {
+							$id_company = '4';
+						}
+
+						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+						$get_div = $this->dbhris->get_where('divisions', ['id' => $id_div])->row();
+
+						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+						$nm_div = ($get_div) ? $get_div->name : '';
+
+						$arr_coa = ['2010-10-0', '1050-40-6', '2010-10-2'];
+						$this->gl->select('no_perkiraan as no_coa, nama as nm_coa');
+						$this->gl->from('coa_master');
+						$this->gl->where_in('no_perkiraan', $arr_coa);
+						$get_coa = $this->gl->get()->result();
+
+						foreach ($get_coa as $item_coa) {
+
+							$debit = 0;
+							$kredit = 0;
+
+							if ($item_coa->no_coa == '2010-10-2') {
+								$debit = ($get_po['hargatotal'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '1050-40-6') {
+								$debit = ($get_po['total_ppn'] * $progress / 100);
+							}
+							if ($item_coa->no_coa == '2010-10-0') {
+								$kredit = ($get_po['subtotal'] * $progress / 100);
+							}
+
+							$hasil_jurnal[] = [
+								'tanggal_jurnal' => date('Y-m-d'),
+								'id_company' => $id_company,
+								'nm_company' => $nm_company,
+								'id_div' => $id_div,
+								'nm_div' => $nm_div,
+								'id_coa' => $item_coa->no_coa,
+								'nm_coa' => $item_coa->nm_coa,
+								'deskripsi' => $item_coa->nm_coa . ' - ' . $no_surat,
+								'debit' => $debit,
+								'kredit' => $kredit
+							];
+						}
+					}
+				} else {
+					$this->db->select('b.created_by');
+					$this->db->from('material_planning_base_on_produksi_detail a');
+					$this->db->join('material_planning_base_on_produksi b', 'b.so_number = a.so_number');
+					$this->db->join('dt_trans_po c', 'c.idpr = a.id');
+					$this->db->join('tr_purchase_order d', 'd.no_po = c.no_po');
+					$this->db->where('d.no_po', $get_po['no_po']);
+					$this->db->group_by('b.created_by');
 					$get_user_create_pr = $this->db->get()->row();
 
 					$get_user = $this->db->get_where('users', ['id_user' => $get_user_create_pr->created_by])->row();

@@ -1140,6 +1140,7 @@ class Expense extends Admin_Controller
 				'pettycash' => $pettycash,
 				'tipe_pengembalian' => $pengembalian,
 				'tipe_penggantian' => $penggantian,
+				'st_reject' => null,
 				'modified_by' => $this->auth->user_name(),
 				'modified_on' => date("Y-m-d h:i:s")
 			);
