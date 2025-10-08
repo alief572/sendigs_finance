@@ -412,16 +412,16 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			$('#save').prop('disabled', false);
 			return false;
 		}
-		if (coa == '0' || coa == '') {
-			swal({
-				title: "Error Message!",
-				text: 'COA is empty, select first ...',
-				type: "warning"
-			});
+		//if (coa == '0' || coa == '') {
+		//	swal({
+		//		title: "Error Message!",
+		//		text: 'COA is empty, select first ...',
+		//		type: "warning"
+		//	});
 
-			$('#save').prop('disabled', false);
-			return false;
-		}
+		//	$('#save').prop('disabled', false);
+		//	return false;
+		//}
 
 
 		var app = $("#approve").val();
