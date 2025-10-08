@@ -83,7 +83,7 @@ class Pembayaran_material_model extends BF_Model
 			if (!empty($search['value'])) {
 				$this->db->group_start();
 				$this->db->like('a.no_doc', $search['value'], 'both');
-				$this->db->or_like('a.created_on', $search['value'], 'both');
+				$this->db->or_like('b.created_by', $search['value'], 'both');
 				$this->db->or_like('a.keperluan', $search['value'], 'both');
 				$this->db->or_like('a.currency', $search['value'], 'both');
 				$this->db->or_like('a.jumlah', $search['value'], 'both');
@@ -169,6 +169,8 @@ class Pembayaran_material_model extends BF_Model
 			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, a.tipe');
 			$this->db->from('payment_approve a');
 			$this->db->join('tr_expense b', 'b.no_doc = a.no_doc', 'left');
+			$this->db->join('tr_kasbon c', 'c.no_doc = a.no_doc', 'left');
+			$this->db->join('tr_transport_req d', 'd.no_doc = a.no_doc', 'left');
 			$this->db->where('a.status <>', 2);
 			$this->db->group_start();
 			$this->db->where('b.exp_inv_po <>', 1);
@@ -181,6 +183,10 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->or_like('a.keperluan', $search['value'], 'both');
 				$this->db->or_like('a.currency', $search['value'], 'both');
 				$this->db->or_like('a.jumlah', $search['value'], 'both');
+				$this->db->or_like('a.created_by', $search['value'], 'both');
+				$this->db->or_like('b.created_by', $search['value'], 'both');
+				$this->db->or_like('c.created_by', $search['value'], 'both');
+				$this->db->or_like('d.created_by', $search['value'], 'both');
 				$this->db->group_end();
 			}
 			$this->db->order_by('a.created_on', 'desc');
