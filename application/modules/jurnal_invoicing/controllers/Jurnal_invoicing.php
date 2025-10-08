@@ -1,0 +1,441 @@
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+
+
+class Jurnal_Invoicing extends Admin_Controller
+{
+    protected $viewPermission     = 'Jurnal_Invoicing.View';
+    protected $addPermission      = 'Jurnal_Invoicing.Add';
+    protected $managePermission = 'Jurnal_Invoicing.Manage';
+    protected $deletePermission = 'Jurnal_Invoicing.Delete';
+
+    protected $consultant;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->load->library(array('upload', 'Image_lib'));
+        $this->load->model(array(
+            'Jurnal_invoicing/Jurnal_invoicing_model',
+            'Jurnal_invoicing/Jurnal_invoicing_nomor_model'
+        ));
+        $this->template->title('Jurnal');
+        $this->template->page_icon('fa fa-building-o');
+
+        date_default_timezone_set('Asia/Bangkok');
+
+        $this->consultant = $this->load->database('consultant', true);
+    }
+
+    public function index()
+    {
+        $this->template->title('Jurnal Invoicing');
+        $this->template->render('index');
+    }
+
+    public function add_jurnal()
+    {
+        $id = $this->input->post('id');
+
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $id])->row();
+
+        $this->db->select('a.*');
+        $this->db->from('tr_jurnal a');
+        $this->db->where('a.no_transaksi', $get_jurnal->no_transaksi);
+        $this->db->where('a.jenis_transaksi', $get_jurnal->jenis_transaksi);
+        $this->db->where('a.sts <>', '1');
+        $get_all_jurnal = $this->db->get()->result();
+
+        $hasil = '<input type="hidden" name="id" value="' . $id . '">';
+
+        $hasil .= '<table class="table table-striped">';
+        $hasil .= '<thead>';
+        $hasil .= '<tr>';
+        $hasil .= '<td class="text-center">Tanggal</td>';
+        $hasil .= '<td class="text-center">Tipe</td>';
+        $hasil .= '<td class="text-center">No. COA</td>';
+        $hasil .= '<td class="text-center">Keterangan</td>';
+        $hasil .= '<td class="text-center">No. Reff</td>';
+        $hasil .= '<td class="text-center">Debit</td>';
+        $hasil .= '<td class="text-center">Kredit</td>';
+        $hasil .= '</tr>';
+        $hasil .= '</thead>';
+        $hasil .= '<tbody>';
+
+        $no = 0;
+        $ttl_debit = 0;
+        $ttl_kredit = 0;
+        foreach ($get_all_jurnal as $item) {
+            $no++;
+
+            $hasil .= '<tr>';
+
+            $hasil .= '<td class="text-center">';
+            $hasil .= date('d F Y', strtotime($item->tgl_jurnal));
+            $hasil .= '<input type="hidden" name="jurnal[' . $no . '][id]" value="' . $item->id . '">';
+            $hasil .= '</td>';
+            $hasil .= '<td class="text-center">' . $item->jenis_transaksi . '</td>';
+            $hasil .= '<td class="text-center">' . $item->coa . '</td>';
+            $hasil .= '<td class="text-center">';
+            $hasil .= '<textarea class="form-control form-control-sm" name="jurnal[' . $no . '][keterangan]">' . $item->keterangan . '</textarea>';
+            $hasil .= '</td>';
+            $hasil .= '<td class="text-center">';
+            $hasil .= $item->no_transaksi;
+            $hasil .= '<input type="hidden" name="jurnal[' . $no . '][no_transaksi]">';
+            $hasil .= '</td>';
+            $hasil .= '<td class="text-center">';
+            $hasil .= '<input type="input" class="form-control form-control-sm text-right" name="jurnal[' . $no . '][debit]" value="' . number_format($item->debit) . '" readonly>';
+            $hasil .= '</td>';
+            $hasil .= '<td class="text-center">';
+            $hasil .= '<input type="input" class="form-control form-control-sm text-right" name="jurnal[' . $no . '][kredit]" value="' . number_format($item->kredit) . '" readonly>';
+            $hasil .= '</td>';
+
+            $hasil .= '</tr>';
+
+            $ttl_debit += $item->debit;
+            $ttl_kredit += $item->kredit;
+        }
+
+        $hasil .= '</tbody>';
+        $hasil .= '<tfoot>';
+        $hasil .= '<tr>';
+        $hasil .= '<th class="text-right" colspan="5">Total</th>';
+        $hasil .= '<td class="text-right">';
+        $hasil .= '<input type="text" class="form-control form-control-sm text-right" name="ttl_debit" value="' . number_format($ttl_debit) . '" readonly>';
+        $hasil .= '</td>';
+        $hasil .= '<td class="text-right">';
+        $hasil .= '<input type="text" class="form-control form-control-sm text-right" name="ttl_kredit" value="' . number_format($ttl_kredit) . '" readonly>';
+        $hasil .= '</td>';
+        $hasil .= '</tr>';
+        $hasil .= '</tfoot>';
+        $hasil .= '</table>';
+
+        echo $hasil;
+    }
+
+    public function save_posting_jurnal()
+    {
+        $post        = $this->input->post();
+        $session = $this->session->userdata('app_session');
+        $data_session    = $this->session->userdata;
+
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+        if ($get_jurnal->jenis_transaksi == 'Invoicing') {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+
+            $id_company = $get_jurnal->id_company;
+
+            $this->db->trans_begin();
+
+
+            $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $get_jurnal->id_company);
+
+
+            $Bln             = substr($get_jurnal->tgl_jurnal, 5, 2);
+            $Thn             = substr($get_jurnal->tgl_jurnal, 0, 4);
+
+
+            $dataJVhead = array(
+                'nomor'             => $Nomor_JV,
+                'tgl'                 => $get_jurnal->tgl_jurnal,
+                'jml'                => $get_invoicing->total_akhir_jurnal,
+                'koreksi_no'        => '-',
+                'kdcab'                => '101',
+                'jenis'                => 'JV',
+                'keterangan'         => $get_jurnal->keterangan,
+                'bulan'                => $Bln,
+                'tahun'                => $Thn,
+                'user_id'            => $this->auth->user_id(),
+                'memo'                => '',
+                'tgl_jvkoreksi'        => $get_jurnal->tgl_jurnal,
+                'ho_valid'            => ''
+            );
+
+            if ($id_company == '1' || $id_company == '4') {
+                $insert_jurnal_header = $this->db->insert(DBACC_VUCA . '.javh', $dataJVhead);
+            } else {
+                $insert_jurnal_header = $this->db->insert(DBACC_SUST . '.javh', $dataJVhead);
+            }
+            if (!$insert_jurnal_header) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+            $tgl_inv = $get_jurnal->tgl_jurnal;
+            $keterangan = $get_jurnal->keterangan;
+            $type = $get_jurnal->jenis_transaksi;
+            $reff = $get_jurnal->no_transaksi;
+            $no_req = $get_jurnal->no_transaksi;
+            $jenis = 'JV';
+            $jenis_jurnal = 'jurnalinvoicing';
+            $no_coa = $get_jurnal->coa;
+            $debet = $get_jurnal->debit;
+            $kredit = $get_jurnal->kredit;
+
+            $datadetail = [
+                'tipe' => 'JV',
+                'nomor' => $Nomor_JV,
+                'tanggal' => $tgl_inv,
+                'no_perkiraan' => $no_coa,
+                'keterangan' => $keterangan,
+                'no_reff' => $reff,
+                'debet' => $debet,
+                'kredit' => $kredit
+            ];
+
+            if ($id_company == '1' || $id_company == '4') {
+                $insert_jurnal_detail = $this->db->insert(DBACC_VUCA . '.jurnal', $datadetail);
+            } else {
+                $insert_jurnal_detail = $this->db->insert(DBACC_SUST . '.jurnal', $datadetail);
+            }
+            if (!$insert_jurnal_detail) {
+                $this->db->trans_rollback();
+
+                print($this->db->last_query());
+                exit;
+            }
+
+            //     $jurnal_posting     = "UPDATE jurnal SET stspos=1 WHERE tipe = 'JV'
+            // AND  jenis_jurnal = 'jurnalinvoicing' AND no_reff  = '" . $get_jurnal->no_transaksi . "' ";
+            //     $this->db->query($jurnal_posting);
+
+            if ($id_company == '1' || $id_company == '4') {
+                $jurnal_posting = $this->db->update(DBACC_VUCA . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $get_jurnal->no_transaksi]);
+            } else {
+                $jurnal_posting = $this->db->update(DBACC_SUST . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $get_jurnal->no_transaksi]);
+            }
+            if (!$jurnal_posting) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+            $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $get_jurnal->id]);
+            if (!$update_jurnal_awal) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+
+            if ($id_company == '1' || $id_company == '4') {
+                $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_VUCA . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+            } else {
+                $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_SUST . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+            }
+            // $this->db->query($Qry_Update_Cabang_acc);
+
+            if (!$Qry_Update_Cabang_acc) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+
+
+            // $jurnal_inv     = "UPDATE tr_invoice SET status_jurnal='CLS' WHERE no_invoice = '" . $get_jurnal->no_transaksi . "' ";
+            // $this->db->query($jurnal_inv);
+
+            $id_cust   = $get_invoicing->id_customer;
+            $nama   = $get_invoicing->nm_customer;
+            $No_Inv  = $get_invoicing->id;
+
+
+            $datapiutang = array(
+                'tipe'            => 'JV',
+                'nomor'            => $Nomor_JV,
+                'tanggal'        => $tgl_inv,
+                'no_perkiraan'  => '1104-01-01',
+                'keterangan'    => $keterangan,
+                'no_reff'       => $No_Inv,
+                'debet'         => $get_invoicing->total_akhir_jurnal,
+                'kredit'         =>  0,
+                'id_supplier'     => $id_cust,
+                'nama_supplier'   => $nama,
+            );
+            $insert_kartu_piutang = $this->db->insert('tr_kartu_piutang', $datapiutang);
+            if (!$insert_kartu_piutang) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+
+                $param = array(
+                    'save' => 0,
+                    'msg' => "GAGAL, simpan data..!!!",
+
+                );
+            } else {
+                $this->db->trans_commit();
+
+                $param = array(
+                    'save' => 1,
+                    'msg' => "SUKSES, simpan data..!!!",
+
+                );
+            }
+            echo json_encode($param);
+        }
+        if ($get_jurnal->jenis_transaksi == 'Payment') {
+
+
+            $get_payment_approve = $this->db->get_where('payment_approve', ['id' => $get_jurnal->no_transaksi])->row();
+
+            $get_jurnal_all = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi])->result();
+
+            $Nomor_JV = $this->Jurnal_invoicing_nomor_model->get_no_buk('101', $get_jurnal->id_company);
+
+            $this->db->trans_begin();
+
+            foreach ($get_jurnal_all as $item_jurnal_all) {
+                $update_tr_jurnal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item_jurnal_all->id]);
+                if (!$update_tr_jurnal) {
+                    $this->db->trans_rollback();
+
+                    print_r($this->db->last_query());
+                    exit;
+                }
+
+                $datadetail = [
+                    'tipe' => 'BUK',
+                    'nomor' => $Nomor_JV,
+                    'tanggal' => $item_jurnal_all->tgl_jurnal,
+                    'no_reff' => $item_jurnal_all->no_transaksi,
+                    'no_perkiraan' => $item_jurnal_all->coa,
+                    'keterangan' => $item_jurnal_all->keterangan,
+                    'debet' => $item_jurnal_all->debit,
+                    'kredit' => $item_jurnal_all->kredit,
+                ];
+                if ($id_company == '1' || $id_company == '4') {
+                    $insert_jurnal_detail = $this->db->insert(DBACC_VUCA . '.jurnal', $datadetail);
+                } else {
+                    $insert_jurnal_detail = $this->db->insert(DBACC_SUST . '.jurnal', $datadetail);
+                }
+                if (!$insert_jurnal_detail) {
+                    $this->db->trans_rollback();
+
+                    print_r($this->db->last_query());
+                    exit;
+                }
+            }
+
+            $keterangan = 'Payment ' . $get_jurnal->no_transaksi;
+
+            $dataJVheader = [
+                'nomor' => $Nomor_JV,
+                'tgl' => $get_jurnal->tgl_jurnal,
+                'jml' => $get_payment_approve->jumlah,
+                'kdcab' => '101',
+                'jenis_reff' => 'BUK',
+                'no_reff' => $get_jurnal->no_transaksi,
+                'jenis_ap' => 'V',
+                'note' => $keterangan,
+                'user_id' => $this->auth->user_name(),
+                'ho_valid' => '',
+                'batal' => '0'
+            ];
+            if ($id_company == '1' || $id_company == '4') {
+                $insert_japh = $this->db->insert(DBACC_VUCA . '.japh', $dataJVheader);
+            } else {
+                $insert_japh = $this->db->insert(DBACC_SUST . '.japh', $dataJVheader);
+            }
+            if (!$insert_japh) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+            if ($id_company == '1' || $id_company == '4') {
+                $Qry_Update_Cabang_acc     = "UPDATE " . DBACC_VUCA . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
+            } else {
+                $Qry_Update_Cabang_acc     = "UPDATE " . DBACC_SUST . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
+            }
+
+            $this->db->query($Qry_Update_Cabang_acc);
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+
+                $param = array(
+                    'save' => 0,
+                    'msg' => "GAGAL, simpan data..!!!",
+
+                );
+            } else {
+                $this->db->trans_commit();
+
+                $param = array(
+                    'save' => 1,
+                    'msg' => "SUKSES, simpan data..!!!",
+
+                );
+            }
+            echo json_encode($param);
+        }
+    }
+
+    public function fix_company()
+    {
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
+
+        $arr_update_jurnal = [];
+        foreach ($get_jurnal as $item_jurnal) {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
+
+            $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
+            $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
+
+            $id_company = (!empty($get_company)) ? $get_company->id : '';
+            $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+
+
+            $arr_update_jurnal[] = [
+                'id' => $item_jurnal->id,
+                'id_company' => $id_company,
+                'nm_company' => $nm_company
+            ];
+        }
+
+        $this->db->trans_begin();
+
+        $update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
+        if (!$update_jurnal) {
+            $this->db->trans_rollback();
+
+            print_r($this->db->last_query());
+            exit;
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'Data has not been updated !'
+            ]);
+        } else {
+            $this->db->trans_commit();
+
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'Data has been updated !'
+            ]);
+        }
+    }
+
+    public function get_data_jurnal_invoicing()
+    {
+        $this->Jurnal_invoicing_model->get_data_jurnal_invoicing();
+    }
+}
