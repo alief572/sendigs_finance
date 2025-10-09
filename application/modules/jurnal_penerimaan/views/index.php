@@ -100,7 +100,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     cache: false,
                     dataType: 'json',
                     success: function(result) {
-                        if (result.save == '1') {
+                        if (result.status == '1') {
                             swal({
                                 type: 'success',
                                 title: 'Success !',
