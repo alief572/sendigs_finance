@@ -40,6 +40,15 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                             <?= $data_invoice->no_po ?>
                         </td>
                     </tr>
+                    <tr>
+                        <th width="13%"></th>
+                        <td width="12%"></td>
+                        <th width="13%"><br> Nomor Faktur</th>
+                        <td width="12%">
+                            <br>
+                            <?= $data_invoice->no_faktur ?>
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>

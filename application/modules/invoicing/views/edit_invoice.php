@@ -42,6 +42,15 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                             <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_po ?>">
                         </td>
                     </tr>
+                    <tr>
+                        <th width="13%"></th>
+                        <td width="12%"></td>
+                        <th width="13%">Nomor Faktur</th>
+                        <td width="12%">
+                            <br>
+                            <input type="text" name="nomor_faktur" class="form-control form-control-sm" value="<?= $data_invoice->no_faktur ?>">
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>
