@@ -41,7 +41,7 @@ class Penerimaan_pph_23 extends Admin_Controller
         $this->db->where('a.id', $id_penerimaan_piutang);
         $get_data_penerimaan = $this->db->get()->row_array();
 
-        $arr_coa_jurnal = ['1050-40-2', '1030-10-1'];
+        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
