@@ -139,12 +139,12 @@ class Penerimaan_pph_23_model extends BF_Model
             $this->db->or_like('a.pph23', $search['value'], 'both');
             $this->db->group_end();
         }
+        $this->db->order_by('a.id', 'desc');
+        $this->db->group_by('a.id');
 
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
-
-        $this->db->order_by('a.id', 'desc');
-        $this->db->group_by('a.id');
+ 
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result_array();
