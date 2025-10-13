@@ -280,16 +280,16 @@
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
 
-            var coa_jurnal = ['1030-10-1', '7010-20-5'];
+            var coa_jurnal = ['1102-01-01', '7201-01-04'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
-                if (value == '1030-10-1') {
+                if (value == '1102-01-01') {
                     var resp_piutang = number_format(piutang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
                 }
-                if (value == '7010-20-5') {
+                if (value == '7201-01-04') {
                     var resp_admin = number_format(biaya_admin);
                     resp_admin += '<input type="hidden" name="debit_' + value + '_' + i + '" value="' + biaya_admin + '">';
 
