@@ -91,4 +91,5 @@ define('DBACC_VUCA', 'db_sendigs_ss_vuca');
 define('DBACC_SUST', 'db_sendigs_ss_sustain');
 define('DBACC_SUSTAIN', 'db_sendigs_ss_sustain');
 define('DBCNL', 'db_consultant_new');
+define('HRIS', 'hr_sentral');
 define('FILE_ALLOW', 'doc|docx|xls|xlsx|ppt|pptx|7z|zip|rar|jpeg|jpg|gif|bmp|png');
