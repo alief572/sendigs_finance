@@ -497,38 +497,17 @@ class Request_pr_stok extends Admin_Controller
     echo json_encode($Arr_Data);
   }
 
-  public function PrintH2()
+  public function PrintH2($id_pr)
   {
+    $header = $this->request_pr_stok_model->getPRStockHeader($id_pr);
+    $detail = $this->request_pr_stok_model->getPRStockDetail($id_pr);
 
-    ob_clean();
-    ob_start();
-    // $this->auth->restrict($this->managePermission);
-    $id = $this->uri->segment(3);
-    $data['header'] = $this->db->query("SELECT a.*, b.nm_customer, b.alamat, c.name as country_name, d.nm_pic, d.hp, d.email_pic, b.fax FROM material_planning_base_on_produksi as a LEFT JOIN material_planning_base_on_produksi x ON x.so_number = a.so_number LEFT JOIN customer b ON b.id_customer = a.id_customer LEFT JOIN country_all c ON c.iso3 = b.country_code LEFT JOIN customer_pic d ON d.id_pic = b.id_pic WHERE a.so_number = '" . $id . "' ")->result();
-    $data['detail']  = $this->db->query("SELECT a.*, if(b.code IS NULL, e.id_stock, b.code) as code, if(b.nama IS NULL, e.stock_name, b.nama) as nama, if(b.konversi IS NULL, if(e.konversi <= 0, 1, e.konversi), b.konversi) as konversi, if(c.code IS NULL, f.code, c.code) as satuan, if(d.code IS NULL, g.code, d.code) as satuan_packing FROM material_planning_base_on_produksi_detail a 
-		LEFT JOIN new_inventory_4 b ON b.code_lv4 = a.id_material 
-		LEFT JOIN ms_satuan c ON c.id = b.id_unit
-		LEFT JOIN ms_satuan d ON d.id = b.id_unit_packing
-		LEFT JOIN accessories e ON e.id = a.id_material
-		LEFT JOIN ms_satuan f ON f.id = e.id_unit
-		LEFT JOIN ms_satuan g ON g.id = e.id_unit_gudang
-		WHERE a.so_number = '" . $id . "' ")->result();
-    // $data['detailsum'] = $this->db->query("SELECT AVG(width) as totalwidth, AVG(qty) as totalqty FROM dt_trans_po WHERE no_po = '" . $id . "' ")->result();
+    $data = [
+      'header' => $header,
+      'detail' => $detail
+    ];
+
     $this->load->view('Print', $data);
-    $html = ob_get_contents();
-
-    // print_r($data['header']);
-    // exit;
-
-    require_once('./assets/html2pdf/html2pdf/html2pdf.class.php');
-    $html2pdf = new HTML2PDF('P', 'A4', 'en', true, 'UTF-8', array(10, 5, 10, 5));
-    $html2pdf->pdf->SetDisplayMode('fullpage');
-    $html2pdf->WriteHTML($html);
-    ob_end_clean();
-    $html2pdf->Output('Purchase Request.pdf', 'I');
-
-    // $this->template->title('Testing');
-    // $this->template->render('print2');
   }
 
   public function edit_detail()

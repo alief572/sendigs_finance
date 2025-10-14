@@ -555,4 +555,27 @@ class Request_pr_stok_model extends BF_Model
     $data['query'] = $this->db->query($sql);
     return $data;
   }
+
+  public function getPRStockHeader($id_pr)
+  {
+    $get_header = $this->db->get_where('material_planning_base_on_produksi', ['so_number' => $id_pr])->row();
+
+    return $get_header;
+  }
+
+  public function getPRStockDetail($id_pr)
+  {
+    $this->db->select('a.*, b.stock_name, b.konversi, b.spec, c.qty_stock, d.nm_category, e.code as satuan, f.kebutuhan_month as qty_kebutuhan');
+    $this->db->from('material_planning_base_on_produksi_detail a');
+    $this->db->join('accessories b', 'b.id = a.id_material', 'left');
+    $this->db->join('warehouse_stock c', 'c.id_material = a.id_material', 'left');
+    $this->db->join('accessories_category d', 'd.id = b.id_category', 'left');
+    $this->db->join('ms_satuan e', 'e.id = b.id_unit_gudang', 'left');
+    $this->db->join('budget_rutin_detail f', 'f.id_barang = b.id', 'left');
+    $this->db->where('a.so_number', $id_pr);
+    $this->db->group_by('b.id');
+    $get_detail = $this->db->get()->result();
+
+    return $get_detail;
+  }
 }
