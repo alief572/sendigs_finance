@@ -137,7 +137,7 @@
 							success: function(data) {
 								if (data.status == 1) {
 									var formdata = new FormData();
-									var fileInput = $('#dokumen_pendukung')[0];
+									var fileInput = $('#dokumen_pendukung_' + nomor)[0];
 
 									formdata.append('id_pr', data.id_pr);
 									formdata.append('dokumen_pendukung', fileInput.files[0]);
