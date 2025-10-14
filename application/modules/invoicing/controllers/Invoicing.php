@@ -409,6 +409,7 @@ class Invoicing extends Admin_Controller
             'tanggal_invoice' => $post['tanggal_invoice'],
             'no_invoice' => $post['nomor_invoice'],
             'no_po' => $post['nomor_po'],
+            'no_faktur' => $post['nomor_faktur'],
             'total_nominal' => $post['total_nominal'],
             'dpp_nilai_lain' => $post['dpp_nilai_lain'],
             'pajak' => $post['pajak'],
@@ -531,7 +532,8 @@ class Invoicing extends Admin_Controller
         $arr_update = [
             'tanggal_invoice' => $post['tanggal_invoice'],
             'no_invoice' => $post['nomor_invoice'],
-            'no_po' => $post['no_po']
+            'no_po' => $post['no_po'],
+            'no_faktur' => $post['nomor_faktur']
         ];
 
         $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
