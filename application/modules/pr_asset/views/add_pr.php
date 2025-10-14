@@ -72,7 +72,7 @@
 			var nil_pr = $('#nil_pr_' + nomor).val().split(",").join("");
 			var tgl_butuh = $('#tgl_butuh_' + nomor).val();
 			var code_plan = $('#code_plan_' + nomor).val();
-			var dokumen_pendukung = $('#dokumen_pendukung')[0].files[0];
+			var dokumen_pendukung = $('#dokumen_pendukung_' + nomor)[0].files[0];
 
 			if (!dokumen_pendukung) {
 				swal({
@@ -137,7 +137,7 @@
 							success: function(data) {
 								if (data.status == 1) {
 									var formdata = new FormData();
-									var fileInput = $('#dokumen_pendukung')[0];
+									var fileInput = $('#dokumen_pendukung_' + nomor)[0];
 
 									formdata.append('id_pr', data.id_pr);
 									formdata.append('dokumen_pendukung', fileInput.files[0]);
