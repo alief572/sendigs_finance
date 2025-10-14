@@ -148,19 +148,19 @@
 
 <body>
 
-	<table width="40%">
+	<table width="50%">
 		<tr>
-			<td width="20%">No. PR </td>
+			<td width="45%">No. PR </td>
 			<td style="text-align: center;">:</td>
 			<td><?= $header->no_pr ?></td>
 		</tr>
 		<tr>
-			<td width="20%">Tanggal PR</td>
+			<td width="45%">Tanggal PR</td>
 			<td style="text-align: center;">:</td>
 			<td><?= date('d F Y', strtotime($header->tgl_so)) ?></td>
 		</tr>
 		<tr>
-			<td width="20%">Tanggal Dibutuhkan</td>
+			<td width="45%">Tanggal Dibutuhkan</td>
 			<td style="text-align: center;">:</td>
 			<td><?= date('d F Y', strtotime($header->tgl_dibutuhkan)) ?></td>
 		</tr>
@@ -222,3 +222,7 @@
 </body>
 
 </html>
+
+<script>
+    window.print();
+</script>
