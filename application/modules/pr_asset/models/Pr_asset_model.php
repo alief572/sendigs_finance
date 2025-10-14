@@ -823,7 +823,7 @@ class Pr_asset_model extends BF_model
 								<input type='hidden' id='code_plan_" . $nomor . "' class='form-control input-sm' value='" . $row['code_plan'] . "'>
 								<br>
 								<b>DOKUMEN PENDUKUNG</b>
-								<input type='file' class='form-control input-sm' name='dokumen_pendukung' id='dokumen_pendukung'>
+								<input type='file' class='form-control input-sm' name='dokumen_pendukung' id='dokumen_pendukung_" . $nomor . "'>
 								</div>
 								<style>.datepicker{cursor:pointer;}</style>
 								";
