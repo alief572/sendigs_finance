@@ -147,391 +147,77 @@
 </head>
 
 <body>
-	<?php
-	foreach ($header as $header) {
-	}
-	// $detailsum = $this->db->query("SELECT SUM(width) as sumwidth, SUM(qty) as sumqty, SUM(totalwidth) as sumtotalwidth, SUM(jumlahharga) as sumjumlahharga, SUM(hargasatuan) as sumhargasatuan FROM dt_trans_po WHERE no_po = '" . $header->no_po . "' ")->result();
-	// $jumlahdetail = $this->db->query("SELECT COUNT(no_po) as no_po FROM dt_trans_po WHERE no_po = '" . $header->no_po . "' ")->result();
-	// $jumlahdata = $jumlahdetail[0]->no_po;
-	// $tinggi = 300 / $jumlahdata;
-	if (empty($header->negara)) {
-		$cou = 'Indonesia';
-	} else {
-		// $findnegara = $this->db->query("SELECT * FROM negara WHERE id_negara = '" . $header->negara . "' ")->result();
-		// $cou = $findnegara[0]->nm_negara;
-	}
-	// $findpic = $this->db->query("SELECT * FROM child_supplier_pic WHERE id_suplier = '" . $header->id_suplier . "' ")->result();
-	// $namapic = $findpic[0]->name_pic;
 
-	// print_r($_SERVER['DOCUMENT_ROOT'] . '/origa_live/assets/images/ori_logo.jpg');
-	// exit;
-	if ($header->tingkat_pr == '2') {
-		$tingkat_pr = 'Urgent';
-	} else {
-		$tingkat_pr = 'Normal';
-	}
-	?>
-	<table class="gridtable2" border="0">
+	<table width="40%">
 		<tr>
-			<td style="text-align:left;">
-				<img src='<?= $_SERVER['DOCUMENT_ROOT'] . '/origa_live/assets/images/ori_logo2.png'; ?>' alt="" width="75" height="95">
-			</td>
-			<td align="right" width="630">
-				<br>
-				Jl. Pembangunan II <br>
-				Kel. Batusari, <br>
-				Kec. Batuceper, <br>
-				Kota Tangerang Postal <br>
-				Code 15122 <br>
-				Indonesia
-
-			</td>
+			<td width="20%">No. PR </td>
+			<td style="text-align: center;">:</td>
+			<td><?= $header->no_pr ?></td>
+		</tr>
+		<tr>
+			<td width="20%">Tanggal PR</td>
+			<td style="text-align: center;">:</td>
+			<td><?= date('d F Y', strtotime($header->tgl_so)) ?></td>
+		</tr>
+		<tr>
+			<td width="20%">Tanggal Dibutuhkan</td>
+			<td style="text-align: center;">:</td>
+			<td><?= date('d F Y', strtotime($header->tgl_dibutuhkan)) ?></td>
 		</tr>
 	</table>
-	<hr>
-	<div style='display:block; border-color:none; background-color:#c2c2c2;' align='center'>
-		<h3>PURCHASE REQUEST </h3>
-	</div>
-	<br>
-	<table class='gridtable2' width='100%' border='1' align='left' cellpadding='0' cellspacing='0'>
-		<tr>
-			<td width="300" align="center">
-				<table width='300' align="center">
-					<tr>
-						<td width='50' align="left">Customer</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->nm_customer ?></td>
-					</tr>
-					<tr>
-						<td width='50' align="left">Address</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->alamat ?></td>
-					</tr>
-					<tr>
-						<td width='50' align="left">Country</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->country_name ?></td>
-					</tr>
-					<tr>
-						<td width='50' align="left">PIC</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $this->auth->user_name(); ?></td>
-					</tr>
-					<tr>
-						<td width='50' align="left">Phone</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->hp ?></td>
-					</tr>
-					<tr>
-						<td width='50' align="left">Fax</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->fax ?></td>
-					</tr>
-				</table>
-			</td>
-			<td width="300" align="center">
-				<table width='300' align="center">
-					<tr>
-						<td width='80' align="left">No. PR</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->no_pr ?></td>
-					</tr>
-					<tr>
-						<td width='80' align="left">Date</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= date('d-F-Y', strtotime($header->created_date))  ?></td>
-					</tr>
-					<tr>
-						<td width='80' align="left">Needed Date</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= date('d-F-Y', strtotime($header->tgl_dibutuhkan))  ?></td>
-					</tr>
-					<tr>
-						<td width='80' align="left">Revision</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $header->no_rev ?></td>
-					</tr>
-					<tr>
-						<td width='80' align="left">Page</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"></td>
-					</tr>
-					<tr>
-						<td width='80' align="left">Tingkat PR</td>
-						<td width='10' align="left">:</td>
-						<td width='250' align="left"><?= $tingkat_pr ?></td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-	<br>
-	<?php
-	// $matauang = (!empty($header->matauang)) ? "<br>(" . strtoupper($header->matauang) . ")" : '';
 
-	// if (strtolower($header->matauang) == 'usd') {
-	// 	$kode = '$';
-	// }
-	// if (strtolower($header->matauang) == 'idr') {
-	// 	$kode = 'Rp';
-	// }
-	?>
-	<table class='gridtable' cellpadding='0' cellspacing='0' style='vertical-align:top;'>
-		<tbody>
-			<tr style='vertical-align:middle; background-color:#c2c2c2; font-weight:bold;'>
-				<td align="center">Code</td>
-				<td align="center">Description</td>
-				<td align="center">Qty (Pack)</td>
-				<td align="center">Unit Packing</td>
-				<td align="center">Qty</td>
-				<td align="center">Unit Measurement</td>
+	<br><br>
+
+	<table width="100%" border="1" s>
+		<thead>
+			<tr>
+				<th style="text-align: center;">No.</th>
+				<th style="text-align: center;">Nama Barang</th>
+				<th style="text-align: center;">Spesifikasi</th>
+				<th style="text-align: center;">Tipe</th>
+				<th style="text-align: center;">Qty Stok</th>
+				<th style="text-align: center;">Satuan</th>
+				<th style="text-align: center;">Qty Kebutuhan</th>
+				<th style="text-align: center;">Qty Permintaan</th>
+				<th style="text-align: center;">Harga</th>
+				<th style="text-align: center;">Total</th>
 			</tr>
+		</thead>
+		<tbody>
 			<?php
-			$CIF = "<br>" . $header->cif . "<br><br><br><br>";
-			$TOT_PPH = 0;
-			foreach ($detail as $detail) {
-				$kategory = $detail->id_material;
-				$barang  = $this->db->query("SELECT * FROM new_inventory_4 WHERE code_lv4 = '$kategory' ")->row();
+			$no = 0;
 
-				$TOT_PPH += $detail->jumlahharga * $detail->pajak / 100;
-				$HS = number_format($detail->hargasatuan, 2);
-				$JH = number_format($detail->jumlahharga, 2);
-				if (strtolower($header->loi) == 'lokal') {
-					$HS = number_format($detail->hargasatuan, 2);
-					$JH = number_format($detail->jumlahharga, 2);
-				}
-
-				$qty = ($detail->propose_purchase * $detail->konversi);
-				$qty_pack = $detail->propose_purchase;
-				$unit_meas = $detail->satuan;
-				$unit_packing = $detail->satuan_packing;
-
-
-
-				if ($jumlahdata <= '30') {
-					if ($qty > 0) {
-						echo "	
-							<tr >
-								<td style='text-align: center;'>" . $barang->code . "</td>
-								<td style='min-width: 200px; max-width: 300px;'>" . $detail->nama . "</td>
-								<td style='text-align: center;'>" . number_format($qty_pack, 2) . "</td>
-								<td style='text-align: center;'>" . strtoupper($unit_packing) . "</td>
-								<td style='text-align: center;'>" . number_format($qty, 2) . "</td>
-								<td style='text-align: center;'>" . strtoupper($unit_meas) . "</td>
-							</tr>";
-					}
-					$CIF = "";
-				} else {
-					if ($qty > 0) {
-						echo "	
-							<tr >
-								<td style='text-align: center;'>" . $barang->code . "</td>
-								<td style='min-width: 200px; max-width: 300px;'>" . $detail->nama . "</td>
-								<td style='text-align: center;'>" . number_format($qty_pack, 2) . "</td>
-								<td style='text-align: center;'>" . strtoupper($unit_packing) . "</td>
-								<td style='text-align: center;'>" . number_format($qty, 2) . "</td>
-								<td style='text-align: center;'>" . strtoupper($unit_meas) . "</td>
-							</tr>";
-					}
-					$CIF = "";
-				}
-			} ?>
-
-			<?php
-			if ($header->loi == 'Lokal') {
-			?>
-
-			<?php
-			}
-			if ($header->loi == 'Import') {
-				$TOT_PPH = 0;
-			}
-
-			$TOTHEAD = number_format($detailsum[0]->sumjumlahharga + $TOT_PPH, 2);
-			if (strtolower($header->loi) == 'lokal') {
-				$TOTHEAD = number_format($detailsum[0]->sumjumlahharga + $TOT_PPH, 2);
+			foreach ($detail as $row) {
+				$no++;
+				echo '<tr>';
+				echo '<td style="text-align: center;">' . $no . '</td>';
+				echo '<td style="text-align: left;">' . $row->stock_name . '</td>';
+				echo '<td style="text-align: left;">' . $row->spec . '</td>';
+				echo '<td style="text-align: left;">' . $row->nm_category . '</td>';
+				echo '<td style="text-align: right;">' . number_format(($row->qty_stock / $row->konversi)) . '</td>';
+				echo '<td style="text-align: center;">' . $row->satuan . '</td>';
+				echo '<td style="text-align: right;">' . number_format(($row->qty_kebutuhan / $row->konversi)) . '</td>';
+				echo '<td style="text-align: right;">' . number_format(($row->propose_purchase / $row->konversi)) . '</td>';
+				echo '<td style="text-align: right;">' . number_format($row->price_ref, 2) . '</td>';
+				echo '<td style="text-align: right;">' . number_format(($row->price_ref * $row->propose_purchase), 2) . '</td>';
+				echo '</tr>';
 			}
 			?>
-
-
 		</tbody>
 	</table>
-	<br>
 
-	<table border="0" width='100%' align="left">
+	<br><br>
 
+	<table width="100%">
 		<tr>
-
-			<td width="250" align="left"><br><br>
-				<table>
-					<tr>
-						<td align='center'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'>(Cost Control)</td>
-					</tr>
-				</table>
-			</td>
-			<td width="250" align="left"><br><br>
-				<table>
-					<tr>
-						<td align='center'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='center'>(Dept Head)</td>
-					</tr>
-				</table>
-			</td>
-			<td width="250" align="left"><br><br>
-				<table>
-					<tr>
-						<td align='center'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='right'></td>
-					</tr>
-					<tr>
-						<td align='center'>(<?= $this->auth->user_name() ?>)</td>
-					</tr>
-				</table>
-
-			</td>
+			<td style="text-align: center;">Mengajukan</td>
+			<td style="text-align: center;">Menyetujui <br> <?= date('d-m-Y') ?></td>
+		</tr>
+		<tr>
+			<td style="text-align: center; height: 200px;">Purchasing</td>
+			<td style="text-align: center; height: 200px;">Imanuel Iman</td>
 		</tr>
 	</table>
-
-
 
 </body>
 
