@@ -185,7 +185,9 @@
 		</thead>
 		<tbody>
 			<?php
-			$no = 0;
+            $no = 0;
+
+            $grand_total = 0;
 
 			foreach ($detail as $row) {
 				$no++;
@@ -200,10 +202,18 @@
 				echo '<td style="text-align: right;">' . number_format(($row->propose_purchase / $row->konversi)) . '</td>';
 				echo '<td style="text-align: right;">' . number_format($row->price_ref, 2) . '</td>';
 				echo '<td style="text-align: right;">' . number_format(($row->price_ref * $row->propose_purchase), 2) . '</td>';
-				echo '</tr>';
+                echo '</tr>';
+
+                $grand_total += (($row->price_ref * $row->propose_purchase));
 			}
 			?>
-		</tbody>
+        </tbody>
+        <tfooter>
+            <tr>
+                <th style="text-align: center;" colspan="9">Grand Total</th>
+                <th style="text-align: right;"><?= number_format($grand_total, 2) ?></th>
+            </tr>
+        </tfooter>
 	</table>
 
 	<br><br>
