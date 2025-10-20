@@ -1,6 +1,8 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+use Mpdf\Mpdf;
+
 class Incoming_stok extends Admin_Controller
 {
   //Permission
@@ -15,6 +17,8 @@ class Incoming_stok extends Admin_Controller
   public function __construct()
   {
     parent::__construct();
+
+    require_once FCPATH . 'vendor/autoload.php';
 
     $this->load->library(array('upload', 'Image_lib'));
     $this->load->model(array(
@@ -399,33 +403,59 @@ class Incoming_stok extends Admin_Controller
 
   public function print_incoming_stok()
   {
-    $kode_trans  = $this->uri->segment(3);
-    $data_session  = $this->session->userdata;
-    $session        = $this->session->userdata('app_session');
-    $printby    = get_name('users', 'nm_lengkap', 'id_user', $session['id_user']);
+    // Bersihkan semua output buffer terlebih dahulu
+    while (ob_get_level()) {
+      ob_end_clean();
+    }
 
-    $data_url    = base_url();
-    $Split_Beda    = explode('/', $data_url);
-    $Jum_Beda    = count($Split_Beda);
-    $Nama_Beda    = $Split_Beda[$Jum_Beda - 2];
+    $kode_trans = $this->uri->segment(3);
 
+    // Validasi kode_trans
+    if (empty($kode_trans)) {
+      show_error('Kode transaksi tidak valid');
+    }
+
+    $data_session = $this->session->userdata;
+    $session = $this->session->userdata('app_session');
+    $printby = get_name('users', 'nm_lengkap', 'id_user', $session['id_user']);
+
+    $data_url = base_url();
+    $Split_Beda = explode('/', $data_url);
+    $Jum_Beda = count($Split_Beda);
+    $Nama_Beda = $Split_Beda[$Jum_Beda - 2];
+
+    // Validasi data exists
     $getData = $this->db->get_where('warehouse_adjustment a', array(
       'a.kode_trans' => $kode_trans
-    ))
-      ->result_array();
+    ))->result_array();
 
-    $getDataDetail  = $this->db->get_where('warehouse_adjustment_detail a', array(
+    if (empty($getData)) {
+      show_error('Data tidak ditemukan untuk kode: ' . $kode_trans);
+    }
+
+    $getDataDetail = $this->db->get_where('warehouse_adjustment_detail a', array(
       'a.kode_trans' => $kode_trans
-    ))
-      ->result_array();
-
+    ))->result_array();
 
     $no_po = [];
-    $get_no_po = $this->db->query("SELECT a.no_surat FROM tr_purchase_order a WHERE a.no_po IN ('" . str_replace(",", "','", $getData[0]['no_ipp']) . "')")->result();
-    foreach ($get_no_po as $item) {
-      $no_po[] = $item->no_surat;
+    if (!empty($getData[0]['no_ipp'])) {
+      $get_no_po = $this->db->query("SELECT a.no_surat FROM tr_purchase_order a WHERE a.no_po IN ('" . str_replace(",", "','", $getData[0]['no_ipp']) . "')")->result();
+      foreach ($get_no_po as $item) {
+        $no_po[] = $item->no_surat;
+      }
+
+      $this->db->select('a.no_doc');
+      $this->db->from('tr_kasbon a');
+      $this->db->where_in('a.no_doc', explode(',', $getData[0]['no_ipp']));
+      $get_no_kasbon = $this->db->get()->result();
+      foreach ($get_no_kasbon as $item) {
+        $no_po[] = $item->no_doc;
+      }
+
+      $no_po = implode(', ', $no_po);
+    } else {
+      $no_po = '-';
     }
-    $no_po = implode(', ', $no_po);
 
     $data = array(
       'Nama_Beda' => $Nama_Beda,
@@ -438,8 +468,34 @@ class Incoming_stok extends Admin_Controller
       'no_po' => $no_po
     );
 
-    history('Print spk request material ' . $kode_trans);
-    $this->load->view('print_incoming_stok', $data);
+    try {
+      // Load mPDF
+      require_once FCPATH . 'vendor/autoload.php';
+
+      $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'orientation' => 'P',
+        'tempDir' => FCPATH . 'uploads/tmp'
+      ]);
+
+      // PERBAIKAN UTAMA: Tambah parameter TRUE
+      $html = $this->load->view('print_incoming_stok', $data, TRUE);
+
+      // Validasi HTML tidak kosong
+      if (empty($html)) {
+        throw new Exception('View mengembalikan konten kosong');
+      }
+
+      $mpdf->WriteHTML($html);
+      $mpdf->Output('Incoming Stock - ' . $kode_trans . '.pdf', \Mpdf\Output\Destination::INLINE);
+
+      exit; // Pastikan berhenti setelah output PDF
+
+    } catch (Exception $e) {
+      log_message('error', 'PDF Generation Error: ' . $e->getMessage());
+      show_error('Gagal generate PDF: ' . $e->getMessage());
+    }
   }
 
   public function detail()

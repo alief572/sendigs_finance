@@ -1,26 +1,3 @@
-<?php
-
-$sroot         = $_SERVER['DOCUMENT_ROOT'] . '/sendigs_ss_dev';
-// print_r($sroot . "/application/libraries/MPDF57/mpdf.php");
-// exit;
-// Ganti include lama dengan ini
-// include_once __DIR__ . '/../../vendor/autoload.php';
-include $sroot . "/application/libraries/MPDF57/mpdf.php";
-// Ganti baris lama
-// $mpdf = new mPDF('utf-8', 'A4');
-
-// Menjadi ini
-$mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
-
-set_time_limit(0);
-ini_set('memory_limit', '1024M');
-
-//Beginning Buffer to save PHP variables and HTML tags
-ob_start();
-date_default_timezone_set('Asia/Jakarta');
-$today = date('l, d F Y [H:i:s]');
-?>
-
 <table class="gridtable2" border='1' width='100%' cellpadding='2'>
     <tr>
         <td align='center'><b>PT. SENTRAL TEHNOLOGI MANAGEMENT</b></td>
@@ -44,7 +21,7 @@ $today = date('l, d F Y [H:i:s]');
             <td class="mid"></td>
         </tr>
         <tr>
-            <td class="mid" width='18%'>Nomor PO</td>
+            <td class="mid" width='18%'>Nomor PO / Kasbon</td>
             <td class="mid" width='2%'>:</td>
             <td class="mid" width='30%'><?= strtoupper($no_po); ?></td>
             <td class="mid" width='18%'>Gudang Incoming</td>
@@ -222,22 +199,3 @@ $today = date('l, d F Y [H:i:s]');
         background-color: #ffffff;
     }
 </style>
-
-
-<?php
-$footer = "<p style='font-family: verdana,arial,sans-serif; font-size:10px;'><i>Printed by : " . ucwords(strtolower($printby)) . ", " . $today . " / Subgudang</i></p>";
-$html = ob_get_contents();
-
-ob_end_clean();
-// $mpdf->SetWatermarkText('ORI Group');
-$mpdf->showWatermarkText = true;
-$mpdf->SetTitle($kode_trans);
-$mpdf->AddPageByArray([
-    'margin-left' => 4,
-    'margin-right' => 4,
-    'margin-top' => 10,
-    'margin-bottom' => 10,
-]);
-$mpdf->SetFooter($footer);
-$mpdf->WriteHTML($html);
-$mpdf->Output('permintaan-material.pdf', 'I');
