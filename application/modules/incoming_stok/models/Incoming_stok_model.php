@@ -78,6 +78,14 @@ class Incoming_stok_model extends BF_Model
       foreach ($get_no_po as $item) {
         $no_po[] = $item->no_surat;
       }
+
+      $this->db->select('a.no_doc');
+      $this->db->from('tr_kasbon a');
+      $this->db->where_in('a.no_doc', explode(',', $row['no_ipp']));
+      $get_no_kasbon = $this->db->get()->result();
+      foreach ($get_no_kasbon as $item) {
+        $no_po[] = $item->no_doc;
+      }
       $no_po = implode(', ', $no_po);
 
       $no_pr = [];
@@ -95,6 +103,15 @@ class Incoming_stok_model extends BF_Model
       ")->result();
       foreach ($get_no_pr as $item_no_pr) {
         $no_pr[] = $item_no_pr->no_pr;
+      }
+
+      $this->db->select('a.id_pr');
+      $this->db->from('tr_kasbon a');
+      $this->db->where_in('a.no_doc', explode(',', $no_po));
+      $get_no_kasbon = $this->db->get()->result();
+
+      foreach ($get_no_kasbon as $item_no_pr) {
+        $no_pr[] = $item_no_pr->id_pr;
       }
 
       if (!empty($no_pr)) {

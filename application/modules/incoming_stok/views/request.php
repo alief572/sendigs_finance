@@ -6,10 +6,10 @@
 				<div class="col-md-2 text-bold">Supplier<span class='text-danger'>*</span></div>
 				<div class="col-md-4">
 					<select name='supplier' id='supplier' class='form-control input-sm pilih_supplier chosen-select'>
-
 						<?php
 						if (!empty($listSupplier)) {
 							echo "<option value=''>- Select Supplier -</option>";
+							echo '<option value="kasbon">Kasbon</option>';
 							foreach ($listSupplier as $item) {
 								echo "<option value='" . $item->kode_supplier . "'>" . $item->nama . "</option>";
 							}
@@ -26,7 +26,7 @@
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th class="text-center">No. PO</th>
+								<th class="text-center">No. PO / Kasbon</th>
 								<th class="text-center">No. PR</th>
 								<th class="text-center">Action</th>
 							</tr>
