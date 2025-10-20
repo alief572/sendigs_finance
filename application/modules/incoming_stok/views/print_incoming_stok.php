@@ -1,6 +1,6 @@
 <?php
 
-$sroot         = $_SERVER['DOCUMENT_ROOT'] . '/sendigs_ss';
+$sroot         = $_SERVER['DOCUMENT_ROOT'] . '/sendigs_ss_dev';
 // print_r($sroot . "/application/libraries/MPDF57/mpdf.php");
 // exit;
 // Ganti include lama dengan ini
