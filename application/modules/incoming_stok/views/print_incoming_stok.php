@@ -1,8 +1,16 @@
 <?php
 
-$sroot         = $_SERVER['DOCUMENT_ROOT'] . '/sendigs_ss_dev';
+$sroot         = $_SERVER['DOCUMENT_ROOT'] . '/sendigs_ss';
+// print_r($sroot . "/application/libraries/MPDF57/mpdf.php");
+// exit;
+// Ganti include lama dengan ini
+// include_once __DIR__ . '/../../vendor/autoload.php';
 include $sroot . "/application/libraries/MPDF57/mpdf.php";
-$mpdf = new mPDF('utf-8', 'A4');
+// Ganti baris lama
+// $mpdf = new mPDF('utf-8', 'A4');
+
+// Menjadi ini
+$mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
 
 set_time_limit(0);
 ini_set('memory_limit', '1024M');
