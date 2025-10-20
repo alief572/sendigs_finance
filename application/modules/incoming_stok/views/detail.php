@@ -11,7 +11,7 @@
 				<td class="text-left" style='vertical-align:middle;' width='33%'></td>
 			</tr>
 			<tr>
-				<td class="text-left" style='vertical-align:middle;'>Nomor PO</td>
+				<td class="text-left" style='vertical-align:middle;'>Nomor PO / Kasbon</td>
 				<td class="text-left" style='vertical-align:middle;'>:</td>
 				<td class="text-left" style='vertical-align:middle;'><?= strtoupper($no_po); ?></td>
 				<td class="text-left" style='vertical-align:middle;'>Tanggal Incoming</td>

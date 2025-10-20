@@ -522,6 +522,13 @@ class Incoming_stok extends Admin_Controller
     foreach ($get_no_po as $item) {
       $no_po[] = $item->no_surat;
     }
+    $this->db->select('a.no_doc');
+    $this->db->from('tr_kasbon a');
+    $this->db->where_in('a.no_doc', explode(',', $getData[0]['no_ipp']));
+    $get_no_kasbon = $this->db->get()->result();
+    foreach ($get_no_kasbon as $item) {
+      $no_po[] = $item->no_doc;
+    }
     $no_po = implode(', ', $no_po);
 
     $data = array(
