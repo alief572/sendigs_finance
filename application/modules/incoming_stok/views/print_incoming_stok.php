@@ -15,7 +15,7 @@ $today = date('l, d F Y [H:i:s]');
 
 <table class="gridtable2" border='1' width='100%' cellpadding='2'>
     <tr>
-        <td align='center'><b>PT ORIGA MULIA</b></td>
+        <td align='center'><b>PT. SENTRAL TEHNOLOGI MANAGEMENT</b></td>
     </tr>
     <tr>
         <td align='center'><b>
@@ -78,16 +78,16 @@ $today = date('l, d F Y [H:i:s]');
             $No++;
             $id_material     = $value['id_material'];
             $nm_material    = (!empty($GET_MATERIAL[$id_material]['nama'])) ? $GET_MATERIAL[$id_material]['nama'] : 0;
-            $id_packing     = (!empty($GET_MATERIAL[$id_material]['id_packing'])) ? $GET_MATERIAL[$id_material]['id_packing'] : 0;
+            $id_unit     = (!empty($GET_MATERIAL[$id_material]['id_unit'])) ? $GET_MATERIAL[$id_material]['id_unit'] : 0;
             $konversi       = (!empty($GET_MATERIAL[$id_material]['konversi'])) ? $GET_MATERIAL[$id_material]['konversi'] : 0;
-            $packing        = (!empty($GET_SATUAN[$id_packing]['code'])) ? $GET_SATUAN[$id_packing]['code'] : '';
+            $unit        = (!empty($GET_SATUAN[$id_unit]['code'])) ? $GET_SATUAN[$id_unit]['code'] : '';
 
             $qty_in = $value['qty_oke'];
             echo "<tr>";
             echo "<td align='center'>" . $No . "</td>";
             echo "<td>" . $nm_material . "</td>";
             echo "<td align='center'>" . number_format($qty_in, 2) . "</td>";
-            echo "<td align='center'>" . strtoupper($packing) . "</td>";
+            echo "<td align='center'>" . strtoupper($unit) . "</td>";
             echo "<td>" . $value['keterangan'] . "</td>";
             echo "</tr>";
         }

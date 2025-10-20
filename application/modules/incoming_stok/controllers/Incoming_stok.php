@@ -91,11 +91,17 @@ class Incoming_stok extends Admin_Controller
 
             // print_r($qty_incoming.' - '.$konversi.'<br>');
 
-            $getIncoming  = $this->db->get_where('dt_trans_po', array('id' => $valx['id']))->result_array();
+            if (isset($valx['id_kasbon'])) {
+              $getIncoming = $this->db->get_where('tr_pr_detail_kasbon', ['id' => $valx['id']])->result_array();
+            } else {
+              $getIncoming  = $this->db->get_where('dt_trans_po', array('id' => $valx['id']))->result_array();
+            }
             $qtyIn        = (!empty($getIncoming[0]['qty_in'])) ? $getIncoming[0]['qty_in'] : 0;
+
 
             $ArrUpdatePO[$val]['id']       = $valx['id'];
             $ArrUpdatePO[$val]['qty_in']   = $qtyIn + $qty_incoming;
+
 
             $value_neraca = 0;
             $get_value_neraca = $this->db->select('a.value_neraca')
@@ -130,16 +136,22 @@ class Incoming_stok extends Admin_Controller
             }
 
             $nilai_beli = 0;
-            $this->db->select('a.hargasatuan, a.persen_disc as item_disc, b.persen_disc as po_disc');
-            $this->db->from('dt_trans_po a');
-            $this->db->join('tr_purchase_order b', 'b.no_po = a.no_po', 'left');
-            $this->db->where_in('a.no_po', explode(',', $no_po));
-            $get_nilai_beli = $this->db->get()->result();
-            foreach ($get_nilai_beli as $item_beli) {
-              if ($item_beli->item_disc > 0) {
-                $nilai_beli = ($item_beli->hargasatuan - ($item_beli->hargasatuan * $item_beli->item_disc));
-              } else {
-                $nilai_beli = ($item_beli->hargasatuan - ($item_beli->hargasatuan * $item_beli->po_disc));
+            if (isset($valx['id_kasbon'])) {
+              $get_nilai_beli = $this->db->select('harga')->get_where('tr_pr_detail_kasbon', ['id' => $valx['id']])->row();
+
+              $nilai_beli = $get_nilai_beli->harga;
+            } else {
+              $this->db->select('a.hargasatuan, a.persen_disc as item_disc, b.persen_disc as po_disc');
+              $this->db->from('dt_trans_po a');
+              $this->db->join('tr_purchase_order b', 'b.no_po = a.no_po', 'left');
+              $this->db->where_in('a.no_po', explode(',', $no_po));
+              $get_nilai_beli = $this->db->get()->result();
+              foreach ($get_nilai_beli as $item_beli) {
+                if ($item_beli->item_disc > 0) {
+                  $nilai_beli = ($item_beli->hargasatuan - ($item_beli->hargasatuan * $item_beli->item_disc));
+                } else {
+                  $nilai_beli = ($item_beli->hargasatuan - ($item_beli->hargasatuan * $item_beli->po_disc));
+                }
               }
             }
 
@@ -296,7 +308,16 @@ class Incoming_stok extends Admin_Controller
         $this->db->insert_batch('warehouse_adjustment_detail', $ArrInsertDetail);
       }
       if (!empty($ArrUpdatePO)) {
-        $this->db->update_batch('dt_trans_po', $ArrUpdatePO, 'id');
+        $this->db->select('a.no_doc');
+        $this->db->from('tr_kasbon a');
+        $this->db->where_in('a.no_doc', explode(',', $no_po));
+        $check_kasbon = $this->db->get()->result();
+
+        if (count($check_kasbon)) {
+          $this->db->update_batch('tr_pr_detail_kasbon', $ArrUpdatePO, 'id');
+        } else {
+          $this->db->update_batch('dt_trans_po', $ArrUpdatePO, 'id');
+        }
       }
 
       if (!empty($ArrInsertJurnal)) {
@@ -467,7 +488,97 @@ class Incoming_stok extends Admin_Controller
 
     $categoryGudang = getPembedaAccessories($id_gudang);
 
-    $detail = $this->db->query("
+    $get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_po])->row();
+    if (!empty($get_kasbon)) {
+      $no_kasbon = $no_po;
+      if ($get_kasbon->tipe_pr == 'pr stok') {
+
+        $this->db->select('a.*, b.id_stock');
+        $this->db->from('tr_pr_detail_kasbon a');
+        $this->db->join('accessories b', 'b.id = a.id_material');
+        $this->db->where_in('a.id_kasbon', explode(',', $no_kasbon));
+        $get_detail_kasbon = $this->db->get()->result();
+
+        $d_Header = '';
+        $id = 0;
+
+        if (!empty($get_detail_kasbon)) {
+          foreach ($get_detail_kasbon as $row) {
+            $id++;
+            $d_Header .= "<tr>";
+            $d_Header .= "<td align='center'>" . $id . "</td>";
+            $d_Header .= "<td align='center'>" . $row->id_material . "</td>";
+            $d_Header .= "<td align='left'>" . $row->id_stock . "</td>";
+            $d_Header .= "<td align='left'>" . $row->nm_material . "</td>";
+            $d_Header .= "<td align='center'>" . number_format($row->qty) . "</td>";
+            $d_Header .= "<td align='center'>" . strtoupper($row->unit) . "</td>";
+            $d_Header .= "<td align='center'>" . number_format($row->qty_in) . "</td>";
+            $d_Header .= "<td align='center' class='qty_max'>" . number_format($row->qty - $row->qty_in) . "</td>";
+            $d_Header .= "<td align='left'>";
+            $d_Header .= "<input type='text' name='Detail[" . $id . "][qty_in]' class='form-control text-center input-md autoNumeric4 qty_in'>";
+            $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id]' value='" . $row->id . "'>";
+            $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_kasbon]' value='" . $row->id_kasbon . "'>";
+            $d_Header .= "<input type='hidden' name='Detail[" . $id . "][qty_po]' value='" . $row->qty . "'>";
+            $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_barang]' value='" . $row->id_material . "'>";
+            $d_Header .= "<input type='hidden' name='Detail[" . $id . "][nm_barang]' value='" . $row->nm_material . "'>";
+            $d_Header .= "</td>";
+            $d_Header .= "<td align='left'>";
+            // $d_Header .= "<input type='text' name='Detail[" . $id . "][ket]' class='form-control input-md'>";
+            $d_Header .= "<textarea class='form-control form-control-sm input-md' name='Detail[" . $id . "][ket]'></textarea>";
+            $d_Header .= "</td>";
+            $d_Header .= "</tr>";
+          }
+        } else {
+          $d_Header .= "<tr>";
+          $d_Header .= "<td colspan='8'><b>Data tidak ada atau <span class='text-red'>gudang yang dipilih tidak sesuai</span> !!!</b></td>";
+          $d_Header .= "</tr>";
+        }
+      }
+      // if ($get_kasbon->tipe_pr == 'pr departemen') {
+      //   $this->db->select('a.*, b.nm_barang, c.nama as satuan');
+      //   $this->db->from('tr_pr_detail_kasbon a');
+      //   $this->db->join('rutin_non_planning_detail b', 'b.id = a.id_detail');
+      //   $this->db->join('ms_satuan c', 'c.id = a.unit', 'left');
+      //   $this->db->where_in('a.', explode(',', $no_kasbon));
+      //   $get_detail_kasbon = $this->db->get()->result();
+
+      //   $d_Header = '';
+      //   $id = 0;
+
+      //   if (!empty($get_detail_kasbon)) {
+      //     foreach ($get_detail_kasbon as $row) {
+      //       $id++;
+      //       $d_Header .= "<tr>";
+      //       $d_Header .= "<td align='center'>" . $id . "</td>";
+      //       $d_Header .= "<td align='center'>-</td>";
+      //       $d_Header .= "<td align='left'>-</td>";
+      //       $d_Header .= "<td align='left'>" . $row->nm_barang . "</td>";
+      //       $d_Header .= "<td align='center'>" . number_format($row->qty) . "</td>";
+      //       $d_Header .= "<td align='center'>" . strtoupper($row->satuan) . "</td>";
+      //       $d_Header .= "<td align='center'>" . number_format($row->qty_in) . "</td>";
+      //       $d_Header .= "<td align='center' class='qty_max'>" . number_format($row->qty - $row->qty_in) . "</td>";
+      //       $d_Header .= "<td align='left'>";
+      //       $d_Header .= "<input type='text' name='Detail[" . $id . "][qty_in]' class='form-control text-center input-md autoNumeric4 qty_in'>";
+      //       $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id]' value='" . $row->id . "'>";
+      //       $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_kasbon]' value='" . $row->id_kasbon . "'>";
+      //       $d_Header .= "<input type='hidden' name='Detail[" . $id . "][qty_po]' value='" . $row->qty . "'>";
+      //       $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_barang]' value=''>";
+      //       $d_Header .= "<input type='hidden' name='Detail[" . $id . "][nm_barang]' value='" . $row->nm_barang . "'>";
+      //       $d_Header .= "</td>";
+      //       $d_Header .= "<td align='left'>";
+      //       // $d_Header .= "<input type='text' name='Detail[" . $id . "][ket]' class='form-control input-md'>";
+      //       $d_Header .= "<textarea class='form-control form-control-sm input-md' name='Detail[" . $id . "][ket]'></textarea>";
+      //       $d_Header .= "</td>";
+      //       $d_Header .= "</tr>";
+      //     }
+      //   } else {
+      //     $d_Header .= "<tr>";
+      //     $d_Header .= "<td colspan='8'><b>Data tidak ada atau <span class='text-red'>gudang yang dipilih tidak sesuai</span> !!!</b></td>";
+      //     $d_Header .= "</tr>";
+      //   }
+      // }
+    } else {
+      $detail = $this->db->query("
                   SELECT 
                     a.id,
                     a.idmaterial as idmaterial,
@@ -485,40 +596,43 @@ class Incoming_stok extends Admin_Controller
                     a.no_po IN ('" . str_replace(",", "','", $no_po) . "')
                     AND a.qty_in < a.qty
                 ")->result_array();
-    // print_r($detail);
-    // echo $this->db->last_query();
-    $d_Header = "";
-    // $d_Header .= "<tr>";
-    $id = 0;
-    if (!empty($detail)) {
-      foreach ($detail as $key => $value) {
-        $id++;
+      // print_r($detail);
+      // echo $this->db->last_query();
+      $d_Header = "";
+      // $d_Header .= "<tr>";
+      $id = 0;
+      if (!empty($detail)) {
+        foreach ($detail as $key => $value) {
+          $id++;
+          $d_Header .= "<tr>";
+          $d_Header .= "<td align='center'>" . $id . "</td>";
+          $d_Header .= "<td align='center'>" . $value['idmaterial'] . "</td>";
+          $d_Header .= "<td align='left'>" . $value['id_stock'] . "</td>";
+          $d_Header .= "<td align='left'>" . $value['namamaterial'] . "</td>";
+          $d_Header .= "<td align='center'>" . number_format($value['qty_po'], 2) . "</td>";
+          $d_Header .= "<td align='center'>" . strtoupper($value['satuan_packing']) . "</td>";
+          $d_Header .= "<td align='center'>" . number_format($value['qty_in'], 2) . "</td>";
+          $d_Header .= "<td align='center' class='qty_max'>" . number_format($value['qty_po'] - $value['qty_in'], 2) . "</td>";
+          $d_Header .= "<td align='left'>";
+          $d_Header .= "<input type='text' name='Detail[" . $id . "][qty_in]' class='form-control text-center input-md autoNumeric4 qty_in'>";
+          $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id]' value='" . $value['id'] . "'>";
+          $d_Header .= "<input type='hidden' name='Detail[" . $id . "][qty_po]' value='" . $value['qty_po'] . "'>";
+          $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_barang]' value='" . $value['idmaterial'] . "'>";
+          $d_Header .= "<input type='hidden' name='Detail[" . $id . "][nm_barang]' value='" . $value['namamaterial'] . "'>";
+          $d_Header .= "</td>";
+          $d_Header .= "<td align='left'>";
+          $d_Header .= "<input type='text' name='Detail[" . $id . "][ket]' class='form-control input-md'>";
+          $d_Header .= "</td>";
+          $d_Header .= "</tr>";
+        }
+      } else {
         $d_Header .= "<tr>";
-        $d_Header .= "<td align='center'>" . $id . "</td>";
-        $d_Header .= "<td align='center'>" . $value['idmaterial'] . "</td>";
-        $d_Header .= "<td align='left'>" . $value['id_stock'] . "</td>";
-        $d_Header .= "<td align='left'>" . $value['namamaterial'] . "</td>";
-        $d_Header .= "<td align='center'>" . number_format($value['qty_po'], 2) . "</td>";
-        $d_Header .= "<td align='center'>" . strtoupper($value['satuan_packing']) . "</td>";
-        $d_Header .= "<td align='center'>" . number_format($value['qty_in'], 2) . "</td>";
-        $d_Header .= "<td align='center' class='qty_max'>" . number_format($value['qty_po'] - $value['qty_in'], 2) . "</td>";
-        $d_Header .= "<td align='left'>";
-        $d_Header .= "<input type='text' name='Detail[" . $id . "][qty_in]' class='form-control text-center input-md autoNumeric4 qty_in'>";
-        $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id]' value='" . $value['id'] . "'>";
-        $d_Header .= "<input type='hidden' name='Detail[" . $id . "][qty_po]' value='" . $value['qty_po'] . "'>";
-        $d_Header .= "<input type='hidden' name='Detail[" . $id . "][id_barang]' value='" . $value['idmaterial'] . "'>";
-        $d_Header .= "<input type='hidden' name='Detail[" . $id . "][nm_barang]' value='" . $value['namamaterial'] . "'>";
-        $d_Header .= "</td>";
-        $d_Header .= "<td align='left'>";
-        $d_Header .= "<input type='text' name='Detail[" . $id . "][ket]' class='form-control input-md'>";
-        $d_Header .= "</td>";
+        $d_Header .= "<td colspan='8'><b>Data tidak ada atau <span class='text-red'>gudang yang dipilih tidak sesuai</span> !!!</b></td>";
         $d_Header .= "</tr>";
       }
-    } else {
-      $d_Header .= "<tr>";
-      $d_Header .= "<td colspan='8'><b>Data tidak ada atau <span class='text-red'>gudang yang dipilih tidak sesuai</span> !!!</b></td>";
-      $d_Header .= "</tr>";
     }
+
+
 
     echo json_encode(array(
       'header' => $d_Header,
@@ -529,25 +643,28 @@ class Incoming_stok extends Admin_Controller
   {
     $kode_supplier = $this->input->post('kode_supplier');
 
-    $countListNomorPO = $this->db
-      ->select('b.no_surat, b.no_po')
-      ->group_by('a.no_po')
-      ->order_by('b.no_surat', 'ASC')
-      ->join('tr_purchase_order b', 'a.no_po=b.no_po', 'left')
-      ->where('a.qty_in < a.qty')
-      ->get_where(
-        'dt_trans_po a',
-        array(
-          'b.status' => '2',
-          'a.idmaterial !=' => '',
-          'SUBSTRING(a.idmaterial, 1, 1) !=' => 'M',
-          'b.id_suplier' => $kode_supplier,
-          'b.close_po' => null
-        )
-      )
-      ->num_rows();
-    if ($countListNomorPO > 0) {
-      $listNomorPO = $this->db
+    if ($kode_supplier == 'kasbon') {
+      $this->db->select('a.no_doc, a.id_pr');
+      $this->db->from('tr_kasbon a');
+      $this->db->join('tr_pr_detail_kasbon b', 'b.id_kasbon = a.no_doc', 'left');
+      $this->db->where_not_in('a.status', ['0', '3', '9']);
+      $this->db->where('a.sts_incoming', null);
+      $this->db->where('a.id_pr <>', '');
+      $this->db->where('a.tipe_pr', 'pr stok');
+      $this->db->where('b.qty_in < b.qty');
+      $this->db->group_by('a.no_doc');
+      $get_kasbon = $this->db->get()->result();
+
+      $hasil = '';
+      foreach ($get_kasbon as $row) {
+        $hasil .= '<tr>';
+        $hasil .= '<td class="text-center">' . $row->no_doc . '</td>';
+        $hasil .= '<td class="text-center">' . $row->id_pr . '</td>';
+        $hasil .= '<td class="text-center"><input type="checkbox" name="no_po[]" class="check_po" value="' . $row->no_doc . '"></td>';
+        $hasil .= '</tr>';
+      }
+    } else {
+      $countListNomorPO = $this->db
         ->select('b.no_surat, b.no_po')
         ->group_by('a.no_po')
         ->order_by('b.no_surat', 'ASC')
@@ -563,17 +680,35 @@ class Incoming_stok extends Admin_Controller
             'b.close_po' => null
           )
         )
-        ->result();
-    } else {
-      $listNomorPO = '';
-    }
+        ->num_rows();
+      if ($countListNomorPO > 0) {
+        $listNomorPO = $this->db
+          ->select('b.no_surat, b.no_po')
+          ->group_by('a.no_po')
+          ->order_by('b.no_surat', 'ASC')
+          ->join('tr_purchase_order b', 'a.no_po=b.no_po', 'left')
+          ->where('a.qty_in < a.qty')
+          ->get_where(
+            'dt_trans_po a',
+            array(
+              'b.status' => '2',
+              'a.idmaterial !=' => '',
+              'SUBSTRING(a.idmaterial, 1, 1) !=' => 'M',
+              'b.id_suplier' => $kode_supplier,
+              'b.close_po' => null
+            )
+          )
+          ->result();
+      } else {
+        $listNomorPO = '';
+      }
 
-    $hasil = '';
-    if (!empty($listNomorPO)) {
-      foreach ($listNomorPO as $item) {
+      $hasil = '';
+      if (!empty($listNomorPO)) {
+        foreach ($listNomorPO as $item) {
 
-        $no_pr = [];
-        $get_no_pr = $this->db->query("
+          $no_pr = [];
+          $get_no_pr = $this->db->query("
           SELECT
             b.no_pr
           FROM
@@ -594,17 +729,18 @@ class Incoming_stok extends Admin_Controller
             a.id IN (SELECT aa.idpr FROM dt_trans_po aa WHERE aa.no_po = '" . $item->no_po . "' AND aa.tipe = 'pr depart')
           GROUP BY b.no_pr
         ")->result();
-        foreach ($get_no_pr as $item_pr) {
-          $no_pr[] = $item_pr->no_pr;
+          foreach ($get_no_pr as $item_pr) {
+            $no_pr[] = $item_pr->no_pr;
+          }
+
+          $no_pr = implode(', ', $no_pr);
+
+          $hasil .= '<tr>';
+          $hasil .= '<td class="text-center">' . $item->no_surat . '</td>';
+          $hasil .= '<td class="text-center">' . $no_pr . '</td>';
+          $hasil .= '<td class="text-center"><input type="checkbox" name="no_po[]" class="check_po" value="' . $item->no_po . '"></td>';
+          $hasil .= '</tr>';
         }
-
-        $no_pr = implode(', ', $no_pr);
-
-        $hasil .= '<tr>';
-        $hasil .= '<td class="text-center">' . $item->no_surat . '</td>';
-        $hasil .= '<td class="text-center">' . $no_pr . '</td>';
-        $hasil .= '<td class="text-center"><input type="checkbox" name="no_po[]" class="check_po" value="' . $item->no_po . '"></td>';
-        $hasil .= '</tr>';
       }
     }
 

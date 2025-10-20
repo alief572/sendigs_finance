@@ -41,10 +41,8 @@
 			<tr>
 				<th class='text-center' width='5%'>#</th>
 				<th class='text-left'>Stok Name</th>
-				<th class='text-center' width='9%'>Qty Pack</th>
-				<th class='text-center' width='9%'>Unit Pack</th>
 				<th class='text-center' width='9%'>Qty</th>
-				<th class='text-center' width='12%'>Unit Measurement</th>
+				<th class='text-center' width='9%'>Unit</th>
 				<th class='text-center' width='20%'>Keterangan</th>
 			</tr>
 		</thead>
@@ -72,8 +70,6 @@
 					echo "<td align='center'>" . $No . "</td>";
 					echo "<td>" . $nm_material . "</td>";
 					echo "<td align='center'>" . number_format($qty_in, 2) . "</td>";
-					echo "<td align='center'>" . strtoupper($packing) . "</td>";
-					echo "<td align='center'>" . number_format($qty_in * $konversi, 2) . "</td>";
 					echo "<td align='center'>" . strtoupper($get_stock->satuan) . "</td>";
 					echo "<td>" . $value['keterangan'] . "</td>";
 					echo "</tr>";
