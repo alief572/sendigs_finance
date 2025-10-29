@@ -48,6 +48,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							<th class="text-center no-sort" width='7%'>Qty</th>
 							<th class="text-center no-sort">Dibutuhkan</th>
 							<th class="text-center no-sort">Keterangan</th>
+							<th class="text-center no-sort">PIC</th>
 							<th class="text-center no-sort">Status</th>
 							<th class="text-center no-sort" width='13%'>Option</th>
 						</tr>
@@ -100,6 +101,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							echo '<td>' . $dt_qty . '</td>';
 							echo '<td>' . $dt_tanggal . '</td>';
 							echo '<td>' . $dt_ket . '</td>';
+							echo '<td>' . $item->nm_lengkap . '</td>';
 
 							$last_by     = (!empty($item->updated_by)) ? $item->updated_by : $item->created_by;
 							$last_date = (!empty($item->updated_date)) ? $item->updated_date : $item->created_date;

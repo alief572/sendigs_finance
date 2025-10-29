@@ -624,6 +624,7 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $dt_qty . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_ket . "</div>";
+            $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
@@ -753,10 +754,11 @@ class Non_rutin_model extends BF_Model
         $sql = "
 			SELECT
 				(@row:=@row+1) AS nomor,
-				a.*
+				a.*, c.nm_lengkap
 			FROM
 				rutin_non_planning_detail z
 				LEFT JOIN rutin_non_planning_header a ON z.no_pengajuan=a.no_pengajuan
+                LEFT JOIN users c ON c.id_user = a.created_by
 		    WHERE 1=1 " . $where . " AND 
             a.status_id = 1 AND 
             a.no_pr IS NULL AND 
