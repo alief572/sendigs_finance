@@ -56,9 +56,10 @@ class Non_rutin extends Admin_Controller
 		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
 		$get_department = $this->hris->get()->result();
 
-		$get_list_data = $this->db->select('a.*')
+		$get_list_data = $this->db->select('a.*, c.nm_lengkap')
 			->from('rutin_non_planning_detail z')
 			->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
+			->join('users c', 'c.id_user = a.created_by', 'left')
 			->where('a.status_id', 1)
 			->where('a.close_pr', null)
 			->group_by('z.no_pengajuan')
