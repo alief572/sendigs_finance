@@ -50,11 +50,11 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 </div>
 
 <div class="modal modal-default fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" style="width: 150vh;">
+    <div class="modal-dialog" style="width: 1200px;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-users"></span>Posting Jurnal</h4>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-users"></span> Posting Jurnal</h4>
             </div>
             <form action="" method="post" id="frm-data">
                 <div class="modal-body" id="ModalView">
@@ -62,6 +62,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary save_btn_modal"><i class="fa fa-save"></i> Save</button>
+                    <button type="button" class="btn btn-warning" onclick="revisi_jurnal()"><i class="fa fa-pencil"></i> Revisi</button>
                     <button type="button" class="btn btn-danger" data-dismiss="modal">
                         <span class="glyphicon glyphicon-remove"></span> Close</button>
                 </div>
@@ -72,31 +73,62 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 
 <div id="form-data"></div>
 <!-- DataTables -->
-
+<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
         DataTables();
+        autoNum();
     });
 
     $(document).on('click', '.posting_jurnal', function() {
         var id = $(this).data('id');
 
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'modal_posting_jurnal',
+            data: {
+                'id': id
+            },
+            cache: false,
+            success: function(result) {
+                $('#ModalView').html(result);
+
+                $('#dialog-popup').modal('show');
+                autoNum();
+            },
+            error: function(result) {
+                swal({
+                    type: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !',
+                    allowOutsideClick: false,
+                    timer: 3000,
+                    showConfirmButton: false,
+                    showCancelButton: false
+                });
+            }
+        });
+    });
+
+    $(document).on('submit', '#frm-data', function(e) {
+        e.preventDefault();
+
         swal({
             type: 'warning',
             title: 'Are you sure ?',
-            text: 'This data will be posted to Tras!',
-            showCancelButton: true,
+            text: 'This data will be moved to Tras !',
+            showConfirmButton: true,
             allowOutsideClick: false
-        }, function(value) {
-            if (value) {
+        }, function(next) {
+            if (next) {
+                var formdata = $('#frm-data').serialize();
+
                 $.ajax({
                     type: 'post',
                     url: siteurl + active_controller + 'save_posting_jurnal',
-                    data: {
-                        'id': id
-                    },
+                    data: formdata,
                     cache: false,
                     dataType: 'json',
                     success: function(result) {
@@ -105,11 +137,13 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                                 type: 'success',
                                 title: 'Success !',
                                 text: result.msg,
-                                timer: 3000,
                                 allowOutsideClick: false,
-                                showCancelButton: false,
+                                timer: 3000,
                                 showConfirmButton: false,
+                                showCancelButton: false
                             }, function(lanjut) {
+                                $('#dialog-popup').modal('hide');
+
                                 swal.close();
                                 DataTables();
                             });
@@ -117,11 +151,11 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                             swal({
                                 type: 'warning',
                                 title: 'Failed !',
-                                text: 'Please try again later !',
+                                text: result.msg,
+                                allowOutsideClick: false,
                                 timer: 3000,
-                                showCancelButton: false,
                                 showConfirmButton: false,
-                                allowOutsideClick: false
+                                showCancelButton: false
                             });
                         }
                     },
@@ -130,16 +164,95 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                             type: 'error',
                             title: 'Error !',
                             text: 'Please try again later !',
+                            allowOutsideClick: false,
                             timer: 3000,
-                            showCancelButton: false,
                             showConfirmButton: false,
-                            allowOutsideClick: false
+                            showCancelButton: false
                         });
                     }
                 });
             }
         });
     });
+
+    function revisi_jurnal() {
+        var alasan_revisi = $('textarea[name="alasan_revisi"]').val();
+        if (alasan_revisi == '') {
+            swal({
+                type: 'warning',
+                title: 'Warning !',
+                text: 'Alasan revisi harus diisi !'
+            });
+
+            return false;
+        }
+
+        swal({
+            type: 'warning',
+            title: 'Anda yakin ?',
+            text: 'Data jurnal ini akan masuk ke Revisi Jurnal !',
+            showCancelButton: true,
+            showConfirmButton: true,
+            allowOutsideClick: false
+        }, function(next) {
+            if (next) {
+                var id = $('input[name="id"]').val();
+
+                $.ajax({
+                    type: 'post',
+                    url: siteurl + active_controller + 'update_sts_revisi_jurnal',
+                    data: {
+                        'id': id,
+                        'alasan_revisi': alasan_revisi
+                    },
+                    cache: false,
+                    dataType: 'json',
+                    success: function(result) {
+                        if (result.status == '1') {
+                            swal({
+                                type: 'success',
+                                title: 'Success !',
+                                text: result.msg,
+                                showConfirmButton: false,
+                                showCancelButton: false,
+                                allowOutsideClick: false,
+                                timer: 3000
+                            }, function(lanjut) {
+                                $('#dialog-popup').modal('hide');
+                                DataTables();
+                                swal.close();
+                            });
+                        } else {
+                            swal({
+                                type: 'warning',
+                                title: 'Failed !',
+                                text: result.msg,
+                                showConfirmButton: false,
+                                showCancelButton: false,
+                                allowOutsideClick: false,
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function(result) {
+                        swal({
+                            type: 'error',
+                            title: 'Error !',
+                            text: 'Please try again later !',
+                            showConfirmButton: false,
+                            showCancelButton: false,
+                            allowOutsideClick: false,
+                            timer: 3000
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    function autoNum() {
+        $('.autonum').autoNumeric('init');
+    }
 
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();
