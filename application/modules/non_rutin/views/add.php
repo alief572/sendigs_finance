@@ -292,6 +292,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.datatables.net/2.0.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 	$(document).ready(function() {
 		$('.maskM').autoNumeric();
@@ -365,10 +366,10 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 				swal.close();
 			},
 			error: function() {
-				swal({
+				Swal.fire({
 					title: "Error Message !",
 					text: 'Connection Time Out. Please try again..',
-					type: "warning",
+					icon: "warning",
 					timer: 3000,
 					showCancelButton: false,
 					showConfirmButton: false,
@@ -403,10 +404,10 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 		var sts_app = $('#sts_app').val();
 		// alert('Tahan'); return false;
 		if (id_dept == '0') {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Department name empty, select first ...',
-				type: "warning"
+				icon: "warning"
 			});
 
 			$('#save').prop('disabled', false);
@@ -428,10 +429,14 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 		var tanda = "";
 		if (app == 'approve') {
 			if (sts_app == '0') {
-				swal({
+				Swal.fire({
 					title: "Error Message!",
 					text: 'Status Approve empty, select first ...',
-					type: "warning"
+					icon: "warning",
+					showCancelButton: false,
+					showConfirmButton: false,
+					allowOutsideClick: false,
+					timer: 2000
 				});
 
 				$('#save').prop('disabled', false);
@@ -450,10 +455,14 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			}
 		});
 		if (FALIDASIwajib === false) {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Satuan wajib diisi !',
-				type: "warning"
+				icon: "warning",
+				showCancelButton: false,
+				showConfirmButton: false,
+				allowOutsideClick: false,
+				timer: 2000
 			});
 
 			$('#save').prop('disabled', false);
@@ -471,10 +480,14 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			}
 		});
 		if (FALIDASI === false) {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Tgl dibutuhkan wajib diisi !',
-				type: "warning"
+				icon: "warning",
+				showCancelButton: false,
+				showConfirmButton: false,
+				allowOutsideClick: false,
+				timer: 2000
 			});
 
 			$('#save').prop('disabled', false);
@@ -483,41 +496,40 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 
 		$('#save').prop('disabled', true);
 
-		swal({
-				title: "Are you sure?",
-				text: "Save this data ?",
-				type: "warning",
-				showCancelButton: true,
-				confirmButtonClass: "btn-danger",
-				confirmButtonText: "Yes, Process it!",
-				cancelButtonText: "No, cancel process!",
-				closeOnConfirm: true,
-				closeOnCancel: false
-			},
-			function(isConfirm) {
-				if (isConfirm) {
-					// loading_spinner();
-					var formData = new FormData($('#form_ct')[0]);
-					var baseurl = base_url + active_controller + '/add';
-					$.ajax({
-						url: baseurl,
-						type: "POST",
-						data: formData,
-						cache: false,
-						dataType: 'json',
-						processData: false,
-						contentType: false,
-						success: function(data) {
-							if (data.status == 1) {
-								swal({
-									title: "Save Success!",
-									text: data.pesan,
-									type: "success",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
+		Swal.fire({
+			title: "Are you sure?",
+			text: "Save this data ?",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonClass: "btn-danger",
+			confirmButtonText: "Yes, Process it!",
+			cancelButtonText: "No, cancel process!",
+			closeOnConfirm: true,
+			closeOnCancel: false
+		}).then((isConfirm) => {
+			if (isConfirm.isConfirmed) {
+				// loading_spinner();
+				var formData = new FormData($('#form_ct')[0]);
+				var baseurl = base_url + active_controller + '/add';
+				$.ajax({
+					url: baseurl,
+					type: "POST",
+					data: formData,
+					cache: false,
+					dataType: 'json',
+					processData: false,
+					contentType: false,
+					success: function(data) {
+						if (data.status == 1) {
+							Swal.fire({
+								title: "Save Success!",
+								text: data.pesan,
+								icon: "success",
+								timer: 3000,
+								showCancelButton: false,
+								showConfirmButton: false,
+								allowOutsideClick: false
+							}).then((next) => {
 								var return_link = '';
 								if (tingkat_approval == '1') {
 									return_link = 'approval_head';
@@ -529,38 +541,41 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 									return_link = 'approval_management';
 								}
 								window.location.href = base_url + active_controller + return_link;
-							} else if (data.status == 0) {
-								swal({
-									title: "Save Failed!",
-									text: data.pesan,
-									type: "warning",
-									timer: 3000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-								$('#save').prop('disabled', false);
-							}
-						},
-						error: function() {
-							swal({
-								title: "Error Message !",
-								text: 'An Error Occured During Process. Please try again..',
-								type: "warning",
-								timer: 7000,
+							});
+						} else if (data.status == 0) {
+							Swal.fire({
+								title: "Save Failed!",
+								text: data.pesan,
+								icon: "warning",
+								timer: 3000,
 								showCancelButton: false,
 								showConfirmButton: false,
 								allowOutsideClick: false
+							}).then((next) => {
+								$('#save').prop('disabled', false);
 							});
-							$('#save').prop('disabled', false);
 						}
-					});
-				} else {
-					swal("Cancelled", "Data can be process again :)", "error");
-					$('#save').prop('disabled', false);
-					return false;
-				}
-			});
+					},
+					error: function() {
+						Swal.fire({
+							title: "Error Message !",
+							text: 'An Error Occured During Process. Please try again..',
+							icon: "warning",
+							timer: 3000,
+							showCancelButton: false,
+							showConfirmButton: false,
+							allowOutsideClick: false
+						}).then(next => {
+							$('#save').prop('disabled', false);
+						});
+					}
+				});
+			} else {
+				Swal.fire("Cancelled", "Data can be process again :)", "error");
+				$('#save').prop('disabled', false);
+				return false;
+			}
+		});
 	});
 
 	$(document).on('click', '.edit_detail', function() {
@@ -619,27 +634,43 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			},
 			success: function(result) {
 				if (result.status == 1) {
-					swal({
+					Swal.fire({
 						title: 'Success !',
 						text: 'Success, item data has been updated !',
-						type: 'success'
+						icon: 'success',
+						timer: 2000,
+						showCancelButton: false,
+						showConfirmButton: false,
+						allowOutsideClick: false
+					}).then((next) => {
+						location.reload();
 					});
 				} else {
-					swal({
+					Swal.fire({
 						title: 'Failed !',
 						text: 'Failed, item data has not been updated !',
-						type: 'error'
+						icon: 'error',
+						timer: 2000,
+						showCancelButton: false,
+						showConfirmButton: false,
+						allowOutsideClick: false
+					}).then((next) => {
+						location.reload();
 					});
 				}
-				location.reload();
 			},
 			error: function(result) {
 				swal({
 					title: 'Failed !',
 					text: 'Failed, item data has not been updated !',
-					type: 'error'
+					type: 'error',
+					timer: 2000,
+					showCancelButton: false,
+					showConfirmButton: false,
+					allowOutsideClick: false
+				}).then((next) => {
+					location.reload();
 				});
-				location.reload();
 			}
 		});
 	});
