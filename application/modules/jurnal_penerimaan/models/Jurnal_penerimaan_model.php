@@ -116,4 +116,43 @@ class Jurnal_penerimaan_model extends BF_Model
 
         echo json_encode($response);
     }
+
+    public function update_sts_revisi_jurnal()
+    {
+        $post = $this->input->post();
+
+        $this->db->trans_begin();
+
+        $valid = 1;
+        $msg = '';
+
+        $update_sts = $this->db->update('tr_jurnal', ['sts' => '9', 'alasan_revisi' => $post['alasan_revisi']], ['id' => $post['id']]);
+        if (!$update_sts) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = $this->db->error()['message'];
+        }
+
+        if ($this->db->trans_status() === false || $valid == 0) {
+            if ($valid !== 0) {
+                $this->db->trans_rollback();
+
+                $valid = 0;
+                $msg = 'Please try again later !';
+            }
+        } else {
+            $this->db->trans_commit();
+
+            $valid = 1;
+            $msg = 'Status data berhasil di update !';
+        }
+
+        $response = [
+            'status' => $valid,
+            'msg' => $msg
+        ];
+
+        echo json_encode($response);
+    }
 }
