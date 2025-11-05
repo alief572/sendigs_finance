@@ -208,7 +208,7 @@ class Budget_rutin extends Admin_Controller
 
         $get_price_ref = $this->db->get_where('accessories', ['id' => $id_barang])->row();
 
-        $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_ref_high : 0;
+        $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_ref : 0;
 
         echo json_encode([
             'nilai_price_ref' => $price_ref
