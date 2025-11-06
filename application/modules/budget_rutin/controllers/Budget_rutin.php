@@ -208,10 +208,49 @@ class Budget_rutin extends Admin_Controller
 
         $get_price_ref = $this->db->get_where('accessories', ['id' => $id_barang])->row();
 
-        $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_ref : 0;
+        $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_ref_use : 0;
 
         echo json_encode([
             'nilai_price_ref' => $price_ref
         ]);
+    }
+
+    public function update_price_reference()
+    {
+        $get_detail = $this->db->get('budget_rutin_detail')->result();
+
+        $arr_update = array();
+        foreach ($get_detail as $item) {
+            $get_stok = $this->db->get_where('accessories', ['id' => $item->id_barang])->row();
+
+            $price_ref = (!empty($get_stok)) ? $get_stok->price_ref_use : 0;
+            $total_price = $item->kebutuhan_month * $price_ref;
+
+            $arr_update[] = array(
+                'id' => $item->id,
+                'price_reference' => $price_ref,
+                'total_price' => $total_price
+            );
+        }
+
+        $this->db->trans_begin();
+
+        $update_price_ref = $this->db->update_batch('budget_rutin_detail', $arr_update, 'id');
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+
+            $valid = 'failed';
+        } else {
+            $this->db->trans_commit();
+
+            $valid = 'success';
+        }
+
+        $response = array(
+            'status' => $valid
+        );
+
+        echo json_encode($response);
     }
 }
