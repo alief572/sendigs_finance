@@ -17,7 +17,7 @@
 							?>
 						</div>
 						<div class="col-md-2">
-							<button type="button" class="btn btn-sm btn-primary" id="update_price_ref"><i class="fa fa-refresh"></i> Update Price Reference</button>
+							<!-- <button type="button" class="btn btn-sm btn-primary" id="update_price_ref"><i class="fa fa-refresh"></i> Update Price Reference</button> -->
 						</div>
 						<div class="col-md-5"></div>
 					</div>
