@@ -16,7 +16,10 @@
 							echo form_dropdown('department', $datdepartemen, set_value('department', isset($data->department) ? $data->department : '0'), array('id' => 'department', 'class' => 'form-control select2', 'style' => 'width:100%;', 'required' => 'required'));
 							?>
 						</div>
-						<div class="col-md-7"></div>
+						<div class="col-md-2">
+							<button type="button" class="btn btn-sm btn-primary" id="update_price_ref"><i class="fa fa-refresh"></i> Update Price Reference</button>
+						</div>
+						<div class="col-md-5"></div>
 					</div>
 					<div class="row" hidden>
 						<div class="col-md-6">
@@ -411,6 +414,44 @@
 		})
 
 		$('.tfoot_' + id_type).html(number_format(totalPrice));
+	});
+
+	$(document).on('click', '#update_price_ref', function() {
+		swal({
+			title: 'Are you sure?',
+			text: "to update all Price Reference based on the latest data!",
+			type: 'warning',
+			showCancelButton: true,
+			confirmButtonColor: '#3085d6',
+			cancelButtonColor: '#d33',
+			confirmButtonText: 'Yes, update it!'
+		}, function(next) {
+			if (next) {
+				$.ajax({
+					url: siteurl + active_controller + 'update_price_reference',
+					type: 'POST',
+					dataType: 'json',
+					success: function(response) {
+						if (response.status == 'success') {
+							swal({
+								title: 'Updated!',
+								text: 'Price Reference has been updated.',
+								type: 'success',
+								timer: 2000,
+								showConfirmButton: false
+							}, function(next) {
+								location.reload();
+							});
+						} else {
+							swal('Error!', 'Failed to update Price Reference.', 'error');
+						}
+					},
+					error: function() {
+						swal('Error!', 'An error occurred while updating Price Reference.', 'error');
+					}
+				});
+			}
+		});
 	});
 
 	function number_format(number, decimals, dec_point, thousands_sep) {
