@@ -7,6 +7,30 @@ class Metode_pembelian_model extends BF_Model
 		parent::__construct();
 	}
 
+	public function generate_no_pr_non_po($no)
+	{
+		$prefix = "NON-PO";
+		$date_part = date('ymd');
+		$like_pattern = $prefix . $date_part;
+
+		$this->db->select('MAX(RIGHT(no_non_po, 4)) AS max_number');
+		$this->db->like('no_non_po', $like_pattern, 'both');
+		$query = $this->db->get('tr_pr_non_po');
+
+		$max_number = 0;
+		if ($query->num_rows() > 0) {
+			$row = $query->row();
+			$max_number = (int)$row->max_number;
+		}
+
+		$new_number = $max_number + $no;
+		$new_number_padded = str_pad($new_number, 4, '0', STR_PAD_LEFT);
+
+		$new_no_non_po = $prefix . $date_part . $new_number_padded;
+
+		return $new_no_non_po;
+	}
+
 	//==================================================================================================================
 	//=============================================PURCHASE REQUEST=====================================================
 	//==================================================================================================================
@@ -1224,26 +1248,106 @@ class Metode_pembelian_model extends BF_Model
 		// if ($jenis_pembelian == 'non po') {
 		// }
 
+		$no = 0;
 		foreach ($data['check'] as $valx) :
+			$no++;
+
 			$category_pr = $data['category_' . $valx];
 			if ($category_pr == 'departemen') {
-				$this->db->update('rutin_non_planning_header', [
+
+				if ($kode_jenis_pembelian == '2') {
+					$get_pr_department = $this->db->get_where('rutin_non_planning_header', array('no_pr' => $valx))->row();
+					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_department->created_by))->row();
+
+					$this->db->select('SUM(a.qty * a.harga) as ttl_pr');
+					$this->db->from('rutin_non_planning_detail a');
+					$this->db->where('a.no_pr', $valx);
+					$get_detail_pr = $this->db->get()->row();
+
+					$ttl_pr = (!empty($get_detail_pr->ttl_pr)) ? $get_detail_pr->ttl_pr : 0;
+
+					if (!empty($get_pr_department)) {
+						$arr_insert_non_po = [
+							'no_non_po' => $this->generate_no_pr_non_po($no),
+							'id_pr' => $get_pr_department->id,
+							'no_pr' => $get_pr_department->no_pr,
+							'jenis_pr' => 'pr departemen',
+							'id_pic' => $get_user->id_user,
+							'nm_pic' => $get_user->nm_lengkap,
+							'total_pr' => $ttl_pr,
+							'created_by' => $this->auth->user_id(),
+							'created_date' => date('Y-m-d H:i:s')
+						];
+
+						$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
+					}
+				}
+
+				$arr_update = [
 					'metode_pembelian' => $kode_jenis_pembelian
-				], [
-					'no_pr' => $valx
-				]);
+				];
+
+				$this->db->where('no_pr', $valx);
+				$update_departemen = $this->db->update('rutin_non_planning_header', $arr_update);
 			} elseif ($category_pr == 'asset') {
-				$this->db->update('tran_pr_header', [
+
+				if ($kode_jenis_pembelian == '2') {
+					$get_pr_header = $this->db->get_where('tran_pr_header', array('no_pr' => $valx))->row();
+					$get_pr_detail = $this->db->get_where('tran_pr_detail', array('no_pr' => $valx))->row();
+					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_header->created_by))->row();
+
+					$arr_insert_non_po = [
+						'no_non_po' => $this->generate_no_pr_non_po($no),
+						'id_pr' => $get_pr_header->id,
+						'no_pr' => $get_pr_header->no_pr,
+						'jenis_pr' => 'pr asset',
+						'id_pic' => $get_user->id_user,
+						'nm_pic' => $get_user->nm_lengkap,
+						'total_pr' => ($get_pr_detail->qty * $get_pr_detail->nilai_pr),
+						'created_by' => $this->auth->user_id(),
+						'created_date' => date('Y-m-d H:i:s')
+					];
+
+					$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
+				}
+
+				$arr_update = [
 					'metode_pembelian' => $kode_jenis_pembelian
-				], [
-					'no_pr' => $valx
-				]);
+				];
+
+				$this->db->where('no_pr', $valx);
+				$update_asset = $this->db->update('tran_pr_header', $arr_update);
 			} else {
-				$this->db->update('material_planning_base_on_produksi', [
+				if ($kode_jenis_pembelian == '2') {
+					$get_pr_header = $this->db->get_where('material_planning_base_on_produksi', array('no_pr' => $valx))->row();
+					$get_pr_detail = $this->db->get_where('material_planning_base_on_produksi_detail', array('so_number' => $get_pr_header->so_number))->result();
+					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_header->created_by))->row();
+
+					$ttl_pengajuan = 0;
+					foreach ($get_pr_detail as $val_detail) {
+						$ttl_pengajuan += ($val_detail->propose_purchase * $val_detail->price_ref);
+					}
+
+					$arr_insert_non_po = [
+						'no_non_po' => $this->generate_no_pr_non_po($no),
+						'id_pr' => $get_pr_header->id,
+						'no_pr' => $get_pr_header->no_pr,
+						'jenis_pr' => 'pr stok',
+						'id_pic' => $get_user->id_user,
+						'nm_pic' => $get_user->nm_lengkap,
+						'total_pr' => $ttl_pengajuan,
+						'created_by' => $this->auth->user_id(),
+						'created_date' => date('Y-m-d H:i:s')
+					];
+
+					$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
+				}
+				$arr_update = [
 					'metode_pembelian' => $kode_jenis_pembelian
-				], [
-					'no_pr' => $valx
-				]);
+				];
+
+				$this->db->where('no_pr', $valx);
+				$update_material = $this->db->update('material_planning_base_on_produksi', $arr_update);
 			}
 		endforeach;
 

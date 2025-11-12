@@ -63,6 +63,7 @@ class Non_rutin extends Admin_Controller
 			->where('a.status_id', 1)
 			->where('a.close_pr', null)
 			->group_by('z.no_pengajuan')
+			->order_by('a.created_date', 'DESC')
 			->get()
 			->result();
 

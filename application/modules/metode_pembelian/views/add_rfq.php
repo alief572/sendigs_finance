@@ -100,6 +100,7 @@
 </style>
 <script src="https://cdn.datatables.net/2.0.5/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 	$(document).ready(function() {
 		$('.chosen-select').chosen();
@@ -144,23 +145,33 @@
 		var pic = $('#pic').val();
 
 		if (jenis_pembelian == '0') {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Jenis Pembelian Not Select, please input first ...',
-				type: "warning"
+				icon: "warning",
+				timer: 3000,
+				showConfirmButton: false,
+				showCancelButton: false,
+				allowOutsideClick: false
+			}).then((next) => {
+				$('#save_rfq').prop('disabled', false);
+				return false;
 			});
-			$('#save_rfq').prop('disabled', false);
-			return false;
 		}
 
 		if (category == '0') {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Category Not Select, please input first ...',
-				type: "warning"
+				icon: "warning",
+				timer: 3000,
+				showConfirmButton: false,
+				showCancelButton: false,
+				allowOutsideClick: false
+			}).then((next) => {
+				$('#save_rfq').prop('disabled', false);
+				return false;
 			});
-			$('#save_rfq').prop('disabled', false);
-			return false;
 		}
 
 		if (jenis_pembelian == 'po') {
@@ -168,7 +179,7 @@
 			// 	swal({
 			// 		title: "Error Message!",
 			// 		text: 'Supplier Not Select, please input first ...',
-			// 		type: "warning"
+			// 		icon: "warning"
 			// 	});
 			// 	$('#save_rfq').prop('disabled', false);
 			// 	return false;
@@ -180,7 +191,7 @@
 			// 	swal({
 			// 		title: "Error Message!",
 			// 		text: 'PIC is empty, please input first ...',
-			// 		type: "warning"
+			// 		icon: "warning"
 			// 	});
 			// 	$('#save_rfq').prop('disabled', false);
 			// 	return false;
@@ -188,82 +199,86 @@
 		}
 
 		if ($('input[type=checkbox]:checked').length == 0) {
-			swal({
+			Swal.fire({
 				title: "Error Message!",
 				text: 'Checklist Minimal One Component',
-				type: "warning"
+				icon: "warning",
+				timer: 3000,
+				showConfirmButton: false,
+				showCancelButton: false,
+				allowOutsideClick: false
+			}).then((next) => {
+				$('#save_rfq').prop('disabled', false);
+				return false;
 			});
-			$('#save_rfq').prop('disabled', false);
-			return false;
 		}
 
 		// alert('Tahan');
 		// return false;
 
-		swal({
-				title: "Are you sure?",
-				text: "You will be able to process again this data!",
-				type: "warning",
-				showCancelButton: true,
-				confirmButtonClass: "btn-danger",
-				confirmButtonText: "Yes, Process it!",
-				cancelButtonText: "No, cancel process!",
-				closeOnConfirm: false,
-				closeOnCancel: false
-			},
-			function(isConfirm) {
-				if (isConfirm) {
-					// loading_spinner();
-					var formData = new FormData($('#form_proses_bro')[0]);
-					$.ajax({
-						url: base_url + active_controller + '/save_rfq',
-						type: "POST",
-						data: formData,
-						cache: false,
-						dataType: 'json',
-						processData: false,
-						contentType: false,
-						success: function(data) {
-							if (data.status == 1) {
-								swal({
-									title: "Save Success!",
-									text: data.pesan,
-									type: "success",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-								window.location.href = base_url + active_controller + '/pr';
-							} else if (data.status == 0) {
-								swal({
-									title: "Save Failed!",
-									text: data.pesan,
-									type: "warning",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-							}
-						},
-						error: function() {
-							swal({
-								title: "Error Message !",
-								text: 'An Error Occured During Process. Please try again..',
-								type: "warning",
-								timer: 7000,
+		Swal.fire({
+			title: "Are you sure?",
+			text: "You will be able to process again this data!",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonClass: "btn-danger",
+			confirmButtonText: "Yes, Process it!",
+			cancelButtonText: "No, cancel process!",
+			closeOnConfirm: false,
+			closeOnCancel: false
+		}).then((result) => {
+			if (result.isConfirmed) {
+				// loading_spinner();
+				// var formData = new FormData($('#form_proses_bro')[0]);
+				var formData = $('#form_proses_bro').serialize();
+				$.ajax({
+					url: base_url + active_controller + '/save_rfq',
+					type: "POST",
+					data: formData,
+					cache: false,
+					dataType: 'json',
+					success: function(data) {
+						if (data.status == 1) {
+							Swal.fire({
+								title: "Save Success!",
+								text: data.pesan,
+								icon: "success",
+								timer: 3000,
+								showCancelButton: false,
+								showConfirmButton: false,
+								allowOutsideClick: false
+							}).then((then) => {
+								window.location.href = base_url + active_controller + 'pr';
+							});
+						} else if (data.status == 0) {
+							Swal.fire({
+								title: "Save Failed!",
+								text: data.pesan,
+								icon: "warning",
+								timer: 3000,
 								showCancelButton: false,
 								showConfirmButton: false,
 								allowOutsideClick: false
 							});
 						}
-					});
-				} else {
-					swal("Cancelled", "Data can be process again :)", "error");
-					return false;
-				}
-			});
+					},
+					error: function() {
+						Swal.fire({
+							title: "Error Message !",
+							text: 'An Error Occured During Process. Please try again..',
+							icon: "warning",
+							timer: 3000,
+							showCancelButton: false,
+							showConfirmButton: false,
+							allowOutsideClick: false
+						});
+					}
+				});
+			} else {
+				Swal.fire("Cancelled", "Data can be process again :)", "error");
+				return false;
+			}
+		});
 	});
 
 	$(document).on('click', '.changeCheckList', function() {

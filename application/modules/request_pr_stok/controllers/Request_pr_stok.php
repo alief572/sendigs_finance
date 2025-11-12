@@ -138,7 +138,7 @@ class Request_pr_stok extends Admin_Controller
 
     $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $id_material])->row();
 
-    $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_reference : 0;
+    $price_ref = (!empty($get_accessories)) ? $get_accessories->price_ref_use : 0;
 
 
     $ArrHeader = array(
@@ -146,7 +146,7 @@ class Request_pr_stok extends Admin_Controller
       'request'       => $purchase,
       'request_pack' => $purchase_pack,
       'tgl_dibutuhkan' => $tanggal,
-      'price_ref_high' => $price_ref
+      'price_ref_use' => $price_ref
     );
     // print_r($ArrHeader);
     // exit;
@@ -471,7 +471,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrUpdate[$key]['tgl_dibutuhkan'] = $tgl_next_month;
       $ArrUpdate[$key]['spec_pr'] = null;
       $ArrUpdate[$key]['info_pr'] = null;
-      $ArrUpdate[$key]['price_ref_high'] = $price_ref;
+      $ArrUpdate[$key]['price_ref_use'] = $price_ref;
     }
 
     $this->db->trans_start();
@@ -627,7 +627,7 @@ class Request_pr_stok extends Admin_Controller
     $post = $this->input->post();
     $get_material = $this->db->get_where('accessories', ['id' => $post['id']])->row();
 
-    $price_ref = (!empty($get_material) && $get_material->price_ref_high !== null) ? $get_material->price_ref_high : 0;
+    $price_ref = (!empty($get_material) && $get_material->price_ref_use !== null) ? $get_material->price_ref_use : 0;
 
     $this->db->trans_begin();
 
@@ -741,7 +741,7 @@ class Request_pr_stok extends Admin_Controller
   {
     $category = $this->input->post('category');
 
-    $this->db->select('a.request, a.price_ref_high');
+    $this->db->select('a.request, a.price_ref_use');
     $this->db->from('accessories a');
     $this->db->where('a.id_category', $category);
     $this->db->where('a.request >', 0);
@@ -749,7 +749,7 @@ class Request_pr_stok extends Admin_Controller
 
     $nilai_pengajuan = 0;
     foreach ($get_hitung_pengajuan as $item) {
-      $nilai_pengajuan += ($item->request * $item->price_ref_high);
+      $nilai_pengajuan += ($item->request * $item->price_ref_use);
     }
 
     $response = [

@@ -414,7 +414,7 @@ class Request_pr_stok_model extends BF_Model
 
 
 
-    $this->db->select('SUM(a.request * a.price_ref) as total_price');
+    $this->db->select('SUM(a.request * a.price_ref_use) as total_price');
     $this->db->from('accessories a');
     if (!empty($requestData['category'])) {
       $this->db->where('a.id_category', $requestData['category']);
@@ -452,7 +452,7 @@ class Request_pr_stok_model extends BF_Model
       $konversi = ($row['konversi'] > 0) ? $row['konversi'] : 1;
 
       // $get_price_ref = $this->db->select('price_reference')->get_where('budget_rutin_detail', ['id_barang' => $row['id']])->row();
-      $price_ref = $row['price_ref'];
+      $price_ref = $row['price_ref_use'];
 
       $kebutuhnMonth   = (!empty($GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'])) ? $GET_KEBUTUHAN_PER_MONTH[$row['id']]['kebutuhan'] : 0;
       $nestedData[]  = "<div align='right'>" . number_format($kebutuhnMonth) . "</div>";
@@ -496,7 +496,7 @@ class Request_pr_stok_model extends BF_Model
 									});
 									</script>";
 
-      $nestedData[] = number_format($price_ref);
+      $nestedData[] = number_format($row['price_ref_use']);
       $nestedData[] = '<div align="right">' . $grand_total_val . '</div>';
       $data[] = $nestedData;
       $urut1++;
