@@ -49,7 +49,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
-        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
         $hasil_jurnal = '';
 
@@ -68,22 +68,35 @@ class Invoicing extends Admin_Controller
             $debit = 0;
             $kredit = 0;
 
-            if ($item_coa_jurnal['no_perkiraan'] == '1030-10-1') {
+            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $debit = ($total_nominal + $ppn);
+                $pph = ($total_nominal * 2 / 100);
+                $debit = ($total_nominal + $ppn - $pph);
             }
-            if ($item_coa_jurnal['no_perkiraan'] == '4010-10-1') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $kredit = $total_nominal;
-            }
-            if ($item_coa_jurnal['no_perkiraan'] == '2010-30-6') {
+
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
 
                 $kredit = $ppn;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $pph = ($total_nominal * 2 / 100);
+                $debit = $pph;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 2 / 100);
+
+                $kredit = $total_nominal;
             }
 
             $hasil_jurnal .= '<tr>';
@@ -154,7 +167,7 @@ class Invoicing extends Admin_Controller
 
         $this->auth->restrict($this->viewPermission);
 
-        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
         $hasil_jurnal = '';
 
@@ -173,22 +186,35 @@ class Invoicing extends Admin_Controller
             $debit = 0;
             $kredit = 0;
 
-            if ($item_coa_jurnal['no_perkiraan'] == '1030-10-1') {
+            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $debit = ($total_nominal + $ppn);
+                $pph = ($total_nominal * 2 / 100);
+                $debit = ($total_nominal + $ppn - $pph);
             }
-            if ($item_coa_jurnal['no_perkiraan'] == '4010-10-1') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $kredit = $total_nominal;
-            }
-            if ($item_coa_jurnal['no_perkiraan'] == '2010-30-6') {
+
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
 
                 $kredit = $ppn;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $pph = ($total_nominal * 2 / 100);
+                $debit = $pph;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 2 / 100);
+
+                $kredit = $total_nominal;
             }
 
             $hasil_jurnal .= '<tr>';
@@ -260,7 +286,7 @@ class Invoicing extends Admin_Controller
 
         $this->auth->restrict($this->viewPermission);
 
-        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
         $hasil_jurnal = '';
 
@@ -279,22 +305,35 @@ class Invoicing extends Admin_Controller
             $debit = 0;
             $kredit = 0;
 
-            if ($item_coa_jurnal['no_perkiraan'] == '1030-10-1') {
+            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $debit = ($total_nominal + $ppn);
+                $pph = ($total_nominal * 2 / 100);
+                $debit = ($total_nominal + $ppn - $pph);
             }
-            if ($item_coa_jurnal['no_perkiraan'] == '4010-10-1') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $kredit = $total_nominal;
-            }
-            if ($item_coa_jurnal['no_perkiraan'] == '2010-30-6') {
+
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
 
                 $kredit = $ppn;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $pph = ($total_nominal * 2 / 100);
+                $debit = $pph;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 2 / 100);
+
+                $kredit = $total_nominal;
             }
 
             $hasil_jurnal .= '<tr>';
@@ -426,7 +465,7 @@ class Invoicing extends Admin_Controller
             'created_date' => date('Y-m-d H:i:s')
         ];
 
-        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
