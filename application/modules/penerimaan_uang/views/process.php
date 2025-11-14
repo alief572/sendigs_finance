@@ -149,10 +149,11 @@
             <th class="text-center">PPN</th>
             <th class="text-center">PPH 23</th>
             <th class="text-center">Tagihan + Ppn</th>
-            <th class="text-center">Tagihan + Ppn + Pph</th>
-            <th class="text-center">Piutang</th>
+            <th class="text-center">Tagihan + Ppn - Pph</th>
+            <th class="text-center">Piutang Dagang</th>
             <th class="text-center">Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
+            <th class="text-center">Sisa Piutang</th>
         </tr>
     </thead>
     <tbody>
@@ -160,9 +161,12 @@
     </tbody>
     <tbody>
         <tr>
-            <td colspan="7" class="text-right">Total</td>
+            <td colspan="6" class="text-right">Total</td>
             <td colspan="2">
                 <input type="text" name="total_piutang" id="total_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
+            </td>
+            <td>
+                <input type="text" name="total_piutang_dagang" id="total_piutang_dagang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
             </td>
             <td>
                 <input type="text" name="total_penerimaan" id="total_penerimaan" class="form-control form-control-sm autonum text-right" readonly>
@@ -170,26 +174,38 @@
             <td>
                 <input type="text" name="total_biaya_admin" id="total_biaya_admin" class="form-control form-control-sm autonum text-right" readonly>
             </td>
+            <td>
+                <input type="text" name="total_sisa_piutang" id="total_sisa_piutang" class="form-control form-control-sm autonum text-right" readonly>
+            </td>
         </tr>
         <tr>
-            <td colspan="9" class="text-right">Grand Total</td>
+            <td colspan="8" class="text-right">Total Penerimaan - Biaya Admin</td>
             <td>
                 <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" readonly>
             </td>
             <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
         </tr>
         <tr>
-            <td colspan="9" class="text-right">Uang Masuk</td>
+            <td colspan="8" class="text-right">Uang Masuk</td>
             <td>
                 <input type="text" name="uang_masuk" class="form-control form-control-sm autonum text-right" id="uang_masuk" value="<?= $uang_masuk ?>" readonly>
             </td>
             <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
         </tr>
         <tr>
-            <td colspan="9" class="text-right">Kontrol</td>
+            <td colspan="8" class="text-right">Kontrol</td>
             <td>
                 <input type="text" name="kontrol" class="form-control form-control-sm autonum text-right" id="kontrol" readonly>
             </td>
+            <td></td>
+            <td></td>
+            <td></td>
             <td></td>
         </tr>
     </tbody>
@@ -273,19 +289,25 @@
         ttl_debit_jurnal += get_num($('input[name="debit_bank_debit"]').val());
         ttl_kredit_jurnal += get_num($('input[name="kredit_bank_debit"]').val());
 
+        var ttl_piutang_dagang = 0;
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
+        var ttl_sisa_piutang = 0;
         for (i = 1; i <= no; i++) {
+            var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var piutang = get_num($('input[name="piutang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
+            var sisa_piutang = Math.round(piutang_dagang - penerimaan);
 
-            var coa_jurnal = ['1102-01-01', '7201-01-04'];
+            $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
+
+            var coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1102-01-01') {
-                    var resp_piutang = number_format(piutang);
-                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang + '">';
+                    var resp_piutang = number_format(piutang_dagang);
+                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang_dagang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
                 }
@@ -295,23 +317,29 @@
 
                     $('.td_debit_' + value + '_' + i).html(resp_admin);
                 }
+                if (value == '2104-01-03') {
+                    var pph23 = $('input[name="kredit_' + value + '_' + i + '"]').val();
+                }
 
                 ttl_debit_jurnal += get_num($('input[name="debit_' + value + '_' + i + '"]').val());
                 ttl_kredit_jurnal += get_num($('input[name="kredit_' + value + '_' + i + '"]').val());
             });
 
 
+            ttl_piutang_dagang += piutang_dagang;
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
-
+            ttl_sisa_piutang += sisa_piutang;
 
         }
 
-        var grand_total = (ttl_penerimaan + ttl_biaya_admin);
-        var kontrol = (grand_total - uang_masuk);
+        var grand_total = Math.round(ttl_piutang_dagang - ttl_biaya_admin);
+        var kontrol = Math.round(grand_total - uang_masuk);
 
         $('input[name="total_penerimaan"]').autoNumeric('set', ttl_penerimaan);
+        $('input[name="total_piutang_dagang"]').autoNumeric('set', ttl_piutang_dagang);
         $('input[name="total_biaya_admin"]').autoNumeric('set', ttl_biaya_admin);
+        $('input[name="total_sisa_piutang"]').autoNumeric('set', ttl_sisa_piutang);
         $('input[name="grand_total"]').autoNumeric('set', grand_total);
         $('input[name="kontrol"]').val(kontrol);
 

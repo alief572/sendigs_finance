@@ -68,7 +68,8 @@ class Penerimaan_uang_model extends BF_Model
             $this->db->group_end();
         }
         $this->db->group_by('a.id');
-        $this->db->order_by('a.created_by', 'desc');
+        $this->db->order_by('a.nilai_terpakai', '');
+
 
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
@@ -100,7 +101,12 @@ class Penerimaan_uang_model extends BF_Model
                 ($item['nominal_kredit'] > 0 && ($item['nominal_kredit'] - $item['nilai_terpakai']) <= 0)
             ) {
                 $status = '<span class="badge bg-green">Used</span>';
-                $action = '';
+                $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['id']])->row_array();
+                if (!empty($get_penerimaan)) {
+                    $action = '<button type="button" class="btn btn-sm btn-info detail" title="View Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-eye"></i></button>';
+                } else {
+                    $action = '';
+                }
             }
 
             $hasil[] = [

@@ -151,7 +151,7 @@
     </div>
 </div>
 <div class="modal" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg" style="width: 100% !important;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
@@ -162,7 +162,7 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Proses</button>
+                    <button type="submit" class="btn btn-success btn_proses"><i class="fa fa-check"></i> Proses</button>
                     <button type="button" class="btn btn-danger" data-dismiss="modal">
                         <span class="glyphicon glyphicon-remove"></span> Batal</button>
                 </div>
@@ -171,8 +171,10 @@
     </div>
 </div>
 
+<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
         DataTables();
@@ -182,6 +184,39 @@
         });
         $('.search_bank').chosen({
             width: '450px'
+        });
+    });
+
+    $(document).on('click', '.detail', function() {
+        var id_alokasi = $(this).data('id');
+
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'detail',
+            data: {
+                id_alokasi: id_alokasi
+            },
+            cache: false,
+            success: function(result) {
+                $('#MyModalBody').html(result);
+                $('#dialog-popup').modal('show');
+
+                $('.btn_proses').hide();
+
+                $('.autonum').autoNumeric('init');
+            },
+            error: function(result) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !',
+                    type: 'error',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    showCancelButton: false,
+                    timer: 3000
+                });
+            }
         });
     });
 

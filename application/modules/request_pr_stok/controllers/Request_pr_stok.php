@@ -195,11 +195,11 @@ class Request_pr_stok extends Admin_Controller
     $ArrSaveDetail = [];
     $SUM = 0;
     foreach ($getraw_materials as $key => $value) {
-      $SUM += $value['request_pack'];
+      $SUM += $value['request'];
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
-      $ArrSaveDetail[$key]['propose_purchase'] = $value['request_pack'];
-      $ArrSaveDetail[$key]['price_ref'] = $value['price_ref'];
+      $ArrSaveDetail[$key]['propose_purchase'] = $value['request'];
+      $ArrSaveDetail[$key]['price_ref'] = (!empty($value['price_ref'])) ? $value['price_ref'] : 0;
     }
 
     $ArrSaveHeader = array(
@@ -225,9 +225,21 @@ class Request_pr_stok extends Admin_Controller
     // exit;
 
     $this->db->trans_start();
-    $this->db->insert('material_planning_base_on_produksi', $ArrSaveHeader);
+    $insert_stok = $this->db->insert('material_planning_base_on_produksi', $ArrSaveHeader);
+    if (!$insert_stok) {
+      $this->db->trans_rollback();
+
+      print_r($this->db->last_query());
+      exit;
+    }
     if (!empty($ArrSaveDetail)) {
-      $this->db->insert_batch('material_planning_base_on_produksi_detail', $ArrSaveDetail);
+      $insert_pr_stok_detail = $this->db->insert_batch('material_planning_base_on_produksi_detail', $ArrSaveDetail);
+      if (!$insert_pr_stok_detail) {
+        $this->db->trans_rollback();
+
+        print_r($this->db->last_query());
+        exit;
+      }
     }
     $this->db->trans_complete();
 
