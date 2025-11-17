@@ -200,6 +200,7 @@ if (!empty($header)) {
 
 	<script src="<?= base_url('assets/js/jquery.maskMoney.js') ?>"></script>
 	<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<style>
 		.datepicker {
 			cursor: pointer;
@@ -243,45 +244,47 @@ if (!empty($header)) {
 				e.preventDefault();
 
 				if ($('.chk_personal:checked').length == 0) {
-					swal({
+					Swal.fire({
 						title: "Error Message!",
 						text: 'Checklist Minimal Satu !',
-						type: "warning"
+						icon: "warning"
 					});
 					return false;
 				}
 
-				swal({
-						title: "Are you sure?",
-						text: "You will not be able to process again this data!",
-						type: "warning",
-						showCancelButton: true,
-						confirmButtonClass: "btn-danger",
-						confirmButtonText: "Yes, Process it!",
-						cancelButtonText: "No, cancel process!",
-						closeOnConfirm: true,
-						closeOnCancel: false
-					},
-					function(isConfirm) {
-						if (isConfirm) {
-							var formData = new FormData($('#data-form')[0]);
-							var baseurl = siteurl + active_controller + '/process_approval_all';
-							$.ajax({
-								url: baseurl,
-								type: "POST",
-								data: formData,
-								cache: false,
-								dataType: 'json',
-								processData: false,
-								contentType: false,
-								success: function(data) {
-									if (data.status == 1) {
-										swal({
-											title: "Save Success!",
-											text: data.pesan,
-											type: "success",
-											timer: 7000
-										});
+				Swal.fire({
+					title: "Are you sure?",
+					text: "You will not be able to process again this data!",
+					icon: "warning",
+					showCancelButton: true,
+					confirmButtonClass: "btn-danger",
+					confirmButtonText: "Yes, Process it!",
+					cancelButtonText: "No, cancel process!",
+					closeOnConfirm: true,
+					closeOnCancel: false
+				}).then((next) => {
+					if (next.isConfirmed) {
+						var formData = new FormData($('#data-form')[0]);
+						var baseurl = siteurl + active_controller + '/process_approval_all';
+						$.ajax({
+							url: baseurl,
+							type: "POST",
+							data: formData,
+							cache: false,
+							dataType: 'json',
+							processData: false,
+							contentType: false,
+							success: function(data) {
+								if (data.status == 1) {
+									Swal.fire({
+										title: "Save Success!",
+										text: data.pesan,
+										icon: "success",
+										timer: 3000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
+									}).then(() => {
 										if (tingkat_approval == "1") {
 											window.location.href = base_url + active_controller + '/approval_head';
 										}
@@ -291,64 +294,72 @@ if (!empty($header)) {
 										if (tingkat_approval == "3") {
 											window.location.href = base_url + active_controller + '/approval_management';
 										}
-									} else {
-										swal({
-											title: "Save Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 7000
-										});
-									}
-								},
-								error: function() {
-
-									swal({
-										title: "Error Message !",
-										text: 'An Error Occured During Process. Please try again..',
-										type: "warning",
-										timer: 7000
+									})
+								} else {
+									Swal.fire({
+										title: "Save Failed!",
+										text: data.pesan,
+										icon: "warning",
+										timer: 3000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
 									});
 								}
-							});
-						} else {
-							swal("Cancelled", "Data can be process again :)", "error");
-							return false;
-						}
-					});
+							},
+							error: function() {
+								Swal.fire({
+									title: "Error Message !",
+									text: 'An Error Occured During Process. Please try again..',
+									icon: "warning",
+									timer: 3000,
+									showCancelButton: false,
+									showConfirmButton: false,
+									allowOutsideClick: false
+								});
+							}
+						});
+					} else {
+						Swal.fire("Cancelled", "Data can be process again :)", "error");
+						return false;
+					}
+				});
 			});
 
 			$("#reject").click(function(e) {
-				swal({
-						title: "Are you sure to Reject this data ?",
-						text: "You process this data again from Approval Head !",
-						type: "warning",
-						showCancelButton: true,
-						confirmButtonClass: "btn-danger",
-						confirmButtonText: "Yes, Reject it!",
-						cancelButtonText: "No, cancel process!",
-						closeOnConfirm: true,
-						closeOnCancel: false
-					},
-					function(isConfirm) {
-						if (isConfirm) {
-							var formData = new FormData($('#data-form')[0]);
-							var baseurl = siteurl + active_controller + '/process_reject_all';
-							$.ajax({
-								url: baseurl,
-								type: "POST",
-								data: formData,
-								cache: false,
-								dataType: 'json',
-								processData: false,
-								contentType: false,
-								success: function(data) {
-									if (data.status == 1) {
-										swal({
-											title: "Reject Success!",
-											text: data.pesan,
-											type: "success",
-											timer: 7000
-										});
+				Swal.fire({
+					title: "Are you sure to Reject this data ?",
+					text: "You process this data again from Approval Head !",
+					type: "warning",
+					showCancelButton: true,
+					confirmButtonClass: "btn-danger",
+					confirmButtonText: "Yes, Reject it!",
+					cancelButtonText: "No, cancel process!",
+					closeOnConfirm: true,
+					closeOnCancel: false
+				}).then((next) => {
+					if (next.isConfirmed) {
+						var formData = new FormData($('#data-form')[0]);
+						var baseurl = siteurl + active_controller + '/process_reject_all';
+						$.ajax({
+							url: baseurl,
+							type: "POST",
+							data: formData,
+							cache: false,
+							dataType: 'json',
+							processData: false,
+							contentType: false,
+							success: function(data) {
+								if (data.status == 1) {
+									Swal.fire({
+										title: "Reject Success!",
+										text: data.pesan,
+										icon: "success",
+										timer: 3000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
+									}).then(() => {
 										if (tingkat_approval == "1") {
 											window.location.href = base_url + active_controller + '/approval_head';
 										}
@@ -358,30 +369,37 @@ if (!empty($header)) {
 										if (tingkat_approval == "3") {
 											window.location.href = base_url + active_controller + '/approval_management';
 										}
-									} else {
-										swal({
-											title: "Reject Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 7000
-										});
-									}
-								},
-								error: function() {
-
-									swal({
-										title: "Error Message !",
-										text: 'An Error Occured During Process. Please try again..',
-										type: "warning",
-										timer: 7000
+									});
+								} else {
+									Swal.fire({
+										title: "Reject Failed!",
+										text: data.pesan,
+										icon: "warning",
+										timer: 3000,
+										showCancelButton: false,
+										showConfirmButton: false,
+										allowOutsideClick: false
 									});
 								}
-							});
-						} else {
-							swal("Cancelled", "Data can be process again :)", "error");
-							return false;
-						}
-					});
+							},
+							error: function() {
+
+								Swal.fire({
+									title: "Error Message !",
+									text: 'An Error Occured During Process. Please try again..',
+									icon: "error",
+									timer: 3000,
+									showCancelButton: false,
+									showConfirmButton: false,
+									allowOutsideClick: false
+								});
+							}
+						});
+					} else {
+						Swal.fire("Cancelled", "Data can be process again :)", "error");
+						return false;
+					}
+				});
 			});
 
 			$(document).on('click', '.processSatuan', function(e) {
@@ -391,10 +409,10 @@ if (!empty($header)) {
 				var so_number = $('#so_number').val();
 				var pr_rev = $('#pr_rev_' + id).val();
 				// alert(id);
-				swal({
+				Swal.fire({
 						title: "Anda Yakin?",
 						text: "Process " + action + " PR !",
-						type: "warning",
+						icon: "warning",
 						showCancelButton: true,
 						confirmButtonClass: "btn-info",
 						confirmButtonText: "Ya!",
@@ -414,28 +432,27 @@ if (!empty($header)) {
 							},
 							success: function(result) {
 								if (result.status == '1') {
-									swal({
-											title: "Sukses",
-											text: result.pesan,
-											type: "success"
-										},
-										function() {
-											window.location.href = base_url + active_controller + '/approval_planning/' + result.so_number + '/' + tingkat_approval
-										})
+									Swal.fire({
+										title: "Sukses",
+										text: result.pesan,
+										icon: "success"
+									}).then(() => {
+										window.location.href = base_url + active_controller + '/approval_planning/' + result.so_number + '/' + tingkat_approval
+									})
 								} else {
-									swal({
+									Swal.fire({
 										title: "Error",
 										text: result.pesan,
-										type: "error"
+										icon: "error"
 									})
 
 								}
 							},
 							error: function() {
-								swal({
+								Swal.fire({
 									title: "Error",
 									text: "Data error. Gagal request Ajax",
-									type: "error"
+									icon: "error"
 								})
 							}
 						})
