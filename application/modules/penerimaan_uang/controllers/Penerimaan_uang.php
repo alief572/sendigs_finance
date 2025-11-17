@@ -170,7 +170,7 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            $total_piutang += ($saldo_piutang);
+            $total_piutang += ($get_inv['total_akhir_jurnal']);
 
             if ($no == 1) {
                 $hasil_jurnal .= '<tr>';
