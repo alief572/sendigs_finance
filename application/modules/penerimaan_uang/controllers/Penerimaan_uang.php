@@ -349,6 +349,7 @@ class Penerimaan_uang extends Admin_Controller
             'hasil' => $hasil,
             'hasil_jurnal' => $hasil_jurnal,
             'total_piutang' => $total_piutang,
+            'total_piutang_dagang' => $total_piutang_dagang,
             'uang_masuk' => $uang_masuk,
             'id_alokasi' => $post['id_alokasi'],
             'no_inv' => $no,
