@@ -190,19 +190,19 @@
 		$('#bankModal').modal('hide');
 	}
 
-	$(document).on("keyup", ".nilai", function(){
+	$(document).on("keyup", ".nilai", function() {
 		var no = $(this).data('no');
 		var nilai_val = $(this).val();
-		if(nilai_val == "" || nilai_val == null || nilai_val == undefined){
+		if (nilai_val == "" || nilai_val == null || nilai_val == undefined) {
 			nilai_val = 0;
-		}else{
+		} else {
 			nilai_val = nilai_val.split(",").join("");
 			nilai_val = parseFloat(nilai_val);
 		}
 
-		if(nilai_val > 0){
+		if (nilai_val > 0) {
 			$("#metode_pembelian_" + no).prop("required", true);
-		}else{
+		} else {
 			$("#metode_pembelian_" + no).prop("required", false);
 		}
 	});
@@ -410,7 +410,7 @@
 						Rows += "<input type='text' class='form-control divide' name='budget[]' value='" + element.nilai + "' id='budget_" + nomor + "' readonly tabindex='-1'/>";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control nilai divide' name='nilai[]' value='0' data-no='"+nomor+"' id='nilai_" + nomor + "' />";
+						Rows += "<input type='text' class='form-control nilai divide' name='nilai[]' value='0' data-no='" + nomor + "' id='nilai_" + nomor + "' />";
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control' name='keterangan[]' id='keterangan_" + nomor + "' value='' />";

@@ -81,7 +81,7 @@ class Pengajuan_rutin extends Admin_Controller
 		$departemen = '';
 		//		$datauser=$this->All_model->GetInfoUser($this->auth->user_id());
 		//		if($datauser) $departemen=$datauser->departemen;
-		$data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.status' => 0));
+		$data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.status' => 0, 'a.sts_reject' => null));
 		$datdept  = $this->All_model->GetDeptCombo();
 
 		$arr_dept = [];
@@ -207,6 +207,9 @@ class Pengajuan_rutin extends Admin_Controller
 				array(
 					'id' => $id,
 					'tanggal_doc' => $tanggal_doc,
+					'sts_reject' => null,
+					'sts' => 0,
+					'reject_ket' => null
 				)
 			);
 			$this->Pengajuan_rutin_model->update_batch($dataheader, 'id');
