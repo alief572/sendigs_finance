@@ -156,15 +156,17 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">';
-            $hasil .= number_format($saldo_piutang);
-            $hasil .= '<input type="hidden" name="piutang_' . $no . '" value="' . $saldo_piutang . '">';
+            $hasil .= '<td>';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="piutang_dagang_' . $no . '" value="' . $saldo_piutang . '" onkeyup="hitungAll()" readonly>';
             $hasil .= '</td>';
             $hasil .= '<td class="text-left">';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" onkeyup="hitungAll()">';
             $hasil .= '</td>';
             $hasil .= '<td class="text-left">';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="biaya_admin_' . $no . '" onkeyup="hitungAll()">';
+            $hasil .= '</td>';
+            $hasil .= '<td class="text-left">';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="sisa_piutang_' . $no . '" onkeyup="hitungAll()" readonly>';
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
@@ -220,13 +222,20 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == '2' && $item_coa_jurnal['no_perkiraan'] == '2104-01-03') {
+                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == '2104-01-03') {
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
                         $get_kredit = $this->db->get()->row_array();
 
                         $value_kredit = $get_kredit['ttl_kredit'];
+                    }
+
+                    if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
+                        $value_kredit = $get_inv['total_akhir_jurnal'];
+                        if ($post['pph23_dipotong'] == 'N') {
+                            $value_kredit = $get_inv['tagihan_ppn_jurnal'];
+                        }
                     }
 
                     $hasil_jurnal .= '<tr>';
@@ -287,6 +296,9 @@ class Penerimaan_uang extends Admin_Controller
 
                         $value_kredit = $get_kredit['ttl_kredit'];
                     }
+                    if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
+                        $value_debit = $get_inv['total_akhir_jurnal'];
+                    }
 
                     $hasil_jurnal .= '<tr>';
 
@@ -307,7 +319,7 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
+                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' (' . $get_inv['id'] . ')';
                     $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
                     $hasil_jurnal .= '</td>';
 
@@ -417,6 +429,11 @@ class Penerimaan_uang extends Admin_Controller
                 $biaya_admin = 0;
             }
 
+            $sisa_piutang = str_replace(',', '', $post['sisa_piutang_' . $i]);
+            if ($sisa_piutang == '') {
+                $sisa_piutang = 0;
+            }
+
             $arr_insert_detail[] = [
                 'id_header' => $id,
                 'id_alokasi' => $post['id_alokasi'],
@@ -432,6 +449,7 @@ class Penerimaan_uang extends Admin_Controller
                 'total' => $total,
                 'penerimaan' => $penerimaan,
                 'biaya_admin' => $biaya_admin,
+                'sisa_piutang' => $sisa_piutang,
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
             ];
@@ -443,7 +461,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $total_penerimaan += $penerimaan;
 
-            $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
+            $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
 
             $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
             $this->accounting->from('coa_master a');
@@ -572,6 +590,47 @@ class Penerimaan_uang extends Admin_Controller
         ];
 
         echo json_encode($response);
+    }
+
+    public function detail()
+    {
+        $post = $this->input->post();
+
+        $id = $post['id_alokasi'];
+
+        $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id' => $id])->row_array();
+
+        $this->db->select('a.*, b.no_invoice, b.total_nominal_jurnal, b.dpp_lain_lain_jurnal, b.ppn_jurnal, b.tagihan_ppn_jurnal, b.pph_jurnal, b.total_akhir_jurnal, b.saldo_piutang, c.no_surat');
+        $this->db->from('tr_penerimaan_piutang_detail a');
+        $this->db->join('tr_invoicing b', 'b.id = a.id_inv', 'left');
+        $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
+        $this->db->where('a.id_header', $get_penerimaan['no_surat']);
+        $get_penerimaan_detail = $this->db->get()->result_array();
+
+        $arr_id_inv = [];
+        foreach ($get_penerimaan_detail as $item_detail) {
+            $arr_id_inv[] = $item_detail['id_inv'];
+        }
+
+        $get_alokasi = $this->db->get_where('tr_alokasi_detail', ['id' => $get_penerimaan['id_alokasi']])->row_array();
+
+        // $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['id_inv'], 'jenis_transaksi' => 'Penerimaan Piutang'])->result_array();
+
+        $this->db->select('a.*');
+        $this->db->from('tr_jurnal a');
+        $this->db->where_in('a.no_transaksi', $arr_id_inv);
+        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
+        $get_jurnal = $this->db->get()->result_array();
+
+        $data = [
+            'header' => $get_penerimaan,
+            'detail' => $get_penerimaan_detail,
+            'alokasi' => $get_alokasi,
+            'list_jurnal' => $get_jurnal
+        ];
+
+        $this->template->set($data);
+        $this->template->render('detail');
     }
 
     public function get_alokasi_penerimaan()
