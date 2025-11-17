@@ -140,9 +140,9 @@ class Penerimaan_uang extends Admin_Controller
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
             $saldo_piutang = $get_inv['saldo_piutang'];
-            if ($pph23_dipotong == 'N') {
-                $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
-            }
+            // if ($pph23_dipotong == 'N') {
+            //     $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
+            // }
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
@@ -233,9 +233,9 @@ class Penerimaan_uang extends Admin_Controller
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                         $value_kredit = $get_inv['total_akhir_jurnal'];
-                        if ($post['pph23_dipotong'] == 'N') {
-                            $value_kredit = $get_inv['tagihan_ppn_jurnal'];
-                        }
+                        // if ($post['pph23_dipotong'] == 'N') {
+                        //     $value_kredit = $get_inv['tagihan_ppn_jurnal'];
+                        // }
                     }
 
                     $hasil_jurnal .= '<tr>';
