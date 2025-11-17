@@ -323,7 +323,6 @@ class App_pr_stock extends Admin_Controller
 
       foreach ($check as $key => $value) {
         $ArrUpdate[$key]['id'] = $value;
-        $ArrUpdate[$key]['propose_rev'] = str_replace(',', '', $data['pr_rev_' . $value]);
         $ArrUpdate[$key]['status_app'] = 'Y';
         $ArrUpdate[$key]['app_by'] = $this->id_user;
         $ArrUpdate[$key]['app_date'] = $this->datetime;
