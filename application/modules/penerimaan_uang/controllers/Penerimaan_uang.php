@@ -212,7 +212,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 $total_debit += $uang_masuk;
 
-                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
+                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02'];
 
                 $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
                 $this->accounting->from('coa_master a');
@@ -224,7 +224,7 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == '2104-01-03') {
+                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
@@ -279,7 +279,7 @@ class Penerimaan_uang extends Admin_Controller
                     $total_kredit += $value_kredit;
                 }
             } else {
-                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
+                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02'];
 
                 $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
                 $this->accounting->from('coa_master a');
@@ -290,7 +290,7 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == '2' && $item_coa_jurnal['no_perkiraan'] == '2104-01-03') {
+                    if ($post['pph23_dipotong'] == '2' && $item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
@@ -464,7 +464,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $total_penerimaan += $penerimaan;
 
-            $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
+            $arr_coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02'];
 
             $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
             $this->accounting->from('coa_master a');
