@@ -302,7 +302,7 @@
 
             $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
 
-            var coa_jurnal = ['1102-01-01', '7201-01-04', '2104-01-03'];
+            var coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1102-01-01') {
@@ -317,7 +317,7 @@
 
                     $('.td_debit_' + value + '_' + i).html(resp_admin);
                 }
-                if (value == '2104-01-03') {
+                if (value == '1106-01-02') {
                     var pph23 = $('input[name="kredit_' + value + '_' + i + '"]').val();
                 }
 
