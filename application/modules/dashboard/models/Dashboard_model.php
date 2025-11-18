@@ -181,6 +181,7 @@ class Dashboard_model extends BF_Model
         $this->db->select('a.id');
         $this->db->from('tr_pengajuan_rutin a');
         $this->db->where('a.status', 0);
+        $this->db->where('a.sts_reject', null);
         $get_ttl_app_periodik = $this->db->get()->num_rows();
 
         // print_r($this->db->last_query());
