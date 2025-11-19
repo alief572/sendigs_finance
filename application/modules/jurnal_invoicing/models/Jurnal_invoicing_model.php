@@ -32,34 +32,36 @@ class Jurnal_invoicing_model extends BF_Model
         $data_session    = $this->session->userdata;
 
         $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
-        if ($get_jurnal->jenis_transaksi == 'Invoicing') {
-            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+        $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi])->result();
 
-            $id_company = $get_jurnal->id_company;
+        foreach ($get_jurnal_detail as $item) {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+
+            $id_company = $item->id_company;
 
             $this->db->trans_begin();
 
 
-            $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $get_jurnal->id_company);
+            $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $item->tgl_jurnal, $item->id_company);
 
 
-            $Bln             = substr($get_jurnal->tgl_jurnal, 5, 2);
-            $Thn             = substr($get_jurnal->tgl_jurnal, 0, 4);
+            $Bln             = substr($item->tgl_jurnal, 5, 2);
+            $Thn             = substr($item->tgl_jurnal, 0, 4);
 
 
             $dataJVhead = array(
                 'nomor'             => $Nomor_JV,
-                'tgl'                 => $get_jurnal->tgl_jurnal,
+                'tgl'                 => $item->tgl_jurnal,
                 'jml'                => $get_invoicing->total_akhir_jurnal,
                 'koreksi_no'        => '-',
                 'kdcab'                => '101',
                 'jenis'                => 'JV',
-                'keterangan'         => $get_jurnal->keterangan,
+                'keterangan'         => $item->keterangan,
                 'bulan'                => $Bln,
                 'tahun'                => $Thn,
                 'user_id'            => $this->auth->user_id(),
                 'memo'                => '',
-                'tgl_jvkoreksi'        => $get_jurnal->tgl_jurnal,
+                'tgl_jvkoreksi'        => $item->tgl_jurnal,
                 'ho_valid'            => ''
             );
 
@@ -75,16 +77,16 @@ class Jurnal_invoicing_model extends BF_Model
                 exit;
             }
 
-            $tgl_inv = $get_jurnal->tgl_jurnal;
-            $keterangan = $get_jurnal->keterangan;
-            $type = $get_jurnal->jenis_transaksi;
-            $reff = $get_jurnal->no_transaksi;
-            $no_req = $get_jurnal->no_transaksi;
+            $tgl_inv = $item->tgl_jurnal;
+            $keterangan = $item->keterangan;
+            $type = $item->jenis_transaksi;
+            $reff = $item->no_transaksi;
+            $no_req = $item->no_transaksi;
             $jenis = 'JV';
             $jenis_jurnal = 'jurnalinvoicing';
-            $no_coa = $get_jurnal->coa;
-            $debet = $get_jurnal->debit;
-            $kredit = $get_jurnal->kredit;
+            $no_coa = $item->coa;
+            $debet = $item->debit;
+            $kredit = $item->kredit;
 
             $datadetail = [
                 'tipe' => 'JV',
@@ -110,13 +112,13 @@ class Jurnal_invoicing_model extends BF_Model
             }
 
             //     $jurnal_posting     = "UPDATE jurnal SET stspos=1 WHERE tipe = 'JV'
-            // AND  jenis_jurnal = 'jurnalinvoicing' AND no_reff  = '" . $get_jurnal->no_transaksi . "' ";
+            // AND  jenis_jurnal = 'jurnalinvoicing' AND no_reff  = '" . $item->no_transaksi . "' ";
             //     $this->db->query($jurnal_posting);
 
             if ($id_company == '1' || $id_company == '4') {
-                $jurnal_posting = $this->db->update(DBACC_VUCA . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $get_jurnal->no_transaksi]);
+                $jurnal_posting = $this->db->update(DBACC_VUCA . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
             } else {
-                $jurnal_posting = $this->db->update(DBACC_SUST . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $get_jurnal->no_transaksi]);
+                $jurnal_posting = $this->db->update(DBACC_SUST . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
             }
             if (!$jurnal_posting) {
                 $this->db->trans_rollback();
@@ -125,7 +127,7 @@ class Jurnal_invoicing_model extends BF_Model
                 exit;
             }
 
-            $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $get_jurnal->id]);
+            $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
             if (!$update_jurnal_awal) {
                 $this->db->trans_rollback();
 
@@ -150,7 +152,7 @@ class Jurnal_invoicing_model extends BF_Model
 
 
 
-            // $jurnal_inv     = "UPDATE tr_invoice SET status_jurnal='CLS' WHERE no_invoice = '" . $get_jurnal->no_transaksi . "' ";
+            // $jurnal_inv     = "UPDATE tr_invoice SET status_jurnal='CLS' WHERE no_invoice = '" . $item->no_transaksi . "' ";
             // $this->db->query($jurnal_inv);
 
             $id_cust   = $get_invoicing->id_customer;
@@ -177,27 +179,27 @@ class Jurnal_invoicing_model extends BF_Model
                 print_r($this->db->last_query());
                 exit;
             }
-
-
-            if ($this->db->trans_status() === FALSE) {
-                $this->db->trans_rollback();
-
-                $param = array(
-                    'save' => 0,
-                    'msg' => "GAGAL, simpan data..!!!",
-
-                );
-            } else {
-                $this->db->trans_commit();
-
-                $param = array(
-                    'save' => 1,
-                    'msg' => "SUKSES, simpan data..!!!",
-
-                );
-            }
-            echo json_encode($param);
         }
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+
+            $param = array(
+                'save' => 0,
+                'msg' => "GAGAL, simpan data..!!!",
+
+            );
+        } else {
+            $this->db->trans_commit();
+
+            $param = array(
+                'save' => 1,
+                'msg' => "SUKSES, simpan data..!!!",
+
+            );
+        }
+        echo json_encode($param);
+        // if ($item->jenis_transaksi == 'Invoicing') {
+        // }
     }
 
     public function update_sts_revisi_jurnal()
@@ -209,7 +211,19 @@ class Jurnal_invoicing_model extends BF_Model
         $valid = 1;
         $msg = '';
 
-        $update_sts = $this->db->update('tr_jurnal', ['sts' => '9', 'alasan_revisi' => $post['alasan_revisi']], ['id' => $post['id']]);
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+
+        $arr_update = [
+            'sts' => '9',
+            'alasan_revisi' => $post['alasan_revisi'],
+        ];
+
+        $where_update = [
+            'no_transaksi' => $get_jurnal->no_transaksi,
+            'jenis_transaksi' => $get_jurnal->jenis_transaksi
+        ];
+
+        $update_sts = $this->db->update('tr_jurnal', $arr_update, $where_update);
         if (!$update_sts) {
             $this->db->trans_rollback();
 
@@ -248,7 +262,7 @@ class Jurnal_invoicing_model extends BF_Model
         $start = $post['start'];
         $search = $post['search'];
 
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
+        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
         $this->db->from('tr_jurnal a');
         $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran');
@@ -260,9 +274,6 @@ class Jurnal_invoicing_model extends BF_Model
         $this->db->where('a.debit >', 0);
         $this->db->or_where('a.kredit >', 0);
         $this->db->group_end();
-
-        $db_clone = clone $this->db;
-        $count_all = $db_clone->count_all_results();
 
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -279,14 +290,51 @@ class Jurnal_invoicing_model extends BF_Model
             $this->db->or_like('a.kredit', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->group_by('a.id');
 
-        $db_clone = clone $this->db;
-        $count_filtered = $db_clone->count_all_results();
-
+        $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result();
+
+        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
+        $this->db->from('tr_jurnal a');
+        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi');
+        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company');
+        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi');
+        $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $this->db->where_in('a.sts', ['', '0']);
+        $this->db->group_start();
+        $this->db->where('a.debit >', 0);
+        $this->db->or_where('a.kredit >', 0);
+        $this->db->group_end();
+
+        if (!empty($search['value'])) {
+            $this->db->group_start();
+            $this->db->like('a.tgl_jurnal', $search['value'], 'both');
+            $this->db->or_like('b.nm_customer', $search['value'], 'both');
+            $this->db->or_like('b.nm_project', $search['value'], 'both');
+            $this->db->or_like('b.no_invoice', $search['value'], 'both');
+            $this->db->or_like('d.nm_company', $search['value'], 'both');
+            $this->db->or_like('e.name', $search['value'], 'both');
+            $this->db->or_like('a.coa', $search['value'], 'both');
+            $this->db->or_like('a.nm_coa', $search['value'], 'both');
+            $this->db->or_like('b.id_spk_penawaran', $search['value'], 'both');
+            $this->db->or_like('a.debit', $search['value'], 'both');
+            $this->db->or_like('a.kredit', $search['value'], 'both');
+            $this->db->group_end();
+        }
+
+        $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
+
+        $get_data_all = $this->db->get()->result();
+
+        $count_all = 0;
+        foreach ($get_data_all as $row) {
+            $count_all++;
+        }
+        // print_r($this->db->last_query());
+        // exit;
 
         $no = (0 + $start);
         $hasil = [];
@@ -302,7 +350,7 @@ class Jurnal_invoicing_model extends BF_Model
                 $nilai = $row->kredit;
             }
 
-            $btn_post_jurnal = '<button type="button" class="btn btn-sm btn-primary posting_jurnal" title="Posting Jurnal" data-id="' . $row->id . '"><i class="fa fa-arrow-up"></i></button>';
+            $btn_post_jurnal = '<button type="button" class="btn btn-sm btn-primary posting_jurnal" title="Posting Jurnal" data-id="' . $row->id . '" data-no_transaksi="' . $row->no_transaksi . '" data-jenis_transaksi="' . $row->jenis_transaksi . '"><i class="fa fa-arrow-up"></i></button>';
             $action = $btn_post_jurnal;
 
             $hasil[] = [
@@ -324,7 +372,7 @@ class Jurnal_invoicing_model extends BF_Model
         $response = [
             'draw' => intval($draw),
             'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_filtered,
+            'recordsFiltered' => $count_all,
             'data' => $hasil
         ];
 

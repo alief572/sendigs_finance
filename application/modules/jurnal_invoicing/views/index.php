@@ -36,8 +36,6 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     <th class="text-center">Keterangan Tagihan</th>
                     <th class="text-center">Company</th>
                     <th class="text-center">Nama Divisi</th>
-                    <th class="text-center">COA</th>
-                    <th class="text-center">Perkiraan</th>
                     <th class="text-center">Uraian</th>
                     <th class="text-center">Original</th>
                     <th class="text-center">Action</th>
@@ -75,6 +73,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 <!-- DataTables -->
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
@@ -84,12 +83,16 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 
     $(document).on('click', '.posting_jurnal', function() {
         var id = $(this).data('id');
+        var no_transaksi = $(this).data('no_transaksi');
+        var jenis_transaksi = $(this).data('jenis_transaksi');
 
         $.ajax({
             type: 'post',
             url: siteurl + active_controller + 'modal_posting_jurnal',
             data: {
-                'id': id
+                'id': id,
+                'no_transaksi': no_transaksi,
+                'jenis_transaksi': jenis_transaksi
             },
             cache: false,
             success: function(result) {
@@ -99,8 +102,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 autoNum();
             },
             error: function(result) {
-                swal({
-                    type: 'error',
+                Swal.fire({
+                    icon: 'error',
                     title: 'Error !',
                     text: 'Please try again later !',
                     allowOutsideClick: false,
@@ -115,14 +118,15 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
-        swal({
-            type: 'warning',
+        Swal.fire({
+            icon: 'warning',
             title: 'Are you sure ?',
             text: 'This data will be moved to Tras !',
             showConfirmButton: true,
+            showCancelButton: true,
             allowOutsideClick: false
-        }, function(next) {
-            if (next) {
+        }).then((next) => {
+            if (next.isConfirmed) {
                 var formdata = $('#frm-data').serialize();
 
                 $.ajax({
@@ -133,23 +137,23 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     dataType: 'json',
                     success: function(result) {
                         if (result.save == '1') {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg,
                                 allowOutsideClick: false,
                                 timer: 3000,
                                 showConfirmButton: false,
                                 showCancelButton: false
-                            }, function(lanjut) {
+                            }).then(() => {
                                 $('#dialog-popup').modal('hide');
 
                                 swal.close();
                                 DataTables();
                             });
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Failed !',
                                 text: result.msg,
                                 allowOutsideClick: false,
@@ -160,8 +164,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                         }
                     },
                     error: function(result) {
-                        swal({
-                            type: 'error',
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
                             text: 'Please try again later !',
                             allowOutsideClick: false,
@@ -178,24 +182,28 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     function revisi_jurnal() {
         var alasan_revisi = $('textarea[name="alasan_revisi"]').val();
         if (alasan_revisi == '') {
-            swal({
+            Swal.fire({
                 type: 'warning',
                 title: 'Warning !',
-                text: 'Alasan revisi harus diisi !'
+                text: 'Alasan revisi harus diisi !',
+                showConfirmButton: false,
+                showCancelButton: false,
+                allowOutsideClick: false,
+                timer: 3000
+            }).then(() => {
+                return false;
             });
-
-            return false;
         }
 
-        swal({
-            type: 'warning',
+        Swal.fire({
+            icon: 'warning',
             title: 'Anda yakin ?',
             text: 'Data jurnal ini akan masuk ke Revisi Jurnal !',
             showCancelButton: true,
             showConfirmButton: true,
             allowOutsideClick: false
-        }, function(next) {
-            if (next) {
+        }).then((next) => {
+            if (next.isConfirmed) {
                 var id = $('input[name="id"]').val();
 
                 $.ajax({
@@ -209,22 +217,22 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     dataType: 'json',
                     success: function(result) {
                         if (result.status == '1') {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg,
                                 showConfirmButton: false,
                                 showCancelButton: false,
                                 allowOutsideClick: false,
                                 timer: 3000
-                            }, function(lanjut) {
+                            }).then(() => {
                                 $('#dialog-popup').modal('hide');
                                 DataTables();
                                 swal.close();
                             });
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Failed !',
                                 text: result.msg,
                                 showConfirmButton: false,
@@ -235,8 +243,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                         }
                     },
                     error: function(result) {
-                        swal({
-                            type: 'error',
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
                             text: 'Please try again later !',
                             showConfirmButton: false,
@@ -287,12 +295,6 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 },
                 {
                     data: 'nm_divisi'
-                },
-                {
-                    data: 'coa'
-                },
-                {
-                    data: 'perkiraan'
                 },
                 {
                     data: 'uraian'

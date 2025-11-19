@@ -1,4 +1,4 @@
-<input type="hidden" name="id" value="<?= $jurnal_header->id ?>">
+<input type="hidden" name="id" value="<?= $id ?>">
 <table class="table table-bordered w-100">
     <thead>
         <tr>
@@ -12,30 +12,44 @@
         </tr>
     </thead>
     <tbody>
-        <tr>
-            <td class="text-center"><?= date('d F Y', strtotime($jurnal_header->tgl_jurnal)) ?></td>
-            <td class="text-center"><?= $jurnal_header->jenis_transaksi ?></td>
-            <td class="text-center"><?= $jurnal_header->coa ?></td>
-            <td class="text-left">
-                <textarea name="keterangan" class="form-control form-control-sm" readonly><?= $jurnal_header->keterangan ?></textarea>
-            </td>
-            <td class="text-center"><?= $jurnal_header->no_transaksi ?></td>
-            <td>
-                <input type="text" name="debit" class="form-control form-control-sm text-right debit autonum" value="<?= $jurnal_header->debit ?>" onchange="hitungDebit();" readonly>
-            </td>
-            <td>
-                <input type="text" name="kredit" class="form-control form-control-sm text-right kredit autonum" value="<?= $jurnal_header->kredit ?>" onchange="hitungKredit();" readonly>
-            </td>
-        </tr>
+        <?php
+        $no = 0;
+
+        $ttl_debit = 0;
+        $ttl_kredit = 0;
+        foreach ($jurnal_header as $row) {
+            $no++;
+
+            echo '<tr>';
+            echo '<td class="text-center">' . date('d F Y', strtotime($row->tgl_jurnal)) . '</td>';
+            echo '<td class="text-center">' . $row->jenis_transaksi . '</td>';
+            echo '<td class="text-center">' . $row->coa . '</td>';
+            echo '<td class="text-left">';
+            echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm" readonly>' . $row->keterangan . '</textarea>';
+            echo '</td>';
+            echo '<td class="text-center">' . $row->no_transaksi . '</td>';
+            echo '<td>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit autonum" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
+            echo '</td>';
+            echo '<td>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit autonum" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
+            echo '</td>';
+            echo '</tr>';
+
+            $ttl_debit += $row->debit;
+            $ttl_kredit += $row->kredit;
+        }
+        ?>
+
     </tbody>
     <tfoot>
         <tr>
             <th colspan="5" class="text-right">Grand Total</th>
             <th class="text-right total_debit">
-                <?= number_format($jurnal_header->debit) ?>
+                <?= number_format($ttl_debit) ?>
             </th>
             <th class="text-right total_kredit">
-                <?= number_format($jurnal_header->kredit) ?>
+                <?= number_format($ttl_kredit) ?>
             </th>
         </tr>
     </tfoot>
