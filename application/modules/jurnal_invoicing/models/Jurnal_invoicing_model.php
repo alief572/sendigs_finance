@@ -33,49 +33,66 @@ class Jurnal_invoicing_model extends BF_Model
 
         $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
         $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi])->result();
+        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
 
-        foreach ($get_jurnal_detail as $item) {
-            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
-
-            $id_company = $item->id_company;
-
-            $this->db->trans_begin();
+        $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $get_jurnal->id_company);
 
 
-            $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $item->tgl_jurnal, $item->id_company);
+        $Bln             = substr($get_jurnal->tgl_jurnal, 5, 2);
+        $Thn             = substr($get_jurnal->tgl_jurnal, 0, 4);
 
+        $id_company = $get_jurnal->id_company;
 
-            $Bln             = substr($item->tgl_jurnal, 5, 2);
-            $Thn             = substr($item->tgl_jurnal, 0, 4);
+        $this->db->trans_begin();
 
+        $dataJVhead = array(
+            'nomor'             => $Nomor_JV,
+            'tgl'                 => $get_jurnal->tgl_jurnal,
+            'jml'                => $get_invoicing->total_akhir_jurnal,
+            'koreksi_no'        => '-',
+            'kdcab'                => '101',
+            'jenis'                => 'JV',
+            'keterangan'         => $get_jurnal->keterangan,
+            'bulan'                => $Bln,
+            'tahun'                => $Thn,
+            'user_id'            => $this->auth->user_id(),
+            'memo'                => '',
+            'tgl_jvkoreksi'        => $get_jurnal->tgl_jurnal,
+            'ho_valid'            => ''
+        );
 
-            $dataJVhead = array(
-                'nomor'             => $Nomor_JV,
-                'tgl'                 => $item->tgl_jurnal,
-                'jml'                => $get_invoicing->total_akhir_jurnal,
-                'koreksi_no'        => '-',
-                'kdcab'                => '101',
-                'jenis'                => 'JV',
-                'keterangan'         => $item->keterangan,
-                'bulan'                => $Bln,
-                'tahun'                => $Thn,
-                'user_id'            => $this->auth->user_id(),
-                'memo'                => '',
-                'tgl_jvkoreksi'        => $item->tgl_jurnal,
-                'ho_valid'            => ''
-            );
-
-            if ($id_company == '1' || $id_company == '4') {
-                $insert_jurnal_header = $this->db->insert(DBACC_VUCA . '.javh', $dataJVhead);
-            } else {
-                $insert_jurnal_header = $this->db->insert(DBACC_SUST . '.javh', $dataJVhead);
-            }
+        if ($id_company == '1' || $id_company == '4') {
+            $insert_jurnal_header = $this->db->insert(DBACC_VUCA . '.javh', $dataJVhead);
             if (!$insert_jurnal_header) {
                 $this->db->trans_rollback();
 
                 print_r($this->db->last_query());
                 exit;
             }
+        } else {
+            $insert_jurnal_header = $this->db->insert(DBACC_SUST . '.javh', $dataJVhead);
+            if (!$insert_jurnal_header) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+        }
+        if (!$insert_jurnal_header) {
+            $this->db->trans_rollback();
+
+            print_r($this->db->last_query());
+            exit;
+        }
+
+
+
+        foreach ($get_jurnal_detail as $item) {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+
+            $id_company = $item->id_company;
+
+
 
             $tgl_inv = $item->tgl_jurnal;
             $keterangan = $item->keterangan;
@@ -264,10 +281,10 @@ class Jurnal_invoicing_model extends BF_Model
 
         $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
         $this->db->from('tr_jurnal a');
-        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi');
-        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi');
+        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
+        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
         $this->db->where('a.jenis_transaksi', 'Invoicing');
         $this->db->where_in('a.sts', ['', '0']);
         $this->db->group_start();
