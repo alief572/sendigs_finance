@@ -165,10 +165,13 @@ class Jurnal_Invoicing extends Admin_Controller
     public function modal_posting_jurnal()
     {
         $id = $this->input->post('id');
+        $no_transaksi = $this->input->post('no_transaksi');
+        $jenis_transaksi = $this->input->post('jenis_transaksi');
 
-        $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $id])->row();
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $no_transaksi, 'jenis_transaksi' => $jenis_transaksi])->result();
 
         $data = [
+            'id' => $id,
             'jurnal_header' => $get_jurnal
         ];
 
