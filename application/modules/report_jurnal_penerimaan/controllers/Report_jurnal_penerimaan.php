@@ -40,14 +40,14 @@ class Report_jurnal_penerimaan extends Admin_Controller
 
         $this->db->select('a.id_company, a.nm_company');
         $this->db->from('tr_jurnal a');
-        $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $this->db->where('a.sts', '1');
         $this->db->group_by('a.id_company');
         $get_company = $this->db->get()->result();
 
         // $this->db->select('a.id_divisi, a.nm_divisi');
         // $this->db->from('tr_jurnal a');
-        // $this->db->where('a.jenis_transaksi', 'Invoicing');
+        // $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         // $this->db->where('a.sts', '1');
         // $this->db->group_by('a.id_divisi');
         // $get_divisi = $this->db->get()->result();
@@ -102,8 +102,8 @@ class Report_jurnal_penerimaan extends Admin_Controller
         $this->load->view('export_excel', $data);
     }
 
-    public function get_data_jurnal_invoicing()
+    public function get_data_jurnal_penerimaan()
     {
-        $this->Report_jurnal_penerimaan_model->get_data_jurnal_invoicing();
+        $this->Report_jurnal_penerimaan_model->get_data_jurnal_penerimaan();
     }
 }

@@ -1,8 +1,8 @@
 <?php
-$ENABLE_ADD     = has_permission('Report_Jurnal_Invoicing.Add');
-$ENABLE_MANAGE  = has_permission('Report_Jurnal_Invoicing.Manage');
-$ENABLE_VIEW    = has_permission('Report_Jurnal_Invoicing.View');
-$ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
+$ENABLE_ADD     = has_permission('Report_Jurnal_Penerimaan.Add');
+$ENABLE_MANAGE  = has_permission('Report_Jurnal_Penerimaan.Manage');
+$ENABLE_VIEW    = has_permission('Report_Jurnal_Penerimaan.View');
+$ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
 ?>
 <!-- <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>"> -->
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
@@ -209,7 +209,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
 
         var dataTables = $('#table_penawaran').dataTable({
             ajax: {
-                url: siteurl + active_controller + 'get_data_jurnal_invoicing',
+                url: siteurl + active_controller + 'get_data_jurnal_penerimaan',
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {

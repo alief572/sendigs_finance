@@ -215,7 +215,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
             );
         }
         echo json_encode($param);
-        // if ($item->jenis_transaksi == 'Invoicing') {
+        // if ($item->jenis_transaksi == 'Penerimaan Piutang') {
         // }
     }
 
@@ -270,7 +270,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         echo json_encode($response);
     }
 
-    public function get_data_jurnal_invoicing()
+    public function get_data_jurnal_penerimaan()
     {
         $post = $this->input->post();
 
@@ -287,7 +287,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
         $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $db_clone->where('a.jenis_transaksi', 'Invoicing');
+        $db_clone->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $db_clone->where('a.sts', '1');
         if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
             $db_clone->where('a.tgl_jurnal >=', $post['tgl_from']);
@@ -320,7 +320,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
         $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $db_clone->where('a.jenis_transaksi', 'Invoicing');
+        $db_clone->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $db_clone->where('a.sts', '1');
         if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
             $db_clone->where('a.tgl_jurnal >=', $post['tgl_from']);
