@@ -1,4 +1,3 @@
-<input type="hidden" name="id" value="<?= $id ?>">
 <table class="table table-bordered w-100">
     <thead>
         <tr>
@@ -17,7 +16,7 @@
 
         $ttl_debit = 0;
         $ttl_kredit = 0;
-        foreach ($jurnal_header as $row) {
+        foreach ($data_jurnal as $row) {
             $no++;
 
             echo '<tr>';
@@ -54,12 +53,6 @@
         </tr>
     </tfoot>
 </table>
-
-<!-- <div class="col-md-6"> -->
-<div class="form-group" style="width: 50%;">
-    <label for="">Alasan Revisi</label>
-    <textarea name="alasan_revisi" id="" class="form-control form-control-sm"></textarea>
-</div>
 <!-- </div> -->
 
 <script>
