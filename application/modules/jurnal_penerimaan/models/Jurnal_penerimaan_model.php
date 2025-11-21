@@ -65,7 +65,7 @@ class Jurnal_penerimaan_model extends BF_Model
             $this->db->or_like('a.kredit', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->group_by('a.id');
+        $this->db->group_by('a.no_transaksi');
 
         $db_clone = clone $this->db;
         $count_filtered = $db_clone->count_all_results();
@@ -126,7 +126,9 @@ class Jurnal_penerimaan_model extends BF_Model
         $valid = 1;
         $msg = '';
 
-        $update_sts = $this->db->update('tr_jurnal', ['sts' => '9', 'alasan_revisi' => $post['alasan_revisi']], ['id' => $post['id']]);
+        $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+
+        $update_sts = $this->db->update('tr_jurnal', ['sts' => '9', 'alasan_revisi' => $post['alasan_revisi']], ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi]);
         if (!$update_sts) {
             $this->db->trans_rollback();
 
