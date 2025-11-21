@@ -21,8 +21,6 @@ class Plan_tagih extends Admin_Controller
         $this->template->title('Plan_tagih');
         $this->template->page_icon('fa fa-building-o');
 
-        date_default_timezone_set('Asia/Bangkok');
-
         $this->consultant = $this->load->database('consultant', true);
     }
 
@@ -47,7 +45,7 @@ class Plan_tagih extends Admin_Controller
         $this->consultant->select('a.*');
         $this->consultant->from('kons_tr_spk_penawaran_payment a');
         $this->consultant->where('a.id_spk_penawaran', $id_spk);
-        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $this->consultant->order_by('a.id', 'asc');
         $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $data = [
