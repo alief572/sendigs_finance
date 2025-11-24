@@ -523,7 +523,7 @@ class Request_payment_model extends BF_Model
                         a.tanggal_doc as tgl_doc,
                         a.keterangan as keperluan,
                         "Periodik" as tipe,
-                        a.nilai_total as nilai_pengajuan
+                        SUM(b.nilai) as nilai_pengajuan
                     FROM
                         tr_pengajuan_rutin a 
                         JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc
@@ -537,7 +537,27 @@ class Request_payment_model extends BF_Model
                             a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
                         )
                     
-                    
+                    UNION ALL 
+
+                    SELECT
+                        a.id as id,
+                        a.no_non_po as no_dokumen,
+                        b.nm_lengkap as request_by,
+                        DATE_FORMAT(a.created_date, "%Y-%m-%d") as tgl_doc,
+                        "" as keperluan,
+                        "Non-PO" as kategori,
+                        a.total_pr as nilai_pengajuan
+                    FROM
+                        tr_pr_non_po a
+                        LEFT JOIN users b ON b.id_user = a.created_by
+                    WHERE
+                        a.sts = "1" AND (
+                            a.id LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.no_non_po LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            b.nm_lengkap LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            DATE_FORMAT(a.created_date, "%Y-%m-%d") LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.total_pr LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
                 ) z
                 GROUP BY z.no_dokumen
             ORDER BY z.tanggal DESC
@@ -641,10 +661,31 @@ class Request_payment_model extends BF_Model
                             a.keterangan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
                         )
+
+                    UNION ALL 
+
+                    SELECT
+                        a.id as id,
+                        a.no_non_po as no_dokumen,
+                        b.nm_lengkap as request_by,
+                        DATE_FORMAT(a.created_date, "%Y-%m-%d") as tgl_doc,
+                        "" as keperluan,
+                        "Non-PO" as kategori,
+                        a.total_pr as nilai_pengajuan
+                    FROM
+                        tr_pr_non_po a
+                        LEFT JOIN users b ON b.id_user = a.created_by
+                    WHERE
+                        a.sts = "1" AND (
+                            a.id LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.no_non_po LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            b.nm_lengkap LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            DATE_FORMAT(a.created_date, "%Y-%m-%d") LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
+                            a.total_pr LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                        )
                 ) z
                 GROUP BY z.no_dokumen
             ORDER BY z.tanggal DESC
-            
         ';
 
         $get_data_all = $this->db->query($sql_all);
@@ -702,13 +743,36 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Expense') {
                 $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
+            if ($item->kategori == 'Non-PO') {
+                $get_pr_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+
+                if ($get_pr_non_po->jenis_pr == 'pr departemen') {
+                }
+            }
+
+            $keperluan = (!empty($item->keperluan)) ? $item->keperluan : '';
+            if ($item->kategori == 'Non-PO') {
+                $get_pr_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+
+                if ($get_pr_non_po->jenis_pr == 'pr stok') {
+                    $keperluan = 'PR Stock - ' . $get_pr_non_po->no_pr;
+                } else if ($get_pr_non_po->jenis_pr == 'pr departemen') {
+                    $get_pr_dept = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_pr_non_po->no_pr])->row();
+
+                    $keperluan = (!empty($get_pr_dept)) ? $get_pr_dept->project_name : '';
+                } else {
+                    $get_pr_asset = $this->db->get_where('tran_pr_detail', ['no_pr' => $get_pr_non_po->no_pr])->row();
+
+                    $keperluan = 'PR Asset - ' . $get_pr_non_po->no_pr . ' - ' . $get_pr_asset->nm_barang;
+                }
+            }
 
             $hasil[] = [
                 'no' => $no,
                 'no_dokumen' => $item->no_dokumen . ' ' . $btn_print,
                 'request_by' => $nmuser,
                 'tanggal' => date('d F Y', strtotime($item->tanggal)),
-                'keperluan' => $item->keperluan,
+                'keperluan' => $keperluan,
                 'kategori' => $item->kategori,
                 'nilai_pengajuan' => number_format($item->nilai_pengajuan, 2),
                 'tanggal_pembayaran' => $input_tanggal_pembayaran,
