@@ -523,7 +523,7 @@ class Request_payment_model extends BF_Model
                         a.tanggal_doc as tgl_doc,
                         a.keterangan as keperluan,
                         "Periodik" as tipe,
-                        SUM(b.nilai) as nilai_pengajuan
+                        (SELECT SUM(aa.nilai) FROM tr_pengajuan_rutin_detail aa WHERE aa.no_doc = a.no_doc) as nilai_pengajuan
                     FROM
                         tr_pengajuan_rutin a 
                         JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc
@@ -534,7 +534,7 @@ class Request_payment_model extends BF_Model
                             c.nm_lengkap LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.tanggal_doc LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
                             a.keterangan LIKE "%' . $this->db->escape_str($search['value']) . '%" OR
-                            a.nilai_total LIKE "%' . $this->db->escape_str($search['value']) . '%"
+                            (SELECT SUM(aa.nilai) FROM tr_pengajuan_rutin_detail aa WHERE aa.no_doc = a.no_doc) LIKE "%' . $this->db->escape_str($search['value']) . '%"
                         )
                     
                     UNION ALL 
@@ -648,7 +648,7 @@ class Request_payment_model extends BF_Model
                         a.tanggal_doc as tgl_doc,
                         a.keterangan as keperluan,
                         "Periodik" as tipe,
-                        a.nilai_total as nilai_pengajuan
+                        SUM(b.nilai) as nilai_pengajuan
                     FROM
                         tr_pengajuan_rutin a 
                         JOIN tr_pengajuan_rutin_detail b ON b.no_doc = a.no_doc

@@ -2645,6 +2645,35 @@ class Request_payment extends Admin_Controller
 				}
 
 				if ($item->tipe == 'Periodik') {
+					$this->db->select('a.*, SUM(b.nilai) as nilai_pengajuan, b.bank_id, b.accnumber, b.accname, c.nm_lengkap as nama');
+					$this->db->from('tr_pengajuan_rutin a');
+					$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc');
+					$this->db->join('users c', 'c.id_user = a.created_by');
+					$this->db->where('a.no_doc', $item->no_doc);
+					$this->db->group_by('a.no_doc');
+					$get_periodik = $this->db->get()->row();
+
+					$arr_insert[] = [
+						'no_doc' => $item->no_doc,
+						'nama' => $get_periodik->nama,
+						'tgl_doc' => $get_periodik->tanggal_doc,
+						'keperluan' => $get_periodik->keterangan,
+						'tipe' => 'periodik',
+						'jumlah' => $nilai_pengajuan,
+						'status' => 0,
+						'tanggal' => $tanggal_pembayaran,
+						'created_by' => $this->auth->user_name(),
+						'created_on' => date('Y-m-d H:i:s'),
+						'bank_id' => $get_periodik->bank_id,
+						'accnumber' => $get_periodik->accnumber,
+						'accname' => $get_periodik->accname,
+						'ids' => $get_periodik->id,
+						'currency' => 'IDR',
+						'admin_bank' => 0,
+						'total_pph' => 0
+					];
+
+					$this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc]);
 				}
 			}
 		}
