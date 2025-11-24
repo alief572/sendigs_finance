@@ -62,7 +62,7 @@ class Report_jurnal_invoicing extends Admin_Controller
             'list_divisi' => $get_divisi
         ];
 
-        $this->template->title('Jurnal Invoicing');
+        $this->template->title('Report Jurnal Invoicing');
         $this->template->set($data);
         $this->template->render('index');
     }
