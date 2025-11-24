@@ -38,7 +38,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <th width="13%">Ditujukan</th>
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
-                        <td width="12%">
+	                <td width="12%">
                             <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_po ?>">
                         </td>
                     </tr>

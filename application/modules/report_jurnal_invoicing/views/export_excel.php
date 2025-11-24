@@ -1,6 +1,6 @@
 <?php
 header("Content-type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Report Jurnal Invoicing.xlsx");
+header("Content-Disposition: attachment; filename=Report Jurnal Invoicing.xls");
 ?>
 <h2>Report Jurnal Invoicing</h2>
 

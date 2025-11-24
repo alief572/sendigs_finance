@@ -575,7 +575,7 @@ class Invoicing extends Admin_Controller
             'no_faktur' => $post['nomor_faktur']
         ];
 
-        $arr_coa_jurnal = ['1030-10-1', '4010-10-1', '2010-30-6'];
+	$arr_coa_jurnal = ['1102-01-01', '1106-01-02', '2104-01-07', '4101-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
