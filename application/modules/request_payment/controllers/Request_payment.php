@@ -2675,6 +2675,32 @@ class Request_payment extends Admin_Controller
 
 					$this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc]);
 				}
+
+				if ($item->tipe == 'Non-PO') {
+					$this->db->select('a.*');
+					$this->db->from('tr_pr_non_po a');
+					$this->db->where('a.no_non_po', $item->no_doc);
+					$get_data_non_po = $this->db->get()->row();
+
+					$arr_insert[] = [
+						'no_doc' => $item->no_doc,
+						'nama' => $get_data_non_po->nm_pic,
+						'tgl_doc' => date('Y-m-d', strtotime($get_data_non_po->created_date)),
+						'keperluan' => 'PR Non-PO - ' . $get_data_non_po->no_pr . ' - ' . ucfirst($get_data_non_po->jenis_pr),
+						'tipe' => 'Non-PO',
+						'jumlah' => $get_data_non_po->total_pr,
+						'status' => 0,
+						'tanggal' => $tanggal_pembayaran,
+						'created_by' => $this->auth->user_name(),
+						'created_on' => date('Y-m-d H:i:s'),
+						'ids' => $get_data_non_po->id,
+						'currency' => 'IDR',
+						'admin_bank' => 0,
+						'total_pph' => 0
+					];
+
+					$this->db->update('tr_pr_non_po', ['sts' => '2'], ['no_non_po' => $item->no_doc]);
+				}
 			}
 		}
 
