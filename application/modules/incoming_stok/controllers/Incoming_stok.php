@@ -91,7 +91,7 @@ class Incoming_stok extends Admin_Controller
               $konversi = 1;
             }
             $ArrStock[$val]['id']   = $valx['id_barang'];
-            $ArrStock[$val]['qty']  = $qty_incoming * $konversi;
+            $ArrStock[$val]['qty']  = $qty_incoming;
 
             // print_r($qty_incoming.' - '.$konversi.'<br>');
 
@@ -717,6 +717,9 @@ class Incoming_stok extends Admin_Controller
       $this->db->where('b.qty_in < b.qty');
       $this->db->group_by('a.no_doc');
       $get_kasbon = $this->db->get()->result();
+
+      // print_r($this->db->last_query());
+      // exit;
 
       $hasil = '';
       foreach ($get_kasbon as $row) {
