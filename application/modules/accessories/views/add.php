@@ -13,6 +13,7 @@ $id_unit        = (!empty($header)) ? $header[0]->id_unit : '';
 $min_stok        = (!empty($header)) ? $header[0]->min_stok : '';
 $max_stok        = (!empty($header)) ? $header[0]->max_stok : '';
 $min_order = (!empty($header)) ? $header[0]->min_order : 0;
+$coa = (!empty($header)) ? $header[0]->no_coa : 0;
 if (!empty($id)) {
 	$status1         = ($header[0]->status == '1') ? 'checked' : '';
 	$status2         = ($header[0]->status == '0') ? 'checked' : '';
@@ -117,6 +118,23 @@ if (!empty($id)) {
 				<div class="col-md-4">
 					<input type="text" name="min_order" id="" class="form-control form-control-sm autoNumeric" value="<?= $min_order; ?>">
 				</div>
+				<div class="col-md-2">
+					<label for="">COA</label>
+				</div>
+				<div class="col-md-4">
+					<select class="form-control form-control-sm chosen-select" name="coa">
+						<option value="">- Select COA -</option>
+						<?php
+						foreach ($list_coa as $item) {
+							$selected = '';
+							if ($item->no_perkiraan == $coa) {
+								$selected = 'selected';
+							}
+							echo '<option value="' . $item->no_perkiraan . '" ' . $selected . '>' . $item->no_perkiraan . ' - ' . $item->nama . '</option>';
+						}
+						?>
+					</select>
+				</div>
 			</div>
 			<?php if (!empty($id)) { ?>
 				<div class="form-group row">
@@ -200,7 +218,7 @@ if (!empty($id)) {
 				},
 				function(isConfirm) {
 					if (isConfirm) {
-						var formData = new FormData($('#data-form')[0]);
+						var formData = $('#data-form').serialize();
 						var baseurl = siteurl + active_controller + '/add';
 						$.ajax({
 							url: baseurl,
@@ -208,8 +226,6 @@ if (!empty($id)) {
 							data: formData,
 							cache: false,
 							dataType: 'json',
-							processData: false,
-							contentType: false,
 							success: function(data) {
 								if (data.status == 1) {
 									swal({
