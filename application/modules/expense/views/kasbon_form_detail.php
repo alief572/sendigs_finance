@@ -241,7 +241,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
                                 echo '<div class="col-md-12">
 						<iframe src="' . base_url('assets/expense/' . $data->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
 						</iframe>
-                        <a href="' . base_url('assets/expense/' . $data->doc_file) . '" class="btn btn-sm btn-primary" target="_blank">Download PDF</a>
+                        <a href="' . base_url('assets/expense/' . $data->doc_file) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
 						<br />' . $data->no_doc . '</div>';
                             } else {
                                 if (file_exists('assets/expense' . $data->doc_file)) {
@@ -254,7 +254,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
                                 echo '<div class="col-md-12">
 						<iframe src="' . base_url('./assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
 						</iframe>
-                        <a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="btn btn-sm btn-primary" target="_blank">Download PDF</a>
+                        <a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
 						<br />' . $data->no_doc . '</div>';
                             } else {
                                 if (file_exists('./assets/expense' . $data->doc_file2)) {
