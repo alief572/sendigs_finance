@@ -8,6 +8,8 @@ class Accessories_model extends BF_Model
 	protected $ENABLE_VIEW;
 	protected $ENABLE_DELETE;
 
+	protected $accounting;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -16,6 +18,8 @@ class Accessories_model extends BF_Model
 		$this->ENABLE_MANAGE  = has_permission('Master_Indirect.Manage');
 		$this->ENABLE_VIEW    = has_permission('Master_Indirect.View');
 		$this->ENABLE_DELETE  = has_permission('Master_Indirect.Delete');
+
+		$this->accounting = $this->load->database('accounting', true);
 	}
 
 	public function get_data($table, $where_field = '', $where_value = '')
@@ -281,5 +285,25 @@ class Accessories_model extends BF_Model
 
 		$data['query'] = $this->db->query($sql);
 		return $data;
+	}
+
+	public function all_coa()
+	{
+		$this->accounting->select('a.no_perkiraan, a.nama');
+		$this->accounting->from('coa_master a');
+		$this->accounting->order_by('a.id', 'desc');
+		$coa = $this->accounting->get()->result();
+
+		return $coa;
+	}
+
+	public function coa_detail($no_coa)
+	{
+		$this->accounting->select('a.*');
+		$this->accounting->from('coa_master a');
+		$this->accounting->where('a.no_perkiraan', $no_coa);
+		$get_coa = $this->accounting->get()->row();
+
+		return $get_coa;
 	}
 }
