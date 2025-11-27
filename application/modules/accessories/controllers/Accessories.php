@@ -12,6 +12,8 @@ class Accessories extends Admin_Controller
   protected $id_user;
   protected $datetime;
 
+  protected $accounting;
+
   public function __construct()
   {
     parent::__construct();
@@ -27,6 +29,8 @@ class Accessories extends Admin_Controller
 
     $this->id_user  = $this->auth->user_id();
     $this->datetime = date('Y-m-d H:i:s');
+
+    $this->accounting = $this->load->database('accounting', true);
   }
 
   public function index()
@@ -68,6 +72,11 @@ class Accessories extends Admin_Controller
       $id_unit          = $data['id_unit'];
       $status           = (!empty($id)) ? $data['status'] : 1;
       $min_order = $data['min_order'];
+      $coa = $data['coa'];
+
+      $coa_detail = $this->accessories_model->coa_detail($coa);
+
+      $nm_coa = (!empty($coa_detail)) ? $coa_detail->nama : '';
 
       // $max_stok         = str_replace(',', '', $data['max_stok']);
       // $min_stok         = str_replace(',', '', $data['min_stok']);
@@ -88,6 +97,8 @@ class Accessories extends Admin_Controller
         'id_unit'        => $id_unit,
         'status'        => $status,
         'min_order' => $min_order,
+        'no_coa' => $coa,
+        'nm_coa' => $nm_coa,
         $created_by      => $this->id_user,
         $created_date    => $this->datetime
       );
@@ -131,12 +142,15 @@ class Accessories extends Admin_Controller
       $satuan_packing = $this->db->get_where('ms_satuan', array('deleted_date' => NULL, 'category' => 'packing'))->result();
       $category       = $this->db->get_where('accessories_category', array('deleted_date' => NULL))->result();
 
+      $coa = $this->accessories_model->all_coa();
+
       $data = [
         'header' => $header,
         'tanda' => $tanda,
         'satuan' => $satuan,
         'satuan_packing' => $satuan_packing,
-        'category' => $category
+        'category' => $category,
+        'list_coa' => $coa
       ];
 
       $this->template->set('results', $data);
