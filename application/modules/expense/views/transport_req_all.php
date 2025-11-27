@@ -28,7 +28,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 			</table>
 		</div>
 
-		<h3>Detail Transport</h3>
+		<!-- <h3>Detail Transport</h3>
 		<div class="table-responsive">
 			<table id="mytabledata2" class="table table-bordered table-striped">
 				<thead>
@@ -72,7 +72,7 @@ $ENABLE_DELETE  = has_permission('List_Transportasi.Delete');
 					}  ?>
 				</tbody>
 			</table>
-		</div>
+		</div> -->
 
 	</div>
 	<!-- /.box-body -->
