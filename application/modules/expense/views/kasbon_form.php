@@ -244,8 +244,8 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 							if (strpos($data->doc_file, 'pdf', 0) > 1) {
 								echo '<div class="col-md-12">
 						<iframe src="' . base_url('assets/expense/' . $data->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-								 <a href="' . base_url('assets/expense/' . $data->doc_file) . '">Download PDF</a>
 						</iframe>
+						<a href="' . base_url('assets/expense/' . $data->doc_file) . '" class="btn btn-sm btn-download" download>Download PDF</a>
 						<br />' . $data->no_doc . '</div>';
 							} else {
 								if (file_exists('assets/expense' . $data->doc_file)) {
