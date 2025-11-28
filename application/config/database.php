@@ -163,9 +163,9 @@ $db['accounting_sustain'] = array(
 
 $db['hris'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
+	'hostname' => '206.84.97.106',
 	'username' => 'alief',
-	'password' => 'Alief@ssc1',
+	'password' => 'sdk*^HkfJKjkefJFJLEJLE',
 	'database' => 'hr_sentral',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',

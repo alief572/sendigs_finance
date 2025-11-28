@@ -42,6 +42,11 @@ class Actual_plan_tagih_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
         $bulan = $this->input->post('bulan');
+        $tahun = $this->input->post('tahun');
+
+        // if (empty($tahun)) {
+        //     $tahun = date('Y');
+        // }
 
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
@@ -51,7 +56,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
         } else {
-            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
+            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
             $this->db->group_start();
             $this->db->where_in('d.tagih_mundur', ['2', '3']);
@@ -72,9 +77,6 @@ class Actual_plan_tagih_model extends BF_Model
 
         $get_data = $this->db->get();
 
-        // print_r($this->db->last_query());
-        // exit;
-
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
@@ -83,8 +85,13 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
         } else {
+<<<<<<< HEAD
             // $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
             $this->db->like('DATE_FORMAT(a.tgl_plan_tagih, "%m")', sprintf('%02s', $bulan), 'both');
+=======
+            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
+            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
+>>>>>>> 30b4966078f79b3479b1e1f5edf9a20b6816803e
             $this->db->group_start();
             $this->db->where_in('d.tagih_mundur', ['2', '3']);
             $this->db->or_where('d.id', null);
