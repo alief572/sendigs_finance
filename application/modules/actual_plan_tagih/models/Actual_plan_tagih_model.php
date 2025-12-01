@@ -166,6 +166,7 @@ class Actual_plan_tagih_model extends BF_Model
                 'project' => $nm_project,
                 'project_leader' => $item->nm_project_leader,
                 'sales' => $nm_sales,
+                'keterangan' => $item->desc_payment,
                 'status' => $status,
                 'option' => $option
             ];

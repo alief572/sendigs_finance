@@ -63,6 +63,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     <th class="text-center" width="15%">Project</th>
                     <th class="text-center" width="15%">Project Leader</th>
                     <th class="text-center" width="15%">Sales</th>
+                    <th class="text-center" width="15%">Keterangan</th>
                     <th class="text-center" width="10%">Status</th>
                     <th class="text-center" width="15%">Action</th>
                 </tr>
@@ -393,6 +394,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 },
                 {
                     data: 'sales'
+                },
+                {
+                    data: 'keterangan'
                 },
                 {
                     data: 'status'
