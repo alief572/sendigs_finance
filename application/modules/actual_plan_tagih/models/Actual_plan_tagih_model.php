@@ -69,6 +69,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
+            $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
@@ -98,6 +99,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
+            $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
         }
         $this->db->order_by('a.id', 'desc');
