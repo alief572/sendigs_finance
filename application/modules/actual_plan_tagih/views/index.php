@@ -25,7 +25,12 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
     <div class="box-header">
-
+        <div class="col-md-2">
+            <div class="form-group">
+                <label for="">Tahun</label>
+                <input type="number" class="form-control form-control-sm inp_tahun" min="2000" max="2100" value="<?= date('Y') ?>">
+            </div>
+        </div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -58,6 +63,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     <th class="text-center" width="15%">Project</th>
                     <th class="text-center" width="15%">Project Leader</th>
                     <th class="text-center" width="15%">Sales</th>
+                    <th class="text-center" width="15%">Keterangan</th>
                     <th class="text-center" width="10%">Status</th>
                     <th class="text-center" width="15%">Action</th>
                 </tr>
@@ -122,16 +128,18 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 <script type="text/javascript">
     $(document).ready(function() {
         var bulan = $('#bulan').val();
-        DataTables(bulan);
+        var tahun = $('.inp_tahun').val();
+        DataTables(bulan, tahun);
     });
 
     $(document).on('click', '.tab_pin', function() {
         var bulan = $(this).data('no');
+        var tahun = $('.inp_tahun').val();
 
         $('.tab_pin').removeClass('active');
         $('.tab_' + bulan).addClass('active');
         $('#bulan').val(bulan);
-        DataTables(bulan);
+        DataTables(bulan, tahun);
     });
 
     $(document).on('click', '.aktual_tagihan', function() {
@@ -344,9 +352,17 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         });
     });
 
-    function DataTables(bulan) {
+    $(document).on('change', '.inp_tahun', function() {
+        var bulan = $('#bulan').val();
+        var tahun = $(this).val();
+
+        DataTables(bulan, tahun);
+    });
+
+    function DataTables(bulan, tahun) {
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
+
 
         var dataTables = $('#table_penawaran').dataTable({
             ajax: {
@@ -355,6 +371,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 dataType: "JSON",
                 data: function(d) {
                     d.bulan = bulan;
+                    d.tahun = tahun;
                 }
             },
             columns: [{
@@ -377,6 +394,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 },
                 {
                     data: 'sales'
+                },
+                {
+                    data: 'keterangan'
                 },
                 {
                     data: 'status'
