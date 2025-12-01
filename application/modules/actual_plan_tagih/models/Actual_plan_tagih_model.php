@@ -85,13 +85,8 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
         } else {
-<<<<<<< HEAD
-            // $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', date('Y'));
-            $this->db->like('DATE_FORMAT(a.tgl_plan_tagih, "%m")', sprintf('%02s', $bulan), 'both');
-=======
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
->>>>>>> 30b4966078f79b3479b1e1f5edf9a20b6816803e
             $this->db->group_start();
             $this->db->where_in('d.tagih_mundur', ['2', '3']);
             $this->db->or_where('d.id', null);
