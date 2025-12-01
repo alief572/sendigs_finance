@@ -106,8 +106,10 @@ class Expense extends Admin_Controller
 			];
 		}
 
+		$get_list_coa = $this->Expense_model->GetListCoa('Kasbon');
 
 		$this->template->set('list_pr_non_po', $list_pr_non_po);
+		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('mod', '');
 		$this->template->render('kasbon_form');
 	}
@@ -134,6 +136,8 @@ class Expense extends Admin_Controller
 		$file_name			= $this->input->post("file_name");
 		$doc_pr			= $this->input->post("doc_pr");
 		$to_doc_pr			= $this->input->post("to_doc_pr");
+		$coa = $this->input->post("coa");
+		$nm_coa = $this->input->post("nm_coa");
 		$metode_pembayaran	= 1;
 
 		$this->db->trans_begin();
@@ -208,6 +212,8 @@ class Expense extends Admin_Controller
 				'id_pr' => $no_pr,
 				'tipe_pr' => $tipe_pr,
 				'metode_pembayaran' => $metode_pembayaran,
+				'no_coa' => $coa,
+				'nm_coa' => $nm_coa,
 				'modified_by' => $this->auth->user_name(),
 				'modified_on' => date("Y-m-d h:i:s"),
 			);
@@ -399,6 +405,8 @@ class Expense extends Admin_Controller
 				'id_pr' => $no_pr,
 				'tipe_pr' => $tipe_pr,
 				'metode_pembayaran' => $metode_pembayaran,
+				'no_coa' => $coa,
+				'nm_coa' => $nm_coa,
 				'created_by' => $this->auth->user_name(),
 				'created_on' => date("Y-m-d h:i:s"),
 			);
@@ -679,9 +687,12 @@ class Expense extends Admin_Controller
 		$this->db->where('a.id_kasbon', $data->no_doc);
 		$get_pr_detail_kasbon = $this->db->get()->result_array();
 
+		$get_list_coa = $this->Expense_model->GetListCoa('Kasbon');
+
 		$this->template->set('mod', $mod);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
+		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('stsview', '');
 		$this->template->set('list_detail_pr_kasbon', $get_pr_detail_kasbon);
 		$this->template->title('Kasbon Form');
@@ -2888,5 +2899,15 @@ class Expense extends Admin_Controller
 	public function get_data_transport_req_all()
 	{
 		$this->Expense_model->get_data_transport_req_all();
+	}
+
+	public function get_coa_name(){
+		$no_coa = $this->input->post('no_coa');
+
+		$get_coa_detail = $this->Expense_model->getCoaDetail($no_coa);
+
+		echo json_encode([
+			'nm_coa' => $get_coa_detail->nama
+		]);
 	}
 }

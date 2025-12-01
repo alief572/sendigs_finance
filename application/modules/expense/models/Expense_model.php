@@ -684,4 +684,29 @@ class Expense_model extends BF_Model
 
 		echo json_encode($response);
 	}
+
+	public function GetListCoa($jenis_pengeluaran){
+		$this->db->select('a.coa');
+		$this->db->from('coa_expense a');
+		$this->db->where('a.jenis_pengeluaran', $jenis_pengeluaran);
+		$query = $this->db->get()->row();
+
+		if(!empty($query->coa)) {
+			$this->db->select('a.no_perkiraan, a.nama');
+			$this->db->from(DBACC . '.coa_master a');
+			$this->db->where_in('a.no_perkiraan', explode(';', $query->coa));
+			$result = $this->db->get()->result_array();
+			return $result;
+		} else {
+			return [];
+		}
+	}
+
+	public function getCoaDetail($no_coa){
+		$this->db->select('a.nama');
+		$this->db->from(DBACC . '.coa_master a');
+		$this->db->where('a.no_perkiraan', $no_coa);
+		$query = $this->db->get()->row();
+		return $query;
+	}
 }
