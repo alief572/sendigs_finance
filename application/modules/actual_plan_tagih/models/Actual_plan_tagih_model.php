@@ -43,6 +43,7 @@ class Actual_plan_tagih_model extends BF_Model
         $search = $this->input->post('search');
         $bulan = $this->input->post('bulan');
         $tahun = $this->input->post('tahun');
+        $status = $this->input->post('status');
 
         // if (empty($tahun)) {
         //     $tahun = date('Y');
@@ -55,13 +56,28 @@ class Actual_plan_tagih_model extends BF_Model
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
+            if(!empty($status)) {
+                if($status == '1' || $status == '2') {
+                    $this->db->where('d.tagih_mundur', $status);
+                } else if($status == '3') {
+                    $this->db->where('d.id', null);
+                }
+            }
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
-            $this->db->group_start();
-            $this->db->where_in('d.tagih_mundur', ['2', '3']);
-            $this->db->or_where('d.id', null);
-            $this->db->group_end();
+            if(!empty($status)) {
+                if($status == '1' || $status == '2') {
+                    $this->db->where('d.tagih_mundur', $status);
+                } else if($status == '3') {
+                    $this->db->where('d.id', null);
+                }
+            } else {
+                $this->db->group_start();
+                $this->db->where_in('d.tagih_mundur', ['2', '3']);
+                $this->db->or_where('d.id', null);
+                $this->db->group_end();
+            }
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -78,6 +94,9 @@ class Actual_plan_tagih_model extends BF_Model
 
         $get_data = $this->db->get();
 
+        // print_r($this->db->last_query());
+        // exit;
+
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
@@ -85,13 +104,28 @@ class Actual_plan_tagih_model extends BF_Model
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
+            if(!empty($status)) {
+                if($status == '1' || $status == '2') {
+                    $this->db->where('d.tagih_mundur', $status);
+                } else if($status == '3') {
+                    $this->db->where('d.id', null);
+                }
+            }
         } else {
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
             $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
-            $this->db->group_start();
-            $this->db->where_in('d.tagih_mundur', ['2', '3']);
-            $this->db->or_where('d.id', null);
-            $this->db->group_end();
+            if(!empty($status)) {
+                if($status == '1' || $status == '2') {
+                    $this->db->where('d.tagih_mundur', $status);
+                } else if($status == '3') {
+                    $this->db->where('d.id', null);
+                }
+            } else {
+                $this->db->group_start();
+                $this->db->where_in('d.tagih_mundur', ['2', '3']);
+                $this->db->or_where('d.id', null);
+                $this->db->group_end();
+            }
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -101,6 +135,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
             $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
+            
         }
         $this->db->order_by('a.id', 'desc');
         $this->db->group_by('a.id');

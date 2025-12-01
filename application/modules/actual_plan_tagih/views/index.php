@@ -31,6 +31,17 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 <input type="number" class="form-control form-control-sm inp_tahun" min="2000" max="2100" value="<?= date('Y') ?>">
             </div>
         </div>
+        <div class="col-md-2">
+            <div class="form-group">
+                <label for="">Status</label>
+                <select name="status" id="status" class="form-control form-control-sm">
+                    <option value="">Pilih Status</option>
+                    <option value="1">Tagih</option>
+                    <option value="2">Mundur</option>
+                    <option value="3">Waiting Actual Plan Tagih</option>
+                </select>
+            </div>
+        </div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -129,17 +140,20 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     $(document).ready(function() {
         var bulan = $('#bulan').val();
         var tahun = $('.inp_tahun').val();
-        DataTables(bulan, tahun);
+        var status = $('#status').val();
+
+        DataTables(bulan, tahun, status);
     });
 
     $(document).on('click', '.tab_pin', function() {
         var bulan = $(this).data('no');
         var tahun = $('.inp_tahun').val();
+        var status = $('#status').val();
 
         $('.tab_pin').removeClass('active');
         $('.tab_' + bulan).addClass('active');
         $('#bulan').val(bulan);
-        DataTables(bulan, tahun);
+        DataTables(bulan, tahun, status);
     });
 
     $(document).on('click', '.aktual_tagihan', function() {
@@ -355,11 +369,20 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     $(document).on('change', '.inp_tahun', function() {
         var bulan = $('#bulan').val();
         var tahun = $(this).val();
+        var status = $('#status').val();
 
-        DataTables(bulan, tahun);
+        DataTables(bulan, tahun, status);
     });
 
-    function DataTables(bulan, tahun) {
+    $(document).on('change', '#status', function() {
+        var bulan = $('#bulan').val();
+        var tahun = $('.inp_tahun').val();
+        var status = $(this).val();
+
+        DataTables(bulan, tahun, status);
+    });
+
+    function DataTables(bulan, tahun, status = null) {
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
 
@@ -372,6 +395,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 data: function(d) {
                     d.bulan = bulan;
                     d.tahun = tahun;
+                    d.status = status;
                 }
             },
             columns: [{
