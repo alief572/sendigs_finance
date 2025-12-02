@@ -8,7 +8,7 @@ if (!defined('BASEPATH')) {
  * @author Harboens
  * @copyright Copyright (c) 2022
  *
- * This is controller for Master Coa Expense
+ * This is controller for Master Coa
  */
 class Coa_expense extends Admin_Controller
 {
@@ -32,7 +32,7 @@ class Coa_expense extends Admin_Controller
         $data = $this->Coa_expense_model->GetList();
         $this->template->set('results', $data);
         $this->template->page_icon('fa fa-list');
-        $this->template->title('Master Coa Expense');
+        $this->template->title('Master Coa');
         $this->template->render('index');
     }
 
