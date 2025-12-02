@@ -443,7 +443,7 @@ class Request_pr_stok_model extends BF_Model
 
       $nestedData   = array();
       $nestedData[]  = "<div align='center'>" . $nomor . "</div>";
-      $nestedData[]  = "<div align='left'>" . $row['stock_name'] . "</div>";
+      $nestedData[]  = "<div align='left'>" . $row['stock_name'] . " - <b>(" . $row['no_coa'] . " - " . strtoupper($row['nm_coa']) . ") </b></div>";
 
       $STOCK_WRH    = (!empty($GET_WAREHOUSE_STOCK[$row['id']]['stok'])) ? $GET_WAREHOUSE_STOCK[$row['id']]['stok'] : 0;
       $stock_oke     = (!empty($STOCK_WRH)) ? $STOCK_WRH : 0;
@@ -565,7 +565,7 @@ class Request_pr_stok_model extends BF_Model
 
   public function getPRStockDetail($id_pr)
   {
-    $this->db->select('a.*, b.stock_name, b.konversi, b.spec, c.qty_stock, d.nm_category, e.code as satuan, f.kebutuhan_month as qty_kebutuhan');
+    $this->db->select('a.*, b.stock_name, b.konversi, b.spec, b.no_coa, b.nm_coa, c.qty_stock, d.nm_category, e.code as satuan, f.kebutuhan_month as qty_kebutuhan');
     $this->db->from('material_planning_base_on_produksi_detail a');
     $this->db->join('accessories b', 'b.id = a.id_material', 'left');
     $this->db->join('warehouse_stock c', 'c.id_material = a.id_material', 'left');

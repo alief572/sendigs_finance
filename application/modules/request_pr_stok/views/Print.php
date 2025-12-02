@@ -185,15 +185,15 @@
 		</thead>
 		<tbody>
 			<?php
-            $no = 0;
+			$no = 0;
 
-            $grand_total = 0;
+			$grand_total = 0;
 
 			foreach ($detail as $row) {
 				$no++;
 				echo '<tr>';
 				echo '<td style="text-align: center;">' . $no . '</td>';
-				echo '<td style="text-align: left;">' . $row->stock_name . '</td>';
+				echo '<td style="text-align: left;">' . $row->stock_name . ' - <b>(' . $row->no_coa . ' - ' . strtoupper($row->nm_coa) . ')</b></td>';
 				echo '<td style="text-align: left;">' . $row->spec . '</td>';
 				echo '<td style="text-align: left;">' . $row->nm_category . '</td>';
 				echo '<td style="text-align: right;">' . number_format(($row->qty_stock / $row->konversi)) . '</td>';
@@ -202,18 +202,18 @@
 				echo '<td style="text-align: right;">' . number_format(($row->propose_purchase / $row->konversi)) . '</td>';
 				echo '<td style="text-align: right;">' . number_format($row->price_ref, 2) . '</td>';
 				echo '<td style="text-align: right;">' . number_format(($row->price_ref * $row->propose_purchase), 2) . '</td>';
-                echo '</tr>';
+				echo '</tr>';
 
-                $grand_total += (($row->price_ref * $row->propose_purchase));
+				$grand_total += (($row->price_ref * $row->propose_purchase));
 			}
 			?>
-        </tbody>
-        <tfooter>
-            <tr>
-                <th style="text-align: center;" colspan="9">Grand Total</th>
-                <th style="text-align: right;"><?= number_format($grand_total, 2) ?></th>
-            </tr>
-        </tfooter>
+		</tbody>
+		<tfooter>
+			<tr>
+				<th style="text-align: center;" colspan="9">Grand Total</th>
+				<th style="text-align: right;"><?= number_format($grand_total, 2) ?></th>
+			</tr>
+		</tfooter>
 	</table>
 
 	<br><br>
@@ -234,5 +234,5 @@
 </html>
 
 <script>
-    window.print();
+	window.print();
 </script>
