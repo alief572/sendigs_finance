@@ -26,7 +26,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 	<input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->id) ? $data->id : ''); ?>">
 	<input type="hidden" id="departement" name="departement" value="<?php echo ($data_user->department_id) ?>">
 	<input type="hidden" id="nama" name="nama" value="<?php echo (isset($data->nama) ? $data->nama : $this->auth->user_name()); ?>">
-	<input type="hidden" name="" class="stsview" value="<?= (isset($stsview)) ? $stsview : null ?>">
+	<input type="hidden" name="stsview" class="stsview" value="<?= (isset($stsview)) ? $stsview : null ?>">
 
 	<div class="tab-content">
 		<div class="tab-pane active">
@@ -104,6 +104,34 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 							}
 							?>
 						</div>
+						<label class="col-sm-2 control-label">COA</label>
+						<div class="col-sm-4">
+							<?php 
+								if($mod == '') {
+									echo '<select name="coa" class="form-control form-control-sm coa_select chosen_select">
+										<option value="">- Pilih COA -</option>
+										';
+											if(!empty($list_coa)) {
+												foreach($list_coa as $item_coa) {
+													$selected = '';
+													if(isset($data->no_coa) && $data->no_coa == $item_coa['no_perkiraan']) {
+														$selected = 'selected';
+													}
+													echo '<option value="' . $item_coa['no_perkiraan'] . '" ' . $selected . '>' . $item_coa['no_perkiraan'] . ' - ' . $item_coa['nama'] . '</option>';
+												}
+											}
+										?>
+									<?php 
+									echo '</select>'; 
+								} else {
+									$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.$data->nm_coa : '';
+									echo '<input type="text" name="nm_coa" value="'. $val_coa .'" class="form-control form-control-sm" readonly>';
+								}
+							?>
+							
+							<input type="hidden" name="nm_coa" value="<?= (isset($data->nm_coa) ? $data->nm_coa : ''); ?>">
+						</div>
+
 					</div>
 
 					<div class="transfer_ke_cont">
@@ -542,6 +570,34 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 
 		hitung_grand_total_non_pr();
 	})
+
+	$(document).on('change', '.coa_select', function() {
+		var no_coa = $(this).val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + 'get_coa_name',
+			data: {
+				'no_coa': no_coa
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(result) {
+				$('input[name="nm_coa"]').val(result.nm_coa);
+			},
+			error: function(result) {
+				swal({
+					type: 'error',
+					title: 'Error !',
+					text: 'Please try again later !',
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowOutsideClick: false,
+					timer: 3000
+				});
+			}
+		});
+	});
 
 	function getNum(val) {
 		if (isNaN(val) || val == '') {

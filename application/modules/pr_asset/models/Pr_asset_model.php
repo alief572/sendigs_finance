@@ -412,6 +412,8 @@ class Pr_asset_model extends BF_model
 				'no_pr' => $no_pr,
 				'category' => 'asset',
 				'tgl_pr'	=> date('Y-m-d'),
+				'no_coa' => $get_asset[0]->no_coa,
+				'nm_coa' => $get_asset[0]->nm_coa,
 				'created_by' => $this->auth->user_id(),
 				'created_date' => date('Y-m-d H:i:s')
 			);
@@ -629,7 +631,7 @@ class Pr_asset_model extends BF_model
 			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
 				$nestedData2 	= array();
 				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
-				$nestedData2[]	= "<div align='left'></div>";
+				$nestedData2[]	= "<div align='right'><b>COA</b><br>" . strtoupper($row['no_coa'] . ' - ' . $row['nm_coa']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>QTY BARANG</b><br>" . number_format($row['qty']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>NILAI PR</b></br>" . number_format($row['nilai_pr']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>TGL DIBUTUHKAN</b></br>" . date('d F Y', strtotime($row['tgl_dibutuhkan'])) . "</div>";
@@ -728,6 +730,8 @@ class Pr_asset_model extends BF_model
 				b.app_status_1,
 				b.app_status_2,
 				b.app_status_3,
+				b.no_coa,
+				b.nm_coa,
 				c.nm_lengkap as dibuat_oleh
 			FROM
 				tran_pr_detail a 
@@ -814,7 +818,7 @@ class Pr_asset_model extends BF_model
 			$nestedData2 	= array();
 			$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>$('.prtCh_" . $nomor . "').parent().parent().attr('class','child-" . $nomor . "');$('.child-" . $nomor . "').hide()</script>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
 			$nestedData2[]	= "<div align='right'><b>BUDGET</b><br>" . number_format($row['budget']) . "<br><b>SISA BUDGET PO</b><br>" . number_format($row['budget_po']) . "<br><b>SISA BUDGET PR</b></br>" . number_format($row['budget_pr']) . "</div>";
-			$nestedData2[]	= "<div align='right'><b>RENCANA BELI</b><br>" . date('F Y', strtotime($row['tahun'] . '-' . $row['bulan'] . '-01')) . "<br><b>KETERANGAN</b><br>" . strtoupper($row['keterangan']) . "</div>";
+			$nestedData2[]	= "<div align='right'><b>RENCANA BELI</b><br>" . date('F Y', strtotime($row['tahun'] . '-' . $row['bulan'] . '-01')) . "<br><b>KETERANGAN</b><br>" . strtoupper($row['keterangan']) . "<br><b>COA</b><br>" . strtoupper($row['no_coa'] . ' - ' . $row['nm_coa']) . "</div>";
 			$nestedData2[]	= "<div align='right'><b>QTY</b><input type='text' id='qty_rev_" . $nomor . "' class='form-control input-sm text-center maskM' placeholder='Qty Rev' value='" . number_format($row['qty']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></div>";
 			$nestedData2[]	= "<div align='right'><b>NILAI PR</b><input type='text' id='nil_pr_" . $nomor . "' class='form-control input-sm text-right maskM' placeholder='Nilai PR' value='" . number_format($row['budget']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></div>";
 			$nestedData2[]	= "<div align='right'>

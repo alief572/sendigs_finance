@@ -62,28 +62,7 @@ class Asset_planning extends Admin_Controller
 		$this->budget_rutin_model->excel_kompilasi();
 	}
 
-	public function kompilasi_budget()
-	{
-		$controller			= ucfirst(strtolower($this->uri->segment(1))) . "/index_rutin";
-		$Arr_Akses			= getAcccesmenu($controller);
-		if ($Arr_Akses['read'] != '1') {
-			$this->session->set_flashdata("alert_data", "<div class=\"alert alert-warning\" id=\"flash-message\">You Don't Have Right To Access This Page, Please Contact Your Administrator....</div>");
-			redirect(site_url('dashboard'));
-		}
-
-		$group_header = $this->db->query("SELECT department, costcenter FROM budget_rutin_header GROUP BY department, costcenter")->result_array();
-		$group_barang = $this->db->query("SELECT id_barang, jenis_barang, satuan FROM budget_rutin_detail GROUP BY id_barang ORDER BY jenis_barang ASC, id_barang")->result_array();
-
-		$data = array(
-			'title'			=> 'Indeks Of Compile Asset_planning',
-			'action'		=> 'index',
-			'akses_menu'	=> $Arr_Akses,
-			'group_header' => $group_header,
-			'group_barang' => $group_barang
-		);
-		history('View Data Asset_planning Kompilasi');
-		$this->load->view('Asset_planning_rutin/kompilasi_budget', $data);
-	}
+	
 
 	public function delete()
 	{
@@ -155,6 +134,8 @@ class Asset_planning extends Admin_Controller
 			$keterangan 	= strtolower($data['keterangan']);
 			$reason 		= (!empty($data['reason'])) ? strtolower($data['reason']) : '';
 			$status 		= (!empty($data['status'])) ? $data['status'] : '';
+			$coa = $data['coa'];
+			$nm_coa = $data['nm_coa'];
 
 			$ym = date('ym');
 
@@ -169,6 +150,8 @@ class Asset_planning extends Admin_Controller
 				'budget' 		=> $budget,
 				'qty' 			=> $qty,
 				'keterangan' 	=> $keterangan,
+				'no_coa' => $coa,
+				'nm_coa' => $nm_coa,
 				'updated_by'	=> $this->auth->user_id(),
 				'updated_date'	=> $dateTime
 			);
@@ -195,6 +178,8 @@ class Asset_planning extends Admin_Controller
 					'budget' 		=> $budget,
 					'qty' 			=> $qty,
 					'keterangan' 	=> $keterangan,
+					'no_coa' => $coa,
+					'nm_coa' => $nm_coa,
 					'created_by'	=> $this->auth->user_id(),
 					'created_date'	=> $dateTime
 				);
@@ -213,7 +198,9 @@ class Asset_planning extends Admin_Controller
 					'status' 		=> $status,
 					'reason' 		=> $reason,
 					'app_by'		=> $this->auth->user_id(),
-					'app_date'		=> $dateTime
+					'app_date'		=> $dateTime,
+					'no_coa' => $coa,
+					'nm_coa' => $nm_coa
 				);
 			}
 
@@ -264,6 +251,16 @@ class Asset_planning extends Admin_Controller
 			$tanda 			= (!empty($header)) ? 'Edit' : 'Add';
 			// $list_department = $this->db->get(DBHRIS . '.departments')->result_array();
 
+			$this->db->select('a.jenis_pengeluaran, a.coa');
+			$this->db->from('coa_expense a');
+			$this->db->where('a.jenis_pengeluaran', 'Asset');
+			$data_jenis_coa = $this->db->get()->row();
+
+			$this->db->select('a.no_perkiraan, a.nama');
+			$this->db->from(DBACC . '.coa_master a');
+			$this->db->where_in('a.no_perkiraan', explode(';', $data_jenis_coa->coa));
+			$data_coa = $this->db->get()->result();
+
 			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
 			$this->hris->from('departments a');
 			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
@@ -279,11 +276,20 @@ class Asset_planning extends Admin_Controller
 				'approve'		=> $approve,
 				'id'			=> $id,
 				'list_department' => $list_department,
-				'list_costcenter' => $list_costcenter
+				'list_costcenter' => $list_costcenter,
+				'list_coa' => $data_coa
 			);
 			$this->template->set($data);
 			$this->template->render('add');
 		}
+	}
+
+	public function get_coa() {
+		$coa = $this->input->post('coa');
+		$get_coa_detail = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $coa])->row();
+		echo json_encode([
+			'nm_coa' => $get_coa_detail->nama
+		]);
 	}
 
 	public function hapus_asset()
