@@ -308,7 +308,7 @@ class Request_pr_stok extends Admin_Controller
       )
       ->result_array();
     $detail     = $this->db
-      ->select('a.*, b.max_stok, b.min_stok, b.stock_name')
+      ->select('a.*, b.max_stok, b.min_stok, b.stock_name, b.no_coa, b.nm_coa')
       ->join('accessories b', 'a.id_material=b.id', 'left')
       ->get_where(
         'material_planning_base_on_produksi_detail a',
