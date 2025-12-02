@@ -18,7 +18,7 @@ $data_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()]
 
 $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 
-
+$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.$data->nm_coa : '';
 
 ?>
 
@@ -103,6 +103,11 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
                                 }
                             }
                             ?>
+                        </div>
+                        <label class="col-sm-2 control-label">COA</label>
+                        <div class="col-sm-4">
+                            <input type="text" class="form-control form-control-sm" id="nm_coa" name="nm_coa" value="<?= $val_coa ?>" placeholder="COA" readonly>
+                            <input type="hidden" name="nm_coa" value="<?= (isset($data->nm_coa) ? $data->nm_coa : ''); ?>">
                         </div>
                     </div>
 

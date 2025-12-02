@@ -12,6 +12,8 @@ $keterangan 	= (!empty($header)) ? strtoupper($header[0]->keterangan) : '';
 $tanda 			= (!empty($id)) ? 'Update' : 'Insert';
 $disabled		= (!empty($approve)) ? 'disabled' : '';
 $disabled2		= ($approve == 'view') ? 'disabled' : '';
+$no_coa = (!empty($header)) ? $header[0]->no_coa : '';
+$nm_coa = (!empty($header)) ? $header[0]->nm_coa : '';
 
 $rev_nama_asset 	= (!empty($header)) ? strtoupper($header[0]->rev_nama_asset) : '';
 $rev_tahun 			= (!empty($header)) ? $header[0]->rev_tahun : date('Y');
@@ -53,6 +55,8 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 					echo form_input(array('id' => 'nama_asset', 'name' => 'nama_asset', 'class' => 'form-control input-md', 'placeholder' => 'Nama Assets'), $nama_asset);
 					?>
 				</div>
+			</div>
+			<div class="form-group row">
 				<label class='label-control col-sm-2'><b>Bulan Tahun <span class='text-red'>*</span></b></label>
 				<div class='col-sm-2'>
 					<select name='bulan' id='bulan' class='form-control input-md' <?= $disabled2; ?>>
@@ -86,6 +90,22 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 						}
 						?>
 					</select>
+				</div>
+				<label class='label-control col-sm-2'><b>COA<span class='text-red'>*</span></b></label>
+				<div class="col-sm-4">
+					<select name="coa" id="coa" class="form-control input-md chosen_select">
+						<option value="">- Pilih COA -</option>
+						<?php
+						foreach ($list_coa as $item_coa) {
+							$selected = '';
+							if($no_coa == $item_coa->no_perkiraan) {
+								$selected = 'selected';
+							}
+							echo '<option value="' . $item_coa->no_perkiraan . '" ' . $selected . '>' . $item_coa->no_perkiraan . ' - ' . $item_coa->nama . '</option>';
+						}
+						?>
+					</select>
+					<input type="hidden" name="nm_coa" id="nm_coa">
 				</div>
 			</div>
 			<div class='form-group row'>
@@ -268,10 +288,28 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 			$('.tnd_reason').hide();
 		}
 	});
+
 	$(document).on('keyup', '#budget', function(e) {
 		var budget = $(this).val();
 		$('#budget_pr').val(budget);
 		$('#budget_po').val(budget);
+	});
+
+	$(document).on('change', '#coa', function(e) {
+		var coa = $(this).val();
+
+		$.ajax({
+			type: 'post',
+			url: siteurl + active_controller + '/get_coa',
+			data: {
+				coa: coa
+			},
+			cache: false,
+			dataType: 'json',
+			success: function(response) {
+				$('#nm_coa').val(response.nm_coa);
+			}
+		});
 	});
 
 	$(document).on('click', '#save', function(e) {
