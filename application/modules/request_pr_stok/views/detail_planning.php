@@ -100,7 +100,7 @@
 
 								echo "<tr>";
 								echo "<td class='text-center'>" . $key . "</td>";
-								echo "	<td class='text-left'>" . $value['stock_name'] . "
+								echo "	<td class='text-left'>" . $value['stock_name'] . " - <b>(" . $value['no_coa'] . " - " . strtoupper($value['nm_coa']) . ")</b>
 										<input type='hidden' name='detail[" . $key . "][id]' value='" . $value['id'] . "'>
 										</td>";
 								echo "<td class='text-right min_stok'>" . number_format($value['min_stok'], 2) . "</td>";

@@ -122,7 +122,7 @@ if (!empty($header)) {
 							$grand_total_price = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
-								$nm_material 	= $value['nm_material'];
+								$nm_material 	= $value['nm_material'] . ' - <b>(' . $value['no_coa'] . ' - ' . $value['nm_coa'] . ')</b>';
 								$stock_free 	= $value['stock_free'];
 								$use_stock 		= $value['use_stock'];
 								$sisa_free 		= $stock_free - $use_stock;

@@ -65,7 +65,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 							$key = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
-								$nm_material 	= $value['nm_material'];
+								$nm_material 	= $value['nm_material'] . ' - <b>(' . $value['no_coa'] . ' - ' . strtoupper($value['nm_coa']) . ')</b>';
 								$stock_free 	= $value['stock_free'];
 								$use_stock 		= $value['use_stock'];
 								$sisa_free 		= $stock_free - $use_stock;
