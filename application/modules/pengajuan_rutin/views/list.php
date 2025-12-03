@@ -43,126 +43,10 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 					</tr>
 				</thead>
 				<tbody>
-					<?php
-					if (!empty($results)) {
-						$numb = 0;
-						foreach ($results as $record) {
-							$numb++;
 
-							$nm_dept = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_dept'] : '';
-							$nm_comp = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_comp'] : '';
-					?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= strtoupper($nm_dept . ' - ' . $nm_comp) ?></td>
-								<td><?= $record->no_doc ?></td>
-								<td class="text-right"><?= number_format($record->nilai_total, 2) ?></td>
-								<td><?= $record->tanggal_doc ?></td>
-								<td class="text-center">
-									<?php
-									if ($record->sts_reject == '1' && $record->status == '0') {
-										echo '<div class="badge bg-red">Reject</div>';
-									} else {
-										if ($record->status == '1') {
-											echo '<div class="badge bg-green">Approved</div>';
-										} else {
-											echo '<div class="badge bg-yellow">Waiting Approval</div>';
-										}
-									}
-									?>
-								</td>
-								<td><?= ($record->status < 1 && $record->sts_reject == 1) ? $record->reject_ket : null ?></td>
-								<td>
-									<?php if ($ENABLE_VIEW) : ?>
-										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
-										<?php endif;
-									if ($record->status == 0) {
-										if ($ENABLE_MANAGE) : ?>
-											<a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit('<?= $record->id ?>')"><i class="fa fa-edit"></i></a>
-										<?php endif;
-										if ($ENABLE_DELETE) : ?>
-											<a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete('<?= $record->no_doc ?>')"><i class="fa fa-trash"></i></a>
-									<?php endif;
-									} ?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
 				</tbody>
 			</table>
 		</div>
-
-		<div class="table-responsive col-md-12">
-			<table id="mytabledata2" class="table table-bordered table-striped">
-				<thead>
-					<tr>
-						<th width="5">#</th>
-						<th>Departement</th>
-						<th>Nomor</th>
-						<th>Tanggal</th>
-						<th>Deskripsi</th>
-						<th>Tanggal Kebutuhan</th>
-						<th>Nominal</th>
-						<th>Status</th>
-						<th>Keterangan Reject</th>
-						<th width="150">
-							Action
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					if (!empty($data_detail)) {
-						$numb = 0;
-						foreach ($data_detail as $record) {
-							$nm_dept = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_dept'] : '';
-							$nm_comp = (isset($dept[$record->departement])) ? $dept[$record->departement]['nm_comp'] : '';
-
-							$numb++; ?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= strtoupper($nm_dept . ' - ' . $nm_comp) ?></td>
-								<td><?= $record->no_doc ?></td>
-								<td><?= $record->tanggal_doc ?></td>
-								<td><?= $record->nama ?></td>
-								<td><?= $record->tanggal ?></td>
-								<td class="text-right"><?= number_format($record->nilai) ?></td>
-								<td class="text-center">
-									<?php
-									if ($record->sts_reject == '1' && $record->status == '0') {
-										echo '<div class="badge bg-red">Reject</div>';
-									} else {
-										if ($record->status == '1') {
-											echo '<div class="badge bg-green">Approved</div>';
-										} else {
-											echo '<div class="badge bg-yellow">Waiting Approval</div>';
-										}
-									}
-									?>
-								</td>
-								<td><?= ($record->status < 1 && $record->sts_reject == 1) ? $record->reject_ket : null ?></td>
-								<td>
-									<?php if ($ENABLE_VIEW) : ?>
-										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
-										<?php endif;
-									if ($record->status == 0) {
-										if ($ENABLE_MANAGE) : ?>
-											<a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit('<?= $record->id ?>')"><i class="fa fa-edit"></i></a>
-										<?php endif;
-										if ($ENABLE_DELETE) : ?>
-											<a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete('<?= $record->no_doc ?>')"><i class="fa fa-trash"></i></a>
-									<?php endif;
-									} ?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
-				</tbody>
-			</table>
-		</div>
-
 	</div>
 	<!-- /.box-body -->
 </div>
@@ -185,15 +69,60 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
 	var url_delete = siteurl + 'pengajuan_rutin/hapus_data/';
 	var url_view = siteurl + 'pengajuan_rutin/view/';
 
+	$(document).ready(function() {
+		datatables();
+	})
+
 	function new_data(key) {
 		url_add = url_add_def + key;
 		data_add();
 	}
-	$("#mytabledata2").DataTable({
-		dom: "<'row'<'col-sm-2'B><'col-sm-4'l><'col-sm-6'f>>rtip",
-		buttons: [
-			'excel'
-		]
-	});
+	// $("#mytabledata2").DataTable({
+	// 	dom: "<'row'<'col-sm-2'B><'col-sm-4'l><'col-sm-6'f>>rtip",
+	// 	buttons: [
+	// 		'excel'
+	// 	]
+	// });
+
+	function datatables() {
+		var datatables = $('#mytabledata').dataTable({
+			serverSide: true,
+			processing: true,
+			paging: true,
+			destroy: true,
+			stateSave: true,
+			ajax: {
+				type: 'post',
+				url: siteurl + active_controller + 'get_pengajuan_periodik',
+				cache: false,
+				dataType: 'json'
+			},
+			columns: [{
+					data: 'no'
+				},
+				{
+					data: 'department'
+				},
+				{
+					data: 'nomor'
+				},
+				{
+					data: 'nominal'
+				},
+				{
+					data: 'tanggal'
+				},
+				{
+					data: 'status'
+				},
+				{
+					data: 'keterangan_reject'
+				},
+				{
+					data: 'action'
+				}
+			]
+		});
+	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
