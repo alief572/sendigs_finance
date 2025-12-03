@@ -82,6 +82,7 @@ $dept = $datauser->department_id;
 							<tr>
 								<th width="5">#</th>
 								<th>Tanggal</th>
+								<th>COA</th>
 								<th width="100">Keperluan</th>
 								<th width="100">Rute</th>
 								<th>Bensin</th>
@@ -116,6 +117,7 @@ $dept = $datauser->department_id;
 											<input type='hidden' class='flainnya' name='lainnya[]' value='<?= $record->lainnya; ?>' id='lainnya_<?= $idd ?>' />
 										</td>
 										<td><?= $record->tgl_doc; ?></td>
+										<td style="font-weight: bold;"><?= $record->no_coa . ' - ' . $record->nm_coa ?></td>
 										<td><?= $record->keperluan; ?></td>
 										<td><?= $record->rute; ?></td>
 										<td class="divide"><?= $record->bensin; ?></td>
@@ -154,7 +156,7 @@ $dept = $datauser->department_id;
 						</tbody>
 						<tfoot>
 							<tr class="info">
-								<td colspan="4" align=right>SUB TOTAL</td>
+								<td colspan="5" align=right>SUB TOTAL</td>
 								<td><input type="text" class="form-control divide input-sm" id="total_bensin" name="total_bensin" value="<?= $total_bensin ?>" placeholder="Total Bensin" tabindex="-1" readonly></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_tol" name="total_tol" value="<?= $total_tol ?>" placeholder="Total Tol" tabindex="-1" readonly></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_parkir" name="total_parkir" value="<?= $total_parkir ?>" placeholder="Total Parkir" tabindex="-1" readonly></td>
@@ -164,7 +166,7 @@ $dept = $datauser->department_id;
 								<td></td>
 							</tr>
 							<tr class="warning">
-								<td colspan="4" align=right>TOTAL</td>
+								<td colspan="5" align=right>TOTAL</td>
 								<td colspan="4"><input type="text" class="form-control divide input-sm" id="jumlah_expense" name="jumlah_expense" value="<?= $grand_total ?>" placeholder="Total" tabindex="-1" readonly></td>
 								<td colspan=4></td>
 							</tr>
@@ -337,6 +339,7 @@ $dept = $datauser->department_id;
 						Rows += "<td><input type='hidden' name='id_transport[]' id='id_transport_" + nomor + "' value='" + data[i].id + "'>";
 						Rows += data[i].no_doc + "</td>";
 						Rows += "<td>" + data[i].tgl_doc + "</td>";
+						Rows += "<td style='font-weight: bold;'>" + data[i].no_coa + " - " + data[i].nm_coa + "</td>";
 						Rows += "<td>" + data[i].keperluan + "</td>";
 						Rows += "<td>" + data[i].rute + "</td>";
 						Rows += "<td>";

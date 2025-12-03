@@ -14,6 +14,26 @@
 						<input type="text" class="form-control tanggal" id="tgl_doc" name="tgl_doc" value="<?php echo (isset($data->tgl_doc) ? $data->tgl_doc : date("Y-m-d")); ?>" placeholder="Tanggal Dokumen" required>
 					</div>
 				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label">COA <b class="text-red">*</b></label>
+					<div class="col-sm-4">
+						<select class="form-control select2" id="coa" name="coa" required>
+							<option value="">- Pilih COA -</option>
+							<?php
+							if (!empty($list_coa)) {
+								foreach ($list_coa as $item_coa) {
+									$selected = '';
+									if (isset($data->no_coa) && $data->no_coa == $item_coa->no_coa) {
+										$selected = 'selected';
+									}
+									echo '<option value="' . $item_coa->no_coa . '" ' . $selected . '>' . $item_coa->no_coa . ' - ' . $item_coa->nm_coa . '</option>';
+								}
+							}
+							?>
+						</select>
+						<input type="hidden" name="nm_coa" id="nm_coa" value="<?= (isset($data->nm_coa)) ? $data->nm_coa : '' ?>">
+					</div>
+				</div>
 				<div class="form-group hidden">
 					<?php
 					$dept = '';
@@ -130,6 +150,40 @@
 		var url_save = siteurl + 'expense/transport_save/';
 		var url_approve = siteurl + 'expense/transport_approve/';
 		$('.divide').divide();
+
+		$('.select2').select2({
+			width: '100%'
+		});
+
+		$(document).on('change', '#coa', function() {
+			var coa = $(this).val();
+
+			$.ajax({
+				type: 'post',
+				url: siteurl + active_controller + 'get_coa_name',
+				data: {
+					'no_coa': coa
+				},
+				cache: false,
+				dataType: 'json',
+				success: function(result) {
+					$('#nm_coa').val(result.nm_coa);
+				},
+				error: function(result) {
+					swal({
+						type: 'error',
+						title: 'Error !',
+						text: 'Please try again later !',
+						showConfirmButton: false,
+						showCancelButton: false,
+						allowOutsideClick: false,
+						allowEscapeKey: false,
+						timer: 3000
+					})
+				}
+			});
+		})
+
 		$('#frm_data').on('submit', async function(e) {
 			e.preventDefault();
 			let errors = "";
