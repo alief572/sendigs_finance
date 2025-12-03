@@ -17,6 +17,7 @@ if (isset($data->id)) $readonly = " readonly"; ?>
                             <option value="PR Department" <?= isset($data) && ($data->jenis_pengeluaran == 'PR Department') ? "selected" : ""; ?>>PR Department</option>
                             <option value="Kasbon" <?= isset($data) && ($data->jenis_pengeluaran == 'Kasbon') ? "selected" : ""; ?>>Kasbon</option>
                             <option value="Asset" <?= isset($data) && ($data->jenis_pengeluaran == 'Asset') ? "selected" : ""; ?>>Asset</option>
+                            <option value="Transport" <?= isset($data) && ($data->jenis_pengeluaran == 'Transport') ? "selected" : ""; ?>>Transport</option>
                         </select>
                     </div>
                     <label for="coa" class="col-sm-2 control-label">COA<b class="text-red">*</b></label>
