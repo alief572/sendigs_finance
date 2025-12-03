@@ -1862,6 +1862,12 @@ class Expense extends Admin_Controller
 		// $data_departement = $this->All_model->GetDeptCombo();
 		// $this->template->title('Pengajuan Transport');
 		// $this->template->set('data_departement', $data_departement);
+		$list_coa_transport = $this->Expense_model->getCoaTransport();
+
+		$data = [
+			'list_coa' => $list_coa_transport
+		];
+		$this->template->set($data);
 		$this->template->render('transport_form');
 	}
 
@@ -1890,6 +1896,8 @@ class Expense extends Admin_Controller
 		$filename		= $this->input->post("filename");
 		$lainnya		= $this->input->post("lainnya");
 		$keterangan		= $this->input->post("keterangan");
+		$no_coa = $this->input->post('coa');
+		$nm_coa = $this->input->post('nm_coa');
 
 		// print_r($tgl_doc);
 
@@ -1942,6 +1950,8 @@ class Expense extends Admin_Controller
 					'parkir' => $parkir,
 					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
 					'doc_file' => $filenames,
+					'no_coa' => $no_coa,
+					'nm_coa' => $nm_coa,
 					'modified_by' => $this->auth->user_name(),
 					'modified_on' => date("Y-m-d h:i:s")
 				], ['id' => $id]);
@@ -1965,6 +1975,8 @@ class Expense extends Admin_Controller
 					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
 					'doc_file' => $filenames,
 					'status' => 0,
+					'no_coa' => $no_coa,
+					'nm_coa' => $nm_coa,
 					'created_by' => $this->auth->user_name(),
 					'created_on' => date("Y-m-d h:i:s"),
 				);
@@ -2015,8 +2027,10 @@ class Expense extends Admin_Controller
 	public function transport_edit($id)
 	{
 		$data = $this->Expense_model->GetDataTransport($id);
+		$get_list_coa = $this->Expense_model->getCoaTransport();
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
+		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('stsview', '');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('transport_form');
@@ -2026,8 +2040,10 @@ class Expense extends Admin_Controller
 	public function transport_view($id)
 	{
 		$data = $this->Expense_model->GetDataTransport($id);
+		$get_list_coa = $this->Expense_model->getCoaTransport();
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
+		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('stsview', 'view');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('transport_form');
@@ -2901,7 +2917,8 @@ class Expense extends Admin_Controller
 		$this->Expense_model->get_data_transport_req_all();
 	}
 
-	public function get_coa_name(){
+	public function get_coa_name()
+	{
 		$no_coa = $this->input->post('no_coa');
 
 		$get_coa_detail = $this->Expense_model->getCoaDetail($no_coa);
