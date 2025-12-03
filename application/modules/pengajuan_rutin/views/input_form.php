@@ -39,7 +39,6 @@
 								<th>Budget</th>
 								<th>Perkiraan Biaya</th>
 								<th>Keterangan</th>
-								<th>Metode Pembayaran</th>
 								<th>Dokumen</th>
 								<th>Bank / No Rek / Nama</th>
 								<th class="hidden">
@@ -66,13 +65,6 @@
 										<td><input type="text" class="form-control divide" name="budget[]" id="budget<?= $idd; ?>" value="<?= ($record->budget); ?>" readonly tabindex="-1"></td>
 										<td><input type="text" class="form-control nilai divide" name="nilai[]" id="nilai_<?= $idd; ?>" value="<?= ($record->nilai); ?>"></td>
 										<td><input type="text" class="form-control" name="keterangan[]" id="keterangan_<?= $idd; ?>" value="<?= $record->keterangan; ?>"></td>
-										<td>
-											<select name="metode_pembelian[]" id="metode_pembelian_<?= $idd ?>" class="form-control form-control-sm">
-												<option value="">- Select Transfer/Kasbon -</option>
-												<option value="1" <?= ($record->metode_pembelian == '1') ? 'selected' : null ?>>Transfer</option>
-												<option value="2" <?= ($record->metode_pembelian == '2') ? 'selected' : null ?>>Kasbon</option>
-											</select>
-										</td>
 										<td><input type="file" name="doc_file_<?= $idd ?>" id="doc_file<?= $idd ?>">
 											<?= ($record->doc_file != '' ? '<a href="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '') ?></td>
 										<td>
@@ -414,13 +406,6 @@
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control' name='keterangan[]' id='keterangan_" + nomor + "' value='' />";
-						Rows += "</td>";
-						Rows += "<td>";
-						Rows += '<select name="metode_pembelian[]" id="metode_pembelian_' + nomor + '" class="form-control form-control-sm">';
-						Rows += '<option value="">- Select Transfer/Kasbon -</option>';
-						Rows += '<option value="1" ' + selected1 + '>Transfer</option>';
-						Rows += '<option value="2" ' + selected2 + '>Kasbon</option>';
-						Rows += '</select>';
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<input type='file' name='doc_file_" + nomor + "' id='doc_file" + nomor + "'>";
