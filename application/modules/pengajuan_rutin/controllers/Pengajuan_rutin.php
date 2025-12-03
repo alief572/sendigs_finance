@@ -44,12 +44,12 @@ class Pengajuan_rutin extends Admin_Controller
 		//		if($datauser) $departemen=$datauser->department_id;
 		// $data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.created_by' => $this->auth->user_id()));
 
-		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
-		$this->db->from('tr_pengajuan_rutin a');
-		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		// $this->db->where('a.created_by', $this->auth->user_id());
-		$this->db->group_by('a.no_doc');
-		$data = $this->db->get()->result();
+		// $this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
+		// $this->db->from('tr_pengajuan_rutin a');
+		// $this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+		// // $this->db->where('a.created_by', $this->auth->user_id());
+		// $this->db->group_by('a.no_doc');
+		// $data = $this->db->get()->result();
 
 		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
 		$this->hris->from('departments a');
@@ -69,7 +69,7 @@ class Pengajuan_rutin extends Admin_Controller
 
 		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll();
 		$this->template->set('datdept', $datdept);
-		$this->template->set('results', $data);
+		// $this->template->set('results', $data);
 		$this->template->set('dept', $arr_dept);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->title('Pengajuan Pembayaran Periodik');
@@ -235,7 +235,7 @@ class Pengajuan_rutin extends Admin_Controller
 						'bank_id' => $bank_id[$x],
 						'accnumber' => $accnumber[$x],
 						'accname' => $accname[$x],
-						'metode_pembelian' => $metode_pembelian[$x],
+						'metode_pembelian' => '1',
 						'created_by' => $this->auth->user_id(),
 						'created_on' => date("Y-m-d h:i:s"),
 					);
@@ -276,7 +276,7 @@ class Pengajuan_rutin extends Admin_Controller
 						'bank_id' => $bank_id[$x],
 						'accnumber' => $accnumber[$x],
 						'accname' => $accname[$x],
-						'metode_pembelian' => $metode_pembelian[$x],
+						'metode_pembelian' => '1',
 						'created_by' => $this->auth->user_id(),
 						'created_on' => date("Y-m-d h:i:s"),
 						'modified_by' => $this->auth->user_id(),
@@ -416,5 +416,129 @@ class Pengajuan_rutin extends Admin_Controller
 			'id' => $id
 		);
 		echo json_encode($param);
+	}
+
+	public function get_pengajuan_periodik()
+	{
+		$post = $this->input->post();
+
+		$draw = intval($post['draw']);
+		$length = $post['length'];
+		$start = $post['start'];
+		$search = $post['search']['value'];
+
+		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
+		$this->db->from('tr_pengajuan_rutin a');
+		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+		$this->db->group_by('a.no_doc');
+		$count_all = $this->db->get()->num_rows();
+
+		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
+		$this->db->from('tr_pengajuan_rutin a');
+		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.nilai_total', $search, 'both');
+			$this->db->or_like('a.tanggal_doc', $search, 'both');
+			$this->db->group_end();
+		}
+
+		$this->db->group_by('a.no_doc');
+		$count_filter = $this->db->get()->num_rows();
+
+		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
+		$this->db->from('tr_pengajuan_rutin a');
+		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.nilai_total', $search, 'both');
+			$this->db->or_like('a.tanggal_doc', $search, 'both');
+			$this->db->group_end();
+		}
+
+		$this->db->group_by('a.no_doc');
+		$this->db->order_by('a.created_on', 'desc');
+		$this->db->limit($length, $start);
+
+		$get_data = $this->db->get()->result();
+
+		$no = (0 + $start);
+		$hasil = [];
+
+		foreach ($get_data as $item) {
+
+			$no++;
+
+			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
+			$this->hris->from('departments a');
+			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+			$this->hris->where('a.id', $item->departement);
+			$get_departments = $this->hris->get()->row();
+
+			$nm_dept = (!empty($get_departments->nm_dept)) ? $get_departments->nm_dept : '';
+
+			$nm_comp = (!empty($get_departments->nm_comp)) ? $get_departments->nm_comp : '';
+
+			$status = '';
+
+			if ($item->sts_reject == '1' && $item->status == '0') {
+				$status = '<div class="badge bg-red">Reject</div>';
+			} else {
+				if ($item->status == '1') {
+					$status = '<div class="badge bg-green">Approved</div>';
+				} else {
+					$status = '<div class="badge bg-yellow">Waiting Approval</div>';
+				}
+			}
+
+			$btn_view = '';
+			$btn_edit = '';
+			$btn_delete = '';
+
+			if (has_permission($this->viewPermission)) {
+				$btn_view = '<a class="btn btn-info btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item->id . ')"><i class="fa fa-eye"></i></a>';
+			}
+
+			if ($item->status == 0) {
+				if (has_permission($this->managePermission)) {
+					$btn_edit = '<a href="javascript:void(0);" class="btn btn-sm btn-warning btn_edit" title="Edit" onclick="data_edit(' . $item->id . ')"><i class="fa fa-edit"></i></a>';
+				}
+				if (has_permission($this->deletePermission)) {
+					$no_doc_delete = str_replace($item->no_doc, "'" . $item->no_doc . "'", $item->no_doc);
+					$btn_delete = '<a class="btn btn-danger btn-sm delete" href="javascript:void(0);" title="hapus" onclick="data_delete(' . $no_doc_delete . ')"><i class="fa fa-trash"></i</a>';
+				}
+			}
+
+			$keterangan_reject = '';
+			if ($item->status < 1 && $item->sts_reject == 1) {
+				$keterangan_reject = $item->reject_ket;
+			}
+
+			$action = $btn_view . ' ' . $btn_edit . ' ' . $btn_delete;
+
+			$hasil[] = [
+				'no' => $no,
+				'department' => strtoupper($nm_dept . ' - ' . $nm_comp),
+				'nomor' => $item->no_doc,
+				'nominal' => number_format($item->nilai_total),
+				'tanggal' => date('d F Y', strtotime($item->tanggal_doc)),
+				'status' => $status,
+				'keterangan_reject' => $keterangan_reject,
+				'action' => $action
+			];
+		}
+
+		$response = [
+			'draw' => $draw,
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data' => $hasil
+		];
+
+		echo json_encode($response);
 	}
 }
