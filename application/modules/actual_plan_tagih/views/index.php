@@ -42,6 +42,10 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 </select>
             </div>
         </div>
+        <div class="col-md-1">
+            <br>
+            <button type="button" class="btn btn-sm btn-success download_excel" title="Download Excel"><i class="fa fa-download"></i> Download Excel</button>
+        </div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -381,6 +385,13 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 
         DataTables(bulan, tahun, status);
     });
+
+    $(document).on('click', '.download_excel', function() {
+        var tahun = $('.inp_tahun').val();
+        var status = $('#status').val();
+
+        window.open(siteurl + active_controller + 'download_excel/' + tahun + '/' + status, '_blank');
+    })
 
     function DataTables(bulan, tahun, status = null) {
         // var dataTables = $('#table_penawaran').dataTable();
