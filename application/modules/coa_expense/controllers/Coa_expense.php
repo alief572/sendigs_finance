@@ -49,9 +49,9 @@ class Coa_expense extends Admin_Controller
     {
         $data = $this->Coa_expense_model->GetData($id);
         $data_coa = $this->All_model->GetCoaCombo();
-        $data_approval = $this->All_model->GetOneTable('user_emp', '', 'nama_karyawan');
+        // $data_approval = $this->All_model->GetOneTable('user_emp', '', 'nama_karyawan');
         $this->template->set('datacoa', $data_coa);
-        $this->template->set('data_approval', $data_approval);
+        // $this->template->set('data_approval', $data_approval);
         $this->template->set('data', $data);
         $this->template->page_icon('fa fa-list');
         $this->template->render('form');
