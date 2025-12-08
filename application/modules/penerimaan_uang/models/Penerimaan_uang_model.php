@@ -21,7 +21,7 @@ class Penerimaan_uang_model extends BF_Model
     public function generate_id()
     {
         $Ym             = date('ym');
-        $srcMtr            = "SELECT MAX(id) as maxP FROM tr_penerimaan_piutang WHERE id LIKE '%/" . int_to_roman(date('m')) . "/" . date('y') . "%' ";
+        $srcMtr            = "SELECT MAX(no_surat) as maxP FROM tr_penerimaan_piutang WHERE no_surat LIKE '%/" . int_to_roman(date('m')) . "/" . date('y') . "%' ";
         $resultMtr        = $this->db->query($srcMtr)->result_array();
         $angkaUrut2        = $resultMtr[0]['maxP'];
         $urutan2        = (int)substr($angkaUrut2, 0, 5);
