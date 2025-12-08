@@ -370,6 +370,9 @@ class Penerimaan_uang extends Admin_Controller
 
         $id = $this->Penerimaan_uang_model->generate_id();
 
+        // print_r($id);
+        // exit;
+
         $this->consultant->select('a.id_customer, a.nm_customer');
         $this->consultant->from('customer a');
         $this->consultant->where('a.id_customer', $post['id_customer']);
