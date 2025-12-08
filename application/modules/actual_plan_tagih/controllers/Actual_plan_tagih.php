@@ -311,6 +311,16 @@ class Actual_plan_tagih extends Admin_Controller
         ]);
     }
 
+    public function download_excel($tahun = null, $status = null)
+    {
+        $data = [
+            'list_data' => $this->Actual_plan_tagih_model->dataDownloadExcel($tahun, $status),
+            'tahun' => $tahun
+        ];
+
+        $this->load->view('download_excel', $data);
+    }
+
     public function get_actual_plan_tagih()
     {
         $this->Actual_plan_tagih_model->get_actual_plan_tagih();
