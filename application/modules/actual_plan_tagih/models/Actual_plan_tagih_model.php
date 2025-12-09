@@ -74,7 +74,7 @@ class Actual_plan_tagih_model extends BF_Model
                 }
             } else {
                 $this->db->group_start();
-                $this->db->where_in('d.tagih_mundur', ['2', '3']);
+                $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
                 $this->db->or_where('d.id', null);
                 $this->db->group_end();
             }
@@ -116,10 +116,11 @@ class Actual_plan_tagih_model extends BF_Model
                     $this->db->where('d.tagih_mundur', $status);
                 } else if ($status == '3') {
                     $this->db->where('d.id', null);
+                    // $this->db->or_in('d.tagih_mundur', ['1','2','3']);
                 }
             } else {
                 $this->db->group_start();
-                $this->db->where_in('d.tagih_mundur', ['2', '3']);
+                $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
                 $this->db->or_where('d.id', null);
                 $this->db->group_end();
             }
@@ -230,7 +231,7 @@ class Actual_plan_tagih_model extends BF_Model
             }
         } else {
             $this->db->group_start();
-            $this->db->where_in('d.tagih_mundur', ['2', '3']);
+            $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
             $this->db->or_where('d.id', null);
             $this->db->group_end();
         }
