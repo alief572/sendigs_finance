@@ -42,11 +42,10 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item['id'], 'tagih_mundur' => 2])->result_array();
             if (count($check_aktual_telat) > 0) {
                 $status = '<div style="background-color: red;">Mundur</div>';
-            } else {
-                $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item['id'], 'tagih_mundur' => 1])->result_array();
-                if (count($check_aktual_tagih) > 0) {
-                    $status = '<div style="background-color: green;">Tagih</div>';
-                }
+            }
+            $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item['id'], 'tagih_mundur' => 1])->result_array();
+            if (count($check_aktual_tagih) > 0) {
+                $status = '<div style="background-color: green;">Tagih</div>';
             }
 
 
