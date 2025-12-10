@@ -128,7 +128,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         <span class="glyphicon glyphicon-remove"></span> Cancel
                     </button>
-                    <button type="submit" class="btn btn-sm btn-success">Update</button>
+                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-save"></i> Update</button>
                 </div>
             </form>
         </div>
@@ -212,12 +212,12 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         var tagih_mundur = $(this).val();
 
         if (tagih_mundur == '1' || tagih_mundur == '3') {
-            $('input[name="tanggal_actual"]').attr('readonly', true);
+            // $('input[name="tanggal_actual"]').attr('readonly', true);
             $('textarea[name="alasan_mundur"]').attr('readonly', true);
             $('input[name="upload_surat_mundur"]').prop('disabled', true);
         }
         if (tagih_mundur == '2') {
-            $('input[name="tanggal_actual"]').attr('readonly', false);
+            // $('input[name="tanggal_actual"]').attr('readonly', false);
             $('textarea[name="alasan_mundur"]').attr('readonly', false);
             $('input[name="upload_surat_mundur"]').prop('disabled', false);
         }

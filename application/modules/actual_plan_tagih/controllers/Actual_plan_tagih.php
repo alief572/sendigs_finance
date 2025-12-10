@@ -147,7 +147,20 @@ class Actual_plan_tagih extends Admin_Controller
                 'macet' => 1
             ];
             $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', $arr_update, array('id_detail_plan_tagih' => $post['id_detail_plan_tagih']));
+
             if (!$update_actual_plan_tagih) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+
+            $arr_update_plan_tagih = [
+                'tgl_plan_tagih' => $post['tgl_plan_tagih']
+            ];
+
+            $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+            if (!$update_plan_tagih) {
                 $this->db->trans_rollback();
 
                 print_r($this->db->last_query());
@@ -157,6 +170,9 @@ class Actual_plan_tagih extends Admin_Controller
             $id = $this->Actual_plan_tagih_model->generate_id();
 
             if ($post['tagih_mundur'] == '3') {
+
+                $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
+
                 $arr_insert = [
                     'id' => $id,
                     'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
@@ -167,9 +183,9 @@ class Actual_plan_tagih extends Admin_Controller
                     'persen_payment' => $post['persen_payment'],
                     'nominal_payment' => $post['nominal_payment'],
                     'desc_payment' => $post['desc_payment'],
-                    'tgl_plan_tagih' => $post['tgl_plan_tagih'],
+                    'tgl_plan_tagih' => $tanggal_actual,
                     'urutan' => $post['urutan'],
-                    'tanggal_actual_plan_tagih' => $post['tanggal_actual'],
+                    'tanggal_actual_plan_tagih' => $tanggal_actual,
                     'tagih_mundur' => $post['tagih_mundur'],
                     'alasan_mundur' => $post['alasan_mundur'],
                     'file_surat_mundur' => $file_surat_mundur,
@@ -186,7 +202,21 @@ class Actual_plan_tagih extends Admin_Controller
                     print_r($this->db->last_query());
                     exit;
                 }
+
+                $arr_update_plan_tagih = [
+                    'tgl_plan_tagih' => $tanggal_actual
+                ];
+
+                $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+                if (!$update_plan_tagih) {
+                    $this->db->trans_rollback();
+
+                    print_r($this->db->last_query());
+                    exit;
+                }
             } else {
+                $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
+
                 $arr_insert = [
                     'id' => $id,
                     'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
@@ -197,9 +227,9 @@ class Actual_plan_tagih extends Admin_Controller
                     'persen_payment' => $post['persen_payment'],
                     'nominal_payment' => $post['nominal_payment'],
                     'desc_payment' => $post['desc_payment'],
-                    'tgl_plan_tagih' => $post['tgl_plan_tagih'],
+                    'tgl_plan_tagih' => $tanggal_actual,
                     'urutan' => $post['urutan'],
-                    'tanggal_actual_plan_tagih' => $post['tanggal_actual'],
+                    'tanggal_actual_plan_tagih' => $tanggal_actual,
                     'tagih_mundur' => $post['tagih_mundur'],
                     'alasan_mundur' => $post['alasan_mundur'],
                     'file_surat_mundur' => $file_surat_mundur,
@@ -223,6 +253,18 @@ class Actual_plan_tagih extends Admin_Controller
 
                     $update_tgl_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, array('id' => $post['id_detail_plan_tagih']));
                     if (!$update_tgl_plan_tagih) {
+                        $this->db->trans_rollback();
+
+                        print_r($this->db->last_query());
+                        exit;
+                    }
+                } else {
+                    $arr_update_plan_tagih = [
+                        'tgl_plan_tagih' => $tanggal_actual
+                    ];
+
+                    $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+                    if (!$update_plan_tagih) {
                         $this->db->trans_rollback();
 
                         print_r($this->db->last_query());
