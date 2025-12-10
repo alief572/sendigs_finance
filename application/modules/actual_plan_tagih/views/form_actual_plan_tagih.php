@@ -34,7 +34,7 @@
                 </select>
             </td>
             <td>
-                <input type="date" name="tanggal_actual" id="" class="form-control form-control-sm" class="text-center" readonly>
+                <input type="date" name="tanggal_actual" id="" class="form-control form-control-sm" class="text-center">
             </td>
             <td>
                 <textarea name="alasan_mundur" id="" class="form-control form-control-sm" readonly></textarea>
