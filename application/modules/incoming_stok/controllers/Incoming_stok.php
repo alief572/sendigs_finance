@@ -73,6 +73,7 @@ class Incoming_stok extends Admin_Controller
       if (!empty($data['Detail'])) {
         foreach ($detail as $val => $valx) {
           $qty_incoming   = str_replace(',', '', $valx['qty_in']);
+          
           if ($qty_incoming > 0) {
             $SUM_MAT  += $qty_incoming;
             //detail adjustment
