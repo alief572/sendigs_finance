@@ -54,6 +54,7 @@ class Jurnal extends Admin_Controller
         $hasil .= '<td class="text-center">Tanggal</td>';
         $hasil .= '<td class="text-center">Tipe</td>';
         $hasil .= '<td class="text-center">No. COA</td>';
+        $hasil .= '<td class="text-center">Nama COA</td>';
         $hasil .= '<td class="text-center">Keterangan</td>';
         $hasil .= '<td class="text-center">No. Reff</td>';
         $hasil .= '<td class="text-center">Debit</td>';
@@ -76,6 +77,7 @@ class Jurnal extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">' . $item->jenis_transaksi . '</td>';
             $hasil .= '<td class="text-center">' . $item->coa . '</td>';
+            $hasil .= '<td class="text-center">' . $item->nm_coa . '</td>';
             $hasil .= '<td class="text-center">';
             $hasil .= '<textarea class="form-control form-control-sm" name="jurnal[' . $no . '][keterangan]">' . $item->keterangan . '</textarea>';
             $hasil .= '</td>';
