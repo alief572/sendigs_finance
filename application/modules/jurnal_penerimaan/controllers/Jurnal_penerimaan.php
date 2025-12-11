@@ -10,6 +10,8 @@ class Jurnal_penerimaan extends Admin_Controller
 	protected $deletePermission = 'Jurnal_Penerimaan.Delete';
 
 	protected $consultant;
+	protected $accounting_vuca;
+	protected $accounting_sustain;
 
 	public function __construct()
 	{
@@ -25,6 +27,8 @@ class Jurnal_penerimaan extends Admin_Controller
 		date_default_timezone_set('Asia/Bangkok');
 
 		$this->consultant = $this->load->database('consultant', true);
+		$this->accounting_vuca = $this->load->database('accounting_vuca', true);
+		$this->accounting_sustain = $this->load->database('accounting_sustain', true);
 	}
 
 	public function index()
@@ -162,9 +166,9 @@ class Jurnal_penerimaan extends Admin_Controller
 		];
 
 		if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-			$insert_jarh = $this->db->insert(DBACC_VUCA . '.jarh', $arr_jarh);
+			$insert_jarh = $this->accounting_vuca->insert('jarh', $arr_jarh);
 		} else {
-			$insert_jarh = $this->db->insert(DBACC_SUSTAIN . '.jarh', $arr_jarh);
+			$insert_jarh = $this->accounting_sustain->insert('jarh', $arr_jarh);
 		}
 
 		if (!$insert_jarh) {
@@ -195,9 +199,9 @@ class Jurnal_penerimaan extends Admin_Controller
 			}
 
 			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-				$insert_jurnal = $this->db->insert_batch(DBACC_VUCA . '.jurnal', $arr_jurnal);
+				$insert_jurnal = $this->accounting_vuca->insert_batch('jurnal', $arr_jurnal);
 			} else {
-				$insert_jurnal = $this->db->insert_batch(DBACC_SUSTAIN . '.jurnal', $arr_jurnal);
+				$insert_jurnal = $this->accounting_sustain->insert_batch('jurnal', $arr_jurnal);
 			}
 
 			if (!$insert_jurnal) {
@@ -212,9 +216,9 @@ class Jurnal_penerimaan extends Admin_Controller
 
 			$update_jurnal_sts = $this->db->update('tr_jurnal', ['sts' => '1'], ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi]);
 			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-				$update_cabang_acc = $this->db->query('UPDATE ' . DBACC_VUCA . '.pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
+				$update_cabang_acc = $this->accounting_vuca->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
 			} else {
-				$update_cabang_acc = $this->db->query('UPDATE ' . DBACC_SUSTAIN . '.pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
+				$update_cabang_acc = $this->accounting_sustain->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
 			}
 
 			if ($this->db->trans_status() === false) {
