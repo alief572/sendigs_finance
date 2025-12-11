@@ -46,7 +46,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <th colspan="5" class="text-right">Grand Total</th>
+            <th colspan="6" class="text-right">Grand Total</th>
             <th class="text-right total_debit">
                 <?= number_format($ttl_debit) ?>
             </th>
