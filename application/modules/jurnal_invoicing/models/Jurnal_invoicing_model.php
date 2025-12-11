@@ -37,7 +37,6 @@ class Jurnal_invoicing_model extends BF_Model
 
         $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $get_jurnal->id_company);
 
-
         $Bln             = substr($get_jurnal->tgl_jurnal, 5, 2);
         $Thn             = substr($get_jurnal->tgl_jurnal, 0, 4);
 
@@ -62,7 +61,7 @@ class Jurnal_invoicing_model extends BF_Model
         );
 
         if ($id_company == '1' || $id_company == '4') {
-            $insert_jurnal_header = $this->db->insert(DBACC_VUCA . '.javh', $dataJVhead);
+            $insert_jurnal_header = $this->accounting_vuca->insert('javh', $dataJVhead);
             if (!$insert_jurnal_header) {
                 $this->db->trans_rollback();
 
@@ -70,7 +69,7 @@ class Jurnal_invoicing_model extends BF_Model
                 exit;
             }
         } else {
-            $insert_jurnal_header = $this->db->insert(DBACC_SUST . '.javh', $dataJVhead);
+            $insert_jurnal_header = $this->accounting_sustain->insert('javh', $dataJVhead);
             if (!$insert_jurnal_header) {
                 $this->db->trans_rollback();
 
@@ -117,9 +116,9 @@ class Jurnal_invoicing_model extends BF_Model
             ];
 
             if ($id_company == '1' || $id_company == '4') {
-                $insert_jurnal_detail = $this->db->insert(DBACC_VUCA . '.jurnal', $datadetail);
+                $insert_jurnal_detail = $this->accounting_vuca->insert('jurnal', $datadetail);
             } else {
-                $insert_jurnal_detail = $this->db->insert(DBACC_SUST . '.jurnal', $datadetail);
+                $insert_jurnal_detail = $this->accounting_sustain->insert('jurnal', $datadetail);
             }
             if (!$insert_jurnal_detail) {
                 $this->db->trans_rollback();
@@ -133,9 +132,9 @@ class Jurnal_invoicing_model extends BF_Model
             //     $this->db->query($jurnal_posting);
 
             if ($id_company == '1' || $id_company == '4') {
-                $jurnal_posting = $this->db->update(DBACC_VUCA . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
+                $jurnal_posting = $this->accounting_vuca->update('jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
             } else {
-                $jurnal_posting = $this->db->update(DBACC_SUST . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
+                $jurnal_posting = $this->accounting_sustain->update('jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
             }
             if (!$jurnal_posting) {
                 $this->db->trans_rollback();
@@ -154,9 +153,9 @@ class Jurnal_invoicing_model extends BF_Model
 
 
             if ($id_company == '1' || $id_company == '4') {
-                $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_VUCA . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+                $Qry_Update_Cabang_acc     = $this->accounting_vuca->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
             } else {
-                $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_SUST . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+                $Qry_Update_Cabang_acc     = $this->accounting_sustain->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
             }
             // $this->db->query($Qry_Update_Cabang_acc);
 
