@@ -145,10 +145,7 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
                                 showConfirmButton: false,
                                 showCancelButton: false
                             }, function(lanjut) {
-                                $('#dialog-popup').modal('hide');
-
-                                swal.close();
-                                DataTables();
+                                location.reload();
                             });
                         } else {
                             Swal.fire({
@@ -225,9 +222,7 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
                                 allowOutsideClick: false,
                                 timer: 3000
                             }).then(() => {
-                                $('#dialog-popup').modal('hide');
-                                DataTables();
-                                swal.close();
+                                location.reload();
                             });
                         } else {
                             Swal.fire({

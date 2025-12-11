@@ -146,10 +146,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                                 showConfirmButton: false,
                                 showCancelButton: false
                             }).then(() => {
-                                $('#dialog-popup').modal('hide');
-
-                                swal.close();
-                                DataTables();
+                                location.reload();
                             });
                         } else {
                             Swal.fire({
@@ -226,9 +223,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                                 allowOutsideClick: false,
                                 timer: 3000
                             }).then(() => {
-                                $('#dialog-popup').modal('hide');
-                                DataTables();
-                                swal.close();
+                                location.reload();
                             });
                         } else {
                             Swal.fire({
