@@ -5,6 +5,7 @@
             <th class="text-center">Tanggal</th>
             <th class="text-center">Tipe</th>
             <th class="text-center">No. COA</th>
+            <th class="text-center">Nama COA</th>
             <th class="text-center">Keterangan</th>
             <th class="text-center">No. Reff</th>
             <th class="text-center">Debit</th>
@@ -24,6 +25,7 @@
             echo '<td class="text-center">' . date('d F Y', strtotime($row->tgl_jurnal)) . '</td>';
             echo '<td class="text-center">' . $row->jenis_transaksi . '</td>';
             echo '<td class="text-center">' . $row->coa . '</td>';
+            echo '<td class="text-left">' . $row->nm_coa . '</td>';
             echo '<td class="text-left">';
             echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm" readonly>' . $row->keterangan . '</textarea>';
             echo '</td>';
