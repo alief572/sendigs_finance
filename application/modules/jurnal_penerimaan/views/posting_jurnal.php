@@ -5,6 +5,7 @@
             <th class="text-center">Tanggal</th>
             <th class="text-center">Tipe</th>
             <th class="text-center">No. COA</th>
+            <th class="text-center">Nama COA</th>
             <th class="text-center">Keterangan</th>
             <th class="text-center">No. Reff</th>
             <th class="text-center">Debit</th>
@@ -23,6 +24,7 @@
                 <td class="text-center"><?= date('d F Y', strtotime($item->tgl_jurnal)) ?></td>
                 <td class="text-center"><?= $item->jenis_transaksi ?></td>
                 <td class="text-center"><?= $item->coa ?></td>
+                <td class="text-left"><?= $item->nm_coa ?></td>
                 <td class="text-left">
                     <textarea name="keterangan" class="form-control form-control-sm" readonly><?= $item->keterangan ?></textarea>
                 </td>
