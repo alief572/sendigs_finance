@@ -99,7 +99,7 @@ class Jurnal_penerimaan extends Admin_Controller
 		$hasil .= '</tbody>';
 		$hasil .= '<tfoot>';
 		$hasil .= '<tr>';
-		$hasil .= '<th class="text-right" colspan="5">Total</th>';
+		$hasil .= '<th class="text-right" colspan="6">Total</th>';
 		$hasil .= '<td class="text-right">';
 		$hasil .= '<input type="text" class="form-control form-control-sm text-right" name="ttl_debit" value="' . number_format($ttl_debit) . '" readonly>';
 		$hasil .= '</td>';
