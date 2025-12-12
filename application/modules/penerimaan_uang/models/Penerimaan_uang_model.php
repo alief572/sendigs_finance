@@ -53,11 +53,16 @@ class Penerimaan_uang_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
 
+        $bank = $this->input->post('bank');
+
         $this->db->select('a.id, a.tanggal_transaksi, a.keterangan, a.nominal_debit, a.nominal_kredit, a.saldo, a.reference_no, a.nilai_terpakai, b.nama as nama_bank_acc, b.rekening, c.nama_bank as nm_bank');
         $this->db->from('tr_alokasi_detail a');
         $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
         $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
         $this->db->where('a.sts', '1');
+        if (!empty($bank)) {
+            $this->db->where('a.tipe_bank', $bank);
+        }
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('DATE_FORMAT(a.tanggal_transaksi,"%d-%M-%Y")', $search['value'], 'both');
@@ -129,5 +134,16 @@ class Penerimaan_uang_model extends BF_Model
         ];
 
         echo json_encode($response);
+    }
+
+    public function getListBank()
+    {
+        $this->db->select('a.id, a.bank, a.rekening, a.nama, a.coa_bank, b.nama_bank');
+        $this->db->from('ms_bank a');
+        $this->db->join('list_bank b', 'b.id = a.bank', 'left');
+        $this->db->where('a.deleted', '0');
+        $get_list_bank = $this->db->get()->result_array();
+
+        return $get_list_bank;
     }
 }

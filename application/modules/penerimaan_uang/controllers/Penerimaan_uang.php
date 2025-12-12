@@ -25,6 +25,13 @@ class Penerimaan_uang extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
+        $list_bank = $this->Penerimaan_uang_model->getListBank();
+
+        $data = [
+            'list_bank' => $list_bank
+        ];
+
+        $this->template->set($data);
         $this->template->title('Penerimaan Piutang');
         $this->template->render('index');
     }
