@@ -70,6 +70,7 @@ class Penerimaan_uang_model extends BF_Model
             $this->db->or_like('b.nama', $search['value'], 'both');
             $this->db->or_like('b.rekening', $search['value'], 'both');
             $this->db->or_like('c.nama_bank', $search['value'], 'both');
+            $this->db->or_like('a.keterangan', $search['value'], 'both');
             $this->db->group_end();
         }
         $this->db->group_by('a.id');
