@@ -200,4 +200,32 @@ class Misc extends Admin_Controller
             }
         }
     }
+
+    public function check_stock()
+    {
+        $this->db->select('a.*');
+        $this->db->from('warehouse_stock a');
+        $this->db->where('a.id_gudang', '1');
+        $get_stock = $this->db->get()->result_array();
+
+        $no = 0;
+        foreach ($get_stock as $item_stock) {
+            $this->db->select('a.qty_stock_akhir');
+            $this->db->from('warehouse_history a');
+            $this->db->where('a.id_material', $item_stock['id_material']);
+            $this->db->where('a.id_gudang', '1');
+            $this->db->order_by('a.update_date', 'desc');
+            $this->db->limit(1);
+            $get_history = $this->db->get()->row_array();
+
+            $qty_stock = floatval($item_stock['qty_stock']);
+            $qty_history = (!empty($get_history['qty_stock_akhir'])) ? floatval($get_history['qty_stock_akhir']) : '';
+
+            if ($qty_stock !== $qty_history) {
+                $no++;
+
+                echo $no . '. ' . $item_stock['nm_material'] . ' - ' . $qty_stock . ' - ' . $qty_history . ' <br>';
+            }
+        }
+    }
 }
