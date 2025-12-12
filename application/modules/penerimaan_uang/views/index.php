@@ -129,6 +129,25 @@
 
 <div class="box">
     <div class="box-header">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <select name="bank" class="form-control form-control-sm bank">
+                        <option value="">- Pilih Bank -</option>
+                        <?php
+                        foreach ($list_bank as $item_bank) :
+                            echo '<option value="' . $item_bank['id'] . '">' . $item_bank['nama_bank'] . ' - ' . $item_bank['rekening'] . ' - ' . $item_bank['nama'] . '</option>';
+                        endforeach;
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-primary search">
+                    <i class="fa fa-search"></i> Search
+                </button>
+            </div>
+        </div>
     </div>
     <div class="box-body">
         <table class="table table-striped" id="table_list">
@@ -187,6 +206,12 @@
         });
     });
 
+    $(document).on('click', '.search', function() {
+        var bank = $('.bank').val();
+
+        DataTables(bank);
+    });
+
     $(document).on('click', '.detail', function() {
         var id_alokasi = $(this).data('id');
 
@@ -220,7 +245,7 @@
         });
     });
 
-    function DataTables() {
+    function DataTables(bank = null) {
         var DataTables = $('#table_list').dataTable({
             serverSide: true,
             process: true,
@@ -230,7 +255,10 @@
             ajax: {
                 type: 'post',
                 url: siteurl + active_controller + 'get_alokasi_penerimaan',
-                dataType: 'json'
+                dataType: 'json',
+                data: function(d) {
+                    d.bank = bank;
+                }
             },
             columns: [{
                     data: 'no'
