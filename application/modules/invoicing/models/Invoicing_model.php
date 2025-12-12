@@ -92,11 +92,21 @@ class Invoicing_model extends BF_Model
             $option = '';
             if ($item->sts_invoice !== '1') {
                 $option = '<a href="' . base_url('invoicing/add_invoice/' . urlencode(str_replace('/', '|', $item->id))) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>';
+
+                $option .= '<a href="' . base_url('invoicing/add_invoice_vuca/' . urlencode(str_replace('/', '|', $item->id))) . '" class="btn btn-sm btn-primary" title="Create Invoice Vuca"><i class="fa fa-pencil"></i></a>';
             } else {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id_actual_plan_tagih' => $item->id])->row();
 
                 if (!empty($get_invoicing)) {
-                    $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
+
+                    $tipe_invoice = (!empty($get_invoicing)) ? $get_invoicing->tipe_invoice : '0';
+
+                    if ($tipe_invoice == '1') {
+                        $option = '<a href="' . base_url('invoicing/view_invoicing_vuca/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice Vuca"><i class="fa fa-eye"></i></a>';
+                    } else {
+                        $option = '<a href="' . base_url('invoicing/view_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-primary" title="View Invoice"><i class="fa fa-eye"></i></a>';
+                    }
+
 
                     $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->result();
                     $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_inv' => $get_invoicing->id])->result();
@@ -107,7 +117,12 @@ class Invoicing_model extends BF_Model
                             $status2 = '<span class="badge bg-red">Journaled</span>';
                         }
                     }
-                    $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+
+                    if ($get_invoicing->tipe_invoice == '1') {
+                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv_vuca" title="Print Invoice" data-toggle="modal" data-target="#modal_print_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+                    } else {
+                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+                    }
                 }
 
 
