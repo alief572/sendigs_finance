@@ -78,6 +78,30 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         </div>
     </div>
 </div>
+
+<div class="modal" id="modal_print_vuca" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-print"></span> Print Invoice Vuca</h4>
+            </div>
+            <div class="modal-body" id="MyModalBody">
+                <input type="hidden" class="id_inv_vuca">
+                <div class="form-group">
+                    <label for="keterangan_print_vuca">Keterangan Print</label>
+                    <textarea name="keterangan_print_vuca" id="keterangan_print_vuca" class="form-control form-control-sm"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success confirm_jenis_header_vuca"><i class="fa fa-check"></i> Proses</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">
+                    <span class="glyphicon glyphicon-remove"></span> Batal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="form-data"></div>
 <!-- DataTables -->
 <!-- <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
@@ -94,7 +118,13 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         var id_inv = $(this).data('id_inv');
 
         $('.id_inv').val(id_inv);
-    })
+    });
+
+    $(document).on('click', '.pilih_print_inv_vuca', function() {
+        var id_inv = $(this).data('id_inv');
+
+        $('.id_inv_vuca').val(id_inv);
+    });
 
     $(document).on('click', '.confirm_jenis_header', function() {
         var company = $('.company').val();
@@ -136,6 +166,35 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
 
         }
+    })
+
+    $(document).on('click', '.confirm_jenis_header_vuca', function() {
+        var id_inv = $('.id_inv_vuca').val();
+        var keterangan_print = $('#keterangan_print_vuca').val();
+
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'save_keterangan_print_vuca',
+            data: {
+                'id': id_inv,
+                'keterangan_print': keterangan_print
+            },
+            cache: false,
+            dataType: 'json',
+            success: function(result) {
+                window.open(siteurl + active_controller + 'print_invoicing_vuca/' + id_inv + '/4', '_blank')
+            },
+            error: function(result) {
+                swal({
+                    type: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        });
     })
 
     function DataTables() {
