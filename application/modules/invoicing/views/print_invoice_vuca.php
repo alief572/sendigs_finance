@@ -192,7 +192,7 @@
                     <tr>
                         <td style="text-align: center;" width="100">:</td>
                         <td style="text-align: right;" width="100">
-                            <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
+                            <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
                         </td>
                     </tr>
                 </table>
@@ -200,7 +200,7 @@
         </tr>
         <tr>
             <td colspan="5" style="height: 50px; vertical-align: middle">
-                <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
+                <?= terbilang(($data_actual_plan_tagih->nominal_payment)) . ' Rupiah' ?>
             </td>
         </tr>
         <tr>
