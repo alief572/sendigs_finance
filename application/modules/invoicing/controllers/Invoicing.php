@@ -862,7 +862,8 @@ class Invoicing extends Admin_Controller
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
             'created_by' => $this->auth->user_id(),
-            'created_date' => date('Y-m-d H:i:s')
+            'created_date' => date('Y-m-d H:i:s'),
+            'tipe_invoice' => '1'
         ];
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
