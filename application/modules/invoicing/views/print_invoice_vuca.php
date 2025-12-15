@@ -122,473 +122,130 @@
 <table class="table_list_barang">
     <thead>
         <?php
-        if ($id_company == '3' || $id_company == '5') {
-            echo '<tr>';
-            echo '<th style="font-size: 15px;" width="30%">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px;" width="10%">Jumlah</th>';
-            echo '<th style="font-size: 15px;" width="10%">Harga @</th>';
-            echo '<th style="font-size: 15px;" width="15%">Disc</th>';
-            echo '<th style="font-size: 15px;" width="20%">Sub Total</th>';
-            echo '</tr>';
-        } else if ($id_company == '4') {
-            echo '<tr>';
-            echo '<th style="font-size: 15px;" width="30%">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px;" width="10%">Jumlah</th>';
-            echo '<th style="font-size: 15px;" width="10%">Harga @</th>';
-            echo '<th style="font-size: 15px;" width="15%">Disc</th>';
-            echo '<th style="font-size: 15px;" width="20%">Sub Total</th>';
-            echo '<th style="font-size: 15px;" width="20%">Pajak    </th>';
-            echo '</tr>';
-        } else {
-            echo '<tr>';
-            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="400px">Nama Barang / Pesanan</th>';
-            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Jumlah</th>';
-            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Harga @</th>';
-            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Disc</th>';
-            echo '<th style="font-size: 15px;border: 1px solid black; text-align: center;" width="100px">Sub Total</th>';
-            echo '</tr>';
-        }
+        echo '<tr>';
+        echo '<th style="font-size: 15px;" width="30%">Nama Barang / Pesanan</th>';
+        echo '<th style="font-size: 15px;" width="10%">Jumlah</th>';
+        echo '<th style="font-size: 15px;" width="10%">Harga @</th>';
+        echo '<th style="font-size: 15px;" width="15%">Disc</th>';
+        echo '<th style="font-size: 15px;" width="20%">Sub Total</th>';
+        echo '<th style="font-size: 15px;" width="20%">Pajak</th>';
+        echo '</tr>';
         ?>
 
     </thead>
     <tbody>
-        <?php
-        if ($id_company == '3' || $id_company == '5') {
-        ?>
-            <tr>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-            </tr>
-            <tr>
-                <td style="border-top: 1px solid black;" colspan="3"></td>
-                <td style="border-top: 1px solid black;">DPP</td>
-                <td style="text-align: right; border-top: 1px solid black;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">DPP Lain-lain</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">Pajak 12%</td>
-                <td style="text-align: right;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style=""><b>TOTAL</b></td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="5" style="height: 50px; vertical-align: middle">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" rowspan="4" style="border-top: 1px solid black;">
-                    <p>Keterangan</p>
-                    <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
-                    <br>
-                    <p>Pembayaran di Transfer ke :</p>
+        <tr>
+            <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
+            <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
+            <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+            <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">0%</td>
+            <td style="text-align: right; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+            <td style="text-align: center; height: 200px; vertical-align: top;">0%</td>
+        </tr>
+        <tr>
+            <td style="border-top: 1px solid black;" colspan="4"></td>
+            <td style="border-top: 1px solid black;">Discount Final</td>
+            <td style="text-align: right; border-top: 1px solid black;">
+                <table border="0" style="width: 100%">
+                    <tr>
+                        <td style="text-align: center;" width="100">:</td>
+                        <td style="text-align: right;" width="100">
+                            -
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="" colspan="4"></td>
+            <td style="">Pajak</td>
+            <td style="text-align: right; ">
+                <table border="0" style="width: 100%">
+                    <tr>
+                        <td style="text-align: center;" width="100">:</td>
+                        <td style="text-align: right;" width="100">
+                            -
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="" colspan="4"></td>
+            <td style="">Biaya Pengiriman</td>
+            <td style="text-align: right;">
+                <table border="0" style="width: 100%">
+                    <tr>
+                        <td style="text-align: center;" width="100">:</td>
+                        <td style="text-align: right;" width="100">
+                            -
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="" colspan="4"></td>
+            <td style=""><b>TOTAL</b></td>
+            <td style="text-align: right; ">
+                <table border="0" style="width: 100%">
+                    <tr>
+                        <td style="text-align: center;" width="100">:</td>
+                        <td style="text-align: right;" width="100">
+                            <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="5" style="height: 50px; vertical-align: middle">
+                <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" rowspan="4" style="border-top: 1px solid black;">
+                <p>Keterangan</p>
+                <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
+                <br>
+                <p>Pembayaran di Transfer ke :</p>
+                <b>PT. VUCA STRATEGI BISNIS</b><br>
+                <b>OCBC NISP Acc. No 7788.0000.0417</b>
+                <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
+            </td>
+            <td colspan="4" style="border-top: 1px solid black; text-align: center;width: 400px !important;">
+                <?php
+                echo '<b style="font-size: 15px;">PT. VUCA STRATEGI BISNIS</b>';
+                ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" style="text-align: center;">
+                <span style="color: #ccc; text-align: center !important; font-size: 10px;">
+                    Digitally Signned By : <br>
+                    Imanuel Iman <br>
                     <?php
-                    if ($id_company == '3') {
-                    ?>
-                        <b style="font-size: 13px !important;">PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
-                        <b>BCA Tebet Barat Acc. No 436.400.0300</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    } else if ($id_company == '4' || $id_company == '5') {
-                    ?>
-                        <b>PT. VUCA STRATEGI BISNIS</b><br>
-                        <b>OCBC NISP Acc. No 7788.0000.0417</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
+                    if ($id_company == '4') {
+                        echo 'PT. Vuca Strategi Bisnis <br>';
                     } else {
-                    ?>
-                        <b>PT. SENTRAL TEHNOLOGI MANAGEMEN</b><br>
-                        <b>BCA Tebet Barat Acc. No 436.300.5287</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
+                        echo 'PT. Sentral Tehnologi Managemen <br>';
                     }
                     ?>
-                </td>
-                <td colspan="4" style="border-top: 1px solid black; text-align: center;width: 400px !important;">
-                    <?php
-                    if ($id_company == '3') {
-                        echo '<b style="font-size: 15px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b>';
-                    } else if ($id_company == '4' || $id_company == '5') {
-                        echo '<b style="font-size: 15px;">PT. VUCA STRATEGI BISNIS</b>';
-                    } else {
-                        echo '<b style="font-size: 15px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>';
-                    }
-                    ?>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4" style="text-align: center;">
-                    <?php
-                    if ($id_company !== '3') {
-                    ?>
-                        <span style="color: #ccc; text-align: center !important; font-size: 10px;">
-                            Digitally Signned By : <br>
-                            Imanuel Iman <br>
-                            <?php
-                            if ($id_company == '4') {
-                                echo 'PT. Vuca Strategi Bisnis <br>';
-                            } else {
-                                echo 'PT. Sentral Tehnologi Managemen <br>';
-                            }
-                            ?>
-                        </span>
-                    <?php
-                    }
-                    ?>
-
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="text-align: center; vertical-align: bottom;">
-                    <?php
-                    if ($id_company == '3') {
-                        echo '<span style="font-weight: bold;">Cahyadi</span>';
-                    } else {
-                        echo '<span style="font-weight: bold;">Imanuel Iman</span>';
-                    }
-                    ?>
-                    <hr style="width: 300px;">
-                    <span>Direktur</span>
-                </td>
-            </tr>
-            <tr>
-                <td style="text-align: center;"></td>
-            </tr>
-        <?php
-        } else if ($id_company == '4') {
-        ?>
-            <tr>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">0%</td>
-                <td style="text-align: right; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top;">0%</td>
-            </tr>
-            <tr>
-                <td style="border-top: 1px solid black;" colspan="4"></td>
-                <td style="border-top: 1px solid black;">Discount Final</td>
-                <td style="text-align: right; border-top: 1px solid black;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                -
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="4"></td>
-                <td style="">Pajak</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                -
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="4"></td>
-                <td style="">Biaya Pengiriman</td>
-                <td style="text-align: right;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                -
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="4"></td>
-                <td style=""><b>TOTAL</b></td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="5" style="height: 50px; vertical-align: middle">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" rowspan="4" style="border-top: 1px solid black;">
-                    <p>Keterangan</p>
-                    <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
-                    <br>
-                    <p>Pembayaran di Transfer ke :</p>
-                    <?php
-                    if ($id_company == '3') {
-                    ?>
-                        <b style="font-size: 13px !important;">PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
-                        <b>BCA Tebet Barat Acc. No 436.400.0300</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    } else if ($id_company == '4' || $id_company == '5') {
-                    ?>
-                        <b>PT. VUCA STRATEGI BISNIS</b><br>
-                        <b>OCBC NISP Acc. No 7788.0000.0417</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    } else {
-                    ?>
-                        <b>PT. SENTRAL TEHNOLOGI MANAGEMEN</b><br>
-                        <b>BCA Tebet Barat Acc. No 436.300.5287</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    }
-                    ?>
-                </td>
-                <td colspan="4" style="border-top: 1px solid black; text-align: center;width: 400px !important;">
-                    <?php
-                    if ($id_company == '3') {
-                        echo '<b style="font-size: 15px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b>';
-                    } else if ($id_company == '4' || $id_company == '5') {
-                        echo '<b style="font-size: 15px;">PT. VUCA STRATEGI BISNIS</b>';
-                    } else {
-                        echo '<b style="font-size: 15px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>';
-                    }
-                    ?>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4" style="text-align: center;">
-                    <?php
-                    if ($id_company !== '3') {
-                    ?>
-                        <span style="color: #ccc; text-align: center !important; font-size: 10px;">
-                            Digitally Signned By : <br>
-                            Imanuel Iman <br>
-                            <?php
-                            if ($id_company == '4') {
-                                echo 'PT. Vuca Strategi Bisnis <br>';
-                            } else {
-                                echo 'PT. Sentral Tehnologi Managemen <br>';
-                            }
-                            ?>
-                        </span>
-                    <?php
-                    }
-                    ?>
-
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="text-align: center; vertical-align: bottom;">
-                    <?php
-                    if ($id_company == '3') {
-                        echo '<span style="font-weight: bold;">Cahyadi</span>';
-                    } else {
-                        echo '<span style="font-weight: bold;">Imanuel Iman</span>';
-                    }
-                    ?>
-                    <hr style="width: 300px;">
-                    <span>Direktur</span>
-                </td>
-            </tr>
-            <tr>
-                <td style="text-align: center;"></td>
-            </tr>
-        <?php
-        } else {
-        ?>
-            <tr>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
-            </tr>
-            <tr>
-                <td style="border-top: 1px solid black;" colspan="3"></td>
-                <td style="border-top: 1px solid black;">DPP</td>
-                <td style="text-align: right; border-top: 1px solid black;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">DPP Lain-lain</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;">
-                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">Pajak 12%</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;">
-                                <?= number_format($data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="font-weight: bold;">TOTAL</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="height: 50px; vertical-align: middle; padding:8px;">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $data_invoice->pajak)) . ' Rupiah' ?>
-                </td>
-                <td colspan="2"></td>
-            </tr>
-            <tr>
-                <td colspan="3" rowspan="4" style="border-top: 1px solid black; padding: 8px;">
-                    <p>Keterangan</p>
-                    <p>Pembayaran harus dilakukan paling lambat 14 hari <br> setelah Invoice diterima</p>
-                    <br>
-                    <p>Pembayaran di Transfer ke :</p>
-                    <?php
-                    if ($id_company == '3') {
-                    ?>
-                        <b style="font-size: 15px;">PT. SENTRAL SUSTAINABILITY CONSULTING</b><br>
-                        <b>OCBC NISP Acc. No 7788.0000.0417</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    } else if ($id_company == '4' || $id_company == '5') {
-                    ?>
-                        <b>PT. VUCA STRATEGI BISNIS</b><br>
-                        <b>OCBC NISP Acc. No 7788.0000.0417</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    } else {
-                    ?>
-                        <b>PT. SENTRAL TEHNOLOGI MANAGEMEN</b><br>
-                        <b>BCA Tebet Barat Acc. No 436.300.5287</b>
-                        <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
-                    <?php
-                    }
-                    ?>
-                </td>
-                <td colspan="2" style="border-top: 1px solid black; text-align: center; padding: 8px;" width="400px">
-                    <b style="font-size: 15px;">PT. SENTRAL TEHNOLOGI MANAGEMEN</b>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="text-align: center;">
-                    <span style="color: #ccc; text-align: left !important; font-size: 10px;">
-                        Digitally Signned By : <br>
-                        Imanuel Iman <br>
-                        <?php
-                        if ($id_company == '4') {
-                            echo 'PT. Vuca Strategi Bisnis <br>';
-                        } else {
-                            echo 'PT. Sentral Tehnologi Managemen <br>';
-                        }
-                        ?>
-                    </span>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" style="text-align: center; ">
-                    <?php
-                    if ($id_company == '3') {
-                        echo '<span style="font-weight: bold;">Cahyadi</span>';
-                    } else {
-                        echo '<span style="font-weight: bold;">Imanuel Iman</span>';
-                    }
-                    ?>
-                    <hr style="width: 300px;">
-                    <span>Direktur</span>
-                </td>
-            </tr>
-            <tr>
-                <td style="text-align: center;"></td>
-            </tr>
-        <?php
-        }
-        ?>
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3" style="text-align: center; vertical-align: bottom;">
+                <?php
+                echo '<span style="font-weight: bold;">Imanuel Iman</span>';
+                ?>
+                <hr style="width: 300px;">
+                <span>Direktur</span>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;"></td>
+        </tr>
     </tbody>
 </table>
 
