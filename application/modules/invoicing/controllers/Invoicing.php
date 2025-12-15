@@ -903,7 +903,6 @@ class Invoicing extends Admin_Controller
                 'sts' => 0,
                 'no_transaksi' => $id,
                 'jenis_transaksi' => 'Invoicing',
-                'tipe_invoice' => '1',
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
             ];
