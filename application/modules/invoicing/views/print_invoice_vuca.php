@@ -148,8 +148,8 @@
             <td style="text-align: right; border-top: 1px solid black;">
                 <table border="0" style="width: 100%">
                     <tr>
-                        <td style="text-align: center;" width="100">:</td>
-                        <td style="text-align: right;" width="100">
+                        <td style="text-align: center;">:</td>
+                        <td style="text-align: right;" width="200">
                             -
                         </td>
                     </tr>
@@ -162,8 +162,8 @@
             <td style="text-align: right; ">
                 <table border="0" style="width: 100%">
                     <tr>
-                        <td style="text-align: center;" width="100">:</td>
-                        <td style="text-align: right;" width="100">
+                        <td style="text-align: center;">:</td>
+                        <td style="text-align: right;" width="200">
                             -
                         </td>
                     </tr>
@@ -176,8 +176,8 @@
             <td style="text-align: right;">
                 <table border="0" style="width: 100%">
                     <tr>
-                        <td style="text-align: center;" width="100">:</td>
-                        <td style="text-align: right;" width="100">
+                        <td style="text-align: center;">:</td>
+                        <td style="text-align: right;" width="200">
                             -
                         </td>
                     </tr>
@@ -190,8 +190,8 @@
             <td style="text-align: right; ">
                 <table border="0" style="width: 100%">
                     <tr>
-                        <td style="text-align: center;" width="100">:</td>
-                        <td style="text-align: right;" width="100">
+                        <td style="text-align: center;">:</td>
+                        <td style="text-align: right;" width="200">
                             <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
                         </td>
                     </tr>
