@@ -213,14 +213,14 @@
                 <b>OCBC NISP Acc. No 7788.0000.0417</b>
                 <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
             </td>
-            <td colspan="4" style="border-top: 1px solid black; text-align: center;width: 400px !important;">
+            <td colspan="4" style="border-top: 1px solid black; text-align: center;">
                 <?php
-                echo '<b style="font-size: 15px;">PT. VUCA STRATEGI BISNIS</b>';
-                ?>
+                    echo '<b style="font-size: 15px; padding-left: 8rem;">PT. VUCA STRATEGI BISNIS</b>';
+                ?>  
             </td>
         </tr>
         <tr>
-            <td colspan="4" style="text-align: center;">
+            <td colspan="4" style="text-align: center; padding-left: 8rem;">
                 <span style="color: #ccc; text-align: center !important; font-size: 10px;">
                     Digitally Signned By : <br>
                     Imanuel Iman <br>
@@ -235,7 +235,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="3" style="text-align: center; vertical-align: bottom;">
+            <td colspan="4" style="text-align: center; vertical-align: bottom; padding-left: 8rem;">
                 <?php
                 echo '<span style="font-weight: bold;">Imanuel Iman</span>';
                 ?>
