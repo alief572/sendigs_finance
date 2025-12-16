@@ -126,7 +126,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
 
-        $this->db->select('a.*, b.print_keterangan, b.nm_project');
+        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.no_invoice');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
@@ -144,7 +144,7 @@ class Penerimaan_pph_23_model extends BF_Model
 
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
- 
+
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result_array();
@@ -167,7 +167,7 @@ class Penerimaan_pph_23_model extends BF_Model
 
             $hasil[] = [
                 'no' => $no,
-                'no_invoice' => $item['id_inv'],
+                'no_invoice' => $item['no_invoice'],
                 'nm_customer' => $item['nm_customer'],
                 'nm_project' => $item['nm_project'],
                 'keterangan_invoice' => $item['print_keterangan'],
@@ -179,8 +179,8 @@ class Penerimaan_pph_23_model extends BF_Model
 
         $response = [
             'draw' => intval($draw),
-            'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_all,
+            'recordsTotal' => $no,
+            'recordsFiltered' => $no,
             'data' => $hasil
         ];
 
