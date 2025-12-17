@@ -71,6 +71,7 @@ class Pembayaran_material_model extends BF_Model
 		$hasil = [];
 
 		if ($jenis_payment == 1) {
+			// Menyusun query pertama
 			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, b.created_by as requestor');
 			$this->db->from('payment_approve a');
 			$this->db->join('tr_expense b', 'b.no_doc = a.no_doc');
@@ -85,19 +86,45 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->or_like('a.jumlah', $search['value'], 'both');
 				$this->db->group_end();
 			}
-			$this->db->order_by('a.created_on', 'desc');
+			$query_1 = $this->db->get_compiled_select();
+
+			// Menyusun query kedua
+			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, a.created_by as requestor');
+			$this->db->from('payment_approve a');
+			$this->db->where('a.status <>', 2);
+			$this->db->where('a.tipe', 'Non-PO');
+			if (!empty($search['value'])) {
+				$this->db->group_start();
+				$this->db->like('a.no_doc', $search['value'], 'both');
+				$this->db->or_like('a.created_by', $search['value'], 'both');
+				$this->db->or_like('a.keperluan', $search['value'], 'both');
+				$this->db->or_like('a.currency', $search['value'], 'both');
+				$this->db->or_like('a.jumlah', $search['value'], 'both');
+				$this->db->group_end();
+			}
 			$this->db->group_by('a.id');
+			$query_2 = $this->db->get_compiled_select();
 
-			$db_clone = clone $this->db;
-			$count_all = $db_clone->count_all_results();
+			// Menggabungkan kedua query dengan UNION ALL
+			$sql = $query_1 . ' UNION ALL ' . $query_2;
 
-			$this->db->limit($length, $start);
-			$get_data = $this->db->get()->result();
+			// Menambahkan ORDER BY di luar query gabungan
+			$sql .= ' ORDER BY created_on DESC'; // Pindahkan ORDER BY ke luar
+
+			// Menambahkan LIMIT setelah ORDER BY
+			$sql .= ' LIMIT ' . $start . ', ' . $length;
+
+			// Eksekusi query gabungan dengan LIMIT
+			$get_data = $this->db->query($sql)->result();  // Eksekusi query gabungan dengan limit
+
+			// $get_data berisi hasil yang sudah dilimit, dan $count_all berisi total jumlah data
 
 			$hasil = [];
 
 			$no = (0 + $start);
 			foreach ($get_data as $item) {
+				$no++;
+
 				$no_incoming = [];
 				$no_po = [];
 				$nm_supplier = [];
@@ -161,6 +188,8 @@ class Pembayaran_material_model extends BF_Model
 					'option' => $option
 				];
 			}
+
+			$count_all = $no;
 		} else {
 			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, a.tipe');
 			$this->db->from('payment_approve a');
@@ -179,7 +208,7 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->or_like('a.keperluan', $search['value'], 'both');
 				$this->db->or_like('a.currency', $search['value'], 'both');
 				$this->db->or_like('a.jumlah', $search['value'], 'both');
-				$this->db->or_like('b.created_by', $search['value'], 'both');
+				$this->db->or_like('a.created_by', $search['value'], 'both');
 				$this->db->or_like('c.created_by', $search['value'], 'both');
 				$this->db->or_like('d.created_by', $search['value'], 'both');
 				$this->db->group_end();
@@ -264,7 +293,7 @@ class Pembayaran_material_model extends BF_Model
 		$get_payment = $this->db->get()->result();
 
 		foreach ($get_payment as $item_payment) :
-			if ($item_payment->tipe == 'kasbon') :
+			if ($item_payment->tipe == 'kasbon') {
 				$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
 				if ($get_kasbon->no_kasbon_consultant !== null) {
 					$coa_bank = '';
@@ -274,7 +303,7 @@ class Pembayaran_material_model extends BF_Model
 						$coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank->coa_bank : '';
 					}
 
-					$arr_coa_jurnal = ['1030-29-9', '7010-20-5'];
+					$arr_coa_jurnal = ['1103-01-04', '7201-01-04'];
 					if (!empty($bank)) {
 						$get_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
 
@@ -381,7 +410,7 @@ class Pembayaran_material_model extends BF_Model
 							$ttl_kredit += $kredit;
 							$no_jurnal++;
 						} else {
-							if ($item_coa->no_coa == '7010-20-5') {
+							if ($item_coa->no_coa == '7201-01-04') {
 								$id_company = '';
 								$nm_company = '';
 
@@ -570,10 +599,7 @@ class Pembayaran_material_model extends BF_Model
 
 					endforeach;
 				}
-
-			endif;
-
-			if ($item_payment->tipe == 'transport' || $item_payment->tipe == 'transportasi') {
+			} else if ($item_payment->tipe == 'transport' || $item_payment->tipe == 'transportasi') {
 				$coa_bank = '';
 				if (!empty($bank)) {
 					$get_coa_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
@@ -674,9 +700,7 @@ class Pembayaran_material_model extends BF_Model
 					$ttl_kredit += $kredit;
 					$no_jurnal++;
 				};
-			}
-
-			if ($item_payment->tipe == 'expense') {
+			} else if ($item_payment->tipe == 'expense') {
 				$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc])->row();
 
 				if (!empty($get_expense->exp_inv_po)) {
@@ -1159,6 +1183,24 @@ class Pembayaran_material_model extends BF_Model
 					// 		}
 					// 	}
 					// }
+				}
+			} else {
+				$get_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc])->row();
+
+				if (!empty($get_non_po)) {
+					$coa_bank = '';
+					if (!empty($bank)) {
+						$get_coa_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
+
+						$coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank->coa_bank : '';
+					}
+
+					$arr_coa_jurnal = ['1103-01-04', '7201-01-04'];
+					if (!empty($bank)) {
+						$get_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
+
+						array_push($arr_coa_jurnal, $get_bank->coa_bank);
+					}
 				}
 			}
 		endforeach;

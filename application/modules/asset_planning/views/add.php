@@ -105,7 +105,7 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 						}
 						?>
 					</select>
-					<input type="hidden" name="nm_coa" id="nm_coa">
+					<input type="hidden" name="nm_coa" id="nm_coa" value="<?= $nm_coa; ?>">
 				</div>
 			</div>
 			<div class='form-group row'>
