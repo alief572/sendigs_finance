@@ -3142,7 +3142,7 @@ class Expense extends Admin_Controller
 				$action .= ' <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
 			}
 
-			$approval_date = (!empty($item['approved_on']) && ($item['status'] == '1' || $item['status'] == '2')) ? $item['approved_on'] : '';
+			$approval_date = (!empty($item['approved_on']) && ($item['status'] == '1' || $item['status'] == '2' || $item['status'] == '3')) ? $item['approved_on'] : '';
 
 			$hasil[] = [
 				'no' => $no,
