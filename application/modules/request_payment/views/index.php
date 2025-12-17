@@ -164,14 +164,20 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					title: 'Error !',
 					text: 'Please try again later !',
 <<<<<<< HEAD
+<<<<<<< HEAD
 					type: 'error'
 =======
+=======
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 					icon: 'error',
 					showConfirmButton: false,
 					showCancelButton: false,
 					allowEscapeKey: false,
 					allowOutsideClick: false,
 					timer: 3000
+<<<<<<< HEAD
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
+=======
 >>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 				});
 			}
@@ -367,12 +373,15 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								type: 'success',
 								title: 'Success !',
 <<<<<<< HEAD
+<<<<<<< HEAD
 								text: result.msg
 							}, function(lanjut) {
 								if (lanjut) {
 									DataTables();
 								}
 =======
+=======
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 								text: result.msg,
 								showConfirmButton: false,
 								showCancelButton: false,
@@ -388,12 +397,15 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								type: 'warning',
 								title: 'Failed !',
 <<<<<<< HEAD
+<<<<<<< HEAD
 								text: result.msg
 							}, function(lanjut) {
 								if (lanjut) {
 									DataTables();
 								}
 =======
+=======
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 								text: result.msg,
 								showConfirmButton: false,
 								showCancelButton: false,
