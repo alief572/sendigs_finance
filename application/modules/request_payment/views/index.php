@@ -163,7 +163,16 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				swal({
 					title: 'Error !',
 					text: 'Please try again later !',
+<<<<<<< HEAD
 					type: 'error'
+=======
+					icon: 'error',
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 				});
 			}
 		});
@@ -212,7 +221,10 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				type: 'warning',
 				title: 'Warning !',
 				text: 'Reject Reason masih kosong !',
+				showConfirmButton: false,
 				showCancelButton: false,
+				allowEscapeKey: false,
+				allowOutsideClick: false,
 				timer: 3000
 			});
 
@@ -240,8 +252,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								type: 'success',
 								title: 'Success !',
 								text: result.msg,
-								timer: 3000,
-								showConfirmButton: false
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							}, function(lanjut) {
 								swal.close();
 								DataTables();
@@ -251,8 +266,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								type: 'warning',
 								title: 'Failed !',
 								text: result.msg,
-								timer: 3000,
-								showConfirmButton: false
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							});
 						}
 					},
@@ -261,8 +279,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							type: 'error',
 							title: 'Error !',
 							text: 'Please try again later !',
-							timer: 3000,
-							showConfirmButton: false
+							showConfirmButton: false,
+							showCancelButton: false,
+							allowEscapeKey: false,
+							allowOutsideClick: false,
+							timer: 3000
 						});
 					}
 				});
@@ -271,8 +292,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					type: 'success',
 					title: 'Success !',
 					text: 'Selected data did not reject !',
-					timer: 3000,
-					showConfirmButton: false
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
 				}, function(next) {
 					swal.close();
 					DataTables();
@@ -308,7 +332,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				swal({
 					type: 'error',
 					title: 'Error !',
-					text: 'Please try again later !'
+					text: 'Please try again later !',
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
 				});
 			}
 		})
@@ -337,21 +366,43 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							swal({
 								type: 'success',
 								title: 'Success !',
+<<<<<<< HEAD
 								text: result.msg
 							}, function(lanjut) {
 								if (lanjut) {
 									DataTables();
 								}
+=======
+								text: result.msg,
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
+							}).then(() => {
+								DataTables();
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 							});
 						} else {
 							swal({
 								type: 'warning',
 								title: 'Failed !',
+<<<<<<< HEAD
 								text: result.msg
 							}, function(lanjut) {
 								if (lanjut) {
 									DataTables();
 								}
+=======
+								text: result.msg,
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
+							}).then(() => {
+								DataTables();
+>>>>>>> 56cd3b2 (Perbaikan - Request Payment)
 							});
 						}
 					},
@@ -359,7 +410,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 						swal({
 							type: 'error',
 							title: 'Error !',
-							text: 'Please try again later !'
+							text: 'Please try again later !',
+							showConfirmButton: false,
+							showCancelButton: false,
+							allowEscapeKey: false,
+							allowOutsideClick: false,
+							timer: 3000
 						});
 					}
 				})
