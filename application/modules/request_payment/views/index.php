@@ -165,7 +165,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				Swal.fire({
 					title: 'Error !',
 					text: 'Please try again later !',
-					icon: 'error'
+					icon: 'error',
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
 				});
 			}
 		});
@@ -214,7 +219,10 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				icon: 'warning',
 				title: 'Warning !',
 				text: 'Reject Reason masih kosong !',
+				showConfirmButton: false,
 				showCancelButton: false,
+				allowEscapeKey: false,
+				allowOutsideClick: false,
 				timer: 3000
 			});
 
@@ -242,8 +250,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								icon: 'success',
 								title: 'Success !',
 								text: result.msg,
-								timer: 3000,
-								showConfirmButton: false
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							}, function(lanjut) {
 								swal.close();
 								DataTables();
@@ -253,8 +264,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								icon: 'warning',
 								title: 'Failed !',
 								text: result.msg,
-								timer: 3000,
-								showConfirmButton: false
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							});
 						}
 					},
@@ -263,8 +277,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							icon: 'error',
 							title: 'Error !',
 							text: 'Please try again later !',
-							timer: 3000,
-							showConfirmButton: false
+							showConfirmButton: false,
+							showCancelButton: false,
+							allowEscapeKey: false,
+							allowOutsideClick: false,
+							timer: 3000
 						});
 					}
 				});
@@ -273,8 +290,11 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					icon: 'success',
 					title: 'Success !',
 					text: 'Selected data did not reject !',
-					timer: 3000,
-					showConfirmButton: false
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
 				}, function(next) {
 					Swal.close();
 					DataTables();
@@ -310,7 +330,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				Swal.fire({
 					icon: 'error',
 					title: 'Error !',
-					text: 'Please try again later !'
+					text: 'Please try again later !',
+					showConfirmButton: false,
+					showCancelButton: false,
+					allowEscapeKey: false,
+					allowOutsideClick: false,
+					timer: 3000
 				});
 			}
 		})
@@ -339,7 +364,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							Swal.fire({
 								icon: 'success',
 								title: 'Success !',
-								text: result.msg
+								text: result.msg,
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							}).then(() => {
 								DataTables();
 							});
@@ -347,7 +377,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 							Swal.fire({
 								icon: 'warning',
 								title: 'Failed !',
-								text: result.msg
+								text: result.msg,
+								showConfirmButton: false,
+								showCancelButton: false,
+								allowEscapeKey: false,
+								allowOutsideClick: false,
+								timer: 3000
 							}).then(() => {
 								DataTables();
 							});
@@ -357,7 +392,12 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 						Swal.fire({
 							icon: 'error',
 							title: 'Error !',
-							text: 'Please try again later !'
+							text: 'Please try again later !',
+							showConfirmButton: false,
+							showCancelButton: false,
+							allowEscapeKey: false,
+							allowOutsideClick: false,
+							timer: 3000
 						});
 					}
 				})
