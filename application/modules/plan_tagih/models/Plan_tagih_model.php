@@ -46,6 +46,10 @@ class Plan_tagih_model extends BF_Model
         $this->consultant->from('kons_tr_spk_penawaran a');
         $this->consultant->join('kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->consultant->where('a.sts_spk', 1);
+
+        $db_clone = clone $this->consultant;
+        $count_all = $db_clone->count_all_results();
+
         if (!empty($search['value'])) {
             $this->consultant->group_start();
             $this->consultant->like('a.id_spk_penawaran', $search['value'], 'both');
@@ -58,7 +62,7 @@ class Plan_tagih_model extends BF_Model
         }
 
         $db_clone = clone $this->consultant;
-        $count_all = $db_clone->count_all_results();
+        $count_filter = $db_clone->count_all_results();
 
         $this->consultant->order_by('a.id_spk_penawaran', 'desc');
         $this->consultant->limit($length, $start);
@@ -107,7 +111,7 @@ class Plan_tagih_model extends BF_Model
         echo json_encode([
             'draw' => intval($draw),
             'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_all,
+            'recordsFiltered' => $count_filter,
             'data' => $hasil
         ]);
     }

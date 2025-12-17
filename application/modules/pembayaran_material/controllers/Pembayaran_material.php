@@ -1635,6 +1635,7 @@ class Pembayaran_material extends Admin_Controller
 		$this->Pembayaran_material_model->set_jurnal();
 	}
 
+
 	public function set_jurnal_refill()
 	{
 		$this->Pembayaran_material_model->set_jurnal_refill();
