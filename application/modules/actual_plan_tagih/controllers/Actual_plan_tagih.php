@@ -155,17 +155,17 @@ class Actual_plan_tagih extends Admin_Controller
                 exit;
             }
 
-            $arr_update_plan_tagih = [
-                'tgl_plan_tagih' => $post['tgl_plan_tagih']
-            ];
+            // $arr_update_plan_tagih = [
+            //     'tgl_plan_tagih' => $post['tgl_plan_tagih']
+            // ];
 
-            $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
-            if (!$update_plan_tagih) {
-                $this->db->trans_rollback();
+            // $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+            // if (!$update_plan_tagih) {
+            //     $this->db->trans_rollback();
 
-                print_r($this->db->last_query());
-                exit;
-            }
+            //     print_r($this->db->last_query());
+            //     exit;
+            // }
         } else {
             $id = $this->Actual_plan_tagih_model->generate_id();
 
@@ -203,17 +203,17 @@ class Actual_plan_tagih extends Admin_Controller
                     exit;
                 }
 
-                $arr_update_plan_tagih = [
-                    'tgl_plan_tagih' => $tanggal_actual
-                ];
+                // $arr_update_plan_tagih = [
+                //     'tgl_plan_tagih' => $tanggal_actual
+                // ];
 
-                $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
-                if (!$update_plan_tagih) {
-                    $this->db->trans_rollback();
+                // $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+                // if (!$update_plan_tagih) {
+                //     $this->db->trans_rollback();
 
-                    print_r($this->db->last_query());
-                    exit;
-                }
+                //     print_r($this->db->last_query());
+                //     exit;
+                // }
             } else {
                 $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
 
@@ -247,29 +247,29 @@ class Actual_plan_tagih extends Admin_Controller
                 }
 
                 if ($post['tagih_mundur'] == '2') {
-                    $arr_update = [
-                        'tgl_plan_tagih' => $post['tanggal_actual']
-                    ];
+                    // $arr_update = [
+                    //     'tgl_plan_tagih' => $post['tanggal_actual']
+                    // ];
 
-                    $update_tgl_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, array('id' => $post['id_detail_plan_tagih']));
-                    if (!$update_tgl_plan_tagih) {
-                        $this->db->trans_rollback();
+                    // $update_tgl_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, array('id' => $post['id_detail_plan_tagih']));
+                    // if (!$update_tgl_plan_tagih) {
+                    //     $this->db->trans_rollback();
 
-                        print_r($this->db->last_query());
-                        exit;
-                    }
+                    //     print_r($this->db->last_query());
+                    //     exit;
+                    // }
                 } else {
-                    $arr_update_plan_tagih = [
-                        'tgl_plan_tagih' => $tanggal_actual
-                    ];
+                    // $arr_update_plan_tagih = [
+                    //     'tgl_plan_tagih' => $tanggal_actual
+                    // ];
 
-                    $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
-                    if (!$update_plan_tagih) {
-                        $this->db->trans_rollback();
+                    // $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
+                    // if (!$update_plan_tagih) {
+                    //     $this->db->trans_rollback();
 
-                        print_r($this->db->last_query());
-                        exit;
-                    }
+                    //     print_r($this->db->last_query());
+                    //     exit;
+                    // }
                 }
             }
         }
