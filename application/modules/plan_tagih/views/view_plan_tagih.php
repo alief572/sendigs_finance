@@ -90,7 +90,7 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
                 </tr>
                 <tr>
                     <th width="20%">Nominal</th>
-                    <td>Rp. <?= number_format($data_spk_penawaran->nilai_kontrak_bersih, 2) ?></td>
+                    <td>Rp. <?= number_format($data_spk_penawaran->nilai_kontrak, 2) ?></td>
                     <th width="20%"></th>
                     <td></td>
                 </tr>
