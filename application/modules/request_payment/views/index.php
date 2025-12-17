@@ -104,6 +104,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 <script type="text/javascript">
 	DataTables();
@@ -160,10 +162,10 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 				load_all_party();
 			},
 			error: function() {
-				swal({
+				Swal.fire({
 					title: 'Error !',
 					text: 'Please try again later !',
-					type: 'error'
+					icon: 'error'
 				});
 			}
 		});
@@ -208,8 +210,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 		var reject_reason = $('#reject_reason').val();
 
 		if (reject_reason == '') {
-			swal({
-				type: 'warning',
+			Swal.fire({
+				icon: 'warning',
 				title: 'Warning !',
 				text: 'Reject Reason masih kosong !',
 				showCancelButton: false,
@@ -219,13 +221,13 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 			return false;
 		}
 
-		swal({
+		Swal.fire({
 			type: 'warning',
 			title: 'Are you sure ?',
 			text: 'Selected data will be rejected !',
 			showCancelButton: true
-		}, function(next) {
-			if (next) {
+		}).then((next) => {
+			if (next.isConfirmed) {
 				$.ajax({
 					type: 'post',
 					url: siteurl + active_controller + 'reject_req_payment',
@@ -236,8 +238,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					dataType: 'json',
 					success: function(result) {
 						if (result.status == '1') {
-							swal({
-								type: 'success',
+							Swal.fire({
+								icon: 'success',
 								title: 'Success !',
 								text: result.msg,
 								timer: 3000,
@@ -247,8 +249,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 								DataTables();
 							});
 						} else {
-							swal({
-								type: 'warning',
+							Swal.fire({
+								icon: 'warning',
 								title: 'Failed !',
 								text: result.msg,
 								timer: 3000,
@@ -257,8 +259,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 						}
 					},
 					error: function(result) {
-						swal({
-							type: 'error',
+						Swal.fire({
+							icon: 'error',
 							title: 'Error !',
 							text: 'Please try again later !',
 							timer: 3000,
@@ -267,14 +269,14 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					}
 				});
 			} else {
-				swal({
-					type: 'success',
+				Swal.fire({
+					icon: 'success',
 					title: 'Success !',
 					text: 'Selected data did not reject !',
 					timer: 3000,
 					showConfirmButton: false
 				}, function(next) {
-					swal.close();
+					Swal.close();
 					DataTables();
 				});
 			}
@@ -305,8 +307,8 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 
 			},
 			error: function(result) {
-				swal({
-					type: 'error',
+				Swal.fire({
+					icon: 'error',
 					title: 'Error !',
 					text: 'Please try again later !'
 				});
@@ -318,13 +320,13 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 	$('#frm_data').on('submit', function(e) {
 		e.preventDefault();
 
-		swal({
-			type: 'warning',
+		Swal.fire({
+			icon: 'warning',
 			title: 'Are you sure ?',
 			text: 'The data you choose will be processed !',
 			showCancelButton: true
-		}, function(next) {
-			if (next) {
+		}).then((next) => {
+			if (next.isConfirmed) {
 				var formdata = $('#frm_data').serialize();
 				$.ajax({
 					type: 'post',
@@ -334,30 +336,26 @@ $ENABLE_VIEW    = has_permission('Request_Payment.View');
 					cache: false,
 					success: function(result) {
 						if (result.status == '1') {
-							swal({
-								type: 'success',
+							Swal.fire({
+								icon: 'success',
 								title: 'Success !',
 								text: result.msg
-							}, function(lanjut) {
-								if (lanjut) {
-									DataTables();
-								}
+							}).then(() => {
+								DataTables();
 							});
 						} else {
-							swal({
-								type: 'warning',
+							Swal.fire({
+								icon: 'warning',
 								title: 'Failed !',
 								text: result.msg
-							}, function(lanjut) {
-								if (lanjut) {
-									DataTables();
-								}
+							}).then(() => {
+								DataTables();
 							});
 						}
 					},
 					error: function(result) {
-						swal({
-							type: 'error',
+						Swal.fire({
+							icon: 'error',
 							title: 'Error !',
 							text: 'Please try again later !'
 						});
