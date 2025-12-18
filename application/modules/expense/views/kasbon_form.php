@@ -21,7 +21,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 
 
 ?>
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <form action="" id="frm_data" class="form-horizontal" enctype="multipart/form-data">
 	<input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->id) ? $data->id : ''); ?>">
 	<input type="hidden" id="departement" name="departement" value="<?php echo ($data_user->department_id) ?>">
@@ -107,26 +107,26 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 						<label class="col-sm-2 control-label">COA</label>
 						<div class="col-sm-4">
 							<?php
-							if ($mod == '') {
-								echo '<select name="coa" class="form-control form-control-sm coa_select chosen_select">
+							// if ($mod == '') {
+							echo '<select name="coa" class="form-control form-control-sm coa_select chosen_select">
 										<option value="">- Pilih COA -</option>
 										';
-								if (!empty($list_coa)) {
-									foreach ($list_coa as $item_coa) {
-										$selected = '';
-										if (isset($data->no_coa) && $data->no_coa == $item_coa['no_perkiraan']) {
-											$selected = 'selected';
-										}
-										echo '<option value="' . $item_coa['no_perkiraan'] . '" ' . $selected . '>' . $item_coa['no_perkiraan'] . ' - ' . $item_coa['nama'] . '</option>';
+							if (!empty($list_coa)) {
+								foreach ($list_coa as $item_coa) {
+									$selected = '';
+									if (isset($data->no_coa) && $data->no_coa == $item_coa['no_perkiraan']) {
+										$selected = 'selected';
 									}
+									echo '<option value="' . $item_coa['no_perkiraan'] . '" ' . $selected . '>' . $item_coa['no_perkiraan'] . ' - ' . $item_coa['nama'] . '</option>';
 								}
+							}
 							?>
 							<?php
-								echo '</select>';
-							} else {
-								$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa . ' - ' . $data->nm_coa : '';
-								echo '<input type="text" name="nm_coa" value="' . $val_coa . '" class="form-control form-control-sm" readonly>';
-							}
+							echo '</select>';
+							// } else {
+							// 	$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa . ' - ' . $data->nm_coa : '';
+							// 	echo '<input type="text" name="nm_coa" value="' . $val_coa . '" class="form-control form-control-sm" readonly>';
+							// }
 							?>
 
 							<input type="hidden" name="nm_coa" value="<?= (isset($data->nm_coa) ? $data->nm_coa : ''); ?>">
