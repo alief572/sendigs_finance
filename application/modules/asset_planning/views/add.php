@@ -96,12 +96,14 @@ $rev_keterangan 	= (!empty($header)) ? strtoupper($header[0]->rev_keterangan) : 
 					<select name="coa" id="coa" class="form-control input-md chosen_select">
 						<option value="">- Pilih COA -</option>
 						<?php
-						foreach ($list_coa as $item_coa) {
-							$selected = '';
-							if($no_coa == $item_coa->no_perkiraan) {
-								$selected = 'selected';
+						if (!empty($list_coa)) {
+							foreach ($list_coa as $item_coa) {
+								$selected = '';
+								if ($no_coa == $item_coa->no_perkiraan) {
+									$selected = 'selected';
+								}
+								echo '<option value="' . $item_coa->no_perkiraan . '" ' . $selected . '>' . $item_coa->no_perkiraan . ' - ' . $item_coa->nama . '</option>';
 							}
-							echo '<option value="' . $item_coa->no_perkiraan . '" ' . $selected . '>' . $item_coa->no_perkiraan . ' - ' . $item_coa->nama . '</option>';
 						}
 						?>
 					</select>
