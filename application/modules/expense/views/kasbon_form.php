@@ -644,9 +644,16 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 			},
 			function(isConfirm) {
 				if (isConfirm) {
+					var coa = $('select[name="coa"]').val();
+					var nm_coa = $('input[name="nm_coa"]').val();
+
 					id = $("#id").val();
 					$.ajax({
 						url: url_approve + id,
+						data: {
+							'coa': coa,
+							'nm_coa': nm_coa
+						},
 						dataType: "json",
 						type: 'POST',
 						success: function(msg) {
