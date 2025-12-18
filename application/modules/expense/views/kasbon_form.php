@@ -106,29 +106,29 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 						</div>
 						<label class="col-sm-2 control-label">COA</label>
 						<div class="col-sm-4">
-							<?php 
-								if($mod == '') {
-									echo '<select name="coa" class="form-control form-control-sm coa_select chosen_select">
+							<?php
+							if ($mod == '') {
+								echo '<select name="coa" class="form-control form-control-sm coa_select chosen_select">
 										<option value="">- Pilih COA -</option>
 										';
-											if(!empty($list_coa)) {
-												foreach($list_coa as $item_coa) {
-													$selected = '';
-													if(isset($data->no_coa) && $data->no_coa == $item_coa['no_perkiraan']) {
-														$selected = 'selected';
-													}
-													echo '<option value="' . $item_coa['no_perkiraan'] . '" ' . $selected . '>' . $item_coa['no_perkiraan'] . ' - ' . $item_coa['nama'] . '</option>';
-												}
-											}
-										?>
-									<?php 
-									echo '</select>'; 
-								} else {
-									$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.$data->nm_coa : '';
-									echo '<input type="text" name="nm_coa" value="'. $val_coa .'" class="form-control form-control-sm" readonly>';
+								if (!empty($list_coa)) {
+									foreach ($list_coa as $item_coa) {
+										$selected = '';
+										if (isset($data->no_coa) && $data->no_coa == $item_coa['no_perkiraan']) {
+											$selected = 'selected';
+										}
+										echo '<option value="' . $item_coa['no_perkiraan'] . '" ' . $selected . '>' . $item_coa['no_perkiraan'] . ' - ' . $item_coa['nama'] . '</option>';
+									}
 								}
 							?>
-							
+							<?php
+								echo '</select>';
+							} else {
+								$val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa . ' - ' . $data->nm_coa : '';
+								echo '<input type="text" name="nm_coa" value="' . $val_coa . '" class="form-control form-control-sm" readonly>';
+							}
+							?>
+
 							<input type="hidden" name="nm_coa" value="<?= (isset($data->nm_coa) ? $data->nm_coa : ''); ?>">
 						</div>
 
@@ -703,7 +703,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 
 				swal({
 						title: "Anda Yakin?",
-						text: "Data Akan Tolak!",
+						text: "Data Akan ditolak!",
 						type: "warning",
 						showCancelButton: true,
 						confirmButtonText: "Ya, tolak!",
