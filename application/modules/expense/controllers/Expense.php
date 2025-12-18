@@ -833,7 +833,9 @@ class Expense extends Admin_Controller
 				'id' => $id,
 				'sts_finance' => '1',
 				'app_finance_date' => date('Y-m-d H:i:s'),
-				'reject_reason_finance' => null
+				'reject_reason_finance' => null,
+				'no_coa' => $this->input->post('coa'),
+				'nm_coa' => $this->input->post('nm_coa')
 			];
 
 			$result 		= $this->All_model->dataUpdate('tr_kasbon', $data, array('id' => $id));
