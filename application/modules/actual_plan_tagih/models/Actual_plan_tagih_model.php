@@ -49,7 +49,7 @@ class Actual_plan_tagih_model extends BF_Model
         //     $tahun = date('Y');
         // }
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date, d.id as id_actual');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
@@ -99,7 +99,7 @@ class Actual_plan_tagih_model extends BF_Model
         // print_r($this->db->last_query());
         // exit;
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date, d.id as id_actual');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
@@ -152,6 +152,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $this->db->select('a.id');
                 $this->db->from('kons_tr_actual_plan_tagih a');
                 $this->db->where('a.id_detail_plan_tagih', $item_all->id);
+                $this->db->where('a.id', $item_all->id_actual);
                 $this->db->where('a.created_date >', $item_all->created_date);
                 $no_check = $this->db->count_all_results();
             }
@@ -172,6 +173,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $this->db->select('a.id');
                 $this->db->from('kons_tr_actual_plan_tagih a');
                 $this->db->where('a.id_detail_plan_tagih', $item->id);
+                $this->db->where('a.id', $item_all->id_actual);
                 $this->db->where('a.created_date >', $item->created_date);
                 $no_check = $this->db->count_all_results();
             }
