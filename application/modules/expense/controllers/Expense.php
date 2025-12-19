@@ -1043,15 +1043,17 @@ class Expense extends Admin_Controller
 	}
 	public function expense_list_all()
 	{
-		$data = $this->Expense_model->GetListData();
-		$data_detail = $this->Expense_model->GetListDataAll();
-		$this->template->page_icon('fa fa-list');
+		// $data = $this->Expense_model->GetListData();
+		// $data_detail = $this->Expense_model->GetListDataAll();
+		// $this->template->page_icon('fa fa-list');
 		$this->template->title('Expense Report List');
 		$this->template->set('status', $this->status);
-		$this->template->set('results', $data);
-		$this->template->set('data_detail', $data_detail);
+		$this->template->set(['all' => 1]);
+		// $this->template->set('results', $data);
+		// $this->template->set('data_detail', $data_detail);
 		$this->template->render('index');
 	}
+
 	public function approval($id)
 	{
 		$data 			= $this->Expense_model->GetDataHeader($id);
@@ -3669,6 +3671,8 @@ class Expense extends Admin_Controller
 	{
 		$post = $this->input->post();
 
+		$all = (isset($post['all']) && !empty($post['all']) && $post['all'] == '1') ? $post['all'] : '';
+
 		$draw = intval($post['draw']);
 		$length = $post['length'];
 		$start = $post['start'];
@@ -3678,8 +3682,10 @@ class Expense extends Admin_Controller
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->join('users c', 'a.approval=c.username', 'left');
-		$this->db->where('a.pettycash', null);
-		$this->db->where('a.exp_pib', null);
+		if (empty($all)) {
+			$this->db->where('a.pettycash', null);
+			$this->db->where('a.exp_pib', null);
+		}
 
 		if ($this->auth->user_id() !== '7') {
 			$this->db->where('a.nama', $this->auth->user_name());
@@ -3717,7 +3723,7 @@ class Expense extends Admin_Controller
 			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
 			$this->db->order_by($column_name, $column_dir);
 		} else {
-			$this->db->order_by($this->order);
+			$this->db->order_by('a.created_on', 'desc');
 		}
 
 		$this->db->limit($length, $start);
@@ -3750,7 +3756,22 @@ class Expense extends Admin_Controller
 				$action .= ' <a class="btn btn-sm btn-default print" href="' . base_url('expense/expense_print/' . $item['id']) . '" 
 					target="expense_print" title="Print"><i class="fa fa-print"></i></a>';
 
-				$action .= ' <a class="btn btn-sm btn-warning view" href="javascript:void(0);" title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
+				$action .= ' <a class="btn btn-sm btn-warning view" href="javascript:void(0);" title="View" 
+					onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
+			}
+
+			if (has_permission($this->managePermission)) {
+				if ($item['status'] == '0' || $item['status'] == '9') {
+					$action .= ' <a href="javascript:void(0);" class="btn btn-sm btn-success edit" title="Edit" 
+						onclick="data_edit(' . $item['id'] . ')"><i class="fa fa-edit"></i></a>';
+				}
+			}
+
+			if (has_permission($this->deletePermission)) {
+				if ($item['status'] == '0' || $item['status'] == '9') {
+					$action .= ' <a href="javascript:void(0);" class="btn btn-sm btn-danger delete" title="Hapus" 
+						onclick="data_delete(' . $item['id'] . ')"><i class="fa fa-trash"></i></a>';
+				}
 			}
 
 			$hasil[] = [
@@ -3761,6 +3782,129 @@ class Expense extends Admin_Controller
 				'approval' => $item['nmapproval'],
 				'approval_date' => $item['approved_on'],
 				'keterangan' => $item['informasi'],
+				'status' => $status,
+				'action' => $action
+			];
+		endforeach;
+
+		$response = [
+			'draw' => $draw,
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data' => $hasil
+		];
+
+		echo json_encode($response);
+	}
+
+	public function get_dat_expense_pc()
+	{
+		$post = $this->input->post();
+
+		$draw = intval($post['draw']);
+		$length = $post['length'];
+		$start = $post['start'];
+		$search = $post['search']['value'];
+
+		$this->db->select('a.*, b.nm_lengkap as nmuser, c.username as nmapproval');
+		$this->db->from('tr_expense a');
+		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->join('users c', 'a.approval=c.username', 'left');
+		$this->db->where('a.pettycash IS NOT NULL');
+		$this->db->where('a.exp_pib', null);
+
+		if ($this->auth->user_id() !== '7') {
+			$this->db->where('a.nama', $this->auth->user_name());
+		}
+
+		$db_clone = clone $this->db;
+		$count_all = $db_clone->count_all_results();
+
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.tgl_doc', $search, 'both');
+			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->group_end();
+		}
+
+		$db_clone = clone $this->db;
+		$count_filter = $db_clone->count_all_results();
+
+		$column_order = [
+			0 => '',
+			1 => 'a.no_doc',
+			2 => 'a.tgl_doc',
+			3 => 'b.nm_lengkap',
+			4 => 'c.username',
+			5 => 'a.approved_on'
+		];
+
+		if (isset($post['order']) && !empty($post['order'])) {
+			$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
+			$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
+			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
+			$this->db->order_by($column_name, $column_dir);
+		} else {
+			$this->db->order_by('a.created_on', 'desc');
+		}
+
+		$this->db->limit($length, $start);
+
+		$get_data = $this->db->get()->result_array();
+
+		$no = (0 + $start);
+		$hasil = [];
+
+		foreach ($get_data as $item) :
+			$no++;
+
+			$status = '<span class="badge bg-yellow">Baru</span>';
+			if ($item['status'] == '1') {
+				$status = '<span class="badge bg-green">Disetujui</span>';
+			}
+			if ($item['status'] == '2') {
+				$status = '<span class="badge bg-green">Disetujui Management</span>';
+			}
+			if ($item['status'] == '3') {
+				$status = '<span class="badge bg-green">Selesai</span>';
+			}
+			if ($item['status'] == '9') {
+				$status = '<span class="badge bg-red">Ditolak</span>';
+			}
+
+			$action = '';
+
+			if (has_permission($this->viewPermission)) {
+				$action .= ' <a class="btn btn-sm btn-default print" href="' . base_url('expense/expense_print/' . $item['id']) . '" 
+					target="expense_print" title="Print"><i class="fa fa-print"></i></a>';
+
+				$action .= ' <a class="btn btn-sm btn-warning view" href="javascript:void(0);"
+				   	title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
+			}
+
+			if (has_permission($this->managePermission)) {
+				if ($item['status'] == '0' || $item['status'] == '9') {
+					$action .= ' <a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit(' . $item['id'] . ')"><i class="fa fa-edit"></i></a>';
+				}
+			}
+
+			if (has_permission($this->deletePermission)) {
+				if ($item['status'] == '0' || $item['status'] == '9') {
+					$action .= ' <a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete(' . $item['id'] . ')"><i class="fa fa-trash"></i></a>';
+				}
+			}
+
+			$hasil[] = [
+				'no' => $no,
+				'no_doc' => $item['no_doc'],
+				'tgl_doc' => $item['tgl_doc'],
+				'nama' => $item['nmuser'],
+				'approval' => $item['nmapproval'],
+				'keterangan' => $item['informasi'],
+				'nominal' => number_format($item['jumlah']),
 				'status' => $status,
 				'action' => $action
 			];
