@@ -99,7 +99,7 @@ class Actual_plan_tagih_model extends BF_Model
         // print_r($this->db->last_query());
         // exit;
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
@@ -144,77 +144,107 @@ class Actual_plan_tagih_model extends BF_Model
 
         $get_data_all = $this->db->get();
 
+        $no_all = 0;
+        foreach ($get_data_all->result() as $item_all) {
+
+            $no_check = 0;
+            if (!empty($item_all->created_date)) {
+                $this->db->select('a.id');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->where('a.id_detail_plan_tagih', $item_all->id);
+                $this->db->where('a.created_date >', $item_all->created_date);
+                $no_check = $this->db->count_all_results();
+            }
+
+
+            if ($no_check < 1) {
+                $no_all++;
+            }
+        }
+
         $hasil = [];
         $no = (0 + $start);
 
         foreach ($get_data->result() as $item) {
-            $no++;
 
-            $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $item->id_spk_penawaran])->row();
-            $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran->nm_sales : '';
-
-            $nm_company = '';
-            if (!empty($get_spk_penawaran)) {
-                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
-                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
-
-                $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
+            $no_check = 0;
+            if (!empty($item->created_date)) {
+                $this->db->select('a.id');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->where('a.id_detail_plan_tagih', $item->id);
+                $this->db->where('a.created_date >', $item->created_date);
+                $no_check = $this->db->count_all_results();
             }
 
-            $status = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
-            if ($bulan == 'macet') {
-                $status = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
-            }
+            if ($no_check < 1) {
+                $no++;
 
-            $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 2])->result();
-            if (count($check_aktual_telat) > 0) {
-                $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
-            }
+                $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $item->id_spk_penawaran])->row();
+                $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran->nm_sales : '';
 
-            $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1])->result();
-            if (count($check_aktual_tagih) > 0) {
-                $status = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
-            }
+                $nm_company = '';
+                if (!empty($get_spk_penawaran)) {
+                    $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
+                    $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
 
-            if ($bulan == 'macet') {
-                $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" title="Penagihan Tagihan Macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
-            } else {
-                $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" title="Aktual Tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
-
-                $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1))->result();
-                if (count($get_actual_plan_tagih)) {
-                    $option = '';
+                    $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
                 }
+
+                $status = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
+                if ($bulan == 'macet') {
+                    $status = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
+                }
+
+                $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 2])->result();
+                if (count($check_aktual_telat) > 0) {
+                    $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
+                }
+
+                $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1])->result();
+                if (count($check_aktual_tagih) > 0) {
+                    $status = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
+                }
+
+                if ($bulan == 'macet') {
+                    $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" title="Penagihan Tagihan Macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+                } else {
+                    $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" title="Aktual Tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+
+                    $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1))->result();
+                    if (count($get_actual_plan_tagih)) {
+                        $option = '';
+                    }
+                }
+
+                $this->consultant->select('b.nm_paket');
+                $this->consultant->from('kons_tr_spk_penawaran a');
+                $this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+                $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                $get_spk = $this->consultant->get()->row();
+
+                $nm_paket = (!empty($get_spk)) ? $get_spk->nm_paket : '';
+
+                $nm_project = ($item->nm_project == '' && $item->nm_project == null) ? $nm_paket : $item->nm_project;
+
+                $hasil[] = [
+                    'no' => $no,
+                    'company' => $nm_company,
+                    'no_spk' => $item->id_spk_penawaran,
+                    'customer' => $item->nm_customer,
+                    'project' => $nm_project,
+                    'project_leader' => $item->nm_project_leader,
+                    'sales' => $nm_sales,
+                    'keterangan' => $item->desc_payment,
+                    'status' => $status,
+                    'option' => $option
+                ];
             }
-
-            $this->consultant->select('b.nm_paket');
-            $this->consultant->from('kons_tr_spk_penawaran a');
-            $this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-            $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            $get_spk = $this->consultant->get()->row();
-
-            $nm_paket = (!empty($get_spk)) ? $get_spk->nm_paket : '';
-
-            $nm_project = ($item->nm_project == '' && $item->nm_project == null) ? $nm_paket : $item->nm_project;
-
-            $hasil[] = [
-                'no' => $no,
-                'company' => $nm_company,
-                'no_spk' => $item->id_spk_penawaran,
-                'customer' => $item->nm_customer,
-                'project' => $nm_project,
-                'project_leader' => $item->nm_project_leader,
-                'sales' => $nm_sales,
-                'keterangan' => $item->desc_payment,
-                'status' => $status,
-                'option' => $option
-            ];
         }
 
         echo json_encode([
             'draw' => intval($draw),
-            'recordsTotal' => $get_data_all->num_rows(),
-            'recordsFiltered' => $get_data_all->num_rows(),
+            'recordsTotal' => $no_all,
+            'recordsFiltered' => $no_all,
             'data' => $hasil
         ]);
     }
