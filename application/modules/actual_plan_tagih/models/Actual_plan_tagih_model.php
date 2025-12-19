@@ -196,9 +196,9 @@ class Actual_plan_tagih_model extends BF_Model
                 }
 
                 $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 2])->result();
-                if (count($check_aktual_telat) > 0) {
-                    $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
-                }
+                // if (count($check_aktual_telat) > 0) {
+                //     $status = '<button type="button" class="btn btn-sm btn-danger">Mundur</button>';
+                // }
 
                 $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1])->result();
                 if (count($check_aktual_tagih) > 0) {
