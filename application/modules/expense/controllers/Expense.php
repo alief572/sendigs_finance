@@ -3919,4 +3919,89 @@ class Expense extends Admin_Controller
 
 		echo json_encode($response);
 	}
+
+	public function get_dat_approval_expense()
+	{
+		$post = $this->input->post();
+
+		$draw = intval($post['draw']);
+		$length = $post['length'];
+		$start = $post['start'];
+		$search = $post['search']['value'];
+
+		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
+		$this->db->join('users c', 'a.nama=c.username', 'left');
+		$this->db->join('users d', 'a.approval=d.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->group_by('a.no_doc');
+
+		$count_all = $this->db->count_all_results();
+
+		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
+		$this->db->join('users c', 'a.nama=c.username', 'left');
+		$this->db->join('users d', 'a.approval=d.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('b.id_kasbon IS NULL');
+
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.tgl_doc', $search, 'both');
+			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('d.username', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.jumlah', $search, 'both');
+			$this->db->group_end();
+		}
+		$this->db->group_by('a.no_doc');
+
+		$count_filter = $this->db->count_all_results();
+
+
+		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
+		$this->db->join('users c', 'a.nama=c.username', 'left');
+		$this->db->join('users d', 'a.approval=d.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('b.id_kasbon IS NULL');
+
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.tgl_doc', $search, 'both');
+			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.jumlah', $search, 'both');
+			$this->db->group_end();
+		}
+		$this->db->group_by('a.no_doc');
+
+		$column_order = [
+			0 => '',
+			1 => 'a.no_doc',
+			2 => 'a.tgl_doc',
+			3 => 'c.username',
+			4 => 'a.informasi',
+			5 => 'a.jumlah'
+		];
+
+		if (isset($post['order']) && !empty($post['order'])) {
+			$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
+			$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
+			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
+			$this->db->order_by($column_name, $column_dir);
+		} else {
+			$this->db->order_by('a.created_on', 'desc');
+		}
+
+		$this->db->limit($length, $start);
+
+		$get_data = $this->db->get()->result();
+	}
 }
