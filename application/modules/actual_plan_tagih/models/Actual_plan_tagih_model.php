@@ -168,11 +168,11 @@ class Actual_plan_tagih_model extends BF_Model
         foreach ($get_data->result() as $item) {
 
             $no_check = 0;
-            if (!empty($item_all->crated_actual)) {
+            if (!empty($item->crated_actual)) {
                 $this->db->select('a.id');
                 $this->db->from('kons_tr_actual_plan_tagih a');
-                $this->db->where('a.id_detail_plan_tagih', $item_all->id);
-                $this->db->where('a.created_date >', $item_all->crated_actual);
+                $this->db->where('a.id_detail_plan_tagih', $item->id);
+                $this->db->where('a.created_date >', $item->crated_actual);
                 $no_check = $this->db->count_all_results();
             }
 
