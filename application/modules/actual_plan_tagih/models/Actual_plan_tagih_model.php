@@ -64,8 +64,10 @@ class Actual_plan_tagih_model extends BF_Model
                 }
             }
         } else {
-            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
-            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
+            // $this->db->group_start();
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL, d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL, d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
+            // $this->db->group_end();
             if (!empty($status)) {
                 if ($status == '1' || $status == '2') {
                     $this->db->where('d.tagih_mundur', $status);
@@ -88,11 +90,14 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->order_by('a.id', 'desc');
+        $this->db->order_by('a.created_date', 'desc');
         $this->db->group_by('a.id');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get();
+
+        // print_r($this->db->last_query());
+        // exit;
 
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader');
         $this->db->from('kons_tr_plan_tagih_detail a');
@@ -109,8 +114,8 @@ class Actual_plan_tagih_model extends BF_Model
                 }
             }
         } else {
-            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
-            $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', sprintf('%02s', $bulan));
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL, d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL, d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
             if (!empty($status)) {
                 if ($status == '1' || $status == '2') {
                     $this->db->where('d.tagih_mundur', $status);
