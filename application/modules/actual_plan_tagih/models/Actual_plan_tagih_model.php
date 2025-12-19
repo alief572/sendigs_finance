@@ -65,8 +65,8 @@ class Actual_plan_tagih_model extends BF_Model
             }
         } else {
             // $this->db->group_start();
-            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "0000-00-00", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
-            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "0000-00-00", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "%0000-00-00%", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "%0000-00-00%", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
             // $this->db->group_end();
             if (!empty($status)) {
                 if ($status == '1' || $status == '2') {
@@ -114,8 +114,8 @@ class Actual_plan_tagih_model extends BF_Model
                 }
             }
         } else {
-            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "0000-00-00", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
-            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "0000-00-00", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "%0000-00-00%", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
+            $this->db->where('DATE_FORMAT(IF(d.tanggal_actual_plan_tagih IS NOT NULL AND d.tanggal_actual_plan_tagih <> "%0000-00-00%", d.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', sprintf('%02s', $bulan));
             if (!empty($status)) {
                 if ($status == '1' || $status == '2') {
                     $this->db->where('d.tagih_mundur', $status);
