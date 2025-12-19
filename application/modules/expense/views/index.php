@@ -34,9 +34,9 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 					</tr>
 				</thead>
 				<tbody>
-				
-	
-			
+
+
+
 				</tbody>
 			</table>
 		</div>
@@ -93,9 +93,11 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 	var url_delete = siteurl + 'expense/delete/';
 	var url_view = siteurl + 'expense/view/';
 
+	var all = "<?= (isset($all)) ? $all : '' ?>";
+
 	$(document).ready(function() {
 		datatables();
-	})	
+	})
 
 	function datatables() {
 		var datatables = $('#mytabledata').dataTable({
@@ -109,6 +111,9 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 				url: siteurl + active_controller + 'get_dat_expense_data',
 				cache: false,
 				dataType: 'json',
+				data: function(d) {
+					d.all = all;
+				},
 				error: function(xhr, status, error) {
 					console.error("DataTable AJAX error: " + status + ": " + error);
 				}
