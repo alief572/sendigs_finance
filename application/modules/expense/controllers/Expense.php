@@ -1023,7 +1023,7 @@ class Expense extends Admin_Controller
 	public function list_expense_approval()
 	{
 
-		$data = $this->Expense_model->GetListData('status=0');
+		// $data = $this->Expense_model->GetListData('status = 0 AND sts_finance = "0"');
 
 		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
 		$this->db->from('tr_expense a');
@@ -1031,6 +1031,30 @@ class Expense extends Admin_Controller
 		$this->db->join('users c', 'a.nama=c.username', 'left');
 		$this->db->join('users d', 'a.approval=d.username', 'left');
 		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '0');
+		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->group_by('a.no_doc');
+		$data = $this->db->get()->result();
+
+		$this->template->set('status', $this->status);
+		$this->template->set('data', $data);
+		$this->template->page_icon('fa fa-list');
+		$this->template->title('Expense Approval');
+		$this->template->render('index_approval');
+	}
+
+	public function list_expense_approval_manage()
+	{
+
+		$data = $this->Expense_model->GetListData('sts_finance = "1"');
+
+		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
+		$this->db->join('users c', 'a.nama=c.username', 'left');
+		$this->db->join('users d', 'a.approval=d.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '1');
 		$this->db->where('b.id_kasbon IS NULL');
 		$this->db->group_by('a.no_doc');
 		$data = $this->db->get()->result();
@@ -1088,85 +1112,99 @@ class Expense extends Admin_Controller
 	// approve
 	public function approve($id = '')
 	{
+
+
 		$result = false;
 		if ($id != "") {
 			$get_expense 		= $this->db->get_where('tr_expense', ['id' => $id])->row();
 			$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $get_expense->no_doc])->result();
 
-			if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar > 0) {
-				$data = array(
-					array(
-						'id' => $id,
-						'status' => 1,
-						'st_reject' => "",
-						'approved_by' => $this->auth->user_name(),
-						'approved_on' => date("Y-m-d h:i:s")
-					)
-				);
-			} else if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar == null) {
-				$data = array(
-					array(
-						'id' => $id,
-						'status' => 3,
-						'st_reject' => "",
-						'approved_by' => $this->auth->user_name(),
-						'approved_on' => date("Y-m-d h:i:s")
-					)
-				);
-			} else if ($get_expense->id_kasbon != null && $get_expense->lebih_bayar != null) {
-				$data = array(
-					array(
-						'id' => $id,
-						'status' => 3,
-						'st_reject' => "",
-						'approved_by' => $this->auth->user_name(),
-						'approved_on' => date("Y-m-d h:i:s")
-					)
-				);
+			if ($get_expense->sts_finance == '0') {
+				$arr_update = [
+					'sts_finance' => '1',
+					'app_finance_date' => date('Y-m-d H:i:s')
+				];
+
+				$update_expense = $this->db->update('tr_expense', $arr_update, ['id' => $id]);
+				if ($update_expense) {
+					$result = true;
+				}
 			} else {
-				$data = array(
-					array(
-						'id' => $id,
-						'status' => 1,
-						'st_reject' => "",
-						'approved_by' => $this->auth->user_name(),
-						'approved_on' => date("Y-m-d h:i:s")
-					)
-				);
+				if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar > 0) {
+					$data = array(
+						array(
+							'id' => $id,
+							'status' => 1,
+							'st_reject' => "",
+							'approved_by' => $this->auth->user_name(),
+							'approved_on' => date("Y-m-d h:i:s")
+						)
+					);
+				} else if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar == null) {
+					$data = array(
+						array(
+							'id' => $id,
+							'status' => 3,
+							'st_reject' => "",
+							'approved_by' => $this->auth->user_name(),
+							'approved_on' => date("Y-m-d h:i:s")
+						)
+					);
+				} else if ($get_expense->id_kasbon != null && $get_expense->lebih_bayar != null) {
+					$data = array(
+						array(
+							'id' => $id,
+							'status' => 3,
+							'st_reject' => "",
+							'approved_by' => $this->auth->user_name(),
+							'approved_on' => date("Y-m-d h:i:s")
+						)
+					);
+				} else {
+					$data = array(
+						array(
+							'id' => $id,
+							'status' => 1,
+							'st_reject' => "",
+							'approved_by' => $this->auth->user_name(),
+							'approved_on' => date("Y-m-d h:i:s")
+						)
+					);
+				}
+				$result = $this->Expense_model->update_batch($data, 'id');
+
+				$nilai_expense = 0;
+				foreach ($get_expense_detail as $item) {
+					$nilai_expense += $item->expense;
+					$detail = array(
+						'status' => 2,
+					);
+					$this->db->update('tr_expense_detail', $detail, ['id' => $item->id]);
+				}
+
+				// if ($get_expense->pettycash !== '' && $get_expense->pettycash !== null) {
+				// 	$get_pettycash = $this->db->get_where('ms_petty_cash', ['nama' => $get_expense->pettycash])->row();
+
+				// 	$nilai_update_pettycash = ($get_pettycash->budget - $nilai_expense);
+
+				// 	$this->db->update('ms_petty_cash', ['budget' => $nilai_update_pettycash], ['id' => $get_pettycash->id]);
+				// 	$this->db->update('tr_pengembalian_expense', [
+				// 		'status' => 1,
+				// 		'app_by' => $this->auth->user_id(),
+				// 		'app_date' => date('Y-m-d H:i:s')
+				// 	], [
+				// 		'id_expense_pettycash' => $get_expense->no_doc
+				// 	]);
+				// }
+
+				$keterangan     = "SUKSES, Approve data " . $id;
+				$status         = 1;
+				$nm_hak_akses   = $this->managePermission;
+				$kode_universal = $id;
+				$jumlah 		= 1;
+				$sql            = $this->db->last_query();
+				simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
 			}
-			$result = $this->Expense_model->update_batch($data, 'id');
-
-			$nilai_expense = 0;
-			foreach ($get_expense_detail as $item) {
-				$nilai_expense += $item->expense;
-				$detail = array(
-					'status' => 2,
-				);
-				$this->db->update('tr_expense_detail', $detail, ['id' => $item->id]);
-			}
-
-			// if ($get_expense->pettycash !== '' && $get_expense->pettycash !== null) {
-			// 	$get_pettycash = $this->db->get_where('ms_petty_cash', ['nama' => $get_expense->pettycash])->row();
-
-			// 	$nilai_update_pettycash = ($get_pettycash->budget - $nilai_expense);
-
-			// 	$this->db->update('ms_petty_cash', ['budget' => $nilai_update_pettycash], ['id' => $get_pettycash->id]);
-			// 	$this->db->update('tr_pengembalian_expense', [
-			// 		'status' => 1,
-			// 		'app_by' => $this->auth->user_id(),
-			// 		'app_date' => date('Y-m-d H:i:s')
-			// 	], [
-			// 		'id_expense_pettycash' => $get_expense->no_doc
-			// 	]);
-			// }
-
-			$keterangan     = "SUKSES, Approve data " . $id;
-			$status         = 1;
-			$nm_hak_akses   = $this->managePermission;
-			$kode_universal = $id;
-			$jumlah 		= 1;
-			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
 		}
 		$param = array(
 			'save' => $result,
@@ -2357,6 +2395,9 @@ class Expense extends Admin_Controller
 		if ($id != "") {
 			$data = array(
 				'status' => 9,
+				'sts_finance' => '0',
+				'app_finance_date' => null,
+				'reject_reason_finance' => $reason,
 				'sts_finance' => '0',
 				'app_finance_date' => null,
 				'reject_reason_finance' => $reason
