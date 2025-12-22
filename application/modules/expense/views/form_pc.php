@@ -431,7 +431,7 @@ foreach($data_budget as $keys=>$val){
 			if (parseFloat($("#grand_total").val()) > parseFloat($("#budgets").val())) errors = "Saldo lebih dari budget";
 			if (errors == "") {
 
-				swal({
+				Swal.fire({
 					title: "Anda Yakin?",
 					text: "Data Akan Disimpan!",
 					icon: "info",
