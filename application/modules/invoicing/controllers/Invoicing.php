@@ -1033,30 +1033,55 @@ class Invoicing extends Admin_Controller
 
         $this->db->trans_begin();
 
-        $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
-        if (!$update_inv) {
-            $this->db->trans_rollback();
+        try {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $post['id']])->row();
 
-            print_r($this->db->last_query());
-            exit;
-        }
+            $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']])->result();
 
-        if ($this->db->trans_status() === false) {
-            $this->db->trans_rollback();
+            if (!empty($get_jurnal) && $get_jurnal[0]->sts == '0') {
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $post['company']])->row();
 
-            $valid = 0;
-            $msg = 'Please try again later !';
-        } else {
+                $id_company = (!empty($get_company->id)) ? $get_company->id : '';
+                $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
+
+                $update_jurnal_company = $this->db->update('tr_jurnal', ['id_company' => $id_company, 'nm_company' => $nm_company], ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']]);
+            }
+
+            $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+
+
+            // if ($this->db->trans_status() === false) {
+            //     $this->db->trans_rollback();
+
+            //     $valid = 0;
+            //     $msg = 'Please try again later !';
+            // } else {
+            //     $this->db->trans_commit();
+
+            //     $valid = 1;
+            //     $msg = 'Data has been updated !';
+            // }
+
             $this->db->trans_commit();
 
-            $valid = 1;
-            $msg = 'Data has been updated !';
-        }
+            http_response_code(200);
 
-        echo json_encode([
-            'status' => $valid,
-            'msg' => $msg
-        ]);
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'Data has been saved !'
+            ]);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+
+            http_response_code(500);
+
+            $response = [
+                'status' => 0,
+                'msg' => $e->getMessage()
+            ];
+
+            echo json_encode($response);
+        }
     }
 
     public function save_keterangan_print_vuca()

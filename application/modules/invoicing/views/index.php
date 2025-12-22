@@ -145,7 +145,8 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 url: siteurl + active_controller + 'save_keterangan_print',
                 data: {
                     'id': id_inv,
-                    'keterangan_print': keterangan_print
+                    'keterangan_print': keterangan_print,
+                    'company': company
                 },
                 cache: false,
                 dataType: 'json',
