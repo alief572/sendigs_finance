@@ -442,11 +442,9 @@ if (!isset($data->departement)) {
 				icon: "info",
 				showCancelButton: true,
 				confirmButtonText: "Ya, simpan!",
-				cancelButtonText: "Tidak!",
-				closeOnConfirm: false,
-				closeOnCancel: true
-			}, function(isConfirm) {
-				if (isConfirm) {
+				cancelButtonText: "Tidak!"
+			}).then((next) => {
+				if (next.isConfirmed) {
 					var formdata = new FormData($('#frm_data')[0]);
 					$.ajax({
 						url: url_save,
@@ -758,9 +756,7 @@ if (!isset($data->departement)) {
 				icon: "info",
 				showCancelButton: true,
 				confirmButtonText: "Ya, setuju!",
-				cancelButtonText: "Tidak!",
-				closeOnConfirm: false,
-				closeOnCancel: true
+				cancelButtonText: "Tidak!"
 			}).then((next) => {
 				if (next.isConfirmed) {
 					id = $("#id").val();
@@ -810,9 +806,7 @@ if (!isset($data->departement)) {
 				title: "Perhatian",
 				text: "Berikan alasan penolakan",
 				icon: "input",
-				showCancelButton: true,
-				closeOnConfirm: false,
-				closeOnCancel: true
+				showCancelButton: true
 			}).then((inputValue) => {
 				if (inputValue === false) return false;
 				if (inputValue === "") {
@@ -826,9 +820,7 @@ if (!isset($data->departement)) {
 						icon: "warning",
 						showCancelButton: true,
 						confirmButtonText: "Ya, tolak!",
-						cancelButtonText: "Tidak!",
-						closeOnConfirm: false,
-						closeOnCancel: true
+						cancelButtonText: "Tidak!"
 					},
 					function(isConfirm) {
 						if (isConfirm) {
