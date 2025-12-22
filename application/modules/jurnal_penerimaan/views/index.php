@@ -144,8 +144,8 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
                                 timer: 3000,
                                 showConfirmButton: false,
                                 showCancelButton: false
-                            }, function(lanjut) {
-                                location.reload();
+                            }).then(() => {
+                                location.reload(true);
                             });
                         } else {
                             Swal.fire({

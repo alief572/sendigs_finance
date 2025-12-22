@@ -12,6 +12,7 @@ class Jurnal_penerimaan extends Admin_Controller
 	protected $consultant;
 	protected $accounting_vuca;
 	protected $accounting_sustain;
+	protected $accounting_stm;
 
 	public function __construct()
 	{
@@ -29,6 +30,7 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->consultant = $this->load->database('consultant', true);
 		$this->accounting_vuca = $this->load->database('accounting_vuca', true);
 		$this->accounting_sustain = $this->load->database('accounting_sustain', true);
+		$this->accounting_stm = $this->load->database('accounting_stm', true);
 	}
 
 	public function index()
@@ -143,102 +145,93 @@ class Jurnal_penerimaan extends Admin_Controller
 
 		$this->db->trans_begin();
 
-		$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
-		$id_company = (!empty($get_jurnal->id_company)) ? $get_jurnal->id_company : '';
+		try {
+			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+			$id_company = (!empty($get_jurnal->id_company)) ? $get_jurnal->id_company : '';
 
-		$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
+			$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
 
-		$nilai = (!empty($get_jurnal->debit) && $get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
+			$nilai = (!empty($get_jurnal->debit) && $get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
 
-		$arr_jarh = [
-			'nomor' => $Nomor_BUM,
-			'tgl' => $get_jurnal->tgl_jurnal,
-			'jml' => $nilai,
-			'kdcab' => '101',
-			'jenis_reff' => 'BUM',
-			'no_reff' => $get_invoicing->id,
-			'customer' => $get_invoicing->nm_customer,
-			'terima_dari' => $this->auth->user_name(),
-			'jenis_ar' => 'BUM',
-			'note' => $get_jurnal->keterangan,
-			'user_id' => $this->auth->user_id(),
-			'tgl_invoice' => $get_invoicing->tanggal_invoice
-		];
-
-		if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-			$insert_jarh = $this->accounting_vuca->insert('jarh', $arr_jarh);
-		} else {
-			$insert_jarh = $this->accounting_sustain->insert('jarh', $arr_jarh);
-		}
-
-		if (!$insert_jarh) {
-			$this->db->trans_rollback();
-
-			print_r($this->db->last_query());
-			exit;
-		}
-
-
-		if ($get_jurnal->jenis_transaksi == 'Penerimaan Piutang') {
-
-			$arr_jurnal = [];
-
-			foreach ($get_jurnal_detail as $item) {
-				$arr_jurnal[] = [
-					'tipe' => 'BUM',
-					'nomor' => $Nomor_BUM,
-					'tanggal' => $item->tgl_jurnal,
-					'no_perkiraan' => $item->coa,
-					'keterangan' => $item->keterangan,
-					'no_reff' => $get_invoicing->id,
-					'debet' => $item->debit,
-					'kredit' => $item->kredit,
-					'id_perusahaan' => $item->id_company,
-					'nm_perusahaan' => $item->nm_company
-				];
-			}
-
-			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-				$insert_jurnal = $this->accounting_vuca->insert_batch('jurnal', $arr_jurnal);
+			$arr_jarh = [
+				'nomor' => $Nomor_BUM,
+				'tgl' => $get_jurnal->tgl_jurnal,
+				'jml' => $nilai,
+				'kdcab' => '101',
+				'jenis_reff' => 'BUM',
+				'no_reff' => $get_invoicing->id,
+				'customer' => $get_invoicing->nm_customer,
+				'terima_dari' => $this->auth->user_name(),
+				'jenis_ar' => 'BUM',
+				'note' => $get_jurnal->keterangan,
+				'user_id' => $this->auth->user_id(),
+				'tgl_invoice' => $get_invoicing->tanggal_invoice
+			];
+			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
+				$insert_jarh = $this->accounting_stm->insert('jarh', $arr_jarh);
+			} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
+				$insert_jarh = $this->accounting_vuca->insert('jarh', $arr_jarh);
 			} else {
-				$insert_jurnal = $this->accounting_sustain->insert_batch('jurnal', $arr_jurnal);
-			}
-
-			if (!$insert_jurnal) {
-				$this->db->trans_rollback();
-
-				print_r($this->db->last_query());
-				exit;
+				$insert_jarh = $this->accounting_sustain->insert('jarh', $arr_jarh);
 			}
 
 
+			if ($get_jurnal->jenis_transaksi == 'Penerimaan Piutang') {
 
+				$arr_jurnal = [];
 
-			$update_jurnal_sts = $this->db->update('tr_jurnal', ['sts' => '1'], ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi]);
-			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '3') {
-				$update_cabang_acc = $this->accounting_vuca->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
-			} else {
-				$update_cabang_acc = $this->accounting_sustain->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
-			}
+				foreach ($get_jurnal_detail as $item) {
+					$arr_jurnal[] = [
+						'tipe' => 'BUM',
+						'nomor' => $Nomor_BUM,
+						'tanggal' => $item->tgl_jurnal,
+						'no_perkiraan' => $item->coa,
+						'keterangan' => $item->keterangan,
+						'no_reff' => $get_invoicing->id,
+						'debet' => $item->debit,
+						'kredit' => $item->kredit,
+						'id_perusahaan' => $item->id_company,
+						'nm_perusahaan' => $item->nm_company
+					];
+				}
 
-			if ($this->db->trans_status() === false) {
-				$this->db->trans_rollback();
+				if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
+					$insert_jurnal = $this->accounting_stm->insert_batch('jurnal', $arr_jurnal);
+				} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
+					$insert_jurnal = $this->accounting_vuca->insert_batch('jurnal', $arr_jurnal);
+				} else {
+					$insert_jurnal = $this->accounting_sustain->insert_batch('jurnal', $arr_jurnal);
+				}
 
-				$valid = 0;
-				$msg = "Please try again later !";
-			} else {
+				$update_jurnal_sts = $this->db->update('tr_jurnal', ['sts' => '1'], ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi]);
+				if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
+					$update_cabang_acc = $this->accounting_stm->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
+				} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
+					$update_cabang_acc = $this->accounting_vuca->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
+				} else {
+					$update_cabang_acc = $this->accounting_sustain->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
+				}
+
 				$this->db->trans_commit();
 
-				$valid = 1;
 				$msg = "Posting jurnal ke Tras Sukses !";
+
+				$response = [
+					'status' => 1,
+					'msg' => $msg
+				];
+
+				echo json_encode($response);
 			}
+		} catch (Exception $e) {
+			$this->db->trans_rollback();
 
-			$response = [
-				'status' => $valid,
-				'msg' => $msg
-			];
+			$param = array(
+				'save' => 0,
+				'msg' => $e->getMessage()
+			);
 
-			echo json_encode($response);
+			echo json_encode($param);
 		}
 	}
 
