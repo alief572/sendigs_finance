@@ -21,7 +21,9 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
     <div class="box-header">
-
+        <button type="button" class="btn btn-sm btn-success download_excel">
+            <i class="fa fa-download"></i> Excel
+        </button>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -174,6 +176,10 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
             }
         });
     });
+
+    $(document).on('click', '.download_excel', function() {
+        window.open(siteurl + active_controller + 'download_excel', '_blank');
+    })
 
     function revisi_jurnal() {
         var alasan_revisi = $('textarea[name="alasan_revisi"]').val();
