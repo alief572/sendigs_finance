@@ -178,6 +178,26 @@ class Jurnal_Invoicing extends Admin_Controller
         $this->load->view('posting_jurnal', $data);
     }
 
+    public function download_excel()
+    {
+        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, a.nm_company, e.name as nm_divisi');
+        $this->db->from('tr_jurnal a');
+        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
+        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
+        $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $this->db->group_start();
+        $this->db->where('a.debit >', 0);
+        $this->db->or_where('a.kredit >', 0);
+        $this->db->group_end();
+        $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
+
+        $get_data_jurnal = $this->db->get()->result();
+
+        $this->load->view('download_excel', ['list_jurnal' => $get_data_jurnal]);
+    }
+
     public function save_posting_jurnal()
     {
         $this->Jurnal_invoicing_model->save_posting_jurnal();
