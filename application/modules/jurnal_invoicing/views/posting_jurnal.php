@@ -31,10 +31,10 @@
             echo '</td>';
             echo '<td class="text-center">' . $row->no_transaksi . '</td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit autonum" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
             echo '</td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit autonum" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
             echo '</td>';
             echo '</tr>';
 
