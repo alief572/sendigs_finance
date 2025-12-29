@@ -30,10 +30,10 @@
                 </td>
                 <td class="text-center"><?= $item->no_transaksi ?></td>
                 <td>
-                    <input type="text" name="debit" class="form-control form-control-sm text-right debit autonum" value="<?= $item->debit ?>" onchange="hitungDebit();" readonly>
+                    <input type="text" name="debit" class="form-control form-control-sm text-right debit" value="<?= $item->debit ?>" onchange="hitungDebit();" readonly>
                 </td>
                 <td>
-                    <input type="text" name="kredit" class="form-control form-control-sm text-right kredit autonum" value="<?= $item->kredit ?>" onchange="hitungKredit();" readonly>
+                    <input type="text" name="kredit" class="form-control form-control-sm text-right kredit" value="<?= $item->kredit ?>" onchange="hitungKredit();" readonly>
                 </td>
             </tr>
         <?php
