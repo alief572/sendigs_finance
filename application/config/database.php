@@ -161,6 +161,28 @@ $db['accounting_sustain'] = array(
 	'save_queries' => TRUE
 );
 
+$db['accounting_stm'] = array(
+	'dsn'    => '',
+	'hostname' => 'localhost',
+	'username' => 'sendigs_ss',
+	'password' => 'kas3ISsj)(*ushsHAdj',
+	'database' => 'db_sendigs_ss_stm',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => (ENVIRONMENT !== 'development'),
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => TRUE
+);
+
 $db['hris'] = array(
 	'dsn'	=> '',
 	'hostname' => '206.84.97.106',
