@@ -32,93 +32,7 @@ $ENABLE_DELETE  = has_permission('Kasbon.Delete');
 					</tr>
 				</thead>
 				<tbody>
-					<?php
-					if (!empty($results)) {
-						$numb = 0;
-						foreach ($results as $record) {
-							$nmuser = $record->nmuser;
-							$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
-							if (count($check_detail)) {
-								if ($record->tipe_pr == 'pr departemen') {
-									$this->db->select('b.nm_lengkap');
-									$this->db->from('rutin_non_planning_header a');
-									$this->db->join('users b', 'b.id_user = a.created_by');
-									$this->db->where('a.no_pr', $record->id_pr);
-									$get_single_detail = $this->db->get()->row();
 
-									$nmuser = $get_single_detail->nm_lengkap;
-								}
-
-								if ($record->tipe_pr == 'pr stok') {
-									$this->db->select('b.nm_lengkap');
-									$this->db->from('material_planning_base_on_produksi a');
-									$this->db->join('users b', 'b.id_user = a.created_by');
-									$this->db->where('a.no_pr', $record->id_pr);
-									$get_single_detail = $this->db->get()->row();
-
-									$nmuser = $get_single_detail->nm_lengkap;
-								}
-
-								if ($record->tipe_pr == 'pr asset') {
-									$this->db->select('b.nm_lengkap');
-									$this->db->from('tran_pr_header a');
-									$this->db->join('users b', 'b.id_user = a.created_by');
-									$this->db->where('a.no_pr', $record->id_pr);
-									$get_single_detail = $this->db->get()->row();
-
-									$nmuser = $get_single_detail->nm_lengkap;
-								}
-							}
-							$numb++; ?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= $record->no_doc ?></td>
-								<td><?= $record->tgl_doc ?></td>
-								<td><?= $nmuser ?></td>
-								<td>
-									<?php
-									if ($record->status == '0') {
-										echo '<div class="badge bg-yellow text-light">New</div>';
-									}
-									if ($record->status == '1' || $record->status == '2') {
-										echo '<div class="badge bg-dark-blue text-light">Approved</div>';
-									}
-									if ($record->status == '3') {
-										$check_expense_report = $this->db->get_where('tr_expense_detail', ['id_kasbon' => $record->no_doc, 'status' => 2])->row();
-										if (!empty($check_expense_report)) {
-											echo '<div class="badge bg-dark text-light">Close</div>';
-										} else {
-											echo '<div class="badge bg-green text-light">Paid</div>';
-										}
-									}
-									if ($record->status == '9') {
-										echo '<div class="badge bg-red text-light">Reject</div>';
-									}
-									if ($record->status == '4') {
-										echo '<div class="badge bg-blue text-dark">Kurang</div>';
-									}
-									?>
-								</td>
-								<td>
-									<?php if ($ENABLE_VIEW && $record->approved_by !== null) : ?>
-										<a class="btn btn-default btn-sm print" href="<?= base_url('expense/kasbon_print/' . $record->id) ?>" target="_blank" title="Print"><i class="fa fa-print"></i></a>
-										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
-										<?php endif;
-									if ($ENABLE_MANAGE) :
-										if ($record->status == 0 || $record->status == 9) { ?>
-											<a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit('<?= $record->id ?>')"><i class="fa fa-edit"></i></a>
-										<?php }
-									endif;
-									if ($ENABLE_DELETE) :
-										if ($record->status == 0 || $record->status == 9) { ?>
-											<a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete('<?= $record->id ?>')"><i class="fa fa-trash"></i></a>
-									<?php }
-									endif; ?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
 				</tbody>
 			</table>
 		</div>
@@ -137,8 +51,50 @@ $ENABLE_DELETE  = has_permission('Kasbon.Delete');
 	var url_delete = siteurl + 'expense/kasbon_delete/';
 	var url_view = siteurl + 'expense/kasbon_view/';
 
-	$('.chosen_select').chosen({
-		width: '100%'
-	});
+	$(document).ready(function() {
+		datatables();
+
+		$('.chosen_select').chosen({
+			width: '100%'
+		});
+	})
+
+	function datatables() {
+		$('#mytabledata').dataTable({
+			serverSide: true,
+			processing: true,
+			destroy: true,
+			paging: true,
+			stateSave: false,
+			ajax: {
+				type: 'POST',
+				url: siteurl + active_controller + 'get_dat_list_kasbon',
+				cache: false,
+				dataType: 'json',
+				error: function(xhr, status, error) {
+					console.error("DataTable AJAX error: " + status + ": " + error);
+				}
+			},
+			columns: [{
+					data: 'no'
+				},
+				{
+					data: 'no_kasbon'
+				},
+				{
+					data: 'tanggal'
+				},
+				{
+					data: 'nama'
+				},
+				{
+					data: 'status'
+				},
+				{
+					data: 'action'
+				}
+			]
+		});
+	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
