@@ -102,6 +102,14 @@
         <div class="navbar-custom-menu">
           <ul class="nav navbar-nav">
             <!-- Notifications Menu -->
+            <li>
+              <a href="<?= base_url('assets/pdf/manual-book.pdf') ?>"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-secondary">
+                Manual Book
+              </a>
+            </li>
 
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -110,61 +118,61 @@
               </a>
               <ul class="dropdown-menu">
                 <li style="background-color: #0080ff; min-width: 500px; max-width:500px; border: 1px solid #ccc;">
-                 
-                    <table border="1">
-                      <tr>
-                        <th width="60" class="text-center" rowspan="2">
-                          <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
-                        </th>
-                        <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
-                          <h4>Testing Inbox</h4>
-                        </th>
-                      </tr>
-                      <tr>
-                        <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
-                          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
-                        </td>
-                      </tr>
-                    </table>
-                
+
+                  <table border="1">
+                    <tr>
+                      <th width="60" class="text-center" rowspan="2">
+                        <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
+                      </th>
+                      <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
+                        <h4>Testing Inbox</h4>
+                      </th>
+                    </tr>
+                    <tr>
+                      <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
+                      </td>
+                    </tr>
+                  </table>
+
                 </li>
                 <li style="background-color: #0080ff; min-width: 500px; max-width:500px; border: 1px solid #ccc;">
-                 
-                    <table border="1">
-                      <tr>
-                        <th width="60" class="text-center" rowspan="2">
-                          <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
-                        </th>
-                        <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
-                          <h4>Testing Inbox</h4>
-                        </th>
-                      </tr>
-                      <tr>
-                        <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
-                          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
-                        </td>
-                      </tr>
-                    </table>
-                
+
+                  <table border="1">
+                    <tr>
+                      <th width="60" class="text-center" rowspan="2">
+                        <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
+                      </th>
+                      <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
+                        <h4>Testing Inbox</h4>
+                      </th>
+                    </tr>
+                    <tr>
+                      <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
+                      </td>
+                    </tr>
+                  </table>
+
                 </li>
                 <li style="background-color: #0080ff; min-width: 500px; max-width:500px; border: 1px solid #ccc;">
-                 
-                    <table border="1">
-                      <tr>
-                        <th width="60" class="text-center" rowspan="2">
-                          <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
-                        </th>
-                        <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
-                          <h4>Testing Inbox</h4>
-                        </th>
-                      </tr>
-                      <tr>
-                        <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
-                          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
-                        </td>
-                      </tr>
-                    </table>
-                
+
+                  <table border="1">
+                    <tr>
+                      <th width="60" class="text-center" rowspan="2">
+                        <img src="assets/images/Kaya_NFS.jpg" alt="" class="img-circle" width="50" height="50">
+                      </th>
+                      <th style="color: white; padding-left: 15px; word-wrap: break-word; white-space: normal;">
+                        <h4>Testing Inbox</h4>
+                      </th>
+                    </tr>
+                    <tr>
+                      <td style="max-width: 500px; word-wrap: break-word; white-space: normal; padding: 15px; text-align: justify; color: white;">
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illum asperiores ea nesciunt soluta nulla. Praesentium blanditiis quisquam facilis esse tempora nemo, iusto sunt itaque! Vitae dicta totam sapiente minus. Enim?
+                      </td>
+                    </tr>
+                  </table>
+
                 </li>
               </ul>
             </li>

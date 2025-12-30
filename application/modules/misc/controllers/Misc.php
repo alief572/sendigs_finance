@@ -4,6 +4,7 @@ class Misc extends Admin_Controller
 
     protected $accounting;
     protected $consultant;
+    protected $accounting_vuca;
 
     public function __construct()
     {
@@ -11,6 +12,7 @@ class Misc extends Admin_Controller
 
         $this->accounting = $this->load->database('accounting', true);
         $this->consultant = $this->load->database('consultant', true);
+        $this->accounting_vuca = $this->load->database('accounting_vuca', true);
     }
 
     public function buat_ulang_jurnal_invoicing()
@@ -227,5 +229,29 @@ class Misc extends Admin_Controller
                 echo $no . '. ' . $item_stock['nm_material'] . ' - ' . $qty_stock . ' - ' . $qty_history . ' <br>';
             }
         }
+    }
+
+    public function check_posted_jurnal_invoicing()
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_jurnal a');
+        $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $this->db->where('a.sts', '1');
+        $this->db->group_start();
+        $this->db->where('a.debit >', 0);
+        $this->db->or_where('a.kredit >', 0);
+        $this->db->group_end();
+        $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
+        $get_data_jurnal = $this->db->get()->result();
+
+        foreach ($get_data_jurnal as $item_jurnal) :
+            if ($item_jurnal->id_company == '4' || $item_jurnal->id_company == '5') {
+                // $this->accounting_vuca->select('a.');
+            }
+            if ($item_jurnal->id_company == '3') {
+            }
+            if ($item_jurnal->id_company == '1' || $item_jurnal->id_company == '6') {
+            }
+        endforeach;
     }
 }
