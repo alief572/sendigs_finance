@@ -301,9 +301,11 @@ class Asset_planning extends Admin_Controller
 			$this->db->where('a.jenis_pengeluaran', 'Asset');
 			$data_jenis_coa = $this->db->get()->row();
 
+			$jenis_coa = (!empty($data_jenis_coa->coa)) ? $data_jenis_coa->coa : '';
+
 			$this->db->select('a.no_perkiraan, a.nama');
 			$this->db->from(DBACC . '.coa_master a');
-			$this->db->where_in('a.no_perkiraan', explode(';', $data_jenis_coa->coa));
+			$this->db->where_in('a.no_perkiraan', explode(';', $jenis_coa));
 			$data_coa = $this->db->get()->result();
 
 			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
@@ -543,8 +545,6 @@ class Asset_planning extends Admin_Controller
 			$this->template->render('add_manage');
 		}
 	}
-
-
 
 	public function get_coa()
 	{
