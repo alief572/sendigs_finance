@@ -116,6 +116,7 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
                 <thead>
                     <tr>
                         <th class="text-center">TOP</th>
+                        <th class="text-center">Persentase</th>
                         <th class="text-center">Nominal</th>
                         <th class="text-center">Desription</th>
                         <th class="text-center">Tanggal Plan Tagih</th>
@@ -134,6 +135,9 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
                         echo '<td class="text-center">';
                         echo $item->term_payment;
                         echo '<input type="hidden" name="dt[' . $no . '][id]" value="' . $item->id . '">';
+                        echo '</td>';
+                        echo '<td class="text-center">';
+                        echo number_format($item->persen_payment) . '%';
                         echo '</td>';
                         echo '<td class="text-right">Rp. ' . number_format($item->nominal_payment, 2) . '</td>';
                         echo '<td class="text-left">' . $item->desc_payment . '</td>';
