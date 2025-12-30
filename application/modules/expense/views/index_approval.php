@@ -60,6 +60,7 @@ $ENABLE_DELETE  = has_permission('Expense_Approval.Delete');
 <div id="form-data"></div>
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript">
 	var url_edit = siteurl + 'expense/edit/';
 	var url_view = siteurl + 'expense/view/';
@@ -71,6 +72,59 @@ $ENABLE_DELETE  = has_permission('Expense_Approval.Delete');
 			$("#form-data").show();
 			$("#form-data").load(url_approval + id);
 		}
+	}
+
+	function datatables() {
+		var datatables = $('#mytabledata').dataTable({
+			serverSide: true,
+			processing: true,
+			destroy: true,
+			paging: true,
+			stateSave: true,
+			ajax: {
+				type: 'post',
+				url: siteurl + active_controller + 'get_dat_approval_expense',
+				cache: false,
+				dataType: 'json',
+				error: function(xhr, status, error) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Error !',
+						text: error,
+						showConfirmButton: false,
+						showCancelButton: false,
+						allowOutsideClick: false,
+						allowEscapeKey: false,
+						timer: 3000
+					});
+				},
+				columns: [{
+						data: 'no'
+					},
+					{
+						data: 'no_doc'
+					},
+					{
+						data: 'tgl_doc'
+					},
+					{
+						data: 'nama'
+					},
+					{
+						data: 'keterangan'
+					},
+					{
+						data: 'nominal'
+					},
+					{
+						data: 'status'
+					},
+					{
+						data: 'action'
+					}
+				]
+			}
+		});
 	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>

@@ -28,6 +28,11 @@ class Non_rutin extends Admin_Controller
 	protected $managePermission3 = 'Approval_PR_Depart_Management.Manage';
 	protected $deletePermission3 = 'Approval_PR_Depart_Management.Delete';
 
+	protected $viewPermission4 	= 'Approval_PR_Department_Finance.View';
+	protected $addPermission4  	= 'Approval_PR_Department_Finance.Add';
+	protected $managePermission4 = 'Approval_PR_Department_Finance.Manage';
+	protected $deletePermission4 = 'Approval_PR_Department_Finance.Delete';
+
 	protected $hris;
 
 	public function __construct()
@@ -95,6 +100,11 @@ class Non_rutin extends Admin_Controller
 	public function server_side_non_rutin_approval_management()
 	{
 		$this->non_rutin_model->get_data_json_non_rutin_approval_management();
+	}
+
+	public function server_side_non_rutin_approval_finance()
+	{
+		$this->non_rutin_model->server_side_non_rutin_approval_finance();
 	}
 
 	public function add()
@@ -561,6 +571,426 @@ class Non_rutin extends Admin_Controller
 		}
 	}
 
+	public function add_finance()
+	{
+		if ($this->input->post()) {
+			$Arr_Kembali	= array();
+			$data			= $this->input->post();
+			$data_session	= $this->session->userdata;
+			$dateTime		= date('Y-m-d H:i:s');
+			// print_r($data); exit;
+			$code_plan  	= $data['id'];
+			$tanda        	= $data['tanda'];
+			$approve        = $data['approve'];
+			$tingkat_approval = $data['tingkat_approval'];
+			$coa = $data['coa'];
+			$code_planx  	= $data['id'];
+			if (empty($code_planx)) :
+				$code_planx = '';
+			endif;
+			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
+			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
+			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
+			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
+			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
+			// $budget 		= str_replace(',', '', $data['budget']);
+			// $sisa_budget 	= str_replace(',', '', $data['sisa_budget']);
+
+			$detail 		= $data['detail'];
+
+			//approve
+			$sts_app        = (!empty($data['sts_app'])) ? $data['sts_app'] : '';
+			$reason        	= (!empty($data['reason'])) ? $data['reason'] : '';
+
+			$ym = date('ym');
+
+
+			// if ($tingkat_approval == '3') :
+			if (empty($code_plan)) {
+				$srcMtr			= "SELECT MAX(no_pengajuan) as maxP FROM rutin_non_planning_header WHERE no_pengajuan LIKE 'PLN" . $ym . "%' ";
+				$numrowMtr		= $this->db->query($srcMtr)->num_rows();
+				$resultMtr		= $this->db->query($srcMtr)->result_array();
+				$angkaUrut2		= $resultMtr[0]['maxP'];
+				$urutan2		= (int)substr($angkaUrut2, 7, 3);
+				$urutan2++;
+				$urut2			= sprintf('%03s', $urutan2);
+				$code_plan		= "PLN" . $ym . $urut2;
+			}
+			// endif;
+
+
+			$SUM_QTY = 0;
+			$SUM_HARGA = 0;
+			if (empty($approve)) {
+				$ArrDetail = array();
+				if (!empty($detail)) {
+					foreach ($detail as $val => $valx) {
+						$qty 	= str_replace(',', '', $valx['qty']);
+						$harga 	= str_replace(',', '', $valx['harga']);
+
+						$SUM_QTY 	+= $qty;
+						$SUM_HARGA 	+= $harga * $qty;
+
+						$ArrDetail[$val]['no_pengajuan'] 	= $code_plan;
+						$ArrDetail[$val]['nm_barang'] 		= strtolower($valx['nm_barang']);
+						$ArrDetail[$val]['spec'] 			= strtolower($valx['spec']);
+						$ArrDetail[$val]['satuan'] 			= $valx['satuan'];
+						$ArrDetail[$val]['qty'] 			= $qty;
+						$ArrDetail[$val]['harga'] 			= $harga;
+						$ArrDetail[$val]['keterangan'] 		= strtolower($valx['keterangan']);
+						$ArrDetail[$val]['tanggal'] 		= $valx['tanggal'];
+						$ArrDetail[$val]['created_by'] 		= $this->auth->user_id();
+						$ArrDetail[$val]['created_date'] 	= $dateTime;
+					}
+				}
+			}
+
+			//UPLOAD DOCUMENT
+			$file_name = NULL;
+			if (!empty($_FILES["upload_spk"]["name"])) {
+
+				$config['upload_path'] = './assets/pr/';
+				$config['allowed_types'] = '*';
+				$config['remove_spaces'] = TRUE;
+				$config['encrypt_name'] = TRUE;
+				$file_name = '';
+				if (!empty($_FILES['upload_spk']['name'])) {
+					$_FILES['file']['name'] = $_FILES['upload_spk']['name'];
+					$_FILES['file']['type'] = $_FILES['upload_spk']['type'];
+					$_FILES['file']['tmp_name'] = $_FILES['upload_spk']['tmp_name'];
+					$_FILES['file']['error'] = $_FILES['upload_spk']['error'];
+					$_FILES['file']['size'] = $_FILES['upload_spk']['size'];
+					$this->load->library('upload', $config);
+					$this->upload->initialize($config);
+					if ($this->upload->do_upload('file')) {
+						$uploadData = $this->upload->data();
+						$file_name = $uploadData['file_name'];
+					} else {
+						print_r($this->upload->display_errors());
+						exit;
+					}
+				}
+				// $target_dir     = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
+				// $target_dir_u   = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
+				// $name_file      = 'lampiran_pr_dept_' . date('Ymdhis');
+				// $target_file    = $target_dir . basename($_FILES["upload_spk"]["name"]);
+				// $name_file_ori  = basename($_FILES["upload_spk"]["name"]);
+				// $imageFileType  = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+				// $nama_upload    = $target_dir_u . $name_file . "." . $imageFileType;
+				// $file_name    	= $name_file . "." . $imageFileType;
+
+				// if (!empty($_FILES["upload_spk"]["tmp_name"])) {
+				// 	move_uploaded_file($_FILES["upload_spk"]["tmp_name"], $nama_upload);
+				// }
+			}
+
+			//header edit
+			// $ArrHeader		= array(
+			// 	'id_dept' 		=> $id_dept,
+			// 	'id_costcenter' => $id_costcenter,
+			// 	'coa' 			=> $coa,
+			// 	'budget' 		=> $budget,
+			// 	'no_so' 		=> $no_so,
+			// 	'project_name'	=> $project_name,
+			// 	'sisa_budget' 	=> $sisa_budget,
+			// 	'qty' 			=> $SUM_QTY,
+			// 	'harga' 		=> $SUM_HARGA,
+			// 	'document' 		=> $file_name,
+			// 	'updated_by'	=> $this->auth->user_id(),
+			// 	'updated_date'	=> $dateTime
+			// );
+
+
+
+			//header approve
+			if (!empty($approve)) {
+				$ArrDetail = array();
+				$ArrDetailPR = array();
+
+				$no_pr = '';
+				$no_pr_group = '';
+
+
+				$ArrHeaderPR = array(
+					'no_pr' => $no_pr,
+					'no_pr_group' => $no_pr_group,
+					'category' => 'non rutin',
+					'tgl_pr'	=> date('Y-m-d'),
+					'created_by' => $this->auth->user_id(),
+					'created_date' => date('Y-m-d H:i:s')
+				);
+
+				$SUM_QTY = 0;
+				$SUM_HARGA = 0;
+				if (!empty($detail)) {
+					foreach ($detail as $val => $valx) {
+						$qty 	= str_replace(',', '', $valx['qty']);
+						$harga 	= str_replace(',', '', $valx['harga']);
+
+						$SUM_QTY 	+= $qty;
+						$SUM_HARGA 	+= $harga * $qty;
+
+						$ArrDetail[$val]['id'] 			= $valx['id'];
+						$ArrDetail[$val]['no_pr'] 		= $no_pr;
+						$ArrDetail[$val]['qty_rev'] 	= $qty;
+						$ArrDetail[$val]['harga_rev'] 	= $harga;
+						$ArrDetail[$val]['sts_app'] 	= $sts_app;
+						$ArrDetail[$val]['sts_app_by'] 	= $this->auth->user_id();
+						$ArrDetail[$val]['sts_app_date'] = $dateTime;
+
+
+						$ArrDetailPR[$val]['no_pr'] 		= $no_pr;
+						$ArrDetailPR[$val]['no_pr_group'] 	= $no_pr_group;
+						$ArrDetailPR[$val]['category'] 		= 'non rutin';
+						$ArrDetailPR[$val]['tgl_pr'] 		= date('Y-m-d');
+						$ArrDetailPR[$val]['id_barang'] 	= $valx['id'];
+						$ArrDetailPR[$val]['nm_barang'] 	= strtolower($valx['nm_barang'] . ' - ' . $valx['spec']);
+						$ArrDetailPR[$val]['qty'] 			= $qty;
+						$ArrDetailPR[$val]['nilai_pr'] 		= $harga;
+						$ArrDetailPR[$val]['tgl_dibutuhkan'] = $valx['tanggal'];
+						$ArrDetailPR[$val]['satuan']		= $valx['satuan'];
+						$ArrDetailPR[$val]['app_status'] 	= 'Y';
+						$ArrDetailPR[$val]['app_reason']	= strtolower($valx['keterangan']);
+						$ArrDetailPR[$val]['app_by'] = $this->auth->user_id();
+						$ArrDetailPR[$val]['app_date'] = $dateTime;
+						$ArrDetailPR[$val]['created_by'] 	= $this->auth->user_id();
+						$ArrDetailPR[$val]['created_date'] 	= $dateTime;
+					}
+				}
+
+				if ($sts_app == 'Y') :
+					$ArrHeader		= array(
+						'qty_rev' 		=> $SUM_QTY,
+						'harga_rev' 	=> $SUM_HARGA,
+						'coa' => $coa,
+						'reason' 		=> $reason,
+						'app_1' 		=> 1,
+						'app_2' 		=> 1,
+						'sts_reject1' 		=> null,
+						'sts_reject2' 		=> null,
+						'app_1_by'	=> $this->auth->user_id(),
+						'app_1_date'	=> $dateTime,
+						'keterangan_1' => $data['keterangan_3'],
+						'app_2_by'	=> $this->auth->user_id(),
+						'app_2_date'	=> $dateTime,
+						'keterangan_2' => $data['keterangan_3'],
+						'app_post' => 2
+					);
+				else :
+					// $ArrHeader		= array(
+					// 	'qty_rev' 		=> $SUM_QTY,
+					// 	'harga_rev' 	=> $SUM_HARGA,
+					// 	'sts_reject' . $tingkat_approval => '1',
+					// 	'reject_reason' . $tingkat_approval => $reason,
+					// 	'sts_reject3_by' => $this->auth->user_id(),
+					// 	'sts_reject3_date' => date('Y-m-d H:i:s'),
+					// 	'no_pr' => null,
+					// 	'sts_app' => 0,
+					// 	'keterangan_3' => $data['keterangan_3'],
+					// 	'reject_reason' . $tingkat_approval => $reason,
+					// 	'app_post' => null,
+					// 	'rejected' => 1
+					// );
+
+					$ArrHeader = array(
+						'qty_rev' 		=> $SUM_QTY,
+						'harga_rev' 	=> $SUM_HARGA,
+						'coa' => $coa,
+						'sts_reject1' => '1',
+						'sts_reject2' => '1',
+						'reject_reason1' => $reason,
+						'reject_reason2' => $reason,
+						'sts_reject1_by' => $this->auth->user_id(),
+						'sts_reject2_by' => $this->auth->user_id(),
+						'sts_reject1_date' => date('Y-m-d H:i:s'),
+						'sts_reject2_date' => date('Y-m-d H:i:s'),
+						'no_pr' => null,
+						'sts_app' => 0,
+						'app_post' => null,
+						'rejected' => 1
+					);
+				endif;
+
+
+				// print_r($ArrHeaderPR);
+				// print_r($ArrDetailPR);
+			} else {
+				if (empty($code_planx)) {
+					$ArrHeader		= array(
+						'id_dept' 		=> $id_dept,
+						'no_pengajuan' 	=> $code_plan,
+						'project_name'	=> $project_name,
+						'qty' 			=> $SUM_QTY,
+						'harga' 		=> $SUM_HARGA,
+						'document' 		=> $file_name,
+						'coa' 		=> $coa,
+						'tingkat_pr' => $data['tingkat_pr'],
+						'created_by'	=> $this->auth->user_id(),
+						'created_date'	=> $dateTime
+					);
+				} else {
+					$ArrHeader		= [
+						'id_dept' 		=> $id_dept,
+						'project_name'	=> $project_name,
+						'qty' 			=> $SUM_QTY,
+						'harga' 		=> $SUM_HARGA,
+						'document' 		=> $file_name,
+						'coa' 		=> $coa,
+						'app_1' => null,
+						'app_2' => null,
+						'app_3' => null,
+						'sts_reject1' => null,
+						'sts_reject2' => null,
+						'sts_reject3' => null,
+						'app_1_by' => null,
+						'app_1_date' => null,
+						'app_2_by' => null,
+						'app_2_date' => null,
+						'app_3_by' => null,
+						'app_3_date' => null,
+						'sts_reject1_by' => null,
+						'sts_reject1_date' => null,
+						'sts_reject2_by' => null,
+						'sts_reject2_date' => null,
+						'sts_reject3_by' => null,
+						'sts_reject3_date' => null,
+						'rejected' => null,
+						'app_post' => null,
+						'keterangan_3' 		=> $data['keterangan_3'],
+						'updated_by'	=> $this->auth->user_id(),
+						'updated_date'	=> $dateTime,
+						'tingkat_pr' => $data['tingkat_pr']
+					];
+				}
+			}
+
+			// print_r($ArrDetail);
+			// print_r($ArrHeader);
+			// exit;
+
+			// if ($tingkat_approval == '3') :
+			// 	$this->db->insert('rutin_non_planning_header', $ArrHeaderPR);
+			// 	$this->db->insert_batch('tran_pr_detail', $ArrDetailPR);
+			// endif;
+
+			$link_approval = (!empty($approve)) ? 'approval' : '';
+
+
+
+			$this->db->trans_start();
+			if (empty($approve)) {
+				if (!empty($code_planx)) {
+					$this->db->where(array('no_pengajuan' => $code_plan));
+					$this->db->update('rutin_non_planning_header', $ArrHeader);
+
+					$this->db->where(array('no_pengajuan' => $code_plan));
+					$this->db->delete('rutin_non_planning_detail');
+					$this->db->insert_batch('rutin_non_planning_detail', $ArrDetail);
+				} else {
+					// print_r($ArrHeader);
+					// exit;
+					$this->db->insert('rutin_non_planning_header', $ArrHeader);
+
+					$this->db->delete('rutin_non_planning_detail', ['no_pengajuan' => $code_plan]);
+					$this->db->insert_batch('rutin_non_planning_detail', $ArrDetail);
+				}
+			}
+			if (!empty($approve)) {
+				// foreach ($ArrHeader as $column => $value) {
+				// 	$this->db->set($column, $value);
+				// }
+				if ($code_planx == '') :
+					$this->db->update('rutin_non_planning_header', $ArrHeader, ['no_pengajuan' => $code_plan]);
+				else :
+					$this->db->update('rutin_non_planning_header', $ArrHeader, ['no_pengajuan' => $code_planx]);
+				endif;
+				$this->db->update_batch('rutin_non_planning_detail', $ArrDetail, 'id');
+
+				// if ($tingkat_approval == '3') :
+				// 	$this->db->insert('rutin_non_planning_header', $ArrHeaderPR);
+				// 	$this->db->insert_batch('tran_pr_detail', $ArrDetailPR);
+				// endif;
+			}
+			$this->db->trans_complete();
+
+
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				$Arr_Kembali	= array(
+					'pesan'		=> 'Process data failed. Please try again later ...',
+					'status'	=> 0,
+					'approve'	=> $link_approval
+				);
+			} else {
+				$this->db->trans_commit();
+				$Arr_Kembali	= array(
+					'pesan'		=> 'Process data success. Thanks ...',
+					'status'	=> 1,
+					'approve'	=> $link_approval
+				);
+				history($tanda . ' pengajuan budget non rutin ' . $code_plan);
+			}
+			echo json_encode($Arr_Kembali);
+		} else {
+
+			$data_Group	= $this->db->get('groups')->result();
+			$id 		= $this->uri->segment(3);
+			$approve 	= $this->uri->segment(4);
+			$tingkat_approval = $this->uri->segment(5);
+			$header 	= $this->db->query("SELECT * FROM rutin_non_planning_header WHERE no_pengajuan='" . $id . "' ")->result();
+			$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $id . "' ")->result_array();
+			$datacoa 	= $this->db->query("SELECT a.coa,b.nama FROM coa_category a join " . DBACC . ".coa_master b on a.coa=b.no_perkiraan WHERE a.tipe='NONRUTIN' order by a.coa")->result_array();
+			$satuan		= $this->db->get_where('ms_satuan', array('deleted' => 'N'))->result_array();
+			$tanda 		= (!empty($header)) ? 'Edit' : 'Add';
+			if (!empty($approve)) {
+				$tanda 		= ($approve == 'view') ? 'View' : 'Approve';
+			}
+
+			$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
+			$coa_pr_dept = explode(';', $get_coa_pr_dept->coa);
+
+			$title_tingkat = 'Finance';
+			// if ($tingkat_approval == '1') :
+			// 	$title_tingkat = 'Head Department';
+			// elseif ($tingkat_approval == '2') :
+			// 	$title_tingkat = 'Cost Control';
+			// elseif ($tingkat_approval == '3') :
+			// 	$title_tingkat = 'Management';
+			// endif;
+
+			// $get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
+
+			$this->db->select('*');
+			$this->db->from(DBACC . '.coa_master');
+			$this->db->where_in('no_perkiraan', $coa_pr_dept);
+			$get_list_coa = $this->db->get()->result_array();
+
+			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
+
+			$this->hris->select('a.id, a.name, b.name as nm_company');
+			$this->hris->from(HRIS . '.departments a');
+			$this->hris->join(HRIS . '.companies b', 'b.id = a.company_id', 'left');
+			$get_department = $this->hris->get()->result();
+
+			$data = array(
+				'title'				=> $tanda . ' PR Departemen ' . $title_tingkat,
+				'action'		=> strtolower($tanda),
+				'header'		=> $header,
+				'detail'		=> $detail,
+				'datacoa'		=> $datacoa,
+				'satuan'		=> $satuan,
+				'approve'		=> $approve,
+				'id'			=> $id,
+				'list_departement' => $get_department,
+				'tingkat_approval'			=> $tingkat_approval,
+				'list_coa' => $get_list_coa
+			);
+
+			$this->template->set($data);
+			$this->template->render('add_finance');
+		}
+	}
+
 	public function get_add()
 	{
 		$id 	= $this->uri->segment(3);
@@ -931,5 +1361,20 @@ class Non_rutin extends Admin_Controller
 		echo json_encode([
 			'status' => $valid
 		]);
+	}
+
+	public function app_pr_dept_finance()
+	{
+		$this->auth->restrict($this->viewPermission4);
+		$data_Group			= $this->db->get('groups')->result();
+		$tanda				= $this->uri->segment(2);
+		$data = array(
+			'title'			=> 'Approval PR Departemen by Finance',
+			'action'		=> 'index',
+			'row_group'		=> $data_Group,
+			'tanda'			=> $tanda
+		);
+		$this->template->set($data);
+		$this->template->render('approval_by_finance');
 	}
 }
