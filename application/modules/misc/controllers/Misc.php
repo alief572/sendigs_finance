@@ -578,4 +578,312 @@ class Misc extends Admin_Controller
             echo $e->getMessage();
         }
     }
+
+    public function check_posted_jurnal_penerimaan()
+    {
+        $this->db->trans_begin();
+        try {
+            $this->db->select('a.*');
+            $this->db->from('tr_jurnal a');
+            $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
+            $this->db->where('a.sts', '1');
+            $this->db->group_start();
+            $this->db->where('a.debit >', 0);
+            $this->db->or_where('a.kredit >', 0);
+            $this->db->group_end();
+            $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
+            $get_data_jurnal = $this->db->get()->result();
+
+            foreach ($get_data_jurnal as $item_jurnal) :
+                if ($item_jurnal->id_company == '4' || $item_jurnal->id_company == '5') {
+                    $this->accounting_vuca->select('a.id');
+                    $this->accounting_vuca->from('jurnal a');
+                    $this->accounting_vuca->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $get_jurnal_tras = $this->accounting_vuca->get()->result();
+
+                    if (count($get_jurnal_tras) < 1) {
+
+                        echo $item_jurnal->no_transaksi . '<br>';
+
+                        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
+
+                        $Bln             = substr($item_jurnal->tgl_jurnal, 5, 2);
+                        $Thn             = substr($item_jurnal->tgl_jurnal, 0, 4);
+
+                        $Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $item_jurnal->tanggal_invoice, $item_jurnal->id_company);
+
+                        $arr_jarh = [
+                            'nomor' => $Nomor_BUM,
+                            'tgl' => $item_jurnal->tgl_jurnal,
+                            'jml' => $get_invoicing->total_akhir_jurnal,
+                            'kdcab' => '101',
+                            'jenis_reff' => 'BUM',
+                            'no_reff' => $get_invoicing->id,
+                            'customer' => $get_invoicing->nm_customer,
+                            'terima_dari' => $this->auth->user_name(),
+                            'jenis_ar' => 'BUM',
+                            'note' => $item_jurnal->keterangan,
+                            'user_id' => $this->auth->user_id(),
+                            'tgl_invoice' => $get_invoicing->tanggal_invoice
+                        ];
+
+                        $insert_jurnal_header = $this->accounting_vuca->insert('javh', $dataJVhead);
+
+                        $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $item_jurnal->no_transaksi, 'jenis_transaksi' => $item_jurnal->jenis_transaksi])->result();
+
+                        foreach ($get_jurnal_detail as $item) {
+                            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+
+                            $id_company = $item->id_company;
+
+                            $tgl_inv = $item->tgl_jurnal;
+                            $keterangan = $item->keterangan;
+                            $type = $item->jenis_transaksi;
+                            $reff = $item->no_transaksi;
+                            $no_req = $item->no_transaksi;
+                            $jenis = 'JV';
+                            $jenis_jurnal = 'jurnalinvoicing';
+                            $no_coa = $item->coa;
+                            $debet = $item->debit;
+                            $kredit = $item->kredit;
+
+                            $datadetail = [
+                                'tipe' => 'JV',
+                                'nomor' => $Nomor_JV,
+                                'tanggal' => $tgl_inv,
+                                'no_perkiraan' => $no_coa,
+                                'keterangan' => $keterangan,
+                                'no_reff' => $reff,
+                                'debet' => $debet,
+                                'kredit' => $kredit
+                            ];
+                            $insert_jurnal_detail = $this->accounting_vuca->insert('jurnal', $datadetail);
+
+                            $jurnal_posting = $this->accounting_vuca->update('jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
+
+                            // $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
+
+                            $Qry_Update_Cabang_acc = $this->accounting_vuca->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+
+
+                            $id_cust   = $get_invoicing->id_customer;
+                            $nama   = $get_invoicing->nm_customer;
+                            $No_Inv  = $get_invoicing->id;
+
+
+                            $datapiutang = array(
+                                'tipe'            => 'JV',
+                                'nomor'            => $Nomor_JV,
+                                'tanggal'        => $tgl_inv,
+                                'no_perkiraan'  => '1104-01-01',
+                                'keterangan'    => $keterangan,
+                                'no_reff'       => $No_Inv,
+                                'debet'         => $get_invoicing->total_akhir_jurnal,
+                                'kredit'         =>  0,
+                                'id_supplier'     => $id_cust,
+                                'nama_supplier'   => $nama,
+                            );
+
+                            $insert_kartu_piutang = $this->db->insert('tr_kartu_piutang', $datapiutang);
+                        }
+                    }
+                }
+                if ($item_jurnal->id_company == '3') {
+                    $this->accounting_sustain->select('a.id');
+                    $this->accounting_sustain->from('jurnal a');
+                    $this->accounting_sustain->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $get_jurnal_tras = $this->accounting_sustain->get()->result();
+
+                    if (count($get_jurnal_tras) < 1) {
+
+                        echo $item_jurnal->no_transaksi . '<br>';
+
+                        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
+
+                        $Bln             = substr($item_jurnal->tgl_jurnal, 5, 2);
+                        $Thn             = substr($item_jurnal->tgl_jurnal, 0, 4);
+
+                        $Nomor_JV  = $this->get_Nomor_Jurnal_Sales('101', $item_jurnal->tgl_jurnal, $item_jurnal->id_company);
+
+                        $dataJVhead = array(
+                            'nomor'             => $Nomor_JV,
+                            'tgl'                 => $item_jurnal->tgl_jurnal,
+                            'jml'                => $get_invoicing->total_akhir_jurnal,
+                            'koreksi_no'        => '-',
+                            'kdcab'                => '101',
+                            'jenis'                => 'JV',
+                            'keterangan'         => $item_jurnal->keterangan,
+                            'bulan'                => $Bln,
+                            'tahun'                => $Thn,
+                            'user_id'            => $this->auth->user_id(),
+                            'memo'                => '',
+                            'tgl_jvkoreksi'        => $item_jurnal->tgl_jurnal,
+                            'ho_valid'            => ''
+                        );
+
+                        $insert_jurnal_header = $this->accounting_sustain->insert('javh', $dataJVhead);
+
+                        $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $item_jurnal->no_transaksi, 'jenis_transaksi' => $item_jurnal->jenis_transaksi])->result();
+
+                        foreach ($get_jurnal_detail as $item) {
+                            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+
+                            $id_company = $item->id_company;
+
+                            $tgl_inv = $item->tgl_jurnal;
+                            $keterangan = $item->keterangan;
+                            $type = $item->jenis_transaksi;
+                            $reff = $item->no_transaksi;
+                            $no_req = $item->no_transaksi;
+                            $jenis = 'JV';
+                            $jenis_jurnal = 'jurnalinvoicing';
+                            $no_coa = $item->coa;
+                            $debet = $item->debit;
+                            $kredit = $item->kredit;
+
+                            $datadetail = [
+                                'tipe' => 'JV',
+                                'nomor' => $Nomor_JV,
+                                'tanggal' => $tgl_inv,
+                                'no_perkiraan' => $no_coa,
+                                'keterangan' => $keterangan,
+                                'no_reff' => $reff,
+                                'debet' => $debet,
+                                'kredit' => $kredit
+                            ];
+                            $insert_jurnal_detail = $this->accounting_sustain->insert('jurnal', $datadetail);
+
+                            $jurnal_posting = $this->accounting_sustain->update('jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
+
+                            // $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
+
+                            $Qry_Update_Cabang_acc = $this->accounting_sustain->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+
+
+                            $id_cust   = $get_invoicing->id_customer;
+                            $nama   = $get_invoicing->nm_customer;
+                            $No_Inv  = $get_invoicing->id;
+
+
+                            $datapiutang = array(
+                                'tipe'            => 'JV',
+                                'nomor'            => $Nomor_JV,
+                                'tanggal'        => $tgl_inv,
+                                'no_perkiraan'  => '1104-01-01',
+                                'keterangan'    => $keterangan,
+                                'no_reff'       => $No_Inv,
+                                'debet'         => $get_invoicing->total_akhir_jurnal,
+                                'kredit'         =>  0,
+                                'id_supplier'     => $id_cust,
+                                'nama_supplier'   => $nama,
+                            );
+
+                            $insert_kartu_piutang = $this->db->insert('tr_kartu_piutang', $datapiutang);
+                        }
+                    }
+                }
+                if ($item_jurnal->id_company == '1' || $item_jurnal->id_company == '6') {
+                    $this->accounting_stm->select('a.id');
+                    $this->accounting_stm->from('jurnal a');
+                    $this->accounting_stm->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $get_jurnal_tras = $this->accounting_stm->get()->result();
+
+                    if (count($get_jurnal_tras) < 1) {
+
+                        echo $item_jurnal->no_transaksi . '<br>';
+
+                        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
+
+                        $Bln             = substr($item_jurnal->tgl_jurnal, 5, 2);
+                        $Thn             = substr($item_jurnal->tgl_jurnal, 0, 4);
+
+                        $Nomor_JV  = $this->get_Nomor_Jurnal_Sales('101', $item_jurnal->tgl_jurnal, $item_jurnal->id_company);
+
+                        $dataJVhead = array(
+                            'nomor'             => $Nomor_JV,
+                            'tgl'                 => $item_jurnal->tgl_jurnal,
+                            'jml'                => $get_invoicing->total_akhir_jurnal,
+                            'koreksi_no'        => '-',
+                            'kdcab'                => '101',
+                            'jenis'                => 'JV',
+                            'keterangan'         => $item_jurnal->keterangan,
+                            'bulan'                => $Bln,
+                            'tahun'                => $Thn,
+                            'user_id'            => $this->auth->user_id(),
+                            'memo'                => '',
+                            'tgl_jvkoreksi'        => $item_jurnal->tgl_jurnal,
+                            'ho_valid'            => ''
+                        );
+
+                        $insert_jurnal_header = $this->accounting_stm->insert('javh', $dataJVhead);
+
+                        $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $item_jurnal->no_transaksi, 'jenis_transaksi' => $item_jurnal->jenis_transaksi])->result();
+
+                        foreach ($get_jurnal_detail as $item) {
+                            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+
+                            $id_company = $item->id_company;
+
+                            $tgl_inv = $item->tgl_jurnal;
+                            $keterangan = $item->keterangan;
+                            $type = $item->jenis_transaksi;
+                            $reff = $item->no_transaksi;
+                            $no_req = $item->no_transaksi;
+                            $jenis = 'JV';
+                            $jenis_jurnal = 'jurnalinvoicing';
+                            $no_coa = $item->coa;
+                            $debet = $item->debit;
+                            $kredit = $item->kredit;
+
+                            $datadetail = [
+                                'tipe' => 'JV',
+                                'nomor' => $Nomor_JV,
+                                'tanggal' => $tgl_inv,
+                                'no_perkiraan' => $no_coa,
+                                'keterangan' => $keterangan,
+                                'no_reff' => $reff,
+                                'debet' => $debet,
+                                'kredit' => $kredit
+                            ];
+                            $insert_jurnal_detail = $this->accounting_stm->insert('jurnal', $datadetail);
+
+                            $jurnal_posting = $this->accounting_stm->update('jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item->no_transaksi]);
+
+                            // $update_jurnal_awal = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
+
+                            $Qry_Update_Cabang_acc = $this->accounting_stm->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+
+
+                            $id_cust   = $get_invoicing->id_customer;
+                            $nama   = $get_invoicing->nm_customer;
+                            $No_Inv  = $get_invoicing->id;
+
+
+                            $datapiutang = array(
+                                'tipe'            => 'JV',
+                                'nomor'            => $Nomor_JV,
+                                'tanggal'        => $tgl_inv,
+                                'no_perkiraan'  => '1104-01-01',
+                                'keterangan'    => $keterangan,
+                                'no_reff'       => $No_Inv,
+                                'debet'         => $get_invoicing->total_akhir_jurnal,
+                                'kredit'         =>  0,
+                                'id_supplier'     => $id_cust,
+                                'nama_supplier'   => $nama,
+                            );
+
+                            $insert_kartu_piutang = $this->db->insert('tr_kartu_piutang', $datapiutang);
+                        }
+                    }
+                }
+            endforeach;
+
+            $this->db->trans_commit();
+
+            echo "Success !";
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            echo $e->getMessage();
+        }
+    }
 }
