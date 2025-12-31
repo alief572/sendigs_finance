@@ -54,7 +54,7 @@ class Jurnal_invoicing_model extends BF_Model
                 'koreksi_no'        => '-',
                 'kdcab'                => '101',
                 'jenis'                => 'JV',
-                'keterangan'         => $get_jurnal->keterangan,
+                'keterangan'         => $get_invoicing->no_invoice . ' - ' . $get_invoicing->nm_customer,
                 'bulan'                => $Bln,
                 'tahun'                => $Thn,
                 'user_id'            => $this->auth->user_id(),

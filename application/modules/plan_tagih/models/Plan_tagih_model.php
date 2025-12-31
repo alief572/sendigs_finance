@@ -44,7 +44,7 @@ class Plan_tagih_model extends BF_Model
 
         $this->consultant->select('a.*, b.nm_company');
         $this->consultant->from('kons_tr_spk_penawaran a');
-        $this->consultant->join('kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
+        $this->consultant->join('kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->consultant->where('a.sts_spk', 1);
 
         $db_clone = clone $this->consultant;
