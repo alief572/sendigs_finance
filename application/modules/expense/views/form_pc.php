@@ -366,6 +366,7 @@ foreach($data_budget as $keys=>$val){
 */
 	?>
 	<script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<script type="text/javascript">
 		var combocoa = "<?= $datacombocoa ?>";
 
@@ -430,64 +431,63 @@ foreach($data_budget as $keys=>$val){
 			if (parseFloat($("#grand_total").val()) > parseFloat($("#budgets").val())) errors = "Saldo lebih dari budget";
 			if (errors == "") {
 
-				swal({
-						title: "Anda Yakin?",
-						text: "Data Akan Disimpan!",
-						type: "info",
-						showCancelButton: true,
-						confirmButtonText: "Ya, simpan!",
-						cancelButtonText: "Tidak!",
-						closeOnConfirm: false,
-						closeOnCancel: true
-					},
-					function(isConfirm) {
-						if (isConfirm) {
-							var formdata = new FormData($('#frm_data')[0]);
-							$.ajax({
-								url: url_save,
-								dataType: "json",
-								type: 'POST',
-								data: formdata,
-								processData: false,
-								contentType: false,
-								success: function(msg) {
-									if (msg['save'] == '1') {
-										swal({
-											title: "Sukses!",
-											text: "Data Berhasil Di Simpan",
-											type: "success",
-											timer: 1500,
-											showConfirmButton: false
-										});
-										window.location = siteurl + 'expense/<?= $urlback ?>';
-									} else {
-										swal({
-											title: "Gagal!",
-											text: "Data Gagal Di Simpan",
-											type: "error",
-											timer: 1500,
-											showConfirmButton: false
-										});
-									};
-									console.log(msg);
-								},
-								error: function(msg) {
-									swal({
-										title: "Gagal!",
-										text: "Ajax Data Gagal Di Proses",
-										type: "error",
+				Swal.fire({
+					title: "Anda Yakin?",
+					text: "Data Akan Disimpan!",
+					icon: "info",
+					showCancelButton: true,
+					confirmButtonText: "Ya, simpan!",
+					cancelButtonText: "Tidak!",
+					closeOnConfirm: false,
+					closeOnCancel: true
+				}).then((next) => {
+					if (next.isConfirmed) {
+						var formdata = new FormData($('#frm_data')[0]);
+						$.ajax({
+							url: url_save,
+							dataType: "json",
+							type: 'POST',
+							data: formdata,
+							processData: false,
+							contentType: false,
+							success: function(msg) {
+								if (msg['save'] == '1') {
+									Swal.fire({
+										title: "Sukses!",
+										text: "Data Berhasil Di Simpan",
+										icon: "success",
 										timer: 1500,
 										showConfirmButton: false
 									});
-									console.log(msg);
-								}
-							});
-						}
-					});
+									window.location = siteurl + 'expense/<?= $urlback ?>';
+								} else {
+									Swal.fire({
+										title: "Gagal!",
+										text: "Data Gagal Di Simpan",
+										icon: "error",
+										timer: 1500,
+										showConfirmButton: false
+									});
+								};
+								console.log(msg);
+							},
+							error: function(msg) {
+								Swal.fire({
+									title: "Gagal!",
+									text: "Ajax Data Gagal Di Proses",
+									icon: "error",
+									timer: 1500,
+									showConfirmButton: false
+								});
+								console.log(msg);
+							}
+						});
+					}
+				});
 
 				//			data_save();
 			} else {
-				swal(errors);
+				Swal.fire(errors);
 				return false;
 			}
 		});
@@ -587,10 +587,10 @@ foreach($data_budget as $keys=>$val){
 					$(".divide").divide();
 				},
 				error: function() {
-					swal({
+					Swal.fire({
 						title: "Error Message !",
 						text: 'Connection Time Out. Please try again..',
-						type: "warning",
+						icon: "warning",
 						timer: 3000,
 						showCancelButton: false,
 						showConfirmButton: false,
@@ -706,38 +706,109 @@ foreach($data_budget as $keys=>$val){
 		}
 
 		function data_approve() {
-			swal({
+			Swal.fire({
+				title: "Anda Yakin?",
+				text: "Data Akan Disetujui!",
+				icon: "info",
+				showCancelButton: true,
+				confirmButtonText: "Ya, setuju!",
+				cancelButtonText: "Tidak!",
+				closeOnConfirm: false,
+				closeOnCancel: true
+			}).then((next) => {
+				if (next.isConfirmed) {
+					id = $("#id").val();
+					$.ajax({
+						url: url_approve + id,
+						dataType: "json",
+						type: 'POST',
+						success: function(msg) {
+							if (msg['save'] == '1') {
+								Swal.fire({
+									title: "Sukses!",
+									text: "Data Berhasil Di Setujui",
+									icon: "success",
+									timer: 1500,
+									showConfirmButton: false
+								});
+								window.location = siteurl + 'expense/<?= $urlback ?>';
+							} else {
+								Swal.fire({
+									title: "Gagal!",
+									text: "Data Gagal Di Setujui",
+									icon: "error",
+									timer: 1500,
+									showConfirmButton: false
+								});
+							};
+							console.log(msg);
+						},
+						error: function(msg) {
+							Swal.fire({
+								title: "Gagal!",
+								text: "Ajax Data Gagal Di Proses",
+								icon: "error",
+								timer: 1500,
+								showConfirmButton: false
+							});
+							console.log(msg);
+						}
+					});
+				}
+			});
+		}
+
+		function data_reject() {
+			Swal.fire({
+				title: "Perhatian",
+				text: "Berikan alasan penolakan",
+				icon: "input",
+				showCancelButton: true,
+				closeOnConfirm: false,
+				closeOnCancel: true
+			}).then((inputValue) => {
+				if (inputValue === false) return false;
+				if (inputValue === "") {
+					Swal.fire.showInputError("Tuliskan alasan anda");
+					return false
+				}
+
+				Swal.fire({
 					title: "Anda Yakin?",
-					text: "Data Akan Disetujui!",
-					type: "info",
+					text: "Data Akan Tolak!",
+					icon: "warning",
 					showCancelButton: true,
-					confirmButtonText: "Ya, setuju!",
+					confirmButtonText: "Ya, tolak!",
 					cancelButtonText: "Tidak!",
 					closeOnConfirm: false,
 					closeOnCancel: true
-				},
-				function(isConfirm) {
-					if (isConfirm) {
+				}).then((next) => {
+					if (next.isConfirmed) {
 						id = $("#id").val();
 						$.ajax({
-							url: url_approve + id,
+							url: base_url + 'expense/reject/',
+							data: {
+								'id': id,
+								'reason': inputValue,
+								'table': 'tr_expense'
+							},
 							dataType: "json",
 							type: 'POST',
 							success: function(msg) {
 								if (msg['save'] == '1') {
-									swal({
+									Swal.fire({
 										title: "Sukses!",
-										text: "Data Berhasil Di Setujui",
-										type: "success",
+										text: "Data Berhasil Di Tolak",
+										icon: "success",
 										timer: 1500,
 										showConfirmButton: false
 									});
-									window.location = siteurl + 'expense/<?= $urlback ?>';
+									window.location.reload();
 								} else {
-									swal({
+									Swal.fire({
 										title: "Gagal!",
-										text: "Data Gagal Di Setujui",
-										type: "error",
+										text: "Data Gagal Di Tolak",
+										icon: "error",
 										timer: 1500,
 										showConfirmButton: false
 									});
@@ -745,10 +816,10 @@ foreach($data_budget as $keys=>$val){
 								console.log(msg);
 							},
 							error: function(msg) {
-								swal({
+								Swal.fire({
 									title: "Gagal!",
 									text: "Ajax Data Gagal Di Proses",
-									type: "error",
+									icon: "error",
 									timer: 1500,
 									showConfirmButton: false
 								});
@@ -757,82 +828,7 @@ foreach($data_budget as $keys=>$val){
 						});
 					}
 				});
-		}
-
-		function data_reject() {
-			swal({
-					title: "Perhatian",
-					text: "Berikan alasan penolakan",
-					type: "input",
-					showCancelButton: true,
-					closeOnConfirm: false,
-					closeOnCancel: true
-				},
-				function(inputValue) {
-					if (inputValue === false) return false;
-					if (inputValue === "") {
-						swal.showInputError("Tuliskan alasan anda");
-						return false
-					}
-
-					swal({
-							title: "Anda Yakin?",
-							text: "Data Akan Tolak!",
-							type: "warning",
-							showCancelButton: true,
-							confirmButtonText: "Ya, tolak!",
-							cancelButtonText: "Tidak!",
-							closeOnConfirm: false,
-							closeOnCancel: true
-						},
-						function(isConfirm) {
-							if (isConfirm) {
-								id = $("#id").val();
-								$.ajax({
-									url: base_url + 'expense/reject/',
-									data: {
-										'id': id,
-										'reason': inputValue,
-										'table': 'tr_expense'
-									},
-									dataType: "json",
-									type: 'POST',
-									success: function(msg) {
-										if (msg['save'] == '1') {
-											swal({
-												title: "Sukses!",
-												text: "Data Berhasil Di Tolak",
-												type: "success",
-												timer: 1500,
-												showConfirmButton: false
-											});
-											window.location.reload();
-										} else {
-											swal({
-												title: "Gagal!",
-												text: "Data Gagal Di Tolak",
-												type: "error",
-												timer: 1500,
-												showConfirmButton: false
-											});
-										};
-										console.log(msg);
-									},
-									error: function(msg) {
-										swal({
-											title: "Gagal!",
-											text: "Ajax Data Gagal Di Proses",
-											type: "error",
-											timer: 1500,
-											showConfirmButton: false
-										});
-										console.log(msg);
-									}
-								});
-							}
-						});
-
-				});
+			});
 		}
 
 		function refresh_list_kasbon_non_pr(no_doc = null) {
@@ -847,10 +843,10 @@ foreach($data_budget as $keys=>$val){
 					$('.list_kasbon_pr_non_po').html(result);
 				},
 				error: function(result) {
-					swal({
+					Swal.fire({
 						title: 'Error !',
 						text: 'Please try again later !',
-						type: 'error'
+						icon: 'error'
 					});
 				}
 			});
@@ -868,10 +864,10 @@ foreach($data_budget as $keys=>$val){
 					$('.list_expense_kembalian').html(result);
 				},
 				error: function(result) {
-					swal({
+					Swal.fire({
 						title: 'Error !',
 						text: 'Please try again later !',
-						type: 'error'
+						icon: 'error'
 					});
 				}
 			});
@@ -942,10 +938,10 @@ foreach($data_budget as $keys=>$val){
 					cektotal(nomor - 1);
 				},
 				error: function(result) {
-					swal({
+					Swal.fire({
 						title: 'Error !',
 						text: 'Please try again later !',
-						type: 'error'
+						icon: 'error'
 					});
 				}
 			});
@@ -1015,7 +1011,7 @@ foreach($data_budget as $keys=>$val){
 					cektotal(nomor - 1);
 				},
 				error: function(result) {
-					swal({
+					Swal.fire({
 						title: 'Error !',
 						text: 'Please try again later !',
 						type: 'error'

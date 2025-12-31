@@ -51,7 +51,7 @@ class Actual_plan_tagih_model extends BF_Model
 
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date as crated_actual');
         $this->db->from('kons_tr_plan_tagih_detail a');
-        $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
+        $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
