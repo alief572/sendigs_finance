@@ -290,6 +290,7 @@ class Misc extends Admin_Controller
                     $this->accounting_vuca->select('a.id');
                     $this->accounting_vuca->from('jurnal a');
                     $this->accounting_vuca->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_vuca->where('a.tipe', 'JV');
                     $get_jurnal_tras = $this->accounting_vuca->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
@@ -384,6 +385,7 @@ class Misc extends Admin_Controller
                     $this->accounting_sustain->select('a.id');
                     $this->accounting_sustain->from('jurnal a');
                     $this->accounting_sustain->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_sustain->where('a.tipe <>', 'JV');
                     $get_jurnal_tras = $this->accounting_sustain->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
@@ -478,6 +480,7 @@ class Misc extends Admin_Controller
                     $this->accounting_stm->select('a.id');
                     $this->accounting_stm->from('jurnal a');
                     $this->accounting_stm->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_stm->where('a.tipe <>', 'JV');
                     $get_jurnal_tras = $this->accounting_stm->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
@@ -599,6 +602,7 @@ class Misc extends Admin_Controller
                     $this->accounting_vuca->select('a.id');
                     $this->accounting_vuca->from('jurnal a');
                     $this->accounting_vuca->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_vuca->where('a.tipe <>', 'JV');
                     $get_jurnal_tras = $this->accounting_vuca->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
@@ -692,6 +696,7 @@ class Misc extends Admin_Controller
                     $this->accounting_sustain->select('a.id');
                     $this->accounting_sustain->from('jurnal a');
                     $this->accounting_sustain->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_sustain->where('a.tipe <>', 'JV');
                     $get_jurnal_tras = $this->accounting_sustain->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
@@ -786,6 +791,7 @@ class Misc extends Admin_Controller
                     $this->accounting_stm->select('a.id');
                     $this->accounting_stm->from('jurnal a');
                     $this->accounting_stm->where('a.no_reff', $item_jurnal->no_transaksi);
+                    $this->accounting_stm->where('a.tipe <>', 'JV');
                     $get_jurnal_tras = $this->accounting_stm->get()->result();
 
                     if (count($get_jurnal_tras) < 1) {
