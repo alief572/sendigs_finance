@@ -320,7 +320,7 @@ class Misc extends Admin_Controller
                         $this->accounting_vuca->select('a.id');
                         $this->accounting_vuca->from('jurnal a');
                         $this->accounting_vuca->where('a.no_reff', $item_jurnal->no_transaksi);
-                        $this->accounting->where('a.tipe', 'JV');
+                        $this->accounting_vuca->where('a.tipe', 'JV');
                         $get_jurnal_tras = $this->accounting_vuca->get()->result();
 
                         if (count($get_jurnal_tras) < 1) {
