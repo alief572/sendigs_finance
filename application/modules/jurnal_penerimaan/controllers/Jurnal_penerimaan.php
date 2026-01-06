@@ -297,7 +297,7 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->db->where('a.debit >', 0);
 		$this->db->or_where('a.kredit >', 0);
 		$this->db->group_end();
-		$this->db->group_by('a.no_transaksi');
+		// $this->db->group_by('a.no_transaksi');
 
 		$get_data_jurnal = $this->db->get()->result();
 
