@@ -27,3 +27,5 @@ docker-compose.yml
 application/config/constants.php
 application/config/config.php
 application/config/constants.php
+
+assets/pdf/manual-book.pdf
