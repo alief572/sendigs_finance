@@ -29,3 +29,6 @@ application/config/config.php
 application/config/constants.php
 
 assets/pdf/manual-book.pdf
+assets/expense/*
+assets/bayar_rutin/*
+uploads/*
