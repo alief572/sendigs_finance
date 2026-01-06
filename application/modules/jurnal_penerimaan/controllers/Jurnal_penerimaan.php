@@ -293,7 +293,6 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company');
 		$this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi');
 		$this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-		$this->db->where('a.sts <>', '1');
 		$this->db->group_start();
 		$this->db->where('a.debit >', 0);
 		$this->db->or_where('a.kredit >', 0);
