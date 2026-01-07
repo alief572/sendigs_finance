@@ -47,7 +47,7 @@ if (!empty($nm_company)) {
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0.00) as total_bulanan');
+                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
                 $this->db->from('view_report_actual_plan_tagih a');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
                 $this->db->where('a.bulan', $item_bulan);
@@ -120,13 +120,13 @@ if (!empty($nm_company)) {
             <td style="font-weight: bold;" align="right"><?= $ttl_macet ?></td>
             <?php
             for ($i = 1; $i <= 12; $i++) {
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0.00) as total_bulanan');
+                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
                 $this->db->from('view_report_actual_plan_tagih a');
                 $this->db->where('a.bulan', $i);
                 $this->db->where('a.tahun', $tahun);
                 $get_nominal_perbulan = $this->db->get()->row();
 
-                $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0.00;
+                $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0;
 
                 echo '<td style="font-weight: bold;" align="right">' . $ttl_bulanan . '</td>';
             }
