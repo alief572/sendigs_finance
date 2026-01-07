@@ -86,15 +86,15 @@ if (!empty($nm_company)) {
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= $item->nilai_kontrak ?></td>
-                <td align="right"><?= $item->total_invoice ?></td>
-                <td align="right"><?= ($item->nilai_kontrak - $item->total_invoice) ?></td>
-                <td align="right"><?= $macet ?></td>
+                <td align="right"><?= round($item->nilai_kontrak) ?></td>
+                <td align="right"><?= round($item->total_invoice) ?></td>
+                <td align="right"><?= round($item->nilai_kontrak - $item->total_invoice) ?></td>
+                <td align="right"><?= round($macet) ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
                 ?>
 
-                    <td align="right"><?= $arr_noms[$item_bulan] ?></td>
+                    <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
 
                 <?php
                 endforeach
@@ -128,7 +128,7 @@ if (!empty($nm_company)) {
 
                 $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0;
 
-                echo '<td style="font-weight: bold;" align="right">' . $ttl_bulanan . '</td>';
+                echo '<td style="font-weight: bold;" align="right">' . round($ttl_bulanan) . '</td>';
             }
             ?>
         </tr>
