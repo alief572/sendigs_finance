@@ -156,7 +156,6 @@ class Actual_plan_tagih_model extends BF_Model
                 $no_check = $this->db->count_all_results();
             }
 
-
             if ($no_check < 1) {
                 $no_all++;
             }
@@ -185,9 +184,11 @@ class Actual_plan_tagih_model extends BF_Model
                 $nm_company = '';
                 if (!empty($get_spk_penawaran)) {
                     $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
-                    $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
+                    if (!empty($get_penawaran)) {
+                        $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
 
-                    $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
+                        $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
+                    }
                 }
 
                 $status = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
