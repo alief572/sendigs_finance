@@ -44,6 +44,8 @@ if (!empty($nm_company)) {
         foreach ($list_report as $item) :
             $no++;
 
+            $total_invoice = 0;
+
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
@@ -55,6 +57,8 @@ if (!empty($nm_company)) {
                 $get_nominal_perbulan = $this->db->get()->row();
 
                 $arr_noms[$item_bulan] = $get_nominal_perbulan->total_bulanan;
+
+                $total_invoice += $get_nominal_perbulan->total_bulanan;
             endforeach;
 
             $this->db->select('a.*');
@@ -87,8 +91,8 @@ if (!empty($nm_company)) {
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
                 <td align="right"><?= round($item->nilai_kontrak) ?></td>
-                <td align="right"><?= round($item->total_invoice) ?></td>
-                <td align="right"><?= round($item->nilai_kontrak - $item->total_invoice) ?></td>
+                <td align="right"><?= round($total_invoice) ?></td>
+                <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
                 <td align="right"><?= round($macet) ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
@@ -104,8 +108,8 @@ if (!empty($nm_company)) {
         <?php
 
             $ttl_nominal_spk += $item->nilai_kontrak;
-            $ttl_invoice += $item->total_invoice;
-            $ttl_uninvoice += ($item->nilai_kontrak - $item->total_invoice);
+            $ttl_invoice += $total_invoice;
+            $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
             $ttl_macet += $macet;
 
         endforeach;
