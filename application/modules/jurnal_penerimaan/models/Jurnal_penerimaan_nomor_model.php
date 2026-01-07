@@ -277,10 +277,10 @@ class Jurnal_penerimaan_nomor_model extends CI_Model
         $nocab            = 'A';
         $bulan_Proses    = date('Y', strtotime($Tgl_Inv));
         $Urut            = 1;
-	$Query_Cab        = "SELECT subcab,nobum FROM " . DBACC_VUCA . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
-	if($dat !== '1' && $dat !== '3') {	
-		$Query_Cab        = "SELECT subcab,nobum FROM " . DBACC_SUSTAIN . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
-	}
+        $Query_Cab        = "SELECT subcab,nobum FROM " . DBACC_VUCA . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        if ($dat !== '1' && $dat !== '3') {
+            $Query_Cab        = "SELECT subcab,nobum FROM " . DBACC_SUSTAIN . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        }
         $Pros_Cab        = $this->db->query($Query_Cab);
         $det_Cab        = $Pros_Cab->result_array();
         if ($det_Cab) {
