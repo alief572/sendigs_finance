@@ -41,60 +41,74 @@ if (!empty($nm_company)) {
         $ttl_uninvoice = 0;
         $ttl_macet = 0;
 
+        $total_jan = 0;
+        $total_feb = 0;
+        $total_mar = 0;
+        $total_apr = 0;
+        $total_may = 0;
+        $total_jun = 0;
+        $total_jul = 0;
+        $total_aug = 0;
+        $total_sep = 0;
+        $total_oct = 0;
+        $total_nov = 0;
+        $total_dec = 0;
+
         foreach ($list_report as $item) :
             $no++;
 
-            $total_invoice = 0;
+            $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total_invoice');
+            $this->db->from('tr_invoicing a');
+            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            $get_invoicing = $this->db->get()->row();
+
+            $total_invoice = (!empty($get_invoicing->total_invoice)) ? $get_invoicing->total_invoice : 0;
+
+            // $this->db->select('a.nominal_payment');
+            // $this->db->from('kons_tr_actual_plan_tagih a');
+            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            // $this->db->where('a.tagih_mundur', '1');
+            // $this->db->where('a.sts_inv', '0');
+            // $this->db->group_by('a.id_detail_plan_tagih');
+            // $get_act_no_inv = $this->db->get()->result();
+
+            // foreach ($get_act_no_inv as $item_act) {
+            //     $total_invoice += $item_act->nominal_payment;
+            // }
+
+            $total_uninvoiced = ($item->nilai_kontrak - $total_invoice);
+
+            $total_macet = 0;
+
+            $this->db->select('COALESCE(a.nominal_payment, 0) as total_macet');
+            $this->db->from('kons_tr_actual_plan_tagih a');
+            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            $this->db->where('a.tagih_mundur', '3');
+            $this->db->group_by('a.id_detail_plan_tagih');
+            $get_tagihan_macet = $this->db->get()->result();
+
+            foreach ($get_tagihan_macet as $item_macet) {
+                $total_macet += $item_macet->total_macet;
+            }
 
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
-                $this->db->from('view_report_actual_plan_tagih a');
-                $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('a.bulan', $item_bulan);
-                $this->db->where('a.tahun', $tahun);
-                $get_nominal_perbulan = $this->db->get()->row();
-
-                $arr_noms[$item_bulan] = $get_nominal_perbulan->total_bulanan;
-                $total_invoice += $get_nominal_perbulan->total_bulanan;
-
-                $this->db->select('a.nominal_payment, b.tagih_mundur');
+                $this->db->select('COALESCE(b.nominal_payment, a.nominal_payment) as nilai_perbulan');
                 $this->db->from('kons_tr_plan_tagih_detail a');
-                $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id AND b.tagih_mundur <> "1"', 'left');
+                $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id AND b.tagih_mundur <> "1" AND b.sts_invoice = "0"', 'left');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', $item_bulan);
-                $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
+                $this->db->where('DATE_FORMAT(COALESCE(b.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', $item_bulan);
+                $this->db->where('DATE_FORMAT(COALESCE(b.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
                 $this->db->group_by('a.id');
-                $get_plan_tagih = $this->db->get()->result();
+                $get_nilai_perbulan = $this->db->get()->result();
 
-                foreach ($get_plan_tagih as $item_plan_tagih) {
-                    if ($item_plan_tagih->tagih_mundur !== '1') {
-                        $arr_noms[$item_bulan] += $item_plan_tagih->nominal_payment;
-                    }
+                $total_perbulan = 0;
+
+                foreach ($get_nilai_perbulan as $item_nilai_perbulan) {
+                    $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
                 }
-            endforeach;
-
-            $this->db->select('a.*');
-            $this->db->from('kons_tr_actual_plan_tagih a');
-            $this->db->where('a.tagih_mundur', '3');
-            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            $this->db->group_start();
-            $this->db->where('DATE_FORMAT(a.tanggal_actual_plan_tagih, "%Y") =', $tahun);
-            $this->db->or_where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
-            $this->db->group_end();
-
-            $get_tagihan_macet = $this->db->get()->result();
-            // print_r($this->db->last_query());
-            // exit;
-
-            $macet = 0;
-            foreach ($get_tagihan_macet as $item_macet) :
-                $get_tagihan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item_macet->id_detail_plan_tagih, 'id_top' => $item_macet->id_top, 'tagih_mundur' => '1'])->result();
-
-                if (empty($get_tagihan_tagih)) {
-                    $macet += $item_macet->nominal_payment;
-                }
+                $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
         ?>
 
@@ -107,7 +121,7 @@ if (!empty($nm_company)) {
                 <td align="right"><?= round($item->nilai_kontrak) ?></td>
                 <td align="right"><?= round($total_invoice) ?></td>
                 <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
-                <td align="right"><?= round($macet) ?></td>
+                <td align="right"><?= round($total_macet) ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
                 ?>
@@ -115,6 +129,42 @@ if (!empty($nm_company)) {
                     <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
 
                 <?php
+                    if ($item_bulan == '1') {
+                        $total_jan += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '2') {
+                        $total_feb += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '3') {
+                        $total_mar += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '4') {
+                        $total_apr += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '5') {
+                        $total_may += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '6') {
+                        $total_jun += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '7') {
+                        $total_jul += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '8') {
+                        $total_aug += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '9') {
+                        $total_sep += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '10') {
+                        $total_oct += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '11') {
+                        $total_nov += $arr_noms[$item_bulan];
+                    }
+                    if ($item_bulan == '12') {
+                        $total_dec += $arr_noms[$item_bulan];
+                    }
                 endforeach
                 ?>
             </tr>
@@ -124,7 +174,7 @@ if (!empty($nm_company)) {
             $ttl_nominal_spk += $item->nilai_kontrak;
             $ttl_invoice += $total_invoice;
             $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
-            $ttl_macet += $macet;
+            $ttl_macet += $total_macet;
 
         endforeach;
         ?>
@@ -136,19 +186,18 @@ if (!empty($nm_company)) {
             <td style="font-weight: bold;" align="right"><?= $ttl_invoice ?></td>
             <td style="font-weight: bold;" align="right"><?= $ttl_uninvoice ?></td>
             <td style="font-weight: bold;" align="right"><?= $ttl_macet ?></td>
-            <?php
-            for ($i = 1; $i <= 12; $i++) {
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
-                $this->db->from('view_report_actual_plan_tagih a');
-                $this->db->where('a.bulan', $i);
-                $this->db->where('a.tahun', $tahun);
-                $get_nominal_perbulan = $this->db->get()->row();
-
-                $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0;
-
-                echo '<td style="font-weight: bold;" align="right">' . round($ttl_bulanan) . '</td>';
-            }
-            ?>
+            <td style="font-weight: bold;" align="right"><?= $total_jan ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_feb ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_mar ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_apr ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_may ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_jun ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_jul ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_aug ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_sep ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_oct ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_nov ?></td>
+            <td style="font-weight: bold;" align="right"><?= $total_dec ?></td>
         </tr>
     </tfoot>
 </table>
