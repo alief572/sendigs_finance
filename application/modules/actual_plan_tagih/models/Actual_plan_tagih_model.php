@@ -207,18 +207,25 @@ class Actual_plan_tagih_model extends BF_Model
                 }
 
                 $valid_btn = 0;
-                if (!empty($item->tanggal_aktual)) {
-                    $bulan_aktual = date('m', strtotime($item->tanggal_aktual));
-                    $tahun_aktual = date('Y', strtotime($item->tanggal_aktual));
 
-                    if (date('Y-m-d', strtotime($tahun_aktual . '-' . $bulan_aktual . '-01')) <= date('Y-m-d', strtotime(date('Y') . '-' . date('m') . '-01'))) {
-                        $valid_btn = 1;
+                // 1. Tentukan tanggal yang mau dipakai dari data
+                $tgl_data = !empty($item->tanggal_aktual) ? $item->tanggal_aktual : $item->tgl_plan_tagih;
+
+                if ($tgl_data) {
+                    // 2. Ambil Tahun dan Bulan dari data (Format: YYYYMM)
+                    $bulan_data = date('Ym', strtotime($tgl_data));
+
+                    // 3. Cek apakah sekarang sudah tanggal 25 atau lebih
+                    if (date('j') >= 25) {
+                        // Jika sudah tgl 25 ke atas, kita anggap "Bulan Sekarang" adalah bulan depan
+                        $bulan_sekarang = date('Ym', strtotime('+1 month'));
+                    } else {
+                        // Jika belum tgl 25, gunakan bulan berjalan
+                        $bulan_sekarang = date('Ym');
                     }
-                } else {
-                    $bulan_tagih = date('m', strtotime($item->tgl_plan_tagih));
-                    $tahun_tagih = date('Y', strtotime($item->tgl_plan_tagih));
 
-                    if (date('Y-m-d', strtotime($tahun_tagih . '-' . $bulan_tagih . '-01')) <= date('Y-m-d', strtotime(date('Y') . '-' . date('m') . '-01'))) {
+                    // 4. Bandingkan
+                    if ($bulan_data <= $bulan_sekarang) {
                         $valid_btn = 1;
                     }
                 }
