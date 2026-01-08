@@ -112,7 +112,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
     <!-- /.box-header -->
     <div class="box-body">
         <!-- <button type="button" class="btn btn-sm btn-primary" onclick="fix_company()">Fix Company</button> -->
-        <div class="table-responsive" style="">
+        <div class="table-responsive">
             <table id="table_penawaran" class="table table-bordered">
                 <thead>
                     <tr class="bg-blue">

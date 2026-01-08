@@ -44,10 +44,12 @@ if (!empty($nm_company)) {
         foreach ($list_report as $item) :
             $no++;
 
+            $total_invoice = 0;
+
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0.00) as total_bulanan');
+                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
                 $this->db->from('view_report_actual_plan_tagih a');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
                 $this->db->where('a.bulan', $item_bulan);
@@ -55,6 +57,8 @@ if (!empty($nm_company)) {
                 $get_nominal_perbulan = $this->db->get()->row();
 
                 $arr_noms[$item_bulan] = $get_nominal_perbulan->total_bulanan;
+
+                $total_invoice += $get_nominal_perbulan->total_bulanan;
             endforeach;
 
             $this->db->select('a.*');
@@ -86,15 +90,15 @@ if (!empty($nm_company)) {
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= $item->nilai_kontrak ?></td>
-                <td align="right"><?= $item->total_invoice ?></td>
-                <td align="right"><?= ($item->nilai_kontrak - $item->total_invoice) ?></td>
-                <td align="right"><?= $macet ?></td>
+                <td align="right"><?= round($item->nilai_kontrak) ?></td>
+                <td align="right"><?= round($total_invoice) ?></td>
+                <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
+                <td align="right"><?= round($macet) ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
                 ?>
 
-                    <td align="right"><?= $arr_noms[$item_bulan] ?></td>
+                    <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
 
                 <?php
                 endforeach
@@ -104,8 +108,8 @@ if (!empty($nm_company)) {
         <?php
 
             $ttl_nominal_spk += $item->nilai_kontrak;
-            $ttl_invoice += $item->total_invoice;
-            $ttl_uninvoice += ($item->nilai_kontrak - $item->total_invoice);
+            $ttl_invoice += $total_invoice;
+            $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
             $ttl_macet += $macet;
 
         endforeach;
@@ -120,15 +124,15 @@ if (!empty($nm_company)) {
             <td style="font-weight: bold;" align="right"><?= $ttl_macet ?></td>
             <?php
             for ($i = 1; $i <= 12; $i++) {
-                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0.00) as total_bulanan');
+                $this->db->select('COALESCE(SUM(a.nominal_bulanan), 0) as total_bulanan');
                 $this->db->from('view_report_actual_plan_tagih a');
                 $this->db->where('a.bulan', $i);
                 $this->db->where('a.tahun', $tahun);
                 $get_nominal_perbulan = $this->db->get()->row();
 
-                $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0.00;
+                $ttl_bulanan = (!empty($get_nominal_perbulan->total_bulanan)) ? $get_nominal_perbulan->total_bulanan : 0;
 
-                echo '<td style="font-weight: bold;" align="right">' . $ttl_bulanan . '</td>';
+                echo '<td style="font-weight: bold;" align="right">' . round($ttl_bulanan) . '</td>';
             }
             ?>
         </tr>

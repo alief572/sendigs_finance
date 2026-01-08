@@ -164,6 +164,8 @@ class Report_actual_plan_tagih extends Admin_Controller
         foreach ($get_data as $item) :
             $no++;
 
+            $total_invoice = 0;
+
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
@@ -175,6 +177,7 @@ class Report_actual_plan_tagih extends Admin_Controller
                 $get_nominal_perbulan = $this->db->get()->row();
 
                 $arr_noms[$item_bulan] = $get_nominal_perbulan->total_bulanan;
+                $total_invoice += $get_nominal_perbulan->total_bulanan;
             endforeach;
 
             $this->db->select('a.*');
@@ -208,8 +211,8 @@ class Report_actual_plan_tagih extends Admin_Controller
                 'customer' => $item->nm_customer,
                 'project' => $item->nm_paket,
                 'nominal_spk' => number_format($item->nilai_kontrak, 2),
-                'nominal_invoice' => number_format($item->total_invoice, 2),
-                'nominal_uninvoice' => number_format(($item->nilai_kontrak - $item->total_invoice), 2),
+                'nominal_invoice' => number_format($total_invoice, 2),
+                'nominal_uninvoice' => number_format(($item->nilai_kontrak - $total_invoice), 2),
                 'macet' => number_format($macet, 2),
                 'jan' => number_format($arr_noms[1], 2),
                 'feb' => number_format($arr_noms[2], 2),
@@ -226,8 +229,8 @@ class Report_actual_plan_tagih extends Admin_Controller
             ];
 
             $ttl_nominal_spk += $item->nilai_kontrak;
-            $ttl_invoice += $item->total_invoice;
-            $ttl_uninvoice += ($item->nilai_kontrak - $item->total_invoice);
+            $ttl_invoice += $total_invoice;
+            $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
             $ttl_macet += $macet;
 
             $total_jan += $arr_noms[1];
