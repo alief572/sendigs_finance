@@ -49,7 +49,7 @@ class Actual_plan_tagih_model extends BF_Model
         //     $tahun = date('Y');
         // }
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, d.created_date as crated_actual');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, COALESCE(d.tanggal_actual_plan_tagih, d.tgl_plan_tagih) as tanggal_aktual, d.created_date as crated_actual');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
@@ -206,14 +206,35 @@ class Actual_plan_tagih_model extends BF_Model
                     $status = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
                 }
 
+                $valid_btn = 0;
+                if (!empty($item->tanggal_aktual)) {
+                    $bulan_aktual = date('m', strtotime($item->tanggal_aktual));
+                    $tahun_aktual = date('Y', strtotime($item->tanggal_aktual));
+
+                    if (date('Y-m-d', strtotime($tahun_aktual . '-' . $bulan_aktual . '-01')) <= date('Y-m-d', strtotime(date('Y') . '-' . date('m') . '-01'))) {
+                        $valid_btn = 1;
+                    }
+                } else {
+                    $bulan_tagih = date('m', strtotime($item->tgl_plan_tagih));
+                    $tahun_tagih = date('Y', strtotime($item->tgl_plan_tagih));
+
+                    if (date('Y-m-d', strtotime($tahun_tagih . '-' . $bulan_tagih . '-01')) <= date('Y-m-d', strtotime(date('Y') . '-' . date('m') . '-01'))) {
+                        $valid_btn = 1;
+                    }
+                }
+
+                $option = '';
+
                 if ($bulan == 'macet') {
                     $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" title="Penagihan Tagihan Macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
                 } else {
-                    $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" title="Aktual Tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+                    if ($valid_btn == '1') {
+                        $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" title="Aktual Tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
 
-                    $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1))->result();
-                    if (count($get_actual_plan_tagih)) {
-                        $option = '';
+                        $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $item->id, 'tagih_mundur' => 1))->result();
+                        if (count($get_actual_plan_tagih)) {
+                            $option = '';
+                        }
                     }
                 }
 
