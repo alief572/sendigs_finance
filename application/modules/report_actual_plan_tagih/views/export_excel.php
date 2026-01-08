@@ -57,8 +57,22 @@ if (!empty($nm_company)) {
                 $get_nominal_perbulan = $this->db->get()->row();
 
                 $arr_noms[$item_bulan] = $get_nominal_perbulan->total_bulanan;
-
                 $total_invoice += $get_nominal_perbulan->total_bulanan;
+
+                $this->db->select('a.nominal_payment, b.tagih_mundur');
+                $this->db->from('kons_tr_plan_tagih_detail a');
+                $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id AND b.tagih_mundur <> "1"', 'left');
+                $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%m") =', $item_bulan);
+                $this->db->where('DATE_FORMAT(a.tgl_plan_tagih, "%Y") =', $tahun);
+                $this->db->group_by('a.id');
+                $get_plan_tagih = $this->db->get()->result();
+
+                foreach ($get_plan_tagih as $item_plan_tagih) {
+                    if ($item_plan_tagih->tagih_mundur !== '1') {
+                        $arr_noms[$item_bulan] += $item_plan_tagih->nominal_payment;
+                    }
+                }
             endforeach;
 
             $this->db->select('a.*');
