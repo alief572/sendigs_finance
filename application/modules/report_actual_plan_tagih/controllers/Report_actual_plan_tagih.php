@@ -112,7 +112,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
         if (!empty($search)) {
             $this->db->group_start();
-            $this->db->like('a.nm_company', $search, 'both');
+            $this->db->like('c.nm_company', $search, 'both');
             $this->db->or_like('a.id_spk_penawaran', $search, 'both');
             $this->db->or_like('a.nm_customer', $search, 'both');
             $this->db->or_like('d.nm_paket', $search, 'both');
@@ -137,7 +137,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
         if (!empty($search)) {
             $this->db->group_start();
-            $this->db->like('a.nm_company', $search, 'both');
+            $this->db->like('c.nm_company', $search, 'both');
             $this->db->or_like('a.id_spk_penawaran', $search, 'both');
             $this->db->or_like('a.nm_customer', $search, 'both');
             $this->db->or_like('d.nm_paket', $search, 'both');
