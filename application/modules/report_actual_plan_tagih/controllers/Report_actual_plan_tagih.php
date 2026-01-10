@@ -77,10 +77,21 @@ class Report_actual_plan_tagih extends Admin_Controller
         $length = $get['length'];
         $start = $get['start'];
         $search = $get['search']['value'];
+        $order_col = (!empty($get['order'][0]['column'])) ? $get['order'][0]['column'] : ''; // Index kolom
+        $order_dir = (!empty($get['order'][0]['dir'])) ? $get['order'][0]['dir'] : '';    // 'asc' atau 'desc'
+        $columns = $get['columns'];              // Data kolom dari client-side
 
         $client = $get['client'];
         $company = $get['company'];
         $tahun = $get['tahun'];
+
+        $order_map = [
+            1 => 'c.nm_company',
+            2 => 'a.id_spk_penawaran',
+            3 => 'a.nm_customer',
+            4 => 'd.nm_paket',
+            5 => 'a.nilai_kontrak'
+        ];
 
         $this->db->select('a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, c.id as id_company, c.nm_company, d.nm_paket');
         $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
@@ -145,6 +156,12 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
 
         $this->db->group_by('a.id_spk_penawaran');
+        if (!empty($order_map[$order_col])) {
+            $this->db->order_by($order_map[$order_col], $order_dir);
+        } else {
+            // Default sorting kalo user belum klik apa-apa
+            $this->db->order_by('a.id_spk_penawaran', 'DESC');
+        }
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result();
