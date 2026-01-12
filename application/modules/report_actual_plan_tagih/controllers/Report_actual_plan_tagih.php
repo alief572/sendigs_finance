@@ -77,10 +77,21 @@ class Report_actual_plan_tagih extends Admin_Controller
         $length = $get['length'];
         $start = $get['start'];
         $search = $get['search']['value'];
+        $order_col = (!empty($get['order'][0]['column'])) ? $get['order'][0]['column'] : ''; // Index kolom
+        $order_dir = (!empty($get['order'][0]['dir'])) ? $get['order'][0]['dir'] : '';    // 'asc' atau 'desc'
+        $columns = $get['columns'];              // Data kolom dari client-side
 
         $client = $get['client'];
         $company = $get['company'];
         $tahun = $get['tahun'];
+
+        $order_map = [
+            1 => 'c.nm_company',
+            2 => 'a.id_spk_penawaran',
+            3 => 'a.nm_customer',
+            4 => 'd.nm_paket',
+            5 => 'a.nilai_kontrak'
+        ];
 
         $this->db->select('a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, c.id as id_company, c.nm_company, d.nm_paket');
         $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
@@ -145,6 +156,12 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
 
         $this->db->group_by('a.id_spk_penawaran');
+        if (!empty($order_map[$order_col])) {
+            $this->db->order_by($order_map[$order_col], $order_dir);
+        } else {
+            // Default sorting kalo user belum klik apa-apa
+            $this->db->order_by('a.id_spk_penawaran', 'DESC');
+        }
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result();
@@ -180,18 +197,6 @@ class Report_actual_plan_tagih extends Admin_Controller
 
             $total_invoice = (!empty($get_invoicing->total_invoice)) ? $get_invoicing->total_invoice : 0;
 
-            // $this->db->select('a.nominal_payment');
-            // $this->db->from('kons_tr_actual_plan_tagih a');
-            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            // $this->db->where('a.tagih_mundur', '1');
-            // $this->db->where('a.sts_inv', '0');
-            // $this->db->group_by('a.id_detail_plan_tagih');
-            // $get_act_no_inv = $this->db->get()->result();
-
-            // foreach ($get_act_no_inv as $item_act) {
-            //     $total_invoice += $item_act->nominal_payment;
-            // }
-
             $total_uninvoiced = ($item->nilai_kontrak - $total_invoice);
 
             $total_macet = 0;
@@ -210,7 +215,7 @@ class Report_actual_plan_tagih extends Admin_Controller
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-                $this->db->select('COALESCE(b.nominal_payment, a.nominal_payment) as nilai_perbulan');
+                $this->db->select('COALESCE(b.nominal_payment, a.nominal_payment) as nilai_perbulan, b.tagih_mundur, b.id_detail_plan_tagih, b.tanggal_actual_plan_tagih');
                 $this->db->from('kons_tr_plan_tagih_detail a');
                 $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id AND b.tagih_mundur <> "1" AND b.sts_invoice = "0"', 'left');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
@@ -222,7 +227,24 @@ class Report_actual_plan_tagih extends Admin_Controller
                 $total_perbulan = 0;
 
                 foreach ($get_nilai_perbulan as $item_nilai_perbulan) {
-                    $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                    if (!empty($item_nilai_perbulan->tagih_mundur)) {
+                        if ($item_nilai_perbulan->tagih_mundur == '2') {
+                            $this->db->select('a.id');
+                            $this->db->from('kons_tr_actual_plan_tagih a');
+                            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                            $this->db->where('a.id_detail_plan_tagih', $item_nilai_perbulan->id_detail_plan_tagih);
+                            $this->db->where('a.tanggal_actual_plan_tagih >', $item_nilai_perbulan->tanggal_actual_plan_tagih);
+                            $get_check_lastest = $this->db->get()->num_rows();
+
+                            if ($get_check_lastest < 1) {
+                                $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                            }
+                        } else {
+                            $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                        }
+                    } else {
+                        $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                    }
                 }
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
