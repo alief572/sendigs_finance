@@ -3103,12 +3103,25 @@ class Expense extends Admin_Controller
 	{
 		$post = $this->input->post();
 
-		$draw = intval($post['draw']);
+		$draw   = intval($post['draw']);
 		$length = $post['length'];
-		$start = $post['start'];
+		$start  = $post['start'];
 		$search = $post['search']['value'];
 
-		$this->db->select('a.*, b.nm_lengkap as nmuser');
+		// 1. Definisikan Subqueries untuk Nama Creator berdasarkan Tipe PR
+		$sub_dept  = "(SELECT u1.nm_lengkap FROM rutin_non_planning_header h1 JOIN users u1 ON u1.id_user = h1.created_by WHERE h1.no_pr = a.id_pr LIMIT 1)";
+		$sub_stok  = "(SELECT u2.nm_lengkap FROM material_planning_base_on_produksi h2 JOIN users u2 ON u2.id_user = h2.created_by WHERE h2.no_pr = a.id_pr LIMIT 1)";
+		$sub_asset = "(SELECT u3.nm_lengkap FROM tran_pr_header h3 JOIN users u3 ON u3.id_user = h3.created_by WHERE h3.no_pr = a.id_pr LIMIT 1)";
+
+		// Gabungkan dalam CASE WHEN
+		$sql_nama = "CASE 
+        WHEN a.tipe_pr = 'pr departemen' THEN $sub_dept
+        WHEN a.tipe_pr = 'pr stok' THEN $sub_stok
+        WHEN a.tipe_pr = 'pr asset' THEN $sub_asset
+        ELSE b.nm_lengkap 
+    END";
+
+		$this->db->select("a.*, b.nm_lengkap as nmuser_default, ($sql_nama) as nmuser_fix");
 		$this->db->from('tr_kasbon a');
 		$this->db->join('users b', 'a.nama = b.username', 'left');
 
@@ -3118,144 +3131,97 @@ class Expense extends Admin_Controller
 
 		$count_all = $this->db->count_all_results('', false);
 
+		// 2. Fitur Search (Sekarang nmuser_fix bisa dicari)
 		if (!empty($search)) {
 			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.tgl_doc', $search, 'both');
-			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->like('a.no_doc', $search);
+			$this->db->or_like('a.tgl_doc', $search);
+			$this->db->or_like("($sql_nama)", $search);
 			$this->db->group_end();
 		}
 
 		$count_filter = $this->db->count_all_results('', false);
 
-		$columns = array(
-			0 => '',
-			1 => 'a.no_doc',
-			2 => 'a.tgl_doc',
-			3 => 'b.nm_lengkap'
-		);
-		if (isset($post['order'])) {
-			// Cek apakah 'order' dan 'column' ada
-			if (isset($post['order'][0]['column']) && isset($post['order'][0]['dir'])) {
-				$order_column = $columns[$post['order'][0]['column']]; // Ambil kolom berdasarkan indeks
-				$order_dir = $post['order'][0]['dir']; // Arah pengurutan (asc/desc)
-
-				// Menambahkan klausa ORDER BY pada query
-				$this->db->order_by($order_column, $order_dir);
-			}
+		// 3. Ordering
+		$columns = [0 => 'a.id', 1 => 'a.no_doc', 2 => 'a.tgl_doc', 3 => "($sql_nama)"];
+		if (isset($post['order'][0]['column'])) {
+			$this->db->order_by($columns[$post['order'][0]['column']], $post['order'][0]['dir']);
 		}
-		$this->db->limit($length, $start);
 
+		$this->db->limit($length, $start);
 		$get_data = $this->db->get()->result_array();
 
-		$no = (0 + $start);
 		$hasil = [];
-
-		foreach ($get_data as $item) :
+		$no = $start;
+		foreach ($get_data as $item) {
 			$no++;
 
-			if ($item['status'] == '0') {
-				$sts = '<div class="badge bg-yellow text-light">New</div>';
-
-				if ($item['sts_finance'] == '1') {
-					$sts = '<div class="badge bg-blue">Waiting Approval Management</div>';
-				}
-			}
-			if ($item['status'] == '1' || $item['status'] == '2') {
-				$sts = '<div class="badge bg-dark-blue text-light">Approved</div>';
-			}
-			if ($item['status'] == '3') {
-				$check_expense_report = $this->db->get_where('tr_expense_detail', ['id_kasbon' => $item['no_doc'], 'status' => 2])->row();
-				if (!empty($check_expense_report)) {
-					$sts = '<div class="badge bg-dark text-light">Close</div>';
-				} else {
-					$sts = '<div class="badge bg-green text-light">Paid</div>';
-				}
-			}
-			if ($item['status'] == '9') {
-				$sts = '<div class="badge bg-red text-light">Reject</div>';
-			}
-			if ($item['status'] == '4') {
-				$sts = '<div class="badge bg-blue text-dark">Kurang</div>';
-			}
-
-			$action = '';
-
-			if (has_permission($this->viewPermissionKasbon)) {
-				if (!empty($item['approved_by'])) {
-					$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url('expense/kasbon_print/' . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
-				}
-
-				$action .= ' <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . str_replace($item['id'], '' . $item['id'] . '', $item['id']) . ')"><i class="fa fa-eye"></i></a>';
-			}
-
-			if (has_permission($this->managePermissionKasbon) && $item['sts_finance'] == '0') {
-				if ($item['status'] == 0  || $item['status'] == 9) {
-					$action .= ' <a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit(' . str_replace($item['id'], '' . $item['id'] . '', $item['id']) . ')"><i class="fa fa-edit"></i></a>';
-				}
-			}
-
-			if (has_permission($this->deletePermissionKasbon) && $item['sts_finance'] == '0') {
-				if ($item['status'] == 0  || $item['status'] == 9) {
-					$action .= ' <a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete(' . str_replace($item['id'], '' . $item['id'] . '', $item['id']) . ')"><i class="fa fa-trash"></i></a>';
-				}
-			}
-
-			$nmuser = $item['nmuser'];
-
-			$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item['no_doc']])->result();
-			if (count($check_detail)) {
-				if ($item['tipe_pr'] == 'pr departemen') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('rutin_non_planning_header a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-
-				if ($item['tipe_pr'] == 'pr stok') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('material_planning_base_on_produksi a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-
-				if ($item['tipe_pr'] == 'pr asset') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('tran_pr_header a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-			}
-
 			$hasil[] = [
-				'no' => $no,
+				'no'        => $no,
 				'no_kasbon' => $item['no_doc'],
-				'tanggal' => $item['tgl_doc'],
-				'nama' => $nmuser,
-				'status' => $sts,
-				'action' => $action,
+				'tanggal'   => $item['tgl_doc'],
+				'nama'      => $item['nmuser_fix'],
+				'status'    => $this->_render_status_badge($item),
+				'action'    => $this->_render_action_buttons($item),
 			];
-		endforeach;
+		}
 
 		$response = [
-			'draw' => $draw,
-			'recordsTotal' => $count_all,
+			'draw'            => $draw,
+			'recordsTotal'    => $count_all,
 			'recordsFiltered' => $count_filter,
-			'data' => $hasil
+			'data'            => $hasil
 		];
 
-		$this->output->set_content_type('application/json')->set_status_header(200);
+		$this->output->set_content_type('application/json')->set_status_header(200)->set_output(json_encode($response));
+	}
 
-		echo json_encode($response);
+	// --- Helper Badge Status ---
+	private function _render_status_badge($item)
+	{
+		$sts = '';
+		if ($item['status'] == '0') {
+			$sts = '<div class="badge bg-yellow text-light">New</div>';
+			if ($item['sts_finance'] == '1') {
+				$sts = '<div class="badge bg-blue">Waiting Approval Management</div>';
+			}
+		} elseif (in_array($item['status'], ['1', '2'])) {
+			$sts = '<div class="badge bg-dark-blue text-light">Approved</div>';
+		} elseif ($item['status'] == '3') {
+			$check = $this->db->get_where('tr_expense_detail', ['id_kasbon' => $item['no_doc'], 'status' => 2])->row();
+			$sts = (!empty($check)) ? '<div class="badge bg-dark text-light">Close</div>' : '<div class="badge bg-green text-light">Paid</div>';
+		} elseif ($item['status'] == '9') {
+			$sts = '<div class="badge bg-red text-light">Reject</div>';
+		} elseif ($item['status'] == '4') {
+			$sts = '<div class="badge bg-blue text-dark">Kurang</div>';
+		}
+		return $sts;
+	}
+
+	// --- Helper Tombol Action ---
+	private function _render_action_buttons($item)
+	{
+		$action = '';
+
+		// View & Print
+		if (has_permission($this->viewPermissionKasbon)) {
+			if (!empty($item['approved_by'])) {
+				$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url('expense/kasbon_print/' . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
+			}
+			$action .= ' <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
+		}
+
+		// Edit & Delete (Hanya jika belum diproses finance)
+		if ($item['sts_finance'] == '0' && ($item['status'] == 0 || $item['status'] == 9)) {
+			if (has_permission($this->managePermissionKasbon)) {
+				$action .= ' <a class="btn btn-success btn-sm edit" href="javascript:void(0)" title="Edit" onclick="data_edit(' . $item['id'] . ')"><i class="fa fa-edit"></i></a>';
+			}
+			if (has_permission($this->deletePermissionKasbon)) {
+				$action .= ' <a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Hapus" onclick="data_delete(' . $item['id'] . ')"><i class="fa fa-trash"></i></a>';
+			}
+		}
+
+		return $action;
 	}
 
 	public function get_dat_kasbon_list()
@@ -3267,7 +3233,16 @@ class Expense extends Admin_Controller
 		$start = $post['start'];
 		$search = $post['search']['value'];
 
-		$this->db->select('a.*, b.nm_lengkap as nmuser');
+		// 1. Buat Subquery untuk menentukan "Nama User" yang sebenarnya berdasarkan tipe_pr
+		// Ini menggantikan logika IF-ELSE di dalam foreach nanti
+		$subquery_nama = "(CASE 
+        WHEN a.tipe_pr = 'pr departemen' THEN (SELECT u1.nm_lengkap FROM rutin_non_planning_header h1 JOIN users u1 ON u1.id_user = h1.created_by WHERE h1.no_pr = a.id_pr LIMIT 1)
+        WHEN a.tipe_pr = 'pr stok' THEN (SELECT u2.nm_lengkap FROM material_planning_base_on_produksi h2 JOIN users u2 ON u2.id_user = h2.created_by WHERE h2.no_pr = a.id_pr LIMIT 1)
+        WHEN a.tipe_pr = 'pr asset' THEN (SELECT u3.nm_lengkap FROM tran_pr_header h3 JOIN users u3 ON u3.id_user = h3.created_by WHERE h3.no_pr = a.id_pr LIMIT 1)
+        ELSE b.nm_lengkap 
+    END)";
+
+		$this->db->select("a.*, b.nm_lengkap as nmuser_default, $subquery_nama as nmuser_fix");
 		$this->db->from('tr_kasbon a');
 		$this->db->join('users b', 'a.nama = b.username', 'left');
 
@@ -3275,126 +3250,66 @@ class Expense extends Admin_Controller
 			$this->db->where('a.created_by', $this->auth->user_name());
 		}
 
+		// Get total records sebelum filter
 		$count_all = $this->db->count_all_results('', false);
 
+		// 2. Fitur Search (Sekarang bisa search nmuser_fix)
 		if (!empty($search)) {
 			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.tgl_doc', $search, 'both');
-			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->like('a.no_doc', $search);
+			$this->db->or_like('a.tgl_doc', $search);
+			// Kita gunakan HAVING atau panggil ulang logic subquery karena nmuser_fix adalah alias
+			$this->db->or_like($subquery_nama, $search);
 			$this->db->group_end();
 		}
 
 		$count_filter = $this->db->count_all_results('', false);
 
+		// 3. Ordering
 		$columns = array(
-			0 => '',
 			1 => 'a.no_doc',
 			2 => 'a.tgl_doc',
-			3 => 'b.nm_lengkap'
+			3 => $subquery_nama // Order by nama hasil logic tadi
 		);
-		if (isset($post['order'])) {
-			// Cek apakah 'order' dan 'column' ada
-			if (isset($post['order'][0]['column']) && isset($post['order'][0]['dir'])) {
-				$order_column = $columns[$post['order'][0]['column']]; // Ambil kolom berdasarkan indeks
-				$order_dir = $post['order'][0]['dir']; // Arah pengurutan (asc/desc)
 
-				// Menambahkan klausa ORDER BY pada query
-				$this->db->order_by($order_column, $order_dir);
-			}
+		if (isset($post['order'][1]['column'])) {
+			$this->db->order_by($columns[$post['order'][1]['column']], $post['order'][1]['dir']);
+		} else {
+			$this->db->order_by('a.no_doc', 'desc');
 		}
-		$this->db->limit($length, $start);
 
+		$this->db->limit($length, $start);
 		$get_data = $this->db->get()->result_array();
 
-		$no = (0 + $start);
+		// 4. Proses Hasil (Sekarang jauh lebih ringan karena gak ada query di dalam loop)
 		$hasil = [];
-
-		foreach ($get_data as $item) :
+		$no = $start;
+		foreach ($get_data as $item) {
 			$no++;
 
-			if ($item['status'] == '0') {
-				$sts = '<div class="badge bg-yellow text-light">New</div>';
-
-				if ($item['sts_finance'] == '1') {
-					$sts = '<div class="badge bg-blue">Waiting Approval Management</div>';
-				}
-			}
-			if ($item['status'] == '1' || $item['status'] == '2') {
-				$sts = '<div class="badge bg-dark-blue text-light">Approved</div>';
-			}
-			if ($item['status'] == '3') {
-				$check_expense_report = $this->db->get_where('tr_expense_detail', ['id_kasbon' => $item['no_doc'], 'status' => 2])->row();
-				if (!empty($check_expense_report)) {
-					$sts = '<div class="badge bg-dark text-light">Close</div>';
-				} else {
-					$sts = '<div class="badge bg-green text-light">Paid</div>';
-				}
-			}
-			if ($item['status'] == '9') {
-				$sts = '<div class="badge bg-red text-light">Reject</div>';
-			}
-			if ($item['status'] == '4') {
-				$sts = '<div class="badge bg-blue text-dark">Kurang</div>';
-			}
+			// Status Logic (Tetap sama)
+			$sts = $this->_render_status_badge($item); // Pindahkan ke private function biar rapi
 
 			$action = '';
-
 			if (has_permission($this->viewPermissionKasbonList)) {
 				if (!empty($item['approved_by'])) {
 					$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url("expense/kasbon_print/" . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
 				}
-
 				$action .= ' <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
 			}
 
-			$approval_date = (!empty($item['approved_on']) && ($item['status'] == '1' || $item['status'] == '2' || $item['status'] == '3')) ? $item['approved_on'] : '';
-
-			$nmuser = $item['nmuser'];
-
-			$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item['no_doc']])->result();
-			if (count($check_detail)) {
-				if ($item['tipe_pr'] == 'pr departemen') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('rutin_non_planning_header a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-
-				if ($item['tipe_pr'] == 'pr stok') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('material_planning_base_on_produksi a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-
-				if ($item['tipe_pr'] == 'pr asset') {
-					$this->db->select('b.nm_lengkap');
-					$this->db->from('tran_pr_header a');
-					$this->db->join('users b', 'b.id_user = a.created_by');
-					$this->db->where('a.no_pr', $item['id_pr']);
-					$get_single_detail = $this->db->get()->row();
-
-					$nmuser = $get_single_detail->nm_lengkap;
-				}
-			}
+			$approval_date = (!empty($item['approved_on']) && in_array($item['status'], [1, 2, 3])) ? $item['approved_on'] : '';
 
 			$hasil[] = [
 				'no' => $no,
 				'no_kasbon' => $item['no_doc'],
 				'tanggal' => $item['tgl_doc'],
-				'nama' => $nmuser,
+				'nama' => $item['nmuser_fix'], // Ambil langsung dari hasil query
 				'approval_date' => $approval_date,
 				'status' => $sts,
 				'action' => $action,
 			];
-		endforeach;
+		}
 
 		$response = [
 			'draw' => $draw,
@@ -3403,9 +3318,7 @@ class Expense extends Admin_Controller
 			'data' => $hasil
 		];
 
-		$this->output->set_content_type('application/json')->set_status_header(200);
-
-		echo json_encode($response);
+		$this->output->set_content_type('application/json')->set_output(json_encode($response));
 	}
 
 	public function get_dat_app_kasbon()
