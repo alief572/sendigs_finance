@@ -134,6 +134,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <!-- DataTables -->
 <!-- <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script> -->
@@ -175,8 +178,8 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 $('#dialog-popup').modal('show');
             },
             error: function(result) {
-                swal({
-                    type: 'error',
+                Swal.fire({
+                    icon: 'error',
                     title: 'Error !',
                     text: 'Please, try again later !'
                 });
@@ -199,8 +202,8 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 $('#dialog-popup-macet').modal('show');
             },
             error: function(result) {
-                swal({
-                    type: 'error',
+                Swal.fire({
+                    icon: 'error',
                     title: 'Error !',
                     text: 'Please, try again later !'
                 });
@@ -253,8 +256,8 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             }
 
             if (valid !== 1) {
-                swal({
-                    type: 'warning',
+                Swal.fire({
+                    icon: 'warning',
                     title: 'Warning !',
                     text: msg
                 });
@@ -263,13 +266,13 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             }
         }
 
-        swal({
+        Swal.fire({
             type: 'warning',
             title: 'Warning !',
             text: 'Are you sure ?',
             showCancelButton: true
-        }, function(next) {
-            if (next) {
+        }).then((next) => {
+            if (next.isConfirmed) {
                 var form_data = new FormData($('#frm-data')[0]);
 
                 $.ajax({
@@ -282,20 +285,20 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     processData: false,
                     success: function(result) {
                         if (result.status == '1') {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg,
                                 timer: 3000,
                                 showConfirmButton: false,
                                 allowOutsideClick: false
-                            }, function(lanjut) {
+                            }).then(() => {
                                 location.reload();
                             });
 
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Warning !',
                                 text: result.msg,
                                 showConfirmButton: false,
@@ -304,11 +307,21 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             });
                         }
                     },
-                    error: function() {
-                        swal({
-                            type: 'error',
+                    error: function(xhr, status, error) {
+                        try {
+                            // Kita parse isi dari xhr.responseText
+                            var response = JSON.parse(xhr.responseText);
+
+                            // Munculin pesannya (msg sesuai dengan key di PHP)
+                            var msg = "Terjadi kesalahan :" + response.msg;
+                        } catch (e) {
+                            var msg = "Terjadi kesalahan sistem";
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
-                            text: 'Please try again later !',
+                            text: msg,
                             showConfirmButton: false,
                             allowOutsideClick: false,
                             timer: 3000
@@ -324,13 +337,13 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 
         var tagih_mundur = $('select[name="tagih_mundur"]').val();
 
-        swal({
-            type: 'warning',
+        Swal.fire({
+            icon: 'warning',
             title: 'Warning !',
             text: 'Are you sure ?',
             showCancelButton: true
-        }, function(next) {
-            if (next) {
+        }).then((next) => {
+            if (next.isConfirmed) {
                 var form_data = new FormData($('#frm-data-macet')[0]);
 
                 $.ajax({
@@ -343,24 +356,24 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     processData: false,
                     success: function(result) {
                         if (result.status == '1') {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg
-                            }, function(lanjut) {
+                            }).then(() => {
                                 location.reload();
                             });
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Warning !',
                                 text: result.msg
                             });
                         }
                     },
                     error: function() {
-                        swal({
-                            type: 'error',
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
                             text: 'Please try again later !'
                         });
