@@ -109,10 +109,11 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_surat_mundur')) {
                 $uploadData = $this->upload->data();
                 $file_surat_mundur = 'uploads/surat_mundur/' . $uploadData['file_name'];
-            } else {
-                print_r('surat_mundur - ' . $this->upload->display_errors());
-                exit;
-            }
+            } 
+            // else {
+            //     print_r('surat_mundur - ' . $this->upload->display_errors());
+            //     exit;
+            // }
         }
 
         $file_laporan_progress = '';
@@ -129,10 +130,11 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_laporan_progress')) {
                 $uploadData2 = $this->upload->data();
                 $file_laporan_progress = 'uploads/laporan_progress/' . $uploadData2['file_name'];
-            } else {
-                print_r('laporan progress - ' . $this->upload->display_errors());
-                exit;
-            }
+            } 
+            // else {
+            //     print_r('laporan progress - ' . $this->upload->display_errors());
+            //     exit;
+            // }
         }
 
         $this->db->trans_begin();
