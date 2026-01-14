@@ -992,10 +992,10 @@ class Non_rutin_model extends BF_Model
 
     public function server_side_non_rutin_approval_finance()
     {
-        $ENABLE_ADD     = has_permission('Approval_PR_Depart_Finance.Add');
-        $ENABLE_MANAGE  = has_permission('Approval_PR_Depart_Finance.Manage');
-        $ENABLE_VIEW    = has_permission('Approval_PR_Depart_Finance.View');
-        $ENABLE_DELETE  = has_permission('Approval_PR_Depart_Finance.Delete');
+        $ENABLE_ADD     = has_permission('Approval_PR_Department_Finance.Add');
+        $ENABLE_MANAGE  = has_permission('Approval_PR_Department_Finance.Manage');
+        $ENABLE_VIEW    = has_permission('Approval_PR_Department_Finance.View');
+        $ENABLE_DELETE  = has_permission('Approval_PR_Department_Finance.Delete');
 
         $requestData    = $_REQUEST;
         $fetch            = $this->query_data_json_non_rutin_approval_finance(
