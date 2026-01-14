@@ -1107,10 +1107,10 @@ class Non_rutin_model extends BF_Model
             $print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $row['no_pengajuan']) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
 
             $view = "";
-            $approve = '';
-            if ($ENABLE_MANAGE) {
+            // $approve = '';
+            // if ($ENABLE_MANAGE) {
                 $approve    = "&nbsp;<a href='" . base_url('non_rutin/add_finance/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
-            }
+            // }
             $nestedData[]    = "<div align='left'>
 									" . $view . "
                                     " . $edit . "
