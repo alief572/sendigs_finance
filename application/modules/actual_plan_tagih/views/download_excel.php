@@ -34,7 +34,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
                 $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $item['id_penawaran']])->row_array();
                 $get_company = $this->db->get_where(DBCNL . '.kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
 
-                $nm_company = (!empty($get_company)) ? $get_penawaran['nm_company'] : '';
+                $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
             }
 
             $status = '<div style="background-color: blue;">Waiting Actual Plan Tagih</div>';

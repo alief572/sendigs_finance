@@ -187,7 +187,7 @@ class Actual_plan_tagih_model extends BF_Model
                     if (!empty($get_penawaran)) {
                         $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
 
-                        $nm_company = (!empty($get_company)) ? $get_penawaran->nm_company : '';
+                        $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
                     }
                 }
 
