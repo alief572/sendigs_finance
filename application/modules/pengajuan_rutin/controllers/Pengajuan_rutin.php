@@ -192,122 +192,140 @@ class Pengajuan_rutin extends Admin_Controller
 		$metode_pembelian		= $this->input->post("metode_pembelian");
 
 		$this->db->trans_begin();
-		if ($no_doc == '') {
-			$no_doc = $this->All_model->GetAutoGenerate('format_nonpo');
-			$dataheader =  array(
-				'tipe' => $tipe,
-				'no_doc' => $no_doc,
-				'tanggal_doc' => $tanggal_doc,
-				'departement' => $departement
-				// 'nilai'=>0,
-			);
-			$this->Pengajuan_rutin_model->insert($dataheader);
-		} else {
-			$dataheader =  array(
-				array(
-					'id' => $id,
+
+		try {
+			if ($no_doc == '') {
+				$no_doc = $this->All_model->GetAutoGenerate('format_nonpo');
+				$dataheader =  array(
+					'tipe' => $tipe,
+					'no_doc' => $no_doc,
 					'tanggal_doc' => $tanggal_doc,
-					'sts_reject' => null,
-					'sts' => 0,
-					'reject_ket' => null
-				)
-			);
-			$this->Pengajuan_rutin_model->update_batch($dataheader, 'id');
-			if (is_array($detail_id)) {
-				$delid = implode("','", $detail_id);
-				$this->All_model->dataDelete('tr_pengajuan_rutin_detail', " id not in ('" . $delid . "') and no_doc='" . $no_doc . "'");
+					'departement' => $departement
+					// 'nilai'=>0,
+				);
+				$this->Pengajuan_rutin_model->insert($dataheader);
 			} else {
-				$this->All_model->dataDelete('tr_pengajuan_rutin_detail', "no_doc='" . $no_doc . "'");
-			}
-		}
-		for ($x = 0; $x < count($detail_id); $x++) {
-			$idf = $details[$x];
-			if ($detail_id[$x] != '') {
-				if ($nilai[$x] > 0) {
-					$data = array(
-						'id_budget' => $id_budget[$x],
-						'coa' => $coa[$x],
-						'nama' => $nama[$x],
-						'tanggal' => $tanggal[$x],
-						'budget' => $budget[$x],
-						'nilai' => $nilai[$x],
-						'keterangan' => $keterangan[$x],
-						'bank_id' => $bank_id[$x],
-						'accnumber' => $accnumber[$x],
-						'accname' => $accname[$x],
-						'metode_pembelian' => '1',
-						'created_by' => $this->auth->user_id(),
-						'created_on' => date("Y-m-d h:i:s"),
-					);
-					if (!empty($_FILES['doc_file_' . $idf]['name'])) {
-						$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
-						$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
-						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
-						$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
-						$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
-						$config['upload_path'] = './assets/bayar_rutin/';
-						$config['allowed_types'] = '*';
-						$config['remove_spaces'] = TRUE;
-						$config['encrypt_name'] = TRUE;
-
-						$this->upload->initialize($config);
-						if ($this->upload->do_upload('file')) {
-							$uploadData = $this->upload->data();
-							$filename = $uploadData['file_name'];
-							$data['doc_file'] = $filename;
-						} else {
-							print_r($this->upload->display_errors());
-							exit;
-						}
-					}
-					$this->db->update('tr_pengajuan_rutin_detail', $data, array('id' => $detail_id[$x]));
-				}
-			} else {
-				if ($nilai[$x] > 0) {
-					$data =  array(
-						'no_doc' => $no_doc,
-						'id_budget' => $id_budget[$x],
-						'coa' => $coa[$x],
-						'nama' => $nama[$x],
-						'tanggal' => $tanggal[$x],
-						'budget' => $budget[$x],
-						'nilai' => $nilai[$x],
-						'keterangan' => $keterangan[$x],
-						'bank_id' => $bank_id[$x],
-						'accnumber' => $accnumber[$x],
-						'accname' => $accname[$x],
-						'metode_pembelian' => '1',
-						'created_by' => $this->auth->user_id(),
-						'created_on' => date("Y-m-d h:i:s"),
-						'modified_by' => $this->auth->user_id(),
-						'modified_on' => date("Y-m-d h:i:s"),
-					);
-					if (!empty($_FILES['doc_file_' . $idf]['name'])) {
-						$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
-						$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
-						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
-						$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
-						$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
-
-						$config['upload_path'] = './assets/bayar_rutin/';
-						$config['allowed_types'] = '*';
-						$config['remove_spaces'] = TRUE;
-						$config['encrypt_name'] = TRUE;
-
-						$this->upload->initialize($config);
-						if ($this->upload->do_upload('file')) {
-							$uploadData = $this->upload->data();
-							$filename = $uploadData['file_name'];
-							$data['doc_file'] = $filename;
-						} else {
-							print_r($this->upload->display_errors());
-							exit;
-						}
-					}
-					$this->db->insert('tr_pengajuan_rutin_detail', $data);
+				$dataheader =  array(
+					array(
+						'id' => $id,
+						'tanggal_doc' => $tanggal_doc,
+						'sts_reject' => null,
+						'sts' => 0,
+						'reject_ket' => null
+					)
+				);
+				$this->Pengajuan_rutin_model->update_batch($dataheader, 'id');
+				if (is_array($detail_id)) {
+					$delid = implode("','", $detail_id);
+					$this->All_model->dataDelete('tr_pengajuan_rutin_detail', " id not in ('" . $delid . "') and no_doc='" . $no_doc . "'");
+				} else {
+					$this->All_model->dataDelete('tr_pengajuan_rutin_detail', "no_doc='" . $no_doc . "'");
 				}
 			}
+			for ($x = 0; $x < count($detail_id); $x++) {
+				$idf = $details[$x];
+				if ($detail_id[$x] != '') {
+					if ($nilai[$x] > 0) {
+						$data = array(
+							'id_budget' => $id_budget[$x],
+							'coa' => $coa[$x],
+							'nama' => $nama[$x],
+							'tanggal' => $tanggal[$x],
+							'budget' => $budget[$x],
+							'nilai' => $nilai[$x],
+							'keterangan' => $keterangan[$x],
+							'bank_id' => $bank_id[$x],
+							'accnumber' => $accnumber[$x],
+							'accname' => $accname[$x],
+							'metode_pembelian' => '1',
+							'created_by' => $this->auth->user_id(),
+							'created_on' => date("Y-m-d h:i:s"),
+						);
+						if (!empty($_FILES['doc_file_' . $idf]['name'])) {
+							$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
+							$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
+							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
+							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
+							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
+							$config['upload_path'] = './assets/bayar_rutin/';
+							$config['allowed_types'] = '*';
+							$config['remove_spaces'] = TRUE;
+							$config['encrypt_name'] = TRUE;
+
+							$this->upload->initialize($config);
+							if ($this->upload->do_upload('file')) {
+								$uploadData = $this->upload->data();
+								$filename = $uploadData['file_name'];
+								$data['doc_file'] = $filename;
+							} else {
+								print_r($this->upload->display_errors());
+								exit;
+							}
+						}
+						$this->db->update('tr_pengajuan_rutin_detail', $data, array('id' => $detail_id[$x]));
+					}
+				} else {
+					if ($nilai[$x] > 0) {
+						$data =  array(
+							'no_doc' => $no_doc,
+							'id_budget' => $id_budget[$x],
+							'coa' => $coa[$x],
+							'nama' => $nama[$x],
+							'tanggal' => $tanggal[$x],
+							'budget' => $budget[$x],
+							'nilai' => $nilai[$x],
+							'keterangan' => $keterangan[$x],
+							'bank_id' => $bank_id[$x],
+							'accnumber' => $accnumber[$x],
+							'accname' => $accname[$x],
+							'metode_pembelian' => '1',
+							'created_by' => $this->auth->user_id(),
+							'created_on' => date("Y-m-d h:i:s"),
+							'modified_by' => $this->auth->user_id(),
+							'modified_on' => date("Y-m-d h:i:s"),
+						);
+						if (!empty($_FILES['doc_file_' . $idf]['name'])) {
+							$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
+							$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
+							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
+							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
+							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
+
+							$config['upload_path'] = './assets/bayar_rutin/';
+							$config['allowed_types'] = '*';
+							$config['remove_spaces'] = TRUE;
+							$config['encrypt_name'] = TRUE;
+
+							$this->upload->initialize($config);
+							if ($this->upload->do_upload('file')) {
+								$uploadData = $this->upload->data();
+								$filename = $uploadData['file_name'];
+								$data['doc_file'] = $filename;
+							} else {
+								print_r($this->upload->display_errors());
+								exit;
+							}
+						}
+						$this->db->insert('tr_pengajuan_rutin_detail', $data);
+					}
+				}
+			}
+
+			$this->db->trans_commit();
+
+			$this->output->set_status_header(200);
+			echo json_encode([
+				'save' => TRUE
+			]);
+		} catch (Exception $e) {
+			$this->db->trans_rollback();
+
+			$this->output->set_status_header(500);
+			echo json_encode([
+				'msg' => $e->getMessage()
+			]);
 		}
+
 		if ($this->db->trans_status()) {
 			$keterangan     = "SUKSES, tambah data ";
 			$status         = 1;
