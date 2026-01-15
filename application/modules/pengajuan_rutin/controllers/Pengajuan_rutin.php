@@ -326,29 +326,29 @@ class Pengajuan_rutin extends Admin_Controller
 			]);
 		}
 
-		if ($this->db->trans_status()) {
-			$keterangan     = "SUKSES, tambah data ";
-			$status         = 1;
-			$nm_hak_akses   = $this->addPermission;
-			$kode_universal = 'NewData';
-			$jumlah         = $x;
-			$sql            = $this->db->last_query();
-			$result         = TRUE;
-		} else {
-			$keterangan     = "GAGAL, tambah data ";
-			$status         = 0;
-			$nm_hak_akses   = $this->addPermission;
-			$kode_universal = 'NewData';
-			$jumlah         = $x;
-			$sql            = $this->db->last_query();
-			$result = FALSE;
-		}
-		simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
-		$this->db->trans_complete();
-		$param = array(
-			'save' => $result
-		);
-		echo json_encode($param);
+		// if ($this->db->trans_status()) {
+		// 	$keterangan     = "SUKSES, tambah data ";
+		// 	$status         = 1;
+		// 	$nm_hak_akses   = $this->addPermission;
+		// 	$kode_universal = 'NewData';
+		// 	$jumlah         = $x;
+		// 	$sql            = $this->db->last_query();
+		// 	$result         = TRUE;
+		// } else {
+		// 	$keterangan     = "GAGAL, tambah data ";
+		// 	$status         = 0;
+		// 	$nm_hak_akses   = $this->addPermission;
+		// 	$kode_universal = 'NewData';
+		// 	$jumlah         = $x;
+		// 	$sql            = $this->db->last_query();
+		// 	$result = FALSE;
+		// }
+		// simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+		// $this->db->trans_complete();
+		// $param = array(
+		// 	'save' => $result
+		// );
+		// echo json_encode($param);
 	}
 
 	function hapus_data($id)
