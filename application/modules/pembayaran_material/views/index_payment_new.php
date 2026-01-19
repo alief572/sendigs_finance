@@ -10,7 +10,6 @@
 		<ul class="nav nav-tabs" role="tablist">
 			<li role="presentation" class="active"><a href="#material" aria-controls="material" role="tab" data-toggle="tab">PR</a></li>
 			<li role="presentation"><a href="#non_material" aria-controls="non_material" role="tab" data-toggle="tab">Non PR</a></li>
-			<li role="presentation"></li>
 		</ul>
 		<div class="tab-content">
 			<div role="tabpanel" class="tab-pane active" id="material">
@@ -29,7 +28,7 @@
 						</thead>
 
 						<tbody>
-							<?php 
+							<?php
 
 							if (!empty($results)) {
 								$no = 1;
@@ -43,11 +42,11 @@
 									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
 									echo '<td class="text-center">' . $nm_supplier . '</td>';
 									echo '<td class="text-right">' . number_format($item->payment_bank, 2) . '</td>';
-									echo '<td class="text-left">'.$item->keterangan_pembayaran.'</td>';
+									echo '<td class="text-left">' . $item->keterangan_pembayaran . '</td>';
 									echo '<td>';
 									echo '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-									if(file_exists('assets/expense/'.$item->link_doc) && $item->link_doc !== '') {
-										echo '<a href="'.base_url('assets/expense/'.$item->link_doc).'" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+									if (file_exists('assets/expense/' . $item->link_doc) && $item->link_doc !== '') {
+										echo '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
 									}
 									echo '</td>';
 									echo '</tr>';
@@ -77,7 +76,7 @@
 						</thead>
 
 						<tbody>
-							<?php 
+							<?php
 
 							if (!empty($results2)) {
 								$no = 1;
@@ -88,11 +87,11 @@
 									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
 									echo '<td class="text-center">' . $item->created_by . '</td>';
 									echo '<td class="text-right">' . number_format($item->payment_bank, 2) . '</td>';
-									echo '<td class="text-left">'.$item->keterangan_pembayaran.'</td>';
+									echo '<td class="text-left">' . $item->keterangan_pembayaran . '</td>';
 									echo '<td>';
 									echo '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-									if(file_exists('assets/expense/'.$item->link_doc) && $item->link_doc !== '') {
-										echo '<a href="'.base_url('assets/expense/'.$item->link_doc).'" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+									if (file_exists('assets/expense/' . $item->link_doc) && $item->link_doc !== '') {
+										echo '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
 									}
 									echo '</tr>';
 

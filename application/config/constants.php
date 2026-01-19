@@ -90,6 +90,7 @@ define('DBACC', 'db_sendigs_gl_ss');
 define('DBACC_VUCA', 'db_sendigs_ss_vuca');
 define('DBACC_SUSTAIN', 'db_sendigs_ss_sustain');
 define('DBACC_SUST', 'db_sendigs_ss_sustain');
+define('DBACC_STM', 'db_sendigs_ss_stm');
 define('DBCNL', 'db_consultant_new');
 define('HRIS', 'hr_sentral');
 define('FILE_ALLOW', 'doc|docx|xls|xlsx|ppt|pptx|7z|zip|rar|jpeg|jpg|gif|bmp|png');
