@@ -21,14 +21,19 @@ class Plan_tagih_model extends BF_Model
         $this->consultant = $this->load->database('consultant', true);
     }
 
-    public function generate_id()
+    public function generate_id($no = null)
     {
         $Ym             = date('ym');
         $srcMtr            = "SELECT MAX(id) as maxP FROM kons_tr_plan_tagih_header WHERE id LIKE '%/" . date('y') . "%' ";
         $resultMtr        = $this->db->query($srcMtr)->result_array();
         $angkaUrut2        = $resultMtr[0]['maxP'];
-        $urutan2        = (int)substr($angkaUrut2, 0, 3);
-        $urutan2++;
+        if (!empty($no)) {
+            $urutan2        = (int)substr($angkaUrut2, 0, 3);
+            $urutan2 = ($urutan2 + $no);
+        } else {
+            $urutan2        = (int)substr($angkaUrut2, 0, 3);
+            $urutan2++;
+        }
         $urut2            = sprintf('%03s', $urutan2);
         $kode_trans        = $urut2 . '/PLN-TGH/' . int_to_roman(date('m')) . '/' . date('y');
 
