@@ -13,8 +13,8 @@ class Misc extends Admin_Controller
         parent::__construct();
 
         $this->load->model(array(
-            'Jurnal_invoicing/Jurnal_invoicing_model',
-            'Jurnal_invoicing/Jurnal_invoicing_nomor_model'
+            'Misc/Misc_model',
+            'Plan_tagih/Plan_tagih_model'
         ));
 
         $this->accounting = $this->load->database('accounting', true);
@@ -732,6 +732,155 @@ class Misc extends Admin_Controller
         } catch (Exception $e) {
             $this->db->trans_rollback();
             echo $e->getMessage();
+        }
+    }
+
+    public function upload_plan_tagih_invoice()
+    {
+        $this->template->render('upload_plan_tagih_invoice');
+    }
+
+    public function update_plan_tagih_invoice()
+    {
+        $post = $this->input->post();
+        $this->load->helper('file');
+
+        $this->db->trans_begin();
+
+        try {
+            if (!empty($_FILES['upload_csv'])) {
+                $config['upload_path']   = './uploads/csv_plan_tagih';
+                $config['allowed_types'] = '*';
+                $config['remove_spaces'] = TRUE;
+                $config['encrypt_name'] = TRUE;
+
+                $this->load->library('upload', $config);
+                $this->upload->initialize($config);
+                if ($this->upload->do_upload('upload_csv')) {
+                    $fileData = $this->upload->data();
+                    $filePath = $fileData['full_path'];
+
+                    $csvData = array_map("str_getcsv", file($filePath));
+                    // $header = array_shift($csvData); // remove and store header
+
+                    $no = 0;
+                    foreach ($csvData as $row => $item) {
+                        $no++;
+                        
+
+                        if ($no > 1) {
+                            $id_spk_penawaran = (!empty($item[3])) ? $item[3] : '';
+                            $term_payment = (!empty($item[5])) ? $item[5] : '';
+                            $persen_payment = (!empty($item[6])) ? $item[6] : 0;
+                            $nominal_payment = (!empty($item[7])) ? str_replace(',', '', $item[7]) : 0;
+                            $tgl_plan_tagih = (!empty($item[9])) ? $item[9] : '';
+                            $tanggal_actual = (!empty($item[11])) ? $item[11] : '';
+                            $tagih_mundur = (!empty($item[12])) ? $item[12] : '';
+                            $sts_invoice = (!empty($item[17])) ? $item[17] : '';
+
+                            $check_header = count($this->Misc_model->get_plan_tagih($id_spk_penawaran));
+                            print_r($check_header.'<br>');
+                            if ($check_header < 1) {
+                                $data_spk_penawaran = $this->Misc_model->get_spk_penawaran($id_spk_penawaran);
+                                $data_top = $this->Misc_model->get_top_by_spk($id_spk_penawaran, $term_payment);
+
+                                $id_penawaran = (!empty($data_spk_penawaran->id_penawaran)) ? $data_spk_penawaran->id_penawaran : '';
+                                $id_customer = (!empty($data_spk_penawaran->id_customer)) ? $data_spk_penawaran->id_customer : '';
+                                $nm_customer = (!empty($data_spk_penawaran->nm_customer)) ? $data_spk_penawaran->nm_customer : '';
+                                $id_project = (!empty($data_spk_penawaran->id_project)) ? $data_spk_penawaran->id_project : '';
+                                $nm_project = (!empty($data_spk_penawaran->nm_paket)) ? $data_spk_penawaran->nm_paket : '';
+                                $id_project_leader = (!empty($data_spk_penawaran->id_project_leader)) ? $data_spk_penawaran->id_project_leader : '';
+                                $nm_project_leader = (!empty($data_spk_penawaran->nm_project_leader)) ? $data_spk_penawaran->nm_project_leader : '';
+                                $nilai_kontrak = (!empty($data_spk_penawaran->nilai_kontrak)) ? $data_spk_penawaran->nilai_kontrak : 0;
+
+                                $id_header = $this->Plan_tagih_model->generate_id($no);
+                                $arr_insert_plan_tagih_header = [
+                                    'id' => $id_header,
+                                    'id_spk_penawaran' => $id_spk_penawaran,
+                                    'id_penawaran' => $id_penawaran,
+                                    'id_customer' => $id_customer,
+                                    'nm_customer' => $nm_customer,
+                                    'id_project' => $id_project,
+                                    'nm_project' => $nm_project,
+                                    'id_project_leader' => $id_project_leader,
+                                    'nm_project_leader' => $nm_project_leader,
+                                    'nilai_bersih_project' => $nilai_kontrak,
+                                    'keterangan_penagihan' => '',
+                                    'created_by' => $this->auth->user_id(),
+                                    'created_date' => date('Y-m-d H:i:s')
+                                ];
+
+                                $this->db->insert('kons_tr_plan_tagih_header', $arr_insert_plan_tagih_header);
+
+                                $id_top = (!empty($data_top->id)) ? $data_top->id : '';
+                                $desc_payment = (!empty($data_top->desc_payment)) ? $data_top->desc_payment : '';
+
+                                $arr_insert_plan_tagih_detail = [
+                                    'id_header' => $id_header,
+                                    'id_spk_penawaran' => $id_spk_penawaran,
+                                    'id_penawaran' => $id_penawaran,
+                                    'id_top' => $id_top,
+                                    'term_payment' => $term_payment,
+                                    'persen_payment' => $persen_payment,
+                                    'nominal_payment' => $nominal_payment,
+                                    'desc_payment' => $desc_payment,
+                                    'tgl_plan_tagih' => $tgl_plan_tagih,
+                                    'urutan' => str_replace('Penagihan ', '', $term_payment),
+                                    'created_by' => $this->auth->user_id(),
+                                    'created_date' => date('Y-m-d H:i:s')
+                                ];
+
+                                $this->db->insert('kons_tr_plan_tagih_detail', $arr_insert_plan_tagih_detail);
+                            } else {
+                                $check_plan_tagih_detail = count($this->Misc_model->get_plan_tagih_detail($id_spk_penawaran, $term_payment));
+                                if ($check_plan_tagih_detail < 1) {
+                                    $data_plan_tagih_header = $this->Misc_model->get_plan_tagih($id_spk_penawaran);
+                                    $data_top = $this->Misc_model->get_top_by_spk($id_spk_penawaran, $term_payment);
+
+                                    $id_header = (!empty($data_plan_tagih_header[0]->id)) ? $data_plan_tagih_header[0]->id : '';
+                                    $id_spk_penawaran = (!empty($data_plan_tagih_header[0]->id_spk_penawaran)) ? $data_plan_tagih_header[0]->id_spk_penawaran : '';
+                                    $id_penawaran = (!empty($data_plan_tagih_header[0]->id_penawaran)) ? $data_plan_tagih_header[0]->id_penawaran : '';
+
+                                    $id_top = (!empty($data_top->id)) ? $data_top->id : '';
+                                    $desc_payment = (!empty($data_top->desc_payment)) ? $data_top->desc_payment : '';
+
+                                    $arr_insert_plan_tagih_detail = [
+                                        'id_header' => $id_header,
+                                        'id_spk_penawaran' => $id_spk_penawaran,
+                                        'id_penawaran' => $id_penawaran,
+                                        'id_top' => $id_top,
+                                        'term_payment' => $term_payment,
+                                        'persen_payment' => $persen_payment,
+                                        'nominal_payment' => $nominal_payment,
+                                        'desc_payment' => $desc_payment,
+                                        'tgl_plan_tagih' => $tgl_plan_tagih,
+                                        'urutan' => str_replace('Penagihan ', '', $term_payment),
+                                        'created_by' => $this->auth->user_id(),
+                                        'created_date' => date('Y-m-d H:i:s')
+                                    ];
+
+                                    $this->db->insert('kons_tr_plan_tagih_detail', $arr_insert_plan_tagih_detail);
+                                }
+                            }
+                        }
+                    }
+                    exit;
+                }
+
+                $this->db->trans_commit();
+
+                $this->output->set_status_header(200);
+                echo json_encode([
+                    'msg' => 'Berhasil !'
+                ]);
+            }
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $this->output->set_status_header(500);
+
+            echo json_encode([
+                'msg' => $e->getMessage()
+            ]);
         }
     }
 }
