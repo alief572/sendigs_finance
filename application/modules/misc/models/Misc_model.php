@@ -37,13 +37,25 @@ class Misc_model extends BF_Model
 
         return $get_data;
     }
-
+    
     public function get_top_by_spk($id_spk_penawaran, $term_payment) {
         $this->consultant->select('a.*');
         $this->consultant->from('kons_tr_spk_penawaran_payment a');
         $this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
         $this->consultant->where('a.term_payment', $term_payment);
         $get_data = $this->consultant->get()->row();
+
+        return $get_data;
+    }
+
+    public function get_actual_by_spk($id_spk_penawaran, $term_payment) {
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+        $this->db->where('a.term_payment', $term_payment);
+        $this->db->order_by('a.created_date', 'desc');
+        $this->db->limit(1);
+        $get_data = $this->db->get()->row();
 
         return $get_data;
     }

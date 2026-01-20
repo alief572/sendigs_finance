@@ -14,7 +14,8 @@ class Misc extends Admin_Controller
 
         $this->load->model(array(
             'Misc/Misc_model',
-            'Plan_tagih/Plan_tagih_model'
+            'Plan_tagih/Plan_tagih_model',
+            'Actual_plan_tagih/Actual_plan_tagih_model'
         ));
 
         $this->accounting = $this->load->database('accounting', true);
@@ -766,7 +767,7 @@ class Misc extends Admin_Controller
                     $no = 0;
                     foreach ($csvData as $row => $item) {
                         $no++;
-                        
+
 
                         if ($no > 1) {
                             $id_spk_penawaran = (!empty($item[3])) ? $item[3] : '';
@@ -823,7 +824,7 @@ class Misc extends Admin_Controller
                                     'persen_payment' => $persen_payment,
                                     'nominal_payment' => $nominal_payment,
                                     'desc_payment' => $desc_payment,
-                                    'tgl_plan_tagih' => $tgl_plan_tagih,
+                                    'tgl_plan_tagih' => date('Y-m-d', strtotime($tgl_plan_tagih)),
                                     'urutan' => str_replace('Penagihan ', '', $term_payment),
                                     'created_by' => $this->auth->user_id(),
                                     'created_date' => date('Y-m-d H:i:s')
@@ -852,7 +853,7 @@ class Misc extends Admin_Controller
                                         'persen_payment' => $persen_payment,
                                         'nominal_payment' => $nominal_payment,
                                         'desc_payment' => $desc_payment,
-                                        'tgl_plan_tagih' => $tgl_plan_tagih,
+                                        'tgl_plan_tagih' => date('Y-m-d', strtotime($tgl_plan_tagih)),
                                         'urutan' => str_replace('Penagihan ', '', $term_payment),
                                         'created_by' => $this->auth->user_id(),
                                         'created_date' => date('Y-m-d H:i:s')
@@ -860,6 +861,61 @@ class Misc extends Admin_Controller
 
                                     $this->db->insert('kons_tr_plan_tagih_detail', $arr_insert_plan_tagih_detail);
                                 }
+                            }
+
+                            $data_actual_plan_tagih = $this->Misc_model->get_actual_by_spk($id_spk_penawaran, $term_payment);
+                            $data_spk_penawaran = $this->Misc_model->get_spk_penawaran($id_spk_penawaran);
+                            $data_top = $this->Misc_model->get_top_by_spk($id_spk_penawaran, $term_payment);
+
+                            $id_penawaran = (!empty($data_spk_penawaran->id_penawaran)) ? $data_spk_penawaran->id_penawaran : '';
+                            $id_top = (!empty($data_top->id)) ? $data_top->id : '';
+
+                            if (!empty($data_actual_plan_tagih)) {
+                                if ($data_actual_plan_tagih->tagih_mundur !== '1') {
+                                    $id_actual = $this->Actual_plan_tagih_model->generate_id($no);
+                                    $arr_insert_actual = [
+                                        'id' => $id_actual,
+                                        'id_detail_plan_tagih' => 'manual',
+                                        'id_top' => $id_top,
+                                        'id_spk_penawaran' => $id_spk_penawaran,
+                                        'id_penawaran' => $id_penawaran,
+                                        'term_payment' => $term_payment,
+                                        'persen_payment' => $persen_payment,
+                                        'nominal_payment' => $nominal_payment,
+                                        'desc_payment' => 'manual',
+                                        'tgl_plan_tagih' => date('Y-m-d', strtotime($tgl_plan_tagih)),
+                                        'urutan' => str_replace('Penagihan ', '', $term_payment),
+                                        'tanggal_actual_plan_tagih' => date('Y-m-d', strtotime($tanggal_actual)),
+                                        'tagih_mundur' => $tagih_mundur,
+                                        'sts_invoice' => $sts_invoice,
+                                        'created_by' => $this->auth->user_id(),
+                                        'created_date' => date('Y-m-d H:i:s')
+                                    ];
+
+                                    $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert_actual);
+                                }
+                            } else {
+                                $id_actual = $this->Actual_plan_tagih_model->generate_id($no);
+                                $arr_insert_actual = [
+                                    'id' => $id_actual,
+                                    'id_detail_plan_tagih' => 'manual',
+                                    'id_top' => $id_top,
+                                    'id_spk_penawaran' => $id_spk_penawaran,
+                                    'id_penawaran' => $id_penawaran,
+                                    'term_payment' => $term_payment,
+                                    'persen_payment' => $persen_payment,
+                                    'nominal_payment' => $nominal_payment,
+                                    'desc_payment' => 'manual',
+                                    'tgl_plan_tagih' => date('Y-m-d H:i:s', strtotime($tgl_plan_tagih)),
+                                    'urutan' => str_replace('Penagihan ', '', $term_payment),
+                                    'tanggal_actual_plan_tagih' => date('Y-m-d', strtotime($tanggal_actual)),
+                                    'tagih_mundur' => $tagih_mundur,
+                                    'sts_invoice' => $sts_invoice,
+                                    'created_by' => $this->auth->user_id(),
+                                    'created_date' => date('Y-m-d H:i:s')
+                                ];
+
+                                $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert_actual);
                             }
                         }
                     }
@@ -879,6 +935,42 @@ class Misc extends Admin_Controller
             echo json_encode([
                 'msg' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function update_manual_actual_plan_tagih()
+    {
+        $this->db->trans_begin();
+        try {
+            $this->db->select('a.*');
+            $this->db->from('kons_tr_actual_plan_tagih a');
+            $this->db->where('a.id_detail_plan_tagih', 'manual');
+            $this->db->where('a.id_top <>', '');
+            $get_actual_plan_tagih = $this->db->get()->result();
+
+            $arr_update = [];
+
+            foreach ($get_actual_plan_tagih as $item_actual_plan_tagih) {
+                $this->db->select('a.id');
+                $this->db->from('kons_tr_plan_tagih_detail a');
+                $this->db->where('a.id_top', $item_actual_plan_tagih->id_top);
+                $get_top = $this->db->get()->row();
+
+                $arr_update[] = [
+                    'id' => $item_actual_plan_tagih->id,
+                    'id_detail_plan_tagih' => $get_top->id
+                ];
+            }
+
+            $this->db->update_batch('kons_tr_actual_plan_tagih', $arr_update, 'id');
+
+            $this->db->trans_commit();
+
+            echo 'Berhasil !';
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+
+            echo $e->getMessage();
         }
     }
 }
