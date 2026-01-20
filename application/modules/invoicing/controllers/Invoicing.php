@@ -43,11 +43,14 @@ class Invoicing extends Admin_Controller
 
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
         $this->db->from('kons_tr_actual_plan_tagih a');
-        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
         $this->db->where('a.id', $id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
+
+        $id_company = (!empty($get_actual_plan_tagih->id_company)) ? $get_actual_plan_tagih->id_company : '1';
+        $nm_company = (!empty($get_actual_plan_tagih->nm_company)) ? $get_actual_plan_tagih->nm_company : 'STM-Vuca'; 
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
@@ -112,9 +115,9 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
-            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
-            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= $nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $nm_company . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
