@@ -780,6 +780,7 @@ class Misc extends Admin_Controller
                             $sts_invoice = (!empty($item[17])) ? $item[17] : '';
 
                             $check_header = count($this->Misc_model->get_plan_tagih($id_spk_penawaran));
+                            // print_r($check_header.'<br>');
                             if ($check_header < 1) {
                                 $data_spk_penawaran = $this->Misc_model->get_spk_penawaran($id_spk_penawaran);
                                 $data_top = $this->Misc_model->get_top_by_spk($id_spk_penawaran, $term_payment);
@@ -919,6 +920,7 @@ class Misc extends Admin_Controller
                             }
                         }
                     }
+                    // exit;
                 }
 
                 $this->db->trans_commit();
@@ -941,6 +943,7 @@ class Misc extends Admin_Controller
     public function update_manual_actual_plan_tagih()
     {
         $this->db->trans_begin();
+
         try {
             $this->db->select('a.*');
             $this->db->from('kons_tr_actual_plan_tagih a');
