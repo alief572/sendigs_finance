@@ -25,9 +25,17 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
         foreach ($list_data as $item) {
             $no++;
 
-            $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $item['id_spk_penawaran']])->row_array();
+            // $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $item['id_spk_penawaran']])->row_array();
+
+            $this->db->select('a.*');
+            $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
+            $this->db->like('a.id_spk_penawaran', $item['id_spk_penawaran']);
+            $get_spk_penawaran = $this->db->get()->row_array();
 
             $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran['nm_sales'] : '';
+
+            $nm_customer = $get_spk_penawaran->nm_customer ?? '';
+            $nm_project_leader = $get_spk_penawaran->nm_project_leader ?? '';
 
             $nm_company = '';
             if (!empty($get_spk_penawaran)) {
@@ -52,7 +60,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             $this->db->select('b.nm_paket');
             $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
             $this->db->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-            $this->db->where('a.id_spk_penawaran', $item['id_spk_penawaran']);
+            $this->db->like('a.id_spk_penawaran', $item['id_spk_penawaran'], 'both');
             $get_spk = $this->db->get()->row_array();
 
             $nm_paket = (!empty($get_spk)) ? $get_spk['nm_paket'] : '';
@@ -77,9 +85,9 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             echo '<td style="text-align: center;">' . $no . '</td>';
             echo '<td>' . $nm_company . '</td>';
             echo '<td>' . $item['id_spk_penawaran'] . '</td>';
-            echo '<td>' . $item['nm_customer'] . '</td>';
+            echo '<td>' . $nm_customer . '</td>';
             echo '<td>' . $nm_project . '</td>';
-            echo '<td>' . $item['nm_project_leader'] . '</td>';
+            echo '<td>' . $nm_project_leader . '</td>';
             echo '<td>' . $nm_sales . '</td>';
             echo '<td>' . $item['desc_payment'] . '</td>';
             echo '<td>' . $status . '</td>';
