@@ -29,7 +29,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
 
             $this->db->select('a.*');
             $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
-            $this->db->like('a.id_spk_penawaran', $item['id_spk_penawaran']);
+            $this->db->like('a.id_spk_penawaran', $item['id_spk_penawaran'], 'both');
             $get_spk_penawaran = $this->db->get()->row_array();
 
             $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran['nm_sales'] : '';
