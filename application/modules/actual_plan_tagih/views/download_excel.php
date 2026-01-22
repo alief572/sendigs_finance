@@ -37,7 +37,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             $nm_customer = $get_spk_penawaran['nm_customer'] ?? '';
             $nm_project_leader = $get_spk_penawaran['nm_project_leader'] ?? '';
 
-            $nm_company = $get_spk_penawaran->nm_company;
+            $nm_company = $get_spk_penawaran['nm_company'];
             if (!empty($get_spk_penawaran) && !empty($item['id_penawaran'])) {
                 $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $item['id_penawaran']])->row_array();
                 $get_company = $this->db->get_where(DBCNL . '.kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
