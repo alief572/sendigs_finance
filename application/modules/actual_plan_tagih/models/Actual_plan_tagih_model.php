@@ -262,7 +262,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $this->consultant->select('b.nm_paket');
                 $this->consultant->from('kons_tr_spk_penawaran a');
                 $this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-                $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                $this->consultant->like('a.id_spk_penawaran', $item->id_spk_penawaran, 'both');
                 $get_spk = $this->consultant->get()->row();
 
                 $nm_paket = (!empty($get_spk)) ? $get_spk->nm_paket : '';
