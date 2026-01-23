@@ -183,11 +183,20 @@ class Actual_plan_tagih_model extends BF_Model
             if ($no_check < 1) {
                 $no++;
 
-                $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $item->id_spk_penawaran])->row();
+                // $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $item->id_spk_penawaran])->row();
+
+                $this->consultant->select('a.*');
+                $this->consultant->from('kons_tr_spk_penawaran a');
+                $this->consultant->like('a.id_spk_penawaran', $item->id_spk_penawaran);
+                $get_spk_penawaran = $this->consultant->get()->row();
+
                 $nm_sales = (!empty($get_spk_penawaran)) ? $get_spk_penawaran->nm_sales : '';
 
-                $nm_company = '';
-                if (!empty($get_spk_penawaran)) {
+                $nm_customer = $get_spk_penawaran->nm_customer ?? '';
+                $nm_project_leader = $get_spk_penawaran->nm_project_leader ?? '';
+
+                $nm_company = $get_spk_penawaran->nm_company;
+                if (!empty($get_spk_penawaran) && !empty($item->id_penawaran)) {
                     $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
                     if (!empty($get_penawaran)) {
                         $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
@@ -253,7 +262,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $this->consultant->select('b.nm_paket');
                 $this->consultant->from('kons_tr_spk_penawaran a');
                 $this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-                $this->consultant->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                $this->consultant->like('a.id_spk_penawaran', $item->id_spk_penawaran, 'both');
                 $get_spk = $this->consultant->get()->row();
 
                 $nm_paket = (!empty($get_spk)) ? $get_spk->nm_paket : '';
@@ -264,9 +273,9 @@ class Actual_plan_tagih_model extends BF_Model
                     'no' => $no,
                     'company' => $nm_company,
                     'no_spk' => $item->id_spk_penawaran,
-                    'customer' => $item->nm_customer,
+                    'customer' => $nm_customer,
                     'project' => $nm_project,
-                    'project_leader' => $item->nm_project_leader,
+                    'project_leader' => $nm_project_leader,
                     'sales' => $nm_sales,
                     'keterangan' => $item->desc_payment,
                     'status' => $status,

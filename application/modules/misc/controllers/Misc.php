@@ -943,6 +943,7 @@ class Misc extends Admin_Controller
     public function update_manual_actual_plan_tagih()
     {
         $this->db->trans_begin();
+
         try {
             $this->db->select('a.*');
             $this->db->from('kons_tr_actual_plan_tagih a');

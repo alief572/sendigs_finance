@@ -29,10 +29,4 @@ application/config/config.php
 application/config/constants.php
 
 assets/pdf/manual-book.pdf
-<<<<<<< HEAD
-assets/expense/*
-assets/bayar_rutin/*
-uploads/*
-=======
 uploads/csv_plan_tagih
->>>>>>> 58d3ced (Update - Misc)
