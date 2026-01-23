@@ -58,6 +58,7 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
@@ -90,7 +91,9 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
+            $this->db->or_like('c.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
+            $this->db->or_like('c.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
             $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
@@ -108,6 +111,7 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header');
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
             $this->db->where('d.tagih_mundur', '3');
@@ -139,7 +143,9 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
             $this->db->or_like('b.nm_customer', $search['value'], 'both');
+            $this->db->or_like('c.nm_customer', $search['value'], 'both');
             $this->db->or_like('b.nm_project', $search['value'], 'both');
+            $this->db->or_like('c.nm_project', $search['value'], 'both');
             $this->db->or_like('b.nm_project_leader', $search['value'], 'both');
             $this->db->or_like('a.desc_payment', $search['value'], 'both');
             $this->db->group_end();
