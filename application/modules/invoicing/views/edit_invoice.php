@@ -38,7 +38,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <th width="13%">Ditujukan</th>
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
-	                <td width="12%">
+                        <td width="12%">
                             <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_po ?>">
                         </td>
                     </tr>
@@ -162,17 +162,18 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
-        swal({
-            type: 'warning',
+        Swal.fire({
+            icon: 'warning',
             title: 'Warning !',
             text: 'This data will be updated !',
             showCancelButton: true
-        }, function(next) {
-            if (next) {
+        }).then((next) => {
+            if (next.isConfirmed) {
                 var formData = $('#frm-data').serialize();
 
                 $.ajax({
@@ -183,24 +184,24 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                     cache: false,
                     success: function(result) {
                         if (result.status == 1) {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg
-                            }, function(lanjut) {
-                                window.location.href = siteurl + active_controller;
+                            }).then(() => {
+                                window.location.href = siteurl + 'invoicing';
                             });
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Failed !',
                                 text: result.msg
                             });
                         }
                     },
                     error: function(result) {
-                        swal({
-                            type: 'error',
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
                             text: 'Please try again later !'
                         });

@@ -3336,9 +3336,9 @@ class Expense extends Admin_Controller
 		$this->db->where('a.status', '0');
 		$this->db->where('a.sts_finance', '0');
 
-		if ($this->auth->user_id() !== '7') {
-			$this->db->where('a.created_by', $this->auth->user_name());
-		}
+		// if ($this->auth->user_id() !== '7') {
+		// 	$this->db->where('a.created_by', $this->auth->user_name());
+		// }
 
 		$count_all = $this->db->count_all_results('', false);
 
@@ -3486,9 +3486,9 @@ class Expense extends Admin_Controller
 		$this->db->where('a.status', '0');
 		$this->db->where('a.sts_finance', '1');
 
-		if ($this->auth->user_id() !== '7') {
-			$this->db->where('a.created_by', $this->auth->user_name());
-		}
+		// if ($this->auth->user_id() !== '7') {
+		// 	$this->db->where('a.created_by', $this->auth->user_name());
+		// }
 
 		$count_all = $this->db->count_all_results('', false);
 

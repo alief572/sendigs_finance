@@ -976,4 +976,83 @@ class Misc extends Admin_Controller
             echo $e->getMessage();
         }
     }
+
+    public function upload_perbaikan_actual_plan_tagih()
+    {
+        $this->template->render('upload_perbaikan_actual_plan_tagih');
+    }
+
+    public function update_perbaikan_actual_plan_tagih()
+    {
+        $post = $this->input->post();
+        $this->load->helper('file');
+
+        $this->db->trans_begin();
+
+        try {
+            if (!empty($_FILES['upload_csv'])) {
+                $config['upload_path']   = './uploads/csv_plan_tagih';
+                $config['allowed_types'] = '*';
+                $config['remove_spaces'] = TRUE;
+                $config['encrypt_name'] = TRUE;
+
+                $this->load->library('upload', $config);
+                $this->upload->initialize($config);
+
+                $arr_update = [];
+                if ($this->upload->do_upload('upload_csv')) {
+                    $fileData = $this->upload->data();
+                    $filePath = $fileData['full_path'];
+
+                    $csvData = array_map("str_getcsv", file($filePath));
+                    // $header = array_shift($csvData); // remove and store header
+
+
+                    $no = 0;
+                    foreach ($csvData as $row => $item) {
+                        $no++;
+
+
+                        if ($no > 1) {
+                            $id_spk_penawaran = (!empty($item[3])) ? $item[3] : '';
+                            $term_payment = (!empty($item[6])) ? $item[6] : '';
+                            $persen_payment = (!empty($item[7])) ? str_replace('%', '', $item[7]) : 0;
+                            $nominal_payment = (!empty($item[8])) ? str_replace(',', '', $item[8]) : 0;
+                            $tgl_plan_tagih = (!empty($item[10])) ? str_replace('/', '-', $item[10]) : '';
+                            $tanggal_actual = (!empty($item[12])) ? str_replace('/', '-', $item[12]) : '';
+                            $tagih_mundur = (!empty($item[12])) ? $item[12] : '';
+                            $sts_invoice = (!empty($item[17])) ? $item[17] : '';
+
+                            $get_actual_plan_tagih_last = $this->Misc_model->get_actual_plan_tagih_last($id_spk_penawaran, $term_payment);
+                            if ($id_spk_penawaran == '142/STM/MKT-SPK/XI/24') {
+                            }
+                            if (!empty($get_actual_plan_tagih_last)) {
+                                $arr_update = [
+                                    'tgl_plan_tagih' => $tgl_plan_tagih,
+                                    'tanggal_actual_plan_tagih' => $tanggal_actual
+                                ];
+
+                                $this->db->update('kons_tr_actual_plan_tagih', $arr_update, array('id' => $get_actual_plan_tagih_last->id));
+                            }
+                        }
+                    }
+                    // exit;
+                }
+
+                $this->db->trans_commit();
+
+                $this->output->set_status_header(200);
+                echo json_encode([
+                    'msg' => 'Berhasil !'
+                ]);
+            }
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $this->output->set_status_header(500);
+
+            echo json_encode([
+                'msg' => $e->getMessage()
+            ]);
+        }
+    }
 }
