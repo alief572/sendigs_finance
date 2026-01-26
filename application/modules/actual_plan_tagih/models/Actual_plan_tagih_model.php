@@ -201,7 +201,7 @@ class Actual_plan_tagih_model extends BF_Model
                 $nm_customer = $get_spk_penawaran->nm_customer ?? '';
                 $nm_project_leader = $get_spk_penawaran->nm_project_leader ?? '';
 
-                $nm_company = $get_spk_penawaran->nm_company;
+                $nm_company = $get_spk_penawaran->nm_company ?? '';
                 if (!empty($get_spk_penawaran) && !empty($item->id_penawaran)) {
                     $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $item->id_penawaran])->row();
                     if (!empty($get_penawaran)) {
