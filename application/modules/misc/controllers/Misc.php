@@ -994,7 +994,7 @@ class Misc extends Admin_Controller
             }
 
             // 2. Konfigurasi Upload
-            $config['upload_path']   = './uploads/csv_upload_plan_tagih';
+            $config['upload_path']   = './uploads/csv_plan_tagih';
             $config['allowed_types'] = 'csv|txt'; // Lebih spesifik lebih aman
             $config['remove_spaces'] = TRUE;
             $config['encrypt_name']  = TRUE;
