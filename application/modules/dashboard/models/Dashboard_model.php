@@ -147,6 +147,39 @@ class Dashboard_model extends BF_Model
         $get_ttl_app_dept = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
+        $this->db->from('rutin_non_planning_header a');
+        $this->db->join('rutin_non_planning_detail b', 'b.no_pengajuan = a.no_pengajuan');
+        $this->db->where('a.status_id', 1);
+        $this->db->where('a.no_pr', null);
+        $this->db->where('a.app_1_by', null);
+        $this->db->where('a.app_2_by', null);
+        $this->db->where('a.close_pr', null);
+        $this->db->group_by('a.id');
+        $get_ttl_app_dept_finance = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
+        $this->db->from('rutin_non_planning_header a');
+        $this->db->join('rutin_non_planning_detail b', 'b.no_pengajuan = a.no_pengajuan');
+        $this->db->where('a.status_id', 1);
+        $this->db->where('a.no_pr', null);
+        $this->db->where('a.app_1_by <>', null);
+        $this->db->where('a.app_2_by <>', null);
+        $this->db->where('a.close_pr', null);
+        $this->db->where('a.sts_app', 'N');
+        $this->db->group_by('a.id');
+        $get_ttl_app_dept_management = $this->db->get()->num_rows();
+
+        // $this->db->select('a.no_pengajuan');
+        // $this->db->from('rutin_non_planning_header a');
+        // $this->db->join('rutin_non_planning_detail b', 'b.no_pengajuan = a.no_pengajuan');
+        // $this->db->where('a.status_id', 1);
+        // $this->db->where('a.no_pr', null);
+        // $this->db->where('a.sts_reject3', null);
+        // $this->db->where('a.close_pr', null);
+        // $this->db->group_by('a.no_pengajuan');
+        // $get_ttl_app_dept = $this->db->get()->num_rows();
+
+        $this->db->select('a.so_number');
         $this->db->from('material_planning_base_on_produksi a');
         $this->db->join('material_planning_base_on_produksi_detail b', 'b.so_number = a.so_number');
         $this->db->where('a.category', 'pr stok');
@@ -155,6 +188,9 @@ class Dashboard_model extends BF_Model
         $this->db->where('a.close_pr', null);
         $this->db->group_by('a.so_number');
         $get_ttl_app_stok = $this->db->get()->num_rows();
+
+        // print_r($this->db->last_query());
+        // exit;
 
         $this->db->select('a.id');
         $this->db->from('tran_pr_detail a');
@@ -174,9 +210,39 @@ class Dashboard_model extends BF_Model
         $get_ttl_app_kasbon = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
+        $this->db->from('tr_kasbon a');
+        $this->db->where('a.status', 0);
+        $this->db->where('a.sts_finance', 0);
+        $get_ttl_app_kasbon_finance = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
+        $this->db->from('tr_kasbon a');
+        $this->db->where('a.status', 0);
+        $this->db->where('a.sts_finance', 1);
+        $get_ttl_app_kasbon_management = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
         $this->db->from('tr_expense a');
         $this->db->where('a.status', 0);
         $get_ttl_app_expense = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
+        $this->db->from('tr_expense a');
+        $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc');
+        $this->db->where('a.status', 0);
+        $this->db->where('a.sts_finance', 0);
+        $this->db->where('b.id_kasbon', null);
+        $this->db->group_by('a.id');
+        $get_ttl_app_expense_finance = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
+        $this->db->from('tr_expense a');
+        $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc');
+        $this->db->where('a.status', 0);
+        $this->db->where('a.sts_finance', 1);
+        $this->db->where('b.id_kasbon', null);
+        $this->db->group_by('a.id');
+        $get_ttl_app_expense_management = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
         $this->db->from('tr_pengajuan_rutin a');
@@ -188,12 +254,15 @@ class Dashboard_model extends BF_Model
         // exit;
 
         $response = [
-            'ttl_app_pr_dept' => $get_ttl_app_dept,
+            'ttl_app_pr_dept_finance' => $get_ttl_app_dept_finance,
+            'ttl_app_pr_dept_management' => $get_ttl_app_dept_management,
             'ttl_app_pr_stok' => $get_ttl_app_stok,
             'ttl_app_pr_asset' => $get_ttl_app_asset,
             'ttl_app_transport' => $get_ttl_app_transport,
-            'ttl_app_kasbon' => $get_ttl_app_kasbon,
-            'ttl_app_expense' => $get_ttl_app_expense,
+            'ttl_app_kasbon_finance' => $get_ttl_app_kasbon_finance,
+            'ttl_app_kasbon_management' => $get_ttl_app_kasbon_management,
+            'ttl_app_expense_finance' => $get_ttl_app_expense_finance,
+            'ttl_app_expense_management' => $get_ttl_app_expense_management,
             'ttl_app_periodik' => $get_ttl_app_periodik
         ];
 
