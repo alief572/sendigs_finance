@@ -201,24 +201,24 @@ class Dashboard_model extends BF_Model
 
         $this->db->select('a.id');
         $this->db->from('tr_transport_req a');
-        $this->db->where('a.status', 0);
+        $this->db->where('a.status', '0');
         $get_ttl_app_transport = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
         $this->db->from('tr_kasbon a');
-        $this->db->where('a.status', 0);
+        $this->db->where('a.status', '0');
         $get_ttl_app_kasbon = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
         $this->db->from('tr_kasbon a');
-        $this->db->where('a.status', 0);
-        $this->db->where('a.sts_finance', 0);
+        $this->db->where('a.status', '0');
+        $this->db->where('a.sts_finance', '0');
         $get_ttl_app_kasbon_finance = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
         $this->db->from('tr_kasbon a');
-        $this->db->where('a.status', 0);
-        $this->db->where('a.sts_finance', 1);
+        $this->db->where('a.status', '0');
+        $this->db->where('a.sts_finance', '1');
         $get_ttl_app_kasbon_management = $this->db->get()->num_rows();
 
         $this->db->select('a.id');
