@@ -64,6 +64,10 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_top = a.id_top', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
+        $this->db->group_start();
+        $this->db->where('d.tagih_mundur <>', '2');
+        $this->db->or_where('d.tagih_mundur', null);
+        $this->db->group_end();
 
         // --- LOGIKA FILTER FIX ---
         if ($bulan == 'macet') {
