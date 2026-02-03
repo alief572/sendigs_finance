@@ -17,6 +17,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             <th style="text-align: center;">Status</th>
             <th style="text-align: center;">Bulan Tagih</th>
             <th style="text-align: center;">Tahun Tagih</th>
+            <th style="text-align: center;">Nominal</th>
         </tr>
     </thead>
     <tbody>
@@ -81,6 +82,13 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
                 $tahun_tagih = date('Y', strtotime($get_actual_plan_tagih['tanggal_actual_plan_tagih']));
             }
 
+            $this->db->select('a.nominal_payment');
+            $this->db->from(DBCNL . '.kons_tr_spk_penawaran_payment a');
+            $this->db->where('a.id', $item['id_top']);
+            $get_top = $this->db->get()->row();
+
+            $nilai_top = (!empty($get_top->nominal_payment)) ? $get_top->nominal_payment : 0;
+
             echo '<tr>';
             echo '<td style="text-align: center;">' . $no . '</td>';
             echo '<td>' . $nm_company . '</td>';
@@ -93,6 +101,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             echo '<td>' . $status . '</td>';
             echo '<td>' . $bulan_tagih . '</td>';
             echo '<td>' . $tahun_tagih . '</td>';
+            echo '<td>' . number_format($nilai_top) . '</td>';
             echo '</tr>';
         }
         ?>
