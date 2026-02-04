@@ -35,6 +35,11 @@ class Expense extends Admin_Controller
 	protected $managePermissionKasbonApp = 'Kasbon_Approval.Manage';
 	protected $deletePermissionKasbonApp = 'Kasbon_Approval.Delete';
 
+	protected $viewPermissionKasbonAppMan 	= 'Approval Kasbon Management.View';
+	protected $addPermissionKasbonAppMan  	= 'Approval Kasbon Management.Add';
+	protected $managePermissionKasbonAppMan = 'Approval Kasbon Management.Manage';
+	protected $deletePermissionKasbonAppMan = 'Approval Kasbon Management.Delete';
+
 	protected $status;
 
 	public function __construct()
@@ -3551,13 +3556,13 @@ class Expense extends Admin_Controller
 
 			$action = '';
 
-			if (has_permission($this->viewPermissionKasbonApp)) {
+			if (has_permission($this->viewPermissionKasbonAppMan)) {
 				$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url("expense/kasbon_print" . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
 
 				$action .= ' <a class="btn btn-warning btn-sm view" href="' . base_url('expense/kasbon_view/' . $item['id'] . '/_fin') . '" title="View"><i class="fa fa-eye"></i> </a>';
 			}
 
-			if (has_permission($this->managePermissionKasbonApp)) {
+			if (has_permission($this->managePermissionKasbonAppMan)) {
 				if ($item['status'] == 0) {
 					$action .= ' <a class="btn btn-success btn-sm approve" href="' . base_url('expense/kasbon_edit_manage/' . $item['id'] . '/_fin') . '" title="Approve"><i class="fa fa-check-square-o"></i></a>';
 				}
