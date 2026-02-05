@@ -61,7 +61,7 @@ class Actual_plan_tagih_model extends BF_Model
         ELSE d.tanggal_actual_plan_tagih 
     END)";
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.tanggal_actual_plan_tagih, d.created_date as created_actual, d.tagih_mundur as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.tanggal_actual_plan_tagih, d.created_date as created_actual, d.tagih_mundur as status_tagih_mundur, d.macet, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
 
@@ -69,9 +69,11 @@ class Actual_plan_tagih_model extends BF_Model
          * SUBQUERY: Mencari record TERAKHIR (ID terbesar) untuk setiap detail plan.
          * Ini memastikan kita cuma membandingkan data dengan status/tanggal paling update.
          */
-        $this->db->join('(SELECT t1.* FROM kons_tr_actual_plan_tagih t1 
-                      INNER JOIN (SELECT MAX(id) as max_id FROM kons_tr_actual_plan_tagih GROUP BY id_detail_plan_tagih) t2 
-                      ON t1.id = t2.max_id) d', 'd.id_detail_plan_tagih = a.id', 'left');
+        // $this->db->join('(SELECT t1.* FROM kons_tr_actual_plan_tagih t1 
+        //               INNER JOIN (SELECT MAX(created_date) as max_id FROM kons_tr_actual_plan_tagih GROUP BY id_detail_plan_tagih) t2 
+        //               ON t1.id = t2.max_id) d', 'd.id_detail_plan_tagih = a.id', 'left');
+
+        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id = (SELECT dd.id FROM kons_tr_actual_plan_tagih dd WHERE dd.id_detail_plan_tagih = a.id ORDER BY dd.created_date DESC LIMIT 1)', 'left', FALSE);
 
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
@@ -79,11 +81,17 @@ class Actual_plan_tagih_model extends BF_Model
         // --- LOGIKA FILTER UTAMA ---
         if ($bulan == 'macet') {
             $this->db->where('d.id IS NOT NULL');
-            $this->db->where('d.tagih_mundur', '3');
+            $this->db->group_start();
+            $this->db->where('d.macet', '1');
+            $this->db->or_where('d.tagih_mundur', '3');
+            $this->db->group_end();
         } else {
             // 1. Filter agar Effective Date sesuai dengan Bulan & Tahun yang dipilih
             $this->db->where("YEAR($effective_date) =", $tahun);
             $this->db->where("MONTH($effective_date) =", intval($bulan));
+            // $this->db->where('d.id IS NULL');
+            $this->db->where('d.tagih_mundur <>', '3');
+            $this->db->where('d.macet', null);
 
             /**
              * 2. CHECK BULAN TERBESAR (Logika yang kamu minta):
@@ -130,11 +138,11 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->limit($length, $start);
         $get_data = $this->db->get();
 
-        // print_r($this->db->last_query());
-        // exit;
-
         $hasil = [];
         $no = $start;
+
+        // print_r($this->db->last_query());
+        // exit;
 
         foreach ($get_data->result() as $item) {
             $no++;

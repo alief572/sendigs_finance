@@ -7,7 +7,7 @@
  * This is model class for table "Customer"
  */
 
-class Actual_plan_tagih_model extends BF_Model
+class Actual_plan_tagih_model_backup extends BF_Model
 {
     protected $viewPermission     = 'Actual_Plan_Tagih.View';
     protected $addPermission      = 'Actual_Plan_Tagih.Add';
