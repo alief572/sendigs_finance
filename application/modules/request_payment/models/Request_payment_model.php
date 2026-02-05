@@ -929,7 +929,7 @@ class Request_payment_model extends BF_Model
 
                 $dtl                 = $this->db->get_where('tr_kasbon', ['no_doc' => $item['no_doc']])->row();
 
-                if ($dtl->kurang_bayar != null) {
+                if (isset($dtl->kurang_bayar) && $dtl->kurang_bayar != null) {
                     $nilai = $dtl->kurang_bayar;
                 } else {
                     $nilai = $dtl->jumlah_kasbon;
