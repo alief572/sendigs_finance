@@ -25,23 +25,55 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     </div>
     <!-- /.box-header -->
     <div class="box-body">
-        <table id="table_penawaran" class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th class="text-center" width="5%">No.</th>
-                    <th class="text-center" width="15%">No. Invoice</th>
-                    <th class="text-center" width="15%">Company</th>
-                    <th class="text-center" width="15%">No. SPK</th>
-                    <th class="text-center" width="20%">Customer</th>
-                    <th class="text-center" width="15%">Project</th>
-                    <th class="text-center" width="15%">Project Leader</th>
-                    <th class="text-center" width="15%">Sales</th>
-                    <th class="text-center" width="10%">Status</th>
-                    <th class="text-center" width="15%">Action</th>
-                </tr>
-            </thead>
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="tab_pin tab_1 active" data-no="1">
+                <a href="javascript:void(0);">Konsultasi</a>
+            </li>
+            <li role="presentation" class="tab_pin tab_2" data-no="2">
+                <a href="javascript:void(0);">Non Konsultasi</a>
+            </li>
+        </ul>
 
-        </table>
+        <div class="col_1">
+            <table id="table_penawaran" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th class="text-center" width="5%">No.</th>
+                        <th class="text-center" width="15%">No. Invoice</th>
+                        <th class="text-center" width="15%">Company</th>
+                        <th class="text-center" width="15%">No. SPK</th>
+                        <th class="text-center" width="20%">Customer</th>
+                        <th class="text-center" width="15%">Project</th>
+                        <th class="text-center" width="15%">Project Leader</th>
+                        <th class="text-center" width="15%">Sales</th>
+                        <th class="text-center" width="10%">Status</th>
+                        <th class="text-center" width="15%">Action</th>
+                    </tr>
+                </thead>
+
+            </table>
+        </div>
+
+        <div class="col_2" style="display: none;">
+            <table id="table_penawaran_non_konsultasi" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th class="text-center">No.</th>
+                        <th class="text-center">ID Quotation</th>
+                        <th class="text-center">Date</th>
+                        <th class="text-center">Admin Sales</th>
+                        <th class="text-center">Penawaran</th>
+                        <th class="text-center">Customer</th>
+                        <th class="text-center">Grand Total</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+
     </div>
     <!-- /.box-body -->
 </div>
@@ -241,6 +273,53 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 },
                 {
                     data: 'option'
+                }
+            ],
+            responsive: true,
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            destroy: true,
+            paging: true
+        });
+    }
+
+    function DataTables_non_kons() {
+        // var dataTables = $('#table_penawaran').dataTable();
+        // dataTables.destroy();
+
+        var dataTables = $('#table_penawaran').dataTable({
+            ajax: {
+                url: siteurl + active_controller + 'get_data_spk_non_kons',
+                type: "POST",
+                dataType: "JSON",
+                data: function(d) {
+
+                }
+            },
+            columns: [{
+                    data: 'no'
+                },
+                {
+                    data: 'id_quotation'
+                },
+                {
+                    data: 'date'
+                },
+                {
+                    data: 'admin_sales'
+                },
+                {
+                    data: 'penawaran'
+                },
+                {
+                    data: 'customer'
+                },
+                {
+                    data: 'grand_total'
+                },
+                {
+                    data: 'action'
                 }
             ],
             responsive: true,

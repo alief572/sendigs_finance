@@ -55,15 +55,19 @@ class Actual_plan_tagih_model extends BF_Model
         WHEN d.tanggal_actual_plan_tagih IS NULL OR YEAR(d.tanggal_actual_plan_tagih) = 0
         THEN a.tgl_plan_tagih 
         ELSE d.tanggal_actual_plan_tagih 
-    END)";
+            END)";
 
         // 2. Query Utama
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.tanggal_actual_plan_tagih, d.created_date as crated_actual, d.tagih_mundur as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_top = a.id_top', 'left');
+        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
+        // $this->db->group_start();
+        // $this->db->where('d.tagih_mundur <>', '2');
+        // $this->db->or_where('d.tagih_mundur', null);
+        // $this->db->group_end();
 
         // --- LOGIKA FILTER FIX ---
         if ($bulan == 'macet') {
