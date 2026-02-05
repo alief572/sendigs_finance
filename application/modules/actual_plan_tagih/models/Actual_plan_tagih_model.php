@@ -90,8 +90,11 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->where("YEAR($effective_date) =", $tahun);
             $this->db->where("MONTH($effective_date) =", intval($bulan));
             // $this->db->where('d.id IS NULL');
-            $this->db->where('d.tagih_mundur <>', '3');
-            $this->db->where('d.macet', null);
+            $this->db->group_start();
+            $this->db->where("d.tagih_mundur <> '3'", NULL, FALSE);
+            $this->db->or_where("d.id_detail_plan_tagih IS NULL", NULL, FALSE);
+            $this->db->or_where("d.macet IS NULL", NULL, FALSE);
+            $this->db->group_end();
 
             /**
              * 2. CHECK BULAN TERBESAR (Logika yang kamu minta):
@@ -101,8 +104,8 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_start();
             $this->db->where('d.id IS NULL'); // Munculkan jika belum ada history
             $this->db->or_group_start();
-            $this->db->where("YEAR(d.tanggal_actual_plan_tagih) <=", $tahun);
-            $this->db->where("MONTH(d.tanggal_actual_plan_tagih) <=", intval($bulan));
+            $this->db->where("YEAR(d.tanggal_actual_plan_tagih) =", $tahun);
+            $this->db->where("MONTH(d.tanggal_actual_plan_tagih) =", intval($bulan));
             $this->db->group_end();
             $this->db->group_end();
         }
