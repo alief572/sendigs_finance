@@ -21,7 +21,7 @@ $ENABLE_DELETE = has_permission('PR_Asset.Delete');
 			</div>
 		</div>
 		<!-- /.box-header -->
-		<div class="box-body">
+		<div class="box-body table-responsive">
 			<input type='hidden' id='tanda' value='<?= $tanda; ?>'>
 			<table class="table table-bordered table-striped" id="my-grid" width='100%'>
 				<thead>
