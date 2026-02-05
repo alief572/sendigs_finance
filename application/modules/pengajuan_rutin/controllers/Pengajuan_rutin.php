@@ -503,13 +503,26 @@ class Pengajuan_rutin extends Admin_Controller
 
 			$status = '';
 
-			if ($item->sts_reject == '1' && $item->status == '0') {
+			if ($item->sts_reject == '1') {
 				$status = '<div class="badge bg-red">Reject</div>';
 			} else {
 				if ($item->status == '1') {
 					$status = '<div class="badge bg-green">Approved</div>';
 				} else {
-					$status = '<div class="badge bg-yellow">Waiting Approval</div>';
+					if ($item->status == '2') {
+						$status = '<div class="badge bg-blue">Diproses Finance</div>';
+
+						$this->db->select('a.id');
+						$this->db->from('payment_approve a');
+						$this->db->where('a.no_doc', $item->no_doc);
+						$count_payment_periodik = $this->db->get()->num_rows();
+
+						if ($count_payment_periodik > 0) {
+							$status = '<div class="badge bg-green">Paid</div>';
+						}
+					} else {
+						$status = '<div class="badge bg-yellow">Waiting Approval</div>';
+					}
 				}
 			}
 
