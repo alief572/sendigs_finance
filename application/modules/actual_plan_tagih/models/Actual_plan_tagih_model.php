@@ -61,7 +61,17 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.tanggal_actual_plan_tagih, d.created_date as crated_actual, d.tagih_mundur as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_detail_plan_tagih = a.id', 'left');
+
+        /**
+         * SUBQUERY: Mencari record TERAKHIR (ID terbesar) untuk setiap detail plan.
+         * Ini memastikan kita cuma membandingkan data dengan status/tanggal paling update.
+         */
+        // $this->db->join('(SELECT t1.* FROM kons_tr_actual_plan_tagih t1 
+        //               INNER JOIN (SELECT MAX(created_date) as max_id FROM kons_tr_actual_plan_tagih GROUP BY id_detail_plan_tagih) t2 
+        //               ON t1.id = t2.max_id) d', 'd.id_detail_plan_tagih = a.id', 'left');
+
+        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id = (SELECT dd.id FROM kons_tr_actual_plan_tagih dd WHERE dd.id_detail_plan_tagih = a.id AND dd.tanggal_actual_plan_tagih IS NOT NULL ORDER BY dd.created_date DESC LIMIT 1)', 'left', FALSE);
+
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
         // $this->db->group_start();
