@@ -118,10 +118,12 @@ class Actual_plan_tagih_model extends BF_Model
         if (!empty($search['value'])) {
             $val = $search['value'];
             $this->db->group_start();
-            $this->db->like('a.id_spk_penawaran', $val);
-            $this->db->or_like('a.desc_payment', $val);
-            $this->db->or_like('b.nm_customer', $val);
-            $this->db->or_like('b.nm_project', $val);
+            $this->db->like('a.id_spk_penawaran', $val, 'both');
+            $this->db->or_like('a.desc_payment', $val, 'both');
+            $this->db->or_like('b.nm_customer', $val, 'both');
+            $this->db->or_like('b.nm_project', $val, 'both');
+            $this->db->or_like('c.nm_project_leader', $val, 'both');
+            $this->db->or_like('c.nm_sales', $val, 'both');
             $this->db->group_end();
         }
 
