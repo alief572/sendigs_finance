@@ -64,67 +64,144 @@ if (!empty($nm_company)) {
 
             $total_invoice = (!empty($get_invoicing->total_invoice)) ? $get_invoicing->total_invoice : 0;
 
-            // $this->db->select('a.nominal_payment');
-            // $this->db->from('kons_tr_actual_plan_tagih a');
-            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            // $this->db->where('a.tagih_mundur', '1');
-            // $this->db->where('a.sts_inv', '0');
-            // $this->db->group_by('a.id_detail_plan_tagih');
-            // $get_act_no_inv = $this->db->get()->result();
-
-            // foreach ($get_act_no_inv as $item_act) {
-            //     $total_invoice += $item_act->nominal_payment;
-            // }
-
             $total_uninvoiced = ($item->nilai_kontrak - $total_invoice);
 
             $total_macet = 0;
 
-            $this->db->select('COALESCE(a.nominal_payment, 0) as total_macet');
+            $this->db->select('a.*,b.nominal_payment');
             $this->db->from('kons_tr_actual_plan_tagih a');
+            $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
             $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            // $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
+            // $this->db->where('MONTH(a.tanggal_actual_plan_tagih)', $item_bulan);
+            $this->db->group_start();
             $this->db->where('a.tagih_mundur', '3');
+            $this->db->or_where('a.macet', '1');
+            $this->db->group_end();
             $this->db->group_by('a.id_detail_plan_tagih');
-            $get_tagihan_macet = $this->db->get()->result();
+            $get_nilai_macet = $this->db->get()->result();
 
-            foreach ($get_tagihan_macet as $item_macet) {
-                $total_macet += $item_macet->total_macet;
+            foreach ($get_nilai_macet as $item_nilai_macet) {
+                $this->db->select('a.id');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->where('a.id_detail_plan_tagih', $item_nilai_macet->id_detail_plan_tagih);
+                $this->db->where('a.id_spk_penawaran', $item_nilai_macet->id_spk_penawaran);
+                // $this->db->group_start();
+                $this->db->where_in('a.tagih_mundur', ['1', '2']);
+                $this->db->where('a.created_date >', $item_nilai_macet->created_date);
+                $this->db->group_start();
+                $this->db->where('a.macet IS NULL');
+                $this->db->or_where('a.macet', '');
+                $this->db->group_end();
+                // $this->db->group_end();
+                $get_check_tagih_mundur_balik = $this->db->get()->num_rows();
+
+                if ($get_check_tagih_mundur_balik < 1) {
+                    $total_macet += $item_nilai_macet->nominal_payment;
+                }
             }
+
+            // $this->db->select('COALESCE(a.nominal_payment, 0) as total_macet');
+            // $this->db->from('kons_tr_actual_plan_tagih a');
+            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            // $this->db->group_start();
+            // $this->db->where('a.tagih_mundur', '3');
+            // $this->db->or_where('a.macet', '1');
+            // $this->db->group_end();
+            // $this->db->group_by('a.id_detail_plan_tagih');
+            // $get_tagihan_macet = $this->db->get()->result();
+
+            // foreach ($get_tagihan_macet as $item_macet) {
+
+            //     $this->db->select('a.id');
+            //     $this->db->from('kons_tr_actual_plan_tagih a');
+            //     $this->db->where('a.id_detail_plan_tagih', $item_macet->id_detail_plan_tagih);
+            //     $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            //     $this->db->where('a.tagih_mundur', '1');
+            //     $this->db->where('a.created_date >', $item->created_date);
+            //     $get_check_tagih_mundur_balik = $this->db->get()->num_rows();
+
+            //     if ($get_check_tagih_mundur_balik < 1) {
+            //         $total_macet += $item_macet->total_macet;
+            //     }
+            // }
 
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-                $this->db->select('COALESCE(b.nominal_payment, a.nominal_payment) as nilai_perbulan, b.tagih_mundur, b.id_detail_plan_tagih, b.tanggal_actual_plan_tagih');
-                $this->db->from('kons_tr_plan_tagih_detail a');
-                $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id AND b.tagih_mundur <> "1" AND b.sts_invoice = "0"', 'left');
+
+                $this->db->select('b.nominal_payment');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('DATE_FORMAT(COALESCE(b.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%m") =', $item_bulan);
-                $this->db->where('DATE_FORMAT(COALESCE(b.tanggal_actual_plan_tagih, a.tgl_plan_tagih), "%Y") =', $tahun);
-                $this->db->group_by('a.id');
-                $get_nilai_perbulan = $this->db->get()->result();
+                $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
+                $this->db->where('MONTH(a.tanggal_actual_plan_tagih)', $item_bulan);
+                $this->db->where('a.tagih_mundur', '1');
+                $this->db->group_by('a.id_detail_plan_tagih');
+                $get_nilai_per_bulan = $this->db->get()->result();
 
                 $total_perbulan = 0;
-
-                foreach ($get_nilai_perbulan as $item_nilai_perbulan) {
-                    if (!empty($item_nilai_perbulan->tagih_mundur)) {
-                        if ($item_nilai_perbulan->tagih_mundur == '2') {
-                            $this->db->select('a.id');
-                            $this->db->from('kons_tr_actual_plan_tagih a');
-                            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                            $this->db->where('a.id_detail_plan_tagih', $item_nilai_perbulan->id_detail_plan_tagih);
-                            $this->db->where('a.tanggal_actual_plan_tagih >', $item_nilai_perbulan->tanggal_actual_plan_tagih);
-                            $get_check_lastest = $this->db->get()->num_rows();
-
-                            if ($get_check_lastest < 1) {
-                                $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
-                            }
-                        } else {
-                            $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
-                        }
-                    } else {
-                        $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
-                    }
+                foreach ($get_nilai_per_bulan as $item_nilai_perbulan) {
+                    $total_perbulan += $item_nilai_perbulan->nominal_payment;
                 }
+
+
+
+                // $this->db->select('
+                //     COALESCE(b.nominal_payment, a.nominal_payment) as nilai_perbulan, 
+                //     b.tagih_mundur, 
+                //     b.id_detail_plan_tagih, 
+                //     b.tanggal_actual_plan_tagih
+                // ', FALSE); // FALSE supaya CI tidak otomatis nambahin backtick (`) yang bikin error di subquery
+
+                // $this->db->from('kons_tr_plan_tagih_detail a');
+
+                // // Join dengan subquery yang lebih bersih
+                // $join_subquery = '(SELECT dd.id_detail_plan_tagih, dd.nominal_payment, dd.tagih_mundur, dd.tanggal_actual_plan_tagih 
+                //    FROM kons_tr_actual_plan_tagih dd 
+                //    WHERE dd.tanggal_actual_plan_tagih IS NOT NULL 
+                //    ORDER BY dd.created_date DESC LIMIT 1) b';
+
+                // $this->db->join($join_subquery, 'b.id_detail_plan_tagih = a.id', 'left');
+
+                // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+
+                // // Gunakan pembanding tanggal yang lebih efisien (Sargable)
+                // $target_date = $tahun . '-' . str_pad($item_bulan, 2, '0', STR_PAD_LEFT);
+                // // $this->db->where("DATE_FORMAT(COALESCE(b.tanggal_actual_plan_tagih, a.tgl_plan_tagih), '%Y-%m') =", $target_date);
+                // $this->db->where("DATE_FORMAT(b.tanggal_actual_plan_tagih, '%Y-%m') =", $target_date);
+
+                // $this->db->group_by('a.id');
+                // $get_nilai_perbulan = $this->db->get()->result();
+
+                // $total_perbulan = 0;
+
+                // foreach ($get_nilai_perbulan as $item_nilai_perbulan) {
+                //     if (!empty($item_nilai_perbulan->tagih_mundur)) {
+                //         if ($item_nilai_perbulan->tagih_mundur == '2') {
+                //             $this->db->select('a.id');
+                //             $this->db->from('kons_tr_actual_plan_tagih a');
+                //             $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                //             $this->db->where('a.id_detail_plan_tagih', $item_nilai_perbulan->id_detail_plan_tagih);
+                //             $this->db->where('a.tanggal_actual_plan_tagih >', $item_nilai_perbulan->tanggal_actual_plan_tagih);
+                //             $this->db->where('a.tanggal_actual_plan_tagih IS NOT NULL');
+                //             if (!empty($item_nilai_perbulan->tanggal_actual_plan_tagih)) {
+                //             }
+                //             $get_check_lastest = $this->db->get()->num_rows();
+
+                //             // print_r($this->db->last_query());
+                //             // exit;
+
+                //             if ($get_check_lastest < 1) {
+                //                 $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                //             }
+                //         } else {
+                //             $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                //         }
+                //     } else {
+                //         $total_perbulan += $item_nilai_perbulan->nilai_perbulan;
+                //     }
+                // }
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
         ?>
@@ -135,15 +212,15 @@ if (!empty($nm_company)) {
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= round($item->nilai_kontrak) ?></td>
-                <td align="right"><?= round($total_invoice) ?></td>
-                <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
-                <td align="right"><?= round($total_macet) ?></td>
+                <td align="right"><?= number_format($item->nilai_kontrak, 2) ?></td>
+                <td align="right"><?= number_format($total_invoice, 2) ?></td>
+                <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2) ?></td>
+                <td align="right"><?= number_format($total_macet, 2) ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
                 ?>
 
-                    <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
+                    <td align="right"><?= number_format($arr_noms[$item_bulan], 2) ?></td>
 
                 <?php
                     if ($item_bulan == '1') {
@@ -195,26 +272,26 @@ if (!empty($nm_company)) {
 
         endforeach;
         ?>
-    </tbody>
-    <tfoot>
+
+
         <tr>
             <td style="font-weight: bold;" colspan="5" align="right">Grand Total</td>
-            <td style="font-weight: bold;" align="right"><?= $ttl_nominal_spk ?></td>
-            <td style="font-weight: bold;" align="right"><?= $ttl_invoice ?></td>
-            <td style="font-weight: bold;" align="right"><?= $ttl_uninvoice ?></td>
-            <td style="font-weight: bold;" align="right"><?= $ttl_macet ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_jan ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_feb ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_mar ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_apr ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_may ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_jun ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_jul ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_aug ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_sep ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_oct ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_nov ?></td>
-            <td style="font-weight: bold;" align="right"><?= $total_dec ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_nominal_spk, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_invoice, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_uninvoice, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_macet, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jan, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_feb, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_mar, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_apr, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_may, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jun, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jul, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_aug, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_sep, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_oct, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_nov, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_dec, 2) ?></td>
         </tr>
-    </tfoot>
+    </tbody>
 </table>

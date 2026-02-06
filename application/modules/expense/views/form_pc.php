@@ -263,8 +263,11 @@ $budgets = 0;
 											?>
 											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>" <?= $tekskasbon ?>>
 										</td>
-										<td data-header="Barang / Jasa & Keterangan"><input type="text" class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" value="<?= $record->deskripsi; ?>" <?= $tekskasbon ?> style='width:100px'>
-											<input type="text" class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" value="<?= $record->keterangan; ?>" style='width:100px'>
+										<td data-header="Barang / Jasa & Keterangan">
+											<!-- <input type="text" class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" value="<?= $record->deskripsi; ?>" <?= $tekskasbon ?> style='width:100px'> -->
+											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" <?= $tekskasbon ?>><?= $record->deskripsi ?></textarea>
+											<!-- <input type="text" class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" value="<?= $record->keterangan; ?>" style='width:100px'> -->
+											<textarea class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" <?= $tekskasbon ?>><?= $record->keterangan ?></textarea>
 										</td>
 										<td data-header="Qty"><input type="text" class="form-control divide input-sm" name="qty[]" id="qty_<?= $idd; ?>" value="<?= $record->qty; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?> size="15"></td>
 										<td data-header="Harga Satuan"><input type="text" class="form-control divide input-sm" name="harga[]" id="harga_<?= $idd; ?>" value="<?= $record->harga; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?>></td>
@@ -611,8 +614,8 @@ foreach($data_budget as $keys=>$val){
 			Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
 			Rows += "</td>";
 			Rows += "<td data-header='Barang / Jasa & Keterangan'>";
-			Rows += "<input type='text' class='form-control input-sm' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' style='width:100px' />";
-			Rows += "<input type='text' class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='width:100px' />";
+			Rows += "<textarea class='form-control input-sm' placeholder='Deskripsi' name='deskripsi[]' id='deskripsi_" + nomor + "'></textarea>";
+			Rows += "<textarea class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "'></textarea>";
 			Rows += "</td>";
 			Rows += "<td data-header='Qty'>";
 			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='0' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")' style='width:60px' />";
