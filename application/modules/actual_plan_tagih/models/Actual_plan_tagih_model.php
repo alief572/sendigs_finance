@@ -73,7 +73,7 @@ class Actual_plan_tagih_model extends BF_Model
         //               INNER JOIN (SELECT MAX(created_date) as max_id FROM kons_tr_actual_plan_tagih GROUP BY id_detail_plan_tagih) t2 
         //               ON t1.id = t2.max_id) d', 'd.id_detail_plan_tagih = a.id', 'left');
 
-        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id = (SELECT dd.id FROM kons_tr_actual_plan_tagih dd WHERE dd.id_detail_plan_tagih = a.id ORDER BY dd.created_date DESC LIMIT 1)', 'left', FALSE);
+        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id = (SELECT dd.id FROM kons_tr_actual_plan_tagih dd WHERE dd.id_detail_plan_tagih = a.id AND dd.tanggal_actual_plan_tagih IS NOT NULL ORDER BY dd.created_date DESC LIMIT 1)', 'left', FALSE);
 
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
