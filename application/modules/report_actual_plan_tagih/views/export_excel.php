@@ -214,15 +214,15 @@ if (!empty($nm_company)) {
                     <td><?= $item->id_spk_penawaran ?></td>
                     <td><?= $item->nm_customer ?></td>
                     <td><?= $item->nm_paket ?></td>
-                    <td align="right"><?= ($item->nilai_kontrak) ?></td>
-                    <td align="right"><?= ($total_invoice) ?></td>
-                    <td align="right"><?= ($item->nilai_kontrak - $total_invoice) ?></td>
-                    <td align="right"><?= ($total_macet) ?></td>
+                    <td align="right"><?= round($item->nilai_kontrak) ?></td>
+                    <td align="right"><?= round($total_invoice) ?></td>
+                    <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
+                    <td align="right"><?= round($total_macet) ?></td>
                     <?php
                     foreach ($arr_bulan as $item_bulan) :
                     ?>
 
-                        <td align="right"><?= ($arr_noms[$item_bulan]) ?></td>
+                        <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
 
                     <?php
                         if ($item_bulan == '1') {
@@ -286,22 +286,22 @@ if (!empty($nm_company)) {
 
         <tr>
             <td style="font-weight: bold;" colspan="5" align="right">Grand Total</td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_nominal_spk) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_invoice) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_uninvoice) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_macet) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jan) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_feb) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_mar) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_apr) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_may) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jun) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jul) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_aug) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_sep) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_oct) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_nov) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_dec) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_nominal_spk) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_invoice) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_uninvoice) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_macet) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jan) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_feb) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_mar) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_apr) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_may) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jun) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jul) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_aug) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_sep) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_oct) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_nov) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_dec) ?></td>
         </tr>
     </tbody>
 </table>
