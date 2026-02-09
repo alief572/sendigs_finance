@@ -54,8 +54,8 @@ class Invoicing_model extends BF_Model
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran','left');
-        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project','left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project', 'left');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
         $this->db->where('a.tagih_mundur', 1);
@@ -153,5 +153,35 @@ class Invoicing_model extends BF_Model
             'recordsFiltered' => $count_all,
             'data' => $hasil
         ]);
+    }
+
+    public function render_action_non_konsultasi($arr)
+    {
+        $action = '
+            <a href="' . base_url('invoicing/add_invoice_non_konsultasi/' . $arr->id_penawaran) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>
+
+            <a href="' . base_url('invoicing/edit_invoice_vuca_non_konsultasi/' . $arr->id_penawaran) . '" class="btn btn-sm btn-primary" title="Add Invoice Vuca"><i class="fa fa-pencil"></i></a>
+        ';
+
+        return $action;
+    }
+
+    public function render_status_non_konsultasi($arr)
+    {
+        $status = '<span class="badge bg-yellow">Draft</span>';
+    }
+
+    public function get_penawaran_non_konsultasi($id_penawaran)
+    {
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->where('a.id_penawaran', $id_penawaran);
+        $this->consultant->where('a.sts_quot', '1');
+        $this->consultant->where('a.sts_deal', '1');
+        $this->consultant->where('a.deleted_by IS NULL');
+        $this->consultant->limit(1);
+        $get_data = $this->consultant->get()->row();
+
+        return $get_data;
     }
 }
