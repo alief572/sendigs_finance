@@ -214,15 +214,16 @@ if (!empty($nm_company)) {
                     <td><?= $item->id_spk_penawaran ?></td>
                     <td><?= $item->nm_customer ?></td>
                     <td><?= $item->nm_paket ?></td>
-                    <td align="right"><?= number_format($item->nilai_kontrak, 2) ?></td>
-                    <td align="right"><?= number_format($total_invoice, 2) ?></td>
-                    <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2) ?></td>
-                    <td align="right"><?= number_format($total_macet, 2) ?></td>
+                    <td align="right"><?= round($item->nilai_kontrak) ?></td>
+                    <td align="right"><?= round($total_invoice) ?></td>
+                    <td align="right"><?= round($item->nilai_kontrak - $total_invoice) ?></td>
+                    <td align="right"><?= round($total_macet) ?></td>
+
                     <?php
                     foreach ($arr_bulan as $item_bulan) :
                     ?>
 
-                        <td align="right"><?= number_format($arr_noms[$item_bulan], 2) ?></td>
+                        <td align="right"><?= round($arr_noms[$item_bulan]) ?></td>
 
                     <?php
                         if ($item_bulan == '1') {
@@ -286,22 +287,22 @@ if (!empty($nm_company)) {
 
         <tr>
             <td style="font-weight: bold;" colspan="5" align="right">Grand Total</td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_nominal_spk, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_invoice, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_uninvoice, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_macet, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jan, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_feb, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_mar, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_apr, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_may, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jun, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jul, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_aug, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_sep, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_oct, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_nov, 2) ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_dec, 2) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_nominal_spk) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_invoice) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_uninvoice) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($ttl_macet) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jan) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_feb) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_mar) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_apr) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_may) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jun) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_jul) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_aug) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_sep) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_oct) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_nov) ?></td>
+            <td style="font-weight: bold;" align="right"><?= round($total_dec) ?></td>
         </tr>
     </tbody>
 </table>
