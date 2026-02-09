@@ -1,7 +1,7 @@
-<!-- <?php
-        // header("Content-type: application/vnd-ms-excel");
-        // header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . $tahun . ") - " . $nm_client . " - " . $nm_company . ".xls");
-        ?> -->
+<?php
+header("Content-type: application/vnd-ms-excel");
+header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . $tahun . ") - " . $nm_client . " - " . $nm_company . ".xls");
+?>
 <h2>Report Actual Plan Tagih (<?= $tahun ?>)</h2>
 <?php
 if (!empty($nm_client)) {
