@@ -160,7 +160,7 @@ class Report_actual_plan_tagih extends Admin_Controller
             $this->db->order_by($order_map[$order_col], $order_dir);
         } else {
             // Default sorting kalo user belum klik apa-apa
-            $this->db->order_by('a.id_spk_penawaran', 'DESC');
+            $this->db->order_by('a.input_date', 'DESC');
         }
         $this->db->limit($length, $start);
 
