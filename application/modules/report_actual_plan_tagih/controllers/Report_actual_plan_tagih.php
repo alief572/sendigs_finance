@@ -338,6 +338,9 @@ class Report_actual_plan_tagih extends Admin_Controller
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
 
+            if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+            }
+
             $hasil[] = [
                 'no' => $no,
                 'company' => $item->nm_company,
@@ -380,11 +383,6 @@ class Report_actual_plan_tagih extends Admin_Controller
             $ttl_uninvoice += $total_uninvoiced;
             $ttl_macet += $total_macet;
         }
-
-
-
-
-
 
         $response = [
             'draw' => $draw,

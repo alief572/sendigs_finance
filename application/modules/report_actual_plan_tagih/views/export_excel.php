@@ -34,7 +34,7 @@ if (!empty($nm_company)) {
     </thead>
     <tbody>
         <?php
-        $no = 0;
+        $no = 1;
 
         $ttl_nominal_spk = 0;
         $ttl_invoice = 0;
@@ -55,7 +55,7 @@ if (!empty($nm_company)) {
         $total_dec = 0;
 
         foreach ($list_report as $item) :
-            $no++;
+
 
             $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total_invoice');
             $this->db->from('tr_invoicing a');
@@ -204,71 +204,81 @@ if (!empty($nm_company)) {
                 // }
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
+
+            if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
         ?>
 
-            <tr>
-                <td align="center"><?= $no; ?></td>
-                <td align="left"><?= $item->nm_company ?></td>
-                <td><?= $item->id_spk_penawaran ?></td>
-                <td><?= $item->nm_customer ?></td>
-                <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= number_format($item->nilai_kontrak, 2) ?></td>
-                <td align="right"><?= number_format($total_invoice, 2) ?></td>
-                <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2) ?></td>
-                <td align="right"><?= number_format($total_macet, 2) ?></td>
-                <?php
-                foreach ($arr_bulan as $item_bulan) :
-                ?>
+                <tr>
+                    <td align="center"><?= $no; ?></td>
+                    <td align="left"><?= $item->nm_company ?></td>
+                    <td><?= $item->id_spk_penawaran ?></td>
+                    <td><?= $item->nm_customer ?></td>
+                    <td><?= $item->nm_paket ?></td>
+                    <td align="right"><?= number_format($item->nilai_kontrak, 2) ?></td>
+                    <td align="right"><?= number_format($total_invoice, 2) ?></td>
+                    <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2) ?></td>
+                    <td align="right"><?= number_format($total_macet, 2) ?></td>
+                    <?php
+                    foreach ($arr_bulan as $item_bulan) :
+                    ?>
 
-                    <td align="right"><?= number_format($arr_noms[$item_bulan], 2) ?></td>
+                        <td align="right"><?= number_format($arr_noms[$item_bulan], 2) ?></td>
 
-                <?php
-                    if ($item_bulan == '1') {
-                        $total_jan += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '2') {
-                        $total_feb += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '3') {
-                        $total_mar += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '4') {
-                        $total_apr += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '5') {
-                        $total_may += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '6') {
-                        $total_jun += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '7') {
-                        $total_jul += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '8') {
-                        $total_aug += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '9') {
-                        $total_sep += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '10') {
-                        $total_oct += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '11') {
-                        $total_nov += $arr_noms[$item_bulan];
-                    }
-                    if ($item_bulan == '12') {
-                        $total_dec += $arr_noms[$item_bulan];
-                    }
-                endforeach
-                ?>
-            </tr>
+                    <?php
+                        if ($item_bulan == '1') {
+                            $total_jan += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '2') {
+                            $total_feb += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '3') {
+                            $total_mar += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '4') {
+                            $total_apr += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '5') {
+                            $total_may += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '6') {
+                            $total_jun += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '7') {
+                            $total_jul += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '8') {
+                            $total_aug += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '9') {
+                            $total_sep += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '10') {
+                            $total_oct += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '11') {
+                            $total_nov += $arr_noms[$item_bulan];
+                        }
+                        if ($item_bulan == '12') {
+                            $total_dec += $arr_noms[$item_bulan];
+                        }
+                    endforeach
+                    ?>
+                </tr>
+
+            <?php
+                $ttl_nominal_spk += $item->nilai_kontrak;
+                $ttl_invoice += $total_invoice;
+                $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
+                $ttl_macet += $total_macet;
+
+                $no++;
+            }
+            ?>
+
+
 
         <?php
 
-            $ttl_nominal_spk += $item->nilai_kontrak;
-            $ttl_invoice += $total_invoice;
-            $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
-            $ttl_macet += $total_macet;
 
         endforeach;
         ?>
