@@ -65,6 +65,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <th class="text-center">Penawaran</th>
                         <th class="text-center">Customer</th>
                         <th class="text-center">Grand Total</th>
+                        <th class="text-center">Status</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
@@ -145,6 +146,25 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 <script type="text/javascript">
     $(document).ready(function() {
         DataTables();
+    });
+
+    $(document).on('click', '.tab_pin', function() {
+        var no = $(this).data('no');
+        if (no == 1) {
+            DataTables();
+            $('.col_1').show();
+            $('.col_2').hide();
+
+            $('.tab_1').addClass('active');
+            $('.tab_2').removeClass('active');
+        } else {
+            DataTables_non_kons();
+            $('.col_1').hide();
+            $('.col_2').show();
+
+            $('.tab_1').removeClass('active');
+            $('.tab_2').addClass('active');
+        }
     });
 
     $(document).on('click', '.pilih_print_inv', function() {
@@ -288,7 +308,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
 
-        var dataTables = $('#table_penawaran').dataTable({
+        var dataTables = $('#table_penawaran_non_konsultasi').dataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_data_spk_non_kons',
                 type: "POST",
@@ -307,16 +327,19 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'date'
                 },
                 {
-                    data: 'admin_sales'
+                    data: 'pic_Penawaran'
                 },
                 {
-                    data: 'penawaran'
+                    data: 'keterangan_penawaran'
                 },
                 {
-                    data: 'customer'
+                    data: 'nm_customer'
                 },
                 {
                     data: 'grand_total'
+                },
+                {
+                    data: 'status'
                 },
                 {
                     data: 'action'
