@@ -1,7 +1,7 @@
-<?php
-header("Content-type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . $tahun . ") - " . $nm_client . " - " . $nm_company . ".xls");
-?>
+<!-- <?php
+        // header("Content-type: application/vnd-ms-excel");
+        // header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . $tahun . ") - " . $nm_client . " - " . $nm_company . ".xls");
+        ?> -->
 <h2>Report Actual Plan Tagih (<?= $tahun ?>)</h2>
 <?php
 if (!empty($nm_client)) {
@@ -34,7 +34,7 @@ if (!empty($nm_company)) {
     </thead>
     <tbody>
         <?php
-        $no = 1;
+        $no = 0;
 
         $ttl_nominal_spk = 0;
         $ttl_invoice = 0;
@@ -206,6 +206,7 @@ if (!empty($nm_company)) {
             endforeach;
 
             if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+                $no++;
         ?>
 
                 <tr>
@@ -214,15 +215,15 @@ if (!empty($nm_company)) {
                     <td><?= $item->id_spk_penawaran ?></td>
                     <td><?= $item->nm_customer ?></td>
                     <td><?= $item->nm_paket ?></td>
-                    <td align="right"><?= ($item->nilai_kontrak) ?></td>
-                    <td align="right"><?= ($total_invoice) ?></td>
-                    <td align="right"><?= ($item->nilai_kontrak - $total_invoice) ?></td>
-                    <td align="right"><?= ($total_macet) ?></td>
+                    <td align="right"><?= number_format($item->nilai_kontrak, 2, ',', '.') ?></td>
+                    <td align="right"><?= number_format($total_invoice, 2, ',', '.') ?></td>
+                    <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2, ',', '.') ?></td>
+                    <td align="right"><?= number_format($total_macet, 2, ',', '.') ?></td>
                     <?php
                     foreach ($arr_bulan as $item_bulan) :
                     ?>
 
-                        <td align="right"><?= ($arr_noms[$item_bulan]) ?></td>
+                        <td align="right"><?= number_format($arr_noms[$item_bulan], 2, ',', '.') ?></td>
 
                     <?php
                         if ($item_bulan == '1') {
@@ -270,8 +271,6 @@ if (!empty($nm_company)) {
                 $ttl_invoice += $total_invoice;
                 $ttl_uninvoice += ($item->nilai_kontrak - $total_invoice);
                 $ttl_macet += $total_macet;
-
-                $no++;
             }
             ?>
 
@@ -286,22 +285,22 @@ if (!empty($nm_company)) {
 
         <tr>
             <td style="font-weight: bold;" colspan="5" align="right">Grand Total</td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_nominal_spk) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_invoice) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_uninvoice) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($ttl_macet) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jan) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_feb) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_mar) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_apr) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_may) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jun) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_jul) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_aug) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_sep) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_oct) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_nov) ?></td>
-            <td style="font-weight: bold;" align="right"><?= ($total_dec) ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_nominal_spk, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_invoice, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_uninvoice, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_macet, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jan, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_feb, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_mar, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_apr, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_may, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jun, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jul, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_aug, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_sep, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_oct, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_nov, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_dec, 2, ',', '.') ?></td>
         </tr>
     </tbody>
 </table>
