@@ -153,6 +153,17 @@ class Invoicing extends Admin_Controller
         $this->template->render('add_invoice');
     }
 
+    public function add_invoice_non_konsultasi($id_penawaran)
+    {
+        $this->auth->restrict($this->addPermission);
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+
+        $this->template->set('data_penawaran', $get_penawaran);
+        $this->template->title('Add Invoicing Non Konsultasi');
+        $this->template->render('add_invoice_non_konsultasi');
+    }
+
     public function add_invoice_vuca($id_actual_plan_tagih)
     {
         $this->auth->restrict($this->viewPermission);
@@ -1124,5 +1135,101 @@ class Invoicing extends Admin_Controller
     public function get_data_spk()
     {
         $this->Invoicing_model->get_data_spk();
+    }
+
+    public function get_data_spk_non_kons()
+    {
+        $draw = $this->input->post('draw', true);
+        $start = $this->input->post('start', true);
+        $length = $this->input->post('length', true);
+        $search = $this->input->post('search', true);
+        $order = $this->input->post('order', true);
+        $columns = $this->input->post('columns', true);
+
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->where('a.sts_quot', '1');
+        $this->consultant->where('a.sts_deal', '1');
+        $this->consultant->where('a.deleted_by IS NULL');
+
+        $db_clone = clone $this->consultant;
+        $count_all = $db_clone->count_all_results();
+
+        if (!empty($search['value'])) {
+            $this->consultant->group_start();
+            $this->consultant->like('a.nm_customer', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_pic_penawaran', $search['value'], 'both');
+            $this->consultant->or_like('a.id_penawaran', $search['value'], 'both');
+            $this->consultant->or_like('a.keterangan_penawaran', $search['value'], 'both');
+            $this->consultant->group_end();
+        }
+
+        // ... baris kode sebelumnya ...
+
+        $db_clone = clone $this->consultant;
+        $count_filter = $db_clone->count_all_results();
+
+        // --- AWAL LOGIKA ORDER BY DINAMIS ---
+        if (isset($order) && !empty($order)) {
+            // Mapping index kolom dari datatable ke kolom database
+            $arr_col = [
+                1 => 'a.id_penawaran',
+                2 => 'a.tgl_quotation',
+                3 => 'a.nm_pic_penawaran',
+                4 => 'a.keterangan_penawaran',
+                5 => 'a.nm_customer',
+                6 => 'a.grand_total'
+                // index 0 (no), 7 (status), dan 8 (action) biasanya tidak di-sort
+            ];
+
+            $columnIndex = $order[0]['column']; // Index kolom yang diklik
+            $sortDir = $order[0]['dir'];        // asc atau desc
+
+            // Cek apakah index yang diklik ada di dalam mapping kita
+            if (isset($arr_col[$columnIndex])) {
+                $this->consultant->order_by($arr_col[$columnIndex], $sortDir);
+            } else {
+                // Jika kolom yang diklik tidak ada di mapping (misal kolom 'no'),
+                // kita arahkan ke default order saja
+                $this->consultant->order_by('a.id_penawaran', 'desc');
+            }
+        } else {
+            // Default order jika tidak ada aksi dari user
+            $this->consultant->order_by('a.id_penawaran', 'desc');
+        }
+        // --- AKHIR LOGIKA ORDER BY DINAMIS ---
+
+        $this->consultant->limit($length, $start);
+        $get_data = $this->consultant->get()->result();
+
+        $no = (0 + $start);
+        $arr_data = [];
+        foreach ($get_data as $row) {
+            $no++;
+
+            $action = $this->Invoicing_model->render_action_non_konsultasi($row);
+            $status = $this->Invoicing_model->render_status_non_konsultasi($row);
+
+            $arr_data[] = [
+                'no' => $no,
+                'id_quotation' => $row->id_penawaran,
+                'date' => date('d F Y', strtotime($row->tgl_quotation)),
+                'pic_Penawaran' => $row->nm_pic_penawaran,
+                'keterangan_penawaran' => $row->keterangan_penawaran,
+                'nm_customer' => $row->nm_customer,
+                'grand_total' => number_format($row->grand_total, 0, ',', '.'),
+                'status' => $status,
+                'action' => $action
+            ];
+        }
+
+        $response = [
+            'draw' => intval($draw),
+            'recordsTotal' => $count_all,
+            'recordsFiltered' => $count_filter,
+            'data' => $arr_data
+        ];
+
+        echo json_encode($response);
     }
 }
