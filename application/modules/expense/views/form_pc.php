@@ -213,8 +213,8 @@ $budgets = 0;
 						<thead>
 							<tr>
 								<th width="5" scope="col" class="column-primary">#</th>
-								<th scope="col" width="250">Jenis dan<br /> Tanggal</th>
-								<th scope="col" width="250">Barang/Jasa &<br />Keterangan</th>
+								<th scope="col" width="150">Jenis dan<br /> Tanggal</th>
+								<th scope="col" width="350">Barang/Jasa &<br />Keterangan</th>
 								<th scope="col" width=150 nowrap>Jumlah</th>
 								<th scope="col" width=200 nowrap>Harga Satuan</th>
 								<th scope="col" width="200">Expense</th>
@@ -256,7 +256,7 @@ $budgets = 0;
 										<td data-header="Jenis & Tanggal">
 											<?php
 											if ($tekskasbon == '') {
-												echo form_dropdown('coa[]', $data_budget, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2', 'style' => 'width:300px'));
+												echo form_dropdown('coa[]', $data_budget, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2', 'style' => 'width:100%'));
 											} else {
 												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $record->coa . '">';
 											}
