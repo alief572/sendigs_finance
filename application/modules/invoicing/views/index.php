@@ -26,14 +26,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     <!-- /.box-header -->
     <div class="box-body">
         <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="tab_pin tab_1 active" data-no="1">
-                <a href="javascript:void(0);">Konsultasi</a>
-            </li>
-            <li role="presentation" class="tab_pin tab_2" data-no="2">
-                <a href="javascript:void(0);">Non Konsultasi</a>
-            </li>
+            <li role="presentation" class="tab_pin tab_1 active" data-no="1"><a href="javascript:void(0);">Konsultasi</a></li>
+            <li role="presentation" class="tab_pin tab_2" data-no="2"><a href="javascript:void(0);">Non Konsultasi</a></li>
         </ul>
-
         <div class="col_1">
             <table id="table_penawaran" class="table table-bordered table-striped">
                 <thead>
@@ -50,15 +45,13 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <th class="text-center" width="15%">Action</th>
                     </tr>
                 </thead>
-
             </table>
         </div>
-
         <div class="col_2" style="display: none;">
             <table id="table_penawaran_non_konsultasi" class="table table-bordered table-striped">
                 <thead>
                     <tr>
-                        <th class="text-center">No.</th>
+                        <th class="text-center">No</th>
                         <th class="text-center">ID Quotation</th>
                         <th class="text-center">Date</th>
                         <th class="text-center">Admin Sales</th>
@@ -69,12 +62,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
-                <tbody>
-
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
-
     </div>
     <!-- /.box-body -->
 </div>
@@ -251,6 +241,24 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         });
     })
 
+    $(document).on('click', '.tab_1', function() {
+        $('.col_1').show();
+        $('.col_2').hide();
+
+        $('.tab_1').addClass('active');
+        $('.tab_2').removeClass('active');
+        DataTables();
+    });
+
+    $(document).on('click', '.tab_2', function() {
+        $('.col_1').hide();
+        $('.col_2').show();
+
+        $('.tab_1').removeClass('active');
+        $('.tab_2').addClass('active');
+        DataTablesNonKonsultasi();
+    });
+
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
@@ -304,13 +312,10 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         });
     }
 
-    function DataTables_non_kons() {
-        // var dataTables = $('#table_penawaran').dataTable();
-        // dataTables.destroy();
-
+    function DataTablesNonKonsultasi() {
         var dataTables = $('#table_penawaran_non_konsultasi').dataTable({
             ajax: {
-                url: siteurl + active_controller + 'get_data_spk_non_kons',
+                url: siteurl + active_controller + 'get_data_quotation_non_konsultasi',
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {
@@ -318,7 +323,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 }
             },
             columns: [{
-                    data: 'no'
+                    data: 'no',
                 },
                 {
                     data: 'id_quotation'
@@ -327,13 +332,13 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'date'
                 },
                 {
-                    data: 'pic_Penawaran'
+                    data: 'admin_sales'
                 },
                 {
-                    data: 'keterangan_penawaran'
+                    data: 'penawaran'
                 },
                 {
-                    data: 'nm_customer'
+                    data: 'customer'
                 },
                 {
                     data: 'grand_total'

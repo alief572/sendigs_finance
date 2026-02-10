@@ -223,7 +223,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $ttl_macet = 0;
 
         foreach ($get_data as $item) {
-            $no++;
+            // $no++;
 
             $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total_invoice');
             $this->db->from('tr_invoicing a');
@@ -374,6 +374,7 @@ class Report_actual_plan_tagih extends Admin_Controller
             endforeach;
 
             if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+                $no++;
                 $hasil[] = [
                     'no' => $no,
                     'company' => $item->nm_company,

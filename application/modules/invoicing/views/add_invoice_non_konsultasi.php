@@ -54,83 +54,101 @@
         </div>
 
         <div class="box-body">
-            <!-- <table class="table table-bordered">
-                <thead>
+            <h4>Detail Penawaran</h4>
+            <table class="table table-striped table-bordered">
+                <thead class="bg-primary">
                     <tr>
                         <th class="text-center">No.</th>
-                        <th class="text-center">Term of Payment</th>
-                        <th class="text-center">Persentase</th>
-                        <th class="text-center">Nominal</th>
-                        <th class="text-center">Description</th>
+                        <th class="text-center">Item</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-center">Harga</th>
+                        <th class="text-center">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td class="text-center">1</td>
-                        <td class="text-left"><?= $data_actual->term_payment ?></td>
-                        <td class="text-center"><?= number_format($data_actual->persen_payment, 2) ?>%</td>
-                        <td class="text-right">Rp. <?= number_format($data_actual->nominal_payment, 2) ?></td>
-                        <td class="text-left"><?= $data_actual->desc_payment ?></td>
-                    </tr>
+                    <?php
+                    $no = 0;
+                    $ttl_grand = 0;
+                    if (!empty($data_penawaran_detail)) :
+                        foreach ($data_penawaran_detail as $item) :
+                            $no++;
+                    ?>
+                            <tr>
+                                <td class="text-center"><?= $no ?></td>
+                                <td><?= $item->nm_item ?></td>
+                                <td class="text-center"><?= round($item->qty) ?></td>
+                                <td class="text-right"><?= number_format($item->harga, 2) ?></td>
+                                <td class="text-right"><?= number_format($item->total, 2) ?></td>
+                            </tr>
+                        <?php
+
+                            $ttl_grand += ($item->total);
+                        endforeach;
+                    else :
+                        ?>
+                        <tr>
+                            <td colspan="5" class="text-center">Data tidak ditemukan</td>
+                        </tr>
+                    <?php
+                    endif;
+
+                    $total_nominal = $ttl_grand;
+                    $dpp_nilai_lain = ($total_nominal * 11 / 12);
+                    $pajak = ($dpp_nilai_lain * 12 / 100);
+                    $total_akhir = ($total_nominal + $pajak);
+                    $dpp_lain_lain = ($total_nominal * 11 / 12);
+
+                    $total_nominal_jurnal = $ttl_grand;
+                    $ppn = ($dpp_lain_lain * 12 / 100);
+                    $pph = ($total_nominal * 2 / 100);
+                    $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
+                    ?>
                 </tbody>
-            </table> -->
+                <tfoot class="bg-gray">
+                    <tr>
+                        <th colspan="4" class="text-right">DPP</th>
+                        <th class="text-right"><?= number_format($total_nominal, 2) ?></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-right">DPP Lain-lain</th>
+                        <th class="text-right"><?= number_format($dpp_lain_lain, 2) ?></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-right">PPn 12% dari DPP Lain</th>
+                        <th class="text-right"><?= number_format($ppn, 2) ?></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-right">Total Tagihan + PPN</th>
+                        <th class="text-right"><?= number_format(($total_nominal + $ppn), 2) ?></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-right">PPh 23</th>
+                        <th class="text-right"><?= number_format($pph, 2) ?></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-right">Total Akhir</th>
+                        <th class="text-right"><?= number_format(($total_nominal + $ppn) - $pph, 2) ?></th>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
 
-        <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
+
+        <input type="hidden" name="total_nominal" value="<?= $ttl_grand ?>">
         <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
         <input type="hidden" name="pajak" value="<?= $pajak ?>">
         <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
+        <input type="hidden" name="total_nominal_jurnal" value="<?= $total_nominal ?>">
+        <input type="hidden" name="dpp_lain_lain" value="<?= $dpp_lain_lain ?>">
+        <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
+        <input type="hidden" name="total_tagihan_ppn" value="<?= ($total_nominal + $ppn) ?>">
+        <input type="hidden" name="pph_jurnal" value="<?= $pph ?>">
+        <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>">
 
         <div class="box-body">
-            <table class="table table-bordered">
-                <tr>
-                    <th width="10%">DPP</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($total_nominal, 2) ?>
-                        <input type="hidden" name="total_nominal_jurnal" value="<?= $total_nominal ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">DPP Lain-lain</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($dpp_lain_lain, 2) ?>
-                        <input type="hidden" name="dpp_lain_lain" value="<?= $dpp_lain_lain ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">PPn 12% dari DPP Lain</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($ppn, 2) ?>
-                        <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">Total Tagihan + PPN</th>
-                    <td class="text-right">
-                        Rp. <?= number_format(($total_nominal + $ppn), 2) ?>
-                        <input type="hidden" name="total_tagihan_ppn" value="<?= ($total_nominal + $ppn) ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">Pph 23</th>
-                    <td class="text-right">
-                        - <span style="color: red;">Rp. <?= number_format($pph, 2) ?></span>
-                        <input type="hidden" name="pph_jurnal" value="<?= $pph ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">Total Akhir</th>
-                    <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format(($total_nominal + $ppn) - $pph, 2) ?></span>
-                        <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>">
-                    </td>
-                </tr>
-            </table>
-
-            <br><br>
-
+            <h4>Jurnal Invoice</h4>
             <table class="table table-striped">
-                <thead>
+                <thead class="bg-primary">
                     <tr>
                         <th class="text-center">Tanggal Jurnal</th>
                         <th class="text-center">COA</th>
@@ -143,7 +161,7 @@
                 <tbody>
                     <?= $hasil_jurnal ?>
                 </tbody>
-                <tbody>
+                <tfoot class="bg-gray">
                     <tr>
                         <th colspan="4" class="text-center">Balancing</th>
                         <th class="text-right th_total_debit">
@@ -153,15 +171,14 @@
                             <?= number_format($total_kredit) ?>
                         </th>
                     </tr>
-                </tbody>
+                </tfoot>
             </table>
 
             <br><br>
 
-            <button type="submit" class="btn btn-sm btn-success">Save</button>
-            <a href="<?= base_url('invoicing') ?>" class="btn btn-sm btn-danger">Back</a>
+            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
+            <a href="<?= base_url('invoicing') ?>" class="btn btn-danger"><i class="fa fa-arrow-left"></i> Back</a>
         </div>
-
     </form>
 </div>
 
@@ -183,7 +200,7 @@
 
                 $.ajax({
                     type: 'post',
-                    url: siteurl + active_controller + 'save_invoice',
+                    url: siteurl + active_controller + 'save_invoice_non_konsultasi',
                     data: formData,
                     dataType: 'json',
                     cache: false,

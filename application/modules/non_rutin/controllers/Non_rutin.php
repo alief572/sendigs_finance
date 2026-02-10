@@ -61,16 +61,27 @@ class Non_rutin extends Admin_Controller
 		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
 		$get_department = $this->hris->get()->result();
 
-		$get_list_data = $this->db->select('a.*, c.nm_lengkap')
-			->from('rutin_non_planning_detail z')
-			->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
-			->join('users c', 'c.id_user = a.created_by', 'left')
-			->where('a.status_id', 1)
-			->where('a.close_pr', null)
-			->group_by('z.no_pengajuan')
-			->order_by('a.created_date', 'DESC')
-			->get()
-			->result();
+		// Ambil department_id user yang sedang login
+		$get_user_dept_id = $this->db->select('department_id')
+			->get_where('users',
+			 ['id_user' => $this->auth->user_id()])
+			->row_array();
+		$user_dept_id = $get_user_dept_id['department_id'] ?? '';
+
+
+		$this->db->select('a.*, c.nm_lengkap');
+		$this->db->from('rutin_non_planning_detail z');
+		$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
+		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+		$this->db->where('a.status_id', 1);
+		if ( $this->auth->user_id() !=='7'){
+			$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
+		}
+		$this->db->where('a.close_pr', null);
+		$this->db->group_by('z.no_pengajuan');
+		$this->db->order_by('a.created_date', 'DESC');
+
+		$get_list_data = $this->db->get()->result();
 
 		$data = array(
 			'title'			=> 'PR Departemen',
@@ -1174,24 +1185,47 @@ class Non_rutin extends Admin_Controller
 		$depart = $this->input->post('depart');
 
 		if ($depart !== '') {
-			$get_list_data = $this->db->select('a.*, b.nama')
-				->from('rutin_non_planning_detail z')
-				->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
-				->join('ms_department b', 'b.id = a.id_dept', 'left')
-				->where('a.status_id', 1)
-				->where('a.id_dept', $depart)
-				->group_by('z.no_pengajuan')
-				->get()
-				->result();
+
+			//mengambil data department user yang melakukan login 
+			$get_user_dept_id = $this->db->select('department_id')
+				->get_where('users', ['id_user' => $this->auth->user_id()])
+				->row_array();
+			$user_dept_id = $get_user_dept_id['department_id'] ?? '';
+
+			$this->db->select('a.*, c.nm_lengkap');
+			$this->db->from('rutin_non_planning_detail z');
+			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
+			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+			$this->db->where('a.status_id', 1);
+			if ( $this->auth->user_id() !=='7'){
+				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
+			}
+			$this->db->where('a.close_pr', null);
+			$this->db->group_by('z.no_pengajuan');
+			$this->db->order_by('a.created_date', 'DESC');
+
+			$get_list_data = $this->db->get()->result();
 		} else {
-			$get_list_data = $this->db->select('a.*, b.nama')
-				->from('rutin_non_planning_detail z')
-				->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left')
-				->join('ms_department b', 'b.id = a.id_dept', 'left')
-				->where('a.status_id', 1)
-				->group_by('z.no_pengajuan')
-				->get()
-				->result();
+
+			// mengambil data deparment user yang melakukan login 
+			$get_user_dept_id = $this->db->select('department_id')
+				->get_where('users', ['id_user' => $this->auth->user_id()])
+				->row_array();
+			$user_dept_id = $get_user_dept_id['department_id'] ?? '';
+
+			$this->db->select('a.*, c.nm_lengkap');
+			$this->db->from('rutin_non_planning_detail z');
+			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
+			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+			$this->db->where('a.status_id', 1);
+			if ( $this->auth->user_id() !=='7'){
+				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
+			}
+			$this->db->where('a.close_pr', null);
+			$this->db->group_by('z.no_pengajuan');
+			$this->db->order_by('a.created_date', 'DESC');
+
+			$get_list_data = $this->db->get()->result();
 		}
 
 		$hasil = '
