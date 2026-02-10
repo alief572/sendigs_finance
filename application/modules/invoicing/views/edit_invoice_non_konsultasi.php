@@ -1,18 +1,13 @@
 <?php
-// $total_nominal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-// $dpp_nilai_lain = ($total_nominal * 11 / 12);
-// $pajak = ($dpp_nilai_lain * 12 / 100);
-// $total_akhir = ($total_nominal + $pajak);
-// $dpp_lain_lain = ($total_nominal * 11 / 12);
-
-// $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-// $ppn = ($dpp_lain_lain * 12 / 100);
-// $pph = ($total_nominal * 2 / 100);
-// $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
+$tanggal_invoice = $data_invoicing->tanggal_invoice ?? '';
+$nomor_invoice = $data_invoicing->no_invoice ?? '';
+$no_po = $data_invoicing->no_po ?? '';
+$no_faktur = $data_invoicing->no_faktur ?? '';
 ?>
 <div class="box">
     <form action="" method="post" id="frm-data">
         <input type="hidden" name="id_penawaran" value="<?= $data_penawaran->id_penawaran ?>">
+        <input type="hidden" name="id_invoicing" value="<?= $data_invoicing->id ?>">
         <div class="box-body">
             <div class="col-6">
                 <table width="100%" border="0">
@@ -21,7 +16,7 @@
                         <td width="12%"><?= $data_penawaran->nm_customer ?></td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice">
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" value="<?= $tanggal_invoice ?>" placeholder="Tanggal Invoice">
                         </td>
                     </tr>
                     <tr>
@@ -29,7 +24,7 @@
                         <td width="12%"><?= $data_penawaran->address ?></td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
-                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice">
+                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= $nomor_invoice ?>">
                         </td>
                     </tr>
                     <tr>
@@ -37,7 +32,7 @@
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
                         <td width="12%">
-                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm">
+                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm" value="<?= $no_po ?>">
                         </td>
                     </tr>
                     <tr>
@@ -46,7 +41,7 @@
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
-                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur">
+                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur" value="<?= $no_faktur ?>">
                         </td>
                     </tr>
                 </table>
@@ -176,7 +171,7 @@
 
             <br><br>
 
-            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
+            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Update</button>
             <a href="<?= base_url('invoicing') ?>" class="btn btn-danger"><i class="fa fa-arrow-left"></i> Back</a>
         </div>
     </form>
@@ -200,7 +195,7 @@
 
                 $.ajax({
                     type: 'post',
-                    url: siteurl + active_controller + 'save_invoice_non_konsultasi',
+                    url: siteurl + active_controller + 'update_invoice_non_konsultasi',
                     data: formData,
                     dataType: 'json',
                     cache: false,

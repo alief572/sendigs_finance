@@ -1137,87 +1137,84 @@ class Invoicing extends Admin_Controller
         $this->Invoicing_model->get_data_spk();
     }
 
-    public function get_data_spk_non_kons()
+    public function _render_status_invoice_non_konsultasi($id_penawaran)
+    {
+        $get_invoice_non_kons = $this->Invoicing_model->get_invoice_non_kons($id_penawaran);
+
+        $status = '<span class="badge bg-yellow">Draft</span>';
+        if (count($get_invoice_non_kons) > 0) {
+            $status = '<span class="badge bg-green">Invoice Created</span>';
+        }
+
+        return $status;
+    }
+
+    public function _render_action_invoice_non_kons($id_penawaran)
+    {
+        $get_invoice_non_kons = $this->Invoicing_model->get_invoice_non_kons($id_penawaran);
+
+        $action = '<a href="' . base_url('invoicing/create_invoice_non_konsultasi/' . $id_penawaran) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-edit"></i></a>';
+        if (count($get_invoice_non_kons) > 0) {
+            $action = '<a href="' . base_url('invoicing/edit_invoice_non_kons/' . $get_invoice_non_kons[0]->id) . '" class="btn btn-sm btn-primary" title="Edit Invoice"><i class="fa fa-edit"></i></a>';
+
+            $action .= ' <a href="' . base_url('invoicing/view_invoicing_non_kons/' . $get_invoice_non_kons[0]->id) . '" class="btn btn-sm btn-info" title="View Invoice" target="_blank"><i class="fa fa-eye"></i></a>';
+        }
+        return $action;
+    }
+
+
+    public function get_data_quotation_non_konsultasi()
     {
         $draw = $this->input->post('draw', true);
-        $start = $this->input->post('start', true);
         $length = $this->input->post('length', true);
+        $start = $this->input->post('start', true);
         $search = $this->input->post('search', true);
-        $order = $this->input->post('order', true);
-        $columns = $this->input->post('columns', true);
 
-        $this->consultant->select('a.*');
+        $this->consultant->select('a.id_penawaran, a.tgl_quotation, a.pic_penawaran, a.id_customer, a.nm_customer, a.grand_total, a.keterangan_penawaran, a.input_date');
         $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
         $this->consultant->where('a.sts_quot', '1');
         $this->consultant->where('a.sts_deal', '1');
-        $this->consultant->where('a.deleted_by IS NULL');
 
         $db_clone = clone $this->consultant;
         $count_all = $db_clone->count_all_results();
 
         if (!empty($search['value'])) {
             $this->consultant->group_start();
-            $this->consultant->like('a.nm_customer', $search['value'], 'both');
-            $this->consultant->or_like('a.nm_pic_penawaran', $search['value'], 'both');
-            $this->consultant->or_like('a.id_penawaran', $search['value'], 'both');
+            $this->consultant->like('a.id_penawaran', $search['value'], 'both');
+            $this->consultant->or_like('a.nm_customer', $search['value'], 'both');
+            $this->consultant->or_like('a.pic_penawaran', $search['value'], 'both');
             $this->consultant->or_like('a.keterangan_penawaran', $search['value'], 'both');
             $this->consultant->group_end();
         }
 
-        // ... baris kode sebelumnya ...
-
         $db_clone = clone $this->consultant;
-        $count_filter = $db_clone->count_all_results();
+        $count_filtered = $db_clone->count_all_results();
 
-        // --- AWAL LOGIKA ORDER BY DINAMIS ---
-        if (isset($order) && !empty($order)) {
-            // Mapping index kolom dari datatable ke kolom database
-            $arr_col = [
-                1 => 'a.id_penawaran',
-                2 => 'a.tgl_quotation',
-                3 => 'a.nm_pic_penawaran',
-                4 => 'a.keterangan_penawaran',
-                5 => 'a.nm_customer',
-                6 => 'a.grand_total'
-                // index 0 (no), 7 (status), dan 8 (action) biasanya tidak di-sort
-            ];
-
-            $columnIndex = $order[0]['column']; // Index kolom yang diklik
-            $sortDir = $order[0]['dir'];        // asc atau desc
-
-            // Cek apakah index yang diklik ada di dalam mapping kita
-            if (isset($arr_col[$columnIndex])) {
-                $this->consultant->order_by($arr_col[$columnIndex], $sortDir);
-            } else {
-                // Jika kolom yang diklik tidak ada di mapping (misal kolom 'no'),
-                // kita arahkan ke default order saja
-                $this->consultant->order_by('a.id_penawaran', 'desc');
-            }
-        } else {
-            // Default order jika tidak ada aksi dari user
-            $this->consultant->order_by('a.id_penawaran', 'desc');
-        }
-        // --- AKHIR LOGIKA ORDER BY DINAMIS ---
-
+        $this->consultant->order_by('a.input_date', 'DESC');
         $this->consultant->limit($length, $start);
+
         $get_data = $this->consultant->get()->result();
 
+        $data = [];
         $no = (0 + $start);
-        $arr_data = [];
-        foreach ($get_data as $row) {
+        foreach ($get_data as $item) {
             $no++;
 
-            $action = $this->Invoicing_model->render_action_non_konsultasi($row);
-            $status = $this->Invoicing_model->render_status_non_konsultasi($row);
+            // $status = '<span class="badge bg-yellow">Draft</span>';
+            $status = $this->_render_status_invoice_non_konsultasi($item->id_penawaran);
 
-            $arr_data[] = [
+            // $action = '<a href="' . base_url('invoicing/create_invoice_non_konsultasi/' . $item->id_penawaran) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-edit"></i></a>';
+
+            $action = $this->_render_action_invoice_non_kons($item->id_penawaran);
+
+            $data[] = [
                 'no' => $no,
-                'id_quotation' => $row->id_penawaran,
-                'date' => date('d F Y', strtotime($row->tgl_quotation)),
-                'pic_Penawaran' => $row->nm_pic_penawaran,
-                'keterangan_penawaran' => $row->keterangan_penawaran,
-                'nm_customer' => $row->nm_customer,
-                'grand_total' => number_format($row->grand_total, 0, ',', '.'),
+                'id_quotation' => $item->id_penawaran,
+                'date' => date('d-F-Y', strtotime($item->tgl_quotation)),
+                'admin_sales' => $item->pic_penawaran,
+                'penawaran' => $item->keterangan_penawaran,
+                'customer' => $item->nm_customer,
+                'grand_total' => number_format($item->grand_total),
                 'status' => $status,
                 'action' => $action
             ];
@@ -1226,10 +1223,322 @@ class Invoicing extends Admin_Controller
         $response = [
             'draw' => intval($draw),
             'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_filter,
-            'data' => $arr_data
+            'recordsFiltered' => $count_filtered,
+            'data' => $data
+        ];
+        echo json_encode($response);
+    }
+
+    public function create_invoice_non_konsultasi($id_penawaran)
+    {
+        $this->auth->restrict($this->addPermission);
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+        $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
+
+        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
+
+        $data = [
+            'data_penawaran' => $get_penawaran,
+            'data_penawaran_detail' => $get_penawaran_detail,
+            'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
+            'total_debit' => $get_jurnal['total_debit'],
+            'total_kredit' => $get_jurnal['total_kredit']
         ];
 
-        echo json_encode($response);
+        if (empty($get_penawaran)) {
+            redirect('invoicing');
+        } else {
+            $this->template->title('Create Invoice Non Konsultasi');
+            $this->template->set($data);
+            $this->template->render('add_invoice_non_konsultasi');
+        }
+    }
+
+    public function edit_invoice_non_kons($id_invoicing)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id_invoicing);
+        $get_invoicing = $this->db->get()->row();
+
+        $id_penawaran = $get_invoicing->id_penawaran ?? '';
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+        $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
+
+        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
+
+        $data = [
+            'data_invoicing' => $get_invoicing,
+            'data_penawaran' => $get_penawaran,
+            'data_penawaran_detail' => $get_penawaran_detail,
+            'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
+            'total_debit' => $get_jurnal['total_debit'],
+            'total_kredit' => $get_jurnal['total_kredit']
+        ];
+
+        if (empty($get_penawaran) || empty($get_invoicing)) {
+            redirect('invoicing');
+        } else {
+            $this->template->title('Edit Invoice Non Konsultasi');
+            $this->template->set($data);
+            $this->template->render('edit_invoice_non_konsultasi');
+        }
+    }
+
+    public function view_invoicing_non_kons($id_invoicing)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id_invoicing);
+        $get_invoicing = $this->db->get()->row();
+
+        $id_penawaran = $get_invoicing->id_penawaran ?? '';
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+        $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
+
+        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
+
+        $data = [
+            'data_invoicing' => $get_invoicing,
+            'data_penawaran' => $get_penawaran,
+            'data_penawaran_detail' => $get_penawaran_detail,
+            'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
+            'total_debit' => $get_jurnal['total_debit'],
+            'total_kredit' => $get_jurnal['total_kredit']
+        ];
+
+        if (empty($get_penawaran) || empty($get_invoicing)) {
+            redirect('invoicing');
+        } else {
+            $this->template->title('View Invoice Non Konsultasi');
+            $this->template->set($data);
+            $this->template->render('view_invoice_non_konsultasi');
+        }
+    }
+
+
+    public function save_invoice_non_konsultasi()
+    {
+        $id_penawaran = $this->input->post('id_penawaran', true);
+
+        $this->db->trans_begin();
+
+        try {
+            $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+
+            $id = $this->Invoicing_model->generate_id();
+
+            $arr_insert = [
+                'id' => $id,
+                'id_actual_plan_tagih' => '0',
+                'id_detail_plan_tagih' => '0',
+                'id_penawaran' => $get_penawaran->id_penawaran,
+                'id_spk_penawaran' => '',
+                'id_customer' => $get_penawaran->id_customer,
+                'nm_customer' => $get_penawaran->nm_customer,
+                'address' => $get_penawaran->address,
+                'id_project' => '',
+                'nm_project' => $get_penawaran->keterangan_penawaran,
+                'id_project_leader' => '',
+                'nm_project_leader' => '',
+                'id_sales' => '',
+                'nm_sales' => $get_penawaran->nm_pic_penawaran,
+                'tanggal_invoice' => $this->input->post('tanggal_invoice', true),
+                'no_invoice' => $this->input->post('nomor_invoice', true),
+                'no_po' => $this->input->post('nomor_po', true),
+                'no_faktur' => $this->input->post('nomor_faktur', true),
+                'total_nominal' => $this->input->post('total_nominal', true),
+                'dpp_nilai_lain' => $this->input->post('dpp_nilai_lain', true),
+                'pajak' => $this->input->post('pajak', true),
+                'total_akhir' => $this->input->post('total_akhir', true),
+                'total_nominal_jurnal' => $this->input->post('total_nominal_jurnal', true),
+                'dpp_lain_lain_jurnal' => $this->input->post('dpp_lain_lain', true),
+                'ppn_jurnal' => $this->input->post('ppn_jurnal', true),
+                'tagihan_ppn_jurnal' => $this->input->post('total_tagihan_ppn', true),
+                'pph_jurnal' => $this->input->post('pph_jurnal', true),
+                'total_akhir_jurnal' => $this->input->post('total_akhir_jurnal', true),
+                'saldo_piutang' => $this->input->post('total_akhir_jurnal', true),
+                'saldo_piutang_tanpa_pph' => $this->input->post('total_tagihan_ppn', true),
+                'non_kons' => '1',
+                'created_by' => $this->auth->user_id(),
+                'created_date' => date('Y-m-d H:i:s')
+            ];
+
+            $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
+
+            $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+            $this->accounting->from('coa_master a');
+            $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+            $get_coa_jurnal = $this->accounting->get()->result_array();
+
+            $arr_insert_jurnal = [];
+
+            $no_coa_jurnal = 0;
+            foreach ($get_coa_jurnal as $item) {
+                $no_coa_jurnal++;
+
+                $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
+                $keterangan = $item['nm_coa'] . ' - ' . $id;
+                $tgl_jurnal = $this->input->post('tgl_jurnal_' . $no_coa_jurnal, true);
+                $coa_jurnal = $this->input->post('coa_jurnal_' . $no_coa_jurnal, true);
+                $id_company = $this->input->post('id_company_' . $no_coa_jurnal, true);
+                $nm_company = $this->input->post('nm_company_' . $no_coa_jurnal, true);
+                $nm_coa = $this->input->post('nm_coa_' . $no_coa_jurnal, true);
+                $debit = $this->input->post('debit_' . $no_coa_jurnal, true);
+                $kredit = $this->input->post('kredit_' . $no_coa_jurnal, true);
+
+                $arr_insert_jurnal[] = [
+                    'no_jurnal' => $no_jurnal,
+                    'tgl_jurnal' => $tgl_jurnal,
+                    'coa' => $coa_jurnal,
+                    'id_company' => $id_company,
+                    'nm_company' => $nm_company,
+                    'nm_coa' => $nm_coa,
+                    'debit' => $debit,
+                    'kredit' => $kredit,
+                    'keterangan' => $keterangan,
+                    'sts' => 0,
+                    'no_transaksi' => $id,
+                    'jenis_transaksi' => 'Invoicing',
+                    'created_by' => $this->auth->user_id(),
+                    'created_date' => date('Y-m-d H:i:s')
+                ];
+            }
+
+            $insert_invoicing = $this->db->insert('tr_invoicing', $arr_insert);
+
+            // Cek jika query insert pertama gagal
+            if (!$insert_invoicing) {
+                $error = $this->db->error(); // Ambil detail error database
+                throw new Exception('Gagal insert invoicing: ' . $error['message']);
+            }
+
+            $insert_invoicing_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
+
+            // Cek jika batch insert kedua gagal
+            if (!$insert_invoicing_jurnal) {
+                $error = $this->db->error();
+                throw new Exception('Gagal insert batch jurnal: ' . $error['message']);
+            }
+
+            $this->db->trans_commit();
+            $valid = 1;
+            $msg = 'Data has been saved !';
+
+            http_response_code(200);
+            echo json_encode([
+                'status' => $valid,
+                'msg' => $msg
+            ]);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $response = [
+                'status' => 0,
+                'msg' => $e->getMessage()
+            ];
+
+            http_response_code(500);
+            echo json_encode($response);
+        }
+    }
+
+
+    public function update_invoice_non_konsultasi()
+    {
+        $id = $this->input->post('id_invoicing', true);
+        $id_penawaran = $this->input->post('id_penawaran', true);
+
+        $this->db->trans_begin();
+
+        try {
+            $arr_update = [
+                'tanggal_invoice' => $this->input->post('tanggal_invoice'),
+                'no_invoice' => $this->input->post('nomor_invoice'),
+                'no_po' => $this->input->post('nomor_po'),
+                'no_faktur' => $this->input->post('nomor_faktur')
+            ];
+
+            $arr_coa_jurnal = ['1102-01-01', '1106-01-02', '2104-01-07', '4101-01-01'];
+
+            $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+            $this->accounting->from('coa_master a');
+            $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+            $get_coa_jurnal = $this->accounting->get()->result_array();
+
+            $arr_insert_jurnal = [];
+
+            $no_coa_jurnal = 0;
+            foreach ($get_coa_jurnal as $item) {
+                $no_coa_jurnal++;
+
+                $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
+                $keterangan = $item['nm_coa'] . ' - ' . $id;
+                $tgl_jurnal = $this->input->post('tgl_jurnal_' . $no_coa_jurnal, true);
+                $coa_jurnal = $this->input->post('coa_jurnal_' . $no_coa_jurnal, true);
+                $id_company = $this->input->post('id_company_' . $no_coa_jurnal, true);
+                $nm_company = $this->input->post('nm_company_' . $no_coa_jurnal, true);
+                $nm_coa = $this->input->post('nm_coa_' . $no_coa_jurnal, true);
+                $debit = $this->input->post('debit_' . $no_coa_jurnal, true);
+                $kredit = $this->input->post('kredit_' . $no_coa_jurnal, true);
+
+
+                $arr_insert_jurnal[] = [
+                    'no_jurnal' => $no_jurnal,
+                    'tgl_jurnal' => $tgl_jurnal,
+                    'coa' => $coa_jurnal,
+                    'id_company' => $id_company,
+                    'nm_company' => $nm_company,
+                    'nm_coa' => $nm_coa,
+                    'debit' => $debit,
+                    'kredit' => $kredit,
+                    'keterangan' => $keterangan,
+                    'sts' => 0,
+                    'no_transaksi' => $id,
+                    'jenis_transaksi' => 'Invoicing',
+                    'created_by' => $this->auth->user_id(),
+                    'created_date' => date('Y-m-d H:i:s')
+                ];
+            }
+
+            $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
+
+            $update_invoice = $this->db->update('tr_invoicing', $arr_update, ['id' => $id]);
+
+            $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
+
+            if (!$update_invoice) {
+                $error = $this->db->error();
+                throw new Exception('Gagal update invoicing: ' . $error['message']);
+            }
+            if (!$insert_jurnal) {
+                $error = $this->db->error();
+                throw new Exception('Gagal insert batch jurnal: ' . $error['message']);
+            }
+            if ($this->db->trans_status() === FALSE) {
+                throw new Exception("Transaksi database gagal (status false).");
+            }
+
+            $this->db->trans_commit();
+            $valid = 1;
+            $msg = 'Data has been updated!';
+
+            $response = [
+                'status' => $valid,
+                'msg' => $msg
+            ];
+            echo json_encode($response);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $response = [
+                'status' => 0,
+                'msg' => $e->getMessage()
+            ];
+
+            http_response_code(500);
+            echo json_encode($response);
+        }
     }
 }
