@@ -130,12 +130,18 @@ class Penerimaan_uang extends Admin_Controller
 
             $get_inv = $this->db->get_where('tr_invoicing', ['id' => $item])->row_array();
 
-            $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
-            $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_inv['id_spk_penawaran']])->row_array();
+            if ($get_inv['non_kons'] == '1') {
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_inv['id_penawaran']])->row_array();
 
-            $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
-            $id_company = (!empty($get_company)) ? $get_company['id'] : '';
-            $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
+                $id_company = '1';
+                $nm_company = 'STM-Vuca';
+            } else {
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
+                $id_company = (!empty($get_company)) ? $get_company['id'] : '';
+                $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
+            }
+            $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_inv['id_spk_penawaran']])->row_array();
 
             $get_bank = $this->db->get_where('ms_bank', ['id' => $get_alokasi['tipe_bank']])->row_array();
 
@@ -421,11 +427,18 @@ class Penerimaan_uang extends Admin_Controller
             $this->db->where('a.id', $post['id_inv_' . $i]);
             $get_inv = $this->db->get()->row_array();
 
-            $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
-            $get_company = $this->consultant->get_where('kons_tr_company', $get_penawaran['company'])->row_array();
+            if ($get_inv['non_kons'] == '1') {
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_inv['id_penawaran']])->row_array();
 
-            $id_company = (!empty($get_company)) ? $get_company['id'] : '';
-            $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
+                $id_company = '1';
+                $nm_company = 'STM-Vuca';
+            } else {
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
+                $get_company = $this->consultant->get_where('kons_tr_company', $get_penawaran['company'])->row_array();
+
+                $id_company = (!empty($get_company)) ? $get_company['id'] : '';
+                $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
+            }
 
             $dpp = (!empty($get_inv)) ? $get_inv['total_nominal_jurnal'] : 0;
             $dpp_lain = (!empty($get_inv)) ? $get_inv['dpp_lain_lain_jurnal'] : 0;
@@ -540,8 +553,6 @@ class Penerimaan_uang extends Admin_Controller
                 }
             }
         }
-
-
 
         $this->db->trans_begin();
 

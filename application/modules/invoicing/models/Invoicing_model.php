@@ -54,8 +54,8 @@ class Invoicing_model extends BF_Model
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran','left');
-        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project','left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project', 'left');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
         $this->db->where('a.tagih_mundur', 1);
@@ -153,5 +153,145 @@ class Invoicing_model extends BF_Model
             'recordsFiltered' => $count_all,
             'data' => $hasil
         ]);
+    }
+
+    public function get_penawaran_non_konsultasi($id_penawaran)
+    {
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->where('a.id_penawaran', $id_penawaran);
+        return $this->consultant->get()->row();
+    }
+
+    public function get_detail_penawaran_non_konsultasi($id_penawaran)
+    {
+        $this->consultant->select('a.id, a.id_header, a.nm_item, a.qty, a.harga, a.total');
+        $this->consultant->from('kons_tr_detail_penawaran_non_konsultasi a');
+        $this->consultant->where('a.id_header', $id_penawaran);
+        return $this->consultant->get()->result();
+    }
+
+    public function jurnal_invoicing_non_konsultasi($id_penawaran)
+    {
+        $get_penawaran = $this->get_penawaran_non_konsultasi($id_penawaran);
+
+        $this->consultant->select('COALESCE(SUM(a.total), 0) as subtotal');
+        $this->consultant->from('kons_tr_detail_penawaran_non_konsultasi a');
+        $this->consultant->where('a.id_header', $id_penawaran);
+        $get_subtotal = $this->consultant->get()->row();
+
+        $total_nominal = $get_subtotal->subtotal ?? 0;
+
+        $id_company = '1';
+        $nm_company = 'STM-Vuca';
+
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
+
+        $hasil_jurnal = '';
+
+        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+        $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+        $get_coa_jurnal = $this->accounting->get()->result_array();
+
+        $no_coa_jurnal = 0;
+
+        $total_debit = 0;
+        $total_kredit = 0;
+
+        foreach ($get_coa_jurnal as $item_coa_jurnal) {
+            $no_coa_jurnal++;
+
+            $debit = 0;
+            $kredit = 0;
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
+                // $total_nominal = (!empty($get_penawaran)) ? $get_penawaran->subtotal : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 2 / 100);
+                $debit = ($total_nominal + $ppn - $pph);
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
+                // $total_nominal = (!empty($get_penawaran)) ? $get_penawaran->subtotal : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+
+                $kredit = $ppn;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+                // $total_nominal = (!empty($get_penawaran)) ? $get_penawaran->subtotal : 0;
+                $pph = ($total_nominal * 2 / 100);
+                $debit = $pph;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
+                // $total_nominal = (!empty($get_penawaran)) ? $get_penawaran->subtotal : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 2 / 100);
+
+                $kredit = $total_nominal;
+            }
+
+            $hasil_jurnal .= '<tr>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= date('d-F-Y');
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d') . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['no_perkiraan'];
+            $hasil_jurnal .= '<input type="hidden" name="coa_jurnal_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['no_perkiraan'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $nm_company . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
+            $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($debit);
+            $hasil_jurnal .= '<input type="hidden" name="debit_' . $no_coa_jurnal . '" value="' . $debit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($kredit);
+            $hasil_jurnal .= '<input type="hidden" name="kredit_' . $no_coa_jurnal . '" value="' . $kredit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '</tr>';
+
+            $total_debit += $debit;
+            $total_kredit += $kredit;
+        }
+
+        $response = [
+            'total_debit' => $total_debit,
+            'total_kredit' => $total_kredit,
+            'hasil_jurnal' => $hasil_jurnal
+        ];
+
+        return $response;
+    }
+
+    public function get_invoice_non_kons($id_penawaran)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id_penawaran', $id_penawaran);
+        $this->db->where('a.non_kons', '1');
+        $get_data = $this->db->get()->result();
+
+        return $get_data;
     }
 }
