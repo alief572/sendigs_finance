@@ -103,6 +103,11 @@
           <ul class="nav navbar-nav">
             <!-- Notifications Menu -->
             <li>
+              <a href="https://sendigs.com/helpdesk" target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-secondary">Helpdesk</a>
+            </li>
+            <li>
               <a href="<?= base_url('assets/pdf/manual-book.pdf') ?>"
                 target="_blank"
                 rel="noopener noreferrer"
