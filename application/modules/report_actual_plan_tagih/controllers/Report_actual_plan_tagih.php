@@ -207,9 +207,10 @@ class Report_actual_plan_tagih extends Admin_Controller
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
 
-            if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
-                $no_all++;
-            }
+            $no_all++;
+
+            // if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+            // }
         }
 
         $this->db->select('a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, c.id as id_company, c.nm_company, d.nm_paket');
@@ -434,50 +435,51 @@ class Report_actual_plan_tagih extends Admin_Controller
                 $arr_noms[$item_bulan] = $total_perbulan;
             endforeach;
 
-            if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
-                $no++;
-                $hasil[] = [
-                    'no' => $no,
-                    'company' => $item->nm_company,
-                    'no_spk' => $item->id_spk_penawaran,
-                    'customer' => $item->nm_customer,
-                    'project' => $item->nm_paket,
-                    'nominal_spk' => number_format($item->nilai_kontrak),
-                    'nominal_invoice' => number_format($total_invoice),
-                    'nominal_uninvoice' => number_format($total_uninvoiced),
-                    'macet' => number_format($total_macet),
-                    'jan' => number_format((!empty($arr_noms[1])) ? $arr_noms[1] : 0),
-                    'feb' => number_format((!empty($arr_noms[2])) ? $arr_noms[2] : 0),
-                    'mar' => number_format((!empty($arr_noms[3])) ? $arr_noms[3] : 0),
-                    'apr' => number_format((!empty($arr_noms[4])) ? $arr_noms[4] : 0),
-                    'may' => number_format((!empty($arr_noms[5])) ? $arr_noms[5] : 0),
-                    'jun' => number_format((!empty($arr_noms[6])) ? $arr_noms[6] : 0),
-                    'jul' => number_format((!empty($arr_noms[7])) ? $arr_noms[7] : 0),
-                    'aug' => number_format((!empty($arr_noms[8])) ? $arr_noms[8] : 0),
-                    'sep' => number_format((!empty($arr_noms[9])) ? $arr_noms[9] : 0),
-                    'oct' => number_format((!empty($arr_noms[10])) ? $arr_noms[10] : 0),
-                    'nov' => number_format((!empty($arr_noms[11])) ? $arr_noms[11] : 0),
-                    'dec' => number_format((!empty($arr_noms[12])) ? $arr_noms[12] : 0)
-                ];
+            $no++;
+            $hasil[] = [
+                'no' => $no,
+                'company' => $item->nm_company,
+                'no_spk' => $item->id_spk_penawaran,
+                'customer' => $item->nm_customer,
+                'project' => $item->nm_paket,
+                'nominal_spk' => number_format($item->nilai_kontrak),
+                'nominal_invoice' => number_format($total_invoice),
+                'nominal_uninvoice' => number_format($total_uninvoiced),
+                'macet' => number_format($total_macet),
+                'jan' => number_format((!empty($arr_noms[1])) ? $arr_noms[1] : 0),
+                'feb' => number_format((!empty($arr_noms[2])) ? $arr_noms[2] : 0),
+                'mar' => number_format((!empty($arr_noms[3])) ? $arr_noms[3] : 0),
+                'apr' => number_format((!empty($arr_noms[4])) ? $arr_noms[4] : 0),
+                'may' => number_format((!empty($arr_noms[5])) ? $arr_noms[5] : 0),
+                'jun' => number_format((!empty($arr_noms[6])) ? $arr_noms[6] : 0),
+                'jul' => number_format((!empty($arr_noms[7])) ? $arr_noms[7] : 0),
+                'aug' => number_format((!empty($arr_noms[8])) ? $arr_noms[8] : 0),
+                'sep' => number_format((!empty($arr_noms[9])) ? $arr_noms[9] : 0),
+                'oct' => number_format((!empty($arr_noms[10])) ? $arr_noms[10] : 0),
+                'nov' => number_format((!empty($arr_noms[11])) ? $arr_noms[11] : 0),
+                'dec' => number_format((!empty($arr_noms[12])) ? $arr_noms[12] : 0)
+            ];
 
-                $total_jan += (!empty($arr_noms[1])) ? $arr_noms[1] : 0;
-                $total_feb += (!empty($arr_noms[2])) ? $arr_noms[2] : 0;
-                $total_mar += (!empty($arr_noms[3])) ? $arr_noms[3] : 0;
-                $total_apr += (!empty($arr_noms[4])) ? $arr_noms[4] : 0;
-                $total_may += (!empty($arr_noms[5])) ? $arr_noms[5] : 0;
-                $total_jun += (!empty($arr_noms[6])) ? $arr_noms[6] : 0;
-                $total_jul += (!empty($arr_noms[7])) ? $arr_noms[7] : 0;
-                $total_aug += (!empty($arr_noms[8])) ? $arr_noms[8] : 0;
-                $total_sep += (!empty($arr_noms[9])) ? $arr_noms[9] : 0;
-                $total_oct += (!empty($arr_noms[10])) ? $arr_noms[10] : 0;
-                $total_nov += (!empty($arr_noms[11])) ? $arr_noms[11] : 0;
-                $total_dec += (!empty($arr_noms[12])) ? $arr_noms[12] : 0;
+            $total_jan += (!empty($arr_noms[1])) ? $arr_noms[1] : 0;
+            $total_feb += (!empty($arr_noms[2])) ? $arr_noms[2] : 0;
+            $total_mar += (!empty($arr_noms[3])) ? $arr_noms[3] : 0;
+            $total_apr += (!empty($arr_noms[4])) ? $arr_noms[4] : 0;
+            $total_may += (!empty($arr_noms[5])) ? $arr_noms[5] : 0;
+            $total_jun += (!empty($arr_noms[6])) ? $arr_noms[6] : 0;
+            $total_jul += (!empty($arr_noms[7])) ? $arr_noms[7] : 0;
+            $total_aug += (!empty($arr_noms[8])) ? $arr_noms[8] : 0;
+            $total_sep += (!empty($arr_noms[9])) ? $arr_noms[9] : 0;
+            $total_oct += (!empty($arr_noms[10])) ? $arr_noms[10] : 0;
+            $total_nov += (!empty($arr_noms[11])) ? $arr_noms[11] : 0;
+            $total_dec += (!empty($arr_noms[12])) ? $arr_noms[12] : 0;
 
-                $ttl_nominal_spk += $item->nilai_kontrak;
-                $ttl_invoice += $total_invoice;
-                $ttl_uninvoice += $total_uninvoiced;
-                $ttl_macet += $total_macet;
-            }
+            $ttl_nominal_spk += $item->nilai_kontrak;
+            $ttl_invoice += $total_invoice;
+            $ttl_uninvoice += $total_uninvoiced;
+            $ttl_macet += $total_macet;
+
+            // if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+            // }
         }
 
         $response = [
