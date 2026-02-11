@@ -190,7 +190,7 @@ class Request_pr_stok extends Admin_Controller
 
     // $getraw_materials   = $this->db->get_where('accessories', array('id_category' => $id_category, 'deleted_date' => NULL, 'status' => '1', 'request >' => 0))->result_array();
 
-    $getraw_materials = $this->db->query('SELECT a.* FROM accessories a WHERE a.id_category = "' . $id_category . '" AND a.deleted_date IS NULL AND a.status = "1" AND (a.request_pack > 0)')->result_array();
+    $getraw_materials = $this->db->query('SELECT a.* FROM accessories a WHERE a.id_category = "' . $id_category . '" AND a.deleted_date IS NULL AND a.status = "1" AND (a.request > 0)')->result_array();
 
     $ArrSaveDetail = [];
     $SUM = 0;
@@ -199,7 +199,7 @@ class Request_pr_stok extends Admin_Controller
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request'];
-      $ArrSaveDetail[$key]['price_ref'] = (!empty($value['price_ref'])) ? $value['price_ref'] : 0;
+      $ArrSaveDetail[$key]['price_ref'] = (!empty($value['price_ref_use'])) ? $value['price_ref_use'] : 0;
     }
 
     $ArrSaveHeader = array(
