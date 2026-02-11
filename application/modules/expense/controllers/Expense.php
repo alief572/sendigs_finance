@@ -789,6 +789,67 @@ class Expense extends Admin_Controller
 		);
 		$this->load->view('kasbon_print', $data);
 	}
+
+	public function periodik_print($id)
+	{
+		$this->db->select('
+			a.*, 
+			a.tanggal_doc as tgl_doc, 
+			a.created_by as created_by_user, 
+			a.created_on as created_on_header,
+			b.nilai as jumlah_kasbon, 
+			b.keterangan as keperluan, 
+			
+		');
+		$this->db->from('tr_pengajuan_rutin a');
+		$this->db->join('tr_pengajuan_rutin_detail b', 'a.no_doc = b.no_doc', 'left');
+		$this->db->where('a.id', $id);
+
+		$query = $this->db->get();
+
+		if (!$query) {
+			show_error('Database Error: ' . $this->db->error()['message']);
+			return;
+		}
+
+		$results = $query->row();
+
+		if (empty($results)) {
+			show_404();
+		}
+
+		if (empty($results->doc_file)) {
+			$results->doc_file = '';
+		}
+
+		$nmuser = '-';
+		$results->created_by = 'FINANCE';
+
+		$id_user_create = !empty($results->created_by_user) ? $results->created_by_user : $results->created_by;
+
+		if (!empty($id_user_create)) {
+			$q_user = $this->db->get_where('users', ['id_user' => $id_user_create]);
+			if ($q_user && $q_user->num_rows() > 0) {
+				$get_user = $q_user->row();
+				$nmuser = $get_user->nm_lengkap;
+				$results->created_by = $get_user->username;
+			}
+		}
+
+		$results->approved_by = 'FINANCE';
+		$results->approved_on = '';
+		$results->doc_file_2 = '';
+
+		$data = array(
+			'title' => 'Print Periodik',
+			'stsview' => 'print',
+			'data' => $results,
+			'nmuser' => $nmuser
+		);
+
+		$this->load->view('periodik_print', $data);
+	}
+
 	// kasbon view
 	public function kasbon_view($id, $mod = '')
 	{
