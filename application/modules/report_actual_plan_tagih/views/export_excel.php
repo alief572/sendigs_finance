@@ -200,15 +200,15 @@ if (!empty($nm_company)) {
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= number_format($item->nilai_kontrak, 0, ',', '.') ?></td>
-                <td align="right"><?= number_format($total_invoice, 0, ',', '.') ?></td>
-                <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 0, ',', '.') ?></td>
-                <td align="right"><?= number_format($total_macet, 0, ',', '.') ?></td>
+                <td align="right"><?= number_format($item->nilai_kontrak, 2, ',', '.') ?></td>
+                <td align="right"><?= number_format($total_invoice, 2, ',', '.') ?></td>
+                <td align="right"><?= number_format($item->nilai_kontrak - $total_invoice, 2, ',', '.') ?></td>
+                <td align="right"><?= number_format($total_macet, 2, ',', '.') ?></td>
                 <?php
                 foreach ($arr_bulan as $item_bulan) :
                 ?>
 
-                    <td align="right"><?= number_format($arr_noms[$item_bulan], 0, ',', '.') ?></td>
+                    <td align="right"><?= number_format($arr_noms[$item_bulan], 2, ',', '.') ?></td>
 
                 <?php
                     if ($item_bulan == '1') {
@@ -270,22 +270,22 @@ if (!empty($nm_company)) {
 
         <tr>
             <td style="font-weight: bold;" colspan="5" align="right">Grand Total</td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_nominal_spk, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_invoice, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_uninvoice, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($ttl_macet, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jan, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_feb, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_mar, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_apr, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_may, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jun, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_jul, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_aug, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_sep, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_oct, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_nov, 0, ',', '.') ?></td>
-            <td style="font-weight: bold;" align="right"><?= number_format($total_dec, 0, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_nominal_spk, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_invoice, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_uninvoice, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($ttl_macet, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jan, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_feb, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_mar, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_apr, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_may, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jun, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_jul, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_aug, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_sep, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_oct, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_nov, 2, ',', '.') ?></td>
+            <td style="font-weight: bold;" align="right"><?= number_format($total_dec, 2, ',', '.') ?></td>
         </tr>
     </tbody>
 </table>
