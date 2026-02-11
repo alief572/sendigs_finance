@@ -197,7 +197,7 @@ class Request_pr_stok extends Admin_Controller
     foreach ($getraw_materials as $key => $value) {
       $SUM += $value['request'];
 
-      if ($value['price_ref'] < 1) {
+      if ($value['price_ref_use'] < 1) {
         $this->db->select('a.price_reference');
         $this->db->from('budget_rutin_detail a');
         $this->db->where('a.id_barang', $value['id']);
@@ -205,7 +205,7 @@ class Request_pr_stok extends Admin_Controller
 
         $price_ref = $get_price_ref->price_reference ?? 0;
       } else {
-        $price_ref = $value['price_ref'];
+        $price_ref = $value['price_ref_use'];
       }
 
       $ArrSaveDetail[$key]['so_number'] = $so_number;
