@@ -204,4 +204,13 @@ class App_pr_stock_model extends BF_Model
     $data['query'] = $this->db->query($sql);
     return $data;
   }
+
+  public function ttl_pengajuan_pr($so_number)
+  {
+    $this->db->select('SUM(COALESCE(a.propose_rev, a.propose_purchase) * a.price_ref) as ttl_pr');
+    $this->db->from('material_planning_base_on_produksi_detail a');
+    $this->db->where('a.so_number', $so_number);
+    $query = $this->db->get();
+    return $query->row();
+  }
 }

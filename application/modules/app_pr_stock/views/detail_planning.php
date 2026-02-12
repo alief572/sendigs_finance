@@ -42,7 +42,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 				</div>
 				<div class="col-md-6">
 					<label for="">Nilai Pengajuan</label>
-					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_pengajuan']) ?>" readonly>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr) ?>" readonly>
 				</div>
 				<div class="col-md-12">
 					<br><br>
@@ -64,12 +64,16 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 							$grand_total_price = 0;
 							$key = 0;
 							foreach ($detail as $key => $value) {
+								$no_coa = $value['no_coa'] ?? '';
+								$nm_coa = $value['nm_coa'] ?? '';
+
 								$key++;
-								$nm_material 	= $value['nm_material'] . ' - <b>(' . $value['no_coa'] . ' - ' . strtoupper($value['nm_coa']) . ')</b>';
+								$nm_material 	= $value['nm_material'] . ' - <b>(' . $no_coa . ' - ' . strtoupper($nm_coa) . ')</b>';
 								$stock_free 	= $value['stock_free'];
 								$use_stock 		= $value['use_stock'];
 								$sisa_free 		= $stock_free - $use_stock;
 								$propose 		= $value['propose_purchase'];
+								$price_ref = $value['price_ref'] ?? 0;
 
 								$get_material = $this->db->get_where('accessories', ['id' => $value['id_material']])->row();
 								$get_kebutuhan = $this->db->get_where('budget_rutin_detail', ['id_barang' => $value['id_material']])->row();
@@ -91,12 +95,12 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format($stock) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose * $konversi) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format($get_material->price_ref_high) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format($price_ref) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $price_ref) . "</td>";
 
 								echo "</tr>";
 
-								$grand_total_price += (($propose * $konversi) * $get_material->price_ref_high);
+								$grand_total_price += (($propose * $konversi) * $price_ref);
 							}
 							?>
 						</tbody>
