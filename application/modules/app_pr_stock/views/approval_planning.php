@@ -100,7 +100,7 @@ if (!empty($header)) {
 				</div>
 				<div class="col-md-6">
 					<label for="">Nilai Pengajuan</label>
-					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_pengajuan']) ?>" readonly>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr) ?>" readonly>
 				</div>
 				<div class="col-md-12">
 					<br><br>

@@ -188,13 +188,16 @@ class App_pr_stock extends Admin_Controller
           ->result_array();
       }
 
+      $ttl_pengajuan_pr = $this->app_pr_stock_model->ttl_pengajuan_pr($so_number);
+
       $data = [
         'so_number' => $so_number,
         'header' => $header,
         'detail' => $detail,
         'tingkat_approval' => $tingkat_approval,
         'GET_LEVEL4'   => get_inventory_lv4(),
-        'GET_STOK_PUSAT' => getStokMaterial(1)
+        'GET_STOK_PUSAT' => getStokMaterial(1),
+        'ttl_pengajuan_pr' => $ttl_pengajuan_pr->ttl_pr
       ];
 
       $posisi_approval = "";
@@ -250,12 +253,15 @@ class App_pr_stock extends Admin_Controller
         ->result_array();
     }
 
+    $ttl_pengajuan_pr = $this->app_pr_stock_model->ttl_pengajuan_pr($so_number);
+
     $data = [
       'so_number' => $so_number,
       'header' => $header,
       'detail' => $detail,
       'GET_LEVEL4'   => get_inventory_lv4(),
-      'GET_STOK_PUSAT' => getStokMaterial(1)
+      'GET_STOK_PUSAT' => getStokMaterial(1),
+      'ttl_pengajuan_pr' => $ttl_pengajuan_pr->ttl_pr
     ];
 
     $this->template->title('Detail - ' . $so_number);
