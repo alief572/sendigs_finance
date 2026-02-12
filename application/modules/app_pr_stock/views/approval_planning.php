@@ -148,12 +148,12 @@ if (!empty($header)) {
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format($stock, 2) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose * $konversi, 2) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format($get_material->price_ref_high) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $get_material->price_ref_high) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format($value['price_ref']) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $value['price_ref']) . "</td>";
 
 								echo "</tr>";
 
-								$grand_total_price += (($propose * $konversi) * $get_material->price_ref_high);
+								$grand_total_price += (($propose * $konversi) * $value['price_ref']);
 							}
 							?>
 						</tbody>

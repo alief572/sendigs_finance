@@ -138,24 +138,24 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         DataTables();
     });
 
-    $(document).on('click', '.tab_pin', function() {
-        var no = $(this).data('no');
-        if (no == 1) {
-            DataTables();
-            $('.col_1').show();
-            $('.col_2').hide();
+    // $(document).on('click', '.tab_pin', function() {
+    //     var no = $(this).data('no');
+    //     if (no == 1) {
+    //         DataTables();
+    //         $('.col_1').show();
+    //         $('.col_2').hide();
 
-            $('.tab_1').addClass('active');
-            $('.tab_2').removeClass('active');
-        } else {
-            DataTables_non_kons();
-            $('.col_1').hide();
-            $('.col_2').show();
+    //         $('.tab_1').addClass('active');
+    //         $('.tab_2').removeClass('active');
+    //     } else {
+    //         DataTablesNonKonsultasi();
+    //         $('.col_1').hide();
+    //         $('.col_2').show();
 
-            $('.tab_1').removeClass('active');
-            $('.tab_2').addClass('active');
-        }
-    });
+    //         $('.tab_1').removeClass('active');
+    //         $('.tab_2').addClass('active');
+    //     }
+    // });
 
     $(document).on('click', '.pilih_print_inv', function() {
         var id_inv = $(this).data('id_inv');

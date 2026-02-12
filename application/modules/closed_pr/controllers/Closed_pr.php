@@ -22,7 +22,7 @@ class Closed_pr extends Admin_Controller
 	public function __construct()
 	{
 		parent::__construct();
-		$this->load->library(array('Mpdf', 'upload', 'Image_lib'));
+		$this->load->library(array('upload', 'Image_lib'));
 		$this->load->model(array(
 			'Closed_pr/Closed_pr_model',
 			'Aktifitas/aktifitas_model',

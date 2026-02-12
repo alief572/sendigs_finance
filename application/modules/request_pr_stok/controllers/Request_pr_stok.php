@@ -196,10 +196,22 @@ class Request_pr_stok extends Admin_Controller
     $SUM = 0;
     foreach ($getraw_materials as $key => $value) {
       $SUM += $value['request'];
+
+      if ($value['price_ref_use'] < 1) {
+        $this->db->select('a.price_reference');
+        $this->db->from('budget_rutin_detail a');
+        $this->db->where('a.id_barang', $value['id']);
+        $get_price_ref = $this->db->get()->row();
+
+        $price_ref = $get_price_ref->price_reference ?? 0;
+      } else {
+        $price_ref = $value['price_ref_use'];
+      }
+
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request'];
-      $ArrSaveDetail[$key]['price_ref'] = (!empty($value['price_ref'])) ? $value['price_ref'] : 0;
+      $ArrSaveDetail[$key]['price_ref'] = $price_ref;
     }
 
     $ArrSaveHeader = array(
