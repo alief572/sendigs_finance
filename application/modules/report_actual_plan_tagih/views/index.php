@@ -277,7 +277,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
             processing: true,
             destroy: true,
             paging: true,
-            lengthMenu: [500, 1000, 2500, 5000, 10000],
+            lengthMenu: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
             ajax: {
                 type: 'get',
                 url: siteurl + active_controller + 'get_data_report_apt',

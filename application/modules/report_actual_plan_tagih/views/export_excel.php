@@ -57,148 +57,57 @@ if (!empty($nm_company)) {
         foreach ($list_report as $item) :
 
 
-            $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total_invoice');
-            $this->db->from('tr_invoicing a');
-            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            $get_invoicing = $this->db->get()->row();
+            // $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total_invoice');
+            // $this->db->from('tr_invoicing a');
+            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+            // $get_invoicing = $this->db->get()->row();
 
-            $total_invoice = (!empty($get_invoicing->total_invoice)) ? $get_invoicing->total_invoice : 0;
+            $total_invoice = $item->nominal_invoice ?? 0;
 
             $total_uninvoiced = ($item->nilai_kontrak - $total_invoice);
 
-            $total_macet = 0;
+            $total_macet = $item->macet ?? 0;
 
-            $this->db->select('a.*,b.nominal_payment');
-            $this->db->from('kons_tr_actual_plan_tagih a');
-            $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
-            $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            // $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
-            // $this->db->where('MONTH(a.tanggal_actual_plan_tagih)', $item_bulan);
-            $this->db->group_start();
-            $this->db->where('a.tagih_mundur', '3');
-            $this->db->or_where('a.macet', '1');
-            $this->db->group_end();
-            $this->db->group_by('a.id_detail_plan_tagih');
-            $get_nilai_macet = $this->db->get()->result();
-
-            foreach ($get_nilai_macet as $item_nilai_macet) {
-                $this->db->select('a.id');
-                $this->db->from('kons_tr_actual_plan_tagih a');
-                $this->db->where('a.id_detail_plan_tagih', $item_nilai_macet->id_detail_plan_tagih);
-                $this->db->where('a.id_spk_penawaran', $item_nilai_macet->id_spk_penawaran);
-                // $this->db->group_start();
-                $this->db->where_in('a.tagih_mundur', ['1', '2']);
-                $this->db->where('a.created_date >', $item_nilai_macet->created_date);
-                $this->db->group_start();
-                $this->db->where('a.macet IS NULL');
-                $this->db->or_where('a.macet', '');
-                $this->db->group_end();
-                // $this->db->group_end();
-                $get_check_tagih_mundur_balik = $this->db->get()->num_rows();
-
-                if ($get_check_tagih_mundur_balik < 1) {
-                    $total_macet += $item_nilai_macet->nominal_payment;
-                }
-            }
-
-            // $this->db->select('COALESCE(a.nominal_payment, 0) as total_macet');
-            // $this->db->from('kons_tr_actual_plan_tagih a');
-            // $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            // $this->db->group_start();
-            // $this->db->where('a.tagih_mundur', '3');
-            // $this->db->or_where('a.macet', '1');
-            // $this->db->group_end();
-            // $this->db->group_by('a.id_detail_plan_tagih');
-            // $get_tagihan_macet = $this->db->get()->result();
-
-            // foreach ($get_tagihan_macet as $item_macet) {
-
-            //     $this->db->select('a.id');
-            //     $this->db->from('kons_tr_actual_plan_tagih a');
-            //     $this->db->where('a.id_detail_plan_tagih', $item_macet->id_detail_plan_tagih);
-            //     $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-            //     $this->db->where('a.tagih_mundur', '1');
-            //     $this->db->where('a.created_date >', $item->created_date);
-            //     $get_check_tagih_mundur_balik = $this->db->get()->num_rows();
-
-            //     if ($get_check_tagih_mundur_balik < 1) {
-            //         $total_macet += $item_macet->total_macet;
-            //     }
-            // }
 
             $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
-
-                $this->db->select('a.id_detail_plan_tagih, b.nominal_payment');
-                $this->db->from('kons_tr_actual_plan_tagih a');
-                $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
-                $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
-                $this->db->where('MONTH(a.tanggal_actual_plan_tagih)', $item_bulan);
-                $this->db->where_in('a.tagih_mundur', '1');
-                $this->db->group_by('a.id_detail_plan_tagih');
-                $this->db->order_by('a.created_date', 'DESC');
-                $get_nilai_per_bulan = $this->db->get()->result();
-
-                $total_perbulan = 0;
-                foreach ($get_nilai_per_bulan as $item_nilai_perbulan) {
-                    $this->db->select('a.id');
-                    $this->db->from('kons_tr_actual_plan_tagih a');
-                    $this->db->where('a.id_detail_plan_tagih', $item_nilai_perbulan->id_detail_plan_tagih);
-                    $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                    $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
-                    $this->db->where('MONTH(a.tanggal_actual_plan_tagih) >', $item_bulan);
-                    $this->db->where('a.tagih_mundur', '1');
-                    $check_newer_tagih_data = $this->db->get()->num_rows();
-
-                    if ($check_newer_tagih_data < 1) {
-                        $total_perbulan += $item_nilai_perbulan->nominal_payment;
-                    }
+                if ($item_bulan == 1) {
+                    $arr_noms[$item_bulan] = $item->jan ?? 0;
                 }
-
-                $this->db->select('a.id_detail_plan_tagih, a.created_date, b.nominal_payment');
-                $this->db->from('kons_tr_actual_plan_tagih a');
-                $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
-                $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
-                $this->db->where('MONTH(a.tanggal_actual_plan_tagih)', $item_bulan);
-                $this->db->where('a.tagih_mundur', '2');
-                $this->db->order_by('a.created_date', 'DESC');
-                $get_nilai_per_bulan_2 = $this->db->get()->result();
-
-                foreach ($get_nilai_per_bulan_2 as $item2) {
-                    $this->db->select('a.id');
-                    $this->db->from('kons_tr_actual_plan_tagih a');
-                    $this->db->where('a.id_detail_plan_tagih', $item2->id_detail_plan_tagih);
-                    $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                    $this->db->where('a.tagih_mundur', '1');
-                    $this->db->where('a.created_date >', $item2->created_date);
-                    $this->db->group_start();
-                    $this->db->where('a.macet IS NULL');
-                    $this->db->or_where('a.macet', '');
-                    $this->db->group_end();
-                    $check_newer_tagih_data = $this->db->get()->num_rows();
-
-                    if ($check_newer_tagih_data < 1) {
-                        $total_perbulan += $item2->nominal_payment;
-                    }
+                if ($item_bulan == 2) {
+                    $arr_noms[$item_bulan] = $item->feb ?? 0;
                 }
-
-                $this->db->select('a.nominal_payment');
-                $this->db->from('kons_tr_plan_tagih_detail a');
-                $this->db->join('kons_tr_actual_plan_tagih b', 'b.id_detail_plan_tagih = a.id', 'left');
-                $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
-                $this->db->where('YEAR(a.tgl_plan_tagih)', $tahun);
-                $this->db->where('MONTH(a.tgl_plan_tagih)', $item_bulan);
-                $this->db->where('b.id IS NULL');
-                $get_nilai_perbulan_3 = $this->db->get()->result();
-
-                foreach ($get_nilai_perbulan_3 as $item3) {
-                    $total_perbulan += $item3->nominal_payment;
+                if ($item_bulan == 3) {
+                    $arr_noms[$item_bulan] = $item->mar ?? 0;
                 }
-
-                $arr_noms[$item_bulan] = $total_perbulan;
+                if ($item_bulan == 4) {
+                    $arr_noms[$item_bulan] = $item->apr ?? 0;
+                }
+                if ($item_bulan == 5) {
+                    $arr_noms[$item_bulan] = $item->may ?? 0;
+                }
+                if ($item_bulan == 6) {
+                    $arr_noms[$item_bulan] = $item->jun ?? 0;
+                }
+                if ($item_bulan == 7) {
+                    $arr_noms[$item_bulan] = $item->jul ?? 0;
+                }
+                if ($item_bulan == 8) {
+                    $arr_noms[$item_bulan] = $item->aug ?? 0;
+                }
+                if ($item_bulan == 9) {
+                    $arr_noms[$item_bulan] = $item->sep ?? 0;
+                }
+                if ($item_bulan == 10) {
+                    $arr_noms[$item_bulan] = $item->oct ?? 0;
+                }
+                if ($item_bulan == 11) {
+                    $arr_noms[$item_bulan] = $item->nov ?? 0;
+                }
+                if ($item_bulan == 12) {
+                    $arr_noms[$item_bulan] = $item->dec ?? 0;
+                }
             endforeach;
 
             // if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
