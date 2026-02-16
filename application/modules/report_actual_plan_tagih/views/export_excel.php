@@ -130,7 +130,7 @@ if (!empty($nm_company)) {
             $arr_noms = [];
             foreach ($arr_bulan as $item_bulan) :
 
-                $this->db->select('b.nominal_payment');
+                $this->db->select('a.id_detail_plan_tagih, b.nominal_payment');
                 $this->db->from('kons_tr_actual_plan_tagih a');
                 $this->db->join('kons_tr_plan_tagih_detail b', 'b.id = a.id_detail_plan_tagih');
                 $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
@@ -143,7 +143,18 @@ if (!empty($nm_company)) {
 
                 $total_perbulan = 0;
                 foreach ($get_nilai_per_bulan as $item_nilai_perbulan) {
-                    $total_perbulan += $item_nilai_perbulan->nominal_payment;
+                    $this->db->select('a.id');
+                    $this->db->from('kons_tr_actual_plan_tagih a');
+                    $this->db->where('a.id_detail_plan_tagih', $item_nilai_perbulan->id_detail_plan_tagih);
+                    $this->db->where('a.id_spk_penawaran', $item->id_spk_penawaran);
+                    $this->db->where('YEAR(a.tanggal_actual_plan_tagih)', $tahun);
+                    $this->db->where('MONTH(a.tanggal_actual_plan_tagih) >', $item_bulan);
+                    $this->db->where('a.tagih_mundur', '1');
+                    $check_newer_tagih_data = $this->db->get()->num_rows();
+
+                    if ($check_newer_tagih_data < 1) {
+                        $total_perbulan += $item_nilai_perbulan->nominal_payment;
+                    }
                 }
 
                 $this->db->select('a.id_detail_plan_tagih, a.created_date, b.nominal_payment');
