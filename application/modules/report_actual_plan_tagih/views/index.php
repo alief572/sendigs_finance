@@ -26,24 +26,6 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
     .btn {
         font-weight: bold;
     }
-
-    /* table {
-        width: 100%;
-        min-width: 800px;
-        overflow-x: auto;
-        display: block;
-    } */
-
-    /* thead,
-    tbody {
-        display: block;
-    }
-
-    tr {
-        display: table;
-        width: 100%;
-        table-layout: fixed;
-    } */
 </style>
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
