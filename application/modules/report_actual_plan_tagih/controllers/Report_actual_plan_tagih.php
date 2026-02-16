@@ -86,6 +86,194 @@ class Report_actual_plan_tagih extends Admin_Controller
         $tahun = $get['tahun'];
 
         $order_map = [
+            1 => 'a.nm_company',
+            2 => 'a.id_spk_penawaran',
+            3 => 'a.nm_customer',
+            4 => 'a.nm_paket',
+            5 => 'a.nilai_kontrak'
+        ];
+
+        $this->db->select('a.*');
+        $this->db->from('view_rekap_actual_plan_tagih a');
+        $this->db->where('a.tahun_data', $tahun);
+        if (!empty($client)) {
+            $this->db->where('a.id_customer', $client);
+        }
+        if (!empty($company)) {
+            $this->db->where('a.id_company', $company);
+        }
+
+        // $db_clone = clone $this->db;
+        $count_all = $this->db->count_all_results('', false);
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('a.nm_company', $search, 'both');
+            $this->db->or_like('a.id_spk_penawaran', $search, 'both');
+            $this->db->or_like('a.nm_customer', $search, 'both');
+            $this->db->or_like('a.nm_paket', $search, 'both');
+            $this->db->group_end();
+        }
+
+        // $db_clone = clone $this->db;
+        $count_filter = $this->db->count_all_results('', false);
+
+        $this->db->order_by('a.id_spk_penawaran', 'DESC');
+        $this->db->limit($length, $start);
+
+        $get_data = $this->db->get()->result();
+
+        // print_r($this->db->last_query());
+        // exit;
+
+        $no = (0 + $start);
+        $hasil = [];
+
+        $total_jan = 0;
+        $total_feb = 0;
+        $total_mar = 0;
+        $total_apr = 0;
+        $total_may = 0;
+        $total_jun = 0;
+        $total_jul = 0;
+        $total_aug = 0;
+        $total_sep = 0;
+        $total_oct = 0;
+        $total_nov = 0;
+        $total_dec = 0;
+
+        $ttl_nominal_spk = 0;
+        $ttl_invoice = 0;
+        $ttl_uninvoice = 0;
+        $ttl_macet = 0;
+
+        foreach ($get_data as $item) {
+            $total_invoice = $item->nominal_invoice ?? 0;
+
+            $total_uninvoiced = ($item->nilai_kontrak - $total_invoice);
+
+            $total_macet = $item->macet ?? 0;
+
+            $arr_bulan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            $arr_noms = [];
+            foreach ($arr_bulan as $item_bulan) :
+                if ($item_bulan == 1) {
+                    $arr_noms[$item_bulan] = $item->jan ?? 0;
+                } elseif ($item_bulan == 2) {
+                    $arr_noms[$item_bulan] = $item->feb ?? 0;
+                } elseif ($item_bulan == 3) {
+                    $arr_noms[$item_bulan] = $item->mar ?? 0;
+                } elseif ($item_bulan == 4) {
+                    $arr_noms[$item_bulan] = $item->apr ?? 0;
+                } elseif ($item_bulan == 5) {
+                    $arr_noms[$item_bulan] = $item->may ?? 0;
+                } elseif ($item_bulan == 6) {
+                    $arr_noms[$item_bulan] = $item->jun ?? 0;
+                } elseif ($item_bulan == 7) {
+                    $arr_noms[$item_bulan] = $item->jul ?? 0;
+                } elseif ($item_bulan == 8) {
+                    $arr_noms[$item_bulan] = $item->aug ?? 0;
+                } elseif ($item_bulan == 9) {
+                    $arr_noms[$item_bulan] = $item->sep ?? 0;
+                } elseif ($item_bulan == 10) {
+                    $arr_noms[$item_bulan] = $item->oct ?? 0;
+                } elseif ($item_bulan == 11) {
+                    $arr_noms[$item_bulan] = $item->nov ?? 0;
+                } else {
+                    $arr_noms[$item_bulan] = $item->dec ?? 0;
+                }
+            endforeach;
+
+            $no++;
+            $hasil[] = [
+                'no' => $no,
+                'company' => $item->nm_company,
+                'no_spk' => $item->id_spk_penawaran,
+                'customer' => $item->nm_customer,
+                'project' => $item->nm_paket,
+                'nominal_spk' => number_format($item->nilai_kontrak),
+                'nominal_invoice' => number_format($total_invoice),
+                'nominal_uninvoice' => number_format($total_uninvoiced),
+                'macet' => number_format($total_macet),
+                'jan' => number_format((!empty($arr_noms[1])) ? $arr_noms[1] : 0),
+                'feb' => number_format((!empty($arr_noms[2])) ? $arr_noms[2] : 0),
+                'mar' => number_format((!empty($arr_noms[3])) ? $arr_noms[3] : 0),
+                'apr' => number_format((!empty($arr_noms[4])) ? $arr_noms[4] : 0),
+                'may' => number_format((!empty($arr_noms[5])) ? $arr_noms[5] : 0),
+                'jun' => number_format((!empty($arr_noms[6])) ? $arr_noms[6] : 0),
+                'jul' => number_format((!empty($arr_noms[7])) ? $arr_noms[7] : 0),
+                'aug' => number_format((!empty($arr_noms[8])) ? $arr_noms[8] : 0),
+                'sep' => number_format((!empty($arr_noms[9])) ? $arr_noms[9] : 0),
+                'oct' => number_format((!empty($arr_noms[10])) ? $arr_noms[10] : 0),
+                'nov' => number_format((!empty($arr_noms[11])) ? $arr_noms[11] : 0),
+                'dec' => number_format((!empty($arr_noms[12])) ? $arr_noms[12] : 0)
+            ];
+
+            $total_jan += (!empty($arr_noms[1])) ? $arr_noms[1] : 0;
+            $total_feb += (!empty($arr_noms[2])) ? $arr_noms[2] : 0;
+            $total_mar += (!empty($arr_noms[3])) ? $arr_noms[3] : 0;
+            $total_apr += (!empty($arr_noms[4])) ? $arr_noms[4] : 0;
+            $total_may += (!empty($arr_noms[5])) ? $arr_noms[5] : 0;
+            $total_jun += (!empty($arr_noms[6])) ? $arr_noms[6] : 0;
+            $total_jul += (!empty($arr_noms[7])) ? $arr_noms[7] : 0;
+            $total_aug += (!empty($arr_noms[8])) ? $arr_noms[8] : 0;
+            $total_sep += (!empty($arr_noms[9])) ? $arr_noms[9] : 0;
+            $total_oct += (!empty($arr_noms[10])) ? $arr_noms[10] : 0;
+            $total_nov += (!empty($arr_noms[11])) ? $arr_noms[11] : 0;
+            $total_dec += (!empty($arr_noms[12])) ? $arr_noms[12] : 0;
+
+            $ttl_nominal_spk += $item->nilai_kontrak;
+            $ttl_invoice += $total_invoice;
+            $ttl_uninvoice += $total_uninvoiced;
+            $ttl_macet += $total_macet;
+
+            // if ($arr_noms[1] > 0 || $arr_noms[2] > 0 || $arr_noms[3] > 0 || $arr_noms[4] > 0 || $arr_noms[5] > 0 || $arr_noms[6] > 0 || $arr_noms[7] > 0 || $arr_noms[8] > 0 || $arr_noms[9] > 0 || $arr_noms[10] > 0 || $arr_noms[11] > 0 || $arr_noms[12] > 0) {
+            // }
+        }
+
+        $response = [
+            'draw' => $draw,
+            'recordsTotal' => $count_all,
+            'recordsFiltered' => $count_filter,
+            'data' => $hasil,
+            'total_nominal_spk' => $ttl_nominal_spk,
+            'total_invoice' => $ttl_invoice,
+            'total_uninvoice' => $ttl_uninvoice,
+            'total_macet' => $ttl_macet,
+            'total_jan' => $total_jan,
+            'total_feb' => $total_feb,
+            'total_mar' => $total_mar,
+            'total_apr' => $total_apr,
+            'total_may' => $total_may,
+            'total_jun' => $total_jun,
+            'total_jul' => $total_jul,
+            'total_aug' => $total_aug,
+            'total_sep' => $total_sep,
+            'total_oct' => $total_oct,
+            'total_nov' => $total_nov,
+            'total_dec' => $total_dec
+        ];
+
+        echo json_encode($response);
+    }
+
+    public function get_data_report_apt_backup()
+    {
+        $get = $this->input->get();
+
+        $draw = intval($get['draw']);
+        $length = $get['length'];
+        $start = $get['start'];
+        $search = $get['search']['value'];
+        $order_col = (!empty($get['order'][0]['column'])) ? $get['order'][0]['column'] : ''; // Index kolom
+        $order_dir = (!empty($get['order'][0]['dir'])) ? $get['order'][0]['dir'] : '';    // 'asc' atau 'desc'
+        $columns = $get['columns'];              // Data kolom dari client-side
+
+        $client = $get['client'];
+        $company = $get['company'];
+        $tahun = $get['tahun'];
+
+        $order_map = [
             1 => 'c.nm_company',
             2 => 'a.id_spk_penawaran',
             3 => 'a.nm_customer',
