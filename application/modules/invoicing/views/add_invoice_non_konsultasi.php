@@ -54,6 +54,34 @@
         </div>
 
         <div class="box-body">
+            <button type="button" class="btn btn-sm btn-success add_item"><i class="fa fa-plus"></i> Tambah Item</button> <br>
+            <table class="table table-striped table-bordered">
+                <thead class="bg-primary">
+                    <tr>
+                        <th class="text-center" width="5%">No.</th>
+                        <th class="text-center" width="15%">Item</th>
+                        <th class="text-center" width="15%">Qty</th>
+                        <th class="text-center" width="15%">Harga</th>
+                        <th class="text-center" width="15%">Total</th>
+                        <th class="text-center" width="15%">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="list_item">
+
+                </tbody>
+                <tfoot class="footer_item">
+                    <tr>
+                        <th colspan="4" class="text-center">Biaya Kirim</th>
+                        <th>
+                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="0">
+                        </th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="box-body">
             <h4>Detail Penawaran</h4>
             <table class="table table-striped table-bordered">
                 <thead class="bg-primary">
@@ -183,7 +211,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script>
+    $('.auto_num').autoNumeric('init');
+
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 

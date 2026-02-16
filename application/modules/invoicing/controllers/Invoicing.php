@@ -2,14 +2,12 @@
 
 class Invoicing extends Admin_Controller
 {
-    protected $viewPermission     = 'Invoicing.View';
-    protected $addPermission      = 'Invoicing.Add';
+    protected $viewPermission = 'Invoicing.View';
+    protected $addPermission = 'Invoicing.Add';
     protected $managePermission = 'Invoicing.Manage';
     protected $deletePermission = 'Invoicing.Delete';
-
     protected $consultant;
     protected $accounting;
-
     public function __construct()
     {
         parent::__construct();
@@ -803,20 +801,23 @@ class Invoicing extends Admin_Controller
 
                 $valid = 0;
                 $msg = $this->db->error($update_actual_plan_tagih)['message'];
-            } else {
-                if ($this->db->trans_status() ===  false) {
+            }
+            else {
+                if ($this->db->trans_status() === false) {
                     $this->db->trans_rollback();
 
                     $valid = 0;
                     $msg = 'Please try again later !';
-                } else {
+                }
+                else {
                     $this->db->trans_commit();
 
                     $valid = 1;
                     $msg = 'Data has been saved !';
                 }
             }
-        } else {
+        }
+        else {
             $valid = 0;
         }
 
@@ -927,7 +928,8 @@ class Invoicing extends Admin_Controller
             ];
 
             echo json_encode($response);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $response = [
                 'status' => 0,
                 'msg' => $e->getMessage()
@@ -1007,18 +1009,21 @@ class Invoicing extends Admin_Controller
 
             $valid = 0;
             $msg = $this->db->error($update_invoice)['message'];
-        } else if (!$insert_jurnal) {
+        }
+        else if (!$insert_jurnal) {
             $this->db->trans_rollback();
 
             $valid = 0;
             $msg = $this->db->error($insert_jurnal)['message'];
-        } else {
+        }
+        else {
             if ($this->db->trans_status() === false) {
                 $this->db->trans_rollback();
 
                 $valid = 0;
                 $msg = 'Please try again later !';
-            } else {
+            }
+            else {
                 $this->db->trans_commit();
 
                 $valid = 1;
@@ -1075,7 +1080,8 @@ class Invoicing extends Admin_Controller
                 'status' => 1,
                 'msg' => 'Data has been saved !'
             ]);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $this->db->trans_rollback();
 
             http_response_code(500);
@@ -1108,7 +1114,8 @@ class Invoicing extends Admin_Controller
 
             $valid = 0;
             $msg = 'Please try again later !';
-        } else {
+        }
+        else {
             $this->db->trans_commit();
 
             $valid = 1;
@@ -1237,7 +1244,8 @@ class Invoicing extends Admin_Controller
 
         if (empty($get_penawaran)) {
             redirect('invoicing');
-        } else {
+        }
+        else {
             $this->template->title('Create Invoice Non Konsultasi');
             $this->template->set($data);
             $this->template->render('add_invoice_non_konsultasi');
@@ -1269,7 +1277,8 @@ class Invoicing extends Admin_Controller
 
         if (empty($get_penawaran) || empty($get_invoicing)) {
             redirect('invoicing');
-        } else {
+        }
+        else {
             $this->template->title('Edit Invoice Non Konsultasi');
             $this->template->set($data);
             $this->template->render('edit_invoice_non_konsultasi');
@@ -1301,7 +1310,8 @@ class Invoicing extends Admin_Controller
 
         if (empty($get_penawaran) || empty($get_invoicing)) {
             redirect('invoicing');
-        } else {
+        }
+        else {
             $this->template->title('View Invoice Non Konsultasi');
             $this->template->set($data);
             $this->template->render('view_invoice_non_konsultasi');
@@ -1422,7 +1432,8 @@ class Invoicing extends Admin_Controller
                 'status' => $valid,
                 'msg' => $msg
             ]);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $this->db->trans_rollback();
             $response = [
                 'status' => 0,
@@ -1519,7 +1530,8 @@ class Invoicing extends Admin_Controller
                 'msg' => $msg
             ];
             echo json_encode($response);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $this->db->trans_rollback();
             $response = [
                 'status' => 0,
