@@ -71,7 +71,7 @@ class Plan_tagih extends Admin_Controller
         $this->consultant->select('a.*');
         $this->consultant->from('kons_tr_spk_penawaran_payment a');
         $this->consultant->where('a.id_spk_penawaran', $id_spk);
-        $this->consultant->order_by('a.dibuat_tgl', 'asc');
+        $this->consultant->order_by('a.id', 'asc');
         $get_top_spk_penawaran = $this->consultant->get()->result();
 
         $this->db->select('a.keterangan_penagihan');
