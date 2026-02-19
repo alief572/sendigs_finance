@@ -46,9 +46,9 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							<th class="text-center no-sort">Nama Barang/Jasa</th>
 							<th class="text-center no-sort">Spec / Requirement</th>
 							<th class="text-center no-sort" width='7%'>Qty</th>
-							<th class="text-center no-sort">Dibutuhkan</th>
 							<th class="text-center no-sort">Keterangan</th>
 							<th class="text-center no-sort">PIC</th>
+							<th class="text-center no-sort">Created Date</th>
 							<th class="text-center no-sort">Status</th>
 							<th class="text-center no-sort" width='13%'>Option</th>
 						</tr>
@@ -87,7 +87,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 								$arr_spec[$val] = "&bull; " . strtoupper($valx['spec']);
 								$arr_qty[$val] = "&bull; " . floatval($valx['qty']) . ' ' . $nm_satuan;
 								$tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
-								$arr_tanggal[$val] = "&bull; " . $tgl_dibutuhkan;
+								$arr_tanggal[$val] = "&bull; " . date('d F Y H:i:s', strtotime($valx['created_date']));
 								$arr_ket[$val] = "&bull; " . strtoupper($valx['keterangan']);
 							}
 							$dt_nama_barang    = implode("<br>", $arr_nmbarang);
@@ -99,9 +99,9 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							echo '<td>' . $dt_nama_barang . '</td>';
 							echo '<td>' . $dt_spec . '</td>';
 							echo '<td>' . $dt_qty . '</td>';
-							echo '<td>' . $dt_tanggal . '</td>';
 							echo '<td>' . $dt_ket . '</td>';
 							echo '<td>' . $item->nm_lengkap . '</td>';
+							echo '<td>' . $dt_tanggal . '</td>';
 
 							$last_by     = (!empty($item->updated_by)) ? $item->updated_by : $item->created_by;
 							$last_date = (!empty($item->updated_date)) ? $item->updated_date : $item->created_date;

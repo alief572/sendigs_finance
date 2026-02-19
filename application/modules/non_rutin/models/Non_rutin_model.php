@@ -610,7 +610,7 @@ class Non_rutin_model extends BF_Model
                 $arr_spec[$val] = "&bull; " . strtoupper($valx['spec']);
                 $arr_qty[$val] = "&bull; " . floatval($valx['qty']) . ' ' . $nm_satuan;
                 $tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
-                $arr_tanggal[$val] = "&bull; " . $tgl_dibutuhkan;
+                $arr_tanggal[$val] = "&bull; " . date('d F Y H:i:s', strtotime($valx['created_date']));
                 $arr_ket[$val] = "&bull; " . strtoupper($valx['keterangan']);
             }
             $dt_nama_barang    = implode("<br>", $arr_nmbarang);
@@ -622,9 +622,9 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $dt_nama_barang . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_spec . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_qty . "</div>";
-            $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_ket . "</div>";
             $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
+            $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
@@ -1051,7 +1051,7 @@ class Non_rutin_model extends BF_Model
                 $arr_spec[$val] = "&bull; " . strtoupper($valx['spec']);
                 $arr_qty[$val] = "&bull; " . floatval($valx['qty']) . ' ' . $nm_satuan;
                 $tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
-                $arr_tanggal[$val] = "&bull; " . $tgl_dibutuhkan;
+                $arr_tanggal[$val] = "&bull; " . date('d F Y H:i:s', strtotime($valx['created_date']));
                 $arr_ket[$val] = "&bull; " . strtoupper($valx['keterangan']);
             }
             $dt_nama_barang    = implode("<br>", $arr_nmbarang);
@@ -1063,9 +1063,9 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $dt_nama_barang . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_spec . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_qty . "</div>";
-            $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_ket . "</div>";
             $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
+            $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
@@ -1109,7 +1109,7 @@ class Non_rutin_model extends BF_Model
             $view = "";
             // $approve = '';
             // if ($ENABLE_MANAGE) {
-                $approve    = "&nbsp;<a href='" . base_url('non_rutin/add_finance/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
+            $approve    = "&nbsp;<a href='" . base_url('non_rutin/add_finance/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
             // }
             $nestedData[]    = "<div align='left'>
 									" . $view . "
