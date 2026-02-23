@@ -16,8 +16,10 @@
 							echo form_dropdown('department', $datdepartemen, set_value('department', isset($data->department) ? $data->department : '0'), array('id' => 'department', 'class' => 'form-control select2', 'style' => 'width:100%;', 'required' => 'required'));
 							?>
 						</div>
-						<div class="col-md-2">
+						<div class="col-md-6">
 							<button type="button" class="btn btn-sm btn-primary" id="update_price_ref"><i class="fa fa-refresh"></i> Update Price Reference</button>
+							<button type="button" class="btn btn-sm btn-success" id="download_budget_stock" title="Download List Budget Stock" data-id="<?= $id ?>"><i class="fa fa-download"></i>Budget Stock</button>
+
 						</div>
 						<div class="col-md-5"></div>
 					</div>
@@ -452,6 +454,12 @@
 				});
 			}
 		});
+	});
+
+	$(document).on('click', '#download_budget_stock', function() {
+		var id = $(this).data('id');
+
+		window.open(siteurl + active_controller + 'download_budget_stock/' + id, '_blank');
 	});
 
 	function number_format(number, decimals, dec_point, thousands_sep) {
