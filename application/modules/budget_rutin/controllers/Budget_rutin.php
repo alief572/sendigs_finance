@@ -90,6 +90,7 @@ class Budget_rutin extends Admin_Controller
         $data_detail  = $this->Budget_rutin_model->GetBudgetRutinDetail($data->code_budget);
         $datdepartemen  = $this->All_model->GetWarehouseStok();
         $datcostcenter  = [];
+        $this->template->set('id', $id);
         $this->template->set('data', $data);
         $this->template->set('data_detail', $data_detail);
         $this->template->set('datcostcenter', $datcostcenter);
@@ -252,5 +253,16 @@ class Budget_rutin extends Admin_Controller
         );
 
         echo json_encode($response);
+    }
+
+    public function download_budget_stock($id_budget)
+    {
+        $get_data_detail = $this->Budget_rutin_model->get_detail_budget($id_budget);
+
+        $data = [
+            'data_detail' => $get_data_detail
+        ];
+
+        $this->load->view('excel_list_budget_detail', $data);
     }
 }
