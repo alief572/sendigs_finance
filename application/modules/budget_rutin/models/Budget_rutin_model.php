@@ -95,4 +95,16 @@ class Budget_rutin_model extends BF_Model
             return false;
         }
     }
+
+    public function get_detail_budget($id_budget)
+    {
+        $this->db->select('a.id, a.code_budget, a.kebutuhan_month, a.keterangan, a.price_reference, a.total_price , b.stock_name, b.spec, c.code');
+        $this->db->from('budget_rutin_detail a');
+        $this->db->join('accessories b', 'b.id = a.id_barang');
+        $this->db->join('ms_satuan c', 'c.id = a.satuan');
+        $this->db->where('a.code_budget', $id_budget);
+        $get_data = $this->db->get()->result();
+
+        return $get_data;
+    }
 }
