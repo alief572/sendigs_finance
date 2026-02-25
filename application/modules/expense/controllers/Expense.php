@@ -2393,33 +2393,58 @@ class Expense extends Admin_Controller
 	}
 	public function reject()
 	{
+		// Gunakan output JSON header agar client tahu ini respon JSON
+		header('Content-Type: application/json');
+
+		$id     = $this->input->post("id");
+		$reason = $this->input->post("reason");
+		$table  = $this->input->post("table");
+
 		$result = false;
-		$id		= $this->input->post("id");
-		$reason	= $this->input->post("reason");
-		$table	= $this->input->post("table");
-		if ($id != "") {
+
+		$this->db->trans_begin();
+
+		try {
+			if (empty($id) || empty($table)) {
+				throw new Exception('ID atau Tabel tidak ditemukan!');
+			}
+
 			$data = array(
-				'status' => 9,
-				'sts_finance' => '0',
-				'app_finance_date' => null,
-				'reject_reason_finance' => $reason,
-				'sts_finance' => '0',
-				'app_finance_date' => null,
+				'status'                => 9,
+				'sts_finance'           => '0',
+				'app_finance_date'      => null,
 				'reject_reason_finance' => $reason
 			);
-			$result = $this->All_model->dataUpdate($table, $data, array('id' => $id));
-			$keterangan     = "SUKSES, Reject data " . $id;
-			$status         = 1;
-			$nm_hak_akses   = $this->managePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+
+			$this->db->where('id', $id);
+			$update = $this->db->update($table, $data);
+
+			if (!$update) {
+				throw new Exception($this->db->error()['message']);
+			}
+
+			// Jika semua oke, commit transaksinya
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				throw new Exception('Transaction Failed!');
+			} else {
+				$this->db->trans_commit();
+				$result = true;
+				$message = "Berhasil mereject data.";
+			}
+		} catch (Exception $e) {
+			$this->db->trans_rollback();
+			$result = false;
+			$message = $e->getMessage();
+			http_response_code(400); // Bad Request atau 500
 		}
+
 		$param = array(
-			'save' => $result,
-			'id' => $id
+			'save'    => $result,
+			'id'      => $id,
+			'message' => $message ?? ''
 		);
+
 		echo json_encode($param);
 	}
 
