@@ -30,3 +30,4 @@ application/config/constants.php
 
 assets/pdf/manual-book.pdf
 uploads/csv_plan_tagih
+application/config/config.php
