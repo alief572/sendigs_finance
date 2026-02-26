@@ -21,7 +21,7 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
     <div class="box-header">
-        <button type="button" class="btn btn-sm btn-danger" onclick="Update();">Update !</button>
+        <!-- <button type="button" class="btn btn-sm btn-danger" onclick="Update();">Update !</button> -->
     </div>
     <!-- /.box-header -->
     <div class="box-body">
