@@ -25,17 +25,20 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
 			<input type='hidden' id='tanda' value='<?= $tanda; ?>'>
-			<div class="col-md-4">
+			<!-- <div class="col-md-4">
 				<select name="" id="" class="form-control form-control-sm search_depart" style="margin-top: 5px;">
-					<option value="">- Department -</option>
+
 					<?php
+					if ($this->auth->user_id() == '7') {
+						echo '<option value="">- Department -</option>';
+					}
 					foreach ($list_department as $item) {
 						echo '<option value="' . $item->id . '">' . strtoupper($item->name) . ' - ' . strtoupper($item->nm_company) . '</option>';
 					}
 					?>
 				</select>
 				<button type="button" class="btn btn-sm btn-primary search_btn" style=''><i class="fa fa-search"></i> Cari</button>
-			</div>
+			</div> -->
 			<div class="col-12 col_table">
 				<table class="table table-bordered table-striped" id="my-grid" width='100%'>
 					<thead>

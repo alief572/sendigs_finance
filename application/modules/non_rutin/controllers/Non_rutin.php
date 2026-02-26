@@ -56,17 +56,24 @@ class Non_rutin extends Admin_Controller
 		$tanda				= $this->uri->segment(2);
 		// $get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
 
-		$this->hris->select('a.id, a.name, b.name as nm_company');
-		$this->hris->from('departments a');
-		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-		$get_department = $this->hris->get()->result();
+
 
 		// Ambil department_id user yang sedang login
 		$get_user_dept_id = $this->db->select('department_id')
-			->get_where('users',
-			 ['id_user' => $this->auth->user_id()])
+			->get_where(
+				'users',
+				['id_user' => $this->auth->user_id()]
+			)
 			->row_array();
 		$user_dept_id = $get_user_dept_id['department_id'] ?? '';
+
+		$this->hris->select('a.id, a.name, b.name as nm_company');
+		$this->hris->from('departments a');
+		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		if ($this->auth->user_id() !== '7') {
+			$this->hris->where('a.id', $user_dept_id);
+		}
+		$get_department = $this->hris->get()->result();
 
 
 		$this->db->select('a.*, c.nm_lengkap');
@@ -74,8 +81,8 @@ class Non_rutin extends Admin_Controller
 		$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
 		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 		$this->db->where('a.status_id', 1);
-		if ( $this->auth->user_id() !=='7'){
-			$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
+		if ($this->auth->user_id() !== '7') {
+			$this->db->where('a.created_by', $this->auth->user_id()); // penyesuaian berdasarkan department_id user
 		}
 		$this->db->where('a.close_pr', null);
 		$this->db->group_by('z.no_pengajuan');
@@ -1197,7 +1204,7 @@ class Non_rutin extends Admin_Controller
 			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
 			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 			$this->db->where('a.status_id', 1);
-			if ( $this->auth->user_id() !=='7'){
+			if ($this->auth->user_id() !== '7') {
 				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
 			}
 			$this->db->where('a.close_pr', null);
@@ -1218,7 +1225,7 @@ class Non_rutin extends Admin_Controller
 			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
 			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 			$this->db->where('a.status_id', 1);
-			if ( $this->auth->user_id() !=='7'){
+			if ($this->auth->user_id() !== '7') {
 				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
 			}
 			$this->db->where('a.close_pr', null);
