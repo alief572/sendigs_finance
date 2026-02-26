@@ -55,67 +55,23 @@ class Actual_plan_tagih_model extends BF_Model
          * Mengambil tanggal terbaru dari tabel actual (alias d). 
          * Jika tidak ada, baru ambil dari tgl_plan_tagih (tabel a).
          */
-        $effective_date = "(CASE 
-        WHEN d.tanggal_actual_plan_tagih IS NULL OR YEAR(d.tanggal_actual_plan_tagih) = 0
-        THEN a.tgl_plan_tagih 
-        ELSE d.tanggal_actual_plan_tagih 
-    END)";
 
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.tanggal_actual_plan_tagih, d.created_date as created_actual, d.tagih_mundur as status_tagih_mundur, d.macet, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
+        $this->db->select('a.*, b.id_customer, b.nm_customer, c.nm_project_leader, c.nm_sales, COALESCE(d.nm_company, c.nm_company) as nm_company, e.nm_paket as nm_project');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-
-        /**
-         * SUBQUERY: Mencari record TERAKHIR (ID terbesar) untuk setiap detail plan.
-         * Ini memastikan kita cuma membandingkan data dengan status/tanggal paling update.
-         */
-        // $this->db->join('(SELECT t1.* FROM kons_tr_actual_plan_tagih t1 
-        //               INNER JOIN (SELECT MAX(created_date) as max_id FROM kons_tr_actual_plan_tagih GROUP BY id_detail_plan_tagih) t2 
-        //               ON t1.id = t2.max_id) d', 'd.id_detail_plan_tagih = a.id', 'left');
-
-        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id = (SELECT dd.id FROM kons_tr_actual_plan_tagih dd WHERE dd.id_detail_plan_tagih = a.id AND dd.tanggal_actual_plan_tagih IS NOT NULL ORDER BY dd.created_date DESC LIMIT 1)', 'left', FALSE);
-
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
-
-        // --- LOGIKA FILTER UTAMA ---
+        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
         if ($bulan == 'macet') {
-            $this->db->where('d.id IS NOT NULL');
-            $this->db->group_start();
-            $this->db->where('d.macet', '1');
-            $this->db->or_where('d.tagih_mundur', '3');
-            $this->db->group_end();
+            $this->db->where('a.status_terakhir', '3');
         } else {
-            // 1. Filter agar Effective Date sesuai dengan Bulan & Tahun yang dipilih
-            $this->db->where("YEAR($effective_date) =", $tahun);
-            $this->db->where("MONTH($effective_date) =", intval($bulan));
-            // $this->db->where('d.id IS NULL');
-            $this->db->group_start();
-            $this->db->where("d.tagih_mundur <> '3'", NULL, FALSE);
-            $this->db->or_where("d.id_detail_plan_tagih IS NULL", NULL, FALSE);
-            $this->db->or_where("d.macet IS NULL", NULL, FALSE);
-            $this->db->group_end();
+            $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
+            $this->db->where('MONTH(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $bulan);
 
-            /**
-             * 2. CHECK BULAN TERBESAR (Logika yang kamu minta):
-             * Kita pastikan bahwa tidak ada record lain yang bulannya lebih besar dari filter sekarang.
-             * Jika di tabel actual ada tanggal yang lebih maju dari bulan filter, maka record ini disembunyikan.
-             */
-            $this->db->group_start();
-            $this->db->where('d.id IS NULL'); // Munculkan jika belum ada history
-            $this->db->or_group_start();
-            $this->db->where("YEAR(d.tanggal_actual_plan_tagih) =", $tahun);
-            $this->db->where("MONTH(d.tanggal_actual_plan_tagih) =", intval($bulan));
-            $this->db->group_end();
-            $this->db->group_end();
-        }
-
-        // Filter Status Tambahan (Dropdown)
-        if (!empty($status)) {
-            if ($status == '1' || $status == '2') {
-                $this->db->where('d.tagih_mundur', $status);
-            } else if ($status == '3') {
-                $this->db->where('d.id', null);
+            if (!empty($status)) {
+                $this->db->where('a.status_terakhir', $status);
+            } else {
+                $this->db->where('a.status_terakhir <>', '3');
             }
         }
 
@@ -143,6 +99,9 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->limit($length, $start);
         $get_data = $this->db->get();
 
+        // print_r($this->db->last_query());
+        // exit;
+
         $hasil = [];
         $no = $start;
 
@@ -154,15 +113,15 @@ class Actual_plan_tagih_model extends BF_Model
 
             // Render Status Button
             $status_btn = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
-            if ($item->status_tagih_mundur == '3') {
+            if ($item->status_terakhir == '3') {
                 $status_btn = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
-            } else if ($item->status_tagih_mundur == '1') {
+            } else if ($item->status_terakhir == '1') {
                 $status_btn = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
             }
 
             // Edit Button Logic
             $valid_btn = 0;
-            $tgl_data = $item->tanggal_aktual;
+            $tgl_data = (!empty($item->tgl_aktual_plan_tagih)) ? $item->tgl_aktual_plan_tagih : $item->tgl_plan_tagih;
             if ($tgl_data) {
                 $bulan_data = date('Ym', strtotime($tgl_data));
                 $cut_off_day = 25;
@@ -171,9 +130,9 @@ class Actual_plan_tagih_model extends BF_Model
             }
 
             $option = '';
-            if ($item->status_tagih_mundur == '3') {
+            if ($item->status_terakhir == '3') {
                 $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
-            } else if ($valid_btn == 1 && $item->status_tagih_mundur != '1') {
+            } else if ($valid_btn == 1 && $item->status_terakhir != '1') {
                 $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
             }
 
@@ -201,33 +160,23 @@ class Actual_plan_tagih_model extends BF_Model
 
     public function dataDownloadExcel($tahun = null, $status = null)
     {
-        $effective_date = "(CASE 
-            WHEN d.tanggal_actual_plan_tagih IS NULL OR YEAR(d.tanggal_actual_plan_tagih) = 0
-            THEN a.tgl_plan_tagih 
-            ELSE d.tanggal_actual_plan_tagih 
-        END)";
+        // $effective_date = "(CASE 
+        //     WHEN d.tanggal_actual_plan_tagih IS NULL OR YEAR(d.tanggal_actual_plan_tagih) = 0
+        //     THEN a.tgl_plan_tagih 
+        //     ELSE d.tanggal_actual_plan_tagih 
+        // END)";
 
         // --- QUERY UTAMA ---
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, ' . $effective_date . ' as tanggal_aktual, d.created_date as crated_actual, d.tagih_mundur as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, a.tgl_aktual_plan_tagih as tanggal_aktual, a.created_date as crated_actual, a.status_terakhir as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join('kons_tr_actual_plan_tagih d', 'd.id_top = a.id_top', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
         if (!empty($tahun)) {
-            $this->db->where('YEAR(' . $effective_date . ') =', $tahun);
+            $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
         }
         if (!empty($status)) {
-            if ($status == '1' || $status == '2') {
-                $this->db->where('d.tagih_mundur', $status);
-            } else if ($status == '3') {
-                $this->db->where('d.id', null);
-            }
-        } else {
-            $this->db->group_start();
-            $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
-            $this->db->or_where('d.id', null);
-            $this->db->group_end();
+            $this->db->where('a.status_terakhir', $status);
         }
         $this->db->order_by('a.id', 'desc');
         $this->db->group_by('a.id');
