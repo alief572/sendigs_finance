@@ -40,6 +40,41 @@ class Plan_tagih_model extends BF_Model
         return $kode_trans;
     }
 
+    public function get_all_plan_tagih_detail()
+    {
+        $this->db->select('a.id, a.id_header, a.id_spk_penawaran, a.id_penawaran, a.id_top, a.term_payment, a.persen_payment, a.nominal_payment, a.desc_payment, a.tgl_plan_tagih, a.urutan');
+        $this->db->from('kons_tr_plan_tagih_detail a');
+        $this->db->where('a.tgl_aktual_plan_tagih IS NULL');
+        $get_data = $this->db->get()->result();
+
+        return $get_data;
+    }
+
+    public function get_data_last_aktual($id_detail_plan_tagih)
+    {
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id_detail_plan_tagih', $id_detail_plan_tagih);
+        $this->db->where('a.tanggal_actual_plan_tagih IS NOT NULL');
+        $this->db->order_by('a.created_date', 'desc');
+        $this->db->limit(1);
+        $get_data = $this->db->get()->row();
+
+        return $get_data;
+    }
+
+    public function get_invoicing($id_detail_plan_tagih = null)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        if ($id_detail_plan_tagih !== null) {
+            $this->db->where('a.id_detail_plan_tagih', $id_detail_plan_tagih);
+            $get_data = $this->db->get()->row();
+        }
+
+        return $get_data;
+    }
+
     public function get_data_spk()
     {
         $draw = $this->input->post('draw');
