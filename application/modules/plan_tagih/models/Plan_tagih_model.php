@@ -104,7 +104,7 @@ class Plan_tagih_model extends BF_Model
         $db_clone = clone $this->consultant;
         $count_filter = $db_clone->count_all_results();
 
-        $this->consultant->order_by('a.id_spk_penawaran', 'desc');
+        $this->consultant->order_by('a.input_date', 'desc');
         $this->consultant->limit($length, $start);
 
         $get_data = $this->consultant->get()->result();
