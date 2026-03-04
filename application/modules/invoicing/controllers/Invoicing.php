@@ -669,7 +669,8 @@ class Invoicing extends Admin_Controller
         $this->load->view('print_invoice', $data);
     }
 
-    public function print_invoice_non_kons($id_invoicing, $id_company = 1) {
+    public function print_invoice_non_kons($id_invoicing, $id_company = 1)
+    {
         $this->auth->restrict($this->viewPermission);
 
         $this->db->select('a.*');
@@ -678,7 +679,7 @@ class Invoicing extends Admin_Controller
         $get_invoicing = $this->db->get()->row();
 
         $this->db->select('a.*');
-        $this->db->from(DBCNL.'.kons_tr_penawaran_non_konsultasi a');
+        $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
 
@@ -1271,7 +1272,7 @@ class Invoicing extends Admin_Controller
 
         $btn_print = '';
         if ($data_invoice->sts_close == '1') {
-            $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="'.$id.'" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
+            $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
 
             $btn_view = '';
             $btn_revisi = '';
@@ -1938,6 +1939,49 @@ class Invoicing extends Admin_Controller
             $this->db->trans_rollback();
             // Ambil pesan dari exception atau pakai pesan default jika terjadi error database
             $msg = $e->getMessage() ?: 'Terjadi kendala teknis saat memproses permintaan Anda. Silakan coba beberapa saat lagi.';
+            return $this->_send_response(500, $msg);
+        }
+    }
+
+    
+
+    public function close_penawaran_non_kons()
+    {
+        // 1. Ambil data input
+        $id_penawaran = $this->input->post('id_penawaran', true);
+
+        // Validasi awal: pastiin ID gak kosong
+        if (empty($id_penawaran)) {
+            return $this->_send_response(400, 'ID Penawaran tidak valid atau tidak terbaca.');
+        }
+
+        $this->db->trans_begin();
+
+        try {
+            // 2. Data yang mau diupdate
+            $arr_update = [
+                'sts_close'  => '1',
+                'close_by'   => $this->auth->user_id(),
+                'close_date' => date('Y-m-d H:i:s')
+            ];
+
+            // 3. Eksekusi Update
+            $this->db->where('id_penawaran', $id_penawaran);
+            $this->db->update(DBCNL . '.kons_tr_penawaran_non_konsultasi', $arr_update);
+
+            // Cek apakah ada perubahan (biar gak update yang sudah diclose)
+            if ($this->db->affected_rows() === 0) {
+                // Bisa jadi karena ID salah atau status memang sudah '1'
+                throw new Exception('Data tidak ditemukan atau penawaran ini sebenarnya sudah ditutup.');
+            }
+
+            // 4. Jika lancar, simpan permanen
+            $this->db->trans_commit();
+            return $this->_send_response(200, 'Penawaran berhasil ditutup dengan sukses.');
+        } catch (Exception $e) {
+            // 5. Jika ada error, batalin semua perubahan database
+            $this->db->trans_rollback();
+            $msg = $e->getMessage() ?: 'Terjadi kesalahan sistem saat menutup penawaran.';
             return $this->_send_response(500, $msg);
         }
     }
