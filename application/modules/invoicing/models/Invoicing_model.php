@@ -322,6 +322,7 @@ class Invoicing_model extends BF_Model
         $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
         $this->consultant->where('a.sts_quot', '1');
         $this->consultant->where('a.sts_deal', '1');
+        $this->consultant->where('a.sts_close', '0');
         $get_data = $this->consultant->get()->result();
 
         return $get_data;
@@ -349,15 +350,15 @@ class Invoicing_model extends BF_Model
         $total_debit = 0;
         $total_kredit = 0;
 
-        foreach($get_jurnal as $item) {
+        foreach ($get_jurnal as $item) {
             $hasil_jurnal .= '
                 <tr>
-                    <td class="text-center">'.date('Y-m-d', strtotime($item->tgl_jurnal)).'</td>
-                    <td class="text-center">'.$item->coa.'</td>
-                    <td class="text-center">'.$item->nm_company.'</td>
-                    <td class="text-center">'.$item->nm_coa.'</td>
-                    <td class="text-right">'.number_format($item->debit).'</td>
-                    <td class="text-right">'.number_format($item->kredit).'</td>
+                    <td class="text-center">' . date('Y-m-d', strtotime($item->tgl_jurnal)) . '</td>
+                    <td class="text-center">' . $item->coa . '</td>
+                    <td class="text-center">' . $item->nm_company . '</td>
+                    <td class="text-center">' . $item->nm_coa . '</td>
+                    <td class="text-right">' . number_format($item->debit) . '</td>
+                    <td class="text-right">' . number_format($item->kredit) . '</td>
                 </tr>
             ';
 
