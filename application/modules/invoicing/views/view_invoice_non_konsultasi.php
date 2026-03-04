@@ -6,14 +6,14 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
 ?>
 <div class="box">
     <!-- <form action="" method="post" id="frm-data"> -->
-    <input type="hidden" name="id_penawaran" value="<?= $data_penawaran->id_penawaran ?>">
+    <input type="hidden" name="id_penawaran" value="<?= $data_invoicing->id_penawaran ?>">
     <input type="hidden" name="id_invoicing" value="<?= $data_invoicing->id ?>">
     <div class="box-body">
         <div class="col-6">
             <table width="100%" border="0">
                 <tr>
                     <th width="13%">Kepada</th>
-                    <td width="12%"><?= $data_penawaran->nm_customer ?></td>
+                    <td width="12%"><?= $data_invoicing->nm_customer ?></td>
                     <th width="13%">Tanggal Invoice</th>
                     <td width="12%">
                         <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" value="<?= $tanggal_invoice ?>" placeholder="Tanggal Invoice">
@@ -21,7 +21,7 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
                 </tr>
                 <tr>
                     <th width="13%">Alamat</th>
-                    <td width="12%"><?= $data_penawaran->address ?></td>
+                    <td width="12%"><?= $data_invoicing->address ?></td>
                     <th width="13%">Nomor Invoice</th>
                     <td width="12%">
                         <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= $nomor_invoice ?>">
@@ -49,100 +49,113 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
     </div>
 
     <div class="box-body">
-        <h4>Detail Penawaran</h4>
         <table class="table table-striped table-bordered">
             <thead class="bg-primary">
                 <tr>
-                    <th class="text-center">No.</th>
-                    <th class="text-center">Item</th>
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Harga</th>
-                    <th class="text-center">Total</th>
+                    <th class="text-center" width="5%">No.</th>
+                    <th class="text-center" width="15%">Item</th>
+                    <th class="text-center" width="15%">Qty</th>
+                    <th class="text-center" width="15%">Harga</th>
+                    <th class="text-center" width="15%">Total</th>
+                    <!-- <th class="text-center" width="5%">Action</th> -->
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="list_item">
                 <?php
+
+                $grand_total = 0;
                 $no = 0;
-                $ttl_grand = 0;
-                if (!empty($data_penawaran_detail)) :
-                    foreach ($data_penawaran_detail as $item) :
-                        $no++;
-                ?>
-                        <tr>
-                            <td class="text-center"><?= $no ?></td>
-                            <td><?= $item->nm_item ?></td>
-                            <td class="text-center"><?= round($item->qty) ?></td>
-                            <td class="text-right"><?= number_format($item->harga, 2) ?></td>
-                            <td class="text-right"><?= number_format($item->total, 2) ?></td>
-                        </tr>
-                    <?php
+                foreach ($data_item_invoice as $item) {
+                    $no++;
 
-                        $ttl_grand += ($item->total);
-                    endforeach;
-                else :
-                    ?>
-                    <tr>
-                        <td colspan="5" class="text-center">Data tidak ditemukan</td>
-                    </tr>
-                <?php
-                endif;
+                    echo '
+                            <tr>
+                                <td class="text-center">' . $no . '</td>
+                                <td class="">' . $item->nm_item . '</td>
+                                <td class="text-center">' . round($item->qty) . '</td>
+                                <td class="text-right">' . number_format($item->harga) . '</td>
+                                <td class="text-right">' . number_format($item->total) . '</td>
+                            </tr>
+                        ';
 
-                $total_nominal = $ttl_grand;
-                $dpp_nilai_lain = ($total_nominal * 11 / 12);
-                $pajak = ($dpp_nilai_lain * 12 / 100);
-                $total_akhir = ($total_nominal + $pajak);
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-
-                $total_nominal_jurnal = $ttl_grand;
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
-                $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
+                    $grand_total += $item->total;
+                }
                 ?>
             </tbody>
-            <tfoot class="bg-gray">
+            <tfoot class="footer_item">
                 <tr>
-                    <th colspan="4" class="text-right">DPP</th>
-                    <th class="text-right"><?= number_format($total_nominal, 2) ?></th>
+                    <th colspan="4" class="text-center">Biaya Kirim</th>
+                    <th>
+                        <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->biaya_kirim ?>" onchange="hitung_all();">
+                    </th>
                 </tr>
                 <tr>
-                    <th colspan="4" class="text-right">DPP Lain-lain</th>
-                    <th class="text-right"><?= number_format($dpp_lain_lain, 2) ?></th>
-                </tr>
-                <tr>
-                    <th colspan="4" class="text-right">PPn 12% dari DPP Lain</th>
-                    <th class="text-right"><?= number_format($ppn, 2) ?></th>
-                </tr>
-                <tr>
-                    <th colspan="4" class="text-right">Total Tagihan + PPN</th>
-                    <th class="text-right"><?= number_format(($total_nominal + $ppn), 2) ?></th>
-                </tr>
-                <tr>
-                    <th colspan="4" class="text-right">PPh 23</th>
-                    <th class="text-right"><?= number_format($pph, 2) ?></th>
-                </tr>
-                <tr>
-                    <th colspan="4" class="text-right">Total Akhir</th>
-                    <th class="text-right"><?= number_format(($total_nominal + $ppn) - $pph, 2) ?></th>
+                    <th colspan="4" class="text-center">Total</th>
+                    <th>
+                        <input type="text" name="total" id="total" class="form-control form-control-sm text-right auto_num" value="<?= ($grand_total + $data_invoicing->biaya_kirim) ?>" readonly>
+                    </th>
                 </tr>
             </tfoot>
         </table>
     </div>
 
-
-    <input type="hidden" name="total_nominal" value="<?= $ttl_grand ?>">
-    <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
-    <input type="hidden" name="pajak" value="<?= $pajak ?>">
-    <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
-    <input type="hidden" name="total_nominal_jurnal" value="<?= $total_nominal ?>">
-    <input type="hidden" name="dpp_lain_lain" value="<?= $dpp_lain_lain ?>">
-    <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
-    <input type="hidden" name="total_tagihan_ppn" value="<?= ($total_nominal + $ppn) ?>">
-    <input type="hidden" name="pph_jurnal" value="<?= $pph ?>">
-    <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>">
+    <div class="box-body">
+        <div class="row">
+            <div class="col-md-6"></div>
+            <div class="col-md-6">
+                <table class="table table-bordered table-striped">
+                    <thead class="bg-primary">
+                        <tr>
+                            <th class="text-center">Keterangan</th>
+                            <th class="text-center">Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DPP</td>
+                            <td>
+                                <input type="text" name="dpp" id="dpp" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->total_nominal ?>" readonly>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DPP Lain-lain</td>
+                            <td>
+                                <input type="text" name="dpp_lain_lain" id="dpp_lain_lain" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->dpp_lain_lain_jurnal ?>" readonly>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>PPN 12% dari DPP lain</td>
+                            <td>
+                                <input type="text" name="ppn" id="ppn" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->pajak ?>" readonly>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Total Tagihan + PPN 12%</td>
+                            <td>
+                                <input type="text" name="total_tagihan_ppn" id="total_tagihan_ppn" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->tagihan_ppn_jurnal ?>" readonly>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Pph 23</td>
+                            <td>
+                                <input type="text" name="pph" id="pph" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->pph_jurnal ?>" readonly>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Total Tagihan + PPn - Pph</td>
+                            <td>
+                                <input type="text" name="total_tagihan_all" id="total_tagihan_all" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->total_akhir_jurnal ?>" readonly>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <div class="box-body">
         <h4>Jurnal Invoice</h4>
-        <table class="table table-striped">
+        <table class="table table-bordered table-striped">
             <thead class="bg-primary">
                 <tr>
                     <th class="text-center">Tanggal Jurnal</th>
@@ -154,7 +167,7 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
                 </tr>
             </thead>
             <tbody>
-                <?= $hasil_jurnal ?>
+                <?= $list_jurnal_invoice ?>
             </tbody>
             <tfoot class="bg-gray">
                 <tr>
@@ -178,6 +191,11 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script>
     $('input').attr('disabled', true);
+
+    $(document).ready(function() {
+        $('.auto_num').autoNumeric('init');
+    })
 </script>
