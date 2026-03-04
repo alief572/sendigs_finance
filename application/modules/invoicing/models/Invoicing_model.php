@@ -284,6 +284,16 @@ class Invoicing_model extends BF_Model
         return $response;
     }
 
+    public function get_invoice($id)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id);
+        $get_data = $this->db->get()->row();
+
+        return $get_data;
+    }
+
     public function get_invoice_non_kons($id_penawaran)
     {
         $this->db->select('a.*');
@@ -293,5 +303,74 @@ class Invoicing_model extends BF_Model
         $get_data = $this->db->get()->result();
 
         return $get_data;
+    }
+
+    public function get_invoice_non_kons_detail($id_header)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoice_detail_non_kons a');
+        $this->db->where('a.id_header', $id_header);
+        $this->db->order_by('a.input_at', 'asc');
+        $get_data = $this->db->get()->result();
+
+        return $get_data;
+    }
+
+    public function get_list_penawaran_non_kons()
+    {
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->where('a.sts_quot', '1');
+        $this->consultant->where('a.sts_deal', '1');
+        $get_data = $this->consultant->get()->result();
+
+        return $get_data;
+    }
+
+    public function get_penawaran_non_kons($id_penawaran)
+    {
+        $this->consultant->select('a.*');
+        $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->where('a.id_penawaran', $id_penawaran);
+        $get_data = $this->consultant->get()->row();
+
+        return $get_data;
+    }
+
+    public function get_view_jurnal_invoice_non_kons($id)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_jurnal a');
+        $this->db->where('a.no_transaksi', $id);
+        $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $get_jurnal = $this->db->get()->result();
+
+        $hasil_jurnal = '';
+        $total_debit = 0;
+        $total_kredit = 0;
+
+        foreach($get_jurnal as $item) {
+            $hasil_jurnal .= '
+                <tr>
+                    <td class="text-center">'.date('Y-m-d', strtotime($item->tgl_jurnal)).'</td>
+                    <td class="text-center">'.$item->coa.'</td>
+                    <td class="text-center">'.$item->nm_company.'</td>
+                    <td class="text-center">'.$item->nm_coa.'</td>
+                    <td class="text-right">'.number_format($item->debit).'</td>
+                    <td class="text-right">'.number_format($item->kredit).'</td>
+                </tr>
+            ';
+
+            $total_debit += $item->debit;
+            $total_kredit += $item->kredit;
+        }
+
+        $response = [
+            'hasil_jurnal' => $hasil_jurnal,
+            'total_debit' => $total_debit,
+            'total_kredit' => $total_kredit
+        ];
+
+        return $response;
     }
 }
