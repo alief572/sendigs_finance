@@ -510,7 +510,7 @@ class Penerimaan_uang extends Admin_Controller
                         'kredit' => str_replace(',', '', $post['kredit_bank_debit']),
                         'keterangan' => $nm_coa_bank . ' - ' . $post['id_inv_' . $i],
                         'sts' => '0',
-                        'no_transaksi' => $id,
+                        'no_transaksi' => $post['id_inv_' . $i],
                         'jenis_transaksi' => 'Penerimaan Piutang',
                         'created_by' => $this->auth->user_id(),
                         'created_date' => date('Y-m-d H:i:s')
@@ -528,7 +528,7 @@ class Penerimaan_uang extends Admin_Controller
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $post['id_inv_' . $i],
                         'sts' => '0',
-                        'no_transaksi' => $id,
+                        'no_transaksi' => $post['id_inv_' . $i],
                         'jenis_transaksi' => 'Penerimaan Piutang',
                         'created_by' => $this->auth->user_id(),
                         'created_date' => date('Y-m-d H:i:s')
@@ -545,7 +545,7 @@ class Penerimaan_uang extends Admin_Controller
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $post['id_inv_' . $i],
                         'sts' => '0',
-                        'no_transaksi' => $id,
+                        'no_transaksi' => $post['id_inv_' . $i],
                         'jenis_transaksi' => 'Penerimaan Piutang',
                         'created_by' => $this->auth->user_id(),
                         'created_date' => date('Y-m-d H:i:s')
