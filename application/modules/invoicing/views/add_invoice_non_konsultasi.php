@@ -338,7 +338,7 @@
 
                 $.ajax({
                     type: 'post',
-                    url: siteurl + active_controller + 'update_invoice_non_konsultasi',
+                    url: siteurl + active_controller + 'save_invoice_non_konsultasi',
                     data: formData,
                     dataType: 'json',
                     cache: false,
