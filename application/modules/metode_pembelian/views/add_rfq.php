@@ -14,6 +14,7 @@
 						<option value='0'>Select Type</option>
 						<option value='po'>PO</option>
 						<option value='non po'>NON PO</option>
+						<option value="cash">Cash</option>
 					</select>
 				</div>
 			</div>
@@ -172,30 +173,6 @@
 				$('#save_rfq').prop('disabled', false);
 				return false;
 			});
-		}
-
-		if (jenis_pembelian == 'po') {
-			// if (id_supplier == null) {
-			// 	swal({
-			// 		title: "Error Message!",
-			// 		text: 'Supplier Not Select, please input first ...',
-			// 		icon: "warning"
-			// 	});
-			// 	$('#save_rfq').prop('disabled', false);
-			// 	return false;
-			// }
-		}
-
-		if (jenis_pembelian == 'non po') {
-			// if (pic == '' || pic == '-') {
-			// 	swal({
-			// 		title: "Error Message!",
-			// 		text: 'PIC is empty, please input first ...',
-			// 		icon: "warning"
-			// 	});
-			// 	$('#save_rfq').prop('disabled', false);
-			// 	return false;
-			// }
 		}
 
 		if ($('input[type=checkbox]:checked').length == 0) {
