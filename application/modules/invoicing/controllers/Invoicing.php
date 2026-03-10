@@ -1270,7 +1270,7 @@ class Invoicing extends Admin_Controller
             $btn_close = '<button type="button" class="btn btn-sm btn-danger close_invoice_non_kons" data-id="' . $id . '" title="Close Invoice"><i class="fa fa-close"></i></button>';
         }
 
-        $btn_print = '';
+        $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
         if ($data_invoice->sts_close == '1') {
             $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
 
@@ -1279,7 +1279,7 @@ class Invoicing extends Admin_Controller
             $btn_close = '';
         }
 
-        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_close;
+        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print;
 
         return $buttons;
     }
@@ -1333,6 +1333,7 @@ class Invoicing extends Admin_Controller
                 'no_penawaran' => $item->id_penawaran,
                 'penjualan' => $item->penjualan,
                 'pic' => $item->pic,
+                'revisi' => $item->no_revisi,
                 'status' => $status,
                 'action' => $action
             ];
@@ -1439,9 +1440,8 @@ class Invoicing extends Admin_Controller
                 'id_detail_plan_tagih' => '0',
                 'id_penawaran' => $get_penawaran->id_penawaran,
                 'id_spk_penawaran' => '',
-                'id_customer' => $get_penawaran->id_customer,
-                'nm_customer' => $get_penawaran->nm_customer,
-                'address' => $get_penawaran->address,
+                'nm_customer' => $this->input->post('nm_customer', true),
+                'address' => $this->input->post('address', true),
                 'id_project' => '',
                 'nm_project' => $get_penawaran->keterangan_penawaran,
                 'id_project_leader' => '',
@@ -1580,14 +1580,19 @@ class Invoicing extends Admin_Controller
         $id = $this->input->post('id', true);
         $id_penawaran = $this->input->post('id_penawaran', true);
 
+        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $id])->row();
+
         $this->db->trans_begin();
 
         try {
             $arr_update = [
-                'tanggal_invoice' => $this->input->post('tanggal_invoice'),
-                'no_invoice' => $this->input->post('nomor_invoice'),
-                'no_po' => $this->input->post('nomor_po'),
-                'no_faktur' => $this->input->post('nomor_faktur')
+                'nm_customer' => $this->input->post('nm_customer', true),
+                'address' => $this->input->post('address', true),
+                'tanggal_invoice' => $this->input->post('tanggal_invoice', true),
+                'no_invoice' => $this->input->post('nomor_invoice', true),
+                'no_po' => $this->input->post('nomor_po', true),
+                'no_faktur' => $this->input->post('nomor_faktur', true),
+                'no_revisi' => ($get_invoicing->no_revisi + 1)
             ];
 
             $arr_data_detail = [];
@@ -1745,6 +1750,7 @@ class Invoicing extends Admin_Controller
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', ['4101-01-03', '4101-01-07']);
         // $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
         $get_coa_jurnal_all = $this->accounting->get()->result_array();
 

@@ -20,7 +20,9 @@
                 <table width="100%" border="0">
                     <tr>
                         <th width="13%">Kepada</th>
-                        <td width="12%"><?= $data_invoicing->nm_customer ?></td>
+                        <td width="12%">
+                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= $data_invoicing->nm_customer ?>">
+                        </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
                             <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= $data_invoicing->tanggal_invoice ?>">
@@ -28,7 +30,9 @@
                     </tr>
                     <tr>
                         <th width="13%">Alamat</th>
-                        <td width="12%"><?= $data_invoicing->address ?></td>
+                        <td width="12%">
+                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= $data_invoicing->address ?></textarea>
+                        </td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
                             <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= $data_invoicing->no_invoice ?>">

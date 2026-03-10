@@ -8,6 +8,7 @@
                     <th class="text-center">No. Penawaran</th>
                     <th class="text-center">Penjualan</th>
                     <th class="text-center">PIC</th>
+                    <th class="text-center">Invoice Created</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Action</th>
                 </tr>
@@ -35,7 +36,11 @@
                         $sts = '<div class="badge bg-green">Invoice Created</div>';
                     }
 
-                    $buttons = $btn_create.' '.$btn_close;
+                    $buttons = $btn_create . ' ' . $btn_close;
+
+                    $get_jum_invoice = $this->db->get_where('tr_invoicing', ['id_penawaran' => $item->id_penawaran, 'non_kons' => '1'])->num_rows();
+
+                    $jum_invoice = $get_jum_invoice ?? 0;
 
                     echo '
                         <tr>
@@ -44,6 +49,7 @@
                             <td class="text-center">' . $item->id_penawaran . '</td>
                             <td class="text-right">' . number_format($item->grand_total) . '</td>
                             <td class="text-center">' . $item->pic . '</td>
+                            <td class="text-center">' . $jum_invoice . '</td>
                             <td class="text-center">' . $sts . '</td>
                             <td class="text-center">' . $buttons . '</td>
                         </tr>
@@ -52,6 +58,8 @@
                 ?>
             </tbody>
         </table>
+        <br>
+        <a href="<?= base_url('invoicing') ?>" class="btn btn-sm btn-danger"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
 </div>
 
