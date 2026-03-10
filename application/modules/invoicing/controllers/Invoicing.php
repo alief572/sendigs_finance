@@ -1308,6 +1308,7 @@ class Invoicing extends Admin_Controller
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('b.nm_company', $search['value'], 'both');
+            $this->db->or_like('a.nm_customer', $search['value'], 'both');
             $this->db->or_like('a.no_invoice', $search['value'], 'both');
             $this->db->or_like('a.id_penawaran', $search['value'], 'both');
             $this->db->or_like('b.keterangan_penawaran', $search['value'], 'both');
@@ -1335,6 +1336,7 @@ class Invoicing extends Admin_Controller
             $hasil[] = [
                 'no' => $no,
                 'no_invoice' => $item->no_invoice,
+                'kepada' => $item->nm_customer,
                 'company' => $item->nm_company,
                 'no_penawaran' => $item->id_penawaran,
                 'penjualan' => $item->penjualan,

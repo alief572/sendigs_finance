@@ -56,6 +56,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     <tr>
                         <th class="text-center">No.</th>
                         <th class="text-center">No. Invoice</th>
+                        <th class="text-center">Kepada</th>
                         <th class="text-center">Company</th>
                         <th class="text-center">No. Penawaran</th>
                         <th class="text-center">Penjualan</th>
@@ -498,6 +499,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 },
                 {
                     data: 'no_invoice'
+                },
+                {
+                    data: 'kepada'
                 },
                 {
                     data: 'company'
