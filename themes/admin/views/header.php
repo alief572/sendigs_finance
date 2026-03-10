@@ -7,7 +7,7 @@
   <title><?= isset($idt->nm_perusahaan) ? $idt->nm_perusahaan : 'not-set'; ?><?= isset($template['title']) ? ' | ' . $template['title'] : ''; ?></title>
   <link rel="shortcut icon" href="<?php echo base_url('assets/'); ?>images/importa.png" />
   <!-- Tell the browser to be responsive to screen width -->
-  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Sweet Alert -->
   <link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert.css'); ?>">
   <!-- Bootstrap 3.3.6 -->
