@@ -60,6 +60,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <th class="text-center">No. Penawaran</th>
                         <th class="text-center">Penjualan</th>
                         <th class="text-center">PIC</th>
+                        <th class="text-center">Revisi</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Action</th>
                     </tr>
@@ -537,6 +538,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 },
                 {
                     data: 'pic'
+                },
+                {
+                    data: 'revisi'
                 },
                 {
                     data: 'status'
