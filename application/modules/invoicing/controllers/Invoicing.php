@@ -679,6 +679,11 @@ class Invoicing extends Admin_Controller
         $get_invoicing = $this->db->get()->row();
 
         $this->db->select('a.*');
+        $this->db->from('tr_invoice_detail_non_kons a');
+        $this->db->where('a.id_header', $id_invoicing);
+        $get_invoice_detail = $this->db->get()->result();
+
+        $this->db->select('a.*');
         $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
@@ -686,6 +691,7 @@ class Invoicing extends Admin_Controller
         $data = [
             'id_invoicing' => $id_invoicing,
             'data_invoice' => $get_invoicing,
+            'data_invoice_detail' => $get_invoice_detail,
             'data_penawaran' => $get_penawaran,
             'id_company' => $id_company
         ];

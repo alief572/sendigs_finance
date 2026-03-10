@@ -126,10 +126,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         ?>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="keterangan_print_non_kons">Keterangan Print</label>
-                    <textarea name="keterangan_print_non_kons" id="keterangan_print_non_kons" class="form-control form-control-sm"></textarea>
-                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-success confirm_jenis_header_non_kons"><i class="fa fa-check"></i> Proses</button>
@@ -315,7 +311,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     $(document).on('click', '.confirm_jenis_header_non_kons', function() {
         var company = $('.company_non_kons').val();
         var id_inv = $('.id_inv_non_kons').val();
-        var keterangan_print = $('#keterangan_print_non_kons').val();
 
         if (company == '') {
             Swal.fire({
@@ -326,30 +321,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
             return false;
         } else {
-            $.ajax({
-                type: 'post',
-                url: siteurl + active_controller + 'save_keterangan_print_non_kons',
-                data: {
-                    'id': id_inv,
-                    'keterangan_print': keterangan_print,
-                    'company': company
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result) {
-                    window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
-                },
-                error: function(result) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error !',
-                        text: 'Please try again later !',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
-                }
-            });
+           window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
 
 
         }
