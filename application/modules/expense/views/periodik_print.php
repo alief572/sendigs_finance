@@ -29,7 +29,7 @@
 			<th colspan=6>PERIODIK<br /><br /><br /></th>
 		</tr>
 		<tr>
-			<td nowrap colspan=2>No Dokumen : <?= $data->no_doc ?>br</td>
+			<td nowrap colspan=2>No Dokumen : <?= $data->no_doc ?></td>
 			<td nowrap colspan=2>Jumlah Nilai : <?= number_format($data->jumlah_kasbon) ?></td>
 			<td nowrap colspan=2>Tanggal : <?= date('d F Y', strtotime($data->tgl_doc)) ?></td>
 		</tr>

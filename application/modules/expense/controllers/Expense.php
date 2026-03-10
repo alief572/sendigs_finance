@@ -797,9 +797,8 @@ class Expense extends Admin_Controller
 			a.tanggal_doc as tgl_doc, 
 			a.created_by as created_by_user, 
 			a.created_on as created_on_header,
-			b.nilai as jumlah_kasbon, 
+			COALESCE(SUM(b.nilai), 0) as jumlah_kasbon, 
 			b.keterangan as keperluan, 
-			
 		');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'a.no_doc = b.no_doc', 'left');
