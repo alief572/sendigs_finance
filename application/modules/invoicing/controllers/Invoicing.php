@@ -1363,12 +1363,14 @@ class Invoicing extends Admin_Controller
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
         $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
+        $total_invoiced = $this->Invoicing_model->total_invoiced_non_kons($id_penawaran);
 
         $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
 
         $data = [
             'data_penawaran' => $get_penawaran,
             'data_penawaran_detail' => $get_penawaran_detail,
+            'total_invoiced' => $total_invoiced,
             'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
             'total_debit' => $get_jurnal['total_debit'],
             'total_kredit' => $get_jurnal['total_kredit']
@@ -1461,7 +1463,7 @@ class Invoicing extends Admin_Controller
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
                 'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_nilai_lain', true)),
+                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
                 'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
                 'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
                 'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
@@ -1471,9 +1473,11 @@ class Invoicing extends Admin_Controller
                 'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
                 'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
                 'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang_tanpa_pph' => $this->input->post('total_tagihan_ppn', true),
+                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
                 'non_kons' => '1',
                 'biaya_kirim' => str_replace(',', '', $this->input->post('biaya_kirim', true)),
+                'discount' => str_replace(',', '', $this->input->post('discount', true)),
+                'ppn_consultant' => str_replace(',', '', $this->input->post('ppn_consultant', true)),
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
             ];
@@ -1600,7 +1604,19 @@ class Invoicing extends Admin_Controller
                 'no_invoice' => $this->input->post('nomor_invoice', true),
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
-                'no_revisi' => ($get_invoicing->no_revisi + 1)
+                'no_revisi' => ($get_invoicing->no_revisi + 1),
+                'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
+                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
+                'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
+                'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
+                'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
+                'dpp_lain_lain_jurnal' => str_replace(',', '', $this->input->post('dpp_lain_lain', true)),
+                'ppn_jurnal' => str_replace(',', '', $this->input->post('ppn', true)),
+                'tagihan_ppn_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
+                'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
+                'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
+                'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
+                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true))
             ];
 
             $arr_data_detail = [];
@@ -1736,7 +1752,7 @@ class Invoicing extends Admin_Controller
         $id_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->id_company : '';
         $nm_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->nm_company : '';
 
-        $arr_coa_jurnal = ['4101-01-01', '1102-01-01', '2104-01-07', '1106-01-02'];
+        $arr_coa_jurnal = ['4101-01-03', '1102-01-01', '2104-01-07', '1106-01-02'];
         if (!empty($id_invoice)) {
             $this->db->select('a.coa');
             $this->db->from('tr_jurnal a');
@@ -1957,7 +1973,7 @@ class Invoicing extends Admin_Controller
         }
     }
 
-    
+
 
     public function close_penawaran_non_kons()
     {
