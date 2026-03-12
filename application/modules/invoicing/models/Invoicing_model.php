@@ -374,4 +374,13 @@ class Invoicing_model extends BF_Model
 
         return $response;
     }
+
+    public function total_invoiced_non_kons($id_penawaran) {
+        $this->db->select('COALESCE(SUM(a.total_nominal), 0) as total');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id_penawaran', $id_penawaran);
+        $get_data = $this->db->get()->row();
+
+        return $get_data->total;
+    }
 }
