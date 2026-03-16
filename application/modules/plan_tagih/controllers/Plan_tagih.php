@@ -289,6 +289,41 @@ class Plan_tagih extends Admin_Controller
         ]);
     }
 
+    public function updateee()
+    {
+        $this->db->trans_begin();
+
+        try {
+            $get_data_detail = $this->Plan_tagih_model->get_all_plan_tagih_detail();
+            $arr_update = [];
+
+            foreach ($get_data_detail as $item) {
+                $get_actual_last = $this->Plan_tagih_model->get_data_last_aktual($item->id);
+                if (!empty($get_actual_last)) {
+                    $data_invoicing = $this->Plan_tagih_model->get_invoicing($item->id);
+
+                    $tgl_invoice = (!empty($data_invoicing->tanggal_invoice)) ? $data_invoicing->tanggal_invoice : null;
+
+                    $arr_update[] = [
+                        'id' => $item->id,
+                        'tgl_aktual_plan_tagih' => $get_actual_last->tanggal_actual_plan_tagih,
+                        'status_terakhir' => '' . $get_actual_last->tagih_mundur . '',
+                        'sts_invoice' => $get_actual_last->sts_invoice,
+                        'tgl_invoice' => $tgl_invoice
+                    ];
+                }
+            }
+
+            $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update, 'id');
+
+            $this->db->trans_commit();
+            http_response_code(200);
+        } catch (\Throwable $th) {
+            $this->db->trans_rollback();
+            http_response_code(500);
+        }
+    }
+
     public function get_data_spk()
     {
         $this->Plan_tagih_model->get_data_spk();

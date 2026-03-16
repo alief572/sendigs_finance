@@ -325,15 +325,7 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         var tingkat_approval = $('#tingkat_approval').val();
         var tanda = "";
         if (app == 'approve') {
-            if (tingkat_approval == '1') {
-                var tanda = 'approval_head';
-            }
-            if (tingkat_approval == '2') {
-                var tanda = 'approval_cost_control';
-            }
-            if (tingkat_approval == '3') {
-                var tanda = 'approval_management';
-            }
+            tanda = 'app_pr_dept_finance';
         }
         window.location.href = base_url + active_controller + tanda;
     });
@@ -530,16 +522,7 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
                                 showConfirmButton: false,
                                 allowOutsideClick: false
                             }).then((next) => {
-                                var return_link = '';
-                                if (tingkat_approval == '1') {
-                                    return_link = 'approval_head';
-                                }
-                                if (tingkat_approval == '2') {
-                                    return_link = 'approval_cost_control';
-                                }
-                                if (tingkat_approval == '3') {
-                                    return_link = 'approval_management';
-                                }
+                                var return_link = 'app_pr_dept_finance';
                                 window.location.href = base_url + active_controller + return_link;
                             });
                         } else if (data.status == 0) {
