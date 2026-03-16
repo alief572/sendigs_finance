@@ -35,6 +35,7 @@ class Report_actual_plan_tagih extends Admin_Controller
     {
         $list_customer = $this->Report_actual_plan_tagih_model->list_customer();
         $list_company = $this->Report_actual_plan_tagih_model->list_company();
+        // $list_report  = $this->Report_actual_plan_tagih_model->get_report_actual_plan_tagih();
 
         $data = [
             'list_customer' => $list_customer,

@@ -109,7 +109,7 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_surat_mundur')) {
                 $uploadData = $this->upload->data();
                 $file_surat_mundur = 'uploads/surat_mundur/' . $uploadData['file_name'];
-            } 
+            }
             // else {
             //     print_r('surat_mundur - ' . $this->upload->display_errors());
             //     exit;
@@ -130,7 +130,7 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_laporan_progress')) {
                 $uploadData2 = $this->upload->data();
                 $file_laporan_progress = 'uploads/laporan_progress/' . $uploadData2['file_name'];
-            } 
+            }
             // else {
             //     print_r('laporan progress - ' . $this->upload->display_errors());
             //     exit;
@@ -150,88 +150,51 @@ class Actual_plan_tagih extends Admin_Controller
                     'macet' => 1
                 ];
                 $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', $arr_update, array('id_detail_plan_tagih' => $post['id_detail_plan_tagih']));
+
+                $arr_update_plan_tagih = [
+                    'tgl_aktual_plan_tagih' => $post['tgl_plan_tagih'],
+                    'status_terakhir' => $post['tagih_mundur']
+                ];
+                $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, ['id' => $post['id_detail_plan_tagih']]);
             } else {
                 $id = $this->Actual_plan_tagih_model->generate_id();
 
-                if ($post['tagih_mundur'] == '3') {
+                $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
 
-                    $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
+                $arr_insert = [
+                    'id' => $id,
+                    'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
+                    'id_top' => $post['id_top'],
+                    'id_spk_penawaran' => $post['id_spk_penawaran'],
+                    'id_penawaran' => $post['id_penawaran'],
+                    'term_payment' => $post['term_payment'],
+                    'persen_payment' => $post['persen_payment'],
+                    'nominal_payment' => $post['nominal_payment'],
+                    'desc_payment' => $post['desc_payment'],
+                    'tgl_plan_tagih' => $tanggal_actual,
+                    'urutan' => $post['urutan'],
+                    'tanggal_actual_plan_tagih' => $tanggal_actual,
+                    'tagih_mundur' => $post['tagih_mundur'],
+                    'alasan_mundur' => $post['alasan_mundur'],
+                    'file_surat_mundur' => $file_surat_mundur,
+                    'file_laporan_progress' => $file_laporan_progress,
+                    'created_by' => $this->auth->user_id(),
+                    'created_date' => date('Y-m-d H:i:s')
+                ];
 
-                    $arr_insert = [
-                        'id' => $id,
-                        'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
-                        'id_top' => $post['id_top'],
-                        'id_spk_penawaran' => $post['id_spk_penawaran'],
-                        'id_penawaran' => $post['id_penawaran'],
-                        'term_payment' => $post['term_payment'],
-                        'persen_payment' => $post['persen_payment'],
-                        'nominal_payment' => $post['nominal_payment'],
-                        'desc_payment' => $post['desc_payment'],
-                        'tgl_plan_tagih' => $tanggal_actual,
-                        'urutan' => $post['urutan'],
-                        'tanggal_actual_plan_tagih' => $tanggal_actual,
-                        'tagih_mundur' => $post['tagih_mundur'],
-                        'alasan_mundur' => $post['alasan_mundur'],
-                        'file_surat_mundur' => $file_surat_mundur,
-                        'file_laporan_progress' => $file_laporan_progress,
-                        'macet' => 1,
-                        'created_by' => $this->auth->user_id(),
-                        'created_date' => date('Y-m-d H:i:s')
-                    ];
-
-                    $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
-                } else {
-                    $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
-
-                    $arr_insert = [
-                        'id' => $id,
-                        'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
-                        'id_top' => $post['id_top'],
-                        'id_spk_penawaran' => $post['id_spk_penawaran'],
-                        'id_penawaran' => $post['id_penawaran'],
-                        'term_payment' => $post['term_payment'],
-                        'persen_payment' => $post['persen_payment'],
-                        'nominal_payment' => $post['nominal_payment'],
-                        'desc_payment' => $post['desc_payment'],
-                        'tgl_plan_tagih' => $tanggal_actual,
-                        'urutan' => $post['urutan'],
-                        'tanggal_actual_plan_tagih' => $tanggal_actual,
-                        'tagih_mundur' => $post['tagih_mundur'],
-                        'alasan_mundur' => $post['alasan_mundur'],
-                        'file_surat_mundur' => $file_surat_mundur,
-                        'file_laporan_progress' => $file_laporan_progress,
-                        'created_by' => $this->auth->user_id(),
-                        'created_date' => date('Y-m-d H:i:s')
-                    ];
-
-                    $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
-
-                    if ($post['tagih_mundur'] == '2') {
-                        // $arr_update = [
-                        //     'tgl_plan_tagih' => $post['tanggal_actual']
-                        // ];
-
-                        // $update_tgl_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, array('id' => $post['id_detail_plan_tagih']));
-                        // if (!$update_tgl_plan_tagih) {
-                        //     $this->db->trans_rollback();
-
-                        //     print_r($this->db->last_query());
-                        //     exit;
-                        // }
-                    } else {
-                        // $arr_update_plan_tagih = [
-                        //     'tgl_plan_tagih' => $tanggal_actual
-                        // ];
-
-                        // $update_plan_tagih = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, array('id' => $post['id_detail_plan_tagih']));
-                        // if (!$update_plan_tagih) {
-                        //     $this->db->trans_rollback();
-
-                        //     print_r($this->db->last_query());
-                        //     exit;
-                        // }
-                    }
+                $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
+                if (!$insert_actual_plan) {
+                    throw new Exception('Maaf, data gagal di proses !');
                 }
+
+                $arr_update_plan_tagih = [
+                    'tgl_aktual_plan_tagih' => $tanggal_actual,
+                    'status_terakhir' => $post['tagih_mundur']
+                ];
+                $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, ['id' => $post['id_detail_plan_tagih']]);
+
+                // print_r($this->db->last_query());
+                // exit;
             }
 
             $this->db->trans_commit();
@@ -251,9 +214,6 @@ class Actual_plan_tagih extends Admin_Controller
                 'msg' => $e->getMessage()
             ]);
         }
-
-
-
 
         // if ($this->db->trans_status() === false) {
         //     $this->db->trans_rollback();

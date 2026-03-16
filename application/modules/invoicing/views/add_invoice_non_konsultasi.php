@@ -339,7 +339,6 @@
         html += '</tr>';
         $('.list_item').append(html);
 
-
         $('.auto_num').autoNumeric('init');
     });
 

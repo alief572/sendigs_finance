@@ -482,24 +482,14 @@ $dept = $datauser->department_id;
 									dataType: "json",
 									type: 'POST',
 									success: function(msg) {
-										if (msg['save'] == '1') {
-											swal({
-												title: "Sukses!",
-												text: "Data Berhasil Di Tolak",
-												type: "success",
-												timer: 1500,
-												showConfirmButton: false
-											});
-											window.location = siteurl + 'expense/transport_req<?= $mod ?>';
-										} else {
-											swal({
-												title: "Gagal!",
-												text: "Data Gagal Di Tolak",
-												type: "error",
-												timer: 1500,
-												showConfirmButton: false
-											});
-										};
+										swal({
+											title: "Sukses!",
+											text: "Data Berhasil Di Tolak",
+											type: "success",
+											timer: 1500,
+											showConfirmButton: false
+										});
+										window.location = siteurl + 'expense/transport_req<?= $mod ?>';
 										console.log(msg);
 									},
 									error: function(msg) {

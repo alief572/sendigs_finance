@@ -2,14 +2,12 @@
 
 class Invoicing extends Admin_Controller
 {
-    protected $viewPermission     = 'Invoicing.View';
-    protected $addPermission      = 'Invoicing.Add';
+    protected $viewPermission = 'Invoicing.View';
+    protected $addPermission = 'Invoicing.Add';
     protected $managePermission = 'Invoicing.Manage';
     protected $deletePermission = 'Invoicing.Delete';
-
     protected $consultant;
     protected $accounting;
-
     public function __construct()
     {
         parent::__construct();
@@ -669,8 +667,7 @@ class Invoicing extends Admin_Controller
         $this->load->view('print_invoice', $data);
     }
 
-    public function print_invoice_non_kons($id_invoicing, $id_company = 1)
-    {
+    public function print_invoice_non_kons($id_invoicing, $id_company = 1) {
         $this->auth->restrict($this->viewPermission);
 
         $this->db->select('a.*');
@@ -685,6 +682,7 @@ class Invoicing extends Admin_Controller
 
         $this->db->select('a.*');
         $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
+        $this->db->from(DBCNL.'.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
 
