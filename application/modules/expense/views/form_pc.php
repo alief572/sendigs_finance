@@ -18,6 +18,7 @@ if (!isset($data->departement)) {
 		$accname = $data_employee->accname;
 		//$data_head = $this->db->get_where('divisions_head', ['id' => $data_employee->division_head])->row();
 		//$app=$data_head->employee_id;
+		
 	}
 }
 $budgets = 0;
