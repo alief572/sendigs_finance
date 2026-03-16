@@ -2335,21 +2335,22 @@ class Expense extends Admin_Controller
 	// list petty_cash
 	public function petty_cash()
 	{
-		$data = $this->Expense_model->GetListData(array('nama' => $this->auth->user_name(), 'pettycash != ' => ''));
+		// $data = $this->Expense_model->GetListData(array('nama' => $this->auth->user_name(), 'pettycash != ' => ''));
 		// print_r($data);
 		// exit;
 
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('users c', 'a.nama=c.username', 'left');
-		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.nama', $this->auth->user_name());
-		$this->db->where('a.pettycash !=', '');
-		$this->db->group_by('a.no_doc');
-		$data = $this->db->get()->result();
+		// $this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		// $this->db->from('tr_expense a');
+		// $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
+		// $this->db->join('users c', 'a.nama=c.username', 'left');
+		// $this->db->join('users d', 'a.approval=d.username', 'left');
+		// $this->db->where('a.nama', $this->auth->user_name());
+		// $this->db->where('a.pettycash !=', '');
+		// $this->db->group_by('a.no_doc');
+		// $this->db->order_by('a.created_on', 'DESC');
+		// $data = $this->db->get()->result();
 
-		$this->template->set('results', $data);
+		// $this->template->set('results', $data);
 		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Petty Cash');
@@ -3877,23 +3878,25 @@ class Expense extends Admin_Controller
 		$db_clone = clone $this->db;
 		$count_filter = $db_clone->count_all_results();
 
-		$column_order = [
-			0 => '',
-			1 => 'a.no_doc',
-			2 => 'a.tgl_doc',
-			3 => 'b.nm_lengkap',
-			4 => 'c.username',
-			5 => 'a.approved_on'
-		];
+		// $column_order = [
+		// 	0 => '',
+		// 	1 => 'a.no_doc',
+		// 	2 => 'a.tgl_doc',
+		// 	3 => 'b.nm_lengkap',
+		// 	4 => 'c.username',
+		// 	5 => 'a.approved_on'
+		// ];
 
-		if (isset($post['order']) && !empty($post['order'])) {
-			$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
-			$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
-			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
-			$this->db->order_by($column_name, $column_dir);
-		} else {
-			$this->db->order_by('a.created_on', 'desc');
-		}
+		// if (isset($post['order']) && !empty($post['order'])) {
+		// 	$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
+		// 	$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
+		// 	$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
+		// 	$this->db->order_by($column_name, $column_dir);
+		// } else {
+		// 	$this->db->order_by('a.created_on', 'desc');
+		// }
+
+		$this->db->order_by('a.created_on', 'desc');
 
 		$this->db->limit($length, $start);
 

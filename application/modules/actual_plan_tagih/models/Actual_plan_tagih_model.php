@@ -73,7 +73,13 @@ class Actual_plan_tagih_model extends BF_Model
             } else {
                 $this->db->where('a.status_terakhir <>', '3');
             }
-        }
+        } 
+        // else if ($bulan != 'macet') {
+        //     $this->db->group_start();
+        //     $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
+        //     $this->db->or_where('d.id', null);
+        //     $this->db->group_end();
+        // }
 
         // Filter Search
         if (!empty($search['value'])) {
@@ -90,7 +96,7 @@ class Actual_plan_tagih_model extends BF_Model
 
         $this->db->group_by('a.id');
 
-        // Clone & Count
+        // Clone untuk count total
         $temp_db = clone $this->db;
         $query_total = $temp_db->get();
         $recordsTotal = ($query_total) ? $query_total->num_rows() : 0;
@@ -98,9 +104,6 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->order_by('a.created_date', 'desc');
         $this->db->limit($length, $start);
         $get_data = $this->db->get();
-
-        // print_r($this->db->last_query());
-        // exit;
 
         $hasil = [];
         $no = $start;
@@ -111,7 +114,7 @@ class Actual_plan_tagih_model extends BF_Model
         foreach ($get_data->result() as $item) {
             $no++;
 
-            // Render Status Button
+            // Status Button Logic
             $status_btn = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
             if ($item->status_terakhir == '3') {
                 $status_btn = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
@@ -119,14 +122,16 @@ class Actual_plan_tagih_model extends BF_Model
                 $status_btn = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
             }
 
-            // Edit Button Logic
+            // Logic Validasi Tombol Edit (Cut off tgl 25)
             $valid_btn = 0;
             $tgl_data = (!empty($item->tgl_aktual_plan_tagih)) ? $item->tgl_aktual_plan_tagih : $item->tgl_plan_tagih;
             if ($tgl_data) {
                 $bulan_data = date('Ym', strtotime($tgl_data));
                 $cut_off_day = 25;
                 $bulan_sekarang = (date('j') >= $cut_off_day) ? date('Ym', strtotime('+1 month')) : date('Ym');
-                if ($bulan_data <= $bulan_sekarang) $valid_btn = 1;
+                if ($bulan_data <= $bulan_sekarang) {
+                    $valid_btn = 1;
+                }
             }
 
             $option = '';

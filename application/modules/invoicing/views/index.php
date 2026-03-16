@@ -56,10 +56,12 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     <tr>
                         <th class="text-center">No.</th>
                         <th class="text-center">No. Invoice</th>
+                        <th class="text-center">Kepada</th>
                         <th class="text-center">Company</th>
                         <th class="text-center">No. Penawaran</th>
                         <th class="text-center">Penjualan</th>
                         <th class="text-center">PIC</th>
+                        <th class="text-center">Revisi</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Action</th>
                     </tr>
@@ -124,10 +126,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         endforeach;
                         ?>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="keterangan_print_non_kons">Keterangan Print</label>
-                    <textarea name="keterangan_print_non_kons" id="keterangan_print_non_kons" class="form-control form-control-sm"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -201,6 +199,25 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     $(document).ready(function() {
         DataTables();
     });
+
+    // $(document).on('click', '.tab_pin', function() {
+    //     var no = $(this).data('no');
+    //     if (no == 1) {
+    //         DataTables();
+    //         $('.col_1').show();
+    //         $('.col_2').hide();
+
+    //         $('.tab_1').addClass('active');
+    //         $('.tab_2').removeClass('active');
+    //     } else {
+    //         DataTablesNonKonsultasi();
+    //         $('.col_1').hide();
+    //         $('.col_2').show();
+
+    //         $('.tab_1').removeClass('active');
+    //         $('.tab_2').addClass('active');
+    //     }
+    // });
 
     $(document).on('click', '.pilih_print_inv', function() {
         var id_inv = $(this).data('id_inv');
@@ -295,7 +312,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     $(document).on('click', '.confirm_jenis_header_non_kons', function() {
         var company = $('.company_non_kons').val();
         var id_inv = $('.id_inv_non_kons').val();
-        var keterangan_print = $('#keterangan_print_non_kons').val();
 
         if (company == '') {
             Swal.fire({
@@ -306,30 +322,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
             return false;
         } else {
-            $.ajax({
-                type: 'post',
-                url: siteurl + active_controller + 'save_keterangan_print_non_kons',
-                data: {
-                    'id': id_inv,
-                    'keterangan_print': keterangan_print,
-                    'company': company
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result) {
-                    window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
-                },
-                error: function(result) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error !',
-                        text: 'Please try again later !',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
-                }
-            });
+           window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
 
 
         }
@@ -508,6 +501,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'no_invoice'
                 },
                 {
+                    data: 'kepada'
+                },
+                {
                     data: 'company'
                 },
                 {
@@ -518,6 +514,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 },
                 {
                     data: 'pic'
+                },
+                {
+                    data: 'revisi'
                 },
                 {
                     data: 'status'

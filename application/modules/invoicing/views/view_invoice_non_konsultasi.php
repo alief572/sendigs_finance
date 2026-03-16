@@ -82,7 +82,13 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
                 }
                 ?>
             </tbody>
-            <tfoot class="footer_item">
+            <tfoot class="footer_item bg-gray">
+                <tr>
+                    <th colspan="4" class="text-center">Discount</th>
+                    <th>
+                        <input type="text" name="discount" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->discount ?>" onchange="hitung_all();">
+                    </th>
+                </tr>
                 <tr>
                     <th colspan="4" class="text-center">Biaya Kirim</th>
                     <th>
@@ -90,9 +96,15 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
                     </th>
                 </tr>
                 <tr>
+                    <th colspan="4" class="text-center">PPn (Consultant)</th>
+                    <th>
+                        <input type="text" name="ppn_consultant" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->ppn_consultant ?>" onchange="hitung_all();">
+                    </th>
+                </tr>
+                <tr>
                     <th colspan="4" class="text-center">Total</th>
                     <th>
-                        <input type="text" name="total" id="total" class="form-control form-control-sm text-right auto_num" value="<?= ($grand_total + $data_invoicing->biaya_kirim) ?>" readonly>
+                        <input type="text" name="total" id="total" class="form-control form-control-sm text-right auto_num" value="<?= ($grand_total - $data_invoicing->discount + $data_invoicing->biaya_kirim + $data_invoicing->ppn_consultant) ?>" readonly>
                     </th>
                 </tr>
             </tfoot>

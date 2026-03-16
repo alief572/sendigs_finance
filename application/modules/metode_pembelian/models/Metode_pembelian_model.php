@@ -1019,364 +1019,120 @@ class Metode_pembelian_model extends BF_Model
 
 	public function save_rfq()
 	{
-		$Arr_Kembali	= array();
-		$data			= $this->input->post();
-		$data_session	= $this->session->userdata;
-		$dateTime		= date('Y-m-d H:i:s');
-		$UserName		= $this->auth->user_name();
-		$Ym				= date('ym');
-		$jenis_pembelian = $data['jenis_pembelian'];
-		$category		= $data['category'];
-
-		if ($jenis_pembelian == 'po') {
-			$kode_jenis_pembelian = '1';
-		} else {
-			$kode_jenis_pembelian = '2';
+		if (!$this->input->is_ajax_request()) {
+			exit('No direct script access allowed');
 		}
 
-		$check			= $this->db->select('id')->get_where('tran_pr_detail', array('checklist' => '1', 'checklist_by' => $UserName, 'no_rfq' => NULL))->result_array();
-		$ArrList 		= array();
-		foreach ($check as $val => $vaxl) {
-			$ArrList[] = $vaxl['id'];
-		}
-		$dtImplode		= "('" . implode("','", $ArrList) . "')";
+		$data           = $this->input->post();
+		$userName       = $this->auth->user_name();
+		$userId         = $this->auth->user_id();
+		$dateTime       = date('Y-m-d H:i:s');
 
-		// print_r($check);
-		// echo $dtImplode;
-		// exit;
+		$jenis_pembelian = $data['jenis_pembelian'] ?? '';
+		// Mapping kode jenis pembelian
+		$map_jenis = ['po' => '1', 'non po' => '2'];
+		$kode_jenis_pembelian = $map_jenis[$jenis_pembelian] ?? '3';
 
-		// if ($jenis_pembelian == 'po') {
-		// 	//pengurutan kode
-		// 	$srcMtr			= "SELECT MAX(no_rfq) as maxP FROM tran_rfq_header WHERE no_rfq LIKE 'RFQX" . $Ym . "%' ";
-		// 	$numrowMtr		= $this->db->query($srcMtr)->num_rows();
-		// 	$resultMtr		= $this->db->query($srcMtr)->result_array();
-		// 	$angkaUrut2		= $resultMtr[0]['maxP'];
-		// 	$urutan2		= (int)substr($angkaUrut2, 8, 4);
-		// 	$urutan2++;
-		// 	$urut2			= sprintf('%04s', $urutan2);
-		// 	$no_rfq			= "RFQX" . $Ym . $urut2;
+		// Mulai Transaksi
+		$this->db->trans_start();
 
-		// 	$id_supplier	= $data['id_supplier'];
-		// 	// $check			= $data['check'];
-		// 	// $ArrList 		= array();
-		// 	// foreach($check AS $vaxl){
-		// 	// 	$ArrList[$vaxl] = $vaxl;
-		// 	// }
-		// 	// $dtImplode		= "('".implode("','", $ArrList)."')";
+		if (!empty($data['check'])) {
+			$no = 0;
+			foreach ($data['check'] as $no_pr) {
+				$no++;
+				$category_pr = $data['category_' . $no_pr];
 
-		// 	$qListPRD 		= "SELECT * FROM tran_pr_detail WHERE id IN " . $dtImplode . "  ";
-		// 	$restListPRD 	= $this->db->query($qListPRD)->result_array();
+				// Konfigurasi per kategori (Table mapping)
+				$config = $this->_get_category_config($category_pr, $no_pr);
 
-		// 	$ArrUpdate = array();
-		// 	foreach ($restListPRD as $val => $valx) {
-		// 		$ArrUpdate[$val]['id'] 	= $valx['id'];
-		// 		$ArrUpdate[$val]['no_rfq'] = $no_rfq;
-		// 		$ArrUpdate[$val]['jenis_pembelian'] = $jenis_pembelian;
-		// 	}
+				if (!$config) continue;
 
-		// 	$qListG 	= "SELECT id, id_barang, nm_barang, nilai_pr, SUM(qty) AS purchase, tgl_dibutuhkan, satuan, no_pr, spec, info FROM tran_pr_detail WHERE id IN " . $dtImplode . " GROUP BY id_barang";
-		// 	$restListG 	= $this->db->query($qListG)->result_array();
-
-		// 	$ArrDetail = array();
-		// 	$ArrHeader = array();
-		// 	$no = 0;
-		// 	foreach ($id_supplier as $sup => $supx) {
-		// 		$qSupplier			= "SELECT * FROM supplier WHERE id_supplier ='" . $supx . "' LIMIT 1 ";
-		// 		$restSupplier		= $this->db->query($qSupplier)->result();
-		// 		$SUM_MAT = 0;
-
-		// 		$no++;
-		// 		$num = sprintf('%03s', $no);
-		// 		foreach ($restListG as $val => $valx) {
-
-		// 			$SUM_MAT += $valx['purchase'];
-		// 			$ArrDetail[$sup . $val]['no_rfq'] 		= $no_rfq;
-		// 			$ArrDetail[$sup . $val]['hub_rfq'] 		= $no_rfq . '-' . $num;
-		// 			$ArrDetail[$sup . $val]['id_barang'] 		= $valx['id_barang'];
-		// 			$ArrDetail[$sup . $val]['nm_barang'] 		= $valx['nm_barang'];
-		// 			$ArrDetail[$sup . $val]['spec'] 			= $valx['spec'];
-		// 			$ArrDetail[$sup . $val]['info'] 			= $valx['info'];
-		// 			$ArrDetail[$sup . $val]['id_supplier']	= $supx;
-		// 			$ArrDetail[$sup . $val]['nm_supplier']	= $restSupplier[0]->nm_supplier;
-		// 			$ArrDetail[$sup . $val]['qty'] 			= $valx['purchase'];
-		// 			$ArrDetail[$sup . $val]['satuan'] 		= $valx['satuan'];
-		// 			$ArrDetail[$sup . $val]['price_ref'] 		= $valx['nilai_pr'];
-		// 			$ArrDetail[$sup . $val]['no_pr'] 		 	= $valx['no_pr'];
-		// 			$ArrDetail[$sup . $val]['tgl_dibutuhkan'] = $valx['tgl_dibutuhkan'];
-		// 			$ArrDetail[$sup . $val]['created_by'] 	= $UserName;
-		// 			$ArrDetail[$sup . $val]['created_date'] 	= $dateTime;
-		// 		}
-
-		// 		$ArrHeader[$sup]['no_rfq'] 			= $no_rfq;
-		// 		$ArrHeader[$sup]['hub_rfq'] 		= $no_rfq . '-' . $num;
-		// 		$ArrHeader[$sup]['category'] 		= $category;
-		// 		$ArrHeader[$sup]['id_supplier'] 	= $supx;
-		// 		$ArrHeader[$sup]['nm_supplier'] 	= $restSupplier[0]->nm_supplier;
-		// 		$ArrHeader[$sup]['total_request'] 	= $SUM_MAT;
-		// 		$ArrHeader[$sup]['created_by'] 		= $UserName;
-		// 		$ArrHeader[$sup]['created_date'] 	= $dateTime;
-		// 		$ArrHeader[$sup]['updated_by'] 		= $UserName;
-		// 		$ArrHeader[$sup]['updated_date'] 	= $dateTime;
-		// 	}
-
-		// 	// print_r($ArrHeader);
-		// 	// print_r($ArrDetail);
-		// 	// print_r($ArrUpdate);
-		// 	// exit;
-
-		// 	$this->db->trans_start();
-		// 	$this->db->insert_batch('tran_rfq_header', $ArrHeader);
-		// 	$this->db->insert_batch('tran_rfq_detail', $ArrDetail);
-		// 	$this->db->update_batch('tran_pr_detail', $ArrUpdate, 'id');
-		// 	$this->db->trans_complete();
-
-		// 	if ($this->db->trans_status() === FALSE) {
-		// 		$this->db->trans_rollback();
-		// 		$Arr_Kembali	= array(
-		// 			'pesan'		=> 'Insert purchase order data failed. Please try again later ...',
-		// 			'status'	=> 2
-		// 		);
-		// 	} else {
-		// 		$this->db->trans_commit();
-		// 		$Arr_Kembali	= array(
-		// 			'pesan'		=> 'Insert purchase order data success. Thanks ...',
-		// 			'status'	=> 1
-		// 		);
-		// 		history('Create RFQ ' . $no_rfq . ', ' . $category . '/' . $jenis_pembelian);
-		// 	}
-		// 	echo json_encode($Arr_Kembali);
-		// }
-		// if ($jenis_pembelian == 'non po') {
-		// 	$pic			= strtolower($data['pic']);
-		// 	$keterangan		= strtolower($data['keterangan']);
-		// 	//pengurutan kode
-		// 	$srcMtr			= "SELECT MAX(no_non_po) as maxP FROM tran_non_po_header WHERE no_non_po LIKE 'NPO" . $Ym . "%' ";
-		// 	$numrowMtr		= $this->db->query($srcMtr)->num_rows();
-		// 	$resultMtr		= $this->db->query($srcMtr)->result_array();
-		// 	$angkaUrut2		= $resultMtr[0]['maxP'];
-		// 	$urutan2		= (int)substr($angkaUrut2, 7, 4);
-		// 	$urutan2++;
-		// 	$urut2			= sprintf('%04s', $urutan2);
-		// 	$no_rfq			= "NPO" . $Ym . $urut2;
-
-		// 	// $check			= $data['check'];
-		// 	// $ArrList 		= array();
-		// 	// foreach($check AS $vaxl){
-		// 	// 	$ArrList[$vaxl] = $vaxl;
-		// 	// }
-		// 	// $dtImplode		= "('".implode("','", $ArrList)."')";
-
-		// 	$qListPRD 		= "SELECT * FROM tran_pr_detail WHERE id IN " . $dtImplode . "  ";
-		// 	$restListPRD 	= $this->db->query($qListPRD)->result_array();
-
-		// 	$ArrUpdate = array();
-		// 	foreach ($restListPRD as $val => $valx) {
-		// 		$ArrUpdate[$val]['id'] 	= $valx['id'];
-		// 		$ArrUpdate[$val]['no_rfq'] = $no_rfq;
-		// 		$ArrUpdate[$val]['jenis_pembelian'] = $jenis_pembelian;
-		// 	}
-
-		// 	$qListG 	= "SELECT no_pr, id, id_barang, nm_barang, nilai_pr, SUM(qty) AS purchase, tgl_dibutuhkan, satuan FROM tran_pr_detail WHERE id IN " . $dtImplode . " GROUP BY id_barang";
-		// 	$restListG 	= $this->db->query($qListG)->result_array();
-
-		// 	$ArrDetail = array();
-		// 	$ArrHeader = array();
-		// 	$SUM_MAT = 0;
-		// 	$SUM_QTY = 0;
-		// 	foreach ($restListG as $val => $valx) {
-
-		// 		$SUM_MAT += $valx['nilai_pr'];
-		// 		$SUM_QTY += $valx['purchase'];
-		// 		$nomor_PR = get_name('rutin_non_planning_detail', 'no_pengajuan', 'no_pr', $valx['no_pr']);
-		// 		$ArrDetail[$val]['no_non_po'] 	= $no_rfq;
-		// 		$ArrDetail[$val]['id_barang'] 	= $valx['id_barang'];
-		// 		$ArrDetail[$val]['nm_barang'] 	= $valx['nm_barang'];
-		// 		$ArrDetail[$val]['qty'] 		= $valx['purchase'];
-		// 		$ArrDetail[$val]['satuan'] 		= $valx['satuan'];
-		// 		$ArrDetail[$val]['no_pr'] 		= $valx['no_pr'];
-		// 		$ArrDetail[$val]['id_dept'] 		= get_name('rutin_non_planning_header', 'id_dept', 'no_pengajuan', $nomor_PR);
-		// 		$ArrDetail[$val]['id_costcenter'] 	= get_name('rutin_non_planning_header', 'id_costcenter', 'no_pengajuan', $nomor_PR);
-		// 		$ArrDetail[$val]['price_unit'] 		= $valx['nilai_pr'];
-		// 		$ArrDetail[$val]['tgl_dibutuhkan'] 	= $valx['tgl_dibutuhkan'];
-		// 		$ArrDetail[$val]['created_by'] 		= $data_session['ORI_User']['username'];
-		// 		$ArrDetail[$val]['created_date'] 	= date('Y-m-d H:i:s');
-		// 	}
-
-		// 	$ArrHeader['no_non_po'] 	= $no_rfq;
-		// 	$ArrHeader['tanggal_non_po'] = date('Y-m-d');
-		// 	$ArrHeader['pic'] 			= $pic;
-		// 	$ArrHeader['category'] 		= $category;
-		// 	$ArrHeader['qty'] 			= $SUM_QTY;
-		// 	$ArrHeader['nilai_request'] = $SUM_MAT;
-		// 	$ArrHeader['keterangan'] 	= $keterangan;
-		// 	$ArrHeader['created_by'] 	= $data_session['ORI_User']['username'];
-		// 	$ArrHeader['created_date'] 	= date('Y-m-d H:i:s');
-
-
-
-		// 	// print_r($ArrHeader);
-		// 	// print_r($ArrDetail);
-		// 	// print_r($ArrUpdate);
-		// 	// exit;
-
-		// 	$this->db->trans_start();
-		// 	$this->db->insert('tran_non_po_header', $ArrHeader);
-		// 	$this->db->insert_batch('tran_non_po_detail', $ArrDetail);
-		// 	$this->db->update_batch('tran_pr_detail', $ArrUpdate, 'id');
-		// 	$this->db->trans_complete();
-
-		// 	if ($this->db->trans_status() === FALSE) {
-		// 		$this->db->trans_rollback();
-		// 		$Arr_Kembali	= array(
-		// 			'pesan'		=> 'Insert purchase order data failed. Please try again later ...',
-		// 			'status'	=> 2
-		// 		);
-		// 	} else {
-		// 		$this->db->trans_commit();
-		// 		$Arr_Kembali	= array(
-		// 			'pesan'		=> 'Insert purchase order data success. Thanks ...',
-		// 			'status'	=> 1
-		// 		);
-		// 		history('Create NON PO ' . $no_rfq . ', ' . $category . '/' . $jenis_pembelian);
-		// 	}
-		// 	echo json_encode($Arr_Kembali);
-		// }
-
-		// if ($jenis_pembelian == 'po') {
-
-		// }
-		// if ($jenis_pembelian == 'non po') {
-		// }
-
-		$no = 0;
-		foreach ($data['check'] as $valx) :
-			$no++;
-
-			$category_pr = $data['category_' . $valx];
-			if ($category_pr == 'departemen') {
-
-				if ($kode_jenis_pembelian == '2') {
-					$get_pr_department = $this->db->get_where('rutin_non_planning_header', array('no_pr' => $valx))->row();
-					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_department->created_by))->row();
-
-					$this->db->select('SUM(a.qty * a.harga) as ttl_pr');
-					$this->db->from('rutin_non_planning_detail a');
-					$this->db->where('a.no_pr', $valx);
-					$get_detail_pr = $this->db->get()->row();
-
-					$ttl_pr = (!empty($get_detail_pr->ttl_pr)) ? $get_detail_pr->ttl_pr : 0;
-
-					if (!empty($get_pr_department)) {
-						$arr_insert_non_po = [
-							'no_non_po' => $this->generate_no_pr_non_po($no),
-							'id_pr' => $get_pr_department->id,
-							'no_pr' => $get_pr_department->no_pr,
-							'jenis_pr' => 'pr departemen',
-							'id_pic' => $get_user->id_user,
-							'nm_pic' => $get_user->nm_lengkap,
-							'total_pr' => $ttl_pr,
-							'created_by' => $this->auth->user_id(),
-							'created_date' => date('Y-m-d H:i:s')
-						];
-
-						$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
-					}
+				// Jika metode pembelian adalah '3' (asumsi: cash/reimburse/non-po tertentu)
+				if ($kode_jenis_pembelian == '3') {
+					$this->_process_non_po_insert($config, $no_pr, $userId, $no);
 				}
 
-				$arr_update = [
-					'metode_pembelian' => $kode_jenis_pembelian
-				];
-
-				$this->db->where('no_pr', $valx);
-				$update_departemen = $this->db->update('rutin_non_planning_header', $arr_update);
-			} elseif ($category_pr == 'asset') {
-
-				if ($kode_jenis_pembelian == '2') {
-					$get_pr_header = $this->db->get_where('tran_pr_header', array('no_pr' => $valx))->row();
-					$get_pr_detail = $this->db->get_where('tran_pr_detail', array('no_pr' => $valx))->row();
-					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_header->created_by))->row();
-
-					$arr_insert_non_po = [
-						'no_non_po' => $this->generate_no_pr_non_po($no),
-						'id_pr' => $get_pr_header->id,
-						'no_pr' => $get_pr_header->no_pr,
-						'jenis_pr' => 'pr asset',
-						'id_pic' => $get_user->id_user,
-						'nm_pic' => $get_user->nm_lengkap,
-						'total_pr' => ($get_pr_detail->qty * $get_pr_detail->nilai_pr),
-						'created_by' => $this->auth->user_id(),
-						'created_date' => date('Y-m-d H:i:s')
-					];
-
-					$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
-				}
-
-				$arr_update = [
-					'metode_pembelian' => $kode_jenis_pembelian
-				];
-
-				$this->db->where('no_pr', $valx);
-				$update_asset = $this->db->update('tran_pr_header', $arr_update);
-			} else {
-				if ($kode_jenis_pembelian == '2') {
-					$get_pr_header = $this->db->get_where('material_planning_base_on_produksi', array('no_pr' => $valx))->row();
-					$get_pr_detail = $this->db->get_where('material_planning_base_on_produksi_detail', array('so_number' => $get_pr_header->so_number))->result();
-					$get_user = $this->db->get_where('users', array('id_user' => $get_pr_header->created_by))->row();
-
-					$ttl_pengajuan = 0;
-					foreach ($get_pr_detail as $val_detail) {
-						$ttl_pengajuan += ($val_detail->propose_purchase * $val_detail->price_ref);
-					}
-
-					$arr_insert_non_po = [
-						'no_non_po' => $this->generate_no_pr_non_po($no),
-						'id_pr' => $get_pr_header->id,
-						'no_pr' => $get_pr_header->no_pr,
-						'jenis_pr' => 'pr stok',
-						'id_pic' => $get_user->id_user,
-						'nm_pic' => $get_user->nm_lengkap,
-						'total_pr' => $ttl_pengajuan,
-						'created_by' => $this->auth->user_id(),
-						'created_date' => date('Y-m-d H:i:s')
-					];
-
-					$this->db->insert('tr_pr_non_po', $arr_insert_non_po);
-				}
-				$arr_update = [
-					'metode_pembelian' => $kode_jenis_pembelian
-				];
-
-				$this->db->where('no_pr', $valx);
-				$update_material = $this->db->update('material_planning_base_on_produksi', $arr_update);
+				// Update metode pembelian ke tabel sumber
+				$this->db->where('no_pr', $no_pr);
+				$this->db->update($config['table_header'], ['metode_pembelian' => $kode_jenis_pembelian]);
 			}
-		endforeach;
+		}
 
+		$this->db->trans_complete();
+
+		// Response handling
 		if ($this->db->trans_status() === FALSE) {
-			$this->db->trans_rollback();
-			if ($kode_jenis_pembelian == '1') {
-				$pesan = 'PO PR Grouping failed, please try again later !';
-			} else {
-				$pesan = 'Non PO PR Grouping failed, please try again later !';
-			}
-			$Arr_Kembali	= array(
-				'pesan'		=> $pesan,
-				'status'	=> 2
-			);
+			$status = 2;
+			$pesan  = ($kode_jenis_pembelian == '1') ? 'PO PR Grouping failed!' : 'Non PO PR Grouping failed!';
 		} else {
-			$this->db->trans_commit();
-			if ($kode_jenis_pembelian == '1') {
-				$pesan = 'PO PR Grouping Success !';
-			} else {
-				$pesan = 'Non PO PR Grouping Success !';
-			}
-			$Arr_Kembali	= array(
-				'pesan'		=> $pesan,
-				'status'	=> 1
-			);
-			// history('Create NON PO ' . $no_rfq . ', ' . $category . '/' . $jenis_pembelian);
+			$status = 1;
+			$pesan  = ($kode_jenis_pembelian == '1') ? 'PO PR Grouping Success!' : 'Non PO PR Grouping Success!';
 		}
 
-		echo json_encode($Arr_Kembali);
+		echo json_encode(['pesan' => $pesan, 'status' => $status]);
+	}
+
+	/**
+	 * Helper untuk mapping tabel dan jenis PR
+	 */
+	private function _get_category_config($category, $no_pr)
+	{
+		$map = [
+			'departemen' => [
+				'table_header' => 'rutin_non_planning_header',
+				'label'        => 'pr departemen'
+			],
+			'asset' => [
+				'table_header' => 'tran_pr_header',
+				'label'        => 'pr asset'
+			],
+			'stok' => [
+				'table_header' => 'material_planning_base_on_produksi',
+				'label'        => 'pr stok'
+			]
+		];
+
+		return $map[$category] ?? null;
+	}
+
+	/**
+	 * Logika perhitungan total dan insert ke tr_pr_non_po
+	 */
+	private function _process_non_po_insert($config, $no_pr, $userId, $increment)
+	{
+		$header = $this->db->get_where($config['table_header'], ['no_pr' => $no_pr])->row();
+		if (!$header) return;
+
+		$user = $this->db->get_where('users', ['id_user' => $header->created_by])->row();
+		$total_pr = 0;
+
+		// Kalkulasi total berdasarkan kategori
+		if ($config['label'] == 'pr departemen') {
+			$res = $this->db->select('SUM(qty * harga) as ttl')->get_where('rutin_non_planning_detail', ['no_pr' => $no_pr])->row();
+			$total_pr = $res->ttl ?? 0;
+		} elseif ($config['label'] == 'pr asset') {
+			$res = $this->db->get_where('tran_pr_detail', ['no_pr' => $no_pr])->row();
+			$total_pr = ($res) ? ($res->qty * $res->nilai_pr) : 0;
+		} else {
+			// pr stok
+			$details = $this->db->get_where('material_planning_base_on_produksi_detail', ['so_number' => $header->so_number])->result();
+			foreach ($details as $d) {
+				$total_pr += ($d->propose_purchase * $d->price_ref);
+			}
+		}
+
+		$this->db->insert('tr_pr_non_po', [
+			'no_non_po'    => $this->generate_no_pr_non_po($increment),
+			'id_pr'        => $header->id,
+			'no_pr'        => $header->no_pr,
+			'jenis_pr'     => $config['label'],
+			'id_pic'       => $user->id_user ?? null,
+			'nm_pic'       => $user->nm_lengkap ?? 'Unknown',
+			'total_pr'     => $total_pr,
+			'sts' 		   => '1',
+			'created_by'   => $userId,
+			'created_date' => date('Y-m-d H:i:s')
+		]);
 	}
 
 	public function modal_detail_rfq()

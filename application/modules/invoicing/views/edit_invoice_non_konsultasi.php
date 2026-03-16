@@ -20,15 +20,19 @@
                 <table width="100%" border="0">
                     <tr>
                         <th width="13%">Kepada</th>
-                        <td width="12%"><?= $data_invoicing->nm_customer ?></td>
+                        <td width="12%">
+                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= $data_invoicing->nm_customer ?>">
+                        </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= $data_invoicing->tanggal_invoice ?>">
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= $data_invoicing->tanggal_invoice ?>" readonly>
                         </td>
                     </tr>
                     <tr>
                         <th width="13%">Alamat</th>
-                        <td width="12%"><?= $data_invoicing->address ?></td>
+                        <td width="12%">
+                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= $data_invoicing->address ?></textarea>
+                        </td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
                             <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= $data_invoicing->no_invoice ?>">
@@ -101,11 +105,25 @@
                     // }
                     ?>
                 </tbody>
-                <tfoot class="footer_item">
+                <tfoot class="footer_item bg-gray">
+                    <tr>
+                        <th colspan="4" class="text-center">Discount</th>
+                        <th>
+                            <input type="text" name="discount" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->discount ?>" onchange="hitung_all();" readonly>
+                        </th>
+                        <th></th>
+                    </tr>
                     <tr>
                         <th colspan="4" class="text-center">Biaya Kirim</th>
                         <th>
-                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="0" onchange="hitung_all();">
+                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->biaya_kirim ?>" onchange="hitung_all();" readonly>
+                        </th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-center">PPn (Consultant)</th>
+                        <th>
+                            <input type="text" name="ppn_consultant" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->ppn_consultant ?>" onchange="hitung_all();" readonly>
                         </th>
                         <th></th>
                     </tr>
@@ -162,7 +180,7 @@
                                     <input type="text" name="pph" id="pph" class="form-control form-control-sm text-right auto_num" value="0" readonly>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr class="bg-gray text-bold">
                                 <td>Total Tagihan + PPn - Pph</td>
                                 <td>
                                     <input type="text" name="total_tagihan_all" id="total_tagihan_all" class="form-control form-control-sm text-right auto_num" value="0" readonly>
@@ -255,7 +273,7 @@
         </div>
 
 
-        <input type="hidden" name="total_nominal" value="<?= $ttl_grand ?>">
+        <!-- <input type="hidden" name="total_nominal" value="<?= $ttl_grand ?>">
         <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
         <input type="hidden" name="pajak" value="<?= $pajak ?>">
         <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
@@ -264,7 +282,7 @@
         <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
         <input type="hidden" name="total_tagihan_ppn" value="<?= ($total_nominal + $ppn) ?>">
         <input type="hidden" name="pph_jurnal" value="<?= $pph ?>">
-        <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>">
+        <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>"> -->
 
         <div class="box-body">
             <h4>Jurnal Invoice</h4>
@@ -318,6 +336,8 @@
     })
 
     $(document).on('click', '.add_item', function() {
+        no++;
+
         var html = '<tr class="tr_item_' + no + '">';
         html += '<td class="text-center">' + no + '</td>';
         html += '<td><textarea name="item['+no+'][nama]" class="form-control form-control-sm"></textarea></td>';
@@ -327,7 +347,6 @@
         html += '<td><button type="button" class="btn btn-sm btn-danger remove_item" data-no="' + no + '"><i class="fa fa-trash"></i></button></td>';
         html += '</tr>';
         $('.list_item').append(html);
-        no++;
 
         $('.auto_num').autoNumeric('init');
     });
@@ -443,11 +462,19 @@
                 var hargaRaw = $hargaInput.val() || "0";
                 var harga = parseFloat(String(hargaRaw).replace(/,/g, '')) || 0;
 
-                var total = qty * harga;
+                var totals = qty * harga;
 
-                $('input[name="item[' + i + '][total]"]').autoNumeric('set', total);
-                totall += total;
+                $('input[name="item[' + i + '][total]"]').autoNumeric('set', totals);
+                totall += totals;
             }
+        }
+
+        var discount = $('input[name="discount"]').val();
+        if (discount == '') {
+            discount = 0;
+        } else {
+            discount = discount.split(',').join('');
+            discount = parseFloat(discount);
         }
 
         var biaya_kirim = $('input[name="biaya_kirim"]').val();
@@ -458,7 +485,17 @@
             biaya_kirim = parseFloat(biaya_kirim);
         }
 
+        var ppn_consultant = $('input[name="ppn_consultant"]').val();
+        if (ppn_consultant == '') {
+            ppn_consultant = 0;
+        } else {
+            ppn_consultant = ppn_consultant.split(',').join('');
+            ppn_consultant = parseFloat(ppn_consultant);
+        }
+
+        totall -= discount;
         totall += biaya_kirim;
+        totall += ppn_consultant;
 
         $('#total').autoNumeric('set', totall);
         $('#dpp').autoNumeric('set', totall);
@@ -488,7 +525,6 @@
                 'ppn': ppn,
                 'pph': pph,
                 'total_tagihan_all': total_tagihan_all,
-                'id_invoice': '<?= $data_invoicing->id ?>'
             },
             cache: false,
             dataType: 'json',

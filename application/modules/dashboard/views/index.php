@@ -1,5 +1,5 @@
 <?php
-$permission_app_pr_depart_finance = 'Approval_PR_Depart_Finance.View';
+$permission_app_pr_depart_finance = 'Approval_PR_Department_Finance.View';
 $permission_app_pr_depart_management = 'Approval_PR_Depart_Management.View';
 $permission_app_pr_stock = 'Approval_PR_Stock_Management.View';
 $permission_app_pr_asset = 'Approval_PR_Asset_Management.View';

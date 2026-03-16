@@ -39,6 +39,7 @@ user experience. Slimscroll is required when using the
 fixed layout. -->
 
 <script src="https://cdn.datatables.net/fixedheader/3.1.7/js/dataTables.fixedHeader.min.js"></script>
+<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 </body>
 </html>
 
