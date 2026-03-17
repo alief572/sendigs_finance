@@ -230,7 +230,7 @@ class Dashboard_model extends BF_Model
         $this->db->from('tr_expense a');
         $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc');
         $this->db->where('a.status', 0);
-        $this->db->where('a.sts_finance', 0);
+        $this->db->where('a.sts_finance', '0');
         $this->db->where('b.id_kasbon', null);
         $this->db->group_by('a.id');
         $get_ttl_app_expense_finance = $this->db->get()->num_rows();
@@ -239,7 +239,7 @@ class Dashboard_model extends BF_Model
         $this->db->from('tr_expense a');
         $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc');
         $this->db->where('a.status', 0);
-        $this->db->where('a.sts_finance', 1);
+        $this->db->where('a.sts_finance', '1');
         $this->db->where('b.id_kasbon', null);
         $this->db->group_by('a.id');
         $get_ttl_app_expense_management = $this->db->get()->num_rows();
