@@ -1111,7 +1111,7 @@ class Expense extends Admin_Controller
 	public function list_expense_approval_manage()
 	{
 
-		$data = $this->Expense_model->GetListData('sts_finance = "1"');
+		// $data = $this->Expense_model->GetListData('sts_finance = "1"');
 
 		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
 		$this->db->from('tr_expense a');
@@ -3202,9 +3202,9 @@ class Expense extends Admin_Controller
 		$this->db->from('v_kasbon_list');
 
 		// Filter User (ID 7 dianggap Superadmin/Full Access)
-		if ($this->auth->user_id() !== '7') {
-			$this->db->where('nmuser_fix', $this->auth->user_name());
-		}
+		// if ($this->auth->user_id() !== '7') {
+		// 	$this->db->where('nmuser_fix', $this->auth->user_name());
+		// }
 
 		// Get total records (tanpa filter search)
 		$count_all = $this->db->count_all_results('', false);
