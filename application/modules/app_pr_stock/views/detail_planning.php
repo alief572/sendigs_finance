@@ -94,13 +94,13 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								echo "<td class='text-right min_stok'>" . number_format($kebutuhan) . "</td>";
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format($stock) . "</td>";
-								echo "<td class='text-right'>" . number_format($propose * $konversi) . "</td>";
+								echo "<td class='text-right'>" . number_format($propose) . "</td>";
 								echo "<td class='text-right'>Rp. " . number_format($price_ref) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format(($propose * $konversi) * $price_ref) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose) * $price_ref) . "</td>";
 
 								echo "</tr>";
 
-								$grand_total_price += (($propose * $konversi) * $price_ref);
+								$grand_total_price += (($propose) * $price_ref);
 							}
 							?>
 						</tbody>
