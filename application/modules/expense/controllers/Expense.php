@@ -3202,7 +3202,7 @@ class Expense extends Admin_Controller
 		$this->db->from('v_kasbon_list');
 
 		// Filter User (ID 7 dianggap Superadmin/Full Access)
-		if ($this->auth->user_id() !== '7') {
+		if ($this->auth->user_id() !== '7' || $this->auth->user_id() !== '202') {
 			$this->db->where('nmuser_fix', $this->auth->user_name());
 		}
 
@@ -3273,7 +3273,7 @@ class Expense extends Admin_Controller
 	{
 		$sts = '';
 		if ($item['status'] == '0') {
-			$sts = '<div class="badge bg-yellow text-light">New</div>';
+			$sts = '<div class="badge bg-blue text-light">Waiting Approval Finance</div>';
 			if ($item['sts_finance'] == '1') {
 				$sts = '<div class="badge bg-blue">Waiting Approval Management</div>';
 			}
@@ -3327,9 +3327,9 @@ class Expense extends Admin_Controller
 		// SEKARANG KITA PAKAI VIEW
 		$this->db->from('v_kasbon_list');
 
-		// if ($this->auth->user_id() !== '7') {
-		// 	$this->db->where('nmuser_fix', $this->auth->user_name());
-		// }
+		if ($this->auth->user_id() !== '7' || $this->auth->user_id() !== '202') {
+			$this->db->where('nmuser_fix', $this->auth->user_name());
+		}
 
 		// Get total records
 		$count_all = $this->db->count_all_results('', false);
