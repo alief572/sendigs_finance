@@ -137,21 +137,30 @@ class Budget_coa extends Admin_Controller
 		$this->db->trans_start();
 		if ($type == "edit") {
 			for ($x = 0; $x < count($coa); $x++) {
-				if (isset($finance_tahun[$x]) && !empty($finance_tahun[$x])) $finance_tahun[$x] = 0;
-				if (isset($finance_bulan[$x]) && !empty($finance_bulan[$x])) $finance_bulan[$x] = 0;
+				if ($finance_tahun[$x] == '') $finance_tahun[$x] = 0;
+				if ($finance_bulan[$x] == '') $finance_bulan[$x] = 0;
 				//			  if($finance_tahun[$x]>0){
-				if ($id[$x] != '') {
+				if ($id[$x] !== '') {
+					$id = (!empty($id[$x])) ? $id[$x] : 0;
+					$coaa = (!empty($coa[$x])) ? $coa[$x] : 0;
+					$info = (!empty($info[$x])) ? $info[$x] : 0;
+					$divisi = (!empty($divisi[$x])) ? $divisi[$x] : 0;
+					$kategori = (!empty($kategori[$x])) ? $kategori[$x] : 0;
+					$definisi = (!empty($definisi[$x])) ? $definisi[$x] : 0;
+					$finance_tahun = (!empty($finance_tahun[$x])) ? $finance_tahun[$x] : 0;
+					$finance_bulan = (!empty($finance_bulan[$x])) ? $finance_bulan[$x] : 0;
+
 					$data = array(
 						array(
-							'id' => $id[$x],
+							'id' => $id,
 							'tahun' => $tahun,
-							'coa' => $coa[$x],
-							'info' => $info[$x],
-							'divisi' => $divisi[$x],
-							'kategori' => $kategori[$x],
-							'definisi' => $definisi[$x],
-							'finance_bulan' => $finance_bulan[$x],
-							'finance_tahun' => $finance_tahun[$x],
+							'coa' => $coaa,
+							'info' => $info,
+							'divisi' => $divisi,
+							'kategori' => $kategori,
+							'definisi' => $definisi,
+							'finance_bulan' => $finance_bulan,
+							'finance_tahun' => $finance_tahun,
 							/*
 								'total'=>$total[$x],
 								'bulan_1'=>$bulan_1[$x], 'bulan_2'=>$bulan_2[$x], 'bulan_3'=>$bulan_3[$x],'bulan_4'=>$bulan_4[$x], 'bulan_5'=>$bulan_5[$x],'bulan_6'=>$bulan_6[$x],
@@ -161,15 +170,23 @@ class Budget_coa extends Admin_Controller
 					);
 					$this->Budget_coa_model->update_batch($data, 'id');
 				} else {
+					$coaa = (!empty($coa[$x])) ? $coa[$x] : 0;
+					$info = (!empty($info[$x])) ? $info[$x] : 0;
+					$divisi = (!empty($divisi[$x])) ? $divisi[$x] : 0;
+					$kategori = (!empty($kategori[$x])) ? $kategori[$x] : 0;
+					$definisi = (!empty($definisi[$x])) ? $definisi[$x] : 0;
+					$finance_tahun = (!empty($finance_tahun[$x])) ? $finance_tahun[$x] : 0;
+					$finance_bulan = (!empty($finance_bulan[$x])) ? $finance_bulan[$x] : 0;
+
 					$data =  array(
 						'tahun' => $tahun,
-						'coa' => $coa[$x],
-						'info' => $info[$x],
-						'divisi' => $divisi[$x],
-						'kategori' => $kategori[$x],
-						'definisi' => $definisi[$x],
-						'finance_bulan' => $finance_bulan[$x],
-						'finance_tahun' => $finance_tahun[$x],
+						'coa' => $coaa,
+						'info' => $info,
+						'divisi' => $divisi,
+						'kategori' => $kategori,
+						'definisi' => $definisi,
+						'finance_bulan' => $finance_bulan,
+						'finance_tahun' => $finance_tahun,
 						/*
 								'total'=>$total[$x],
 								'sisa'=>0,
@@ -194,15 +211,24 @@ class Budget_coa extends Admin_Controller
 				if (isset($finance_tahun[$x]) && $finance_tahun[$x] == '') $finance_tahun[$x] = 0;
 				if (isset($finance_bulan[$x]) && $finance_bulan[$x] == '') $finance_bulan[$x] = 0;
 				//			  if($finance_tahun[$x]>0){
+
+				$coaa = (!empty($coa[$x])) ? $coa[$x] : 0;
+				$info = (!empty($info[$x])) ? $info[$x] : 0;
+				$divisi = (!empty($divisi[$x])) ? $divisi[$x] : 0;
+				$kategori = (!empty($kategori[$x])) ? $kategori[$x] : 0;
+				$definisi = (!empty($definisi[$x])) ? $definisi[$x] : 0;
+				$finance_tahun = (!empty($finance_tahun[$x])) ? $finance_tahun[$x] : 0;
+				$finance_bulan = (!empty($finance_bulan[$x])) ? $finance_bulan[$x] : 0;
+
 				$data =  array(
 					'tahun' => $tahun,
-					'coa' => $coa[$x],
-					'info' => $info[$x],
-					'divisi' => $divisi[$x],
-					'kategori' => $kategori[$x],
-					'finance_bulan' => $finance_bulan[$x],
-					'finance_tahun' => $finance_tahun[$x],
-					'definisi' => $definisi[$x],
+					'coa' => $coaa,
+					'info' => $info,
+					'divisi' => $divisi,
+					'kategori' => $kategori,
+					'finance_bulan' => $finance_bulan,
+					'finance_tahun' => $finance_tahun,
+					'definisi' => $definisi,
 					/*
 							'total'=>$total[$x],
 							'sisa'=>0,
