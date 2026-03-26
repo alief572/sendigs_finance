@@ -3202,7 +3202,7 @@ class Expense extends Admin_Controller
 		$this->db->from('v_kasbon_list');
 
 		// Filter User (ID 7 dianggap Superadmin/Full Access)
-		if ($this->auth->user_id() !== '7' || $this->auth->user_id() !== '202') {
+		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '202') {
 			$this->db->where('nmuser_fix', $this->auth->user_name());
 		}
 
@@ -3327,7 +3327,7 @@ class Expense extends Admin_Controller
 		// SEKARANG KITA PAKAI VIEW
 		$this->db->from('v_kasbon_list');
 
-		if ($this->auth->user_id() !== '7' || $this->auth->user_id() !== '202') {
+		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '202') {
 			$this->db->where('nmuser_fix', $this->auth->user_name());
 		}
 
