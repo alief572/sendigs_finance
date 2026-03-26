@@ -137,8 +137,8 @@ class Budget_coa extends Admin_Controller
 		$this->db->trans_start();
 		if ($type == "edit") {
 			for ($x = 0; $x < count($coa); $x++) {
-				if ($finance_tahun[$x] == '') $finance_tahun[$x] = 0;
-				if ($finance_bulan[$x] == '') $finance_bulan[$x] = 0;
+				if (isset($finance_tahun[$x]) && !empty($finance_tahun[$x])) $finance_tahun[$x] = 0;
+				if (isset($finance_bulan[$x]) && !empty($finance_bulan[$x])) $finance_bulan[$x] = 0;
 				//			  if($finance_tahun[$x]>0){
 				if ($id[$x] != '') {
 					$data = array(
