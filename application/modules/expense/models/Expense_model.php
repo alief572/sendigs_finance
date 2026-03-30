@@ -54,6 +54,8 @@ class Expense_model extends BF_Model
 	public function __construct()
 	{
 		parent::__construct();
+
+		$this->hr = $this->load->database('hris', true);
 	}
 
 	// list data kasbon
@@ -714,6 +716,8 @@ class Expense_model extends BF_Model
 
 	public function getCoaTransport()
 	{
+		$get_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
+		
 		$this->db->select('a.coa');
 		$this->db->from('coa_expense a');
 		$this->db->where('a.jenis_pengeluaran', 'Transport');
@@ -723,6 +727,15 @@ class Expense_model extends BF_Model
 			$this->db->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
 			$this->db->from(DBACC . '.coa_master a');
 			$this->db->where_in('a.no_perkiraan', explode(';', $get_kelompok_coa->coa));
+			if($this->auth->user_id() !== '7') {
+				
+
+				if($get_user->department_id == 'DEP005' || $get_user->department_id == 'DEP011' || $get_user->department_id == 'DEP022') {
+					$this->db->like('a.no_perkiraan', '6202-', 'both');
+				} else {
+					$this->db->like('a.no_perkiraan', '5103-', 'both');
+				}	
+			}
 			$get_list_coa = $this->db->get()->result();
 
 			return $get_list_coa;

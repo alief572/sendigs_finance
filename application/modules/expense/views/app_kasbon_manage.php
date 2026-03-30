@@ -658,7 +658,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
                                     timer: 1500,
                                     showConfirmButton: false
                                 });
-                                window.location = siteurl + 'expense/kasbon<?= $mod ?>';
+                                window.location = siteurl + 'expense/kasbon_fin_manage';
                             } else {
                                 swal({
                                     title: "Gagal!",
@@ -732,7 +732,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
                                             timer: 1500,
                                             showConfirmButton: false
                                         });
-                                        window.location = siteurl + 'expense/kasbon<?= $mod ?>'
+                                        window.location = siteurl + 'expense/kasbon_fin_manage'
                                     } else {
                                         swal({
                                             title: "Gagal!",
