@@ -151,6 +151,17 @@ class Invoicing extends Admin_Controller
         $this->template->render('add_invoice');
     }
 
+    public function add_invoice_non_konsultasi($id_penawaran)
+    {
+        $this->auth->restrict($this->addPermission);
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
+
+        $this->template->set('data_penawaran', $get_penawaran);
+        $this->template->title('Add Invoicing Non Konsultasi');
+        $this->template->render('add_invoice_non_konsultasi');
+    }
+
     public function add_invoice_vuca($id_actual_plan_tagih)
     {
         $this->auth->restrict($this->viewPermission);
@@ -665,6 +676,12 @@ class Invoicing extends Admin_Controller
         $get_invoicing = $this->db->get()->row();
 
         $this->db->select('a.*');
+        $this->db->from('tr_invoice_detail_non_kons a');
+        $this->db->where('a.id_header', $id_invoicing);
+        $get_invoice_detail = $this->db->get()->result();
+
+        $this->db->select('a.*');
+        $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
         $this->db->from(DBCNL.'.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
@@ -672,6 +689,7 @@ class Invoicing extends Admin_Controller
         $data = [
             'id_invoicing' => $id_invoicing,
             'data_invoice' => $get_invoicing,
+            'data_invoice_detail' => $get_invoice_detail,
             'data_penawaran' => $get_penawaran,
             'id_company' => $id_company
         ];
@@ -1256,16 +1274,16 @@ class Invoicing extends Admin_Controller
             $btn_close = '<button type="button" class="btn btn-sm btn-danger close_invoice_non_kons" data-id="' . $id . '" title="Close Invoice"><i class="fa fa-close"></i></button>';
         }
 
-        $btn_print = '';
+        $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
         if ($data_invoice->sts_close == '1') {
-            $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="'.$id.'" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
+            $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
 
             $btn_view = '';
             $btn_revisi = '';
             $btn_close = '';
         }
 
-        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_close;
+        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print;
 
         return $buttons;
     }
@@ -1288,6 +1306,7 @@ class Invoicing extends Admin_Controller
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('b.nm_company', $search['value'], 'both');
+            $this->db->or_like('a.nm_customer', $search['value'], 'both');
             $this->db->or_like('a.no_invoice', $search['value'], 'both');
             $this->db->or_like('a.id_penawaran', $search['value'], 'both');
             $this->db->or_like('b.keterangan_penawaran', $search['value'], 'both');
@@ -1315,10 +1334,12 @@ class Invoicing extends Admin_Controller
             $hasil[] = [
                 'no' => $no,
                 'no_invoice' => $item->no_invoice,
+                'kepada' => $item->nm_customer,
                 'company' => $item->nm_company,
                 'no_penawaran' => $item->id_penawaran,
                 'penjualan' => $item->penjualan,
                 'pic' => $item->pic,
+                'revisi' => $item->no_revisi,
                 'status' => $status,
                 'action' => $action
             ];
@@ -1340,12 +1361,14 @@ class Invoicing extends Admin_Controller
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
         $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
+        $total_invoiced = $this->Invoicing_model->total_invoiced_non_kons($id_penawaran);
 
         $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
 
         $data = [
             'data_penawaran' => $get_penawaran,
             'data_penawaran_detail' => $get_penawaran_detail,
+            'total_invoiced' => $total_invoiced,
             'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
             'total_debit' => $get_jurnal['total_debit'],
             'total_kredit' => $get_jurnal['total_kredit']
@@ -1425,9 +1448,8 @@ class Invoicing extends Admin_Controller
                 'id_detail_plan_tagih' => '0',
                 'id_penawaran' => $get_penawaran->id_penawaran,
                 'id_spk_penawaran' => '',
-                'id_customer' => $get_penawaran->id_customer,
-                'nm_customer' => $get_penawaran->nm_customer,
-                'address' => $get_penawaran->address,
+                'nm_customer' => $this->input->post('nm_customer', true),
+                'address' => $this->input->post('address', true),
                 'id_project' => '',
                 'nm_project' => $get_penawaran->keterangan_penawaran,
                 'id_project_leader' => '',
@@ -1439,7 +1461,7 @@ class Invoicing extends Admin_Controller
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
                 'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_nilai_lain', true)),
+                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
                 'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
                 'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
                 'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
@@ -1449,9 +1471,11 @@ class Invoicing extends Admin_Controller
                 'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
                 'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
                 'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang_tanpa_pph' => $this->input->post('total_tagihan_ppn', true),
+                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
                 'non_kons' => '1',
                 'biaya_kirim' => str_replace(',', '', $this->input->post('biaya_kirim', true)),
+                'discount' => str_replace(',', '', $this->input->post('discount', true)),
+                'ppn_consultant' => str_replace(',', '', $this->input->post('ppn_consultant', true)),
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
             ];
@@ -1566,14 +1590,31 @@ class Invoicing extends Admin_Controller
         $id = $this->input->post('id', true);
         $id_penawaran = $this->input->post('id_penawaran', true);
 
+        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $id])->row();
+
         $this->db->trans_begin();
 
         try {
             $arr_update = [
-                'tanggal_invoice' => $this->input->post('tanggal_invoice'),
-                'no_invoice' => $this->input->post('nomor_invoice'),
-                'no_po' => $this->input->post('nomor_po'),
-                'no_faktur' => $this->input->post('nomor_faktur')
+                'nm_customer' => $this->input->post('nm_customer', true),
+                'address' => $this->input->post('address', true),
+                'tanggal_invoice' => $this->input->post('tanggal_invoice', true),
+                'no_invoice' => $this->input->post('nomor_invoice', true),
+                'no_po' => $this->input->post('nomor_po', true),
+                'no_faktur' => $this->input->post('nomor_faktur', true),
+                'no_revisi' => ($get_invoicing->no_revisi + 1),
+                'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
+                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
+                'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
+                'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
+                'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
+                'dpp_lain_lain_jurnal' => str_replace(',', '', $this->input->post('dpp_lain_lain', true)),
+                'ppn_jurnal' => str_replace(',', '', $this->input->post('ppn', true)),
+                'tagihan_ppn_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
+                'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
+                'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
+                'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
+                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true))
             ];
 
             $arr_data_detail = [];
@@ -1709,7 +1750,7 @@ class Invoicing extends Admin_Controller
         $id_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->id_company : '';
         $nm_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->nm_company : '';
 
-        $arr_coa_jurnal = ['4101-01-01', '1102-01-01', '2104-01-07', '1106-01-02'];
+        $arr_coa_jurnal = ['4101-01-03', '1102-01-01', '2104-01-07', '1106-01-02'];
         if (!empty($id_invoice)) {
             $this->db->select('a.coa');
             $this->db->from('tr_jurnal a');
@@ -1731,6 +1772,7 @@ class Invoicing extends Admin_Controller
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', ['4101-01-03', '4101-01-07']);
         // $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
         $get_coa_jurnal_all = $this->accounting->get()->result_array();
 
@@ -1925,6 +1967,49 @@ class Invoicing extends Admin_Controller
             $this->db->trans_rollback();
             // Ambil pesan dari exception atau pakai pesan default jika terjadi error database
             $msg = $e->getMessage() ?: 'Terjadi kendala teknis saat memproses permintaan Anda. Silakan coba beberapa saat lagi.';
+            return $this->_send_response(500, $msg);
+        }
+    }
+
+
+
+    public function close_penawaran_non_kons()
+    {
+        // 1. Ambil data input
+        $id_penawaran = $this->input->post('id_penawaran', true);
+
+        // Validasi awal: pastiin ID gak kosong
+        if (empty($id_penawaran)) {
+            return $this->_send_response(400, 'ID Penawaran tidak valid atau tidak terbaca.');
+        }
+
+        $this->db->trans_begin();
+
+        try {
+            // 2. Data yang mau diupdate
+            $arr_update = [
+                'sts_close'  => '1',
+                'close_by'   => $this->auth->user_id(),
+                'close_date' => date('Y-m-d H:i:s')
+            ];
+
+            // 3. Eksekusi Update
+            $this->db->where('id_penawaran', $id_penawaran);
+            $this->db->update(DBCNL . '.kons_tr_penawaran_non_konsultasi', $arr_update);
+
+            // Cek apakah ada perubahan (biar gak update yang sudah diclose)
+            if ($this->db->affected_rows() === 0) {
+                // Bisa jadi karena ID salah atau status memang sudah '1'
+                throw new Exception('Data tidak ditemukan atau penawaran ini sebenarnya sudah ditutup.');
+            }
+
+            // 4. Jika lancar, simpan permanen
+            $this->db->trans_commit();
+            return $this->_send_response(200, 'Penawaran berhasil ditutup dengan sukses.');
+        } catch (Exception $e) {
+            // 5. Jika ada error, batalin semua perubahan database
+            $this->db->trans_rollback();
+            $msg = $e->getMessage() ?: 'Terjadi kesalahan sistem saat menutup penawaran.';
             return $this->_send_response(500, $msg);
         }
     }
