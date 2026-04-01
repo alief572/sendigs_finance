@@ -293,7 +293,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                                 showConfirmButton: false,
                                 allowOutsideClick: false
                             }).then(() => {
-                                location.reload();
+                                Swal.close();
+                                $('#dialog-popup').modal('hide');
+                                DataTables();
                             });
 
                         } else {
