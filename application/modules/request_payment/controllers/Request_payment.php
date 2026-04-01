@@ -2877,12 +2877,15 @@ class Request_payment extends Admin_Controller
 		$get_v_req_payment = $this->db->get_where('v_request_payment', ['id' => $id])->row();
 
 		if($get_data_cash->jenis_pr == 'pr departemen') {
-			$this->db->select('CONCAT("assets/pr/", a.document) as link_document');
+			$this->db->select('CONCAT("assets/pr/", a.document) as doc_file, a.no_pr as no_doc');
 			$this->db->from('rutin_non_planning_header a');
 			$this->db->where('a.no_pr', $get_data_cash->no_pr);
 			$get_doc_pr = $this->db->get()->row();
 		} else {
-			
+			$this->db->select('CONCAT("assets/pr/", a.dokument_pendukung) as doc_file, a.no_pr as no_doc');
+			$this->db->from('tran_pr_header a');
+			$this->db->where('a.no_pr', $get_data_cash->no_pr);
+			$get_doc_pr = $this->db->get()->row();
 		}
 
 		$data = [
