@@ -444,10 +444,10 @@ class Request_payment_model extends BF_Model
         $this->db->select('a.*');
         $this->db->from('v_request_payment a');
         $this->db->where('a.status', '1');
-        
+
         $count_all = $this->db->count_all_results('', false);
 
-        if(!empty($search['value'])) {
+        if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.no_dokumen', $search['value'], 'both');
             $this->db->or_like('a.request_by', $search['value'], 'both');
@@ -521,10 +521,10 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Expense') {
                 $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
-            if ($item->kategori == 'Non-PO') {
-                $get_pr_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
-
-                if ($get_pr_non_po->jenis_pr == 'pr departemen') {
+            if ($item->kategori == 'Cash') {
+                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+                if($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
+                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 
