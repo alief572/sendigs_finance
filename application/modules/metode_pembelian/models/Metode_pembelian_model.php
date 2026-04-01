@@ -9,7 +9,7 @@ class Metode_pembelian_model extends BF_Model
 
 	public function generate_no_pr_non_po($no)
 	{
-		$prefix = "NON-PO";
+		$prefix = "PCH-";
 		$date_part = date('ymd');
 		$like_pattern = $prefix . $date_part;
 
