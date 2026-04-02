@@ -79,6 +79,28 @@
             </td>
 		</tr>
 	</table><br /><br />
+
+	<?php 
+	
+	if(!empty($detail)) {
+			foreach($detail as $item_rutin) {
+				// if (isset($item_rutin)) {
+		//	echo '<div class="pagebreak"> </div>';
+					if ($item_rutin->doc_file != '') {
+						if (strpos($item_rutin->doc_file, 'pdf', 0) > 1) {
+							echo '<div class="col-md-12">
+						<iframe src="' . base_url('assets/bayar_rutin/' . $item_rutin->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+								<a href="' . base_url('assets/bayar_rutin/' . $item_rutin->doc_file) . '">Download PDF</a>
+						</iframe>
+						<br />' . $item_rutin->no_doc . '</div>';
+						} else {
+							echo '<div class="col-md-12"><a href="' . base_url('assets/bayar_rutin/' . $item_rutin->doc_file) . '" target="_blank"><img src="' . base_url('assets/bayar_rutin/' . $item_rutin->doc_file) . '" class="img-responsive"></a><br />' . $item_rutin->no_doc . '</div>';
+						}
+					}
+				}
+			}
+		// }
+	?>
 	
 </body>
 
