@@ -21,7 +21,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.$data->nm_coa : '';
 
 ?>
-
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <form action="" id="frm_data" class="form-horizontal" enctype="multipart/form-data">
     <input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->id) ? $data->id : ''); ?>">
     <input type="hidden" id="departement" name="departement" value="<?php echo ($data_user->department_id) ?>">
@@ -277,7 +277,7 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
 
 <script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script type="text/javascript">
     var url_save = siteurl + 'expense/kasbon_save/';
     var url_approve = siteurl + 'expense/kasbon_approve/';
@@ -292,7 +292,7 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
     $('.divide').divide();
 
     $('.autonum').autoNumeric('init');
-    $('.chosen_select').chosen({
+    $('.chosen_select').select2({
         width: '100%'
     });
 

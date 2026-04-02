@@ -3214,6 +3214,7 @@ class Expense extends Admin_Controller
 			$this->db->group_start();
 			$this->db->like('no_doc', $search);
 			$this->db->or_like('tgl_doc', $search);
+			$this->db->or_like('keperluan', $search);
 			$this->db->or_like('nmuser_fix', $search); // Gak perlu ngetik subquery lagi
 			$this->db->group_end();
 		}
@@ -3226,7 +3227,8 @@ class Expense extends Admin_Controller
 			0 => 'no_doc', // Biasanya kolom 0 itu nomor urut, sesuaikan mappingnya
 			1 => 'no_doc',
 			2 => 'tgl_doc',
-			3 => 'nmuser_fix'
+			3 => 'nmuser_fix',
+			4 => 'keperluan'
 		];
 
 		if (isset($post['order'][0]['column'])) {
@@ -3250,6 +3252,7 @@ class Expense extends Admin_Controller
 				'no_kasbon' => $item['no_doc'],
 				'tanggal'   => $item['tgl_doc'],
 				'nama'      => $item['nmuser_fix'], // Langsung dari View
+				'keperluan' => $item['keperluan'],
 				'status'    => $this->_render_status_badge($item),
 				'action'    => $this->_render_action_buttons($item),
 			];
@@ -3278,7 +3281,7 @@ class Expense extends Admin_Controller
 				$sts = '<div class="badge bg-blue">Waiting Approval Management</div>';
 			}
 		} elseif (in_array($item['status'], ['1', '2'])) {
-			$sts = '<div class="badge bg-dark-blue text-light">Approved</div>';
+			$sts = '<div class="badge bg-green text-light">Approved</div>';
 		} elseif ($item['status'] == '3') {
 			$check = $this->db->get_where('tr_expense_detail', ['id_kasbon' => $item['no_doc'], 'status' => 2])->row();
 			$sts = (!empty($check)) ? '<div class="badge bg-dark text-light">Close</div>' : '<div class="badge bg-green text-light">Paid</div>';
@@ -3340,6 +3343,7 @@ class Expense extends Admin_Controller
 			$this->db->like('no_doc', $search);
 			$this->db->or_like('tgl_doc', $search);
 			$this->db->or_like('nmuser_fix', $search); // Gak perlu panggil ulang subquery
+			$this->db->or_like('keperluan', $search);
 			$this->db->group_end();
 		}
 
@@ -3361,6 +3365,7 @@ class Expense extends Admin_Controller
 				'no_kasbon'     => $item['no_doc'],
 				'tanggal'       => $item['tgl_doc'],
 				'nama'          => $item['nmuser_fix'],
+				'keperluan'		=> $item['keperluan'],
 				'approval_date' => (!empty($item['approved_on']) && in_array($item['status'], [1, 2, 3])) ? $item['approved_on'] : '',
 				'status'        => $this->_render_status_badge($item),
 				'action'        => $this->_render_action_buttons($item), // Opsional: bungkus biar makin rapi
