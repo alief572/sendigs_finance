@@ -839,11 +839,17 @@ class Expense extends Admin_Controller
 		$results->approved_on = '';
 		$results->doc_file_2 = '';
 
+		$this->db->select('a.*');
+		$this->db->from('tr_pengajuan_rutin_detail a');
+		$this->db->where('a.no_doc', $results->no_doc);
+		$get_detail = $this->db->get()->result();
+
 		$data = array(
 			'title' => 'Print Periodik',
 			'stsview' => 'print',
 			'data' => $results,
-			'nmuser' => $nmuser
+			'nmuser' => $nmuser,
+			'detail' => $get_detail
 		);
 
 		$this->load->view('periodik_print', $data);
