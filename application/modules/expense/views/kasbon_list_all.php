@@ -6,6 +6,7 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 ?>
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <div class="box">
 	<!-- /.box-header -->
 	<div class="box-body">
@@ -17,6 +18,7 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 						<th>No Kasbon</th>
 						<th>Tanggal</th>
 						<th>Nama</th>
+						<th>Keperluan</th>
 						<th>Approval Date</th>
 						<th>Status</th>
 						<th width="120">Action</th>
@@ -82,6 +84,9 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 					data: 'nama'
 				},
 				{
+					data: 'keperluan'
+				},
+				{
 					data: 'approval_date'
 				},
 				{
@@ -95,4 +100,4 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
