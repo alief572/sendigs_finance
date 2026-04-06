@@ -109,6 +109,7 @@ class Actual_plan_tagih_model extends BF_Model
         
         if ($bulan == 'macet') {
             $this->db->where('a.status_terakhir', '3');
+            
         } else {
             $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
             $this->db->where('MONTH(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $bulan);
@@ -169,24 +170,25 @@ class Actual_plan_tagih_model extends BF_Model
 
     public function dataDownloadExcel($tahun = null, $status = null)
     {
-        // $effective_date = "(CASE 
-        //     WHEN d.tanggal_actual_plan_tagih IS NULL OR YEAR(d.tanggal_actual_plan_tagih) = 0
-        //     THEN a.tgl_plan_tagih 
-        //     ELSE d.tanggal_actual_plan_tagih 
-        // END)";
-
         // --- QUERY UTAMA ---
         $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, a.tgl_aktual_plan_tagih as tanggal_aktual, a.created_date as crated_actual, a.status_terakhir as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
+        
+        // Filter tahun hanya berlaku jika status_terakhir bukan 3 (Tagihan Macet).
         if (!empty($tahun)) {
+            $this->db->group_start();
             $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
+            $this->db->or_where('a.status_terakhir', '3');
+            $this->db->group_end();
         }
+        
         if (!empty($status)) {
             $this->db->where('a.status_terakhir', $status);
         }
+        
         $this->db->order_by('a.id', 'desc');
         $this->db->group_by('a.id');
 
