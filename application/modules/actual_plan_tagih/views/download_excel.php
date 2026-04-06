@@ -47,14 +47,14 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             }
 
             $status = '<div style="background-color: blue;">Waiting Actual Plan Tagih</div>';
-
-            // $check_aktual_telat = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item['id'], 'tagih_mundur' => 2])->result_array();
             if ($item['status_terakhir'] == '2') {
                 $status = '<div style="background-color: red;">Mundur</div>';
             }
-            // $check_aktual_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id_detail_plan_tagih' => $item['id'], 'tagih_mundur' => 1])->result_array();
             if ($item['status_terakhir'] == '1') {
                 $status = '<div style="background-color: green;">Tagih</div>';
+            }
+            if($item['status_terakhir'] == '3') {
+                $status = '<div style="background-color: red;">Tagihan Macet</div>';
             }
 
 
