@@ -53,7 +53,7 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             if ($item['status_terakhir'] == '1') {
                 $status = '<div style="background-color: green;">Tagih</div>';
             }
-            if($item['status_terakhir'] == '3') {
+            if ($item['status_terakhir'] == '3') {
                 $status = '<div style="background-color: red;">Tagihan Macet</div>';
             }
 
@@ -87,7 +87,9 @@ header("Content-Disposition: attachment; filename=Report Actual Plan Tagih (" . 
             $this->db->where('a.id', $item['id_top']);
             $get_top = $this->db->get()->row();
 
-            $nilai_top = (!empty($get_top->nominal_payment)) ? $get_top->nominal_payment : 0;
+
+
+            $nilai_top = $item['nominal_payment'];
 
             echo '<tr>';
             echo '<td style="text-align: center;">' . $no . '</td>';
