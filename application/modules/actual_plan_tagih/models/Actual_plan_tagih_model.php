@@ -45,23 +45,68 @@ class Actual_plan_tagih_model extends BF_Model
         $draw   = $this->input->post('draw');
         $length = $this->input->post('length');
         $start  = $this->input->post('start');
-        $search = $this->input->post('search');
+
+        $this->_build_datatables_query();
+
+        // Clone untuk count total data sesudah filter
+        $temp_db      = clone $this->db;
+        $query_total  = $temp_db->get();
+        $recordsTotal = ($query_total) ? $query_total->num_rows() : 0;
+
+        $this->db->order_by('a.created_date', 'desc');
+        $this->db->limit($length, $start);
+        $get_data = $this->db->get();
+
+        $hasil = [];
+        $no    = $start;
+
+        // Logic validasi cut-off tanggal 25 digenerate satu kali di luar loop agar lebih efisien
+        $cut_off_day    = 25;
+        $bulan_sekarang = (date('j') >= $cut_off_day) ? date('Ym', strtotime('+1 month')) : date('Ym');
+
+        foreach ($get_data->result() as $item) {
+            $no++;
+            $hasil[] = [
+                'no'             => $no,
+                'company'        => $item->nm_company,
+                'no_spk'         => $item->id_spk_penawaran,
+                'customer'       => $item->nm_customer,
+                'project'        => $item->nm_project,
+                'project_leader' => $item->nm_project_leader,
+                'sales'          => $item->nm_sales,
+                'keterangan'     => $item->desc_payment,
+                'status'         => $this->_get_status_button($item->status_terakhir),
+                'option'         => $this->_get_option_button($item, $bulan_sekarang)
+            ];
+        }
+
+        echo json_encode([
+            'draw'            => intval($draw),
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsTotal,
+            'data'            => $hasil
+        ]);
+    }
+
+    private function _build_datatables_query()
+    {
         $bulan  = $this->input->post('bulan');
         $tahun  = $this->input->post('tahun');
         $status = $this->input->post('status');
+        $search = $this->input->post('search');
 
         /**
          * LOGIKA EFFECTIVE DATE:
          * Mengambil tanggal terbaru dari tabel actual (alias d). 
          * Jika tidak ada, baru ambil dari tgl_plan_tagih (tabel a).
          */
-
         $this->db->select('a.*, b.id_customer, b.nm_customer, c.nm_project_leader, c.nm_sales, COALESCE(d.nm_company, c.nm_company) as nm_company, e.nm_paket as nm_project');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
+        
         if ($bulan == 'macet') {
             $this->db->where('a.status_terakhir', '3');
         } else {
@@ -73,13 +118,7 @@ class Actual_plan_tagih_model extends BF_Model
             } else {
                 $this->db->where('a.status_terakhir <>', '3');
             }
-        } 
-        // else if ($bulan != 'macet') {
-        //     $this->db->group_start();
-        //     $this->db->where_in('d.tagih_mundur', ['1', '2', '3']);
-        //     $this->db->or_where('d.id', null);
-        //     $this->db->group_end();
-        // }
+        }
 
         // Filter Search
         if (!empty($search['value'])) {
@@ -95,72 +134,37 @@ class Actual_plan_tagih_model extends BF_Model
         }
 
         $this->db->group_by('a.id');
+    }
 
-        // Clone untuk count total
-        $temp_db = clone $this->db;
-        $query_total = $temp_db->get();
-        $recordsTotal = ($query_total) ? $query_total->num_rows() : 0;
+    private function _get_status_button($status_terakhir)
+    {
+        switch ($status_terakhir) {
+            case '1':
+                return '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
+            case '3':
+                return '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
+            default:
+                return '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
+        }
+    }
 
-        $this->db->order_by('a.created_date', 'desc');
-        $this->db->limit($length, $start);
-        $get_data = $this->db->get();
+    private function _get_option_button($item, $bulan_sekarang)
+    {
+        if ($item->status_terakhir == '3') {
+            return '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+        }
 
-        $hasil = [];
-        $no = $start;
-
-        // print_r($this->db->last_query());
-        // exit;
-
-        foreach ($get_data->result() as $item) {
-            $no++;
-
-            // Status Button Logic
-            $status_btn = '<button type="button" class="btn btn-sm btn-primary">Waiting Actual Plan Tagih</button>';
-            if ($item->status_terakhir == '3') {
-                $status_btn = '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
-            } else if ($item->status_terakhir == '1') {
-                $status_btn = '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
-            }
-
-            // Logic Validasi Tombol Edit (Cut off tgl 25)
-            $valid_btn = 0;
+        if ($item->status_terakhir != '1') {
             $tgl_data = (!empty($item->tgl_aktual_plan_tagih)) ? $item->tgl_aktual_plan_tagih : $item->tgl_plan_tagih;
             if ($tgl_data) {
                 $bulan_data = date('Ym', strtotime($tgl_data));
-                $cut_off_day = 25;
-                $bulan_sekarang = (date('j') >= $cut_off_day) ? date('Ym', strtotime('+1 month')) : date('Ym');
                 if ($bulan_data <= $bulan_sekarang) {
-                    $valid_btn = 1;
+                    return '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
                 }
             }
-
-            $option = '';
-            if ($item->status_terakhir == '3') {
-                $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
-            } else if ($valid_btn == 1 && $item->status_terakhir != '1') {
-                $option = '<button type="button" class="btn btn-sm btn-warning aktual_tagihan" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
-            }
-
-            $hasil[] = [
-                'no' => $no,
-                'company' => $item->nm_company,
-                'no_spk' => $item->id_spk_penawaran,
-                'customer' => $item->nm_customer,
-                'project' => $item->nm_project,
-                'project_leader' => $item->nm_project_leader,
-                'sales' => $item->nm_sales,
-                'keterangan' => $item->desc_payment,
-                'status' => $status_btn,
-                'option' => $option
-            ];
         }
 
-        echo json_encode([
-            'draw' => intval($draw),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
-            'data' => $hasil
-        ]);
+        return '';
     }
 
     public function dataDownloadExcel($tahun = null, $status = null)
