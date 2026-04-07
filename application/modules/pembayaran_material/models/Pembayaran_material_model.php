@@ -472,6 +472,9 @@ class Pembayaran_material_model extends BF_Model
 				$get_users = $this->db->get_where('users', ['username' => $get_coa_transport->created_by])->row();
 				$get_department = $this->hris->get_where('departments', ['id' => $get_users->department_id])->row();
 
+				$id_department = $get_department->id ?? '';
+				$nm_department = $get_department->name ?? '';
+
 				$idd_company = (!empty($get_department->company_id)) ? $get_department->company_id : '';
 
 				$coa_bank = '';
@@ -570,9 +573,9 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= '</td>';
 
 					$hasil_jurnal .= '<td class="text-center">';
-					$hasil_jurnal .= $nm_divisi;
-					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_divisi]" value="' . $id_divisi . '">';
-					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_divisi]" value="' . $nm_divisi . '">';
+					$hasil_jurnal .= $nm_department;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_divisi]" value="' . $id_department . '">';
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_divisi]" value="' . $nm_department . '">';
 					$hasil_jurnal .= '</td>';
 
 					$hasil_jurnal .= '<td class="text-center">';

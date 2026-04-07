@@ -376,7 +376,7 @@ foreach ($results['result_payment'] as $item) {
 						<tr>
 							<th class="text-center">Tanggal Jurnal</th>
 							<th class="text-center">Nama Company</th>
-							<th class="text-center">Divisi</th>
+							<th class="text-center">Department</th>
 							<th class="text-center">COA</th>
 							<th class="text-center">Nama Account</th>
 							<th class="text-center">Keterangan</th>
