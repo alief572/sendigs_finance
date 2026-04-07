@@ -51,7 +51,7 @@ class Pembayaran_material_model extends BF_Model
 			$urutan = (int) substr($kodeBarang, 9, 4);
 		}
 
-		if($urutan == '') {
+		if ($urutan == '') {
 			$urutan = 0;
 		}
 		$urutan++;
@@ -65,217 +65,67 @@ class Pembayaran_material_model extends BF_Model
 	public function get_list_req_payment()
 	{
 		$post = $this->input->post();
-
-		$draw = $post['draw'];
-		$length = $post['length'];
-		$start = $post['start'];
-		$search = $post['search'];
 		$jenis_payment = $post['jenis_payment'];
+		$search = $post['search']['value'];
 
-		$hasil = [];
+		$this->db->from('v_list_payment');
+		$this->db->where('status <>', 2);
 
+		// Logika Filter Jenis Payment
 		if ($jenis_payment == 1) {
-			// Menyusun query pertama
-			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, b.created_by as requestor');
-			$this->db->from('payment_approve a');
-			$this->db->join('tr_expense b', 'b.no_doc = a.no_doc');
-			$this->db->where('a.status <>', 2);
-			$this->db->where('b.exp_inv_po', 1);
-			if (!empty($search['value'])) {
-				$this->db->group_start();
-				$this->db->like('a.no_doc', $search['value'], 'both');
-				$this->db->or_like('b.created_by', $search['value'], 'both');
-				$this->db->or_like('a.keperluan', $search['value'], 'both');
-				$this->db->or_like('a.currency', $search['value'], 'both');
-				$this->db->or_like('a.jumlah', $search['value'], 'both');
-				$this->db->group_end();
-			}
-			$query_1 = $this->db->get_compiled_select();
-
-			// Menyusun query kedua
-			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, a.created_by as requestor');
-			$this->db->from('payment_approve a');
-			$this->db->where('a.status <>', 2);
-			$this->db->where('a.tipe', 'Non-PO');
-			if (!empty($search['value'])) {
-				$this->db->group_start();
-				$this->db->like('a.no_doc', $search['value'], 'both');
-				$this->db->or_like('a.created_by', $search['value'], 'both');
-				$this->db->or_like('a.keperluan', $search['value'], 'both');
-				$this->db->or_like('a.currency', $search['value'], 'both');
-				$this->db->or_like('a.jumlah', $search['value'], 'both');
-				$this->db->group_end();
-			}
-			$this->db->group_by('a.id');
-			$query_2 = $this->db->get_compiled_select();
-
-			// Menggabungkan kedua query dengan UNION ALL
-			$sql = $query_1 . ' UNION ALL ' . $query_2;
-
-			// Menambahkan ORDER BY di luar query gabungan
-			$sql .= ' ORDER BY created_on DESC'; // Pindahkan ORDER BY ke luar
-
-			// Menambahkan LIMIT setelah ORDER BY
-			$sql .= ' LIMIT ' . $start . ', ' . $length;
-
-			// Eksekusi query gabungan dengan LIMIT
-			$get_data = $this->db->query($sql)->result();  // Eksekusi query gabungan dengan limit
-
-			// $get_data berisi hasil yang sudah dilimit, dan $count_all berisi total jumlah data
-
-			$hasil = [];
-
-			$no = (0 + $start);
-			foreach ($get_data as $item) {
-				$no++;
-
-				$no_incoming = [];
-				$no_po = [];
-				$nm_supplier = [];
-
-				if (!empty($get_rec_invoice)) {
-					if (strpos($get_rec_invoice->no_po, 'TRS1') !== false) {
-						$arr_no_incoming = str_replace(', ', ',', $get_rec_invoice->no_po);
-						$get_no_po = $this->db
-							->select('a.no_ipp')
-							->from('tr_incoming_check a')
-							->where_in('a.kode_trans', explode(',', $arr_no_incoming))
-							->get()
-							->result();
-
-						$arr_no_po = [];
-						foreach ($get_no_po as $item_no_po) {
-							$arr_no_po[] = $item_no_po->no_ipp;
-						}
-
-						$arr_no_po = implode(',', $arr_no_po);
-						$arr_no_po = str_replace(', ', ',', $arr_no_po);
-
-						$get_no_surat = $this->db->query("SELECT a.no_surat FROM tr_purchase_order a WHERE a.no_po IN ('" . str_replace(",", "','", $arr_no_po) . "')")->result();
-						foreach ($get_no_surat as $item_no_surat) {
-							$no_po[] = $item_no_surat->no_surat;
-						}
-					} else {
-						$no_po[] = $get_rec_invoice->no_po;
-					}
-				}
-
-				if (!empty($no_po)) {
-					$get_nm_supplier = $this->db
-						->select('b.nama as nm_supplier')
-						->from('tr_purchase_order a')
-						->join('new_supplier b', 'b.kode_supplier = a.id_suplier', 'left')
-						->where_in('a.no_surat', $no_po)
-						->group_by('b.nama')
-						->get()
-						->result();
-					foreach ($get_nm_supplier as $item_supplier) {
-						$nm_supplier[] = $item_supplier->nm_supplier;
-					}
-				}
-
-				$nm_supplier = implode(', ', $nm_supplier);
-
-				$get_choosed_payment = $this->db->get_where('tr_choosed_payment', ['id_user' => $this->auth->user_id(), 'id_payment' => $item->id])->result();
-				$checked = (count($get_choosed_payment) > 0) ? 'checked' : null;
-
-				$option = '<input type="checkbox" class="check_payment" value="' . $item->id . '" ' . $checked . '>';
-
-				$hasil[] = [
-					'no' => $no,
-					'no_dokumen' => $item->no_doc,
-					'tgl' => date('d F Y', strtotime($item->created_on)),
-					'keperluan' => $item->keperluan,
-					'currency' => $item->currency,
-					'total_invoice' => number_format($item->jumlah),
-					'requestor' => $item->requestor,
-					'option' => $option
-				];
-			}
-
-			$count_all = $no;
+			$this->db->group_start()
+				->where('is_po_payment', 1)
+				->or_where('tipe', 'Non-PO')
+				->group_end();
 		} else {
-			$this->db->select('a.id, a.created_on, a.no_doc, a.currency, a.jumlah, a.keperluan, a.tipe');
-			$this->db->from('payment_approve a');
-			$this->db->join('tr_expense b', 'b.no_doc = a.no_doc', 'left');
-			$this->db->join('tr_kasbon c', 'c.no_doc = a.no_doc', 'left');
-			$this->db->join('tr_transport_req d', 'd.no_doc = a.no_doc', 'left');
-			$this->db->where('a.status <>', 2);
-			$this->db->group_start();
-			$this->db->where('b.exp_inv_po <>', 1);
-			$this->db->or_where('b.exp_inv_po', null);
-			$this->db->group_end();
-			if (!empty($search['value'])) {
-				$this->db->group_start();
-				$this->db->like('a.no_doc', $search['value'], 'both');
-				$this->db->or_like('a.created_on', $search['value'], 'both');
-				$this->db->or_like('a.keperluan', $search['value'], 'both');
-				$this->db->or_like('a.currency', $search['value'], 'both');
-				$this->db->or_like('a.jumlah', $search['value'], 'both');
-				$this->db->or_like('a.created_by', $search['value'], 'both');
-				$this->db->or_like('c.created_by', $search['value'], 'both');
-				$this->db->or_like('d.created_by', $search['value'], 'both');
-				$this->db->group_end();
-			}
-			$this->db->order_by('a.created_on', 'desc');
-			$this->db->group_by('a.id');
-
-			$db_clone = clone $this->db;
-			$count_all = $db_clone->count_all_results();
-
-			$this->db->limit($length, $start);
-			$get_data = $this->db->get()->result();
-
-			$hasil = [];
-
-			$no = (0 + $start);
-			foreach ($get_data as $item) {
-				$no++;
-
-				$get_choosed_payment = $this->db->get_where('tr_choosed_payment', ['id_user' => $this->auth->user_id(), 'id_payment' => $item->id])->result();
-
-				$checked = (count($get_choosed_payment) > 0) ? 'checked' : null;
-
-				$option = '<input type="checkbox" class="check_payment" value="' . $item->id . '" ' . $checked . '>';
-
-				$requestor = '';
-				if ($item->tipe == 'kasbon') {
-					$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item->no_doc))->row();
-
-					$requestor = (!empty($get_kasbon)) ? $get_kasbon->nama : '';
-				}
-				if ($item->tipe == 'expense') {
-					$get_expense = $this->db->get_where('tr_expense', array('no_doc' => $item->no_doc))->row();
-
-					$requestor = (!empty($get_expense)) ? $get_expense->nama : '';
-				}
-				if ($item->tipe == 'transport' || $item->tipe == 'transportasi') {
-					$get_transport_req = $this->db->get_where('tr_transport_req', array('no_doc' => $item->no_doc))->row();
-
-					$requestor = (!empty($get_transport_req)) ? $get_transport_req->nama : '';
-				}
-
-				$hasil[] = [
-					'no' => $no,
-					'no_dokumen' => $item->no_doc,
-					'tgl' => date('d F Y', strtotime($item->created_on)),
-					'keperluan' => $item->keperluan,
-					'currency' => $item->currency,
-					'total_invoice' => number_format($item->jumlah),
-					'requestor' => $requestor,
-					'option' => $option
-				];
-			}
+			$this->db->where('is_po_payment <>', 1);
 		}
 
-		$response = [
-			'draw' => intval($draw),
+		// Global Search
+		if (!empty($search)) {
+			$this->db->group_start()
+				->like('no_doc', $search)
+				->or_like('requestor', $search)
+				->or_like('keperluan', $search)
+				->group_end();
+		}
+
+		// Clone untuk count total
+		$count_all = $this->db->count_all_results('', FALSE);
+
+		// Order & Limit
+		$this->db->order_by('created_on', 'DESC');
+		$this->db->limit($post['length'], $post['start']);
+		$get_data = $this->db->get()->result();
+
+		$hasil = [];
+		$no = (0 + $post['start']);
+		foreach ($get_data as $item) {
+			$no++;
+			// Logika checkbox tetep di sini karena butuh session user_id
+			$is_checked = $this->db->get_where('tr_choosed_payment', [
+				'id_user' => $this->auth->user_id(),
+				'id_payment' => $item->id
+			])->num_rows() > 0;
+
+			$hasil[] = [
+				'no' => $no,
+				'no_dokumen' => $item->no_doc,
+				'tgl' => date('d F Y', strtotime($item->created_on)),
+				'keperluan' => $item->keperluan,
+				'total_invoice' => number_format($item->jumlah),
+				'requestor' => $item->requestor,
+				'currency' => $item->currency,
+				'option' => '<input type="checkbox" class="check_payment" value="' . $item->id . '" ' . ($is_checked ? 'checked' : '') . '>'
+			];
+		}
+
+		echo json_encode([
+			'draw' => intval($post['draw']),
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_all,
 			'data' => $hasil
-		];
-
-		echo json_encode($response);
+		]);
 	}
 
 	public function set_jurnal()
@@ -296,7 +146,12 @@ class Pembayaran_material_model extends BF_Model
 		$this->db->where_in('a.id', explode(',', $id_payment));
 		$get_payment = $this->db->get()->result();
 
+		$nilai_pph = $this->input->post('nilai_pph', true);
+		$nilai_ppn = $this->input->post('nilai_ppn', true);
+
+		$no = 1;
 		foreach ($get_payment as $item_payment) :
+
 			if ($item_payment->tipe == 'kasbon') {
 				$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
 				if ($get_kasbon->no_kasbon_consultant !== null) {
@@ -604,6 +459,24 @@ class Pembayaran_material_model extends BF_Model
 					endforeach;
 				}
 			} else if ($item_payment->tipe == 'transport' || $item_payment->tipe == 'transportasi') {
+
+				$this->db->select('a.no_coa, a.nm_coa, a.created_by');
+				$this->db->from('tr_transport a');
+				$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req');
+				$this->db->where('b.no_doc', $item_payment->no_doc);
+				$get_coa_transport = $this->db->get()->row();
+
+				$coa_transport = (!empty($get_coa_transport->no_coa)) ? $get_coa_transport->no_coa : '';
+				$nm_coa_transport = (!empty($get_coa_transport->nm_coa)) ? $get_coa_transport->nm_coa : '';
+
+				$get_users = $this->db->get_where('users', ['username' => $get_coa_transport->created_by])->row();
+				$get_department = $this->hris->get_where('departments', ['id' => $get_users->department_id])->row();
+
+				$id_department = $get_department->id ?? '';
+				$nm_department = $get_department->name ?? '';
+
+				$idd_company = (!empty($get_department->company_id)) ? $get_department->company_id : '';
+
 				$coa_bank = '';
 				if (!empty($bank)) {
 					$get_coa_bank = $this->db->get_where('ms_bank', ['id' => $bank])->row();
@@ -611,7 +484,7 @@ class Pembayaran_material_model extends BF_Model
 					$coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank->coa_bank : '';
 				}
 
-				$arr_coa_jurnal = ['5010-30-1', '1010-10-2'];
+				$arr_coa_jurnal = [$coa_transport, '1106-01-06', '7201-01-04', '1106-01-01', $coa_bank];
 
 				$this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
 				$this->accounting->from('coa_master a');
@@ -622,12 +495,35 @@ class Pembayaran_material_model extends BF_Model
 				foreach ($get_coa_jurnal as $item_coa) {
 					$debit = 0;
 					$kredit = 0;
-					if ($item_coa->no_coa == '5010-30-1') {
+
+					if ($item_coa->no_coa == $coa_transport) {
 						$debit = $item_payment->jumlah;
+						$kredit = 0;
 					}
-					if ($item_coa->no_coa == '1010-10-2') {
-						$kredit = $item_payment->jumlah;
+					if ($item_coa->no_coa == $coa_bank) {
+						$kredit = $payment_bank;
+						$debit = 0;
 					}
+					if ($item_coa->no_coa == '1106-01-06') {
+						$debit = $nilai_ppn;
+						$kredit = 0;
+					}
+					if ($item_coa->no_coa == '7201-01-04') {
+						$debit = $bank_charge;
+						$kredit = 0;
+					}
+					if ($item_coa->no_coa == '1106-01-01') {
+						$kredit = $nilai_pph;
+						$debit = 0;
+					}
+
+					if ($debit == '') {
+						$debit = 0;
+					}
+					if ($kredit == '') {
+						$kredit = 0;
+					}
+
 
 					$this->db->select('a.title_id');
 					$this->db->from('users a');
@@ -637,12 +533,21 @@ class Pembayaran_material_model extends BF_Model
 
 					$id_company = '';
 					$nm_company = '';
-					if ($get_transport_title->title_id == 'TIT009') {
-						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => 4])->row();
 
-						$id_company = (!empty($get_company)) ? $get_company->id : '';
-						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+					if ($idd_company == 'COM003') {
+						$id_company = '1';
 					}
+					if ($idd_company == 'COM006') {
+						$id_company = '3';
+					}
+					if ($idd_company == 'COM012') {
+						$id_company = '4';
+					}
+
+					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+
+					$id_company = (!empty($get_company)) ? $get_company->id : '';
+					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 
 					$id_divisi = '';
 					$nm_divisi = '';
@@ -668,9 +573,9 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= '</td>';
 
 					$hasil_jurnal .= '<td class="text-center">';
-					$hasil_jurnal .= $nm_divisi;
-					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_divisi]" value="' . $id_divisi . '">';
-					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_divisi]" value="' . $nm_divisi . '">';
+					$hasil_jurnal .= $nm_department;
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_divisi]" value="' . $id_department . '">';
+					$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_divisi]" value="' . $nm_department . '">';
 					$hasil_jurnal .= '</td>';
 
 					$hasil_jurnal .= '<td class="text-center">';
@@ -1207,6 +1112,8 @@ class Pembayaran_material_model extends BF_Model
 					}
 				}
 			}
+
+			$no++;
 		endforeach;
 
 		$response = [

@@ -1,8 +1,8 @@
 <?php
 $hide_table_jurnal_petty_cash = 'd-none';
-if (!empty($results['jurnal_refill_petty_cash'])) {
-	$hide_table_jurnal_petty_cash = '';
-}
+// if (!empty($results['jurnal_refill_petty_cash'])) {
+// 	$hide_table_jurnal_petty_cash = '';
+// }
 
 $kode_supplier = [];
 $nm_supplier = [];
@@ -376,7 +376,7 @@ foreach ($results['result_payment'] as $item) {
 						<tr>
 							<th class="text-center">Tanggal Jurnal</th>
 							<th class="text-center">Nama Company</th>
-							<th class="text-center">Divisi</th>
+							<th class="text-center">Department</th>
 							<th class="text-center">COA</th>
 							<th class="text-center">Nama Account</th>
 							<th class="text-center">Keterangan</th>
@@ -609,7 +609,7 @@ foreach ($results['result_payment'] as $item) {
 			bank_charge = parseFloat(bank_charge);
 		}
 
-		var kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph + bank_charge);
+		var kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph - bank_charge);
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
@@ -620,6 +620,8 @@ foreach ($results['result_payment'] as $item) {
 		var payment_bank = $('.input_payment_bank').val()
 		var bank_charge = $('.bank_charge').val();
 		var bank = $('.bank').val();
+		var nilai_pph = $('.total_pph').val();
+		var nilai_ppn = $('.total_ppn').val();
 
 		$.ajax({
 			type: 'post',
@@ -628,7 +630,9 @@ foreach ($results['result_payment'] as $item) {
 				'id_payment': id_payment,
 				'payment_bank': payment_bank,
 				'bank_charge': bank_charge,
-				'bank': bank
+				'bank': bank,
+				'nilai_pph': nilai_pph,
+				'nilai_ppn': nilai_ppn
 			},
 			cache: false,
 			dataType: 'json',
@@ -641,24 +645,24 @@ foreach ($results['result_payment'] as $item) {
 	}
 
 	function set_jurnal_refill() {
-		var id_payment = $('.id_payment').val();
-		var bank = $('.bank').val();
+		// var id_payment = $('.id_payment').val();
+		// var bank = $('.bank').val();
 
-		$.ajax({
-			type: 'post',
-			url: siteurl + active_controller + 'set_jurnal_refill',
-			data: {
-				'id_payment': id_payment,
-				'bank': bank
-			},
-			cache: false,
-			dataType: 'json',
-			success: function(result) {
-				$('.tbody_jurnal_refill_pettycash').html(result.hasil);
-				$('.ttl_debit_refill').html(number_format(result.ttl_debit));
-				$('.ttl_kredit_refill').html(number_format(result.ttl_kredit));
-			}
-		});
+		// $.ajax({
+		// 	type: 'post',
+		// 	url: siteurl + active_controller + 'set_jurnal_refill',
+		// 	data: {
+		// 		'id_payment': id_payment,
+		// 		'bank': bank
+		// 	},
+		// 	cache: false,
+		// 	dataType: 'json',
+		// 	success: function(result) {
+		// 		$('.tbody_jurnal_refill_pettycash').html(result.hasil);
+		// 		$('.ttl_debit_refill').html(number_format(result.ttl_debit));
+		// 		$('.ttl_kredit_refill').html(number_format(result.ttl_kredit));
+		// 	}
+		// });
 	}
 
 	$(document).on('change', '.change_nilai_pph', function() {
@@ -700,6 +704,7 @@ foreach ($results['result_payment'] as $item) {
 		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
 
 		hitung_kontrol();
+		set_jurnal();
 	});
 
 	$(document).on('change', '.change_nilai_ppn', function() {
@@ -741,6 +746,7 @@ foreach ($results['result_payment'] as $item) {
 		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
 
 		hitung_kontrol();
+		set_jurnal();
 	});
 
 	$(document).on('change', '.input_payment_bank', function() {
