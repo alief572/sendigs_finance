@@ -460,7 +460,7 @@ class Pembayaran_material_model extends BF_Model
 				}
 			} else if ($item_payment->tipe == 'transport' || $item_payment->tipe == 'transportasi') {
 
-				$this->db->select('a.no_coa, a.nm_coa');
+				$this->db->select('a.no_coa, a.nm_coa, a.created_by');
 				$this->db->from('tr_transport a');
 				$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req');
 				$this->db->where('b.no_doc', $item_payment->no_doc);
@@ -468,6 +468,11 @@ class Pembayaran_material_model extends BF_Model
 
 				$coa_transport = (!empty($get_coa_transport->no_coa)) ? $get_coa_transport->no_coa : '';
 				$nm_coa_transport = (!empty($get_coa_transport->nm_coa)) ? $get_coa_transport->nm_coa : '';
+
+				$get_users = $this->db->get_where('users', ['username' => $get_coa_transport->created_by])->row();
+				$get_department = $this->hris->get_where('departments', ['id' => $get_users->department_id])->row();
+
+				$idd_company = (!empty($get_department->company_id)) ? $get_department->company_id : '';
 
 				$coa_bank = '';
 				if (!empty($bank)) {
@@ -525,12 +530,21 @@ class Pembayaran_material_model extends BF_Model
 
 					$id_company = '';
 					$nm_company = '';
-					if ($get_transport_title->title_id == 'TIT009') {
-						$get_company = $this->consultant->get_where('kons_tr_company', ['id' => 4])->row();
 
-						$id_company = (!empty($get_company)) ? $get_company->id : '';
-						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+					if ($idd_company == 'COM003') {
+						$id_company = '1';
 					}
+					if ($idd_company == 'COM006') {
+						$id_company = '3';
+					}
+					if ($idd_company == 'COM012') {
+						$id_company = '4';
+					}
+
+					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+
+					$id_company = (!empty($get_company)) ? $get_company->id : '';
+					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 
 					$id_divisi = '';
 					$nm_divisi = '';
