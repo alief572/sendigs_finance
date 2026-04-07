@@ -37,7 +37,7 @@ class Jurnal_model extends BF_Model
         $this->db->select('a.id, a.no_jurnal, a.tgl_jurnal, a.coa, a.id_company, a.nm_company, a.nm_coa, a.debit, a.kredit, a.keterangan, a.sts, a.no_transaksi, a.jenis_transaksi');
         $this->db->from('tr_jurnal a');
         $this->db->where('a.sts <>', '1');
-        $this->db->where('a.id_company <>', '');
+        // $this->db->where('a.id_company <>', '');
         $this->db->where('a.jenis_transaksi <>', 'Invoicing');
         $this->db->where('a.jenis_transaksi <>', 'Penerimaan Piutang');
         if (!empty($search)) {
