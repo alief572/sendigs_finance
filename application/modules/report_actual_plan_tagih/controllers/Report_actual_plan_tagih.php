@@ -98,7 +98,24 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
 
-        $count_all = $this->db->count_all_results('', false);
+        $this->db->group_by('a.id_spk_penawaran');
+        $get_all = $this->db->get()->result();
+
+        $count_all = count($get_all);
+
+        $this->db->select('a.*');
+        $this->db->from('view_rekap_actual_plan_tagih a');
+
+        $this->db->group_start();
+        $this->db->where('a.tahun_data', $tahun);
+        $this->db->or_where('a.macet >', 0);
+        $this->db->group_end();
+
+        // Safety filter untuk data tahun yang valid
+        $this->db->where('a.tahun_data >=', 2000);
+
+        if (!empty($client))  $this->db->where('a.id_customer', $client);
+        if (!empty($company)) $this->db->where('a.id_company', $company);
 
         // 2. Global Search
         if (!empty($search)) {
@@ -109,10 +126,36 @@ class Report_actual_plan_tagih extends Admin_Controller
             $this->db->or_like('a.nm_paket', $search, 'both');
             $this->db->group_end();
         }
+        $this->db->group_by('a.id_spk_penawaran');
+        $get_filter = $this->db->get()->result();
 
-        $count_filter = $this->db->count_all_results('', false);
+        $count_filter = count($get_filter);
 
         // 3. Order & Limit
+        $this->db->select('a.*');
+        $this->db->from('view_rekap_actual_plan_tagih a');
+
+        $this->db->group_start();
+        $this->db->where('a.tahun_data', $tahun);
+        $this->db->or_where('a.macet >', 0);
+        $this->db->group_end();
+
+        // Safety filter untuk data tahun yang valid
+        $this->db->where('a.tahun_data >=', 2000);
+
+        if (!empty($client))  $this->db->where('a.id_customer', $client);
+        if (!empty($company)) $this->db->where('a.id_company', $company);
+
+        // 2. Global Search
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('a.nm_company', $search, 'both');
+            $this->db->or_like('a.id_spk_penawaran', $search, 'both');
+            $this->db->or_like('a.nm_customer', $search, 'both');
+            $this->db->or_like('a.nm_paket', $search, 'both');
+            $this->db->group_end();
+        }
+        $this->db->group_by('a.id_spk_penawaran');
         $this->db->order_by('a.id_spk_penawaran', 'DESC');
         $this->db->limit($length, $start);
         $get_data = $this->db->get()->result();
