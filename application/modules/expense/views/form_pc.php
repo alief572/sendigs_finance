@@ -125,9 +125,9 @@ $budgets = 0;
 
 
 
-				<?php
-				if (!isset($stsview) || (isset($stsview) && $stsview == '')) {
-				?>
+				<!-- <?php
+						if (!isset($stsview) || (isset($stsview) && $stsview == '')) {
+						?>
 
 					<h4>List Penggantian/Pengembalian Kasbon</h4>
 					<table class="table table-bordered">
@@ -189,8 +189,8 @@ $budgets = 0;
 					</table>
 
 				<?php
-				}
-				?>
+						}
+				?> -->
 
 				<div>
 					<h4>Transfer ke</h4>
