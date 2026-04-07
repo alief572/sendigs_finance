@@ -489,6 +489,15 @@ class Pembayaran_material_model extends BF_Model
 				$this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
 				$this->accounting->from('coa_master a');
 				$this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+
+				// Maksa urutan berdasarkan posisi di array
+				// 1. Gabungkan isi array jadi string dipisahkan koma dan petik
+				// Hasil yang kita mau: 1106-01-06', '7201-01-04', 'dst...
+				$ids = implode("', '", $arr_coa_jurnal);
+
+				// 2. Masukkan ke FIELD() dengan benar
+				// Perhatikan: ada petik pembuka sebelum $ids dan petik penutup setelah $ids
+				$this->accounting->order_by("FIELD(a.no_perkiraan, '$ids')", '', FALSE);
 				$get_coa_jurnal = $this->accounting->get()->result();
 
 				$no_jurnal = 1;
