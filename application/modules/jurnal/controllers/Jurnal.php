@@ -155,6 +155,8 @@ class Jurnal extends Admin_Controller
 
             if ($id_company == '1' || $id_company == '4') {
                 $insert_jurnal_header = $this->db->insert(DBACC_VUCA . '.javh', $dataJVhead);
+            } else if ($id_company == '7') {
+                $insert_jurnal_header = $this->db->insert(DBACC_STM . '.javh', $dataJVhead);
             } else {
                 $insert_jurnal_header = $this->db->insert(DBACC_SUST . '.javh', $dataJVhead);
             }
@@ -194,6 +196,8 @@ class Jurnal extends Admin_Controller
 
                 if ($id_company == '1' || $id_company == '4') {
                     $insert_jurnal_detail = $this->db->insert(DBACC_VUCA . '.jurnal', $datadetail);
+                } else if ($id_company == '7') {
+                    $insert_jurnal_detail = $this->db->insert(DBACC_STM . '.jurnal', $datadetail);
                 } else {
                     $insert_jurnal_detail = $this->db->insert(DBACC_SUST . '.jurnal', $datadetail);
                 }
@@ -210,6 +214,8 @@ class Jurnal extends Admin_Controller
 
                 if ($id_company == '1' || $id_company == '4') {
                     $jurnal_posting = $this->db->update(DBACC_VUCA . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item_jurnal_all->no_transaksi]);
+                } else if ($id_company == '7') {
+                    $jurnal_posting = $this->db->update(DBACC_STM . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item_jurnal_all->no_transaksi]);
                 } else {
                     $jurnal_posting = $this->db->update(DBACC_SUST . '.jurnal', ['stspos' => 1], ['tipe' => 'JV', 'nomor' => $Nomor_JV, 'no_reff' => $item_jurnal_all->no_transaksi]);
                 }
@@ -232,6 +238,8 @@ class Jurnal extends Admin_Controller
 
             if ($id_company == '1' || $id_company == '4') {
                 $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_VUCA . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+            } else if ($id_company == '7') {
+                $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_STM . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
             } else {
                 $Qry_Update_Cabang_acc     = $this->db->query("UPDATE " . DBACC_SUST . ".pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
             }

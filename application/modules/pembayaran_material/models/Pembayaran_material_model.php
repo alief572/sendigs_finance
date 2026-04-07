@@ -535,7 +535,7 @@ class Pembayaran_material_model extends BF_Model
 					$nm_company = '';
 
 					if ($idd_company == 'COM003') {
-						$id_company = '1';
+						$id_company = '7';
 					}
 					if ($idd_company == 'COM006') {
 						$id_company = '3';
