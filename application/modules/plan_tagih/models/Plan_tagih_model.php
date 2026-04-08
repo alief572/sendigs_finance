@@ -87,6 +87,7 @@ class Plan_tagih_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join('kons_tr_plan_tagih_header c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->where('a.sts_spk', 1);
+        $this->db->where('a.deleted_by IS NULL');
 
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
