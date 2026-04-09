@@ -67,12 +67,23 @@ class Actual_plan_tagih extends Admin_Controller
         $get_plan_tagih_detail  = $this->db->get_where('kons_tr_plan_tagih_detail', array('id' => $id))->row();
 
         $macet = '';
+        $tgl_aktual_tagih_last = '';
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', array('id_detail_plan_tagih' => $id))->result();
         if (!empty($get_actual_plan_tagih) && $get_actual_plan_tagih[0]->tagih_mundur == '3') {
             $macet = '1';
         }
 
+        $this->db->select('tanggal_actual_plan_tagih');
+        $this->db->from('kons_tr_actual_plan_tagih');
+        $this->db->where('id_detail_plan_tagih', $id);
+        $this->db->order_by('created_date', 'desc');
+        $this->db->limit(1);
+        $get_last_actual = $this->db->get()->row();
+
+        $tgl_actual_plan_tagih_last = (!empty($get_last_actual->tanggal_actual_plan_tagih)) ? $get_last_actual->tanggal_actual_plan_tagih : '';
+
         $this->template->set('data_plan_tagih_detail', $get_plan_tagih_detail);
+        $this->template->set('tgl_actual_tagih_last', $tgl_actual_plan_tagih_last);
         $this->template->set('macet', $macet);
         $this->template->render('form_actual_plan_tagih');
     }
@@ -158,6 +169,16 @@ class Actual_plan_tagih extends Admin_Controller
                 $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, ['id' => $post['id_detail_plan_tagih']]);
             } else {
                 $id = $this->Actual_plan_tagih_model->generate_id();
+
+                if (!empty($post['tanggal_actual'])) {
+                    $tanggal_actual = $post['tanggal_actual'];
+                } else {
+                    if (!empty($post['tgl_actual_tagih_last'])) {
+                        $tanggal_actual = $post['tgl_actual_tagih_last'];
+                    } else {
+                        $tanggal_actual = $post['tgl_plan_tagih'];
+                    }
+                }
 
                 $tanggal_actual = (!empty($post['tanggal_actual'])) ? $post['tanggal_actual'] : $post['tgl_plan_tagih'];
 
