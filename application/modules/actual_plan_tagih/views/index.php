@@ -409,10 +409,6 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     })
 
     function DataTables(bulan, tahun, status = null) {
-        // var dataTables = $('#table_penawaran').dataTable();
-        // dataTables.destroy();
-
-
         var dataTables = $('#table_penawaran').dataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_actual_plan_tagih',

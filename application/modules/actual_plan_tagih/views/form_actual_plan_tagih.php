@@ -24,6 +24,7 @@
                 <input type="hidden" name="tgl_plan_tagih" value="<?= $data_plan_tagih_detail->tgl_plan_tagih ?>">
                 <input type="hidden" name="urutan" value="<?= $data_plan_tagih_detail->urutan ?>">
                 <input type="hidden" name="macet" value="<?= $macet ?>">
+                <input type="hidden" name="tgl_actual_tagih_last" value="<?= $tgl_actual_tagih_last ?>">
             </td>
             <td class="text-left"><?= $data_plan_tagih_detail->desc_payment ?></td>
             <td>
