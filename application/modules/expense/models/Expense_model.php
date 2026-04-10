@@ -717,7 +717,7 @@ class Expense_model extends BF_Model
 	public function getCoaTransport()
 	{
 		$get_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
-		
+
 		$this->db->select('a.coa');
 		$this->db->from('coa_expense a');
 		$this->db->where('a.jenis_pengeluaran', 'Transport');
@@ -727,14 +727,16 @@ class Expense_model extends BF_Model
 			$this->db->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
 			$this->db->from(DBACC . '.coa_master a');
 			$this->db->where_in('a.no_perkiraan', explode(';', $get_kelompok_coa->coa));
-			if($this->auth->user_id() !== '7') {
-				
+			if ($this->auth->user_id() !== '7') {
 
-				if($get_user->department_id == 'DEP005' || $get_user->department_id == 'DEP011' || $get_user->department_id == 'DEP022') {
+
+				$target_departments = ['DEP005', 'DEP011', 'DEP015', 'DEP016', 'DEP017', 'DEP018', 'DEP019', 'DEP022', 'DEP024', 'DEP007'];
+
+				if (in_array($get_user->department_id, $target_departments)) {
 					$this->db->like('a.no_perkiraan', '6202-', 'both');
 				} else {
 					$this->db->like('a.no_perkiraan', '5103-', 'both');
-				}	
+				}
 			}
 			$get_list_coa = $this->db->get()->result();
 
