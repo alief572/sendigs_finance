@@ -75,7 +75,7 @@ class Pembayaran_material_model extends BF_Model
 		if ($jenis_payment == 1) {
 			$this->db->group_start()
 				->where('is_po_payment', 1)
-				->or_where('tipe', 'Non-PO')
+				->or_where('tipe', 'Cash')
 				->group_end();
 		} else {
 			$this->db->where('is_po_payment <>', 1);
