@@ -730,7 +730,7 @@ class Expense_model extends BF_Model
 			if ($this->auth->user_id() !== '7') {
 
 
-				$target_departments = ['DEP005', 'DEP011', 'DEP015', 'DEP016', 'DEP017', 'DEP018', 'DEP019', 'DEP022', 'DEP024', 'DEP007'];
+				$target_departments = ['DEP005', 'DEP006', 'DEP011', 'DEP015', 'DEP016', 'DEP017', 'DEP018', 'DEP019', 'DEP022', 'DEP024', 'DEP007'];
 
 				if (in_array($get_user->department_id, $target_departments)) {
 					$this->db->like('a.no_perkiraan', '6202-', 'both');
