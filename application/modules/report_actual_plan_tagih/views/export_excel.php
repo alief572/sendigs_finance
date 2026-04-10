@@ -69,10 +69,10 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_paket ?></td>
-                <td align="right"><?= number_format($item->nilai_kontrak, 2) ?></td>
-                <td align="right"><?= number_format($current_invoice, 2) ?></td>
-                <td align="right"><?= number_format($current_uninvoice, 2) ?></td>
-                <td align="right"><?= number_format($current_macet, 2) ?></td>
+                <td align="right"><?= $item->nilai_kontrak ?></td>
+                <td align="right"><?= $current_invoice ?></td>
+                <td align="right"><?= $current_uninvoice ?></td>
+                <td align="right"><?= $current_macet ?></td>
 
                 <?php
                 foreach ($list_bulan_map as $num => $key) :
@@ -80,7 +80,7 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
                     $val_bulan = ($is_same_year) ? ($item->$key ?? 0) : 0;
                     $total_per_bulan[$num] += $val_bulan;
                 ?>
-                    <td align="right"><?= number_format($val_bulan, 2) ?></td>
+                    <td align="right"><?= $val_bulan ?></td>
                 <?php endforeach; ?>
             </tr>
         <?php
@@ -94,12 +94,12 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
 
         <tr style="font-weight: bold; background-color: #f2f2f2;">
             <td colspan="5" align="right">Grand Total</td>
-            <td align="right"><?= number_format($ttl_nominal_spk, 2) ?></td>
-            <td align="right"><?= number_format($ttl_invoice, 2) ?></td>
-            <td align="right"><?= number_format($ttl_uninvoice, 2) ?></td>
-            <td align="right"><?= number_format($ttl_macet, 2) ?></td>
+            <td align="right"><?= $ttl_nominal_spk ?></td>
+            <td align="right"><?= $ttl_invoice ?></td>
+            <td align="right"><?= $ttl_uninvoice ?></td>
+            <td align="right"><?= $ttl_macet ?></td>
             <?php foreach ($total_per_bulan as $total_bln) : ?>
-                <td align="right"><?= number_format($total_bln, 2) ?></td>
+                <td align="right"><?= $total_bln ?></td>
             <?php endforeach; ?>
         </tr>
     </tbody>

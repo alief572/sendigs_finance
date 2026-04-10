@@ -523,7 +523,7 @@ class Request_payment_model extends BF_Model
             }
             if ($item->kategori == 'Cash') {
                 $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
-                if($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
+                if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
                     $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
@@ -589,9 +589,11 @@ class Request_payment_model extends BF_Model
             $no_coa_bank = $no_coa_bank[0];
 
             $kode_bank = '';
-            $get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
-            if (!empty($get_kode_bank)) {
-                $kode_bank = $get_kode_bank->kode_bank;
+            if (!empty($no_coa_bank)) {
+                $get_kode_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $no_coa_bank])->row();
+                if (!empty($get_kode_bank)) {
+                    $kode_bank = $get_kode_bank->kode_bank;
+                }
             }
 
             $Id = $this->generate_id_payment2($kode_bank, $no);
