@@ -235,7 +235,7 @@ class Jurnal extends Admin_Controller
                 if (!$insert_kartu_piutang) {
                     throw new Exception('Gagal insert kartu piutang');
                 }
-            } else if ($get_jurnal->jenis_transaksi == 'Payment' || $get_jurnal->jenis_transaksi == 'Transport') {
+            } else {
                 $get_payment_approve = $this->db->get_where('payment_approve', ['id' => $get_jurnal->no_transaksi])->row();
                 if (!$get_payment_approve) {
                     throw new Exception('Data Payment Approve tidak ditemukan');
