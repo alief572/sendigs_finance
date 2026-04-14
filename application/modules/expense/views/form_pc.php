@@ -29,22 +29,48 @@ $budgets = 0;
 <input type="hidden" id="nama" name="nama" value="<?php echo (isset($data->nama) ? $data->nama : $this->auth->user_name()); ?>">
 <input type="hidden" id="approval" name="approval" value="<?php echo (isset($data->approval) ? $data->approval : $app); ?>">
 <style>
+	/* Tabel selalu bisa scroll horizontal */
+	.table-responsive {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Lebar minimum tabel agar semua kolom cukup */
+	.table-responsive > table.table {
+		min-width: 1600px;
+	}
+
+	/* Semua sel vertikal dari atas */
+	#detail_body td,
+	#detail_body th {
+		vertical-align: top;
+	}
+
+	/* Font semua kolom cukup besar untuk dibaca */
+	table.table th,
+	table.table td {
+		font-size: 14px;
+		white-space: normal;
+	}
+
+	/* Textarea Barang/Jasa & Spesifikasi */
+	textarea.form-control {
+		min-height: 80px;
+		font-size: 14px;
+		resize: vertical;
+		line-height: 1.5;
+		width: 100%;
+	}
+
+	/* Mobile stacked layout */
 	@media screen and (max-width: 520px) {
-		table {
-			width: 100%;
+		.table-responsive > table.table {
+			min-width: unset;
 		}
 
-		thead th.column-primary {
-			width: 100%;
-		}
-
-		thead th:not(.column-primary) {
-			display: none;
-		}
-
-		th[scope="row"] {
-			vertical-align: top;
-		}
+		thead th.column-primary { width: 100%; }
+		thead th:not(.column-primary) { display: none; }
+		th[scope="row"] { vertical-align: top; }
 
 		td {
 			display: block;
@@ -58,15 +84,18 @@ $budgets = 0;
 			content: attr(data-header);
 		}
 
-		thead th:first-child span {
-			display: none;
-		}
+		thead th:first-child span { display: none; }
 
 		td::before {
 			float: left;
 			text-transform: uppercase;
 			font-weight: bold;
 			content: attr(data-header);
+		}
+
+		textarea.form-control {
+			font-size: 14px;
+			text-align: left;
 		}
 	}
 </style>
@@ -213,15 +242,17 @@ $budgets = 0;
 					<table class="table table-bordered table-striped" width="100%">
 						<thead>
 							<tr>
-								<th width="5" scope="col" class="column-primary">#</th>
-								<th scope="col" width="150">Jenis dan<br /> Tanggal</th>
-								<th scope="col" width="350">Barang/Jasa &<br />Keterangan</th>
-								<th scope="col" width=150 nowrap>Jumlah</th>
-								<th scope="col" width=200 nowrap>Harga Satuan</th>
-								<th scope="col" width="200">Expense</th>
-								<th scope="col" width="200">Kasbon</th>
-								<th scope="col" width="50">Bon Bukti</th>
-								<th scope="col" class="column-primary">
+								<th width="30" scope="col" class="column-primary">#</th>
+								<th scope="col" width="220">Jenis</th>
+								<th scope="col" width="110">Tanggal</th>
+								<th scope="col" width="200">Barang/Jasa</th>
+								<th scope="col" width="200">Spesifikasi</th>
+								<th scope="col" width="70">Jumlah</th>
+								<th scope="col" width="120">Harga Satuan</th>
+								<th scope="col" width="120">Expense</th>
+								<th scope="col" width="100">Kasbon</th>
+								<th scope="col" width="120">Bon Bukti</th>
+								<th scope="col" width="80" class="column-primary">
 									<div class="pull-right">
 										<a class="btn btn-info btn-xs stsview" href="javascript:void(0)" title="Kasbon" onclick="add_kasbon()" id="add-kasbon"><i class="fa fa-user"></i> Kasbon</a><br />
 										<a class="btn btn-success btn-xs stsview" href="javascript:void(0)" title="Tambah" onclick="add_detail()" id="add-material"><i class="fa fa-plus"></i> Tambah</a>
@@ -254,7 +285,7 @@ $budgets = 0;
 											}
 											?>
 										</td>
-										<td data-header="Jenis & Tanggal">
+										<td data-header="Jenis">
 											<?php
 											if ($tekskasbon == '') {
 												echo form_dropdown('coa[]', $data_budget, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2', 'style' => 'width:100%'));
@@ -262,13 +293,15 @@ $budgets = 0;
 												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $record->coa . '">';
 											}
 											?>
+										</td>
+										<td data-header="Tanggal">
 											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>" <?= $tekskasbon ?>>
 										</td>
-										<td data-header="Barang / Jasa & Keterangan">
-											<!-- <input type="text" class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" value="<?= $record->deskripsi; ?>" <?= $tekskasbon ?> style='width:100px'> -->
-											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" <?= $tekskasbon ?>><?= $record->deskripsi ?></textarea>
-											<!-- <input type="text" class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" value="<?= $record->keterangan; ?>" style='width:100px'> -->
-											<textarea class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" <?= $tekskasbon ?>><?= $record->keterangan ?></textarea>
+										<td data-header="Barang / Jasa">
+											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" style="min-height:80px;min-width:200px;font-size:14px;" <?= $tekskasbon ?>><?= $record->deskripsi ?></textarea>
+										</td>
+										<td data-header="Spesifikasi">
+											<textarea class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" style="min-height:80px;min-width:200px;font-size:14px;" <?= $tekskasbon ?>><?= $record->keterangan ?></textarea>
 										</td>
 										<td data-header="Qty"><input type="text" class="form-control divide input-sm" name="qty[]" id="qty_<?= $idd; ?>" value="<?= $record->qty; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?> size="15"></td>
 										<td data-header="Harga Satuan"><input type="text" class="form-control divide input-sm" name="harga[]" id="harga_<?= $idd; ?>" value="<?= $record->harga; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?>></td>
@@ -318,7 +351,7 @@ $budgets = 0;
 						</tbody>
 						<tfoot>
 							<tr>
-								<td colspan="5" align=right>TOTAL</td>
+								<td colspan="7" align=right>TOTAL</td>
 								<td><input type="text" class="form-control divide input-sm" id="total_expense" name="total_expense" value="<?= $total_expense ?>" placeholder="Total Expense" tabindex="-1" readonly style='width:90px'></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_kasbon" name="total_kasbon" value="<?= $total_kasbon ?>" placeholder="Total Kasbon" tabindex="-1" readonly style='width:90px'></td>
 								<td align=right colspan=2>
@@ -610,13 +643,17 @@ foreach($data_budget as $keys=>$val){
 			Rows += "<input type='hidden' name='detail_id[]' id='raw_id_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
 			Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='' class='dtlloop'>";
 			Rows += "<input type='hidden' name='filename[]' id='filename_" + nomor + "' value=''></td>";
-			Rows += "<td data-header='Jenis & Tanggal'>";
-			Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:300px'>" + combocoa + "</select>";
+			Rows += "<td data-header='Jenis'>";
+			Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:100%'>" + combocoa + "</select>";
+			Rows += "</td>";
+			Rows += "<td data-header='Tanggal'>";
 			Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
 			Rows += "</td>";
-			Rows += "<td data-header='Barang / Jasa & Keterangan'>";
-			Rows += "<textarea class='form-control input-sm' placeholder='Deskripsi' name='deskripsi[]' id='deskripsi_" + nomor + "'></textarea>";
-			Rows += "<textarea class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "'></textarea>";
+			Rows += "<td data-header='Barang / Jasa'>";
+			Rows += "<textarea class='form-control input-sm' placeholder='Deskripsi' name='deskripsi[]' id='deskripsi_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'></textarea>";
+			Rows += "</td>";
+			Rows += "<td data-header='Spesifikasi'>";
+			Rows += "<textarea class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'></textarea>";
 			Rows += "</td>";
 			Rows += "<td data-header='Qty'>";
 			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='0' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")' style='width:60px' />";
@@ -901,13 +938,17 @@ foreach($data_budget as $keys=>$val){
 					Rows += "<input type='hidden' name='detail_id[]' id='raw_id_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
 					Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='' class='dtlloop'>";
 					Rows += "<input type='hidden' name='filename[]' id='filename_" + nomor + "' value=''></td>";
-					Rows += "<td data-header='Jenis & Tanggal'>";
-					Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:300px'>" + combocoa + "</select>";
+					Rows += "<td data-header='Jenis'>";
+					Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:100%'>" + combocoa + "</select>";
+					Rows += "</td>";
+					Rows += "<td data-header='Tanggal'>";
 					Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
 					Rows += "</td>";
-					Rows += "<td data-header='Barang / Jasa & Keterangan'>";
-					Rows += "<input type='text' class='form-control input-sm' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' value='" + result.keperluan + "' style='width:100px' />";
-					Rows += "<input type='text' class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='width:100px' />";
+					Rows += "<td data-header='Barang / Jasa'>";
+					Rows += "<textarea class='form-control input-sm' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'>" + result.keperluan + "</textarea>";
+					Rows += "</td>";
+					Rows += "<td data-header='Spesifikasi'>";
+					Rows += "<textarea class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'></textarea>";
 					Rows += "</td>";
 					Rows += "<td data-header='Qty'>";
 					Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='1' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")' style='width:60px' />";
@@ -974,13 +1015,17 @@ foreach($data_budget as $keys=>$val){
 					Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='" + result.id_detail + "' class='dtlloop'>";
 					Rows += "<input type='hidden' name='no_docc[]' id='no_doc_" + nomor + "' value='" + result.no_doc2 + "' class='dtlloop'>";
 					Rows += "<input type='hidden' name='filename[]' id='filename_" + nomor + "' value=''></td>";
-					Rows += "<td data-header='Jenis & Tanggal'>";
-					Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:300px'>" + combocoa + "</select>";
+					Rows += "<td data-header='Jenis'>";
+					Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2' style='width:100%'>" + combocoa + "</select>";
+					Rows += "</td>";
+					Rows += "<td data-header='Tanggal'>";
 					Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
 					Rows += "</td>";
-					Rows += "<td data-header='Barang / Jasa & Keterangan'>";
-					Rows += "<input type='text' class='form-control input-sm' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' value='" + result.informasi + "' style='width:100px' />";
-					Rows += "<input type='text' class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='width:100px' />";
+					Rows += "<td data-header='Barang / Jasa'>";
+					Rows += "<textarea class='form-control input-sm' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'>" + result.informasi + "</textarea>";
+					Rows += "</td>";
+					Rows += "<td data-header='Spesifikasi'>";
+					Rows += "<textarea class='form-control input-sm' placeholder='Keterangan' name='keterangan[]' id='keterangan_" + nomor + "' style='min-height:80px;min-width:200px;font-size:14px;'></textarea>";
 					Rows += "</td>";
 					Rows += "<td data-header='Qty'>";
 					Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='1' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")' style='width:60px' />";

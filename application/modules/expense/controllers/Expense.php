@@ -1581,7 +1581,6 @@ class Expense extends Admin_Controller
 				$result = TRUE;
 			}
 		}
-
 		// proses utama insert tr_expense
 		else {
 			$no_doc = $this->All_model->GetAutoGenerate('format_expense');

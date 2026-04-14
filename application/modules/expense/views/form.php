@@ -27,22 +27,49 @@ if (!isset($data->departement)) {
 <input type="hidden" id="approval" name="approval" value="<?php echo (isset($data->approval) ? $data->approval : $app); ?>">
 <input type="hidden" name="" class="stsview" value="<?= (isset($stsview)) ? $stsview : null ?>">
 <style>
+	/* Tabel selalu bisa scroll horizontal */
+	.table-responsive {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Lebar minimum tabel agar semua kolom cukup */
+	#detail_body table,
+	.table-responsive > table.table {
+		min-width: 1400px;
+	}
+
+	/* Semua sel vertikal dari atas */
+	#detail_body td,
+	#detail_body th {
+		vertical-align: top;
+	}
+
+	/* Font semua kolom cukup besar untuk dibaca */
+	table.table th,
+	table.table td {
+		font-size: 14px;
+		white-space: normal;
+	}
+
+	/* Textarea Barang/Jasa & Spesifikasi */
+	textarea.form-control {
+		min-height: 80px;
+		font-size: 14px;
+		resize: vertical;
+		line-height: 1.5;
+		width: 100%;
+	}
+
+	/* Mobile stacked layout */
 	@media screen and (max-width: 520px) {
-		table {
-			width: 100%;
+		.table-responsive > table.table {
+			min-width: unset;
 		}
 
-		thead th.column-primary {
-			width: 100%;
-		}
-
-		thead th:not(.column-primary) {
-			display: none;
-		}
-
-		th[scope="row"] {
-			vertical-align: top;
-		}
+		thead th.column-primary { width: 100%; }
+		thead th:not(.column-primary) { display: none; }
+		th[scope="row"] { vertical-align: top; }
 
 		td {
 			display: block;
@@ -56,15 +83,18 @@ if (!isset($data->departement)) {
 			content: attr(data-header);
 		}
 
-		thead th:first-child span {
-			display: none;
-		}
+		thead th:first-child span { display: none; }
 
 		td::before {
 			float: left;
 			text-transform: uppercase;
 			font-weight: bold;
 			content: attr(data-header);
+		}
+
+		textarea.form-control {
+			font-size: 14px;
+			text-align: left;
 		}
 	}
 </style>
@@ -137,15 +167,15 @@ if (!isset($data->departement)) {
 					<table class="table table-bordered table-striped" width="100%">
 						<thead>
 							<tr>
-								<th width="5" scope="col" class="column-primary">#</th>
-								<th scope="col" width="200px">Jenis</th>
-								<th scope="col" width="100px">Tanggal</th>
-								<th scope="col">Barang/Jasa</th>
-								<th scope="col">Spesifikasi</th>
-								<th scope="col" width="50px">Jumlah</th>
-								<th scope="col" nowrap>Harga Satuan</th>
-								<th scope="col">Expense</th>
-								<th scope="col" class="column-primary">
+								<th width="30" scope="col" class="column-primary">#</th>
+								<th scope="col" width="220">Jenis</th>
+								<th scope="col" width="110">Tanggal</th>
+								<th scope="col" width="200">Barang/Jasa</th>
+								<th scope="col" width="200">Spesifikasi</th>
+								<th scope="col" width="70">Jumlah</th>
+								<th scope="col" width="120">Harga Satuan</th>
+								<th scope="col" width="120">Expense</th>
+								<th scope="col" width="100" class="column-primary">
 									<div class="pull-right">
 										<a class="btn btn-success btn-xs stsview" href="javascript:void(0)" title="Tambah" onclick="add_detail()" id="add-material"><i class="fa fa-plus"></i> Tambah</a>
 									</div>
@@ -183,10 +213,10 @@ if (!isset($data->departement)) {
 											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>" <?= $tekskasbon ?>>
 										</td>
 										<td data-header="Barang / Jasa">
-											<textarea class="form-control" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" <?= $tekskasbon; ?>><?= $record->deskripsi; ?></textarea>
+											<textarea class="form-control" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" style="min-height:70px;font-size:13px;" <?= $tekskasbon; ?>><?= $record->deskripsi; ?></textarea>
 										</td>
 										<td data-header="Spesifikasi">
-											<textarea class="form-control" name="keterangan[]" id="keterangan_<?= $idd; ?>" <?= $tekskasbon ?>><?= $record->keterangan; ?></textarea>
+											<textarea class="form-control" name="keterangan[]" id="keterangan_<?= $idd; ?>" style="min-height:70px;font-size:13px;" <?= $tekskasbon ?>><?= $record->keterangan; ?></textarea>
 										</td>
 										<td data-header="Qty"><input type="text" class="form-control divide input-sm" name="qty[]" id="qty_<?= $idd; ?>" value="<?= $record->qty; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?> size="15"></td>
 										<td data-header="Harga Satuan"><input type="text" class="form-control divide input-sm" name="harga[]" id="harga_<?= $idd; ?>" value="<?= (($tekskasbon != "") ? $record->kasbon : $record->expense) ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?>></td>
@@ -617,11 +647,11 @@ if (!isset($data->departement)) {
 			Rows += "<input type='text' class='form-control tanggal input-sm' name='tanggal[]' id='tanggal_" + nomor + "' tabindex='-1' readonly value='" + tgl_doc + "' />";
 			Rows += "</td>";
 			Rows += "<td data-header='Barang / Jasa'>";
-			Rows += "<textarea class='form-control' name='deskripsi[]' id='deskripsi_" + nomor + "' readonly>" + keperluan + "</textarea>";
+			Rows += "<textarea class='form-control' name='deskripsi[]' id='deskripsi_" + nomor + "' readonly style='min-height:70px;font-size:13px;'>" + keperluan + "</textarea>";
 			Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
 			Rows += "</td>";
 			Rows += "<td data-header='Spesifikasi'>";
-			Rows += "<textarea class='form-control' name='keterangan[]' id='keterangan_" + nomor + "' readonly>" + keterangan + "</textarea>";
+			Rows += "<textarea class='form-control' name='keterangan[]' id='keterangan_" + nomor + "' readonly style='min-height:70px;font-size:13px;'>" + keterangan + "</textarea>";
 			Rows += "</td>";
 			Rows += "<td data-header='Qty'>";
 			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='1' id='qty_" + nomor + "' tabindex='-1' readonly />";
@@ -675,11 +705,11 @@ if (!isset($data->departement)) {
 			Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
 			Rows += "</td>";
 			Rows += "<td data-header='Barang / Jasa'>";
-			Rows += "<textarea class='form-control' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "'></textarea>";
+			Rows += "<textarea class='form-control' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' style='min-height:70px;font-size:13px;'></textarea>";
 			Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
 			Rows += "</td>";
 			Rows += "<td data-header='Spesifikasi'>";
-			Rows += "<textarea class='form-control' placeholder='Spesifikasi' name='keterangan[]' id='keterangan_" + nomor + "'></textarea>";
+			Rows += "<textarea class='form-control' placeholder='Spesifikasi' name='keterangan[]' id='keterangan_" + nomor + "' style='min-height:70px;font-size:13px;'></textarea>";
 			Rows += "</td>";
 			Rows += "<td data-header='Qty'>";
 			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")'/>";
