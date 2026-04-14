@@ -2615,7 +2615,7 @@ class Request_payment extends Admin_Controller
 				}
 
 				if ($item->tipe == 'Transport') {
-					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.jumlah_kasbon, a.keterangan, b.bank_id, b.accnumber, b.accname, b.id');
+					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.jumlah_kasbon, a.keterangan, b.bank_id, b.accnumber, b.accname, b.id, b.jumlah_expense');
 					$this->db->from('tr_transport a');
 					$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req', 'left');
 					$this->db->where('a.no_req', $item->no_doc);
@@ -2627,7 +2627,7 @@ class Request_payment extends Admin_Controller
 						'tgl_doc' => $get_transport->tgl_doc,
 						'keperluan' => $get_transport->keterangan,
 						'tipe' => 'transport',
-						'jumlah' => $get_transport->jumlah_kasbon,
+						'jumlah' => $get_transport->jumlah_expense,
 						'status' => 0,
 						'tanggal' => $tanggal_pembayaran,
 						'created_by' => $this->auth->user_name(),
