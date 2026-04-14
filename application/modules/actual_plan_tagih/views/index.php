@@ -45,6 +45,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         <div class="col-md-1">
             <br>
             <button type="button" class="btn btn-sm btn-success download_excel" title="Download Excel"><i class="fa fa-download"></i> Download Excel</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="update_actual_plan_tagih()">UPDATE !</button>
         </div>
     </div>
     <!-- /.box-header -->
@@ -407,6 +408,49 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 
         window.open(siteurl + active_controller + 'download_excel/' + tahun + '/' + status, '_blank');
     })
+
+    function update_actual_plan_tagih() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Apakah anda yakin ingin mengupdate actual plan tagih ?',
+            showCancelButton: true,
+            confirmButtonText: 'Ya',
+            cancelButtonText: 'Tidak'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    type: 'post',
+                    url: siteurl + active_controller + 'update_actual_plan_tagih',
+                    data: {},
+                    cache: false,
+                    success: function(result) {
+                        if (result.status == '1') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success !',
+                                text: result.msg
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Warning !',
+                                text: result.msg
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error !',
+                            text: 'Please try again later !'
+                        });
+                    }
+                });
+            }
+        });
+    }
 
     function DataTables(bulan, tahun, status = null) {
         var dataTables = $('#table_penawaran').dataTable({
