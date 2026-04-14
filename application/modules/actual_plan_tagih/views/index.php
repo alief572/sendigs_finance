@@ -45,7 +45,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         <div class="col-md-1">
             <br>
             <button type="button" class="btn btn-sm btn-success download_excel" title="Download Excel"><i class="fa fa-download"></i> Download Excel</button>
-            <button type="button" class="btn btn-sm btn-danger" onclick="update_actual_plan_tagih()">UPDATE !</button>
+            <!-- <button type="button" class="btn btn-sm btn-danger" onclick="update_actual_plan_tagih()">UPDATE !</button> -->
         </div>
     </div>
     <!-- /.box-header -->
