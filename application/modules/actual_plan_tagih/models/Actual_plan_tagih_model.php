@@ -106,10 +106,9 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
-        
+
         if ($bulan == 'macet') {
             $this->db->where('a.status_terakhir', '3');
-            
         } else {
             $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
             $this->db->where('MONTH(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $bulan);
@@ -176,7 +175,7 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
-        
+
         // Filter tahun hanya berlaku jika status_terakhir bukan 3 (Tagihan Macet).
         if (!empty($tahun)) {
             $this->db->group_start();
@@ -184,11 +183,11 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_where('a.status_terakhir', '3');
             $this->db->group_end();
         }
-        
+
         if (!empty($status)) {
             $this->db->where('a.status_terakhir', $status);
         }
-        
+
         $this->db->order_by('a.id', 'desc');
         $this->db->group_by('a.id');
 
