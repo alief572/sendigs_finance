@@ -38,7 +38,7 @@ $ENABLE_DELETE  = has_permission('Approval Expense Management.Delete');
                                 <td><?= $status[$record->status] ?></td>
                                 <td>
                                     <?php if ($ENABLE_VIEW) : ?>
-                                        <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
+                                        
                                         <?php endif;
                                     if ($ENABLE_MANAGE) :
                                         if ($record->status == 0) { ?>
