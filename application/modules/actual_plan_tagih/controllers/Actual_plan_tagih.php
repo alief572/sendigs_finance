@@ -295,7 +295,6 @@ class Actual_plan_tagih extends Admin_Controller
             exit;
         }
 
-
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
@@ -322,6 +321,51 @@ class Actual_plan_tagih extends Admin_Controller
         ];
 
         $this->load->view('download_excel', $data);
+    }
+
+    public function update_actual_plan_tagih()
+    {
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_plan_tagih_detail a');
+        $this->db->where('a.status_terakhir', '1');
+        $get_plan_tagih_detail = $this->db->get()->result();
+
+        $arr_update_actual = [];
+
+        foreach ($get_plan_tagih_detail as $item_detail) {
+            $this->db->select('COUNT(a.id) as jumlah_mundur');
+            $this->db->from('kons_tr_actual_plan_tagih a');
+            $this->db->where('a.id_detail_plan_tagih', $item_detail->id);
+            $this->db->where('a.tagih_mundur', '2');
+            $get_jumlah_mundur = $this->db->get()->row();
+
+            if ($get_jumlah_mundur->jumlah_mundur > 0) {
+                $this->db->select('a.*');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->where('a.id_detail_plan_tagih', $item_detail->id);
+                $this->db->order_by('a.created_date', 'desc');
+                $this->db->limit(1);
+                $get_actual_plan_tagih_last = $this->db->get()->row();
+
+                $this->db->select('a.*');
+                $this->db->from('kons_tr_actual_plan_tagih a');
+                $this->db->where('a.id_detail_plan_tagih', $item_detail->id);
+                $this->db->order_by('a.created_date', 'desc');
+                $this->db->limit(1, 1);
+                $get_actual_plan_tagih_before_last = $this->db->get()->row();
+
+                if ($get_actual_plan_tagih_before_last->tagih_mundur == '2' && $get_actual_plan_tagih_before_last->tanggal_actual_plan_tagih > $get_actual_plan_tagih_last->tanggal_actual_plan_tagih) {
+                    $arr_update_actual[] = [
+                        'id' => $item_detail->id,
+                        'tanggal_actual_plan_tagih' => $get_actual_plan_tagih_before_last->tanggal_actual_plan_tagih
+                    ];
+                }
+            }
+        }
+
+        if (!empty($arr_update_actual)) {
+            $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update_actual, 'id');
+        }
     }
 
     public function get_actual_plan_tagih()
