@@ -63,7 +63,7 @@
 												echo $combocoa;
 											} ?>
 										</select></td>
-									<td><input type="text" class="form-control" name="nama[]" id="nama_<?= $idd; ?>" value=""></td>
+									<td><textarea class="form-control" name="nama[]" id="nama_<?= $idd; ?>" rows="2" style="min-height:60px;font-size:13px;resize:vertical;"></textarea></td>
 									<td><select class="form-control" name="tipe[]" id="tipe_<?= $idd; ?>" onchange="cektipe(<?= $idd; ?>)">
 											<?php echo $combowaktu; ?>
 										</select></td>
@@ -96,7 +96,7 @@
 												echo $combocoa;
 											} ?>
 										</select></td>
-									<td><input type="text" class="form-control" name="nama[]" id="nama_<?= $idd; ?>" value="<?= $record->nama; ?>"></td>
+									<td><textarea class="form-control" name="nama[]" id="nama_<?= $idd; ?>" rows="2" style="min-height:60px;font-size:13px;resize:vertical;"><?= htmlspecialchars($record->nama); ?></textarea></td>
 									<td><select class="form-control" name="tipe[]" id="tipe_<?= $idd; ?>" onchange="cektipe(<?= $idd; ?>)">
 											<?php
 											if ($record->coa != '') {
@@ -253,7 +253,7 @@
 		Rows += "<select class='form-control select2' style='width:100%' name='coa[]' id='coa_" + nomor + "'><?php echo $combocoa; ?></select>";
 		Rows += "</td>";
 		Rows += "<td>";
-		Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' />";
+		Rows += "<textarea class='form-control' name='nama[]' id='nama_" + nomor + "' rows='2' style='min-height:60px;font-size:13px;resize:vertical;'></textarea>";
 		Rows += "</td>";
 		Rows += "<td>";
 		Rows += "<select class='form-control' name='tipe[]' id='tipe_" + nomor + "' onchange='cektipe(" + nomor + ")'><?php echo $combowaktu; ?></select>";
