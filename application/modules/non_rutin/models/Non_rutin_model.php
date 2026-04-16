@@ -634,7 +634,7 @@ class Non_rutin_model extends BF_Model
 
             if ($row['sts_app'] == 'N') {
                 $warna     = 'blue';
-                $sts     = 'WAITING APPROVAL';
+                $sts     = 'WAITING APPROVAL: MANAGEMENT';
             } elseif ($row['sts_app'] == 'Y') {
                 $warna     = 'green';
                 $sts     = 'APPROVED';
@@ -678,7 +678,7 @@ class Non_rutin_model extends BF_Model
 
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
-                    $sts = 'Waiting Approval';
+                    $sts = 'Waiting Approval: Management';
                 } else {
                     if ($row['sts_app'] == 'Y') {
                         $warna = 'green';
@@ -1083,7 +1083,7 @@ class Non_rutin_model extends BF_Model
 
             if ($row['sts_app'] == 'N') {
                 $warna     = 'blue';
-                $sts     = 'WAITING APPROVAL';
+                $sts     = 'WAITING APPROVAL: FINANCE';
             } elseif ($row['sts_app'] == 'Y') {
                 $warna     = 'green';
                 $sts     = 'APPROVED';
@@ -1098,7 +1098,7 @@ class Non_rutin_model extends BF_Model
             } else {
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
-                    $sts = 'Waiting Approval';
+                    $sts = 'Waiting Approval: Finance';
                 } else {
                     if ($row['sts_app'] == 'Y') {
                         $warna = 'green';
