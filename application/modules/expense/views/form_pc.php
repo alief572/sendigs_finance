@@ -36,7 +36,7 @@ $budgets = 0;
 	}
 
 	/* Lebar minimum tabel agar semua kolom cukup */
-	.table-responsive > table.table {
+	.table-responsive>table.table {
 		min-width: 1600px;
 	}
 
@@ -64,13 +64,21 @@ $budgets = 0;
 
 	/* Mobile stacked layout */
 	@media screen and (max-width: 520px) {
-		.table-responsive > table.table {
+		.table-responsive>table.table {
 			min-width: unset;
 		}
 
-		thead th.column-primary { width: 100%; }
-		thead th:not(.column-primary) { display: none; }
-		th[scope="row"] { vertical-align: top; }
+		thead th.column-primary {
+			width: 100%;
+		}
+
+		thead th:not(.column-primary) {
+			display: none;
+		}
+
+		th[scope="row"] {
+			vertical-align: top;
+		}
 
 		td {
 			display: block;
@@ -84,7 +92,9 @@ $budgets = 0;
 			content: attr(data-header);
 		}
 
-		thead th:first-child span { display: none; }
+		thead th:first-child span {
+			display: none;
+		}
 
 		td::before {
 			float: left;
@@ -496,7 +506,7 @@ foreach($data_budget as $keys=>$val){
 										timer: 1500,
 										showConfirmButton: false
 									});
-									window.location = siteurl + 'expense/<?= $urlback ?>';
+									location.reload();
 								} else {
 									Swal.fire({
 										title: "Gagal!",
@@ -772,7 +782,7 @@ foreach($data_budget as $keys=>$val){
 									timer: 1500,
 									showConfirmButton: false
 								});
-								window.location = siteurl + 'expense/<?= $urlback ?>';
+								location.reload();
 							} else {
 								Swal.fire({
 									title: "Gagal!",
