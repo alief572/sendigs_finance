@@ -1093,22 +1093,7 @@ class Expense extends Admin_Controller
 	}
 	public function list_expense_approval()
 	{
-
-		// $data = $this->Expense_model->GetListData('status = 0 AND sts_finance = "0"');
-
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('users c', 'a.nama=c.username', 'left');
-		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '0');
-		$this->db->where('b.id_kasbon IS NULL');
-		$this->db->group_by('a.no_doc');
-		$data = $this->db->get()->result();
-
 		$this->template->set('status', $this->status);
-		$this->template->set('data', $data);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Expense Approval By Finance');
 		$this->template->render('index_approval');
@@ -4028,88 +4013,207 @@ class Expense extends Admin_Controller
 
 	public function get_dat_approval_expense_manage()
 	{
-		$post = $this->input->post();
+		$post   = $this->input->post();
+		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
+		$length = isset($post['length']) ? (int) $post['length'] : 10;
+		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 
-		$draw = intval($post['draw']);
-		$length = $post['length'];
-		$start = $post['start'];
-		$search = $post['search']['value'];
+		$status_label = array(
+			"0" => "Baru",
+			"1" => "Disetujui",
+			"2" => "Disetujui Management",
+			"3" => "Selesai",
+			"9" => "Ditolak"
+		);
 
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('users c', 'a.nama=c.username', 'left');
-		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', 1);
-		$this->db->where('b.id_kasbon IS NULL');
-		$this->db->group_by('a.no_doc');
-
-		$count_all = $this->db->count_all_results();
-
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('users c', 'a.nama=c.username', 'left');
-		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', 1);
-		$this->db->where('b.id_kasbon IS NULL');
-
-		if (!empty($search)) {
-			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.tgl_doc', $search, 'both');
-			$this->db->or_like('c.username', $search, 'both');
-			$this->db->or_like('d.username', $search, 'both');
-			$this->db->or_like('a.informasi', $search, 'both');
-			$this->db->or_like('a.jumlah', $search, 'both');
-			$this->db->group_end();
-		}
-		$this->db->group_by('a.no_doc');
-
-		$count_filter = $this->db->count_all_results();
-
-
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		$this->db->join('users c', 'a.nama=c.username', 'left');
-		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('b.id_kasbon IS NULL');
-
-		if (!empty($search)) {
-			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.tgl_doc', $search, 'both');
-			$this->db->or_like('c.username', $search, 'both');
-			$this->db->or_like('a.informasi', $search, 'both');
-			$this->db->or_like('a.jumlah', $search, 'both');
-			$this->db->group_end();
-		}
-		$this->db->group_by('a.no_doc');
-
-		$column_order = [
-			0 => '',
+		$column_order = array(
 			1 => 'a.no_doc',
 			2 => 'a.tgl_doc',
 			3 => 'c.username',
 			4 => 'a.informasi',
-			5 => 'a.jumlah'
-		];
+			5 => 'nominal',
+		);
 
-		if (isset($post['order']) && !empty($post['order'])) {
-			$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
-			$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
-			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
-			$this->db->order_by($column_name, $column_dir);
+		// Total semua record
+		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '1');
+		$count_all = (int) $this->db->get()->row()->cnt;
+
+		// Total setelah filter
+		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '1');
+		if ($search !== '') {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.tgl_doc', $search, 'both');
+			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->group_end();
+		}
+		$count_filter = (int) $this->db->get()->row()->cnt;
+
+		// Data aktual
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status,
+			IFNULL(SUM(b.total_harga), 0) as nominal,
+			c.username as nmuser');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '1');
+		if ($search !== '') {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.tgl_doc', $search, 'both');
+			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->group_end();
+		}
+		$this->db->group_by('a.no_doc');
+
+		if (isset($post['order'][0])) {
+			$col_idx = (int) $post['order'][0]['column'];
+			$col_dir = $post['order'][0]['dir'] === 'asc' ? 'ASC' : 'DESC';
+			if (isset($column_order[$col_idx])) {
+				$this->db->order_by($column_order[$col_idx], $col_dir);
+			}
 		} else {
-			$this->db->order_by('a.created_on', 'desc');
+			$this->db->order_by('a.id', 'DESC');
 		}
 
-		$this->db->limit($length, $start);
+		$this->db->limit($length > 0 ? $length : 10, $start);
+		$rows = $this->db->get()->result();
 
-		$get_data = $this->db->get()->result();
+		$data = array();
+		$no   = $start + 1;
+		foreach ($rows as $row) {
+			$action = '';
+			if (has_permission('Approval Expense Management.View')) {
+				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
+			}
+			if (has_permission('Approval Expense Management.Manage') && $row->status == 0) {
+				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
+			}
+			$data[] = array(
+				'no'        => $no++,
+				'no_doc'    => $row->no_doc,
+				'tgl_doc'   => $row->tgl_doc,
+				'nmuser'    => $row->nmuser,
+				'informasi' => $row->informasi,
+				'nominal'   => number_format($row->nominal),
+				'status'    => isset($status_label[$row->status]) ? $status_label[$row->status] : $row->status,
+				'action'    => $action,
+			);
+		}
+
+		echo json_encode(array(
+			'draw'            => $draw,
+			'recordsTotal'    => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data'            => $data,
+		));
+	}
+
+	public function get_expense_app_finance()
+	{
+		$draw    = (int) $this->input->get('draw', true);
+		$length  = (int) $this->input->get('length', true);
+		$start   = (int) $this->input->get('start', true);
+		$search  = $this->input->get('search', true);
+		$keyword = (!empty($search['value'])) ? trim($search['value']) : '';
+
+		$status_label = array(
+			"0" => "Baru",
+			"1" => "Disetujui",
+			"2" => "Disetujui Management",
+			"3" => "Selesai",
+			"9" => "Ditolak"
+		);
+
+		// Total semua record (tanpa filter)
+		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '0');
+		$count_all = (int) $this->db->get()->row()->cnt;
+
+		// Total setelah filter search
+		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '0');
+		if ($keyword !== '') {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $keyword);
+			$this->db->or_like('a.tgl_doc', $keyword);
+			$this->db->or_like('c.username', $keyword);
+			$this->db->or_like('a.informasi', $keyword);
+			$this->db->group_end();
+		}
+		$count_filtered = (int) $this->db->get()->row()->cnt;
+
+		// Data aktual dengan limit & offset
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status,
+			IFNULL(SUM(b.total_harga), 0) as nominal,
+			c.username as nmuser');
+		$this->db->from('tr_expense a');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('users c', 'a.nama = c.username', 'left');
+		$this->db->where('a.status', 0);
+		$this->db->where('a.sts_finance', '0');
+		if ($keyword !== '') {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $keyword);
+			$this->db->or_like('a.tgl_doc', $keyword);
+			$this->db->or_like('c.username', $keyword);
+			$this->db->or_like('a.informasi', $keyword);
+			$this->db->group_end();
+		}
+		$this->db->group_by('a.no_doc');
+		$this->db->order_by('a.id', 'DESC');
+		$this->db->limit($length > 0 ? $length : 10, $start);
+		$rows = $this->db->get()->result();
+
+		$data = array();
+		$no   = $start + 1;
+		foreach ($rows as $row) {
+			$action = '';
+			if (has_permission('Expense_Approval.View')) {
+				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
+			}
+			if (has_permission('Expense_Approval.Manage') && $row->status == 0) {
+				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
+			}
+			$data[] = array(
+				'no'        => $no++,
+				'no_doc'    => $row->no_doc,
+				'tgl_doc'   => $row->tgl_doc,
+				'nmuser'    => $row->nmuser,
+				'informasi' => $row->informasi,
+				'nominal'   => number_format($row->nominal),
+				'status'    => isset($status_label[$row->status]) ? $status_label[$row->status] : $row->status,
+				'action'    => $action,
+			);
+		}
+
+		echo json_encode(array(
+			'draw'            => $draw,
+			'recordsTotal'    => $count_all,
+			'recordsFiltered' => $count_filtered,
+			'data'            => $data,
+		));
 	}
 }

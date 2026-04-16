@@ -126,7 +126,12 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							} else {
 								if ($item->app_3 == null) {
 									$warna = 'blue';
-									$sts = 'Waiting Approval';
+									// Tentukan waiting approval di level mana
+									if (empty($item->app_1_by) && empty($item->app_2_by)) {
+										$sts = 'Waiting Approval: Finance';
+									} else {
+										$sts = 'Waiting Approval: Management';
+									}
 								} else {
 									if ($item->sts_app == 'Y') {
 										$warna = "green";
