@@ -136,102 +136,88 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function save_posting_jurnal()
 	{
-		$post        = $this->input->post();
-		$session = $this->session->userdata('app_session');
-		$data_session    = $this->session->userdata;
+		$post = $this->input->post();
 
-		$get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
-		$get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi])->result();
+		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+		$get_jurnal_detail = $this->db->get_where('tr_jurnal', [
+			'no_transaksi'    => $get_jurnal->no_transaksi,
+			'jenis_transaksi' => $get_jurnal->jenis_transaksi,
+		])->result();
+
+		if ($get_jurnal->jenis_transaksi !== 'Penerimaan Piutang') {
+			echo json_encode(['status' => 0, 'msg' => 'Jenis transaksi tidak valid.']);
+			return;
+		}
 
 		$this->db->trans_begin();
 
 		try {
 			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
-			$id_company = (!empty($get_jurnal->id_company)) ? $get_jurnal->id_company : '';
+			$id_company    = !empty($get_jurnal->id_company) ? $get_jurnal->id_company : '';
+			$acc_db        = $this->_get_accounting_db($id_company);
 
 			$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
+			$nilai     = ($get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
 
-			$nilai = (!empty($get_jurnal->debit) && $get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
-
-			$arr_jarh = [
-				'nomor' => $Nomor_BUM,
-				'tgl' => $get_jurnal->tgl_jurnal,
-				'jml' => $nilai,
-				'kdcab' => '101',
-				'jenis_reff' => 'BUM',
-				'no_reff' => $get_invoicing->id,
-				'customer' => $get_invoicing->nm_customer,
+			// Insert header penerimaan
+			$acc_db->insert('jarh', [
+				'nomor'       => $Nomor_BUM,
+				'tgl'         => $get_jurnal->tgl_jurnal,
+				'jml'         => $nilai,
+				'kdcab'       => '101',
+				'jenis_reff'  => 'BUM',
+				'no_reff'     => $get_invoicing->id,
+				'customer'    => $get_invoicing->nm_customer,
 				'terima_dari' => $this->auth->user_name(),
-				'jenis_ar' => 'BUM',
-				'note' => $get_jurnal->keterangan,
-				'user_id' => $this->auth->user_id(),
-				'tgl_invoice' => $get_invoicing->tanggal_invoice
-			];
-			if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
-				$insert_jarh = $this->accounting_stm->insert('jarh', $arr_jarh);
-			} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
-				$insert_jarh = $this->accounting_vuca->insert('jarh', $arr_jarh);
-			} else {
-				$insert_jarh = $this->accounting_sustain->insert('jarh', $arr_jarh);
-			}
+				'jenis_ar'    => 'BUM',
+				'note'        => $get_jurnal->keterangan,
+				'user_id'     => $this->auth->user_id(),
+				'tgl_invoice' => $get_invoicing->tanggal_invoice,
+			]);
 
-
-			if ($get_jurnal->jenis_transaksi == 'Penerimaan Piutang') {
-
-				$arr_jurnal = [];
-
-				foreach ($get_jurnal_detail as $item) {
-					$arr_jurnal[] = [
-						'tipe' => 'BUM',
-						'nomor' => $Nomor_BUM,
-						'tanggal' => $item->tgl_jurnal,
-						'no_perkiraan' => $item->coa,
-						'keterangan' => $item->keterangan,
-						'no_reff' => $get_invoicing->id,
-						'debet' => $item->debit,
-						'kredit' => $item->kredit,
-						'id_perusahaan' => $item->id_company,
-						'nm_perusahaan' => $item->nm_company
-					];
-				}
-
-				if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
-					$insert_jurnal = $this->accounting_stm->insert_batch('jurnal', $arr_jurnal);
-				} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
-					$insert_jurnal = $this->accounting_vuca->insert_batch('jurnal', $arr_jurnal);
-				} else {
-					$insert_jurnal = $this->accounting_sustain->insert_batch('jurnal', $arr_jurnal);
-				}
-
-				$update_jurnal_sts = $this->db->update('tr_jurnal', ['sts' => '1'], ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi]);
-				if ($get_jurnal->id_company == '1' || $get_jurnal->id_company == '6') {
-					$update_cabang_acc = $this->accounting_stm->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
-				} else if ($get_jurnal->id_company == '4' || $get_jurnal->id_company == '5') {
-					$update_cabang_acc = $this->accounting_vuca->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
-				} else {
-					$update_cabang_acc = $this->accounting_sustain->query('UPDATE pastibisa_tb_cabang SET nobum = nobum+1 WHERE nocab = "101"');
-				}
-
-				$this->db->trans_commit();
-
-				$msg = "Posting jurnal ke Tras Sukses !";
-
-				$response = [
-					'status' => 1,
-					'msg' => $msg
+			// Build dan insert jurnal detail sekaligus (batch)
+			$arr_jurnal = [];
+			foreach ($get_jurnal_detail as $item) {
+				$arr_jurnal[] = [
+					'tipe'          => 'BUM',
+					'nomor'         => $Nomor_BUM,
+					'tanggal'       => $item->tgl_jurnal,
+					'no_perkiraan'  => $item->coa,
+					'keterangan'    => $item->keterangan,
+					'no_reff'       => $get_invoicing->id,
+					'debet'         => $item->debit,
+					'kredit'        => $item->kredit,
+					'id_perusahaan' => $item->id_company,
+					'nm_perusahaan' => $item->nm_company,
 				];
-
-				echo json_encode($response);
 			}
+			$acc_db->insert_batch('jurnal', $arr_jurnal);
+
+			// Update status jurnal & counter cabang
+			$this->db->update('tr_jurnal', ['sts' => '1'], [
+				'no_transaksi'    => $get_jurnal->no_transaksi,
+				'jenis_transaksi' => $get_jurnal->jenis_transaksi,
+			]);
+			$acc_db->query('UPDATE pastibisa_tb_cabang SET nobum = nobum + 1 WHERE nocab = "101"');
+
+			$this->db->trans_commit();
+
+			echo json_encode(['status' => 1, 'msg' => 'Posting jurnal ke Tras Sukses!']);
 		} catch (Exception $e) {
 			$this->db->trans_rollback();
 
-			$param = array(
-				'save' => 0,
-				'msg' => $e->getMessage()
-			);
+			echo json_encode(['status' => 0, 'msg' => $e->getMessage()]);
+		}
+	}
 
-			echo json_encode($param);
+	private function _get_accounting_db($id_company)
+	{
+		if ($id_company == '1' || $id_company == '4') {
+			return $this->accounting_vuca;
+		} elseif ($id_company == '7') {
+			return $this->accounting_stm;
+		} else {
+			return $this->accounting_sustain;
 		}
 	}
 
