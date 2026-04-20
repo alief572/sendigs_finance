@@ -122,9 +122,9 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function _get_accounting_db($id_company)
     {
-        if ($id_company == '1' || $id_company == '4') {
+        if ($id_company == '4') {
             return $this->accounting_vuca;
-        } elseif ($id_company == '7') {
+        } elseif ($id_company == '7' || $id_company == '1' || $id_company == '6') {
             return $this->accounting_stm;
         } else {
             return $this->accounting_sustain;
