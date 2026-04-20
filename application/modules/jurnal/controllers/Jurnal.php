@@ -263,7 +263,7 @@ class Jurnal extends Admin_Controller
 
                     if ($id_company == '4') {
                         $insert_jurnal_detail = $this->db->insert(DBACC_VUCA . '.jurnal', $datadetail);
-                    } else if ($id_company == '7' || $id_company == '1') {
+                    } else if ($id_company == '7' || $id_company == '1' || $id_company == '6') {
                         $insert_jurnal_detail = $this->db->insert(DBACC_STM . '.jurnal', $datadetail);
                     } else {
                         $insert_jurnal_detail = $this->db->insert(DBACC_SUST . '.jurnal', $datadetail);
@@ -290,7 +290,7 @@ class Jurnal extends Admin_Controller
 
                 if ($id_company == '4') {
                     $insert_japh = $this->db->insert(DBACC_VUCA . '.japh', $dataJVheader);
-                } else if ($id_company == '7' || $id_company == '1') {
+                } else if ($id_company == '7' || $id_company == '1' || $id_company == '6') {
                     $insert_japh = $this->db->insert(DBACC_STM . '.japh', $dataJVheader);
                 } else {
                     $insert_japh = $this->db->insert(DBACC_SUST . '.japh', $dataJVheader);
@@ -302,7 +302,7 @@ class Jurnal extends Admin_Controller
 
                 if ($id_company == '4') {
                     $Qry_Update_Cabang_acc = $this->db->query("UPDATE " . DBACC_VUCA . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'");
-                } else if ($id_company == '1' || $id_company == '7') {
+                } else if ($id_company == '1' || $id_company == '7' || $id_company == '6') {
                     $Qry_Update_Cabang_acc = $this->db->query("UPDATE " . DBACC_STM . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'");
                 } else {
                     $Qry_Update_Cabang_acc = $this->db->query("UPDATE " . DBACC_SUST . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'");
