@@ -54,7 +54,7 @@ class Penerimaan_pph_23_model extends BF_Model
 
     public function create_jurnal($id)
     {
-        $arr_coa_jurnal = ['1050-40-2', '1030-10-1'];
+        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
 
         $get_penerimaan_pph23 = $this->db->get_where('tr_penerimaan_pph_23', ['id' => $id])->row();
 
@@ -83,7 +83,7 @@ class Penerimaan_pph_23_model extends BF_Model
 
             $debit = 0;
             $kredit = 0;
-            if ($item == '1050-40-2') {
+            if ($item == '1106-01-02') {
                 $debit = $get_penerimaan_pph23->nilai_setor;
             } else {
                 $kredit = $get_penerimaan_pph23->nilai_setor;

@@ -110,7 +110,7 @@ class Penerimaan_pph_23 extends Admin_Controller
 
         $arr_insert_jurnal = [];
 
-        $arr_coa_jurnal = ['1050-40-2', '1030-10-1'];
+        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
 
         $this->db->trans_begin();
 
