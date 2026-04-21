@@ -196,17 +196,16 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     }
 
     function DataTables() {
-        // var dataTables = $('#table_penawaran').dataTable();
-        // dataTables.destroy();
+        if ($.fn.DataTable.isDataTable('#table_penawaran')) {
+            $('#table_penawaran').DataTable().ajax.reload(null, false);
+            return;
+        }
 
-        var dataTables = $('#table_penawaran').dataTable({
+        $('#table_penawaran').DataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_data_jurnal',
                 type: "POST",
-                dataType: "JSON",
-                data: function(d) {
-
-                }
+                dataType: "JSON"
             },
             columns: [{
                     data: 'no'
@@ -227,13 +226,30 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     data: 'action'
                 }
             ],
+            columnDefs: [{
+                    targets: [0, 5],
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center'
+                },
+                {
+                    targets: [1, 2, 3, 4],
+                    className: 'text-center'
+                }
+            ],
             responsive: true,
             processing: true,
             serverSide: true,
             stateSave: true,
-            destroy: true,
-            paging: true
+            paging: true,
+            searchDelay: 500,
+            lengthMenu: [
+                [10, 25, 50, 100],
+                [10, 25, 50, 100]
+            ],
+            pageLength: 10
         });
     }
+
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
