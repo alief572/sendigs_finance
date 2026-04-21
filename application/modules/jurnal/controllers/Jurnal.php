@@ -229,7 +229,7 @@ class Jurnal extends Admin_Controller
                     ->get()
                     ->row();
 
-                $Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_inv->tanggal_invoice, $acc->id_company ?? $id_company);
+                $Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_inv->tanggal_invoice, $get_inv->id_company ?? '');
                 $nilai     = ($get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
 
                 $arr_insert_jarh = [
@@ -404,11 +404,12 @@ class Jurnal extends Admin_Controller
         $db_key = '';
         $db_name = '';
 
+
         if ($jenis_transaksi == 'Invoicing') {
-            if ($id_company == '1' || $id_company == '4') {
+            if ($id_company == '4') {
                 $db_key = 'accounting_vuca';
                 $db_name = DBACC_VUCA;
-            } else if ($id_company == '7') {
+            } else if (in_array($id_company, ['1', '6', '7'])) {
                 $db_key = 'accounting_stm';
                 $db_name = DBACC_STM;
             } else {
