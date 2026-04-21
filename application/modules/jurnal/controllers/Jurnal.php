@@ -221,7 +221,7 @@ class Jurnal extends Admin_Controller
                     throw new Exception('Data Penerimaan PPH 23 tidak ditemukan');
                 }
 
-                $get_inv = $this->db->select('a.*, COALESCE(b.id_company, c.id_company) as id_company')
+                $get_inv = $this->db->select('a.*, COALESCE(b.id_company, c.company) as id_company')
                     ->from('tr_invoicing a')
                     ->join(DBCNL . '.kons_tr_spk_penawaran b', 'b.id_spk_penawaran = a.id_spk_penawaran', 'left')
                     ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -435,4 +435,3 @@ class Jurnal extends Admin_Controller
         ];
     }
 }
-
