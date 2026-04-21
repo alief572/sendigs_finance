@@ -29,62 +29,83 @@ class Jurnal_model extends BF_Model
     {
         $post = $this->input->post();
 
-        $draw = $post['draw'];
-        $length = $post['length'];
-        $start = $post['start'];
-        $search = $post['search'];
+        $draw   = isset($post['draw']) ? $post['draw'] : 0;
+        $length = isset($post['length']) ? $post['length'] : 10;
+        $start  = isset($post['start']) ? $post['start'] : 0;
+        $search = isset($post['search']) ? $post['search'] : ['value' => ''];
+        $order  = isset($post['order']) ? $post['order'] : [];
 
-        $this->db->select('a.id, a.no_jurnal, a.tgl_jurnal, a.coa, a.id_company, a.nm_company, a.nm_coa, a.debit, a.kredit, a.keterangan, a.sts, a.no_transaksi, a.jenis_transaksi');
+        // Define sortable columns mapping
+        $sort_columns = [
+            1 => 'a.no_transaksi',
+            2 => 'a.jenis_transaksi',
+            3 => 'a.tgl_jurnal',
+            4 => 'a.nm_company'
+        ];
+
+        // Base filter criteria
         $this->db->from('tr_jurnal a');
         $this->db->where('a.sts <>', '1');
-        // $this->db->where('a.id_company <>', '');
-        $this->db->where('a.jenis_transaksi <>', 'Invoicing');
-        $this->db->where('a.jenis_transaksi <>', 'Penerimaan Piutang');
-        if (!empty($search)) {
+        $this->db->where_not_in('a.jenis_transaksi', [
+            'Invoicing',
+            'Penerimaan Piutang',
+            'Expense Report Consultant',
+            'Refill Pettycash'
+        ]);
+        $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
+
+        // Calculate recordsTotal (Total before search)
+        $temp_db = clone $this->db;
+        $query_total = $temp_db->get();
+        $recordsTotal = $query_total->num_rows();
+
+        // Apply Search
+        if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.no_transaksi', $search['value'], 'both');
             $this->db->or_like('a.jenis_transaksi', $search['value'], 'both');
             $this->db->or_like('a.nm_company', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->group_by('a.no_transaksi');
-        $this->db->group_by('a.jenis_transaksi');
 
-        $db_clone = clone $this->db;
-        $count_all = $db_clone->count_all_results();
+        // Calculate recordsFiltered (Total after search)
+        $temp_db_filtered = clone $this->db;
+        $query_filtered = $temp_db_filtered->get();
+        $recordsFiltered = $query_filtered->num_rows();
 
-        $this->db->order_by('a.id', 'desc');
-        $this->db->limit($length, $start);
+        // Apply Ordering
+        if (!empty($order) && isset($sort_columns[$order[0]['column']])) {
+            $this->db->order_by($sort_columns[$order[0]['column']], $order[0]['dir']);
+        } else {
+            $this->db->order_by('a.id', 'desc');
+        }
 
+        // Apply Select and Limit
+        $this->db->select('a.id, a.no_jurnal, a.tgl_jurnal, a.coa, a.id_company, a.nm_company, a.nm_coa, a.debit, a.kredit, a.keterangan, a.sts, a.no_transaksi, a.jenis_transaksi');
+        if ($length != -1) {
+            $this->db->limit($length, $start);
+        }
         $get_data = $this->db->get()->result();
 
         $hasil = [];
-        $no = (0 + $start);
-
+        $no = $start;
         foreach ($get_data as $item) {
             $no++;
-
-            $btn_jurnal = '<button type="button" class="btn btn-sm btn-primary" onclick="add_jurnal(' . $item->id . ')" title="Posting Jurnal"><i class="fa fa-plus"></i></button>';
-
-            $action = $btn_jurnal;
-
             $hasil[] = [
-                'no' => $no,
-                'no_transaksi' => $item->no_transaksi,
+                'no'              => $no,
+                'no_transaksi'    => $item->no_transaksi,
                 'jenis_transaksi' => $item->jenis_transaksi,
-                'tanggal_jurnal' => date('d F Y', strtotime($item->tgl_jurnal)),
-                'company' => $item->nm_company,
-                'action' => $btn_jurnal
+                'tanggal_jurnal'  => date('d F Y', strtotime($item->tgl_jurnal)),
+                'company'         => $item->nm_company,
+                'action'          => '<button type="button" class="btn btn-sm btn-primary" onclick="add_jurnal(' . $item->id . ')" title="Posting Jurnal"><i class="fa fa-plus"></i></button>'
             ];
         }
 
-        $response = [
-            'draw' => intval($draw),
-            'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_all,
-            'data' => $hasil
-        ];
-
-        echo json_encode($response);
+        echo json_encode([
+            'draw'            => intval($draw),
+            'recordsTotal'    => intval($recordsTotal),
+            'recordsFiltered' => intval($recordsFiltered),
+            'data'            => $hasil
+        ]);
     }
 }
