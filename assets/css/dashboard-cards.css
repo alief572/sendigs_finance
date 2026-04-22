@@ -1,0 +1,529 @@
+/* ============================================================================
+   DASHBOARD STYLING FRAMEWORK
+   Modern, accessible, and performant CSS for approval cards
+   Last Updated: 2026-04-22
+   ============================================================================ */
+
+/* ============================================================================
+   1. CSS VARIABLES - Design System Foundation
+   ============================================================================ */
+
+:root {
+	/* ========================================================================
+	   1.1 COLOR VARIABLES - 10 Unique Colors for Approval Types
+	   Based on color psychology principles for visual differentiation
+	   ======================================================================== */
+
+	/* Red - Urgency/Finance (PR Dept Finance Approval) */
+	--color-primary-red: #E74C3C;
+	--color-primary-red-dark: #C0392B;
+
+	/* Crimson - Urgent/Management (PR Dept Management Approval) */
+	--color-primary-crimson: #DC143C;
+	--color-primary-crimson-dark: #B22222;
+
+	/* Amber - Warning/Stock (Approval PR Stock) */
+	--color-primary-amber: #FFA500;
+	--color-primary-amber-dark: #FF8C00;
+
+	/* Emerald - Success/Asset (Approval PR Asset) */
+	--color-primary-emerald: #50C878;
+	--color-primary-emerald-dark: #2E8B57;
+
+	/* Sky Blue - Info/Transport (Approval Transport) */
+	--color-primary-sky-blue: #00BFFF;
+	--color-primary-sky-blue-dark: #0099CC;
+
+	/* Violet - Special/Finance (Kasbon Finance Approval) */
+	--color-primary-violet: #9370DB;
+	--color-primary-violet-dark: #6A5ACD;
+
+	/* Orchid - Special/Management (Kasbon Management Approval) */
+	--color-primary-orchid: #DA70D6;
+	--color-primary-orchid-dark: #BA55D3;
+
+	/* Teal - Info/Expense Finance (Expense Finance Approval) */
+	--color-primary-teal: #20B2AA;
+	--color-primary-teal-dark: #008B8B;
+
+	/* Cyan - Info/Expense Management (Expense Management Approval) */
+	--color-primary-cyan: #00CED1;
+	--color-primary-cyan-dark: #00BFFF;
+
+	/* Slate - Neutral/Periodic (Approval Pengajuan Periodik) */
+	--color-primary-slate: #708090;
+	--color-primary-slate-dark: #2F4F4F;
+
+	/* ========================================================================
+	   1.2 TYPOGRAPHY VARIABLES
+	   Font family, sizes, and weights for consistent text styling
+	   ======================================================================== */
+
+	/* Font Family - System font stack for optimal performance and compatibility */
+	--font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+	/* Font Sizes - Desktop (base sizes) */
+	--font-size-title-desktop: 18px;
+	--font-size-number-desktop: 36px;
+	--font-size-subtitle-desktop: 14px;
+
+	/* Font Sizes - Tablet (responsive adjustments) */
+	--font-size-title-tablet: 17px;
+	--font-size-number-tablet: 34px;
+	--font-size-subtitle-tablet: 13px;
+
+	/* Font Sizes - Mobile (responsive adjustments) */
+	--font-size-title-mobile: 16px;
+	--font-size-number-mobile: 32px;
+	--font-size-subtitle-mobile: 12px;
+
+	/* Font Weights - Semantic weight values */
+	--font-weight-regular: 400;
+	--font-weight-title: 600;
+	/* Semi-bold for card titles */
+	--font-weight-number: 700;
+	/* Bold for card numbers */
+
+	/* Line Heights - For optimal readability */
+	--line-height-title: 1.4;
+	--line-height-number: 1.2;
+	--line-height-subtitle: 1.5;
+
+	/* ========================================================================
+	   1.3 SPACING VARIABLES
+	   Consistent spacing scale for padding, margins, and gaps
+	   ======================================================================== */
+
+	--spacing-xs: 4px;
+	/* Extra small - minimal spacing */
+	--spacing-sm: 8px;
+	/* Small - compact spacing */
+	--spacing-md: 16px;
+	/* Medium - standard spacing */
+	--spacing-lg: 20px;
+	/* Large - comfortable spacing */
+	--spacing-xl: 24px;
+	/* Extra large - generous spacing */
+	--spacing-2xl: 32px;
+	/* 2X Large - maximum spacing */
+
+	/* ========================================================================
+	   1.4 SHADOW VARIABLES
+	   Elevation levels for depth and visual hierarchy
+	   ======================================================================== */
+
+	/* Small shadow - subtle depth for base state */
+	--shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+	/* Medium shadow - moderate depth for interactive elements */
+	--shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+
+	/* Large shadow - significant depth for elevated elements */
+	--shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.2);
+
+	/* Hover shadow - enhanced depth for hover state */
+	--shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.25);
+
+	/* ========================================================================
+	   1.5 BORDER RADIUS VARIABLES
+	   Consistent corner rounding for modern appearance
+	   ======================================================================== */
+
+	--border-radius-sm: 4px;
+	/* Subtle rounding */
+	--border-radius-md: 8px;
+	/* Standard rounding */
+	--border-radius-lg: 12px;
+	/* Generous rounding */
+
+	/* ========================================================================
+	   1.6 TRANSITION VARIABLES
+	   Animation timing for smooth interactions
+	   ======================================================================== */
+
+	--transition-fast: 200ms ease-in-out;
+	/* Quick feedback */
+	--transition-normal: 300ms ease-in-out;
+	/* Standard animation */
+	--transition-slow: 500ms ease-in-out;
+	/* Deliberate animation */
+
+	/* ========================================================================
+	   1.7 TEXT COLOR VARIABLES
+	   Semantic color values for text and overlays
+	   ======================================================================== */
+
+	--text-white-primary: rgba(255, 255, 255, 1);
+	--text-white-secondary: rgba(255, 255, 255, 0.95);
+	--text-white-tertiary: rgba(255, 255, 255, 0.8);
+
+	/* ========================================================================
+	   1.8 BORDER VARIABLES
+	   Subtle borders for definition and separation
+	   ======================================================================== */
+
+	--border-subtle: 1px solid rgba(255, 255, 255, 0.1);
+	--border-focus: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================================
+   2. BASE STYLES - Foundation for all elements
+   ============================================================================ */
+
+/* Reset and normalize card styling */
+.card {
+	/* Layout Properties */
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+
+	/* Sizing */
+	min-height: 140px;
+
+	/* Spacing */
+	padding: var(--spacing-lg);
+	margin-bottom: var(--spacing-lg);
+
+	/* Appearance */
+	border: var(--border-subtle);
+	border-radius: var(--border-radius-md);
+	box-shadow: var(--shadow-sm);
+
+	/* Typography */
+	font-family: var(--font-family-base);
+	color: var(--text-white-primary);
+	text-decoration: none;
+
+	/* Transitions - smooth animation for all state changes */
+	transition: all var(--transition-normal);
+
+	/* Performance - GPU acceleration for smooth transforms */
+	will-change: transform, box-shadow;
+	transform: translateZ(0);
+	backface-visibility: hidden;
+	perspective: 1000px;
+}
+
+/* ============================================================================
+   3. TYPOGRAPHY STYLES - Text styling for card content
+   ============================================================================ */
+
+/* Card Title - Approval type name */
+.card-title {
+	/* Typography */
+	font-size: var(--font-size-title-desktop);
+	font-weight: var(--font-weight-title);
+	line-height: var(--line-height-title);
+
+	/* Spacing */
+	margin: 0 0 var(--spacing-md) 0;
+
+	/* Appearance */
+	color: var(--text-white-secondary);
+
+	/* Transitions */
+	transition: color var(--transition-normal);
+}
+
+/* Card Number - Approval count display */
+.card h2 {
+	/* Typography */
+	font-size: var(--font-size-number-desktop);
+	font-weight: var(--font-weight-number);
+	line-height: var(--line-height-number);
+
+	/* Spacing */
+	margin: 0;
+
+	/* Appearance */
+	color: var(--text-white-primary);
+
+	/* Transitions */
+	transition: color var(--transition-normal);
+}
+
+/* ============================================================================
+   4. COLOR CLASSES - 10 Unique colors with gradients
+   Each color represents a specific approval type for visual differentiation
+   ============================================================================ */
+
+/* Red - PR Dept Finance Approval (Urgent/Finance) */
+.bg-red {
+	background-color: var(--color-primary-red);
+	background: linear-gradient(135deg, var(--color-primary-red) 0%, var(--color-primary-red-dark) 100%);
+}
+
+/* Crimson - PR Dept Management Approval (Urgent/Management) */
+.bg-crimson {
+	background-color: var(--color-primary-crimson);
+	background: linear-gradient(135deg, var(--color-primary-crimson) 0%, var(--color-primary-crimson-dark) 100%);
+}
+
+/* Amber - Approval PR Stock (Warning/Stock) */
+.bg-amber {
+	background-color: var(--color-primary-amber);
+	background: linear-gradient(135deg, var(--color-primary-amber) 0%, var(--color-primary-amber-dark) 100%);
+}
+
+/* Emerald - Approval PR Asset (Success/Asset) */
+.bg-emerald {
+	background-color: var(--color-primary-emerald);
+	background: linear-gradient(135deg, var(--color-primary-emerald) 0%, var(--color-primary-emerald-dark) 100%);
+}
+
+/* Sky Blue - Approval Transport (Info/Transport) */
+.bg-sky-blue {
+	background-color: var(--color-primary-sky-blue);
+	background: linear-gradient(135deg, var(--color-primary-sky-blue) 0%, var(--color-primary-sky-blue-dark) 100%);
+}
+
+/* Violet - Kasbon Finance Approval (Special/Finance) */
+.bg-violet {
+	background-color: var(--color-primary-violet);
+	background: linear-gradient(135deg, var(--color-primary-violet) 0%, var(--color-primary-violet-dark) 100%);
+}
+
+/* Orchid - Kasbon Management Approval (Special/Management) */
+.bg-orchid {
+	background-color: var(--color-primary-orchid);
+	background: linear-gradient(135deg, var(--color-primary-orchid) 0%, var(--color-primary-orchid-dark) 100%);
+}
+
+/* Teal - Expense Finance Approval (Info/Expense Finance) */
+.bg-teal {
+	background-color: var(--color-primary-teal);
+	background: linear-gradient(135deg, var(--color-primary-teal) 0%, var(--color-primary-teal-dark) 100%);
+}
+
+/* Cyan - Expense Management Approval (Info/Expense Management) */
+.bg-cyan {
+	background-color: var(--color-primary-cyan);
+	background: linear-gradient(135deg, var(--color-primary-cyan) 0%, var(--color-primary-cyan-dark) 100%);
+}
+
+/* Slate - Approval Pengajuan Periodik (Neutral/Periodic) */
+.bg-slate {
+	background-color: var(--color-primary-slate);
+	background: linear-gradient(135deg, var(--color-primary-slate) 0%, var(--color-primary-slate-dark) 100%);
+}
+
+/* ============================================================================
+   5. HOVER STATE - Interactive feedback for mouse users
+   ============================================================================ */
+
+.card:hover {
+	/* Transform - subtle scale and lift effect */
+	transform: scale(1.02) translateY(-2px);
+
+	/* Shadow - enhanced depth on hover */
+	box-shadow: var(--shadow-lg);
+
+	/* Cursor - indicate clickable element */
+	cursor: pointer;
+}
+
+/* ============================================================================
+   6. ACTIVE STATE - Feedback for click/press
+   ============================================================================ */
+
+.card:active {
+	/* Transform - pressed effect */
+	transform: scale(0.98);
+
+	/* Shadow - reduced depth on press */
+	box-shadow: var(--shadow-sm);
+}
+
+/* ============================================================================
+   7. FOCUS STATE - Keyboard navigation and accessibility
+   ============================================================================ */
+
+.card:focus {
+	/* Outline - visible focus indicator for keyboard users */
+	outline: var(--border-focus);
+	outline-offset: 2px;
+
+	/* Shadow - enhanced visibility */
+	box-shadow: var(--shadow-lg);
+}
+
+/* Focus-visible - modern focus indicator for keyboard navigation only */
+.card:focus-visible {
+	outline: var(--border-focus);
+	outline-offset: 2px;
+	box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================================
+   8. RESPONSIVE LAYOUT - Desktop, Tablet, Mobile
+   ============================================================================ */
+
+/* Desktop Layout (≥1200px) - 3 columns */
+@media (min-width: 1200px) {
+	.row {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: var(--spacing-md);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.col-md-4 {
+		width: 100%;
+	}
+
+	.card {
+		min-height: 140px;
+	}
+
+	.card-title {
+		font-size: var(--font-size-title-desktop);
+	}
+
+	.card h2 {
+		font-size: var(--font-size-number-desktop);
+	}
+}
+
+/* Tablet Layout (768px - 1199px) - 2 columns */
+@media (min-width: 768px) and (max-width: 1199px) {
+	.row {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: var(--spacing-md);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.col-md-4 {
+		width: 100%;
+	}
+
+	.card {
+		min-height: 135px;
+	}
+
+	.card-title {
+		font-size: var(--font-size-title-tablet);
+	}
+
+	.card h2 {
+		font-size: var(--font-size-number-tablet);
+	}
+}
+
+/* Mobile Layout (<768px) - 1 column */
+@media (max-width: 767px) {
+	.row {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: var(--spacing-sm);
+		margin-bottom: var(--spacing-md);
+	}
+
+	.col-md-4 {
+		width: 100%;
+	}
+
+	.card {
+		min-height: 120px;
+		padding: var(--spacing-md);
+	}
+
+	.card-title {
+		font-size: var(--font-size-title-mobile);
+		margin-bottom: var(--spacing-sm);
+	}
+
+	.card h2 {
+		font-size: var(--font-size-number-mobile);
+	}
+}
+
+/* ============================================================================
+   9. GRID LAYOUT FIX - Remove gaps from hidden cards
+   ============================================================================ */
+
+/* Remove pseudo-elements that cause gaps */
+.row::before,
+.row::after {
+	display: none !important;
+	content: none !important;
+}
+
+/* Ensure grid fills available space without gaps */
+.row {
+	width: 100%;
+}
+
+/* Remove margin-bottom from last card in row */
+.col-md-4:last-child .card {
+	margin-bottom: 0;
+}
+
+/* Ensure cards fill their grid cells */
+.col-md-4 {
+	display: flex;
+	flex-direction: column;
+}
+
+.col-md-4 a {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.col-md-4 .card {
+	flex: 1;
+}
+
+/* ============================================================================
+   10. ACCESSIBILITY FEATURES
+   ============================================================================ */
+
+/* High Contrast Mode Support - enhanced visibility for users with contrast preferences */
+@media (prefers-contrast: more) {
+	.card {
+		border: 2px solid rgba(255, 255, 255, 0.3);
+	}
+
+	.card-title {
+		font-weight: var(--font-weight-number);
+	}
+}
+
+/* Reduced Motion Support - respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+	.card {
+		transition: none;
+	}
+
+	.card:hover {
+		transform: none;
+	}
+
+	.card:active {
+		transform: none;
+	}
+}
+
+/* ============================================================================
+   11. PERFORMANCE OPTIMIZATIONS
+   GPU acceleration and efficient rendering
+   ============================================================================ */
+
+/* Link wrapper - ensure proper stacking context */
+a {
+	text-decoration: none;
+	color: inherit;
+}
+
+/* Prevent text selection on cards for better UX */
+.card {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+/* ============================================================================
+   END OF DASHBOARD STYLING FRAMEWORK
+   ============================================================================ */
