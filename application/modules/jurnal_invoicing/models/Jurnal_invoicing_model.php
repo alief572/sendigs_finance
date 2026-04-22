@@ -190,15 +190,25 @@ class Jurnal_invoicing_model extends BF_Model
         $start  = isset($post['start']) ? $post['start'] : 0;
         $search = isset($post['search']) ? $post['search']['value'] : '';
 
+        $klien = isset($post['klien']) ? $post['klien'] : '';
+        $no_invoice = isset($post['no_invoice']) ? $post['no_invoice'] : '';
+        $company = isset($post['company']) ? $post['company'] : '';
+
+        $filter = [
+            'b.id_customer' => $klien,
+            'b.no_invoice' => $no_invoice,
+            'a.id_company' => $company
+        ];
+
         // 1. Hitung Total Record (Tanpa Filter Search)
-        $this->base_query_jurnal();
+        $this->base_query_jurnal($filter);
         $this->db->group_by('a.no_transaksi');
         $sub_query_all = $this->db->get_compiled_select();
         $count_all_res = $this->db->query("SELECT COUNT(*) as total FROM ($sub_query_all) as temp")->row();
         $count_all     = $count_all_res ? (int)$count_all_res->total : 0;
 
         // 2. Hitung Filtered Record (Dengan Filter Search)
-        $this->base_query_jurnal();
+        $this->base_query_jurnal($filter);
         if (!empty($search)) {
             $this->apply_search_jurnal($search);
         }
@@ -208,7 +218,7 @@ class Jurnal_invoicing_model extends BF_Model
         $count_filtered     = $count_filter_res ? (int)$count_filter_res->total : 0;
 
         // 3. Ambil Data Aktual
-        $this->base_query_jurnal();
+        $this->base_query_jurnal($filter);
         if (!empty($search)) {
             $this->apply_search_jurnal($search);
         }
@@ -259,7 +269,7 @@ class Jurnal_invoicing_model extends BF_Model
     /**
      * Base Query untuk menghindari penulisan ulang JOIN dan WHERE dasar
      */
-    private function base_query_jurnal()
+    private function base_query_jurnal($filter)
     {
         $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, 
                       b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, 
@@ -270,10 +280,18 @@ class Jurnal_invoicing_model extends BF_Model
             ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left')
-            ->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left')
+            ->join('hris_divisions e', 'e.id = c.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Invoicing')
             ->where_in('a.sts', ['', '0'])
             ->where('(a.debit > 0 OR a.kredit > 0)'); // Pindahan dari HAVING
+
+        if (!empty($filter)) {
+            foreach ($filter as $key => $value) {
+                if ($value !== '') {
+                    $this->db->where($key, $value);
+                }
+            }
+        }
     }
 
     /**
@@ -304,5 +322,50 @@ class Jurnal_invoicing_model extends BF_Model
             }
         }
         $this->db->group_end();
+    }
+
+    public function get_cust_jurnal()
+    {
+        $get_cust_jurnal = $this->db->select('a.id_customer, a.nm_customer')
+            ->from('tr_invoicing a')
+            ->join('tr_jurnal b', 'b.no_transaksi = a.id')
+            ->where('b.jenis_transaksi', 'Invoicing')
+            ->where('b.sts <>', '1')
+            ->group_by('a.id_customer')
+            ->order_by('a.nm_customer', 'asc')
+            ->get()
+            ->result_array();
+
+        return $get_cust_jurnal;
+    }
+
+    public function get_no_invoice_jurnal()
+    {
+        $get_no_invoice_jurnal = $this->db->select('a.no_invoice, a.created_date')
+            ->from('tr_invoicing a')
+            ->join('tr_jurnal b', 'b.no_transaksi = a.id AND b.jenis_transaksi = "Invoicing"')
+            ->where('b.sts <>', '1')
+            ->where('b.jenis_transaksi', 'Invoicing')
+            ->group_by('a.no_invoice')
+            ->order_by('a.created_date', 'desc')
+            ->get()
+            ->result_array();
+
+        return $get_no_invoice_jurnal;
+    }
+
+    public function get_company_jurnal()
+    {
+        $get_company_jurnal = $this->db->select('a.id_company, a.nm_company')
+            ->from('tr_jurnal a')
+            ->where('a.sts <>', '1')
+            ->where('a.id_company <>', '')
+            ->where('a.nm_company <>', '')
+            ->where('a.jenis_transaksi', 'Invoicing')
+            ->group_by('a.id_company')
+            ->get()
+            ->result_array();
+
+        return $get_company_jurnal;
     }
 }
