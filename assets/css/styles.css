@@ -43,3 +43,23 @@
     border-radius: 20px;
     box-shadow: 1px 3px 12px 1px #6e6e6e;
 }
+
+/* Letakkan ini di file CSS global lu */
+.swal2-popup {
+    font-size: 1.2rem !important; /* Menaikkan skala font secara global */
+    width: 500px !important;      /* Set lebar default yang lebih lega */
+    padding: 2rem !important;     /* Kasih ruang napas di dalam modal */
+}
+
+/* Biar icon-nya juga ikut membesar proporsional */
+.swal2-icon {
+    transform: scale(1.6);
+    margin-top: 20px !important;
+    margin-bottom: 10px !important;
+}
+
+/* Memperbesar tombol konfirmasi & cancel */
+.swal2-actions button {
+    font-size: 1.1em !important;
+    padding: 10px 25px !important;
+}
