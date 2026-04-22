@@ -39,7 +39,7 @@ class Jurnal_penerimaan_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi');
+        $this->db->join('hris_divisions e', 'e.id = c.id_divisi');
         $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $this->db->where('a.sts <>', '1');
         $this->db->group_start();
@@ -70,6 +70,7 @@ class Jurnal_penerimaan_model extends BF_Model
         $db_clone = clone $this->db;
         $count_filtered = $db_clone->count_all_results();
 
+        $this->db->order_by('a.created_date', 'desc');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result();
