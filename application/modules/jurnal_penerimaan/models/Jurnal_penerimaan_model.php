@@ -37,8 +37,18 @@ class Jurnal_penerimaan_model extends BF_Model
         $start   = $post['start'];
         $search  = $post['search']['value'];
 
+        $klien = $post['klien'];
+        $no_invoice = $post['no_invoice'];
+        $company = $post['company'];
+
+        $filter = [
+            'b.id_customer' => $klien,
+            'b.no_invoice' => $no_invoice,
+            'd.id' => $company
+        ];
+
         // 1. Build base query
-        $this->_query_jurnal();
+        $this->_query_jurnal($filter);
 
         // 2. Count Total Records (before search)
         $totalData = $this->db->count_all_results('', FALSE);
@@ -107,7 +117,7 @@ class Jurnal_penerimaan_model extends BF_Model
         ]);
     }
 
-    private function _query_jurnal()
+    private function _query_jurnal($filter = null)
     {
         $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
         $this->db->from('tr_jurnal a');
@@ -117,6 +127,15 @@ class Jurnal_penerimaan_model extends BF_Model
         $this->db->join('hris_divisions e', 'e.id = c.id_divisi', 'left');
         $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $this->db->where('a.sts <>', '1');
+
+        if (!empty($filter)) {
+            foreach ($filter as $key => $value) {
+                if ($value !== '') {
+                    $this->db->where($key, $value);
+                }
+            }
+        }
+
         $this->db->group_start()
             ->where('a.debit >', 0)
             ->or_where('a.kredit >', 0)
@@ -184,7 +203,7 @@ class Jurnal_penerimaan_model extends BF_Model
     {
         $get_no_invoice_jurnal = $this->db->select('a.no_invoice, a.created_date')
             ->from('tr_invoicing a')
-            ->join('tr_jurnal b', 'b.no_transaksi = a.id AND b.jenis_transaksi = "Penerimaan Piutang"')
+            ->join('tr_jurnal b', 'b.no_transaksi = a.id')
             ->where('b.sts <>', '1')
             ->where('b.jenis_transaksi', 'Penerimaan Piutang')
             ->group_by('a.no_invoice')
