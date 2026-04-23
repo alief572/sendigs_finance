@@ -53,10 +53,10 @@ class Jurnal_penerimaan_model extends BF_Model
         $this->_query_jurnal($filter);
 
         // 2. Count Total Records (before search)
-        $totalData = $this->db->count_all_results('', FALSE);
+        $totalData = $this->db->count_all_results('', false);
         // Since we use GROUP_BY, CI's count_all_results can be unreliable. 
         // Using subquery for accurate count of groups
-        $sql_total = $this->db->get_compiled_select('', FALSE);
+        $sql_total = $this->db->get_compiled_select('', false);
         $totalData = $this->db->query("SELECT COUNT(*) AS num FROM ($sql_total) AS temp")->row()->num;
 
         // 3. Apply Search
