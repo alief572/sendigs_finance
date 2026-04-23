@@ -273,7 +273,7 @@ class Jurnal_invoicing_model extends BF_Model
     {
         $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, 
                       b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, 
-                      a.nm_company, e.name as nm_divisi';
+                      d.nm_company, e.name as nm_divisi';
 
         $this->db->select($select_fields)
             ->from('tr_jurnal a')
@@ -282,6 +282,8 @@ class Jurnal_invoicing_model extends BF_Model
             ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left')
             ->join('hris_divisions e', 'e.id = c.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Invoicing')
+            ->where('b.no_invoice <>', '')
+            ->where('d.nm_company <>', '')
             ->where_in('a.sts', ['', '0'])
             ->where('(a.debit > 0 OR a.kredit > 0)'); // Pindahan dari HAVING
 
