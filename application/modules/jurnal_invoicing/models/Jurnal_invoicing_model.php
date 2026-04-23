@@ -39,8 +39,9 @@ class Jurnal_invoicing_model extends BF_Model
             'jenis_transaksi' => $get_jurnal->jenis_transaksi,
         ])->result();
         $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+        $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
+        $id_company    = (!empty($get_penawaran->company)) ? $get_penawaran->company : '';
 
-        $id_company = $get_jurnal->id_company;
         $Nomor_JV   = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
         $Bln        = substr($get_jurnal->tgl_jurnal, 5, 2);
         $Thn        = substr($get_jurnal->tgl_jurnal, 0, 4);
