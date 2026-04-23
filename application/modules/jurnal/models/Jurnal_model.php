@@ -50,7 +50,9 @@ class Jurnal_model extends BF_Model
             'Invoicing',
             'Penerimaan Piutang',
             'Expense Report Consultant',
-            'Refill Pettycash'
+            'Refill Pettycash',
+            'Payment',
+            'Transport'
         ]);
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
 

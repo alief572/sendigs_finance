@@ -250,6 +250,5 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
             pageLength: 10
         });
     }
-
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>

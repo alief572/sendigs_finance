@@ -18,6 +18,7 @@ class Jurnal_invoicing_model extends BF_Model
     protected $accounting_vuca;
     protected $accounting_sustain;
     protected $accounting_stm;
+    protected $consultant;
 
     public function __construct()
     {
@@ -25,6 +26,7 @@ class Jurnal_invoicing_model extends BF_Model
         $this->accounting_vuca = $this->load->database('accounting_vuca', true);
         $this->accounting_sustain = $this->load->database('accounting_sustain', true);
         $this->accounting_stm = $this->load->database('accounting_stm', true);
+        $this->consultant = $this->load->database('consultant', true);
     }
 
     public function save_posting_jurnal()
@@ -328,13 +330,10 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function get_cust_jurnal()
     {
-        $get_cust_jurnal = $this->db->select('a.id_customer, a.nm_customer')
-            ->from('tr_invoicing a')
-            ->join('tr_jurnal b', 'b.no_transaksi = a.id')
-            ->where('b.jenis_transaksi', 'Invoicing')
-            ->where('b.sts <>', '1')
-            ->group_by('a.id_customer')
-            ->order_by('a.nm_customer', 'asc')
+        $get_cust_jurnal = $this->consultant->select('a.id_customer, a.nm_customer')
+            ->from('customer a')
+            ->where('a.sts_aktif', 'Y')
+            ->where('a.deleted', 'N')
             ->get()
             ->result_array();
 
@@ -358,13 +357,8 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function get_company_jurnal()
     {
-        $get_company_jurnal = $this->db->select('a.id_company, a.nm_company')
-            ->from('tr_jurnal a')
-            ->where('a.sts <>', '1')
-            ->where('a.id_company <>', '')
-            ->where('a.nm_company <>', '')
-            ->where('a.jenis_transaksi', 'Invoicing')
-            ->group_by('a.id_company')
+        $get_company_jurnal = $this->consultant->select('a.id as id_company, a.nm_company')
+            ->from('kons_tr_company a')
             ->get()
             ->result_array();
 

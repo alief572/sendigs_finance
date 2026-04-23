@@ -44,8 +44,6 @@ header("Content-Disposition: attachment; filename=Jurnal Penerimaan.xls");
                 <td><?= $item_jurnal->nm_project ?></td>
                 <td><?= $item_jurnal->nm_company ?></td>
                 <td><?= $item_jurnal->nm_divisi ?></td>
-                <td><?= $item_jurnal->coa ?></td>
-                <td><?= $item_jurnal->nm_coa ?></td>
                 <td><?= $item_jurnal->no_invoice ?></td>
                 <td style="text-align: cemter;"><?= $nilai ?></td>
                 <td><?= $status ?></td>
