@@ -21,9 +21,53 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
     <div class="box-header">
-        <button type="button" class="btn btn-sm btn-success download_excel">
-            <i class="fa fa-download"></i> Excel
-        </button>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="">Klien</label>
+                <select class="form-control form-control-sm select2" name="klien">
+                    <option value="">- Pilih Klien -</option>
+                    <?php
+                    foreach ($list_customer as $item) :
+                        echo '<option value="' . $item['id_customer'] . '">' . $item['nm_customer'] . '</option>';
+                    endforeach;
+                    ?>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="">No. Invoice</label>
+                <select class="form-control form-control-sm select2" name="no_invoice">
+                    <option value="">- Pilih No. Invoice -</option>
+                    <?php
+                    foreach ($list_no_invoice as $item) :
+                        echo '<option value="' . $item['no_invoice'] . '">' . $item['no_invoice'] . '</option>';
+                    endforeach;
+                    ?>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="">Company</label>
+                <select class="form-control form-control-sm select2" name="company">
+                    <option value="">- Pilih Company -</option>
+                    <?php
+                    foreach ($list_company as $item) {
+                        echo '<option value="' . $item['id_company'] . '">' . $item['nm_company'] . '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <br>
+            <button type="button" class="btn btn-sm btn-primary" onclick="search_jurnal();"><i class="fa fa-search"></i> Search</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="reset_search_jurnal();"><i class="fa fa-refresh"></i> Reset</button>
+            <button type="button" class="btn btn-sm btn-success download_excel">
+                <i class="fa fa-download"></i> Excel
+            </button>
+        </div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -263,23 +307,20 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
     }
 
     function DataTables() {
-        // var dataTables = $('#table_penawaran').dataTable();
-        // dataTables.destroy();
-
-        var dataTables = $('#table_penawaran').dataTable({
+        $('#table_penawaran').DataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_data_jurnal_invoicing',
-                type: "POST",
-                dataType: "JSON",
-                data: function(d) {
-
-                }
+                type: "POST"
             },
             columns: [{
-                    data: 'no'
+                    data: 'no',
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center'
                 },
                 {
-                    data: 'tgl'
+                    data: 'tgl',
+                    className: 'text-center'
                 },
                 {
                     data: 'klien'
@@ -309,7 +350,10 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
                     data: 'original'
                 },
                 {
-                    data: 'action'
+                    data: 'action',
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center'
                 }
             ],
             responsive: true,
@@ -317,7 +361,8 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
             serverSide: true,
             stateSave: true,
             destroy: true,
-            paging: true
+            paging: true,
+            searchDelay: 500
         });
     }
 </script>

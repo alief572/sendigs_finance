@@ -29,6 +29,18 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function index()
     {
+
+        $get_cust_jurnal = $this->Jurnal_invoicing_model->get_cust_jurnal();
+        $get_no_invoice_jurnal = $this->Jurnal_invoicing_model->get_no_invoice_jurnal();
+        $get_company_jurnal = $this->Jurnal_invoicing_model->get_company_jurnal();
+
+        $data = [
+            'list_customer' => $get_cust_jurnal,
+            'list_no_invoice' => $get_no_invoice_jurnal,
+            'list_company' => $get_company_jurnal
+        ];
+
+        $this->template->set($data);
         $this->template->title('Jurnal Invoicing');
         $this->template->render('index');
     }
@@ -180,6 +192,10 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function download_excel()
     {
+        $klien = $this->input->get('klien');
+        $no_invoice = $this->input->get('no_invoice');
+        $company = $this->input->get('company');
+
         $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, a.nm_company, e.name as nm_divisi');
         $this->db->from('tr_jurnal a');
         $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
@@ -191,6 +207,19 @@ class Jurnal_Invoicing extends Admin_Controller
         $this->db->where('a.debit >', 0);
         $this->db->or_where('a.kredit >', 0);
         $this->db->group_end();
+
+        if (!empty($klien)) {
+            $this->db->where('b.id_customer', $klien);
+        }
+
+        if (!empty($no_invoice)) {
+            $this->db->where('b.no_invoice', $no_invoice);
+        }
+
+        if (!empty($company)) {
+            $this->db->where('a.id_company', $company);
+        }
+
         $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
 
         $get_data_jurnal = $this->db->get()->result();

@@ -35,6 +35,17 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function index()
 	{
+		$get_cust_jurnal = $this->Jurnal_penerimaan_model->get_cust_jurnal();
+		$get_no_invoice_jurnal = $this->Jurnal_penerimaan_model->get_no_invoice_jurnal();
+		$get_company_jurnal = $this->Jurnal_penerimaan_model->get_company_jurnal();
+
+		$data = [
+			'list_customer' => $get_cust_jurnal,
+			'list_no_invoice' => $get_no_invoice_jurnal,
+			'list_company' => $get_company_jurnal
+		];
+
+		$this->template->set($data);
 		$this->template->title('Jurnal Penerimaan');
 		$this->template->render('index');
 	}
@@ -277,8 +288,16 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->db->join('tr_invoicing b', 'b.id = a.no_transaksi');
 		$this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran');
 		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company');
-		$this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi');
+		$this->db->join('hris_divisions e', 'e.id = c.id_divisi');
 		$this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
+		$this->db->where('a.sts <>', '1');
+		$this->db->group_start();
+		$this->db->where('a.debit >', 0);
+		$this->db->or_where('a.kredit >', 0);
+		$this->db->group_end();
+
+		$this->db->group_by('a.no_transaksi');
+		$this->db->order_by('a.created_date', 'desc');
 		// $this->db->group_start();
 		// $this->db->where('a.debit >', 0);
 		// $this->db->or_where('a.kredit >', 0);
