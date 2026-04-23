@@ -6,6 +6,7 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
 ?>
 <!-- <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>"> -->
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <style>
     .btn {
@@ -123,11 +124,13 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
         DataTables();
         autoNum();
+        select2();
     });
 
     $(document).on('click', '.posting_jurnal', function() {
@@ -222,7 +225,11 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
     });
 
     $(document).on('click', '.download_excel', function() {
-        window.open(siteurl + active_controller + 'download_excel', '_blank');
+        var klien = $('select[name="klien"]').val();
+        var no_invoice = $('select[name="no_invoice"]').val();
+        var company = $('select[name="company"]').val();
+
+        window.open(siteurl + active_controller + 'download_excel?klien=' + klien + '&no_invoice=' + no_invoice + '&company=' + company, '_blank');
     })
 
     function revisi_jurnal() {
@@ -306,11 +313,16 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
         $('.autonum').autoNumeric('init');
     }
 
-    function DataTables() {
+    function DataTables(klien = null, no_invoice = null, company = null) {
         $('#table_penawaran').DataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_data_jurnal_invoicing',
-                type: "POST"
+                type: "POST",
+                data: function(d) {
+                    d.klien = klien
+                    d.no_invoice = no_invoice
+                    d.company = company
+                }
             },
             columns: [{
                     data: 'no',
@@ -364,6 +376,28 @@ $ENABLE_DELETE  = has_permission('Jurnal_Penerimaan.Delete');
             paging: true,
             searchDelay: 500
         });
+    }
+
+    function select2() {
+        $('.select2').select2({
+            width: '100%'
+        });
+    }
+
+    function search_jurnal() {
+        var klien = $('select[name="klien"]').val();
+        var no_invoice = $('select[name="no_invoice"]').val();
+        var company = $('select[name="company"]').val();
+
+        DataTables(klien, no_invoice, company);
+    }
+
+    function reset_search_jurnal() {
+        var klien = $('select[name="klien"]').val('').trigger('change');
+        var no_invoice = $('select[name="no_invoice"]').val('').trigger('change');
+        var company = $('select[name="company"]').val('').trigger('change');
+
+        DataTables();
     }
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
