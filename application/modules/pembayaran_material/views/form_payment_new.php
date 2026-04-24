@@ -485,45 +485,7 @@ foreach ($results['result_payment'] as $item) {
 				</table>
 			</div>
 		</div>
-		<!-- <div class="box-footer">
-		<input type="hidden" name="total" id="total" value="<?= round($total); ?>" />
-		<input type="hidden" name="id_supplier" id="id_supplier" value="<?= (isset($data) ? $data->id_supplier : $id_supplier); ?>" />
-		<input type="hidden" name="curs_header" id="curs_header" value="<?= (isset($data) ? $data->curs_header : $curs_header); ?>" />
-		<input type="hidden" name="modul" id="modul" value="<?= (isset($data) ? $data->modul : 'PO'); ?>" />
-		<div class="row">
-			<div class="col-md-6">
-				<label class="control-label">Bank</label>
-				<?php
-				echo form_dropdown('bank_coa', $datacoa, (isset($data) ? $data->bank_coa : ''), array('id' => 'bank_coa', 'class' => 'form-control select2', 'required' => 'required'));
-				?>
-				<label class="control-label">Nilai Bank</label>
-				<input type="text" class="form-control divide" id="nilai_bayar_bank" name="nilai_bayar_bank" value="<?php echo (isset($data) ? $data->nilai_bayar_bank : $total); ?>" placeholder=0 onblur="cek_kurs()" required>
-				<label class="control-label">Kurs Bank</label>
-				<input type="text" class="form-control divide" id="curs" name="curs" value="<?php echo (isset($data) ? $data->curs : 1); ?>" onblur="cek_kurs()">
-				<label class="control-label">Nilai Bank Rupiah</label>
-				<input type="text" class="form-control divide" id="bank_nilai" name="bank_nilai" value="<?php echo (isset($data) ? $data->bank_nilai : 0); ?>" placeholder=0 required tabindex="-1">
-			</div>
-			<div class="col-md-6">
-				<label class="control-label">Bank Admin</label>
-				<?php
-				echo form_dropdown('bank_coa_admin', $datacoa, (isset($data) ? $data->bank_coa_admin : ''), array('id' => 'bank_coa_admin', 'class' => 'form-control select2', 'required' => 'required'));
-				?>
-				<label class="control-label">Biaya Admin Bank</label>
-				<input type="text" class="form-control divide" id="biaya_admin_forex" name="biaya_admin_forex" value="<?php echo (isset($data) ? $data->biaya_admin_forex : 0); ?>" placeholder=0 onblur="cek_kurs_admin('')">
-				<label class="control-label">Kurs Admin 1</label>
-				<input type="text" class="form-control divide" id="curs_admin" name="curs_admin" value="<?php echo (isset($data) ? $data->curs_admin : 1); ?>" onblur="cek_kurs_admin('')">
-				<label class="control-label">Biaya Admin 1 Rupiah</label>
-				<input type="text" class="form-control divide" id="biaya_admin" name="biaya_admin" value="<?php echo (isset($data) ? $data->biaya_admin : 0); ?>" placeholder=0 required readonly tabindex="-1">
 
-				<label class="control-label">Biaya Admin Bank 2</label>
-				<input type="text" class="form-control divide" id="biaya_admin_forex2" name="biaya_admin_forex2" value="<?php echo (isset($data) ? $data->biaya_admin_forex2 : 0); ?>" placeholder=0 onblur="cek_kurs_admin('2')">
-				<label class="control-label">Kurs Admin 2</label>
-				<input type="text" class="form-control divide" id="curs_admin2" name="curs_admin2" value="<?php echo (isset($data) ? $data->curs_admin2 : 1); ?>" onblur="cek_kurs_admin('2')">
-				<label class="control-label">Biaya Admin 2 Rupiah</label>
-				<input type="text" class="form-control divide" id="biaya_admin2" name="biaya_admin2" value="<?php echo (isset($data) ? $data->biaya_admin2 : 0); ?>" placeholder=0 required tabindex="-1">
-			</div>
-		</div>
-	</div> -->
 		<div class="box-footer">
 			<div class="form-group">
 				<div class="col-sm-offset-2 col-sm-10">
