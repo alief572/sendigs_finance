@@ -46,10 +46,8 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							<th class="text-center">#</th>
 							<th class="text-center">No PR</th>
 							<th class="text-center">Departemen</th>
-							<th class="text-center no-sort">Nama Barang/Jasa</th>
-							<th class="text-center no-sort">Spec / Requirement</th>
-							<th class="text-center no-sort" width='7%'>Qty</th>
-							<th class="text-center no-sort">Keterangan</th>
+							<th class="text-center no-sort">Keterangan Project</th>
+							<th class="text-center no-sort">Tingkat PR</th>
 							<th class="text-center no-sort">PIC</th>
 							<th class="text-center no-sort">Created Date</th>
 							<th class="text-center no-sort">Status</th>
@@ -57,113 +55,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 						</tr>
 					</thead>
 					<tbody>
-						<?php
-						$no = 1;
-						foreach ($result as $item) {
-							$this->hris = $this->load->database('hris', true);
 
-							$this->hris->select('a.id, a.name, b.name as nm_company');
-							$this->hris->from('departments a');
-							$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-							$this->hris->where('a.id', $item->id_dept);
-							$get_department = $this->hris->get()->row();
-
-							echo '<tr>';
-							echo '<td class="text-center">' . $no . '</td>';
-							if (!empty($item->no_pr)) {
-								echo '<td>' . $item->no_pr . '</td>';
-							} else {
-								echo '<td><span class="text-red">' . $item->no_pengajuan . '</span></td>';
-							}
-							echo '<td>' . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . '</td>';
-
-							$list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $item->no_pengajuan))->result_array();
-							$arr_nmbarang = array();
-							$arr_spec = array();
-							$arr_qty = array();
-							$arr_tanggal = array();
-							$arr_ket = array();
-							foreach ($list_barang as $val => $valx) {
-								$get_satuan = $this->db->get_where('ms_satuan', array('id' => $valx['satuan']))->result();
-								$nm_satuan = (!empty($get_satuan)) ? strtolower($get_satuan[0]->code) : '';
-								$arr_nmbarang[$val] = "&bull; " . strtoupper($valx['nm_barang']);
-								$arr_spec[$val] = "&bull; " . strtoupper($valx['spec']);
-								$arr_qty[$val] = "&bull; " . floatval($valx['qty']) . ' ' . $nm_satuan;
-								$tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
-								$arr_tanggal[$val] = "&bull; " . date('d F Y H:i:s', strtotime($valx['created_date']));
-								$arr_ket[$val] = "&bull; " . strtoupper($valx['keterangan']);
-							}
-							$dt_nama_barang    = implode("<br>", $arr_nmbarang);
-							$dt_spec    = implode("<br>", $arr_spec);
-							$dt_qty    = implode("<br>", $arr_qty);
-							$dt_tanggal    = implode("<br>", $arr_tanggal);
-							$dt_ket    = implode("<br>", $arr_ket);
-
-							echo '<td>' . $dt_nama_barang . '</td>';
-							echo '<td>' . $dt_spec . '</td>';
-							echo '<td>' . $dt_qty . '</td>';
-							echo '<td>' . $dt_ket . '</td>';
-							echo '<td>' . $item->nm_lengkap . '</td>';
-							echo '<td>' . $dt_tanggal . '</td>';
-
-							$last_by     = (!empty($item->updated_by)) ? $item->updated_by : $item->created_by;
-							$last_date = (!empty($item->updated_date)) ? $item->updated_date : $item->created_date;
-
-							if ($item->sts_app == 'N') {
-								$warna     = 'blue';
-								$sts     = 'WAITING APPROVAL';
-							} elseif ($item->sts_app == 'Y') {
-								$warna     = 'green';
-								$sts     = 'APPROVED';
-							} else {
-								$warna     = 'red';
-								$sts     = 'REJECTED';
-							}
-
-							if (($item->sts_reject1 !== null || $item->sts_reject2 !== null || $item->sts_reject3 !== null) && $item->rejected == 1) {
-								$warna = 'red';
-								$sts = 'Rejected';
-							} else {
-								if ($item->app_3 == null) {
-									$warna = 'blue';
-									// Tentukan waiting approval di level mana
-									if (empty($item->app_1_by) && empty($item->app_2_by)) {
-										$sts = 'Waiting Approval: Finance';
-									} else {
-										$sts = 'Waiting Approval: Management';
-									}
-								} else {
-									if ($item->sts_app == 'Y') {
-										$warna = "green";
-										$sts = "Approved";
-									}
-								}
-							}
-
-							echo '<td><span class="badge" style="background-color: ' . $warna . '">' . $sts . '</span></td>';
-
-							$view        = "<a href='" . base_url('non_rutin/add/' . $item->no_pengajuan . '/view') . "' class='btn btn-sm btn-warning' title='View' data-role='qtip'><i class='fa fa-eye'></i></a>";
-							$edit        = "";
-							$approve    = "";
-							$cancel        = "";
-							$print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $item->no_pengajuan) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
-
-							if ($item->sts_app == 'N' || $item->sts_app == '') {
-								$edit    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $item->no_pengajuan) . "' class='btn btn-sm btn-primary' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></a>";
-							}
-
-							$close = '';
-							if ($ENABLE_DELETE) {
-								$close = '<button type="button" class="btn btn-sm btn-danger close_pr_modal" data-no_pengajuan="' . $item->no_pengajuan . '" title="Close PR"><i class="fa fa-close"></i></button>';
-							}
-
-							echo '<td>' . $view . ' ' . $edit . ' ' . $approve . ' ' . $cancel . ' ' . $print . ' ' . $close . '</td>';
-
-							echo '</tr>';
-
-							$no++;
-						}
-						?>
 					</tbody>
 				</table>
 			</div>
@@ -219,8 +111,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 	$(document).ready(function() {
 		$('.maskM').autoNumeric();
 
-		var tanda = $('#tanda').val();
-		DataTables(tanda);
+		DataTables();
 
 		$('.search_depart').chosen({
 			width: '250px',
@@ -362,7 +253,44 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		});
 	});
 
-	function DataTables(tanda = null, department = null) {
-		var dataTable = $('#my-grid').DataTable();
+	function DataTables() {
+		var dataTable = $('#my-grid').DataTable({
+			serverSide: true,
+			processing: true,
+			destroy: true,
+			paging: true,
+			ajax: {
+				type: 'get',
+				url: siteurl + active_controller + 'get_data_non_rutin'
+			},
+			columns: [{
+					data: 'no'
+				},
+				{
+					data: 'no_pr'
+				},
+				{
+					data: 'departemen'
+				},
+				{
+					data: 'keterangan'
+				},
+				{
+					data: 'tingkat_pr'
+				},
+				{
+					data: 'pic'
+				},
+				{
+					data: 'created_date'
+				},
+				{
+					data: 'status'
+				},
+				{
+					data: 'option'
+				}
+			]
+		});
 	}
 </script>

@@ -1418,4 +1418,16 @@ class Non_rutin extends Admin_Controller
 		$this->template->set($data);
 		$this->template->render('approval_by_finance');
 	}
+
+	public function get_data_non_rutin()
+	{
+		$draw = $this->input->get('draw', true);
+		$length = $this->input->get('length', true);
+		$start = $this->input->get('start', true);
+		$search = $this->input->get('search', true);
+		$order = $this->input->get('order', true);
+		$columns = $this->input->get('columns', true);
+
+		$this->non_rutin_model->get_data_non_rutin($draw, $length, $start, $search, $order, $columns);
+	}
 }
