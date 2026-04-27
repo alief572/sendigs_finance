@@ -269,7 +269,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 						<a href="' . base_url('assets/pr/' . $header[0]->document) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
 						<br />' . $header[0]->no_pengajuan . '</div>';
 				else :
-					if (file_exists('assets/pr' . $header[0]->document)) {
+					if (file_exists('assets/pr/' . $header[0]->document)) {
 						echo '<div class="col-md-12"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
 					}
 				endif;
