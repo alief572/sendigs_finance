@@ -545,7 +545,7 @@ class Non_rutin extends Admin_Controller
 			}
 
 			$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
-			$coa_pr_dept = explode(';', $get_coa_pr_dept->coa);
+			$coa_pr_dept = (!empty($get_coa_pr_dept->coa)) ? explode(';', $get_coa_pr_dept->coa) : '';
 
 			$title_tingkat = '';
 			if ($tingkat_approval == '1') :
