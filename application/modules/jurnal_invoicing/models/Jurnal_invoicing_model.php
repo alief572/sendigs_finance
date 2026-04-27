@@ -200,7 +200,7 @@ class Jurnal_invoicing_model extends BF_Model
         $filter = [
             'b.id_customer' => $klien,
             'b.no_invoice' => $no_invoice,
-            'a.id_company' => $company
+            'd.id' => $company
         ];
 
         // 1. Hitung Total Record (Tanpa Filter Search)
@@ -291,9 +291,16 @@ class Jurnal_invoicing_model extends BF_Model
             ->where('(a.debit > 0 OR a.kredit > 0)'); // Pindahan dari HAVING
 
         if (!empty($filter)) {
+            $no_filters = 1;
             foreach ($filter as $key => $value) {
-                if ($value !== '') {
-                    $this->db->where($key, $value);
+                if (!empty($value)) {
+                    if ($no_filters == 1) {
+                        $this->db->like($key, $value);
+                    } else {
+                        $this->db->or_like($key, $value);
+                    }
+
+                    $no_filters++;
                 }
             }
         }

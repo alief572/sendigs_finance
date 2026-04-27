@@ -80,6 +80,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     <th class="text-center">No.</th>
                     <th class="text-center">No. Transaksi</th>
                     <th class="text-center">Jenis Transaksi</th>
+                    <th class="text-center">Kategori Payment</th>
                     <th class="text-center">Tanggal Jurnal</th>
                     <th class="text-center">Company</th>
                     <th class="text-center">Action</th>
@@ -255,10 +256,10 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     }
 
     function DataTables(tgl_jurnal = null, no_transaksi = null, company = null) {
-        if ($.fn.DataTable.isDataTable('#table_penawaran')) {
-            $('#table_penawaran').DataTable().ajax.reload(null, false);
-            return;
-        }
+        // if ($.fn.DataTable.isDataTable('#table_penawaran')) {
+        //     $('#table_penawaran').DataTable().ajax.reload(null, false);
+        //     return;
+        // }
 
         $('#table_penawaran').DataTable({
             ajax: {
@@ -279,6 +280,9 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 },
                 {
                     data: 'jenis_transaksi'
+                },
+                {
+                    data: 'kategori_payment'
                 },
                 {
                     data: 'tanggal_jurnal'
@@ -306,6 +310,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
             serverSide: true,
             stateSave: true,
             paging: true,
+            destroy: true,
             searchDelay: 500,
             lengthMenu: [
                 [10, 25, 50, 100],

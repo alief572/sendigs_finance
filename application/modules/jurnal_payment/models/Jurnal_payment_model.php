@@ -64,22 +64,24 @@ class Jurnal_payment_model extends BF_Model
             4 => 'a.nm_company'
         ];
 
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+
         // Base filter criteria
         $this->db->from('tr_jurnal a');
         $this->db->where('a.sts <>', '1');
-        $this->db->where('a.jenis_transaksi', 'Payment');
+        $this->db->where_in('a.jenis_transaksi', $arr_jenis_transaksi);
         $this->db->where('a.nm_company <>', '');
 
-        if (!empty($filter['tgl_from']) && !empty($filter['tgl_to'])) {
+        if (!empty($tgl_from) && !empty($tgl_to)) {
             $this->db->where('a.tgl_jurnal >=', $filter['tgl_from']);
             $this->db->where('a.tgl_jurnal <=', $filter['tgl_to']);
         }
 
-        if (!empty($filter['no_transaksi'])) {
+        if (!empty($no_transaksi)) {
             $this->db->where('a.no_transaksi', $filter['no_transaksi']);
         }
 
-        if (!empty($filter['company'])) {
+        if (!empty($company)) {
             $this->db->where('a.id_company', $filter['company']);
         }
 
@@ -122,10 +124,27 @@ class Jurnal_payment_model extends BF_Model
         $no = $start;
         foreach ($get_data as $item) {
             $no++;
+
+            $get_kategori_payment = $this->db->select('a.tipe')
+                ->from('request_payment a')
+                ->join('payment_approve b', 'b.no_doc = a.no_doc')
+                ->where('b.id', $item->no_transaksi)
+                ->group_by('a.tipe')
+                ->get()
+                ->result_array();
+
+            $arr_tipe_payment = [];
+            foreach ($get_kategori_payment as $item_payment) {
+                $arr_tipe_payment[] = $item_payment['tipe'];
+            }
+
+            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', $arr_tipe_payment) : '';
+
             $hasil[] = [
                 'no'              => $no,
                 'no_transaksi'    => $item->no_transaksi,
                 'jenis_transaksi' => $item->jenis_transaksi,
+                'kategori_payment' => ucfirst($tipe_payment),
                 'tanggal_jurnal'  => date('d F Y', strtotime($item->tgl_jurnal)),
                 'company'         => $item->nm_company,
                 'action'          => '<button type="button" class="btn btn-sm btn-primary" onclick="add_jurnal(' . $item->id . ')" title="Posting Jurnal"><i class="fa fa-plus"></i></button>'
