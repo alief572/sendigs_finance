@@ -261,16 +261,18 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			</div>
 
 			<?php
-			if (strpos($header[0]->document, 'pdf', 0) > 1) :
-				echo '<div class="col-md-12">
+			if (isset($header)) :
+				if (strpos($header[0]->document, 'pdf', 0) > 1) :
+					echo '<div class="col-md-12">
 						<iframe src="' . base_url('assets/pr/' . $header[0]->document) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
 						</iframe>
 						<a href="' . base_url('assets/pr/' . $header[0]->document) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
 						<br />' . $header[0]->no_pengajuan . '</div>';
-			else :
-				if (file_exists('assets/pr' . $header[0]->document)) {
-					echo '<div class="col-md-12"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
-				}
+				else :
+					if (file_exists('assets/pr' . $header[0]->document)) {
+						echo '<div class="col-md-12"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
+					}
+				endif;
 			endif;
 			?>
 		</div>
