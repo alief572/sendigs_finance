@@ -408,7 +408,7 @@ class Penerimaan_uang extends Admin_Controller
             'nm_customer' => $nm_customer,
             'ppn_dipotong' => $post['ppn_dipotong'],
             'pph23_dipotong' => $post['pph23_dipotong'],
-            'nominal_penerimaan_bank' => str_replace(',', '', $post['nominal_penerimaan_bank']),
+            'nominal_penerimaan_bank' => str_replace(',', '.', str_replace('.', '', $post['nominal_penerimaan_bank'])),
             'created_by' => $this->session->userdata('id_user'),
             'created_date' => date('Y-m-d H:i:s')
         ];
@@ -449,13 +449,13 @@ class Penerimaan_uang extends Admin_Controller
             $saldo_piutang = (!empty($get_inv)) ? $get_inv['saldo_piutang'] : 0;
             $tgl_inv = (!empty($get_inv)) ? date('Y-m-d', strtotime($get_inv['created_date'])) : '';
 
-            $penerimaan = str_replace(',', '', $post['penerimaan_' . $i]);
-            $biaya_admin = str_replace(',', '', $post['biaya_admin_' . $i]);
+            $penerimaan = str_replace(',', '.', str_replace('.', '', $post['penerimaan_' . $i]));
+            $biaya_admin = str_replace(',', '.', str_replace('.', '', $post['biaya_admin_' . $i]));
             if ($biaya_admin == '') {
                 $biaya_admin = 0;
             }
 
-            $sisa_piutang = str_replace(',', '', $post['sisa_piutang_' . $i]);
+            $sisa_piutang = str_replace(',', '.', str_replace('.', '', $post['sisa_piutang_' . $i]));
             if ($sisa_piutang == '') {
                 $sisa_piutang = 0;
             }
@@ -506,8 +506,8 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $nm_coa_bank,
-                        'debit' => str_replace(',', '', $post['debit_bank_debit']),
-                        'kredit' => str_replace(',', '', $post['kredit_bank_debit']),
+                        'debit' => str_replace(',', '.', str_replace('.', '', $post['debit_bank_debit'])),
+                        'kredit' => str_replace(',', '.', str_replace('.', '', $post['kredit_bank_debit'])),
                         'keterangan' => $nm_coa_bank . ' - ' . $post['id_inv_' . $i],
                         'sts' => '0',
                         'no_transaksi' => $post['id_inv_' . $i],
