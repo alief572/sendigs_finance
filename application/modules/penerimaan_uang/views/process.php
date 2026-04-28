@@ -245,6 +245,18 @@
 <script>
     function get_num(nilai = null) {
         if (nilai !== '' && nilai !== null) {
+            nilai = nilai.split('.').join('');
+            nilai = nilai.split('.').join(',');
+            nilai = parseFloat(nilai);
+        } else {
+            nilai = 0;
+        }
+
+        return nilai;
+    }
+
+    function get_num2(nilai = null) {
+        if (nilai !== '' && nilai !== null) {
             nilai = nilai.split(',').join('');
             nilai = parseFloat(nilai);
         } else {
@@ -286,8 +298,8 @@
         var ttl_debit_jurnal = 0;
         var ttl_kredit_jurnal = 0;
 
-        ttl_debit_jurnal += get_num($('input[name="debit_bank_debit"]').val());
-        ttl_kredit_jurnal += get_num($('input[name="kredit_bank_debit"]').val());
+        ttl_debit_jurnal += get_num2($('input[name="debit_bank_debit"]').val());
+        ttl_kredit_jurnal += get_num2($('input[name="kredit_bank_debit"]').val());
 
         var ttl_piutang_dagang = 0;
         var ttl_penerimaan = 0;
@@ -321,8 +333,8 @@
                     var pph23 = $('input[name="kredit_' + value + '_' + i + '"]').val();
                 }
 
-                ttl_debit_jurnal += get_num($('input[name="debit_' + value + '_' + i + '"]').val());
-                ttl_kredit_jurnal += get_num($('input[name="kredit_' + value + '_' + i + '"]').val());
+                ttl_debit_jurnal += get_num2($('input[name="debit_' + value + '_' + i + '"]').val());
+                ttl_kredit_jurnal += get_num2($('input[name="kredit_' + value + '_' + i + '"]').val());
             });
 
 
@@ -336,12 +348,45 @@
         var grand_total = Math.round(ttl_piutang_dagang - ttl_biaya_admin);
         var kontrol = Math.round(grand_total - uang_masuk);
 
+        $('input[name="total_penerimaan"]').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+        $('input[name="total_piutang_dagang"]').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+        $('input[name="total_biaya_admin"]').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+
+        $('input[name="total_sisa_piutang"]').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+        $('input[name="grand_total"]').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+        // $('input[name="kontrol"]').val(kontrol);
+
         $('input[name="total_penerimaan"]').autoNumeric('set', ttl_penerimaan);
         $('input[name="total_piutang_dagang"]').autoNumeric('set', ttl_piutang_dagang);
         $('input[name="total_biaya_admin"]').autoNumeric('set', ttl_biaya_admin);
         $('input[name="total_sisa_piutang"]').autoNumeric('set', ttl_sisa_piutang);
         $('input[name="grand_total"]').autoNumeric('set', grand_total);
-        $('input[name="kontrol"]').val(kontrol);
+        $('input[name="kontrol"]').autoNumeric('set', kontrol);
 
         var resp_ttl_debit_jurnal = number_format(ttl_debit_jurnal);
         resp_ttl_debit_jurnal += '<input type="hidden" name="total_debit_jurnal" value="' + ttl_debit_jurnal + '">';

@@ -275,7 +275,12 @@
             width: '100%'
         });
 
-        $('#nominal_penerimaan_bank').autoNumeric('init');
+        $('#nominal_penerimaan_bank').autoNumeric('init', {
+            vMin: '-9999999999999.99', // Kasih range negatif seluas mungkin
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
     });
 
     $(document).on('change', '#customer', function() {
@@ -381,7 +386,12 @@
                 $('#MyModalBody').html(result);
                 $('#dialog-popup').modal('show');
 
-                $('.autonum').autoNumeric('init');
+                $('.autonum').autoNumeric('init', {
+                    vMin: '-9999999999999.99', // Kasih range negatif seluas mungkin
+                    vMax: '9999999999999.99',
+                    aSep: '.',
+                    aDec: ','
+                });
             },
             error: function(result) {
                 swal({
@@ -401,7 +411,7 @@
 
         var kontrol = get_num($('input[name="kontrol"]').val());
 
-        if (kontrol > 0) {
+        if (kontrol != 0) {
             swal({
                 type: 'warning',
                 title: 'Warning !',
