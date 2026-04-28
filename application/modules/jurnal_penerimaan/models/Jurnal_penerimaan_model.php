@@ -121,14 +121,16 @@ class Jurnal_penerimaan_model extends BF_Model
 
     private function _query_jurnal($filter = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
-        $this->db->from('tr_jurnal a');
-        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join('hris_divisions e', 'e.id = c.id_divisi', 'left');
-        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-        $this->db->where('a.sts <>', '1');
+        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
+            ->from('tr_jurnal a')
+            ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
+            ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_spk_penawaran f', 'f.id_spk_penawaran = b.id_spk_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company d', 'd.id = COALESCE(c.company, f.id_company)', 'left', FALSE)
+            ->join('hris_divisions e', 'e.id = COALESCE(c.id_divisi, f.id_divisi)', 'left', FALSE)
+            ->where('a.jenis_transaksi', 'Penerimaan Piutang')
+            ->where('a.sts <>', '1')
+            ->where('b.no_invoice IS NOT NULL');
 
         if (!empty($filter)) {
             foreach ($filter as $key => $value) {
