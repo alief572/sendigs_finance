@@ -153,10 +153,10 @@ class Penerimaan_uang extends Admin_Controller
             $coa_bank = (!empty($get_bank)) ? $get_bank['coa_bank'] : '';
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
-            $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
-            if ($pph23_dipotong == 'N') {
-                $saldo_piutang = $get_inv['saldo_piutang'];
-            }
+            $saldo_piutang = $get_inv['saldo_piutang'];
+            // if ($pph23_dipotong == 'N') {
+            //     $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
+            // }
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
@@ -184,7 +184,8 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            $total_piutang += ($pph23_dipotong == 'N') ? $get_inv['total_akhir_jurnal'] : $get_inv['tagihan_ppn_jurnal'];
+            // $total_piutang += ($pph23_dipotong == 'N') ? $get_inv['tagihan_ppn_jurnal'] : $get_inv['total_akhir_jurnal'];
+            $total_piutang += $get_inv['total_akhir_jurnal'];
             $total_piutang_dagang += $saldo_piutang;
 
             if ($no == 1) {
