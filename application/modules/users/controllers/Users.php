@@ -3,6 +3,7 @@
 class Users extends Front_Controller
 {
 
+    protected $id_user;
     public function __construct()
     {
         parent::__construct();
@@ -11,6 +12,7 @@ class Users extends Front_Controller
 
         $this->id_user  = $this->auth->user_id();
     }
+
 
     public function index()
     {

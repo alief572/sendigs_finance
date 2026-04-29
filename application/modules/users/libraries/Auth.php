@@ -118,7 +118,6 @@ class Auth
         }
 
         $this->ci->template->set_message(lang('users_wrong_password'), 'danger');
-        $this->ci->template->message();
         return FALSE;
     }
 
