@@ -1,4 +1,4 @@
-<?php defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * CodeIgniter Template Class
@@ -59,11 +59,10 @@ class Template
 	 */
 	function __construct($config = array())
 	{
-		$this->_ci =& get_instance();
-		self::$ci =& get_instance();
+		$this->_ci = &get_instance();
+		self::$ci = &get_instance();
 
-		if ( ! empty($config))
-		{
+		if (! empty($config)) {
 			$this->initialize($config);
 		}
 
@@ -81,39 +80,33 @@ class Template
 	 */
 	function initialize($config = array())
 	{
-		foreach ($config as $key => $val)
-		{
-			if ($key == 'theme' AND $val != '')
-			{
+		foreach ($config as $key => $val) {
+			if ($key == 'theme' and $val != '') {
 				$this->set_theme($val);
 				continue;
 			}
 
-			$this->{'_'.$key} = $val;
+			$this->{'_' . $key} = $val;
 		}
 
 		// No locations set in config?
-		if ($this->_theme_locations === array())
-		{
+		if ($this->_theme_locations === array()) {
 			// Let's use this obvious default
 			$this->_theme_locations = array(APPPATH . 'themes/');
 		}
-		
+
 		// Theme was set
-		if ($this->_theme)
-		{
+		if ($this->_theme) {
 			$this->set_theme($this->_theme);
 		}
 
 		// If the parse is going to be used, best make sure it's loaded
-		if ($this->_parser_enabled === TRUE)
-		{
+		if ($this->_parser_enabled === TRUE) {
 			$this->_ci->load->library('parser');
 		}
 
 		// Modular Separation / Modular Extensions has been detected
-		if (method_exists( $this->_ci->router, 'fetch_module' ))
-		{
+		if (method_exists($this->_ci->router, 'fetch_module')) {
 			$this->_module 	= $this->_ci->router->fetch_module();
 		}
 
@@ -168,17 +161,14 @@ class Template
 	public function set($name, $value = NULL)
 	{
 		// Lots of things! Set them all
-		if (is_array($name) OR is_object($name))
-		{
-			foreach ($name as $item => $value)
-			{
+		if (is_array($name) or is_object($name)) {
+			foreach ($name as $item => $value) {
 				$this->_data[$item] = $value;
 			}
 		}
 
 		// Just one thing, set that
-		else
-		{
+		else {
 			$this->_data[$name] = $value;
 		}
 
@@ -197,7 +187,7 @@ class Template
 	public function render($view, $data = array(), $return = FALSE)
 	{
 		// Set whatever values are given. These will be available to all view files
-		is_array($data) OR $data = (array) $data;
+		is_array($data) or $data = (array) $data;
 
 		// Merge in what we already have with the specific data
 		$this->_data = array_merge($this->_data, $data);
@@ -205,8 +195,7 @@ class Template
 		// We don't need you any more buddy
 		unset($data);
 
-		if (empty($this->_title))
-		{
+		if (empty($this->_title)) {
 			$this->_title = $this->_guess_title();
 		}
 
@@ -218,24 +207,20 @@ class Template
 		$template['partials']	= array();
 
 		// Assign by reference, as all loaded views will need access to partials
-		$this->_data['template'] =& $template;
+		$this->_data['template'] = &$template;
 
-		foreach ($this->_partials as $name => $partial)
-		{
+		foreach ($this->_partials as $name => $partial) {
 			// We can only work with data arrays
-			is_array($partial['data']) OR $partial['data'] = (array) $partial['data'];
+			is_array($partial['data']) or $partial['data'] = (array) $partial['data'];
 
 			// If it uses a view, load it
-			if (isset($partial['view']))
-			{
+			if (isset($partial['view'])) {
 				$template['partials'][$name] = $this->_find_view($partial['view'], $partial['data']);
 			}
 
 			// Otherwise the partial must be a string
-			else
-			{
-				if ($this->_parser_enabled === TRUE)
-				{
+			else {
+				if ($this->_parser_enabled === TRUE) {
 					$partial['string'] = $this->_ci->parser->parse_string($partial['string'], $this->_data + $partial['data'], TRUE, TRUE);
 				}
 
@@ -247,7 +232,7 @@ class Template
 		$this->_ci->output->set_header('Expires: Sat, 01 Jan 2000 00:00:01 GMT');
 		$this->_ci->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
 		$this->_ci->output->set_header('Cache-Control: post-check=0, pre-check=0, max-age=0');
-		$this->_ci->output->set_header('Last-Modified: ' . gmdate( 'D, d M Y H:i:s' ) . ' GMT' );
+		$this->_ci->output->set_header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
 		$this->_ci->output->set_header('Pragma: no-cache');
 
 		// Let CI do the caching instead of the browser
@@ -257,18 +242,16 @@ class Template
 		$this->_body = $this->_find_view($view, array(), $this->_parser_body_enabled);
 
 		// Want this file wrapped with a layout file?
-		if ($this->_layout)
-		{
+		if ($this->_layout) {
 			// Added to $this->_data['template'] by refference
 			$template['body'] = $this->_body;
 
 			// Find the main body and 3rd param means parse if its a theme view (only if parser is enabled)
-			$this->_body =  self::_load_view('layouts/'.$this->_layout, $this->_data, TRUE, self::_find_view_folder());
+			$this->_body =  self::_load_view('layouts/' . $this->_layout, $this->_data, TRUE, self::_find_view_folder());
 		}
 
 		// Want it returned or output to browser?
-		if ( ! $return)
-		{
+		if (! $return) {
 			$this->_ci->output->set_output($this->_body);
 		}
 
@@ -285,8 +268,7 @@ class Template
 	public function title()
 	{
 		// If we have some segments passed
-		if (func_num_args() >= 1)
-		{
+		if (func_num_args() >= 1) {
 			$title_segments = func_get_args();
 			$this->_title = implode($this->_title_separator, $title_segments);
 		}
@@ -295,9 +277,9 @@ class Template
 	}
 
 	/**
-	* Set Icon of the page
-	*
-	*/
+	 * Set Icon of the page
+	 *
+	 */
 	public function page_icon($icon = 'fa fa-table')
 	{
 		$this->_page_icon = $icon;
@@ -349,20 +331,18 @@ class Template
 		$content = htmlspecialchars(strip_tags($content));
 
 		// Keywords with no comments? ARG! comment them
-		if ($name == 'keywords' AND ! strpos($content, ','))
-		{
+		if ($name == 'keywords' and ! strpos($content, ',')) {
 			$content = preg_replace('/[\s]+/', ', ', trim($content));
 		}
 
-		switch($type)
-		{
+		switch ($type) {
 			case 'meta':
-				$this->_metadata[$name] = '<meta name="'.$name.'" content="'.$content.'" />';
-			break;
+				$this->_metadata[$name] = '<meta name="' . $name . '" content="' . $content . '" />';
+				break;
 
 			case 'link':
-				$this->_metadata[$content] = '<link rel="'.$name.'" href="'.$content.'" />';
-			break;
+				$this->_metadata[$content] = '<link rel="' . $name . '" href="' . $content . '" />';
+				break;
 		}
 
 		return $this;
@@ -379,11 +359,9 @@ class Template
 	public function set_theme($theme = NULL)
 	{
 		$this->_theme = $theme;
-		foreach ($this->_theme_locations as $location)
-		{
-			if ($this->_theme AND file_exists($location.$this->_theme))
-			{
-				$this->_theme_path = rtrim($location.$this->_theme.'/');
+		foreach ($this->_theme_locations as $location) {
+			if ($this->_theme and file_exists($location . $this->_theme)) {
+				$this->_theme_path = rtrim($location . $this->_theme . '/');
 				break;
 			}
 		}
@@ -397,10 +375,10 @@ class Template
 	 * @access public
 	 * @return string	The current theme
 	 */
-	 public function get_theme()
-	 {
-	 	return $this->_theme;
-	 }
+	public function get_theme()
+	{
+		return $this->_theme;
+	}
 
 	/**
 	 * Get the current theme path
@@ -425,7 +403,7 @@ class Template
 	{
 		$this->_layout = $view;
 
-		$_layout_subdir AND $this->_layout_subdir = $_layout_subdir;
+		$_layout_subdir and $this->_layout_subdir = $_layout_subdir;
 
 		return $this;
 	}
@@ -471,7 +449,7 @@ class Template
 	 */
 	public function set_breadcrumb($name, $uri = '')
 	{
-		$this->_breadcrumbs[] = array('name' => $name, 'uri' => $uri );
+		$this->_breadcrumbs[] = array('name' => $name, 'uri' => $uri);
 		return $this;
 	}
 
@@ -555,12 +533,10 @@ class Template
 	 */
 	public function theme_exists($theme = NULL)
 	{
-		$theme OR $theme = $this->_theme;
+		$theme or $theme = $this->_theme;
 
-		foreach ($this->_theme_locations as $location)
-		{
-			if (is_dir($location.$theme))
-			{
+		foreach ($this->_theme_locations as $location) {
+			if (is_dir($location . $theme)) {
 				return TRUE;
 			}
 		}
@@ -580,8 +556,7 @@ class Template
 	{
 		$layouts = array();
 
-		foreach(glob(self::_find_view_folder().'layouts/*.*') as $layout)
-		{
+		foreach (glob(self::_find_view_folder() . 'layouts/*.*') as $layout) {
 			$layouts[] = pathinfo($layout, PATHINFO_BASENAME);
 		}
 
@@ -599,27 +574,22 @@ class Template
 	 */
 	public function get_theme_layouts($theme = NULL)
 	{
-		$theme OR $theme = $this->_theme;
+		$theme or $theme = $this->_theme;
 
 		$layouts = array();
 
-		foreach ($this->_theme_locations as $location)
-		{
+		foreach ($this->_theme_locations as $location) {
 			// Get special web layouts
-			if( is_dir($location.$theme.'/views/web/layouts/') )
-			{
-				foreach(glob($location.$theme . '/views/web/layouts/*.*') as $layout)
-				{
+			if (is_dir($location . $theme . '/views/web/layouts/')) {
+				foreach (glob($location . $theme . '/views/web/layouts/*.*') as $layout) {
 					$layouts[] = pathinfo($layout, PATHINFO_BASENAME);
 				}
 				break;
 			}
 
 			// So there are no web layouts, assume all layouts are web layouts
-			if(is_dir($location.$theme.'/views/layouts/'))
-			{
-				foreach(glob($location.$theme . '/views/layouts/*.*') as $layout)
-				{
+			if (is_dir($location . $theme . '/views/layouts/')) {
+				foreach (glob($location . $theme . '/views/layouts/*.*') as $layout) {
 					$layouts[] = pathinfo($layout, PATHINFO_BASENAME);
 				}
 				break;
@@ -640,13 +610,12 @@ class Template
 	public function layout_exists($layout)
 	{
 		// If there is a theme, check it exists in there
-		if ( ! empty($this->_theme) AND in_array($layout, self::get_theme_layouts()))
-		{
+		if (! empty($this->_theme) and in_array($layout, self::get_theme_layouts())) {
 			return TRUE;
 		}
 
 		// Otherwise look in the normal places
-		return file_exists(self::_find_view_folder().'layouts/' . $layout . self::_ext($layout));
+		return file_exists(self::_find_view_folder() . 'layouts/' . $layout . self::_ext($layout));
 	}
 
 	/**
@@ -666,42 +635,37 @@ class Template
 	// find layout files, they could be mobile or web
 	private function _find_view_folder()
 	{
-		if ($this->_ci->load->get_var('template_views'))
-		{
+		if ($this->_ci->load->get_var('template_views')) {
 			return $this->_ci->load->get_var('template_views');
 		}
 
 		// Base view folder
-		$view_folder = APPPATH.'views/';
+		$view_folder = APPPATH . 'views/';
 
 		// Using a theme? Put the theme path in before the view folder
-		if ( ! empty($this->_theme))
-		{
-			$view_folder = $this->_theme_path.'views/';
+		if (! empty($this->_theme)) {
+			$view_folder = $this->_theme_path . 'views/';
 		}
 
 		// Would they like the mobile version?
-		if ($this->_is_mobile === TRUE AND is_dir($view_folder.'mobile/'))
-		{
+		if ($this->_is_mobile === TRUE and is_dir($view_folder . 'mobile/')) {
 			// Use mobile as the base location for views
 			$view_folder .= 'mobile/';
 		}
 
 		// Use the web version
-		else if (is_dir($view_folder.'web/'))
-		{
+		else if (is_dir($view_folder . 'web/')) {
 			$view_folder .= 'web/';
 		}
 
 		// Things like views/admin/web/view admin = subdir
-		if ($this->_layout_subdir)
-		{
-			$view_folder .= $this->_layout_subdir.'/';
+		if ($this->_layout_subdir) {
+			$view_folder .= $this->_layout_subdir . '/';
 		}
 
 		// If using themes store this for later, available to all views
 		$this->_ci->load->vars('template_views', $view_folder);
-		
+
 		return $view_folder;
 	}
 
@@ -709,19 +673,15 @@ class Template
 	private function _find_view($view, array $data, $parse_view = TRUE)
 	{
 		// Only bother looking in themes if there is a theme
-		if ( ! empty($this->_theme))
-		{
-			foreach ($this->_theme_locations as $location)
-			{
+		if (! empty($this->_theme)) {
+			foreach ($this->_theme_locations as $location) {
 				$theme_views = array(
 					$this->_theme . '/views/modules/' . $this->_module . '/' . $view,
 					$this->_theme . '/views/' . $view
 				);
 
-				foreach ($theme_views as $theme_view)
-				{
-					if (file_exists($location . $theme_view . self::_ext($theme_view)))
-					{
+				foreach ($theme_views as $theme_view) {
+					if (file_exists($location . $theme_view . self::_ext($theme_view))) {
 						return self::_load_view($theme_view, $this->_data + $data, $parse_view, $location);
 					}
 				}
@@ -735,35 +695,28 @@ class Template
 	private function _load_view($view, array $data, $parse_view = TRUE, $override_view_path = NULL)
 	{
 		// Sevear hackery to load views from custom places AND maintain compatibility with Modular Extensions
-		if ($override_view_path !== NULL)
-		{
-			if ($this->_parser_enabled === TRUE AND $parse_view === TRUE)
-			{
+		if ($override_view_path !== NULL) {
+			if ($this->_parser_enabled === TRUE and $parse_view === TRUE) {
 				// Load content and pass through the parser
 				$content = $this->_ci->parser->parse_string($this->_ci->load->file(
-					$override_view_path.$view.self::_ext($view), 
+					$override_view_path . $view . self::_ext($view),
 					TRUE
 				), $data, TRUE);
-
-			}
-
-			else
-			{
+			} else {
 				$this->_ci->load->vars($data);
-				
+
 				// Load it directly, bypassing $this->load->view() as ME resets _ci_view
 				$content = $this->_ci->load->file(
-					$override_view_path.$view.self::_ext($view),
+					$override_view_path . $view . self::_ext($view),
 					TRUE
 				);
 			}
 		}
 
 		// Can just run as usual
-		else
-		{
+		else {
 			// Grab the content of the view (parsed or loaded)
-			$content = ($this->_parser_enabled === TRUE AND $parse_view === TRUE)
+			$content = ($this->_parser_enabled === TRUE and $parse_view === TRUE)
 
 				// Parse that bad boy
 				? $this->_ci->parser->parse($view, $data, TRUE)
@@ -783,20 +736,17 @@ class Template
 		$title_parts = array();
 
 		// If the method is something other than index, use that
-		if ($this->_method != 'index')
-		{
+		if ($this->_method != 'index') {
 			$title_parts[] = $this->_method;
 		}
 
 		// Make sure controller name is not the same as the method name
-		if ( ! in_array($this->_controller, $title_parts))
-		{
+		if (! in_array($this->_controller, $title_parts)) {
 			$title_parts[] = $this->_controller;
 		}
 
 		// Is there a module? Make sure it is not named the same as the method or controller
-		if ( ! empty($this->_module) AND ! in_array($this->_module, $title_parts))
-		{
+		if (! empty($this->_module) and ! in_array($this->_module, $title_parts)) {
 			$title_parts[] = $this->_module;
 		}
 
@@ -812,62 +762,63 @@ class Template
 	}
 
 	public static function set_message($tmessage = '', $type = 'info')
-    {
-        if (empty($tmessage)) {
-            return;
-        }
+	{
+		if (empty($tmessage)) {
+			return;
+		}
 
-        if (isset(self::$ci->session)) {
-            self::$ci->session->set_flashdata('tmessage', "{$type}::{$tmessage}");
-        }
+		if (isset(self::$ci->session)) {
+			self::$ci->session->set_flashdata('tmessage', "{$type}::{$tmessage}");
+		}
 
-        self::$tMessage = array('type' => $type, 'tmessage' => $tmessage);
-    }
+		self::$tMessage = array('type' => $type, 'tmessage' => $tmessage);
+	}
 
 	public static function message($tmessage = '', $type = 'information')
-    {
-        // Does session data exist?
-        if (empty($tmessage) && class_exists('CI_Session', false)
-        ) {
-            $tmessage = self::$ci->session->flashdata('tmessage');
-            if (! empty($tmessage)) {
-                // Split out the message parts
-                $temp_message = explode('::', $tmessage);
-                $type = $temp_message[0];
-                $tmessage = $temp_message[1];
+	{
+		// Does session data exist?
+		if (
+			empty($tmessage) && class_exists('CI_Session', false)
+		) {
+			$tmessage = self::$ci->session->flashdata('tmessage');
+			if (! empty($tmessage)) {
+				// Split out the message parts
+				$temp_message = explode('::', $tmessage);
+				$type = $temp_message[0];
+				$tmessage = $temp_message[1];
 
-                unset($temp_message);
-            }
-        }
+				unset($temp_message);
+			}
+		}
 
-        // If message is empty, check the $tMessage property.
-        if (empty($tmessage)) {
-            if (empty(self::$tMessage['tmessage'])) {
-                return '';
-            }
+		// If message is empty, check the $tMessage property.
+		if (empty($tmessage)) {
+			if (empty(self::$tMessage['tmessage'])) {
+				return '';
+			}
 
-            $tmessage = self::$tMessage['tmessage'];
-            $type = self::$tMessage['type'];
-        }
+			$tmessage = self::$tMessage['tmessage'];
+			$type = self::$tMessage['type'];
+		}
 
-        $arr_icon = array('info' => 'fa fa-info', 'success' => 'fa fa-check', 'error' => 'fa fa-times', 'warning' => 'fa fa-warning');
-        $arr_title = array('info' => 'Information', 'success' => 'Success', 'error' => 'Error', 'warning' => 'Warning');
+		$arr_icon = array('info' => 'fa fa-info', 'success' => 'fa fa-check', 'error' => 'fa fa-times', 'warning' => 'fa fa-warning', 'danger' => 'fa fa-times');
+		$arr_title = array('info' => 'Information', 'success' => 'Success', 'error' => 'Error', 'warning' => 'Warning', 'danger' => 'Error');
 
-        // Get the message template and replace the placeholders.
-        $template = str_replace(
-            array('{type}', '{icon}', '{title}', '{message}'),
-            array($type, $arr_icon[$type], $arr_title[$type], $tmessage),
-            self::$ci->config->item('template.message_template')
-        );
+		// Get the message template and replace the placeholders.
+		$template = str_replace(
+			array('{type}', '{icon}', '{title}', '{message}'),
+			array($type, $arr_icon[$type], $arr_title[$type], $tmessage),
+			self::$ci->config->item('template.message_template')
+		);
 
-        // Clear the session data to prevent extra messages. (This was a very rare
-        // occurence, but clearing should resolve the problem.)
-        if (class_exists('CI_Session', false)) {
-            self::$ci->session->set_flashdata('tmessage', '');
-        }
+		// Clear the session data to prevent extra messages. (This was a very rare
+		// occurence, but clearing should resolve the problem.)
+		if (class_exists('CI_Session', false)) {
+			self::$ci->session->set_flashdata('tmessage', '');
+		}
 
-        return $template;
-    }
+		return $template;
+	}
 }
 
 // END Template class
