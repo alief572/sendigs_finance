@@ -261,7 +261,7 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			</div>
 
 			<?php
-			if (isset($header)) :
+			if (!empty($header)) :
 				if (strpos($header[0]->document, 'pdf', 0) > 1) :
 					echo '<div class="col-md-12">
 						<iframe src="' . base_url('assets/pr/' . $header[0]->document) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
