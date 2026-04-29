@@ -667,7 +667,8 @@ class Invoicing extends Admin_Controller
         $this->load->view('print_invoice', $data);
     }
 
-    public function print_invoice_non_kons($id_invoicing, $id_company = 1) {
+    public function print_invoice_non_kons($id_invoicing, $id_company = 1)
+    {
         $this->auth->restrict($this->viewPermission);
 
         $this->db->select('a.*');
@@ -682,7 +683,7 @@ class Invoicing extends Admin_Controller
 
         $this->db->select('a.*');
         $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
-        $this->db->from(DBCNL.'.kons_tr_penawaran_non_konsultasi a');
+        $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
 
@@ -910,6 +911,7 @@ class Invoicing extends Admin_Controller
             'pph_jurnal' => $post['pph_jurnal'],
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
+            'tagihan_ppn_jurnal' => $post['total_nominal'],
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s'),
             'tipe_invoice' => '1'
