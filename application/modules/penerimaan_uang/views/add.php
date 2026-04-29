@@ -149,8 +149,8 @@
                     <div class="form-group">
                         <label for="pph23_dipotong">PPH23 Dipotong <span class="text-red">*</span></label>
                         <select class="form-control form-control-sm" name="pph23_dipotong" id="pph23_dipotong">
-                            <option value="Y">Dipotong PPH</option>
-                            <option value="N">Tidak Dipotong PPH</option>
+                            <option value="N">Tidak Dipotong PPh</option>
+                            <option value="Y">Dipotong PPh</option>
                         </select>
                     </div>
                 </div>
@@ -411,7 +411,7 @@
 
         var kontrol = get_num($('input[name="kontrol"]').val());
 
-        if (kontrol != 0) {
+        if (kontrol > 0) {
             swal({
                 type: 'warning',
                 title: 'Warning !',
