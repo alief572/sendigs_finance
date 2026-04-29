@@ -183,7 +183,7 @@
                                 <th class="text-center">PPN</th>
                                 <th class="text-center">PPH 23</th>
                                 <th class="text-center">Tagihan + Ppn</th>
-                                <th class="text-center">Tagihan + Ppn + Pph</th>
+                                <th class="text-center">Tagihan + Ppn - Pph</th>
                                 <th class="text-center">Saldo Piutang</th>
                                 <th class="text-center">Action</th>
                             </tr>
