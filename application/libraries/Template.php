@@ -774,6 +774,31 @@ class Template
 		self::$tMessage = array('type' => $type, 'tmessage' => $tmessage);
 	}
 
+	public static function get_message_raw()
+	{
+		// Cek static property dulu (same request)
+		if (!empty(self::$tMessage['tmessage'])) {
+			return array(
+				'type'    => self::$tMessage['type'],
+				'message' => self::$tMessage['tmessage'],
+			);
+		}
+
+		// Fallback ke session flashdata (setelah redirect)
+		if (class_exists('CI_Session', false)) {
+			$flash = self::$ci->session->flashdata('tmessage');
+			if (!empty($flash)) {
+				$parts = explode('::', $flash, 2);
+				return array(
+					'type'    => $parts[0],
+					'message' => isset($parts[1]) ? $parts[1] : $parts[0],
+				);
+			}
+		}
+
+		return null;
+	}
+
 	public static function message($tmessage = '', $type = 'information')
 	{
 		// Does session data exist?
