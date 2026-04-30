@@ -535,7 +535,7 @@ class Non_rutin extends Admin_Controller
 			$id 		= $this->uri->segment(3);
 			$approve 	= $this->uri->segment(4);
 			$tingkat_approval = $this->uri->segment(5);
-			$header 	= $this->db->query("SELECT * FROM rutin_non_planning_header WHERE no_pengajuan='" . $id . "' ")->result();
+			$header 	= $this->db->query("SELECT a.*, b.nm_lengkap as nm_pembuat FROM rutin_non_planning_header a LEFT JOIN users b ON b.id_user = a.created_by WHERE a.no_pengajuan='" . $id . "' ")->result();
 			$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $id . "' ")->result_array();
 			$datacoa 	= $this->db->query("SELECT a.coa,b.nama FROM coa_category a join " . DBACC . ".coa_master b on a.coa=b.no_perkiraan WHERE a.tipe='NONRUTIN' order by a.coa")->result_array();
 			$satuan		= $this->db->get_where('ms_satuan', array('deleted' => 'N'))->result_array();
@@ -955,7 +955,7 @@ class Non_rutin extends Admin_Controller
 			$id 		= $this->uri->segment(3);
 			$approve 	= $this->uri->segment(4);
 			$tingkat_approval = $this->uri->segment(5);
-			$header 	= $this->db->query("SELECT * FROM rutin_non_planning_header WHERE no_pengajuan='" . $id . "' ")->result();
+			$header 	= $this->db->query("SELECT a.*, b.nm_lengkap as nm_pembuat FROM rutin_non_planning_header a LEFT JOIN users b ON b.id_user = a.created_by WHERE a.no_pengajuan='" . $id . "' ")->result();
 			$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $id . "' ")->result_array();
 			$datacoa 	= $this->db->query("SELECT a.coa,b.nama FROM coa_category a join " . DBACC . ".coa_master b on a.coa=b.no_perkiraan WHERE a.tipe='NONRUTIN' order by a.coa")->result_array();
 			$satuan		= $this->db->get_where('ms_satuan', array('deleted' => 'N'))->result_array();
