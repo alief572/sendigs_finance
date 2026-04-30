@@ -9,6 +9,8 @@ $no_so 			= (!empty($header)) ? $header[0]->no_so : '';
 $project_name 	= (!empty($header)) ? $header[0]->project_name : '';
 $pr_coa 	= (!empty($header)) ? $header[0]->coa : '';
 $tingkat_pr = (!empty($header)) ? $header[0]->tingkat_pr : '';
+$nm_pembuat  = (!empty($header)) ? $header[0]->nm_pembuat : '';
+$tgl_dibuat  = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
 
 // Detail Approval
 $alasan_reject1 = (!empty($header)) ? $header[0]->reject_reason1 : '';
@@ -123,6 +125,17 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 						<option value="1" <?= ($tingkat_pr == '1') ? 'selected' : null ?>>Normal</option>
 						<option value="2" <?= ($tingkat_pr == '2') ? 'selected' : null ?>>Urgent</option>
 					</select>
+				</div>
+			</div>
+
+			<div class='form-group row'>
+				<label class='label-control col-sm-2'><b>Nama Pembuat PR</b></label>
+				<div class='col-sm-4'>
+					<input type='text' class='form-control' value='<?= ucwords(strtolower($nm_pembuat)) ?>' readonly>
+				</div>
+				<label class='label-control col-sm-2'><b>Tgl Dibuat PR</b></label>
+				<div class='col-sm-4'>
+					<input type='text' class='form-control' value='<?= $tgl_dibuat ?>' readonly>
 				</div>
 			</div>
 
@@ -299,6 +312,12 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 
 	.chosen-container-single .chosen-single div {
 		top: 5px;
+	}
+
+	/* Dropdown scroll untuk department dan COA */
+	.chosen-container .chosen-results {
+		max-height: 300px;
+		overflow-y: auto;
 	}
 
 	.datepicker {

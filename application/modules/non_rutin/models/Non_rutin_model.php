@@ -622,6 +622,8 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $row['project_name'] . "</div>";
             $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
+            $nestedData[]    = "<div align='left'>" . ucwords(strtolower($row['nm_lengkap'])) . "</div>";
+            $nestedData[]    = "<div align='left'>" . (!empty($row['created_date']) ? date('d-M-Y', strtotime($row['created_date'])) : '-') . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
@@ -1071,6 +1073,8 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $row['project_name'] . "</div>";
             $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
+            $nestedData[]    = "<div align='left'>" . ucwords(strtolower($row['nm_lengkap'])) . "</div>";
+            $nestedData[]    = "<div align='left'>" . (!empty($row['created_date']) ? date('d-M-Y', strtotime($row['created_date'])) : '-') . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
