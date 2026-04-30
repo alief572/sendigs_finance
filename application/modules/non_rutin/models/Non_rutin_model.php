@@ -96,38 +96,15 @@ class Non_rutin_model extends BF_Model
             }
 
             if (($row['sts_reject1'] !== null || $row['sts_reject2'] !== null || $row['sts_reject3'] !== null) && $row['rejected'] == 1) {
-                // if ($row['sts_reject1'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Head Department";
-                // elseif ($row['sts_reject2'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Cost Control";
-                // elseif ($row['sts_reject3'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Management";
-                // endif;
                 $warna = 'red';
-                $sts = 'Rejected';
+                if ($row['sts_reject3'] == '1') {
+                    $sts = 'Rejected by Management';
+                } elseif ($row['sts_reject1'] == '1' || $row['sts_reject2'] == '1') {
+                    $sts = 'Rejected by Finance';
+                } else {
+                    $sts = 'Rejected';
+                }
             } else {
-                // if ($row['app_1'] == null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Head Department";
-                // elseif ($row['app_1'] !== null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Cost Control";
-                // elseif ($row['app_1'] !== null && $row['app_2'] !== null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Management";
-                // else :
-                //     if ($row['sts_app'] == "Y") :
-                //         $warna = "green";
-                //         $sts = "Approved";
-                //     else :
-                //         $warna = "blue";
-                //         $sts = "Waiting Approval Head Department";
-                //     endif;
-                // endif;
-
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
                     $sts = 'Waiting Approval';
@@ -273,38 +250,15 @@ class Non_rutin_model extends BF_Model
             }
 
             if (($row['sts_reject1'] !== null || $row['sts_reject2'] !== null || $row['sts_reject3'] !== null) && $row['rejected'] == 1) {
-                // if ($row['sts_reject1'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Head Department";
-                // elseif ($row['sts_reject2'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Cost Control";
-                // elseif ($row['sts_reject3'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Management";
-                // endif;
                 $warna = 'red';
-                $sts = 'Rejected';
+                if ($row['sts_reject3'] == '1') {
+                    $sts = 'Rejected by Management';
+                } elseif ($row['sts_reject1'] == '1' || $row['sts_reject2'] == '1') {
+                    $sts = 'Rejected by Finance';
+                } else {
+                    $sts = 'Rejected';
+                }
             } else {
-                // if ($row['app_1'] == null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Head Department";
-                // elseif ($row['app_1'] !== null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Cost Control";
-                // elseif ($row['app_1'] !== null && $row['app_2'] !== null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Management";
-                // else :
-                //     if ($row['sts_app'] == "Y") :
-                //         $warna = "green";
-                //         $sts = "Approved";
-                //     else :
-                //         $warna = "blue";
-                //         $sts = "Waiting Approval Head Department";
-                //     endif;
-                // endif;
-
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
                     $sts = 'Waiting Approval';
@@ -323,23 +277,6 @@ class Non_rutin_model extends BF_Model
             $cancel        = "";
             $print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $row['no_pengajuan']) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
 
-
-            // if ($tanda <> 'approval') {
-            //     // if ($Arr_Akses['update'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $edit    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan']) . "' class='btn btn-sm btn-primary' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></a>";
-            //     }
-            //     // }
-            // }
-
-            // if ($tanda == 'approval') {
-            //     $view        = "";
-            //     // if ($Arr_Akses['approve'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
-            //     }
-            //     // }
-            // }
             $view = "";
             $approve = '';
             if ($ENABLE_MANAGE) {
@@ -455,38 +392,15 @@ class Non_rutin_model extends BF_Model
             }
 
             if (($row['sts_reject1'] !== null || $row['sts_reject2'] !== null || $row['sts_reject3'] !== null) && $row['rejected'] == 1) {
-                // if ($row['sts_reject1'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Head Department";
-                // elseif ($row['sts_reject2'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Cost Control";
-                // elseif ($row['sts_reject3'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Management";
-                // endif;
                 $warna = 'red';
-                $sts = 'Rejected';
+                if ($row['sts_reject3'] == '1') {
+                    $sts = 'Rejected by Management';
+                } elseif ($row['sts_reject1'] == '1' || $row['sts_reject2'] == '1') {
+                    $sts = 'Rejected by Finance';
+                } else {
+                    $sts = 'Rejected';
+                }
             } else {
-                // if ($row['app_1'] == null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Head Department";
-                // elseif ($row['app_1'] !== null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Cost Control";
-                // elseif ($row['app_1'] !== null && $row['app_2'] !== null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Management";
-                // else :
-                //     if ($row['sts_app'] == "Y") :
-                //         $warna = "green";
-                //         $sts = "Approved";
-                //     else :
-                //         $warna = "blue";
-                //         $sts = "Waiting Approval Head Department";
-                //     endif;
-                // endif;
-
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
                     $sts = 'Waiting Approval';
@@ -505,23 +419,6 @@ class Non_rutin_model extends BF_Model
             $cancel        = "";
             $print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $row['no_pengajuan']) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
 
-
-            // if ($tanda <> 'approval') {
-            //     // if ($Arr_Akses['update'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $edit    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan']) . "' class='btn btn-sm btn-primary' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></a>";
-            //     }
-            //     // }
-            // }
-
-            // if ($tanda == 'approval') {
-            //     $view        = "";
-            //     // if ($Arr_Akses['approve'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
-            //     }
-            //     // }
-            // }
             $view = "";
             $approve = '';
             if ($ENABLE_MANAGE) {
@@ -643,38 +540,15 @@ class Non_rutin_model extends BF_Model
             }
 
             if (($row['sts_reject1'] !== null || $row['sts_reject2'] !== null || $row['sts_reject3'] !== null) && $row['rejected'] == 1) {
-                // if ($row['sts_reject1'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Head Department";
-                // elseif ($row['sts_reject2'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Cost Control";
-                // elseif ($row['sts_reject3'] == "1") :
-                //     $warna = "red";
-                //     $sts = "Rejected By Management";
-                // endif;
                 $warna = 'red';
-                $sts = 'Rejected';
+                if ($row['sts_reject3'] == '1') {
+                    $sts = 'Rejected by Management';
+                } elseif ($row['sts_reject1'] == '1' || $row['sts_reject2'] == '1') {
+                    $sts = 'Rejected by Finance';
+                } else {
+                    $sts = 'Rejected';
+                }
             } else {
-                // if ($row['app_1'] == null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Head Department";
-                // elseif ($row['app_1'] !== null && $row['app_2'] == null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Cost Control";
-                // elseif ($row['app_1'] !== null && $row['app_2'] !== null && $row['app_3'] == null) :
-                //     $warna = "blue";
-                //     $sts = "Waiting Approval Management";
-                // else :
-                //     if ($row['sts_app'] == "Y") :
-                //         $warna = "green";
-                //         $sts = "Approved";
-                //     else :
-                //         $warna = "blue";
-                //         $sts = "Waiting Approval Head Department";
-                //     endif;
-                // endif;
-
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
                     $sts = 'Waiting Approval: Management';
@@ -696,23 +570,6 @@ class Non_rutin_model extends BF_Model
             $cancel        = "";
             $print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $row['no_pengajuan']) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
 
-
-            // if ($tanda <> 'approval') {
-            //     // if ($Arr_Akses['update'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $edit    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan']) . "' class='btn btn-sm btn-primary' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></a>";
-            //     }
-            //     // }
-            // }
-
-            // if ($tanda == 'approval') {
-            //     $view        = "";
-            //     // if ($Arr_Akses['approve'] == '1') {
-            //     if ($row['sts_app'] == 'N') {
-            //         $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
-            //     }
-            //     // }
-            // }
             $view = "";
             $approve = '';
             if ($ENABLE_MANAGE) {
@@ -1095,7 +952,13 @@ class Non_rutin_model extends BF_Model
 
             if (($row['sts_reject1'] !== null || $row['sts_reject2'] !== null || $row['sts_reject3'] !== null) && $row['rejected'] == 1) {
                 $warna = 'red';
-                $sts = 'Rejected';
+                if ($row['sts_reject3'] == '1') {
+                    $sts = 'Rejected by Management';
+                } elseif ($row['sts_reject1'] == '1' || $row['sts_reject2'] == '1') {
+                    $sts = 'Rejected by Finance';
+                } else {
+                    $sts = 'Rejected';
+                }
             } else {
                 if ($row['app_3'] == null) {
                     $warna = 'blue';
@@ -1262,7 +1125,15 @@ class Non_rutin_model extends BF_Model
 
         if (($data->sts_reject1 !== null || $data->sts_reject2 !== null || $data->sts_reject3 !== null) && $data->rejected == 1) {
             $warna = 'red';
-            $sts = 'Rejected';
+            // Finance reject: sts_reject1 dan sts_reject2 di-set bersamaan oleh add_finance
+            // Management reject: sts_reject3 di-set oleh add (tingkat 3)
+            if ($data->sts_reject3 == '1') {
+                $sts = 'Rejected by Management';
+            } elseif ($data->sts_reject1 == '1' || $data->sts_reject2 == '1') {
+                $sts = 'Rejected by Finance';
+            } else {
+                $sts = 'Rejected';
+            }
         } else {
             if ($data->app_3 == null) {
                 $warna = 'blue';
