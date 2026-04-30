@@ -1383,9 +1383,10 @@ class Pembayaran_material extends Admin_Controller
 					$no_jurnal++;
 					// }
 				}
-			} else {
-				throw new Exception('Data jurnal tidak terdeteksi !');
 			}
+			// else {
+			// 	throw new Exception('Data jurnal tidak terdeteksi !');
+			// }
 
 			// if (!empty($arr_jurnal)) {
 			$insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_jurnal);
