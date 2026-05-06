@@ -178,7 +178,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 
                 $.ajax({
                     type: 'post',
-                    url: siteurl + active_controller + 'update_invoice',
+                    url: siteurl + active_controller + 'update_invoice_vuca',
                     data: formData,
                     dataType: 'json',
                     cache: false,
