@@ -7,7 +7,7 @@ $dpp_lain_lain = ($total_nominal * 11 / 12);
 
 $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
 $ppn = ($dpp_lain_lain * 12 / 100);
-$pph = ($total_nominal * 2 / 100);
+$pph = ($total_nominal * 0.5 / 100);
 $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
 ?>
 <div class="box">

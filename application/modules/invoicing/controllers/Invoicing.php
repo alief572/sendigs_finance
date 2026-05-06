@@ -8,11 +8,13 @@ class Invoicing extends Admin_Controller
     protected $deletePermission = 'Invoicing.Delete';
     protected $consultant;
     protected $accounting;
+    protected $accounting_vuca;
     public function __construct()
     {
         parent::__construct();
         $this->consultant = $this->load->database('consultant', true);
         $this->accounting = $this->load->database('accounting', true);
+        $this->accounting_vuca = $this->load->database('accounting_vuca', true);
 
         $this->load->models(array(
             'Invoicing/Invoicing_model'
@@ -177,14 +179,14 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
-        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
 
         $hasil_jurnal = '';
 
-        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
-        $this->accounting->from('coa_master a');
-        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
-        $get_coa_jurnal = $this->accounting->get()->result_array();
+        $this->accounting_vuca->select('a.no_perkiraan, a.nama as nm_coa');
+        $this->accounting_vuca->from('coa_master a');
+        $this->accounting_vuca->where_in('a.no_perkiraan', $arr_coa_jurnal);
+        $get_coa_jurnal = $this->accounting_vuca->get()->result_array();
 
         $no_coa_jurnal = 0;
 
@@ -200,7 +202,7 @@ class Invoicing extends Admin_Controller
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
                 $debit = ($total_nominal - $pph);
             }
 
@@ -212,9 +214,9 @@ class Invoicing extends Admin_Controller
             //     $kredit = $ppn;
             // }
 
-            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
                 $debit = $pph;
             }
 
@@ -222,7 +224,7 @@ class Invoicing extends Admin_Controller
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
 
                 $kredit = $total_nominal;
             }
@@ -415,7 +417,7 @@ class Invoicing extends Admin_Controller
 
         $this->auth->restrict($this->viewPermission);
 
-        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
 
         $hasil_jurnal = '';
 
@@ -450,7 +452,7 @@ class Invoicing extends Admin_Controller
                 $kredit = 0;
             }
 
-            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $pph = ($total_nominal * 2 / 100);
                 $debit = $pph;
@@ -636,6 +638,127 @@ class Invoicing extends Admin_Controller
         $this->template->title('Edit Invoice');
         $this->template->set($data);
         $this->template->render('edit_invoice');
+    }
+
+    public function edit_invoicing_vuca($id_invoicing)
+    {
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id_invoicing);
+        $get_invoicing = $this->db->get()->row();
+
+        $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = c.id_company', 'left');
+        $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
+        $get_actual_plan_tagih = $this->db->get()->row();
+
+        $this->auth->restrict($this->viewPermission);
+
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
+
+        $hasil_jurnal = '';
+
+        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+        $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+        $get_coa_jurnal = $this->accounting->get()->result_array();
+
+        $no_coa_jurnal = 0;
+
+        $total_debit = 0;
+        $total_kredit = 0;
+        foreach ($get_coa_jurnal as $item_coa_jurnal) {
+            $no_coa_jurnal++;
+
+            $debit = 0;
+            $kredit = 0;
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
+                $debit = ($total_nominal - $pph);
+            }
+
+            // if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
+            //     $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+            //     $dpp_lain_lain = ($total_nominal * 11 / 12);
+            //     $ppn = ($dpp_lain_lain * 12 / 100);
+
+            //     $kredit = $ppn;
+            // }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $pph = ($total_nominal * 0.5 / 100);
+                $debit = $pph;
+            }
+
+            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
+                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $dpp_lain_lain = ($total_nominal * 11 / 12);
+                $ppn = ($dpp_lain_lain * 12 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
+
+                $kredit = $total_nominal;
+            }
+
+            $hasil_jurnal .= '<tr>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= date('d-F-Y');
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d') . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['no_perkiraan'];
+            $hasil_jurnal .= '<input type="hidden" name="coa_jurnal_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['no_perkiraan'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-center">';
+            $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
+            $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($debit);
+            $hasil_jurnal .= '<input type="hidden" name="debit_' . $no_coa_jurnal . '" value="' . $debit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '<td class="text-right">';
+            $hasil_jurnal .= number_format($kredit);
+            $hasil_jurnal .= '<input type="hidden" name="kredit_' . $no_coa_jurnal . '" value="' . $kredit . '">';
+            $hasil_jurnal .= '</td>';
+
+            $hasil_jurnal .= '</tr>';
+
+            $total_debit += $debit;
+            $total_kredit += $kredit;
+        }
+
+        $data = [
+            'id_invoicing' => $id_invoicing,
+            'data_invoice' => $get_invoicing,
+            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'hasil_jurnal' => $hasil_jurnal,
+            'total_debit' => $total_debit,
+            'total_kredit' => $total_kredit
+        ];
+
+        $this->template->title('Edit Invoice');
+        $this->template->set($data);
+        $this->template->render('edit_invoice_vuca');
     }
 
     public function print_invoicing($id_invoicing, $id_company = 1)
@@ -917,7 +1040,7 @@ class Invoicing extends Admin_Controller
             'tipe_invoice' => '1'
         ];
 
-        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
+        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
@@ -997,6 +1120,101 @@ class Invoicing extends Admin_Controller
         ];
 
         $arr_coa_jurnal = ['1102-01-01', '1106-01-02', '2104-01-07', '4101-01-01'];
+
+        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
+        $this->accounting->from('coa_master a');
+        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
+        $get_coa_jurnal = $this->accounting->get()->result_array();
+
+        $arr_insert_jurnal = [];
+
+        $no_coa_jurnal = 0;
+        foreach ($get_coa_jurnal as $item) {
+            $no_coa_jurnal++;
+
+            $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
+            $keterangan = $item['nm_coa'] . ' - ' . $id;
+            $tgl_jurnal = $post['tgl_jurnal_' . $no_coa_jurnal];
+            $coa_jurnal = $post['coa_jurnal_' . $no_coa_jurnal];
+            $id_company = $post['id_company_' . $no_coa_jurnal];
+            $nm_company = $post['nm_company_' . $no_coa_jurnal];
+            $nm_coa = $post['nm_coa_' . $no_coa_jurnal];
+            $debit = $post['debit_' . $no_coa_jurnal];
+            $kredit = $post['kredit_' . $no_coa_jurnal];
+
+
+            $arr_insert_jurnal[] = [
+                'no_jurnal' => $no_jurnal,
+                'tgl_jurnal' => $tgl_jurnal,
+                'coa' => $coa_jurnal,
+                'id_company' => $id_company,
+                'nm_company' => $nm_company,
+                'nm_coa' => $nm_coa,
+                'debit' => $debit,
+                'kredit' => $kredit,
+                'keterangan' => $keterangan,
+                'sts' => 0,
+                'no_transaksi' => $id,
+                'jenis_transaksi' => 'Invoicing',
+                'created_by' => $this->auth->user_id(),
+                'created_date' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        $this->db->trans_begin();
+
+        $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
+
+        $valid = 1;
+        $msg = '';
+        $update_invoice = $this->db->update('tr_invoicing', $arr_update, ['id' => $post['id_invoicing']]);
+
+        $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
+
+        if (!$update_invoice) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = $this->db->error($update_invoice)['message'];
+        } else if (!$insert_jurnal) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = $this->db->error($insert_jurnal)['message'];
+        } else {
+            if ($this->db->trans_status() === false) {
+                $this->db->trans_rollback();
+
+                $valid = 0;
+                $msg = 'Please try again later !';
+            } else {
+                $this->db->trans_commit();
+
+                $valid = 1;
+                $msg = 'Data has been updated !';
+            }
+        }
+
+        echo json_encode([
+            'status' => $valid,
+            'msg' => $msg
+        ]);
+    }
+
+    public function update_invoice_vuca()
+    {
+        $post = $this->input->post();
+
+        $id = $post['id_invoicing'];
+
+        $arr_update = [
+            'tanggal_invoice' => $post['tanggal_invoice'],
+            'no_invoice' => $post['nomor_invoice'],
+            'no_po' => $post['no_po'],
+            'no_faktur' => $post['nomor_faktur']
+        ];
+
+        $arr_coa_jurnal = ['1102-01-01', '1106-01-05', '2104-01-07', '4101-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
