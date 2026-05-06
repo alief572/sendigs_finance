@@ -302,7 +302,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
             $db_clone->where('d.id', $post['company']);
         }
         if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $db_clone->where('d.id', $post['divisi']);
+            $db_clone->where('e.id', $post['divisi']);
         }
         $db_clone->group_start();
         $db_clone->where('a.debit >', 0);
@@ -488,6 +488,8 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $this->db->where('a.debit >', 0);
         $this->db->or_where('a.kredit >', 0);
         $this->db->group_end();
+
+        $this->db->group_by('a.no_transaksi');
 
         $get_data = $this->db->get()->result();
 
