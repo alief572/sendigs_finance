@@ -2864,9 +2864,11 @@ class Request_payment extends Admin_Controller
 	public function download_excel_request_payment()
 	{
 		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment();
+		$payment_approve_lookup = $this->Request_payment_model->get_payment_approve_lookup();
 
 		$data = [
-			'list_all_request_payment' => $list_all_request_payment
+			'list_all_request_payment' => $list_all_request_payment,
+			'payment_approve_lookup' => $payment_approve_lookup
 		];
 
 		$this->load->view('download_excel', $data);
