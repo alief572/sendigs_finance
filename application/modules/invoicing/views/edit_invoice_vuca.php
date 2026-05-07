@@ -1,35 +1,37 @@
 <?php
-$total_nominal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$dpp_nilai_lain = ($total_nominal * 11 / 12);
-$pajak = ($dpp_nilai_lain * 12 / 100);
-$total_akhir = ($total_nominal + $pajak);
-$dpp_lain_lain = ($total_nominal * 11 / 12);
+$total_nominal = $data_invoice->total_nominal;
+$dpp_nilai_lain = $data_invoice->dpp_nilai_lain;
+$pajak = $data_invoice->pajak;
+$total_akhir = $data_invoice->total_akhir;
 
-$total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$ppn = ($dpp_lain_lain * 12 / 100);
-$pph = ($total_nominal * 0.5 / 100);
-$total_akhir_jurnal = ($total_nominal_jurnal - $pph);
+$total_nominal_jurnal = $data_invoice->total_nominal_jurnal;
+$dpp = $data_invoice->total_nominal_jurnal;
+$dpp_lain_lain = $data_invoice->dpp_lain_lain_jurnal;
+$ppn = $data_invoice->ppn_jurnal;
+$pph = $data_invoice->pph_jurnal;
+$tagihan_ppn = $data_invoice->tagihan_ppn_jurnal;
+$total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 ?>
 <div class="box">
     <form action="" method="post" id="frm-data">
-        <input type="hidden" name="id" value="<?= $data_actual->id ?>">
-        <div class="box-body">
+        <input type="hidden" name="id_invoicing" value="<?= $id_invoicing ?>">
+        <div class=" box-body">
             <div class="col-6">
                 <table width="100%" border="0">
                     <tr>
                         <th width="13%">Kepada</th>
-                        <td width="12%"><?= $data_actual->nm_customer ?></td>
+                        <td width="12%"><?= $data_invoice->nm_customer ?></td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice">
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" value="<?= $data_invoice->tanggal_invoice ?>">
                         </td>
                     </tr>
                     <tr>
                         <th width="13%">Alamat</th>
-                        <td width="12%"><?= $data_actual->address ?></td>
+                        <td width="12%"><?= $data_invoice->address ?></td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
-                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice">
+                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_invoice ?>">
                         </td>
                     </tr>
                     <tr>
@@ -37,7 +39,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
                         <td width="12%">
-                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm">
+                            <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_po ?>">
                         </td>
                     </tr>
                     <tr>
@@ -46,7 +48,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
-                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur">
+                            <input type="text" name="nomor_faktur" class="form-control form-control-sm" value="<?= $data_invoice->no_faktur ?>">
                         </td>
                     </tr>
                 </table>
@@ -67,34 +69,43 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                 <tbody>
                     <tr>
                         <td class="text-center">1</td>
-                        <td class="text-left"><?= $data_actual->term_payment ?></td>
-                        <td class="text-center"><?= number_format($data_actual->persen_payment, 2) ?>%</td>
-                        <td class="text-right">Rp. <?= number_format($data_actual->nominal_payment, 2) ?></td>
-                        <td class="text-left"><?= $data_actual->desc_payment ?></td>
+                        <td class="text-left"><?= $data_actual_plan_tagih->term_payment ?></td>
+                        <td class="text-center"><?= number_format($data_actual_plan_tagih->persen_payment, 2) ?>%</td>
+                        <td class="text-right">Rp. <?= number_format($data_actual_plan_tagih->nominal_payment, 2) ?></td>
+                        <td class="text-left"><?= $data_actual_plan_tagih->desc_payment ?></td>
                     </tr>
                 </tbody>
             </table>
         </div>
-
-        <input type="hidden" name="total_nominal" value="<?= $total_nominal ?>">
-        <input type="hidden" name="dpp_nilai_lain" value="<?= $dpp_nilai_lain ?>">
-        <input type="hidden" name="pajak" value="<?= $pajak ?>">
-        <input type="hidden" name="total_akhir" value="<?= $total_akhir ?>">
 
         <div class="box-body">
             <table class="table table-bordered">
                 <tr>
                     <th width="10%">DPP</th>
                     <td class="text-right">
-                        Rp. <?= number_format($total_nominal, 2) ?>
-                        <input type="hidden" name="total_nominal_jurnal" value="<?= $total_nominal ?>">
+                        Rp. <?= number_format($dpp, 2) ?>
+                        <input type="hidden" name="total_nominal_jurnal" value="<?= $dpp ?>">
                     </td>
                 </tr>
                 <tr>
                     <th width="10%">DPP Lain-lain</th>
                     <td class="text-right">
                         Rp. <?= number_format($dpp_lain_lain, 2) ?>
-                        <input type="hidden" name="dpp_lain_lain" value="<?= $dpp_lain_lain ?>">
+                        <input type="hidden" name="dpp_lain_lain_jurnal" value="<?= $dpp_lain_lain ?>">
+                    </td>
+                </tr>
+                <tr>
+                    <th width="10%">PPn 12% dari DPP Lain</th>
+                    <td class="text-right">
+                        Rp. <?= number_format($ppn, 2) ?>
+                        <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
+                    </td>
+                </tr>
+                <tr>
+                    <th width="10%">Total Tagihan + PPN</th>
+                    <td class="text-right">
+                        Rp. <?= number_format($tagihan_ppn, 2) ?>
+                        <input type="hidden" name="tagihan_ppn_jurnal" value="<?= $tagihan_ppn ?>">
                     </td>
                 </tr>
                 <tr>
@@ -107,8 +118,8 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                 <tr>
                     <th width="10%">Total Akhir</th>
                     <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format(($total_nominal) - $pph, 2) ?></span>
-                        <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal) - $pph ?>">
+                        <span style="font-weight: bold;">Rp. <?= number_format($total_akhir_jurnal, 2) ?></span>
+                        <input type="hidden" name="total_akhir_jurnal" value="<?= $total_akhir_jurnal ?>">
                     </td>
                 </tr>
             </table>
@@ -144,7 +155,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
 
             <br><br>
 
-            <button type="submit" class="btn btn-sm btn-success">Save</button>
+            <button type="submit" class="btn btn-sm btn-success">Update</button>
             <a href="<?= base_url('invoicing') ?>" class="btn btn-sm btn-danger">Back</a>
         </div>
 
@@ -159,17 +170,15 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
         Swal.fire({
             icon: 'warning',
             title: 'Warning !',
-            text: 'This data will be saved !',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
+            text: 'This data will be updated !',
+            showCancelButton: true
         }).then((next) => {
             if (next.isConfirmed) {
                 var formData = $('#frm-data').serialize();
 
                 $.ajax({
                     type: 'post',
-                    url: siteurl + active_controller + 'save_invoice_vuca',
+                    url: siteurl + active_controller + 'update_invoice_vuca',
                     data: formData,
                     dataType: 'json',
                     cache: false,
@@ -178,21 +187,15 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Success !',
-                                text: result.msg,
-                                allowOutsideClick: false,
-                                showConfirmButton: false,
-                                timer: 3000
-                            }).then((next) => {
-                                window.location.href = siteurl + active_controller;
+                                text: result.msg
+                            }).then(() => {
+                                window.location.href = siteurl + 'invoicing';
                             });
                         } else {
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Failed !',
-                                text: result.msg,
-                                allowOutsideClick: false,
-                                showConfirmButton: false,
-                                timer: 3000
+                                text: result.msg
                             });
                         }
                     },
@@ -200,10 +203,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                         Swal.fire({
                             icon: 'error',
                             title: 'Error !',
-                            text: 'Please try again later !',
-                            allowOutsideClick: false,
-                            showConfirmButton: false,
-                            timer: 3000
+                            text: 'Please try again later !'
                         });
                     }
                 });

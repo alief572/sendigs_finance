@@ -928,10 +928,36 @@ class Request_payment_model extends BF_Model
     {
         $this->db->select('a.*');
         $this->db->from('v_request_payment a');
-        $this->db->where('a.status', '1');
         $this->db->order_by('a.tanggal', 'desc');
         $get_data = $this->db->get()->result();
 
         return $get_data;
+    }
+
+    /**
+     * Get payment_approve lookup data keyed by no_doc.
+     * Returns the most recent record per no_doc (by approved_on DESC).
+     *
+     * @return array Associative array keyed by no_doc containing approved_on and tgl_bayar
+     */
+    public function get_payment_approve_lookup()
+    {
+        $this->db->select('no_doc, approved_on, tgl_bayar');
+        $this->db->from('payment_approve');
+        $this->db->order_by('approved_on', 'DESC');
+        $results = $this->db->get()->result();
+
+        $lookup = [];
+        foreach ($results as $row) {
+            // Keep only the first occurrence (most recent) per no_doc
+            if (!isset($lookup[$row->no_doc])) {
+                $lookup[$row->no_doc] = [
+                    'approved_on' => $row->approved_on,
+                    'tgl_bayar'   => $row->tgl_bayar
+                ];
+            }
+        }
+
+        return $lookup;
     }
 }
