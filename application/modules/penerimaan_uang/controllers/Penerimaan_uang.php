@@ -192,8 +192,8 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil_jurnal .= '<tr>';
 
                 $hasil_jurnal .= '<td class="text-center">';
-                $hasil_jurnal .= date('d-F-Y');
-                $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_debit" value="' . date('Y-m-d') . '">';
+                $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
+                $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_debit" value="' . $get_alokasi['tanggal_transaksi'] . '">';
                 $hasil_jurnal .= '</td>';
 
                 $hasil_jurnal .= '<td class="text-center">';
@@ -259,8 +259,8 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '<tr>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= date('d-F-Y');
-                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . date('Y-m-d') . '">';
+                    $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
+                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $get_alokasi['tanggal_transaksi'] . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
@@ -323,8 +323,8 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '<tr>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= date('d-F-Y');
-                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . date('Y-m-d') . '">';
+                    $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
+                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $get_alokasi['tanggal_transaksi'] . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
@@ -508,7 +508,7 @@ class Penerimaan_uang extends Admin_Controller
                 if ($i == 1 && $no_jurnal == 1) {
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => date('Y-m-d'),
+                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
                         'coa' => $coa_bank,
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
@@ -526,7 +526,7 @@ class Penerimaan_uang extends Admin_Controller
                     $no_jurnal++;
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => date('Y-m-d'),
+                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
                         'coa' => $item_jurnal['no_perkiraan'],
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
@@ -543,7 +543,7 @@ class Penerimaan_uang extends Admin_Controller
                 } else {
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => date('Y-m-d'),
+                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
                         'coa' => $item_jurnal['no_perkiraan'],
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
