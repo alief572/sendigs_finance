@@ -33,7 +33,7 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
-        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran');
+        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
@@ -41,7 +41,9 @@ class Penerimaan_pph_23 extends Admin_Controller
         $this->db->where('a.id', $id_penerimaan_piutang);
         $get_data_penerimaan = $this->db->get()->row_array();
 
-        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
+        $tipe_invoice = (!empty($get_data_penerimaan['tipe_invoice'])) ? $get_data_penerimaan['tipe_invoice'] : '';
+        $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';
+        $arr_coa_jurnal = [$coa_pph, '1102-01-01'];
 
         $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
         $this->accounting->from('coa_master a');
@@ -110,7 +112,10 @@ class Penerimaan_pph_23 extends Admin_Controller
 
         $arr_insert_jurnal = [];
 
-        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
+        $get_invoice = $this->db->get_where('tr_invoicing', ['id' => $post['no_invoice']])->row();
+        $tipe_invoice = (!empty($get_invoice)) ? $get_invoice->tipe_invoice : '';
+        $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';
+        $arr_coa_jurnal = [$coa_pph, '1102-01-01'];
 
         $this->db->trans_begin();
 
