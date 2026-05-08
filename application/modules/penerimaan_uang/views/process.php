@@ -312,7 +312,16 @@
             var piutang = get_num($('input[name="piutang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
-            var sisa_piutang = Math.round(piutang_dagang - penerimaan);
+            var pph23_inv = get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
+
+            var sisa_piutang;
+            if (pph23_dipotong == 'Y') {
+                // Potong PPh (client bayar net): Piutang Dagang - Penerimaan - Biaya Admin
+                sisa_piutang = Math.round(piutang_dagang - penerimaan - biaya_admin);
+            } else {
+                // Tidak Potong PPh (client bayar full): Piutang Dagang - (Penerimaan - PPh 23) - Biaya Admin
+                sisa_piutang = Math.round(piutang_dagang - (penerimaan - pph23_inv) - biaya_admin);
+            }
 
             $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
 
