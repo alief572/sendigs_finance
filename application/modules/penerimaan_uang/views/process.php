@@ -294,6 +294,7 @@
         var no = '<?= $no_inv ?>';
 
         var uang_masuk = get_num($('#uang_masuk').val());
+        var pph23_dipotong = $('input[name="pph23_dipotong"]').val();
 
         var ttl_debit_jurnal = 0;
         var ttl_kredit_jurnal = 0;
@@ -305,6 +306,7 @@
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
         var ttl_sisa_piutang = 0;
+        var ttl_pph23 = 0;
         for (i = 1; i <= no; i++) {
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var piutang = get_num($('input[name="piutang_' + i + '"]').val());
@@ -342,11 +344,17 @@
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
             ttl_sisa_piutang += sisa_piutang;
+            ttl_pph23 += get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
 
         }
 
         var grand_total = Math.round(ttl_piutang_dagang - ttl_biaya_admin);
-        var kontrol = Math.round(grand_total - uang_masuk);
+        var kontrol;
+        if (pph23_dipotong == 'Y') {
+            kontrol = Math.round(uang_masuk - ttl_piutang_dagang);
+        } else {
+            kontrol = Math.round(uang_masuk - ttl_piutang_dagang - ttl_pph23);
+        }
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
