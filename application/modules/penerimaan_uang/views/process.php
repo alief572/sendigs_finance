@@ -316,12 +316,20 @@
 
             $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
 
-            var coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02'];
+            var coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02', '1106-01-05'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1102-01-01') {
-                    var resp_piutang = number_format(piutang_dagang);
-                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + piutang_dagang + '">';
+                    var kredit_piutang_dagang;
+                    if (pph23_dipotong == 'Y') {
+                        // Dipotong PPh: kredit piutang dagang = Tagihan + PPN (full)
+                        kredit_piutang_dagang = piutang;
+                    } else {
+                        // Tidak dipotong: kredit piutang dagang = Tagihan + PPN - PPh (net)
+                        kredit_piutang_dagang = piutang_dagang;
+                    }
+                    var resp_piutang = number_format(kredit_piutang_dagang);
+                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
 
                     $('.td_kredit_' + value + '_' + i).html(resp_piutang);
                 }
