@@ -54,12 +54,14 @@ class Penerimaan_pph_23_model extends BF_Model
 
     public function create_jurnal($id)
     {
-        $arr_coa_jurnal = ['1106-01-02', '1102-01-01'];
-
         $get_penerimaan_pph23 = $this->db->get_where('tr_penerimaan_pph_23', ['id' => $id])->row();
 
         $id_invoice = (!empty($get_penerimaan_pph23)) ? $get_penerimaan_pph23->id_inv : '';
         $get_invoice = $this->db->get_where('tr_invoicing', ['id' => $id_invoice])->row();
+
+        $tipe_invoice = (!empty($get_invoice)) ? $get_invoice->tipe_invoice : '';
+        $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';
+        $arr_coa_jurnal = [$coa_pph, '1102-01-01'];
 
         $id_penawaran = (!empty($get_invoice)) ? $get_invoice->id_penawaran : '';
 
@@ -83,7 +85,7 @@ class Penerimaan_pph_23_model extends BF_Model
 
             $debit = 0;
             $kredit = 0;
-            if ($item == '1106-01-02') {
+            if ($item == $coa_pph) {
                 $debit = $get_penerimaan_pph23->nilai_setor;
             } else {
                 $kredit = $get_penerimaan_pph23->nilai_setor;

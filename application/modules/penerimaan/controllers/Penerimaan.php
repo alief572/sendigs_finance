@@ -859,6 +859,14 @@ class Penerimaan extends Admin_Controller
 			$nilai   = $val->total_bayar_idr;
 			$nilai_usd = $val->total_bayar;
 			$tipe2     = $val->tipe_bayar;
+			$jenis_pphdt = $val->jenis_pph;
+
+			// Cek tipe_invoice dari tr_invoicing untuk override COA PPh VUCA
+			$get_inv = $this->db->get_where('tr_invoicing', ['no_invoice' => $invoice])->row();
+			$tipe_invoice = (!empty($get_inv)) ? $get_inv->tipe_invoice : '';
+			if ($tipe_invoice == '1') {
+				$jenis_pphdt = '1106-01-05';
+			}
 
 
 			if ($kurs > 1) {
