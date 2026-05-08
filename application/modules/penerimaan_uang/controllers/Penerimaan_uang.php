@@ -184,8 +184,8 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            // $total_piutang += ($pph23_dipotong == 'N') ? $get_inv['tagihan_ppn_jurnal'] : $get_inv['total_akhir_jurnal'];
-            $total_piutang += $get_inv['total_akhir_jurnal'];
+            $total_piutang += ($pph23_dipotong == 'N') ? $get_inv['tagihan_ppn_jurnal'] : $get_inv['total_akhir_jurnal'];
+            // $total_piutang += $get_inv['total_akhir_jurnal'];
             $total_piutang_dagang += $saldo_piutang;
 
             if ($no == 1) {
