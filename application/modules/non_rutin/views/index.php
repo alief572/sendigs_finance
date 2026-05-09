@@ -45,6 +45,8 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 						<tr class='bg-blue'>
 							<th class="text-center">#</th>
 							<th class="text-center">No PR</th>
+							<th class="text-center no-sort">No. Dokumen</th>
+							<th class="text-center no-sort">Status Dokumen</th>
 							<th class="text-center">Departemen</th>
 							<th class="text-center no-sort">Keterangan Project</th>
 							<th class="text-center no-sort">Tingkat PR</th>
@@ -268,6 +270,12 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 				},
 				{
 					data: 'no_pr'
+				},
+				{
+					data: 'no_dokumen'
+				},
+				{
+					data: 'status_dokumen'
 				},
 				{
 					data: 'departemen'
