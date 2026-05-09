@@ -1018,11 +1018,18 @@ class Non_rutin_model extends BF_Model
     private function _main_query($limit = null, $offset = 0, $where = null)
     {
         $this->db->select('a.*, c.nm_lengkap, d.name as nm_dept, e.name as nm_company');
+        $this->db->select('GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon', FALSE);
+        $this->db->select('GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ", ") as no_doc_non_po', FALSE);
+        $this->db->select('GROUP_CONCAT(DISTINCT po.no_po SEPARATOR ", ") as no_doc_po', FALSE);
         $this->db->from('rutin_non_planning_detail z');
         $this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
         $this->db->join('users c', 'c.id_user = a.created_by', 'left');
         $this->db->join('departments d', 'd.id = a.id_dept', 'left');
         $this->db->join('hris_companies e', 'e.id = d.company_id', 'left');
+        $this->db->join('tr_pr_detail_kasbon pdk', 'pdk.id_detail = z.id', 'left');
+        $this->db->join('tr_kasbon kb', 'kb.no_doc = pdk.id_kasbon', 'left');
+        $this->db->join('tr_pr_non_po np', "np.no_pr = a.no_pr AND np.jenis_pr = 'pr departemen'", 'left', FALSE);
+        $this->db->join('tr_purchase_order po', 'po.no_pr = a.no_pr', 'left');
         $this->db->where('a.status_id', 1);
         if ($this->auth->user_id() !== '7') {
             $this->db->where('a.created_by', $this->auth->user_id()); // penyesuaian berdasarkan department_id user
@@ -1087,9 +1094,22 @@ class Non_rutin_model extends BF_Model
             $status = $this->get_status($item);
             $options = $this->get_option($item);
             $tingkat_pr = $this->get_tingkat_pr($item);
+            $status_dokumen = $this->get_status_dokumen($item);
+
+            $no_dokumen_parts = [];
+            if (!empty($item->no_doc_kasbon)) {
+                $no_dokumen_parts[] = $item->no_doc_kasbon;
+            }
+            if (!empty($item->no_doc_non_po)) {
+                $no_dokumen_parts[] = $item->no_doc_non_po;
+            }
+            $no_dokumen = implode(', ', $no_dokumen_parts);
+
             $hasil[] = [
                 'no' => $no,
                 'no_pr' => (!empty($item->no_pr)) ? $item->no_pr : '<span class="text-red">' . $item->no_pengajuan . '</span>',
+                'no_dokumen' => $no_dokumen,
+                'status_dokumen' => $status_dokumen,
                 'departemen' => strtoupper($item->nm_dept . ' - ' . $item->nm_company),
                 'keterangan' => $item->project_name,
                 'tingkat_pr' => $tingkat_pr,
@@ -1152,6 +1172,39 @@ class Non_rutin_model extends BF_Model
         }
 
         return '<span class="badge" style="background-color: ' . $warna . '">' . $sts . '</span>';
+    }
+
+    public function get_status_dokumen($data)
+    {
+        $metode = $data->metode_pembelian;
+
+        // Belum ditentukan metode pembelian
+        if (empty($metode)) {
+            return '<span class="badge bg-gray">Belum Diproses</span>';
+        }
+
+        switch ($metode) {
+            case '1': // PO
+                if (!empty($data->no_doc_po)) {
+                    return '<span class="badge bg-green">PO Dibuat</span>';
+                }
+                return '<span class="badge bg-yellow">Menunggu PO</span>';
+
+            case '2': // Kasbon
+                if (!empty($data->no_doc_kasbon)) {
+                    return '<span class="badge bg-green">Kasbon Dibuat</span>';
+                }
+                return '<span class="badge bg-yellow">Menunggu Kasbon</span>';
+
+            case '3': // Cash / Non-PO
+                if (!empty($data->no_doc_non_po)) {
+                    return '<span class="badge bg-green">Pembelian Cash Dibuat</span>';
+                }
+                return '<span class="badge bg-yellow">Menunggu Pembelian Cash</span>';
+
+            default:
+                return '<span class="badge bg-gray">Belum Diproses</span>';
+        }
     }
 
     public function get_option($data)
