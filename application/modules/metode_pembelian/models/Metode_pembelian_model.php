@@ -1108,7 +1108,7 @@ class Metode_pembelian_model extends BF_Model
 
 		// Kalkulasi total berdasarkan kategori
 		if ($config['label'] == 'pr departemen') {
-			$res = $this->db->select('SUM(qty * harga) as ttl')->get_where('rutin_non_planning_detail', ['no_pr' => $no_pr])->row();
+			$res = $this->db->select('SUM(qty * harga) as ttl')->get_where('rutin_non_planning_detail', ['no_pengajuan' => $header->no_pengajuan])->row();
 			$total_pr = $res->ttl ?? 0;
 		} elseif ($config['label'] == 'pr asset') {
 			$res = $this->db->get_where('tran_pr_detail', ['no_pr' => $no_pr])->row();
