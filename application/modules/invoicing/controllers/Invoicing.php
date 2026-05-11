@@ -1516,13 +1516,16 @@ class Invoicing extends Admin_Controller
         $start = $this->input->post('start', true);
         $search = $this->input->post('search', true);
 
-        $this->db->select('a.*, b.id_company, b.nm_company, b.keterangan_penawaran as penjualan, b.nm_pic_penawaran as pic');
+        // Count all records (tanpa filter search)
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
         $this->db->where('a.non_kons', '1');
+        $count_all = $this->db->count_all_results();
 
-        $count_all = $this->db->count_all_results('', false);
-
+        // Count filtered records (dengan filter search)
+        $this->db->from('tr_invoicing a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
+        $this->db->where('a.non_kons', '1');
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('b.nm_company', $search['value'], 'both');
@@ -1530,15 +1533,28 @@ class Invoicing extends Admin_Controller
             $this->db->or_like('a.no_invoice', $search['value'], 'both');
             $this->db->or_like('a.id_penawaran', $search['value'], 'both');
             $this->db->or_like('b.keterangan_penawaran', $search['value'], 'both');
-            $this->db->or_like('b.nm_pic_penawaran', $search['value'], 'both');
+            $this->db->or_like('b.pic', $search['value'], 'both');
             $this->db->group_end();
         }
+        $count_filtered = $this->db->count_all_results();
 
-        $count_filtered = $this->db->count_all_results('', false);
-
+        // Query data
+        $this->db->select('a.*, b.id_company, b.nm_company, b.keterangan_penawaran as penjualan, b.pic as pic');
+        $this->db->from('tr_invoicing a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
+        $this->db->where('a.non_kons', '1');
+        if (!empty($search['value'])) {
+            $this->db->group_start();
+            $this->db->like('b.nm_company', $search['value'], 'both');
+            $this->db->or_like('a.nm_customer', $search['value'], 'both');
+            $this->db->or_like('a.no_invoice', $search['value'], 'both');
+            $this->db->or_like('a.id_penawaran', $search['value'], 'both');
+            $this->db->or_like('b.keterangan_penawaran', $search['value'], 'both');
+            $this->db->or_like('b.pic', $search['value'], 'both');
+            $this->db->group_end();
+        }
         $this->db->order_by('a.created_date', 'desc');
         $this->db->limit($length, $start);
-
         $get_data = $this->db->get()->result();
 
         $no = (0 + $start);
