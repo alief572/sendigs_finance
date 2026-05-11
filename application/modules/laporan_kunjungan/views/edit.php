@@ -97,7 +97,17 @@ $disabled_attr = $is_final ? 'disabled' : '';
             <div class="col-md-4 text-center">
                 <label>Start Time</label>
                 <div class="time-display" id="start-time-display">
-                    <?php echo $visit->start_time ? substr($visit->start_time, 0, 5) : '--:--'; ?>
+                    <?php
+                    if ($visit->start_time) {
+                        // Format DATETIME "YYYY-MM-DD HH:MM:SS" → "DD-MM-YYYY HH:MM"
+                        $st = substr($visit->start_time, 0, 16); // "YYYY-MM-DD HH:MM"
+                        $stParts = explode(' ', $st);
+                        $dateParts = explode('-', $stParts[0]);
+                        echo $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0] . ' ' . $stParts[1];
+                    } else {
+                        echo '--/--/---- --:--';
+                    }
+                    ?>
                 </div>
                 <?php if (!$is_final): ?>
                 <button type="button" class="btn btn-success btn-sm" id="btn-start"
@@ -109,7 +119,17 @@ $disabled_attr = $is_final ? 'disabled' : '';
             <div class="col-md-4 text-center">
                 <label>Finish Time</label>
                 <div class="time-display" id="finish-time-display">
-                    <?php echo $visit->finish_time ? substr($visit->finish_time, 0, 5) : '--:--'; ?>
+                    <?php
+                    if ($visit->finish_time) {
+                        // Format DATETIME "YYYY-MM-DD HH:MM:SS" → "DD-MM-YYYY HH:MM"
+                        $ft = substr($visit->finish_time, 0, 16); // "YYYY-MM-DD HH:MM"
+                        $ftParts = explode(' ', $ft);
+                        $dateParts2 = explode('-', $ftParts[0]);
+                        echo $dateParts2[2] . '-' . $dateParts2[1] . '-' . $dateParts2[0] . ' ' . $ftParts[1];
+                    } else {
+                        echo '--/--/---- --:--';
+                    }
+                    ?>
                 </div>
                 <?php if (!$is_final): ?>
                 <button type="button" class="btn btn-danger btn-sm" id="btn-finish"
@@ -123,9 +143,18 @@ $disabled_attr = $is_final ? 'disabled' : '';
                 <div class="duration-display" id="duration-display">
                     <?php
                     if ($visit->duration_minutes) {
-                        $hours = floor($visit->duration_minutes / 60);
-                        $minutes = $visit->duration_minutes % 60;
-                        echo $hours . ' jam ' . $minutes . ' menit';
+                        $dm = (int) $visit->duration_minutes;
+                        if ($dm >= 1440) {
+                            $days = floor($dm / 1440);
+                            $remainingAfterDays = $dm % 1440;
+                            $hours = floor($remainingAfterDays / 60);
+                            $minutes = $remainingAfterDays % 60;
+                            echo $days . ' hari ' . $hours . ' jam ' . $minutes . ' menit';
+                        } else {
+                            $hours = floor($dm / 60);
+                            $minutes = $dm % 60;
+                            echo $hours . ' jam ' . $minutes . ' menit';
+                        }
                     } else {
                         echo '-';
                     }
@@ -357,9 +386,35 @@ $(document).ready(function() {
         return;
     }
 
+    // ===== Helper Functions =====
+    function formatDatetimeDisplay(datetimeStr) {
+        if (!datetimeStr || datetimeStr === '' || datetimeStr === null) return '--/--/---- --:--';
+        var parts = datetimeStr.split(' ');
+        if (parts.length < 2) return '--/--/---- --:--';
+        var dateParts = parts[0].split('-');
+        var time = parts[1].substring(0, 5);
+        return dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0] + ' ' + time;
+    }
+
+    function formatDuration(minutes) {
+        if (minutes === null || minutes === undefined || minutes === '' || minutes === 0) return '-';
+        minutes = parseInt(minutes);
+        if (minutes >= 1440) {
+            var days = Math.floor(minutes / 1440);
+            var remainingAfterDays = minutes % 1440;
+            var hours = Math.floor(remainingAfterDays / 60);
+            var mins = remainingAfterDays % 60;
+            return days + ' hari ' + hours + ' jam ' + mins + ' menit';
+        } else {
+            var hours = Math.floor(minutes / 60);
+            var mins = minutes % 60;
+            return hours + ' jam ' + mins + ' menit';
+        }
+    }
+
     // ===== Start/Finish Time State =====
-    var startTime = <?php echo $visit->start_time ? "'" . substr($visit->start_time, 0, 5) . "'" : 'null'; ?>;
-    var finishTime = <?php echo $visit->finish_time ? "'" . substr($visit->finish_time, 0, 5) . "'" : 'null'; ?>;
+    var startTime = <?php echo $visit->start_time ? "'" . substr($visit->start_time, 0, 16) . "'" : 'null'; ?>;
+    var finishTime = <?php echo $visit->finish_time ? "'" . substr($visit->finish_time, 0, 16) . "'" : 'null'; ?>;
     var durationMinutesVal = <?php echo $visit->duration_minutes ? (int)$visit->duration_minutes : 'null'; ?>;
     var mandaysUsedVal = <?php echo $visit->mandays_used ? $visit->mandays_used : 'null'; ?>;
 
@@ -376,7 +431,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.status) {
                     startTime = response.start_time;
-                    $('#start-time-display').text(response.start_time);
+                    $('#start-time-display').text(formatDatetimeDisplay(response.start_time));
                     $('#btn-finish').prop('disabled', false);
                 } else {
                     alert(response.message || 'Gagal memulai sesi. Silakan coba lagi.');
@@ -406,11 +461,8 @@ $(document).ready(function() {
                     durationMinutesVal = response.duration_minutes;
                     mandaysUsedVal = response.mandays_used;
 
-                    $('#finish-time-display').text(response.finish_time);
-
-                    var hours = Math.floor(durationMinutesVal / 60);
-                    var minutes = durationMinutesVal % 60;
-                    $('#duration-display').text(hours + ' jam ' + minutes + ' menit');
+                    $('#finish-time-display').text(formatDatetimeDisplay(response.finish_time));
+                    $('#duration-display').text(formatDuration(durationMinutesVal));
                     $('#mandays-terpakai-display').text(mandaysUsedVal);
                 } else {
                     alert(response.message || 'Gagal mengakhiri sesi. Silakan coba lagi.');
