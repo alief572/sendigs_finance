@@ -94,7 +94,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">Pph 23</th>
+                    <th width="10%">PPh Final Disetor</th>
                     <td class="text-right">
                         - <span style="color: red;">Rp. <?= number_format($pph, 2) ?></span>
                         <input type="hidden" name="pph_jurnal" value="<?= $pph ?>">
