@@ -78,7 +78,7 @@ $encoded_id_spk = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($id
 
         <!-- Action Buttons -->
         <div class="row">
-            <div class="col-md-12 report-actions">
+            <div class="col-md-12 report-actions" style="display:none;">
                 <a href="<?php echo base_url('laporan_kunjungan/download_pdf/' . urlencode($encoded_id_spk)); ?>" class="btn btn-primary" id="btn-download-pdf">
                     <i class="fa fa-file-pdf-o"></i> Download PDF
                 </a>
