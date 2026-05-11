@@ -400,6 +400,28 @@ class Laporan_kunjungan_model extends BF_Model
     }
 
     /**
+     * Get active draft for an SPK.
+     * Returns the latest draft visit record for the given SPK ID.
+     *
+     * @param string $id_spk The SPK budgeting ID
+     * @return object|false Draft row object if found, false otherwise
+     */
+    public function get_active_draft($id_spk)
+    {
+        $this->db->where('id_spk_budgeting', $id_spk);
+        $this->db->where('status', 'draft');
+        $this->db->order_by('id', 'desc');
+        $this->db->limit(1);
+        $query = $this->db->get('lk_visit_header');
+
+        if ($query && $query->num_rows() > 0) {
+            return $query->row();
+        }
+
+        return false;
+    }
+
+    /**
      * Get action plans from previous visits for a project.
      * Used to display follow-up items during a new visit.
      *

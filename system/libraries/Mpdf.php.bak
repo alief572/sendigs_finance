@@ -13,23 +13,22 @@
 // ******************************************************************************
 
 
-define('mPDF_VERSION','5.7.4');
+if (!defined('mPDF_VERSION')) define('mPDF_VERSION','5.7.4');
 
-//Scale factor
-define('_MPDFK', (72/25.4));
+if (!defined('_MPDFK')) define('_MPDFK', (72/25.4));
 
 /*-- HTML-CSS --*/
-define('AUTOFONT_CJK',1);
-define('AUTOFONT_THAIVIET',2);
-define('AUTOFONT_RTL',4);
-define('AUTOFONT_INDIC',8);
-define('AUTOFONT_ALL',15);
+if (!defined('AUTOFONT_CJK')) define('AUTOFONT_CJK',1);
+if (!defined('AUTOFONT_THAIVIET')) define('AUTOFONT_THAIVIET',2);
+if (!defined('AUTOFONT_RTL')) define('AUTOFONT_RTL',4);
+if (!defined('AUTOFONT_INDIC')) define('AUTOFONT_INDIC',8);
+if (!defined('AUTOFONT_ALL')) define('AUTOFONT_ALL',15);
 
-define('_BORDER_ALL',15);
-define('_BORDER_TOP',8);
-define('_BORDER_RIGHT',4);
-define('_BORDER_BOTTOM',2);
-define('_BORDER_LEFT',1);
+if (!defined('_BORDER_ALL')) define('_BORDER_ALL',15);
+if (!defined('_BORDER_TOP')) define('_BORDER_TOP',8);
+if (!defined('_BORDER_RIGHT')) define('_BORDER_RIGHT',4);
+if (!defined('_BORDER_BOTTOM')) define('_BORDER_BOTTOM',2);
+if (!defined('_BORDER_LEFT')) define('_BORDER_LEFT',1);
 /*-- END HTML-CSS --*/
 
 if (!defined('_MPDF_PATH')) define('_MPDF_PATH', dirname(preg_replace('/\\\\/','/',__FILE__)) . '/mpdf/');
