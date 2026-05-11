@@ -626,6 +626,7 @@ class Non_rutin_model extends BF_Model
             a.close_pr IS NULL
             AND (
 				a.no_pengajuan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+                OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.tanggal LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
@@ -678,6 +679,7 @@ class Non_rutin_model extends BF_Model
             a.close_pr IS NULL
             AND (
 				a.no_pengajuan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+                OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.tanggal LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
@@ -731,6 +733,7 @@ class Non_rutin_model extends BF_Model
             a.close_pr IS NULL
             AND (
 				a.no_pengajuan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+                OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.tanggal LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR b.nama LIKE '%" . $this->db->escape_like_str($like_value) . "%'
