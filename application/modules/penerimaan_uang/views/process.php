@@ -309,7 +309,6 @@
         var ttl_pph23 = 0;
         for (i = 1; i <= no; i++) {
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
-            var piutang = get_num($('input[name="piutang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
             var pph23_inv = get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
@@ -331,11 +330,11 @@
                 if (value == '1102-01-01') {
                     var kredit_piutang_dagang;
                     if (pph23_dipotong == 'Y') {
-                        // Dipotong PPh: kredit piutang dagang = Tagihan + PPN (full)
-                        kredit_piutang_dagang = piutang;
+                        // Dipotong PPh: kredit piutang dagang = penerimaan + biaya admin (total yang mengurangi piutang)
+                        kredit_piutang_dagang = penerimaan + biaya_admin;
                     } else {
-                        // Tidak dipotong: kredit piutang dagang = Tagihan + PPN - PPh (net)
-                        kredit_piutang_dagang = piutang_dagang;
+                        // Tidak dipotong PPh: kredit piutang dagang = penerimaan + biaya admin - pph23
+                        kredit_piutang_dagang = penerimaan + biaya_admin - pph23_inv;
                     }
                     var resp_piutang = number_format(kredit_piutang_dagang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
@@ -365,12 +364,12 @@
 
         }
 
-        var grand_total = Math.round(ttl_piutang_dagang - ttl_biaya_admin);
+        var grand_total = Math.round(ttl_penerimaan - ttl_biaya_admin);
         var kontrol;
         if (pph23_dipotong == 'Y') {
-            kontrol = Math.round(uang_masuk - ttl_piutang_dagang);
+            kontrol = Math.round(uang_masuk - ttl_penerimaan);
         } else {
-            kontrol = Math.round(uang_masuk - ttl_piutang_dagang - ttl_pph23);
+            kontrol = Math.round(uang_masuk - ttl_penerimaan + ttl_pph23);
         }
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
