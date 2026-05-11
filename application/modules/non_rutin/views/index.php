@@ -52,7 +52,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							<th class="text-center no-sort">Tingkat PR</th>
 							<th class="text-center no-sort">PIC</th>
 							<th class="text-center no-sort">Created Date</th>
-							<th class="text-center no-sort">Status</th>
+							<th class="text-center no-sort">Status PR</th>
 							<th class="text-center no-sort" width='13%'>Option</th>
 						</tr>
 					</thead>

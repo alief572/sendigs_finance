@@ -282,6 +282,11 @@ class Metode_pembelian_model extends BF_Model
 				$metode_pembelian = '<span class="badge" style="background-color: #ff3300;">PO</span>';
 			} else {
 				$metode_pembelian = '<span class="badge" style="background-color: #0066ff;">NON PO</span>';
+
+				$check_pr_non_po = $this->db->get_where('tr_pr_non_po', ['no_pr' => $row['no_pr']])->num_rows();
+				if ($check_pr_non_po > 0) {
+					$metode_pembelian = '<span class="badge" style="background-color: green;">Pembelian Cash</span>';
+				}
 			}
 
 			$nestedData[]	= "<div align='center'><span class='badge' style='background-color: " . $warna . ";'>" . strtoupper($category) . "</span></div>";
@@ -314,27 +319,6 @@ class Metode_pembelian_model extends BF_Model
 		if ($category <> '0') {
 			$where = " AND a.category='" . $category . "' ";
 		}
-
-		// $sql = "
-		// 	SELECT
-		// 		(@row:=@row+1) AS nomor,
-		// 		a.*,
-		// 		d.nm_dept
-		// 	FROM
-		// 		tran_pr_detail a
-		// 		LEFT JOIN rutin_non_planning_detail c ON a.id_barang=c.id
-		// 		LEFT JOIN rutin_non_planning_header e ON c.no_pengajuan=e.no_pengajuan
-		// 		LEFT JOIN department d ON e.id_dept=d.id,
-		// 		(SELECT @row:=0) r
-		//     WHERE 1=1 AND a.app_status = 'Y' " . $where . " 
-		// 		AND (
-		// 		a.no_pr_group LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-		// 		OR a.id_barang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-		// 		OR a.nm_barang LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-		// 		OR a.created_date LIKE '%" . $this->db->escape_like_str($like_value) . "%'
-		//     )
-		// 	GROUP BY a.no_pr_group
-		// ";
 
 		if ($category <> '0') {
 			if ($category == 'departemen') {
