@@ -1,9 +1,5 @@
 <?php
 
-if (class_exists('mPDF', false)) {
-    return; // Prevent "Cannot redeclare class mPDF" when loaded from multiple paths
-}
-
 // ******************************************************************************
 // Software: mPDF, Unicode-HTML Free PDF generator                              *
 // Version:  5.7.4     based on                                                 *

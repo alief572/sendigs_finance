@@ -1419,9 +1419,7 @@ class Laporan_kunjungan extends Admin_Controller
 
         // Generate PDF using mPDF
         try {
-            if (!class_exists('mPDF', false)) {
-                $this->load->library('Mpdf');
-            }
+            require_once(APPPATH . 'libraries/Mpdf.php');
             $mpdf = new mPDF('', 'A4-L');
             $mpdf->WriteHTML($html);
             $mpdf->Output('Laporan_Kunjungan_' . date('Y-m-d') . '.pdf', 'D');
@@ -1489,9 +1487,7 @@ class Laporan_kunjungan extends Admin_Controller
         $temp_path = APPPATH . 'cache/laporan_kunjungan_' . time() . '.pdf';
 
         try {
-            if (!class_exists('mPDF', false)) {
-                $this->load->library('Mpdf');
-            }
+            require_once(APPPATH . 'libraries/Mpdf.php');
             $mpdf = new mPDF('', 'A4-L');
             $mpdf->WriteHTML($html);
             $mpdf->Output($temp_path, 'F');
