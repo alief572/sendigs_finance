@@ -86,14 +86,14 @@ $ENABLE_ADD = has_permission('Laporan_Kunjungan.Add');
         <div class="row">
             <div class="col-md-4 text-center">
                 <label>Start Time</label>
-                <div class="time-display" id="start-time-display">--:--</div>
+                <div class="time-display" id="start-time-display">--/--/---- --:--</div>
                 <button type="button" class="btn btn-success btn-sm" id="btn-start">
                     <i class="fa fa-play"></i> Start
                 </button>
             </div>
             <div class="col-md-4 text-center">
                 <label>Finish Time</label>
-                <div class="time-display" id="finish-time-display">--:--</div>
+                <div class="time-display" id="finish-time-display">--/--/---- --:--</div>
                 <button type="button" class="btn btn-danger btn-sm" id="btn-finish" disabled>
                     <i class="fa fa-stop"></i> Finish
                 </button>
@@ -259,6 +259,47 @@ $(document).ready(function() {
     var idSpk = '<?php echo addslashes($id_spk); ?>';
     var selectedKegiatan = []; // Array of {id, nama, is_custom, action_plans: [...]}
 
+    // ===== Helper Functions =====
+    /**
+     * Format datetime string for display.
+     * Input: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD HH:MM:SS"
+     * Output: "DD-MM-YYYY HH:MM"
+     */
+    function formatDatetimeDisplay(datetimeStr) {
+        if (!datetimeStr || datetimeStr === '' || datetimeStr === null) return '--/--/---- --:--';
+
+        var parts = datetimeStr.split(' ');
+        if (parts.length < 2) return '--/--/---- --:--';
+
+        var dateParts = parts[0].split('-'); // [YYYY, MM, DD]
+        var time = parts[1].substring(0, 5); // HH:MM
+
+        return dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0] + ' ' + time;
+    }
+
+    /**
+     * Format duration in minutes to human-readable string.
+     * >= 1440 minutes: "X hari Y jam Z menit"
+     * < 1440 minutes: "X jam Y menit"
+     */
+    function formatDuration(minutes) {
+        if (minutes === null || minutes === undefined || minutes === '' || minutes === 0) return '-';
+
+        minutes = parseInt(minutes);
+
+        if (minutes >= 1440) {
+            var days = Math.floor(minutes / 1440);
+            var remainingAfterDays = minutes % 1440;
+            var hours = Math.floor(remainingAfterDays / 60);
+            var mins = remainingAfterDays % 60;
+            return days + ' hari ' + hours + ' jam ' + mins + ' menit';
+        } else {
+            var hours = Math.floor(minutes / 60);
+            var mins = minutes % 60;
+            return hours + ' jam ' + mins + ' menit';
+        }
+    }
+
     // ===== Character Counters =====
     $('#custom-kegiatan-input').on('input', function() {
         var len = $(this).val().length;
@@ -298,7 +339,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.status) {
                     startTime = response.start_time;
-                    $('#start-time-display').text(response.start_time);
+                    $('#start-time-display').text(formatDatetimeDisplay(response.start_time));
                     $('#btn-finish').prop('disabled', false);
                 } else {
                     alert(response.message || 'Gagal memulai sesi. Silakan coba lagi.');
@@ -328,15 +369,9 @@ $(document).ready(function() {
                     durationMinutes = response.duration_minutes;
                     mandaysTerpakai = response.mandays_used;
 
-                    $('#finish-time-display').text(response.finish_time);
-
-                    // Display duration as "X jam Y menit"
-                    var hours = Math.floor(durationMinutes / 60);
-                    var minutes = durationMinutes % 60;
-                    var durationText = hours + ' jam ' + minutes + ' menit';
-                    $('#duration-display').text(durationText);
-
-                    $('#mandays-terpakai-display').text(mandaysTerpakai);
+                    $('#finish-time-display').text(formatDatetimeDisplay(response.finish_time));
+                    $('#duration-display').text(formatDuration(response.duration_minutes));
+                    $('#mandays-terpakai-display').text(response.mandays_used);
                 } else {
                     alert(response.message || 'Gagal mengakhiri sesi. Silakan coba lagi.');
                     btn.prop('disabled', false);
@@ -687,6 +722,9 @@ $(document).ready(function() {
                 btn.prop('disabled', false);
                 if (response.status) {
                     alert('Draft berhasil disimpan.');
+                    if (response.redirect_url) {
+                        window.location.href = response.redirect_url;
+                    }
                 } else {
                     alert(response.message || 'Gagal menyimpan draft.');
                 }

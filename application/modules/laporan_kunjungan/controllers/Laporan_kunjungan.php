@@ -173,9 +173,8 @@ class Laporan_kunjungan extends Admin_Controller
             // Action buttons - encode id_spk with base64url for safe URLs
             $encoded_spk = $this->_encode_id_spk($item->id_spk_budgeting);
             $btn_view = '<a href="' . base_url('laporan_kunjungan/view/' . $encoded_spk) . '" class="btn btn-sm btn-info" title="View"><i class="fa fa-eye"></i></a>';
-            $btn_visit = '<a href="' . base_url('laporan_kunjungan/visit/' . $encoded_spk) . '" class="btn btn-sm btn-success" title="Visit" style="margin-left: 3px;"><i class="fa fa-plus"></i></a>';
 
-            // Check if draft exists for edit button
+            // Check if draft exists - show pencil (edit draft) or plus (new visit)
             $this->db_consultant->select('id');
             $this->db_consultant->from('lk_visit_header');
             $this->db_consultant->where('id_spk_budgeting', $item->id_spk_budgeting);
@@ -184,16 +183,19 @@ class Laporan_kunjungan extends Admin_Controller
             $this->db_consultant->limit(1);
             $draft_query = $this->db_consultant->get();
 
-            $btn_edit = '';
             if ($draft_query->num_rows() > 0) {
+                // Draft exists - show pencil icon linking to edit draft
                 $draft_id = $draft_query->row()->id;
                 $encoded_draft_id = $this->_encode_id_spk((string)$draft_id);
-                $btn_edit = '<a href="' . base_url('laporan_kunjungan/edit/' . $encoded_draft_id) . '" class="btn btn-sm btn-warning" title="Edit Draft" style="margin-left: 3px;"><i class="fa fa-pencil"></i></a>';
+                $btn_visit_or_edit = '<a href="' . base_url('laporan_kunjungan/edit/' . $encoded_draft_id) . '" class="btn btn-sm btn-warning" title="Edit Draft" style="margin-left: 3px;"><i class="fa fa-pencil"></i></a>';
+            } else {
+                // No draft - show plus icon linking to new visit
+                $btn_visit_or_edit = '<a href="' . base_url('laporan_kunjungan/visit/' . $encoded_spk) . '" class="btn btn-sm btn-success" title="Kunjungan Baru" style="margin-left: 3px;"><i class="fa fa-plus"></i></a>';
             }
 
             $btn_report = '<a href="' . base_url('laporan_kunjungan/report/' . $encoded_spk) . '" class="btn btn-sm btn-primary" title="Report" style="margin-left: 3px;"><i class="fa fa-file-text"></i></a>';
 
-            $option = $btn_view . $btn_visit . $btn_edit . $btn_report;
+            $option = $btn_view . $btn_visit_or_edit . $btn_report;
 
             $hasil[] = [
                 'no'                => $no,
@@ -272,6 +274,14 @@ class Laporan_kunjungan extends Admin_Controller
         // Get full id_spk from URI segments (handles slashes in ID)
         $id_spk = $this->_get_id_spk_from_uri(2);
 
+        // Check if active draft exists for this SPK - redirect to edit instead of showing empty form
+        $existing_draft = $this->Laporan_kunjungan_model->get_active_draft($id_spk);
+        if ($existing_draft) {
+            $encoded_draft_id = $this->_encode_id_spk((string)$existing_draft->id);
+            redirect('laporan_kunjungan/edit/' . $encoded_draft_id);
+            return;
+        }
+
         // Load SPK detail
         $spk_detail = $this->Laporan_kunjungan_model->get_spk_detail($id_spk);
 
@@ -344,19 +354,20 @@ class Laporan_kunjungan extends Admin_Controller
     {
         $this->auth->restrict($this->addPermission);
 
-        $start_time = date('H:i');
+        $start_datetime = date('Y-m-d H:i');
 
         echo json_encode([
             'status'     => true,
             'message'    => 'Sesi kunjungan dimulai.',
-            'start_time' => $start_time
+            'start_time' => $start_datetime
         ]);
     }
 
     /**
      * AJAX endpoint to record the finish time of a visit session.
-     * Receives start_time from POST, records current time as finish_time,
-     * calculates duration_minutes and mandays_used.
+     * Receives start_time (DATETIME format "YYYY-MM-DD HH:MM") from POST,
+     * records current server datetime as finish_time,
+     * validates finish > start, calculates duration_minutes and mandays_used.
      *
      * @return void Outputs JSON response
      */
@@ -366,17 +377,8 @@ class Laporan_kunjungan extends Admin_Controller
 
         $start_time = $this->input->post('start_time');
 
-        // Validate start_time is provided
-        if (empty($start_time)) {
-            echo json_encode([
-                'status'  => false,
-                'message' => 'Start time tidak ditemukan. Silakan mulai sesi terlebih dahulu.'
-            ]);
-            return;
-        }
-
-        // Validate start_time format (HH:mm)
-        if (!preg_match('/^\d{2}:\d{2}$/', $start_time)) {
+        // Validate start_time is provided and matches DATETIME format "YYYY-MM-DD HH:MM"
+        if (!$start_time || !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $start_time)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Format start time tidak valid.'
@@ -384,11 +386,10 @@ class Laporan_kunjungan extends Admin_Controller
             return;
         }
 
-        $finish_time = date('H:i');
+        $finish_datetime = date('Y-m-d H:i');
 
-        // Parse times for comparison and calculation
-        $start_timestamp  = strtotime(date('Y-m-d') . ' ' . $start_time . ':00');
-        $finish_timestamp = strtotime(date('Y-m-d') . ' ' . $finish_time . ':00');
+        $start_timestamp  = strtotime($start_time . ':00');
+        $finish_timestamp = strtotime($finish_datetime . ':00');
 
         // Validate finish > start
         if ($finish_timestamp <= $start_timestamp) {
@@ -399,17 +400,17 @@ class Laporan_kunjungan extends Admin_Controller
             return;
         }
 
-        // Calculate duration in minutes
-        $duration_minutes = ($finish_timestamp - $start_timestamp) / 60;
+        // Calculate duration in minutes (supports multi-day)
+        $duration_minutes = (int)(($finish_timestamp - $start_timestamp) / 60);
 
-        // Calculate mandays_used: duration_minutes / 60 / 8, rounded to 2 decimal places
-        $mandays_used = round($duration_minutes / 60 / 8, 2);
+        // Calculate mandays_used: duration_minutes / 480 (8 hours per day), rounded to 2 decimal places
+        $mandays_used = round($duration_minutes / 480, 2);
 
         echo json_encode([
             'status'           => true,
             'message'          => 'Sesi kunjungan selesai.',
-            'finish_time'      => $finish_time,
-            'duration_minutes' => (int) $duration_minutes,
+            'finish_time'      => $finish_datetime,
+            'duration_minutes' => $duration_minutes,
             'mandays_used'     => $mandays_used
         ]);
     }
@@ -422,11 +423,10 @@ class Laporan_kunjungan extends Admin_Controller
      * Expects JSON POST body with structure:
      * {
      *   "id_spk": "...",
-     *   "start_time": "HH:mm",
-     *   "finish_time": "HH:mm",
+     *   "start_time": "YYYY-MM-DD HH:MM",
+     *   "finish_time": "YYYY-MM-DD HH:MM",
      *   "duration_minutes": int,
      *   "mandays_used": float,
-     *   "visit_date": "YYYY-MM-DD",
      *   "potensi_improvement": "...",
      *   "hasil_improvement": "...",
      *   "kegiatan": [...]
@@ -456,14 +456,18 @@ class Laporan_kunjungan extends Admin_Controller
 
         $now = date('Y-m-d H:i:s');
 
+        // Extract start_time and finish_time inputs (format "YYYY-MM-DD HH:MM")
+        $start_time_input = isset($input['start_time']) && $input['start_time'] !== '' ? $input['start_time'] : null;
+        $finish_time_input = isset($input['finish_time']) && $input['finish_time'] !== '' ? $input['finish_time'] : null;
+
         // Prepare visit header data
         $header_data = [
             'id_spk_budgeting'    => isset($input['id_spk']) ? $input['id_spk'] : '',
             'konsultan_id'        => $konsultan_id,
             'konsultan_name'      => $konsultan_name,
-            'visit_date'          => isset($input['visit_date']) ? $input['visit_date'] : date('Y-m-d'),
-            'start_time'          => isset($input['start_time']) && $input['start_time'] !== '' ? $input['start_time'] . ':00' : null,
-            'finish_time'         => isset($input['finish_time']) && $input['finish_time'] !== '' ? $input['finish_time'] . ':00' : null,
+            'visit_date'          => $start_time_input ? substr($start_time_input, 0, 10) : date('Y-m-d'),
+            'start_time'          => $start_time_input ? $start_time_input . ':00' : null,
+            'finish_time'         => $finish_time_input ? $finish_time_input . ':00' : null,
             'duration_minutes'    => isset($input['duration_minutes']) ? (int) $input['duration_minutes'] : null,
             'mandays_used'        => isset($input['mandays_used']) ? (float) $input['mandays_used'] : null,
             'potensi_improvement' => isset($input['potensi_improvement']) ? $input['potensi_improvement'] : null,
@@ -524,9 +528,10 @@ class Laporan_kunjungan extends Admin_Controller
         }
 
         echo json_encode([
-            'status'   => true,
-            'message'  => 'Draft berhasil disimpan.',
-            'visit_id' => (int) $visit_id
+            'status'       => true,
+            'message'      => 'Draft berhasil disimpan.',
+            'visit_id'     => (int) $visit_id,
+            'redirect_url' => base_url('laporan_kunjungan/edit/' . $this->_encode_id_spk((string)$visit_id))
         ]);
     }
 
@@ -565,30 +570,27 @@ class Laporan_kunjungan extends Admin_Controller
         // =====================================================================
         $errors = [];
 
-        // Validate start_time and finish_time
+        // Validate start_time and finish_time (format "YYYY-MM-DD HH:MM")
         $start_time  = isset($input['start_time']) ? trim($input['start_time']) : '';
         $finish_time = isset($input['finish_time']) ? trim($input['finish_time']) : '';
 
         if (empty($start_time)) {
-            $errors[] = 'Start time wajib diisi.';
+            echo json_encode(['status' => false, 'message' => 'Start time wajib diisi.']);
+            return;
         }
 
         if (empty($finish_time)) {
-            $errors[] = 'Finish time wajib diisi.';
+            echo json_encode(['status' => false, 'message' => 'Finish time wajib diisi.']);
+            return;
         }
 
         // Validate start < finish
-        if (!empty($start_time) && !empty($finish_time)) {
-            if (strtotime($start_time) >= strtotime($finish_time)) {
-                $errors[] = 'Start time harus lebih awal dari finish time.';
-            }
+        if (strtotime($start_time . ':00') >= strtotime($finish_time . ':00')) {
+            $errors[] = 'Start time harus lebih awal dari finish time.';
         }
 
-        // Validate visit_date
-        $visit_date = isset($input['visit_date']) ? trim($input['visit_date']) : '';
-        if (empty($visit_date)) {
-            $errors[] = 'Tanggal kunjungan wajib diisi.';
-        }
+        // Derive visit_date from start_time date component
+        $visit_date = substr($start_time, 0, 10);
 
         // Validate potensi_improvement character limit (2000)
         if (isset($input['potensi_improvement']) && mb_strlen($input['potensi_improvement']) > 2000) {
@@ -885,11 +887,15 @@ class Laporan_kunjungan extends Admin_Controller
 
         $now = date('Y-m-d H:i:s');
 
+        // Extract start_time and finish_time inputs (format "YYYY-MM-DD HH:MM")
+        $start_time_input = isset($input['start_time']) && $input['start_time'] !== '' ? $input['start_time'] : null;
+        $finish_time_input = isset($input['finish_time']) && $input['finish_time'] !== '' ? $input['finish_time'] : null;
+
         // Prepare visit header update data
         $header_data = [
-            'visit_date'          => isset($input['visit_date']) ? $input['visit_date'] : $visit->visit_date,
-            'start_time'          => isset($input['start_time']) && $input['start_time'] !== '' ? $input['start_time'] . ':00' : $visit->start_time,
-            'finish_time'         => isset($input['finish_time']) && $input['finish_time'] !== '' ? $input['finish_time'] . ':00' : $visit->finish_time,
+            'visit_date'          => $start_time_input ? substr($start_time_input, 0, 10) : $visit->visit_date,
+            'start_time'          => $start_time_input ? $start_time_input . ':00' : $visit->start_time,
+            'finish_time'         => $finish_time_input ? $finish_time_input . ':00' : $visit->finish_time,
             'duration_minutes'    => isset($input['duration_minutes']) ? (int) $input['duration_minutes'] : $visit->duration_minutes,
             'mandays_used'        => isset($input['mandays_used']) ? (float) $input['mandays_used'] : $visit->mandays_used,
             'potensi_improvement' => isset($input['potensi_improvement']) ? $input['potensi_improvement'] : $visit->potensi_improvement,
@@ -1201,16 +1207,13 @@ class Laporan_kunjungan extends Admin_Controller
 
         // Validate start < finish
         if (!empty($start_time) && !empty($finish_time)) {
-            if (strtotime($start_time) >= strtotime($finish_time)) {
+            if (strtotime($start_time . ':00') >= strtotime($finish_time . ':00')) {
                 $errors[] = 'Start time harus lebih awal dari finish time.';
             }
         }
 
-        // Validate visit_date
-        $visit_date = isset($input['visit_date']) ? trim($input['visit_date']) : '';
-        if (empty($visit_date)) {
-            $errors[] = 'Tanggal kunjungan wajib diisi.';
-        }
+        // Derive visit_date from start_time date component (consistent with save_draft/save_final)
+        $visit_date = !empty($start_time) ? substr($start_time, 0, 10) : '';
 
         // Validate potensi_improvement character limit (2000)
         if (isset($input['potensi_improvement']) && mb_strlen($input['potensi_improvement']) > 2000) {
