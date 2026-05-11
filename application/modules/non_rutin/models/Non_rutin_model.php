@@ -1075,6 +1075,7 @@ class Non_rutin_model extends BF_Model
         if (!empty($search['value'])) {
             $arr_where = [
                 'a.no_pengajuan' => $search['value'],
+                'a.no_pr' => $search['value'],
                 'd.name' => $search['value'],
                 'e.name' => $search['value'],
                 'c.nm_lengkap' => $search['value'],
