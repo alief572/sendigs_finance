@@ -809,7 +809,6 @@ class Invoicing extends Admin_Controller
 
         $this->db->select('a.*');
         $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
-        $this->db->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a');
         $this->db->where('a.id_penawaran', $get_invoicing->id_penawaran);
         $get_penawaran = $this->db->get()->row();
 
