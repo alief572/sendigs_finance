@@ -9,12 +9,15 @@ class Invoicing extends Admin_Controller
     protected $consultant;
     protected $accounting;
     protected $accounting_vuca;
+    protected $hris;
     public function __construct()
     {
         parent::__construct();
         $this->consultant = $this->load->database('consultant', true);
         $this->accounting = $this->load->database('accounting', true);
         $this->accounting_vuca = $this->load->database('accounting_vuca', true);
+        $this->hris = $this->load->database('hris', true);
+
 
         $this->load->models(array(
             'Invoicing/Invoicing_model'
@@ -1519,16 +1522,18 @@ class Invoicing extends Admin_Controller
         // Count all records (tanpa filter search)
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
         $this->db->where('a.non_kons', '1');
         $count_all = $this->db->count_all_results();
 
         // Count filtered records (dengan filter search)
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
         $this->db->where('a.non_kons', '1');
         if (!empty($search['value'])) {
             $this->db->group_start();
-            $this->db->like('b.nm_company', $search['value'], 'both');
+            $this->db->like('c.nm_company', $search['value'], 'both');
             $this->db->or_like('a.nm_customer', $search['value'], 'both');
             $this->db->or_like('a.no_invoice', $search['value'], 'both');
             $this->db->or_like('a.id_penawaran', $search['value'], 'both');
@@ -1539,13 +1544,14 @@ class Invoicing extends Admin_Controller
         $count_filtered = $this->db->count_all_results();
 
         // Query data
-        $this->db->select('a.*, b.id_company, b.nm_company, b.keterangan_penawaran as penjualan, b.pic as pic');
+        $this->db->select('a.*, b.id_company, c.nm_company, b.keterangan_penawaran as penjualan, b.pic as pic');
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
         $this->db->where('a.non_kons', '1');
         if (!empty($search['value'])) {
             $this->db->group_start();
-            $this->db->like('b.nm_company', $search['value'], 'both');
+            $this->db->like('c.nm_company', $search['value'], 'both');
             $this->db->or_like('a.nm_customer', $search['value'], 'both');
             $this->db->or_like('a.no_invoice', $search['value'], 'both');
             $this->db->or_like('a.id_penawaran', $search['value'], 'both');
@@ -1621,7 +1627,22 @@ class Invoicing extends Admin_Controller
 
     public function edit_invoice_non_kons($id)
     {
+        $this->auth->restrict($this->managePermission);
+
         $data_invoicing = $this->Invoicing_model->get_invoice($id);
+
+        // IDOR prevention: verify invoice exists and references a valid penawaran
+        if (empty($data_invoicing)) {
+            $this->session->set_flashdata('error', 'Data invoice tidak ditemukan.');
+            redirect('invoicing');
+        }
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($data_invoicing->id_penawaran);
+        if (empty($get_penawaran)) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('invoicing');
+        }
+
         $data_detail_invoice = $this->Invoicing_model->get_invoice_non_kons_detail($id);
 
         $data = [
@@ -1669,6 +1690,8 @@ class Invoicing extends Admin_Controller
 
     public function save_invoice_non_konsultasi()
     {
+        $this->auth->restrict($this->addPermission);
+
         $id_penawaran = $this->input->post('id_penawaran', true);
 
         $this->db->trans_begin();
@@ -1677,6 +1700,54 @@ class Invoicing extends Admin_Controller
             $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
 
             $id = $this->Invoicing_model->generate_id();
+
+            // Server-side DPP calculation from submitted items
+            $item_all = $this->input->post('item', true);
+            $biaya_kirim = (float) str_replace(',', '', $this->input->post('biaya_kirim', true));
+
+            $dpp = 0;
+            $arr_item_detail = [];
+            foreach ($item_all as $item_detail) {
+                if (!empty($item_detail['nama'])) {
+                    $qty = (float) $item_detail['qty'];
+                    $harga = (float) str_replace(',', '', $item_detail['harga']);
+                    $item_total = $qty * $harga;
+
+                    $dpp += $item_total;
+
+                    $arr_item_detail[] = [
+                        'id_header' => $id,
+                        'nm_item' => $item_detail['nama'],
+                        'qty' => $qty,
+                        'harga' => $harga,
+                        'total' => $item_total,
+                        'input_by' => $this->auth->user_id(),
+                        'input_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            $dpp += $biaya_kirim;
+
+            // Server-side outstanding validation
+            $total_invoiced = $this->Invoicing_model->total_invoiced_non_kons($id_penawaran);
+            $grand_total = $get_penawaran->grand_total;
+            $outstanding = $grand_total - $total_invoiced;
+
+            if ($dpp > $outstanding) {
+                echo json_encode([
+                    'status' => 0,
+                    'msg' => 'Total DPP melebihi outstanding invoice'
+                ]);
+                return;
+            }
+
+            // Server-side derived financial values
+            $dpp_lain_lain = $dpp * 11 / 12;
+            $ppn = $dpp_lain_lain * 12 / 100;
+            $pph = $dpp * 2 / 100;
+            $total_tagihan_ppn = $dpp + $ppn;
+            $total_tagihan_all = $dpp + $ppn - $pph;
 
             $arr_insert = [
                 'id' => $id,
@@ -1696,42 +1767,34 @@ class Invoicing extends Admin_Controller
                 'no_invoice' => $this->input->post('nomor_invoice', true),
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
-                'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
-                'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
-                'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
-                'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_lain_lain_jurnal' => str_replace(',', '', $this->input->post('dpp_lain_lain', true)),
-                'ppn_jurnal' => str_replace(',', '', $this->input->post('ppn', true)),
-                'tagihan_ppn_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
-                'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
-                'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
+                'total_nominal' => $dpp,
+                'dpp_nilai_lain' => $dpp_lain_lain,
+                'pajak' => $ppn,
+                'total_akhir' => $total_tagihan_ppn,
+                'total_nominal_jurnal' => $dpp,
+                'dpp_lain_lain_jurnal' => $dpp_lain_lain,
+                'ppn_jurnal' => $ppn,
+                'tagihan_ppn_jurnal' => $total_tagihan_ppn,
+                'pph_jurnal' => $pph,
+                'total_akhir_jurnal' => $total_tagihan_all,
+                'saldo_piutang' => $total_tagihan_all,
+                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn,
                 'non_kons' => '1',
-                'biaya_kirim' => str_replace(',', '', $this->input->post('biaya_kirim', true)),
-                'discount' => str_replace(',', '', $this->input->post('discount', true)),
-                'ppn_consultant' => str_replace(',', '', $this->input->post('ppn_consultant', true)),
+                'biaya_kirim' => $biaya_kirim,
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
             ];
 
-            $item_all = $this->input->post('item', true);
+            // Server-side journal calculation
+            $get_company = $this->db->select('a.id_company, b.nm_company')
+                ->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a')
+                ->join(DBCNL . '.kons_tr_company b', 'b.id = a.id_company', 'left')
+                ->where('a.id_penawaran', $id_penawaran)
+                ->get()
+                ->row();
 
-            $arr_item_detail = [];
-            foreach ($item_all as $item_detail) {
-                if (!empty($item_detail['nama'])) {
-                    $arr_item_detail[] = [
-                        'id_header' => $id,
-                        'nm_item' => $item_detail['nama'],
-                        'qty' => $item_detail['qty'],
-                        'harga' => str_replace(',', '', $item_detail['harga']),
-                        'total' => str_replace(',', '', $item_detail['total']),
-                        'input_by' => $this->auth->user_id(),
-                        'input_at' => date('Y-m-d H:i:s')
-                    ];
-                }
-            }
+            $id_company = (!empty($get_company)) ? $get_company->id_company : '';
+            $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 
             $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
@@ -1739,6 +1802,9 @@ class Invoicing extends Admin_Controller
             $this->accounting->from('coa_master a');
             $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
             $get_coa_jurnal = $this->accounting->get()->result_array();
+
+            // Use revenue COA from POST if provided (user may select different revenue COA)
+            $jurnal_invoice_no_coa = $this->input->post('jurnal_invoice_no_coa', true);
 
             $arr_insert_jurnal = [];
 
@@ -1748,16 +1814,26 @@ class Invoicing extends Admin_Controller
 
                 $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
                 $keterangan = $item['nm_coa'] . ' - ' . $id;
-                $tgl_jurnal = $this->input->post('tgl_jurnal_' . $no_coa_jurnal, true);
-                $coa_jurnal = $this->input->post('coa_jurnal_' . $no_coa_jurnal, true);
-                if (!isset($coa_jurnal)) {
-                    $coa_jurnal = $this->input->post('jurnal_invoice_no_coa', true);
+                $tgl_jurnal = date('Y-m-d');
+                $coa_jurnal = $item['no_perkiraan'];
+
+                // Server-side debit/kredit calculation
+                $debit = 0;
+                $kredit = 0;
+
+                if ($item['no_perkiraan'] == '1102-01-01') {
+                    $debit = $total_tagihan_all;
+                } else if ($item['no_perkiraan'] == '2104-01-07') {
+                    $kredit = $ppn;
+                } else if ($item['no_perkiraan'] == '1106-01-02') {
+                    $debit = $pph;
+                } else {
+                    // Revenue COA (4101-01-xx)
+                    if (!empty($jurnal_invoice_no_coa)) {
+                        $coa_jurnal = $jurnal_invoice_no_coa;
+                    }
+                    $kredit = $dpp;
                 }
-                $id_company = $this->input->post('id_company_' . $no_coa_jurnal, true);
-                $nm_company = $this->input->post('nm_company_' . $no_coa_jurnal, true);
-                $nm_coa = $this->input->post('nm_coa_' . $no_coa_jurnal, true);
-                $debit = $this->input->post('debit_' . $no_coa_jurnal, true);
-                $kredit = $this->input->post('kredit_' . $no_coa_jurnal, true);
 
                 $arr_insert_jurnal[] = [
                     'no_jurnal' => $no_jurnal,
@@ -1765,7 +1841,7 @@ class Invoicing extends Admin_Controller
                     'coa' => $coa_jurnal,
                     'id_company' => $id_company,
                     'nm_company' => $nm_company,
-                    'nm_coa' => $nm_coa,
+                    'nm_coa' => $item['nm_coa'],
                     'debit' => $debit,
                     'kredit' => $kredit,
                     'keterangan' => $keterangan,
@@ -1781,13 +1857,13 @@ class Invoicing extends Admin_Controller
 
             // Cek jika query insert pertama gagal
             if (!$insert_invoicing) {
-                $error = $this->db->error(); // Ambil detail error database
+                $error = $this->db->error();
                 throw new Exception('Gagal insert invoicing: ' . $error['message']);
             }
 
             $insert_detail_item = $this->db->insert_batch('tr_invoice_detail_non_kons', $arr_item_detail);
             if (!$insert_detail_item) {
-                $error = $this->db->error(); // Ambil detail error database
+                $error = $this->db->error();
                 throw new Exception('Gagal insert detail item: ' . $error['message']);
             }
 
@@ -1823,6 +1899,8 @@ class Invoicing extends Admin_Controller
 
     public function update_invoice_non_konsultasi()
     {
+        $this->auth->restrict($this->managePermission);
+
         $id = $this->input->post('id', true);
         $id_penawaran = $this->input->post('id_penawaran', true);
 
@@ -1831,6 +1909,41 @@ class Invoicing extends Admin_Controller
         $this->db->trans_begin();
 
         try {
+            // Server-side DPP calculation from submitted items
+            $data_item = (isset($_POST['item'])) ? $this->input->post('item') : '';
+            $biaya_kirim = (float) $get_invoicing->biaya_kirim;
+
+            $dpp = 0;
+            $arr_data_detail = [];
+            if (!empty($data_item)) {
+                foreach ($data_item as $item) {
+                    $qty = (float) $item['qty'];
+                    $harga = (float) str_replace(',', '', $item['harga']);
+                    $item_total = $qty * $harga;
+
+                    $dpp += $item_total;
+
+                    $arr_data_detail[] = [
+                        'id_header' => $id,
+                        'nm_item' => $item['nama'],
+                        'qty' => $qty,
+                        'harga' => $harga,
+                        'total' => $item_total,
+                        'input_by' => $this->auth->user_id(),
+                        'input_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            $dpp += $biaya_kirim;
+
+            // Server-side derived financial values
+            $dpp_lain_lain = $dpp * 11 / 12;
+            $ppn = $dpp_lain_lain * 12 / 100;
+            $pph = $dpp * 2 / 100;
+            $total_tagihan_ppn = $dpp + $ppn;
+            $total_tagihan_all = $dpp + $ppn - $pph;
+
             $arr_update = [
                 'nm_customer' => $this->input->post('nm_customer', true),
                 'address' => $this->input->post('address', true),
@@ -1839,39 +1952,50 @@ class Invoicing extends Admin_Controller
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
                 'no_revisi' => ($get_invoicing->no_revisi + 1),
-                'total_nominal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_nilai_lain' => str_replace(',', '', $this->input->post('dpp_lain_lain  ', true)),
-                'pajak' => str_replace(',', '', $this->input->post('ppn', true)),
-                'total_akhir' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
-                'total_nominal_jurnal' => str_replace(',', '', $this->input->post('dpp', true)),
-                'dpp_lain_lain_jurnal' => str_replace(',', '', $this->input->post('dpp_lain_lain', true)),
-                'ppn_jurnal' => str_replace(',', '', $this->input->post('ppn', true)),
-                'tagihan_ppn_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true)),
-                'pph_jurnal' => str_replace(',', '', $this->input->post('pph', true)),
-                'total_akhir_jurnal' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang' => str_replace(',', '', $this->input->post('total_tagihan_all', true)),
-                'saldo_piutang_tanpa_pph' => str_replace(',', '', $this->input->post('total_tagihan_ppn', true))
+                'total_nominal' => $dpp,
+                'dpp_nilai_lain' => $dpp_lain_lain,
+                'pajak' => $ppn,
+                'total_akhir' => $total_tagihan_ppn,
+                'total_nominal_jurnal' => $dpp,
+                'dpp_lain_lain_jurnal' => $dpp_lain_lain,
+                'ppn_jurnal' => $ppn,
+                'tagihan_ppn_jurnal' => $total_tagihan_ppn,
+                'pph_jurnal' => $pph,
+                'total_akhir_jurnal' => $total_tagihan_all,
+                'saldo_piutang' => $total_tagihan_all,
+                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn
             ];
 
-            $arr_data_detail = [];
-            $data_item = (isset($_POST['item'])) ? $this->input->post('item') : '';
+            // Server-side journal calculation
+            $get_company = $this->db->select('a.id_company, b.nm_company')
+                ->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a')
+                ->join(DBCNL . '.kons_tr_company b', 'b.id = a.id_company', 'left')
+                ->where('a.id_penawaran', $id_penawaran)
+                ->get()
+                ->row();
 
-            if (!empty($data_item)) {
-                foreach ($data_item as $item) {
-                    $arr_data_detail[] = [
-                        'id_header' => $id,
-                        'nm_item' => $item['nama'],
-                        'qty' => $item['qty'],
-                        'harga' => str_replace(',', '', $item['harga']),
-                        'total' => str_replace(',', '', $item['total']),
-                        'input_by' => $this->auth->user_id(),
-                        'input_at' => date('Y-m-d H:i:s')
-                    ];
+            $id_company = (!empty($get_company)) ? $get_company->id_company : '';
+            $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+
+            // Determine revenue COA - check existing journal or use POST selection
+            $jurnal_invoice_no_coa = $this->input->post('jurnal_invoice_no_coa', true);
+            $revenue_coa = '4101-01-03';
+            if (!empty($jurnal_invoice_no_coa)) {
+                $revenue_coa = $jurnal_invoice_no_coa;
+            } else {
+                // Check existing journal for the revenue COA
+                $this->db->select('a.coa');
+                $this->db->from('tr_jurnal a');
+                $this->db->where('a.no_transaksi', $id);
+                $this->db->where('a.jenis_transaksi', 'Invoicing');
+                $this->db->where_not_in('a.coa', ['1102-01-01', '2104-01-07', '1106-01-02']);
+                $get_coa_other = $this->db->get()->row();
+                if (!empty($get_coa_other)) {
+                    $revenue_coa = $get_coa_other->coa;
                 }
             }
 
-
-            $arr_coa_jurnal = ['1102-01-01', '1106-01-02', '2104-01-07', $this->input->post('jurnal_invoice_no_coa')];
+            $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', $revenue_coa];
 
             $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
             $this->accounting->from('coa_master a');
@@ -1886,17 +2010,22 @@ class Invoicing extends Admin_Controller
 
                 $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
                 $keterangan = $item['nm_coa'] . ' - ' . $id;
-                $tgl_jurnal = $this->input->post('tgl_jurnal_' . $no_coa_jurnal, true);
-                $coa_jurnal = $this->input->post('coa_jurnal_' . $no_coa_jurnal, true);
-                if (!isset($coa_jurnal)) {
-                    $coa_jurnal = $this->input->post('jurnal_invoice_no_coa', true);
-                }
-                $id_company = $this->input->post('id_company_' . $no_coa_jurnal, true);
-                $nm_company = $this->input->post('nm_company_' . $no_coa_jurnal, true);
-                $nm_coa = $this->input->post('nm_coa_' . $no_coa_jurnal, true);
-                $debit = $this->input->post('debit_' . $no_coa_jurnal, true);
-                $kredit = $this->input->post('kredit_' . $no_coa_jurnal, true);
+                $tgl_jurnal = date('Y-m-d');
+                $coa_jurnal = $item['no_perkiraan'];
 
+                // Server-side debit/kredit calculation
+                $debit = 0;
+                $kredit = 0;
+
+                if ($item['no_perkiraan'] == '1102-01-01') {
+                    $debit = $total_tagihan_all;
+                } else if ($item['no_perkiraan'] == '2104-01-07') {
+                    $kredit = $ppn;
+                } else if ($item['no_perkiraan'] == '1106-01-02') {
+                    $debit = $pph;
+                } else {
+                    $kredit = $dpp;
+                }
 
                 $arr_insert_jurnal[] = [
                     'no_jurnal' => $no_jurnal,
@@ -1904,7 +2033,7 @@ class Invoicing extends Admin_Controller
                     'coa' => $coa_jurnal,
                     'id_company' => $id_company,
                     'nm_company' => $nm_company,
-                    'nm_coa' => $nm_coa,
+                    'nm_coa' => $item['nm_coa'],
                     'debit' => $debit,
                     'kredit' => $kredit,
                     'keterangan' => $keterangan,
@@ -1970,21 +2099,32 @@ class Invoicing extends Admin_Controller
 
     public function hitung_jurnal()
     {
+        $this->auth->restrict($this->viewPermission);
+
         $get = $this->input->get();
 
         $id_penawaran = $get['id_penawaran'];
-        $dpp = $get['dpp'];
-        $dpp_lain_lain = $get['dpp_lain_lain'];
-        $ppn = $get['ppn'];
-        $pph = $get['pph'];
-        $total_tagihan_all = $get['total_tagihan_all'];
+        $dpp = (float) $get['dpp'];
 
         $id_invoice = (isset($get['id_invoice'])) ? $get['id_invoice'] : '';
 
-        $get_penawaran_non_kons = $this->db->get_where(DBCNL . '.kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $id_penawaran])->row();
+        // Server-side recalculation from DPP only
+        $dpp_lain_lain = $dpp * 11 / 12;
+        $ppn = $dpp_lain_lain * 12 / 100;
+        $pph = $dpp * 2 / 100;
+        $total_tagihan_all = $dpp + $ppn - $pph;
 
-        $id_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->id_company : '';
-        $nm_company = (!empty($get_penawaran_non_kons)) ? $get_penawaran_non_kons->nm_company : '';
+        // $get_penawaran_non_kons = $this->db->get_where(DBCNL . '.kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $id_penawaran])->row();
+
+        $get_company = $this->db->select('a.id_company, b.nm_company')
+            ->from(DBCNL . '.kons_tr_penawaran_non_konsultasi a')
+            ->join(DBCNL . '.kons_tr_company b', 'b.id = a.id_company', 'left')
+            ->where('a.id_penawaran', $id_penawaran)
+            ->get()
+            ->row();
+
+        $id_company = (!empty($get_company)) ? $get_company->id_company : '';
+        $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 
         $arr_coa_jurnal = ['4101-01-03', '1102-01-01', '2104-01-07', '1106-01-02'];
         if (!empty($id_invoice)) {
@@ -2148,7 +2288,22 @@ class Invoicing extends Admin_Controller
 
     public function view_invoice_non_kons($id)
     {
+        $this->auth->restrict($this->viewPermission);
+
         $data_invoice = $this->Invoicing_model->get_invoice($id);
+
+        // IDOR prevention: verify invoice exists and references a valid penawaran
+        if (empty($data_invoice)) {
+            $this->session->set_flashdata('error', 'Data invoice tidak ditemukan.');
+            redirect('invoicing');
+        }
+
+        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($data_invoice->id_penawaran);
+        if (empty($get_penawaran)) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('invoicing');
+        }
+
         $data_item_invoice = $this->Invoicing_model->get_invoice_non_kons_detail($id);
         $data_jurnal_invoice = $this->Invoicing_model->get_view_jurnal_invoice_non_kons($id);
 
@@ -2167,6 +2322,8 @@ class Invoicing extends Admin_Controller
 
     public function save_close_invoice()
     {
+        $this->auth->restrict($this->managePermission);
+
         $id_invoicing   = $this->input->post('id_invoicing', true);
         $alasan_closing = $this->input->post('alasan_closing', true);
 
@@ -2211,6 +2368,8 @@ class Invoicing extends Admin_Controller
 
     public function close_penawaran_non_kons()
     {
+        $this->auth->restrict($this->managePermission);
+
         // 1. Ambil data input
         $id_penawaran = $this->input->post('id_penawaran', true);
 
