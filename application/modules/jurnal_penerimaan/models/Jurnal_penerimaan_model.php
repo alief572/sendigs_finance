@@ -93,7 +93,6 @@ class Jurnal_penerimaan_model extends BF_Model
         $no   = $start;
         foreach ($get_data as $row) {
             $no++;
-            $nilai = ($row->debit > 0) ? $row->debit : $row->kredit;
 
             $data[] = [
                 'no'                 => $no,
@@ -106,7 +105,7 @@ class Jurnal_penerimaan_model extends BF_Model
                 'coa'                => $row->coa,
                 'perkiraan'          => $row->nm_coa,
                 'uraian'             => $row->no_invoice,
-                'original'           => number_format($nilai),
+                'original'           => number_format($row->total_debit),
                 'action'             => '<button type="button" class="btn btn-sm btn-primary posting_jurnal" title="Posting Jurnal" data-id="' . $row->id . '"><i class="fa fa-arrow-up"></i></button>'
             ];
         }
@@ -121,7 +120,7 @@ class Jurnal_penerimaan_model extends BF_Model
 
     private function _query_jurnal($filter = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
+        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
             ->from('tr_jurnal a')
             ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')

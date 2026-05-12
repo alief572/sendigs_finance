@@ -288,7 +288,7 @@ class Jurnal_penerimaan extends Admin_Controller
 		$no_invoice = $this->input->get('no_invoice');
 		$company = $this->input->get('company');
 
-		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
+		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
 		$this->db->from('tr_jurnal a');
 		$this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
 		$this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');

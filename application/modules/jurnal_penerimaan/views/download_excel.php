@@ -20,13 +20,6 @@ header("Content-Disposition: attachment; filename=Jurnal Penerimaan.xls");
     <tbody>
         <?php $no = 0;
         foreach ($list_jurnal as $item_jurnal) : $no++;
-            $nilai = 0;
-            if ($item_jurnal->debit > 0) {
-                $nilai = $item_jurnal->debit;
-            }
-            if ($item_jurnal->kredit > 0) {
-                $nilai = $item_jurnal->kredit;
-            }
 
             $status = "Open";
             if ($item_jurnal->sts == '1') {
@@ -45,7 +38,7 @@ header("Content-Disposition: attachment; filename=Jurnal Penerimaan.xls");
                 <td><?= $item_jurnal->nm_company ?></td>
                 <td><?= $item_jurnal->nm_divisi ?></td>
                 <td><?= $item_jurnal->no_invoice ?></td>
-                <td style="text-align: cemter;"><?= $nilai ?></td>
+                <td style="text-align: cemter;"><?= number_format($item_jurnal->total_debit) ?></td>
                 <td><?= $status ?></td>
             </tr>
         <?php endforeach; ?>
