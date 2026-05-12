@@ -322,8 +322,9 @@ class Invoicing_model extends BF_Model
 
     public function get_list_penawaran_non_kons()
     {
-        $this->consultant->select('a.*');
+        $this->consultant->select('a.*, b.nm_company');
         $this->consultant->from('kons_tr_penawaran_non_konsultasi a');
+        $this->consultant->join('kons_tr_company b', 'b.id = a.id_company', 'left');
         $this->consultant->where('a.sts_quot', '1');
         $this->consultant->where('a.sts_deal', '1');
         $this->consultant->where('a.sts_close', '0');
