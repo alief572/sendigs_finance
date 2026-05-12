@@ -25,7 +25,7 @@
                         </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= date('Y-m-d') ?>" readonly>
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= date('Y-m-d') ?>">
                         </td>
                     </tr>
                     <tr>

@@ -25,7 +25,7 @@
                         </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= htmlspecialchars($data_invoicing->tanggal_invoice, ENT_QUOTES, 'UTF-8') ?>" readonly>
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= htmlspecialchars($data_invoicing->tanggal_invoice, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                     <tr>
