@@ -55,11 +55,12 @@ class Penerimaan_uang_model extends BF_Model
 
         $bank = $this->input->post('bank');
 
-        $this->db->select('a.id, a.tanggal_transaksi, a.keterangan, a.nominal_debit, a.nominal_kredit, a.saldo, a.reference_no, a.nilai_terpakai, b.nama as nama_bank_acc, b.rekening, c.nama_bank as nm_bank');
-        $this->db->from('tr_alokasi_detail a');
+        $this->db->select('s.id as split_id, s.nominal as split_nominal, a.id as detail_id, a.tanggal_transaksi, a.keterangan, a.nominal_debit, a.nominal_kredit, a.saldo, a.reference_no, a.nilai_terpakai, b.nama as nama_bank_acc, b.rekening, c.nama_bank as nm_bank');
+        $this->db->from('tr_alokasi_split s');
+        $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
         $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
         $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
-        $this->db->where('a.sts', '1');
+        $this->db->where('s.jenis_alokasi', 1);
         if (!empty($bank)) {
             $this->db->where('a.tipe_bank', $bank);
         }
@@ -73,7 +74,7 @@ class Penerimaan_uang_model extends BF_Model
             $this->db->or_like('a.keterangan', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->group_by('a.id');
+        $this->db->group_by('s.id');
         $this->db->order_by('a.nilai_terpakai', '');
 
 
@@ -96,18 +97,15 @@ class Penerimaan_uang_model extends BF_Model
                 $tgl_transaksi_bank = date('d-F-Y', strtotime($item['tanggal_transaksi']));
             }
 
-            $nominal = ($item['nominal_debit'] < 1) ? $item['nominal_kredit'] : $item['nominal_debit'];
+            $nominal = $item['split_nominal'];
 
             $status = '<span class="badge bg-yellow">Draft</span>';
 
-            $action = '<a href="' . base_url('penerimaan_uang/add_penerimaan_uang/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Alokasi Penerimaan Uang"><i class="fa fa-plus"></i></a>';
+            $action = '<a href="' . base_url('penerimaan_uang/add_penerimaan_uang/' . $item['split_id']) . '" class="btn btn-sm btn-primary" title="Alokasi Penerimaan Uang"><i class="fa fa-plus"></i></a>';
 
-            if (
-                ($item['nominal_debit'] > 0 && ($item['nominal_debit'] - $item['nilai_terpakai']) <= 0) ||
-                ($item['nominal_kredit'] > 0 && ($item['nominal_kredit'] - $item['nilai_terpakai']) <= 0)
-            ) {
+            if ($item['nilai_terpakai'] >= $item['split_nominal']) {
                 $status = '<span class="badge bg-green">Used</span>';
-                $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['id']])->row_array();
+                $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['split_id']])->row_array();
                 if (!empty($get_penerimaan)) {
                     $action = '<button type="button" class="btn btn-sm btn-info detail" title="View Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-eye"></i></button>';
                 } else {
@@ -146,5 +144,54 @@ class Penerimaan_uang_model extends BF_Model
         $get_list_bank = $this->db->get()->result_array();
 
         return $get_list_bank;
+    }
+
+    /**
+     * Resolves an id_alokasi to both split and detail records.
+     * Supports backward compatibility with legacy records.
+     *
+     * @param int|string $id_alokasi The allocation ID (could be split.id or legacy detail.id)
+     * @return array|null ['split' => row|null, 'detail' => row, 'is_legacy' => bool] or null if not found
+     */
+    public function resolve_alokasi($id_alokasi)
+    {
+        if (empty($id_alokasi)) {
+            return null;
+        }
+
+        // Step 1: Check tr_alokasi_split first
+        $split = $this->db->get_where('tr_alokasi_split', ['id' => $id_alokasi])->row_array();
+
+        if (!empty($split)) {
+            // Found in split table — join to tr_alokasi_detail via id_alokasi_detail
+            $detail = $this->db->get_where('tr_alokasi_detail', ['id' => $split['id_alokasi_detail']])->row_array();
+
+            if (empty($detail)) {
+                // Data integrity issue: split references non-existent detail
+                log_message('error', 'resolve_alokasi: tr_alokasi_split.id=' . $id_alokasi . ' references non-existent tr_alokasi_detail.id=' . $split['id_alokasi_detail']);
+                return null;
+            }
+
+            return [
+                'split'     => $split,
+                'detail'    => $detail,
+                'is_legacy' => false
+            ];
+        }
+
+        // Step 2: Not found in split — try tr_alokasi_detail directly (legacy path)
+        $detail = $this->db->get_where('tr_alokasi_detail', ['id' => $id_alokasi])->row_array();
+
+        if (!empty($detail)) {
+            return [
+                'split'     => null,
+                'detail'    => $detail,
+                'is_legacy' => true
+            ];
+        }
+
+        // Step 3: Not found in either table
+        log_message('error', 'resolve_alokasi: id_alokasi=' . $id_alokasi . ' not found in tr_alokasi_split or tr_alokasi_detail');
+        return null;
     }
 }

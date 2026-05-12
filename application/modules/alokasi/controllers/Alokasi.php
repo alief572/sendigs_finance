@@ -468,4 +468,194 @@ class Alokasi extends Admin_Controller
     {
         $this->Alokasi_model->get_alokasi();
     }
+
+    public function get_alokasi_split_detail()
+    {
+        $id = $this->input->post('id');
+
+        $data = $this->Alokasi_model->get_transaction_for_split($id);
+
+        if (!$data) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Data transaksi tidak ditemukan'
+            ]);
+            return;
+        }
+
+        $tanggal_transaksi = date('d F Y', strtotime($data['tanggal_transaksi']));
+        if ($data['tanggal_transaksi'] == '0000-00-00') {
+            $tanggal_transaksi = 'PEND';
+        }
+
+        echo json_encode([
+            'status' => 1,
+            'id' => $data['id'],
+            'tanggal_transaksi' => $tanggal_transaksi,
+            'keterangan' => $data['keterangan'],
+            'nominal_kredit' => floatval($data['nominal_kredit']),
+            'nominal_debit' => floatval($data['nominal_debit']),
+            'saldo' => floatval($data['saldo']),
+            'reference_no' => $data['reference_no']
+        ]);
+    }
+
+    public function save_split_alokasi()
+    {
+        $id = $this->input->post('id');
+        $splits = $this->input->post('splits');
+
+        // Validate id not empty
+        if (empty($id)) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'ID transaksi tidak boleh kosong'
+            ]);
+            return;
+        }
+
+        // Validate splits not empty
+        if (empty($splits) || !is_array($splits)) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Data alokasi tidak boleh kosong'
+            ]);
+            return;
+        }
+
+        // Validate each split row
+        foreach ($splits as $split) {
+            $jenis = isset($split['jenis_alokasi']) ? intval($split['jenis_alokasi']) : 0;
+            $nominal = isset($split['nominal']) ? floatval($split['nominal']) : 0;
+
+            if ($jenis < 1 || $jenis > 7) {
+                echo json_encode([
+                    'status' => 0,
+                    'msg' => 'Semua baris harus memiliki jenis alokasi'
+                ]);
+                return;
+            }
+
+            if ($nominal <= 0) {
+                echo json_encode([
+                    'status' => 0,
+                    'msg' => 'Nominal harus lebih besar dari 0'
+                ]);
+                return;
+            }
+        }
+
+        // Get transaction to validate sum
+        $transaction = $this->Alokasi_model->get_transaction_for_split($id);
+
+        if (!$transaction) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Data transaksi tidak ditemukan'
+            ]);
+            return;
+        }
+
+        // Determine transaction nominal (kredit or debit)
+        $nominal_transaksi = ($transaction['nominal_kredit'] > 0)
+            ? floatval($transaction['nominal_kredit'])
+            : floatval($transaction['nominal_debit']);
+
+        // Validate sum of splits equals transaction total
+        $total_split = 0;
+        foreach ($splits as $split) {
+            $total_split += floatval($split['nominal']);
+        }
+
+        if (abs($total_split - $nominal_transaksi) > 0.01) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Total nominal harus sama dengan total transaksi'
+            ]);
+            return;
+        }
+
+        // Call model to save
+        $user_id = $this->auth->user_id();
+        $result = $this->Alokasi_model->save_split_alokasi($id, $splits, $user_id);
+
+        if ($result) {
+            // Double-check: ensure sts is set to 8
+            $this->db->query("UPDATE tr_alokasi_detail SET sts = '8' WHERE id = ?", array($id));
+
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'Save Success !'
+            ]);
+        } else {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Penyimpanan gagal, silakan coba lagi'
+            ]);
+        }
+    }
+
+    public function get_view_split_alokasi()
+    {
+        $id = $this->input->post('id');
+
+        if (empty($id)) {
+            echo json_encode(['status' => 0, 'msg' => 'ID tidak valid']);
+            return;
+        }
+
+        // Get transaction detail
+        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no');
+        $this->db->from('tr_alokasi_detail');
+        $this->db->where('id', $id);
+        $transaction = $this->db->get()->row_array();
+
+        if (!$transaction) {
+            echo json_encode(['status' => 0, 'msg' => 'Data transaksi tidak ditemukan']);
+            return;
+        }
+
+        // Get split records
+        $split_data = $this->db->get_where('tr_alokasi_split', ['id_alokasi_detail' => $id])->result_array();
+
+        if (empty($split_data)) {
+            echo json_encode(['status' => 0, 'msg' => 'Data split tidak ditemukan']);
+            return;
+        }
+
+        $jenis_labels = [
+            '1' => 'Penerimaan Piutang',
+            '2' => 'Unlocated Penerimaan',
+            '3' => 'Pengembalian Kasbon',
+            '4' => 'Mutasi',
+            '5' => 'Transaksi Bank',
+            '6' => 'Pembayaran',
+            '7' => 'Alokasi Kalibrasi'
+        ];
+
+        $splits = [];
+        foreach ($split_data as $split) {
+            $splits[] = [
+                'jenis_alokasi' => isset($jenis_labels[$split['jenis_alokasi']]) ? $jenis_labels[$split['jenis_alokasi']] : '-',
+                'nominal' => floatval($split['nominal']),
+                'created_date' => $split['created_date']
+            ];
+        }
+
+        $tanggal_transaksi = date('d F Y', strtotime($transaction['tanggal_transaksi']));
+        if ($transaction['tanggal_transaksi'] == '0000-00-00') {
+            $tanggal_transaksi = 'PEND';
+        }
+
+        echo json_encode([
+            'status' => 1,
+            'tanggal_transaksi' => $tanggal_transaksi,
+            'keterangan' => $transaction['keterangan'],
+            'nominal_kredit' => floatval($transaction['nominal_kredit']),
+            'nominal_debit' => floatval($transaction['nominal_debit']),
+            'saldo' => floatval($transaction['saldo']),
+            'reference_no' => $transaction['reference_no'],
+            'splits' => $splits
+        ]);
+    }
 }

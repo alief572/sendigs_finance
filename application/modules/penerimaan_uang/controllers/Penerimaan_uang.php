@@ -40,9 +40,20 @@ class Penerimaan_uang extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
-        $get_alokasi_detail = $this->db->get_where('tr_alokasi_detail', ['id' => $id])->row_array();
+        // Fetch split record joined to detail
+        $this->db->select('s.*, a.tanggal_transaksi, a.keterangan, a.nominal_debit, a.nominal_kredit, a.saldo, a.reference_no, a.nilai_terpakai, a.tipe_bank, a.jenis_bank');
+        $this->db->from('tr_alokasi_split s');
+        $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
+        $this->db->where('s.id', $id);
+        $result = $this->db->get()->row_array();
 
-        $nominal_penerimaan_bank = ($get_alokasi_detail['nominal_debit'] < 1) ? ($get_alokasi_detail['nominal_kredit'] - $get_alokasi_detail['nilai_terpakai']) : ($get_alokasi_detail['nominal_debit'] - $get_alokasi_detail['nilai_terpakai']);
+        if (empty($result)) {
+            $this->session->set_flashdata('error', 'Data alokasi split tidak ditemukan.');
+            redirect('penerimaan_uang');
+            return;
+        }
+
+        $nominal_penerimaan_bank = $result['nominal'] - $result['nilai_terpakai'];
 
         $this->db->select('a.id_customer, a.nm_customer');
         $this->db->from('tr_invoicing a');
@@ -50,7 +61,7 @@ class Penerimaan_uang extends Admin_Controller
         $get_customer = $this->db->get()->result_array();
 
         $data = [
-            'id_alokasi' => $id,
+            'id_alokasi' => $result['id'],
             'list_customer' => $get_customer,
             'nominal_penerimaan_bank' => $nominal_penerimaan_bank
         ];
@@ -109,9 +120,11 @@ class Penerimaan_uang extends Admin_Controller
         $pph23_dipotong = $post['pph23_dipotong'];
         $ppn_dipotong = $post['ppn_dipotong'];
 
-        $get_alokasi = $this->db->get_where('tr_alokasi_detail', ['id' => $post['id_alokasi']])->row_array();
+        $resolved = $this->Penerimaan_uang_model->resolve_alokasi($post['id_alokasi']);
+        $split = $resolved['split'];
+        $detail = $resolved['detail'];
 
-        $uang_masuk = ($get_alokasi['nominal_debit'] < 0) ? $get_alokasi['nominal_kredit'] : $get_alokasi['nominal_debit'];
+        $uang_masuk = $split['nominal'];
 
 
 
@@ -143,7 +156,7 @@ class Penerimaan_uang extends Admin_Controller
             }
             $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_inv['id_spk_penawaran']])->row_array();
 
-            $get_bank = $this->db->get_where('ms_bank', ['id' => $get_alokasi['tipe_bank']])->row_array();
+            $get_bank = $this->db->get_where('ms_bank', ['id' => $detail['tipe_bank']])->row_array();
 
             $this->accounting->select('a.nama as nm_coa');
             $this->accounting->from('coa_master a');
@@ -192,8 +205,8 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil_jurnal .= '<tr>';
 
                 $hasil_jurnal .= '<td class="text-center">';
-                $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
-                $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_debit" value="' . $get_alokasi['tanggal_transaksi'] . '">';
+                $hasil_jurnal .= date('d-F-Y', strtotime($detail['tanggal_transaksi']));
+                $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_debit" value="' . $detail['tanggal_transaksi'] . '">';
                 $hasil_jurnal .= '</td>';
 
                 $hasil_jurnal .= '<td class="text-center">';
@@ -259,8 +272,8 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '<tr>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
-                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $get_alokasi['tanggal_transaksi'] . '">';
+                    $hasil_jurnal .= date('d-F-Y', strtotime($detail['tanggal_transaksi']));
+                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $detail['tanggal_transaksi'] . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
@@ -323,8 +336,8 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '<tr>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= date('d-F-Y', strtotime($get_alokasi['tanggal_transaksi']));
-                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $get_alokasi['tanggal_transaksi'] . '">';
+                    $hasil_jurnal .= date('d-F-Y', strtotime($detail['tanggal_transaksi']));
+                    $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $detail['tanggal_transaksi'] . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
@@ -396,8 +409,10 @@ class Penerimaan_uang extends Admin_Controller
         $this->consultant->where('a.id_customer', $post['id_customer']);
         $get_customer = $this->consultant->get()->row_array();
 
-        $get_alokasi = $this->db->get_where('tr_alokasi_detail', ['id' => $post['id_alokasi']])->row_array();
-        $get_ms_bank = $this->db->get_where('ms_bank', ['id' => $get_alokasi['tipe_bank']])->row_array();
+        $resolved = $this->Penerimaan_uang_model->resolve_alokasi($post['id_alokasi']);
+        $split = $resolved['split'];
+        $detail = $resolved['detail'];
+        $get_ms_bank = $this->db->get_where('ms_bank', ['id' => $detail['tipe_bank']])->row_array();
 
         $coa_bank = (!empty($get_ms_bank)) ? $get_ms_bank['coa_bank'] : '';
 
@@ -508,7 +523,7 @@ class Penerimaan_uang extends Admin_Controller
                 if ($i == 1 && $no_jurnal == 1) {
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
+                        'tgl_jurnal' => $detail['tanggal_transaksi'],
                         'coa' => $coa_bank,
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
@@ -526,7 +541,7 @@ class Penerimaan_uang extends Admin_Controller
                     $no_jurnal++;
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
+                        'tgl_jurnal' => $detail['tanggal_transaksi'],
                         'coa' => $item_jurnal['no_perkiraan'],
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
@@ -543,7 +558,7 @@ class Penerimaan_uang extends Admin_Controller
                 } else {
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
-                        'tgl_jurnal' => $get_alokasi['tanggal_transaksi'],
+                        'tgl_jurnal' => $detail['tanggal_transaksi'],
                         'coa' => $item_jurnal['no_perkiraan'],
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
@@ -595,7 +610,8 @@ class Penerimaan_uang extends Admin_Controller
             exit;
         }
 
-        $update_alokasi = $this->db->update('tr_alokasi_detail', ['nilai_terpakai' => $total_penerimaan], ['id' => $post['id_alokasi']]);
+        $detail_id_for_update = $resolved['is_legacy'] ? $post['id_alokasi'] : $split['id_alokasi_detail'];
+        $update_alokasi = $this->db->update('tr_alokasi_detail', ['nilai_terpakai' => $total_penerimaan], ['id' => $detail_id_for_update]);
         if (!$update_alokasi) {
             $this->db->trans_rollback();
 
@@ -643,7 +659,8 @@ class Penerimaan_uang extends Admin_Controller
             $arr_id_inv[] = $item_detail['id_inv'];
         }
 
-        $get_alokasi = $this->db->get_where('tr_alokasi_detail', ['id' => $get_penerimaan['id_alokasi']])->row_array();
+        $resolved = $this->Penerimaan_uang_model->resolve_alokasi($get_penerimaan['id_alokasi']);
+        $get_alokasi = (!empty($resolved)) ? $resolved['detail'] : [];
 
         // $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['id_inv'], 'jenis_transaksi' => 'Penerimaan Piutang'])->result_array();
 
