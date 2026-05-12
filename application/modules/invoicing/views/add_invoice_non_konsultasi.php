@@ -13,15 +13,15 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <div class="box">
     <form action="" method="post" id="frm-data">
-        <input type="hidden" name="id_penawaran" value="<?= $data_penawaran->id_penawaran ?>">
-        <input type="hidden" name="total_penawaran" value="<?= ($data_penawaran->grand_total - $total_invoiced) ?>">
+        <input type="hidden" name="id_penawaran" value="<?= htmlspecialchars($data_penawaran->id_penawaran, ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="total_penawaran" value="<?= htmlspecialchars(($data_penawaran->grand_total - $total_invoiced), ENT_QUOTES, 'UTF-8') ?>">
         <div class="box-body">
             <div class="col-6">
                 <table width="100%" border="0">
                     <tr>
                         <th width="13%">Kepada</th>
                         <td width="11%">
-                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= $data_penawaran->nm_customer ?>">
+                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= htmlspecialchars($data_penawaran->nm_customer, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
@@ -31,7 +31,7 @@
                     <tr>
                         <th width="13%">Alamat</th>
                         <td width="12%">
-                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= $data_penawaran->address ?></textarea>
+                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= htmlspecialchars($data_penawaran->address, ENT_QUOTES, 'UTF-8') ?></textarea>
                         </td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
@@ -81,10 +81,10 @@
                         echo '
                                 <tr class="tr_item_' . $no_item . '">
                                     <td class="text-center">' . $no_item . '</td>
-                                    <td><textarea name="item[' . $no_item . '][nama]" class="form-control form-control-sm">' . $item->nm_item . '</textarea></td>
-                                    <td><input type="number" name="item[' . $no_item . '][qty]" id="" class="form-control form-control-sm" min="1" value="' . round($item->qty) . '" onchange="hitung_all();"></td>
-                                    <td><input type="text" name="item[' . $no_item . '][harga]" id="" class="form-control form-control-sm text-right auto_num" value="' . $item->harga . '" onchange="hitung_all();"></td>
-                                    <td><input type="text" name="item[' . $no_item . '][total]" id="" class="form-control form-control-sm text-right auto_num" value="' . $item->total . '"></td>
+                                    <td><textarea name="item[' . $no_item . '][nama]" class="form-control form-control-sm">' . htmlspecialchars($item->nm_item, ENT_QUOTES, 'UTF-8') . '</textarea></td>
+                                    <td><input type="number" name="item[' . $no_item . '][qty]" id="" class="form-control form-control-sm" min="1" value="' . htmlspecialchars(round($item->qty), ENT_QUOTES, 'UTF-8') . '" onchange="hitung_all();"></td>
+                                    <td><input type="text" name="item[' . $no_item . '][harga]" id="" class="form-control form-control-sm text-right auto_num" value="' . htmlspecialchars($item->harga, ENT_QUOTES, 'UTF-8') . '" onchange="hitung_all();"></td>
+                                    <td><input type="text" name="item[' . $no_item . '][total]" id="" class="form-control form-control-sm text-right auto_num" value="' . htmlspecialchars($item->total, ENT_QUOTES, 'UTF-8') . '"></td>
                                     <td><button type="button" class="btn btn-sm btn-danger remove_item" data-no="' . $no_item . '"><i class="fa fa-trash"></i></button></td>
                                 </tr>
                             ';
@@ -93,23 +93,9 @@
                 </tbody>
                 <tfoot class="footer_item bg-gray">
                     <tr>
-                        <th colspan="4" class="text-center">Discount</th>
-                        <th>
-                            <input type="text" name="discount" id="discount" class="form-control form-control-sm text-right auto_num" value="<?= $data_penawaran->nominal_disc ?>" readonly>
-                        </th>
-                        <th></th>
-                    </tr>
-                    <tr>
                         <th colspan="4" class="text-center">Biaya Kirim</th>
                         <th>
-                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_penawaran->biaya_kirim ?>" onchange="hitung_all();" readonly>
-                        </th>
-                        <th></th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-center">PPn (Consultant)</th>
-                        <th>
-                            <input type="text" name="ppn_consultant" id="ppn_consultant" class="form-control form-control-sm text-right auto_num" value="<?= $data_penawaran->ppn ?>" readonly>
+                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= htmlspecialchars($data_penawaran->biaya_kirim, ENT_QUOTES, 'UTF-8') ?>" onchange="hitung_all();" readonly>
                         </th>
                         <th></th>
                     </tr>
@@ -136,12 +122,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
+                            <!-- <tr>
                                 <td>Outstanding Invoice</td>
                                 <td>
                                     <input type="text" name="outstanding_invoice" id="outstanding_invoice" class="form-control form-control-sm text-right auto_num" value="<?= ($data_penawaran->grand_total - $total_invoiced) ?>" readonly>
                                 </td>
-                            </tr>
+                            </tr> -->
                             <tr>
                                 <td>DPP</td>
                                 <td>
@@ -351,7 +337,7 @@
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
-        var total_penawaran = $('input[name="outstanding_invoice"]').val();
+        var total_penawaran = $('#total').val();
         if (total_penawaran !== '') {
             total_penawaran = total_penawaran.split(',').join('');
             total_penawaran = parseFloat(total_penawaran);
@@ -375,7 +361,7 @@
                 showCancelButton: false
             });
 
-            return false;   
+            return false;
         }
 
         Swal.fire({
@@ -487,13 +473,7 @@
             }
         }
 
-        var discount = $('input[name="discount"]').val();
-        if (discount == '') {
-            discount = 0;
-        } else {
-            discount = discount.split(',').join('');
-            discount = parseFloat(discount);
-        }
+
 
         var biaya_kirim = $('input[name="biaya_kirim"]').val();
         if (biaya_kirim == '') {
@@ -503,17 +483,9 @@
             biaya_kirim = parseFloat(biaya_kirim);
         }
 
-        var ppn_consultant = $('input[name="ppn_consultant"]').val();
-        if (ppn_consultant == '') {
-            ppn_consultant = 0;
-        } else {
-            ppn_consultant = ppn_consultant.split(',').join('');
-            ppn_consultant = parseFloat(ppn_consultant);
-        }
-
-        totall -= discount;
+        // totall -= discount;
         totall += biaya_kirim;
-        totall += ppn_consultant;
+        // totall += ppn_consultant;
 
         $('#total').autoNumeric('set', totall);
         $('#dpp').autoNumeric('set', totall);

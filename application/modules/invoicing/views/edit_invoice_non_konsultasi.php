@@ -13,29 +13,29 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <div class="box">
     <form action="" method="post" id="frm-data">
-        <input type="hidden" name="id" value="<?= $data_invoicing->id ?>">
-        <input type="hidden" name="id_penawaran" value="<?= $data_invoicing->id_penawaran ?>">
+        <input type="hidden" name="id" value="<?= htmlspecialchars($data_invoicing->id, ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="id_penawaran" value="<?= htmlspecialchars($data_invoicing->id_penawaran, ENT_QUOTES, 'UTF-8') ?>">
         <div class="box-body">
             <div class="col-6">
                 <table width="100%" border="0">
                     <tr>
                         <th width="13%">Kepada</th>
                         <td width="12%">
-                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= $data_invoicing->nm_customer ?>">
+                            <input type="text" name="nm_customer" id="" class="form-control form-control-sm" value="<?= htmlspecialchars($data_invoicing->nm_customer, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= $data_invoicing->tanggal_invoice ?>" readonly>
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= htmlspecialchars($data_invoicing->tanggal_invoice, ENT_QUOTES, 'UTF-8') ?>" readonly>
                         </td>
                     </tr>
                     <tr>
                         <th width="13%">Alamat</th>
                         <td width="12%">
-                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= $data_invoicing->address ?></textarea>
+                            <textarea name="address" id="" class="form-control form-control-sm" rows="3"><?= htmlspecialchars($data_invoicing->address, ENT_QUOTES, 'UTF-8') ?></textarea>
                         </td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
-                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= $data_invoicing->no_invoice ?>">
+                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" value="<?= htmlspecialchars($data_invoicing->no_invoice, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                     <tr>
@@ -43,7 +43,7 @@
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
                         <td width="12%">
-                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm" value="<?= $data_invoicing->no_po ?>">
+                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm" value="<?= htmlspecialchars($data_invoicing->no_po, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                     <tr>
@@ -52,7 +52,7 @@
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
-                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur" value="<?= $data_invoicing->no_faktur ?>">
+                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur" value="<?= htmlspecialchars($data_invoicing->no_faktur, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                 </table>
@@ -75,16 +75,16 @@
                 <tbody class="list_item">
                     <?php
                     $no_item = 0;
-                    foreach($data_detail_invoice as $item) {
+                    foreach ($data_detail_invoice as $item) {
                         $no_item++;
 
                         echo '
-                                <tr class="tr_item_'.$no_item.'">
+                                <tr class="tr_item_' . $no_item . '">
                                     <td class="text-center">' . $no_item . '</td>
-                                    <td><textarea name="item['.$no_item.'][nama]" class="form-control form-control-sm">'.$item->nm_item.'</textarea></td>
-                                    <td><input type="number" name="item[' . $no_item . '][qty]" id="" class="form-control form-control-sm" min="1" value="' . round($item->qty) . '" onchange="hitung_all();"></td>
-                                    <td><input type="text" name="item[' . $no_item . '][harga]" id="" class="form-control form-control-sm text-right auto_num" value="' . $item->harga . '" onchange="hitung_all();"></td>
-                                    <td><input type="text" name="item[' . $no_item . '][total]" id="" class="form-control form-control-sm text-right auto_num" value="' . $item->total . '"></td>
+                                    <td><textarea name="item[' . $no_item . '][nama]" class="form-control form-control-sm">' . htmlspecialchars($item->nm_item, ENT_QUOTES, 'UTF-8') . '</textarea></td>
+                                    <td><input type="number" name="item[' . $no_item . '][qty]" id="" class="form-control form-control-sm" min="1" value="' . htmlspecialchars(round($item->qty), ENT_QUOTES, 'UTF-8') . '" onchange="hitung_all();"></td>
+                                    <td><input type="text" name="item[' . $no_item . '][harga]" id="" class="form-control form-control-sm text-right auto_num" value="' . htmlspecialchars($item->harga, ENT_QUOTES, 'UTF-8') . '" onchange="hitung_all();"></td>
+                                    <td><input type="text" name="item[' . $no_item . '][total]" id="" class="form-control form-control-sm text-right auto_num" value="' . htmlspecialchars($item->total, ENT_QUOTES, 'UTF-8') . '"></td>
                                     <td><button type="button" class="btn btn-sm btn-danger remove_item" data-no="' . $no_item . '"><i class="fa fa-trash"></i></button></td>
                                 </tr>
                             ';
@@ -107,23 +107,9 @@
                 </tbody>
                 <tfoot class="footer_item bg-gray">
                     <tr>
-                        <th colspan="4" class="text-center">Discount</th>
-                        <th>
-                            <input type="text" name="discount" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->discount ?>" onchange="hitung_all();" readonly>
-                        </th>
-                        <th></th>
-                    </tr>
-                    <tr>
                         <th colspan="4" class="text-center">Biaya Kirim</th>
                         <th>
-                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->biaya_kirim ?>" onchange="hitung_all();" readonly>
-                        </th>
-                        <th></th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-center">PPn (Consultant)</th>
-                        <th>
-                            <input type="text" name="ppn_consultant" id="" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->ppn_consultant ?>" onchange="hitung_all();" readonly>
+                            <input type="text" name="biaya_kirim" id="" class="form-control form-control-sm text-right auto_num" value="<?= htmlspecialchars($data_invoicing->biaya_kirim, ENT_QUOTES, 'UTF-8') ?>" onchange="hitung_all();" readonly>
                         </th>
                         <th></th>
                     </tr>
@@ -340,7 +326,7 @@
 
         var html = '<tr class="tr_item_' + no + '">';
         html += '<td class="text-center">' + no + '</td>';
-        html += '<td><textarea name="item['+no+'][nama]" class="form-control form-control-sm"></textarea></td>';
+        html += '<td><textarea name="item[' + no + '][nama]" class="form-control form-control-sm"></textarea></td>';
         html += '<td><input type="number" name="item[' + no + '][qty]" id="" class="form-control form-control-sm" min="1" onchange="hitung_all();"></td>';
         html += '<td><input type="text" name="item[' + no + '][harga]" id="" class="form-control form-control-sm text-right auto_num" onchange="hitung_all();"></td>';
         html += '<td><input type="text" name="item[' + no + '][total]" id="" class="form-control form-control-sm text-right auto_num"></td>';
@@ -469,13 +455,13 @@
             }
         }
 
-        var discount = $('input[name="discount"]').val();
-        if (discount == '') {
-            discount = 0;
-        } else {
-            discount = discount.split(',').join('');
-            discount = parseFloat(discount);
-        }
+        // var discount = $('input[name="discount"]').val();
+        // if (discount == '') {
+        //     discount = 0;
+        // } else {
+        //     discount = discount.split(',').join('');
+        //     discount = parseFloat(discount);
+        // }
 
         var biaya_kirim = $('input[name="biaya_kirim"]').val();
         if (biaya_kirim == '') {
@@ -485,17 +471,17 @@
             biaya_kirim = parseFloat(biaya_kirim);
         }
 
-        var ppn_consultant = $('input[name="ppn_consultant"]').val();
-        if (ppn_consultant == '') {
-            ppn_consultant = 0;
-        } else {
-            ppn_consultant = ppn_consultant.split(',').join('');
-            ppn_consultant = parseFloat(ppn_consultant);
-        }
+        // var ppn_consultant = $('input[name="ppn_consultant"]').val();
+        // if (ppn_consultant == '') {
+        //     ppn_consultant = 0;
+        // } else {
+        //     ppn_consultant = ppn_consultant.split(',').join('');
+        //     ppn_consultant = parseFloat(ppn_consultant);
+        // }
 
-        totall -= discount;
+        // totall -= discount;
         totall += biaya_kirim;
-        totall += ppn_consultant;
+        // totall += ppn_consultant;
 
         $('#total').autoNumeric('set', totall);
         $('#dpp').autoNumeric('set', totall);
