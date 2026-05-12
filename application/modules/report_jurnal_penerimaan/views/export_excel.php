@@ -17,6 +17,7 @@ header("Content-Disposition: attachment; filename=Report Jurnal Penerimaan.xls")
             <th style="text-align: center;">Company</th>
             <th style="text-align: center;">Nama Divisi</th>
             <th style="text-align: center;">Uraian</th>
+            <th style="text-align: center;">Original</th>
             <th style="text-align: center;">Debit</th>
             <th style="text-align: center;">Kredit</th>
         </tr>
@@ -42,6 +43,7 @@ header("Content-Disposition: attachment; filename=Report Jurnal Penerimaan.xls")
                 <td>' . $item->nm_company . '</td>
                 <td>' . $item->nm_divisi . '</td>
                 <td>' . $item->no_invoice . '</td>
+                <td style="text-align: right;">' . number_format($item->total_debit) . '</td>
                 <td style="text-align: right;">' . number_format($item->debit) . '</td>
                 <td style="text-align: right;">' . number_format($item->kredit) . '</td>
                 
@@ -54,6 +56,7 @@ header("Content-Disposition: attachment; filename=Report Jurnal Penerimaan.xls")
     </tbody>
     <tfoot>
         <th colspan="10" style="text-align: center;">Grand Total</th>
+        <th style="text-align: right"></th>
         <th style="text-align: right"><?= number_format($ttl_debit) ?></th>
         <th style="text-align: right"><?= number_format($ttl_kredit) ?></th>
     </tfoot>
