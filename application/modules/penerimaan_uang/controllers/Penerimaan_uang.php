@@ -214,7 +214,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 $hasil_jurnal .= '<td class="text-center td_debit_bank_debit">';
                 $hasil_jurnal .= number_format($uang_masuk);
-                $hasil_jurnal .= '<input type="hidden" name="debit_bank_debit" value="' . $uang_masuk . '">';
+                $hasil_jurnal .= '<input type="hidden" name="debit_bank_debit" value="' . intval($uang_masuk) . '">';
                 $hasil_jurnal .= '</td>';
 
                 $hasil_jurnal .= '<td class="text-center td_kredit_bank_debit">';
@@ -281,12 +281,12 @@ class Penerimaan_uang extends Admin_Controller
 
                     $hasil_jurnal .= '<td class="text-center td_debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '">';
                     $hasil_jurnal .= number_format($value_debit);
-                    $hasil_jurnal .= '<input type="hidden" name="debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $value_debit . '">';
+                    $hasil_jurnal .= '<input type="hidden" name="debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . intval($value_debit) . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center td_kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '">';
                     $hasil_jurnal .= number_format($value_kredit);
-                    $hasil_jurnal .= '<input type="hidden" name="kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $value_kredit . '">';
+                    $hasil_jurnal .= '<input type="hidden" name="kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . intval($value_kredit) . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '</tr>';
@@ -345,12 +345,12 @@ class Penerimaan_uang extends Admin_Controller
 
                     $hasil_jurnal .= '<td class="text-center td_debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '">';
                     $hasil_jurnal .= number_format($value_debit);
-                    $hasil_jurnal .= '<input type="hidden" name="debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $value_debit . '">';
+                    $hasil_jurnal .= '<input type="hidden" name="debit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . intval($value_debit) . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center td_kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '">';
                     $hasil_jurnal .= number_format($value_kredit);
-                    $hasil_jurnal .= '<input type="hidden" name="kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $value_kredit . '">';
+                    $hasil_jurnal .= '<input type="hidden" name="kredit_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . intval($value_kredit) . '">';
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '</tr>';
