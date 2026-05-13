@@ -189,7 +189,7 @@ class Actual_plan_tagih extends Admin_Controller
                     'persen_payment' => $post['persen_payment'],
                     'nominal_payment' => $post['nominal_payment'],
                     'desc_payment' => $post['desc_payment'],
-                    'tgl_plan_tagih' => $tanggal_actual,
+                    'tgl_plan_tagih' => $post['tgl_plan_tagih'],
                     'urutan' => $post['urutan'],
                     'tanggal_actual_plan_tagih' => $tanggal_actual,
                     'tagih_mundur' => $post['tagih_mundur'],
