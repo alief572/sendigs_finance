@@ -214,14 +214,37 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 
     $(document).on('change', 'select[name="tagih_mundur"]', function() {
         var tagih_mundur = $(this).val();
+        var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
+        var current_tanggal_actual = $('input[name="tanggal_actual"]').val();
 
         if (tagih_mundur == '1' || tagih_mundur == '3') {
-            // $('input[name="tanggal_actual"]').attr('readonly', true);
+            $('input[name="tanggal_actual"]').prop('disabled', true);
+            $('input[name="tanggal_actual"]').val(tgl_plan_tagih);
             $('textarea[name="alasan_mundur"]').attr('readonly', true);
             $('input[name="upload_surat_mundur"]').prop('disabled', true);
+
+            if (tagih_mundur == '1') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Info',
+                    text: 'Anda memilih "Tagih". Tanggal actual akan menggunakan tgl_plan_tagih.',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+            }
         }
         if (tagih_mundur == '2') {
-            // $('input[name="tanggal_actual"]').attr('readonly', false);
+            if (current_tanggal_actual && current_tanggal_actual !== tgl_plan_tagih) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Warning',
+                    text: 'Akan switch ke "Mundur". Tanggal yang Anda input sebelumnya akan di-reset. Mohon isi tanggal baru.',
+                    confirmButtonColor: '#f0ad4e',
+                    confirmButtonText: 'OK'
+                });
+            }
+            $('input[name="tanggal_actual"]').prop('disabled', false);
+            $('input[name="tanggal_actual"]').val('');
             $('textarea[name="alasan_mundur"]').attr('readonly', false);
             $('input[name="upload_surat_mundur"]').prop('disabled', false);
         }

@@ -21,21 +21,22 @@
                 <input type="hidden" name="persen_payment" value="<?= $data_plan_tagih_detail->persen_payment ?>">
                 <input type="hidden" name="nominal_payment" value="<?= $data_plan_tagih_detail->nominal_payment ?>">
                 <input type="hidden" name="desc_payment" value="<?= $data_plan_tagih_detail->desc_payment ?>">
-                <input type="hidden" name="tgl_plan_tagih" value="<?= $data_plan_tagih_detail->tgl_plan_tagih ?>">
+                <input type="hidden" name="tgl_plan_tagih" id="tgl_plan_tagih" value="<?= $data_plan_tagih_detail->tgl_plan_tagih ?>">
+                <input type="hidden" name="status_terakhir" id="status_terakhir" value="<?= $data_plan_tagih_detail->status_terakhir ?>">
                 <input type="hidden" name="urutan" value="<?= $data_plan_tagih_detail->urutan ?>">
                 <input type="hidden" name="macet" value="<?= $macet ?>">
                 <input type="hidden" name="tgl_actual_tagih_last" value="<?= $tgl_actual_tagih_last ?>">
             </td>
             <td class="text-left"><?= $data_plan_tagih_detail->desc_payment ?></td>
             <td>
-                <select name="tagih_mundur" id="" class="form-control form-control-sm">
+                <select name="tagih_mundur" id="tagih_mundur" class="form-control form-control-sm">
                     <option value="1">Tagih</option>
                     <option value="2">Mundur</option>
                     <option value="3">Tagihan Macet</option>
                 </select>
             </td>
             <td>
-                <input type="date" name="tanggal_actual" id="" class="form-control form-control-sm" class="text-center">
+                <input type="date" name="tanggal_actual" id="tanggal_actual" class="form-control form-control-sm text-center" disabled>
             </td>
             <td>
                 <textarea name="alasan_mundur" id="" class="form-control form-control-sm" readonly></textarea>
@@ -55,3 +56,19 @@
         <input type="file" name="upload_laporan_progress" id="upload_laporan_progress" class="form-control form-control-sm">
     </div>
 </div>
+
+<script>
+$(document).ready(function() {
+    var status_terakhir = $('input[name="status_terakhir"]').val();
+    var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
+
+    if (status_terakhir == '2') {
+        $('input[name="tanggal_actual"]').prop('disabled', false);
+        $('textarea[name="alasan_mundur"]').attr('readonly', false);
+        $('input[name="upload_surat_mundur"]').prop('disabled', false);
+        $('select[name="tagih_mundur"]').val('2');
+    } else {
+        $('input[name="tanggal_actual"]').val(tgl_plan_tagih);
+    }
+});
+</script>
