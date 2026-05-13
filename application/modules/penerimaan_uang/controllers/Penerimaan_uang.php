@@ -321,7 +321,7 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == '2' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
@@ -330,7 +330,7 @@ class Penerimaan_uang extends Admin_Controller
                         $value_kredit = $get_kredit['ttl_kredit'];
                     }
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
-                        $value_debit = $get_inv['total_akhir_jurnal'];
+                        $value_kredit = $get_inv['total_akhir_jurnal'];
                     }
 
                     $hasil_jurnal .= '<tr>';
