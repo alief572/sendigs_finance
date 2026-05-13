@@ -28,11 +28,12 @@ class Unlocated_penerimaan_model extends BF_Model
         $endDate = $this->input->post('endDate');
         $bank = $this->input->post('bank');
 
-        $this->db->select('a.id, a.keterangan, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, a.sts, b.nama_bank, c.rekening, c.nama');
-        $this->db->from('tr_alokasi_detail a');
+        $this->db->select('s.id, a.keterangan, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, b.nama_bank, c.rekening, c.nama');
+        $this->db->from('tr_alokasi_split s');
+        $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
         $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
         $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
-        $this->db->where('a.sts', '2');
+        $this->db->where('s.jenis_alokasi', 2);
         if (!empty($startDate)) {
             $this->db->where('a.tanggal_transaksi >=', $startDate);
         }
@@ -53,7 +54,7 @@ class Unlocated_penerimaan_model extends BF_Model
             $this->db->or_like('a.saldo', $search['value'], 'both');
             $this->db->group_end();
         }
-        $this->db->group_by('a.id');
+        $this->db->group_by('s.id');
 
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
@@ -67,31 +68,7 @@ class Unlocated_penerimaan_model extends BF_Model
         foreach ($get_data as $item) {
             $no++;
 
-            $status = '<span class="badge bg-blue">Open</span>';
-            if ($item['sts'] !== '0') {
-                $txt = '';
-                if ($item['sts'] == '1') {
-                    $txt = 'Penerimaan Piutang';
-                } else if ($item['sts'] == '2') {
-                    $txt = 'Unlocated Penerimaan';
-                } else if ($item['sts'] == '3') {
-                    $txt = 'Pengembalian Kasbon';
-                } else if ($item['sts'] == '4') {
-                    $txt = 'Mutasi';
-                } else if ($item['sts'] == '5') {
-                    $txt = 'Transaksi Bank';
-                } else if ($item['sts'] == '6') {
-                    $txt = 'Pembayaran';
-                } else if ($item['sts'] == '7') {
-                    $txt = 'Alokasi Kalibrasi';
-                }
-                $status = '<span class="badge bg-green">' . $txt . '</span>';
-            }
-
-            $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
-            if ($item['sts'] !== '0') {
-                $btn_alokasi = '';
-            }
+            $status = '<span class="badge bg-green">Unlocated Penerimaan</span>';
 
             $tanggal_transaksi = date('d-F-Y', strtotime($item['tanggal_transaksi']));
             if ($item['tanggal_transaksi'] == '0000-00-00') {

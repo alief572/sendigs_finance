@@ -81,7 +81,30 @@ class Alokasi_model extends BF_Model
             $no++;
 
             $status = '<span class="badge bg-blue">Open</span>';
-            if ($item['sts'] !== '0') {
+            $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
+
+            // Check if this transaction has split records
+            $split_data = $this->db->get_where('tr_alokasi_split', ['id_alokasi_detail' => $item['id']])->result_array();
+
+            if (!empty($split_data)) {
+                // Show all split jenis as badges
+                $jenis_labels = [
+                    '1' => 'Penerimaan Piutang',
+                    '2' => 'Unlocated Penerimaan',
+                    '3' => 'Pengembalian Kasbon',
+                    '4' => 'Mutasi',
+                    '5' => 'Transaksi Bank',
+                    '6' => 'Pembayaran',
+                    '7' => 'Alokasi Kalibrasi'
+                ];
+                $badges = '';
+                foreach ($split_data as $split) {
+                    $label = isset($jenis_labels[$split['jenis_alokasi']]) ? $jenis_labels[$split['jenis_alokasi']] : 'Split';
+                    $badges .= '<span class="badge bg-purple" style="margin-right:2px;">' . $label . '</span>';
+                }
+                $status = $badges;
+                $btn_alokasi = '<button type="button" class="btn btn-sm btn-info btn_view_split" title="View Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-eye"></i></button>';
+            } else if ($item['sts'] !== '0') {
                 $txt = '';
                 if ($item['sts'] == '1') {
                     $txt = 'Penerimaan Piutang';
@@ -99,10 +122,6 @@ class Alokasi_model extends BF_Model
                     $txt = 'Alokasi Kalibrasi';
                 }
                 $status = '<span class="badge bg-green">' . $txt . '</span>';
-            }
-
-            $btn_alokasi = '<button type="button" class="btn btn-sm btn-primary btn_alokasi" title="Alokasi" data-id="' . $item['id'] . '"><i class="fa fa-money"></i></button>';
-            if ($item['sts'] !== '0') {
                 $btn_alokasi = '';
             }
 
@@ -132,6 +151,78 @@ class Alokasi_model extends BF_Model
         ];
 
         echo json_encode($response);
+    }
+
+    public function get_transaction_for_split($id)
+    {
+        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, id_header, sts');
+        $this->db->from('tr_alokasi_detail');
+        $this->db->where('id', $id);
+        $query = $this->db->get();
+
+        if ($query->num_rows() < 1) {
+            return false;
+        }
+
+        $row = $query->row_array();
+
+        if ($row['sts'] != '0') {
+            return false;
+        }
+
+        return $row;
+    }
+
+    public function save_split_alokasi($id_detail, $splits, $user_id)
+    {
+        // Get transaction to verify it exists and is still open
+        $transaction = $this->get_transaction_for_split($id_detail);
+        if (!$transaction) {
+            return false;
+        }
+
+        // Determine the transaction nominal (kredit or debit)
+        $nominal_transaksi = ($transaction['nominal_kredit'] > 0)
+            ? $transaction['nominal_kredit']
+            : $transaction['nominal_debit'];
+
+        // Validate sum of splits equals transaction nominal
+        $total_split = 0;
+        foreach ($splits as $split) {
+            $total_split += (float) $split['nominal'];
+        }
+
+        if (abs($total_split - (float) $nominal_transaksi) > 0.01) {
+            return false;
+        }
+
+        // Begin DB transaction
+        $this->db->trans_start();
+
+        // Insert each split record into tr_alokasi_split
+        foreach ($splits as $split) {
+            $data = [
+                'id_alokasi_detail' => $id_detail,
+                'jenis_alokasi'     => $split['jenis_alokasi'],
+                'nominal'           => $split['nominal'],
+                'created_by'        => $user_id,
+                'created_date'      => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tr_alokasi_split', $data);
+        }
+
+        // Update tr_alokasi_detail.sts = 8 for the original transaction
+        $this->db->query("UPDATE tr_alokasi_detail SET sts = '8' WHERE id = ?", array($id_detail));
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return false;
+        }
+
+        // Update parent header status
+        $this->update_alokasi_header($transaction['id_header']);
+        return true;
     }
 
     public function update_alokasi_header($id)
