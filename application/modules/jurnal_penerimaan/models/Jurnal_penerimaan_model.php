@@ -122,7 +122,8 @@ class Jurnal_penerimaan_model extends BF_Model
     {
         $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
             ->from('tr_jurnal a')
-            ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
+            ->join('tr_penerimaan_piutang_detail ppd', 'ppd.id_header = a.no_transaksi', 'left')
+            ->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_spk_penawaran f', 'f.id_spk_penawaran = b.id_spk_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company d', 'd.id = COALESCE(c.company, f.id_company)', 'left', FALSE)
