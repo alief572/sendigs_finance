@@ -33,7 +33,10 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
         $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
         $get_jurnal_detail = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_jurnal->no_transaksi, 'jenis_transaksi' => $get_jurnal->jenis_transaksi])->result();
-        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+
+        // Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
+        $get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $get_jurnal->no_transaksi])->row();
+        $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
 
         $Nomor_JV  = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $get_jurnal->id_company);
 
@@ -88,7 +91,9 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
 
         foreach ($get_jurnal_detail as $item) {
-            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item->no_transaksi])->row();
+            // Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
+            $get_penerimaan_detail_item = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $item->no_transaksi])->row();
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail_item->id_inv])->row();
 
             $id_company = $item->id_company;
 
