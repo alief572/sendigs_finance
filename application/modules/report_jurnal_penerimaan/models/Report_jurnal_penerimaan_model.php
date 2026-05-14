@@ -288,7 +288,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone = clone $this->db;
         $db_clone->select('a.id');
         $db_clone->from('tr_jurnal a');
-        $db_clone->join('tr_penerimaan_piutang_detail ppd1', 'ppd1.id_header = a.no_transaksi', 'left');
+        $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
         $db_clone->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
@@ -322,7 +322,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone = clone $this->db;
         $db_clone->select('a.id');
         $db_clone->from('tr_jurnal a');
-        $db_clone->join('tr_penerimaan_piutang_detail ppd2', 'ppd2.id_header = a.no_transaksi', 'left');
+        $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd2', 'ppd2.id_header = a.no_transaksi', 'left', FALSE);
         $db_clone->join('tr_invoicing b', 'b.id = ppd2.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
@@ -372,7 +372,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         // Query untuk mendapatkan data yang akan ditampilkan di tabel
         $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi, SUM(a.debit) as total_debit');
         $this->db->from('tr_jurnal a');
-        $this->db->join('tr_penerimaan_piutang_detail ppd3', 'ppd3.id_header = a.no_transaksi', 'left');
+        $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd3', 'ppd3.id_header = a.no_transaksi', 'left', FALSE);
         $this->db->join('tr_invoicing b', 'b.id = ppd3.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
@@ -467,7 +467,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
         $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
         $this->db->from('tr_jurnal a');
-        $this->db->join('tr_penerimaan_piutang_detail ppd4', 'ppd4.id_header = a.no_transaksi', 'left');
+        $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd4', 'ppd4.id_header = a.no_transaksi', 'left', FALSE);
         $this->db->join('tr_invoicing b', 'b.id = ppd4.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
