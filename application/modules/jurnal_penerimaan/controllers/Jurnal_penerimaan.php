@@ -163,7 +163,9 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->db->trans_begin();
 
 		try {
-			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
+			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $get_jurnal->no_transaksi])->row();
+			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
 			$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
 			$id_company    = !empty($get_penawaran->company) ? $get_penawaran->company : '';
 			$acc_db        = $this->_get_accounting_db($id_company);
@@ -239,7 +241,9 @@ class Jurnal_penerimaan extends Admin_Controller
 
 		$arr_update_jurnal = [];
 		foreach ($get_jurnal as $item_jurnal) {
-			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
+			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
+			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $item_jurnal->no_transaksi])->row();
+			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
 
 			$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
 			$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
@@ -290,7 +294,8 @@ class Jurnal_penerimaan extends Admin_Controller
 
 		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
 		$this->db->from('tr_jurnal a');
-		$this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
+		$this->db->join('tr_penerimaan_piutang_detail ppd', 'ppd.id_header = a.no_transaksi', 'left');
+		$this->db->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left');
 		$this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
 		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
 		$this->db->join('hris_divisions e', 'e.id = c.id_divisi', 'left');
