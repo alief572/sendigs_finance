@@ -294,7 +294,7 @@ class Jurnal_penerimaan extends Admin_Controller
 
 		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
 		$this->db->from('tr_jurnal a');
-		$this->db->join('tr_penerimaan_piutang_detail ppd', 'ppd.id_header = a.no_transaksi', 'left');
+		$this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE);
 		$this->db->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left');
 		$this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
 		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');

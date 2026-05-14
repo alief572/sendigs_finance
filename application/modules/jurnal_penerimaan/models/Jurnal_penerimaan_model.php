@@ -52,6 +52,8 @@ class Jurnal_penerimaan_model extends BF_Model
         // 1. Build base query
         $this->_query_jurnal($filter);
 
+
+
         // 2. Count Total Records (before search)
         $totalData = $this->db->count_all_results('', false);
         // Since we use GROUP_BY, CI's count_all_results can be unreliable. 
@@ -122,7 +124,7 @@ class Jurnal_penerimaan_model extends BF_Model
     {
         $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
             ->from('tr_jurnal a')
-            ->join('tr_penerimaan_piutang_detail ppd', 'ppd.id_header = a.no_transaksi', 'left')
+            ->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE)
             ->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_spk_penawaran f', 'f.id_spk_penawaran = b.id_spk_penawaran', 'left')
