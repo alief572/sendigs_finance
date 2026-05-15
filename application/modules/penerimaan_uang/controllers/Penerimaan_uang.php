@@ -55,9 +55,13 @@ class Penerimaan_uang extends Admin_Controller
 
         $nominal_penerimaan_bank = $result['nominal'] - $result['nilai_terpakai'];
 
+        // Get all customers from all invoices (konsultasi + non-konsultasi) grouped by nm_customer
         $this->db->select('a.id_customer, a.nm_customer');
         $this->db->from('tr_invoicing a');
-        $this->db->group_by('a.id_customer');
+        $this->db->where('a.nm_customer !=', '');
+        $this->db->where('a.nm_customer IS NOT NULL', null, false);
+        $this->db->group_by('a.nm_customer');
+        $this->db->order_by('a.nm_customer', 'ASC');
         $get_customer = $this->db->get()->result_array();
 
         $data = [
@@ -73,11 +77,11 @@ class Penerimaan_uang extends Admin_Controller
 
     public function get_inv_by_cust()
     {
-        $id_customer = $this->input->post('id');
+        $nm_customer = $this->input->post('nm_customer');
 
-        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice');
+        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons');
         $this->db->from('tr_invoicing a');
-        $this->db->where('a.id_customer', $id_customer);
+        $this->db->where('a.nm_customer', $nm_customer);
         $this->db->where('a.saldo_piutang >', 0);
         $get_invoice = $this->db->get()->result_array();
 
@@ -87,10 +91,12 @@ class Penerimaan_uang extends Admin_Controller
             foreach ($get_invoice as $item) {
                 $no++;
 
+                $label_non_kons = ($item['non_kons'] == '1') ? ' <span class="label label-warning">Non Kons</span>' : '';
+
                 $hasil .= '<tr>';
 
                 $hasil .= '<td class="text-center">' . $no . '</td>';
-                $hasil .= '<td class="text-center">' . $item['no_invoice'] . '</td>';
+                $hasil .= '<td class="text-center">' . $item['no_invoice'] . $label_non_kons . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['total_nominal_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['dpp_lain_lain_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['ppn_jurnal']) . '</td>';
@@ -106,7 +112,7 @@ class Penerimaan_uang extends Admin_Controller
             }
         } else {
             $hasil = '<tr>';
-            $hasil .= '<td colspan="9" class="text-center">No Data Found</td>';
+            $hasil .= '<td colspan="10" class="text-center">No Data Found</td>';
             $hasil .= '</tr>';
         }
 
@@ -386,7 +392,7 @@ class Penerimaan_uang extends Admin_Controller
             'no_inv' => $no,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit,
-            'id_customer' => $post['customer'],
+            'nm_customer' => $post['customer'],
             'ppn_dipotong' => $post['ppn_dipotong'],
             'pph23_dipotong' => $post['pph23_dipotong'],
             'nominal_penerimaan_bank' => str_replace(',', '', $post['nominal_penerimaan_bank'])
@@ -401,13 +407,14 @@ class Penerimaan_uang extends Admin_Controller
 
         $id = $this->Penerimaan_uang_model->generate_id();
 
-        // print_r($id);
-        // exit;
+        $nm_customer = $post['nm_customer'];
 
-        $this->consultant->select('a.id_customer, a.nm_customer');
+        // Try to find id_customer from consultant database
+        $this->consultant->select('a.id_customer');
         $this->consultant->from('customer a');
-        $this->consultant->where('a.id_customer', $post['id_customer']);
+        $this->consultant->where('a.nm_customer', $nm_customer);
         $get_customer = $this->consultant->get()->row_array();
+        $id_customer_save = (!empty($get_customer)) ? $get_customer['id_customer'] : '';
 
         $resolved = $this->Penerimaan_uang_model->resolve_alokasi($post['id_alokasi']);
         $split = $resolved['split'];
@@ -419,12 +426,10 @@ class Penerimaan_uang extends Admin_Controller
         $get_coa_bank = $this->accounting->get_where('coa_master', ['no_perkiraan' => $coa_bank])->row_array();
         $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nama'] : '';
 
-        $nm_customer = (!empty($get_customer)) ? $get_customer['nm_customer'] : '';
-
         $arr_insert_header = [
             'no_surat' => $id,
             'id_alokasi' => $post['id_alokasi'],
-            'id_customer' => $post['id_customer'],
+            'id_customer' => $id_customer_save,
             'nm_customer' => $nm_customer,
             'ppn_dipotong' => $post['ppn_dipotong'],
             'pph23_dipotong' => $post['pph23_dipotong'],
@@ -485,7 +490,7 @@ class Penerimaan_uang extends Admin_Controller
                 'id_alokasi' => $post['id_alokasi'],
                 'id_inv' => $post['id_inv_' . $i],
                 'tgl_inv' => $tgl_inv,
-                'id_customer' => $post['id_customer'],
+                'id_customer' => $id_customer_save,
                 'nm_customer' => $nm_customer,
                 'dpp' => $dpp,
                 'dpp_lain' => $dpp_lain,

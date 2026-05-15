@@ -141,7 +141,7 @@
                             <option value="">- Pilih Customer -</option>
                             <?php
                             foreach ($results['list_customer'] as $item) {
-                                echo '<option value="' . $item['id_customer'] . '">' . $item['nm_customer'] . '</option>';
+                                echo '<option value="' . htmlspecialchars($item['nm_customer'], ENT_QUOTES) . '">' . htmlspecialchars($item['nm_customer']) . '</option>';
                             }
                             ?>
                         </select>
@@ -157,7 +157,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <div class="form-group">
-                            <label for="customer">PPN Dipotong <span class="text-red">*</span></label>
+                            <label for="ppn_dipotong">PPN Dipotong <span class="text-red">*</span></label>
                             <select class="form-control form-control-sm" name="ppn_dipotong" id="ppn_dipotong">
                                 <option value="Y">Dipotong PPN</option>
                                 <option value="N">Tidak Dipotong PPN</option>
@@ -276,7 +276,7 @@
         });
 
         $('#nominal_penerimaan_bank').autoNumeric('init', {
-            vMin: '-9999999999999.99', // Kasih range negatif seluas mungkin
+            vMin: '-9999999999999.99',
             vMax: '9999999999999.99',
             aSep: '.',
             aDec: ','
@@ -284,14 +284,14 @@
     });
 
     $(document).on('change', '#customer', function() {
-        var id_customer = $(this).val();
+        var nm_customer = $(this).val();
 
-        if (id_customer !== '') {
+        if (nm_customer !== '') {
             $.ajax({
                 type: 'post',
                 url: siteurl + active_controller + 'get_inv_by_cust',
                 data: {
-                    'id': id_customer
+                    'nm_customer': nm_customer
                 },
                 cache: false,
                 success: function(result) {
@@ -312,6 +312,7 @@
             var hasil = '<tr>';
             hasil += '<td colspan="10" class="text-center">No Data Found</td>';
             hasil += '</tr>';
+            $('.tbody_list').html(hasil);
         }
     });
 
@@ -387,7 +388,7 @@
                 $('#dialog-popup').modal('show');
 
                 $('.autonum').autoNumeric('init', {
-                    vMin: '-9999999999999.99', // Kasih range negatif seluas mungkin
+                    vMin: '-9999999999999.99',
                     vMax: '9999999999999.99',
                     aSep: '.',
                     aDec: ','
