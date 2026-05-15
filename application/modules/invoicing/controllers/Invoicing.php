@@ -1813,7 +1813,7 @@ class Invoicing extends Admin_Controller
 
                 $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
                 $keterangan = $item['nm_coa'] . ' - ' . $id;
-                $tgl_jurnal = date('Y-m-d');
+                $tgl_jurnal = $this->input->post('tanggal_invoice', true);
                 $coa_jurnal = $item['no_perkiraan'];
 
                 // Server-side debit/kredit calculation
