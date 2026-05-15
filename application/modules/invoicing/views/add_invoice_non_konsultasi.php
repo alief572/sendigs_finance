@@ -25,7 +25,7 @@
                         </td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" value="<?= date('Y-m-d') ?>">
+                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice" onchange='hitung_all();' value="<?= date('Y-m-d') ?>">
                         </td>
                     </tr>
                     <tr>
@@ -505,6 +505,9 @@
         var total_tagihan_all = totall + ppn - pph;
         $('#total_tagihan_all').autoNumeric('set', total_tagihan_all);
 
+        var tanggal_invoice = $('input[name="tanggal_invoice"]').val();
+
+
         $.ajax({
             type: 'get',
             url: siteurl + active_controller + 'hitung_jurnal',
@@ -515,6 +518,7 @@
                 'ppn': ppn,
                 'pph': pph,
                 'total_tagihan_all': total_tagihan_all,
+                'tanggal_invoice': tanggal_invoice
             },
             cache: false,
             dataType: 'json',

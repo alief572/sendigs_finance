@@ -39,8 +39,16 @@ class Jurnal_invoicing_model extends BF_Model
             'jenis_transaksi' => $get_jurnal->jenis_transaksi,
         ])->result();
         $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+
+        // Cek penawaran konsultasi dulu
         $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
-        $id_company    = (!empty($get_penawaran->company)) ? $get_penawaran->company : '';
+        $id_company = (!empty($get_penawaran->company)) ? $get_penawaran->company : '';
+
+        // Jika tidak ditemukan di penawaran konsultasi, cek penawaran non-konsultasi
+        if (empty($id_company)) {
+            $get_penawaran_non_kons = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_invoicing->id_penawaran])->row();
+            $id_company = (!empty($get_penawaran_non_kons->id_company)) ? $get_penawaran_non_kons->id_company : '';
+        }
 
         $Nomor_JV   = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
         $Bln        = substr($get_jurnal->tgl_jurnal, 5, 2);
@@ -297,16 +305,9 @@ class Jurnal_invoicing_model extends BF_Model
             ->group_end();
 
         if (!empty($filter)) {
-            $no_filters = 1;
             foreach ($filter as $key => $value) {
                 if (!empty($value)) {
-                    if ($no_filters == 1) {
-                        $this->db->like($key, $value);
-                    } else {
-                        $this->db->or_like($key, $value);
-                    }
-
-                    $no_filters++;
+                    $this->db->where($key, $value);
                 }
             }
         }
@@ -323,7 +324,8 @@ class Jurnal_invoicing_model extends BF_Model
             'b.nm_project',
             'b.no_invoice',
             'a.nm_company',
-            'e.name',
+            'g.name',
+            'h.name',
             'a.coa',
             'a.nm_coa',
             'b.id_spk_penawaran',
