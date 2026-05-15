@@ -1902,6 +1902,7 @@ class Invoicing extends Admin_Controller
 
         $id = $this->input->post('id', true);
         $id_penawaran = $this->input->post('id_penawaran', true);
+        $tanggal_invoice = $this->input->post('tanggal_invoice', true);
 
         $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $id])->row();
 
@@ -2009,7 +2010,7 @@ class Invoicing extends Admin_Controller
 
                 $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
                 $keterangan = $item['nm_coa'] . ' - ' . $id;
-                $tgl_jurnal = date('Y-m-d');
+                $tgl_jurnal = (!empty($tanggal_invoice)) ? date('Y-m-d', strtotime($tanggal_invoice)) : date('Y-m-d');
                 $coa_jurnal = $item['no_perkiraan'];
 
                 // Server-side debit/kredit calculation
@@ -2028,7 +2029,7 @@ class Invoicing extends Admin_Controller
 
                 $arr_insert_jurnal[] = [
                     'no_jurnal' => $no_jurnal,
-                    'tgl_jurnal' => $tgl_jurnal,
+                    'tgl_jurnal' => $tanggal_invoice,
                     'coa' => $coa_jurnal,
                     'id_company' => $id_company,
                     'nm_company' => $nm_company,
@@ -2104,6 +2105,7 @@ class Invoicing extends Admin_Controller
 
         $id_penawaran = $get['id_penawaran'];
         $dpp = (float) $get['dpp'];
+        $tanggal_invoice = $get['tanggal_invoice'] ?? date('Y-m-d');
 
         $id_invoice = (isset($get['id_invoice'])) ? $get['id_invoice'] : '';
 
@@ -2175,8 +2177,8 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '<tr>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= date('d-F-Y');
-            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d') . '">';
+            $hasil_jurnal .= date('d-F-Y', strtotime($tanggal_invoice));
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($tanggal_invoice)) . '">';
             $hasil_jurnal .= '</td>';
 
             if (
