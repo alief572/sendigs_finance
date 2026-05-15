@@ -50,9 +50,11 @@
             <th colspan="6" class="text-right">Grand Total</th>
             <th class="text-right total_debit">
                 <?= number_format($ttl_debit) ?>
+                <input type="hidden" name="ttl_debit" value="<?= $ttl_debit ?>">
             </th>
             <th class="text-right total_kredit">
                 <?= number_format($ttl_kredit) ?>
+                <input type="hidden" name="ttl_kredit" value="<?= $ttl_kredit ?>">
             </th>
         </tr>
     </tfoot>

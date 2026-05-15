@@ -116,6 +116,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 <div id="form-data"></div>
 <!-- DataTables -->
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -137,14 +138,29 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
-        swal({
-            type: 'warning',
+        var ttl_debit = parseFloat($('input[name="ttl_debit"]').val());
+        var ttl_kredit = parseFloat($('input[name="ttl_kredit"]').val());
+
+        if (ttl_debit != ttl_kredit) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Warning !',
+                text: 'Maaf, Data jurnal tidak balance untuk di posting !',
+                showConfirmButton: true,
+                allowOutsideClick: false
+            });
+
+            return false;
+        }
+
+        Swal.fire({
+            icon: 'warning',
             title: 'Are you sure ?',
             text: 'This data will be posted to Tras!',
             showCancelButton: true,
             allowOutsideClick: false
-        }, function(value) {
-            if (value) {
+        }).then(function(result) {
+            if (result.isConfirmed) {
                 var data = $('#frm-data').serialize();
 
                 $.ajax({
@@ -155,21 +171,19 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     dataType: 'json',
                     success: function(result) {
                         if (result.save == '1') {
-                            swal({
-                                type: 'success',
+                            Swal.fire({
+                                icon: 'success',
                                 title: 'Success !',
                                 text: result.msg,
                                 timer: 3000,
                                 allowOutsideClick: false
-                            }, function(lanjut) {
-                                swal.close();
+                            }).then(function() {
                                 $('#dialog-popup').modal('hide');
-
                                 DataTables();
                             });
                         } else {
-                            swal({
-                                type: 'warning',
+                            Swal.fire({
+                                icon: 'warning',
                                 title: 'Failed !',
                                 text: 'Please try again later !',
                                 timer: 3000,
@@ -178,8 +192,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                         }
                     },
                     error: function(result) {
-                        swal({
-                            type: 'error',
+                        Swal.fire({
+                            icon: 'error',
                             title: 'Error !',
                             text: 'Please try again later !',
                             timer: 3000,
@@ -205,8 +219,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 $('#dialog-popup').modal('show');
             },
             error: function(result) {
-                swal({
-                    type: 'error',
+                Swal.fire({
+                    icon: 'error',
                     title: 'Error !',
                     text: 'Please try again later !',
                     timer: 3000,
@@ -226,16 +240,16 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
             dataType: 'json',
             success: function(result) {
                 if (result.status == '1') {
-                    swal({
-                        type: 'success',
+                    Swal.fire({
+                        icon: 'success',
                         title: 'Success !',
                         text: 'Company fixed !',
                         allowOutsideClick: false,
                         timer: 3000
                     });
                 } else {
-                    swal({
-                        type: 'warning',
+                    Swal.fire({
+                        icon: 'warning',
                         title: 'Failed !',
                         text: 'Please try again later !',
                         allowOutsideClick: false,
@@ -244,8 +258,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 }
             },
             error: function(result) {
-                swal({
-                    type: 'error',
+                Swal.fire({
+                    icon: 'error',
                     title: 'Error !',
                     text: 'Please try again later !',
                     allowOutsideClick: false,
