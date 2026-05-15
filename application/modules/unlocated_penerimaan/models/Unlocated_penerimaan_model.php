@@ -12,10 +12,10 @@ class Unlocated_penerimaan_model extends BF_Model
     {
         parent::__construct();
 
-        $this->ENABLE_ADD     = has_permission('Unlocated_Penerimaan.Add');
-        $this->ENABLE_MANAGE  = has_permission('Unlocated_Penerimaan.Manage');
-        $this->ENABLE_VIEW    = has_permission('Unlocated_Penerimaan.View');
-        $this->ENABLE_DELETE  = has_permission('Unlocated_Penerimaan.Delete');
+        $this->ENABLE_ADD     = has_permission('Unlocated Penerimaan.Add');
+        $this->ENABLE_MANAGE  = has_permission('Unlocated Penerimaan.Manage');
+        $this->ENABLE_VIEW    = has_permission('Unlocated Penerimaan.View');
+        $this->ENABLE_DELETE  = has_permission('Unlocated Penerimaan.Delete');
     }
 
     public function get_unlocated_penerimaan()
