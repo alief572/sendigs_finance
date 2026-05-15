@@ -203,6 +203,9 @@ class Jurnal_Invoicing extends Admin_Controller
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
         $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
         $this->db->where('a.jenis_transaksi', 'Invoicing');
+        $this->db->where('b.no_invoice <>', '');
+        $this->db->where('d.nm_company <>', '');
+        $this->db->where_in('a.sts', ['', '0']);
         $this->db->group_start();
         $this->db->where('a.debit >', 0);
         $this->db->or_where('a.kredit >', 0);
