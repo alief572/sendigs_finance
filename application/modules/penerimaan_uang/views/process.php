@@ -134,7 +134,7 @@
 
 <input type="hidden" name="no_inv" value="<?= $no_inv ?>">
 <input type="hidden" name="id_alokasi" value="<?= $id_alokasi ?>">
-<input type="hidden" name="id_customer" value="<?= $id_customer ?>">
+<input type="hidden" name="nm_customer" value="<?= $nm_customer ?>">
 <input type="hidden" name="ppn_dipotong" value="<?= $ppn_dipotong ?>">
 <input type="hidden" name="pph23_dipotong" value="<?= $pph23_dipotong ?>">
 <input type="hidden" name="nominal_penerimaan_bank" value="<?= $nominal_penerimaan_bank ?>">
