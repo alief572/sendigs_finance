@@ -168,6 +168,21 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
+        var ttl_debit = parseFloat($('input[name="ttl_debit"]').val());
+        var ttl_kredit = parseFloat($('input[name="ttl_kredit"]').val());
+
+        if (ttl_debit != ttl_kredit) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Warning !',
+                text: 'Maaf, Data jurnal tidak balance untuk di posting !',
+                showConfirmButton: true,
+                allowOutsideClick: false
+            });
+
+            return false;
+        }
+
         Swal.fire({
             icon: 'warning',
             title: 'Are you sure ?',
