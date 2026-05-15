@@ -250,7 +250,9 @@ class Jurnal_invoicing_model extends BF_Model
                 'tgl'                => date('d F Y', strtotime($row->tgl_jurnal)),
                 'klien'              => $row->nm_customer,
                 'no_invoice'         => $row->no_invoice,
-                'keterangan_tagihan' => $row->nm_project . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>',
+                'keterangan_tagihan' => (!empty($row->non_kons) && $row->non_kons == '1')
+                    ? $row->keterangan_penawaran . ' - <span style="font-weight:bold;">' . $row->id_penawaran_non_kons . '</span>'
+                    : $row->nm_project . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>',
                 'company'            => $row->nm_company,
                 'nm_divisi'          => $row->nm_divisi,
                 'coa'                => $row->coa,
@@ -274,21 +276,25 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function base_query_jurnal($filter)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, 
-                      b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, 
-                      d.nm_company, e.name as nm_divisi';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(d.id, f.id) as id_company, COALESCE(d.nm_company, f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
 
-        $this->db->select($select_fields)
+        $this->db->select($select_fields, FALSE)
             ->from('tr_jurnal a')
             ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left')
-            ->join('hris_divisions e', 'e.id = c.id_divisi', 'left')
+            ->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left')
+            ->join('hris_divisions g', 'g.id = c.id_divisi', 'left')
+            ->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Invoicing')
             ->where('b.no_invoice <>', '')
-            ->where('d.nm_company <>', '')
             ->where_in('a.sts', ['', '0'])
-            ->where('(a.debit > 0 OR a.kredit > 0)'); // Pindahan dari HAVING
+            ->where('(a.debit > 0 OR a.kredit > 0)') // Pindahan dari HAVING
+            ->group_start()
+            ->where('d.nm_company IS NOT NULL')
+            ->or_where('f.nm_company IS NOT NULL')
+            ->group_end();
 
         if (!empty($filter)) {
             $no_filters = 1;
