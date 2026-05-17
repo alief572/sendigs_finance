@@ -45,9 +45,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         <div class="col-md-1">
             <br>
             <button type="button" class="btn btn-sm btn-success download_excel" title="Download Excel"><i class="fa fa-download"></i> Download Excel</button>
-            <?php if ($ENABLE_MANAGE): ?>
+            <!-- <?php if ($ENABLE_MANAGE): ?>
                 <button type="button" class="btn btn-sm btn-primary btn_batch_process" title="Batch Process Tagih"><i class="fa fa-cogs"></i> Batch Process Tagih</button>
-            <?php endif; ?>
+            <?php endif; ?> -->
             <!-- <button type="button" class="btn btn-sm btn-danger" onclick="update_actual_plan_tagih()">UPDATE !</button> -->
         </div>
     </div>
