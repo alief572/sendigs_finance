@@ -45,6 +45,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         <div class="col-md-1">
             <br>
             <button type="button" class="btn btn-sm btn-success download_excel" title="Download Excel"><i class="fa fa-download"></i> Download Excel</button>
+            <?php if ($ENABLE_MANAGE): ?>
+                <button type="button" class="btn btn-sm btn-primary btn_batch_process" title="Batch Process Tagih"><i class="fa fa-cogs"></i> Batch Process Tagih</button>
+            <?php endif; ?>
             <!-- <button type="button" class="btn btn-sm btn-danger" onclick="update_actual_plan_tagih()">UPDATE !</button> -->
         </div>
     </div>
@@ -474,6 +477,58 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             }
         });
     }
+
+    // Batch Process Tagih button handler
+    $(document).on('click', '.btn_batch_process', function() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Batch Process Tagih',
+            html: "Proses ini akan mengubah semua data dengan status 'Waiting Actual Plan Tagih' pada tahun 2019-2025 menjadi status 'Tagih' dan membuat Invoice secara otomatis.<br><br><strong>Aksi ini tidak dapat dibatalkan.</strong>",
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Proses Sekarang',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Disable button and show loading overlay
+                $('.btn_batch_process').prop('disabled', true);
+                $('.box').append('<div class="overlay"><i class="fa fa-refresh fa-spin"></i></div>');
+
+                $.ajax({
+                    type: 'POST',
+                    url: '<?= site_url("actual_plan_tagih/batch_process_tagih") ?>',
+                    dataType: 'json',
+                    timeout: 120000,
+                    success: function(response) {
+                        $('.box .overlay').remove();
+                        $('.btn_batch_process').prop('disabled', false);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Batch Process Selesai',
+                            html: 'Total ditemukan: ' + response.total_found + '<br>Berhasil diproses: ' + response.total_success + '<br>Gagal: ' + response.total_failed + '<br>Durasi: ' + response.duration_seconds + ' detik'
+                        }).then(function() {
+                            var bulan = $('#bulan').val();
+                            var tahun = $('.inp_tahun').val();
+                            var status = $('#status').val();
+                            DataTables(bulan, tahun, status);
+                        });
+                    },
+                    error: function() {
+                        $('.box .overlay').remove();
+                        $('.btn_batch_process').prop('disabled', false);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Batch Process Gagal',
+                            text: 'Terjadi kesalahan saat memproses batch. Silakan coba lagi.'
+                        });
+                    }
+                });
+            }
+        });
+    });
 
     function DataTables(bulan, tahun, status = null) {
         var dataTables = $('#table_penawaran').dataTable({
