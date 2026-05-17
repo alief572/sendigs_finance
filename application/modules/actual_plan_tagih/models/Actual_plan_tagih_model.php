@@ -40,6 +40,62 @@ class Actual_plan_tagih_model extends BF_Model
         return $kode_trans;
     }
 
+    /**
+     * Re-check a record's status before processing (race condition guard).
+     * Returns null if record not found or if status_terakhir is '1' (Tagih) or '3' (Macet).
+     *
+     * @param string $id
+     * @return object|null
+     */
+    public function get_record_for_processing($id)
+    {
+        $this->db->select('*');
+        $this->db->from('kons_tr_plan_tagih_detail');
+        $this->db->where('id', $id);
+        $query = $this->db->get();
+
+        if ($query->num_rows() === 0) {
+            return null;
+        }
+
+        $record = $query->row();
+
+        // Race condition guard: skip if status has changed to Tagih or Macet
+        if ($record->status_terakhir === '1' || $record->status_terakhir === '3') {
+            return null;
+        }
+
+        return $record;
+    }
+
+    /**
+     * Retrieve all Plan_Tagih_Detail records qualifying for batch processing.
+     * Filters: status_terakhir NOT IN ('1', '3'), effective year in [$start_year, $end_year].
+     *
+     * @param int $start_year
+     * @param int $end_year
+     * @return array
+     */
+    public function get_batch_records($start_year, $end_year)
+    {
+        $this->db->select('a.id, a.id_header, a.id_spk_penawaran, a.id_penawaran, a.id_top, a.term_payment, a.persen_payment, a.nominal_payment, a.desc_payment, a.tgl_plan_tagih, a.tgl_aktual_plan_tagih, a.urutan, a.status_terakhir');
+        $this->db->select('c.id_customer, c.nm_customer, c.address');
+        $this->db->select('c.id_project, c.id_project_leader, c.nm_project_leader, c.id_sales, c.nm_sales');
+        $this->db->select('e.nm_paket as nm_project');
+        $this->db->select('COALESCE(d.nm_company, c.nm_company) as nm_company', false);
+        $this->db->from('kons_tr_plan_tagih_detail a');
+        $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
+        $this->db->where_not_in('a.status_terakhir', ['1', '3']);
+        $this->db->where("YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) >=", $start_year, false);
+        $this->db->where("YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) <=", $end_year, false);
+        $this->db->group_by('a.id');
+
+        return $this->db->get()->result();
+    }
+
     public function get_actual_plan_tagih()
     {
         $draw   = $this->input->post('draw');

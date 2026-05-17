@@ -369,4 +369,289 @@ class Actual_plan_tagih extends Admin_Controller
     {
         $this->Actual_plan_tagih_model->get_actual_plan_tagih();
     }
+
+    /**
+     * Batch process all qualifying "Waiting" records to "Tagih" status
+     * with automatic invoice and journal creation.
+     *
+     * @return void Outputs JSON response
+     */
+    public function batch_process_tagih()
+    {
+        $start_time = microtime(true);
+
+        // Permission check for AJAX request — return 403 JSON if denied
+        if (!$this->auth->has_permission($this->managePermission)) {
+            $this->output->set_status_header(403);
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'status' => 'error',
+                'message' => 'Access denied. Actual_Plan_Tagih.Manage permission required.'
+            ]));
+            return;
+        }
+
+        try {
+
+            // Load Invoicing model from the invoicing module
+            $this->load->model('invoicing/Invoicing_model', 'Invoicing_model');
+
+            // Retrieve qualifying records
+            $records = $this->Actual_plan_tagih_model->get_batch_records(2019, 2025);
+
+            // If no records found, return early with appropriate message
+            if (empty($records)) {
+                $this->output->set_content_type('application/json')->set_output(json_encode([
+                    'status' => 'success',
+                    'total_found' => 0,
+                    'total_success' => 0,
+                    'total_failed' => 0,
+                    'failed_records' => [],
+                    'duration_seconds' => round(microtime(true) - $start_time, 2),
+                    'message' => 'No qualifying records found for batch processing.'
+                ]));
+                return;
+            }
+
+            // Log batch start
+            log_message('info', sprintf(
+                'Batch Process Tagih started: timestamp=%s, user_id=%s, year_range=2019-2025, total_records=%d',
+                date('Y-m-d H:i:s'),
+                $this->auth->user_id(),
+                count($records)
+            ));
+
+            // Initialize counters
+            $total_found = count($records);
+            $success_count = 0;
+            $failed_count = 0;
+            $failed_records = [];
+            $macet_excluded = 0;
+            $offset = 0;
+
+            // Per-record processing loop
+            foreach ($records as $record) {
+                $this->db->trans_begin();
+
+                try {
+                    // Re-check record status (race condition guard)
+                    $fresh_record = $this->Actual_plan_tagih_model->get_record_for_processing($record->id);
+
+                    if ($fresh_record === null) {
+                        $this->db->trans_rollback();
+                        $macet_excluded++;
+                        continue;
+                    }
+
+                    // Generate actual_plan_tagih ID with incrementing offset
+                    $offset++;
+                    $id = $this->Actual_plan_tagih_model->generate_id($offset);
+
+                    // Insert into kons_tr_actual_plan_tagih
+                    $arr_insert = [
+                        'id' => $id,
+                        'id_detail_plan_tagih' => $record->id,
+                        'id_top' => $record->id_top,
+                        'id_spk_penawaran' => $record->id_spk_penawaran,
+                        'id_penawaran' => $record->id_penawaran,
+                        'term_payment' => $record->term_payment,
+                        'persen_payment' => $record->persen_payment,
+                        'nominal_payment' => $record->nominal_payment,
+                        'desc_payment' => $record->desc_payment,
+                        'tgl_plan_tagih' => $record->tgl_plan_tagih,
+                        'urutan' => $record->urutan,
+                        'tanggal_actual_plan_tagih' => date('Y-m-d'),
+                        'tagih_mundur' => '1',
+                        'alasan_mundur' => '',
+                        'file_surat_mundur' => '',
+                        'file_laporan_progress' => '',
+                        'sts_invoice' => 0,
+                        'created_by' => $this->auth->user_id(),
+                        'created_date' => date('Y-m-d H:i:s')
+                    ];
+
+                    $insert_result = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
+                    if (!$insert_result) {
+                        throw new Exception('Database insert failed for actual_plan_tagih');
+                    }
+
+                    // Update kons_tr_plan_tagih_detail status
+                    $arr_update = [
+                        'status_terakhir' => '1',
+                        'tgl_aktual_plan_tagih' => date('Y-m-d')
+                    ];
+                    $update_result = $this->db->update('kons_tr_plan_tagih_detail', $arr_update, ['id' => $record->id]);
+                    if (!$update_result) {
+                        throw new Exception('Database update failed for plan_tagih_detail');
+                    }
+
+                    // Invoice and journal creation
+                    if ($arr_insert['sts_invoice'] != 1) {
+                        // Generate invoice ID
+                        $invoice_id = $this->Invoicing_model->generate_id();
+
+                        // Calculate financial values
+                        $nominal = $record->nominal_payment;
+                        $dpp = $nominal * 11 / 12;
+                        $ppn = $dpp * 12 / 100;
+                        $pph = $nominal * 2 / 100;
+                        $total_akhir = $nominal + $ppn - $pph;
+
+                        // Insert into tr_invoicing
+                        $arr_invoice = [
+                            'id' => $invoice_id,
+                            'id_actual_plan_tagih' => $id,
+                            'id_detail_plan_tagih' => $record->id,
+                            'id_penawaran' => $record->id_penawaran,
+                            'id_spk_penawaran' => $record->id_spk_penawaran,
+                            'id_customer' => $record->id_customer,
+                            'nm_customer' => $record->nm_customer,
+                            'address' => $record->address,
+                            'id_project' => $record->id_project,
+                            'nm_project' => $record->nm_project,
+                            'id_project_leader' => $record->id_project_leader,
+                            'nm_project_leader' => $record->nm_project_leader,
+                            'id_sales' => $record->id_sales,
+                            'nm_sales' => $record->nm_sales,
+                            'tanggal_invoice' => date('Y-m-d'),
+                            'no_invoice' => '',
+                            'total_nominal' => $nominal,
+                            'dpp_nilai_lain' => $dpp,
+                            'ppn_jurnal' => $ppn,
+                            'pph_jurnal' => $pph,
+                            'total_akhir_jurnal' => $total_akhir,
+                            'saldo_piutang' => $total_akhir,
+                            'created_by' => $this->auth->user_id(),
+                            'created_date' => date('Y-m-d H:i:s')
+                        ];
+
+                        $invoice_result = $this->db->insert('tr_invoicing', $arr_invoice);
+                        if (!$invoice_result) {
+                            throw new Exception('Invoice creation failed');
+                        }
+
+                        // Generate 4 journal entry IDs and insert journal entries
+                        $journal_entries = [];
+
+                        // Journal 1: COA 1102-01-01 (Piutang Usaha) - Debit = Total Akhir
+                        $journal_entries[] = [
+                            'no_jurnal' => $this->Invoicing_model->generate_id_invoice_jurnal(1),
+                            'tgl_jurnal' => date('Y-m-d'),
+                            'coa' => '1102-01-01',
+                            'id_company' => '',
+                            'nm_company' => $record->nm_company,
+                            'nm_coa' => 'Piutang Usaha',
+                            'debit' => $total_akhir,
+                            'kredit' => 0,
+                            'keterangan' => '',
+                            'sts' => 0,
+                            'no_transaksi' => $invoice_id,
+                            'jenis_transaksi' => 'Invoicing',
+                            'created_by' => $this->auth->user_id(),
+                            'created_date' => date('Y-m-d H:i:s')
+                        ];
+
+                        // Journal 2: COA 2104-01-07 (PPN Keluaran) - Kredit = PPN
+                        $journal_entries[] = [
+                            'no_jurnal' => $this->Invoicing_model->generate_id_invoice_jurnal(2),
+                            'tgl_jurnal' => date('Y-m-d'),
+                            'coa' => '2104-01-07',
+                            'id_company' => '',
+                            'nm_company' => $record->nm_company,
+                            'nm_coa' => 'PPN Keluaran',
+                            'debit' => 0,
+                            'kredit' => $ppn,
+                            'keterangan' => '',
+                            'sts' => 0,
+                            'no_transaksi' => $invoice_id,
+                            'jenis_transaksi' => 'Invoicing',
+                            'created_by' => $this->auth->user_id(),
+                            'created_date' => date('Y-m-d H:i:s')
+                        ];
+
+                        // Journal 3: COA 1106-01-02 (PPh 23 Dibayar Dimuka) - Debit = PPh
+                        $journal_entries[] = [
+                            'no_jurnal' => $this->Invoicing_model->generate_id_invoice_jurnal(3),
+                            'tgl_jurnal' => date('Y-m-d'),
+                            'coa' => '1106-01-02',
+                            'id_company' => '',
+                            'nm_company' => $record->nm_company,
+                            'nm_coa' => 'PPh 23 Dibayar Dimuka',
+                            'debit' => $pph,
+                            'kredit' => 0,
+                            'keterangan' => '',
+                            'sts' => 0,
+                            'no_transaksi' => $invoice_id,
+                            'jenis_transaksi' => 'Invoicing',
+                            'created_by' => $this->auth->user_id(),
+                            'created_date' => date('Y-m-d H:i:s')
+                        ];
+
+                        // Journal 4: COA 4101-01-01 (Pendapatan Jasa Konsultansi) - Kredit = nominal
+                        $journal_entries[] = [
+                            'no_jurnal' => $this->Invoicing_model->generate_id_invoice_jurnal(4),
+                            'tgl_jurnal' => date('Y-m-d'),
+                            'coa' => '4101-01-01',
+                            'id_company' => '',
+                            'nm_company' => $record->nm_company,
+                            'nm_coa' => 'Pendapatan Jasa Konsultansi',
+                            'debit' => 0,
+                            'kredit' => $nominal,
+                            'keterangan' => '',
+                            'sts' => 0,
+                            'no_transaksi' => $invoice_id,
+                            'jenis_transaksi' => 'Invoicing',
+                            'created_by' => $this->auth->user_id(),
+                            'created_date' => date('Y-m-d H:i:s')
+                        ];
+
+                        // Insert all 4 journal entries at once
+                        $journal_result = $this->db->insert_batch('tr_jurnal', $journal_entries);
+                        if (!$journal_result) {
+                            throw new Exception('Journal entries creation failed');
+                        }
+
+                        // Update sts_invoice to 1
+                        $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $id]);
+                    }
+
+                    if ($this->db->trans_status() === false) {
+                        throw new Exception('Transaction failed');
+                    }
+
+                    $this->db->trans_commit();
+                    $success_count++;
+                } catch (Exception $e) {
+                    $this->db->trans_rollback();
+                    $failed_records[] = ['id' => $record->id, 'error' => $e->getMessage()];
+                    $failed_count++;
+                }
+            }
+
+            // Log batch completion
+            log_message('info', sprintf(
+                'Batch Process Tagih completed: total_found=%d, success=%d, failed=%d, macet_excluded=%d, duration=%.2fs',
+                $total_found,
+                $success_count,
+                $failed_count,
+                $macet_excluded,
+                microtime(true) - $start_time
+            ));
+
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'status' => 'success',
+                'total_found' => $total_found,
+                'total_success' => $success_count,
+                'total_failed' => $failed_count,
+                'failed_records' => $failed_records,
+                'duration_seconds' => round(microtime(true) - $start_time, 2)
+            ]));
+        } catch (Exception $e) {
+            log_message('error', 'Batch Process Tagih system error: ' . $e->getMessage());
+            $this->output->set_status_header(500);
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'status' => 'error',
+                'message' => 'System error: ' . $e->getMessage()
+            ]));
+        }
+    }
 }
