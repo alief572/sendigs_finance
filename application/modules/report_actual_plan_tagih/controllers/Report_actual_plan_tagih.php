@@ -186,7 +186,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         foreach ($get_data as $item) {
             $total_invoice = $item->nominal_invoice ?? 0;
-            $total_uninvoice = ($item->nilai_kontrak - $total_invoice);
+            $total_uninvoice = $item->nominal_uninvoice ?? 0;
             $total_macet = $item->macet ?? 0;
 
             // VALIDASI TAHUN: Cek apakah baris ini memang jadwal tahun yang difilter
