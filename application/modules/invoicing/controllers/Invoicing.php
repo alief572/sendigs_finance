@@ -443,7 +443,7 @@ class Invoicing extends Admin_Controller
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
                 $debit = ($total_nominal - $pph);
             }
 
@@ -457,7 +457,7 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
                 $debit = $pph;
             }
 
@@ -465,7 +465,7 @@ class Invoicing extends Admin_Controller
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
+                $pph = ($total_nominal * 0.5 / 100);
 
                 $kredit = $total_nominal;
             }
@@ -1447,6 +1447,31 @@ class Invoicing extends Admin_Controller
     public function get_data_spk()
     {
         $this->Invoicing_model->get_data_spk();
+    }
+
+    public function download_excel()
+    {
+        $filter_status = $this->input->get('filter_status');
+
+        $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
+        $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
+        $this->db->where('a.tagih_mundur', 1);
+
+        if ($filter_status == 'uninvoiced') {
+            $this->db->where('a.sts_invoice !=', '1');
+        } elseif ($filter_status == 'invoiced') {
+            $this->db->where('a.sts_invoice', '1');
+        }
+
+        $this->db->order_by('a.created_by', 'desc');
+        $get_data = $this->db->get()->result();
+
+        $this->load->view('download_excel', ['list_data' => $get_data]);
     }
 
     // public function _render_status_invoice_non_konsultasi($id_penawaran)
