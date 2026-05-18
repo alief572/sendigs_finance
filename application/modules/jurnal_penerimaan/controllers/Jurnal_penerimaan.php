@@ -292,26 +292,28 @@ class Jurnal_penerimaan extends Admin_Controller
 		$no_invoice = $this->input->get('no_invoice');
 		$company = $this->input->get('company');
 
-		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
+		$filter = [
+			'b.id_customer' => $klien,
+			'b.no_invoice' => $no_invoice,
+			'd.id' => $company
+		];
+
+		$this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, a.sts, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE);
 		$this->db->from('tr_jurnal a');
 		$this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE);
 		$this->db->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left');
 		$this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-		$this->db->join('hris_divisions e', 'e.id = c.id_divisi', 'left');
+		$this->db->join(DBCNL . '.kons_tr_spk_penawaran f', 'f.id_spk_penawaran = b.id_spk_penawaran', 'left');
+		$this->db->join(DBCNL . '.kons_tr_company d', 'd.id = COALESCE(c.company, f.id_company)', 'left', FALSE);
+		$this->db->join('hris_divisions e', 'e.id = COALESCE(c.id_divisi, f.id_divisi)', 'left', FALSE);
 		$this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
 		$this->db->where('a.sts <>', '1');
+		$this->db->where('b.no_invoice IS NOT NULL');
 
-		if (!empty($klien)) {
-			$this->db->where('b.id_customer', $klien);
-		}
-
-		if (!empty($no_invoice)) {
-			$this->db->where('b.no_invoice', $no_invoice);
-		}
-
-		if (!empty($company)) {
-			$this->db->where('d.id', $company);
+		foreach ($filter as $key => $value) {
+			if (!empty($value)) {
+				$this->db->where($key, $value);
+			}
 		}
 
 		$this->db->group_start();
@@ -321,11 +323,6 @@ class Jurnal_penerimaan extends Admin_Controller
 
 		$this->db->group_by('a.no_transaksi');
 		$this->db->order_by('a.created_date', 'desc');
-		// $this->db->group_start();
-		// $this->db->where('a.debit >', 0);
-		// $this->db->or_where('a.kredit >', 0);
-		// $this->db->group_end();
-		// $this->db->group_by('a.no_transaksi');	
 
 		$get_data_jurnal = $this->db->get()->result();
 
