@@ -19,9 +19,9 @@ header("Content-Disposition: attachment; filename=Data Invoicing.xls");
     <tbody>
         <?php $no = 0;
         foreach ($list_data as $item) : $no++;
-            $status = "Draft";
+            $status = "Uninvoiced";
             if ($item->sts_invoice == '1') {
-                $status = "Invoice Created";
+                $status = "Invoiced";
             }
         ?>
             <tr>

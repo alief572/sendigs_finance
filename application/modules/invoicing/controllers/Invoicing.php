@@ -37,20 +37,29 @@ class Invoicing extends Admin_Controller
         $this->template->render('index');
     }
 
-    public function add_invoice($id_actual_plan_tagih)
+    public function add_invoice($id_plan_tagih_detail)
     {
         $this->auth->restrict($this->viewPermission);
 
-        $id_actual_plan_tagih = urldecode($id_actual_plan_tagih);
-        $id_actual_plan_tagih = str_replace('|', '/', $id_actual_plan_tagih);
-
+        // Get plan tagih detail data
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
-        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
-        $this->db->where('a.id', $id_actual_plan_tagih);
+        $this->db->where('a.id', $id_plan_tagih_detail);
         $get_actual_plan_tagih = $this->db->get()->row();
+
+        // Find related actual_plan_tagih for backward compatibility with save process
+        $get_actual = $this->db->get_where('kons_tr_actual_plan_tagih', [
+            'id_detail_plan_tagih' => $id_plan_tagih_detail,
+            'tagih_mundur' => '1'
+        ])->row();
+
+        // Use actual_plan_tagih id if exists, otherwise use plan_tagih_detail id
+        if (!empty($get_actual)) {
+            $get_actual_plan_tagih->id = $get_actual->id;
+        }
 
         $id_company = (!empty($get_actual_plan_tagih->id_company)) ? $get_actual_plan_tagih->id_company : '1';
         $nm_company = (!empty($get_actual_plan_tagih->nm_company)) ? $get_actual_plan_tagih->nm_company : 'STM-Vuca';
@@ -167,20 +176,29 @@ class Invoicing extends Admin_Controller
         $this->template->render('add_invoice_non_konsultasi');
     }
 
-    public function add_invoice_vuca($id_actual_plan_tagih)
+    public function add_invoice_vuca($id_plan_tagih_detail)
     {
         $this->auth->restrict($this->viewPermission);
 
-        $id_actual_plan_tagih = urldecode($id_actual_plan_tagih);
-        $id_actual_plan_tagih = str_replace('|', '/', $id_actual_plan_tagih);
-
+        // Get plan tagih detail data
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
-        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
-        $this->db->where('a.id', $id_actual_plan_tagih);
+        $this->db->where('a.id', $id_plan_tagih_detail);
         $get_actual_plan_tagih = $this->db->get()->row();
+
+        // Find related actual_plan_tagih for backward compatibility with save process
+        $get_actual = $this->db->get_where('kons_tr_actual_plan_tagih', [
+            'id_detail_plan_tagih' => $id_plan_tagih_detail,
+            'tagih_mundur' => '1'
+        ])->row();
+
+        // Use actual_plan_tagih id if exists, otherwise use plan_tagih_detail id
+        if (!empty($get_actual)) {
+            $get_actual_plan_tagih->id = $get_actual->id;
+        }
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
 
@@ -965,6 +983,9 @@ class Invoicing extends Admin_Controller
         if ($valid == 1) {
             $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $post['id']]);
 
+            // Update sts_invoice di kons_tr_plan_tagih_detail
+            $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
+
             if (!$update_actual_plan_tagih) {
                 $this->db->trans_rollback();
 
@@ -1089,6 +1110,9 @@ class Invoicing extends Admin_Controller
             $insert_invoicing = $this->db->insert('tr_invoicing', $arr_insert);
             $insert_invoicing_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
             $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $post['id']]);
+
+            // Update sts_invoice di kons_tr_plan_tagih_detail
+            $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
 
             $this->db->trans_commit();
 
@@ -1454,13 +1478,13 @@ class Invoicing extends Admin_Controller
         $filter_status = $this->input->get('filter_status');
 
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
-        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
-        $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
-        $this->db->where('a.tagih_mundur', 1);
+        $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
+        $this->db->where('a.status_terakhir', '1');
 
         if ($filter_status == 'uninvoiced') {
             $this->db->where('a.sts_invoice !=', '1');
@@ -1468,7 +1492,8 @@ class Invoicing extends Admin_Controller
             $this->db->where('a.sts_invoice', '1');
         }
 
-        $this->db->order_by('a.created_by', 'desc');
+        $this->db->group_by('a.id');
+        $this->db->order_by('a.id', 'desc');
         $get_data = $this->db->get()->result();
 
         $this->load->view('download_excel', ['list_data' => $get_data]);

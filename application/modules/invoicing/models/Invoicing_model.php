@@ -53,15 +53,15 @@ class Invoicing_model extends BF_Model
         $filter_status = $this->input->post('filter_status');
 
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
-        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
-        $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
-        $this->db->where('a.tagih_mundur', 1);
+        $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
+        $this->db->where('a.status_terakhir', '1');
 
-        // Filter status
+        // Filter status berdasarkan sts_invoice di kons_tr_plan_tagih_detail
         if ($filter_status == 'uninvoiced') {
             $this->db->where('a.sts_invoice !=', '1');
         } elseif ($filter_status == 'invoiced') {
@@ -79,10 +79,13 @@ class Invoicing_model extends BF_Model
             $this->db->group_end();
         }
 
+        $this->db->group_by('a.id');
+
         $db_clone = clone $this->db;
         $count_all = $db_clone->count_all_results();
 
-        $this->db->order_by('a.created_by', 'desc');
+        $this->db->group_by('a.id');
+        $this->db->order_by('a.id', 'desc');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get();
@@ -93,19 +96,19 @@ class Invoicing_model extends BF_Model
         foreach ($get_data->result() as $item) {
             $no++;
 
-            $status = '<span class="badge bg-yellow">Draft</span>';
+            $status = '<span class="badge bg-yellow">Uninvoiced</span>';
             $status2 = '';
-            if ($item->sts_invoice == 1) {
-                $status = '<span class="badge bg-green">Invoice Created</span>';
+            if ($item->sts_invoice == '1') {
+                $status = '<span class="badge bg-green">Invoiced</span>';
             }
 
             $option = '';
-            if ($item->sts_invoice !== '1') {
-                $option = '<a href="' . base_url('invoicing/add_invoice/' . urlencode(str_replace('/', '|', $item->id))) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>';
+            if ($item->sts_invoice != '1') {
+                $option = '<a href="' . base_url('invoicing/add_invoice/' . $item->id) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>';
 
-                $option .= '<a href="' . base_url('invoicing/add_invoice_vuca/' . urlencode(str_replace('/', '|', $item->id))) . '" class="btn btn-sm btn-primary" title="Create Invoice Vuca"><i class="fa fa-pencil"></i></a>';
+                $option .= ' <a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-primary" title="Create Invoice Vuca"><i class="fa fa-pencil"></i></a>';
             } else {
-                $get_invoicing = $this->db->get_where('tr_invoicing', ['id_actual_plan_tagih' => $item->id])->row();
+                $get_invoicing = $this->db->get_where('tr_invoicing', ['id_detail_plan_tagih' => $item->id])->row();
 
                 if (!empty($get_invoicing)) {
 
