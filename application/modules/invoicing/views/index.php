@@ -30,6 +30,20 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             <li role="presentation" class="tab_pin tab_2" data-no="2"><a href="javascript:void(0);">Non Konsultasi</a></li>
         </ul>
         <div class="col_1">
+            <div class="row" style="margin-bottom: 10px;">
+                <div class="col-md-3">
+                    <label for="filter_status">Filter Status:</label>
+                    <select name="filter_status" id="filter_status" class="form-control form-control-sm">
+                        <option value="">-- Semua --</option>
+                        <option value="uninvoiced">Uninvoiced</option>
+                        <option value="invoiced">Invoiced</option>
+                    </select>
+                </div>
+                <div class="col-md-2" style="padding-top: 25px;">
+                    <button type="button" class="btn btn-sm btn-primary btn_filter"><i class="fa fa-search"></i> Filter</button>
+                    <a href="<?= base_url('invoicing/download_excel') ?>" class="btn btn-sm btn-success btn_download_excel" title="Download Excel"><i class="fa fa-file-excel-o"></i> Excel</a>
+                </div>
+            </div>
             <table id="table_penawaran" class="table table-bordered table-striped">
                 <thead class="bg-primary">
                     <tr>
@@ -322,11 +336,22 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
             return false;
         } else {
-           window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
+            window.open(siteurl + active_controller + 'print_invoice_non_kons/' + id_inv + '/' + company, '_blank')
 
 
         }
     })
+
+    $(document).on('click', '.btn_filter', function() {
+        DataTables();
+    });
+
+    $(document).on('click', '.btn_download_excel', function(e) {
+        e.preventDefault();
+        var filter_status = $('#filter_status').val();
+        var url = siteurl + active_controller + 'download_excel?filter_status=' + filter_status;
+        window.open(url, '_blank');
+    });
 
     $(document).on('click', '.tab_1', function() {
         $('.col_1').show();
@@ -441,7 +466,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {
-
+                    d.filter_status = $('#filter_status').val();
                 }
             },
             columns: [{

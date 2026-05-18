@@ -50,6 +50,7 @@ class Invoicing_model extends BF_Model
         $length = $this->input->post('length');
         $start = $this->input->post('start');
         $search = $this->input->post('search');
+        $filter_status = $this->input->post('filter_status');
 
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_actual_plan_tagih a');
@@ -59,6 +60,13 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_actual_plan_tagih = a.id', 'left');
         $this->db->where('a.tagih_mundur', 1);
+
+        // Filter status
+        if ($filter_status == 'uninvoiced') {
+            $this->db->where('a.sts_invoice !=', '1');
+        } elseif ($filter_status == 'invoiced') {
+            $this->db->where('a.sts_invoice', '1');
+        }
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
