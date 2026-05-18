@@ -34,11 +34,23 @@ class Jurnal_invoicing_model extends BF_Model
         $post = $this->input->post();
 
         $get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+
         $get_jurnal_detail = $this->db->get_where('tr_jurnal', [
             'no_transaksi'    => $get_jurnal->no_transaksi,
             'jenis_transaksi' => $get_jurnal->jenis_transaksi,
         ])->result();
         $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
+
+        $get_coa_piutang = $this->db->select('a.coa, a.nm_coa')
+            ->from('tr_jurnal a')
+            ->where('a.no_transaksi', $get_jurnal->no_transaksi)
+            ->where('a.jenis_transaksi', $get_jurnal->jenis_transaksi)
+            ->like('a.nm_coa', 'Piutang', 'both')
+            ->get()
+            ->row();
+
+        $no_coa_piutang = $get_coa_piutang->coa ?? '';
+        $nm_coa_piutang = $get_coa_piutang->nm_coa ?? '';
 
         // Cek penawaran konsultasi dulu
         $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
@@ -49,6 +61,10 @@ class Jurnal_invoicing_model extends BF_Model
             $get_penawaran_non_kons = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_invoicing->id_penawaran])->row();
             $id_company = (!empty($get_penawaran_non_kons->id_company)) ? $get_penawaran_non_kons->id_company : '';
         }
+
+        $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $id_company])->row();
+
+        $nm_company = $get_company->nm_company ?? '';
 
         $Nomor_JV   = $this->Jurnal_invoicing_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
         $Bln        = substr($get_jurnal->tgl_jurnal, 5, 2);
@@ -61,7 +77,7 @@ class Jurnal_invoicing_model extends BF_Model
 
         try {
             // Insert jurnal header — sekali saja
-            $acc_db->insert('javh', [
+            $insert_javh = $acc_db->insert('javh', [
                 'nomor'          => $Nomor_JV,
                 'tgl'            => $get_jurnal->tgl_jurnal,
                 'jml'            => $get_invoicing->total_akhir_jurnal,
@@ -76,10 +92,13 @@ class Jurnal_invoicing_model extends BF_Model
                 'tgl_jvkoreksi'  => $get_jurnal->tgl_jurnal,
                 'ho_valid'       => '',
             ]);
+            if (!$insert_javh) {
+                throw new Exception('Gagal insert jurnal header (javh): ' . $acc_db->error()['message']);
+            }
 
             // Insert jurnal detail — satu baris per item
             foreach ($get_jurnal_detail as $item) {
-                $acc_db->insert('jurnal', [
+                $insert_jurnal = $acc_db->insert('jurnal', [
                     'tipe'          => 'JV',
                     'nomor'         => $Nomor_JV,
                     'tanggal'       => $item->tgl_jurnal,
@@ -89,34 +108,51 @@ class Jurnal_invoicing_model extends BF_Model
                     'debet'         => $item->debit,
                     'kredit'        => $item->kredit,
                 ]);
+                if (!$insert_jurnal) {
+                    throw new Exception('Gagal insert jurnal detail: ' . $acc_db->error()['message']);
+                }
 
                 // Update status posting jurnal detail
-                $acc_db->update('jurnal', ['stspos' => 1], [
+                $update_stspos = $acc_db->update('jurnal', ['stspos' => 1], [
                     'tipe'   => 'JV',
                     'nomor'  => $Nomor_JV,
                     'no_reff' => $item->no_transaksi,
                 ]);
+                if (!$update_stspos) {
+                    throw new Exception('Gagal update stspos jurnal: ' . $acc_db->error()['message']);
+                }
 
                 // Tandai jurnal awal sudah diposting
-                $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
+                $update_sts = $this->db->update('tr_jurnal', ['sts' => '1'], ['id' => $item->id]);
+                if (!$update_sts) {
+                    throw new Exception('Gagal update status tr_jurnal: ' . $this->db->error()['message']);
+                }
             }
 
             // Update nomor cabang — sekali saja setelah semua detail selesai
-            $acc_db->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+            $update_cabang = $acc_db->query("UPDATE pastibisa_tb_cabang SET nomorJC = nomorJC + 1 WHERE nocab='101'");
+            if (!$update_cabang) {
+                throw new Exception('Gagal update nomor cabang: ' . $acc_db->error()['message']);
+            }
 
             // Insert kartu piutang — sekali saja per invoice
-            $acc_db->insert('tr_kartu_piutang', [
+            $insert_kartu_piutang = $this->db->insert('tr_kartu_piutang', [
                 'tipe'           => 'JV',
                 'nomor'          => $Nomor_JV,
                 'tanggal'        => $get_jurnal->tgl_jurnal,
-                'no_perkiraan'   => '1104-01-01',
+                'no_perkiraan'   => $no_coa_piutang,
                 'keterangan'     => $get_invoicing->no_invoice . ' - ' . $get_invoicing->nm_customer,
                 'no_reff'        => $get_invoicing->id,
                 'debet'          => $get_invoicing->total_akhir_jurnal,
                 'kredit'         => 0,
                 'id_supplier'    => $get_invoicing->id_customer,
                 'nama_supplier'  => $get_invoicing->nm_customer,
+                'id_company'     => $id_company,
+                'nm_company'     => $nm_company
             ]);
+            if (!$insert_kartu_piutang) {
+                throw new Exception('Gagal insert kartu piutang: ' . $this->db->error()['message']);
+            }
 
             $this->db->trans_commit();
 
