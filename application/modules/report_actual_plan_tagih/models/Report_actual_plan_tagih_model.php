@@ -32,29 +32,24 @@ class Report_actual_plan_tagih_model extends Admin_Controller
 
     public function list_report_filterable($client = null, $company = null, $tahun)
     {
-        // 1. Kolom Utama
-        $this->db->select('a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.nominal_invoice, a.nominal_uninvoice, a.macet, a.tahun_data');
-
-        // 2. Kolom Bulan Dinamis (CASE WHEN)
-        $list_bulan = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
-        foreach ($list_bulan as $bln) {
-            // Tambahin backtick di `$bln` terakhir supaya MySQL tau itu nama kolom, bukan perintah SORT
-            $this->db->select("(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.$bln ELSE 0 END) AS `$bln`", FALSE);
-        }
-
+        $this->db->select('a.*');
         $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
-        // Logic Sakti: Ambil yang tahunnya sesuai OR yang masih nunggak (macet)
+        // Logic sama persis dengan get_data_report_apt di controller
         $this->db->group_start();
         $this->db->where('a.tahun_data', $tahun);
         $this->db->or_where('a.macet >', 0);
         $this->db->group_end();
 
+        // Safety filter untuk data tahun yang valid
+        $this->db->where('a.tahun_data >=', 2000);
+        $this->db->where('a.tahun_data', $tahun);
+
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
 
-        $this->db->group_by('a.id_spk_penawaran, a.macet');
+        $this->db->group_by('a.id_spk_penawaran');
+        $this->db->order_by('a.id_spk_penawaran', 'DESC');
 
         $get_data = $this->db->get()->result();
 

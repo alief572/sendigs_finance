@@ -94,6 +94,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // Safety filter untuk data tahun yang valid
         $this->db->where('a.tahun_data >=', 2000);
+        $this->db->where('a.tahun_data', $tahun);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
@@ -113,6 +114,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // Safety filter untuk data tahun yang valid
         $this->db->where('a.tahun_data >=', 2000);
+        $this->db->where('a.tahun_data', $tahun);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
@@ -142,6 +144,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // Safety filter untuk data tahun yang valid
         $this->db->where('a.tahun_data >=', 2000);
+        $this->db->where('a.tahun_data', $tahun);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
@@ -159,6 +162,8 @@ class Report_actual_plan_tagih extends Admin_Controller
         $this->db->order_by('a.id_spk_penawaran', 'DESC');
         $this->db->limit($length, $start);
         $get_data = $this->db->get()->result();
+
+
 
         // 4. Processing Data
         $no = $start;
