@@ -217,7 +217,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 
     $(document).on('change', 'select[name="tagih_mundur"]', function() {
         var tagih_mundur = $(this).val();
-        var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
+        var tgl_plan_tagih = $('input[name="tgl_actual_tagih_last"]').val();
         var current_tanggal_actual = $('input[name="tanggal_actual"]').val();
 
         if (tagih_mundur == '1' || tagih_mundur == '3') {
