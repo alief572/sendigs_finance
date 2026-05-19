@@ -55,7 +55,7 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
 
         foreach ($list_report as $item) :
             $current_invoice   = $item->nominal_invoice ?? 0;
-            $current_uninvoice = ($item->nilai_kontrak - $current_invoice);
+            $current_uninvoice = $item->nominal_uninvoice ?? 0;
             $current_macet     = $item->macet ?? 0;
 
             // KUNCI LOGIKA: Cek apakah data ini sesuai tahun filter

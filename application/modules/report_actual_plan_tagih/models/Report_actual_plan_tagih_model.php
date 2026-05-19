@@ -43,7 +43,7 @@ class Report_actual_plan_tagih_model extends Admin_Controller
             $this->db->select("(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.$bln ELSE 0 END) AS `$bln`", FALSE);
         }
 
-        $this->db->from('view_rekap_actual_plan_tagih a');
+        $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         // Logic Sakti: Ambil yang tahunnya sesuai OR yang masih nunggak (macet)
         $this->db->group_start();

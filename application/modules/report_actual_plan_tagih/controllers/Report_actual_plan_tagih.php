@@ -84,7 +84,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // 1. Query Builder & Filtering
         $this->db->select('a.*');
-        $this->db->from('view_rekap_actual_plan_tagih a');
+        $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         // Logic: Ambil yang sesuai tahun terpilih ATAU yang masih nunggak (macet)
         $this->db->group_start();
@@ -104,7 +104,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $count_all = count($get_all);
 
         $this->db->select('a.*');
-        $this->db->from('view_rekap_actual_plan_tagih a');
+        $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         $this->db->group_start();
         $this->db->where('a.tahun_data', $tahun);
@@ -133,7 +133,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // 3. Order & Limit
         $this->db->select('a.*');
-        $this->db->from('view_rekap_actual_plan_tagih a');
+        $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         $this->db->group_start();
         $this->db->where('a.tahun_data', $tahun);
