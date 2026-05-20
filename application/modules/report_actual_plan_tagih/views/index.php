@@ -293,10 +293,6 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
                         icon: 'error',
                         title: 'Error !',
                         text: error,
-                        showConfirmButton: false,
-                        showCancelButton: false,
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
                     });
                 }
             },

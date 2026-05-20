@@ -83,7 +83,13 @@ class Report_actual_plan_tagih extends Admin_Controller
         $company  = $get['company'];
 
         // 1. Query Builder & Filtering
-        $this->db->select('a.*');
+        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
+
+        $list_bulan_select = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        foreach ($list_bulan_select as $bln) {
+            $this->db->select("SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`$bln` ELSE 0 END) AS `$bln`", FALSE);
+        }
+
         $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         // Logic: Ambil yang sesuai tahun terpilih ATAU yang masih nunggak (macet)
@@ -103,7 +109,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         $count_all = count($get_all);
 
-        $this->db->select('a.*');
+        $this->db->select('a.id_spk_penawaran');
         $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         $this->db->group_start();
@@ -117,7 +123,6 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
 
-        // 2. Global Search
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.nm_company', $search, 'both');
@@ -132,7 +137,12 @@ class Report_actual_plan_tagih extends Admin_Controller
         $count_filter = count($get_filter);
 
         // 3. Order & Limit
-        $this->db->select('a.*');
+        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
+
+        foreach ($list_bulan_select as $bln) {
+            $this->db->select("SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`$bln` ELSE 0 END) AS `$bln`", FALSE);
+        }
+
         $this->db->from('view_rekap_actual_plan_tagih_dev a');
 
         $this->db->group_start();
@@ -146,7 +156,6 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) $this->db->where('a.id_company', $company);
 
-        // 2. Global Search
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.nm_company', $search, 'both');
@@ -159,6 +168,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $this->db->order_by('a.id_spk_penawaran', 'DESC');
         $this->db->limit($length, $start);
         $get_data = $this->db->get()->result();
+
 
         // 4. Processing Data
         $no = $start;
