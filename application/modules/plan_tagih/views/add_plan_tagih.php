@@ -162,7 +162,7 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
     <input type="hidden" name="nilai_bersih_project" value="<?= $data_spk_penawaran->nilai_kontrak_bersih ?>">
 
     <a href="<?= base_url('plan_tagih'); ?>" class="btn btn-sm btn-danger"><i class="fa fa-arrow-left"></i> Back</a>
-    <button type="submit" class="btn btn-sm btn-primary">
+    <button type="submit" class="btn btn-sm btn-primary btn_save">
         <i class="fa fa-save"></i> Save
     </button>
 </form>
@@ -216,7 +216,11 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
                     data: form_data,
                     cache: false,
                     dataType: 'json',
+                    beforeSend: function(data) {
+                        $('.btn_save').attr('disabled', true);
+                    },
                     success: function(result) {
+                        $('.btn_save').attr('disabled', false);
                         if (result.status == '1') {
                             swal({
                                 type: 'success',
@@ -240,6 +244,7 @@ $ENABLE_DELETE  = has_permission('Plan_Tagih.Delete');
                         }
                     },
                     error: function(result) {
+                        $('.btn_save').attr('disabled', false);
                         swal({
                             type: 'error',
                             title: 'Error !',

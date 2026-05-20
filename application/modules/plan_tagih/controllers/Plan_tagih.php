@@ -155,6 +155,16 @@ class Plan_tagih extends Admin_Controller
     {
         $post = $this->input->post();
 
+        // Validasi: cek apakah SPK sudah punya plan tagih (mencegah duplikasi)
+        $existing_header = $this->db->get_where('kons_tr_plan_tagih_header', ['id_spk_penawaran' => $post['id_spk_penawaran']])->row();
+        if (!empty($existing_header)) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Plan Tagih untuk SPK ini sudah ada! Gunakan fitur Revisi jika ingin mengubah.'
+            ]);
+            return;
+        }
+
         $id = $this->Plan_tagih_model->generate_id();
 
         $arr_header = [
@@ -179,6 +189,14 @@ class Plan_tagih extends Admin_Controller
             $no_detail++;
             $data_top = $this->consultant->get_where('kons_tr_spk_penawaran_payment', array('id' => $item['id']))->row();
 
+            if (empty($data_top)) {
+                echo json_encode([
+                    'status' => 0,
+                    'msg' => 'Data Term of Payment tidak ditemukan untuk item ke-' . $no_detail
+                ]);
+                return;
+            }
+
             $arr_detail[] = [
                 'id_spk_penawaran' => $post['id_spk_penawaran'],
                 'id_header' => $id,
@@ -197,38 +215,38 @@ class Plan_tagih extends Admin_Controller
 
         $this->db->trans_begin();
 
-        $insert_header = $this->db->insert('kons_tr_plan_tagih_header', $arr_header);
-        if (!$insert_header) {
-            $this->db->trans_rollback();
+        try {
+            $insert_header = $this->db->insert('kons_tr_plan_tagih_header', $arr_header);
+            if (!$insert_header) {
+                // throw new Exception('Gagal menyimpan header plan tagih.');
 
-            print_r($this->db->last_query());
-            exit;
-        }
+                print_r($this->db->error($insert_header));
+                exit;
+            }
 
-        $insert_detail = $this->db->insert_batch('kons_tr_plan_tagih_detail', $arr_detail);
-        if (!$insert_detail) {
-            $this->db->trans_rollback();
+            $insert_detail = $this->db->insert_batch('kons_tr_plan_tagih_detail', $arr_detail);
+            if (!$insert_detail) {
+                throw new Exception('Gagal menyimpan detail plan tagih.');
+            }
 
-            print_r($this->db->last_query());
-            exit;
-        }
+            if ($this->db->trans_status() === false) {
+                throw new Exception('Transaksi gagal, silakan coba lagi.');
+            }
 
-        if ($this->db->trans_status() === false) {
-            $this->db->trans_rollback();
-
-            $valid = 0;
-            $msg = 'Please, try again later !';
-        } else {
             $this->db->trans_commit();
 
-            $valid = 1;
-            $msg = 'New Plan Tagih has been saved !';
-        }
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'New Plan Tagih has been saved !'
+            ]);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
 
-        echo json_encode([
-            'status' => $valid,
-            'msg' => $msg
-        ]);
+            echo json_encode([
+                'status' => 0,
+                'msg' => $e->getMessage()
+            ]);
+        }
     }
 
     public function revisi_plan_tagih()

@@ -24,17 +24,17 @@ class Plan_tagih_model extends BF_Model
     public function generate_id($no = null)
     {
         $Ym             = date('ym');
-        $srcMtr            = "SELECT MAX(id) as maxP FROM kons_tr_plan_tagih_header WHERE id LIKE '%/" . date('y') . "%' ";
+        $srcMtr            = "SELECT id as maxP FROM kons_tr_plan_tagih_header WHERE id LIKE '%/" . date('y') . "%' ORDER BY created_date DESC LIMIT 1";
         $resultMtr        = $this->db->query($srcMtr)->result_array();
         $angkaUrut2        = $resultMtr[0]['maxP'];
         if (!empty($no)) {
-            $urutan2        = (int)substr($angkaUrut2, 0, 3);
+            $urutan2        = (int)substr($angkaUrut2, 0, 4);
             $urutan2 = ($urutan2 + $no);
         } else {
-            $urutan2        = (int)substr($angkaUrut2, 0, 3);
+            $urutan2        = (int)substr($angkaUrut2, 0, 4);
             $urutan2++;
         }
-        $urut2            = sprintf('%03s', $urutan2);
+        $urut2            = sprintf('%04s', $urutan2);
         $kode_trans        = $urut2 . '/PLN-TGH/' . int_to_roman(date('m')) . '/' . date('y');
 
         return $kode_trans;
