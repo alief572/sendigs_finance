@@ -367,9 +367,10 @@
         var grand_total = Math.round(ttl_penerimaan - ttl_biaya_admin);
         var kontrol;
         if (pph23_dipotong == 'Y') {
-            kontrol = Math.round(uang_masuk - ttl_penerimaan);
+            kontrol = Math.round(uang_masuk - ttl_piutang_dagang);
         } else {
-            kontrol = Math.round(uang_masuk - ttl_penerimaan + ttl_pph23);
+            // Tidak dipotong PPh 23: kontrol dikurangi juga dengan nilai PPh 23
+            kontrol = Math.round(uang_masuk - ttl_piutang_dagang - ttl_pph23);
         }
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
