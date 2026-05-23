@@ -65,6 +65,9 @@
                     <button type="button" class="btn btn-sm btn-primary" id="btn-search" onclick="searchReport();">
                         <i class="fa fa-search"></i> Search
                     </button>
+                    <button type="button" class="btn btn-sm btn-success" id="btn-download" onclick="downloadExcel();">
+                        <i class="fa fa-file-excel-o"></i> Download Excel
+                    </button>
                 </div>
             </div>
         </div>
@@ -667,5 +670,32 @@
         $('#summary-uninvoiced-' + tabKey).text(uninvoiced);
         $('#summary-sisa-piutang-' + tabKey).text(sisaPiutangPerSpk);
         $('#summary-total-piutang-' + tabKey).html('<strong>' + totalPiutang + '</strong>');
+    }
+
+    /**
+     * Download report as Excel file for the active tab.
+     */
+    function downloadExcel() {
+        var filterDate = $('#filter_date').val();
+
+        if (!filterDate || filterDate.trim() === '') {
+            swal('Perhatian', 'Silakan pilih tanggal filter terlebih dahulu.', 'warning');
+            return false;
+        }
+
+        // Convert dd-mm-yyyy to Y-m-d
+        var serverDate = convertDateToServerFormat(filterDate);
+        if (!serverDate) {
+            swal('Error', 'Tanggal tidak valid.', 'error');
+            return false;
+        }
+
+        // Get active tab key
+        var activeTab = $('#company-tabs li.active a');
+        var tabKey = activeTab.attr('href').replace('#panel-', '');
+
+        // Open download URL in new window
+        var url = siteurl + 'report_piutang_per_invoice/download_excel/' + serverDate + '/' + tabKey;
+        window.open(url, '_blank');
     }
 </script>
