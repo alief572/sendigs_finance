@@ -45,14 +45,18 @@ class Report_piutang_per_invoice_model extends BF_Model
         $sql = "SELECT
                     pth.nm_customer,
                     pth.id_spk_penawaran,
-                    pth.nilai_bersih_project AS nominal_project,
+                    spk.nilai_kontrak AS nominal_project,
                     ptd.id AS id_detail_plan_tagih,
                     ptd.urutan AS top_number,
                     ptd.nominal_payment AS rincian_top,
                     inv.id AS id_invoice,
                     inv.tanggal_invoice,
                     inv.no_invoice,
-                    inv.total_nominal AS nilai_invoice,
+                    CASE
+                        WHEN pph.pph23_dipotong = 'N' THEN inv.tagihan_ppn_jurnal
+                        ELSE inv.total_akhir_jurnal
+                    END AS nilai_invoice,
+                    inv.total_nominal AS nilai_invoice_nominal,
                     ppd.id AS id_payment,
                     DATE(pph.created_date) AS tanggal_bayar,
                     ppd.penerimaan AS nilai_bayar,

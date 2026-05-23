@@ -170,6 +170,7 @@ class Report_piutang_per_invoice extends Admin_Controller
                         'tanggal_invoice' => $row['tanggal_invoice'],
                         'no_invoice' => $row['no_invoice'],
                         'nilai_invoice' => (float) $row['nilai_invoice'],
+                        'nilai_invoice_nominal' => (float) $row['nilai_invoice_nominal'],
                         'payments' => [],
                     ];
                 }
@@ -227,7 +228,7 @@ class Report_piutang_per_invoice extends Admin_Controller
                 // Build details array from TOPs (sorted by tanggal_invoice ASC via query order)
                 // Also calculate formula fields per invoice and aggregate per SPK
                 $details = [];
-                $sum_nilai_invoice = 0;
+                $sum_rincian_top_invoiced = 0;
                 $sum_piutang_per_invoice = 0;
 
                 foreach ($spk_data['tops'] as $top_id => $top_data) {
@@ -254,7 +255,8 @@ class Report_piutang_per_invoice extends Admin_Controller
                         $piutang_per_invoice = max(0, $nilai_invoice - $sum_nilai_bayar);
 
                         // Accumulate for SPK-level calculations
-                        $sum_nilai_invoice += $nilai_invoice;
+                        // Use rincian_top (nominal_payment) for uninvoiced calculation
+                        $sum_rincian_top_invoiced += $top_data['rincian_top'];
                         $sum_piutang_per_invoice += $piutang_per_invoice;
 
                         $detail_entry['invoice'] = [
@@ -269,8 +271,8 @@ class Report_piutang_per_invoice extends Admin_Controller
                     $details[] = $detail_entry;
                 }
 
-                // Calculate Uninvoiced per SPK: nominal_project - SUM(nilai_invoice)
-                $uninvoiced = $spk_data['nominal_project'] - $sum_nilai_invoice;
+                // Calculate Uninvoiced per SPK: nominal_project - SUM(rincian_top yang sudah punya invoice)
+                $uninvoiced = $spk_data['nominal_project'] - $sum_rincian_top_invoiced;
 
                 // Calculate Total Sisa Piutang Per SPK: SUM(piutang_per_invoice)
                 $total_sisa_piutang = $sum_piutang_per_invoice;
@@ -336,5 +338,211 @@ class Report_piutang_per_invoice extends Admin_Controller
             'total_sisa_piutang_per_spk' => $total_sisa_piutang_per_spk,
             'grand_total_piutang' => $grand_total_piutang,
         ];
+    }
+
+    /**
+     * Download report as Excel file.
+     * URL: report_piutang_per_invoice/download_excel/{filter_date}/{tab_key}
+     */
+    public function download_excel($filter_date = '', $tab_key = 'stm')
+    {
+        $this->auth->restrict('Report_Piutang_Per_Invoice.View');
+
+        // Validate filter_date
+        if (empty($filter_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date)) {
+            show_error('Parameter tanggal tidak valid.');
+            return;
+        }
+
+        // Determine company codes from tab key
+        $tab_key = strtoupper($tab_key);
+        if (!isset(self::COMPANY_TAB_MAP[$tab_key])) {
+            show_error('Tab tidak valid.');
+            return;
+        }
+        $company_codes = self::COMPANY_TAB_MAP[$tab_key];
+
+        // Fetch and process data
+        $raw_data = $this->Report_piutang_per_invoice_model->get_report_data($company_codes, $filter_date);
+        $processed_data = $this->_process_report_data($raw_data);
+        $summary = $this->_calculate_summary($processed_data);
+
+        // Generate Excel
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
+        $this->load->library('PHPExcel');
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->getActiveSheet();
+        $sheet->setTitle('Piutang Per Invoice');
+
+        // Styles
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => '2980B9']],
+            'alignment' => ['horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $customerStyle = [
+            'font' => ['bold' => true],
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => 'F9F0D2']],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $bodyStyle = [
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $formulaStyle = [
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => 'D6EAF8']],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $summaryStyle = [
+            'font' => ['bold' => true],
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => 'D6EAF8']],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+
+        // Title row
+        $row = 1;
+        $display_date = date('d-m-Y', strtotime($filter_date));
+        $sheet->setCellValue('A' . $row, 'Report Piutang Per Invoice - ' . $tab_key . ' (Tanggal: ' . $display_date . ')');
+        $sheet->mergeCells('A' . $row . ':M' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+
+        // Header row
+        $row = 3;
+        $headers = ['Customer', 'No SPK', 'Nominal Project', 'TOP', 'Rincian TOP', 'Tgl Invoice', 'No Invoice', 'Nilai Invoice', 'Tgl Bayar', 'Nilai Bayar', 'Piutang Per Invoice', 'Uninvoiced', 'Total Sisa Piutang'];
+        $cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
+
+        foreach ($headers as $i => $header) {
+            $sheet->setCellValue($cols[$i] . $row, $header);
+            $sheet->getColumnDimension($cols[$i])->setAutoSize(true);
+        }
+        $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($headerStyle);
+
+        // Data rows
+        $row = 4;
+
+        if (empty($processed_data)) {
+            $sheet->setCellValue('A' . $row, 'Tidak ada data piutang untuk ditampilkan.');
+            $sheet->mergeCells('A' . $row . ':M' . $row);
+        } else {
+            foreach ($processed_data as $customer) {
+                // Customer header row
+                $sheet->setCellValue('A' . $row, $customer['customer']);
+                $sheet->mergeCells('A' . $row . ':M' . $row);
+                $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($customerStyle);
+                $row++;
+
+                foreach ($customer['spk_list'] as $spk) {
+                    $is_first_spk_row = true;
+
+                    foreach ($spk['details'] as $detail) {
+                        $invoice = $detail['invoice'];
+                        $payments = ($invoice && !empty($invoice['payments'])) ? $invoice['payments'] : [];
+
+                        // Main row
+                        $sheet->setCellValue('A' . $row, ''); // Customer empty (shown in header)
+
+                        if ($is_first_spk_row) {
+                            $sheet->setCellValue('B' . $row, $spk['no_spk']);
+                            $sheet->setCellValue('C' . $row, $spk['nominal_project']);
+                        }
+
+                        $sheet->setCellValue('D' . $row, $detail['top_number']);
+                        $sheet->setCellValue('E' . $row, $detail['rincian_top']);
+
+                        if ($invoice) {
+                            $sheet->setCellValue('F' . $row, $invoice['tanggal_invoice'] ? date('d-m-Y', strtotime($invoice['tanggal_invoice'])) : '-');
+                            $sheet->setCellValue('G' . $row, $invoice['no_invoice']);
+                            $sheet->setCellValue('H' . $row, $invoice['nilai_invoice']);
+
+                            if (!empty($payments)) {
+                                $sheet->setCellValue('I' . $row, $payments[0]['tanggal_bayar'] ? date('d-m-Y', strtotime($payments[0]['tanggal_bayar'])) : '-');
+                                $sheet->setCellValue('J' . $row, $payments[0]['nilai_bayar']);
+                            }
+
+                            $sheet->setCellValue('K' . $row, $invoice['piutang_per_invoice']);
+                        } else {
+                            $sheet->setCellValue('F' . $row, '-');
+                            $sheet->setCellValue('G' . $row, '-');
+                            $sheet->setCellValue('H' . $row, '-');
+                            $sheet->setCellValue('I' . $row, '-');
+                            $sheet->setCellValue('J' . $row, '-');
+                            $sheet->setCellValue('K' . $row, '-');
+                        }
+
+                        if ($is_first_spk_row) {
+                            $sheet->setCellValue('L' . $row, $spk['uninvoiced']);
+                            $sheet->setCellValue('M' . $row, $spk['total_sisa_piutang']);
+                        }
+
+                        // Apply styles
+                        $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray($bodyStyle);
+                        $sheet->getStyle('K' . $row . ':M' . $row)->applyFromArray($formulaStyle);
+
+                        // Number format for currency columns
+                        $sheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('L' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+                        $row++;
+
+                        // Additional payment rows (2nd payment onward)
+                        for ($p = 1; $p < count($payments); $p++) {
+                            $sheet->setCellValue('I' . $row, $payments[$p]['tanggal_bayar'] ? date('d-m-Y', strtotime($payments[$p]['tanggal_bayar'])) : '-');
+                            $sheet->setCellValue('J' . $row, $payments[$p]['nilai_bayar']);
+
+                            $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray($bodyStyle);
+                            $sheet->getStyle('K' . $row . ':M' . $row)->applyFromArray($formulaStyle);
+                            $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                            $row++;
+                        }
+
+                        $is_first_spk_row = false;
+                    }
+                }
+            }
+
+            // Summary section
+            $row++;
+            $sheet->setCellValue('A' . $row, 'Summary Piutang Per Invoice');
+            $sheet->setCellValue('M' . $row, $summary['total_piutang_per_invoice']);
+            $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
+            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $row++;
+
+            $sheet->setCellValue('A' . $row, 'Summary Uninvoiced');
+            $sheet->setCellValue('M' . $row, $summary['total_uninvoiced']);
+            $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
+            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $row++;
+
+            $sheet->setCellValue('A' . $row, 'Summary Sisa Piutang Per SPK');
+            $sheet->setCellValue('M' . $row, $summary['total_sisa_piutang_per_spk']);
+            $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
+            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $row++;
+
+            $sheet->setCellValue('A' . $row, 'Total Piutang');
+            $sheet->setCellValue('M' . $row, $summary['grand_total_piutang']);
+            $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
+            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('A' . $row . ':M' . $row)->getFont()->setBold(true);
+        }
+
+        // Output file
+        $filename = 'Report_Piutang_Per_Invoice_' . $tab_key . '_' . $filter_date . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+        $objWriter->save('php://output');
+        exit;
     }
 }
