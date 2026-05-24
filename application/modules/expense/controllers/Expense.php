@@ -1916,6 +1916,35 @@ class Expense extends Admin_Controller
 		$accnumber		= $this->input->post("accnumber");
 		$accname		= $this->input->post("accname");
 
+		$bensin_arr		= $this->input->post("bensin");
+		$tol_arr		= $this->input->post("tol");
+		$parkir_arr		= $this->input->post("parkir");
+		$lainnya_arr	= $this->input->post("lainnya");
+
+		// Clean numeric values (remove thousand separators)
+		if (!empty($bensin_arr)) {
+			$bensin_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $bensin_arr);
+		}
+		if (!empty($tol_arr)) {
+			$tol_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $tol_arr);
+		}
+		if (!empty($parkir_arr)) {
+			$parkir_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $parkir_arr);
+		}
+		if (!empty($lainnya_arr)) {
+			$lainnya_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $lainnya_arr);
+		}
+		// Clean jumlah_expense
+		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
+
 		$this->db->trans_begin();
 		if ($id != "") {
 			$data = array(
@@ -1927,16 +1956,56 @@ class Expense extends Admin_Controller
 				'bank_id' => $bank_id,
 				'accnumber' => $accnumber,
 				'status' => 0,
+				'st_reject' => '',
+				'reject_reason_finance' => '',
 				'accname' => $accname,
 				'jumlah_expense' => ($jumlah_expense),
 				'modified_by' => $this->auth->user_name(),
 				'modified_on' => date("Y-m-d h:i:s")
 			);
 			$result = $this->All_model->dataUpdate('tr_transport_req', $data, array('id' => $id));
-			$result = $this->All_model->dataUpdate('tr_transport', array('no_req' => '', 'status' => '0'), array('no_req' => $no_doc));
+
+			// Handle removed details - unlink them from this request
+			$removed_transport = $this->input->post("removed_transport");
+			if (!empty($removed_transport) && is_array($removed_transport)) {
+				foreach ($removed_transport as $removed_id) {
+					$this->All_model->dataUpdate('tr_transport', array('no_req' => '', 'status' => '0'), array('id' => intval($removed_id)));
+				}
+			}
+
+			// Unlink all remaining transport records that are still linked to this doc
+			// but NOT in the current id_transport list (handles edge cases)
+			$current_linked = $this->db->get_where('tr_transport', array('no_req' => $no_doc))->result();
+			if (!empty($current_linked)) {
+				foreach ($current_linked as $linked) {
+					if (empty($id_transport) || !in_array($linked->id, $id_transport)) {
+						$this->All_model->dataUpdate('tr_transport', array('no_req' => '', 'status' => '0'), array('id' => $linked->id));
+					}
+				}
+			}
+
+			// Link the remaining and newly added transport details
 			if (!empty($id_transport)) {
 				foreach ($id_transport as $keys => $val) {
-					$result = $this->All_model->dataUpdate('tr_transport', array('no_req' => $no_doc, 'status' => '1'), array('id' => $val));
+					$detail_data = array('no_req' => $no_doc, 'status' => '1');
+					// Update detail values (bensin, tol, parkir, lainnya) if provided
+					if (isset($bensin_arr[$keys])) {
+						$detail_data['bensin'] = $bensin_arr[$keys];
+					}
+					if (isset($tol_arr[$keys])) {
+						$detail_data['tol'] = $tol_arr[$keys];
+					}
+					if (isset($parkir_arr[$keys])) {
+						$detail_data['parkir'] = $parkir_arr[$keys];
+					}
+					if (isset($lainnya_arr[$keys])) {
+						$detail_data['lainnya'] = $lainnya_arr[$keys];
+					}
+					// Recalculate jumlah_kasbon
+					if (isset($bensin_arr[$keys]) && isset($tol_arr[$keys]) && isset($parkir_arr[$keys]) && isset($lainnya_arr[$keys])) {
+						$detail_data['jumlah_kasbon'] = ($bensin_arr[$keys] + $tol_arr[$keys] + $parkir_arr[$keys] + $lainnya_arr[$keys]);
+					}
+					$result = $this->All_model->dataUpdate('tr_transport', $detail_data, array('id' => $val));
 				}
 			}
 			if ($this->db->trans_status() === FALSE) {
@@ -2189,9 +2258,26 @@ class Expense extends Admin_Controller
 
 	public function get_list_req_transport($nama, $departement, $date1, $date2)
 	{
-		$data	= $this->db->query("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc")->result();
+		$existing_ids = $this->input->post('existing_ids');
+		$no_doc = $this->input->post('no_doc');
 
-		// print_r("SELECT * FROM tr_transport WHERE nama='" . $nama . "' and departement='" . $departement . "' and tgl_doc between '" . $date1 . "' and '" . $date2 . "' and (no_req ='' or no_req is null) order by tgl_doc");
+		$where = "nama='" . $this->db->escape_str($nama) . "' AND tgl_doc BETWEEN '" . $this->db->escape_str($date1) . "' AND '" . $this->db->escape_str($date2) . "' AND (no_req = '' OR no_req IS NULL";
+		// Also include items linked to current document (so they can be re-selected)
+		if (!empty($no_doc)) {
+			$where .= " OR no_req = '" . $this->db->escape_str($no_doc) . "'";
+		}
+		$where .= ")";
+
+		// Exclude IDs already displayed in the form
+		if (!empty($existing_ids) && is_array($existing_ids)) {
+			$escaped_ids = array_map(function ($id) {
+				return intval($id);
+			}, $existing_ids);
+			$where .= " AND id NOT IN (" . implode(',', $escaped_ids) . ")";
+		}
+
+		$data = $this->db->query("SELECT * FROM tr_transport WHERE " . $where . " ORDER BY tgl_doc")->result();
+
 		echo json_encode($data);
 		die();
 	}

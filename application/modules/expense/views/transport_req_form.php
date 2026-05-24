@@ -53,6 +53,15 @@ $dept = $datauser->department_id;
 								  </div>';
 							}
 						}
+						if (isset($data->reject_reason_finance)) {
+							if ($data->reject_reason_finance != '') {
+								echo '
+								  <div class="alert alert-danger alert-dismissible">
+									<h4><i class="icon fa fa-ban"></i> Alasan Penolakan!</h4>
+									' . $data->reject_reason_finance . '
+								  </div>';
+							}
+						}
 						?>
 					</div>
 				</div>
@@ -75,7 +84,7 @@ $dept = $datauser->department_id;
 					<table class="table table-bordered table-striped">
 						<caption>
 							<div class="pull-right">
-								<a class="btn btn-info btn-xs stsview" href="javascript:void(0)" title="Transport" onclick="add_detail()" id="add-kasbon"><i class="fa fa-user"></i> Generate</a>
+								<a class="btn btn-info btn-xs stsview" href="javascript:void(0)" title="Transport" onclick="add_detail()" id="add-kasbon"><i class="fa fa-plus"></i> Generate</a>
 							</div>
 						</caption>
 						<thead>
@@ -93,6 +102,7 @@ $dept = $datauser->department_id;
 								<th>KM Akhir</th>
 								<th>Total KM</th>
 								<th width="50">Bukti</th>
+								<th width="30" class="stsview">Aksi</th>
 							</tr>
 						</thead>
 						<tbody id="detail_body">
@@ -111,23 +121,21 @@ $dept = $datauser->department_id;
 									<tr id='tr1_<?= $idd ?>' class='delAll'>
 										<td>
 											<input type="hidden" name="id_transport[]" id="id_transport_<?= $idd ?>" value="<?= $record->id; ?>"><?= $record->no_doc; ?>
-											<input type='hidden' class='fben' name='bensin[]' value='<?= $record->bensin; ?>' id='bensin_<?= $idd ?>' />
-											<input type='hidden' class='ftol' name='tol[]' value='<?= $record->tol; ?>' id='tol_<?= $idd ?>' />
-											<input type='hidden' class='fpark' name='parkir[]' value='<?= $record->parkir; ?>' id='parkir_<?= $idd ?>' />
-											<input type='hidden' class='flainnya' name='lainnya[]' value='<?= $record->lainnya; ?>' id='lainnya_<?= $idd ?>' />
 										</td>
 										<td><?= $record->tgl_doc; ?></td>
 										<td style="font-weight: bold;"><?= $record->no_coa . ' - ' . $record->nm_coa ?></td>
 										<td><?= $record->keperluan; ?></td>
 										<td><?= $record->rute; ?></td>
-										<td class="divide"><?= $record->bensin; ?></td>
-										<td class="divide"><?= $record->tol; ?></td>
-										<td class="divide"><?= $record->parkir; ?></td>
-										<td class="divide"><?= $record->lainnya; ?></td>
+										<td><input type='text' class='form-control fben input-sm detail-edit' name='bensin[]' value='<?= $record->bensin; ?>' id='bensin_<?= $idd ?>' onblur='cektotal()' /></td>
+										<td><input type='text' class='form-control ftol input-sm detail-edit' name='tol[]' value='<?= $record->tol; ?>' id='tol_<?= $idd ?>' onblur='cektotal()' /></td>
+										<td><input type='text' class='form-control fpark input-sm detail-edit' name='parkir[]' value='<?= $record->parkir; ?>' id='parkir_<?= $idd ?>' onblur='cektotal()' /></td>
+										<td><input type='text' class='form-control flainnya input-sm detail-edit' name='lainnya[]' value='<?= $record->lainnya; ?>' id='lainnya_<?= $idd ?>' onblur='cektotal()' /></td>
 										<td class="divide"><?= $record->km_awal; ?></td>
 										<td class="divide"><?= $record->km_akhir; ?></td>
 										<td class="divide"><?= ($record->km_akhir - $record->km_awal); ?></td>
 										<td><span class="pull-right"><?= ($record->doc_file != '' ? '<a href="' . base_url('assets/expense/' . $record->doc_file) . '" target="_blank"><i class="fa fa-download"></i></a>' : '') ?></span>
+										</td>
+										<td class="stsview"><a href="javascript:void(0)" class="btn btn-danger btn-xs" onclick="remove_detail(<?= $idd ?>, <?= $record->id ?>)" title="Hapus detail"><i class="fa fa-trash"></i></a>
 										</td>
 									</tr>
 							<?php
@@ -163,12 +171,12 @@ $dept = $datauser->department_id;
 								<td><input type="text" class="form-control divide input-sm" id="total_lainnya" name="total_lainnya" value="<?= $total_lainnya ?>" placeholder="Total Lainnya" tabindex="-1" readonly></td>
 								<td colspan=2></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_km" name="total_km" value="<?= $total_km ?>" placeholder="Total KM" tabindex="-1" readonly></td>
-								<td></td>
+								<td colspan="2"></td>
 							</tr>
 							<tr class="warning">
 								<td colspan="5" align=right>TOTAL</td>
 								<td colspan="4"><input type="text" class="form-control divide input-sm" id="jumlah_expense" name="jumlah_expense" value="<?= $grand_total ?>" placeholder="Total" tabindex="-1" readonly></td>
-								<td colspan=4></td>
+								<td colspan=5></td>
 							</tr>
 						</tfoot>
 					</table>
@@ -204,12 +212,12 @@ $dept = $datauser->department_id;
 		var url_save = siteurl + 'expense/transport_req_save/';
 		var url_approve = siteurl + 'expense/transport_req_approve/';
 		var nomor = <?= $idd ?>;
+		var removed_ids = []; // Track removed detail IDs
 		$('.divide').divide();
 		$('#frm_data').on('submit', function(e) {
 			e.preventDefault();
 			var errors = "";
 			if ($("#jumlah_expense").val() == "0") errors = "Total tidak boleh kosong";
-			if ($("#coa").val() == "0") errors = "COA tidak boleh kosong";
 			if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
 			if (errors == "") {
 
@@ -226,6 +234,10 @@ $dept = $datauser->department_id;
 					function(isConfirm) {
 						if (isConfirm) {
 							var formdata = new FormData($('#frm_data')[0]);
+							// Append removed IDs to form data
+							for (var i = 0; i < removed_ids.length; i++) {
+								formdata.append('removed_transport[]', removed_ids[i]);
+							}
 							$.ajax({
 								url: url_save,
 								dataType: "json",
@@ -292,47 +304,66 @@ $dept = $datauser->department_id;
 			});
 		});
 
-		function cektotal(id) {
+		function cektotal() {
 			var sum = 0;
 			$('.fben').each(function() {
-				sum += Number($(this).val());
+				sum += Number(String($(this).val()).replace(/\./g, '').replace(/,/g, ''));
 			});
 			$("#total_bensin").val(sum);
 			var sum1 = 0;
 			$('.ftol').each(function() {
-				sum1 += Number($(this).val());
+				sum1 += Number(String($(this).val()).replace(/\./g, '').replace(/,/g, ''));
 			});
 			$("#total_tol").val(sum1);
 			var sum2 = 0;
 			$('.fpark').each(function() {
-				sum2 += Number($(this).val());
+				sum2 += Number(String($(this).val()).replace(/\./g, '').replace(/,/g, ''));
 			});
 			$("#total_parkir").val(sum2);
 			var sum3 = 0;
 			$('.fkm').each(function() {
-				sum3 += Number($(this).val());
+				sum3 += Number(String($(this).val()).replace(/\./g, '').replace(/,/g, ''));
 			});
 			$("#total_km").val(sum3);
 			var sum4 = 0;
 			$('.flainnya').each(function() {
-				sum4 += Number($(this).val());
+				sum4 += Number(String($(this).val()).replace(/\./g, '').replace(/,/g, ''));
 			});
 			$("#total_lainnya").val(sum4);
 			$("#jumlah_expense").val(sum + sum1 + sum2 + sum4);
 		}
 
 		function add_detail() {
-			$('.kasbonrow').remove();
 			var nama = $("#nama").val();
 			var departement = $("#departement").val();
 			var date1 = $("#date1").val();
 			var date2 = $("#date2").val();
+			var no_doc = $("#no_doc").val();
+			var existing_ids = [];
+			// Collect IDs of transport details already in the table
+			$("input[name='id_transport[]']").each(function() {
+				existing_ids.push($(this).val());
+			});
 			$.ajax({
 				url: siteurl + 'expense/get_list_req_transport/' + nama + '/' + departement + '/' + date1 + '/' + date2,
 				cache: false,
 				type: "POST",
 				dataType: "json",
+				data: {
+					existing_ids: existing_ids,
+					no_doc: no_doc
+				},
 				success: function(data) {
+					if (data.length == 0) {
+						swal({
+							title: "Info",
+							text: "Tidak ada data transport baru yang tersedia untuk periode ini.",
+							type: "info",
+							timer: 2000,
+							showConfirmButton: false
+						});
+						return;
+					}
 					var i;
 					for (i = 0; i < data.length; i++) {
 						var Rows = "<tr id='tr1_" + nomor + "' class='delAll kasbonrow'>";
@@ -343,16 +374,16 @@ $dept = $datauser->department_id;
 						Rows += "<td>" + data[i].keperluan + "</td>";
 						Rows += "<td>" + data[i].rute + "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide fben input-sm' name='bensin[]' value='" + data[i].bensin + "' id='bensin_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control fben input-sm detail-edit' name='bensin[]' value='" + data[i].bensin + "' id='bensin_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide ftol input-sm' name='tol[]' value='" + data[i].tol + "' id='tol_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control ftol input-sm detail-edit' name='tol[]' value='" + data[i].tol + "' id='tol_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide fpark input-sm' name='parkir[]' value='" + data[i].parkir + "' id='parkir_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control fpark input-sm detail-edit' name='parkir[]' value='" + data[i].parkir + "' id='parkir_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide flainnya input-sm' name='lainnya[]' value='" + data[i].lainnya + "' id='lainnya_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control flainnya input-sm detail-edit' name='lainnya[]' value='" + data[i].lainnya + "' id='lainnya_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control divide input-sm' name='km_awal[]' value='" + data[i].km_awal + "' id='km_awal_" + nomor + "' tabindex='-1' readonly />";
@@ -365,10 +396,11 @@ $dept = $datauser->department_id;
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<span class='pull-right'>";
-						if (data[i].doc_file != '') {
-							Rows += "<a href='<?= base_url('assets/expense/') ?>" + data[i].doc_file + "' target='_blank'><i class='fa fa-download'></i></a></span>";
+						if (data[i].doc_file != '' && data[i].doc_file != null) {
+							Rows += "<a href='<?= base_url('assets/expense/') ?>" + data[i].doc_file + "' target='_blank'><i class='fa fa-download'></i></a>";
 						}
-						Rows += "</td>";
+						Rows += "</span></td>";
+						Rows += "<td class='stsview'><a href='javascript:void(0)' class='btn btn-danger btn-xs' onclick='remove_detail(" + nomor + ", " + data[i].id + ")' title='Hapus detail'><i class='fa fa-trash'></i></a></td>";
 						Rows += "</tr>";
 						nomor++;
 						$('#detail_body').append(Rows);
@@ -388,6 +420,27 @@ $dept = $datauser->department_id;
 					});
 				}
 			});
+		}
+
+		function remove_detail(row_id, transport_id) {
+			swal({
+					title: "Anda Yakin?",
+					text: "Detail ini akan dihapus dari pengajuan.",
+					type: "warning",
+					showCancelButton: true,
+					confirmButtonText: "Ya, hapus!",
+					cancelButtonText: "Batal",
+					closeOnConfirm: true,
+					closeOnCancel: true
+				},
+				function(isConfirm) {
+					if (isConfirm) {
+						$('#tr1_' + row_id).remove();
+						// Track removed ID so backend can unlink it
+						removed_ids.push(transport_id);
+						cektotal();
+					}
+				});
 		}
 
 		function data_approve(id, status) {
