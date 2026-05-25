@@ -619,7 +619,8 @@ class Non_rutin_model extends BF_Model
 				LEFT JOIN rutin_non_planning_header a ON z.no_pengajuan=a.no_pengajuan
                 LEFT JOIN users c ON c.id_user = a.created_by
 		    WHERE 1=1 " . $where . " AND 
-            a.status_id = 1 AND 
+            a.status_id = 1 AND
+            a.rejected IS NULL AND 
             a.no_pr IS NULL AND 
             a.app_1_by IS NOT NULL AND
             a.app_2_by IS NOT NULL AND
@@ -673,6 +674,7 @@ class Non_rutin_model extends BF_Model
                 LEFT JOIN users c ON c.id_user = a.created_by
 		    WHERE 1=1 " . $where . " AND 
             a.status_id = 1 AND 
+            a.rejected IS NULL AND
             a.no_pr IS NULL AND 
             a.app_1_by IS NULL AND 
             a.app_2_by IS NULL AND
