@@ -36,7 +36,7 @@
                 </select>
             </td>
             <td>
-                <input type="date" name="tanggal_actual" id="tanggal_actual" class="form-control form-control-sm text-center" disabled>
+                <input type="date" name="tanggal_actual" id="tanggal_actual" class="form-control form-control-sm text-center" readonly>
             </td>
             <td>
                 <textarea name="alasan_mundur" id="" class="form-control form-control-sm" readonly></textarea>
@@ -58,17 +58,17 @@
 </div>
 
 <script>
-$(document).ready(function() {
-    var status_terakhir = $('input[name="status_terakhir"]').val();
-    var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
+    $(document).ready(function() {
+        var status_terakhir = $('input[name="status_terakhir"]').val();
+        var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
 
-    if (status_terakhir == '2') {
-        $('input[name="tanggal_actual"]').prop('disabled', false);
-        $('textarea[name="alasan_mundur"]').attr('readonly', false);
-        $('input[name="upload_surat_mundur"]').prop('disabled', false);
-        $('select[name="tagih_mundur"]').val('2');
-    } else {
-        $('input[name="tanggal_actual"]').val(tgl_plan_tagih);
-    }
-});
+        if (status_terakhir == '2') {
+            $('input[name="tanggal_actual"]').prop('readonly', false);
+            $('textarea[name="alasan_mundur"]').attr('readonly', false);
+            $('input[name="upload_surat_mundur"]').prop('disabled', false);
+            $('select[name="tagih_mundur"]').val('2');
+        } else {
+            $('input[name="tanggal_actual"]').val(tgl_plan_tagih);
+        }
+    });
 </script>
