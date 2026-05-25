@@ -171,7 +171,7 @@ class Actual_plan_tagih extends Admin_Controller
                 $id = $this->Actual_plan_tagih_model->generate_id();
 
                 if ($post['tagih_mundur'] == '1') {
-                    $tanggal_actual = $post['tgl_actual_tagih_last'];
+                    $tanggal_actual = $post['tanggal_actual'];
                 } else {
                     if (empty($post['tanggal_actual'])) {
                         throw new Exception('Mohon pilih tanggal rencana penagihan untuk status "Mundur"!');

@@ -1317,6 +1317,31 @@ class Expense extends Admin_Controller
 			$penggantian = '';
 		}
 
+		// Validasi server-side: untuk petty cash, semua detail WAJIB upload file bon bukti
+		if (!empty($pettycash) && !empty($detail_id)) {
+			$upload_errors = [];
+			foreach ($detail_id as $keys => $val) {
+				// Skip jika row kasbon (sudah punya file dari kasbon)
+				if (!empty($id_kasbon[$keys])) continue;
+
+				// Cek apakah sudah ada file sebelumnya (edit mode)
+				$existing_file = (!empty($filename[$keys])) ? $filename[$keys] : '';
+
+				// Jika belum ada file existing, maka file baru WAJIB diupload
+				if ($existing_file == '' && empty($_FILES['doc_file_' . $val]['name'])) {
+					$upload_errors[] = "Bon Bukti pada baris " . ($keys + 1) . " wajib diupload";
+				}
+			}
+			if (!empty($upload_errors)) {
+				$param = array(
+					'save' => false,
+					'message' => implode(', ', $upload_errors)
+				);
+				echo json_encode($param);
+				return;
+			}
+		}
+
 		//proses utama update tr_expense
 		$this->db->trans_begin();
 		if ($id != "") {
@@ -1338,6 +1363,8 @@ class Expense extends Admin_Controller
 			$this->db->update('tr_expense', $data, ['id' => $id]);
 
 			$this->db->delete('tr_expense_detail', ['no_doc' => $this->auth->user_id()]);
+			$upload_failed = false;
+			$upload_failed_msg = '';
 			if (!empty($detail_id)) {
 				foreach ($detail_id as $keys => $val) {
 					$no_doc = $no_doc;
@@ -1365,7 +1392,21 @@ class Expense extends Admin_Controller
 								if ($this->upload->do_upload('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
+								} else {
+									// Upload gagal untuk petty cash - batalkan proses
+									if (!empty($pettycash)) {
+										$upload_failed = true;
+										$upload_failed_msg = 'Gagal upload file Bon Bukti baris ' . ($keys + 1) . ': ' . $this->upload->display_errors('', '');
+										break;
+									}
 								}
+							}
+
+							// Validasi: untuk petty cash, file harus ada setelah proses upload
+							if (!empty($pettycash) && empty($filenames) && empty($id_kasbon[$keys])) {
+								$upload_failed = true;
+								$upload_failed_msg = 'Bon Bukti pada baris ' . ($keys + 1) . ' wajib diupload';
+								break;
 							}
 
 							// untuk update kasbon kasbon pr non po yang dikirim dari form_pc
@@ -1468,7 +1509,21 @@ class Expense extends Admin_Controller
 								if ($this->upload->do_upload('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
+								} else {
+									// Upload gagal untuk petty cash - batalkan proses
+									if (!empty($pettycash)) {
+										$upload_failed = true;
+										$upload_failed_msg = 'Gagal upload file Bon Bukti baris ' . ($keys + 1) . ': ' . $this->upload->display_errors('', '');
+										break;
+									}
 								}
+							}
+
+							// Validasi: untuk petty cash, file harus ada setelah proses upload
+							if (!empty($pettycash) && empty($filenames) && empty($id_kasbon[$keys])) {
+								$upload_failed = true;
+								$upload_failed_msg = 'Bon Bukti pada baris ' . ($keys + 1) . ' wajib diupload';
+								break;
 							}
 
 							// update tr_kasbon berdasarkan kasbon_pr_non_po
@@ -1556,6 +1611,16 @@ class Expense extends Admin_Controller
 						}
 					}
 				}
+			}
+
+			if ($upload_failed) {
+				$this->db->trans_rollback();
+				$param = array(
+					'save' => false,
+					'message' => $upload_failed_msg
+				);
+				echo json_encode($param);
+				return;
 			}
 
 			if ($this->db->trans_status() === FALSE) {
@@ -1650,6 +1715,8 @@ class Expense extends Admin_Controller
 			$this->db->delete('tr_expense_detail', ['no_doc' => $this->auth->user_id()]);
 
 			// jika detail_id tidak kosong
+			$upload_failed = false;
+			$upload_failed_msg = '';
 			if (!empty($detail_id)) {
 				foreach ($detail_id as $keys => $val) {
 					$no_doc			= $no_doc;
@@ -1670,7 +1737,21 @@ class Expense extends Admin_Controller
 							if ($this->upload->do_upload('file')) {
 								$uploadData = $this->upload->data();
 								$filenames = $uploadData['file_name'];
+							} else {
+								// Upload gagal untuk petty cash - batalkan proses
+								if (!empty($pettycash)) {
+									$upload_failed = true;
+									$upload_failed_msg = 'Gagal upload file Bon Bukti baris ' . ($keys + 1) . ': ' . $this->upload->display_errors('', '');
+									break;
+								}
 							}
+						}
+
+						// Validasi: untuk petty cash, file harus ada setelah proses upload
+						if (!empty($pettycash) && empty($filenames) && empty($id_kasbon[$keys])) {
+							$upload_failed = true;
+							$upload_failed_msg = 'Bon Bukti pada baris ' . ($keys + 1) . ' wajib diupload';
+							break;
 						}
 
 						//update tr_kasbon berdasarkan kasbon_pr_non_po yang datanya dari form pc
@@ -1749,7 +1830,7 @@ class Expense extends Admin_Controller
 								'deskripsi' => $deskripsi[$keys],
 								'keterangan' => $keterangan[$keys],
 								'status'	=> 1,
-								// 'doc_file' => $filenames,
+								'doc_file' => $filenames,
 								'id_kasbon' => (($id_kasbon[$keys]) ? $id_kasbon[$keys] : null),
 								'coa' => (isset($coa[$keys]) ? $coa[$keys] : ""),
 								'created_by' => $this->auth->user_name(),
@@ -1765,6 +1846,16 @@ class Expense extends Admin_Controller
 						}
 					}
 				}
+			}
+
+			if ($upload_failed) {
+				$this->db->trans_rollback();
+				$param = array(
+					'save' => false,
+					'message' => $upload_failed_msg
+				);
+				echo json_encode($param);
+				return;
 			}
 
 			if ($this->db->trans_status() === FALSE) {
@@ -3291,6 +3382,7 @@ class Expense extends Admin_Controller
 			$this->db->like('no_doc', $search);
 			$this->db->or_like('tgl_doc', $search);
 			$this->db->or_like('keperluan', $search);
+			$this->db->or_like('keterangan', $search);
 			$this->db->or_like('nmuser_fix', $search); // Gak perlu ngetik subquery lagi
 			$this->db->group_end();
 		}
@@ -3304,7 +3396,8 @@ class Expense extends Admin_Controller
 			1 => 'no_doc',
 			2 => 'tgl_doc',
 			3 => 'nmuser_fix',
-			4 => 'keperluan'
+			4 => 'keperluan',
+			5 => 'keterangan'
 		];
 
 		if (isset($post['order'][0]['column'])) {
@@ -3329,6 +3422,7 @@ class Expense extends Admin_Controller
 				'tanggal'   => $item['tgl_doc'],
 				'nama'      => $item['nmuser_fix'], // Langsung dari View
 				'keperluan' => $item['keperluan'],
+				'keterangan' => $item['keterangan'],
 				'status'    => $this->_render_status_badge($item),
 				'action'    => $this->_render_action_buttons($item),
 			];
@@ -3482,6 +3576,8 @@ class Expense extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.tgl_doc', $search, 'both');
 			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->or_like('a.keperluan', $search, 'both');
+			$this->db->or_like('a.keterangan', $search, 'both');
 			$this->db->group_end();
 		}
 
@@ -3491,7 +3587,9 @@ class Expense extends Admin_Controller
 			0 => '',
 			1 => 'a.no_doc',
 			2 => 'a.tgl_doc',
-			3 => 'b.nm_lengkap'
+			3 => 'b.nm_lengkap',
+			4 => 'a.keperluan',
+			5 => 'a.keterangan'
 		);
 		if (isset($post['order'])) {
 			// Cek apakah 'order' dan 'column' ada
@@ -3589,6 +3687,8 @@ class Expense extends Admin_Controller
 				'no_kasbon' => $item['no_doc'],
 				'tanggal' => $item['tgl_doc'],
 				'nama' => $nmuser,
+				'keperluan' => $item['keperluan'],
+				'keterangan' => $item['keterangan'],
 				'status' => $sts,
 				'action' => $action,
 			];
@@ -3632,6 +3732,8 @@ class Expense extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.tgl_doc', $search, 'both');
 			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->or_like('a.keperluan', $search, 'both');
+			$this->db->or_like('a.keterangan', $search, 'both');
 			$this->db->group_end();
 		}
 
@@ -3641,7 +3743,9 @@ class Expense extends Admin_Controller
 			0 => '',
 			1 => 'a.no_doc',
 			2 => 'a.tgl_doc',
-			3 => 'b.nm_lengkap'
+			3 => 'b.nm_lengkap',
+			4 => 'a.keperluan',
+			5 => 'a.keterangan'
 		);
 		if (isset($post['order'])) {
 			// Cek apakah 'order' dan 'column' ada
@@ -3739,6 +3843,8 @@ class Expense extends Admin_Controller
 				'no_kasbon' => $item['no_doc'],
 				'tanggal' => $item['tgl_doc'],
 				'nama' => $nmuser,
+				'keperluan' => $item['keperluan'],
+				'keterangan' => $item['keterangan'],
 				'status' => $sts,
 				'action' => $action,
 			];

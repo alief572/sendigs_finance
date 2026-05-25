@@ -462,14 +462,14 @@ foreach($data_budget as $keys=>$val){
 			e.preventDefault();
 			var errors = "";
 			var lops = 0;
-			$('.dtlloop').each(function() {
+			$('input[name="detail_id[]"]').each(function() {
 				lops++;
 				var iddtl = $(this).val();
-				// if($("#filename_"+iddtl).val()=="") {
-				// 	if ($('#doc_file_'+iddtl).get(0).files.length === 0) {
-				// 		errors="Bon Bukti harus diupload";
-				// 	}
-				// }
+				if ($("#filename_" + iddtl).val() == "") {
+					if ($('#doc_file_' + iddtl).get(0).files.length === 0) {
+						errors = "Bon Bukti wajib diupload untuk semua detail";
+					}
+				}
 			});
 			if (lops == 0) errors = "Detail harus diisi";
 			if ($("#informasi").val() == "") errors = "Keterangan tidak boleh kosong";
@@ -508,12 +508,14 @@ foreach($data_budget as $keys=>$val){
 									});
 									location.reload();
 								} else {
+									var errorText = "Data Gagal Di Simpan";
+									if (msg['message']) {
+										errorText = msg['message'];
+									}
 									Swal.fire({
 										title: "Gagal!",
-										text: "Data Gagal Di Simpan",
-										icon: "error",
-										timer: 1500,
-										showConfirmButton: false
+										text: errorText,
+										icon: "error"
 									});
 								};
 								console.log(msg);
