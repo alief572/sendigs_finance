@@ -19,6 +19,8 @@ $ENABLE_DELETE  = has_permission('Kasbon_Approval.Delete');
 						<th>No Kasbon</th>
 						<th>Tanggal</th>
 						<th>Nama</th>
+						<th>Keperluan</th>
+						<th>Keterangan</th>
 						<th>Status</th>
 						<th width="120">Action</th>
 					</tr>
@@ -65,6 +67,12 @@ $ENABLE_DELETE  = has_permission('Kasbon_Approval.Delete');
 				},
 				{
 					data: 'nama'
+				},
+				{
+					data: 'keperluan'
+				},
+				{
+					data: 'keterangan'
 				},
 				{
 					data: 'status'
