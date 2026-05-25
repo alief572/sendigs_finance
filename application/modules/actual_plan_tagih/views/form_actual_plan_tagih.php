@@ -36,7 +36,7 @@
                 </select>
             </td>
             <td>
-                <input type="date" name="tanggal_actual" id="tanggal_actual" class="form-control form-control-sm text-center" readonly>
+                <input type="date" name="tanggal_actual" id="tanggal_actual" class="form-control form-control-sm text-center">
             </td>
             <td>
                 <textarea name="alasan_mundur" id="" class="form-control form-control-sm" readonly></textarea>
@@ -60,7 +60,7 @@
 <script>
     $(document).ready(function() {
         var status_terakhir = $('input[name="status_terakhir"]').val();
-        var tgl_plan_tagih = $('input[name="tgl_plan_tagih"]').val();
+        var tgl_plan_tagih = $('input[name="tgl_actual_tagih_last"]').val();
 
         if (status_terakhir == '2') {
             $('input[name="tanggal_actual"]').prop('readonly', false);

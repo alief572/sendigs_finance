@@ -80,7 +80,7 @@ class Actual_plan_tagih extends Admin_Controller
         $this->db->limit(1);
         $get_last_actual = $this->db->get()->row();
 
-        $tgl_actual_plan_tagih_last = (!empty($get_last_actual->tanggal_actual_plan_tagih)) ? $get_last_actual->tanggal_actual_plan_tagih : '';
+        $tgl_actual_plan_tagih_last = (!empty($get_last_actual->tanggal_actual_plan_tagih)) ? $get_last_actual->tanggal_actual_plan_tagih : $get_plan_tagih_detail->tgl_plan_tagih;
 
         $this->template->set('data_plan_tagih_detail', $get_plan_tagih_detail);
         $this->template->set('tgl_actual_tagih_last', $tgl_actual_plan_tagih_last);
