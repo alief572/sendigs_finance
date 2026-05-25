@@ -221,7 +221,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         var current_tanggal_actual = $('input[name="tanggal_actual"]').val();
 
         if (tagih_mundur == '1' || tagih_mundur == '3') {
-            $('input[name="tanggal_actual"]').prop('readonly', true);
+            // $('input[name="tanggal_actual"]').prop('readonly', true);
             $('input[name="tanggal_actual"]').val(tgl_plan_tagih);
             $('textarea[name="alasan_mundur"]').attr('readonly', true);
             $('input[name="upload_surat_mundur"]').prop('readonly', true);
