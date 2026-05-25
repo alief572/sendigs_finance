@@ -171,7 +171,7 @@ class Actual_plan_tagih extends Admin_Controller
                 $id = $this->Actual_plan_tagih_model->generate_id();
 
                 if ($post['tagih_mundur'] == '1') {
-                    $tanggal_actual = $post['tgl_plan_tagih'];
+                    $tanggal_actual = $post['tgl_actual_tagih_last'];
                 } else {
                     if (empty($post['tanggal_actual'])) {
                         throw new Exception('Mohon pilih tanggal rencana penagihan untuk status "Mundur"!');
@@ -493,7 +493,7 @@ class Actual_plan_tagih extends Admin_Controller
                         $nominal = $record->nominal_payment;
                         $dpp = $nominal * 11 / 12;
                         $ppn = $dpp * 12 / 100;
-                        $pph = $nominal * 2 / 100;
+                        $pph = $nominal * 0.5 / 100;
                         $total_akhir = $nominal + $ppn - $pph;
 
                         // Insert into tr_invoicing
