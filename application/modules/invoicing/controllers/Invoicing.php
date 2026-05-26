@@ -960,55 +960,39 @@ class Invoicing extends Admin_Controller
         }
 
         $this->db->trans_begin();
+        try {
+            $insert_invoicing = $this->db->insert('tr_invoicing', $arr_insert);
+            if (!$insert_invoicing) {
+                throw new Exception($this->db->error($insert_invoicing)['message']);
+            }
 
-        $valid = 1;
-        $msg = '';
+            $insert_invoicing_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
+            if (!$insert_invoicing_jurnal) {
+                throw new Exception($this->db->error($insert_invoicing_jurnal)['message']);
+            }
 
-        $insert_invoicing = $this->db->insert('tr_invoicing', $arr_insert);
-        if (!$insert_invoicing) {
-            $this->db->trans_rollback();
-
-            $valid = 0;
-            $msg = $this->db->error($insert_invoicing)['message'];
-        }
-
-        $insert_invoicing_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
-        if (!$insert_invoicing_jurnal) {
-            $this->db->trans_rollback();
-
-            $valid = 0;
-            $msg = $this->db->error($insert_invoicing_jurnal)['message'];
-        }
-
-        if ($valid == 1) {
             $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $post['id']]);
+            if (!$update_actual_plan_tagih) {
+                throw new Exception($this->db->error($update_actual_plan_tagih)['message']);
+            }
 
             // Update sts_invoice di kons_tr_plan_tagih_detail
-            $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
-
-            if (!$update_actual_plan_tagih) {
-                $this->db->trans_rollback();
-
-                print_r($this->db->last_query());
-                exit;
-
-                $valid = 0;
-                $msg = $this->db->error($update_actual_plan_tagih)['message'];
-            } else {
-                if ($this->db->trans_status() === false) {
-                    $this->db->trans_rollback();
-
-                    $valid = 0;
-                    $msg = 'Please try again later !';
-                } else {
-                    $this->db->trans_commit();
-
-                    $valid = 1;
-                    $msg = 'Data has been saved !';
-                }
+            $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
+            if (!$update_plan_tagih_detail) {
+                throw new Exception($this->db->error($update_plan_tagih_detail)['message']);
             }
-        } else {
+
+            if ($this->db->trans_status() === false) {
+                throw new Exception('Please try again later !');
+            }
+
+            $this->db->trans_commit();
+            $valid = 1;
+            $msg = 'Data has been saved !';
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
             $valid = 0;
+            $msg = $e->getMessage();
         }
 
         echo json_encode([
