@@ -3,6 +3,7 @@
         <tr>
             <th class="text-center">TOP</th>
             <th class="text-center">Keterangan</th>
+            <th class="text-center">Nominal</th>
             <th class="text-center">Tagih/Mundur</th>
             <th class="text-center">Select Tanggal</th>
             <th class="text-center">Alasan Mundur</th>
@@ -27,7 +28,8 @@
                 <input type="hidden" name="macet" value="<?= $macet ?>">
                 <input type="hidden" name="tgl_actual_tagih_last" value="<?= $tgl_actual_tagih_last ?>">
             </td>
-            <td class="text-left"><?= $data_plan_tagih_detail->desc_payment ?></td>
+            <td class="text-left" width="20%"><?= $data_plan_tagih_detail->desc_payment ?></td>
+            <td class="text-right"><?= number_format($data_plan_tagih_detail->nominal_payment) ?></td>
             <td>
                 <select name="tagih_mundur" id="tagih_mundur" class="form-control form-control-sm">
                     <option value="1">Tagih</option>
