@@ -131,6 +131,7 @@ class Actual_plan_tagih_model extends BF_Model
                 'project_leader' => $item->nm_project_leader,
                 'sales'          => $item->nm_sales,
                 'keterangan'     => $item->desc_payment,
+                'nominal'        => number_format($item->nominal_payment),
                 'status'         => $this->_get_status_button($item->status_terakhir),
                 'option'         => $this->_get_option_button($item, $bulan_sekarang)
             ];
@@ -186,6 +187,7 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_project', $val, 'both');
             $this->db->or_like('c.nm_project_leader', $val, 'both');
             $this->db->or_like('c.nm_sales', $val, 'both');
+            $this->db->or_like('a.nominal_payment', $val, 'both');
             $this->db->group_end();
         }
 

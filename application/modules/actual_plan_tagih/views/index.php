@@ -83,6 +83,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     <th class="text-center" width="15%">Project Leader</th>
                     <th class="text-center" width="15%">Sales</th>
                     <th class="text-center" width="15%">Keterangan</th>
+                    <th class="text-center" width="15%">Nominal</th>
                     <th class="text-center" width="10%">Status</th>
                     <th class="text-center" width="15%">Action</th>
                 </tr>
@@ -96,7 +97,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 <input type="hidden" id="bulan" value="1">
 
 <div class="modal modal-default fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg" style="width: 70% !important;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
@@ -565,6 +566,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                 },
                 {
                     data: 'keterangan'
+                },
+                {
+                    data: 'nominal'
                 },
                 {
                     data: 'status'
