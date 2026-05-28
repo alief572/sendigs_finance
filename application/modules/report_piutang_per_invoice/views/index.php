@@ -34,7 +34,7 @@
     }
 
     .summary-section {
-        margin-top: 15px;
+        margin-bottom: 15px;
     }
 
     .summary-section table td {
@@ -98,6 +98,29 @@
                 </div>
                 <!-- Table container (hidden until date selected) -->
                 <div class="table-container" id="table-container-stm" style="display: none;">
+                    <!-- Summary Section STM -->
+                    <div class="summary-section" id="summary-stm" style="margin-bottom: 15px;">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr class="bg-formula">
+                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
+                                    <td class="text-right" id="summary-piutang-stm">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Uninvoiced</strong></td>
+                                    <td class="text-right" id="summary-uninvoiced-stm">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
+                                    <td class="text-right" id="summary-sisa-piutang-stm">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Total Piutang</strong></td>
+                                    <td class="text-right" id="summary-total-piutang-stm"><strong>-</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-report" id="table-stm">
                             <thead>
@@ -120,29 +143,6 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    <!-- Summary Section STM -->
-                    <div class="summary-section" id="summary-stm">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr class="bg-formula">
-                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
-                                    <td class="text-right" id="summary-piutang-stm">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Uninvoiced</strong></td>
-                                    <td class="text-right" id="summary-uninvoiced-stm">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-stm">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Total Piutang</strong></td>
-                                    <td class="text-right" id="summary-total-piutang-stm"><strong>-</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
 
@@ -155,6 +155,29 @@
                 </div>
                 <!-- Table container (hidden until date selected) -->
                 <div class="table-container" id="table-container-vuca" style="display: none;">
+                    <!-- Summary Section VUCA -->
+                    <div class="summary-section" id="summary-vuca" style="margin-bottom: 15px;">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr class="bg-formula">
+                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
+                                    <td class="text-right" id="summary-piutang-vuca">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Uninvoiced</strong></td>
+                                    <td class="text-right" id="summary-uninvoiced-vuca">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
+                                    <td class="text-right" id="summary-sisa-piutang-vuca">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Total Piutang</strong></td>
+                                    <td class="text-right" id="summary-total-piutang-vuca"><strong>-</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-report" id="table-vuca">
                             <thead>
@@ -177,29 +200,6 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    <!-- Summary Section VUCA -->
-                    <div class="summary-section" id="summary-vuca">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr class="bg-formula">
-                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
-                                    <td class="text-right" id="summary-piutang-vuca">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Uninvoiced</strong></td>
-                                    <td class="text-right" id="summary-uninvoiced-vuca">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-vuca">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Total Piutang</strong></td>
-                                    <td class="text-right" id="summary-total-piutang-vuca"><strong>-</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
 
@@ -212,6 +212,29 @@
                 </div>
                 <!-- Table container (hidden until date selected) -->
                 <div class="table-container" id="table-container-sustain" style="display: none;">
+                    <!-- Summary Section SUSTAIN -->
+                    <div class="summary-section" id="summary-sustain" style="margin-bottom: 15px;">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr class="bg-formula">
+                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
+                                    <td class="text-right" id="summary-piutang-sustain">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Uninvoiced</strong></td>
+                                    <td class="text-right" id="summary-uninvoiced-sustain">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
+                                    <td class="text-right" id="summary-sisa-piutang-sustain">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Total Piutang</strong></td>
+                                    <td class="text-right" id="summary-total-piutang-sustain"><strong>-</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-report" id="table-sustain">
                             <thead>
@@ -232,29 +255,6 @@
                                 </tr>
                             </thead>
                             <tbody></tbody>
-                        </table>
-                    </div>
-                    <!-- Summary Section SUSTAIN -->
-                    <div class="summary-section" id="summary-sustain">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr class="bg-formula">
-                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
-                                    <td class="text-right" id="summary-piutang-sustain">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Uninvoiced</strong></td>
-                                    <td class="text-right" id="summary-uninvoiced-sustain">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-sustain">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Total Piutang</strong></td>
-                                    <td class="text-right" id="summary-total-piutang-sustain"><strong>-</strong></td>
-                                </tr>
-                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -513,6 +513,20 @@
                 var details = spk.details || [];
                 var isFirstSpkRow = true;
 
+                // Calculate total rows for this SPK (for rowspan on Uninvoiced & Total Sisa Piutang)
+                var spkRowCount = 0;
+                if (details.length === 0) {
+                    spkRowCount = 1;
+                } else {
+                    for (var dr = 0; dr < details.length; dr++) {
+                        var detailPayments = (details[dr].invoice && details[dr].invoice.payments) ? details[dr].invoice.payments : [];
+                        spkRowCount += 1; // main row for this detail
+                        if (detailPayments.length > 1) {
+                            spkRowCount += detailPayments.length - 1; // additional payment rows
+                        }
+                    }
+                }
+
                 // If SPK has no details at all, render one row with SPK info and empty columns
                 if (details.length === 0) {
                     html += '<tr>';
@@ -527,8 +541,8 @@
                     html += '<td class="bg-data text-center">-</td>'; // Tgl Bayar
                     html += '<td class="bg-data text-right">-</td>'; // Nilai Bayar
                     html += '<td class="bg-formula text-right">' + formatFormulaField(0) + '</td>'; // Piutang Per Invoice
-                    html += '<td class="bg-formula text-right">' + formatFormulaField(spk.uninvoiced) + '</td>'; // Uninvoiced
-                    html += '<td class="bg-formula text-right">' + formatFormulaField(spk.total_sisa_piutang) + '</td>'; // Total Sisa Piutang
+                    html += '<td class="bg-formula text-right" rowspan="1">' + formatFormulaField(spk.uninvoiced) + '</td>'; // Uninvoiced
+                    html += '<td class="bg-formula text-right" rowspan="1">' + formatFormulaField(spk.total_sisa_piutang) + '</td>'; // Total Sisa Piutang
                     html += '</tr>';
                     continue;
                 }
@@ -588,18 +602,14 @@
                         html += '<td class="bg-formula text-right">-</td>';
                     }
 
-                    // Uninvoiced - only on first row of SPK
+                    // Uninvoiced - only on first row of SPK, with rowspan
                     if (isFirstSpkRow) {
-                        html += '<td class="bg-formula text-right">' + formatFormulaField(spk.uninvoiced) + '</td>';
-                    } else {
-                        html += '<td class="bg-formula"></td>';
+                        html += '<td class="bg-formula text-right" rowspan="' + spkRowCount + '" style="vertical-align:middle;">' + formatFormulaField(spk.uninvoiced) + '</td>';
                     }
 
-                    // Total Sisa Piutang - only on first row of SPK
+                    // Total Sisa Piutang - only on first row of SPK, with rowspan
                     if (isFirstSpkRow) {
-                        html += '<td class="bg-formula text-right">' + formatFormulaField(spk.total_sisa_piutang) + '</td>';
-                    } else {
-                        html += '<td class="bg-formula"></td>';
+                        html += '<td class="bg-formula text-right" rowspan="' + spkRowCount + '" style="vertical-align:middle;">' + formatFormulaField(spk.total_sisa_piutang) + '</td>';
                     }
 
                     html += '</tr>';
@@ -618,8 +628,6 @@
                         html += '<td class="bg-data text-center">' + formatDate(payments[p].tanggal_bayar) + '</td>';
                         html += '<td class="bg-data text-right">' + formatDataField(payments[p].nilai_bayar) + '</td>';
                         html += '<td class="bg-formula"></td>'; // Piutang Per Invoice
-                        html += '<td class="bg-formula"></td>'; // Uninvoiced
-                        html += '<td class="bg-formula"></td>'; // Total Sisa Piutang
                         html += '</tr>';
                     }
 
