@@ -149,32 +149,54 @@ class Jurnal_penerimaan extends Admin_Controller
 	{
 		$post = $this->input->post();
 
-		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+		$get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
+		if (empty($get_jurnal)) {
+			echo json_encode(['status' => 0, 'msg' => 'Data jurnal tidak ditemukan.']);
+			return;
+		}
+
 		$get_jurnal_detail = $this->db->get_where('tr_jurnal', [
 			'no_transaksi'    => $get_jurnal->no_transaksi,
 			'jenis_transaksi' => $get_jurnal->jenis_transaksi,
 		])->result();
+
+		if (empty($get_jurnal_detail)) {
+			echo json_encode(['status' => 0, 'msg' => 'Detail jurnal tidak ditemukan.']);
+			return;
+		}
 
 		if ($get_jurnal->jenis_transaksi !== 'Penerimaan Piutang') {
 			echo json_encode(['status' => 0, 'msg' => 'Jenis transaksi tidak valid.']);
 			return;
 		}
 
+		// Lookup data terkait sebelum memulai transaksi
+		$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $get_jurnal->no_transaksi])->row();
+		if (empty($get_penerimaan_detail)) {
+			echo json_encode(['status' => 0, 'msg' => 'Data penerimaan piutang tidak ditemukan.']);
+			return;
+		}
+
+		$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
+		if (empty($get_invoicing)) {
+			echo json_encode(['status' => 0, 'msg' => 'Data invoicing tidak ditemukan.']);
+			return;
+		}
+
+		$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
+		$id_company    = !empty($get_penawaran->company) ? $get_penawaran->company : '';
+		$acc_db        = $this->_get_accounting_db($id_company);
+
+		$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
+		$nilai     = ($get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
+
+		// Mulai transaksi di kedua database
 		$this->db->trans_begin();
+		$acc_db->trans_begin();
 
 		try {
-			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
-			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $get_jurnal->no_transaksi])->row();
-			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
-			$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
-			$id_company    = !empty($get_penawaran->company) ? $get_penawaran->company : '';
-			$acc_db        = $this->_get_accounting_db($id_company);
-
-			$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
-			$nilai     = ($get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
-
 			// Insert header penerimaan
-			$acc_db->insert('jarh', [
+			$insert_jarh = $acc_db->insert('jarh', [
 				'nomor'       => $Nomor_BUM,
 				'tgl'         => $get_jurnal->tgl_jurnal,
 				'jml'         => $nilai,
@@ -188,6 +210,9 @@ class Jurnal_penerimaan extends Admin_Controller
 				'user_id'     => $this->auth->user_id(),
 				'tgl_invoice' => $get_invoicing->tanggal_invoice,
 			]);
+			if (!$insert_jarh) {
+				throw new Exception('Gagal insert header penerimaan (jarh).');
+			}
 
 			// Build dan insert jurnal detail sekaligus (batch)
 			$arr_jurnal = [];
@@ -205,20 +230,42 @@ class Jurnal_penerimaan extends Admin_Controller
 					'nm_perusahaan' => $item->nm_company,
 				];
 			}
-			$acc_db->insert_batch('jurnal', $arr_jurnal);
+			$insert_jurnal = $acc_db->insert_batch('jurnal', $arr_jurnal);
+			if (!$insert_jurnal) {
+				throw new Exception('Gagal insert detail jurnal.');
+			}
 
-			// Update status jurnal & counter cabang
-			$this->db->update('tr_jurnal', ['sts' => '1'], [
+			// Update status jurnal
+			$update_jurnal = $this->db->update('tr_jurnal', ['sts' => '1'], [
 				'no_transaksi'    => $get_jurnal->no_transaksi,
 				'jenis_transaksi' => $get_jurnal->jenis_transaksi,
 			]);
-			$acc_db->query('UPDATE pastibisa_tb_cabang SET nobum = nobum + 1 WHERE nocab = "101"');
+			if (!$update_jurnal) {
+				throw new Exception('Gagal update status jurnal.');
+			}
+
+			// Update counter cabang
+			$update_cabang = $acc_db->query('UPDATE pastibisa_tb_cabang SET nobum = nobum + 1 WHERE nocab = "101"');
+			if (!$update_cabang) {
+				throw new Exception('Gagal update counter cabang.');
+			}
+
+			// $get_coa_piutang = $this->db->select('a.coa')
+			// 	->from('tr_jurnal a')
+			// 	->where();
+
+			// Commit kedua database jika semua berhasil
+			if ($this->db->trans_status() === false || $acc_db->trans_status() === false) {
+				throw new Exception('Transaksi gagal, silakan coba lagi.');
+			}
 
 			$this->db->trans_commit();
+			$acc_db->trans_commit();
 
 			echo json_encode(['status' => 1, 'msg' => 'Posting jurnal ke Tras Sukses!']);
 		} catch (Exception $e) {
 			$this->db->trans_rollback();
+			$acc_db->trans_rollback();
 
 			echo json_encode(['status' => 0, 'msg' => $e->getMessage()]);
 		}
