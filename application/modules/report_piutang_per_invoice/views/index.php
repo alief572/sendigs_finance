@@ -589,7 +589,7 @@
                     // Payment columns - show first payment on same row if exists
                     if (payments.length > 0) {
                         html += '<td class="bg-data text-center">' + formatDate(payments[0].tanggal_bayar) + '</td>';
-                        html += '<td class="bg-data text-right">' + formatDataField(payments[0].nilai_bayar) + '</td>';
+                        html += '<td class="bg-data text-right">' + (payments[0].nilai_bayar !== null ? formatDataField(payments[0].nilai_bayar) : '-') + '</td>';
                     } else {
                         html += '<td class="bg-data text-center"></td>';
                         html += '<td class="bg-data text-right"></td>';
@@ -626,7 +626,7 @@
                         html += '<td class="bg-data"></td>'; // No Invoice
                         html += '<td class="bg-data"></td>'; // Nilai Invoice
                         html += '<td class="bg-data text-center">' + formatDate(payments[p].tanggal_bayar) + '</td>';
-                        html += '<td class="bg-data text-right">' + formatDataField(payments[p].nilai_bayar) + '</td>';
+                        html += '<td class="bg-data text-right">' + (payments[p].nilai_bayar !== null ? formatDataField(payments[p].nilai_bayar) : '-') + '</td>';
                         html += '<td class="bg-formula"></td>'; // Piutang Per Invoice
                         html += '</tr>';
                     }
