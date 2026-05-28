@@ -6,6 +6,7 @@
  *
  * This is model class for table "Customer"
  */
+// aaaa
 
 class Actual_plan_tagih_model extends BF_Model
 {
