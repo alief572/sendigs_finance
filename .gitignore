@@ -37,10 +37,3 @@ application/config/config.php
 /vendor/bin
 /vendor
 /application/config
-/application/tests
-/vendor
-/application/modules/report_piutang/migrations
-/application/modules/report_piutang/tests
-/application/modules/report_piutang_per_invoice/tests
-/vendor
-/.kiro

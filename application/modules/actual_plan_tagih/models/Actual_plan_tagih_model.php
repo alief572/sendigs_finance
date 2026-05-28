@@ -222,34 +222,6 @@ class Actual_plan_tagih_model extends BF_Model
             }
         }
 
-        $get_last_actual_mundur = $this->db->select('a.file_surat_mundur')
-            ->from('kons_tr_actual_plan_tagih a')
-            ->where('a.id_detail_plan_tagih', $item->id)
-            ->where('a.file_surat_mundur <>', '')
-            ->where('a.file_surat_mundur IS NOT NULL')
-            ->order_by('a.created_date', 'desc')
-            ->limit(1)
-            ->get()
-            ->row();
-
-        if (!empty($get_last_actual_mundur->file_surat_mundur)) {
-            return '<a class="btn btn-sm btn-danger" href="' . base_url($get_last_actual_mundur->file_surat_mundur) . '" download title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
-        }
-
-        $get_last_actual_progress = $this->db->select('a.file_laporan_progress')
-            ->from('kons_tr_actual_plan_tagih a')
-            ->where('a.id_detail_plan_tagih', $item->id)
-            ->where('a.file_laporan_progress <>', '')
-            ->where('a.file_laporan_progress IS NOT NULL')
-            ->order_by('a.created_date', 'desc')
-            ->limit(1)
-            ->get()
-            ->row();
-
-        if (!empty($get_last_actual_progress->file_laporan_progress)) {
-            return '<a class="btn btn-sm btn-warning" href="' . base_url($get_last_actual_progress->file_laporan_progress) . '" download title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
-        }
-
         return '';
     }
 
