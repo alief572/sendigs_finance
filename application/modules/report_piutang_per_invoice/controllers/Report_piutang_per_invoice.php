@@ -242,11 +242,14 @@ class Report_piutang_per_invoice extends Admin_Controller
                         $clean_payments = [];
                         $sum_nilai_bayar = 0;
                         foreach ($top_data['invoice']['payments'] as $payment) {
+                            $has_date = !empty($payment['tanggal_bayar']);
                             $clean_payments[] = [
                                 'tanggal_bayar' => $payment['tanggal_bayar'],
-                                'nilai_bayar' => $payment['nilai_bayar'],
+                                'nilai_bayar' => $has_date ? $payment['nilai_bayar'] : null,
                             ];
-                            $sum_nilai_bayar += $payment['nilai_bayar'];
+                            if ($has_date) {
+                                $sum_nilai_bayar += $payment['nilai_bayar'];
+                            }
                         }
 
                         // Calculate Piutang Per Invoice: max(0, nilai_invoice - SUM(nilai_bayar))
@@ -457,7 +460,7 @@ class Report_piutang_per_invoice extends Admin_Controller
 
                             if (!empty($payments)) {
                                 $sheet->setCellValue('I' . $row, $payments[0]['tanggal_bayar'] ? date('d-m-Y', strtotime($payments[0]['tanggal_bayar'])) : '-');
-                                $sheet->setCellValue('J' . $row, $payments[0]['nilai_bayar']);
+                                $sheet->setCellValue('J' . $row, $payments[0]['nilai_bayar'] !== null ? $payments[0]['nilai_bayar'] : '-');
                             }
 
                             $sheet->setCellValue('K' . $row, $invoice['piutang_per_invoice']);
@@ -493,7 +496,7 @@ class Report_piutang_per_invoice extends Admin_Controller
                         // Additional payment rows (2nd payment onward)
                         for ($p = 1; $p < count($payments); $p++) {
                             $sheet->setCellValue('I' . $row, $payments[$p]['tanggal_bayar'] ? date('d-m-Y', strtotime($payments[$p]['tanggal_bayar'])) : '-');
-                            $sheet->setCellValue('J' . $row, $payments[$p]['nilai_bayar']);
+                            $sheet->setCellValue('J' . $row, $payments[$p]['nilai_bayar'] !== null ? $payments[$p]['nilai_bayar'] : '-');
 
                             $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray($bodyStyle);
                             $sheet->getStyle('K' . $row . ':M' . $row)->applyFromArray($formulaStyle);
