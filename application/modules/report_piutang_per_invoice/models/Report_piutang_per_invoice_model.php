@@ -52,14 +52,10 @@ class Report_piutang_per_invoice_model extends BF_Model
                     inv.id AS id_invoice,
                     inv.tanggal_invoice,
                     inv.no_invoice,
-                    CASE
-                        WHEN pph.pph23_dipotong = 'N' THEN inv.tagihan_ppn_jurnal
-                        ELSE inv.total_akhir_jurnal
-                    END AS nilai_invoice,
-                    inv.total_nominal AS nilai_invoice_nominal,
+                    inv.total_nominal AS nilai_invoice,
                     ppd.id AS id_payment,
                     DATE(pph.created_date) AS tanggal_bayar,
-                    ppd.penerimaan AS nilai_bayar,
+                    ppd.dpp AS nilai_bayar,
                     comp.id AS company_code
                 FROM " . DBERP . ".kons_tr_plan_tagih_header pth
                 JOIN " . DBERP . ".kons_tr_plan_tagih_detail ptd

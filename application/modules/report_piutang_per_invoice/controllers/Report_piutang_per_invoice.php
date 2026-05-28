@@ -170,7 +170,6 @@ class Report_piutang_per_invoice extends Admin_Controller
                         'tanggal_invoice' => $row['tanggal_invoice'],
                         'no_invoice' => $row['no_invoice'],
                         'nilai_invoice' => (float) $row['nilai_invoice'],
-                        'nilai_invoice_nominal' => (float) $row['nilai_invoice_nominal'],
                         'payments' => [],
                     ];
                 }
