@@ -17,6 +17,7 @@ class Report_piutang_per_invoice_model extends BF_Model
      * SUSTAIN: company id 3
      */
     const COMPANY_TAB_MAP = [
+        'ALL'     => [1, 3, 4, 6, 7],
         'STM'     => [1, 6, 7],
         'VUCA'    => [4],
         'SUSTAIN' => [3],
