@@ -56,7 +56,11 @@ class Report_piutang_per_invoice_model extends BF_Model
                     inv.total_nominal AS nilai_invoice,
                     ppd.id AS id_payment,
                     DATE(pph.created_date) AS tanggal_bayar,
-                    ppd.dpp AS nilai_bayar,
+                    CASE 
+                        WHEN (SELECT COUNT(*) FROM tr_penerimaan_piutang_detail sub WHERE sub.id_inv = inv.id) > 1 
+                        THEN ppd.penerimaan 
+                        ELSE ppd.dpp 
+                    END AS nilai_bayar,
                     comp.id AS company_code
                 FROM " . DBERP . ".kons_tr_plan_tagih_header pth
                 JOIN " . DBERP . ".kons_tr_plan_tagih_detail ptd
