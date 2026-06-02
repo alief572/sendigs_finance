@@ -11,6 +11,7 @@ class Report_piutang_per_invoice extends Admin_Controller
      * Mapping company codes ke tab perusahaan.
      */
     const COMPANY_TAB_MAP = [
+        'ALL'     => [1, 3, 4, 6, 7],
         'STM'     => [1, 6, 7],
         'VUCA'    => [4],
         'SUSTAIN' => [3],
@@ -34,7 +35,7 @@ class Report_piutang_per_invoice extends Admin_Controller
     {
         $this->auth->restrict('Report_Piutang_Per_Invoice.View');
 
-        $this->template->title('Report Piutang Per Invoice');
+        $this->template->title('Report Uninvoiced dan Piutang Per Invoice');
         $this->template->render('index');
     }
 

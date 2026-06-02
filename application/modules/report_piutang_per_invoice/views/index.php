@@ -77,7 +77,10 @@
         <!-- Tab Navigation -->
         <ul class="nav nav-tabs" role="tablist" id="company-tabs">
             <li class="nav-item active" role="presentation">
-                <a class="nav-link active" id="tab-stm" data-toggle="tab" href="#panel-stm" role="tab" aria-controls="panel-stm" aria-selected="true" data-company-codes="1,6,7">STM</a>
+                <a class="nav-link active" id="tab-all" data-toggle="tab" href="#panel-all" role="tab" aria-controls="panel-all" aria-selected="true" data-company-codes="1,3,4,6,7">All</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-stm" data-toggle="tab" href="#panel-stm" role="tab" aria-controls="panel-stm" aria-selected="false" data-company-codes="1,6,7">STM</a>
             </li>
             <li class="nav-item" role="presentation">
                 <a class="nav-link" id="tab-vuca" data-toggle="tab" href="#panel-vuca" role="tab" aria-controls="panel-vuca" aria-selected="false" data-company-codes="4">VUCA</a>
@@ -89,8 +92,65 @@
 
         <!-- Tab Content -->
         <div class="tab-content">
+            <!-- ALL Tab -->
+            <div class="tab-pane active" id="panel-all" role="tabpanel" aria-labelledby="tab-all">
+                <!-- Instruction message (shown when no date selected) -->
+                <div class="instruction-message" id="instruction-all">
+                    <i class="fa fa-calendar"></i>
+                    <p>Silakan pilih tanggal filter terlebih dahulu untuk menampilkan data piutang.</p>
+                </div>
+                <!-- Table container (hidden until date selected) -->
+                <div class="table-container" id="table-container-all" style="display: none;">
+                    <!-- Summary Section ALL -->
+                    <div class="summary-section" id="summary-all" style="margin-bottom: 15px;">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr class="bg-formula">
+                                    <td width="250"><strong>Summary Piutang Per Invoice</strong></td>
+                                    <td class="text-right" id="summary-piutang-all">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Uninvoiced</strong></td>
+                                    <td class="text-right" id="summary-uninvoiced-all">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
+                                    <td class="text-right" id="summary-sisa-piutang-all">-</td>
+                                </tr>
+                                <tr class="bg-formula">
+                                    <td><strong>Total Piutang</strong></td>
+                                    <td class="text-right" id="summary-total-piutang-all"><strong>-</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-report" id="table-all">
+                            <thead>
+                                <tr class="bg-blue">
+                                    <th>Customer</th>
+                                    <th>No SPK</th>
+                                    <th>Nominal Project</th>
+                                    <th>TOP</th>
+                                    <th>Rincian TOP</th>
+                                    <th>Tgl Invoice</th>
+                                    <th>No Invoice</th>
+                                    <th>Nilai Invoice</th>
+                                    <th>Tgl Bayar</th>
+                                    <th>Nilai Bayar</th>
+                                    <th>Piutang Per Invoice</th>
+                                    <th>Uninvoiced</th>
+                                    <th>Total Sisa Piutang</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- STM Tab -->
-            <div class="tab-pane active" id="panel-stm" role="tabpanel" aria-labelledby="tab-stm">
+            <div class="tab-pane" id="panel-stm" role="tabpanel" aria-labelledby="tab-stm">
                 <!-- Instruction message (shown when no date selected) -->
                 <div class="instruction-message" id="instruction-stm">
                     <i class="fa fa-calendar"></i>
