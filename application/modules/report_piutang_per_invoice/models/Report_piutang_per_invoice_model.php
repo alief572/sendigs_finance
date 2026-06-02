@@ -79,13 +79,14 @@ class Report_piutang_per_invoice_model extends BF_Model
                 LEFT JOIN tr_penerimaan_piutang pph
                     ON pph.no_surat = ppd.id_header
                     AND DATE(pph.created_date) <= ?
-                WHERE comp.id IN ({$placeholders})
+                WHERE spk.input_date <= ?
+                AND comp.id IN ({$placeholders})
                 ORDER BY pth.nm_customer ASC, pth.id_spk_penawaran ASC,
                          ptd.urutan ASC, inv.tanggal_invoice ASC, pph.created_date ASC";
 
-        // Build bindings array: filter_date (for inv), filter_date (for ppd), then company_codes
+        // Build bindings array: filter_date (for inv), filter_date (for ppd), filter_date (for spk.input_date), then company_codes
         $bindings = array_merge(
-            [$filter_date, $filter_date],
+            [$filter_date, $filter_date, $filter_date],
             $company_codes
         );
 
