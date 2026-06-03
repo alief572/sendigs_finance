@@ -688,7 +688,13 @@ class Request_payment_model extends BF_Model
                         $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
                     }
                     break;
-                // Periodik dan Direct Payment: kosongkan
+                case 'Periodik':
+                    $row_approval = $this->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->approved_date)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_date));
+                    }
+                    break;
+                // Direct Payment, Purchase Invoice: kosongkan
                 default:
                     $tanggal_approval = '';
                     break;
