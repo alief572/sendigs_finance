@@ -58,7 +58,13 @@ function get_tanggal_approval_tagihan($item, $CI)
                 $tgl_approve = $row->approved_on;
             }
             break;
-        // Periodik, Direct Payment, Purchase Invoice: kosongkan
+        case 'Periodik':
+            $row = $CI->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
+            if ($row && !empty($row->approved_date)) {
+                $tgl_approve = $row->approved_date;
+            }
+            break;
+        // Direct Payment, Purchase Invoice: kosongkan
         default:
             $tgl_approve = '';
             break;
