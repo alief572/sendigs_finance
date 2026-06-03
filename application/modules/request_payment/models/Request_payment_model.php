@@ -628,7 +628,7 @@ class Request_payment_model extends BF_Model
             }
 
             // Format tanggal
-            $tanggal_formatted = date('d F Y', strtotime($item->tanggal));
+            $tanggal_formatted = date('d-M-Y', strtotime($item->tanggal));
 
             // NO. DOKUMEN: display with tanggal below
             $no_dokumen_html = '<span>' . $item->no_dokumen . '</span><br><small class="text-muted">' . $tanggal_formatted . '</small>';
@@ -654,7 +654,7 @@ class Request_payment_model extends BF_Model
             // TGL PEMBAYARAN
             if ($tab == 'sudah_dibayar' && !empty($item->tgl_bayar)) {
                 // Show actual payment date for "Sudah Dibayar"
-                $tgl_pembayaran_html = date('d/m/Y', strtotime($item->tgl_bayar));
+                $tgl_pembayaran_html = date('d-M-Y', strtotime($item->tgl_bayar));
             } else {
                 // Date picker input for "Belum Dibayar"
                 $tgl_pembayaran_html = '<input type="text" class="form-control form-control-sm datepicker" name="tanggal_pembayaran_' . $item->no_dokumen . '" placeholder="dd/mm/yyyy" autocomplete="off">';
@@ -666,26 +666,26 @@ class Request_payment_model extends BF_Model
                 case 'Kasbon':
                     $row_approval = $this->db->select('approved_on')->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
                     if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d M Y', strtotime($row_approval->approved_on));
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
                     }
                     break;
                 case 'Transport':
                     $row_approval = $this->db->select('approved_on')->get_where('tr_transport_req', ['no_doc' => $item->no_dokumen])->row();
                     if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d M Y', strtotime($row_approval->approved_on));
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
                     }
                     break;
                 case 'Cash':
                 case 'Non-PO':
                     $row_approval = $this->db->select('created_date')->get_where('tr_pr_non_po', ['id' => $item->id])->row();
                     if ($row_approval && !empty($row_approval->created_date)) {
-                        $tanggal_approval = date('d M Y', strtotime($row_approval->created_date));
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_date));
                     }
                     break;
                 case 'Expense':
                     $row_approval = $this->db->select('approved_on')->get_where('tr_expense', ['no_doc' => $item->no_dokumen])->row();
                     if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d M Y', strtotime($row_approval->approved_on));
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
                     }
                     break;
                 // Periodik dan Direct Payment: kosongkan
@@ -1091,6 +1091,15 @@ class Request_payment_model extends BF_Model
         $this->db->join('users b', 'b.username = a.request_by', 'left');
         $this->db->join('departments c', 'c.id = b.department_id', 'left');
         $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+
+        // JOIN payment_approve for tgl_bayar
+        $this->db->join('(SELECT no_doc, MAX(tgl_bayar) as tgl_bayar FROM payment_approve GROUP BY no_doc) pa', 'pa.no_doc = a.no_dokumen', 'left');
+
+        // Data = gabungan tab Belum Dibayar (status=1) + Sudah Dibayar (tgl_bayar IS NOT NULL)
+        $this->db->group_start();
+        $this->db->where('a.status', '1');
+        $this->db->or_where('pa.tgl_bayar IS NOT NULL');
+        $this->db->group_end();
 
         // Apply periode filter if provided
         if (!empty($bulan_from) && !empty($tahun_from) && !empty($bulan_to) && !empty($tahun_to)) {
