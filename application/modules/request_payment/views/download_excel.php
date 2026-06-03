@@ -23,11 +23,7 @@ $bulan_indonesia = [
 function format_tanggal_indo($date_str, $bulan_indo)
 {
     if (empty($date_str) || strtotime($date_str) === false) return '';
-    $ts = strtotime($date_str);
-    $day = date('d', $ts);
-    $month = (int) date('m', $ts);
-    $year = date('Y', $ts);
-    return $day . ' ' . $bulan_indo[$month] . ' ' . $year;
+    return date('d-M-Y', strtotime($date_str));
 }
 
 /**
