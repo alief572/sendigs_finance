@@ -32,9 +32,6 @@ class Request_payment extends Admin_Controller
 	public function index()
 	{
 		$this->template->title('Request Payment');
-		// Load companies for filter dropdown
-		$companies = $this->Request_payment_model->get_companies_list();
-		$this->template->set('companies', $companies);
 		$this->template->render('index');
 	}
 
@@ -2511,29 +2508,7 @@ class Request_payment extends Admin_Controller
 
 	public function get_data_req_payment()
 	{
-		$company_id = $this->input->post('company_id');
-		$bulan_from = $this->input->post('bulan_from');
-		$tahun_from = $this->input->post('tahun_from');
-		$bulan_to   = $this->input->post('bulan_to');
-		$tahun_to   = $this->input->post('tahun_to');
-		$kategori   = $this->input->post('kategori');
-		$tab        = $this->input->post('tab') ?: 'belum_dibayar';
-
-		$this->Request_payment_model->get_data_req_payment($company_id, $bulan_from, $tahun_from, $bulan_to, $tahun_to, $kategori, $tab);
-	}
-
-	public function get_summary_cards()
-	{
-		$filters = [
-			'company_id' => $this->input->post('company_id'),
-			'bulan_from' => $this->input->post('bulan_from'),
-			'tahun_from' => $this->input->post('tahun_from'),
-			'bulan_to'   => $this->input->post('bulan_to'),
-			'tahun_to'   => $this->input->post('tahun_to'),
-			'kategori'   => $this->input->post('kategori'),
-		];
-		$result = $this->Request_payment_model->get_summary_cards($filters);
-		echo json_encode($result);
+		$this->Request_payment_model->get_data_req_payment();
 	}
 
 	public function added_pilih_data()
@@ -2576,9 +2551,9 @@ class Request_payment extends Admin_Controller
 
 		if (!empty($get_added)) {
 			foreach ($get_added as $item) {
-				$tanggal_pembayaran = isset($post['tanggal_pembayaran_' . $item->no_doc]) ? $post['tanggal_pembayaran_' . $item->no_doc] : '';
-				$kategori = isset($post['kategori_' . $item->no_doc]) ? $post['kategori_' . $item->no_doc] : $item->tipe;
-				$nilai_pengajuan = isset($post['nilai_pengajuan_' . $item->no_doc]) ? $post['nilai_pengajuan_' . $item->no_doc] : 0;
+				$tanggal_pembayaran = $post['tanggal_pembayaran_' . $item->no_doc];
+				$kategori = $post['kategori_' . $item->no_doc];
+				$nilai_pengajuan = $post['nilai_pengajuan_' . $item->no_doc];
 
 				if ($item->tipe == 'Kasbon') {
 
@@ -2888,16 +2863,7 @@ class Request_payment extends Admin_Controller
 
 	public function download_excel_request_payment()
 	{
-		$filters = [
-			'company_id' => $this->input->get('company_id'),
-			'bulan_from' => $this->input->get('bulan_from'),
-			'tahun_from' => $this->input->get('tahun_from'),
-			'bulan_to'   => $this->input->get('bulan_to'),
-			'tahun_to'   => $this->input->get('tahun_to'),
-			'kategori'   => $this->input->get('kategori'),
-		];
-
-		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment($filters);
+		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment();
 		$payment_approve_lookup = $this->Request_payment_model->get_payment_approve_lookup();
 
 		$data = [
