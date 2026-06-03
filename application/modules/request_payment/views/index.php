@@ -1,520 +1,918 @@
 <?php
-$ENABLE_ADD     = has_permission('Request_Payment.Add');
-$ENABLE_MANAGE  = has_permission('Request_Payment.Manage');
-$ENABLE_DELETE  = has_permission('Request_Payment.Delete');
-$ENABLE_VIEW    = has_permission('Request_Payment.View');
+$ENABLE_VIEW = has_permission('Request_Payment.View');
+
+// Indonesian months mapping
+$bulan_indonesia = [
+	1 => 'Januari',
+	2 => 'Februari',
+	3 => 'Maret',
+	4 => 'April',
+	5 => 'Mei',
+	6 => 'Juni',
+	7 => 'Juli',
+	8 => 'Agustus',
+	9 => 'September',
+	10 => 'Oktober',
+	11 => 'November',
+	12 => 'Desember'
+];
+
+$current_month = (int) date('n');
+$current_year  = (int) date('Y');
+$max_year      = $current_year + 1;
+$default_bulan_from = 1; // Januari
 ?>
 
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+
 <style>
-	.table-container {
-		max-height: 500px;
-		/* Example height for the table container (adjust as needed) */
-		overflow-y: auto;
-		/* Enable vertical scrolling */
+	.filter-card {
+		background: #f9f9f9;
+		border: 1px solid #e0e0e0;
+		border-radius: 4px;
+		padding: 15px;
+		margin-bottom: 15px;
 	}
 
-	/* Style for the table */
-	.table-container table {
-		width: 100%;
-		border-collapse: collapse !important;
+	.filter-card .form-group {
+		margin-bottom: 10px;
 	}
 
-	/* Style for the table header */
-
-	/* Style for table cells */
-	.table-container th,
-	.table-container td {
-		padding: 8px;
-		border: 1px solid #ddd;
-		text-align: left;
+	.filter-card label {
+		font-weight: 600;
+		font-size: 12px;
+		text-transform: uppercase;
+		color: #666;
+		margin-bottom: 5px;
 	}
 
-	.sticky-header th {
-		position: sticky !important;
-		top: 0 !important;
-		/* Stick to the top of the container */
-		z-index: 1;
-		/* Ensure it appears above tbody content */
-		background-color: #3c8dbc;
-		/* Header background color */
-		color: white;
-		font-weight: bold;
+	.active-filter-badge {
+		display: inline-block;
+		background: #e8f5e9;
+		color: #2e7d32;
+		border: 1px solid #a5d6a7;
+		border-radius: 3px;
+		padding: 5px 12px;
+		font-size: 12px;
+		margin-top: 10px;
+	}
+
+	.breadcrumb-custom {
+		background: none;
+		padding: 0;
+		margin-bottom: 5px;
+		font-size: 12px;
+	}
+
+	.breadcrumb-custom li a {
+		color: #3c8dbc;
+	}
+
+	.breadcrumb-custom li.active {
+		color: #777;
 	}
 </style>
-<!-- <script src="//cdn.rawgit.com/rainabba/jquery-table2excel/1.1.0/dist/jquery.table2excel.min.js"></script> -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
-<div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 
-
-<form action="<?= $this->uri->uri_string() ?>" id="frm_data" name="frm_data" class="form-horizontal" enctype="multipart/form-data">
-	<div class="box">
-		<div class="box-header text-right">
-			<a href="<?= base_url('request_payment/download_excel_request_payment') ?>" class="btn btn-sm btn-success"><i class="fa fa-download"></i> Excel</a>
-			<button type="button" class="btn btn-sm btn-danger" onclick="reset_data();"><i class="fa fa-refresh"></i> Reset</button>
+<div class="box">
+	<div class="box-header with-border">
+		<ol class="breadcrumb breadcrumb-custom">
+			<li><a href="javascript:void(0);">Finance</a></li>
+			<li class="active">Request Payment</li>
+		</ol>
+		<h3 class="box-title" style="font-size: 22px; font-weight: 600;">Request Payment</h3>
+		<div class="box-tools pull-right">
+			<button type="button" class="btn btn-sm btn-success" onclick="exportExcel();">
+				<i class="fa fa-file-excel-o"></i> Export Excel
+			</button>
+			<button type="button" class="btn btn-sm btn-default" onclick="resetFilter();">
+				<i class="fa fa-refresh"></i> Reset Filter
+			</button>
 		</div>
-		<div class="box-body">
+	</div>
+	<div class="box-body">
 
-			<input type="hidden" name="" class="actived_tab" value="transport">
-			<!-- <ul class="nav nav-tabs" role="tablist">
-				<li role="presentation" class="transport_tab tab_pin active"><a href="javascript:void();" onclick="change_tab('transport')">Transportasi</a></li>
-				<li role="presentation" class="kasbon_tab tab_pin"><a href="javascript:void();" onclick="change_tab('kasbon')">Kasbon</a></li>
-				<li role="presentation" class="expense_tab tab_pin"><a href="javascript:void();" onclick="change_tab('expense')">Expense</a></li>
-				<li role="presentation" class="periodik_tab tab_pin"><a href="javascript:void();" onclick="change_tab('periodik')">Periodik</a></li>
-				<li role="presentation" class="pembayaran_po_tab tab_pin"><a href="javascript:void();" onclick="change_tab('pembayaran_po')">Pembayaran PO</a></li>
-				<li role="presentation" class="pembayaran_direct_payment tab_pin"><a href="javascript:void();" onclick="change_tab('direct_payment')">Direct Payment</a></li>
-			</ul> -->
-			<div class=" col-md-12" style="margin-top: 10px;">
-				<table id="table_req_payment" class="table table-bordered">
-					<thead class="sticky-header">
-						<tr>
-							<th class="text-center">No.</th>
-							<th class="text-center">No. Dokumen</th>
-							<th class="text-center">Request By</th>
-							<th class="text-center">Tanggal</th>
-							<th class="text-center">Keperluan</th>
-							<th class="text-center">Kategori</th>
-							<th class="text-center">Nilai Pengajuan</th>
-							<th class="text-center">Tanggal Pembayaran</th>
-							<th class="text-center">Action</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-				<!-- <div class="pull-left"> -->
-				<div class="col-md-6">
+		<!-- Filter Bar Card -->
+		<div class="filter-card">
+			<div class="row">
+				<!-- COMPANY Dropdown -->
+				<div class="col-md-3">
 					<div class="form-group">
-						<label for="">Reject Reason</label>
-						<textarea name="reject_reason" id="reject_reason" class="form-control form-control-sm"></textarea>
+						<label>Company</label>
+						<select id="filter_company" class="form-control select2-filter" style="width: 100%;">
+							<option value="">Semua Entitas</option>
+							<?php if (!empty($companies)): ?>
+								<?php foreach ($companies as $company): ?>
+									<option value="<?= $company->id; ?>"><?= $company->nama; ?></option>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</select>
 					</div>
 				</div>
-				<!-- </div> -->
-				<div class="pull-right">
-					<!-- <button type="button" id="btnxls" class="btn btn-default">Export Excel</button>  -->
-					<button type="button" class="btn btn-sm btn-danger" onclick="reject_req_payment()"><i class="fa fa-close"></i> Reject</button>
-					<button type="submit" name="save" class="btn btn-success btn-sm" id="submit"><i class="fa fa-save">&nbsp;</i>Update</button>
+
+				<!-- PERIODE Dropdowns -->
+				<div class="col-md-5">
+					<div class="form-group">
+						<label>Periode</label>
+						<div style="display: flex; align-items: center; gap: 5px;">
+							<div style="flex: 3;">
+								<select id="filter_bulan_from" class="form-control select2-filter" style="width: 100%;">
+									<?php foreach ($bulan_indonesia as $num => $nama): ?>
+										<option value="<?= $num; ?>" <?= ($num == $default_bulan_from) ? 'selected' : ''; ?>><?= $nama; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div style="flex: 2;">
+								<select id="filter_tahun_from" class="form-control select2-filter" style="width: 100%;">
+									<?php for ($y = 2020; $y <= $max_year; $y++): ?>
+										<option value="<?= $y; ?>" <?= ($y == $current_year) ? 'selected' : ''; ?>><?= $y; ?></option>
+									<?php endfor; ?>
+								</select>
+							</div>
+							<div style="flex: 0; padding: 0 5px; font-weight: 600;">
+								&mdash;
+							</div>
+							<div style="flex: 3;">
+								<select id="filter_bulan_to" class="form-control select2-filter" style="width: 100%;">
+									<?php foreach ($bulan_indonesia as $num => $nama): ?>
+										<option value="<?= $num; ?>" <?= ($num == $current_month) ? 'selected' : ''; ?>><?= $nama; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div style="flex: 2;">
+								<select id="filter_tahun_to" class="form-control select2-filter" style="width: 100%;">
+									<?php for ($y = 2020; $y <= $max_year; $y++): ?>
+										<option value="<?= $y; ?>" <?= ($y == $current_year) ? 'selected' : ''; ?>><?= $y; ?></option>
+									<?php endfor; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- KATEGORI Dropdown -->
+				<div class="col-md-3">
+					<div class="form-group">
+						<label>Kategori</label>
+						<select id="filter_kategori" class="form-control select2-filter" style="width: 100%;">
+							<option value="">Semua</option>
+							<option value="Cash">Cash</option>
+							<option value="Transport">Transport</option>
+							<option value="Kasbon">Kasbon</option>
+							<option value="Periodik">Periodik</option>
+							<option value="Expense">Expense</option>
+							<option value="Non-PO">Non-PO</option>
+							<option value="Purchase Invoice">Purchase Invoice</option>
+							<option value="Direct Payment">Direct Payment</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- Apply Filter Button -->
+				<div class="col-md-1">
+					<div class="form-group">
+						<label>&nbsp;</label>
+						<button type="button" class="btn btn-sm btn-primary btn-block" onclick="applyFilter();" style="margin-top: 1px;">
+							<i class="fa fa-filter"></i> Filter
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Active Filter Badge -->
+			<div class="row">
+				<div class="col-md-12">
+					<span class="active-filter-badge" id="active_filter_badge">
+						<i class="fa fa-info-circle"></i>
+						Export: <?= $bulan_indonesia[$default_bulan_from]; ?> - <?= $bulan_indonesia[$current_month]; ?> <?= $current_year; ?> - Semua Entitas
+					</span>
 				</div>
 			</div>
 		</div>
-		<!-- /.box-body -->
-	</div>
-</form>
-<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
-<script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+		<!-- End Filter Bar Card -->
+
+		<!-- Summary Cards Section -->
+		<div class="row" style="margin-bottom: 20px;">
+			<!-- Card 1: Total Pengajuan -->
+			<div class="col-md-3">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TOTAL PENGAJUAN</div>
+					<div style="font-size: 22px; font-weight: bold; color: #333;" id="card_total_pengajuan">0</div>
+					<div style="font-size: 12px; color: #999;">item</div>
+				</div>
+			</div>
+			<!-- Card 2: Total Nilai -->
+			<div class="col-md-3">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TOTAL NILAI</div>
+					<div style="font-size: 22px; font-weight: bold; color: #2196F3;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_nilai">0</span>
+					</div>
+				</div>
+			</div>
+			<!-- Card 3: Cash -->
+			<div class="col-md-3">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">CASH</div>
+					<div style="font-size: 22px; font-weight: bold; color: #2196F3;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_cash">0</span>
+					</div>
+				</div>
+			</div>
+			<!-- Card 4: Kasbon -->
+			<div class="col-md-3">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">KASBON</div>
+					<div style="font-size: 22px; font-weight: bold; color: #FF9800;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_kasbon">0</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- End Summary Cards Section -->
+
+		<!-- Tab Navigation Section -->
+		<style>
+			.nav-tabs-custom {
+				margin-bottom: 0;
+			}
+
+			.nav-tabs-custom>.nav-tabs>li.active>a {
+				border-top-color: #3c8dbc;
+				font-weight: 600;
+			}
+
+			.nav-tabs-custom>.nav-tabs>li>a .badge {
+				margin-left: 5px;
+				font-size: 11px;
+			}
+
+			.tab-badge-belum {
+				background-color: #f39c12;
+				color: #fff;
+			}
+
+			.tab-badge-sudah {
+				background-color: #00a65a;
+				color: #fff;
+			}
+
+			.datatable-controls {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 15px;
+				flex-wrap: wrap;
+				gap: 10px;
+			}
+
+			.datatable-controls .entries-control {
+				font-size: 13px;
+				color: #555;
+			}
+
+			.datatable-controls .entries-control select {
+				display: inline-block;
+				width: auto;
+				padding: 4px 8px;
+				font-size: 13px;
+				border: 1px solid #ccc;
+				border-radius: 3px;
+			}
+
+			.datatable-controls .search-control {
+				position: relative;
+			}
+
+			.datatable-controls .search-control input {
+				padding: 6px 12px;
+				font-size: 13px;
+				border: 1px solid #ccc;
+				border-radius: 3px;
+				width: 250px;
+			}
+
+			#table_req_payment {
+				width: 100% !important;
+			}
+
+			#table_req_payment thead th {
+				position: sticky;
+				top: 0;
+				background-color: #3c8dbc;
+				color: #fff;
+				z-index: 10;
+				font-size: 12px;
+				text-align: center;
+				vertical-align: middle;
+				white-space: nowrap;
+			}
+
+			#table_req_payment tbody td {
+				font-size: 13px;
+				vertical-align: middle;
+			}
+
+			#table_req_payment .col-nilai {
+				text-align: right;
+			}
+
+			#table_req_payment .col-checkbox {
+				text-align: center;
+				width: 30px;
+			}
+
+			#table_req_payment .col-no {
+				text-align: center;
+				width: 40px;
+			}
+
+			.table-wrapper {
+				max-height: 500px;
+				overflow-y: auto;
+				border: 1px solid #ddd;
+			}
+		</style>
+
+		<div class="nav-tabs-custom">
+			<ul class="nav nav-tabs" id="payment_tabs">
+				<li class="active">
+					<a href="#tab_belum_dibayar" data-toggle="tab" data-tab="belum_dibayar">
+						Belum Dibayar <span class="badge tab-badge-belum" id="badge_belum_dibayar">0</span>
+					</a>
+				</li>
+				<li>
+					<a href="#tab_sudah_dibayar" data-toggle="tab" data-tab="sudah_dibayar">
+						Sudah Dibayar <span class="badge tab-badge-sudah" id="badge_sudah_dibayar">0</span>
+					</a>
+				</li>
+			</ul>
+			<div class="tab-content">
+				<div class="tab-pane active" id="tab_belum_dibayar">
+				</div>
+				<div class="tab-pane" id="tab_sudah_dibayar">
+				</div>
+			</div>
+		</div>
+		<!-- End Tab Navigation -->
+
+		<!-- DataTables Controls -->
+		<div class="datatable-controls">
+			<div class="entries-control">
+				Tampilkan
+				<select id="dt_entries_per_page">
+					<option value="10">10</option>
+					<option value="25">25</option>
+					<option value="50">50</option>
+					<option value="100">100</option>
+				</select>
+				entri per halaman
+			</div>
+			<div class="search-control">
+				<input type="text" id="dt_search" class="form-control" placeholder="Cari dokumen, pemohon...">
+			</div>
+		</div>
+		<!-- End DataTables Controls -->
+
+		<!-- DataTable -->
+		<div class="table-wrapper">
+			<table id="table_req_payment" class="table table-bordered table-striped" style="width:100%;">
+				<thead>
+					<tr>
+						<th class="col-checkbox"><input type="checkbox" id="check_all"></th>
+						<th class="col-no">NO</th>
+						<th>NO. DOKUMEN</th>
+						<th>DIMINTA OLEH</th>
+						<th>COMPANY</th>
+						<th>TANGGAL PENGAJUAN</th>
+						<th>TANGGAL APPROVAL</th>
+						<th>KEPERLUAN</th>
+						<th>KATEGORI</th>
+						<th class="col-nilai">NILAI (RP)</th>
+						<th>TGL PEMBAYARAN</th>
+					</tr>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+		</div>
+		<!-- End DataTable -->
+
+		<!-- Process Buttons (only for Belum Dibayar tab) -->
+		<div id="process_section" class="row" style="margin-top: 15px;">
+			<div class="col-md-6">
+				<div class="form-group">
+					<label for="reject_reason">Reject Reason</label>
+					<textarea name="reject_reason" id="reject_reason" class="form-control form-control-sm" rows="2" placeholder="Masukkan alasan reject..."></textarea>
+				</div>
+			</div>
+			<div class="col-md-6 text-right" style="padding-top: 25px;">
+				<button type="button" class="btn btn-sm btn-default" onclick="resetChecked();"><i class="fa fa-refresh"></i> Reset Pilihan</button>
+				<button type="button" class="btn btn-sm btn-danger" onclick="rejectReqPayment();"><i class="fa fa-close"></i> Reject</button>
+				<button type="button" class="btn btn-sm btn-success" onclick="processReqPayment();"><i class="fa fa-save"></i> Proses Pembayaran</button>
+			</div>
+		</div>
+		<!-- End Process Buttons -->
+
+	</div><!-- /.box-body -->
+</div><!-- /.box -->
+
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 
+<script>
+	$(document).ready(function() {
+		// Current defaults from PHP
+		var defaultBulanFrom = <?= $default_bulan_from; ?>;
+		var defaultTahunFrom = <?= $current_year; ?>;
+		var defaultBulanTo = <?= $current_month; ?>;
+		var defaultTahunTo = <?= $current_year; ?>;
 
-<script type="text/javascript">
-	DataTables();
-	load_all_party();
+		// Indonesian month names for badge display
+		var bulanIndonesia = {
+			1: 'Januari',
+			2: 'Februari',
+			3: 'Maret',
+			4: 'April',
+			5: 'Mei',
+			6: 'Juni',
+			7: 'Juli',
+			8: 'Agustus',
+			9: 'September',
+			10: 'Oktober',
+			11: 'November',
+			12: 'Desember'
+		};
 
-	// change_tab('transport');
+		// Active tab variable
+		var currentTab = 'belum_dibayar';
 
-	function load_all_party() {
-		$(".divide").autoNumeric('init');
-		$(".select2").select2({
-			width: '100%'
-		});
-		$('.vendor').chosen();
-		$('.tipe').chosen();
+		// DataTables instance
+		var dataTable = null;
 
-		$(".tanggal").datepicker({
-			todayHighlight: true,
-			format: "yyyy-mm-dd",
-			showInputs: true,
-			autoclose: true
-		});
-	}
-
-	function cektotal() {
-		var total_req = 0;
-		$('.dtlloop').each(function() {
-			if (this.checked) {
-				var ids = $(this).val();
-				total_req += Number($("#jumlah_" + ids).val());
-
-			}
-		});
-		$("#total_req").autoNumeric('set', total_req);
-	}
-
-	var url_save = siteurl + 'request_payment/save_request/';
-
-
-	function change_tab(tab) {
-		$('.tab_pin').removeClass('active');
-
-		$('.' + tab + '_tab').addClass('active');
-		$('.actived_tab').val(tab);
-
-		$.ajax({
-			type: 'POST',
-			url: siteurl + active_controller + 'change_tab',
-			data: {
-				'tab': tab
-			},
-			cache: false,
-			success: function(result) {
-				$('.list_req_payment').html(result);
-				load_all_party();
-			},
-			error: function() {
-				Swal.fire({
-					title: 'Error !',
-					text: 'Please try again later !',
-					icon: 'error',
-					showConfirmButton: false,
-					showCancelButton: false,
-					allowEscapeKey: false,
-					allowOutsideClick: false,
-					timer: 3000
-				});
-			}
-		});
-	}
-
-	function hitung_net_payment(no) {
-		var nilai_pengajuan = $('.nilai_pengajuan_' + no).val();
-		if (nilai_pengajuan !== '') {
-			nilai_pengajuan = nilai_pengajuan.split(',').join('');
-			nilai_pengajuan = parseFloat(nilai_pengajuan);
-		}
-
-		var admin_charge = $('.admin_charge_' + no).val();
-		if (admin_charge !== '') {
-			admin_charge = admin_charge.split(',').join('');
-			admin_charge = parseFloat(admin_charge);
-		}
-
-		var nilai_pph = $('.nilai_pph_' + no).val();
-		if (nilai_pph !== '') {
-			nilai_pph = nilai_pph.split(',').join('');
-			nilai_pph = parseFloat(nilai_pph);
-		}
-
-		var net_payment = (nilai_pengajuan + admin_charge - nilai_pph);
-
-		$('.net_payment_' + no).val(net_payment.toLocaleString());
-	}
-
-	function reset_data() {
-		$.ajax({
-			type: 'post',
-			url: siteurl + active_controller + 'reset_choosed_req_payment',
-			cache: false,
-			success: function(result) {
-				DataTables();
-			}
-		});
-	}
-
-	function reject_req_payment() {
-		var reject_reason = $('#reject_reason').val();
-
-		if (reject_reason == '') {
-			Swal.fire({
-				icon: 'warning',
-				title: 'Warning !',
-				text: 'Reject Reason masih kosong !',
-				showConfirmButton: false,
-				showCancelButton: false,
-				allowEscapeKey: false,
-				allowOutsideClick: false,
-				timer: 3000
+		// ========================================
+		// INIT FILTERS
+		// ========================================
+		function initFilters() {
+			$('.select2-filter').select2({
+				minimumResultsForSearch: -1,
+				width: '100%'
 			});
 
-			return false;
+			// Set defaults
+			$('#filter_bulan_from').val(defaultBulanFrom).trigger('change.select2');
+			$('#filter_tahun_from').val(defaultTahunFrom).trigger('change.select2');
+			$('#filter_bulan_to').val(defaultBulanTo).trigger('change.select2');
+			$('#filter_tahun_to').val(defaultTahunTo).trigger('change.select2');
+			$('#filter_company').val('').trigger('change.select2');
+			$('#filter_kategori').val('').trigger('change.select2');
 		}
 
-		Swal.fire({
-			type: 'warning',
-			title: 'Are you sure ?',
-			text: 'Selected data will be rejected !',
-			showCancelButton: true
-		}).then((next) => {
-			if (next.isConfirmed) {
-				$.ajax({
-					type: 'post',
-					url: siteurl + active_controller + 'reject_req_payment',
-					cache: false,
-					data: {
-						'reject_reason': reject_reason
-					},
-					dataType: 'json',
-					success: function(result) {
-						if (result.status == '1') {
-							Swal.fire({
-								icon: 'success',
-								title: 'Success !',
-								text: result.msg,
-								showConfirmButton: false,
-								showCancelButton: false,
-								allowEscapeKey: false,
-								allowOutsideClick: false,
-								timer: 3000
-							}, function(lanjut) {
-								swal.close();
-								DataTables();
-							});
-						} else {
-							Swal.fire({
-								icon: 'warning',
-								title: 'Failed !',
-								text: result.msg,
-								showConfirmButton: false,
-								showCancelButton: false,
-								allowEscapeKey: false,
-								allowOutsideClick: false,
-								timer: 3000
-							});
-						}
-					},
-					error: function(result) {
-						Swal.fire({
-							icon: 'error',
-							title: 'Error !',
-							text: 'Please try again later !',
-							showConfirmButton: false,
-							showCancelButton: false,
-							allowEscapeKey: false,
-							allowOutsideClick: false,
-							timer: 3000
-						});
-					}
-				});
-			} else {
-				Swal.fire({
-					icon: 'success',
-					title: 'Success !',
-					text: 'Selected data did not reject !',
-					showConfirmButton: false,
-					showCancelButton: false,
-					allowEscapeKey: false,
-					allowOutsideClick: false,
-					timer: 3000
-				}, function(next) {
-					Swal.close();
-					DataTables();
-				});
-			}
-		});
-	}
-
-	$(document).on('click', '.pilih_data', function() {
-		var val_pilih = $(this).val();
-		var kategori = $(this).data('kategori');
-
-		var isChecked = $('input[value="' + val_pilih + '"]').is(':checked');
-
-		var wdo = 1;
-		if (!isChecked) {
-			wdo = 0;
+		// ========================================
+		// GET CURRENT FILTERS
+		// ========================================
+		function getFilters() {
+			return {
+				company_id: $('#filter_company').val(),
+				bulan_from: $('#filter_bulan_from').val(),
+				tahun_from: $('#filter_tahun_from').val(),
+				bulan_to: $('#filter_bulan_to').val(),
+				tahun_to: $('#filter_tahun_to').val(),
+				kategori: $('#filter_kategori').val()
+			};
 		}
 
-		$.ajax({
-			type: 'post',
-			url: siteurl + active_controller + 'added_pilih_data',
-			data: {
-				'id': val_pilih,
-				'kategori': kategori,
-				'wdo': wdo
-			},
-			cache: false,
-			success: function(result) {
+		// ========================================
+		// VALIDATE FILTERS
+		// ========================================
+		function validateFilters(filters) {
+			var tahunFrom = parseInt(filters.tahun_from);
+			var tahunTo = parseInt(filters.tahun_to);
+			var bulanFrom = parseInt(filters.bulan_from);
+			var bulanTo = parseInt(filters.bulan_to);
 
-			},
-			error: function(result) {
-				Swal.fire({
-					icon: 'error',
-					title: 'Error !',
-					text: 'Please try again later !',
-					showConfirmButton: false,
-					showCancelButton: false,
-					allowEscapeKey: false,
-					allowOutsideClick: false,
-					timer: 3000
-				});
+			if (tahunFrom > tahunTo) {
+				alert('Tahun awal tidak boleh lebih besar dari tahun akhir.');
+				return false;
 			}
-		})
-	})
-
-	//Save
-	$('#frm_data').on('submit', function(e) {
-		e.preventDefault();
-
-		Swal.fire({
-			icon: 'warning',
-			title: 'Are you sure ?',
-			text: 'The data you choose will be processed !',
-			showCancelButton: true
-		}).then((next) => {
-			if (next.isConfirmed) {
-				var formdata = $('#frm_data').serialize();
-				$.ajax({
-					type: 'post',
-					url: siteurl + active_controller + 'save_request_payment',
-					data: formdata,
-					dataType: 'json',
-					cache: false,
-					success: function(result) {
-						if (result.status == '1') {
-							Swal.fire({
-								icon: 'success',
-								title: 'Success !',
-								text: result.msg,
-								showConfirmButton: false,
-								showCancelButton: false,
-								allowEscapeKey: false,
-								allowOutsideClick: false,
-								timer: 3000
-							}).then(() => {
-								DataTables();
-							});
-						} else {
-							Swal.fire({
-								icon: 'warning',
-								title: 'Failed !',
-								text: result.msg,
-								showConfirmButton: false,
-								showCancelButton: false,
-								allowEscapeKey: false,
-								allowOutsideClick: false,
-								timer: 3000
-							}).then(() => {
-								DataTables();
-							});
-						}
-					},
-					error: function(result) {
-						Swal.fire({
-							icon: 'error',
-							title: 'Error !',
-							text: 'Please try again later !',
-							showConfirmButton: false,
-							showCancelButton: false,
-							allowEscapeKey: false,
-							allowOutsideClick: false,
-							timer: 3000
-						});
-					}
-				})
+			if (tahunFrom === tahunTo && bulanFrom > bulanTo) {
+				alert('Bulan awal tidak boleh lebih besar dari bulan akhir pada tahun yang sama.');
+				return false;
 			}
-		});
+			return true;
+		}
 
-		// var errors = "";
+		// ========================================
+		// APPLY FILTER
+		// ========================================
+		window.applyFilter = function() {
+			var filters = getFilters();
 
-		// var checked_item = $('input[name="pilih"]:checked').length;
-		// if (errors == "" && checked_item > 0) {
-		// 	swal({
-		// 			title: "Anda Yakin?",
-		// 			text: "Data Akan Disimpan!",
-		// 			type: "info",
-		// 			showCancelButton: true,
-		// 			confirmButtonText: "Ya, simpan!",
-		// 			cancelButtonText: "Tidak!",
-		// 			closeOnConfirm: false,
-		// 			closeOnCancel: true
-		// 		},
-		// 		function(isConfirm) {
-		// 			if (isConfirm) {
-		// 				var formdata = new FormData($('#frm_data')[0]);
-		// 				$.ajax({
-		// 					url: url_save,
-		// 					dataType: "json",
-		// 					type: 'POST',
-		// 					data: formdata,
-		// 					processData: false,
-		// 					contentType: false,
-		// 					success: function(msg) {
-		// 						if (msg['save'] == '1') {
-		// 							swal({
-		// 								title: "Sukses!",
-		// 								text: "Data Berhasil Di Update",
-		// 								type: "success",
-		// 								timer: 1500,
-		// 								showConfirmButton: false
-		// 							});
-		// 							window.location.href = window.location.href;
-		// 						} else {
-		// 							swal({
-		// 								title: "Gagal!",
-		// 								text: "Data Gagal Di Update",
-		// 								type: "error",
-		// 								timer: 1500,
-		// 								showConfirmButton: false
-		// 							});
-		// 						};
-		// 						console.log(msg);
-		// 					},
-		// 					error: function(msg) {
-		// 						swal({
-		// 							title: "Gagal!",
-		// 							text: "Ajax Data Gagal Di Proses",
-		// 							type: "error",
-		// 							timer: 1500,
-		// 							showConfirmButton: false
-		// 						});
-		// 						console.log(msg);
-		// 					}
-		// 				});
-		// 			}
-		// 		});
-		// } else {
-		// 	if (checked_item < 1) {
-		// 		errors = 'Please check at least 1 data before you update it !';
-		// 	}
-		// 	swal({
-		// 		title: 'Error !',
-		// 		text: errors,
-		// 		type: 'error'
-		// 	});
-		// 	return false;
-		// }
-	});
+			if (!validateFilters(filters)) {
+				return;
+			}
 
-	function DataTables() {
-		var DataTables = $('#table_req_payment').dataTable({
-			serverSide: true,
-			process: true,
-			stateSave: true,
-			paging: true,
-			destroy: true,
-			ajax: {
-				type: 'post',
-				url: siteurl + active_controller + 'get_data_req_payment',
-				dataType: 'json'
-			},
-			columns: [{
-					data: 'no'
+			// Update active filter badge text
+			var companyText = $('#filter_company option:selected').text() || 'Semua Entitas';
+			if (!filters.company_id) companyText = 'Semua Entitas';
+			var bulanToLabel = bulanIndonesia[parseInt(filters.bulan_to)] || '';
+			var badgeText = 'Export: ' + bulanToLabel + ' ' + filters.tahun_to + ' - ' + companyText;
+			$('#active_filter_badge').html('<i class="fa fa-info-circle"></i> ' + badgeText);
+
+			// Reload DataTables
+			if (dataTable) {
+				dataTable.ajax.reload(null, true);
+			}
+
+			// Reload summary cards
+			loadSummaryCards(filters);
+		};
+
+		// ========================================
+		// RESET FILTER
+		// ========================================
+		window.resetFilter = function() {
+			$('#filter_company').val('').trigger('change.select2');
+			$('#filter_bulan_from').val(defaultBulanFrom).trigger('change.select2');
+			$('#filter_tahun_from').val(defaultTahunFrom).trigger('change.select2');
+			$('#filter_bulan_to').val(defaultBulanTo).trigger('change.select2');
+			$('#filter_tahun_to').val(defaultTahunTo).trigger('change.select2');
+			$('#filter_kategori').val('').trigger('change.select2');
+
+			applyFilter();
+		};
+
+		// ========================================
+		// LOAD SUMMARY CARDS
+		// ========================================
+		function loadSummaryCards(filters) {
+			$.ajax({
+				url: '<?= site_url("request_payment/get_summary_cards"); ?>',
+				type: 'POST',
+				data: filters,
+				dataType: 'json',
+				success: function(response) {
+					$('#card_total_pengajuan').text(formatNumber(response.total_pengajuan || 0));
+					$('#card_total_nilai').text(formatNumber(response.total_nilai || 0));
+					$('#card_total_cash').text(formatNumber(response.total_cash || 0));
+					$('#card_total_kasbon').text(formatNumber(response.total_kasbon || 0));
 				},
-				{
-					data: 'no_dokumen',
-				},
-				{
-					data: 'request_by'
-				},
-				{
-					data: 'tanggal'
-				},
-				{
-					data: 'keperluan'
-				},
-				{
-					data: 'kategori'
-				},
-				{
-					data: 'nilai_pengajuan'
-				},
-				{
-					data: 'tanggal_pembayaran'
-				},
-				{
-					data: 'action'
+				error: function() {
+					$('#card_total_pengajuan').text('-');
+					$('#card_total_nilai').text('-');
+					$('#card_total_cash').text('-');
+					$('#card_total_kasbon').text('-');
 				}
-			]
+			});
+		}
+
+		// ========================================
+		// FORMAT NUMBER (dot as thousand separator)
+		// ========================================
+		function formatNumber(num) {
+			if (num === null || num === undefined || num === '') return '0';
+			num = parseInt(num);
+			if (isNaN(num)) return '0';
+			return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		}
+
+		// ========================================
+		// LOAD OTHER TAB COUNT
+		// ========================================
+		function loadOtherTabCount() {
+			var filters = getFilters();
+			var otherTab = (currentTab === 'belum_dibayar') ? 'sudah_dibayar' : 'belum_dibayar';
+			var postData = $.extend({}, filters, {
+				tab: otherTab,
+				draw: 1,
+				start: 0,
+				length: 1,
+				search: {
+					value: ''
+				}
+			});
+
+			$.ajax({
+				url: '<?= site_url("request_payment/get_data_req_payment"); ?>',
+				type: 'POST',
+				data: postData,
+				dataType: 'json',
+				success: function(response) {
+					if (otherTab === 'belum_dibayar') {
+						$('#badge_belum_dibayar').text(response.recordsTotal || 0);
+					} else {
+						$('#badge_sudah_dibayar').text(response.recordsTotal || 0);
+					}
+				}
+			});
+		}
+
+		// ========================================
+		// INIT DATATABLES
+		// ========================================
+		function initDataTable() {
+			// Destroy existing if any
+			if (dataTable) {
+				dataTable.destroy();
+				dataTable = null;
+			}
+
+			dataTable = $('#table_req_payment').DataTable({
+				processing: true,
+				serverSide: true,
+				ajax: {
+					url: '<?= site_url("request_payment/get_data_req_payment"); ?>',
+					type: 'POST',
+					data: function(d) {
+						var filters = getFilters();
+						d.company_id = filters.company_id;
+						d.bulan_from = filters.bulan_from;
+						d.tahun_from = filters.tahun_from;
+						d.bulan_to = filters.bulan_to;
+						d.tahun_to = filters.tahun_to;
+						d.kategori = filters.kategori;
+						d.tab = currentTab;
+					},
+					error: function(xhr, error, thrown) {
+						alert('Gagal memuat data. Silakan coba lagi.');
+						console.error('DataTables AJAX error:', error, thrown);
+					}
+				},
+				columns: [{
+						data: 'checkbox',
+						orderable: false,
+						searchable: false
+					},
+					{
+						data: 'no',
+						orderable: false,
+						searchable: false
+					},
+					{
+						data: 'no_dokumen'
+					},
+					{
+						data: 'diminta_oleh'
+					},
+					{
+						data: 'company'
+					},
+					{
+						data: 'tanggal'
+					},
+					{
+						data: 'tanggal_approval'
+					},
+					{
+						data: 'keperluan'
+					},
+					{
+						data: 'kategori'
+					},
+					{
+						data: 'nilai',
+						className: 'col-nilai'
+					},
+					{
+						data: 'tgl_pembayaran',
+						orderable: false,
+						searchable: false
+					}
+				],
+				order: [
+					[5, 'desc']
+				],
+				pageLength: parseInt($('#dt_entries_per_page').val()) || 10,
+				searching: true,
+				lengthChange: false,
+				dom: 'rtip',
+				language: {
+					processing: '<i class="fa fa-spinner fa-spin"></i> Memproses...',
+					emptyTable: 'Tidak ada data yang tersedia',
+					zeroRecords: 'Tidak ada data yang cocok dengan pencarian',
+					info: 'Menampilkan _START_ - _END_ dari _TOTAL_ entri',
+					infoEmpty: 'Menampilkan 0 - 0 dari 0 entri',
+					infoFiltered: '(disaring dari _MAX_ total entri)',
+					paginate: {
+						first: 'Pertama',
+						last: 'Terakhir',
+						next: 'Selanjutnya',
+						previous: 'Sebelumnya'
+					}
+				},
+				drawCallback: function(settings) {
+					// Update tab badge counts from server response
+					var json = this.api().ajax.json();
+					if (json) {
+						if (currentTab === 'belum_dibayar') {
+							$('#badge_belum_dibayar').text(json.recordsTotal || 0);
+						} else {
+							$('#badge_sudah_dibayar').text(json.recordsTotal || 0);
+						}
+					}
+					// Load the opposite tab count
+					loadOtherTabCount();
+
+					// Initialize datepicker on rendered date inputs
+					$('#table_req_payment .datepicker').datepicker({
+						format: 'dd/mm/yyyy',
+						autoclose: true,
+						todayHighlight: true,
+						orientation: 'bottom auto'
+					});
+				}
+			});
+		}
+
+		// ========================================
+		// TAB SWITCHING
+		// ========================================
+		$('#payment_tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+			var tab = $(e.target).data('tab');
+			currentTab = tab;
+
+			// Reinitialize DataTables with new tab
+			initDataTable();
+			toggleProcessSection();
 		});
-	}
+
+		// ========================================
+		// ENTRIES PER PAGE CHANGE
+		// ========================================
+		$('#dt_entries_per_page').on('change', function() {
+			if (dataTable) {
+				dataTable.page.len(parseInt($(this).val())).draw();
+			}
+		});
+
+		// ========================================
+		// CUSTOM SEARCH
+		// ========================================
+		$('#dt_search').on('keyup', function() {
+			if (dataTable) {
+				dataTable.search($(this).val()).draw();
+			}
+		});
+
+		// ========================================
+		// CHECK ALL CHECKBOX
+		// ========================================
+		$('#check_all').on('change', function() {
+			var isChecked = $(this).is(':checked');
+			$('#table_req_payment tbody input[type="checkbox"]').prop('checked', isChecked);
+		});
+
+		// ========================================
+		// EXPORT EXCEL
+		// ========================================
+		window.exportExcel = function() {
+			var filters = getFilters();
+
+			if (!validateFilters(filters)) {
+				return;
+			}
+
+			var params = [];
+			if (filters.company_id) params.push('company_id=' + encodeURIComponent(filters.company_id));
+			if (filters.bulan_from) params.push('bulan_from=' + encodeURIComponent(filters.bulan_from));
+			if (filters.tahun_from) params.push('tahun_from=' + encodeURIComponent(filters.tahun_from));
+			if (filters.bulan_to) params.push('bulan_to=' + encodeURIComponent(filters.bulan_to));
+			if (filters.tahun_to) params.push('tahun_to=' + encodeURIComponent(filters.tahun_to));
+			if (filters.kategori) params.push('kategori=' + encodeURIComponent(filters.kategori));
+
+			var url = '<?= site_url("request_payment/download_excel_request_payment"); ?>';
+			if (params.length > 0) {
+				url += '?' + params.join('&');
+			}
+
+			window.location = url;
+		};
+
+		// ========================================
+		// PROCESS / REJECT FUNCTIONS
+		// ========================================
+
+		// Toggle process section visibility based on active tab
+		function toggleProcessSection() {
+			if (currentTab === 'belum_dibayar') {
+				$('#process_section').show();
+			} else {
+				$('#process_section').hide();
+			}
+		}
+
+		// Track checkbox selection via AJAX (same as backup)
+		$(document).on('click', '.pilih_data', function() {
+			var val_pilih = $(this).val();
+			var kategori = $(this).data('kategori');
+			var isChecked = $(this).is(':checked');
+			var wdo = isChecked ? 1 : 0;
+
+			$.ajax({
+				type: 'post',
+				url: '<?= site_url("request_payment/added_pilih_data"); ?>',
+				data: {
+					id: val_pilih,
+					kategori: kategori,
+					wdo: wdo
+				},
+				cache: false
+			});
+		});
+
+		// Reset checked items (clear tr_added_req_payment)
+		window.resetChecked = function() {
+			$.ajax({
+				type: 'post',
+				url: '<?= site_url("request_payment/reset_choosed_req_payment"); ?>',
+				cache: false,
+				success: function() {
+					initDataTable();
+				}
+			});
+		};
+
+		// Process payment (submit selected data)
+		window.processReqPayment = function() {
+			var checked = $('#table_req_payment tbody input.pilih_data:checked');
+			if (checked.length === 0) {
+				alert('Pilih minimal 1 data sebelum memproses!');
+				return;
+			}
+
+			if (!confirm('Data yang dipilih akan diproses. Lanjutkan?')) return;
+
+			var formData = $('#table_req_payment tbody input').serialize();
+
+			$.ajax({
+				type: 'post',
+				url: '<?= site_url("request_payment/save_request_payment"); ?>',
+				data: formData,
+				dataType: 'json',
+				cache: false,
+				success: function(result) {
+					if (result.status == '1') {
+						alert(result.msg || 'Data berhasil diproses!');
+						initDataTable();
+						loadSummaryCards(getFilters());
+					} else {
+						alert(result.msg || 'Gagal memproses data!');
+					}
+				},
+				error: function() {
+					alert('Terjadi error. Silakan coba lagi.');
+				}
+			});
+		};
+
+		// Reject selected data
+		window.rejectReqPayment = function() {
+			var reject_reason = $('#reject_reason').val();
+			if (reject_reason === '') {
+				alert('Reject Reason masih kosong!');
+				return;
+			}
+
+			var checked = $('#table_req_payment tbody input.pilih_data:checked');
+			if (checked.length === 0) {
+				alert('Pilih minimal 1 data sebelum reject!');
+				return;
+			}
+
+			if (!confirm('Data yang dipilih akan di-reject. Lanjutkan?')) return;
+
+			$.ajax({
+				type: 'post',
+				url: '<?= site_url("request_payment/reject_req_payment"); ?>',
+				data: {
+					reject_reason: reject_reason
+				},
+				dataType: 'json',
+				cache: false,
+				success: function(result) {
+					if (result.status == '1') {
+						alert(result.msg || 'Data berhasil di-reject!');
+						$('#reject_reason').val('');
+						initDataTable();
+						loadSummaryCards(getFilters());
+					} else {
+						alert(result.msg || 'Gagal reject data!');
+					}
+				},
+				error: function() {
+					alert('Terjadi error. Silakan coba lagi.');
+				}
+			});
+		};
+
+		// ========================================
+		// INITIALIZATION
+		// ========================================
+		initFilters();
+		initDataTable();
+		loadSummaryCards(getFilters());
+		toggleProcessSection();
+	});
 </script>
