@@ -170,18 +170,26 @@
                     <th class="text-center">Total Credit</th>
                     <th class="text-center">Saldo Akhir</th>
                     <th class="text-center">Status Alokasi</th>
+                    <th class="text-center"><input type="checkbox" id="check_all"></th>
                 </tr>
             </thead>
             <tbody>
 
             </tbody>
         </table>
+        <div style="margin-top: 15px;">
+            <button type="button" class="btn btn-danger" id="btn_rollback_batch">
+                <i class="fa fa-undo"></i> Rollback Data Terpilih
+            </button>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
+    var checkedIds = [];
+
     $(document).ready(function() {
         DataTables();
 
@@ -259,8 +267,148 @@
                 },
                 {
                     data: 'status_alokasi'
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
                 }
-            ]
+            ],
+            drawCallback: function(settings) {
+                $('.check_item').each(function() {
+                    var id = String($(this).data('id'));
+                    if (checkedIds.indexOf(id) !== -1) {
+                        $(this).prop('checked', true);
+                    } else {
+                        $(this).prop('checked', false);
+                    }
+                });
+
+                var allChecked = true;
+                var anyCheckbox = false;
+                $('.check_item').each(function() {
+                    anyCheckbox = true;
+                    if (!$(this).prop('checked')) {
+                        allChecked = false;
+                    }
+                });
+                if (anyCheckbox && allChecked) {
+                    $('#check_all').prop('checked', true);
+                } else {
+                    $('#check_all').prop('checked', false);
+                }
+            }
         });
     }
+
+    $(document).on('change', '.check_item', function() {
+        var id = String($(this).data('id'));
+        var isChecked = $(this).prop('checked');
+        
+        var index = checkedIds.indexOf(id);
+        if (isChecked) {
+            if (index === -1) {
+                checkedIds.push(id);
+            }
+        } else {
+            if (index !== -1) {
+                checkedIds.splice(index, 1);
+            }
+        }
+        
+        var allChecked = true;
+        var anyCheckbox = false;
+        $('.check_item').each(function() {
+            anyCheckbox = true;
+            if (!$(this).prop('checked')) {
+                allChecked = false;
+            }
+        });
+        if (anyCheckbox && allChecked) {
+            $('#check_all').prop('checked', true);
+        } else {
+            $('#check_all').prop('checked', false);
+        }
+    });
+
+    $(document).on('change', '#check_all', function() {
+        var isChecked = $(this).prop('checked');
+        $('.check_item').each(function() {
+            var id = String($(this).data('id'));
+            $(this).prop('checked', isChecked);
+            
+            var index = checkedIds.indexOf(id);
+            if (isChecked) {
+                if (index === -1) {
+                    checkedIds.push(id);
+                }
+            } else {
+                if (index !== -1) {
+                    checkedIds.splice(index, 1);
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '#btn_rollback_batch', function(e) {
+        e.preventDefault();
+        if (checkedIds.length === 0) {
+            swal({
+                title: "Warning",
+                text: "Silakan pilih minimal satu data untuk di-rollback!",
+                type: "warning"
+            });
+            return;
+        }
+
+        swal({
+                title: "Are you sure?",
+                text: "Anda akan me-rollback " + checkedIds.length + " data terpilih ke menu Alokasi!",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonClass: "btn-danger",
+                confirmButtonText: "Yes, Rollback All!",
+                cancelButtonText: "No, cancel!",
+                closeOnConfirm: false,
+                closeOnCancel: false
+            },
+            function(isConfirm) {
+                if (isConfirm) {
+                    $.ajax({
+                        type: 'POST',
+                        url: siteurl + active_controller + 'rollback',
+                        dataType: 'json',
+                        data: {
+                            'ids': checkedIds
+                        },
+                        success: function(result) {
+                            if (result.status == '1') {
+                                swal({
+                                    title: "Success",
+                                    text: result.pesan,
+                                    type: "success"
+                                }, function() {
+                                    window.location.reload(true);
+                                });
+                            } else {
+                                swal({
+                                    title: "Error",
+                                    text: result.pesan,
+                                    type: "error"
+                                });
+                            }
+                        },
+                        error: function() {
+                            swal({
+                                title: "Error",
+                                text: "Failed to process request!",
+                                type: "error"
+                            });
+                        }
+                    });
+                } else {
+                    swal("Cancelled", "Data tidak jadi di-rollback :)", "error");
+                }
+            });
+    });
 </script>
