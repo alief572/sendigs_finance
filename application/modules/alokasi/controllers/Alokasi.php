@@ -231,12 +231,31 @@ class Alokasi extends Admin_Controller
                     exit;
                 }
 
-                $insert_detail = $this->db->insert_batch('tr_alokasi_detail', $arr_detail);
-                if (!$insert_detail) {
-                    $this->db->trans_rollback();
+                foreach ($arr_detail as $detail) {
+                    $insert_det = $this->db->insert('tr_alokasi_detail', $detail);
+                    if (!$insert_det) {
+                        $this->db->trans_rollback();
+                        print_r($this->db->error($insert_det));
+                        exit;
+                    }
+                    $detail_id = $this->db->insert_id();
 
-                    print_r($this->db->error($insert_detail));
-                    exit;
+                    $log_desc = 'Upload rekening koran: ' . $detail['keterangan'] . 
+                                ' (Debit: Rp. ' . number_format($detail['nominal_debit'], 2) . 
+                                ', Kredit: Rp. ' . number_format($detail['nominal_kredit'], 2) . ')';
+                    $log_data = [
+                        'id_alokasi_detail' => $detail_id,
+                        'action' => 'UPLOAD_REKENING',
+                        'deskripsi_log' => $log_desc,
+                        'created_by' => $this->auth->user_id(),
+                        'created_date' => date('Y-m-d H:i:s')
+                    ];
+                    $insert_log = $this->db->insert('log_alokasi_history', $log_data);
+                    if (!$insert_log) {
+                        $this->db->trans_rollback();
+                        print_r($this->db->error($insert_log));
+                        exit;
+                    }
                 }
 
                 if ($this->db->trans_status() === false) {
