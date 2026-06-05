@@ -34,4 +34,34 @@ class Unlocated_penerimaan extends Admin_Controller
     {
         $this->Unlocated_penerimaan_model->get_unlocated_penerimaan();
     }
+
+    public function rollback()
+    {
+        $ids = $this->input->post('ids');
+
+        if (empty($ids) || !is_array($ids)) {
+            $response = [
+                'status' => 0,
+                'pesan' => 'Tidak ada data terpilih untuk di-rollback!'
+            ];
+            echo json_encode($response);
+            return;
+        }
+
+        $rollback = $this->Unlocated_penerimaan_model->rollback_data($ids);
+
+        if ($rollback) {
+            $response = [
+                'status' => 1,
+                'pesan' => 'Seluruh data terpilih berhasil di-rollback ke Alokasi!'
+            ];
+        } else {
+            $response = [
+                'status' => 0,
+                'pesan' => 'Gagal me-rollback data! Seluruh transaksi dibatalkan.'
+            ];
+        }
+
+        echo json_encode($response);
+    }
 }
