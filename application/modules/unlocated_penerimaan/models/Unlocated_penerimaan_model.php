@@ -83,7 +83,8 @@ class Unlocated_penerimaan_model extends BF_Model
                 'debit' => number_format($item['nominal_debit'], 2),
                 'kredit' => number_format($item['nominal_kredit'], 2),
                 'saldo' => number_format($item['saldo'], 2),
-                'status_alokasi' => $status
+                'status_alokasi' => $status,
+                'action' => '<div class="text-center"><input type="checkbox" class="check_item" data-id="' . $item['id'] . '"></div>'
             ];
         }
 
@@ -108,5 +109,60 @@ class Unlocated_penerimaan_model extends BF_Model
         if (count($check_detail) < 1) {
             $this->db->update('tr_alokasi', ['status_alokasi' => 2], ['id' => $id]);
         }
+    }
+
+    public function rollback_data($ids)
+    {
+        if (empty($ids) || !is_array($ids)) {
+            return false;
+        }
+
+        $this->db->trans_start();
+
+        foreach ($ids as $id) {
+            // Get tr_alokasi_split using the ID passed (which is actually tr_alokasi_split.id)
+            $split = $this->db->get_where('tr_alokasi_split', ['id' => $id])->row_array();
+            
+            if (!$split) {
+                // If it's already deleted or not found, we could continue or rollback, but let's just continue
+                continue;
+            }
+
+            $id_alokasi_detail = $split['id_alokasi_detail'];
+
+            // Get id_header from tr_alokasi_detail
+            $detail = $this->db->get_where('tr_alokasi_detail', ['id' => $id_alokasi_detail])->row_array();
+            if (!$detail) {
+                $this->db->trans_rollback();
+                return false;
+            }
+            $id_header = $detail['id_header'];
+
+            // FULL ROLLBACK: Delete ALL split records for this transaction
+            $this->db->delete('tr_alokasi_split', ['id_alokasi_detail' => $id_alokasi_detail]);
+
+            // Update tr_alokasi_detail sts to 0 (Open)
+            $this->db->update('tr_alokasi_detail', ['sts' => '0'], ['id' => $id_alokasi_detail]);
+
+            // Check if we need to open the header again
+            $this->db->select('a.id');
+            $this->db->from('tr_alokasi_detail a');
+            $this->db->where('a.id_header', $id_header);
+            $this->db->where('a.sts', '0');
+            $check_detail = $this->db->get()->result_array();
+
+            if (count($check_detail) > 0) {
+                // If there's at least one open detail, the header must be 1 (Open)
+                $this->db->update('tr_alokasi', ['status_alokasi' => 1], ['id' => $id_header]);
+            }
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return false;
+        }
+
+        return true;
     }
 }
