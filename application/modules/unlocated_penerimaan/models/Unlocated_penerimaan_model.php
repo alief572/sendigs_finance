@@ -138,6 +138,33 @@ class Unlocated_penerimaan_model extends BF_Model
             }
             $id_header = $detail['id_header'];
 
+            // Get all split details to be deleted for logging
+            $splits_to_rollback = $this->db->get_where('tr_alokasi_split', ['id_alokasi_detail' => $id_alokasi_detail])->result_array();
+            $jenis_labels = [
+                '1' => 'Penerimaan Piutang',
+                '2' => 'Unlocated Penerimaan',
+                '3' => 'Pengembalian Kasbon',
+                '4' => 'Mutasi',
+                '5' => 'Transaksi Bank',
+                '6' => 'Pembayaran',
+                '7' => 'Alokasi Kalibrasi'
+            ];
+            $split_details = [];
+            foreach ($splits_to_rollback as $split_item) {
+                $label = isset($jenis_labels[$split_item['jenis_alokasi']]) ? $jenis_labels[$split_item['jenis_alokasi']] : 'Unknown';
+                $split_details[] = $label . ' (Rp. ' . number_format($split_item['nominal'], 2) . ')';
+            }
+            $log_desc = 'Rollback alokasi transaksi. Detail alokasi yang dibatalkan: ' . implode(', ', $split_details) . '. Transaksi dikembalikan ke status Open.';
+            
+            $log_data = [
+                'id_alokasi_detail' => $id_alokasi_detail,
+                'action' => 'ROLLBACK_UNLOCATED',
+                'deskripsi_log' => $log_desc,
+                'created_by' => $this->auth->user_id(),
+                'created_date' => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('log_alokasi_history', $log_data);
+
             // FULL ROLLBACK: Delete ALL split records for this transaction
             $this->db->delete('tr_alokasi_split', ['id_alokasi_detail' => $id_alokasi_detail]);
 

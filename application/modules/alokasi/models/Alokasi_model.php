@@ -214,6 +214,31 @@ class Alokasi_model extends BF_Model
         // Update tr_alokasi_detail.sts = 8 for the original transaction
         $this->db->query("UPDATE tr_alokasi_detail SET sts = '8' WHERE id = ?", array($id_detail));
 
+        // Log SPLIT_ALOKASI
+        $jenis_labels = [
+            '1' => 'Penerimaan Piutang',
+            '2' => 'Unlocated Penerimaan',
+            '3' => 'Pengembalian Kasbon',
+            '4' => 'Mutasi',
+            '5' => 'Transaksi Bank',
+            '6' => 'Pembayaran',
+            '7' => 'Alokasi Kalibrasi'
+        ];
+        $split_details = [];
+        foreach ($splits as $split) {
+            $label = isset($jenis_labels[$split['jenis_alokasi']]) ? $jenis_labels[$split['jenis_alokasi']] : 'Unknown';
+            $split_details[] = $label . ' (Rp. ' . number_format($split['nominal'], 2) . ')';
+        }
+        $log_desc = 'Split alokasi transaksi menjadi: ' . implode(', ', $split_details);
+        $log_data = [
+            'id_alokasi_detail' => $id_detail,
+            'action' => 'SPLIT_ALOKASI',
+            'deskripsi_log' => $log_desc,
+            'created_by' => $user_id,
+            'created_date' => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('log_alokasi_history', $log_data);
+
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === false) {
