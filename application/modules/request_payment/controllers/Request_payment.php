@@ -2726,6 +2726,38 @@ class Request_payment extends Admin_Controller
 
 					$this->db->update('tr_pr_non_po', ['sts' => '2'], ['no_non_po' => $item->no_doc]);
 				}
+
+				if ($item->tipe == 'Direct Payment') {
+					$this->db->select('a.ids, a.no_doc, a.tgl_doc, a.deskripsi, a.grand_total, a.bank, a.bank_number, a.bank_account, b.nm_lengkap as nama');
+					$this->db->from('tr_direct_payment a');
+					$this->db->join('users b', 'b.id_user = a.created_by', 'left');
+					$this->db->where('a.no_doc', $item->no_doc);
+					$get_direct_payment = $this->db->get()->row();
+
+					if ($get_direct_payment) {
+						$arr_insert[] = [
+							'no_doc' => $item->no_doc,
+							'nama' => $get_direct_payment->nama,
+							'tgl_doc' => $get_direct_payment->tgl_doc,
+							'keperluan' => $get_direct_payment->deskripsi,
+							'tipe' => 'direct_payment',
+							'jumlah' => $get_direct_payment->grand_total,
+							'status' => 0,
+							'tanggal' => $tanggal_pembayaran,
+							'created_by' => $this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id' => $get_direct_payment->bank,
+							'accnumber' => $get_direct_payment->bank_number,
+							'accname' => $get_direct_payment->bank_account,
+							'ids' => $get_direct_payment->ids,
+							'currency' => 'IDR',
+							'admin_bank' => 0,
+							'total_pph' => 0
+						];
+
+						$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $item->no_doc]);
+					}
+				}
 			}
 		}
 
@@ -2854,6 +2886,22 @@ class Request_payment extends Admin_Controller
 					}
 				}
 
+				if ($item->tipe == 'Direct Payment') {
+					$data_reject = [
+						'sts' => '9',
+						'sts_reject' => '1',
+						'reject_reason' => $reject_reason
+					];
+
+					$update_reject_direct_payment = $this->db->update('tr_direct_payment', $data_reject, ['no_doc' => $item->no_doc]);
+					if (!$update_reject_direct_payment) {
+						$this->db->trans_rollback();
+
+						print_r($this->db->last_query());
+						exit;
+					}
+				}
+
 				if ($this->db->trans_status() === false) {
 					$this->db->trans_rollback();
 
@@ -2898,11 +2946,9 @@ class Request_payment extends Admin_Controller
 		];
 
 		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment($filters);
-		$payment_approve_lookup = $this->Request_payment_model->get_payment_approve_lookup();
 
 		$data = [
-			'list_all_request_payment' => $list_all_request_payment,
-			'payment_approve_lookup' => $payment_approve_lookup
+			'list_all_request_payment' => $list_all_request_payment
 		];
 
 		$this->load->view('download_excel', $data);

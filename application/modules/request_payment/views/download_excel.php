@@ -64,7 +64,13 @@ function get_tanggal_approval_tagihan($item, $CI)
                 $tgl_approve = $row->approved_date;
             }
             break;
-        // Direct Payment, Purchase Invoice: kosongkan
+        case 'Direct Payment':
+            $row = $CI->db->select('approved_on')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
+            if ($row && !empty($row->approved_on)) {
+                $tgl_approve = $row->approved_on;
+            }
+            break;
+        // Purchase Invoice: kosongkan
         default:
             $tgl_approve = '';
             break;
@@ -102,8 +108,6 @@ function get_tanggal_approval_tagihan($item, $CI)
             <th>Kategori</th>
             <th>Nilai Pengajuan</th>
             <th>Tanggal di Approve</th>
-            <th>Tanggal Dibayar</th>
-            <th>Bulan Dibayar</th>
         </tr>
     </thead>
     <tbody>
@@ -149,18 +153,6 @@ function get_tanggal_approval_tagihan($item, $CI)
                 $raw_tgl_approve = get_tanggal_approval_tagihan($item, $CI);
                 $tgl_approve = format_tanggal_indo($raw_tgl_approve, $bulan_indonesia);
 
-                // Tanggal Dibayar & Bulan Dibayar (dari payment_approve.tgl_bayar)
-                $tgl_dibayar = '';
-                $bulan_dibayar = '';
-                if (isset($payment_approve_lookup[$item->no_dokumen])) {
-                    $pa = $payment_approve_lookup[$item->no_dokumen];
-                    if (!empty($pa['tgl_bayar']) && strtotime($pa['tgl_bayar']) !== false) {
-                        $tgl_dibayar = format_tanggal_indo($pa['tgl_bayar'], $bulan_indonesia);
-                        $month_bayar = (int) date('m', strtotime($pa['tgl_bayar']));
-                        $bulan_dibayar = $bulan_indonesia[$month_bayar];
-                    }
-                }
-
                 // Nilai Pengajuan
                 $nilai = (!empty($item->nilai_pengajuan)) ? number_format($item->nilai_pengajuan, 0, ',', '.') : '0';
 
@@ -176,8 +168,6 @@ function get_tanggal_approval_tagihan($item, $CI)
                 echo '<td style="text-align: center;">' . $item->kategori . '</td>';
                 echo '<td style="text-align: right;">' . $nilai . '</td>';
                 echo '<td style="text-align: center;">' . $tgl_approve . '</td>';
-                echo '<td style="text-align: center;">' . $tgl_dibayar . '</td>';
-                echo '<td style="text-align: center;">' . $bulan_dibayar . '</td>';
                 echo '</tr>';
             }
         }
