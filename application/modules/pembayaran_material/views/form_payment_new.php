@@ -11,8 +11,6 @@ $nm_supplier = [];
 
 foreach ($results['result_payment'] as $item) {
 
-
-
 	$get_rec_invoice = $this->db->get_where('tr_invoice_po', ['id' => $item->no_doc])->row();
 
 	if (!empty($get_rec_invoice)) {
