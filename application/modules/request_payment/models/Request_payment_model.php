@@ -492,6 +492,10 @@ class Request_payment_model extends BF_Model
         if ($tab == 'sudah_dibayar') {
             // "Sudah Dibayar": records that have been paid (tgl_bayar IS NOT NULL)
             $this->db->where('pa.tgl_bayar IS NOT NULL');
+        } elseif ($tab == 'menunggu_pembayaran') {
+            // "Menunggu Pembayaran": status = 2 but not yet paid
+            $this->db->where('a.status', '2');
+            $this->db->where('pa.tgl_bayar IS NULL');
         } else {
             // "Belum Dibayar": only records with status = 1
             $this->db->where('a.status', '1');
@@ -541,6 +545,7 @@ class Request_payment_model extends BF_Model
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get();
+
 
         // print_r($this->db->last_query());
         // exit;
@@ -642,7 +647,7 @@ class Request_payment_model extends BF_Model
             $nilai_html = '<span style="display:block;text-align:right;">' . $nilai . '</span>';
 
             // Checkbox - only show for "Belum Dibayar" tab
-            if ($tab == 'sudah_dibayar') {
+            if ($tab == 'sudah_dibayar' || $tab == 'menunggu_pembayaran') {
                 $checkbox_html = '';
             } else {
                 $checked = in_array($item->no_dokumen, $added_docs) ? ' checked' : '';
@@ -655,6 +660,9 @@ class Request_payment_model extends BF_Model
             if ($tab == 'sudah_dibayar' && !empty($item->tgl_bayar)) {
                 // Show actual payment date for "Sudah Dibayar"
                 $tgl_pembayaran_html = date('d-M-Y', strtotime($item->tgl_bayar));
+            } elseif ($tab == 'menunggu_pembayaran' && !empty($item->tanggal)) {
+                // Show previously inputted payment date for "Menunggu Pembayaran"
+                $tgl_pembayaran_html = date('d/m/Y', strtotime($item->tanggal));
             } else {
                 // Date picker input for "Belum Dibayar"
                 $tgl_pembayaran_html = '<input type="text" class="form-control form-control-sm datepicker" name="tanggal_pembayaran_' . $item->no_dokumen . '" placeholder="dd/mm/yyyy" autocomplete="off">';
@@ -694,7 +702,13 @@ class Request_payment_model extends BF_Model
                         $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_date));
                     }
                     break;
-                // Direct Payment, Purchase Invoice: kosongkan
+                case 'Direct Payment':
+                    $row_approval = $this->db->select('created_date')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->created_date)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_date));
+                    }
+                    break;
+                // Purchase Invoice: kosongkan
                 default:
                     $tanggal_approval = '';
                     break;
@@ -736,13 +750,12 @@ class Request_payment_model extends BF_Model
         $this->db->from('request_payment a');
         $this->db->join('payment_approve b', 'b.no_doc = a.no_doc', 'left');
         $this->db->where('b.no_doc IS NULL');
-        $this->db->where('a.tipe <>', 'direct_payment');
         $get_request_payment = $this->db->get()->result_array();
 
         $no = 0;
         $no2 = 1;
         foreach ($get_request_payment as $item) {
-            $no_coa_bank = explode(' - ', $item['bank_name']);
+            $no_coa_bank = explode(' - ', (string)$item['bank_name']);
             $no_coa_bank = $no_coa_bank[0];
 
             $kode_bank = '';
@@ -1015,6 +1028,32 @@ class Request_payment_model extends BF_Model
 
             }
 
+            if ($item['tipe'] == 'direct_payment') {
+                $id_detail = $this->generate_id_detail($no2);
+
+                $dtl = $this->db->get_where('tr_direct_payment', ['no_doc' => $item['no_doc']])->row();
+
+                if ($dtl) {
+                    $arr_detail[] = [
+                        'id'         => $id_detail,
+                        'payment_id' => $Id,
+                        'no_doc'     => $dtl->no_doc,
+                        'tgl_doc'    => $dtl->tgl_doc,
+                        'deskripsi'  => $dtl->deskripsi,
+                        'qty'        => '1',
+                        'harga'      => $dtl->grand_total,
+                        'total'      => $dtl->grand_total,
+                        'keterangan' => $dtl->deskripsi,
+                        'doc_file'   => '',
+                        'coa'        => '',
+                        'created_by' => $this->auth->user_name(),
+                        'created_on' => date("Y-m-d H:i:s"),
+                    ];
+
+                    $no2++;
+                }
+            }
+
             $no++;
         }
 
@@ -1101,11 +1140,8 @@ class Request_payment_model extends BF_Model
         // JOIN payment_approve for tgl_bayar
         $this->db->join('(SELECT no_doc, MAX(tgl_bayar) as tgl_bayar FROM payment_approve GROUP BY no_doc) pa', 'pa.no_doc = a.no_dokumen', 'left');
 
-        // Data = gabungan tab Belum Dibayar (status=1) + Sudah Dibayar (tgl_bayar IS NOT NULL)
-        $this->db->group_start();
+        // Export only "Belum Dibayar" data (status = 1)
         $this->db->where('a.status', '1');
-        $this->db->or_where('pa.tgl_bayar IS NOT NULL');
-        $this->db->group_end();
 
         // Apply periode filter if provided
         if (!empty($bulan_from) && !empty($tahun_from) && !empty($bulan_to) && !empty($tahun_to)) {

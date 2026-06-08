@@ -343,6 +343,11 @@ $default_bulan_from = 1; // Januari
 					</a>
 				</li>
 				<li>
+					<a href="#tab_menunggu_pembayaran" data-toggle="tab" data-tab="menunggu_pembayaran">
+						Menunggu Pembayaran <span class="badge" style="background-color:#0073b7;color:#fff;" id="badge_menunggu_pembayaran">0</span>
+					</a>
+				</li>
+				<li>
 					<a href="#tab_sudah_dibayar" data-toggle="tab" data-tab="sudah_dibayar">
 						Sudah Dibayar <span class="badge tab-badge-sudah" id="badge_sudah_dibayar">0</span>
 					</a>
@@ -350,6 +355,8 @@ $default_bulan_from = 1; // Januari
 			</ul>
 			<div class="tab-content">
 				<div class="tab-pane active" id="tab_belum_dibayar">
+				</div>
+				<div class="tab-pane" id="tab_menunggu_pembayaran">
 				</div>
 				<div class="tab-pane" id="tab_sudah_dibayar">
 				</div>
@@ -583,29 +590,36 @@ $default_bulan_from = 1; // Januari
 		// ========================================
 		function loadOtherTabCount() {
 			var filters = getFilters();
-			var otherTab = (currentTab === 'belum_dibayar') ? 'sudah_dibayar' : 'belum_dibayar';
-			var postData = $.extend({}, filters, {
-				tab: otherTab,
-				draw: 1,
-				start: 0,
-				length: 1,
-				search: {
-					value: ''
-				}
-			});
+			var allTabs = ['belum_dibayar', 'menunggu_pembayaran', 'sudah_dibayar'];
 
-			$.ajax({
-				url: '<?= site_url("request_payment/get_data_req_payment"); ?>',
-				type: 'POST',
-				data: postData,
-				dataType: 'json',
-				success: function(response) {
-					if (otherTab === 'belum_dibayar') {
-						$('#badge_belum_dibayar').text(response.recordsTotal || 0);
-					} else {
-						$('#badge_sudah_dibayar').text(response.recordsTotal || 0);
+			allTabs.forEach(function(tabName) {
+				if (tabName === currentTab) return;
+
+				var postData = $.extend({}, filters, {
+					tab: tabName,
+					draw: 1,
+					start: 0,
+					length: 1,
+					search: {
+						value: ''
 					}
-				}
+				});
+
+				$.ajax({
+					url: '<?= site_url("request_payment/get_data_req_payment"); ?>',
+					type: 'POST',
+					data: postData,
+					dataType: 'json',
+					success: function(response) {
+						if (tabName === 'belum_dibayar') {
+							$('#badge_belum_dibayar').text(response.recordsTotal || 0);
+						} else if (tabName === 'menunggu_pembayaran') {
+							$('#badge_menunggu_pembayaran').text(response.recordsTotal || 0);
+						} else {
+							$('#badge_sudah_dibayar').text(response.recordsTotal || 0);
+						}
+					}
+				});
 			});
 		}
 
@@ -708,6 +722,8 @@ $default_bulan_from = 1; // Januari
 					if (json) {
 						if (currentTab === 'belum_dibayar') {
 							$('#badge_belum_dibayar').text(json.recordsTotal || 0);
+						} else if (currentTab === 'menunggu_pembayaran') {
+							$('#badge_menunggu_pembayaran').text(json.recordsTotal || 0);
 						} else {
 							$('#badge_sudah_dibayar').text(json.recordsTotal || 0);
 						}
