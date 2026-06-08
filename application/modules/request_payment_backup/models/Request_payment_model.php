@@ -1,9 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-// Define cross-database constants if not already defined
-if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
-if (!defined('DBHRIS')) define('DBHRIS', 'hr_sentral');
-
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022
@@ -438,288 +434,135 @@ class Request_payment_model extends BF_Model
         return $kodecollect;
     }
 
-    /**
-     * Get data for DataTables server-side processing with filters, tab logic, and company derivation.
-     *
-     * @param string|null $company_id   Company ID from kons_tr_company (7, 3, or 4)
-     * @param string|null $bulan_from   Start month (1-12)
-     * @param string|null $tahun_from   Start year
-     * @param string|null $bulan_to     End month (1-12)
-     * @param string|null $tahun_to     End year
-     * @param string|null $kategori     Category filter
-     * @param string      $tab          Active tab: 'belum_dibayar' or 'sudah_dibayar'
-     */
-    public function get_data_req_payment($company_id = null, $bulan_from = null, $tahun_from = null, $bulan_to = null, $tahun_to = null, $kategori = null, $tab = 'belum_dibayar')
+    public function get_data_req_payment()
     {
-        $draw   = $this->input->post('draw');
+        $draw = $this->input->post('draw');
         $length = $this->input->post('length');
-        $start  = $this->input->post('start');
+        $start = $this->input->post('start');
         $search = $this->input->post('search');
 
-        // Default periode to current month/year if not provided
-        $bulan_from = !empty($bulan_from) ? $bulan_from : date('m');
-        $tahun_from = !empty($tahun_from) ? $tahun_from : date('Y');
-        $bulan_to   = !empty($bulan_to) ? $bulan_to : date('m');
-        $tahun_to   = !empty($tahun_to) ? $tahun_to : date('Y');
-
-        // Hardcode map: hris_companies.id => kons_tr_company.id
-        $company_map = ['COM003' => 7, 'COM006' => 3, 'COM012' => 4];
-
-        // Build company names lookup from db_consultant_new.kons_tr_company using raw query
-        $company_names = [];
-        $company_query = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
-        if ($company_query) {
-            foreach ($company_query->result() as $comp) {
-                $company_names[$comp->id] = $comp->nama;
-            }
-        }
-
-
-        // print_r($company_names);
-        // exit;
-
-        // --- Build the main query ---
-        $this->db->select('a.*, d.id as id_company, pa.tgl_bayar');
+        $this->db->select('a.*');
         $this->db->from('v_request_payment a');
-        $this->db->join('users b', 'b.username = a.request_by', 'left');
-        $this->db->join('departments c', 'c.id = b.department_id', 'left');
-        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+        $this->db->where('a.status', '1');
 
-        // JOIN payment_approve to get tgl_bayar (latest record per no_doc)
-        $this->db->join('(SELECT no_doc, MAX(tgl_bayar) as tgl_bayar FROM payment_approve GROUP BY no_doc) pa', 'pa.no_doc = a.no_dokumen', 'left');
-
-        // Tab logic
-        if ($tab == 'sudah_dibayar') {
-            // "Sudah Dibayar": records that have been paid (tgl_bayar IS NOT NULL)
-            $this->db->where('pa.tgl_bayar IS NOT NULL');
-        } else {
-            // "Belum Dibayar": only records with status = 1
-            $this->db->where('a.status', '1');
-        }
-
-        // Apply periode filter
-        $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-        $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
-        $this->db->where('a.tanggal >=', $date_from);
-        $this->db->where('a.tanggal <=', $date_to);
-
-        // Apply kategori filter if non-null
-        if (!empty($kategori)) {
-            $this->db->where('a.kategori', $kategori);
-        }
-
-        // Apply company_id filter if non-null
-        if (!empty($company_id)) {
-            // company_id from dropdown = kons_tr_company.id (7, 3, 4)
-            // Reverse map to hris_companies.id
-            $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
-        }
-
-        // Count total records (before search filter)
         $count_all = $this->db->count_all_results('', false);
 
-        // Apply search filter
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.no_dokumen', $search['value'], 'both');
             $this->db->or_like('a.request_by', $search['value'], 'both');
+            $this->db->or_like('DATE_FORMAT(a.tanggal, "%d-%M-%Y")', $search['value'], 'both');
             $this->db->or_like('a.keperluan', $search['value'], 'both');
             $this->db->or_like('a.kategori', $search['value'], 'both');
             $this->db->or_like('a.nilai_pengajuan', $search['value'], 'both');
-            $this->db->or_like('d.name', $search['value'], 'both');
             $this->db->group_end();
         }
 
-        // Count filtered records
         $count_filter = $this->db->count_all_results('', false);
 
-        // Order and paginate
         $this->db->order_by('a.tanggal', 'desc');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get();
 
-        // print_r($this->db->last_query());
-        // exit;
-
-        // Kategori badge color mapping
-        $badge_colors = [
-            'Cash'             => 'badge-primary',
-            'Kasbon'           => 'badge-warning',
-            'Transport'        => 'badge-info',
-            'Periodik'         => 'badge-default',
-            'Expense'          => 'badge-success',
-            'Non-PO'           => 'badge-danger',
-            'Purchase Invoice' => 'badge-danger',
-            'Direct Payment'   => 'badge-default',
-        ];
-
-        $no    = (int) $start;
+        $no = ($start + 0);
         $hasil = [];
-
-        // Load checked items from tr_added_req_payment (persisted checkbox state)
-        $added_docs = [];
-        $added_result = $this->db->select('no_doc')->get('tr_added_req_payment')->result();
-        foreach ($added_result as $added) {
-            $added_docs[] = $added->no_doc;
-        }
 
         foreach ($get_data->result() as $item) {
             $no++;
 
-            // Company display - derive from hris_companies.id via mapping to kons_tr_company.nama
-            $company_display = '';
-            if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
-                $mapped_id = $company_map[$item->id_company];
-                if (isset($company_names[$mapped_id])) {
-                    $company_display = $company_names[$mapped_id];
-                }
-            }
-
-            // Determine "diminta_oleh" (request_by with Kasbon special logic)
             $nmuser = $item->request_by;
             if ($item->kategori == 'Kasbon') {
                 $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item->no_dokumen))->row();
-                if ($get_kasbon) {
-                    $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
-                    if (count($check_detail)) {
-                        if ($get_kasbon->tipe_pr == 'pr departemen') {
-                            $this->db->select('b.nm_lengkap');
-                            $this->db->from('rutin_non_planning_header a');
-                            $this->db->join('users b', 'b.id_user = a.created_by');
-                            $this->db->where('a.no_pr', $get_kasbon->id_pr);
-                            $get_single_detail = $this->db->get()->row();
-                            if ($get_single_detail) {
-                                $nmuser = $get_single_detail->nm_lengkap;
-                            }
-                        }
-                        if ($get_kasbon->tipe_pr == 'pr stok') {
-                            $this->db->select('b.nm_lengkap');
-                            $this->db->from('material_planning_base_on_produksi a');
-                            $this->db->join('users b', 'b.id_user = a.created_by');
-                            $this->db->where('a.no_pr', $get_kasbon->id_pr);
-                            $get_single_detail = $this->db->get()->row();
-                            if ($get_single_detail) {
-                                $nmuser = $get_single_detail->nm_lengkap;
-                            }
-                        }
+                $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
+                if (count($check_detail)) {
+                    if ($get_kasbon->tipe_pr == 'pr departemen') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('rutin_non_planning_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
+                    }
+
+                    if ($get_kasbon->tipe_pr == 'pr stok') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('material_planning_base_on_produksi a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+
+                        $nmuser = $get_single_detail->nm_lengkap;
                     }
                 }
             }
 
-            // Keperluan handling
+            $check_added = $this->db->get_where('tr_added_req_payment', ['no_doc' => $item->no_dokumen])->result();
+
+            $checked = (count($check_added) > 0) ? 'checked' : '';
+
+            $input_tanggal_pembayaran = '<input type="date" class="form-control form-control-sm" name="tanggal_pembayaran_' . $item->no_dokumen . '">';
+
+            $action = '<input type="checkbox" class="pilih_data" name="pilih[]" value="' . $item->no_dokumen . '" data-kategori="' . $item->kategori . '" ' . $checked . '>';
+            $action .= '<input type="hidden" name="kategori_' . $item->no_dokumen . '" value="' . $item->kategori . '">';
+            $action .= '<input type="hidden" name="nilai_pengajuan_' . $item->no_dokumen . '" value="' . $item->nilai_pengajuan . '">';
+
+            $btn_print = '';
+            if ($item->kategori == 'Periodik') {
+                $btn_print = ' <a href="' . base_url('expense/periodik_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Kasbon') {
+                $btn_print = ' <a href="' . base_url('expense/kasbon_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Transport') {
+                $btn_print = ' <a href="' . base_url('expense/transport_req_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Expense') {
+                $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Cash') {
+                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+                if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
+                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+
             $keperluan = (!empty($item->keperluan)) ? $item->keperluan : '';
             if ($item->kategori == 'Non-PO') {
                 $get_pr_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
-                if ($get_pr_non_po) {
-                    if ($get_pr_non_po->jenis_pr == 'pr stok') {
-                        $keperluan = 'PR Stock - ' . $get_pr_non_po->no_pr;
-                    } else if ($get_pr_non_po->jenis_pr == 'pr departemen') {
-                        $get_pr_dept = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_pr_non_po->no_pr])->row();
-                        $keperluan = (!empty($get_pr_dept)) ? $get_pr_dept->project_name : '';
-                    } else {
-                        $get_pr_asset = $this->db->get_where('tran_pr_detail', ['no_pr' => $get_pr_non_po->no_pr])->row();
-                        $keperluan = (!empty($get_pr_asset)) ? 'PR Asset - ' . $get_pr_non_po->no_pr . ' - ' . $get_pr_asset->nm_barang : '';
-                    }
+
+                if ($get_pr_non_po->jenis_pr == 'pr stok') {
+                    $keperluan = 'PR Stock - ' . $get_pr_non_po->no_pr;
+                } else if ($get_pr_non_po->jenis_pr == 'pr departemen') {
+                    $get_pr_dept = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_pr_non_po->no_pr])->row();
+
+                    $keperluan = (!empty($get_pr_dept)) ? $get_pr_dept->project_name : '';
+                } else {
+                    $get_pr_asset = $this->db->get_where('tran_pr_detail', ['no_pr' => $get_pr_non_po->no_pr])->row();
+
+                    $keperluan = 'PR Asset - ' . $get_pr_non_po->no_pr . ' - ' . $get_pr_asset->nm_barang;
                 }
             }
 
-            // Format tanggal
-            $tanggal_formatted = date('d-M-Y', strtotime($item->tanggal));
-
-            // NO. DOKUMEN: display with tanggal below
-            $no_dokumen_html = '<span>' . $item->no_dokumen . '</span><br><small class="text-muted">' . $tanggal_formatted . '</small>';
-
-            // Kategori badge
-            $badge_class = isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default';
-            $kategori_html = '<span class="badge ' . $badge_class . '">' . $item->kategori . '</span>';
-
-            // Nilai (right-aligned formatted)
-            $nilai = (!empty($item->nilai_pengajuan)) ? number_format($item->nilai_pengajuan, 0, ',', '.') : '0';
-            $nilai_html = '<span style="display:block;text-align:right;">' . $nilai . '</span>';
-
-            // Checkbox - only show for "Belum Dibayar" tab
-            if ($tab == 'sudah_dibayar') {
-                $checkbox_html = '';
-            } else {
-                $checked = in_array($item->no_dokumen, $added_docs) ? ' checked' : '';
-                $checkbox_html = '<input type="checkbox" class="pilih_data" name="pilih[]" value="' . $item->no_dokumen . '" data-kategori="' . $item->kategori . '"' . $checked . '>';
-                $checkbox_html .= '<input type="hidden" name="kategori_' . $item->no_dokumen . '" value="' . $item->kategori . '">';
-                $checkbox_html .= '<input type="hidden" name="nilai_pengajuan_' . $item->no_dokumen . '" value="' . $item->nilai_pengajuan . '">';
-            }
-
-            // TGL PEMBAYARAN
-            if ($tab == 'sudah_dibayar' && !empty($item->tgl_bayar)) {
-                // Show actual payment date for "Sudah Dibayar"
-                $tgl_pembayaran_html = date('d-M-Y', strtotime($item->tgl_bayar));
-            } else {
-                // Date picker input for "Belum Dibayar"
-                $tgl_pembayaran_html = '<input type="text" class="form-control form-control-sm datepicker" name="tanggal_pembayaran_' . $item->no_dokumen . '" placeholder="dd/mm/yyyy" autocomplete="off">';
-            }
-
-            // TANGGAL APPROVAL - ambil dari tabel asal masing-masing kategori
-            $tanggal_approval = '';
-            switch ($item->kategori) {
-                case 'Kasbon':
-                    $row_approval = $this->db->select('approved_on')->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
-                    if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
-                    }
-                    break;
-                case 'Transport':
-                    $row_approval = $this->db->select('approved_on')->get_where('tr_transport_req', ['no_doc' => $item->no_dokumen])->row();
-                    if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
-                    }
-                    break;
-                case 'Cash':
-                case 'Non-PO':
-                    $row_approval = $this->db->select('created_date')->get_where('tr_pr_non_po', ['id' => $item->id])->row();
-                    if ($row_approval && !empty($row_approval->created_date)) {
-                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_date));
-                    }
-                    break;
-                case 'Expense':
-                    $row_approval = $this->db->select('approved_on')->get_where('tr_expense', ['no_doc' => $item->no_dokumen])->row();
-                    if ($row_approval && !empty($row_approval->approved_on)) {
-                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
-                    }
-                    break;
-                case 'Periodik':
-                    $row_approval = $this->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
-                    if ($row_approval && !empty($row_approval->approved_date)) {
-                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_date));
-                    }
-                    break;
-                // Direct Payment, Purchase Invoice: kosongkan
-                default:
-                    $tanggal_approval = '';
-                    break;
-            }
-
             $hasil[] = [
-                'checkbox'       => $checkbox_html,
-                'no'             => $no,
-                'no_dokumen'     => $no_dokumen_html,
-                'diminta_oleh'   => $nmuser,
-                'company'        => $company_display,
-                'tanggal'        => $tanggal_formatted,
-                'keperluan'      => $keperluan,
-                'kategori'       => $kategori_html,
-                'nilai'          => $nilai_html,
-                'tgl_pembayaran' => $tgl_pembayaran_html,
-                'tanggal_approval' => $tanggal_approval
+                'no' => $no,
+                'no_dokumen' => $item->no_dokumen . ' ' . $btn_print,
+                'request_by' => $nmuser,
+                'tanggal' => date('d F Y', strtotime($item->tanggal)),
+                'keperluan' => $keperluan,
+                'kategori' => $item->kategori,
+                'nilai_pengajuan' => number_format($item->nilai_pengajuan, 2),
+                'tanggal_pembayaran' => $input_tanggal_pembayaran,
+                'action' => $action
             ];
         }
 
         echo json_encode([
-            'draw'            => intval($draw),
+            'draw' => intval($draw),
             'recordsFiltered' => $count_filter,
-            'recordsTotal'    => $count_all,
-            'data'            => $hasil
+            'recordsTotal' => $count_all,
+            'data' => $hasil
         ]);
     }
 
@@ -1081,120 +924,14 @@ class Request_payment_model extends BF_Model
         return $get_list;
     }
 
-    public function list_all_request_payment($filters = [])
+    public function list_all_request_payment()
     {
-        $company_id = isset($filters['company_id']) ? $filters['company_id'] : null;
-        $bulan_from = isset($filters['bulan_from']) ? $filters['bulan_from'] : null;
-        $tahun_from = isset($filters['tahun_from']) ? $filters['tahun_from'] : null;
-        $bulan_to   = isset($filters['bulan_to']) ? $filters['bulan_to'] : null;
-        $tahun_to   = isset($filters['tahun_to']) ? $filters['tahun_to'] : null;
-        $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
-
         $this->db->select('a.*');
         $this->db->from('v_request_payment a');
-
-        // JOIN for company filter
-        $this->db->join('users b', 'b.username = a.request_by', 'left');
-        $this->db->join('departments c', 'c.id = b.department_id', 'left');
-        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
-
-        // JOIN payment_approve for tgl_bayar
-        $this->db->join('(SELECT no_doc, MAX(tgl_bayar) as tgl_bayar FROM payment_approve GROUP BY no_doc) pa', 'pa.no_doc = a.no_dokumen', 'left');
-
-        // Data = gabungan tab Belum Dibayar (status=1) + Sudah Dibayar (tgl_bayar IS NOT NULL)
-        $this->db->group_start();
-        $this->db->where('a.status', '1');
-        $this->db->or_where('pa.tgl_bayar IS NOT NULL');
-        $this->db->group_end();
-
-        // Apply periode filter if provided
-        if (!empty($bulan_from) && !empty($tahun_from) && !empty($bulan_to) && !empty($tahun_to)) {
-            $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-            $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
-            $this->db->where('a.tanggal >=', $date_from);
-            $this->db->where('a.tanggal <=', $date_to);
-        }
-
-        // Apply kategori filter if non-null
-        if (!empty($kategori)) {
-            $this->db->where('a.kategori', $kategori);
-        }
-
-        // Apply company filter if non-null
-        if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
-        }
-
         $this->db->order_by('a.tanggal', 'desc');
-        $query = $this->db->get();
-        $get_data = $query ? $query->result() : [];
+        $get_data = $this->db->get()->result();
 
         return $get_data;
-    }
-
-    /**
-     * Get summary cards aggregates based on active filters.
-     * Queries v_request_payment with LEFT JOIN to request_payment (only "Belum Dibayar" records).
-     *
-     * @param array $filters Associative array with keys: company_id, bulan_from, tahun_from, bulan_to, tahun_to, kategori
-     * @return array Associative array with keys: total_pengajuan, total_nilai, total_cash, total_kasbon
-     */
-    public function get_summary_cards($filters = [])
-    {
-        $company_id = isset($filters['company_id']) ? $filters['company_id'] : null;
-        $bulan_from = isset($filters['bulan_from']) ? $filters['bulan_from'] : date('m');
-        $tahun_from = isset($filters['tahun_from']) ? $filters['tahun_from'] : date('Y');
-        $bulan_to   = isset($filters['bulan_to']) ? $filters['bulan_to'] : date('m');
-        $tahun_to   = isset($filters['tahun_to']) ? $filters['tahun_to'] : date('Y');
-        $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
-
-        $this->db->select('
-            COUNT(*) as total_pengajuan,
-            IFNULL(SUM(a.nilai_pengajuan), 0) as total_nilai,
-            IFNULL(SUM(CASE WHEN a.kategori = "Cash" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_cash,
-            IFNULL(SUM(CASE WHEN a.kategori = "Kasbon" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_kasbon
-        ');
-        $this->db->from('v_request_payment a');
-
-        // JOIN for company filter
-        $this->db->join('users b', 'b.username = a.request_by', 'left');
-        $this->db->join('departments c', 'c.id = b.department_id', 'left');
-        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
-
-        // Filter only "Belum Dibayar" records (status = 1)
-        $this->db->where('a.status', '1');
-
-        // Apply periode filter
-        $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-        $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
-        $this->db->where('a.tanggal >=', $date_from);
-        $this->db->where('a.tanggal <=', $date_to);
-
-        // Apply kategori filter if non-null
-        if (!empty($kategori)) {
-            $this->db->where('a.kategori', $kategori);
-        }
-
-        // Apply company filter if non-null
-        if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
-        }
-
-        $query = $this->db->get();
-        $result = $query ? $query->row() : null;
-
-        return [
-            'total_pengajuan' => (int) ($result ? $result->total_pengajuan : 0),
-            'total_nilai'     => (float) ($result ? $result->total_nilai : 0),
-            'total_cash'      => (float) ($result ? $result->total_cash : 0),
-            'total_kasbon'    => (float) ($result ? $result->total_kasbon : 0),
-        ];
     }
 
     /**
@@ -1222,24 +959,5 @@ class Request_payment_model extends BF_Model
         }
 
         return $lookup;
-    }
-
-    /**
-     * Get list of companies for COMPANY filter dropdown.
-     * Queries db_consultant_new.kons_tr_company for mapped companies (IDs 7, 3, 4).
-     *
-     * @return array Result set with id and nama columns, ordered by nama ASC
-     */
-    public function get_companies_list()
-    {
-        $this->db->select('id, nm_company as nama');
-        $this->db->from(DBCNL . '.kons_tr_company');
-        $this->db->where_in('id', ['7', '3', '4']);
-        $this->db->order_by('nama', 'asc');
-        $query = $this->db->get();
-        if (!$query) {
-            return [];
-        }
-        return $query->result();
     }
 }

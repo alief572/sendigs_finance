@@ -392,6 +392,10 @@ class Pengajuan_rutin extends Admin_Controller
 				array(
 					'id' => $id,
 					'status' => 1,
+					'approved_by' => $this->auth->user_id(),
+					'approved_date' => date('Y-m-d H:i:s'),
+					'reject_by' => null,
+					'reject_date' => null
 				)
 			);
 			$result = $this->Pengajuan_rutin_model->update_batch($data, 'id');
@@ -417,7 +421,9 @@ class Pengajuan_rutin extends Admin_Controller
 				array(
 					'id' => $id,
 					'sts_reject' => 1,
-					'reject_ket' => $this->input->post('reject_reason')
+					'reject_ket' => $this->input->post('reject_reason'),
+					'reject_by' => $this->auth->user_id(),
+					'reject_date' => date('Y-m-d H:i:s')
 				)
 			);
 			$result = $this->Pengajuan_rutin_model->update_batch($data, 'id');
