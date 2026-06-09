@@ -569,6 +569,26 @@ class Request_payment_model extends BF_Model
         foreach ($get_data->result() as $item) {
             $no++;
 
+            $btn_print = '';
+            if ($item->kategori == 'Periodik') {
+                $btn_print = ' <a href="' . base_url('expense/periodik_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Kasbon') {
+                $btn_print = ' <a href="' . base_url('expense/kasbon_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Transport') {
+                $btn_print = ' <a href="' . base_url('expense/transport_req_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Expense') {
+                $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+            }
+            if ($item->kategori == 'Cash') {
+                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+                if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
+                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+
             // Company display - derive from hris_companies.id via mapping to kons_tr_company.nama
             $company_display = '';
             if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
@@ -711,7 +731,7 @@ class Request_payment_model extends BF_Model
             $hasil[] = [
                 'checkbox'       => $checkbox_html,
                 'no'             => $no,
-                'no_dokumen'     => $no_dokumen_html,
+                'no_dokumen'     => $no_dokumen_html.' '.$btn_print,
                 'diminta_oleh'   => $nmuser,
                 'company'        => $company_display,
                 'tanggal'        => $tanggal_formatted,

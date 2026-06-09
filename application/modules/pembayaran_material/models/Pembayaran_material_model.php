@@ -988,8 +988,6 @@ class Pembayaran_material_model extends BF_Model
 				} else {
 					if (!empty($get_expense->no_expense_consultant)) {
 
-
-
 						$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_expense->id_kasbon])->row();
 
 						if (!empty($get_kasbon->tipe)) {
@@ -1020,6 +1018,7 @@ class Pembayaran_material_model extends BF_Model
 									->result();
 
 								foreach ($get_kasbon_detail as $item_detail) {
+									
 								}
 							} elseif ($get_kasbon->tipe == '4') {
 								$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
