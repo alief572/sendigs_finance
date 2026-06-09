@@ -735,7 +735,7 @@ class Penerimaan_uang extends Admin_Controller
             $this->db->update('tr_invoicing');
         }
 
-        // Revert nilai_terpakai in tr_alokasi_detail
+        // Revert nilai_terpakai in tr_alokasi_detail, hapus split, dan kembalikan sts ke 0
         $resolved = $this->Penerimaan_uang_model->resolve_alokasi($get_penerimaan['id_alokasi']);
         if (!empty($resolved)) {
             $split = $resolved['split'];
@@ -743,14 +743,26 @@ class Penerimaan_uang extends Admin_Controller
             
             $detail_id_for_update = $resolved['is_legacy'] ? $get_penerimaan['id_alokasi'] : $split['id_alokasi_detail'];
             
-            // To be safe, we subtract the total penerimaan from current nilai_terpakai
-            // Note: The original save logic sets it directly to $total_penerimaan. 
-            // In case there are multiple penerimaan (if system allows), subtraction is safer.
-            // If it goes below 0, set to 0.
-            $new_terpakai = $alokasi_detail['nilai_terpakai'] - $total_penerimaan;
-            if ($new_terpakai < 0) $new_terpakai = 0;
-            
-            $this->db->update('tr_alokasi_detail', ['nilai_terpakai' => $new_terpakai], ['id' => $detail_id_for_update]);
+            // Set nilai_terpakai = NULL dan sts = '0' agar kembali Open di modul Alokasi
+            $this->db->update('tr_alokasi_detail', [
+                'nilai_terpakai' => NULL,
+                'sts' => '0'
+            ], ['id' => $detail_id_for_update]);
+
+            if (!$resolved['is_legacy']) {
+                // Hapus seluruh data split pada tr_alokasi_split
+                $this->db->delete('tr_alokasi_split', ['id_alokasi_detail' => $detail_id_for_update]);
+
+                // Insert log ke log_alokasi_history
+                $log_data = [
+                    'id_alokasi_detail' => $detail_id_for_update,
+                    'action' => 'ROLLBACK_PENERIMAAN',
+                    'deskripsi_log' => 'Rollback penerimaan piutang (' . $no_surat . ') dan hapus split alokasi',
+                    'created_by' => $this->session->userdata('id_user') ?: 'System',
+                    'created_date' => date('Y-m-d H:i:s')
+                ];
+                $this->db->insert('log_alokasi_history', $log_data);
+            }
         }
 
         // Delete Jurnal
