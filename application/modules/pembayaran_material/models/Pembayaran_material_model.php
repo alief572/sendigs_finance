@@ -931,6 +931,7 @@ class Pembayaran_material_model extends BF_Model
 
 					// 		$id_coa = $item_coa->no_coa;
 					// 		$nm_coa = $item_coa->nm_coa;
+						$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_expense->id_kasbon])->row();
 
 					// 		$debit = 0;
 					// 		$kredit = 0;
@@ -1101,9 +1102,18 @@ class Pembayaran_material_model extends BF_Model
 					// 		}
 					// 	}
 					// }
-				}
-			} else {
-				$get_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc])->row();
+								foreach ($get_kasbon_detail as $item_detail) {
+									
+								}
+							} elseif ($get_kasbon->tipe == '4') {
+								$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
+							} elseif ($get_kasbon->tipe == '5') {
+							} else {
+							}
+						}
+					}
+				} else {
+					$get_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc])->row();
 
 				if (!empty($get_non_po)) {
 					$coa_bank = '';
