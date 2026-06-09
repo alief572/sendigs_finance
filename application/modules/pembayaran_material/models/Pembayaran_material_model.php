@@ -990,41 +990,140 @@ class Pembayaran_material_model extends BF_Model
 
 						$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_expense->id_kasbon])->row();
 
+						
+
+						$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_kasbon->id_penawaran])->row();
+
+						$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran])->row();
+
+						if (!empty($get_penawaran->company)) {
+							$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
+
+							
+						} else {
+							$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_spk_penawaran->id_company])->row();
+						}
+
+						$id_company = $get_company->id ?? '';
+						$nm_company = $get_company->nm_company ?? '';
+
+						$get_department = $this->hris->select('a.id as id_depart, a.name as nm_depart')
+						->from('divisions a')
+						->where('a.id', $get_spk_penawaran->id_divisi)
+						->get()
+						->row();
+
+						$id_department = $get_department->id_depart ?? '';
+						$nm_department = $get_department->nm_depart ?? '';
+
+						$arr_coa = ['9999-99-99', '7201-01-04', '1106-01-06', '2104-01-02', $coa_bank];
+
+						$get_coa_jurnal = $this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa')
+						->from('coa_master a')
+						->where_in('a.no_perkiraan', $arr_coa)
+						->get()
+						->result();
+						
+						$no_jurnal = 0;
+						foreach ($get_coa_jurnal as $item_coa) {
+							$no_jurnal++;
+							
+							if ($item_coa->no_coa == '9999-99-99') {
+								$debit = $item_payment->jumlah;
+								$kredit = 0;
+							} elseif ($item_coa->no_coa == '7201-01-04') {
+								$debit = $bank_charge;
+								$kredit = 0;
+							} elseif ($item_coa->no_coa == '1106-01-06') {
+								$debit = $nilai_ppn;
+								$kredit = 0;
+							} elseif ($item_coa->no_coa == '2104-01-02') {
+								$debit = 0;
+								$kredit = $nilai_pph;
+							} elseif ($item_coa->no_coa == $coa_bank) {
+								$kredit = $item_payment->jumlah;
+								$debit = 0;
+							} else {
+								$debit = 0;
+								$kredit = 0;
+							}
+
+							$hasil_jurnal .= '<tr>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= date('d F Y');
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $item_payment->id . '">';
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= $nm_company;
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_company]" value="' . $id_company . '">';
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= $nm_department;
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_divisi]" value="' . $id_department . '">';
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_divisi]" value="' . $nm_department . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= $item_coa->no_coa;
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][coa]" value="' . $item_coa->no_coa . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= $item_coa->nm_coa;
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][nm_coa]" value="' . $item_coa->nm_coa . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-center">';
+							$hasil_jurnal .= $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][keterangan]" value="' . $item_coa->nm_coa . ' - ' . $item_payment->no_doc . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-right">';
+							$hasil_jurnal .= number_format($debit);
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][debit]" value="' . $debit . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '<td class="text-right">';
+							$hasil_jurnal .= number_format($kredit);
+							$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][kredit]" value="' . $kredit . '">';
+							$hasil_jurnal .= '</td>';
+
+							$hasil_jurnal .= '</tr>';
+
+							$ttl_debit += $debit;
+							$ttl_kredit += $kredit;
+							$no_jurnal++;
+						}
+
 						if (!empty($get_kasbon->tipe)) {
 
-							$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_kasbon->id_penawaran])->row();
+							
 
-							$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran])->row();
+							// if ($get_kasbon->tipe == '1') {
+							// 	$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
+							// } elseif ($get_kasbon->tipe == '2') {
+							// 	$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_akomodasi', ['id_header' => $get_kasbon->id])->result();
+							// } elseif ($get_kasbon->tipe == '3') {
+							// 	$get_kasbon_detail = $this->consultant->select('a.*')
+							// 		->from('kons_tr_kasbon_project_others a')
+							// 		->join('kons_master_biaya b', 'b.id = a.id_item', 'left')
+							// 		->where('a.id', $get_expense->id_kasbon)
+							// 		->get()
+							// 		->result();
 
-							if (!empty($get_penawaran->id_company)) {
-								$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->id_company])->row();
-							} else {
-								$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_spk_penawaran->id_company])->row();
-							}
-
-							$id_company = $get_company->id ?? '';
-							$nm_company = $get_company->nm_company ?? '';
-
-							if ($get_kasbon->tipe == '1') {
-								$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
-							} elseif ($get_kasbon->tipe == '2') {
-								$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_akomodasi', ['id_header' => $get_kasbon->id])->result();
-							} elseif ($get_kasbon->tipe == '3') {
-								$get_kasbon_detail = $this->consultant->select('a.*')
-									->from('kons_tr_kasbon_project_others a')
-									->join('kons_master_biaya b', 'b.id = a.id_item', 'left')
-									->where('a.id', $get_expense->id_kasbon)
-									->get()
-									->result();
-
-								foreach ($get_kasbon_detail as $item_detail) {
+							// 	foreach ($get_kasbon_detail as $item_detail) {
 									
-								}
-							} elseif ($get_kasbon->tipe == '4') {
-								$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
-							} elseif ($get_kasbon->tipe == '5') {
-							} else {
-							}
+							// 	}
+							// } elseif ($get_kasbon->tipe == '4') {
+							// 	$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
+							// } elseif ($get_kasbon->tipe == '5') {
+							// } else {
+							// }
 						}
 					}
 				}
