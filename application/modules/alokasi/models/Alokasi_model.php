@@ -64,6 +64,7 @@ class Alokasi_model extends BF_Model
             $this->db->or_like('a.nominal_debit', $search['value'], 'both');
             $this->db->or_like('a.nominal_kredit', $search['value'], 'both');
             $this->db->or_like('a.saldo', $search['value'], 'both');
+            $this->db->or_like('a.keterangan', $search['value'], 'both');
             $this->db->group_end();
         }
         $this->db->group_by('a.id');
