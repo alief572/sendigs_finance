@@ -1,26 +1,12 @@
 <?php
 $ENABLE_VIEW = has_permission('Request_Payment.View');
 
-// Indonesian months mapping
-$bulan_indonesia = [
-	1 => 'Januari',
-	2 => 'Februari',
-	3 => 'Maret',
-	4 => 'April',
-	5 => 'Mei',
-	6 => 'Juni',
-	7 => 'Juli',
-	8 => 'Agustus',
-	9 => 'September',
-	10 => 'Oktober',
-	11 => 'November',
-	12 => 'Desember'
-];
-
 $current_month = (int) date('n');
 $current_year  = (int) date('Y');
-$max_year      = $current_year + 1;
-$default_bulan_from = 1; // Januari
+
+// Default date range: first day of current year to today
+$default_date_from = date('Y') . '-01-01';
+$default_date_to   = date('Y-m-d');
 ?>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -111,41 +97,19 @@ $default_bulan_from = 1; // Januari
 					</div>
 				</div>
 
-				<!-- PERIODE Dropdowns -->
+				<!-- PERIODE Date Range -->
 				<div class="col-md-5">
 					<div class="form-group">
 						<label>Periode</label>
 						<div style="display: flex; align-items: center; gap: 5px;">
-							<div style="flex: 3;">
-								<select id="filter_bulan_from" class="form-control select2-filter" style="width: 100%;">
-									<?php foreach ($bulan_indonesia as $num => $nama): ?>
-										<option value="<?= $num; ?>" <?= ($num == $default_bulan_from) ? 'selected' : ''; ?>><?= $nama; ?></option>
-									<?php endforeach; ?>
-								</select>
-							</div>
-							<div style="flex: 2;">
-								<select id="filter_tahun_from" class="form-control select2-filter" style="width: 100%;">
-									<?php for ($y = 2020; $y <= $max_year; $y++): ?>
-										<option value="<?= $y; ?>" <?= ($y == $current_year) ? 'selected' : ''; ?>><?= $y; ?></option>
-									<?php endfor; ?>
-								</select>
+							<div style="flex: 1;">
+								<input type="text" id="filter_date_from" class="form-control datepicker-filter" placeholder="Dari tanggal" value="<?= date('d/m/Y', strtotime($default_date_from)); ?>" readonly>
 							</div>
 							<div style="flex: 0; padding: 0 5px; font-weight: 600;">
 								&mdash;
 							</div>
-							<div style="flex: 3;">
-								<select id="filter_bulan_to" class="form-control select2-filter" style="width: 100%;">
-									<?php foreach ($bulan_indonesia as $num => $nama): ?>
-										<option value="<?= $num; ?>" <?= ($num == $current_month) ? 'selected' : ''; ?>><?= $nama; ?></option>
-									<?php endforeach; ?>
-								</select>
-							</div>
-							<div style="flex: 2;">
-								<select id="filter_tahun_to" class="form-control select2-filter" style="width: 100%;">
-									<?php for ($y = 2020; $y <= $max_year; $y++): ?>
-										<option value="<?= $y; ?>" <?= ($y == $current_year) ? 'selected' : ''; ?>><?= $y; ?></option>
-									<?php endfor; ?>
-								</select>
+							<div style="flex: 1;">
+								<input type="text" id="filter_date_to" class="form-control datepicker-filter" placeholder="Sampai tanggal" value="<?= date('d/m/Y', strtotime($default_date_to)); ?>" readonly>
 							</div>
 						</div>
 					</div>
@@ -185,7 +149,7 @@ $default_bulan_from = 1; // Januari
 				<div class="col-md-12">
 					<span class="active-filter-badge" id="active_filter_badge">
 						<i class="fa fa-info-circle"></i>
-						Export: <?= $bulan_indonesia[$default_bulan_from]; ?> - <?= $bulan_indonesia[$current_month]; ?> <?= $current_year; ?> - Semua Entitas
+						Periode: <?= date('d/m/Y', strtotime($default_date_from)); ?> - <?= date('d/m/Y', strtotime($default_date_to)); ?> | Semua Entitas
 					</span>
 				</div>
 			</div>
@@ -431,27 +395,9 @@ $default_bulan_from = 1; // Januari
 
 <script>
 	$(document).ready(function() {
-		// Current defaults from PHP
-		var defaultBulanFrom = <?= $default_bulan_from; ?>;
-		var defaultTahunFrom = <?= $current_year; ?>;
-		var defaultBulanTo = <?= $current_month; ?>;
-		var defaultTahunTo = <?= $current_year; ?>;
-
-		// Indonesian month names for badge display
-		var bulanIndonesia = {
-			1: 'Januari',
-			2: 'Februari',
-			3: 'Maret',
-			4: 'April',
-			5: 'Mei',
-			6: 'Juni',
-			7: 'Juli',
-			8: 'Agustus',
-			9: 'September',
-			10: 'Oktober',
-			11: 'November',
-			12: 'Desember'
-		};
+		// Default dates from PHP
+		var defaultDateFrom = '<?= date("d/m/Y", strtotime($default_date_from)); ?>';
+		var defaultDateTo = '<?= date("d/m/Y", strtotime($default_date_to)); ?>';
 
 		// Active tab variable
 		var currentTab = 'belum_dibayar';
@@ -468,11 +414,17 @@ $default_bulan_from = 1; // Januari
 				width: '100%'
 			});
 
+			// Init datepicker for filter dates
+			$('.datepicker-filter').datepicker({
+				format: 'dd/mm/yyyy',
+				autoclose: true,
+				todayHighlight: true,
+				orientation: 'bottom auto'
+			});
+
 			// Set defaults
-			$('#filter_bulan_from').val(defaultBulanFrom).trigger('change.select2');
-			$('#filter_tahun_from').val(defaultTahunFrom).trigger('change.select2');
-			$('#filter_bulan_to').val(defaultBulanTo).trigger('change.select2');
-			$('#filter_tahun_to').val(defaultTahunTo).trigger('change.select2');
+			$('#filter_date_from').datepicker('update', defaultDateFrom);
+			$('#filter_date_to').datepicker('update', defaultDateTo);
 			$('#filter_company').val('').trigger('change.select2');
 			$('#filter_kategori').val('').trigger('change.select2');
 		}
@@ -481,12 +433,25 @@ $default_bulan_from = 1; // Januari
 		// GET CURRENT FILTERS
 		// ========================================
 		function getFilters() {
+			// Convert dd/mm/yyyy to yyyy-mm-dd for server
+			var dateFromRaw = $('#filter_date_from').val();
+			var dateToRaw = $('#filter_date_to').val();
+			var dateFrom = '';
+			var dateTo = '';
+
+			if (dateFromRaw) {
+				var parts = dateFromRaw.split('/');
+				dateFrom = parts[2] + '-' + parts[1] + '-' + parts[0];
+			}
+			if (dateToRaw) {
+				var parts = dateToRaw.split('/');
+				dateTo = parts[2] + '-' + parts[1] + '-' + parts[0];
+			}
+
 			return {
 				company_id: $('#filter_company').val(),
-				bulan_from: $('#filter_bulan_from').val(),
-				tahun_from: $('#filter_tahun_from').val(),
-				bulan_to: $('#filter_bulan_to').val(),
-				tahun_to: $('#filter_tahun_to').val(),
+				date_from: dateFrom,
+				date_to: dateTo,
 				kategori: $('#filter_kategori').val()
 			};
 		}
@@ -495,18 +460,11 @@ $default_bulan_from = 1; // Januari
 		// VALIDATE FILTERS
 		// ========================================
 		function validateFilters(filters) {
-			var tahunFrom = parseInt(filters.tahun_from);
-			var tahunTo = parseInt(filters.tahun_to);
-			var bulanFrom = parseInt(filters.bulan_from);
-			var bulanTo = parseInt(filters.bulan_to);
-
-			if (tahunFrom > tahunTo) {
-				alert('Tahun awal tidak boleh lebih besar dari tahun akhir.');
-				return false;
-			}
-			if (tahunFrom === tahunTo && bulanFrom > bulanTo) {
-				alert('Bulan awal tidak boleh lebih besar dari bulan akhir pada tahun yang sama.');
-				return false;
+			if (filters.date_from && filters.date_to) {
+				if (filters.date_from > filters.date_to) {
+					alert('Tanggal awal tidak boleh lebih besar dari tanggal akhir.');
+					return false;
+				}
 			}
 			return true;
 		}
@@ -524,8 +482,7 @@ $default_bulan_from = 1; // Januari
 			// Update active filter badge text
 			var companyText = $('#filter_company option:selected').text() || 'Semua Entitas';
 			if (!filters.company_id) companyText = 'Semua Entitas';
-			var bulanToLabel = bulanIndonesia[parseInt(filters.bulan_to)] || '';
-			var badgeText = 'Export: ' + bulanToLabel + ' ' + filters.tahun_to + ' - ' + companyText;
+			var badgeText = 'Periode: ' + ($('#filter_date_from').val() || '-') + ' - ' + ($('#filter_date_to').val() || '-') + ' | ' + companyText;
 			$('#active_filter_badge').html('<i class="fa fa-info-circle"></i> ' + badgeText);
 
 			// Reload DataTables
@@ -542,10 +499,8 @@ $default_bulan_from = 1; // Januari
 		// ========================================
 		window.resetFilter = function() {
 			$('#filter_company').val('').trigger('change.select2');
-			$('#filter_bulan_from').val(defaultBulanFrom).trigger('change.select2');
-			$('#filter_tahun_from').val(defaultTahunFrom).trigger('change.select2');
-			$('#filter_bulan_to').val(defaultBulanTo).trigger('change.select2');
-			$('#filter_tahun_to').val(defaultTahunTo).trigger('change.select2');
+			$('#filter_date_from').datepicker('update', defaultDateFrom);
+			$('#filter_date_to').datepicker('update', defaultDateTo);
 			$('#filter_kategori').val('').trigger('change.select2');
 
 			applyFilter();
@@ -642,10 +597,8 @@ $default_bulan_from = 1; // Januari
 					data: function(d) {
 						var filters = getFilters();
 						d.company_id = filters.company_id;
-						d.bulan_from = filters.bulan_from;
-						d.tahun_from = filters.tahun_from;
-						d.bulan_to = filters.bulan_to;
-						d.tahun_to = filters.tahun_to;
+						d.date_from = filters.date_from;
+						d.date_to = filters.date_to;
 						d.kategori = filters.kategori;
 						d.tab = currentTab;
 					},
@@ -792,10 +745,8 @@ $default_bulan_from = 1; // Januari
 
 			var params = [];
 			if (filters.company_id) params.push('company_id=' + encodeURIComponent(filters.company_id));
-			if (filters.bulan_from) params.push('bulan_from=' + encodeURIComponent(filters.bulan_from));
-			if (filters.tahun_from) params.push('tahun_from=' + encodeURIComponent(filters.tahun_from));
-			if (filters.bulan_to) params.push('bulan_to=' + encodeURIComponent(filters.bulan_to));
-			if (filters.tahun_to) params.push('tahun_to=' + encodeURIComponent(filters.tahun_to));
+			if (filters.date_from) params.push('date_from=' + encodeURIComponent(filters.date_from));
+			if (filters.date_to) params.push('date_to=' + encodeURIComponent(filters.date_to));
 			if (filters.kategori) params.push('kategori=' + encodeURIComponent(filters.kategori));
 
 			var url = '<?= site_url("request_payment/download_excel_request_payment"); ?>';

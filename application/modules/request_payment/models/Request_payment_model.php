@@ -442,25 +442,21 @@ class Request_payment_model extends BF_Model
      * Get data for DataTables server-side processing with filters, tab logic, and company derivation.
      *
      * @param string|null $company_id   Company ID from kons_tr_company (7, 3, or 4)
-     * @param string|null $bulan_from   Start month (1-12)
-     * @param string|null $tahun_from   Start year
-     * @param string|null $bulan_to     End month (1-12)
-     * @param string|null $tahun_to     End year
+     * @param string|null $date_from    Start date (Y-m-d)
+     * @param string|null $date_to      End date (Y-m-d)
      * @param string|null $kategori     Category filter
      * @param string      $tab          Active tab: 'belum_dibayar' or 'sudah_dibayar'
      */
-    public function get_data_req_payment($company_id = null, $bulan_from = null, $tahun_from = null, $bulan_to = null, $tahun_to = null, $kategori = null, $tab = 'belum_dibayar')
+    public function get_data_req_payment($company_id = null, $date_from = null, $date_to = null, $kategori = null, $tab = 'belum_dibayar')
     {
         $draw   = $this->input->post('draw');
         $length = $this->input->post('length');
         $start  = $this->input->post('start');
         $search = $this->input->post('search');
 
-        // Default periode to current month/year if not provided
-        $bulan_from = !empty($bulan_from) ? $bulan_from : date('m');
-        $tahun_from = !empty($tahun_from) ? $tahun_from : date('Y');
-        $bulan_to   = !empty($bulan_to) ? $bulan_to : date('m');
-        $tahun_to   = !empty($tahun_to) ? $tahun_to : date('Y');
+        // Default date range: first day of current year to today
+        $date_from = !empty($date_from) ? $date_from : date('Y') . '-01-01';
+        $date_to   = !empty($date_to) ? $date_to : date('Y-m-d');
 
         // Hardcode map: hris_companies.id => kons_tr_company.id
         $company_map = ['COM003' => 7, 'COM006' => 3, 'COM012' => 4];
@@ -501,9 +497,7 @@ class Request_payment_model extends BF_Model
             $this->db->where('a.status', '1');
         }
 
-        // Apply periode filter
-        $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-        $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
+        // Apply date range filter
         $this->db->where('a.tanggal >=', $date_from);
         $this->db->where('a.tanggal <=', $date_to);
 
@@ -1123,10 +1117,8 @@ class Request_payment_model extends BF_Model
     public function list_all_request_payment($filters = [])
     {
         $company_id = isset($filters['company_id']) ? $filters['company_id'] : null;
-        $bulan_from = isset($filters['bulan_from']) ? $filters['bulan_from'] : null;
-        $tahun_from = isset($filters['tahun_from']) ? $filters['tahun_from'] : null;
-        $bulan_to   = isset($filters['bulan_to']) ? $filters['bulan_to'] : null;
-        $tahun_to   = isset($filters['tahun_to']) ? $filters['tahun_to'] : null;
+        $date_from  = isset($filters['date_from']) ? $filters['date_from'] : null;
+        $date_to    = isset($filters['date_to']) ? $filters['date_to'] : null;
         $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
 
         $this->db->select('a.*');
@@ -1143,10 +1135,8 @@ class Request_payment_model extends BF_Model
         // Export only "Belum Dibayar" data (status = 1)
         $this->db->where('a.status', '1');
 
-        // Apply periode filter if provided
-        if (!empty($bulan_from) && !empty($tahun_from) && !empty($bulan_to) && !empty($tahun_to)) {
-            $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-            $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
+        // Apply date range filter if provided
+        if (!empty($date_from) && !empty($date_to)) {
             $this->db->where('a.tanggal >=', $date_from);
             $this->db->where('a.tanggal <=', $date_to);
         }
@@ -1175,16 +1165,14 @@ class Request_payment_model extends BF_Model
      * Get summary cards aggregates based on active filters.
      * Queries v_request_payment with LEFT JOIN to request_payment (only "Belum Dibayar" records).
      *
-     * @param array $filters Associative array with keys: company_id, bulan_from, tahun_from, bulan_to, tahun_to, kategori
+     * @param array $filters Associative array with keys: company_id, date_from, date_to, kategori
      * @return array Associative array with keys: total_pengajuan, total_nilai, total_cash, total_kasbon
      */
     public function get_summary_cards($filters = [])
     {
         $company_id = isset($filters['company_id']) ? $filters['company_id'] : null;
-        $bulan_from = isset($filters['bulan_from']) ? $filters['bulan_from'] : date('m');
-        $tahun_from = isset($filters['tahun_from']) ? $filters['tahun_from'] : date('Y');
-        $bulan_to   = isset($filters['bulan_to']) ? $filters['bulan_to'] : date('m');
-        $tahun_to   = isset($filters['tahun_to']) ? $filters['tahun_to'] : date('Y');
+        $date_from  = isset($filters['date_from']) && !empty($filters['date_from']) ? $filters['date_from'] : date('Y') . '-01-01';
+        $date_to    = isset($filters['date_to']) && !empty($filters['date_to']) ? $filters['date_to'] : date('Y-m-d');
         $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
 
         $this->db->select('
@@ -1203,9 +1191,7 @@ class Request_payment_model extends BF_Model
         // Filter only "Belum Dibayar" records (status = 1)
         $this->db->where('a.status', '1');
 
-        // Apply periode filter
-        $date_from = $tahun_from . '-' . str_pad($bulan_from, 2, '0', STR_PAD_LEFT) . '-01';
-        $date_to   = date('Y-m-t', strtotime($tahun_to . '-' . str_pad($bulan_to, 2, '0', STR_PAD_LEFT) . '-01'));
+        // Apply date range filter
         $this->db->where('a.tanggal >=', $date_from);
         $this->db->where('a.tanggal <=', $date_to);
 

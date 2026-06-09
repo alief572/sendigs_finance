@@ -2512,24 +2512,20 @@ class Request_payment extends Admin_Controller
 	public function get_data_req_payment()
 	{
 		$company_id = $this->input->post('company_id');
-		$bulan_from = $this->input->post('bulan_from');
-		$tahun_from = $this->input->post('tahun_from');
-		$bulan_to   = $this->input->post('bulan_to');
-		$tahun_to   = $this->input->post('tahun_to');
+		$date_from  = $this->input->post('date_from');
+		$date_to    = $this->input->post('date_to');
 		$kategori   = $this->input->post('kategori');
 		$tab        = $this->input->post('tab') ?: 'belum_dibayar';
 
-		$this->Request_payment_model->get_data_req_payment($company_id, $bulan_from, $tahun_from, $bulan_to, $tahun_to, $kategori, $tab);
+		$this->Request_payment_model->get_data_req_payment($company_id, $date_from, $date_to, $kategori, $tab);
 	}
 
 	public function get_summary_cards()
 	{
 		$filters = [
 			'company_id' => $this->input->post('company_id'),
-			'bulan_from' => $this->input->post('bulan_from'),
-			'tahun_from' => $this->input->post('tahun_from'),
-			'bulan_to'   => $this->input->post('bulan_to'),
-			'tahun_to'   => $this->input->post('tahun_to'),
+			'date_from'  => $this->input->post('date_from'),
+			'date_to'    => $this->input->post('date_to'),
 			'kategori'   => $this->input->post('kategori'),
 		];
 		$result = $this->Request_payment_model->get_summary_cards($filters);
@@ -2938,10 +2934,8 @@ class Request_payment extends Admin_Controller
 	{
 		$filters = [
 			'company_id' => $this->input->get('company_id'),
-			'bulan_from' => $this->input->get('bulan_from'),
-			'tahun_from' => $this->input->get('tahun_from'),
-			'bulan_to'   => $this->input->get('bulan_to'),
-			'tahun_to'   => $this->input->get('tahun_to'),
+			'date_from'  => $this->input->get('date_from'),
+			'date_to'    => $this->input->get('date_to'),
 			'kategori'   => $this->input->get('kategori'),
 		];
 

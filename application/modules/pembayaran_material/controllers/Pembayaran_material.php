@@ -1360,6 +1360,11 @@ class Pembayaran_material extends Admin_Controller
 				// exit;
 				foreach ($post['jurnal_ls'] as $item_jurnal) {
 					// if (isset($item_jurnal['tanggal_jurnal'])) {
+
+					$get_data_payment = $this->db->get_where('payment_approve', ['id' => $item_jurnal['id_payment_ref']])->row();
+
+					$tipe_jurnal = ucfirst($get_data_payment->tipe) ?? '';
+
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
 
 					$arr_jurnal[] = [
@@ -1373,7 +1378,7 @@ class Pembayaran_material extends Admin_Controller
 						'kredit' => $item_jurnal['kredit'],
 						'keterangan' => $item_jurnal['keterangan'],
 						'no_transaksi' => $id_payment_paid,
-						'jenis_transaksi' => 'Transport',
+						'jenis_transaksi' => $tipe_jurnal,
 						'id_divisi' => $item_jurnal['id_divisi'],
 						'nm_divisi' => $item_jurnal['nm_divisi'],
 						'created_by' => $this->auth->user_id(),

@@ -197,16 +197,12 @@ class Request_pr_stok extends Admin_Controller
     foreach ($getraw_materials as $key => $value) {
       $SUM += $value['request'];
 
-      if ($value['price_ref_use'] < 1) {
-        $this->db->select('a.price_reference');
-        $this->db->from('budget_rutin_detail a');
-        $this->db->where('a.id_barang', $value['id']);
-        $get_price_ref = $this->db->get()->row();
+      $this->db->select('a.price_reference');
+      $this->db->from('budget_rutin_detail a');
+      $this->db->where('a.id_barang', $value['id']);
+      $get_price_ref = $this->db->get()->row();
 
-        $price_ref = $get_price_ref->price_reference ?? 0;
-      } else {
-        $price_ref = $value['price_ref_use'];
-      }
+      $price_ref = $get_price_ref->price_reference ?? $value['price_ref_use'];
 
       $ArrSaveDetail[$key]['so_number'] = $so_number;
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
@@ -765,15 +761,17 @@ class Request_pr_stok extends Admin_Controller
   {
     $category = $this->input->post('category');
 
-    $this->db->select('a.request, a.price_ref_use');
+    $this->db->select('a.request, a.price_ref_use, b.price_reference');
     $this->db->from('accessories a');
+    $this->db->join('budget_rutin_detail b', 'b.id_barang = a.id', 'left');
     $this->db->where('a.id_category', $category);
     $this->db->where('a.request >', 0);
     $get_hitung_pengajuan = $this->db->get()->result();
 
     $nilai_pengajuan = 0;
     foreach ($get_hitung_pengajuan as $item) {
-      $nilai_pengajuan += ($item->request * $item->price_ref_use);
+      $price_ref = $item->price_reference ?? $item->price_ref_use;
+      $nilai_pengajuan += ($item->request * $price_ref);
     }
 
     $response = [
