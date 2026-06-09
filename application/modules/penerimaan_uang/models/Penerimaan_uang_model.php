@@ -108,6 +108,12 @@ class Penerimaan_uang_model extends BF_Model
                 $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['split_id']])->row_array();
                 if (!empty($get_penerimaan)) {
                     $action = '<button type="button" class="btn btn-sm btn-info detail" title="View Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-eye"></i></button>';
+                    
+                    // Check if journal has been posted
+                    $check_posted = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['no_surat'], 'sts' => '1'])->num_rows();
+                    if ($check_posted == 0) {
+                        $action .= '&nbsp;<button type="button" class="btn btn-sm btn-danger rollback" title="Rollback Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-undo"></i></button>';
+                    }
                 } else {
                     $action = '';
                 }

@@ -245,6 +245,60 @@
         });
     });
 
+    $(document).on('click', '.rollback', function() {
+        var id_penerimaan = $(this).data('id');
+
+        Swal.fire({
+            title: 'Apakah Anda Yakin?',
+            text: "Data penerimaan piutang ini akan dihapus dan dibatalkan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Rollback!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    type: 'post',
+                    url: siteurl + active_controller + 'rollback_penerimaan',
+                    data: {
+                        id_penerimaan: id_penerimaan
+                    },
+                    dataType: 'json',
+                    cache: false,
+                    success: function(result) {
+                        if (result.status == 1) {
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: result.msg,
+                                icon: 'success',
+                                timer: 3000
+                            }).then(function() {
+                                DataTables();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: result.msg,
+                                icon: 'error',
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function(result) {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Gagal saat memproses rollback. Silahkan coba lagi.',
+                            icon: 'error',
+                            timer: 3000
+                        });
+                    }
+                });
+            }
+        });
+    });
+
     function DataTables(bank = null) {
         var DataTables = $('#table_list').dataTable({
             serverSide: true,

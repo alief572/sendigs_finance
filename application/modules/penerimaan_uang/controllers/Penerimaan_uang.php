@@ -690,4 +690,91 @@ class Penerimaan_uang extends Admin_Controller
     {
         $this->Penerimaan_uang_model->get_alokasi_penerimaan();
     }
+
+    public function rollback_penerimaan()
+    {
+        $this->auth->restrict($this->deletePermission);
+
+        $id_penerimaan = $this->input->post('id_penerimaan');
+
+        if (empty($id_penerimaan)) {
+            echo json_encode(['status' => 0, 'msg' => 'ID Penerimaan tidak valid.']);
+            return;
+        }
+
+        // Get header
+        $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id' => $id_penerimaan])->row_array();
+        if (empty($get_penerimaan)) {
+            echo json_encode(['status' => 0, 'msg' => 'Data penerimaan tidak ditemukan.']);
+            return;
+        }
+
+        $no_surat = $get_penerimaan['no_surat'];
+
+        // Check if journal has been posted
+        $check_posted = $this->db->get_where('tr_jurnal', ['no_transaksi' => $no_surat, 'sts' => '1'])->num_rows();
+        if ($check_posted > 0) {
+            echo json_encode(['status' => 0, 'msg' => 'Penerimaan tidak bisa di-rollback karena jurnal sudah di-posting.']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        // Revert Saldo Piutang in tr_invoicing
+        $get_details = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $no_surat])->result_array();
+        
+        $total_penerimaan = 0;
+        foreach ($get_details as $detail) {
+            $id_inv = $detail['id_inv'];
+            $penerimaan = $detail['penerimaan'];
+            $total_penerimaan += $penerimaan;
+
+            // Update saldo_piutang
+            $this->db->set('saldo_piutang', 'saldo_piutang + ' . $penerimaan, FALSE);
+            $this->db->where('id', $id_inv);
+            $this->db->update('tr_invoicing');
+        }
+
+        // Revert nilai_terpakai in tr_alokasi_detail
+        $resolved = $this->Penerimaan_uang_model->resolve_alokasi($get_penerimaan['id_alokasi']);
+        if (!empty($resolved)) {
+            $split = $resolved['split'];
+            $alokasi_detail = $resolved['detail'];
+            
+            $detail_id_for_update = $resolved['is_legacy'] ? $get_penerimaan['id_alokasi'] : $split['id_alokasi_detail'];
+            
+            // To be safe, we subtract the total penerimaan from current nilai_terpakai
+            // Note: The original save logic sets it directly to $total_penerimaan. 
+            // In case there are multiple penerimaan (if system allows), subtraction is safer.
+            // If it goes below 0, set to 0.
+            $new_terpakai = $alokasi_detail['nilai_terpakai'] - $total_penerimaan;
+            if ($new_terpakai < 0) $new_terpakai = 0;
+            
+            $this->db->update('tr_alokasi_detail', ['nilai_terpakai' => $new_terpakai], ['id' => $detail_id_for_update]);
+        }
+
+        // Delete Jurnal
+        $this->db->delete('tr_jurnal', ['no_transaksi' => $no_surat, 'jenis_transaksi' => 'Penerimaan Piutang']);
+
+        // Delete Details
+        $this->db->delete('tr_penerimaan_piutang_detail', ['id_header' => $no_surat]);
+
+        // Delete Header
+        $this->db->delete('tr_penerimaan_piutang', ['no_surat' => $no_surat]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $valid = 0;
+            $msg = 'Gagal melakukan rollback, coba lagi.';
+        } else {
+            $this->db->trans_commit();
+            $valid = 1;
+            $msg = 'Rollback penerimaan berhasil dilakukan.';
+        }
+
+        echo json_encode([
+            'status' => $valid,
+            'msg' => $msg
+        ]);
+    }
 }
