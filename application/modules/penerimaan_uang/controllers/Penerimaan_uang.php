@@ -507,7 +507,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $arr_update_inv[] = [
                 'id' => $post['id_inv_' . $i],
-                'saldo_piutang' => ($saldo_piutang - $penerimaan)
+                'saldo_piutang' => $sisa_piutang
             ];
 
             $total_penerimaan += $penerimaan;
@@ -723,14 +723,32 @@ class Penerimaan_uang extends Admin_Controller
         // Revert Saldo Piutang in tr_invoicing
         $get_details = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $no_surat])->result_array();
         
+        // Cek tanggal rilis perbaikan untuk backward compatibility
+        $tgl_rilis_perbaikan = '2026-06-09 00:00:00';
+        $is_old_data = (strtotime($get_penerimaan['created_date']) < strtotime($tgl_rilis_perbaikan));
+
         $total_penerimaan = 0;
         foreach ($get_details as $detail) {
             $id_inv = $detail['id_inv'];
             $penerimaan = $detail['penerimaan'];
+            $biaya_admin = $detail['biaya_admin'];
+            $pph23 = $detail['pph23'];
             $total_penerimaan += $penerimaan;
 
+            if ($is_old_data) {
+                // Logika lama: hanya menambahkan penerimaan
+                $amount_to_add = $penerimaan;
+            } else {
+                // Logika baru: akurat berdasarkan perhitungan UI
+                if ($get_penerimaan['pph23_dipotong'] == 'N') {
+                    $amount_to_add = $penerimaan - $pph23 + $biaya_admin;
+                } else {
+                    $amount_to_add = $penerimaan + $biaya_admin;
+                }
+            }
+
             // Update saldo_piutang
-            $this->db->set('saldo_piutang', 'saldo_piutang + ' . $penerimaan, FALSE);
+            $this->db->set('saldo_piutang', 'saldo_piutang + ' . $amount_to_add, FALSE);
             $this->db->where('id', $id_inv);
             $this->db->update('tr_invoicing');
         }
