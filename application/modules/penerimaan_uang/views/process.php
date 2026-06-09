@@ -299,7 +299,7 @@
         var ttl_debit_jurnal = 0;
         var ttl_kredit_jurnal = 0;
 
-        ttl_debit_jurnal += get_num2($('input[name="debit_bank_debit"]').val());
+        // Debit bank akan ditambahkan di akhir setelah ttl_penerimaan dihitung
         ttl_kredit_jurnal += get_num2($('input[name="kredit_bank_debit"]').val());
 
         var ttl_piutang_dagang = 0;
@@ -412,6 +412,11 @@
         $('input[name="total_sisa_piutang"]').autoNumeric('set', ttl_sisa_piutang);
         $('input[name="grand_total"]').autoNumeric('set', grand_total);
         $('input[name="kontrol"]').autoNumeric('set', kontrol);
+
+        // Update nilai Bank Debit dengan total penerimaan yang diketik user
+        $('input[name="debit_bank_debit"]').val(ttl_penerimaan);
+        $('.td_debit_bank_debit').html(number_format(ttl_penerimaan));
+        ttl_debit_jurnal += ttl_penerimaan;
 
         var resp_ttl_debit_jurnal = number_format(ttl_debit_jurnal);
         resp_ttl_debit_jurnal += '<input type="hidden" name="total_debit_jurnal" value="' + ttl_debit_jurnal + '">';
