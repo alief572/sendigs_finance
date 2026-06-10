@@ -408,8 +408,9 @@
         $('input[name="kontrol"]').autoNumeric('set', kontrol);
 
         // Update nilai Bank Debit dengan total penerimaan yang diketik user
-        $('input[name="debit_bank_debit"]').val(ttl_penerimaan);
-        $('.td_debit_bank_debit').html(number_format(ttl_penerimaan));
+        var resp_debit_bank_debit = number_format(ttl_penerimaan);
+        resp_debit_bank_debit += '<input type="hidden" name="debit_bank_debit" value="' + ttl_penerimaan + '">';
+        $('.td_debit_bank_debit').html(resp_debit_bank_debit);
         ttl_debit_jurnal += ttl_penerimaan;
 
         var resp_ttl_debit_jurnal = number_format(ttl_debit_jurnal);
