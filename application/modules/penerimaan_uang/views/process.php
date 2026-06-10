@@ -179,7 +179,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right">Total Penerimaan - Biaya Admin</td>
+            <td colspan="8" class="text-right">Total Alokasi Penerimaan</td>
             <td>
                 <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" readonly>
             </td>
@@ -364,7 +364,7 @@
 
         }
 
-        var grand_total = Math.round(ttl_penerimaan - ttl_biaya_admin);
+        var grand_total = Math.round(ttl_penerimaan);
         var kontrol = Math.round(grand_total - uang_masuk);
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {

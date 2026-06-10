@@ -73,9 +73,9 @@ $total_kredit = (!empty($total_kredit)) ? $total_kredit : 0;
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right">Total Penerimaan - Biaya Admin</td>
+            <td colspan="8" class="text-right">Total Alokasi Penerimaan</td>
             <td>
-                <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" value="<?= ($total_piutang_dagang - $total_biaya_admin) ?>" readonly>
+                <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" value="<?= $total_penerimaan ?>" readonly>
             </td>
             <td></td>
             <td></td>
