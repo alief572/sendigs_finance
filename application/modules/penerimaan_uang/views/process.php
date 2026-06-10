@@ -365,13 +365,7 @@
         }
 
         var grand_total = Math.round(ttl_penerimaan - ttl_biaya_admin);
-        var kontrol;
-        if (pph23_dipotong == 'Y') {
-            kontrol = Math.round(uang_masuk - ttl_piutang_dagang);
-        } else {
-            // Tidak dipotong PPh 23: kontrol dikurangi juga dengan nilai PPh 23
-            kontrol = Math.round(uang_masuk - ttl_piutang_dagang - ttl_pph23);
-        }
+        var kontrol = Math.round(grand_total - uang_masuk);
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
