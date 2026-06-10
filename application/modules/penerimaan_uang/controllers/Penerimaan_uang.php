@@ -155,7 +155,10 @@ class Penerimaan_uang extends Admin_Controller
                 $id_company = '1';
                 $nm_company = 'STM-Vuca';
             } else {
-                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
+                $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_inv['id_spk_penawaran']])->row_array();
+
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran['id_penawaran']])->row_array();
+
                 $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
                 $id_company = (!empty($get_company)) ? $get_company['id'] : '';
                 $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
