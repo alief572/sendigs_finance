@@ -507,7 +507,8 @@
                                 text: result.msg,
                                 timer: 3000
                             }, function(lanjut) {
-                                location.reload();
+                                var enc_id = result.id_header.replace(/\//g, '-O-');
+                                window.location.href = siteurl + active_controller + 'review_upload/' + enc_id;
                             });
                         } else {
                             swal({
