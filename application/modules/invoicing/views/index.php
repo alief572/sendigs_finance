@@ -176,6 +176,65 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     </div>
 </div>
 
+<div class="modal" id="modal_print_kwitansi" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-file-pdf-o"></span> Print Kwitansi</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="hidden" class="id_inv_kwitansi">
+                    <label for="">Company</label>
+                    <select name="company_kwitansi" id="" class="form-control form-control-sm company_kwitansi">
+                        <option value="">- Company -</option>
+                        <?php
+                        foreach ($data_company as $item) :
+                            echo '<option value="' . $item->id . '">' . $item->nm_company . '</option>';
+                        endforeach;
+                        ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="keterangan_print_kwitansi">Keterangan Print</label>
+                    <textarea name="keterangan_print_kwitansi" id="keterangan_print_kwitansi" class="form-control form-control-sm"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success confirm_kwitansi"><i class="fa fa-check"></i> Proses</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">
+                    <span class="glyphicon glyphicon-remove"></span> Batal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modal_print_kwitansi_vuca" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-file-pdf-o"></span> Print Kwitansi Vuca</h4>
+            </div>
+            <div class="modal-body" id="MyModalBody">
+                <input type="hidden" class="id_inv_kwitansi_vuca">
+                <div class="form-group">
+                    <label for="keterangan_print_kwitansi_vuca">Keterangan Print</label>
+                    <textarea name="keterangan_print_kwitansi_vuca" id="keterangan_print_kwitansi_vuca" class="form-control form-control-sm"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success confirm_kwitansi_vuca"><i class="fa fa-check"></i> Proses</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">
+                    <span class="glyphicon glyphicon-remove"></span> Batal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal" id="modal_list_non_kons" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md">
         <div class="modal-content">
@@ -340,6 +399,88 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
 
         }
+    })
+
+    $(document).on('click', '.pilih_print_kwitansi', function() {
+        var id_inv = $(this).data('id_inv');
+
+        $('.id_inv_kwitansi').val(id_inv);
+    });
+
+    $(document).on('click', '.pilih_print_kwitansi_vuca', function() {
+        var id_inv = $(this).data('id_inv');
+
+        $('.id_inv_kwitansi_vuca').val(id_inv);
+    });
+
+    $(document).on('click', '.confirm_kwitansi', function() {
+        var company = $('.company_kwitansi').val();
+        var id_inv = $('.id_inv_kwitansi').val();
+        var keterangan_print = $('#keterangan_print_kwitansi').val();
+
+        if (company == '') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Warning !',
+                text: 'Company cannot be empty !'
+            });
+
+            return false;
+        } else {
+            $.ajax({
+                type: 'post',
+                url: siteurl + active_controller + 'save_keterangan_print_kwitansi',
+                data: {
+                    'id': id_inv,
+                    'keterangan_print': keterangan_print,
+                    'company': company
+                },
+                cache: false,
+                dataType: 'json',
+                success: function(result) {
+                    window.open(siteurl + active_controller + 'print_kwitansi/' + id_inv + '/' + company, '_blank')
+                },
+                error: function(result) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error !',
+                        text: 'Please try again later !',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
+            });
+        }
+    })
+
+    $(document).on('click', '.confirm_kwitansi_vuca', function() {
+        var id_inv = $('.id_inv_kwitansi_vuca').val();
+        var keterangan_print = $('#keterangan_print_kwitansi_vuca').val();
+
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'save_keterangan_print_kwitansi_vuca',
+            data: {
+                'id': id_inv,
+                'keterangan_print': keterangan_print
+            },
+            cache: false,
+            dataType: 'json',
+            success: function(result) {
+                window.open(siteurl + active_controller + 'print_kwitansi_vuca/' + id_inv + '/4', '_blank')
+            },
+            error: function(result) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        });
     })
 
     $(document).on('click', '.btn_filter', function() {

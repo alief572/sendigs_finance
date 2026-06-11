@@ -137,8 +137,10 @@ class Invoicing_model extends BF_Model
 
                     if ($get_invoicing->tipe_invoice == '1') {
                         $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv_vuca" title="Print Invoice" data-toggle="modal" data-target="#modal_print_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi_vuca" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-file-pdf-o"></i></a>';
                     } else {
                         $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-file-pdf-o"></i></a>';
                     }
                 }
 

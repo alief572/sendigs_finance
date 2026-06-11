@@ -870,6 +870,40 @@ class Invoicing extends Admin_Controller
         $this->load->view('print_invoice_vuca', $data);
     }
 
+    public function print_kwitansi($id, $id_company = 1)
+    {
+        $this->auth->restrict($this->viewPermission);
+
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id);
+        $get_invoicing = $this->db->get()->row();
+
+        $data = [
+            'data_invoice' => $get_invoicing,
+            'id_company' => $id_company
+        ];
+
+        $this->load->view('print_kwitansi', $data);
+    }
+
+    public function print_kwitansi_vuca($id, $id_company = 4)
+    {
+        $this->auth->restrict($this->viewPermission);
+
+        $this->db->select('a.*');
+        $this->db->from('tr_invoicing a');
+        $this->db->where('a.id', $id);
+        $get_invoicing = $this->db->get()->row();
+
+        $data = [
+            'data_invoice' => $get_invoicing,
+            'id_company' => $id_company
+        ];
+
+        $this->load->view('print_kwitansi_vuca', $data);
+    }
+
     public function save_invoice()
     {
         $post = $this->input->post();
@@ -1452,6 +1486,82 @@ class Invoicing extends Admin_Controller
         }
     }
 
+    public function save_keterangan_print_kwitansi()
+    {
+        $post = $this->input->post();
+
+        $this->db->trans_begin();
+
+        try {
+            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $post['id']])->row();
+
+            $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']])->result();
+
+            if (!empty($get_jurnal) && $get_jurnal[0]->sts == '0') {
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $post['company']])->row();
+
+                $id_company = (!empty($get_company->id)) ? $get_company->id : '';
+                $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
+
+                $update_jurnal_company = $this->db->update('tr_jurnal', ['id_company' => $id_company, 'nm_company' => $nm_company], ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']]);
+            }
+
+            $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+
+            $this->db->trans_commit();
+
+            http_response_code(200);
+
+            echo json_encode([
+                'status' => 1,
+                'msg' => 'Data has been saved !'
+            ]);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+
+            http_response_code(500);
+
+            $response = [
+                'status' => 0,
+                'msg' => $e->getMessage()
+            ];
+
+            echo json_encode($response);
+        }
+    }
+
+    public function save_keterangan_print_kwitansi_vuca()
+    {
+        $post = $this->input->post();
+
+        $this->db->trans_begin();
+
+        $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+        if (!$update_inv) {
+            $this->db->trans_rollback();
+
+            print_r($this->db->last_query());
+            exit;
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = 'Please try again later !';
+        } else {
+            $this->db->trans_commit();
+
+            $valid = 1;
+            $msg = 'Data has been updated !';
+        }
+
+        echo json_encode([
+            'status' => $valid,
+            'msg' => $msg
+        ]);
+    }
+
     public function get_data_spk()
     {
         $this->Invoicing_model->get_data_spk();
@@ -1539,7 +1649,9 @@ class Invoicing extends Admin_Controller
             $btn_close = '';
         }
 
-        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print;
+        $btn_print_kwitansi = '<a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" data-id_inv="' . $id . '" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi"><i class="fa fa-file-pdf-o"></i></a>';
+
+        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_print_kwitansi;
 
         return $buttons;
     }
