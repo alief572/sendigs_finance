@@ -46,6 +46,7 @@ class Alokasi_model extends BF_Model
         $this->db->from('tr_alokasi_detail a');
         $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
         $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
+        $this->db->where('a.status_approval', 'approved');
         if (!empty($startDate)) {
             $this->db->where('a.tanggal_transaksi >=', $startDate);
         }

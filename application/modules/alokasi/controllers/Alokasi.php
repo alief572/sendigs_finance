@@ -138,6 +138,7 @@ class Alokasi extends Admin_Controller
                                     'saldo' => $saldo,
                                     'reference_no' => '',
                                     'cheque_no' => '',
+                                    'status_approval' => 'pending',
                                     'created_by' => $this->auth->user_id(),
                                     'created_date' => date('Y-m-d H:i:s')
                                 ];
@@ -193,6 +194,7 @@ class Alokasi extends Admin_Controller
                                 'saldo' => str_replace(',', '', $item[7]),
                                 'reference_no' => str_replace("'", "", $item[2]),
                                 'cheque_no' => str_replace('', '', $item[3]),
+                                'status_approval' => 'pending',
                                 'created_by' => $this->auth->user_id(),
                                 'created_date' => date('Y-m-d H:i:s')
                             ];
@@ -272,7 +274,8 @@ class Alokasi extends Admin_Controller
 
                 echo json_encode([
                     'status' => $valid,
-                    'msg' => $msg
+                    'msg' => $msg,
+                    'id_header' => $id_header
                 ]);
             } else {
                 print_r($this->upload->display_errors());
@@ -676,5 +679,116 @@ class Alokasi extends Admin_Controller
             'reference_no' => $transaction['reference_no'],
             'splits' => $splits
         ]);
+    }
+
+    public function review_upload($id_header)
+    {
+        $id_header = str_replace('-O-', '/', $id_header);
+        $this->auth->restrict($this->viewPermission);
+
+        $data['id_header'] = $id_header;
+        $this->template->title('Review Upload Alokasi');
+        $this->template->render('review_upload', $data);
+    }
+
+    public function get_pending_alokasi()
+    {
+        $id_header = $this->input->post('id_header');
+        
+        $this->db->select('a.id, a.keterangan, a.tanggal_transaksi, a.nominal_debit, a.nominal_kredit, a.saldo, a.reference_no, b.nama_bank, c.rekening, c.nama');
+        $this->db->from('tr_alokasi_detail a');
+        $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
+        $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
+        $this->db->where('a.id_header', $id_header);
+        $this->db->where('a.status_approval', 'pending');
+        
+        $get_data = $this->db->get()->result_array();
+
+        $hasil = [];
+        $no = 0;
+        foreach ($get_data as $item) {
+            $no++;
+            $tanggal_transaksi = date('d-F-Y', strtotime($item['tanggal_transaksi']));
+            if ($item['tanggal_transaksi'] == '0000-00-00') {
+                $tanggal_transaksi = 'PEND';
+            }
+
+            $hasil[] = [
+                'id' => $item['id'],
+                'no' => $no,
+                'tanggal_transaksi' => $tanggal_transaksi,
+                'bank' => $item['nama_bank'] . ' - ' . $item['rekening'] . ' - ' . $item['nama'],
+                'keterangan' => $item['keterangan'],
+                'reference_no' => $item['reference_no'],
+                'debit' => number_format($item['nominal_debit'], 2),
+                'kredit' => number_format($item['nominal_kredit'], 2),
+                'saldo' => number_format($item['saldo'], 2)
+            ];
+        }
+
+        echo json_encode(['data' => $hasil]);
+    }
+
+    public function approve_data()
+    {
+        $ids = $this->input->post('ids');
+        $id_header = $this->input->post('id_header');
+
+        if (!empty($ids) && is_array($ids)) {
+            $this->db->where_in('id', $ids);
+            $this->db->update('tr_alokasi_detail', ['status_approval' => 'approved']);
+        } else if (!empty($id_header)) {
+            $this->db->where('id_header', $id_header);
+            $this->db->where('status_approval', 'pending');
+            $this->db->update('tr_alokasi_detail', ['status_approval' => 'approved']);
+        }
+
+        echo json_encode(['status' => 1, 'msg' => 'Data berhasil diapprove!']);
+    }
+
+    public function delete_pending_data()
+    {
+        $ids = $this->input->post('ids');
+        $id_header = $this->input->post('id_header');
+
+        if (!empty($ids) && is_array($ids)) {
+            $this->db->where_in('id', $ids);
+            $this->db->delete('tr_alokasi_detail');
+        } else if (!empty($id_header)) {
+            $this->db->where('id_header', $id_header);
+            $this->db->where('status_approval', 'pending');
+            $this->db->delete('tr_alokasi_detail');
+            
+            // Delete header if all details are deleted
+            $this->db->where('id_header', $id_header);
+            $count = $this->db->count_all_results('tr_alokasi_detail');
+            if ($count == 0) {
+                $this->db->where('id', $id_header);
+                $this->db->delete('tr_alokasi');
+            }
+        }
+
+        echo json_encode(['status' => 1, 'msg' => 'Data berhasil dihapus!']);
+    }
+
+    public function update_pending_data()
+    {
+        $id = $this->input->post('id');
+        $keterangan = $this->input->post('keterangan');
+        $nominal_debit = $this->input->post('nominal_debit');
+        $nominal_kredit = $this->input->post('nominal_kredit');
+        $reference_no = $this->input->post('reference_no');
+
+        $data = [
+            'keterangan' => $keterangan,
+            'nominal_debit' => str_replace(',', '', $nominal_debit),
+            'nominal_kredit' => str_replace(',', '', $nominal_kredit),
+            'reference_no' => $reference_no
+        ];
+
+        $this->db->where('id', $id);
+        $this->db->update('tr_alokasi_detail', $data);
+
+        echo json_encode(['status' => 1, 'msg' => 'Data berhasil direvisi!']);
     }
 }
