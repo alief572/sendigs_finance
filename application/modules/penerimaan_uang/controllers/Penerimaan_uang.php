@@ -528,6 +528,14 @@ class Penerimaan_uang extends Admin_Controller
             foreach ($get_coa_jurnal as $item_jurnal) {
                 $no_jurnal++;
 
+                $get_no_invoice = $this->db->select('a.no_invoice')
+                    ->from('tr_invoicing a')
+                    ->where('a.id', $post['id_inv_' . $i])
+                    ->get()
+                    ->row();
+
+                $no_invoice = $get_no_invoice->no_invoice ?? '';
+
                 if ($i == 1 && $no_jurnal == 1) {
                     $arr_insert_jurnal[] = [
                         'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
@@ -538,7 +546,7 @@ class Penerimaan_uang extends Admin_Controller
                         'nm_coa' => $nm_coa_bank,
                         'debit' => str_replace(',', '.', str_replace('.', '', $post['debit_bank_debit'])),
                         'kredit' => str_replace(',', '.', str_replace('.', '', $post['kredit_bank_debit'])),
-                        'keterangan' => $nm_coa_bank . ' - ' . $post['id_inv_' . $i],
+                        'keterangan' => $nm_coa_bank . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
                         'jenis_transaksi' => 'Penerimaan Piutang',
@@ -556,7 +564,7 @@ class Penerimaan_uang extends Admin_Controller
                         'nm_coa' => $item_jurnal['nm_coa'],
                         'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-                        'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $post['id_inv_' . $i],
+                        'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
                         'jenis_transaksi' => 'Penerimaan Piutang',
@@ -573,7 +581,7 @@ class Penerimaan_uang extends Admin_Controller
                         'nm_coa' => $item_jurnal['nm_coa'],
                         'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-                        'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $post['id_inv_' . $i],
+                        'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
                         'jenis_transaksi' => 'Penerimaan Piutang',
@@ -736,7 +744,7 @@ class Penerimaan_uang extends Admin_Controller
 
         // Revert Saldo Piutang in tr_invoicing
         $get_details = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $no_surat])->result_array();
-        
+
         // Cek tanggal rilis perbaikan untuk backward compatibility
         $tgl_rilis_perbaikan = '2026-06-09 00:00:00';
         $is_old_data = (strtotime($get_penerimaan['created_date']) < strtotime($tgl_rilis_perbaikan));
@@ -772,9 +780,9 @@ class Penerimaan_uang extends Admin_Controller
         if (!empty($resolved)) {
             $split = $resolved['split'];
             $alokasi_detail = $resolved['detail'];
-            
+
             $detail_id_for_update = $resolved['is_legacy'] ? $get_penerimaan['id_alokasi'] : $split['id_alokasi_detail'];
-            
+
             // Set nilai_terpakai = NULL dan sts = '0' agar kembali Open di modul Alokasi
             $this->db->update('tr_alokasi_detail', [
                 'nilai_terpakai' => NULL,
