@@ -167,7 +167,8 @@ class Jurnal_penerimaan extends Admin_Controller
 			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $get_jurnal->no_transaksi])->row();
 			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
 			$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
-			$id_company    = !empty($get_penawaran->company) ? $get_penawaran->company : '';
+			$get_penawaran_non_konsultasi = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_invoicing->id_penawaran])->row();
+			$id_company    = !empty($get_penawaran->company) ? $get_penawaran->company : $get_penawaran_non_konsultasi->id_company;
 			$acc_db        = $this->_get_accounting_db($id_company);
 
 			$Nomor_BUM = $this->Jurnal_penerimaan_nomor_model->get_Nomor_Jurnal_BUM('101', $get_invoicing->tanggal_invoice, $id_company);
