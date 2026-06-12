@@ -73,12 +73,14 @@ class Jurnal_penerimaan_model extends BF_Model
         foreach ($get_data as $row) {
             $no++;
 
+            $span_id_spk_penawaran = ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>' ?? '';
+
             $data[] = [
                 'no'                 => $no,
                 'tgl'                => date('d F Y', strtotime($row->tgl_jurnal)),
                 'klien'              => $row->nm_customer,
                 'no_invoice'         => $row->no_invoice,
-                'keterangan_tagihan' => $row->nm_project . ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>',
+                'keterangan_tagihan' => $row->nm_project . $span_id_spk_penawaran,
                 'company'            => $row->nm_company,
                 'nm_divisi'          => $row->nm_divisi,
                 'coa'                => $row->coa,
