@@ -73,7 +73,7 @@ class Jurnal_penerimaan_model extends BF_Model
         foreach ($get_data as $row) {
             $no++;
 
-            $span_id_spk_penawaran = ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>' ?? '';
+            $span_id_spk_penawaran = (!empty($row->id_spk_penawaran)) ? ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>' : '';
 
             $data[] = [
                 'no'                 => $no,
