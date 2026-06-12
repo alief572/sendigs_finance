@@ -627,6 +627,17 @@ class Penerimaan_uang extends Admin_Controller
             exit;
         }
 
+        // Update nilai_terpakai di tr_alokasi_split agar status per-split akurat
+        if (!$resolved['is_legacy'] && !empty($split)) {
+            $update_split = $this->db->update('tr_alokasi_split', ['nilai_terpakai' => $total_penerimaan], ['id' => $post['id_alokasi']]);
+            if (!$update_split) {
+                $this->db->trans_rollback();
+
+                print_r($this->db->last_query());
+                exit;
+            }
+        }
+
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
