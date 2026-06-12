@@ -103,19 +103,16 @@ class Penerimaan_uang_model extends BF_Model
 
             $action = '<a href="' . base_url('penerimaan_uang/add_penerimaan_uang/' . $item['split_id']) . '" class="btn btn-sm btn-primary" title="Alokasi Penerimaan Uang"><i class="fa fa-plus"></i></a>';
 
-            if ($item['nilai_terpakai'] >= $item['split_nominal']) {
+            // Cek status berdasarkan apakah split ini sudah punya record penerimaan piutang
+            $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['split_id']])->row_array();
+            if (!empty($get_penerimaan)) {
                 $status = '<span class="badge bg-green">Used</span>';
-                $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id_alokasi' => $item['split_id']])->row_array();
-                if (!empty($get_penerimaan)) {
-                    $action = '<button type="button" class="btn btn-sm btn-info detail" title="View Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-eye"></i></button>';
-                    
-                    // Check if journal has been posted
-                    $check_posted = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['no_surat'], 'sts' => '1'])->num_rows();
-                    if ($check_posted == 0) {
-                        $action .= '&nbsp;<button type="button" class="btn btn-sm btn-danger rollback" title="Rollback Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-undo"></i></button>';
-                    }
-                } else {
-                    $action = '';
+                $action = '<button type="button" class="btn btn-sm btn-info detail" title="View Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-eye"></i></button>';
+                
+                // Check if journal has been posted
+                $check_posted = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['no_surat'], 'sts' => '1'])->num_rows();
+                if ($check_posted == 0) {
+                    $action .= '&nbsp;<button type="button" class="btn btn-sm btn-danger rollback" title="Rollback Penerimaan Piutang" data-id="' . $get_penerimaan['id'] . '"><i class="fa fa-undo"></i></button>';
                 }
             }
 

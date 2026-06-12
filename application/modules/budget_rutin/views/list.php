@@ -25,7 +25,6 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 					<th class='text-center'>#</th>
 					<th class='text-left'>Tanggal Dibuat</th>
 					<th>Warehouse</th>
-					<!-- <th>Costcenter</th> -->
 					<th class='text-center'>Rev</th>
 					<th class='text-center'>
 						<?php if ($ENABLE_MANAGE) : ?>
@@ -34,34 +33,7 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 					</th>
 				</tr>
 			</thead>
-
-			<tbody>
-				<?php if (empty($results)) {
-				} else {
-					$numb = 0;
-					foreach ($results as $record) {
-						$numb++; ?>
-						<tr>
-							<td class='text-center'><?= $numb ?></td>
-							<td class='text-left'><?= date('d-M-Y', strtotime($record->tanggal)) ?></td>
-							<td><?= strtoupper($record->nm_dept) ?></td>
-							<!-- <td><?= $record->cost_center ?></td> -->
-							<td class='text-center'><?= $record->rev ?></td>
-							<td class='text-center'>
-								<?php if ($ENABLE_VIEW) : ?>
-									<!-- <button type='button' class="btn btn-sm btn-primary" title="View" onclick="view_data('<?= $record->code_budget ?>')"><i class="fa fa-eye"></i></button> -->
-								<?php endif;
-								if ($ENABLE_MANAGE) : ?>
-									<button type='button' class="btn btn-sm btn-success" title="Edit" onclick="edit_data('<?= $record->code_budget ?>')"><i class="fa fa-pencil"></i></button>
-								<?php endif;
-								if ($ENABLE_DELETE) : ?>
-									<button type='button' class="btn btn-sm btn-danger" title="Delete" onclick="delete_data('<?= $record->code_budget ?>')"><i class="fa fa-trash"></i></button>
-								<?php endif; ?>
-							</td>
-						</tr>
-				<?php }
-				}  ?>
-			</tbody>
+			<tbody></tbody>
 		</table>
 	</div>
 	<!-- /.box-body -->
@@ -75,11 +47,31 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 <!-- page script -->
 <script type="text/javascript">
 	$(function() {
-		$("#example1").DataTable({
-			"paging": true,
-		});
+		DataTables();
 		$("#form-data").hide();
 	});
+
+	function DataTables() {
+		$('#example1').DataTable({
+			ajax: {
+				url: siteurl + 'budget_rutin/get_data',
+				type: "POST",
+				dataType: "JSON"
+			},
+			columns: [
+				{ data: 'no', className: 'text-center', orderable: false, searchable: false },
+				{ data: 'tanggal', className: 'text-left' },
+				{ data: 'warehouse' },
+				{ data: 'rev', className: 'text-center' },
+				{ data: 'action', className: 'text-center', orderable: false, searchable: false }
+			],
+			processing: true,
+			serverSide: true,
+			destroy: true,
+			paging: true,
+			stateSave: true
+		});
+	}
 
 	function add_data() {
 		var url = 'budget_rutin/create/';
@@ -101,7 +93,6 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 
 	//Delete
 	function delete_data(id) {
-		//alert(id);
 		swal({
 				title: "Anda Yakin?",
 				text: "Data Akan Terhapus secara Permanen!",
@@ -128,7 +119,7 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 									timer: 1500,
 									showConfirmButton: false
 								});
-								window.location.reload();
+								$('#example1').DataTable().ajax.reload(null, false);
 							} else {
 								swal({
 									title: "Gagal!",
@@ -149,8 +140,6 @@ $ENABLE_DELETE  = has_permission('Budget_Rutin.Delete');
 							});
 						}
 					});
-				} else {
-					//cancel();
 				}
 			});
 	}
