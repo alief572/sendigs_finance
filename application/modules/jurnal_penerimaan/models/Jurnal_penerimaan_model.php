@@ -73,18 +73,22 @@ class Jurnal_penerimaan_model extends BF_Model
         foreach ($get_data as $row) {
             $no++;
 
+            $span_id_spk_penawaran = (!empty($row->id_spk_penawaran)) ? ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>' : '';
+
+            $original = ($row->total_debit > 0) ? $row->total_debit : $row->total_kredit;
+
             $data[] = [
                 'no'                 => $no,
                 'tgl'                => date('d F Y', strtotime($row->tgl_jurnal)),
                 'klien'              => $row->nm_customer,
                 'no_invoice'         => $row->no_invoice,
-                'keterangan_tagihan' => $row->nm_project . ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>',
+                'keterangan_tagihan' => $row->nm_project . $span_id_spk_penawaran,
                 'company'            => $row->nm_company,
                 'nm_divisi'          => $row->nm_divisi,
                 'coa'                => $row->coa,
                 'perkiraan'          => $row->nm_coa,
                 'uraian'             => $row->no_invoice,
-                'original'           => number_format($row->total_debit),
+                'original'           => number_format($original),
                 'action'             => '<button type="button" class="btn btn-sm btn-primary posting_jurnal" title="Posting Jurnal" data-id="' . $row->id . '"><i class="fa fa-arrow-up"></i></button>'
             ];
         }
@@ -99,7 +103,7 @@ class Jurnal_penerimaan_model extends BF_Model
 
     private function _query_jurnal($filter = null, $search = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(d.id, g.id) as id_company, COALESCE(d.nm_company, g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
+        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, a.kredit as total_kredit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(d.id, g.id) as id_company, COALESCE(d.nm_company, g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
             ->from('tr_jurnal a')
             ->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE)
             ->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left')
@@ -111,6 +115,7 @@ class Jurnal_penerimaan_model extends BF_Model
             ->join(DBCNL . '.kons_tr_company g', 'g.id = nk.id_company', 'left')
             ->join('departments h', 'h.id = nk.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Penerimaan Piutang')
+            ->where_not_in('a.coa', ['1102-01-01', '1106-01-02', '7201-01-04', '1106-01-05'])
             ->where('a.sts <>', '1')
             ->where('b.no_invoice IS NOT NULL');
 
