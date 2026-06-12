@@ -49,48 +49,25 @@ class Jurnal_penerimaan_model extends BF_Model
             'd.id' => $company
         ];
 
-        // 1. Build base query
+        // 1. Count Total Records (tanpa search)
         $this->_query_jurnal($filter);
-
-
-
-        // 2. Count Total Records (before search)
-        $totalData = $this->db->count_all_results('', false);
-        // Since we use GROUP_BY, CI's count_all_results can be unreliable. 
-        // Using subquery for accurate count of groups
-        $sql_total = $this->db->get_compiled_select('', false);
+        $sql_total = $this->db->get_compiled_select();
         $totalData = $this->db->query("SELECT COUNT(*) AS num FROM ($sql_total) AS temp")->row()->num;
 
-        // 3. Apply Search
-        if (!empty($search)) {
-            $this->db->group_start();
-            $this->db->like('a.tgl_jurnal', $search);
-            $this->db->or_like('b.nm_customer', $search);
-            $this->db->or_like('b.nm_project', $search);
-            $this->db->or_like('b.no_invoice', $search);
-            $this->db->or_like('d.nm_company', $search);
-            $this->db->or_like('e.name', $search);
-            $this->db->or_like('a.coa', $search);
-            $this->db->or_like('a.nm_coa', $search);
-            $this->db->or_like('b.id_spk_penawaran', $search);
-            $this->db->or_like('a.debit', $search);
-            $this->db->or_like('a.kredit', $search);
-            $this->db->group_end();
-        }
-
-        // 4. Count Filtered Records
-        $sql_filtered = $this->db->get_compiled_select('', FALSE);
+        // 2. Count Filtered Records (dengan search)
+        $this->_query_jurnal($filter, $search);
+        $sql_filtered = $this->db->get_compiled_select();
         $totalFiltered = $this->db->query("SELECT COUNT(*) AS num FROM ($sql_filtered) AS temp")->row()->num;
 
-        // 5. Order and Limit
+        // 3. Get Data (dengan search + order + limit)
+        $this->_query_jurnal($filter, $search);
         $this->db->order_by('a.created_date', 'desc');
         if ($length != -1) {
             $this->db->limit($length, $start);
         }
-
         $get_data = $this->db->get()->result();
 
-        // 6. Format Data
+        // 4. Format Data
         $data = [];
         $no   = $start;
         foreach ($get_data as $row) {
@@ -120,16 +97,19 @@ class Jurnal_penerimaan_model extends BF_Model
         ]);
     }
 
-    private function _query_jurnal($filter = null)
+    private function _query_jurnal($filter = null, $search = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, f.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi', FALSE)
+        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(d.id, g.id) as id_company, COALESCE(d.nm_company, g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
             ->from('tr_jurnal a')
             ->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE)
             ->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
-            ->join(DBCNL . '.kons_tr_spk_penawaran f', 'f.id_spk_penawaran = b.id_spk_penawaran', 'left')
-            ->join(DBCNL . '.kons_tr_company d', 'd.id = COALESCE(c.company, f.id_company)', 'left', FALSE)
-            ->join('hris_divisions e', 'e.id = COALESCE(c.id_divisi, f.id_divisi)', 'left', FALSE)
+            ->join(DBCNL . '.kons_tr_spk_penawaran spk', 'spk.id_spk_penawaran = b.id_spk_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left', FALSE)
+            ->join('hris_divisions e', 'e.id = c.id_divisi', 'left')
+            ->join(DBCNL . '.kons_tr_penawaran_non_konsultasi nk', 'nk.id_penawaran = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company g', 'g.id = nk.id_company', 'left')
+            ->join('departments h', 'h.id = nk.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Penerimaan Piutang')
             ->where('a.sts <>', '1')
             ->where('b.no_invoice IS NOT NULL');
@@ -140,6 +120,22 @@ class Jurnal_penerimaan_model extends BF_Model
                     $this->db->where($key, $value);
                 }
             }
+        }
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('a.tgl_jurnal', $search);
+            $this->db->or_like('b.nm_customer', $search);
+            $this->db->or_like('b.nm_project', $search);
+            $this->db->or_like('b.no_invoice', $search);
+            $this->db->or_like('d.nm_company', $search);
+            $this->db->or_like('e.name', $search);
+            $this->db->or_like('a.coa', $search);
+            $this->db->or_like('a.nm_coa', $search);
+            $this->db->or_like('b.id_spk_penawaran', $search);
+            $this->db->or_like('a.debit', $search);
+            $this->db->or_like('a.kredit', $search);
+            $this->db->group_end();
         }
 
         $this->db->group_start()
