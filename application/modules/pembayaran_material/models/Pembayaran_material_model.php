@@ -351,6 +351,7 @@ class Pembayaran_material_model extends BF_Model
 						$hasil_jurnal .= '<tr>';
 						$hasil_jurnal .= '<td class="text-center">';
 						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $item_payment->id . '">';
 						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
 						$hasil_jurnal .= '</td>';
 						$hasil_jurnal .= '<td class="text-center">';
@@ -396,6 +397,7 @@ class Pembayaran_material_model extends BF_Model
 						$hasil_jurnal .= '<tr>';
 						$hasil_jurnal .= '<td class="text-center">';
 						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $item_payment->id . '">';
 						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
 						$hasil_jurnal .= '</td>';
 						$hasil_jurnal .= '<td class="text-center">';
@@ -441,6 +443,7 @@ class Pembayaran_material_model extends BF_Model
 						$hasil_jurnal .= '<tr>';
 						$hasil_jurnal .= '<td class="text-center">';
 						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $item_payment->id . '">';
 						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
 						$hasil_jurnal .= '</td>';
 						$hasil_jurnal .= '<td class="text-center">';
@@ -489,6 +492,7 @@ class Pembayaran_material_model extends BF_Model
 						$hasil_jurnal .= '<tr>';
 						$hasil_jurnal .= '<td class="text-center">';
 						$hasil_jurnal .= date('d F Y');
+						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $item_payment->id . '">';
 						$hasil_jurnal .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][tanggal_jurnal]" value="' . date('Y-m-d') . '">';
 						$hasil_jurnal .= '</td>';
 						$hasil_jurnal .= '<td class="text-center">';
@@ -990,7 +994,6 @@ class Pembayaran_material_model extends BF_Model
 
 						$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_expense->id_kasbon])->row();
 
-						
 
 						$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_kasbon->id_penawaran])->row();
 
@@ -998,8 +1001,6 @@ class Pembayaran_material_model extends BF_Model
 
 						if (!empty($get_penawaran->company)) {
 							$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
-
-							
 						} else {
 							$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_spk_penawaran->id_company])->row();
 						}
@@ -1008,10 +1009,10 @@ class Pembayaran_material_model extends BF_Model
 						$nm_company = $get_company->nm_company ?? '';
 
 						$get_department = $this->hris->select('a.id as id_depart, a.name as nm_depart')
-						->from('divisions a')
-						->where('a.id', $get_spk_penawaran->id_divisi)
-						->get()
-						->row();
+							->from('divisions a')
+							->where('a.id', $get_spk_penawaran->id_divisi)
+							->get()
+							->row();
 
 						$id_department = $get_department->id_depart ?? '';
 						$nm_department = $get_department->nm_depart ?? '';
@@ -1019,15 +1020,15 @@ class Pembayaran_material_model extends BF_Model
 						$arr_coa = ['9999-99-99', '7201-01-04', '1106-01-06', '2104-01-02', $coa_bank];
 
 						$get_coa_jurnal = $this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa')
-						->from('coa_master a')
-						->where_in('a.no_perkiraan', $arr_coa)
-						->get()
-						->result();
-						
+							->from('coa_master a')
+							->where_in('a.no_perkiraan', $arr_coa)
+							->get()
+							->result();
+
 						$no_jurnal = 0;
 						foreach ($get_coa_jurnal as $item_coa) {
 							$no_jurnal++;
-							
+
 							if ($item_coa->no_coa == '9999-99-99') {
 								$debit = $item_payment->jumlah;
 								$kredit = 0;
@@ -1102,7 +1103,7 @@ class Pembayaran_material_model extends BF_Model
 
 						if (!empty($get_kasbon->tipe)) {
 
-							
+
 
 							// if ($get_kasbon->tipe == '1') {
 							// 	$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
@@ -1117,7 +1118,7 @@ class Pembayaran_material_model extends BF_Model
 							// 		->result();
 
 							// 	foreach ($get_kasbon_detail as $item_detail) {
-									
+
 							// 	}
 							// } elseif ($get_kasbon->tipe == '4') {
 							// 	$get_kasbon_detail = $this->consultant->get_where('kons_tr_kasbon_project_subcont', ['id_header' => $get_kasbon->id])->result();
