@@ -1270,6 +1270,17 @@ class Pembayaran_material extends Admin_Controller
 	{
 		$post = $this->input->post();
 
+		// Validasi field wajib
+		$required_fields = ['bank', 'tgl_bayar', 'keterangan_pembayaran', 'mata_uang', 'payment_bank', 'total_payment', 'id_payment', 'kurs_payment'];
+		foreach ($required_fields as $field) {
+			if (!isset($post[$field]) || $post[$field] === '') {
+				echo json_encode(['status' => 0, 'pesan' => "Field {$field} wajib diisi!"]);
+				return;
+			}
+		}
+
+		$this->db->trans_start();
+
 		try {
 			$get_coa_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $post['bank']])->row();
 			$nm_coa_bank = '';
@@ -1311,6 +1322,10 @@ class Pembayaran_material extends Admin_Controller
 				throw new Exception($this->db->error($insert_payment_paid));
 			}
 
+			$total_payment_clean = str_replace(',', '', $post['total_payment']);
+			$payment_bank_clean = str_replace(',', '', $post['payment_bank']);
+			$kurs_payment_clean = str_replace(',', '', $post['kurs_payment']);
+
 			$this->db->where_in('id', explode(',', $post['id_payment']));
 			$update_payment1 = $this->db->update('payment_approve', [
 				'id_payment' => $id_payment_paid,
@@ -1320,18 +1335,21 @@ class Pembayaran_material extends Admin_Controller
 				'coa_bank' => $post['bank'],
 				'nm_coa_bank' => $nm_coa_bank,
 				'mata_uang' => $post['mata_uang'],
-				'payment_bank' => str_replace(',', '', $post['payment_bank']),
-				'total_payment' => $post['total_payment'],
-				'selisih' => ($post['total_payment'] - str_replace(',', '', $post['payment_bank'])),
+				'payment_bank' => $payment_bank_clean,
+				'total_payment' => $total_payment_clean,
+				'selisih' => ($total_payment_clean - $payment_bank_clean),
 				'status' => 2,
 				'link_doc' => $filenames,
 				'id_supplier' => $post['supplier_input'],
 				'nm_supplier' => $post['nm_supplier_input'],
-				'kurs_payment' => str_replace(',', '', $post['kurs_payment'])
+				'kurs_payment' => $kurs_payment_clean
 			]);
 			if (!$update_payment1) {
 				throw new Exception($this->db->error($update_payment1));
 			}
+
+			$kurs_invoice = 0;
+			$last_detail_ppn = 0;
 
 			if (!empty($post['dt'])) {
 				foreach ($post['dt'] as $detail) {
@@ -1345,10 +1363,9 @@ class Pembayaran_material extends Admin_Controller
 					]);
 
 					$kurs_invoice = $detail['kurs_invoice'];
+					$last_detail_ppn = str_replace(',', '', $detail['nilai_ppn']);
 					if (!$update_payment_detail) {
 						throw new Exception($this->db->error($update_payment_detail));
-						// print_r($this->db->error($update_payment_detail));
-						// exit;
 					}
 				}
 			}
@@ -1394,9 +1411,11 @@ class Pembayaran_material extends Admin_Controller
 			// }
 
 			// if (!empty($arr_jurnal)) {
-			$insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_jurnal);
-			if (!$insert_jurnal) {
-				throw new Exception('Data jurnal gagal dibuat !');
+			if (!empty($arr_jurnal)) {
+				$insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_jurnal);
+				if (!$insert_jurnal) {
+					throw new Exception('Data jurnal gagal dibuat !');
+				}
 			}
 
 			$no_payment = $post['id_payment'];
@@ -1405,22 +1424,24 @@ class Pembayaran_material extends Admin_Controller
 				$jenis_jurnal = 'BUK001';
 				$kurs         = 1;
 				$selisih      = 0;
-				$hutang       = (str_replace(',', '', $post['total_payment']) * $kurs) + (str_replace(',', '', $detail['nilai_ppn']) * $kurs);
+				$hutang       = ($total_payment_clean * $kurs) + ($last_detail_ppn * $kurs);
 			} else {
 				$jenis_jurnal = 'BUK004';
-				$kurs         = str_replace(',', '', $post['kurs_payment']);
+				$kurs         = $kurs_payment_clean;
 				$selisih      = $kurs - $kurs_invoice;
-				$hutang       = (str_replace(',', '', $post['total_payment']) * $kurs_invoice) + (str_replace(',', '', $detail['nilai_ppn']) * $kurs_invoice);
+				$hutang       = ($total_payment_clean * $kurs_invoice) + ($last_detail_ppn * $kurs_invoice);
 			}
 
 			$bank_coa     = $post['bank'];
 			$no_request   = $post['id_payment'];
 			$keterangan   = $post['keterangan_pembayaran'];
 			$bankcharge   = (str_replace(',', '', $post['bank_charge'])) * $kurs;
-			$bank_nilai   = (str_replace(',', '', $post['payment_bank'])) * $kurs;
-			$ap           = str_replace(',', '', $post['total_payment']);
+			$bank_nilai   = $payment_bank_clean * $kurs;
+			$ap           = $total_payment_clean;
 			$selisihkurs  = $selisih * $ap;
 
+			$selisihdebet  = 0;
+			$selisihkredit = 0;
 			if ($selisihkurs < 0) {
 				$selisihdebet  = 0;
 				$selisihkredit = $selisihkurs * (-1);
@@ -1436,7 +1457,7 @@ class Pembayaran_material extends Admin_Controller
 			$no_reff     = $post['id_payment'];
 			$Username    = $this->auth->user_id();
 
-			$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' order by parameter_no")->result();
+			$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? order by parameter_no", [$jenis_jurnal])->result();
 			$det_Jurnaltes1 = array();
 			foreach ($datajurnal1 as $rec) {
 				if ($rec->parameter_no == "1") {
@@ -1489,7 +1510,7 @@ class Pembayaran_material extends Admin_Controller
 					);
 				}
 
-				if ($jenis_jurnal = 'BUK004') {
+				if ($jenis_jurnal == 'BUK004') {
 					if ($rec->parameter_no == "5") {
 						$det_Jurnaltes1[] = array(
 							'nomor' => $nomor_jurnal,
@@ -1559,7 +1580,7 @@ class Pembayaran_material extends Admin_Controller
 			$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
 			$this->db->query($Qry_Update_Cabang_acc);
 
-			$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='3'")->row();
+			$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? and parameter_no='3'", [$jenis_jurnal])->row();
 			$datahutang = array(
 				'tipe'       	 => 'BUK',
 				'nomor'       	 => $Nomor_JV,
@@ -1585,7 +1606,12 @@ class Pembayaran_material extends Admin_Controller
 			$valid = 1;
 			$pesan = 'Selamat, data telah berhasil dibayar !';
 			// }
-			$this->db->trans_commit();
+			$this->db->trans_complete();
+
+			if ($this->db->trans_status() === FALSE) {
+				throw new Exception('Transaksi gagal, data telah di-rollback.');
+			}
+
 			echo json_encode([
 				'status' => $valid,
 				'pesan' => $pesan
