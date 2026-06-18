@@ -307,7 +307,7 @@ class Report_piutang_per_invoice extends Admin_Controller
      * - total_piutang_per_invoice: SUM of all piutang_per_invoice across all invoices
      * - total_uninvoiced: SUM of all uninvoiced values across all SPKs
      * - total_sisa_piutang_per_spk: SUM of all total_sisa_piutang across all SPKs
-     * - grand_total_piutang: total_piutang_per_invoice + total_uninvoiced
+     * - grand_total_piutang: same as total_piutang_per_invoice
      *
      * @param array $processed_data Hierarchical data from _process_report_data()
      * @return array Summary with total_piutang_per_invoice, total_uninvoiced, total_sisa_piutang_per_spk, grand_total_piutang
@@ -333,7 +333,7 @@ class Report_piutang_per_invoice extends Admin_Controller
             }
         }
 
-        $grand_total_piutang = $total_piutang_per_invoice + $total_uninvoiced;
+        $grand_total_piutang = $total_piutang_per_invoice;
 
         return [
             'total_piutang_per_invoice' => $total_piutang_per_invoice,
@@ -520,12 +520,6 @@ class Report_piutang_per_invoice extends Admin_Controller
 
             $sheet->setCellValue('A' . $row, 'Summary Uninvoiced');
             $sheet->setCellValue('M' . $row, $summary['total_uninvoiced']);
-            $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
-            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
-            $row++;
-
-            $sheet->setCellValue('A' . $row, 'Summary Sisa Piutang Per SPK');
-            $sheet->setCellValue('M' . $row, $summary['total_sisa_piutang_per_spk']);
             $sheet->getStyle('A' . $row . ':M' . $row)->applyFromArray($summaryStyle);
             $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('#,##0');
             $row++;

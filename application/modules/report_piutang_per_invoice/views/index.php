@@ -114,10 +114,6 @@
                                     <td class="text-right" id="summary-uninvoiced-all">-</td>
                                 </tr>
                                 <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-all">-</td>
-                                </tr>
-                                <tr class="bg-formula">
                                     <td><strong>Total Piutang</strong></td>
                                     <td class="text-right" id="summary-total-piutang-all"><strong>-</strong></td>
                                 </tr>
@@ -169,10 +165,6 @@
                                 <tr class="bg-formula">
                                     <td><strong>Summary Uninvoiced</strong></td>
                                     <td class="text-right" id="summary-uninvoiced-stm">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-stm">-</td>
                                 </tr>
                                 <tr class="bg-formula">
                                     <td><strong>Total Piutang</strong></td>
@@ -228,10 +220,6 @@
                                     <td class="text-right" id="summary-uninvoiced-vuca">-</td>
                                 </tr>
                                 <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-vuca">-</td>
-                                </tr>
-                                <tr class="bg-formula">
                                     <td><strong>Total Piutang</strong></td>
                                     <td class="text-right" id="summary-total-piutang-vuca"><strong>-</strong></td>
                                 </tr>
@@ -283,10 +271,6 @@
                                 <tr class="bg-formula">
                                     <td><strong>Summary Uninvoiced</strong></td>
                                     <td class="text-right" id="summary-uninvoiced-sustain">-</td>
-                                </tr>
-                                <tr class="bg-formula">
-                                    <td><strong>Summary Sisa Piutang Per SPK</strong></td>
-                                    <td class="text-right" id="summary-sisa-piutang-sustain">-</td>
                                 </tr>
                                 <tr class="bg-formula">
                                     <td><strong>Total Piutang</strong></td>
@@ -723,7 +707,6 @@
         if (!summary) {
             $('#summary-piutang-' + tabKey).text('-');
             $('#summary-uninvoiced-' + tabKey).text('-');
-            $('#summary-sisa-piutang-' + tabKey).text('-');
             $('#summary-total-piutang-' + tabKey).html('<strong>-</strong>');
             return;
         }
@@ -731,12 +714,10 @@
         // Format and render each summary value using formatFormulaField
         var piutangPerInvoice = formatFormulaField(summary.total_piutang_per_invoice);
         var uninvoiced = formatFormulaField(summary.total_uninvoiced);
-        var sisaPiutangPerSpk = formatFormulaField(summary.total_sisa_piutang_per_spk);
         var totalPiutang = formatFormulaField(summary.grand_total_piutang);
 
         $('#summary-piutang-' + tabKey).text(piutangPerInvoice);
         $('#summary-uninvoiced-' + tabKey).text(uninvoiced);
-        $('#summary-sisa-piutang-' + tabKey).text(sisaPiutangPerSpk);
         $('#summary-total-piutang-' + tabKey).html('<strong>' + totalPiutang + '</strong>');
     }
 
