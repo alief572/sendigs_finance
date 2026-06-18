@@ -429,12 +429,12 @@ class Invoicing extends Admin_Controller
         $get_invoicing = $this->db->get()->row();
 
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
-        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
-        $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
-        $get_actual_plan_tagih = $this->db->get()->row();
+        $this->db->where('a.id', $get_invoicing->id_detail_plan_tagih);
+        $get_plan_tagih = $this->db->get()->row();
 
         $this->auth->restrict($this->viewPermission);
 
@@ -458,7 +458,7 @@ class Invoicing extends Admin_Controller
             $kredit = 0;
 
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
                 $pph = ($total_nominal * 0.5 / 100);
@@ -466,7 +466,7 @@ class Invoicing extends Admin_Controller
             }
 
             if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
 
@@ -474,13 +474,13 @@ class Invoicing extends Admin_Controller
             }
 
             if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
                 $pph = ($total_nominal * 0.5 / 100);
                 $debit = $pph;
             }
 
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
+                $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
                 $ppn = ($dpp_lain_lain * 12 / 100);
                 $pph = ($total_nominal * 0.5 / 100);
@@ -501,9 +501,9 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
-            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
-            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= $get_plan_tagih->nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_plan_tagih->id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_plan_tagih->nm_company . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
@@ -529,7 +529,7 @@ class Invoicing extends Admin_Controller
 
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'data_plan_tagih' => $get_plan_tagih,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit
