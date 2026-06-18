@@ -67,10 +67,10 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                 <tbody>
                     <tr>
                         <td class="text-center">1</td>
-                        <td class="text-left"><?= $data_actual_plan_tagih->term_payment ?></td>
-                        <td class="text-center"><?= number_format($data_actual_plan_tagih->persen_payment, 2) ?>%</td>
-                        <td class="text-right">Rp. <?= number_format($data_actual_plan_tagih->nominal_payment, 2) ?></td>
-                        <td class="text-left"><?= $data_actual_plan_tagih->desc_payment ?></td>
+                        <td class="text-left"><?= $data_plan_tagih->term_payment ?></td>
+                        <td class="text-center"><?= number_format($data_plan_tagih->persen_payment, 2) ?>%</td>
+                        <td class="text-right">Rp. <?= number_format($data_plan_tagih->nominal_payment, 2) ?></td>
+                        <td class="text-left"><?= $data_plan_tagih->desc_payment ?></td>
                     </tr>
                 </tbody>
             </table>
