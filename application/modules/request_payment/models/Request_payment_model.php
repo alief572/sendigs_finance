@@ -630,7 +630,7 @@ class Request_payment_model extends BF_Model
             }
 
             // Keperluan handling
-            $keperluan = (!empty($item->keperluan)) ? $item->keperluan : '';
+            $keperluan = (!empty($item->keperluan)) ? nl2br($item->keperluan) : '';
             if ($item->kategori == 'Non-PO') {
                 $get_pr_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
                 if ($get_pr_non_po) {
@@ -731,7 +731,7 @@ class Request_payment_model extends BF_Model
             $hasil[] = [
                 'checkbox'       => $checkbox_html,
                 'no'             => $no,
-                'no_dokumen'     => $no_dokumen_html.' '.$btn_print,
+                'no_dokumen'     => $no_dokumen_html . ' ' . $btn_print,
                 'diminta_oleh'   => $nmuser,
                 'company'        => $company_display,
                 'tanggal'        => $tanggal_formatted,
