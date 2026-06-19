@@ -263,12 +263,13 @@ class Jurnal_model extends CI_Model
 		return $Nomor_BUK;
 	}
 
-	function get_Nomor_Jurnal_BUM($Cabang = '', $Tgl_Inv = '')
+	function get_Nomor_Jurnal_BUM($Cabang = '', $Tgl_Inv = '', $db_name = null)
 	{
 		$nocab			= 'A';
 		$bulan_Proses	= date('Y', strtotime($Tgl_Inv));
 		$Urut			= 1;
-		$Query_Cab		= "SELECT subcab,nobum FROM " . DBACC . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+		$db_prefix		= ($db_name !== null) ? $db_name : DBACC;
+		$Query_Cab		= "SELECT subcab,nobum FROM " . $db_prefix . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
 		$Pros_Cab		= $this->db->query($Query_Cab);
 		$det_Cab		= $Pros_Cab->result_array();
 		if ($det_Cab) {
@@ -282,12 +283,13 @@ class Jurnal_model extends CI_Model
 		return $Nomor_BUM;
 	}
 
-	function get_Nomor_Jurnal_BUK2($Cabang = '', $Tgl_Inv = '')
+	function get_Nomor_Jurnal_BUK2($Cabang = '', $Tgl_Inv = '', $db_name = null)
 	{
 		$nocab			= 'A';
 		$bulan_Proses	= date('Y', strtotime($Tgl_Inv));
 		$Urut			= 1;
-		$Query_Cab		= "SELECT subcab,nobuk FROM " . DBACC . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+		$db_prefix		= ($db_name !== null) ? $db_name : DBACC;
+		$Query_Cab		= "SELECT subcab,nobuk FROM " . $db_prefix . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
 		$Pros_Cab		= $this->db->query($Query_Cab);
 		$det_Cab		= $Pros_Cab->result_array();
 		if ($det_Cab) {
@@ -301,7 +303,7 @@ class Jurnal_model extends CI_Model
 		return $Nomor_BUK;
 	}
 
-	function update_Nomor_Jurnal($Cabang = '', $tipe = 'BUM')
+	function update_Nomor_Jurnal($Cabang = '', $tipe = 'BUM', $db_name = null)
 	{
 		$db2 = $this->load->database('accounting', TRUE);
 		if (strtolower($tipe) == 'bum') {
@@ -317,7 +319,9 @@ class Jurnal_model extends CI_Model
 		$nocab			= 'A';
 
 		$Urut			= 1;
-		$Query_Cab		= "UPDATE pastibisa_tb_cabang SET " . $fields . "=" . $fields . " + 1 WHERE nocab='" . $Cabang . "'";
+		$db_prefix		= ($db_name !== null) ? $db_name : '';
+		$table_ref		= ($db_prefix !== '') ? $db_prefix . ".pastibisa_tb_cabang" : "pastibisa_tb_cabang";
+		$Query_Cab		= "UPDATE " . $table_ref . " SET " . $fields . "=" . $fields . " + 1 WHERE nocab='" . $Cabang . "'";
 		$Pros_Cab		= $db2->query($Query_Cab);
 	}
 

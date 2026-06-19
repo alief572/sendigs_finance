@@ -28,6 +28,17 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="target_accounting" class="col-sm-4 control-label">Target Accounting </label>
+                        <div class="col-sm-8">
+                            <select class="form-control input-sm select2" name="target_accounting" id="target_accounting">
+                                <option value="">-- Pilih Target Accounting --</option>
+                                <option value="accounting_stm">STM</option>
+                                <option value="accounting_vuca">VUCA</option>
+                                <option value="accounting_sustain">SUSTAIN</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="dari" class="col-sm-4 control-label">COA Tujuan </label>
                         <div class="col-sm-8">
                             <?php
@@ -105,8 +116,66 @@
     $('.select2').select2();
     $('.divide').divide();
 
+    // Target Accounting onChange handler - reload COA Bank dropdown
+    $('#target_accounting').on('change', function() {
+        var target = $(this).val();
+        if (target === '') {
+            // Clear COA Bank dropdown
+            $('#ke').empty().append('<option value=""></option>').trigger('change');
+            return;
+        }
+
+        $.ajax({
+            url: '<?= site_url("request_mutasi/get_coa_by_target") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                target_accounting: target
+            },
+            success: function(response) {
+                if (response.status == 1) {
+                    var $ke = $('#ke');
+                    $ke.empty().append('<option value=""></option>');
+                    $.each(response.data, function(i, item) {
+                        $ke.append('<option value="' + item.no_perkiraan + '">' + item.no_perkiraan + ' - ' + item.nama + '</option>');
+                    });
+                    $ke.trigger('change');
+                } else {
+                    swal({
+                        title: "Gagal!",
+                        text: response.pesan || "Gagal memuat data COA",
+                        type: "error",
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            },
+            error: function() {
+                swal({
+                    title: "Gagal!",
+                    text: "Tidak dapat memuat data COA. Silakan coba lagi.",
+                    type: "error",
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        });
+    });
+
     $('#frm_data').on('submit', function(e) {
         e.preventDefault();
+
+        // Validate target_accounting first
+        if ($('#target_accounting').val() === '' || $('#target_accounting').val() === null) {
+            swal({
+                title: "Target Accounting tidak boleh kosong!",
+                type: "warning",
+                timer: 3000,
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            return false;
+        }
 
         let errors = {
             '#tgl_request': 'Tanggal Tidak Boleh Kosong!',
@@ -179,13 +248,11 @@
 
     // fungsi untuk di view
     function total() {
-        var kurs = $('#kurs').val();
-        var nilai = $('#nilai').val();
-        var kurs = getNum($('#kurs').val().split(",").join(""));
-        var nilai = getNum($('#nilai').val().split(",").join(""));
+        var kurs = parseFloat($('#kurs').val().replace(/,/g, '')) || 1;
+        var nilai = parseFloat($('#nilai').val().replace(/,/g, '')) || 0;
 
-        var jumlah = parseFloat(nilai) * parseFloat(kurs);
-        $('#transaksi').val(jumlah);
+        var jumlah = nilai * kurs;
+        $('#transaksi').val(jumlah.toLocaleString('id-ID'));
 
         fn_terbilang();
     }

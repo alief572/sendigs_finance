@@ -20,19 +20,30 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="target_accounting" class="col-sm-4 control-label">Target Accounting</label>
+                        <div class="col-sm-8">
+                            <select name="target_accounting" id="target_accounting" class="form-control select2" required="required">
+                                <option value="">-- Pilih Target Accounting --</option>
+                                <option value="accounting_stm">STM</option>
+                                <option value="accounting_vuca">VUCA</option>
+                                <option value="accounting_sustain">SUSTAIN</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="dari" class="col-sm-4 control-label">Dari</label>
                         <div class="col-sm-8">
-                            <?php
-                            echo form_dropdown('dari', $datbank, '', array('id' => 'dari', 'required' => 'required', 'class' => 'form-control select2'));
-                            ?>
+                            <select name="dari" id="dari" required="required" class="form-control select2">
+                                <option value="">-- Pilih Bank Asal --</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="ke" class="col-sm-4 control-label">Ke</label>
                         <div class="col-sm-8">
-                            <?php
-                            echo form_dropdown('ke', $datbank, '', array('id' => 'ke', 'required' => 'required', 'class' => 'form-control select2'));
-                            ?>
+                            <select name="ke" id="ke" required="required" class="form-control select2">
+                                <option value="">-- Pilih Bank Tujuan --</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -82,8 +93,69 @@
     $('.select2').select2();
     $('.divide').divide();
 
+    // onChange handler untuk Target Accounting dropdown
+    $('#target_accounting').on('change', function() {
+        var target = $(this).val();
+
+        // Clear existing Dari/Ke dropdowns
+        $('#dari').empty().append('<option value="">-- Pilih Bank Asal --</option>').trigger('change');
+        $('#ke').empty().append('<option value="">-- Pilih Bank Tujuan --</option>').trigger('change');
+
+        if (target === '') {
+            return;
+        }
+
+        $.ajax({
+            url: '<?= site_url("request_mutasi/get_coa_by_target") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                target_accounting: target
+            },
+            success: function(response) {
+                if (response.status == 1) {
+                    var options = '<option value="">-- Pilih Bank --</option>';
+                    $.each(response.data, function(i, item) {
+                        options += '<option value="' + item.no_perkiraan + '">' + item.no_perkiraan + ' - ' + item.nama + '</option>';
+                    });
+                    $('#dari').html(options).trigger('change');
+                    $('#ke').html(options).trigger('change');
+                } else {
+                    swal({
+                        title: "Gagal!",
+                        text: response.pesan || "Gagal memuat data COA",
+                        type: "error",
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            },
+            error: function() {
+                swal({
+                    title: "Gagal!",
+                    text: "Tidak dapat memuat data COA. Periksa koneksi jaringan.",
+                    type: "error",
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        });
+    });
+
     $('#frm_data').on('submit', function(e) {
         e.preventDefault();
+
+        // Validasi Target Accounting terlebih dahulu
+        if ($('#target_accounting').val() === '' || $('#target_accounting').val() === null) {
+            swal({
+                title: "Target Accounting tidak boleh kosong!",
+                type: "warning",
+                timer: 3000,
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            return false;
+        }
 
         let errors = {
             '#tgl_request': 'Tanggal Tidak Boleh Kosong!',

@@ -75,9 +75,20 @@ class Request_mutasi_model extends BF_Model
 
     public function GetListDataMutasi()
     {
-        $query = $this->db->query("SELECT a.*
-        FROM tr_request_mutasi_aktual a
-        ORDER BY a.id DESC")->result();
+        $query = $this->db->query("
+            SELECT
+                a.kd_mutasi_aktual   AS kd_mutasi,
+                a.tgl_mutasi         AS tgl_request,
+                a.keterangan,
+                a.nama_bank_asal,
+                a.nama_bank_tujuan,
+                a.mata_uang,
+                a.target_accounting,
+                a.nilai_aktual       AS nilai_request,
+                a.kd_mutasi_request
+            FROM tr_request_mutasi_aktual a
+            ORDER BY a.id DESC
+        ")->result();
 
         return $query;
     }
