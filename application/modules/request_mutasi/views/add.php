@@ -11,9 +11,19 @@
         $kenama     = $record->nama_bank_tujuan;
         $nilai      = $record->nilai_request;
         $tanggal    = $record->tgl_request;
+        $target_accounting = isset($record->target_accounting) ? $record->target_accounting : '';
         $numb++;
     }
 }
+
+$target_labels = [
+    'accounting_stm'     => 'STM',
+    'accounting_vuca'    => 'VUCA',
+    'accounting_sustain' => 'SUSTAIN',
+];
+$target_display = isset($target_accounting, $target_labels[$target_accounting])
+    ? $target_labels[$target_accounting]
+    : '-';
 ?>
 <input type="hidden" id="id" name="id" value="<?php echo (isset($data->id) ? $data->id : ''); ?>">
 <div class="box box-primary">
@@ -25,6 +35,13 @@
                         <label for="tgl_bayar" class="col-sm-4 control-label">No Request</label>
                         <div class="col-sm-8">
                             <input type="text" name="no_request" id="no_request" value="<?= $kd_mutasi ?>" placeholder="Automatic" class="form-control input-sm" readonly>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="target_accounting_display" class="col-sm-4 control-label">Target Accounting</label>
+                        <div class="col-sm-8">
+                            <input type="text" id="target_accounting_display" value="<?= $target_display ?>" class="form-control input-sm" readonly>
+                            <input type="hidden" name="target_accounting" id="target_accounting" value="<?= $target_accounting ?>">
                         </div>
                     </div>
                     <div class="form-group">
@@ -89,7 +106,7 @@
                                 <input type="text" name="nilai" class="form-control input-sm" id="nilai" value="<?= number_format($nilai) ?>" onblur="total()" readonly>
                             </td>
                             <td>
-                                <input type="text" name="rupiah" class="form-control input-sm divide" id="rupiah" value="<?= number_format($nilai) ?>">
+                                <input type="text" name="rupiah" class="form-control input-sm" id="rupiah" value="<?= number_format($nilai) ?>">
                             </td>
                         </tr>
                     </tbody>
@@ -110,79 +127,70 @@
 <script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/select2/select2.full.min.js') ?>"></script>
 <script type="text/javascript">
+    var url_save = siteurl + 'request_mutasi/save_mutasi/';
     $('.select2').select2();
     $('.divide').divide();
+
+    function total() {
+        var nilai = parseFloat($('#nilai').val().replace(/,/g, '')) || 0;
+        var kurs = parseFloat($('#kurs').val().replace(/,/g, '')) || 1;
+        var hasil = nilai * kurs;
+        $('#rupiah').val(hasil.toLocaleString('id-ID'));
+    }
 
     $('#frm_data').on('submit', function(e) {
         e.preventDefault();
 
-        let errors = {
-            '#tgl_request': 'Tanggal Tidak Boleh Kosong!',
-            '#dari_matauang': 'Mata uang asal tidak boleh kosong!',
-            '#ke_matauang': 'Mata uang tujuan tidak boleh kosong!',
-            '#dari': 'Bank Asal tidak boleh kosong!',
-            '#ke': 'Bank Tujuan tidak boleh kosong!',
-            '#rupiah': 'Nilai Aktual tidak boleh kosong!',
-            '#keterangan': 'Keterangan tidak boleh kosong!',
-        };
-
-        for (let field in errors) {
-            if ($(field).val() === "" || $(field).val() === "0") {
-                swal({
-                    title: errors[field],
-                    text: "Silakan isi dengan benar!",
-                    type: "warning",
-                    timer: 3000,
-                    showConfirmButton: false,
-                    allowOutsideClick: false
-                });
-                return;
-            }
-        }
-
         swal({
-            title: "Peringatan!",
-            text: "Pastikan data sudah lengkap dan benar",
+            title: "Konfirmasi",
+            text: "Pastikan data sudah benar sebelum disimpan.",
             type: "warning",
             showCancelButton: true,
+            confirmButtonColor: "#00a65a",
             confirmButtonText: "Ya, simpan!",
-            cancelButtonText: "Batal!",
-            confirmButtonColor: "#DD6B55",
+            cancelButtonText: "Batal",
             closeOnConfirm: false,
             closeOnCancel: true
         }, function(isConfirm) {
-            if (isConfirm) {
-                $.ajax({
-                    url: base_url + "request_mutasi/save_mutasi",
-                    dataType: "json",
-                    type: "POST",
-                    data: $("#frm_data").serialize(),
-                    success: function(data) {
-                        let status = data.status == 1 ? "success" : "warning";
-                        swal({
-                            title: data.status == 1 ? "Save Success!" : "Save Failed!",
-                            text: data.pesan,
-                            type: status,
-                            timer: 10000,
-                            showConfirmButton: false,
-                            allowOutsideClick: false
-                        });
+            if (!isConfirm) return;
 
-                        if (data.status == 1) {
-                            window.location.href = base_url + active_controller + 'index';
-                        }
-                    },
-                    error: function() {
+            $.ajax({
+                url: url_save,
+                type: 'POST',
+                data: $('#frm_data').serialize(),
+                dataType: 'json',
+                success: function(res) {
+                    if (res.status == 1) {
+                        swal({
+                            title: "Berhasil!",
+                            text: res.pesan + ' No: ' + res.nomor,
+                            type: "success",
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                        setTimeout(function() {
+                            window.location.href = base_url + 'request_mutasi/mutasi';
+                        }, 3000);
+                    } else {
                         swal({
                             title: "Gagal!",
-                            text: "Batal Proses, Data bisa diproses nanti",
+                            text: res.pesan,
                             type: "error",
-                            timer: 1500,
+                            timer: 5000,
                             showConfirmButton: false
                         });
                     }
-                });
-            }
+                },
+                error: function() {
+                    swal({
+                        title: "Error!",
+                        text: "Terjadi kesalahan, silakan coba lagi.",
+                        type: "error",
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            });
         });
     });
 </script>

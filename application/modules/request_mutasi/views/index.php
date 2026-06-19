@@ -24,6 +24,7 @@ $ENABLE_VIEW    = has_permission('Request_Mutasi.View');
                         <th width='7%'>Bank Asal</th>
                         <th width='7%'>Bank Tujuan</th>
                         <th width='7%'>Mata Uang</th>
+                        <th width='7%'>Accounting</th>
                         <th class="text-right" width='7%'>Nilai</th>
                         <th class="text-center" width='7%'>Option</th>
                     </tr>
@@ -43,6 +44,20 @@ $ENABLE_VIEW    = has_permission('Request_Mutasi.View');
                                 <td><?= $record->nama_bank_asal ?></td>
                                 <td><?= $record->nama_bank_tujuan ?></td>
                                 <td><?= $record->mata_uang ?></td>
+                                <td>
+                                    <?php
+                                    $target_labels = [
+                                        'accounting_stm'     => 'STM',
+                                        'accounting_vuca'    => 'VUCA',
+                                        'accounting_sustain' => 'SUSTAIN',
+                                    ];
+                                    if (!empty($record->target_accounting) && isset($target_labels[$record->target_accounting])) {
+                                        echo '<span class="label label-info">' . $target_labels[$record->target_accounting] . '</span>';
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
+                                </td>
                                 <td align="right"><?= number_format($record->nilai_request) ?></td>
                                 <td style="padding-left:20px">
                                     <?php if ($record->status_approve == '0') { ?>
