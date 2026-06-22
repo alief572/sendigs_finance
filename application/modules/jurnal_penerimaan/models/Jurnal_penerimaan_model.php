@@ -103,7 +103,7 @@ class Jurnal_penerimaan_model extends BF_Model
 
     private function _query_jurnal($filter = null, $search = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, a.kredit as total_kredit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(d.id, g.id) as id_company, COALESCE(d.nm_company, g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
+        $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, a.kredit as total_kredit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(COALESCE(d.id, j.id), g.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
             ->from('tr_jurnal a')
             ->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd', 'ppd.id_header = a.no_transaksi', 'left', FALSE)
             ->join('tr_invoicing b', 'b.id = ppd.id_inv', 'left')
@@ -114,6 +114,7 @@ class Jurnal_penerimaan_model extends BF_Model
             ->join(DBCNL . '.kons_tr_penawaran_non_konsultasi nk', 'nk.id_penawaran = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company g', 'g.id = nk.id_company', 'left')
             ->join('departments h', 'h.id = nk.id_divisi', 'left')
+            ->join(DBCNL . '.kons_tr_company j', 'j.id = spk.id_company', 'left')
             ->where('a.jenis_transaksi', 'Penerimaan Piutang')
             ->where_not_in('a.coa', ['1102-01-01', '1106-01-02', '7201-01-04', '1106-01-05'])
             ->where('a.sts <>', '1')
