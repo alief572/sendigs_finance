@@ -52,12 +52,13 @@ class Invoicing_model extends BF_Model
         $search = $this->input->post('search');
         $filter_status = $this->input->post('filter_status');
 
-        $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project', 'left');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
 
@@ -75,6 +76,7 @@ class Invoicing_model extends BF_Model
             $this->db->or_like('c.nm_project_leader', $search['value'], 'both');
             $this->db->or_like('c.nm_sales', $search['value'], 'both');
             $this->db->or_like('e.nm_company', $search['value'], 'both');
+            $this->db->or_like('g.nm_company', $search['value'], 'both');
             $this->db->or_like('f.no_invoice', $search['value'], 'both');
             $this->db->group_end();
         }
@@ -153,7 +155,7 @@ class Invoicing_model extends BF_Model
             $hasil[] = [
                 'no' => $no,
                 'no_invoice' => $item->no_invoice,
-                'company' => $item->nm_company,
+                'company' => $item->company_name,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,
                 'project' => $item->nm_project,
