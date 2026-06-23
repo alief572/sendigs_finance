@@ -123,69 +123,109 @@ class Penerimaan_pph_23_model extends BF_Model
 
     public function get_alokasi_penerimaan_pph23()
     {
-        $draw = $this->input->post('draw');
-        $length = $this->input->post('length');
-        $start = $this->input->post('start');
+        $draw   = intval($this->input->post('draw'));
+        $length = intval($this->input->post('length'));
+        $start  = intval($this->input->post('start'));
         $search = $this->input->post('search');
+        $search_value = isset($search['value']) ? trim($search['value']) : '';
 
-        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.no_invoice');
+        // Count total records (tanpa filter search)
+        $records_total = $this->db->query("
+            SELECT COUNT(DISTINCT a.id) as total
+            FROM tr_penerimaan_piutang_detail a
+            JOIN tr_invoicing b ON b.id = a.id_inv
+            JOIN tr_penerimaan_piutang c ON c.no_surat = a.id_header
+            WHERE c.pph23_dipotong = 'Y'
+        ")->row()->total;
+
+        // Count filtered records
+        $this->db->select('COUNT(DISTINCT a.id) as total');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
-        if (!empty($search['value'])) {
+
+        if ($search_value !== '') {
             $this->db->group_start();
-            $this->db->like('a.id_inv', $search['value'], 'both');
-            $this->db->or_like('a.nm_customer', $search['value'], 'both');
-            $this->db->or_like('b.print_keterangan', $search['value'], 'both');
-            $this->db->or_like('a.pph23', $search['value'], 'both');
+            $this->db->like('b.no_invoice', $search_value, 'both');
+            $this->db->or_like('a.nm_customer', $search_value, 'both');
+            $this->db->or_like('b.print_keterangan', $search_value, 'both');
+            $this->db->or_like('b.nm_project', $search_value, 'both');
             $this->db->group_end();
         }
-        $this->db->order_by('a.id', 'desc');
+
+        $records_filtered = $this->db->get()->row()->total;
+
+        // Main query with limit
+        $this->db->select('a.id, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice');
+        $this->db->from('tr_penerimaan_piutang_detail a');
+        $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
+        $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
+        $this->db->where('c.pph23_dipotong', 'Y');
+
+        if ($search_value !== '') {
+            $this->db->group_start();
+            $this->db->like('b.no_invoice', $search_value, 'both');
+            $this->db->or_like('a.nm_customer', $search_value, 'both');
+            $this->db->or_like('b.print_keterangan', $search_value, 'both');
+            $this->db->or_like('b.nm_project', $search_value, 'both');
+            $this->db->group_end();
+        }
+
         $this->db->group_by('a.id');
-
-        $db_clone = clone $this->db;
-        $count_all = $db_clone->count_all_results();
-
+        $this->db->order_by('a.id', 'DESC');
         $this->db->limit($length, $start);
 
         $get_data = $this->db->get()->result_array();
 
-        $hasil = [];
+        // Batch fetch status penerimaan PPH 23 (menghindari N+1 query)
+        $detail_ids = array_column($get_data, 'id');
+        $pph23_map = [];
+        if (!empty($detail_ids)) {
+            $this->db->where_in('id_detail_penerimaan', $detail_ids);
+            $pph23_rows = $this->db->get('tr_penerimaan_pph_23')->result_array();
+            foreach ($pph23_rows as $row) {
+                $pph23_map[$row['id_detail_penerimaan']] = $row;
+            }
+        }
 
-        $no = (0 + $start);
+        // Build response data
+        $hasil = [];
+        $no = $start;
         foreach ($get_data as $item) {
             $no++;
 
-            $status = '<span class="badge bg-red">Belum Lunas</span>';
+            $is_lunas = isset($pph23_map[$item['id']]);
 
-            $action = '<a href="' . base_url('penerimaan_pph_23/add/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Setor PPH 23"><i class="fa fa-money"></i></a>';
-
-            $get_penerimaan_pph23 = $this->db->get_where('tr_penerimaan_pph_23', ['id_detail_penerimaan' => $item['id']])->row_array();
-            if (!empty($get_penerimaan_pph23)) {
+            if ($is_lunas) {
+                $pph23_data = $pph23_map[$item['id']];
                 $status = '<span class="badge bg-green">Lunas</span>';
-                $action = '<a href="' . base_url('uploads/penerimaan_pph_23/' . $get_penerimaan_pph23['upload_bukti_setor']) . '" target="_blank" class="btn btn-sm btn-info" title="Lihat Bukti Setor"><i class="fa fa-download"></i></a>';
+                $action = '<a href="' . base_url('uploads/penerimaan_pph_23/' . $pph23_data['upload_bukti_setor']) . '" target="_blank" class="btn btn-sm btn-info" title="Lihat Bukti Setor"><i class="fa fa-download"></i></a>';
+            } else {
+                $status = '<span class="badge bg-red">Belum Lunas</span>';
+                $action = '<a href="' . base_url('penerimaan_pph_23/add/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Setor PPH 23"><i class="fa fa-money"></i></a>';
             }
 
             $hasil[] = [
-                'no' => $no,
-                'no_invoice' => $item['no_invoice'],
-                'nm_customer' => $item['nm_customer'],
-                'nm_project' => $item['nm_project'],
-                'keterangan_invoice' => $item['print_keterangan'],
-                'nilai_pph' => number_format($item['pph23']),
-                'status' => $status,
-                'action' => $action
+                'no'                 => $no,
+                'no_invoice'         => htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8'),
+                'nm_customer'        => htmlspecialchars($item['nm_customer'], ENT_QUOTES, 'UTF-8'),
+                'nm_project'         => htmlspecialchars($item['nm_project'], ENT_QUOTES, 'UTF-8'),
+                'keterangan_invoice' => htmlspecialchars($item['print_keterangan'], ENT_QUOTES, 'UTF-8'),
+                'nilai_pph'          => number_format($item['pph23'], 0, ',', '.'),
+                'status'             => $status,
+                'action'             => $action
             ];
         }
 
         $response = [
-            'draw' => intval($draw),
-            'recordsTotal' => $no,
-            'recordsFiltered' => $no,
-            'data' => $hasil
+            'draw'            => $draw,
+            'recordsTotal'    => $records_total,
+            'recordsFiltered' => $records_filtered,
+            'data'            => $hasil
         ];
 
+        header('Content-Type: application/json');
         echo json_encode($response);
     }
 }
