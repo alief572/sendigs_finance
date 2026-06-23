@@ -272,228 +272,193 @@ class Report_jurnal_invoicing_model extends BF_Model
 
     public function get_data_jurnal_invoicing()
     {
-        $post = $this->input->post();
+        $post   = $this->input->post();
+        $draw   = isset($post['draw']) ? $post['draw'] : 0;
+        $length = isset($post['length']) ? $post['length'] : 10;
+        $start  = isset($post['start']) ? $post['start'] : 0;
+        $search = isset($post['search']) ? $post['search']['value'] : '';
 
-        $draw = $post['draw'];
-        $length = $post['length'];
-        $start = $post['start'];
-        $search = $post['search'];
+        $filter = [
+            'tgl_from' => isset($post['tgl_from']) ? $post['tgl_from'] : '',
+            'tgl_to'   => isset($post['tgl_to']) ? $post['tgl_to'] : '',
+            'client'   => isset($post['client']) ? $post['client'] : '',
+            'company'  => isset($post['company']) ? $post['company'] : '',
+            'divisi'   => isset($post['divisi']) ? $post['divisi'] : '',
+        ];
 
-        // Query untuk menghitung count_all (total data tanpa filter pencarian)
-        $db_clone = clone $this->db;
-        $db_clone->select('a.id');
-        $db_clone->from('tr_jurnal a');
-        $db_clone->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $db_clone->where('a.jenis_transaksi', 'Invoicing');
-        $db_clone->where('a.sts', '1');
-        if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
-            $db_clone->where('a.tgl_jurnal >=', $post['tgl_from']);
-        }
-        if (isset($post['tgl_to']) && !empty($post['tgl_to'])) {
-            $db_clone->where('a.tgl_jurnal <=', $post['tgl_to']);
-        }
-        if (isset($post['client']) && !empty($post['client'])) {
-            $db_clone->where('c.id_customer', $post['client']);
-        }
-        if (isset($post['company']) && !empty($post['company'])) {
-            $db_clone->where('d.id', $post['company']);
-        }
-        if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $db_clone->where('d.id', $post['divisi']);
-        }
-        $db_clone->group_start();
-        $db_clone->where('a.debit >', 0);
-        $db_clone->or_where('a.kredit >', 0);
-        $db_clone->group_end();
-
-        $query = $db_clone->group_by('a.no_transaksi');
-        $count_all = $query->count_all_results('', false);
-
-        // Query untuk menghitung count_filter (total data yang sesuai dengan filter pencarian)
-        $db_clone = clone $this->db;
-        $db_clone->select('a.id');
-        $db_clone->from('tr_jurnal a');
-        $db_clone->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $db_clone->where('a.jenis_transaksi', 'Invoicing');
-        $db_clone->where('a.sts', '1');
-        if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
-            $db_clone->where('a.tgl_jurnal >=', $post['tgl_from']);
-        }
-        if (isset($post['tgl_to']) && !empty($post['tgl_to'])) {
-            $db_clone->where('a.tgl_jurnal <=', $post['tgl_to']);
-        }
-        if (isset($post['client']) && !empty($post['client'])) {
-            $db_clone->where('c.id_customer', $post['client']);
-        }
-        if (isset($post['company']) && !empty($post['company'])) {
-            $db_clone->where('d.id', $post['company']);
-        }
-        if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $db_clone->where('e.id', $post['divisi']);
-        }
-        $db_clone->group_start();
-        $db_clone->where('a.debit >', 0);
-        $db_clone->or_where('a.kredit >', 0);
-        $db_clone->group_end();
-
-        // Jika ada pencarian, tambahkan kondisi pencarian
-        if (!empty($search['value'])) {
-            $db_clone->group_start();
-            $db_clone->like('a.tgl_jurnal', $search['value'], 'both');
-            $db_clone->or_like('b.nm_customer', $search['value'], 'both');
-            $db_clone->or_like('b.nm_project', $search['value'], 'both');
-            $db_clone->or_like('b.no_invoice', $search['value'], 'both');
-            $db_clone->or_like('d.nm_company', $search['value'], 'both');
-            $db_clone->or_like('e.name', $search['value'], 'both');
-            $db_clone->or_like('a.coa', $search['value'], 'both');
-            $db_clone->or_like('a.nm_coa', $search['value'], 'both');
-            $db_clone->or_like('b.id_spk_penawaran', $search['value'], 'both');
-            $db_clone->or_like('a.debit', $search['value'], 'both');
-            $db_clone->or_like('a.kredit', $search['value'], 'both');
-            $db_clone->group_end();
-        }
-
-        $query = $db_clone->group_by('a.no_transaksi');
-        $count_filter = $query->count_all_results('', false);
-
-        // Query untuk mendapatkan data yang akan ditampilkan di tabel
-        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
-        $this->db->from('tr_jurnal a');
-        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $this->db->where('a.jenis_transaksi', 'Invoicing');
-        $this->db->where('a.sts', '1');
-        if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
-            $this->db->where('a.tgl_jurnal >=', $post['tgl_from']);
-        }
-        if (isset($post['tgl_to']) && !empty($post['tgl_to'])) {
-            $this->db->where('a.tgl_jurnal <=', $post['tgl_to']);
-        }
-        if (isset($post['client']) && !empty($post['client'])) {
-            $this->db->where('c.id_customer', $post['client']);
-        }
-        if (isset($post['company']) && !empty($post['company'])) {
-            $this->db->where('d.id', $post['company']);
-        }
-        if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $this->db->where('e.id', $post['divisi']);
-        }
-        $this->db->group_start();
-        $this->db->where('a.debit >', 0);
-        $this->db->or_where('a.kredit >', 0);
-        $this->db->group_end();
-
-        // Jika ada pencarian, tambahkan kondisi pencarian
-        if (!empty($search['value'])) {
-            $this->db->group_start();
-            $this->db->like('a.tgl_jurnal', $search['value'], 'both');
-            $this->db->or_like('b.nm_customer', $search['value'], 'both');
-            $this->db->or_like('b.nm_project', $search['value'], 'both');
-            $this->db->or_like('b.no_invoice', $search['value'], 'both');
-            $this->db->or_like('d.nm_company', $search['value'], 'both');
-            $this->db->or_like('e.name', $search['value'], 'both');
-            $this->db->or_like('a.coa', $search['value'], 'both');
-            $this->db->or_like('a.nm_coa', $search['value'], 'both');
-            $this->db->or_like('b.id_spk_penawaran', $search['value'], 'both');
-            $this->db->or_like('a.debit', $search['value'], 'both');
-            $this->db->or_like('a.kredit', $search['value'], 'both');
-            $this->db->group_end();
-        }
-
-        // Limit data berdasarkan parameter
+        // 1. Hitung Total Record (Tanpa Filter Search)
+        $this->_base_query_report($filter);
         $this->db->group_by('a.no_transaksi');
+        $sub_query_all = $this->db->get_compiled_select();
+        $count_all_res = $this->db->query("SELECT COUNT(*) as total FROM ($sub_query_all) as temp")->row();
+        $count_all     = $count_all_res ? (int)$count_all_res->total : 0;
+
+        // 2. Hitung Filtered Record (Dengan Filter Search)
+        $this->_base_query_report($filter);
+        if (!empty($search)) {
+            $this->_apply_search_report($search);
+        }
+        $this->db->group_by('a.no_transaksi');
+        $sub_query_filtered = $this->db->get_compiled_select();
+        $count_filter_res   = $this->db->query("SELECT COUNT(*) as total FROM ($sub_query_filtered) as temp")->row();
+        $count_filtered     = $count_filter_res ? (int)$count_filter_res->total : 0;
+
+        // 3. Ambil Data Aktual
+        $this->_base_query_report($filter);
+        if (!empty($search)) {
+            $this->_apply_search_report($search);
+        }
+        $this->db->group_by('a.no_transaksi');
+        $this->db->order_by('a.tgl_jurnal', 'DESC');
         $this->db->limit($length, $start);
+        $rows = $this->db->get()->result();
 
-        // Ambil data yang akan ditampilkan
-        $get_data = $this->db->get()->result();
-
-        $no = (0 + $start);
+        // 4. Build Response untuk Datatables
         $hasil = [];
+        $no    = (int)$start;
 
-        foreach ($get_data as $row) {
+        foreach ($rows as $row) {
             $no++;
-            $nilai = $row->debit > 0 ? $row->debit : $row->kredit;
-
-            // $btn_post_jurnal = '<button type="button" class="btn btn-sm btn-primary posting_jurnal" title="Posting Jurnal" data-id="' . $row->id . '" data-no_transaksi="' . $row->no_transaksi . '" data-jenis_transaksi="' . $row->jenis_transaksi . '"><i class="fa fa-arrow-up"></i></button>';
-            // $action = $btn_post_jurnal;
+            $nilai = ($row->debit > 0) ? $row->debit : $row->kredit;
 
             $btn_view_jurnal = '<button type="button" class="btn btn-sm btn-info view_jurnal" title="View Jurnal" data-no_transaksi="' . $row->no_transaksi . '" data-jenis_transaksi="' . $row->jenis_transaksi . '"><i class="fa fa-eye"></i></button>';
 
             $action = $btn_view_jurnal;
 
+            $keterangan = $row->keterangan_penawaran;
+            if (empty($keterangan)) {
+                $get_keterangan_spk = $this->db->select('a.nm_project, b.nm_paket as keterangan')
+                    ->from(DBCNL . '.kons_tr_spk_penawaran a')
+                    ->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left')
+                    ->where('a.id_spk_penawaran', $row->id_spk_penawaran)
+                    ->get()
+                    ->row();
+
+                $keterangan = isset($get_keterangan_spk->nm_project) ? $get_keterangan_spk->nm_project : '';
+            }
+
             $hasil[] = [
-                'no' => $no,
-                'tgl' => date('d F Y', strtotime($row->tgl_jurnal)),
-                'klien' => $row->nm_customer,
-                'no_invoice' => $row->no_invoice,
-                'keterangan_tagihan' => $row->nm_project . ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>',
-                'company' => $row->nm_company,
-                'nm_divisi' => $row->nm_divisi,
-                'coa' => $row->coa,
-                'perkiraan' => $row->nm_coa,
-                'uraian' => $row->no_invoice,
-                'original' => number_format($nilai),
-                'action' => $action
+                'no'                 => $no,
+                'tgl'                => date('d F Y', strtotime($row->tgl_jurnal)),
+                'klien'              => $row->nm_customer,
+                'no_invoice'         => $row->no_invoice,
+                'keterangan_tagihan' => (!empty($row->non_kons) && $row->non_kons == '1')
+                    ? $row->keterangan_penawaran . ' - <span style="font-weight:bold;">' . $row->id_penawaran_non_kons . '</span>'
+                    : $keterangan . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>',
+                'company'            => $row->nm_company,
+                'nm_divisi'          => $row->nm_divisi,
+                'coa'                => $row->coa,
+                'perkiraan'          => $row->nm_coa,
+                'uraian'             => $row->no_invoice,
+                'original'           => number_format($nilai),
+                'action'             => $action,
             ];
         }
 
-        // Response JSON untuk DataTables
-        $response = [
-            'draw' => intval($draw),
-            'recordsTotal' => $count_all,
-            'recordsFiltered' => $count_filter,
-            'data' => $hasil
-        ];
-
-        echo json_encode($response);
+        echo json_encode([
+            'draw'            => (int)$draw,
+            'recordsTotal'    => $count_all,
+            'recordsFiltered' => $count_filtered,
+            'data'            => $hasil,
+        ]);
     }
 
     public function get_jurnal_invoicing($tgl_from = null, $tgl_to = null, $client = null, $company = null, $divisi = null)
     {
+        $filter = [
+            'tgl_from' => $tgl_from,
+            'tgl_to'   => $tgl_to,
+            'client'   => $client,
+            'company'  => $company,
+            'divisi'   => $divisi,
+        ];
 
-
-
-        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
-        $this->db->from('tr_jurnal a');
-        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $this->db->where('a.jenis_transaksi', 'Invoicing');
-        $this->db->where('a.sts', '1');
-        if (isset($tgl_from) && !empty($tgl_from)) {
-            $this->db->where('a.tgl_jurnal >=', $tgl_from);
-        }
-        if (isset($tgl_to) && !empty($tgl_to)) {
-            $this->db->where('a.tgl_jurnal <=', $tgl_to);
-        }
-        if (isset($client) && !empty($client)) {
-            $this->db->where('c.id_customer', $client);
-        }
-        if (isset($company) && !empty($company)) {
-            $this->db->where('d.id', $company);
-        }
-        if (isset($divisi) && !empty($divisi)) {
-            $this->db->where('e.id', $divisi);
-        }
-        $this->db->group_start();
-        $this->db->where('a.debit >', 0);
-        $this->db->or_where('a.kredit >', 0);
-        $this->db->group_end();
+        $this->_base_query_report($filter);
+        $this->db->group_by('a.no_transaksi');
 
         $get_data = $this->db->get()->result();
 
-        // print_r($this->db->last_query());
-        // exit;
-
         return $get_data;
+    }
+
+    /**
+     * Base Query - sama dengan jurnal_invoicing tapi filter sts = '1' (sudah posting)
+     */
+    private function _base_query_report($filter)
+    {
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
+
+        $this->db->select($select_fields, FALSE)
+            ->from('tr_jurnal a')
+            ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
+            ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left')
+            ->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left')
+            ->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left')
+            ->join('hris_divisions g', 'g.id = c.id_divisi', 'left')
+            ->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left')
+            ->where('a.jenis_transaksi', 'Invoicing')
+            ->where('b.no_invoice <>', '')
+            ->where('a.sts', '1')
+            ->where('(a.debit > 0 OR a.kredit > 0)')
+            ->group_start()
+            ->where('d.nm_company IS NOT NULL')
+            ->or_where('f.nm_company IS NOT NULL')
+            ->or_where('j.nm_company IS NOT NULL')
+            ->group_end();
+
+        // Apply filters
+        if (!empty($filter['tgl_from'])) {
+            $this->db->where('a.tgl_jurnal >=', $filter['tgl_from']);
+        }
+        if (!empty($filter['tgl_to'])) {
+            $this->db->where('a.tgl_jurnal <=', $filter['tgl_to']);
+        }
+        if (!empty($filter['client'])) {
+            $this->db->where('b.id_customer', $filter['client']);
+        }
+        if (!empty($filter['company'])) {
+            $this->db->group_start();
+            $this->db->where('d.id', $filter['company']);
+            $this->db->or_where('f.id', $filter['company']);
+            $this->db->or_where('j.id', $filter['company']);
+            $this->db->group_end();
+        }
+        if (!empty($filter['divisi'])) {
+            $this->db->group_start();
+            $this->db->where('g.id', $filter['divisi']);
+            $this->db->or_where('h.id', $filter['divisi']);
+            $this->db->group_end();
+        }
+    }
+
+    /**
+     * Helper untuk Apply Search
+     */
+    private function _apply_search_report($search_value)
+    {
+        $search_terms = [
+            'a.tgl_jurnal',
+            'b.nm_customer',
+            'b.nm_project',
+            'b.no_invoice',
+            'a.coa',
+            'a.nm_coa',
+            'b.id_spk_penawaran',
+            'a.debit',
+            'a.kredit'
+        ];
+
+        $this->db->group_start();
+        foreach ($search_terms as $key => $field) {
+            if ($key === 0) {
+                $this->db->like($field, $search_value, 'both');
+            } else {
+                $this->db->or_like($field, $search_value, 'both');
+            }
+        }
+        $this->db->group_end();
     }
 }

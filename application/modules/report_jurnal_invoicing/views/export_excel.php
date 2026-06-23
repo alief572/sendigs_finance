@@ -30,13 +30,24 @@ header("Content-Disposition: attachment; filename=Report Jurnal Invoicing.xls");
         foreach ($data_jurnal as $item) {
             $no++;
 
+            $keterangan = isset($item->keterangan_penawaran) ? $item->keterangan_penawaran : '';
+            if (empty($keterangan)) {
+                $keterangan = isset($item->nm_project) ? $item->nm_project : '';
+            }
+
+            if (!empty($item->non_kons) && $item->non_kons == '1') {
+                $keterangan_tagihan = $item->keterangan_penawaran . ' - ' . (isset($item->id_penawaran_non_kons) ? $item->id_penawaran_non_kons : '');
+            } else {
+                $keterangan_tagihan = $keterangan . ' - ' . $item->id_spk_penawaran;
+            }
+
             echo '<tr>
                 
                 <td style="text-align: center;">' . $no . '</td>
                 <td>' . date('d F Y', strtotime($item->tgl_jurnal)) . '</td>
                 <td>' . $item->nm_customer . '</td>
                 <td>' . $item->no_invoice . '</td>
-                <td>' . $item->nm_project . ' - <span style="font-weight: bold;">' . $item->id_spk_penawaran . '</span></td>
+                <td>' . $keterangan_tagihan . '</td>
                 <td> ' . "'" . $item->coa . '</td>
                 <td>' . $item->nm_coa . '</td>
                 <td>' . $item->nm_company . '</td>
