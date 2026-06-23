@@ -306,7 +306,7 @@ class Jurnal_invoicing_model extends BF_Model
                     ->get()
                     ->row();
 
-                $keterangan = $get_keterangan_spk->nm_project;
+                $keterangan = $row->nm_project ?? $get_keterangan_spk->nm_project;
             }
 
             $hasil[] = [
