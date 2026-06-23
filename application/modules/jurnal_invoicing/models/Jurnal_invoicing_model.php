@@ -56,7 +56,15 @@ class Jurnal_invoicing_model extends BF_Model
         $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
         $id_company = (!empty($get_penawaran->company)) ? $get_penawaran->company : '';
 
+
+
         // Jika tidak ditemukan di penawaran konsultasi, cek penawaran non-konsultasi
+        if (empty($id_company)) {
+            $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_invoicing->id_spk_penawaran])->row();
+
+            $id_company = $get_spk_penawaran->id_company ?? '';
+        }
+
         if (empty($id_company)) {
             $get_penawaran_non_kons = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_invoicing->id_penawaran])->row();
             $id_company = (!empty($get_penawaran_non_kons->id_company)) ? $get_penawaran_non_kons->id_company : '';
@@ -289,6 +297,18 @@ class Jurnal_invoicing_model extends BF_Model
                 . ' data-jenis_transaksi="' . $row->jenis_transaksi . '">'
                 . '<i class="fa fa-arrow-up"></i></button>';
 
+            $keterangan = $row->keterangan_penawaran;
+            if (empty($keterangan)) {
+                $get_keterangan_spk = $this->db->select('a.nm_project, b.nm_paket as keterangan')
+                    ->from(DBCNL . '.kons_tr_spk_penawaran a')
+                    ->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left')
+                    ->where('a.id_spk_penawaran', $row->id_spk_penawaran)
+                    ->get()
+                    ->row();
+
+                $keterangan = $get_keterangan_spk->nm_project;
+            }
+
             $hasil[] = [
                 'no'                 => $no,
                 'tgl'                => date('d F Y', strtotime($row->tgl_jurnal)),
@@ -296,7 +316,7 @@ class Jurnal_invoicing_model extends BF_Model
                 'no_invoice'         => $row->no_invoice,
                 'keterangan_tagihan' => (!empty($row->non_kons) && $row->non_kons == '1')
                     ? $row->keterangan_penawaran . ' - <span style="font-weight:bold;">' . $row->id_penawaran_non_kons . '</span>'
-                    : $row->nm_project . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>',
+                    : $keterangan . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>',
                 'company'            => $row->nm_company,
                 'nm_divisi'          => $row->nm_divisi,
                 'coa'                => $row->coa,
@@ -320,15 +340,17 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function base_query_jurnal($filter)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(d.id, f.id) as id_company, COALESCE(d.nm_company, f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
 
         $this->db->select($select_fields, FALSE)
             ->from('tr_jurnal a')
             ->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left')
             ->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left')
+            ->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left')
             ->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left')
             ->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left')
+            ->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left')
             ->join('hris_divisions g', 'g.id = c.id_divisi', 'left')
             ->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Invoicing')
@@ -338,6 +360,7 @@ class Jurnal_invoicing_model extends BF_Model
             ->group_start()
             ->where('d.nm_company IS NOT NULL')
             ->or_where('f.nm_company IS NOT NULL')
+            ->or_where('j.nm_company IS NOT NULL')
             ->group_end();
 
         if (!empty($filter)) {
