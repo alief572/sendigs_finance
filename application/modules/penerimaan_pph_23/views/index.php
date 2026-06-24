@@ -186,22 +186,36 @@
     });
 
     function DataTables() {
-        var DataTables = $('#table_list').dataTable({
+        if ($.fn.DataTable.isDataTable('#table_list')) {
+            $('#table_list').DataTable().destroy();
+        }
+
+        $('#table_list').DataTable({
             serverSide: true,
-            process: true,
+            processing: true,
             stateSave: true,
-            destroy: true,
             paging: true,
+            pageLength: 25,
+            lengthMenu: [10, 25, 50, 100],
             ajax: {
-                type: 'post',
+                type: 'POST',
                 url: siteurl + active_controller + 'get_alokasi_penerimaan_pph23',
-                dataType: 'json'
+                dataType: 'json',
+                error: function(xhr, error, thrown) {
+                    console.error('DataTables AJAX error:', error, thrown);
+                    swal('Gagal memuat data. Silakan coba lagi.');
+                }
             },
             columns: [{
-                    data: 'no'
+                    data: 'no',
+                    className: 'text-center',
+                    width: '50px',
+                    orderable: false,
+                    searchable: false
                 },
                 {
-                    data: 'no_invoice'
+                    data: 'no_invoice',
+                    className: 'text-center'
                 },
                 {
                     data: 'nm_customer'
@@ -213,15 +227,41 @@
                     data: 'keterangan_invoice'
                 },
                 {
-                    data: 'nilai_pph'
+                    data: 'nilai_pph',
+                    className: 'text-right'
                 },
                 {
-                    data: 'status'
+                    data: 'status',
+                    className: 'text-center',
+                    orderable: false,
+                    searchable: false
                 },
                 {
-                    data: 'action'
+                    data: 'action',
+                    className: 'text-center',
+                    width: '100px',
+                    orderable: false,
+                    searchable: false
                 }
-            ]
+            ],
+            language: {
+                processing: '<i class="fa fa-spinner fa-spin"></i> Memuat data...',
+                emptyTable: 'Tidak ada data yang tersedia',
+                info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                infoEmpty: 'Menampilkan 0 - 0 dari 0 data',
+                infoFiltered: '(disaring dari _MAX_ total data)',
+                lengthMenu: 'Tampilkan _MENU_ data',
+                search: 'Cari:',
+                zeroRecords: 'Tidak ditemukan data yang cocok',
+                paginate: {
+                    first: '<i class="fa fa-angle-double-left"></i>',
+                    last: '<i class="fa fa-angle-double-right"></i>',
+                    next: '<i class="fa fa-angle-right"></i>',
+                    previous: '<i class="fa fa-angle-left"></i>'
+                }
+            },
+            order: [],
+            responsive: true
         });
     }
 </script>
