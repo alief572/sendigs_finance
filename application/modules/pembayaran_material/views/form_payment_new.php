@@ -67,6 +67,51 @@ foreach ($results['result_payment'] as $item) {
 	.d-none {
 		display: none;
 	}
+
+	.switch-toggle {
+		position: relative;
+		display: inline-block;
+		width: 34px;
+		height: 18px;
+	}
+
+	.switch-toggle input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.slider-toggle {
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: #ccc;
+		transition: .3s;
+		border-radius: 18px;
+	}
+
+	.slider-toggle:before {
+		position: absolute;
+		content: "";
+		height: 12px;
+		width: 12px;
+		left: 3px;
+		bottom: 3px;
+		background-color: white;
+		transition: .3s;
+		border-radius: 50%;
+	}
+
+	.switch-toggle input:checked+.slider-toggle {
+		background-color: #2196F3;
+	}
+
+	.switch-toggle input:checked+.slider-toggle:before {
+		transform: translateX(16px);
+	}
 </style>
 <form action="" id="frm-data" enctype="multipart/form-data">
 	<input type="hidden" name="id_payment" class="id_payment" value="<?= $results['id_payment'] ?>">
@@ -330,7 +375,12 @@ foreach ($results['result_payment'] as $item) {
 						<td class="text-right selisih_col"><?= number_format($total_payment - 0, 2) ?></td>
 					</tr>
 					<tr>
-						<td colspan="5"></td>
+						<td colspan="5" class="text-right">
+							<label class="switch-toggle" style="display:inline-flex;align-items:center;gap:5px;margin:0;cursor:pointer;">
+								<input type="checkbox" class="toggle_bank_charge_jurnal" checked>
+								<span class="slider-toggle"></span>
+							</label>
+						</td>
 						<td>Bank Charge</td>
 						<td>
 							<input type="text" name="bank_charge" id="" class="form-control form-control-sm text-right auto_num bank_charge" value="<?= $ttl_bank_charge ?>">
@@ -569,9 +619,19 @@ foreach ($results['result_payment'] as $item) {
 		if (bank_charge !== '') {
 			bank_charge = bank_charge.split(',').join('');
 			bank_charge = parseFloat(bank_charge);
+		} else {
+			bank_charge = 0;
 		}
 
-		var kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph - bank_charge);
+		var kontrol = 0;
+		var toggle_on = $('.toggle_bank_charge_jurnal').is(':checked');
+		if (toggle_on) {
+			// Toggle ON: bank charge di-exclude dari rumus kontrol (sudah dijurnal terpisah)
+			kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph);
+		} else {
+			// Toggle OFF: bank charge masuk rumus kontrol
+			kontrol = parseFloat(total_payment_bank - total_payment - total_ppn + total_pph - bank_charge);
+		}
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
@@ -584,6 +644,8 @@ foreach ($results['result_payment'] as $item) {
 		var bank = $('.bank').val();
 		var nilai_pph = $('.total_pph').val();
 		var nilai_ppn = $('.total_ppn').val();
+		var tgl_bayar = $('.tgl_bayar').val();
+		var include_bank_charge_jurnal = $('.toggle_bank_charge_jurnal').is(':checked') ? '1' : '0';
 
 		$.ajax({
 			type: 'post',
@@ -594,7 +656,9 @@ foreach ($results['result_payment'] as $item) {
 				'bank_charge': bank_charge,
 				'bank': bank,
 				'nilai_pph': nilai_pph,
-				'nilai_ppn': nilai_ppn
+				'nilai_ppn': nilai_ppn,
+				'tgl_bayar': tgl_bayar,
+				'include_bank_charge_jurnal': include_bank_charge_jurnal
 			},
 			cache: false,
 			dataType: 'json',
@@ -602,6 +666,7 @@ foreach ($results['result_payment'] as $item) {
 				$('.tbody_jurnal').html(result.hasil_jurnal);
 				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit));
 				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
+				hitung_kontrol();
 			}
 		})
 	}
@@ -736,6 +801,15 @@ foreach ($results['result_payment'] as $item) {
 	});
 	$(document).on('change', '.bank', function() {
 		set_jurnal();
+	})
+
+	$(document).on('change', '.tgl_bayar', function() {
+		set_jurnal();
+	})
+
+	$(document).on('change', '.toggle_bank_charge_jurnal', function() {
+		set_jurnal();
+		hitung_kontrol();
 	})
 
 	$(document).on('submit', '#frm-data', function(e) {
