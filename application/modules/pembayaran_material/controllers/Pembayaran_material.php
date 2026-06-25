@@ -183,6 +183,11 @@ class Pembayaran_material extends Admin_Controller
 
 		$id_payment = explode(';', $_GET['id_payment']);
 
+		$admin_charge_bearer = isset($_GET['admin_charge_bearer']) ? $_GET['admin_charge_bearer'] : '';
+		if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+			$admin_charge_bearer = '';
+		}
+
 		// $dataid = implode("','", $request_id);
 		// $results = $this->pembayaran_material_model->get_data_json_request_payment("id in ('" . $dataid . "')");
 		// $data_Group	= $this->master_model->getArray('groups', array(), 'id', 'name');
@@ -228,7 +233,8 @@ class Pembayaran_material extends Admin_Controller
 			'list_supplier' => $get_supplier,
 			'list_bank' => $get_bank,
 			'list_mata_uang' => $get_mata_uang,
-			'jurnal_refill_petty_cash' => $jurnal_refill_petty_cash
+			'jurnal_refill_petty_cash' => $jurnal_refill_petty_cash,
+			'admin_charge_bearer' => $admin_charge_bearer
 		];
 		$this->template->set('results', $data);
 		$this->template->render('form_payment_new');
@@ -236,6 +242,15 @@ class Pembayaran_material extends Admin_Controller
 
 	public function save_payment_new()
 	{
+		// Validate admin_charge_bearer if present
+		$admin_charge_bearer = $this->input->post('admin_charge_bearer');
+		if ($admin_charge_bearer !== null && $admin_charge_bearer !== false) {
+			if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+				echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
+				return;
+			}
+		}
+
 		$id_req = $this->input->post("id_req");
 		$payment_date = $this->input->post("payment_date");
 		$bank_coa = $this->input->post("bank_coa");
@@ -318,6 +333,8 @@ class Pembayaran_material extends Admin_Controller
 				}
 				// ADMIN BANK EXPENSE
 				if ($rec->parameter_no == "4") {
+					$admin_debit_1 = ($admin_charge_bearer === 'recipient') ? 0 : $biaya_admin;
+					$admin_debit_2 = ($admin_charge_bearer === 'recipient') ? 0 : $biaya_admin2;
 					$det_Jurnaltes1[] = array(
 						'nomor' => $nomor_jurnal,
 						'tanggal' => $payment_date,
@@ -326,7 +343,7 @@ class Pembayaran_material extends Admin_Controller
 						'keterangan' => $rec->keterangan,
 						'no_request' => $no_payment,
 						'kredit' => 0,
-						'debet' => $biaya_admin,
+						'debet' => $admin_debit_1,
 						'nilai_valas_debet' => 0,
 						'nilai_valas_kredit' => 0,
 						'no_reff' => $no_payment,
@@ -342,7 +359,7 @@ class Pembayaran_material extends Admin_Controller
 						'keterangan' => $rec->keterangan,
 						'no_request' => $no_payment,
 						'kredit' => 0,
-						'debet' => $biaya_admin2,
+						'debet' => $admin_debit_2,
 						'nilai_valas_debet' => 0,
 						'nilai_valas_kredit' => 0,
 						'no_reff' => $no_payment,
@@ -797,6 +814,15 @@ class Pembayaran_material extends Admin_Controller
 
 	public function save_payment_new_nonmaterial()
 	{
+		// Validate admin_charge_bearer if present
+		$admin_charge_bearer = $this->input->post('admin_charge_bearer');
+		if ($admin_charge_bearer !== null && $admin_charge_bearer !== false) {
+			if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+				echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
+				return;
+			}
+		}
+
 		$id_req = $this->input->post("id_req");
 		$payment_date = $this->input->post("payment_date");
 		$bank_coa = $this->input->post("bank_coa");
@@ -881,6 +907,8 @@ class Pembayaran_material extends Admin_Controller
 				}
 				// ADMIN BANK EXPENSE
 				if ($rec->parameter_no == "4") {
+					$admin_debit_1 = ($admin_charge_bearer === 'recipient') ? 0 : $biaya_admin;
+					$admin_debit_2 = ($admin_charge_bearer === 'recipient') ? 0 : $biaya_admin2;
 					$det_Jurnaltes1[] = array(
 						'nomor' => $nomor_jurnal,
 						'tanggal' => $payment_date,
@@ -889,7 +917,7 @@ class Pembayaran_material extends Admin_Controller
 						'keterangan' => $rec->keterangan,
 						'no_request' => $no_payment,
 						'kredit' => 0,
-						'debet' => $biaya_admin,
+						'debet' => $admin_debit_1,
 						'no_reff' => $no_payment,
 						'jenis_jurnal' => $jenis_jurnal,
 						'nocust' => $id_supplier,
@@ -903,7 +931,7 @@ class Pembayaran_material extends Admin_Controller
 						'keterangan' => $rec->keterangan,
 						'no_request' => $no_payment,
 						'kredit' => 0,
-						'debet' => $biaya_admin2,
+						'debet' => $admin_debit_2,
 						'no_reff' => $no_payment,
 						'jenis_jurnal' => $jenis_jurnal,
 						'nocust' => $id_supplier,
@@ -1279,6 +1307,13 @@ class Pembayaran_material extends Admin_Controller
 			}
 		}
 
+		// Validate admin_charge_bearer
+		$admin_charge_bearer = isset($post['admin_charge_bearer']) ? $post['admin_charge_bearer'] : '';
+		if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+			echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
+			return;
+		}
+
 		$this->db->trans_start();
 
 		try {
@@ -1315,6 +1350,7 @@ class Pembayaran_material extends Admin_Controller
 			$insert_payment_paid = $this->db->insert('tr_payment_paid', [
 				'id' => $id_payment_paid,
 				'bank_charge' => str_replace(',', '', $post['bank_charge']),
+				'admin_charge_bearer' => $admin_charge_bearer,
 				'created_by' => $this->auth->user_id(),
 				'created_on' => date('Y-m-d H:i:s')
 			]);
@@ -1494,6 +1530,7 @@ class Pembayaran_material extends Admin_Controller
 				}
 
 				if ($rec->parameter_no == "4") {
+					$admin_debit = ($admin_charge_bearer === 'recipient') ? 0 : $bankcharge;
 					$det_Jurnaltes1[] = array(
 						'nomor' => $nomor_jurnal,
 						'tanggal' => $payment_date,
@@ -1502,7 +1539,7 @@ class Pembayaran_material extends Admin_Controller
 						'keterangan' => $no_request . '. ' . $keterangan,
 						'no_request' => $id_payment_paid,
 						'kredit' => 0,
-						'debet' => $bankcharge,
+						'debet' => $admin_debit,
 						'no_reff' => $no_request,
 						'jenis_jurnal' => $jenis_jurnal,
 						'nocust' => $id_supplier,

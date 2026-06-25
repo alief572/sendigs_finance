@@ -68,8 +68,16 @@ foreach ($results['result_payment'] as $item) {
 </style>
 <form action="" id="frm-data" enctype="multipart/form-data">
 	<input type="hidden" name="id_payment" class="id_payment" value="<?= $results['id_payment'] ?>">
+	<input type="hidden" name="admin_charge_bearer" value="<?= htmlspecialchars($results['admin_charge_bearer']) ?>">
 	<div class="box box-primary">
 		<div class="box-header">
+			<?php if ($results['admin_charge_bearer'] === 'company'): ?>
+				<div class="alert alert-info" style="margin-bottom:10px;"><strong><i class="fa fa-info-circle"></i> Admin charge ditanggung perusahaan</strong></div>
+			<?php elseif ($results['admin_charge_bearer'] === 'recipient'): ?>
+				<div class="alert alert-warning" style="margin-bottom:10px;"><strong><i class="fa fa-info-circle"></i> Admin charge ditanggung penerima</strong></div>
+			<?php else: ?>
+				<div class="alert alert-danger" style="margin-bottom:10px;"><strong><i class="fa fa-exclamation-triangle"></i> Parameter penanggung admin charge tidak valid. Silakan kembali dan pilih ulang.</strong></div>
+			<?php endif; ?>
 			<table class="" style="width: 100%;" border="0">
 				<tr>
 					<td width="15%" style="">Tgl Bayar</td>
@@ -288,14 +296,16 @@ foreach ($results['result_payment'] as $item) {
 					' . number_format($item->jumlah, 2) . '
 					</td>';
 						echo '<td>';
-						echo '<select name="dt[' . $no . '][tipe_pph]" class="form-control form-control-sm chosen">';
-						echo '<option value="1">PPH 21</option>';
+						echo '<select name="dt[' . $no . '][tipe_pph]" class="form-control form-control-sm tipe_pph" data-id="' . $item->id . '">';
+						echo '<option value="">- Select PPh -</option>';
+						echo '<option value="21">PPH 21</option>';
+						echo '<option value="23">PPH 23</option>';
 						echo '</select>';
 						echo '</td>';
 						echo '<td>';
 						echo '<input type="hidden" class="nilai_utuh_' . $item->id . '" value="' . $nilai_utuh . '">';
 						echo '<input type="hidden" class="persen_progress_' . $item->id . '" value="' . $persen_progress . '">';
-						echo '<input type="text" class="form-control form-control-sm text-right auto_num nilai_pph nilai_pph_' . $item->id . ' change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '">';
+						echo '<input type="text" class="form-control form-control-sm text-right auto_num nilai_pph nilai_pph_' . $item->id . ' change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '" readonly>';
 						echo '</td>';
 						echo '<td class="text-right">';
 						echo '<input type="text" name="dt[' . $no . '][nilai_ppn]" class="form-control form-control-sm text-right auto_num change_nilai_ppn nilai_ppn nilai_ppn_' . $item->id . '" data-id="' . $item->id . '" value="' . $nilai_ppn . '">';
@@ -318,13 +328,13 @@ foreach ($results['result_payment'] as $item) {
 					<tr>
 						<td colspan="5"></td>
 						<td>Total Payment</td>
-						<td class="text-right">
+						<td class="text-right total_payment_col">
 							<?= number_format($total_payment, 2) ?>
 						</td>
 					</tr>
 					<tr>
 						<td colspan="5"></td>
-						<td>Bank Charge</td>
+						<td><?= ($results['admin_charge_bearer'] === 'recipient') ? 'Bank Charge (ditanggung penerima)' : 'Bank Charge' ?></td>
 						<td>
 							<input type="text" name="bank_charge" id="" class="form-control form-control-sm text-right auto_num bank_charge" value="<?= $ttl_bank_charge ?>">
 						</td>
@@ -482,7 +492,7 @@ foreach ($results['result_payment'] as $item) {
 		<div class="box-footer">
 			<div class="form-group">
 				<div class="col-sm-offset-2 col-sm-10">
-					<button type="submit" name="simpan-com" class="btn btn-success btn-sm stsview" id="simpan-com"><i class="fa fa-save">&nbsp;</i>Submit</button>
+					<button type="submit" name="simpan-com" class="btn btn-success btn-sm stsview" id="simpan-com" <?= empty($results['admin_charge_bearer']) ? 'disabled' : '' ?>><i class="fa fa-save">&nbsp;</i>Submit</button>
 					<a href="<?= base_url() ?>pembayaran_material/payment_list" class="btn btn-warning btn-sm"><i class="fa fa-reply">&nbsp;</i>Kembali</a>
 				</div>
 			</div>
@@ -548,6 +558,7 @@ foreach ($results['result_payment'] as $item) {
 	}
 
 	function hitung_kontrol() {
+		var bearer = $('input[name="admin_charge_bearer"]').val();
 		var total_payment = parseFloat($('.total_payment').val());
 		var total_payment_bank = $('.input_payment_bank').val();
 		if (total_payment_bank !== '') {
@@ -564,10 +575,25 @@ foreach ($results['result_payment'] as $item) {
 			bank_charge = 0;
 		}
 
-		var kontrol = parseFloat(total_payment_bank - total_payment - bank_charge);
+		var kontrol;
+		if (bearer === 'recipient') {
+			kontrol = total_payment_bank - total_payment;
+		} else {
+			kontrol = total_payment_bank - total_payment - bank_charge;
+		}
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
+
+		// Disable submit button if kontrol != 0
+		if (Math.abs(kontrol) > 0.001) {
+			$('#simpan-com').prop('disabled', true);
+		} else {
+			// Only re-enable if bearer is valid
+			if (bearer === 'company' || bearer === 'recipient') {
+				$('#simpan-com').prop('disabled', false);
+			}
+		}
 	}
 
 	function set_jurnal() {
@@ -579,6 +605,14 @@ foreach ($results['result_payment'] as $item) {
 		var nilai_ppn = $('.total_ppn').val();
 		var tgl_bayar = $('.tgl_bayar').val();
 		var total_payment = $('.total_payment').val();
+		var admin_charge_bearer = $('input[name="admin_charge_bearer"]').val();
+
+		var pph_data = {};
+		$('.tipe_pph').each(function() {
+			var id = $(this).data('id');
+			var tipe = $(this).val();
+			pph_data[id] = tipe;
+		});
 
 		$.ajax({
 			type: 'post',
@@ -591,7 +625,9 @@ foreach ($results['result_payment'] as $item) {
 				'nilai_pph': nilai_pph,
 				'nilai_ppn': nilai_ppn,
 				'tgl_bayar': tgl_bayar,
-				'total_payment': total_payment
+				'total_payment': total_payment,
+				'admin_charge_bearer': admin_charge_bearer,
+				'pph_data': pph_data
 			},
 			cache: false,
 			dataType: 'json',
@@ -623,6 +659,38 @@ foreach ($results['result_payment'] as $item) {
 		// 	}
 		// });
 	}
+
+	function calculatePPh(tipe, requestPayment, ppn) {
+		if (tipe === '23') return (requestPayment + ppn) * 0.02;
+		if (tipe === '21') return (requestPayment + ppn) * 0.025;
+		return 0;
+	}
+
+	$(document).on('change', '.tipe_pph', function() {
+		var id = $(this).data('id');
+		var tipe = $(this).val();
+		var requestPayment = parseFloat($('.payment_bank_' + id).val()) || 0;
+		var nilai_ppn = $('.nilai_ppn_' + id).val();
+		if (nilai_ppn !== '') {
+			nilai_ppn = nilai_ppn.split(',').join('');
+			nilai_ppn = parseFloat(nilai_ppn);
+		} else {
+			nilai_ppn = 0;
+		}
+
+		var pph = calculatePPh(tipe, requestPayment, nilai_ppn);
+
+		// Update nilai_pph field
+		var pphField = $('.nilai_pph_' + id);
+		if (pphField.data('autoNumeric')) {
+			pphField.autoNumeric('set', pph.toFixed(2));
+		} else {
+			pphField.val(pph.toFixed(2));
+		}
+
+		// Trigger the existing change_nilai_pph logic to recalculate DPP, totals, kontrol, jurnal
+		pphField.trigger('change');
+	});
 
 	$(document).on('change', '.change_nilai_pph', function() {
 		var id = $(this).data('id');
@@ -674,6 +742,7 @@ foreach ($results['result_payment'] as $item) {
 			new_total_payment += (row_payment_bank - row_pph + row_ppn);
 		});
 		$('.total_payment').val(new_total_payment);
+		$('.total_payment_col').html(number_format(new_total_payment, 2));
 
 		hitung_kontrol();
 		set_jurnal();
@@ -729,6 +798,7 @@ foreach ($results['result_payment'] as $item) {
 			new_total_payment += (row_payment_bank - row_pph + row_ppn);
 		});
 		$('.total_payment').val(new_total_payment);
+		$('.total_payment_col').html(number_format(new_total_payment, 2));
 
 		hitung_kontrol();
 		set_jurnal();
