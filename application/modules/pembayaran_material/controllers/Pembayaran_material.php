@@ -1298,6 +1298,9 @@ class Pembayaran_material extends Admin_Controller
 	{
 		$post = $this->input->post();
 
+		$post['mata_uang'] = 'IDR';
+		$post['kurs_payment'] = 1;
+
 		// Validasi field wajib
 		$required_fields = ['bank', 'tgl_bayar', 'keterangan_pembayaran', 'mata_uang', 'payment_bank', 'total_payment', 'id_payment', 'kurs_payment'];
 		foreach ($required_fields as $field) {

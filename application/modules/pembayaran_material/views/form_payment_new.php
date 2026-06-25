@@ -121,29 +121,11 @@ foreach ($results['result_payment'] as $item) {
 					</td>
 				</tr>
 				<tr>
-					<td width="15%" style="">Mata Uang</td>
-					<td width="5%" class="text-center">:</td>
-					<td width="25%">
-						<select name="mata_uang" id="" class="form-control form-control-sm mata_uang">
-							<option value="">- Mata Uang -</option>
-							<?php
-							foreach ($results['list_mata_uang'] as $item_mata_uang) {
-								echo '<option value="' . $item_mata_uang->kode . '">' . $item_mata_uang->kode . '</option>';
-							}
-							?>
-						</select>
-					</td>
+					<td colspan="3"></td>
 					<td width="15%" style="">Payment Bank</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
 						<input type="text" name="payment_bank" id="" class="form-control form-control-sm text-right input_payment_bank auto_num" value="0">
-					</td>
-				</tr>
-				<tr>
-					<td width="15%" style="">Kurs</td>
-					<td width="5%" class="text-center">:</td>
-					<td width="25%">
-						<input type="text" name="kurs_payment" id="" class="form-control form-control-sm text-right auto_num">
 					</td>
 				</tr>
 				<!-- <tr>
@@ -839,9 +821,7 @@ foreach ($results['result_payment'] as $item) {
 			kontrol = parseFloat(kontrol);
 		}
 
-		var mata_uang = $('select[name="mata_uang"]').val();
 		var bank = $('select[name="bank"]').val();
-		var kurs_payment = $('input[name="kurs_payment"]').val();
 
 		var payment_bank = $('.input_payment_bank').val();
 		if (payment_bank !== '') {
@@ -879,25 +859,7 @@ foreach ($results['result_payment'] as $item) {
 			return false;
 		}
 
-		if (mata_uang == '') {
-			swal({
-				title: 'Warning !',
-				text: 'Maaf, Mata Uang tidak boleh kosong!',
-				type: 'warning'
-			});
 
-			return false;
-		}
-
-		if (kurs_payment == '') {
-			swal({
-				title: 'Warning !',
-				text: 'Maaf, Kurs payment tidak bbisa kosong!',
-				type: 'warning'
-			});
-
-			return false;
-		}
 
 		swal({
 				title: "Are you sure?",
