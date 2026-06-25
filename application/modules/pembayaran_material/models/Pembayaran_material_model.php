@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 class Pembayaran_material_model extends BF_Model
 {
 
@@ -137,6 +137,12 @@ class Pembayaran_material_model extends BF_Model
 		$bank_charge = str_replace(',', '', $post['bank_charge']);
 		$bank = $post['bank'];
 		$total_payment = str_replace(',', '', $post['total_payment']);
+
+		// Determine admin charge bearer (company or recipient)
+		$admin_charge_bearer = isset($post['admin_charge_bearer']) ? $post['admin_charge_bearer'] : '';
+		if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+			$admin_charge_bearer = 'company'; // Default for backward compatibility
+		}
 
 		// Ambil tgl_bayar dari input user, fallback ke hari ini jika kosong
 		$tgl_bayar = !empty($post['tgl_bayar']) ? $post['tgl_bayar'] : date('Y-m-d');
@@ -293,7 +299,11 @@ class Pembayaran_material_model extends BF_Model
 					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 				}
 
-				$arr_coa_jurnal = ['1103-01-14', '7201-01-04', '1106-01-06', '2104-01-02'];
+				$pph_data = $this->input->post('pph_data');
+				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
+				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
+
+				$arr_coa_jurnal = ['1103-01-14', '7201-01-04', '1106-01-06', $coa_pph];
 				if (!empty($coa_bank)) {
 					array_push($arr_coa_jurnal, $coa_bank);
 				}
@@ -352,7 +362,7 @@ class Pembayaran_material_model extends BF_Model
 					}
 
 					if ($item_coa->no_coa == '7201-01-04') {
-						$debit = $bank_charge;
+						$debit = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
 
 						$hasil_jurnal .= '<tr>';
 						$hasil_jurnal .= '<td class="text-center">';
@@ -443,7 +453,7 @@ class Pembayaran_material_model extends BF_Model
 						$no_jurnal++;
 					}
 
-					if ($item_coa->no_coa == '2104-01-02') {
+					if ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
 						$kredit = $nilai_pph;
 
 						$hasil_jurnal .= '<tr>';
@@ -490,7 +500,11 @@ class Pembayaran_material_model extends BF_Model
 					}
 
 					if (!empty($coa_bank) && $coa_bank == $item_coa->no_coa) {
-						$kredit = $total_payment;
+						if ($admin_charge_bearer === 'recipient') {
+							$kredit = $total_payment - $bank_charge;
+						} else {
+							$kredit = $total_payment;
+						}
 						// if ($get_kasbon && $payment_bank > $get_kasbon->jumlah_kasbon) {
 						// 	$kredit = $get_kasbon->jumlah_kasbon;
 						// }
