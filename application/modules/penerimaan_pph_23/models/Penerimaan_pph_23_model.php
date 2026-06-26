@@ -250,6 +250,16 @@ class Penerimaan_pph_23_model extends BF_Model
             foreach ($penawaran_rows as $row) {
                 $penawaran_map[$row['id_penawaran']] = $row;
             }
+
+            $penawaran_company_rows = $this->consultant->select('a.id_quotation, c.nm_company')
+                ->from('kons_tr_penawaran a')
+                ->join('kons_tr_company c', 'c.id = a.company', 'left')
+                ->where_in('a.id_quotation', $penawaran_ids)
+                ->get()
+                ->result_array();
+            foreach ($penawaran_company_rows as $row) {
+                $penawaran_map['company_' . $row['id_quotation']] = $row;
+            }
         }
 
         // Build response data
@@ -283,9 +293,18 @@ class Penerimaan_pph_23_model extends BF_Model
             $print_keterangan = $item['print_keterangan'] ?? '-';
             $nm_company = '-';
 
-            if (!empty($item['id_spk_penawaran']) && isset($spk_penawaran_map[$item['id_spk_penawaran']])) {
+            // Coba ambil company dari kons_tr_penawaran terlebih dahulu
+            if (!empty($item['id_penawaran']) && isset($penawaran_map['company_' . $item['id_penawaran']])) {
+                $nm_company = $penawaran_map['company_' . $item['id_penawaran']]['nm_company'] ?? '-';
+            }
+
+            // Jika tidak ada, coba ambil dari kons_tr_spk_penawaran
+            if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_spk_penawaran']) && isset($spk_penawaran_map[$item['id_spk_penawaran']])) {
                 $nm_company = $spk_penawaran_map[$item['id_spk_penawaran']]['nm_company'] ?? '-';
-            } else if (!empty($item['id_penawaran']) && isset($penawaran_map[$item['id_penawaran']])) {
+            }
+            
+            // Jika tidak ada juga, fallback ke kons_tr_penawaran_non_konsultasi
+            if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_penawaran']) && isset($penawaran_map[$item['id_penawaran']])) {
                 $nm_company = $penawaran_map[$item['id_penawaran']]['nm_company'] ?? '-';
             }
 
