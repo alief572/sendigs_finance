@@ -33,13 +33,48 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
-        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice');
+        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
         $this->db->where('a.id', $id_penerimaan_piutang);
         $get_data_penerimaan = $this->db->get()->row_array();
+
+        if (empty($get_data_penerimaan['id_alokasi'])) {
+            if (!empty($get_data_penerimaan['id_spk_penawaran'])) {
+                $get_plan_tagih_detail = $this->db->get_where('kons_tr_plan_tagih_detail', ['id' => $get_data_penerimaan['id_detail_plan_tagih']])->row();
+
+                $get_spk_penawaran = $this->consultant->select('a.*, b.nm_paket')
+                    ->from('kons_tr_spk_penawaran a')
+                    ->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left')
+                    ->where('a.id_spk_penawaran', $get_plan_tagih_detail->id_spk_penawaran ?? '')
+                    ->get()
+                    ->row();
+
+                $get_data_penerimaan['nm_customer'] = $get_spk_penawaran->nm_customer ?? '-';
+                $get_data_penerimaan['nm_project'] = $get_spk_penawaran->nm_paket ?? '-';
+                $get_data_penerimaan['print_keterangan'] = $get_plan_tagih_detail->desc_payment ?? '-';
+            } else {
+                $get_penawaran_non_kons = $this->consultant->select('a.*')
+                    ->from('kons_tr_penawaran_non_konsultasi a')
+                    ->where('a.id_penawaran', $get_data_penerimaan['id_penawaran'])
+                    ->get()
+                    ->row();
+
+                $get_data_penerimaan['nm_customer'] = $get_penawaran_non_kons->nm_customer ?? '-';
+                $get_data_penerimaan['nm_project'] = $get_penawaran_non_kons->keterangan_penawaran ?? '-';
+                $get_data_penerimaan['print_keterangan'] = $get_penawaran_non_kons->keterangan_penawaran ?? '-';
+            }
+        }
+
+        if ($get_data_penerimaan['pph23'] == 0) {
+            if ($get_data_penerimaan['tipe_invoice'] == '1') {
+                $get_data_penerimaan['pph23'] = $get_data_penerimaan['total_nominal'] * 0.5 / 100;
+            } else {
+                $get_data_penerimaan['pph23'] = $get_data_penerimaan['total_nominal'] * 2 / 100;
+            }
+        }
 
         $tipe_invoice = (!empty($get_data_penerimaan['tipe_invoice'])) ? $get_data_penerimaan['tipe_invoice'] : '';
         $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';

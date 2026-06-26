@@ -137,6 +137,7 @@
                     <th class="text-center">No.</th>
                     <th class="text-center">No. Invoice</th>
                     <th class="text-center">Customer</th>
+                    <th class="text-center">Company</th>
                     <th class="text-center">Project</th>
                     <th class="text-center">Keterangan Invoice</th>
                     <th class="text-center">Nilai PPh</th>
@@ -219,6 +220,9 @@
                 },
                 {
                     data: 'nm_customer'
+                },
+                {
+                    data: 'nm_company'
                 },
                 {
                     data: 'nm_project'
