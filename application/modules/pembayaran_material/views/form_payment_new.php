@@ -617,8 +617,29 @@ foreach ($results['result_payment'] as $item) {
 				$('.tbody_jurnal').html(result.hasil_jurnal);
 				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit));
 				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
+				check_jurnal_coa();
 			}
 		})
+	}
+
+	function check_jurnal_coa() {
+		var has_empty_coa = false;
+		$('.tbody_jurnal input[name*="[coa]"]').each(function() {
+			if ($(this).val().trim() === '') {
+				has_empty_coa = true;
+				return false; // break
+			}
+		});
+
+		if (has_empty_coa) {
+			$('#simpan-com').prop('disabled', true);
+			$('.jurnal-coa-warning').remove();
+			$('.tbody_jurnal').closest('table').after('<div class="alert alert-danger jurnal-coa-warning" style="margin-top:10px;"><i class="fa fa-exclamation-triangle"></i> Terdapat baris jurnal dengan COA kosong. Data tidak dapat disimpan sampai semua COA terisi.</div>');
+		} else {
+			$('.jurnal-coa-warning').remove();
+			// Re-check kontrol to determine if submit should be enabled
+			hitung_kontrol();
+		}
 	}
 
 	function set_jurnal_refill() {
@@ -829,6 +850,24 @@ foreach ($results['result_payment'] as $item) {
 			payment_bank = parseFloat(payment_bank);
 		} else {
 			payment_bank = 0;
+		}
+
+		// Validasi COA jurnal tidak boleh kosong
+		var has_empty_coa = false;
+		$('.tbody_jurnal input[name*="[coa]"]').each(function() {
+			if ($(this).val().trim() === '') {
+				has_empty_coa = true;
+				return false;
+			}
+		});
+
+		if (has_empty_coa) {
+			swal({
+				title: 'Warning !',
+				text: 'Maaf, terdapat baris jurnal dengan COA kosong. Pastikan semua COA terisi sebelum menyimpan data!',
+				type: 'warning'
+			});
+			return false;
 		}
 
 		if (kontrol > 0 || kontrol < 0) {
