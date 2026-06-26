@@ -157,7 +157,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $records_filtered = $this->db->get()->row()->total;
 
         // Main query with limit
-        $this->db->select('a.id, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice');
+        $this->db->select('a.id, a.id_alokasi, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.id_penawaran');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
@@ -189,6 +189,69 @@ class Penerimaan_pph_23_model extends BF_Model
             }
         }
 
+        // Batch fetch plan tagih detail
+        $plan_tagih_ids = array_unique(array_filter(array_column($get_data, 'id_detail_plan_tagih')));
+        $plan_tagih_map = [];
+        if (!empty($plan_tagih_ids)) {
+            $this->db->where_in('id', $plan_tagih_ids);
+            $plan_tagih_rows = $this->db->get('kons_tr_plan_tagih_detail')->result_array();
+            foreach ($plan_tagih_rows as $row) {
+                $plan_tagih_map[$row['id']] = $row;
+            }
+        }
+
+        // Collect IDs for consultant DB
+        $spk_penawaran_ids = [];
+        $penawaran_ids = [];
+        foreach ($get_data as $item) {
+            if (!empty($item['id_spk_penawaran'])) {
+                $spk_penawaran_ids[] = $item['id_spk_penawaran'];
+            }
+            if (!empty($item['id_penawaran'])) {
+                $penawaran_ids[] = $item['id_penawaran'];
+            }
+
+            if (empty($item['id_alokasi'])) {
+                if (!empty($item['id_spk_penawaran'])) {
+                    $id_plan = $item['id_detail_plan_tagih'];
+                    if (isset($plan_tagih_map[$id_plan]) && !empty($plan_tagih_map[$id_plan]['id_spk_penawaran'])) {
+                        $spk_penawaran_ids[] = $plan_tagih_map[$id_plan]['id_spk_penawaran'];
+                    }
+                }
+            }
+        }
+
+        // Batch fetch spk penawaran from consultant DB
+        $spk_penawaran_map = [];
+        $spk_penawaran_ids = array_unique(array_filter($spk_penawaran_ids));
+        if (!empty($spk_penawaran_ids)) {
+            $spk_penawaran_rows = $this->consultant->select('a.*, b.nm_paket, c.nm_company')
+                ->from('kons_tr_spk_penawaran a')
+                ->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left')
+                ->join('kons_tr_company c', 'c.id = a.id_company', 'left')
+                ->where_in('a.id_spk_penawaran', $spk_penawaran_ids)
+                ->get()
+                ->result_array();
+            foreach ($spk_penawaran_rows as $row) {
+                $spk_penawaran_map[$row['id_spk_penawaran']] = $row;
+            }
+        }
+
+        // Batch fetch penawaran dari consultant DB
+        $penawaran_map = [];
+        $penawaran_ids = array_unique(array_filter($penawaran_ids));
+        if (!empty($penawaran_ids)) {
+            $penawaran_rows = $this->consultant->select('a.*, c.nm_company')
+                ->from('kons_tr_penawaran_non_konsultasi a')
+                ->join('kons_tr_company c', 'c.id = a.id_company', 'left')
+                ->where_in('a.id_penawaran', $penawaran_ids)
+                ->get()
+                ->result_array();
+            foreach ($penawaran_rows as $row) {
+                $penawaran_map[$row['id_penawaran']] = $row;
+            }
+        }
+
         // Build response data
         $hasil = [];
         $no = $start;
@@ -206,13 +269,60 @@ class Penerimaan_pph_23_model extends BF_Model
                 $action = '<a href="' . base_url('penerimaan_pph_23/add/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Setor PPH 23"><i class="fa fa-money"></i></a>';
             }
 
+            $nilai_pph = $item['pph23'];
+            if ($nilai_pph == 0) {
+                if ($item['tipe_invoice'] == '1') {
+                    $nilai_pph = $item['total_nominal'] * 0.5 / 100;
+                } else {
+                    $nilai_pph = $item['total_nominal'] * 2 / 100;
+                }
+            }
+
+            $nm_customer = $item['nm_customer'] ?? '-';
+            $nm_project = $item['nm_project'] ?? '-';
+            $print_keterangan = $item['print_keterangan'] ?? '-';
+            $nm_company = '-';
+
+            if (!empty($item['id_spk_penawaran']) && isset($spk_penawaran_map[$item['id_spk_penawaran']])) {
+                $nm_company = $spk_penawaran_map[$item['id_spk_penawaran']]['nm_company'] ?? '-';
+            } else if (!empty($item['id_penawaran']) && isset($penawaran_map[$item['id_penawaran']])) {
+                $nm_company = $penawaran_map[$item['id_penawaran']]['nm_company'] ?? '-';
+            }
+
+            if(empty($item['id_alokasi'])) {
+                if(!empty($item['id_spk_penawaran'])) {
+                    $id_plan = $item['id_detail_plan_tagih'];
+                    $desc_payment = '-';
+                    $spk_id = null;
+                    if (isset($plan_tagih_map[$id_plan])) {
+                        $desc_payment = $plan_tagih_map[$id_plan]['desc_payment'];
+                        $spk_id = $plan_tagih_map[$id_plan]['id_spk_penawaran'];
+                    }
+
+                    if ($spk_id && isset($spk_penawaran_map[$spk_id])) {
+                        $nm_customer = $spk_penawaran_map[$spk_id]['nm_customer'] ?? '-';
+                        $nm_project = $spk_penawaran_map[$spk_id]['nm_paket'] ?? '-';
+                    }
+                    $print_keterangan = $desc_payment ?? '-';
+                } else {
+                    $id_pen = $item['id_penawaran'];
+                    if ($id_pen && isset($penawaran_map[$id_pen])) {
+                        $nm_customer = $penawaran_map[$id_pen]['nm_customer'] ?? '-';
+                        $nm_project = $penawaran_map[$id_pen]['keterangan_penawaran'] ?? '-';
+                        $print_keterangan = $penawaran_map[$id_pen]['keterangan_penawaran'] ?? '-';
+                    }
+                }
+            }
+
+
             $hasil[] = [
                 'no'                 => $no,
                 'no_invoice'         => htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8'),
-                'nm_customer'        => htmlspecialchars($item['nm_customer'], ENT_QUOTES, 'UTF-8'),
-                'nm_project'         => htmlspecialchars($item['nm_project'], ENT_QUOTES, 'UTF-8'),
-                'keterangan_invoice' => htmlspecialchars($item['print_keterangan'], ENT_QUOTES, 'UTF-8'),
-                'nilai_pph'          => number_format($item['pph23'], 0, ',', '.'),
+                'nm_customer'        => htmlspecialchars($nm_customer, ENT_QUOTES, 'UTF-8'),
+                'nm_company'         => htmlspecialchars($nm_company, ENT_QUOTES, 'UTF-8'),
+                'nm_project'         => htmlspecialchars($nm_project, ENT_QUOTES, 'UTF-8'),
+                'keterangan_invoice' => htmlspecialchars($print_keterangan, ENT_QUOTES, 'UTF-8'),
+                'nilai_pph'          => number_format($nilai_pph, 0, ',', '.'),
                 'status'             => $status,
                 'action'             => $action
             ];
