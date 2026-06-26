@@ -346,9 +346,11 @@ foreach ($results['result_payment'] as $item) {
 			<input type="hidden" name="total_payment_bank" class="total_payment_bank" value="<?= $total_payment_bank ?>">
 			<input type="hidden" name="kontrol" class="kontrol" value="0">
 
+			<br><br>
 			<div class="col-md-4">
 				<div class="form-group">
-					<input type="file" class="form-control form-control-sm" name="upload_doc" id="" style="margin-top: 15px;">
+					<label for="">Upload Bukti Bayar <span class="text-danger">*</span></label>
+					<input type="file" class="form-control form-control-sm" name="upload_doc" id="" required>
 				</div>
 			</div>
 
@@ -850,6 +852,17 @@ foreach ($results['result_payment'] as $item) {
 			payment_bank = parseFloat(payment_bank);
 		} else {
 			payment_bank = 0;
+		}
+
+		// Validasi file bukti bayar wajib di-upload
+		var upload_doc = $('input[name="upload_doc"]').val();
+		if (!upload_doc || upload_doc.trim() === '') {
+			swal({
+				title: 'Warning !',
+				text: 'Maaf, Upload Bukti Bayar wajib diisi sebelum menyimpan data!',
+				type: 'warning'
+			});
+			return false;
 		}
 
 		// Validasi COA jurnal tidak boleh kosong

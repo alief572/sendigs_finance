@@ -18,6 +18,15 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         position: absolute;
         overflow: auto;
     }
+
+    .filter-actions {
+        margin-top: 25px;
+    }
+
+    .save_btn_modal:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
 </style>
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
@@ -64,10 +73,11 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 </div>
             </div>
             <div class="col-md-3">
-                <br>
-                <button type="button" class="btn btn-sm btn-primary" onclick="search_jurnal()"><i class="fa fa-search"></i> Search</button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="reset_search_jurnal()"><i class="fa fa-refresh"></i> Reset</button>
-                <button type="button" class="btn btn-sm btn-success" onclick="export_jurnal()"><i class="fa fa-download"></i> Export</button>
+                <div class="form-group filter-actions">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="search_jurnal()"><i class="fa fa-search"></i> Search</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="reset_search_jurnal()"><i class="fa fa-refresh"></i> Reset</button>
+                    <button type="button" class="btn btn-sm btn-success" onclick="export_jurnal()"><i class="fa fa-download"></i> Export</button>
+                </div>
             </div>
         </div>
     </div>
@@ -97,7 +107,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-users"></span>Posting Jurnal</h4>
+                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-book"></span> Posting Jurnal</h4>
             </div>
             <form action="" method="post" id="frm-data">
                 <div class="modal-body" id="ModalView">
@@ -106,7 +116,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary save_btn_modal"><i class="fa fa-save"></i> Save</button>
                     <button type="button" class="btn btn-danger" data-dismiss="modal">
-                        <span class="glyphicon glyphicon-remove"></span> Close</button>
+                        <i class="fa fa-times"></i> Close</button>
                 </div>
             </form>
         </div>
@@ -131,8 +141,12 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         $('#tgl_jurnal').flatpickr({
             dateFormat: 'Y-m-d',
             allowInput: true,
-            mode: 'range'
+            mode: 'range',
+            placeholder: 'Pilih rentang tanggal'
         });
+
+        // Set placeholder manual karena flatpickr tidak support attr placeholder langsung
+        $('#tgl_jurnal').attr('placeholder', 'Pilih rentang tanggal');
     });
 
     $(document).on('submit', '#frm-data', function(e) {
@@ -163,6 +177,11 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
             if (result.isConfirmed) {
                 var data = $('#frm-data').serialize();
 
+                // Loading state pada tombol save
+                var $saveBtn = $('.save_btn_modal');
+                var originalBtnText = $saveBtn.html();
+                $saveBtn.html('<i class="fa fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+
                 $.ajax({
                     type: 'post',
                     url: siteurl + active_controller + 'save_posting_jurnal',
@@ -170,6 +189,8 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                     cache: false,
                     dataType: 'json',
                     success: function(result) {
+                        $saveBtn.html(originalBtnText).prop('disabled', false);
+
                         if (result.save == '1') {
                             Swal.fire({
                                 icon: 'success',
@@ -185,13 +206,15 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Failed !',
-                                text: 'Please try again later !',
+                                text: result.msg || 'Please try again later !',
                                 timer: 3000,
                                 allowOutsideClick: false
                             });
                         }
                     },
                     error: function(result) {
+                        $saveBtn.html(originalBtnText).prop('disabled', false);
+
                         Swal.fire({
                             icon: 'error',
                             title: 'Error !',
@@ -343,11 +366,15 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     }
 
     function reset_search_jurnal() {
-        var tgl_jurnal = $('#tgl_jurnal').val('');
-        var no_transaksi = $('#no_transaksi').val('');
-        var company = $('#company').val('');
+        $('#tgl_jurnal').val('');
+        // Clear flatpickr
+        var fp = document.querySelector('#tgl_jurnal')._flatpickr;
+        if (fp) fp.clear();
 
-        DataTables()
+        $('#no_transaksi').val('').trigger('change');
+        $('#company').val('').trigger('change');
+
+        DataTables();
     }
 
     function export_jurnal() {

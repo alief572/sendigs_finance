@@ -77,6 +77,11 @@ class Jurnal_payment extends Admin_Controller
         $ttl_debit = 0;
         $ttl_kredit = 0;
         foreach ($get_all_jurnal as $item) {
+            // Skip baris yang debit dan kredit sama-sama 0
+            if ($item->debit <= 0 && $item->kredit <= 0) {
+                continue;
+            }
+
             $no++;
 
             $hasil .= '<tr>';
@@ -179,17 +184,21 @@ class Jurnal_payment extends Admin_Controller
                 $details = [];
                 $ids = [];
                 foreach ($get_jurnal_all as $item) {
-                    $details[] = [
-                        'tipe'         => 'JV',
-                        'nomor'        => $Nomor_JV,
-                        'tanggal'      => $item->tgl_jurnal,
-                        'no_perkiraan' => $item->coa,
-                        'keterangan'   => $item->keterangan,
-                        'no_reff'      => $item->no_transaksi,
-                        'debet'        => $item->debit,
-                        'kredit'       => $item->kredit,
-                        'stspos'       => 1
-                    ];
+                    // Hanya insert ke tras jika debit atau kredit > 0
+                    if ($item->debit > 0 || $item->kredit > 0) {
+                        $details[] = [
+                            'tipe'         => 'JV',
+                            'nomor'        => $Nomor_JV,
+                            'tanggal'      => $item->tgl_jurnal,
+                            'no_perkiraan' => $item->coa,
+                            'keterangan'   => $item->keterangan,
+                            'no_reff'      => $item->no_transaksi,
+                            'debet'        => $item->debit,
+                            'kredit'       => $item->kredit,
+                            'stspos'       => 1
+                        ];
+                    }
+                    // Semua baris tetap di-update sts = 1
                     $ids[] = $item->id;
                 }
 
@@ -197,6 +206,8 @@ class Jurnal_payment extends Admin_Controller
                     if (!$acc->db->insert_batch('jurnal', $details)) {
                         throw new Exception('Gagal insert jurnal detail');
                     }
+                }
+                if (!empty($ids)) {
                     $this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1']);
                 }
 
@@ -259,23 +270,29 @@ class Jurnal_payment extends Admin_Controller
 
                 $arr_jurnal = [];
                 foreach ($get_jurnal_detail as $item) {
-                    $arr_jurnal[] = [
-                        'tipe'          => 'BUM',
-                        'nomor'         => $Nomor_BUM,
-                        'tanggal'       => $item->tgl_jurnal,
-                        'no_perkiraan'  => $item->coa,
-                        'keterangan'    => $item->keterangan,
-                        'no_reff'       => $get_inv->id,
-                        'debet'         => $item->debit,
-                        'kredit'        => $item->kredit,
-                        'id_perusahaan' => $item->id_company,
-                        'nm_perusahaan' => $item->nm_company,
-                    ];
+                    // Hanya insert ke tras jika debit atau kredit > 0
+                    if ($item->debit > 0 || $item->kredit > 0) {
+                        $arr_jurnal[] = [
+                            'tipe'          => 'BUM',
+                            'nomor'         => $Nomor_BUM,
+                            'tanggal'       => $item->tgl_jurnal,
+                            'no_perkiraan'  => $item->coa,
+                            'keterangan'    => $item->keterangan,
+                            'no_reff'       => $get_inv->id,
+                            'debet'         => $item->debit,
+                            'kredit'        => $item->kredit,
+                            'id_perusahaan' => $item->id_company,
+                            'nm_perusahaan' => $item->nm_company,
+                        ];
+                    }
                 }
 
                 $acc->db->insert('jarh', $arr_insert_jarh);
-                $acc->db->insert_batch('jurnal', $arr_jurnal);
+                if (!empty($arr_jurnal)) {
+                    $acc->db->insert_batch('jurnal', $arr_jurnal);
+                }
 
+                // Semua baris tetap di-update sts = 1
                 $this->db->where([
                     'no_transaksi'    => $get_jurnal->no_transaksi,
                     'jenis_transaksi' => $get_jurnal->jenis_transaksi,
@@ -297,16 +314,20 @@ class Jurnal_payment extends Admin_Controller
                 $details = [];
                 $ids = [];
                 foreach ($get_jurnal_all as $item) {
-                    $details[] = [
-                        'tipe'         => 'BUK',
-                        'nomor'        => $Nomor_JV,
-                        'tanggal'      => $item->tgl_jurnal,
-                        'no_reff'      => $item->no_transaksi,
-                        'no_perkiraan' => $item->coa,
-                        'keterangan'   => $item->keterangan,
-                        'debet'        => $item->debit,
-                        'kredit'       => $item->kredit,
-                    ];
+                    // Hanya insert ke tras jika debit atau kredit > 0
+                    if ($item->debit > 0 || $item->kredit > 0) {
+                        $details[] = [
+                            'tipe'         => 'BUK',
+                            'nomor'        => $Nomor_JV,
+                            'tanggal'      => $item->tgl_jurnal,
+                            'no_reff'      => $item->no_transaksi,
+                            'no_perkiraan' => $item->coa,
+                            'keterangan'   => $item->keterangan,
+                            'debet'        => $item->debit,
+                            'kredit'       => $item->kredit,
+                        ];
+                    }
+                    // Semua baris tetap di-update sts = 1
                     $ids[] = $item->id;
                 }
 
@@ -314,6 +335,8 @@ class Jurnal_payment extends Admin_Controller
                     if (!$acc->db->insert_batch('jurnal', $details)) {
                         throw new Exception('Gagal insert jurnal detail payment');
                     }
+                }
+                if (!empty($ids)) {
                     $this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1']);
                 }
 
