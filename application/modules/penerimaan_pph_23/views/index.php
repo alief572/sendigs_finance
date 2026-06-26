@@ -129,6 +129,33 @@
 
 <div class="box">
     <div class="box-header">
+        <div class="row">
+            <div class="col-md-3">
+                <select id="filter_company" class="form-control form-control-sm select2">
+                    <option value="">- Semua Company -</option>
+                    <?php foreach ($list_company as $item): ?>
+                        <option value="<?= $item->id ?>"><?= $item->nm_company ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filter_year" class="form-control form-control-sm select2">
+                    <option value="">- Semua Tahun -</option>
+                    <?php 
+                    $current_year = date('Y');
+                    for ($i = $current_year; $i >= $current_year - 5; $i--): ?>
+                        <option value="<?= $i ?>"><?= $i ?></option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filter_status" class="form-control form-control-sm select2">
+                    <option value="">- Semua Status -</option>
+                    <option value="1">Lunas</option>
+                    <option value="0">Belum Lunas</option>
+                </select>
+            </div>
+        </div>
     </div>
     <div class="box-body">
         <table class="table table-striped" id="table_list">
@@ -184,6 +211,13 @@
         $('.search_bank').chosen({
             width: '450px'
         });
+        $('.select2').chosen({
+            width: '100%'
+        });
+
+        $(document).on('change', '#filter_company, #filter_year, #filter_status', function() {
+            $('#table_list').DataTable().ajax.reload();
+        });
     });
 
     function DataTables() {
@@ -201,6 +235,11 @@
             ajax: {
                 type: 'POST',
                 url: siteurl + active_controller + 'get_alokasi_penerimaan_pph23',
+                data: function(d) {
+                    d.filter_company = $('#filter_company').val();
+                    d.filter_year = $('#filter_year').val();
+                    d.filter_status = $('#filter_status').val();
+                },
                 dataType: 'json',
                 error: function(xhr, error, thrown) {
                     console.error('DataTables AJAX error:', error, thrown);

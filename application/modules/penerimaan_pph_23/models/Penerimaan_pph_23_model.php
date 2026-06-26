@@ -129,14 +129,57 @@ class Penerimaan_pph_23_model extends BF_Model
         $search = $this->input->post('search');
         $search_value = isset($search['value']) ? trim($search['value']) : '';
 
+        $filter_company = $this->input->post('filter_company');
+        $filter_year = $this->input->post('filter_year');
+        $filter_status = $this->input->post('filter_status');
+
+        $spk_ids_for_company = [];
+        $penawaran_ids_for_company = [];
+        if (!empty($filter_company)) {
+            $spk_rows = $this->consultant->select('id_spk_penawaran')->where('id_company', $filter_company)->get('kons_tr_spk_penawaran')->result_array();
+            $spk_ids_for_company = array_column($spk_rows, 'id_spk_penawaran');
+
+            $penawaran_rows = $this->consultant->select('id_quotation')->where('company', $filter_company)->get('kons_tr_penawaran')->result_array();
+            $penawaran_ids_for_company = array_column($penawaran_rows, 'id_quotation');
+
+            $penawaran_non_kons_rows = $this->consultant->select('id_penawaran')->where('id_company', $filter_company)->get('kons_tr_penawaran_non_konsultasi')->result_array();
+            $penawaran_non_kons_ids = array_column($penawaran_non_kons_rows, 'id_penawaran');
+
+            $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, $penawaran_non_kons_ids);
+        }
+
+        $apply_filters = function($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
+            if (!empty($filter_year)) {
+                $db->where('YEAR(b.tanggal_invoice)', $filter_year);
+            }
+            if ($filter_status === '1') {
+                $db->where("EXISTS (SELECT 1 FROM tr_penerimaan_pph_23 pph WHERE pph.id_detail_penerimaan = a.id)", null, false);
+            } else if ($filter_status === '0') {
+                $db->where("NOT EXISTS (SELECT 1 FROM tr_penerimaan_pph_23 pph WHERE pph.id_detail_penerimaan = a.id)", null, false);
+            }
+            if (!empty($filter_company)) {
+                $db->group_start();
+                if (!empty($spk_ids_for_company)) {
+                    $db->or_where_in('b.id_spk_penawaran', $spk_ids_for_company);
+                }
+                if (!empty($penawaran_ids_for_company)) {
+                    $db->or_where_in('b.id_penawaran', $penawaran_ids_for_company);
+                }
+                if (empty($spk_ids_for_company) && empty($penawaran_ids_for_company)) {
+                    $db->or_where('1=0');
+                }
+                $db->group_end();
+            }
+        };
+
         // Count total records (tanpa filter search)
-        $records_total = $this->db->query("
-            SELECT COUNT(DISTINCT a.id) as total
-            FROM tr_penerimaan_piutang_detail a
-            JOIN tr_invoicing b ON b.id = a.id_inv
-            JOIN tr_penerimaan_piutang c ON c.no_surat = a.id_header
-            WHERE c.pph23_dipotong = 'Y'
-        ")->row()->total;
+        $this->db->select('COUNT(DISTINCT a.id) as total');
+        $this->db->from('tr_penerimaan_piutang_detail a');
+        $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
+        $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
+        $this->db->where('c.pph23_dipotong', 'Y');
+        $apply_filters($this->db);
+        $records_total = $this->db->get()->row()->total;
 
         // Count filtered records
         $this->db->select('COUNT(DISTINCT a.id) as total');
@@ -144,6 +187,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
+        $apply_filters($this->db);
 
         if ($search_value !== '') {
             $this->db->group_start();
@@ -162,6 +206,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
+        $apply_filters($this->db);
 
         if ($search_value !== '') {
             $this->db->group_start();

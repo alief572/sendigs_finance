@@ -25,6 +25,9 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
+        $list_company = $this->consultant->get('kons_tr_company')->result();
+        $this->template->set('list_company', $list_company);
+
         $this->template->title('Penerimaan PPH 23');
         $this->template->render('index');
     }
