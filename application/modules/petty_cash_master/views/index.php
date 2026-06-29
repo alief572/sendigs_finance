@@ -32,7 +32,20 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
     <!-- /.box-body -->
 </div>
 
-<div id="form-data"></div>
+<!-- Modal CRUD -->
+<div class="modal fade" id="modal-crud" tabindex="-1" role="dialog" aria-labelledby="modal-crud-label">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="modal-crud-label">Master Petty Cash</h4>
+            </div>
+            <div class="modal-body" id="modal-crud-body">
+                <div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- DataTables -->
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
@@ -80,19 +93,21 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
     }
 
     /**
-     * Load create form via AJAX into #form-data
+     * Open modal and load create form via AJAX
      */
     function data_add() {
+        $('#modal-crud-label').text('Tambah Master Petty Cash');
+        $('#modal-crud-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
+        $('#modal-crud').modal('show');
+
         $.ajax({
             type: 'GET',
             url: siteurl + 'petty_cash_master/create',
-            beforeSend: function() {
-                $('#form-data').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-            },
             success: function(response) {
-                $('#form-data').html(response);
+                $('#modal-crud-body').html(response);
             },
             error: function() {
+                $('#modal-crud').modal('hide');
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -104,20 +119,22 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
     }
 
     /**
-     * Load edit form via AJAX into #form-data
+     * Open modal and load edit form via AJAX
      * @param {int} id - Master petty cash ID
      */
     function data_edit(id) {
+        $('#modal-crud-label').text('Edit Master Petty Cash');
+        $('#modal-crud-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
+        $('#modal-crud').modal('show');
+
         $.ajax({
             type: 'GET',
             url: siteurl + 'petty_cash_master/edit/' + id,
-            beforeSend: function() {
-                $('#form-data').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-            },
             success: function(response) {
-                $('#form-data').html(response);
+                $('#modal-crud-body').html(response);
             },
             error: function() {
+                $('#modal-crud').modal('hide');
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -129,20 +146,22 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
     }
 
     /**
-     * Load view (read-only) form via AJAX into #form-data
+     * Open modal and load view (read-only) form via AJAX
      * @param {int} id - Master petty cash ID
      */
     function data_view(id) {
+        $('#modal-crud-label').text('Detail Master Petty Cash');
+        $('#modal-crud-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
+        $('#modal-crud').modal('show');
+
         $.ajax({
             type: 'GET',
             url: siteurl + 'petty_cash_master/view/' + id,
-            beforeSend: function() {
-                $('#form-data').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-            },
             success: function(response) {
-                $('#form-data').html(response);
+                $('#modal-crud-body').html(response);
             },
             error: function() {
+                $('#modal-crud').modal('hide');
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',

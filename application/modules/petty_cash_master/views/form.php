@@ -8,121 +8,111 @@ $header_id = (isset($data->id)) ? $data->id : '';
 <?= form_open('petty_cash_master/save', array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal')) ?>
 <input type="hidden" id="id" name="id" value="<?= $header_id ?>">
 
-<div class="box box-primary">
-    <div class="box-header with-border">
-        <h3 class="box-title"><i class="fa fa-pencil-square-o"></i>&nbsp;<?= $edit_mode ? 'Edit' : 'Tambah' ?> Master Petty Cash</h3>
+<!-- Header Fields -->
+<div class="form-group">
+    <label for="nama" class="col-sm-2 control-label">Nama <b class="text-red">*</b></label>
+    <div class="col-sm-10">
+        <input type="text" class="form-control" id="nama" name="nama" value="<?= isset($data->nama) ? $data->nama : '' ?>" placeholder="Nama">
     </div>
-    <div class="box-body">
-        <!-- Header Fields -->
-        <div class="form-group">
-            <label for="nama" class="col-sm-2 control-label">Nama <b class="text-red">*</b></label>
-            <div class="col-sm-10">
-                <input type="text" class="form-control" id="nama" name="nama" value="<?= isset($data->nama) ? $data->nama : '' ?>" placeholder="Nama">
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="keterangan" class="col-sm-2 control-label">Keterangan <b class="text-red">*</b></label>
-            <div class="col-sm-10">
-                <input type="text" class="form-control" id="keterangan" name="keterangan" value="<?= isset($data->keterangan) ? $data->keterangan : '' ?>" placeholder="Keterangan">
-            </div>
-        </div>
+</div>
+<div class="form-group">
+    <label for="keterangan" class="col-sm-2 control-label">Keterangan <b class="text-red">*</b></label>
+    <div class="col-sm-10">
+        <input type="text" class="form-control" id="keterangan" name="keterangan" value="<?= isset($data->keterangan) ? $data->keterangan : '' ?>" placeholder="Keterangan">
+    </div>
+</div>
 
+<hr>
 
-        <hr>
-
-        <!-- Detail Table Section -->
-        <h4><i class="fa fa-list"></i>&nbsp;Detail COA</h4>
-        <div class="table-responsive">
-            <table id="detail-table" class="table table-bordered table-striped">
-                <thead>
-                    <tr class="bg-primary">
-                        <th width="40" class="text-center">No</th>
-                        <th width="250">COA</th>
-                        <th>Jenis Pengeluaran</th>
-                        <th width="180">Nominal</th>
-                        <th width="60" class="text-center">Action</th>
+<!-- Detail Table Section -->
+<h4><i class="fa fa-list"></i>&nbsp;Detail COA</h4>
+<div class="table-responsive">
+    <table id="detail-table" class="table table-bordered table-striped">
+        <thead>
+            <tr class="bg-primary">
+                <th width="40" class="text-center">No</th>
+                <th width="250">COA</th>
+                <th>Jenis Pengeluaran</th>
+                <th width="180">Nominal</th>
+                <th width="60" class="text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($edit_mode && isset($details) && !empty($details)) : ?>
+                <?php foreach ($details as $idx => $detail) : ?>
+                    <tr>
+                        <td class="text-center row-number"><?= $idx + 1 ?></td>
+                        <td>
+                            <select name="detail[<?= $idx ?>][coa_code]" class="form-control select2 coa-select" style="width: 100%;">
+                                <option value="">-- Pilih COA --</option>
+                                <?php foreach ($coa_list as $code => $label) : ?>
+                                    <option value="<?= $code ?>" <?= ($detail->coa_code == $code) ? 'selected' : '' ?>>
+                                        <?= $label ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="detail[<?= $idx ?>][jenis_pengeluaran]" class="form-control" value="<?= $detail->jenis_pengeluaran ?>" placeholder="Jenis Pengeluaran">
+                        </td>
+                        <td>
+                            <input type="text" name="detail[<?= $idx ?>][nominal]" class="form-control nominal-input text-right" value="<?= number_format($detail->nominal, 0, ',', '.') ?>" placeholder="0">
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-danger btn-sm btn-remove-row" title="Hapus"><i class="fa fa-trash"></i></button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php if ($edit_mode && isset($details) && !empty($details)) : ?>
-                        <?php foreach ($details as $idx => $detail) : ?>
-                            <tr>
-                                <td class="text-center row-number"><?= $idx + 1 ?></td>
-                                <td>
-                                    <select name="detail[<?= $idx ?>][coa_code]" class="form-control select2 coa-select" style="width: 100%;">
-                                        <option value="">-- Pilih COA --</option>
-                                        <?php foreach ($coa_list as $code => $label) : ?>
-                                            <option value="<?= $code ?>" <?= ($detail->coa_code == $code) ? 'selected' : '' ?>>
-                                                <?= $label ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                                <td>
-                                    <input type="text" name="detail[<?= $idx ?>][jenis_pengeluaran]" class="form-control" value="<?= $detail->jenis_pengeluaran ?>" placeholder="Jenis Pengeluaran">
-                                </td>
-                                <td>
-                                    <input type="text" name="detail[<?= $idx ?>][nominal]" class="form-control nominal-input text-right" value="<?= number_format($detail->nominal, 0, ',', '.') ?>" placeholder="0">
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-danger btn-sm btn-remove-row" title="Hapus"><i class="fa fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
-                        <!-- Default empty row for create mode -->
-                        <tr>
-                            <td class="text-center row-number">1</td>
-                            <td>
-                                <select name="detail[0][coa_code]" class="form-control select2 coa-select" style="width: 100%;">
-                                    <option value="">-- Pilih COA --</option>
-                                    <?php foreach ($coa_list as $code => $label) : ?>
-                                        <option value="<?= $code ?>"><?= $label ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" name="detail[0][jenis_pengeluaran]" class="form-control" value="" placeholder="Jenis Pengeluaran">
-                            </td>
-                            <td>
-                                <input type="text" name="detail[0][nominal]" class="form-control nominal-input text-right" value="" placeholder="0">
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-danger btn-sm btn-remove-row" title="Hapus"><i class="fa fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <!-- Default empty row for create mode -->
+                <tr>
+                    <td class="text-center row-number">1</td>
+                    <td>
+                        <select name="detail[0][coa_code]" class="form-control select2 coa-select" style="width: 100%;">
+                            <option value="">-- Pilih COA --</option>
+                            <?php foreach ($coa_list as $code => $label) : ?>
+                                <option value="<?= $code ?>"><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" name="detail[0][jenis_pengeluaran]" class="form-control" value="" placeholder="Jenis Pengeluaran">
+                    </td>
+                    <td>
+                        <input type="text" name="detail[0][nominal]" class="form-control nominal-input text-right" value="" placeholder="0">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm btn-remove-row" title="Hapus"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
 
-        <!-- Tambah Baris Button -->
-        <button type="button" class="btn btn-info btn-sm" id="btn-add-row">
-            <i class="fa fa-plus"></i>&nbsp;Tambah Baris
-        </button>
+<!-- Tambah Baris Button -->
+<button type="button" class="btn btn-info btn-sm" id="btn-add-row">
+    <i class="fa fa-plus"></i>&nbsp;Tambah Baris
+</button>
 
-        <!-- Total Budget Display -->
-        <div class="callout callout-success" style="margin-top: 15px; padding: 15px 20px;">
-            <h4 style="margin: 0; font-size: 20px; font-weight: bold;">
-                <i class="fa fa-calculator"></i>&nbsp;
-                Total Budget: <span id="total-budget-display">Rp 0</span>
-            </h4>
-        </div>
-    </div>
-    <!-- /.box-body -->
+<!-- Total Budget Display -->
+<div class="callout callout-success" style="margin-top: 15px; padding: 15px 20px;">
+    <h4 style="margin: 0; font-size: 20px; font-weight: bold;">
+        <i class="fa fa-calculator"></i>&nbsp;
+        Total Budget: <span id="total-budget-display">Rp 0</span>
+    </h4>
+</div>
 
-    <div class="box-footer">
-        <div class="form-group">
-            <div class="col-sm-offset-2 col-sm-10">
-                <button type="button" class="btn btn-success" id="btn-save"><i class="fa fa-save"></i>&nbsp;Simpan</button>
-                <a class="btn btn-warning" onclick="cancel()"><i class="fa fa-reply"></i>&nbsp;Batal</a>
-            </div>
-        </div>
+<!-- Footer Buttons -->
+<div class="form-group" style="margin-top: 15px;">
+    <div class="col-sm-12 text-right">
+        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-reply"></i>&nbsp;Batal</button>
+        <button type="button" class="btn btn-success" id="btn-save"><i class="fa fa-save"></i>&nbsp;Simpan</button>
     </div>
 </div>
 <?= form_close() ?>
 
-<!-- Hidden COA options template for JS (Task 5.2 will use this) -->
+<!-- Hidden COA options template for JS -->
 <script type="text/template" id="coa-options-template">
     <option value="">-- Pilih COA --</option>
     <?php foreach ($coa_list as $code => $label) : ?>
@@ -138,16 +128,7 @@ $header_id = (isset($data->id)) ? $data->id : '';
     $('.select2').select2();
 
     /**
-     * Cancel form and return to list view
-     */
-    function cancel() {
-        $('#form-data').html('');
-    }
-
-    /**
      * Parse formatted nominal string "1.000.000" to integer 1000000
-     * @param {string} str - Formatted nominal string
-     * @returns {number} Integer value
      */
     function parseNominal(str) {
         if (!str || str.trim() === '') return 0;
@@ -158,8 +139,6 @@ $header_id = (isset($data->id)) ? $data->id : '';
 
     /**
      * Format integer to Indonesian number format "1.000.000"
-     * @param {number} num - Integer value
-     * @returns {string} Formatted string
      */
     function formatNominal(num) {
         if (!num || num === 0) return '0';
@@ -168,12 +147,11 @@ $header_id = (isset($data->id)) ? $data->id : '';
 
     // Auto-format nominal inputs as user types
     $(document).on('keyup', '.nominal-input', function(e) {
-        // Skip arrow keys and non-character keys
         if (e.which >= 37 && e.which <= 40) return;
-        
+
         var val = $(this).val();
         var num = parseNominal(val);
-        
+
         if (num === 0 && val !== '0') {
             $(this).val('');
         } else {
@@ -199,7 +177,6 @@ $header_id = (isset($data->id)) ? $data->id : '';
     function renumberRows() {
         $('#detail-table tbody tr').each(function(index) {
             $(this).find('.row-number').text(index + 1);
-            // Update name attributes for proper array indexing
             $(this).find('[name]').each(function() {
                 var name = $(this).attr('name');
                 name = name.replace(/detail\[\d+\]/, 'detail[' + index + ']');
@@ -209,7 +186,7 @@ $header_id = (isset($data->id)) ? $data->id : '';
     }
 
     /**
-     * Add a new detail row to the table with Select2-initialized COA dropdown
+     * Add a new detail row
      */
     function addDetailRow() {
         var rowCount = $('#detail-table tbody tr').length;
@@ -234,14 +211,11 @@ $header_id = (isset($data->id)) ? $data->id : '';
             '</tr>';
 
         $('#detail-table tbody').append(newRow);
-
-        // Initialize Select2 on the new COA dropdown
         $('#detail-table tbody tr:last').find('.coa-select').select2();
     }
 
     /**
-     * Remove a detail row and recalculate total
-     * @param {HTMLElement} btn - The remove button clicked
+     * Remove a detail row
      */
     function removeDetailRow(btn) {
         var rowCount = $('#detail-table tbody tr').length;
@@ -261,12 +235,10 @@ $header_id = (isset($data->id)) ? $data->id : '';
 
     /**
      * Validate form before submission
-     * @returns {string} Error message or empty string if valid
      */
     function validateForm() {
         var nama = $('#nama').val().trim();
         var keterangan = $('#keterangan').val().trim();
-        var keterangan = $('#keterangan').val();
 
         if (!nama) {
             return 'Field Nama harus diisi';
@@ -286,7 +258,7 @@ $header_id = (isset($data->id)) ? $data->id : '';
             var parsed = parseNominal(nominalVal);
             if (parsed <= 0) {
                 nominalError = 'Nominal pada baris ' + (index + 1) + ' harus lebih besar dari 0';
-                return false; // break .each loop
+                return false;
             }
         });
 
@@ -310,7 +282,6 @@ $header_id = (isset($data->id)) ? $data->id : '';
             cancelButtonText: 'Batal'
         }).then(function(result) {
             if (result.isConfirmed) {
-                // Show loading
                 Swal.fire({
                     title: 'Menyimpan...',
                     text: 'Mohon tunggu',
@@ -321,7 +292,6 @@ $header_id = (isset($data->id)) ? $data->id : '';
                     }
                 });
 
-                // Serialize form data
                 var formData = $('#frm_data').serialize();
 
                 $.ajax({
@@ -337,11 +307,10 @@ $header_id = (isset($data->id)) ? $data->id : '';
                                 icon: 'success',
                                 confirmButtonText: 'OK'
                             }).then(function() {
-                                // Reload DataTable and clear form
+                                $('#modal-crud').modal('hide');
                                 if (typeof DataTables === 'function') {
                                     DataTables();
                                 }
-                                cancel();
                             });
                         } else {
                             Swal.fire({
@@ -377,13 +346,12 @@ $header_id = (isset($data->id)) ? $data->id : '';
         removeDetailRow(this);
     });
 
-    // Real-time total calculation on nominal input (<500ms)
+    // Real-time total calculation on nominal input
     $(document).on('input', '.nominal-input', calculateTotal);
 
     // Keypress filter on nominal fields - allow only digits and dots
     $(document).on('keypress', '.nominal-input', function(e) {
         var charCode = e.which || e.keyCode;
-        // Allow digits (48-57) and dot/period (46)
         if (charCode !== 46 && (charCode < 48 || charCode > 57)) {
             e.preventDefault();
         }
@@ -404,6 +372,6 @@ $header_id = (isset($data->id)) ? $data->id : '';
         saveData();
     });
 
-    // Initialize total calculation on page load (for edit mode with existing data)
+    // Initialize total calculation on page load (for edit mode)
     calculateTotal();
 </script>
