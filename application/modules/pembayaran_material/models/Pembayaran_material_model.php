@@ -414,6 +414,9 @@ class Pembayaran_material_model extends BF_Model
 									->get()
 									->result();
 
+								// print_r(get_kasbon_detail);
+								// exit;
+
 								foreach ($get_kasbon_detail as $item_kasbon) :
 									$debit = $item_kasbon->total_pengajuan;
 									$kredit = 0;

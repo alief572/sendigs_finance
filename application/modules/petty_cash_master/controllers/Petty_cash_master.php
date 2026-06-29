@@ -40,7 +40,7 @@ class Petty_cash_master extends Admin_Controller
     }
 
     /**
-     * Load create form via AJAX into #form-data
+     * Load create form via AJAX into modal body
      * @return void
      */
     public function create()
@@ -51,12 +51,11 @@ class Petty_cash_master extends Admin_Controller
         $data['users_list'] = $this->Petty_cash_master_model->get_active_users();
         $data['mode']       = 'create';
 
-        $this->template->set($data);
-        $this->template->render('form');
+        $this->load->view('form', $data);
     }
 
     /**
-     * Load edit form with existing data via AJAX
+     * Load edit form with existing data via AJAX into modal body
      * @param int $id  Master petty cash ID
      * @return void
      */
@@ -78,12 +77,11 @@ class Petty_cash_master extends Admin_Controller
         $data['users_list'] = $this->Petty_cash_master_model->get_active_users();
         $data['mode']       = 'edit';
 
-        $this->template->set($data);
-        $this->template->render('form');
+        $this->load->view('form', $data);
     }
 
     /**
-     * Load view (read-only) form via AJAX
+     * Load view (read-only) form via AJAX into modal body
      * @param int $id  Master petty cash ID
      * @return void
      */
@@ -105,8 +103,7 @@ class Petty_cash_master extends Admin_Controller
         $data['users_list'] = $this->Petty_cash_master_model->get_active_users();
         $data['mode']       = 'view';
 
-        $this->template->set($data);
-        $this->template->render('view');
+        $this->load->view('view', $data);
     }
 
     /**
