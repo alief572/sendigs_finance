@@ -70,6 +70,15 @@
     });
 
     $("#grand-total-display").text(formatAngka(grandTotal));
+
+    // Update Budget & Sisa Budget table display
+    // Sisa Budget = Budget - Budget Terpakai - Grand Total saat ini
+    var budget = budgetInfo.budget || 0;
+    var sisaBudgetCurrent =
+      budget - (budgetInfo.budget_terpakai || 0) - grandTotal;
+    $("#budget-table-display").text(formatAngka(budget));
+    $("#sisa-budget-table-display").text(formatAngka(sisaBudgetCurrent));
+
     checkBudgetWarning(grandTotal);
     renderJurnalSimulation();
   }
@@ -408,7 +417,7 @@
       '">' +
       '<input type="file" name="evidence_' +
       idx +
-      '[]" class="evidence-input" multiple accept=".png,.jpg,.pdf,.xlsx,.xls" style="display:none;">' +
+      '[]" class="evidence-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xlsx,.xls" style="display:none;">' +
       '<button type="button" class="btn btn-xs btn-default btn-upload-evidence" title="Upload Evidence">' +
       '<i class="fa fa-upload"></i> Upload' +
       "</button>" +
@@ -880,6 +889,12 @@
             formatAngka(budgetInfo.budget_terpakai),
           );
           $("#sisa-budget-display").text(formatAngka(budgetInfo.sisa_budget));
+
+          // Update Budget & Sisa Budget table display
+          $("#budget-table-display").text(formatAngka(budgetInfo.budget));
+          $("#sisa-budget-table-display").text(
+            formatAngka(budgetInfo.sisa_budget),
+          );
 
           // Re-check budget warning with current Grand Total
           var currentGrandTotal = 0;

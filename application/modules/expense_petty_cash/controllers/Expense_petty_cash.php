@@ -1093,7 +1093,7 @@ class Expense_petty_cash extends Admin_Controller
         $extension     = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
 
         // Validate extension
-        $allowed_types = ['png', 'jpg', 'pdf', 'xlsx', 'xls'];
+        $allowed_types = ['png', 'jpg', 'jpeg', 'pdf', 'xlsx', 'xls'];
         if (!in_array($extension, $allowed_types)) {
             echo json_encode([
                 'status'  => false,
@@ -1123,7 +1123,7 @@ class Expense_petty_cash extends Admin_Controller
         }
 
         $config['upload_path']   = $upload_path;
-        $config['allowed_types'] = 'png|jpg|pdf|xlsx|xls';
+        $config['allowed_types'] = 'png|jpg|jpeg|pdf|xlsx|xls';
         $config['max_size']      = 5120; // KB
         $config['encrypt_name']  = false;
         $config['file_name']     = $encrypted_name;
@@ -1204,7 +1204,7 @@ class Expense_petty_cash extends Admin_Controller
         // Get POST data
         $id            = $this->input->post('id') ?: null;
         $company       = $this->input->post('company');
-        $tanggal       = $this->input->post('tanggal');
+        $tanggal       = date('Y-m-d'); // Server-enforced: selalu hari ini, tidak terima input user
         $request_by    = $this->input->post('request_by');
         $keterangan    = $this->input->post('keterangan');
         $petty_cash_id = $this->input->post('petty_cash_id');
