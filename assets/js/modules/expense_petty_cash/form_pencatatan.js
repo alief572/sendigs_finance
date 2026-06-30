@@ -342,6 +342,9 @@
         width: "100%",
       });
     }
+    // Trigger change to ensure Select2 syncs with pre-selected values (edit mode)
+    $(".coa-select").trigger("change.select2");
+    $("#company").trigger("change.select2");
   }
 
   // =========================================================================
@@ -1027,6 +1030,13 @@
 
     // Calculate initial grand total (for edit mode)
     calculateGrandTotal();
+
+    // Re-render jurnal after a short delay to ensure Select2 values are ready (edit mode)
+    if (FORM_DATA.mode === "edit") {
+      setTimeout(function () {
+        calculateGrandTotal();
+      }, 300);
+    }
 
     // Bind all events
     bindEvents();
