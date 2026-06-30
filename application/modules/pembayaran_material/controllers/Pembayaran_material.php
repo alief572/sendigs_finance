@@ -1652,6 +1652,24 @@ class Pembayaran_material extends Admin_Controller
 				throw new Exception('Transaksi gagal, data telah di-rollback.');
 			}
 
+			// Update status done payment for petty_cash_hutang records
+			try {
+				$processed_ids = explode(',', $post['id_payment']);
+				$this->db->where_in('id', $processed_ids);
+				$this->db->where('tipe', 'petty_cash_hutang');
+				$petty_cash_payments = $this->db->get('payment_approve')->result();
+
+				if (!empty($petty_cash_payments)) {
+					$CI = &get_instance();
+					$CI->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
+					foreach ($petty_cash_payments as $pc_payment) {
+						$CI->pcvs_model->update_status_done($pc_payment->no_doc, $this->auth->user_id());
+					}
+				}
+			} catch (Exception $e) {
+				log_message('error', 'Failed to update petty_cash_vuca_sustain status: ' . $e->getMessage());
+			}
+
 			echo json_encode([
 				'status' => $valid,
 				'pesan' => $pesan

@@ -535,43 +535,66 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
     /**
      * Send approved pelaporan data to Petty Cash VUCA/SUSTAIN module
      *
-     * Inserts a record into the tr_petty_cash_vuca_sustain table with the same
-     * core data as the request_payment record.
+     * Generates a No Payment Hutang via Petty_cash_vuca_sustain_model and inserts
+     * a record into tr_petty_cash_vuca_sustain with full pelaporan mapping.
+     * Wrapped in try-catch to ensure approval process is never blocked by failures here.
      *
      * @param object $pelaporan Pelaporan data object
-     * @return bool
+     * @return bool Always returns true to avoid blocking approval flow
      */
     public function send_to_petty_cash_vuca_sustain($pelaporan)
     {
-        // Look up the creator's full name from users table
-        $this->db->select('nm_lengkap');
-        $this->db->from('users');
-        $this->db->where('id_user', $pelaporan->created_by);
-        $user_query = $this->db->get();
-        $creator_name = '';
-        if ($user_query->num_rows() > 0) {
-            $creator_name = $user_query->row()->nm_lengkap;
+        try {
+            // Load Petty_cash_vuca_sustain_model to generate no_payment_hutang
+            $CI = &get_instance();
+            $CI->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
+
+            // Generate sequential No Payment Hutang (PHP-YYYY-NNNN)
+            $no_payment_hutang = $CI->pcvs_model->generate_no_payment_hutang();
+
+            if ($no_payment_hutang === false) {
+                log_message('error', 'send_to_petty_cash_vuca_sustain: Gagal generate no_payment_hutang untuk pelaporan ' . $pelaporan->no_pelaporan);
+                return true; // Don't block approval
+            }
+
+            // Look up the creator's full name from users table
+            $this->db->select('nm_lengkap');
+            $this->db->from('users');
+            $this->db->where('id_user', $pelaporan->created_by);
+            $user_query = $this->db->get();
+            $creator_name = '';
+            if ($user_query->num_rows() > 0) {
+                $creator_name = $user_query->row()->nm_lengkap;
+            }
+
+            // Prepare data for tr_petty_cash_vuca_sustain
+            $vuca_data = [
+                'no_payment_hutang' => $no_payment_hutang,
+                'no_pelaporan'      => $pelaporan->no_pelaporan,
+                'pelaporan_id'      => $pelaporan->id,
+                'company'           => strtoupper(trim($pelaporan->company)),
+                'periode_start'     => $pelaporan->periode_start,
+                'periode_end'       => $pelaporan->periode_end,
+                'jumlah_pencatatan' => $pelaporan->jumlah_pencatatan,
+                'grand_total'       => $pelaporan->grand_total,
+                'nama_pembuat'      => $creator_name,
+                'status'            => 'draft',
+                'created_by'        => $pelaporan->approved_by,
+                'created_on'        => date('Y-m-d H:i:s'),
+            ];
+
+            // Insert into tr_petty_cash_vuca_sustain table
+            $result = $this->db->insert('tr_petty_cash_vuca_sustain', $vuca_data);
+
+            if ($result === false) {
+                log_message('error', 'send_to_petty_cash_vuca_sustain: Gagal insert record untuk pelaporan ' . $pelaporan->no_pelaporan . '. DB Error: ' . $this->db->error()['message']);
+            }
+
+            return true; // Always return true to not block approval
+        } catch (Exception $e) {
+            log_message('error', 'send_to_petty_cash_vuca_sustain: Exception saat proses pelaporan ' . $pelaporan->no_pelaporan . ' - ' . $e->getMessage());
+            return true; // Don't block approval process
         }
-
-        // Prepare data for VUCA/SUSTAIN petty cash module
-        $vuca_data = [
-            'no_doc'     => $pelaporan->no_pelaporan,
-            'nama'       => $creator_name,
-            'tgl_doc'    => date('Y-m-d'),
-            'tanggal'    => date('Y-m-d'),
-            'keperluan'  => 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
-            'tipe'       => 'petty_cash',
-            'jumlah'     => $pelaporan->grand_total,
-            'company'    => $pelaporan->company,
-            'status'     => 0,
-            'created_by' => $pelaporan->approved_by,
-            'created_on' => date('Y-m-d H:i:s'),
-        ];
-
-        // Insert into VUCA/SUSTAIN petty cash module table
-        $result = $this->db->insert('tr_petty_cash_vuca_sustain', $vuca_data);
-
-        return $result !== false;
     }
 
     /**

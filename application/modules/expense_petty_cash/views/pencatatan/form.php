@@ -2,7 +2,7 @@
 $edit_mode = (isset($mode) && $mode === 'edit');
 $header_id = ($edit_mode && isset($pencatatan->id)) ? $pencatatan->id : '';
 $no_pencatatan = ($edit_mode && isset($pencatatan->no_pencatatan)) ? $pencatatan->no_pencatatan : 'Auto-generated';
-$tanggal = ($edit_mode && isset($pencatatan->tanggal)) ? $pencatatan->tanggal : date('Y-m-d');
+$tanggal = date('Y-m-d');
 $company = ($edit_mode && isset($pencatatan->company)) ? $pencatatan->company : '';
 $request_by = ($edit_mode && isset($pencatatan->request_by)) ? $pencatatan->request_by : '';
 $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->keterangan : '';
@@ -72,7 +72,7 @@ $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->kete
                         <div class="input-group-addon">
                             <i class="fa fa-calendar"></i>
                         </div>
-                        <input type="text" class="form-control datepicker" id="tanggal" name="tanggal" value="<?= $tanggal ?>" autocomplete="off">
+                        <input type="text" class="form-control" id="tanggal" name="tanggal" value="<?= $tanggal ?>" readonly>
                     </div>
                 </div>
             </div>
@@ -170,7 +170,7 @@ $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->kete
                                                 <?php endforeach; ?>
                                             </ul>
                                         <?php endif; ?>
-                                        <input type="file" name="evidence_<?= $idx ?>[]" class="evidence-input" multiple accept=".png,.jpg,.pdf,.xlsx,.xls" style="display:none;">
+                                        <input type="file" name="evidence_<?= $idx ?>[]" class="evidence-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xlsx,.xls" style="display:none;">
                                         <button type="button" class="btn btn-xs btn-default btn-upload-evidence" title="Upload Evidence">
                                             <i class="fa fa-upload"></i> Upload
                                         </button>
@@ -213,7 +213,7 @@ $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->kete
                             </td>
                             <td>
                                 <div class="evidence-container" data-row="0">
-                                    <input type="file" name="evidence_0[]" class="evidence-input" multiple accept=".png,.jpg,.pdf,.xlsx,.xls" style="display:none;">
+                                    <input type="file" name="evidence_0[]" class="evidence-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xlsx,.xls" style="display:none;">
                                     <button type="button" class="btn btn-xs btn-default btn-upload-evidence" title="Upload Evidence">
                                         <i class="fa fa-upload"></i> Upload
                                     </button>
@@ -225,6 +225,23 @@ $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->kete
                         </tr>
                     <?php endif; ?>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="6" class="text-right" style="vertical-align: middle;">Grand Total</th>
+                        <th class="text-right" style="font-size: 16px;"><span id="grand-total-display">0</span></th>
+                        <th colspan="2"></th>
+                    </tr>
+                    <tr style="background-color: #fff3cd;">
+                        <th colspan="6" class="text-right">Budget</th>
+                        <th class="text-right" id="budget-table-display"><?= isset($budget_info->budget) ? number_format($budget_info->budget, 0, ',', '.') : '0' ?></th>
+                        <th colspan="2"></th>
+                    </tr>
+                    <tr style="background-color: #d4edda;">
+                        <th colspan="6" class="text-right">Sisa Budget</th>
+                        <th class="text-right" id="sisa-budget-table-display"><?= isset($budget_info->sisa_budget) ? number_format($budget_info->sisa_budget, 0, ',', '.') : '0' ?></th>
+                        <th colspan="2"></th>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -234,18 +251,6 @@ $keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->kete
         </button>
 
         <hr>
-
-        <!-- Grand Total Display -->
-        <div class="row">
-            <div class="col-md-6 col-md-offset-6">
-                <div class="callout callout-info" style="padding: 15px 20px;">
-                    <h4 style="margin: 0; font-size: 20px; font-weight: bold;">
-                        <i class="fa fa-calculator"></i>&nbsp;
-                        Grand Total: <span id="grand-total-display">0</span>
-                    </h4>
-                </div>
-            </div>
-        </div>
 
         <!-- Warning: Grand Total > Sisa Budget -->
         <div class="row" id="budget-warning-container" style="display: none;">
