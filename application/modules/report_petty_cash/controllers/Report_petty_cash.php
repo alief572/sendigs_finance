@@ -47,7 +47,7 @@ class Report_petty_cash extends Admin_Controller
             'no' => '',
             'no_transaksi' => '',
             'tanggal' => '',
-            'coa' => '',
+            'coa' => ' ',
             'company' => '',
             'pengeluaran' => '',
             'jenis_jurnal' => '',
@@ -64,7 +64,7 @@ class Report_petty_cash extends Admin_Controller
                 'no' => $no++,
                 'no_transaksi' => $row->no_transaksi,
                 'tanggal' => date('d/m/Y', strtotime($row->tanggal)),
-                'coa' => $row->coa,
+                'coa' => ' ' . $row->coa,
                 'company' => $row->company,
                 'pengeluaran' => $row->pengeluaran,
                 'jenis_jurnal' => $row->jenis_jurnal,
@@ -81,5 +81,25 @@ class Report_petty_cash extends Admin_Controller
             'recordsFiltered' => count($data),
             'data' => $data
         ]);
+    }
+
+    public function export_excel()
+    {
+        $this->auth->restrict($this->downloadPermission);
+
+        $start_date = $this->input->get('start_date');
+        $end_date = $this->input->get('end_date');
+
+        $saldo_awal = $this->Report_petty_cash_model->get_saldo_awal($start_date);
+        $records = $this->Report_petty_cash_model->get_report_data($start_date, $end_date);
+
+        $data = [
+            'start_date' => $start_date,
+            'end_date' => $end_date,
+            'saldo_awal' => $saldo_awal,
+            'records' => $records
+        ];
+
+        $this->load->view('export_excel', $data);
     }
 }
