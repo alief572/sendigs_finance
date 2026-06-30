@@ -1,52 +1,20 @@
 <?php
 
 /**
- * View Detail Payment Hutang - Petty Cash VUCA & Sustain (Enhanced UI)
+ * Konfirmasi Payment Hutang - Review detail sebelum proses
  *
- * PHP vars:
- *   $record->header          - object with tr_petty_cash_vuca_sustain fields
- *   $record->pencatatan_list - array of objects, each with:
- *       ->no_pencatatan, ->tanggal, ->request_by, ->keterangan, ->nominal
- *       ->items (array: ->coa_code, ->coa_nama, ->pengeluaran, ->spesifikasi, ->jumlah, ->nominal, ->total)
+ * PHP vars: $record (->header, ->pencatatan_list)
  */
 
-// Helper: Indonesian month names
-function pcvs_bulan_indonesia($month_number)
+function cpvs_bulan($m)
 {
-    $bulan = [
-        1 => 'Januari',
-        2 => 'Februari',
-        3 => 'Maret',
-        4 => 'April',
-        5 => 'Mei',
-        6 => 'Juni',
-        7 => 'Juli',
-        8 => 'Agustus',
-        9 => 'September',
-        10 => 'Oktober',
-        11 => 'November',
-        12 => 'Desember'
-    ];
-    return isset($bulan[(int)$month_number]) ? $bulan[(int)$month_number] : '';
+    $b = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+    return isset($b[(int)$m]) ? $b[(int)$m] : '';
 }
-
-function pcvs_format_tanggal_indonesia($date)
+function cpvs_tgl($d)
 {
-    if (empty($date)) return '-';
-    $day = date('d', strtotime($date));
-    $month = pcvs_bulan_indonesia((int)date('m', strtotime($date)));
-    $year = date('Y', strtotime($date));
-    return $day . ' ' . $month . ' ' . $year;
-}
-
-function pcvs_status_label($status)
-{
-    $map = [
-        'draft'           => '<span class="label label-warning">Draft</span>',
-        'waiting payment' => '<span class="label label-info">Waiting Payment</span>',
-        'done payment'    => '<span class="label label-success">Done Payment</span>',
-    ];
-    return isset($map[$status]) ? $map[$status] : '<span class="label label-default">' . htmlspecialchars($status) . '</span>';
+    if (empty($d)) return '-';
+    return date('d', strtotime($d)) . ' ' . cpvs_bulan((int)date('m', strtotime($d))) . ' ' . date('Y', strtotime($d));
 }
 
 $header = $record->header;
@@ -163,6 +131,14 @@ $jumlah_item = count($pencatatan_list);
         transition: transform 0.2s;
         color: #999;
     }
+
+    .btn-process-lg {
+        padding: 12px 35px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 6px;
+        box-shadow: 0 3px 10px rgba(0, 166, 101, 0.3);
+    }
 </style>
 
 <!-- Summary Card -->
@@ -178,7 +154,7 @@ $jumlah_item = count($pencatatan_list);
         </div>
         <div class="card-item">
             <div class="label-text">Periode</div>
-            <div class="value-text text-sm"><?= pcvs_format_tanggal_indonesia($header->periode_start) ?> — <?= pcvs_format_tanggal_indonesia($header->periode_end) ?></div>
+            <div class="value-text text-sm"><?= cpvs_tgl($header->periode_start) ?> — <?= cpvs_tgl($header->periode_end) ?></div>
         </div>
         <div class="card-item">
             <div class="label-text">Company</div>
@@ -189,8 +165,8 @@ $jumlah_item = count($pencatatan_list);
             <div class="value-text">Rp <?= number_format($header->grand_total, 0, ',', '.') ?></div>
         </div>
         <div class="card-item">
-            <div class="label-text">Status</div>
-            <div class="value-text text-sm"><?= pcvs_status_label($header->status) ?></div>
+            <div class="label-text">Pencatatan</div>
+            <div class="value-text text-sm"><?= $jumlah_item ?> item</div>
         </div>
     </div>
 </div>
@@ -198,36 +174,36 @@ $jumlah_item = count($pencatatan_list);
 <!-- Detail Pencatatan -->
 <div class="box box-solid">
     <div class="box-header with-border">
-        <h3 class="box-title"><i class="fa fa-list-alt"></i>&nbsp;Daftar Pencatatan</h3>
+        <h3 class="box-title"><i class="fa fa-list-alt"></i>&nbsp;Detail Pencatatan</h3>
         <div class="box-tools pull-right">
-            <button type="button" class="btn btn-box-tool" id="btn-expand-all" title="Expand All">
-                <i class="fa fa-expand"></i> Expand All
-            </button>
+            <button type="button" class="btn btn-box-tool" id="btn-expand-all"><i class="fa fa-expand"></i> Expand All</button>
         </div>
     </div>
     <div class="box-body" style="padding: 15px;">
         <?php if (!empty($pencatatan_list)) : ?>
             <?php $no = 1;
             foreach ($pencatatan_list as $pencatatan) : ?>
-                <?php $panel_id = 'panel-' . $no; ?>
+                <?php
+                $panel_id = 'panel-' . $no;
+                $jurnal_company = $header->company;
+                $jurnal_tanggal = date('d/m/Y', strtotime($pencatatan->tanggal));
+                $jurnal_total = (float) $pencatatan->nominal;
+                $coa_hutang = ($jurnal_company === 'VUCA') ? '2103-01-01' : '2103-01-02';
+                $coa_piutang = ($jurnal_company === 'VUCA') ? '1103-01-01' : '1103-01-02';
+                ?>
                 <div class="pencatatan-panel">
                     <div class="panel-header" data-toggle="collapse" data-target="#<?= $panel_id ?>">
                         <div>
-                            <div class="panel-title-text">
-                                <i class="fa fa-file-text-o"></i>&nbsp;
-                                <?= $no ?>. <?= htmlspecialchars($pencatatan->no_pencatatan) ?>
-                            </div>
+                            <div class="panel-title-text"><i class="fa fa-file-text-o"></i>&nbsp;<?= $no ?>. <?= htmlspecialchars($pencatatan->no_pencatatan) ?></div>
                             <div class="panel-meta">
                                 <i class="fa fa-calendar-o"></i> <?= date('d/m/Y', strtotime($pencatatan->tanggal)) ?>
-                                &nbsp;&bull;&nbsp;
-                                <i class="fa fa-user"></i> <?= htmlspecialchars($pencatatan->request_by) ?>
+                                &bull; <i class="fa fa-user"></i> <?= htmlspecialchars($pencatatan->request_by) ?>
                                 <?php if (!empty($pencatatan->keterangan)) : ?>
-                                    &nbsp;&bull;&nbsp;
-                                    <i class="fa fa-comment-o"></i> <?= htmlspecialchars(mb_substr($pencatatan->keterangan, 0, 50)) ?><?= mb_strlen($pencatatan->keterangan) > 50 ? '...' : '' ?>
+                                    &bull; <i class="fa fa-comment-o"></i> <?= htmlspecialchars(mb_substr($pencatatan->keterangan, 0, 50)) ?>
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
                             <span class="panel-amount">Rp <?= number_format($pencatatan->nominal, 0, ',', '.') ?></span>
                             <i class="fa fa-chevron-down toggle-icon"></i>
                         </div>
@@ -248,10 +224,10 @@ $jumlah_item = count($pencatatan_list);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php $item_no = 1;
+                                        <?php $d_no = 1;
                                         foreach ($pencatatan->items as $item) : ?>
                                             <tr>
-                                                <td class="text-center"><?= $item_no++ ?></td>
+                                                <td class="text-center"><?= $d_no++ ?></td>
                                                 <td><?= htmlspecialchars($item->coa_code) ?><?= !empty($item->coa_nama) ? ' - ' . htmlspecialchars($item->coa_nama) : '' ?></td>
                                                 <td><?= htmlspecialchars($item->pengeluaran) ?></td>
                                                 <td><?= htmlspecialchars($item->spesifikasi) ?></td>
@@ -268,26 +244,12 @@ $jumlah_item = count($pencatatan_list);
                                         </tr>
                                     </tfoot>
                                 </table>
-                            <?php else : ?>
-                                <p class="text-muted"><em>Detail item tidak tersedia</em></p>
                             <?php endif; ?>
 
-                            <!-- Preview Jurnal -->
-                            <?php
-                            $jurnal_company = $header->company; // Always VUCA or SUSTAIN
-                            $jurnal_tanggal = date('d/m/Y', strtotime($pencatatan->tanggal));
-                            $jurnal_total = (float) $pencatatan->nominal;
-                            $coa_hutang = ($jurnal_company === 'VUCA') ? '2103-01-01' : '2103-01-02';
-                            $coa_piutang = ($jurnal_company === 'VUCA') ? '1103-01-01' : '1103-01-02';
-                            ?>
-                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #dee2e6;">
-                                <h5 style="font-size: 12px; font-weight: 600; color: #555; margin-bottom: 10px;">
-                                    <i class="fa fa-book"></i>&nbsp;Preview Jurnal
-                                </h5>
-
-                                <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:8px;background:#fff3cd;color:#856404;">
-                                    <i class="fa fa-building"></i> Sisi <?= $jurnal_company ?>
-                                </span>
+                            <!-- Jurnal Preview -->
+                            <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #dee2e6;">
+                                <h5 style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px;"><i class="fa fa-book"></i>&nbsp;Preview Jurnal</h5>
+                                <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:8px;background:#fff3cd;color:#856404;"><i class="fa fa-building"></i> Sisi <?= $jurnal_company ?></span>
                                 <table class="table table-bordered" style="font-size:11px;margin-bottom:10px;">
                                     <thead>
                                         <tr style="background:#f8f9fa;">
@@ -300,7 +262,7 @@ $jumlah_item = count($pencatatan_list);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php if (isset($pencatatan->items) && !empty($pencatatan->items)) : foreach ($pencatatan->items as $item) : ?>
+                                        <?php if (isset($pencatatan->items)) : foreach ($pencatatan->items as $item) : ?>
                                                 <tr>
                                                     <td><?= $jurnal_tanggal ?></td>
                                                     <td><?= htmlspecialchars($item->coa_code) ?></td>
@@ -329,9 +291,7 @@ $jumlah_item = count($pencatatan_list);
                                     </tfoot>
                                 </table>
 
-                                <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:8px;margin-top:5px;background:#cce5ff;color:#004085;">
-                                    <i class="fa fa-building"></i> Sisi STM (Inter-Company)
-                                </span>
+                                <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:8px;background:#cce5ff;color:#004085;"><i class="fa fa-building"></i> Sisi STM (Inter-Company)</span>
                                 <table class="table table-bordered" style="font-size:11px;margin-bottom:0;">
                                     <thead>
                                         <tr style="background:#f8f9fa;">
@@ -378,24 +338,29 @@ $jumlah_item = count($pencatatan_list);
         <?php else : ?>
             <div class="callout callout-warning">
                 <h4><i class="fa fa-info-circle"></i> Tidak Ada Data</h4>
-                <p>Tidak ada pencatatan dalam payment hutang ini.</p>
+                <p>Tidak ada pencatatan.</p>
             </div>
         <?php endif; ?>
     </div>
 
-    <div class="box-footer" style="text-align: center; padding: 20px;">
-        <a href="<?= site_url('petty_cash_vuca_sustain') ?>" class="btn btn-default" style="padding: 10px 25px; font-size: 14px;">
-            <i class="fa fa-arrow-left"></i>&nbsp;Back
-        </a>
+    <div class="box-footer" style="text-align:center;padding:20px;">
+        <button type="button" class="btn btn-success btn-process-lg" id="btn-process-payment">
+            <i class="fa fa-paper-plane"></i>&nbsp;Proses Payment Hutang
+        </button>
         &nbsp;&nbsp;
-        <a href="<?= site_url('petty_cash_vuca_sustain/print_pdf/' . $header->id) ?>" target="_blank" class="btn btn-info" style="padding: 10px 25px; font-size: 14px;">
-            <i class="fa fa-print"></i>&nbsp;Print
+        <a href="<?= site_url('petty_cash_vuca_sustain') ?>" class="btn btn-default" style="padding:12px 25px;font-size:14px;">
+            <i class="fa fa-arrow-left"></i>&nbsp;Kembali
         </a>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     (function() {
+        var BASE_URL = '<?= site_url('petty_cash_vuca_sustain/') ?>';
+        var RECORD_ID = <?= json_encode($header->id) ?>;
+
+        // Expand/Collapse
         var allExpanded = true;
         $('#btn-expand-all').on('click', function() {
             if (allExpanded) {
@@ -409,14 +374,68 @@ $jumlah_item = count($pencatatan_list);
             }
         });
         $('.pencatatan-panel .panel-header').on('click', function() {
-            var $icon = $(this).find('.toggle-icon');
-            var $target = $($(this).data('target'));
+            var $icon = $(this).find('.toggle-icon'),
+                $target = $($(this).data('target'));
             $target.on('shown.bs.collapse', function() {
-                    $icon.css('transform', 'rotate(0deg)');
-                })
-                .on('hidden.bs.collapse', function() {
-                    $icon.css('transform', 'rotate(-90deg)');
-                });
+                $icon.css('transform', 'rotate(0deg)');
+            }).on('hidden.bs.collapse', function() {
+                $icon.css('transform', 'rotate(-90deg)');
+            });
+        });
+
+        // Process button
+        $('#btn-process-payment').on('click', function() {
+            Swal.fire({
+                icon: 'question',
+                title: 'Proses Payment Hutang?',
+                html: '<p>Data akan dikirim ke <strong>Request Payment</strong> dan status berubah menjadi <strong>"Waiting Payment"</strong>.</p>',
+                showCancelButton: true,
+                confirmButtonColor: '#00a65a',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: '<i class="fa fa-check"></i> Ya, Proses!',
+                cancelButtonText: 'Batal',
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        allowOutsideClick: false,
+                        didOpen: function() {
+                            Swal.showLoading();
+                        }
+                    });
+                    $.ajax({
+                        url: BASE_URL + 'payment_hutang/' + RECORD_ID,
+                        type: 'POST',
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: response.message,
+                                    timer: 2500,
+                                    showConfirmButton: false
+                                }).then(function() {
+                                    window.location.href = BASE_URL;
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal',
+                                    text: response.message
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Terjadi kesalahan.'
+                            });
+                        }
+                    });
+                }
+            });
         });
     })();
 </script>

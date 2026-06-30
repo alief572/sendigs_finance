@@ -261,7 +261,7 @@ class Petty_cash_vuca_sustain_model extends BF_Model
                 'keperluan'  => 'Payment Hutang Petty Cash - ' . $record->no_payment_hutang,
                 'tipe'       => 'petty_cash_hutang',
                 'jumlah'     => $record->grand_total,
-                'status'     => 0,
+                'status'     => 1, // status 1 = approved/ready for payment (no additional approval needed)
                 'created_by' => $user_id,
                 'created_on' => $now,
             ];

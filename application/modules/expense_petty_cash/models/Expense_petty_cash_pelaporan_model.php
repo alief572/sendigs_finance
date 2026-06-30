@@ -567,6 +567,10 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 $creator_name = $user_query->row()->nm_lengkap;
             }
 
+            // Count jumlah pencatatan from detail table (not a column in tr_pelaporan_petty_cash)
+            $this->db->where('pelaporan_id', $pelaporan->id);
+            $jumlah_pencatatan = $this->db->count_all_results('tr_pelaporan_petty_cash_detail');
+
             // Prepare data for tr_petty_cash_vuca_sustain
             $vuca_data = [
                 'no_payment_hutang' => $no_payment_hutang,
@@ -575,7 +579,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'company'           => strtoupper(trim($pelaporan->company)),
                 'periode_start'     => $pelaporan->periode_start,
                 'periode_end'       => $pelaporan->periode_end,
-                'jumlah_pencatatan' => $pelaporan->jumlah_pencatatan,
+                'jumlah_pencatatan' => $jumlah_pencatatan,
                 'grand_total'       => $pelaporan->grand_total,
                 'nama_pembuat'      => $creator_name,
                 'status'            => 'draft',

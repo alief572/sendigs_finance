@@ -139,6 +139,39 @@ class Petty_cash_vuca_sustain extends Admin_Controller
     // =========================================================================
 
     /**
+     * Halaman konfirmasi sebelum proses Payment Hutang
+     *
+     * Menampilkan detail lengkap payment hutang (pencatatan + jurnal preview)
+     * sebelum user memproses.
+     *
+     * @param int $id ID record tr_petty_cash_vuca_sustain
+     * @return void
+     */
+    public function confirm_payment($id)
+    {
+        $this->auth->restrict($this->managePermission);
+
+        $record = $this->Petty_cash_vuca_sustain_model->get_payment_hutang($id);
+
+        if (!$record) {
+            $this->session->set_flashdata('message', 'Data tidak ditemukan.');
+            redirect('petty_cash_vuca_sustain');
+            return;
+        }
+
+        // Only draft records can be processed
+        if ($record->header->status !== 'draft') {
+            $this->session->set_flashdata('message', 'Hanya record berstatus "draft" yang dapat diproses.');
+            redirect('petty_cash_vuca_sustain');
+            return;
+        }
+
+        $this->template->set('record', $record);
+        $this->template->title('Konfirmasi Payment Hutang');
+        $this->template->render('confirm_payment');
+    }
+
+    /**
      * Proses kirim ke request_payment (POST, AJAX)
      *
      * Memproses pembayaran hutang: insert ke tabel request_payment
