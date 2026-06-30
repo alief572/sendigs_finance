@@ -190,7 +190,7 @@ class Invoicing_model extends BF_Model
         return $this->consultant->get()->result();
     }
 
-    public function jurnal_invoicing_non_konsultasi($id_penawaran)
+    public function jurnal_invoicing_non_konsultasi($id_penawaran, $tanggal_invoice = null)
     {
         $get_penawaran = $this->get_penawaran_non_konsultasi($id_penawaran);
 
@@ -258,8 +258,9 @@ class Invoicing_model extends BF_Model
             $hasil_jurnal .= '<tr>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= date('d-F-Y');
-            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d') . '">';
+            $tgl_jurnal = !empty($tanggal_invoice) ? $tanggal_invoice : date('Y-m-d');
+            $hasil_jurnal .= date('d-F-Y', strtotime($tgl_jurnal));
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($tgl_jurnal)) . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';

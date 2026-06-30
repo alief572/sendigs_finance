@@ -253,50 +253,12 @@
         });
 
         // =========================================================================
-        // Payment Hutang Confirmation
+        // Payment Hutang - Redirect to confirm page
         // =========================================================================
 
         $(document).on('click', '.btn-payment-hutang', function() {
             var id = $(this).data('id');
-            var no = $(this).data('no');
-            var company = $(this).data('company');
-            var total = $(this).data('total');
-
-            Swal.fire({
-                title: 'Konfirmasi Payment Hutang',
-                html: '<table class="table table-bordered">' +
-                    '<tr><td><b>No Payment Hutang</b></td><td>' + no + '</td></tr>' +
-                    '<tr><td><b>Company</b></td><td>' + company + '</td></tr>' +
-                    '<tr><td><b>Grand Total</b></td><td>Rp ' + Number(total).toLocaleString('id-ID') + '</td></tr>' +
-                    '</table>' +
-                    '<p class="text-warning">Apakah Anda yakin ingin memproses Payment Hutang ini?</p>',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#00a65a',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Ya, Proses!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: BASE_URL + 'payment_hutang/' + id,
-                        type: 'POST',
-                        dataType: 'json',
-                        success: function(response) {
-                            if (response.status) {
-                                Swal.fire('Berhasil!', response.message, 'success').then(function() {
-                                    table.ajax.reload(null, false);
-                                });
-                            } else {
-                                Swal.fire('Gagal!', response.message, 'error');
-                            }
-                        },
-                        error: function() {
-                            Swal.fire('Error!', 'Terjadi kesalahan saat memproses request.', 'error');
-                        }
-                    });
-                }
-            });
+            window.location.href = BASE_URL + 'confirm_payment/' + id;
         });
 
     });

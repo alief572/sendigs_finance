@@ -372,8 +372,8 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '<tr>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= date('d-F-Y', strtotime($get_invoicing->created_date));
-            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($get_invoicing->created_date)) . '">';
+            $hasil_jurnal .= date('d-F-Y', strtotime($get_invoicing->tanggal_invoice));
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($get_invoicing->tanggal_invoice)) . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
@@ -491,8 +491,8 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '<tr>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= date('d-F-Y', strtotime($get_invoicing->created_date));
-            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($get_invoicing->created_date)) . '">';
+            $hasil_jurnal .= date('d-F-Y', strtotime($get_invoicing->tanggal_invoice));
+            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d', strtotime($get_invoicing->tanggal_invoice)) . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
@@ -1812,7 +1812,7 @@ class Invoicing extends Admin_Controller
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
         $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
 
-        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
+        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran, $get_invoicing->tanggal_invoice);
 
         $data = [
             'data_invoicing' => $get_invoicing,
