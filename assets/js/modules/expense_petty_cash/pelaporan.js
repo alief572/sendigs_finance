@@ -211,53 +211,7 @@ $(document).ready(function () {
 
   $(document).on("click", ".btn-ajukan", function () {
     var id = $(this).data("id");
-
-    Swal.fire({
-      icon: "question",
-      title: "Ajukan Pelaporan?",
-      text: "Pelaporan akan diajukan untuk proses approval. Status akan berubah menjadi Waiting.",
-      showCancelButton: true,
-      confirmButtonText: "Ya, Ajukan",
-      cancelButtonText: "Batal",
-      allowOutsideClick: false,
-    }).then(function (result) {
-      if (result.isConfirmed) {
-        $.ajax({
-          type: "POST",
-          url: BASE_URL + "submit_pelaporan/" + id,
-          dataType: "json",
-          cache: false,
-          success: function (response) {
-            if (response.status == "1") {
-              Swal.fire({
-                icon: "success",
-                title: "Berhasil",
-                text: response.message || "Pelaporan berhasil diajukan.",
-                timer: 3000,
-                allowOutsideClick: false,
-              }).then(function () {
-                table.ajax.reload(null, false);
-              });
-            } else {
-              Swal.fire({
-                icon: "error",
-                title: "Gagal",
-                text: response.message || "Gagal mengajukan pelaporan.",
-                allowOutsideClick: false,
-              });
-            }
-          },
-          error: function () {
-            Swal.fire({
-              icon: "error",
-              title: "Error",
-              text: "Terjadi kesalahan saat memproses data. Silakan coba lagi.",
-              timer: 3000,
-              allowOutsideClick: false,
-            });
-          },
-        });
-      }
-    });
+    // Redirect ke halaman konfirmasi (review detail sebelum ajukan)
+    window.location.href = BASE_URL + "confirm_pelaporan/" + id;
   });
 });
