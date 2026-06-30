@@ -463,20 +463,103 @@ class Expense_petty_cash extends Admin_Controller
 
         // Get budget info
         $budget_info = false;
-        if (!empty($pelaporan->header->petty_cash_id)) {
-            $budget_info = $this->Expense_petty_cash_model->get_budget_info($pelaporan->header->petty_cash_id);
+        $petty_cash_id = !empty($pelaporan->header->petty_cash_id) ? $pelaporan->header->petty_cash_id : null;
+        if ($petty_cash_id) {
+            $budget_info = $this->Expense_petty_cash_model->get_budget_info($petty_cash_id);
         }
 
+        // Get detail items per pencatatan for full review
+        $pencatatan_details = [];
+        if (!empty($pelaporan->pencatatan_list)) {
+            foreach ($pelaporan->pencatatan_list as $pencatatan) {
+                $detail = $this->Expense_petty_cash_model->get_pencatatan($pencatatan->id);
+                if ($detail) {
+                    $pencatatan_details[$pencatatan->id] = $detail;
+                }
+            }
+        }
+
+        // Get COA list for display
+        $coa_list = $petty_cash_id ? $this->_get_coa_list($petty_cash_id) : [];
+
         $data = [
-            'pelaporan'   => $pelaporan,
-            'budget_info' => $budget_info,
-            'has_add'     => has_permission($this->addPermission),
-            'has_manage'  => has_permission($this->managePermission),
+            'pelaporan'          => $pelaporan,
+            'budget_info'        => $budget_info,
+            'pencatatan_details' => $pencatatan_details,
+            'coa_list'           => $coa_list,
+            'has_add'            => has_permission($this->addPermission),
+            'has_manage'         => has_permission($this->managePermission),
         ];
 
         $this->template->set($data);
         $this->template->title('Detail Pelaporan Petty Cash');
         $this->template->render('pelaporan/view');
+    }
+
+    /**
+     * Halaman konfirmasi sebelum ajukan pelaporan
+     *
+     * Menampilkan detail lengkap pelaporan (ringkasan, detail pencatatan,
+     * detail item per pencatatan, dan preview jurnal) sebelum user mengajukan.
+     *
+     * @param int $id Pelaporan ID
+     * @return void
+     */
+    public function confirm_pelaporan($id)
+    {
+        $this->auth->restrict($this->viewPermission);
+
+        // Get pelaporan data with linked pencatatan
+        $pelaporan = $this->Expense_petty_cash_pelaporan_model->get_pelaporan($id);
+
+        if (!$pelaporan) {
+            Template::set_message('Data pelaporan tidak ditemukan.', 'error');
+            redirect('expense_petty_cash/pelaporan');
+            return;
+        }
+
+        // Only draft pelaporan can be confirmed/submitted
+        if ($pelaporan->header->status !== 'draft') {
+            Template::set_message('Hanya pelaporan berstatus "draft" yang dapat diajukan.', 'error');
+            redirect('expense_petty_cash/pelaporan');
+            return;
+        }
+
+        // Get budget info
+        $budget_info = false;
+        if (!empty($pelaporan->header->petty_cash_id)) {
+            $budget_info = $this->Expense_petty_cash_model->get_budget_info($pelaporan->header->petty_cash_id);
+        }
+
+        // Get detail items per pencatatan for full review
+        $pencatatan_details = [];
+        if (!empty($pelaporan->pencatatan_list)) {
+            foreach ($pelaporan->pencatatan_list as $pencatatan) {
+                $detail = $this->Expense_petty_cash_model->get_pencatatan($pencatatan->id);
+                if ($detail) {
+                    $pencatatan_details[$pencatatan->id] = $detail;
+                }
+            }
+        }
+
+        // Get COA list for display
+        $coa_list = [];
+        if (!empty($pelaporan->header->petty_cash_id)) {
+            $coa_list = $this->_get_coa_list($pelaporan->header->petty_cash_id);
+        }
+
+        $data = [
+            'pelaporan'          => $pelaporan,
+            'budget_info'        => $budget_info,
+            'pencatatan_details' => $pencatatan_details,
+            'coa_list'           => $coa_list,
+            'has_add'            => has_permission($this->addPermission),
+            'has_manage'         => has_permission($this->managePermission),
+        ];
+
+        $this->template->set($data);
+        $this->template->title('Konfirmasi Pelaporan Petty Cash');
+        $this->template->render('pelaporan/confirm');
     }
 
     /**
@@ -710,6 +793,12 @@ class Expense_petty_cash extends Admin_Controller
         $data = [
             'pelaporan'          => $pelaporan,
             'pencatatan_details' => $pencatatan_details,
+            'budget_info'        => (!empty($pelaporan->header->petty_cash_id))
+                ? $this->Expense_petty_cash_model->get_budget_info($pelaporan->header->petty_cash_id)
+                : false,
+            'coa_list'           => (!empty($pelaporan->header->petty_cash_id))
+                ? $this->_get_coa_list($pelaporan->header->petty_cash_id)
+                : [],
         ];
 
         $this->template->set($data);
