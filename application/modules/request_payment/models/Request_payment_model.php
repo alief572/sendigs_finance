@@ -1199,7 +1199,10 @@ class Request_payment_model extends BF_Model
             COUNT(*) as total_pengajuan,
             IFNULL(SUM(a.nilai_pengajuan), 0) as total_nilai,
             IFNULL(SUM(CASE WHEN a.kategori = "Cash" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_cash,
-            IFNULL(SUM(CASE WHEN a.kategori = "Kasbon" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_kasbon
+            IFNULL(SUM(CASE WHEN a.kategori = "Kasbon" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_kasbon,
+            IFNULL(SUM(CASE WHEN a.kategori = "Expense" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_expense,
+            IFNULL(SUM(CASE WHEN a.kategori = "Periodik" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_periodik,
+            IFNULL(SUM(CASE WHEN a.kategori = "Transport" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_transport
         ');
         $this->db->from('v_request_payment a');
 
@@ -1236,6 +1239,9 @@ class Request_payment_model extends BF_Model
             'total_nilai'     => (float) ($result ? $result->total_nilai : 0),
             'total_cash'      => (float) ($result ? $result->total_cash : 0),
             'total_kasbon'    => (float) ($result ? $result->total_kasbon : 0),
+            'total_expense'   => (float) ($result ? $result->total_expense : 0),
+            'total_periodik'  => (float) ($result ? $result->total_periodik : 0),
+            'total_transport' => (float) ($result ? $result->total_transport : 0),
         ];
     }
 

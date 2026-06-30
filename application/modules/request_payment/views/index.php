@@ -157,10 +157,10 @@ $default_date_to   = date('Y-m-d');
 		<!-- End Filter Bar Card -->
 
 		<!-- Summary Cards Section -->
-		<div class="row" style="margin-bottom: 20px;">
+		<div class="row" style="margin-bottom: 15px;">
 			<!-- Card 1: Total Pengajuan -->
 			<div class="col-md-3">
-				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TOTAL PENGAJUAN</div>
 					<div style="font-size: 22px; font-weight: bold; color: #333;" id="card_total_pengajuan">0</div>
 					<div style="font-size: 12px; color: #999;">item</div>
@@ -168,7 +168,7 @@ $default_date_to   = date('Y-m-d');
 			</div>
 			<!-- Card 2: Total Nilai -->
 			<div class="col-md-3">
-				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TOTAL NILAI</div>
 					<div style="font-size: 22px; font-weight: bold; color: #2196F3;">
 						<span style="font-size: 14px;">Rp</span> <span id="card_total_nilai">0</span>
@@ -177,7 +177,7 @@ $default_date_to   = date('Y-m-d');
 			</div>
 			<!-- Card 3: Cash -->
 			<div class="col-md-3">
-				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">CASH</div>
 					<div style="font-size: 22px; font-weight: bold; color: #2196F3;">
 						<span style="font-size: 14px;">Rp</span> <span id="card_total_cash">0</span>
@@ -186,10 +186,39 @@ $default_date_to   = date('Y-m-d');
 			</div>
 			<!-- Card 4: Kasbon -->
 			<div class="col-md-3">
-				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff;">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">KASBON</div>
 					<div style="font-size: 22px; font-weight: bold; color: #FF9800;">
 						<span style="font-size: 14px;">Rp</span> <span id="card_total_kasbon">0</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row" style="margin-bottom: 20px;">
+			<!-- Card 5: Expense -->
+			<div class="col-md-4">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">EXPENSE</div>
+					<div style="font-size: 22px; font-weight: bold; color: #F44336;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_expense">0</span>
+					</div>
+				</div>
+			</div>
+			<!-- Card 6: Periodik -->
+			<div class="col-md-4">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">PERIODIK</div>
+					<div style="font-size: 22px; font-weight: bold; color: #9C27B0;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_periodik">0</span>
+					</div>
+				</div>
+			</div>
+			<!-- Card 7: Transport -->
+			<div class="col-md-4">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TRANSPORT</div>
+					<div style="font-size: 22px; font-weight: bold; color: #4CAF50;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_transport">0</span>
 					</div>
 				</div>
 			</div>
@@ -520,12 +549,18 @@ $default_date_to   = date('Y-m-d');
 					$('#card_total_nilai').text(formatNumber(response.total_nilai || 0));
 					$('#card_total_cash').text(formatNumber(response.total_cash || 0));
 					$('#card_total_kasbon').text(formatNumber(response.total_kasbon || 0));
+					$('#card_total_expense').text(formatNumber(response.total_expense || 0));
+					$('#card_total_periodik').text(formatNumber(response.total_periodik || 0));
+					$('#card_total_transport').text(formatNumber(response.total_transport || 0));
 				},
 				error: function() {
 					$('#card_total_pengajuan').text('-');
 					$('#card_total_nilai').text('-');
 					$('#card_total_cash').text('-');
 					$('#card_total_kasbon').text('-');
+					$('#card_total_expense').text('-');
+					$('#card_total_periodik').text('-');
+					$('#card_total_transport').text('-');
 				}
 			});
 		}
