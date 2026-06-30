@@ -105,10 +105,10 @@ class Petty_cash_vuca_sustain extends Admin_Controller
     }
 
     /**
-     * Generate dan output PDF dokumen payment hutang
+     * Print dokumen payment hutang (HTML browser print)
      *
-     * Load data payment hutang, render HTML via view template,
-     * kemudian output PDF A4 portrait menggunakan mPDF.
+     * Load data payment hutang, render standalone HTML page,
+     * auto-trigger window.print() di browser.
      *
      * @param int $id ID record tr_petty_cash_vuca_sustain
      * @return void
@@ -130,16 +130,8 @@ class Petty_cash_vuca_sustain extends Admin_Controller
             'record' => $record,
         ];
 
-        // Load mPDF library
-        $this->load->library('Mpdf');
-
-        // Generate HTML from view template
-        $html = $this->load->view('print', $data, true);
-
-        // Configure and output PDF
-        $this->mpdf->SetTitle('Payment Hutang Petty Cash - ' . $record->no_payment_hutang);
-        $this->mpdf->WriteHTML($html);
-        $this->mpdf->Output('Payment_Hutang_' . $record->no_payment_hutang . '.pdf', 'I');
+        // Load view directly as standalone HTML page (browser print)
+        $this->load->view('print', $data);
     }
 
     // =========================================================================

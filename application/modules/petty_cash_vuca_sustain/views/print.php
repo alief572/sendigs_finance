@@ -60,14 +60,26 @@ $grand_total = (int) $record->header->grand_total;
 <head>
     <style>
         @page {
+            size: A4 portrait;
             margin: 15mm;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
         }
 
         body {
             font-family: Arial, sans-serif;
             font-size: 11px;
             color: #333;
-            margin: 0;
+            margin: 15mm;
             padding: 0;
         }
 
@@ -264,6 +276,12 @@ $grand_total = (int) $record->header->grand_total;
             </td>
         </tr>
     </table>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
 </body>
 
 </html>
