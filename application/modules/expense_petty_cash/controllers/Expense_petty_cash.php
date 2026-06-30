@@ -980,23 +980,15 @@ class Expense_petty_cash extends Admin_Controller
             }
         }
 
-        // Prepare data for view
+        // Prepare data for view — render as plain HTML (browser print)
         $data = [
             'pelaporan'     => $pelaporan,
             'creator_name'  => $creator_name,
             'approver_name' => $approver_name,
         ];
 
-        // Load mPDF library
-        $this->load->library('Mpdf');
-
-        // Generate HTML from view template
-        $html = $this->load->view('pelaporan/print', $data, true);
-
-        // Configure and output PDF
-        $this->mpdf->SetTitle('Laporan Pelaporan Petty Cash - ' . $pelaporan->header->no_pelaporan);
-        $this->mpdf->WriteHTML($html);
-        $this->mpdf->Output('Pelaporan_' . $pelaporan->header->no_pelaporan . '.pdf', 'I');
+        // Load view directly without template wrapper (standalone HTML page)
+        $this->load->view('pelaporan/print', $data);
     }
 
     // =========================================================================
