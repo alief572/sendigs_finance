@@ -21,7 +21,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                         <td width="12%"><?= $data_actual->nm_customer ?></td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="" class="form-control form-control-sm" placeholder="Tanggal Invoice">
+                            <input type="date" name="tanggal_invoice" id="tanggal_invoice" class="form-control form-control-sm" placeholder="Tanggal Invoice" onchange="syncTanggalJurnal(this.value)">
                         </td>
                     </tr>
                     <tr>
@@ -167,6 +167,19 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function syncTanggalJurnal(val) {
+        if (!val) return;
+        var dateObj = new Date(val);
+        var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        var formatted = ('0' + dateObj.getDate()).slice(-2) + '-' + months[dateObj.getMonth()] + '-' + dateObj.getFullYear();
+        var ymd = val; // already in Y-m-d format from input[type=date]
+
+        $('input[name^="tgl_jurnal_"]').each(function() {
+            $(this).val(ymd);
+            $(this).closest('td').contents().first().replaceWith(formatted);
+        });
+    }
+
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
