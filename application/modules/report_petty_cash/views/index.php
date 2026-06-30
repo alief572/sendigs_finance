@@ -254,7 +254,9 @@
                         <button type="button" class="btn btn-modern btn-reset-modern" id="btn-reset" style="margin-left: 10px;">
                             <i class="fa fa-refresh"></i> Reset
                         </button>
-                        <div id="export-container" style="margin-left: 10px;"></div>
+                        <button type="button" class="btn btn-modern btn-export" id="btn-export-custom" style="margin-left: 10px;">
+                            <i class="fa fa-file-excel-o"></i> Download Excel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -348,17 +350,6 @@
             "dom": "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
                    "<'row'<'col-sm-12'tr>>" +
                    "<'row'<'col-sm-5'i><'col-sm-7'p>>",
-            "buttons": [
-                {
-                    extend: 'excelHtml5',
-                    text: '<i class="fa fa-file-excel-o"></i> Download Excel',
-                    className: 'btn-export',
-                    title: 'Report Petty Cash - Buku Kas Kecil',
-                    exportOptions: {
-                        columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-                    }
-                }
-            ],
             "pageLength": 50,
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
             "ordering": false, // Disable ordering to keep running balance correct
@@ -367,9 +358,6 @@
                 "searchPlaceholder": "Search records..."
             }
         });
-        
-        // Append generated buttons to our custom container
-        table.buttons().container().appendTo('#export-container');
 
         $('#btn-filter').click(function() {
             table.ajax.reload();
@@ -379,6 +367,14 @@
             $('#start_date').val('');
             $('#end_date').val('');
             table.ajax.reload();
+        });
+
+        $('#btn-export-custom').click(function() {
+            var start_date = $('#start_date').val();
+            var end_date = $('#end_date').val();
+            
+            // Redirect to custom export endpoint
+            window.location.href = BASE_URL + 'export_excel?start_date=' + start_date + '&end_date=' + end_date;
         });
     });
 </script>
