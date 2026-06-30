@@ -1,11 +1,11 @@
 <?php
 $edit_mode = (isset($mode) && $mode === 'edit');
-$header_id = ($edit_mode && isset($pencatatan->id)) ? $pencatatan->id : '';
-$no_pencatatan = ($edit_mode && isset($pencatatan->no_pencatatan)) ? $pencatatan->no_pencatatan : 'Auto-generated';
+$header_id = ($edit_mode && isset($pencatatan->header->id)) ? $pencatatan->header->id : '';
+$no_pencatatan = ($edit_mode && isset($pencatatan->header->no_pencatatan)) ? $pencatatan->header->no_pencatatan : 'Auto-generated';
 $tanggal = date('Y-m-d');
-$company = ($edit_mode && isset($pencatatan->company)) ? $pencatatan->company : '';
-$request_by = ($edit_mode && isset($pencatatan->request_by)) ? $pencatatan->request_by : '';
-$keterangan = ($edit_mode && isset($pencatatan->keterangan)) ? $pencatatan->keterangan : '';
+$company = ($edit_mode && isset($pencatatan->header->company)) ? $pencatatan->header->company : '';
+$request_by = ($edit_mode && isset($pencatatan->header->request_by)) ? $pencatatan->header->request_by : '';
+$keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatatan->header->keterangan : '';
 ?>
 <!-- Select2 CSS -->
 <link rel="stylesheet" href="<?= base_url('assets/plugins/select2/select2.min.css') ?>">
