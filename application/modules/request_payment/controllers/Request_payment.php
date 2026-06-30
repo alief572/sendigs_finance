@@ -836,6 +836,29 @@ class Request_payment extends Admin_Controller
 				$Harga[] 		= $nilai;
 			}
 
+			if ($Data['tipe'] == 'petty_cash_hutang') {
+				$dtl = $this->db->get_where('request_payment', ['no_doc' => $detail['no_doc'], 'tipe' => 'petty_cash_hutang'])->row();
+
+				$nilai = $dtl->jumlah;
+
+				$ArrDetail[] 		= [
+					'id' 			=> $id_detail,
+					'payment_id' 	=> $Id,
+					'no_doc' 		=> $dtl->no_doc,
+					'tgl_doc' 		=> $dtl->tgl_doc,
+					'deskripsi' 	=> $dtl->keperluan,
+					'qty' 			=> '1',
+					'harga' 		=> $nilai,
+					'total' 		=> $nilai,
+					'keterangan' 	=> $dtl->keperluan,
+					'doc_file' 		=> '',
+					'coa' 			=> '',
+					'created_by' 	=> $this->auth->user_name(),
+					'created_on' 	=> date("Y-m-d h:i:s"),
+				];
+				$Harga[] 		= $nilai;
+			}
+
 			$id_detail++;
 		}
 
@@ -991,6 +1014,11 @@ class Request_payment extends Admin_Controller
 				$data_request_payment = $this->db->select('id')->get_where('request_payment', ['no_doc' => $get_kasbon['no_doc']])->row_array();
 
 				$this->db->update('request_payment', ['status' => '2'], ['id' => $data_request_payment['id']]);
+			}
+
+			if ($Data['tipe'] == 'petty_cash_hutang') {
+				$this->db->insert_batch('payment_approve_details', $ArrDetail);
+				$this->db->update('request_payment', ['status' => '2'], ['no_doc' => $Data['no_doc'], 'tipe' => 'petty_cash_hutang']);
 			}
 		}
 
