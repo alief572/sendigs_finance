@@ -282,14 +282,18 @@ class Jurnal_payment_petty_cash_model extends BF_Model
             return false;
         }
 
-        // 2. Build batch detail rows (filter debit > 0 OR kredit > 0)
-        $batch_data = [];
+        // 2. Build batch detail rows and calculate total debit per company
+        $batch_company = [];
+        $batch_stm = [];
+        $jml_company = 0;
+        $jml_stm = 0;
+
         foreach ($jurnal_details as $row) {
             $debit  = (float) $row->debit;
             $kredit = (float) $row->kredit;
 
             if ($debit > 0 || $kredit > 0) {
-                $batch_data[] = [
+                $detail = [
                     'tipe'         => 'BUK',
                     'tanggal'      => $row->tgl_jurnal,
                     'no_perkiraan' => $row->coa,
@@ -298,79 +302,69 @@ class Jurnal_payment_petty_cash_model extends BF_Model
                     'debet'        => $debit,
                     'kredit'       => $kredit
                 ];
+
+                if ($row->id_company == $company) {
+                    $detail['nomor'] = $nomor_buk_company;
+                    $batch_company[] = $detail;
+                    $jml_company += $debit;
+                } elseif ($row->id_company == '5') {
+                    $detail['nomor'] = $nomor_buk_stm;
+                    $batch_stm[] = $detail;
+                    $jml_stm += $debit;
+                }
             }
         }
 
-        if (empty($batch_data)) {
+        if (empty($batch_company) && empty($batch_stm)) {
             return false;
         }
 
         // === Company side (VUCA or SUSTAIN) ===
 
-        // 3. INSERT japh header into target_db
-        $dataJVheader_company = [
-            'nomor'      => $nomor_buk_company,
-            'tgl'        => $jurnal_header->tgl,
-            'jml'        => $jurnal_header->jml,
-            'kdcab'      => '101',
-            'jenis_reff' => 'BUK',
-            'no_reff'    => $jurnal_header->no_reff,
-            'user_id'    => $jurnal_header->user_id,
-            'ho_valid'   => '',
-            'batal'      => '0'
-        ];
+        if (!empty($batch_company)) {
+            // 3. INSERT japh header into target_db
+            $dataJVheader_company = [
+                'nomor'      => $nomor_buk_company,
+                'tgl'        => $jurnal_header->tgl,
+                'jml'        => $jml_company,
+                'kdcab'      => '101',
+                'jenis_reff' => 'BUK',
+                'no_reff'    => $jurnal_header->no_reff,
+                'user_id'    => $jurnal_header->user_id,
+                'ho_valid'   => '',
+                'batal'      => '0'
+            ];
 
-        $insert_header_company = $target_db->insert('japh', $dataJVheader_company);
+            $insert_header_company = $target_db->insert('japh', $dataJVheader_company);
+            if (!$insert_header_company) return false;
 
-        if (!$insert_header_company) {
-            return false;
-        }
-
-        // 4. INSERT BATCH jurnal details into target_db
-        $batch_company = [];
-        foreach ($batch_data as $detail) {
-            $detail['nomor'] = $nomor_buk_company;
-            $batch_company[] = $detail;
-        }
-
-        $insert_details_company = $target_db->insert_batch('jurnal', $batch_company);
-
-        if (!$insert_details_company) {
-            return false;
+            // 4. INSERT BATCH jurnal details into target_db
+            $insert_details_company = $target_db->insert_batch('jurnal', $batch_company);
+            if (!$insert_details_company) return false;
         }
 
         // === STM side ===
 
-        // 5. INSERT japh header into DBACC_STM
-        $dataJVheader_stm = [
-            'nomor'      => $nomor_buk_stm,
-            'tgl'        => $jurnal_header->tgl,
-            'jml'        => $jurnal_header->jml,
-            'kdcab'      => '101',
-            'jenis_reff' => 'BUK',
-            'no_reff'    => $jurnal_header->no_reff,
-            'user_id'    => $jurnal_header->user_id,
-            'ho_valid'   => '',
-            'batal'      => '0'
-        ];
+        if (!empty($batch_stm)) {
+            // 5. INSERT japh header into DBACC_STM
+            $dataJVheader_stm = [
+                'nomor'      => $nomor_buk_stm,
+                'tgl'        => $jurnal_header->tgl,
+                'jml'        => $jml_stm,
+                'kdcab'      => '101',
+                'jenis_reff' => 'BUK',
+                'no_reff'    => $jurnal_header->no_reff,
+                'user_id'    => $jurnal_header->user_id,
+                'ho_valid'   => '',
+                'batal'      => '0'
+            ];
 
-        $insert_header_stm = $this->accounting_stm->insert('japh', $dataJVheader_stm);
+            $insert_header_stm = $this->accounting_stm->insert('japh', $dataJVheader_stm);
+            if (!$insert_header_stm) return false;
 
-        if (!$insert_header_stm) {
-            return false;
-        }
-
-        // 6. INSERT BATCH jurnal details into DBACC_STM
-        $batch_stm = [];
-        foreach ($batch_data as $detail) {
-            $detail['nomor'] = $nomor_buk_stm;
-            $batch_stm[] = $detail;
-        }
-
-        $insert_details_stm = $this->accounting_stm->insert_batch('jurnal', $batch_stm);
-
-        if (!$insert_details_stm) {
-            return false;
+            // 6. INSERT BATCH jurnal details into DBACC_STM
+            $insert_details_stm = $this->accounting_stm->insert_batch('jurnal', $batch_stm);
+            if (!$insert_details_stm) return false;
         }
 
         return true;
@@ -523,5 +517,55 @@ class Jurnal_payment_petty_cash_model extends BF_Model
         $this->db->where_in('sts', ['', '0']);
         $this->db->order_by('nm_company', 'ASC');
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Transaction Helpers for multi-database coordination
+     */
+    public function begin_transaction($db_name)
+    {
+        $db = $this->_get_db_by_name($db_name);
+        if ($db) {
+            $db->trans_begin();
+        }
+    }
+
+    public function commit_transaction($db_name)
+    {
+        $db = $this->_get_db_by_name($db_name);
+        if ($db) {
+            $db->trans_commit();
+        }
+    }
+
+    public function rollback_transaction($db_name)
+    {
+        $db = $this->_get_db_by_name($db_name);
+        if ($db) {
+            $db->trans_rollback();
+        }
+    }
+
+    public function check_transaction_status($db_name)
+    {
+        $db = $this->_get_db_by_name($db_name);
+        if ($db) {
+            return $db->trans_status();
+        }
+        return false;
+    }
+
+    private function _get_db_by_name($db_name)
+    {
+        switch ($db_name) {
+            case 'accounting_stm':
+                return $this->accounting_stm;
+            case 'accounting_vuca':
+                return $this->accounting_vuca;
+            case 'accounting_sustain':
+                return $this->accounting_sustain;
+            default:
+                return null;
+        }
     }
 }
