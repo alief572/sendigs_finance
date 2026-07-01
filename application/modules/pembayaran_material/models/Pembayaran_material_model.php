@@ -164,7 +164,7 @@ class Pembayaran_material_model extends BF_Model
 		// Cek apakah semua pembayaran bertipe petty_cash_hutang
 		$is_all_petty_cash_hutang = true;
 		foreach ($get_payment as $_check_item) {
-			if ($_check_item->tipe != 'petty_cash_hutang') {
+			if ($_check_item->tipe != 'petty_cash_hutang' && strpos($_check_item->no_doc, 'RPC') !== 0) {
 				$is_all_petty_cash_hutang = false;
 				break;
 			}
@@ -904,7 +904,7 @@ class Pembayaran_material_model extends BF_Model
 				if ($bank_charge > 0 && !empty($coa_bank)) {
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa_bank, $nm_bank, $nm_bank, 0, $bank_charge);
 				}
-			} else if ($item_payment->tipe == 'petty_cash_hutang') {
+			} else if ($item_payment->tipe == 'petty_cash_hutang' || strpos($item_payment->no_doc, 'RPC') === 0) {
 				$get_petty_cash = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc])->row();
 
 				if (!empty($get_petty_cash)) {
@@ -965,6 +965,21 @@ class Pembayaran_material_model extends BF_Model
 
 					// 3. Refill STM (Jurnal Refill Petty Cash)
 					// Company for Refill is always STM
+					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
+					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
+
+					$no_jurnal_refill = 0;
+					$no_jurnal_refill++;
+					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Refill Kas Kecil', $jumlah, 0);
+					$ttl_debit_refill += $jumlah;
+					$no_jurnal_refill++;
+					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, (!empty($coa_bank) ? $coa_bank : '1101-02-09'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), 0, $jumlah);
+					$ttl_kredit_refill += $jumlah;
+				} else if (strpos($item_payment->no_doc, 'RPC') === 0) {
+					$jumlah = $item_payment->jumlah;
+					$id_divisi = '';
+					$nm_divisi = '';
+
 					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
 					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
 

@@ -598,6 +598,23 @@ class Request_payment_model extends BF_Model
                 }
             }
 
+            // Fallback untuk Petty Cash Hutang: ambil company dari pencatatan petty cash
+            if (empty($company_display) && $item->kategori == 'Petty Cash Hutang') {
+                // Cek dulu di tr_petty_cash_vuca_sustain (untuk PHP-xxxx)
+                $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                if (!empty($get_petty_cash)) {
+                    $company_display = $get_petty_cash->company;
+                }
+
+                // Fallback ke tr_pelaporan_petty_cash (untuk RPC-xxxx)
+                if (empty($company_display)) {
+                    $get_pelaporan = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                    if (!empty($get_pelaporan)) {
+                        $company_display = $get_pelaporan->company;
+                    }
+                }
+            }
+
             // Determine "diminta_oleh" (request_by with Kasbon special logic)
             $nmuser = $item->request_by;
             if ($item->kategori == 'Kasbon') {
@@ -1094,7 +1111,7 @@ class Request_payment_model extends BF_Model
         }
 
         if (!empty($arr_update_req_payment)) {
-            $this->db->update_batch('request_payment', $arr_update_req_payment);
+            $this->db->update_batch('request_payment', $arr_update_req_payment, 'no_doc');
         }
 
         if ($this->db->trans_status() === false) {
@@ -1202,7 +1219,8 @@ class Request_payment_model extends BF_Model
             IFNULL(SUM(CASE WHEN a.kategori = "Kasbon" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_kasbon,
             IFNULL(SUM(CASE WHEN a.kategori = "Expense" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_expense,
             IFNULL(SUM(CASE WHEN a.kategori = "Periodik" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_periodik,
-            IFNULL(SUM(CASE WHEN a.kategori = "Transport" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_transport
+            IFNULL(SUM(CASE WHEN a.kategori = "Transport" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_transport,
+            IFNULL(SUM(CASE WHEN a.kategori = "Petty Cash Hutang" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_petty_cash
         ');
         $this->db->from('v_request_payment a');
 
@@ -1242,6 +1260,7 @@ class Request_payment_model extends BF_Model
             'total_expense'   => (float) ($result ? $result->total_expense : 0),
             'total_periodik'  => (float) ($result ? $result->total_periodik : 0),
             'total_transport' => (float) ($result ? $result->total_transport : 0),
+            'total_petty_cash' => (float) ($result ? $result->total_petty_cash : 0),
         ];
     }
 

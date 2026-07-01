@@ -505,24 +505,42 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         }
 
         // Prepare request payment data
-        $request_payment_data = [
-            'no_doc'     => $pelaporan->no_pelaporan,
-            'nama'       => $creator_name,
-            'tgl_doc'    => date('Y-m-d'),
-            'tanggal'    => date('Y-m-d'),
-            'keperluan'  => 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
-            'tipe'       => 'petty_cash',
-            'jumlah'     => $pelaporan->grand_total,
-            'status'     => 0,
-            'created_by' => $pelaporan->approved_by,
-            'created_on' => date('Y-m-d H:i:s'),
-        ];
+        $company = strtoupper(trim($pelaporan->company));
+
+        // Untuk STM: tipe = petty_cash_hutang, status = 1 (langsung masuk list pembayaran)
+        // Untuk lainnya: tipe = petty_cash, status = 0
+        if ($company === 'STM') {
+            $request_payment_data = [
+                'no_doc'     => $pelaporan->no_pelaporan,
+                'nama'       => $creator_name,
+                'tgl_doc'    => date('Y-m-d'),
+                'tanggal'    => date('Y-m-d'),
+                'keperluan'  => 'Payment Hutang Petty Cash - ' . $pelaporan->no_pelaporan,
+                'tipe'       => 'petty_cash_hutang',
+                'jumlah'     => $pelaporan->grand_total,
+                'status'     => 1,
+                'created_by' => $pelaporan->approved_by,
+                'created_on' => date('Y-m-d H:i:s'),
+            ];
+        } else {
+            $request_payment_data = [
+                'no_doc'     => $pelaporan->no_pelaporan,
+                'nama'       => $creator_name,
+                'tgl_doc'    => date('Y-m-d'),
+                'tanggal'    => date('Y-m-d'),
+                'keperluan'  => 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
+                'tipe'       => 'petty_cash',
+                'jumlah'     => $pelaporan->grand_total,
+                'status'     => 0,
+                'created_by' => $pelaporan->approved_by,
+                'created_on' => date('Y-m-d H:i:s'),
+            ];
+        }
 
         // Insert into request_payment table
         $this->db->insert('request_payment', $request_payment_data);
 
         // For VUCA or SUSTAIN companies, also send to Petty Cash VUCA/SUSTAIN module
-        $company = strtoupper(trim($pelaporan->company));
         if ($company === 'VUCA' || $company === 'SUSTAIN') {
             if ($this->db->table_exists('tr_petty_cash_vuca_sustain')) {
                 $this->send_to_petty_cash_vuca_sustain($pelaporan);

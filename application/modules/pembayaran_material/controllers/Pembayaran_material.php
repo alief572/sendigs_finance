@@ -1416,6 +1416,7 @@ class Pembayaran_material extends Admin_Controller
 			$processed_ids_check = explode(',', $post['id_payment']);
 			$this->db->where_in('id', $processed_ids_check);
 			$this->db->where('tipe !=', 'petty_cash_hutang');
+			$this->db->not_like('no_doc', 'RPC', 'after');
 			$non_petty_count = $this->db->count_all_results('payment_approve');
 			$is_all_petty_cash_hutang = ($non_petty_count == 0);
 
@@ -1705,7 +1706,10 @@ class Pembayaran_material extends Admin_Controller
 			try {
 				$processed_ids = explode(',', $post['id_payment']);
 				$this->db->where_in('id', $processed_ids);
+				$this->db->group_start();
 				$this->db->where('tipe', 'petty_cash_hutang');
+				$this->db->or_like('no_doc', 'RPC', 'after');
+				$this->db->group_end();
 				$petty_cash_payments = $this->db->get('payment_approve')->result();
 
 				if (!empty($petty_cash_payments)) {

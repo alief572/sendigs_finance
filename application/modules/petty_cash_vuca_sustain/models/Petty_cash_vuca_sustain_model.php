@@ -244,7 +244,7 @@ class Petty_cash_vuca_sustain_model extends BF_Model
 
             if ($query->num_rows() === 0) {
                 $this->db->trans_rollback();
-                log_message('warning', 'process_payment_hutang: Record id=' . $id . ' tidak ditemukan atau status bukan draft');
+                log_message('error', 'process_payment_hutang: Record id=' . $id . ' tidak ditemukan atau status bukan draft');
                 return false;
             }
 
@@ -437,13 +437,13 @@ class Petty_cash_vuca_sustain_model extends BF_Model
 
         // Record not found
         if (!$record) {
-            log_message('warning', 'update_status_done: Record not found for no_doc: ' . $no_doc);
+            log_message('error', 'update_status_done: Record not found for no_doc: ' . $no_doc);
             return false;
         }
 
         // Validate current status must be "waiting payment"
         if ($record->status !== self::STATUS_WAITING_PAYMENT) {
-            log_message('warning', 'update_status_done: Invalid status transition for no_doc: ' . $no_doc . ', current status: ' . $record->status);
+            log_message('error', 'update_status_done: Invalid status transition for no_doc: ' . $no_doc . ', current status: ' . $record->status);
             return false;
         }
 
