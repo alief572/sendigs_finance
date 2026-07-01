@@ -7,7 +7,7 @@ $hide_table_jurnal_petty_cash = 'd-none';
 // Cek apakah semua payment bertipe petty_cash_hutang → hide jurnal atas
 $is_all_petty_cash_hutang = true;
 foreach ($results['result_payment'] as $_item_check) {
-	if ($_item_check->tipe != 'petty_cash_hutang') {
+	if ($_item_check->tipe != 'petty_cash_hutang' && strpos($_item_check->no_doc, 'RPC') !== 0) {
 		$is_all_petty_cash_hutang = false;
 		break;
 	}
