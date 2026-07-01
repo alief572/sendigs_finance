@@ -217,43 +217,6 @@ $ENABLE_ADD = $addPermission;
         initDataTable();
     }
 
-    /**
-     * Client-side balance validation - redundant check on rendered modal HTML.
-     * Parses footer totals from the modal table to verify debit == kredit.
-     * Returns object: { isBalance: bool, totalDebit: number, totalKredit: number }
-     */
-    function validateBalanceFromModal() {
-        var $tfoot = $('#ModalView table tfoot tr');
-        if ($tfoot.length === 0) {
-            return {
-                isBalance: false,
-                totalDebit: 0,
-                totalKredit: 0
-            };
-        }
-
-        var $cells = $tfoot.find('th.text-right');
-        if ($cells.length < 2) {
-            return {
-                isBalance: false,
-                totalDebit: 0,
-                totalKredit: 0
-            };
-        }
-
-        // Parse Indonesian formatted numbers (dot as thousand separator)
-        var rawDebit = $cells.eq(0).text().trim().replace(/\./g, '');
-        var rawKredit = $cells.eq(1).text().trim().replace(/\./g, '');
-
-        var totalDebit = parseInt(rawDebit, 10) || 0;
-        var totalKredit = parseInt(rawKredit, 10) || 0;
-
-        return {
-            isBalance: (totalDebit === totalKredit && (totalDebit + totalKredit) > 0),
-            totalDebit: totalDebit,
-            totalKredit: totalKredit
-        };
-    }
 
     /**
      * Apply balance visual indicator and button state on modal.
@@ -299,9 +262,7 @@ $ENABLE_ADD = $addPermission;
                     $('.save_btn_modal').prop('disabled', false);
                 }
 
-                // Client-side redundant balance validation (safety net)
-                var balanceCheck = validateBalanceFromModal();
-                applyBalanceIndicator(balanceCheck.isBalance);
+                applyBalanceIndicator(result && result.is_balance !== false);
             },
             error: function() {
                 Swal.fire({
