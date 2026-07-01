@@ -4,6 +4,16 @@ $hide_table_jurnal_petty_cash = 'd-none';
 // 	$hide_table_jurnal_petty_cash = '';
 // }
 
+// Cek apakah semua payment bertipe petty_cash_hutang → hide jurnal atas
+$is_all_petty_cash_hutang = true;
+foreach ($results['result_payment'] as $_item_check) {
+	if ($_item_check->tipe != 'petty_cash_hutang') {
+		$is_all_petty_cash_hutang = false;
+		break;
+	}
+}
+$hide_table_jurnal_utama = $is_all_petty_cash_hutang ? 'd-none' : '';
+
 $kode_supplier = [];
 $nm_supplier = [];
 
@@ -356,7 +366,7 @@ foreach ($results['result_payment'] as $item) {
 
 			<br><br>
 
-			<div class="col-md-12">
+			<div class="col-md-12 wrap_jurnal_utama <?= $hide_table_jurnal_utama ?>">
 				<h3>Jurnal</h3>
 				<table class="table table-striped">
 					<thead class="bg-primary">
@@ -489,6 +499,8 @@ foreach ($results['result_payment'] as $item) {
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 
 <script>
+	var is_all_petty_cash_hutang = <?= $is_all_petty_cash_hutang ? 'true' : 'false' ?>;
+
 	set_jurnal();
 	set_jurnal_refill();
 
@@ -569,6 +581,14 @@ foreach ($results['result_payment'] as $item) {
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
 
+		// Untuk petty_cash_hutang, skip validasi kontrol
+		if (is_all_petty_cash_hutang) {
+			if (bearer === 'company' || bearer === 'recipient') {
+				$('#simpan-com').prop('disabled', false);
+			}
+			return;
+		}
+
 		// Disable submit button if kontrol != 0
 		if (Math.abs(kontrol) > 0.001) {
 			$('#simpan-com').prop('disabled', true);
@@ -617,6 +637,24 @@ foreach ($results['result_payment'] as $item) {
 			dataType: 'json',
 			success: function(result) {
 				$('.tbody_jurnal').html(result.hasil_jurnal);
+
+				// Update flag global
+				is_all_petty_cash_hutang = result.is_all_petty_cash_hutang;
+
+				// Hide jurnal utama jika semua pembayaran bertipe petty_cash_hutang
+				if (result.is_all_petty_cash_hutang) {
+					$('.wrap_jurnal_utama').addClass('d-none');
+				} else {
+					$('.wrap_jurnal_utama').removeClass('d-none');
+				}
+
+				if (result.hasil_jurnal_refill !== undefined && result.hasil_jurnal_refill !== '') {
+					$('.tbody_jurnal_refill_pettycash').html(result.hasil_jurnal_refill);
+					$('.tbody_jurnal_refill_pettycash').closest('.col-md-12').removeClass('d-none');
+					$('.ttl_debit_refill').html(number_format(result.ttl_debit_refill));
+					$('.ttl_kredit_refill').html(number_format(result.ttl_kredit_refill));
+				}
+
 				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit));
 				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
 				check_jurnal_coa();
@@ -625,6 +663,13 @@ foreach ($results['result_payment'] as $item) {
 	}
 
 	function check_jurnal_coa() {
+		// Untuk petty_cash_hutang, skip validasi COA jurnal utama
+		if (is_all_petty_cash_hutang) {
+			$('.jurnal-coa-warning').remove();
+			hitung_kontrol();
+			return;
+		}
+
 		var has_empty_coa = false;
 		$('.tbody_jurnal input[name*="[coa]"]').each(function() {
 			if ($(this).val().trim() === '') {
@@ -865,25 +910,27 @@ foreach ($results['result_payment'] as $item) {
 			return false;
 		}
 
-		// Validasi COA jurnal tidak boleh kosong
-		var has_empty_coa = false;
-		$('.tbody_jurnal input[name*="[coa]"]').each(function() {
-			if ($(this).val().trim() === '') {
-				has_empty_coa = true;
+		// Validasi COA jurnal tidak boleh kosong (skip untuk petty_cash_hutang)
+		if (!is_all_petty_cash_hutang) {
+			var has_empty_coa = false;
+			$('.tbody_jurnal input[name*="[coa]"]').each(function() {
+				if ($(this).val().trim() === '') {
+					has_empty_coa = true;
+					return false;
+				}
+			});
+
+			if (has_empty_coa) {
+				swal({
+					title: 'Warning !',
+					text: 'Maaf, terdapat baris jurnal dengan COA kosong. Pastikan semua COA terisi sebelum menyimpan data!',
+					type: 'warning'
+				});
 				return false;
 			}
-		});
-
-		if (has_empty_coa) {
-			swal({
-				title: 'Warning !',
-				text: 'Maaf, terdapat baris jurnal dengan COA kosong. Pastikan semua COA terisi sebelum menyimpan data!',
-				type: 'warning'
-			});
-			return false;
 		}
 
-		if (kontrol > 0 || kontrol < 0) {
+		if (!is_all_petty_cash_hutang && (kontrol > 0 || kontrol < 0)) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Pastikan Kontrol harus 0 sebelum data dibayarkan!',
@@ -892,7 +939,7 @@ foreach ($results['result_payment'] as $item) {
 
 			return false;
 		}
-		if (payment_bank <= 0) {
+		if (!is_all_petty_cash_hutang && payment_bank <= 0) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Payment bank harus diisi dan tidak boleh 0!',
