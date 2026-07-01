@@ -2782,6 +2782,11 @@ class Request_payment extends Admin_Controller
 						$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $item->no_doc]);
 					}
 				}
+
+				// Petty Cash Hutang: data sudah ada di request_payment, update status saja
+				if ($item->tipe == 'Petty Cash Hutang') {
+					$this->db->update('request_payment', ['status' => 2], ['no_doc' => $item->no_doc, 'tipe' => 'petty_cash_hutang']);
+				}
 			}
 		}
 
@@ -2792,12 +2797,13 @@ class Request_payment extends Admin_Controller
 
 				print_r($this->db->error($insert_req_payment));
 				exit;
-			} else {
-				$this->db->from('tr_added_req_payment');
-				$this->db->where('no_doc IS NOT NULL');
-				$this->db->delete();
 			}
 		}
+
+		// Selalu clear tr_added_req_payment setelah proses
+		$this->db->from('tr_added_req_payment');
+		$this->db->where('no_doc IS NOT NULL');
+		$this->db->delete();
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
