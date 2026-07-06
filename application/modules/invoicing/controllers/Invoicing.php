@@ -1207,7 +1207,17 @@ class Invoicing extends Admin_Controller
 
         $this->db->trans_begin();
 
-        $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
+        $check_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing', 'sts' => '1'])->num_rows();
+        if ($check_jurnal > 0) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Invoice tidak dapat diupdate karena jurnal sudah diposting!'
+            ]);
+            return;
+        }
+
+        $delete_jurnal = $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
 
         $valid = 1;
         $msg = '';
@@ -1215,7 +1225,12 @@ class Invoicing extends Admin_Controller
 
         $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
 
-        if (!$update_invoice) {
+        if (!$delete_jurnal) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = $this->db->error()['message'] ?: 'Gagal menghapus jurnal lama';
+        } else if (!$update_invoice) {
             $this->db->trans_rollback();
 
             $valid = 0;
@@ -1302,7 +1317,17 @@ class Invoicing extends Admin_Controller
 
         $this->db->trans_begin();
 
-        $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
+        $check_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing', 'sts' => '1'])->num_rows();
+        if ($check_jurnal > 0) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'Invoice tidak dapat diupdate karena jurnal sudah diposting!'
+            ]);
+            return;
+        }
+
+        $delete_jurnal = $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
 
         $valid = 1;
         $msg = '';
@@ -1310,7 +1335,12 @@ class Invoicing extends Admin_Controller
 
         $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
 
-        if (!$update_invoice) {
+        if (!$delete_jurnal) {
+            $this->db->trans_rollback();
+
+            $valid = 0;
+            $msg = $this->db->error()['message'] ?: 'Gagal menghapus jurnal lama';
+        } else if (!$update_invoice) {
             $this->db->trans_rollback();
 
             $valid = 0;
@@ -2191,12 +2221,22 @@ class Invoicing extends Admin_Controller
                 ];
             }
 
-            $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
-            $this->db->delete('tr_invoice_detail_non_kons', ['id_header' => $id]);
+            $check_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing', 'sts' => '1'])->num_rows();
+            if ($check_jurnal > 0) {
+                throw new Exception('Invoice tidak dapat diupdate karena jurnal sudah diposting!');
+            }
+
+            $delete_jurnal = $this->db->delete('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing']);
+            $delete_detail = $this->db->delete('tr_invoice_detail_non_kons', ['id_header' => $id]);
 
             $update_invoice = $this->db->update('tr_invoicing', $arr_update, ['id' => $id]);
             $insert_detail = $this->db->insert_batch('tr_invoice_detail_non_kons', $arr_data_detail);
             $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
+
+            if (!$delete_jurnal || !$delete_detail) {
+                $error = $this->db->error();
+                throw new Exception('Gagal menghapus data lama: ' . $error['message']);
+            }
 
             if (!$update_invoice) {
                 $error = $this->db->error();
