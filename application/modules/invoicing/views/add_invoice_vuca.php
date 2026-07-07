@@ -21,32 +21,32 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                         <td width="12%"><?= $data_actual->nm_customer ?></td>
                         <th width="13%">Tanggal Invoice</th>
                         <td width="12%">
-                            <input type="date" name="tanggal_invoice" id="tanggal_invoice" class="form-control form-control-sm" placeholder="Tanggal Invoice" onchange="syncTanggalJurnal(this.value)">
+                            <input type="date" name="tanggal_invoice" id="tanggal_invoice" class="form-control form-control-sm" placeholder="Tanggal Invoice" onchange="syncTanggalJurnal(this.value)" value="<?= date('Y-m-d') ?>" readonly>
                         </td>
                     </tr>
                     <tr>
                         <th width="13%">Alamat</th>
                         <td width="12%"><?= $data_actual->address ?></td>
-                        <th width="13%">Nomor Invoice</th>
+                        <th width="13%">Nomor Invoice <span class="text-red">*</span></th>
                         <td width="12%">
-                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice">
+                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice" required>
                         </td>
                     </tr>
                     <tr>
                         <th width="13%">Ditujukan</th>
                         <td width="12%">Finance Dept.</td>
-                        <th width="13%">Nomor PO</th>
+                        <th width="13%">Nomor PO <span class="text-red">*</span></th>
                         <td width="12%">
-                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm">
+                            <input type="text" name="nomor_po" id="" class="form-control form-control-sm" placeholder="Nomor PO" required>
                         </td>
                     </tr>
                     <tr>
                         <th width="13%"></th>
                         <td width="12%"></td>
-                        <th width="13%">Nomor Faktur</th>
+                        <th width="13%">Nomor Faktur <span class="text-red">*</span></th>
                         <td width="12%">
                             <br>
-                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur">
+                            <input type="text" class="form-control form-control-sm" name="nomor_faktur" placeholder="Nomor Faktur" required>
                         </td>
                     </tr>
                 </table>

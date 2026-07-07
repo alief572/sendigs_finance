@@ -126,11 +126,11 @@ class Invoicing_model extends BF_Model
                     $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->result();
                     $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_inv' => $get_invoicing->id])->result();
                     if (empty($get_jurnal) && empty($get_penerimaan)) {
-                        if ($get_invoicing->tipe_invoice == '1') {
-                            $option .= ' <a href="' . base_url('invoicing/edit_invoicing_vuca/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
-                        } else {
-                            $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
-                        }
+                        // if ($get_invoicing->tipe_invoice == '1') {
+                        //     $option .= ' <a href="' . base_url('invoicing/edit_invoicing_vuca/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
+                        // } else {
+                        //     $option .= ' <a href="' . base_url('invoicing/edit_invoicing/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
+                        // }
                     } else {
                         if (!empty($get_jurnal)) {
                             $status2 = '<span class="badge bg-red">Journaled</span>';
