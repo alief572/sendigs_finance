@@ -19,6 +19,7 @@ class Report_petty_cash_model extends CI_Model
         $this->db->from('tr_pelaporan_petty_cash');
         $this->db->where('status', 'approved');
         $this->db->where('DATE(approved_on) <', $start_date);
+        $this->db->where("EXISTS (SELECT 1 FROM tr_jurnal j WHERE j.no_transaksi = tr_pelaporan_petty_cash.no_pelaporan AND j.sts = '1')");
         $refill = $this->db->get()->row()->total_refill;
 
         // Sum Expense (menggunakan detail agar akurat dengan data report)
@@ -27,6 +28,24 @@ class Report_petty_cash_model extends CI_Model
         $this->db->join('tr_expense_petty_cash_detail d', 'd.pencatatan_id = h.id');
         $this->db->where('h.status', 'approved');
         $this->db->where('h.tanggal <', $start_date);
+        $this->db->where("
+            (
+                (h.company = 'STM' AND EXISTS (
+                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
+                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
+                    JOIN tr_jurnal j ON j.no_transaksi = p.no_pelaporan
+                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
+                ))
+                OR
+                (h.company != 'STM' AND EXISTS (
+                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
+                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
+                    JOIN tr_petty_cash_vuca_sustain vs ON vs.no_pelaporan = p.no_pelaporan
+                    JOIN tr_jurnal j ON j.no_transaksi = vs.no_payment_hutang
+                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
+                ))
+            )
+        ");
         $expense = $this->db->get()->row()->total_expense;
 
         return $refill - $expense;
@@ -63,6 +82,22 @@ class Report_petty_cash_model extends CI_Model
             FROM tr_expense_petty_cash h
             JOIN tr_expense_petty_cash_detail d ON d.pencatatan_id = h.id
             WHERE {$where_expense}
+            AND (
+                (h.company = 'STM' AND EXISTS (
+                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
+                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
+                    JOIN tr_jurnal j ON j.no_transaksi = p.no_pelaporan
+                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
+                ))
+                OR
+                (h.company != 'STM' AND EXISTS (
+                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
+                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
+                    JOIN tr_petty_cash_vuca_sustain vs ON vs.no_pelaporan = p.no_pelaporan
+                    JOIN tr_jurnal j ON j.no_transaksi = vs.no_payment_hutang
+                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
+                ))
+            )
 
             UNION ALL
 
@@ -79,6 +114,7 @@ class Report_petty_cash_model extends CI_Model
                 approved_on AS sort_date
             FROM tr_pelaporan_petty_cash
             WHERE {$where_refill}
+            AND EXISTS (SELECT 1 FROM tr_jurnal j WHERE j.no_transaksi = tr_pelaporan_petty_cash.no_pelaporan AND j.sts = '1')
 
             ORDER BY tanggal ASC, sort_date ASC
         ";

@@ -507,8 +507,8 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         // Prepare request payment data
         $company = strtoupper(trim($pelaporan->company));
 
-        // Untuk STM: tipe = petty_cash_hutang, status = 1 (langsung masuk list pembayaran)
-        // Untuk lainnya: tipe = petty_cash, status = 0
+        // Untuk STM: tipe = refill_pettycash, status = 1 (langsung masuk list pembayaran)
+        // Untuk lainnya: tipe = refill_pettycash, status = 1 (langsung masuk list pembayaran)
         if ($company === 'STM') {
             $request_payment_data = [
                 'no_doc'     => $pelaporan->no_pelaporan,
@@ -516,7 +516,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'tgl_doc'    => date('Y-m-d'),
                 'tanggal'    => date('Y-m-d'),
                 'keperluan'  => 'Payment Hutang Petty Cash - ' . $pelaporan->no_pelaporan,
-                'tipe'       => 'petty_cash_hutang',
+                'tipe'       => 'refill_pettycash',
                 'jumlah'     => $pelaporan->grand_total,
                 'status'     => 1,
                 'created_by' => $pelaporan->approved_by,
@@ -529,9 +529,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'tgl_doc'    => date('Y-m-d'),
                 'tanggal'    => date('Y-m-d'),
                 'keperluan'  => 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
-                'tipe'       => 'petty_cash',
+                'tipe'       => 'refill_pettycash',
                 'jumlah'     => $pelaporan->grand_total,
-                'status'     => 0,
+                'status'     => 1,
                 'created_by' => $pelaporan->approved_by,
                 'created_on' => date('Y-m-d H:i:s'),
             ];
