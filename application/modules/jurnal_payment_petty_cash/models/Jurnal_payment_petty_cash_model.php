@@ -249,15 +249,16 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         // 1. INSERT header into japh table in DBACC_STM
         $dataJVheader = [
-            'nomor'      => $nomor_buk,
-            'tgl'        => $jurnal_header->tgl,
-            'jml'        => $jurnal_header->jml,
-            'kdcab'      => '101',
-            'jenis_reff' => 'BUK',
-            'no_reff'    => $jurnal_header->no_reff,
-            'user_id'    => $jurnal_header->user_id,
-            'ho_valid'   => '',
-            'batal'      => '0'
+            'nomor'        => $nomor_buk,
+            'tgl'          => $jurnal_header->tgl,
+            'jml'          => $jurnal_header->jml,
+            'kdcab'        => '101',
+            'jenis_reff'   => 'BUK',
+            'no_reff'      => $jurnal_header->no_reff,
+            'bayar_kepada' => isset($jurnal_header->bayar_kepada) ? $jurnal_header->bayar_kepada : '',
+            'user_id'      => $jurnal_header->user_id,
+            'ho_valid'     => '',
+            'batal'        => '0'
         ];
 
         $insert_header = $this->accounting_stm->insert('japh', $dataJVheader);
@@ -363,15 +364,16 @@ class Jurnal_payment_petty_cash_model extends BF_Model
         if (!empty($batch_company)) {
             // 3. INSERT japh header into target_db
             $dataJVheader_company = [
-                'nomor'      => $nomor_buk_company,
-                'tgl'        => $jurnal_header->tgl,
-                'jml'        => $jml_company,
-                'kdcab'      => '101',
-                'jenis_reff' => 'BUK',
-                'no_reff'    => $jurnal_header->no_reff,
-                'user_id'    => $jurnal_header->user_id,
-                'ho_valid'   => '',
-                'batal'      => '0'
+                'nomor'        => $nomor_buk_company,
+                'tgl'          => $jurnal_header->tgl,
+                'jml'          => $jml_company,
+                'kdcab'        => '101',
+                'jenis_reff'   => 'BUK',
+                'no_reff'      => $jurnal_header->no_reff,
+                'bayar_kepada' => isset($jurnal_header->bayar_kepada) ? $jurnal_header->bayar_kepada : '',
+                'user_id'      => $jurnal_header->user_id,
+                'ho_valid'     => '',
+                'batal'        => '0'
             ];
 
             $insert_header_company = $target_db->insert('japh', $dataJVheader_company);
@@ -387,15 +389,16 @@ class Jurnal_payment_petty_cash_model extends BF_Model
         if (!empty($batch_stm)) {
             // 5. INSERT japh header into DBACC_STM
             $dataJVheader_stm = [
-                'nomor'      => $nomor_buk_stm,
-                'tgl'        => $jurnal_header->tgl,
-                'jml'        => $jml_stm,
-                'kdcab'      => '101',
-                'jenis_reff' => 'BUK',
-                'no_reff'    => $jurnal_header->no_reff,
-                'user_id'    => $jurnal_header->user_id,
-                'ho_valid'   => '',
-                'batal'      => '0'
+                'nomor'        => $nomor_buk_stm,
+                'tgl'          => $jurnal_header->tgl,
+                'jml'          => $jml_stm,
+                'kdcab'        => '101',
+                'jenis_reff'   => 'BUK',
+                'no_reff'      => $jurnal_header->no_reff,
+                'bayar_kepada' => isset($jurnal_header->bayar_kepada) ? $jurnal_header->bayar_kepada : '',
+                'user_id'      => $jurnal_header->user_id,
+                'ho_valid'     => '',
+                'batal'        => '0'
             ];
 
             $insert_header_stm = $this->accounting_stm->insert('japh', $dataJVheader_stm);
@@ -437,15 +440,16 @@ class Jurnal_payment_petty_cash_model extends BF_Model
 
         // 2. INSERT japh header into resolved DB
         $dataJVheader = [
-            'nomor'      => $nomor_buk,
-            'tgl'        => $jurnal_header->tgl,
-            'jml'        => $jurnal_header->jml,
-            'kdcab'      => '101',
-            'jenis_reff' => 'BUK',
-            'no_reff'    => $jurnal_header->no_reff,
-            'user_id'    => $jurnal_header->user_id,
-            'ho_valid'   => '',
-            'batal'      => '0'
+            'nomor'        => $nomor_buk,
+            'tgl'          => $jurnal_header->tgl,
+            'jml'          => $jurnal_header->jml,
+            'kdcab'        => '101',
+            'jenis_reff'   => 'BUK',
+            'no_reff'      => $jurnal_header->no_reff,
+            'bayar_kepada' => isset($jurnal_header->bayar_kepada) ? $jurnal_header->bayar_kepada : '',
+            'user_id'      => $jurnal_header->user_id,
+            'ho_valid'     => '',
+            'batal'        => '0'
         ];
 
         $insert_header = $db->insert('japh', $dataJVheader);

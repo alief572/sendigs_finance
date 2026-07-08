@@ -159,6 +159,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         // Determine company from first row
         $id_company = $rows[0]->id_company;
+        $nm_company = $rows[0]->nm_company;
 
         // Calculate totals
         $total_debit = 0;
@@ -168,10 +169,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         // Prepare header
         $jurnal_header = (object) [
-            'tgl'      => $rows[0]->tgl_jurnal,
-            'jml'      => $total_debit,
-            'no_reff'  => $no_transaksi,
-            'user_id'  => $this->auth->user_id()
+            'tgl'          => $rows[0]->tgl_jurnal,
+            'jml'          => $total_debit,
+            'no_reff'      => $rows[0]->no_transaksi,
+            'bayar_kepada' => $rows[0]->nm_company,
+            'user_id'      => $this->auth->user_id()
         ];
 
         // --- Detect refill scenario ---
@@ -186,17 +188,17 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         if ($is_refill) {
             // === Refill Posting (single target DB based on company) ===
-            $this->_post_refill($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            $this->_post_refill($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
             return;
         }
 
-        // Branch logic based on id_company (regular expense posting)
-        if ($id_company == '5') {
+        // Branch logic based on nm_company (regular expense posting)
+        if ($nm_company == 'STM') {
             // === STM Internal Posting ===
             $this->_post_stm($jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
-        } elseif ($id_company == '4' || $id_company == '6') {
+        } elseif ($nm_company == 'VUCA' || $nm_company == 'SUSTAIN') {
             // === Inter-Company Posting (VUCA or SUSTAIN) ===
-            $this->_post_intercompany($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            $this->_post_intercompany($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
         } else {
             echo json_encode(['status' => 0, 'msg' => 'Company tidak dikenali untuk posting jurnal']);
             return;
@@ -234,19 +236,19 @@ class Jurnal_payment_petty_cash extends Admin_Controller
      * @param string $no_transaksi Transaction number
      * @param string $jenis_transaksi Transaction type
      */
-    private function _post_refill($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
+    private function _post_refill($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
     {
-        // Determine target database based on id_company
-        switch ($id_company) {
-            case '5':
+        // Determine target database based on nm_company
+        switch ($nm_company) {
+            case 'STM':
                 $target_db = 'accounting_stm';
                 $company_label = 'STM';
                 break;
-            case '4':
+            case 'VUCA':
                 $target_db = 'accounting_vuca';
                 $company_label = 'VUCA';
                 break;
-            case '6':
+            case 'SUSTAIN':
                 $target_db = 'accounting_sustain';
                 $company_label = 'SUSTAIN';
                 break;
@@ -377,11 +379,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
      * @param string $no_transaksi Transaction number
      * @param string $jenis_transaksi Transaction type
      */
-    private function _post_intercompany($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
+    private function _post_intercompany($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
     {
         // Determine target DB name for company side
-        $db_company = ($id_company == '4') ? 'accounting_vuca' : 'accounting_sustain';
-        $company_label = ($id_company == '4') ? 'VUCA' : 'SUSTAIN';
+        $db_company = ($nm_company == 'VUCA') ? 'accounting_vuca' : 'accounting_sustain';
+        $company_label = ($nm_company == 'VUCA') ? 'VUCA' : 'SUSTAIN';
 
         $this->db->trans_begin();
         $this->Jurnal_payment_petty_cash_model->begin_transaction('accounting_stm');
@@ -409,7 +411,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         // Post to both databases (company + STM)
         $post_result = $this->Jurnal_payment_petty_cash_model->post_jurnal_intercompany(
-            $id_company,
+            $nm_company,
             $jurnal_header,
             $rows,
             $nomor_buk_company,
