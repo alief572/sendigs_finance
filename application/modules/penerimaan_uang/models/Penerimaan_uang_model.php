@@ -61,6 +61,10 @@ class Penerimaan_uang_model extends BF_Model
         $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
         $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
         $this->db->where('s.jenis_alokasi', 1);
+
+        // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
+        $this->db->where('YEAR(a.tanggal_transaksi) >=', 2025);
+
         if (!empty($bank)) {
             $this->db->where('a.tipe_bank', $bank);
         }
