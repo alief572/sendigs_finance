@@ -551,7 +551,7 @@ class Request_payment_model extends BF_Model
         // Kategori badge color mapping
         $badge_colors = [
             'Petty Cash'       => 'badge-primary',
-            'Petty Cash Hutang'=> 'badge-primary',
+            'Petty Cash Hutang' => 'badge-primary',
             'Refill Pettycash' => 'badge-primary',
             'Cash'             => 'badge-primary',
             'Kasbon'           => 'badge-warning',
@@ -593,6 +593,20 @@ class Request_payment_model extends BF_Model
                 $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
                 if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
                     $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+            // Print button untuk RPC (Petty Cash - pelaporan)
+            if (strpos($item->no_dokumen, 'RPC-') === 0) {
+                $get_rpc_data = $this->db->select('id')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                if ($get_rpc_data) {
+                    $btn_print = ' <a href="' . base_url('expense_petty_cash/print_pelaporan/' . $get_rpc_data->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+            // Print button untuk PHP (Petty Cash Hutang)
+            if ($item->kategori == 'Petty Cash Hutang' || strpos($item->no_dokumen, 'PHP-') === 0) {
+                $get_php_data = $this->db->select('id')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                if ($get_php_data) {
+                    $btn_print = ' <a href="' . base_url('petty_cash_vuca_sustain/print_pdf/' . $get_php_data->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 
@@ -684,7 +698,7 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'refill_pettycash') {
                 $display_kategori = 'Refill Pettycash';
             }
-            
+
             $badge_class = isset($badge_colors[$display_kategori]) ? $badge_colors[$display_kategori] : (isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default');
             $kategori_html = '<span class="badge ' . $badge_class . '">' . $display_kategori . '</span>';
 
