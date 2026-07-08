@@ -191,7 +191,7 @@
 
                         $debit = 0;
                         $kredit = 0;
-                        if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02' || $item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
+                        if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
                             $debit = $data_penerimaan['pph23'];
                         } else {
                             $kredit = $data_penerimaan['pph23'];
