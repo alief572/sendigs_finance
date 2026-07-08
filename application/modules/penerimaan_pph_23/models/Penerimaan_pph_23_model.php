@@ -148,7 +148,7 @@ class Penerimaan_pph_23_model extends BF_Model
             $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, $penawaran_non_kons_ids);
         }
 
-        $apply_filters = function($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
+        $apply_filters = function ($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
             if (!empty($filter_year)) {
                 $db->where('YEAR(b.tanggal_invoice)', $filter_year);
             }
@@ -201,7 +201,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $records_filtered = $this->db->get()->row()->total;
 
         // Main query with limit
-        $this->db->select('a.id, a.id_alokasi, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.id_penawaran');
+        $this->db->select('a.id, a.id_alokasi, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.id_penawaran, b.pph_jurnal');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
@@ -324,12 +324,16 @@ class Penerimaan_pph_23_model extends BF_Model
                 $action = '<a href="' . base_url('penerimaan_pph_23/add/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Setor PPH 23"><i class="fa fa-money"></i></a>';
             }
 
-            $nilai_pph = $item['pph23'];
-            if ($nilai_pph == 0) {
-                if ($item['tipe_invoice'] == '1') {
-                    $nilai_pph = $item['total_nominal'] * 0.5 / 100;
-                } else {
-                    $nilai_pph = $item['total_nominal'] * 2 / 100;
+            $nilai_pph = $item['pph_jurnal'];
+            if (empty($nilai_pph) || $nilai_pph == 0) {
+                // Fallback jika pph_jurnal kosong (data lama)
+                $nilai_pph = $item['pph23'];
+                if (empty($nilai_pph) || $nilai_pph == 0) {
+                    if ($item['tipe_invoice'] == '1') {
+                        $nilai_pph = $item['total_nominal'] * 0.5 / 100;
+                    } else {
+                        $nilai_pph = $item['total_nominal'] * 2 / 100;
+                    }
                 }
             }
 
@@ -347,14 +351,14 @@ class Penerimaan_pph_23_model extends BF_Model
             if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_spk_penawaran']) && isset($spk_penawaran_map[$item['id_spk_penawaran']])) {
                 $nm_company = $spk_penawaran_map[$item['id_spk_penawaran']]['nm_company'] ?? '-';
             }
-            
+
             // Jika tidak ada juga, fallback ke kons_tr_penawaran_non_konsultasi
             if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_penawaran']) && isset($penawaran_map[$item['id_penawaran']])) {
                 $nm_company = $penawaran_map[$item['id_penawaran']]['nm_company'] ?? '-';
             }
 
-            if(empty($item['id_alokasi'])) {
-                if(!empty($item['id_spk_penawaran'])) {
+            if (empty($item['id_alokasi'])) {
+                if (!empty($item['id_spk_penawaran'])) {
                     $id_plan = $item['id_detail_plan_tagih'];
                     $desc_payment = '-';
                     $spk_id = null;
