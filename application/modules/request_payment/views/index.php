@@ -128,6 +128,7 @@ $default_date_to   = date('Y-m-d');
 							<option value="Expense">Expense</option>
 							<option value="Petty Cash">Petty Cash</option>
 							<option value="Petty Cash Hutang">Petty Cash Hutang</option>
+							<option value="Refill Pettycash">Refill Pettycash</option>
 							<option value="Non-PO">Non-PO</option>
 							<option value="Purchase Invoice">Purchase Invoice</option>
 							<option value="Direct Payment">Direct Payment</option>

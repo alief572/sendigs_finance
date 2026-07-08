@@ -503,7 +503,11 @@ class Request_payment_model extends BF_Model
 
         // Apply kategori filter if non-null
         if (!empty($kategori)) {
-            $this->db->where('a.kategori', $kategori);
+            if ($kategori === 'Refill Pettycash') {
+                $this->db->where('a.kategori', 'refill_pettycash');
+            } else {
+                $this->db->where('a.kategori', $kategori);
+            }
         }
 
         // Apply company_id filter if non-null
@@ -546,6 +550,9 @@ class Request_payment_model extends BF_Model
 
         // Kategori badge color mapping
         $badge_colors = [
+            'Petty Cash'       => 'badge-primary',
+            'Petty Cash Hutang'=> 'badge-primary',
+            'Refill Pettycash' => 'badge-primary',
             'Cash'             => 'badge-primary',
             'Kasbon'           => 'badge-warning',
             'Transport'        => 'badge-info',
@@ -598,8 +605,8 @@ class Request_payment_model extends BF_Model
                 }
             }
 
-            // Fallback untuk Petty Cash Hutang: ambil company dari pencatatan petty cash
-            if (empty($company_display) && $item->kategori == 'Petty Cash Hutang') {
+            // Fallback untuk Petty Cash Hutang dan Petty Cash biasa: ambil company dari pencatatan petty cash
+            if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
                 // Cek dulu di tr_petty_cash_vuca_sustain (untuk PHP-xxxx)
                 $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
                 if (!empty($get_petty_cash)) {
@@ -607,10 +614,12 @@ class Request_payment_model extends BF_Model
                 }
 
                 // Fallback ke tr_pelaporan_petty_cash (untuk RPC-xxxx)
-                if (empty($company_display)) {
-                    $get_pelaporan = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
-                    if (!empty($get_pelaporan)) {
-                        $company_display = $get_pelaporan->company;
+                if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
+                    $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                    if (!empty($get_rpc) && !empty($get_rpc->company)) {
+                        $company_display = $get_rpc->company;
+                    } else {
+                        $company_display = 'STM';
                     }
                 }
             }
@@ -670,8 +679,14 @@ class Request_payment_model extends BF_Model
             $no_dokumen_html = '<span>' . $item->no_dokumen . '</span><br><small class="text-muted">' . $tanggal_formatted . '</small>';
 
             // Kategori badge
-            $badge_class = isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default';
-            $kategori_html = '<span class="badge ' . $badge_class . '">' . $item->kategori . '</span>';
+            // Map refill_pettycash to Refill Pettycash for display
+            $display_kategori = $item->kategori;
+            if ($item->kategori == 'refill_pettycash') {
+                $display_kategori = 'Refill Pettycash';
+            }
+            
+            $badge_class = isset($badge_colors[$display_kategori]) ? $badge_colors[$display_kategori] : (isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default');
+            $kategori_html = '<span class="badge ' . $badge_class . '">' . $display_kategori . '</span>';
 
             // Nilai (right-aligned formatted)
             $nilai = (!empty($item->nilai_pengajuan)) ? number_format($item->nilai_pengajuan, 0, ',', '.') : '0';
