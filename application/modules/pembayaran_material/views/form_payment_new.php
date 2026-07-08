@@ -1,25 +1,43 @@
 <?php
 $hide_table_jurnal_petty_cash = 'd-none';
-// if (!empty($results['jurnal_refill_petty_cash'])) {
-// 	$hide_table_jurnal_petty_cash = '';
-// }
+$is_refill_pettycash = false;
+foreach ($results['result_payment'] as $_item_check) {
+	if (strpos($_item_check->no_doc, 'RPC-') === 0 || $_item_check->tipe == 'refill_pettycash') {
+		$hide_table_jurnal_petty_cash = '';
+		$is_refill_pettycash = true;
+		break;
+	}
+}
 
 // Cek apakah semua payment bertipe petty_cash_hutang → hide jurnal atas
 $is_all_petty_cash_hutang = true;
 foreach ($results['result_payment'] as $_item_check) {
-	if ($_item_check->tipe != 'petty_cash_hutang' && strpos($_item_check->no_doc, 'RPC') !== 0) {
+	if ($_item_check->tipe != 'petty_cash_hutang') {
 		$is_all_petty_cash_hutang = false;
 		break;
 	}
 }
-$hide_table_jurnal_utama = $is_all_petty_cash_hutang ? 'd-none' : '';
+$hide_table_jurnal_utama = ($is_all_petty_cash_hutang || $is_refill_pettycash) ? 'd-none' : '';
 
 $kode_supplier = [];
 $nm_supplier = [];
-
+$company_hutang = '';
+$total_hutang = 0;
+$list_coa = $this->db->query("SELECT no_perkiraan, nama FROM " . DBACC . ".coa_master WHERE level = 5 ORDER BY no_perkiraan ASC")->result();
+$opt_coa = '<option value="">- Select COA -</option>';
+foreach ($list_coa as $c) {
+    $opt_coa .= '<option value="' . $c->no_perkiraan . '">' . $c->no_perkiraan . ' - ' . $c->nama . '</option>';
+}
 
 
 foreach ($results['result_payment'] as $item) {
+	if ($item->tipe == 'petty_cash_hutang') {
+		$total_hutang += $item->jumlah;
+		$get_company = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc])->row();
+		if (!empty($get_company)) {
+			$company_hutang = strtoupper($get_company->company);
+		}
+	}
 
 	$get_rec_invoice = $this->db->get_where('tr_invoice_po', ['id' => $item->no_doc])->row();
 
@@ -394,6 +412,182 @@ foreach ($results['result_payment'] as $item) {
 
 			<br><br>
 
+			<div class="col-md-12 <?= $is_all_petty_cash_hutang ? '' : 'd-none' ?>">
+				<h3>Simulasi Jurnal Payment Hutang <?= $company_hutang ?></h3>
+				<table class="table table-striped">
+					<thead class="bg-primary">
+						<tr>
+							<th class="text-center">Tanggal Jurnal</th>
+							<th class="text-center">COA</th>
+							<th class="text-center">Company</th>
+							<th class="text-center">Nama Account</th>
+							<th class="text-center">Keterangan</th>
+							<th class="text-center">Debit</th>
+							<th class="text-center">Kredit</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_jurnal_hutang_1">
+						<tr>
+							<td class="text-center">
+								<?= date('d F Y') ?>
+								<input type="hidden" name="jurnal_hutang_1[1][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
+							</td>
+							<td class="text-center">
+								2203-01-01
+								<input type="hidden" name="jurnal_hutang_1[1][coa]" value="2203-01-01">
+							</td>
+							<td class="text-center">
+								<?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_1[1][company]" value="<?= $company_hutang ?>">
+							</td>
+							<td class="text-center">
+								Hutang Hubungan Istimewa
+								<input type="hidden" name="jurnal_hutang_1[1][nama_account]" value="Hutang Hubungan Istimewa">
+							</td>
+							<td class="text-center">
+								Hutang ke STM
+								<input type="hidden" name="jurnal_hutang_1[1][keterangan]" value="Hutang ke STM">
+							</td>
+							<td class="text-right">
+								<?= number_format($total_hutang) ?>
+								<input type="hidden" name="jurnal_hutang_1[1][debit]" value="<?= $total_hutang ?>">
+							</td>
+							<td class="text-right">
+								0
+								<input type="hidden" name="jurnal_hutang_1[1][kredit]" value="0">
+							</td>
+						</tr>
+						<tr>
+							<td class="text-center">
+								<?= date('d F Y') ?>
+								<input type="hidden" name="jurnal_hutang_1[2][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
+							</td>
+							<td class="text-center">
+								1101-02-09
+								<input type="hidden" name="jurnal_hutang_1[2][coa]" value="1101-02-09">
+							</td>
+							<td class="text-center">
+								<?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_1[2][company]" value="<?= $company_hutang ?>">
+							</td>
+							<td class="text-center">
+								Bank <?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_1[2][nama_account]" value="Bank <?= $company_hutang ?>">
+							</td>
+							<td class="text-center">
+								Bank <?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_1[2][keterangan]" value="Bank <?= $company_hutang ?>">
+							</td>
+							<td class="text-right">
+								0
+								<input type="hidden" name="jurnal_hutang_1[2][debit]" value="0">
+							</td>
+							<td class="text-right">
+								<?= number_format($total_hutang) ?>
+								<input type="hidden" name="jurnal_hutang_1[2][kredit]" value="<?= $total_hutang ?>">
+							</td>
+						</tr>
+					</tbody>
+					<tfoot class="bg-primary">
+						<tr>
+							<th colspan="5" class="text-center">Balancing</th>
+							<th class="text-right"><?= number_format($total_hutang) ?></th>
+							<th class="text-right"><?= number_format($total_hutang) ?></th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+			
+			<br><br>
+
+			<div class="col-md-12 <?= $is_all_petty_cash_hutang ? '' : 'd-none' ?>">
+				<h3>STM Terima Payment <?= $company_hutang ?></h3>
+				<table class="table table-striped">
+					<thead class="bg-primary">
+						<tr>
+							<th class="text-center">Tanggal Jurnal</th>
+							<th class="text-center">COA</th>
+							<th class="text-center">Company</th>
+							<th class="text-center">Nama Account</th>
+							<th class="text-center">Keterangan</th>
+							<th class="text-center">Debit</th>
+							<th class="text-center">Kredit</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_jurnal_hutang_2">
+						<tr>
+							<td class="text-center">
+								<?= date('d F Y') ?>
+								<input type="hidden" name="jurnal_hutang_2[1][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
+							</td>
+							<td class="text-center">
+								1101-02-01
+								<input type="hidden" name="jurnal_hutang_2[1][coa]" value="1101-02-01">
+							</td>
+							<td class="text-center">
+								STM
+								<input type="hidden" name="jurnal_hutang_2[1][company]" value="STM">
+							</td>
+							<td class="text-center">
+								Bank STM
+								<input type="hidden" name="jurnal_hutang_2[1][nama_account]" value="Bank STM">
+							</td>
+							<td class="text-center">
+								Bank STM
+								<input type="hidden" name="jurnal_hutang_2[1][keterangan]" value="Bank STM">
+							</td>
+							<td class="text-right">
+								<?= number_format($total_hutang) ?>
+								<input type="hidden" name="jurnal_hutang_2[1][debit]" value="<?= $total_hutang ?>">
+							</td>
+							<td class="text-right">
+								0
+								<input type="hidden" name="jurnal_hutang_2[1][kredit]" value="0">
+							</td>
+						</tr>
+						<tr>
+							<td class="text-center">
+								<?= date('d F Y') ?>
+								<input type="hidden" name="jurnal_hutang_2[2][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
+							</td>
+							<td class="text-center">
+								1103-01-01
+								<input type="hidden" name="jurnal_hutang_2[2][coa]" value="1103-01-01">
+							</td>
+							<td class="text-center">
+								STM
+								<input type="hidden" name="jurnal_hutang_2[2][company]" value="STM">
+							</td>
+							<td class="text-center">
+								Piutang Hubungan Istimewa
+								<input type="hidden" name="jurnal_hutang_2[2][nama_account]" value="Piutang Hubungan Istimewa">
+							</td>
+							<td class="text-center">
+								Piutang <?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_2[2][keterangan]" value="Piutang <?= $company_hutang ?>">
+							</td>
+							<td class="text-right">
+								0
+								<input type="hidden" name="jurnal_hutang_2[2][debit]" value="0">
+							</td>
+							<td class="text-right">
+								<?= number_format($total_hutang) ?>
+								<input type="hidden" name="jurnal_hutang_2[2][kredit]" value="<?= $total_hutang ?>">
+							</td>
+						</tr>
+					</tbody>
+					<tfoot class="bg-primary">
+						<tr>
+							<th colspan="5" class="text-center">Balancing</th>
+							<th class="text-right"><?= number_format($total_hutang) ?></th>
+							<th class="text-right"><?= number_format($total_hutang) ?></th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+
+			<br><br>
+
 			<div class="col-md-12 <?= $hide_table_jurnal_petty_cash ?>">
 				<h3>Jurnal Refill Pettycash</h3>
 				<table class="table table-striped">
@@ -509,6 +703,7 @@ foreach ($results['result_payment'] as $item) {
 		$('.bank').chosen();
 		$('.mata_uang').chosen();
 		$('.pph').chosen();
+		$('.coa_dropdown').chosen();
 
 		$('.auto_num').autoNumeric();
 
@@ -641,8 +836,8 @@ foreach ($results['result_payment'] as $item) {
 				// Update flag global
 				is_all_petty_cash_hutang = result.is_all_petty_cash_hutang;
 
-				// Hide jurnal utama jika semua pembayaran bertipe petty_cash_hutang
-				if (result.is_all_petty_cash_hutang) {
+				// Hide jurnal utama jika semua pembayaran bertipe petty_cash_hutang atau refill_pettycash
+				if (result.is_all_petty_cash_hutang || result.is_refill_pettycash) {
 					$('.wrap_jurnal_utama').addClass('d-none');
 				} else {
 					$('.wrap_jurnal_utama').removeClass('d-none');

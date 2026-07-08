@@ -108,13 +108,41 @@ class Pembayaran_material_model extends BF_Model
 				'id_payment' => $item->id
 			])->num_rows() > 0;
 
+			$requestor = $item->requestor;
+			
+			if (strpos($item->no_doc, 'PHP') !== false) {
+				$get_vuca = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc])->row();
+				if (!empty($get_vuca)) {
+					$get_pencatatan = $this->db->select('a.request_by')
+						->from('tr_expense_petty_cash a')
+						->join('tr_pelaporan_petty_cash_detail b', 'b.pencatatan_id = a.id')
+						->where('b.pelaporan_id', $get_vuca->pelaporan_id)
+						->get()
+						->row();
+					if (!empty($get_pencatatan) && !empty($get_pencatatan->request_by)) {
+						$requestor = $get_pencatatan->request_by;
+					}
+				}
+			} elseif (strpos($item->no_doc, 'RPC') !== false) {
+				$get_pencatatan = $this->db->select('a.request_by')
+					->from('tr_expense_petty_cash a')
+					->join('tr_pelaporan_petty_cash_detail b', 'b.pencatatan_id = a.id')
+					->join('tr_pelaporan_petty_cash c', 'c.id = b.pelaporan_id')
+					->where('c.no_pelaporan', $item->no_doc)
+					->get()
+					->row();
+				if (!empty($get_pencatatan) && !empty($get_pencatatan->request_by)) {
+					$requestor = $get_pencatatan->request_by;
+				}
+			}
+
 			$hasil[] = [
 				'no' => $no,
 				'no_dokumen' => $item->no_doc,
 				'tgl' => date('d F Y', strtotime($item->created_on)),
 				'keperluan' => $item->keperluan,
 				'total_invoice' => number_format($item->jumlah),
-				'requestor' => $item->requestor,
+				'requestor' => $requestor,
 				'currency' => !empty($item->currency) ? $item->currency : 'IDR',
 				'option' => '<input type="checkbox" class="check_payment" value="' . $item->id . '" ' . ($is_checked ? 'checked' : '') . '>'
 			];
@@ -164,8 +192,16 @@ class Pembayaran_material_model extends BF_Model
 		// Cek apakah semua pembayaran bertipe petty_cash_hutang
 		$is_all_petty_cash_hutang = true;
 		foreach ($get_payment as $_check_item) {
-			if ($_check_item->tipe != 'petty_cash_hutang' && strpos($_check_item->no_doc, 'RPC') !== 0) {
+			if ($_check_item->tipe != 'petty_cash_hutang') {
 				$is_all_petty_cash_hutang = false;
+				break;
+			}
+		}
+
+		$is_refill_pettycash = false;
+		foreach ($get_payment as $_check_item) {
+			if (strpos($_check_item->no_doc, 'RPC') === 0 || $_check_item->tipe == 'refill_pettycash') {
+				$is_refill_pettycash = true;
 				break;
 			}
 		}
@@ -180,6 +216,7 @@ class Pembayaran_material_model extends BF_Model
 
 		$coa_bank = '';
 		$nm_bank = '';
+		$nm_coa_bank = '';
 		if (!empty($bank)) {
 			$this->db->select('a.rekening, a.nama, a.coa_bank, b.nama_bank');
 			$this->db->from('ms_bank a');
@@ -189,6 +226,13 @@ class Pembayaran_material_model extends BF_Model
 			if (!empty($get_bank_detail)) {
 				$coa_bank = $get_bank_detail->coa_bank;
 				$nm_bank = $get_bank_detail->rekening . ' - ' . $get_bank_detail->nama_bank . ' - ' . $get_bank_detail->nama;
+				
+				$get_coa_bank = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_bank)->get()->row();
+				if (!empty($get_coa_bank)) {
+					$nm_coa_bank = $get_coa_bank->nama;
+				} else {
+					$nm_coa_bank = $get_bank_detail->nama_bank;
+				}
 			}
 		}
 
@@ -676,7 +720,7 @@ class Pembayaran_material_model extends BF_Model
 				}
 
 				if ($bank_charge > 0 && !empty($coa_bank)) {
-					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_bank, $nm_bank, 0, $bank_charge);
+					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
 				}
 			} else if ($item_payment->tipe == 'expense') {
 				$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc])->row();
@@ -817,7 +861,7 @@ class Pembayaran_material_model extends BF_Model
 
 						if ($bank_charge > 0 && !empty($coa_bank)) {
 							$no_jurnal++;
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_bank, $nm_bank, 0, $bank_charge);
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
 						}
 					}
 				}
@@ -902,93 +946,97 @@ class Pembayaran_material_model extends BF_Model
 				endforeach;
 
 				if ($bank_charge > 0 && !empty($coa_bank)) {
-					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa_bank, $nm_bank, $nm_bank, 0, $bank_charge);
+					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
 				}
-			} else if ($item_payment->tipe == 'petty_cash_hutang' || strpos($item_payment->no_doc, 'RPC') === 0) {
-				$get_petty_cash = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc])->row();
+			} else if ($item_payment->tipe == 'petty_cash_hutang' || $item_payment->tipe == 'refill_pettycash' || strpos($item_payment->no_doc, 'RPC') === 0) {
+				$nm_company = '';
+				$pelaporan_id = '';
+				
+				if (strpos($item_payment->no_doc, 'PHP') === 0) {
+					$get_petty_cash = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc])->row();
+					if (!empty($get_petty_cash)) {
+						$nm_company = $get_petty_cash->company;
+						$pelaporan_id = $get_petty_cash->pelaporan_id;
+					}
 
-				if (!empty($get_petty_cash)) {
+					if (!empty($pelaporan_id)) {
+						$id_company = '';
+						$id_divisi = '';
+						$nm_divisi = '';
+
+						$get_company = $this->hris->get_where('companies', ['name' => $nm_company])->row();
+						if (!empty($get_company)) {
+							$id_company = $get_company->id;
+						}
+
+						$no_jurnal = 0;
+						$jumlah = $item_payment->jumlah;
+
+						// Ambil detail expenses dari pencatatan petty cash
+						$this->db->select('d.coa_code, d.pengeluaran, d.total, c.nama as coa_nama');
+						$this->db->from('tr_pelaporan_petty_cash_detail pd');
+						$this->db->join('tr_expense_petty_cash_detail d', 'd.pencatatan_id = pd.pencatatan_id');
+						$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = d.coa_code', 'left');
+						$this->db->where('pd.pelaporan_id', $pelaporan_id);
+						$expense_details = $this->db->get()->result();
+
+						// 1. Jurnal Expense (Debit)
+						foreach ($expense_details as $detail) {
+							$no_jurnal++;
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $detail->coa_code, $detail->coa_nama, $detail->pengeluaran, $detail->total, 0);
+						}
+
+						// 2. Jurnal Kas Kecil (Kredit)
+						$no_jurnal++;
+						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Kas Kecil', 0, $jumlah);
+
+						if ($bank_charge > 0) {
+							$no_jurnal++;
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $bank_charge, 0);
+						}
+						if ($nilai_ppn > 0) {
+							$no_jurnal++;
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1106-01-06', 'PPN', 'PPN', $nilai_ppn, 0);
+						}
+						if ($nilai_pph > 0) {
+							$no_jurnal++;
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '2104-01-02', 'PPh', 'PPh', 0, $nilai_pph);
+						}
+					}
+				} else if (strpos($item_payment->no_doc, 'RPC') === 0 || $item_payment->tipe == 'refill_pettycash') {
+					$get_pelaporan = $this->db->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item_payment->no_doc])->row();
+					if (!empty($get_pelaporan)) {
+						$nm_company = $get_pelaporan->company;
+						$pelaporan_id = $get_pelaporan->id;
+					}
+
 					$id_company = '';
-					$nm_company = $get_petty_cash->company;
 					$id_divisi = '';
 					$nm_divisi = '';
 
-					$get_company = $this->hris->get_where('companies', ['name' => $nm_company])->row();
-					if (!empty($get_company)) {
-						$id_company = $get_company->id;
+					if (!empty($nm_company)) {
+						$get_company = $this->hris->get_where('companies', ['name' => $nm_company])->row();
+						if (!empty($get_company)) {
+							$id_company = $get_company->id;
+						}
 					}
-
-					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
-					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
-
-					$no_jurnal = 0;
-					$jumlah = $item_payment->jumlah;
-
-					// Ambil detail expenses dari pencatatan petty cash
-					$this->db->select('d.coa_code, d.pengeluaran, d.total, c.nama as coa_nama');
-					$this->db->from('tr_pelaporan_petty_cash_detail pd');
-					$this->db->join('tr_expense_petty_cash_detail d', 'd.pencatatan_id = pd.pencatatan_id');
-					$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = d.coa_code', 'left');
-					$this->db->where('pd.pelaporan_id', $get_petty_cash->pelaporan_id);
-					$expense_details = $this->db->get()->result();
-
-					// 1. Jurnal Expense (Debit)
-					foreach ($expense_details as $detail) {
-						$no_jurnal++;
-						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $detail->coa_code, $detail->coa_nama, $detail->pengeluaran, $detail->total, 0);
-					}
-
-					// 2. Jurnal Kas Kecil (Kredit)
-					// Kas Kecil COA is 1101-01-02
-					$no_jurnal++;
-					$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Kas Kecil', 0, $jumlah);
-
-					// Note: Bank Charge and PPN/PPh usually don't apply to petty cash expense journals, but we leave the logic if they are entered in the UI.
-					if ($bank_charge > 0) {
-						$no_jurnal++;
-						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $bank_charge, 0);
-					}
-					if ($nilai_ppn > 0) {
-						$no_jurnal++;
-						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1106-01-06', 'PPN', 'PPN', $nilai_ppn, 0);
-					}
-					if ($nilai_pph > 0) {
-						$no_jurnal++;
-						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '2104-01-02', 'PPh', 'PPh', 0, $nilai_pph);
-					}
-
-					// Since the refill part generates the Bank credit in a separate table, we don't need to credit the Bank in this table.
-					// But if coa_bank is somehow processed, we shouldn't credit it here to avoid double crediting (it's credited in Jurnal Refill).
-					// Actually, wait, the Jurnal table requires balancing. 
-					// Expense (Debit) = 500k
-					// Kas Kecil (Kredit) = 500k. It's balanced!
-
-					// 3. Refill STM (Jurnal Refill Petty Cash)
-					// Company for Refill is always STM
-					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
-					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
-
-					$no_jurnal_refill = 0;
-					$no_jurnal_refill++;
-					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Refill Kas Kecil', $jumlah, 0);
-					$ttl_debit_refill += $jumlah;
-					$no_jurnal_refill++;
-					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, (!empty($coa_bank) ? $coa_bank : '1101-02-09'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), 0, $jumlah);
-					$ttl_kredit_refill += $jumlah;
-				} else if (strpos($item_payment->no_doc, 'RPC') === 0) {
-					$jumlah = $item_payment->jumlah;
-					$id_divisi = '';
-					$nm_divisi = '';
 
 					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
 					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
 
 					$no_jurnal_refill = 0;
+					$jumlah = $item_payment->jumlah;
+
+					// Expense details are omitted for RPC as per user request to only show Refill STM journals
+
+					// 3. Refill Kas Kecil (Debit)
 					$no_jurnal_refill++;
 					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Refill Kas Kecil', $jumlah, 0);
 					$ttl_debit_refill += $jumlah;
+					
+					// 4. Bank (Kredit)
 					$no_jurnal_refill++;
-					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, (!empty($coa_bank) ? $coa_bank : '1101-02-09'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), 0, $jumlah);
+					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, (!empty($coa_bank) ? $coa_bank : '1101-02-09'), (!empty($nm_coa_bank) ? $nm_coa_bank : 'Bank STM'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), 0, $jumlah);
 					$ttl_kredit_refill += $jumlah;
 				}
 			} else {
@@ -1013,7 +1061,8 @@ class Pembayaran_material_model extends BF_Model
 			'ttl_kredit' => $ttl_kredit,
 			'ttl_debit_refill' => $ttl_debit_refill,
 			'ttl_kredit_refill' => $ttl_kredit_refill,
-			'is_all_petty_cash_hutang' => $is_all_petty_cash_hutang
+			'is_all_petty_cash_hutang' => $is_all_petty_cash_hutang,
+			'is_refill_pettycash' => $is_refill_pettycash
 		];
 
 		echo json_encode($response);
