@@ -36,7 +36,7 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
-        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran');
+        $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.pph_jurnal');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
@@ -71,7 +71,12 @@ class Penerimaan_pph_23 extends Admin_Controller
             }
         }
 
-        if ($get_data_penerimaan['pph23'] == 0) {
+        // Selalu prioritaskan nilai PPh dari pph_jurnal di tr_invoicing
+        $pph_jurnal = isset($get_data_penerimaan['pph_jurnal']) ? (float) $get_data_penerimaan['pph_jurnal'] : 0;
+        if ($pph_jurnal > 0) {
+            $get_data_penerimaan['pph23'] = $pph_jurnal;
+        } else if ($get_data_penerimaan['pph23'] == 0) {
+            // Fallback untuk data lama yang pph_jurnal kosong
             if ($get_data_penerimaan['tipe_invoice'] == '1') {
                 $get_data_penerimaan['pph23'] = $get_data_penerimaan['total_nominal'] * 0.5 / 100;
             } else {

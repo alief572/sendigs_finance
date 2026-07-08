@@ -159,6 +159,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         // Determine company from first row
         $id_company = $rows[0]->id_company;
+        $nm_company = $rows[0]->nm_company;
 
         // Calculate totals
         $total_debit = 0;
@@ -186,15 +187,15 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         if ($is_refill) {
             // === Refill Posting (single target DB based on company) ===
-            $this->_post_refill($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            $this->_post_refill($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
             return;
         }
 
         // Branch logic based on id_company (regular expense posting)
-        if ($id_company == '5') {
+        if ($nm_company == 'STM') {
             // === STM Internal Posting ===
             $this->_post_stm($jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
-        } elseif ($id_company == '4' || $id_company == '6') {
+        } elseif ($nm_company == 'VUCA' || $nm_company == 'SUSTAIN') {
             // === Inter-Company Posting (VUCA or SUSTAIN) ===
             $this->_post_intercompany($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
         } else {
@@ -234,19 +235,19 @@ class Jurnal_payment_petty_cash extends Admin_Controller
      * @param string $no_transaksi Transaction number
      * @param string $jenis_transaksi Transaction type
      */
-    private function _post_refill($id_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
+    private function _post_refill($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
     {
-        // Determine target database based on id_company
-        switch ($id_company) {
-            case '5':
+        // Determine target database based on nm_company
+        switch ($nm_company) {
+            case 'STM':
                 $target_db = 'accounting_stm';
                 $company_label = 'STM';
                 break;
-            case '4':
+            case 'VUCA':
                 $target_db = 'accounting_vuca';
                 $company_label = 'VUCA';
                 break;
-            case '6':
+            case 'SUSTAIN':
                 $target_db = 'accounting_sustain';
                 $company_label = 'SUSTAIN';
                 break;
