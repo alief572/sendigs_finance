@@ -149,6 +149,9 @@ class Penerimaan_pph_23_model extends BF_Model
         }
 
         $apply_filters = function ($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
+            // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
+            $db->where('YEAR(b.tanggal_invoice) >=', 2025);
+
             if (!empty($filter_year)) {
                 $db->where('YEAR(b.tanggal_invoice)', $filter_year);
             }
