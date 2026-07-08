@@ -2783,9 +2783,20 @@ class Request_payment extends Admin_Controller
 					}
 				}
 
-				// Petty Cash Hutang: data sudah ada di request_payment, update status saja
-				if ($item->tipe == 'Petty Cash Hutang') {
-					$this->db->update('request_payment', ['status' => 2], ['no_doc' => $item->no_doc, 'tipe' => 'petty_cash_hutang']);
+				// Data yang sudah ada di request_payment, update status saja
+				$tipe_lower = strtolower($item->tipe);
+				if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang' || $tipe_lower == 'petty cash' || $tipe_lower == 'petty_cash' || $tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
+					$tipe_update = $item->tipe;
+					if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang') {
+						$tipe_update = 'petty_cash_hutang';
+					} else if ($tipe_lower == 'petty cash' || $tipe_lower == 'petty_cash') {
+						$tipe_update = 'petty_cash';
+					} else if ($tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
+						$tipe_update = 'refill_pettycash';
+					}
+					
+					// Ensure we also update the tipe in request_payment to be consistent
+					$this->db->update('request_payment', ['status' => 2, 'tipe' => $tipe_update], ['no_doc' => $item->no_doc]);
 				}
 			}
 		}

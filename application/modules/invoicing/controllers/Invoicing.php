@@ -908,6 +908,15 @@ class Invoicing extends Admin_Controller
     {
         $post = $this->input->post();
 
+        // Validasi duplikat no_invoice (per company Sentral)
+        if ($this->Invoicing_model->is_no_invoice_exists($post['nomor_invoice'], '0')) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'No. Invoice "' . $post['nomor_invoice'] . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
+            ]);
+            return;
+        }
+
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
 
         $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_actual_plan_tagih->id_spk_penawaran])->row();
@@ -1038,6 +1047,15 @@ class Invoicing extends Admin_Controller
     public function save_invoice_vuca()
     {
         $post = $this->input->post();
+
+        // Validasi duplikat no_invoice (per company VUCA)
+        if ($this->Invoicing_model->is_no_invoice_exists($post['nomor_invoice'], '1')) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'No. Invoice "' . $post['nomor_invoice'] . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
+            ]);
+            return;
+        }
 
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
 
@@ -1868,6 +1886,16 @@ class Invoicing extends Admin_Controller
         $this->auth->restrict($this->addPermission);
 
         $id_penawaran = $this->input->post('id_penawaran', true);
+
+        // Validasi duplikat no_invoice (per company Sentral)
+        $nomor_invoice = $this->input->post('nomor_invoice', true);
+        if ($this->Invoicing_model->is_no_invoice_exists($nomor_invoice, '0')) {
+            echo json_encode([
+                'status' => 0,
+                'msg' => 'No. Invoice "' . $nomor_invoice . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
+            ]);
+            return;
+        }
 
         $this->db->trans_begin();
 

@@ -66,9 +66,8 @@ $ENABLE_ADD = $addPermission;
                     <th class="text-center">No.</th>
                     <th class="text-center">Tanggal</th>
                     <th class="text-center">No Transaksi</th>
+                    <th class="text-center">Tipe</th>
                     <th class="text-center">Company</th>
-                    <th class="text-center">COA</th>
-                    <th class="text-center">Nama COA</th>
                     <th class="text-center">Keterangan</th>
                     <th class="text-center">Debit</th>
                     <th class="text-center">Kredit</th>
@@ -144,13 +143,10 @@ $ENABLE_ADD = $addPermission;
                     data: 'no_transaksi'
                 },
                 {
+                    data: 'jenis_transaksi'
+                },
+                {
                     data: 'company'
-                },
-                {
-                    data: 'coa'
-                },
-                {
-                    data: 'nm_coa'
                 },
                 {
                     data: 'keterangan'
@@ -172,17 +168,17 @@ $ENABLE_ADD = $addPermission;
                 }
             ],
             columnDefs: [{
-                    targets: [0, 9],
+                    targets: [0, 8],
                     orderable: false,
                     searchable: false,
                     className: 'text-center'
                 },
                 {
-                    targets: [1, 2, 3, 4, 5],
+                    targets: [1, 2, 3, 4],
                     className: 'text-center'
                 },
                 {
-                    targets: [7, 8],
+                    targets: [6, 7],
                     className: 'text-right'
                 }
             ],

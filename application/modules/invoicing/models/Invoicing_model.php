@@ -405,4 +405,29 @@ class Invoicing_model extends BF_Model
 
         return $get_data->total;
     }
+
+    /**
+     * Cek apakah no_invoice sudah pernah digunakan (per company/tipe_invoice)
+     *
+     * @param string $no_invoice
+     * @param string $tipe_invoice  '1' untuk VUCA, '0' atau null untuk Sentral
+     * @return bool  true jika sudah ada (duplikat)
+     */
+    public function is_no_invoice_exists($no_invoice, $tipe_invoice = '0')
+    {
+        $this->db->from('tr_invoicing');
+        $this->db->where('LOWER(no_invoice)', strtolower(trim($no_invoice)));
+
+        if ($tipe_invoice == '1') {
+            $this->db->where('tipe_invoice', '1');
+        } else {
+            $this->db->group_start();
+            $this->db->where('tipe_invoice IS NULL');
+            $this->db->or_where('tipe_invoice', '0');
+            $this->db->or_where('tipe_invoice', '');
+            $this->db->group_end();
+        }
+
+        return $this->db->count_all_results() > 0;
+    }
 }

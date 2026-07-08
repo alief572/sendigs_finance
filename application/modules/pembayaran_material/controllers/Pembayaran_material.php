@@ -1416,7 +1416,6 @@ class Pembayaran_material extends Admin_Controller
 			$processed_ids_check = explode(',', $post['id_payment']);
 			$this->db->where_in('id', $processed_ids_check);
 			$this->db->where('tipe !=', 'petty_cash_hutang');
-			$this->db->not_like('no_doc', 'RPC', 'after');
 			$non_petty_count = $this->db->count_all_results('payment_approve');
 			$is_all_petty_cash_hutang = ($non_petty_count == 0);
 
@@ -1426,6 +1425,70 @@ class Pembayaran_material extends Admin_Controller
 			if (isset($post['jurnal_refill_pettycash'])) {
 				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash count: ' . count($post['jurnal_refill_pettycash']));
 				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash data: ' . json_encode($post['jurnal_refill_pettycash']));
+			}
+
+			// Save Jurnal Hutang if it's all petty cash hutang
+			if ($is_all_petty_cash_hutang) {
+				if (isset($post['jurnal_hutang_1'])) {
+					foreach ($post['jurnal_hutang_1'] as $jr) {
+						$coa_nm = $jr['nama_account'];
+						if (!empty($jr['coa'])) {
+							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							if (!empty($nm_coa)) {
+								$coa_nm = $nm_coa->nama;
+							}
+						}
+						
+						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+						$arr_jurnal[] = [
+							'no_jurnal' => $id_jurnal,
+							'tgl_jurnal' => $jr['tanggal_jurnal'],
+							'coa' => $jr['coa'],
+							'id_company' => ($jr['company'] == 'STM') ? 1 : 1, // Defaulting to 1, or can map VUCA/SUSTAIN
+							'nm_company' => $jr['company'],
+							'nm_coa' => $coa_nm,
+							'debit' => str_replace(',', '', $jr['debit']),
+							'kredit' => str_replace(',', '', $jr['kredit']),
+							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'sts' => '0',
+							'no_transaksi' => $id_payment_paid,
+							'jenis_transaksi' => 'Payment Hutang Petty Cash',
+							'created_by' => $this->auth->user_id(),
+							'created_date' => date('Y-m-d H:i:s')
+						];
+						$no_jurnal++;
+					}
+				}
+				if (isset($post['jurnal_hutang_2'])) {
+					foreach ($post['jurnal_hutang_2'] as $jr) {
+						$coa_nm = $jr['nama_account'];
+						if (!empty($jr['coa'])) {
+							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							if (!empty($nm_coa)) {
+								$coa_nm = $nm_coa->nama;
+							}
+						}
+
+						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+						$arr_jurnal[] = [
+							'no_jurnal' => $id_jurnal,
+							'tgl_jurnal' => $jr['tanggal_jurnal'],
+							'coa' => $jr['coa'],
+							'id_company' => ($jr['company'] == 'STM') ? 1 : 1,
+							'nm_company' => $jr['company'],
+							'nm_coa' => $coa_nm,
+							'debit' => str_replace(',', '', $jr['debit']),
+							'kredit' => str_replace(',', '', $jr['kredit']),
+							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'sts' => '0',
+							'no_transaksi' => $id_payment_paid,
+							'jenis_transaksi' => 'Payment Hutang Petty Cash',
+							'created_by' => $this->auth->user_id(),
+							'created_date' => date('Y-m-d H:i:s')
+						];
+						$no_jurnal++;
+					}
+				}
 			}
 
 			// Jurnal utama hanya diproses jika BUKAN petty_cash_hutang semua

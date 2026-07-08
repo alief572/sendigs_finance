@@ -64,10 +64,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         $id            = $this->input->post('id');
         $no_transaksi  = $this->input->post('no_transaksi');
+        $jenis_transaksi = '';
 
-        // If only id is provided, look up the no_transaksi from the record
+        // If only id is provided, look up the no_transaksi and jenis_transaksi from the record
         if (empty($no_transaksi) && !empty($id)) {
-            $row = $this->db->select('no_transaksi')
+            $row = $this->db->select('no_transaksi, jenis_transaksi')
                 ->from('tr_jurnal')
                 ->where('id', $id)
                 ->get()
@@ -75,6 +76,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
             if ($row) {
                 $no_transaksi = $row->no_transaksi;
+                $jenis_transaksi = $row->jenis_transaksi;
             }
         }
 
@@ -87,8 +89,8 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
-        // Get detail rows for this transaction
-        $rows = $this->Jurnal_payment_petty_cash_model->get_detail_by_transaksi($no_transaksi, 'Petty Cash');
+        // Get detail rows for this transaction (use jenis_transaksi if known, else fetch all for this no_transaksi)
+        $rows = $this->Jurnal_payment_petty_cash_model->get_detail_by_transaksi($no_transaksi, $jenis_transaksi ?: null);
 
         // Validate balance
         $is_balance = $this->Jurnal_payment_petty_cash_model->validate_balance($rows);
@@ -108,7 +110,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             'total_debit'      => $total_debit,
             'total_kredit'     => $total_kredit,
             'no_transaksi'     => $no_transaksi,
-            'jenis_transaksi'  => 'Petty Cash'
+            'jenis_transaksi'  => $jenis_transaksi ?: (!empty($rows) ? $rows[0]->jenis_transaksi : 'Petty Cash')
         ];
 
         // Render the partial view as a string
