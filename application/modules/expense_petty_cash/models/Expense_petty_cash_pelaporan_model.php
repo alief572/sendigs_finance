@@ -504,6 +504,21 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
             return true;
         }
 
+        // Fetch keterangan from pencatatan
+        $this->db->select('pc.keterangan');
+        $this->db->from('tr_pelaporan_petty_cash_detail pd');
+        $this->db->join('tr_expense_petty_cash pc', 'pc.id = pd.pencatatan_id', 'inner');
+        $this->db->where('pd.pelaporan_id', $pelaporan->id);
+        $keterangan_query = $this->db->get();
+        
+        $keterangan_list = [];
+        foreach ($keterangan_query->result() as $row) {
+            if (!empty(trim($row->keterangan))) {
+                $keterangan_list[] = trim($row->keterangan);
+            }
+        }
+        $keterangan_text = implode(', ', $keterangan_list);
+
         // Prepare request payment data
         $company = strtoupper(trim($pelaporan->company));
 
@@ -515,7 +530,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'nama'       => $creator_name,
                 'tgl_doc'    => date('Y-m-d'),
                 'tanggal'    => date('Y-m-d'),
-                'keperluan'  => 'Payment Hutang Petty Cash - ' . $pelaporan->no_pelaporan,
+                'keperluan'  => $keterangan_text ?: 'Payment Hutang Petty Cash - ' . $pelaporan->no_pelaporan,
                 'tipe'       => 'refill_pettycash',
                 'jumlah'     => $pelaporan->grand_total,
                 'status'     => 1,
@@ -528,7 +543,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'nama'       => $creator_name,
                 'tgl_doc'    => date('Y-m-d'),
                 'tanggal'    => date('Y-m-d'),
-                'keperluan'  => 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
+                'keperluan'  => $keterangan_text ?: 'Pengeluaran Petty Cash - ' . $pelaporan->no_pelaporan,
                 'tipe'       => 'refill_pettycash',
                 'jumlah'     => $pelaporan->grand_total,
                 'status'     => 1,
