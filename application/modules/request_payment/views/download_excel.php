@@ -154,7 +154,7 @@ function get_tanggal_approval_tagihan($item, $CI)
                 $tgl_approve = format_tanggal_indo($raw_tgl_approve, $bulan_indonesia);
 
                 // Nilai Pengajuan
-                $nilai = (!empty($item->nilai_pengajuan)) ? number_format($item->nilai_pengajuan, 0, ',', '.') : '0';
+                $nilai = (!empty($item->nilai_pengajuan)) ? $item->nilai_pengajuan : '0';
 
                 // Keperluan
                 $keperluan = (!empty($item->keperluan)) ? $item->keperluan : '';
