@@ -768,6 +768,21 @@ class Request_payment_model extends BF_Model
                         $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_date));
                     }
                     break;
+                case 'refill_pettycash':
+                case 'Refill Pettycash':
+                case 'Petty Cash':
+                    $row_approval = $this->db->select('approved_on')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->approved_on)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
+                    }
+                    break;
+                case 'petty_cash_hutang':
+                case 'Petty Cash Hutang':
+                    $row_approval = $this->db->select('created_on')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->created_on)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_on));
+                    }
+                    break;
                 // Purchase Invoice: kosongkan
                 default:
                     $tanggal_approval = '';
