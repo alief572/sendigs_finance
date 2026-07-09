@@ -124,8 +124,10 @@ $header_id = (isset($data->id)) ? $data->id : '';
 <script src="<?= base_url('assets/plugins/select2/select2.min.js') ?>"></script>
 
 <script type="text/javascript">
-    // Initialize Select2 on existing elements
-    $('.select2').select2();
+    // Initialize Select2 on existing elements (dropdownParent fixes search inside modal)
+    $('.select2').select2({
+        dropdownParent: $('#modal-crud')
+    });
 
     /**
      * Parse formatted nominal string "1.000.000" to integer 1000000
@@ -211,7 +213,9 @@ $header_id = (isset($data->id)) ? $data->id : '';
             '</tr>';
 
         $('#detail-table tbody').append(newRow);
-        $('#detail-table tbody tr:last').find('.coa-select').select2();
+        $('#detail-table tbody tr:last').find('.coa-select').select2({
+            dropdownParent: $('#modal-crud')
+        });
     }
 
     /**
