@@ -176,9 +176,11 @@ class Penerimaan_uang extends Admin_Controller
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
             $saldo_piutang = $get_inv['saldo_piutang'];
-            // if ($pph23_dipotong == 'N') {
-            //     $saldo_piutang = $get_inv['saldo_piutang_tanpa_pph'];
-            // }
+            if (abs($saldo_piutang - $get_inv['total_akhir_jurnal']) < 10) {
+                $saldo_piutang = round($get_inv['tagihan_ppn_jurnal']) - round($get_inv['pph_jurnal']);
+            } else {
+                $saldo_piutang = round($saldo_piutang);
+            }
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
@@ -206,9 +208,9 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            $total_piutang += ($pph23_dipotong == 'N') ? $get_inv['tagihan_ppn_jurnal'] : $get_inv['total_akhir_jurnal'];
+            $total_piutang += ($pph23_dipotong == 'N') ? round($get_inv['tagihan_ppn_jurnal']) : round($get_inv['total_akhir_jurnal']);
             // $total_piutang += $get_inv['total_akhir_jurnal'];
-            $total_piutang_dagang += $saldo_piutang;
+            $total_piutang_dagang += round($saldo_piutang);
 
             if ($no == 1) {
                 $hasil_jurnal .= '<tr>';
@@ -268,7 +270,7 @@ class Penerimaan_uang extends Admin_Controller
                         $this->db->where('a.id', $item);
                         $get_kredit = $this->db->get()->row_array();
 
-                        $value_kredit = $get_kredit['ttl_kredit'];
+                        $value_kredit = round($get_kredit['ttl_kredit']);
                     }
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
@@ -473,6 +475,10 @@ class Penerimaan_uang extends Admin_Controller
             $ppn = (!empty($get_inv)) ? $get_inv['ppn_jurnal'] : 0;
             $tagihan_ppn = (!empty($get_inv)) ? $get_inv['tagihan_ppn_jurnal'] : 0;
             $pph = (!empty($get_inv)) ? $get_inv['pph_jurnal'] : 0;
+            if ($post['pph23_dipotong'] == 'N') {
+                $pph = 0; // Force PPh to 0 if not deducted
+            }
+            
             $total = (!empty($get_inv)) ? $get_inv['total_akhir_jurnal'] : 0;
             $saldo_piutang = (!empty($get_inv)) ? $get_inv['saldo_piutang'] : 0;
             $tgl_inv = (!empty($get_inv)) ? date('Y-m-d', strtotime($get_inv['created_date'])) : '';
@@ -517,7 +523,11 @@ class Penerimaan_uang extends Admin_Controller
 
             // Tentukan COA PPh berdasarkan tipe_invoice (VUCA = 1106-01-05, lainnya = 1106-01-02)
             $coa_pph = (!empty($get_inv['tipe_invoice']) && $get_inv['tipe_invoice'] == '1') ? '1106-01-05' : '1106-01-02';
-            $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+            
+            $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
+            // if ($post['pph23_dipotong'] == 'Y') {
+            $arr_coa_jurnal[] = $coa_pph;
+            // }
 
             $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
             $this->accounting->from('coa_master a');
