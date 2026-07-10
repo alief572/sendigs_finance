@@ -215,8 +215,9 @@ class Jurnal_payment_petty_cash_model extends BF_Model
      */
     public function get_detail_by_transaksi($no_transaksi, $jenis_transaksi = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.keterangan, COALESCE(p.no_doc_gabung, a.no_transaksi) as no_transaksi, a.jenis_transaksi, a.id_company, a.nm_company, a.debit, a.kredit', FALSE);
+        $this->db->select('a.id, a.tgl_jurnal, a.coa, COALESCE(c.nama, a.nm_coa) as nm_coa, a.keterangan, COALESCE(p.no_doc_gabung, a.no_transaksi) as no_transaksi, a.jenis_transaksi, a.id_company, a.nm_company, a.debit, a.kredit', FALSE);
         $this->db->from('tr_jurnal a');
+        $this->db->join('(SELECT no_perkiraan, MAX(nama) as nama FROM ' . DBACC . '.coa_master GROUP BY no_perkiraan) c', 'c.no_perkiraan = a.coa', 'left');
         $this->db->join('(
             SELECT join_key, MAX(no_doc_gabung) as no_doc_gabung FROM (
                 SELECT id_payment as join_key, GROUP_CONCAT(no_doc SEPARATOR ", ") as no_doc_gabung
