@@ -406,6 +406,45 @@ class Invoicing_model extends BF_Model
         return $get_data->total;
     }
 
+    /**
+     * Preview nomor invoice berikutnya (read-only, tidak update sequence)
+     *
+     * @param string $id_company
+     * @param string $tipe_invoice '0' untuk Sentral, '1' untuk VUCA
+     * @return string format: XXX/{ENTITY}/{YEAR}
+     */
+    public function preview_no_invoice($id_company, $tipe_invoice = '0')
+    {
+        $tahun = date('Y');
+
+        $kode_entitas = 'SSC';
+        if (in_array($id_company, [1, 6, 7])) {
+            $kode_entitas = 'STM';
+        } elseif ($id_company == 4 || $tipe_invoice == '1') {
+            $kode_entitas = 'VSB';
+        }
+
+        // Cek tabel sequence
+        $table_exists = $this->db->query("SHOW TABLES LIKE 'ms_invoice_sequence'")->num_rows() > 0;
+
+        if ($table_exists) {
+            $seq_row = $this->db->get_where('ms_invoice_sequence', [
+                'kode_entitas' => $kode_entitas,
+                'tahun' => $tahun
+            ])->row();
+
+            if ($seq_row) {
+                $sequence = (int)$seq_row->last_sequence + 1;
+            } else {
+                $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+            }
+        } else {
+            $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+        }
+
+        return sprintf('%03d/%s/%d', $sequence, $kode_entitas, $tahun);
+    }
+
     public function generate_no_invoice($id_company, $tipe_invoice = '0')
     {
         $tahun = date('Y');

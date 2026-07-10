@@ -64,6 +64,9 @@ class Invoicing extends Admin_Controller
         $id_company = (!empty($get_actual_plan_tagih->id_company)) ? $get_actual_plan_tagih->id_company : '1';
         $nm_company = (!empty($get_actual_plan_tagih->nm_company)) ? $get_actual_plan_tagih->nm_company : 'STM-Vuca';
 
+        // Preview nomor invoice berikutnya
+        $preview_no_invoice = $this->Invoicing_model->preview_no_invoice($id_company, '0');
+
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
         $hasil_jurnal = '';
@@ -157,7 +160,8 @@ class Invoicing extends Admin_Controller
             'data_actual' => $get_actual_plan_tagih,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
-            'total_kredit' => $total_kredit
+            'total_kredit' => $total_kredit,
+            'preview_no_invoice' => $preview_no_invoice
         ];
 
         $this->template->set($data);
@@ -199,6 +203,10 @@ class Invoicing extends Admin_Controller
         if (!empty($get_actual)) {
             $get_actual_plan_tagih->id = $get_actual->id;
         }
+
+        // Preview nomor invoice berikutnya (VUCA)
+        $id_company_vuca = (!empty($get_actual_plan_tagih->id_company)) ? $get_actual_plan_tagih->id_company : '4';
+        $preview_no_invoice = $this->Invoicing_model->preview_no_invoice($id_company_vuca, '1');
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-05', '4101-01-01'];
 
@@ -293,7 +301,8 @@ class Invoicing extends Admin_Controller
             'data_actual' => $get_actual_plan_tagih,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
-            'total_kredit' => $total_kredit
+            'total_kredit' => $total_kredit,
+            'preview_no_invoice' => $preview_no_invoice
         ];
 
         $this->template->set($data);
@@ -1790,13 +1799,18 @@ class Invoicing extends Admin_Controller
 
         $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
 
+        // Preview nomor invoice berikutnya
+        $id_company_gen = (!empty($get_penawaran->id_company)) ? $get_penawaran->id_company : '1';
+        $preview_no_invoice = $this->Invoicing_model->preview_no_invoice($id_company_gen, '0');
+
         $data = [
             'data_penawaran' => $get_penawaran,
             'data_penawaran_detail' => $get_penawaran_detail,
             'total_invoiced' => $total_invoiced,
             'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
             'total_debit' => $get_jurnal['total_debit'],
-            'total_kredit' => $get_jurnal['total_kredit']
+            'total_kredit' => $get_jurnal['total_kredit'],
+            'preview_no_invoice' => $preview_no_invoice
         ];
 
         if (empty($get_penawaran)) {
