@@ -20,19 +20,28 @@
     <input type="hidden" name="no_transaksi" value="<?= $no_transaksi ?>">
     <input type="hidden" name="jenis_transaksi" value="<?= isset($jenis_transaksi) ? $jenis_transaksi : 'Petty Cash' ?>">
 
-    <?php 
-    // Group rows by nm_company
-    $grouped_rows = [];
-    foreach ($rows as $row) {
-        $comp = !empty($row->nm_company) ? $row->nm_company : 'Lainnya';
-        if (!isset($grouped_rows[$comp])) {
-            $grouped_rows[$comp] = [];
+    <?php
+    // For 'Petty Cash': show all rows in a single table (no grouping by company)
+    // For other types (Refill/Payment Hutang): group by nm_company (inter-company view)
+    $is_petty_cash = (isset($jenis_transaksi) && $jenis_transaksi === 'Petty Cash');
+
+    if ($is_petty_cash) {
+        // Single table — no grouping
+        $grouped_rows = ['all' => $rows];
+    } else {
+        // Group rows by nm_company
+        $grouped_rows = [];
+        foreach ($rows as $row) {
+            $comp = !empty($row->nm_company) ? $row->nm_company : 'Lainnya';
+            if (!isset($grouped_rows[$comp])) {
+                $grouped_rows[$comp] = [];
+            }
+            $grouped_rows[$comp][] = $row;
         }
-        $grouped_rows[$comp][] = $row;
     }
     ?>
 
-    <?php foreach ($grouped_rows as $comp => $comp_rows): 
+    <?php foreach ($grouped_rows as $comp => $comp_rows):
         // Calculate total for this group
         $g_total_debit = 0;
         $g_total_kredit = 0;
@@ -44,15 +53,27 @@
         $g_is_balance = (abs($g_total_debit - $g_total_kredit) < 0.01);
 
         // Determine label style
-        $label_class = 'label-primary';
-        if (strtoupper($comp) === 'VUCA' || strtoupper($comp) === 'SUSTAIN') {
-            $label_class = 'label-warning';
-        } elseif (strtoupper($comp) === 'STM') {
-            $label_class = 'label-info';
+        if ($is_petty_cash) {
+            // For Petty Cash, use the company from first row
+            $comp_label = !empty($comp_rows[0]->nm_company) ? $comp_rows[0]->nm_company : 'Petty Cash';
+            $label_class = 'label-primary';
+            if (strtoupper($comp_label) === 'VUCA' || strtoupper($comp_label) === 'SUSTAIN') {
+                $label_class = 'label-warning';
+            } elseif (strtoupper($comp_label) === 'STM') {
+                $label_class = 'label-info';
+            }
+        } else {
+            $comp_label = $comp;
+            $label_class = 'label-primary';
+            if (strtoupper($comp) === 'VUCA' || strtoupper($comp) === 'SUSTAIN') {
+                $label_class = 'label-warning';
+            } elseif (strtoupper($comp) === 'STM') {
+                $label_class = 'label-info';
+            }
         }
     ?>
         <label class="label <?= $label_class ?>" style="font-size: 12px; margin-bottom: 8px; margin-top: 10px; display: inline-block;">
-            <i class="fa fa-building"></i> Sisi <?= htmlspecialchars($comp) ?>
+            <i class="fa fa-building"></i> Sisi <?= htmlspecialchars($comp_label) ?>
         </label>
         <div class="table-responsive">
             <table class="table table-bordered table-condensed" style="font-size: 12px;">
