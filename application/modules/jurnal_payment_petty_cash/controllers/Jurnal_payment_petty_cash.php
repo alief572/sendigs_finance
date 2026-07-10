@@ -193,7 +193,13 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
-        // Branch logic based on nm_company (regular expense posting)
+        // === Petty Cash: selalu posting ke 1 DB sesuai company ===
+        if ($jenis_transaksi === 'Petty Cash') {
+            $this->_post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            return;
+        }
+
+        // Branch logic based on nm_company (Refill Pettycash / Payment Hutang Petty Cash)
         if ($nm_company == 'STM') {
             // === STM Internal Posting ===
             $this->_post_stm($jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
@@ -221,6 +227,92 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             }
         }
         return false;
+    }
+
+    /**
+     * Internal: Posting jurnal Petty Cash (single target DB based on company)
+     *
+     * Petty Cash selalu posting ke 1 database saja sesuai company:
+     * - STM → accounting_stm
+     * - VUCA → accounting_vuca
+     * - SUSTAIN → accounting_sustain
+     *
+     * @param string $nm_company Company name
+     * @param object $jurnal_header Header data
+     * @param array  $rows Detail rows from staging
+     * @param string $no_transaksi Transaction number
+     * @param string $jenis_transaksi Transaction type
+     */
+    private function _post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
+    {
+        // Determine target database based on company
+        switch ($nm_company) {
+            case 'STM':
+                $target_db = 'accounting_stm';
+                $company_label = 'STM';
+                break;
+            case 'VUCA':
+                $target_db = 'accounting_vuca';
+                $company_label = 'VUCA';
+                break;
+            case 'SUSTAIN':
+                $target_db = 'accounting_sustain';
+                $company_label = 'SUSTAIN';
+                break;
+            default:
+                echo json_encode(['status' => 0, 'msg' => 'Company tidak dikenali untuk posting Petty Cash']);
+                return;
+        }
+
+        $this->db->trans_begin();
+        $this->Jurnal_payment_petty_cash_model->begin_transaction($target_db);
+
+        // Generate BUK number for target DB
+        $nomor_buk = $this->Jurnal_payment_petty_cash_nomor_model->get_nomor_buk('101', $target_db);
+        if (!$nomor_buk) {
+            $this->db->trans_rollback();
+            $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
+            echo json_encode(['status' => 0, 'msg' => 'Gagal generate nomor BUK untuk Petty Cash ' . $company_label]);
+            return;
+        }
+
+        // Post jurnal to target database (reuse post_jurnal_refill — same logic: single DB insert)
+        $post_result = $this->Jurnal_payment_petty_cash_model->post_jurnal_refill($jurnal_header, $rows, $nomor_buk, $target_db);
+        if (!$post_result) {
+            $this->db->trans_rollback();
+            $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
+            echo json_encode(['status' => 0, 'msg' => 'Gagal insert jurnal Petty Cash ke database akuntansi ' . $company_label]);
+            return;
+        }
+
+        // Increment BUK counter on target DB
+        $increment_result = $this->Jurnal_payment_petty_cash_nomor_model->increment_nobuk('101', $target_db);
+        if (!$increment_result) {
+            $this->db->trans_rollback();
+            $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
+            echo json_encode(['status' => 0, 'msg' => 'Gagal update counter BUK Petty Cash di ' . $company_label]);
+            return;
+        }
+
+        // Update staging status to posted
+        $update_result = $this->Jurnal_payment_petty_cash_model->update_status_posted($no_transaksi, $jenis_transaksi);
+        if (!$update_result) {
+            $this->db->trans_rollback();
+            $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
+            echo json_encode(['status' => 0, 'msg' => 'Gagal update status jurnal Petty Cash']);
+            return;
+        }
+
+        if ($this->db->trans_status() === FALSE || $this->Jurnal_payment_petty_cash_model->check_transaction_status($target_db) === FALSE) {
+            $this->db->trans_rollback();
+            $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
+            echo json_encode(['status' => 0, 'msg' => 'Transaksi Petty Cash gagal, data di-rollback']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->Jurnal_payment_petty_cash_model->commit_transaction($target_db);
+        echo json_encode(['status' => 1, 'msg' => 'Jurnal Petty Cash berhasil diposting ke DBACC_' . $company_label]);
     }
 
     /**
