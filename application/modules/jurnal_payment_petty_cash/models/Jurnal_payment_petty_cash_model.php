@@ -111,62 +111,98 @@ class Jurnal_payment_petty_cash_model extends BF_Model
 
     /**
      * Build base query untuk DataTables server-side
-     * Grouped by no_transaksi, jenis_transaksi dengan aggregasi SUM
+     * Menggunakan UNION antara:
+     * - Data 'Petty Cash' langsung dari tr_jurnal (tanpa join payment_approve)
+     * - Data 'Refill Pettycash' & 'Payment Hutang Petty Cash' join ke payment_approve
      *
      * @param string $company Filter company (id_company)
      * @param string $search  Search keyword
      */
     private function _build_base_query($company = '', $search = '')
     {
-        $this->db->select('
-            MAX(a.id) as id, 
-            MAX(a.tgl_jurnal) as tgl_jurnal, 
-            MAX(p.no_transaksi) as no_transaksi, 
-            a.jenis_transaksi, 
-            MAX(a.nm_company) as nm_company, 
-            MAX(a.id_company) as id_company, 
-            MAX(p.keterangan_pembayaran) as keterangan, 
-            MAX(p.total_jumlah) as total_debit, 
-            MAX(p.total_jumlah) as total_kredit
-        ', FALSE);
-        $this->db->from('tr_jurnal a');
-        $this->db->join('(
-            SELECT 
-                id_payment as join_key, 
-                MAX(tipe) as tipe,
-                GROUP_CONCAT(no_doc SEPARATOR ", ") as no_transaksi,
-                GROUP_CONCAT(keterangan_pembayaran SEPARATOR ", ") as keterangan_pembayaran,
-                SUM(jumlah) as total_jumlah
-            FROM payment_approve
-            GROUP BY id_payment
-            UNION
-            SELECT 
-                CAST(id AS CHAR) as join_key,
-                tipe,
-                no_doc as no_transaksi,
-                keterangan_pembayaran,
-                jumlah as total_jumlah
-            FROM payment_approve
-        ) p', 'p.join_key = a.no_transaksi', 'inner');
-        $this->db->where_in('a.jenis_transaksi', ['Refill Pettycash', 'Payment Hutang Petty Cash']);
-        $this->db->where("(p.tipe IN ('refill_pettycash', 'petty_cash_hutang') OR p.no_transaksi LIKE '%RPC%')", NULL, FALSE);
-        $this->db->where_in('a.sts', ['', '0']);
-
-        // Filter company
+        // Build WHERE conditions for company and search filters
+        $where_company = '';
         if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
+            $where_company = " AND a.id_company = " . $this->db->escape($company);
         }
 
-        // Search
+        $where_search = '';
         if (!empty($search)) {
-            $this->db->group_start();
-            $this->db->like('p.no_transaksi', $search, 'both');
-            $this->db->or_like('a.nm_company', $search, 'both');
-            $this->db->or_like('p.keterangan_pembayaran', $search, 'both');
-            $this->db->group_end();
+            $escaped_search = $this->db->escape_like_str($search);
+            $where_search = " AND (a.no_transaksi LIKE '%{$escaped_search}%' OR a.nm_company LIKE '%{$escaped_search}%' OR a.keterangan LIKE '%{$escaped_search}%')";
         }
 
-        $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
+        // Query 1: Petty Cash — langsung dari tr_jurnal tanpa payment_approve
+        $sql_petty_cash = "
+            SELECT 
+                MAX(a.id) as id,
+                MAX(a.tgl_jurnal) as tgl_jurnal,
+                a.no_transaksi,
+                a.jenis_transaksi,
+                MAX(a.nm_company) as nm_company,
+                MAX(a.id_company) as id_company,
+                MAX(a.keterangan) as keterangan,
+                SUM(a.debit) as total_debit,
+                SUM(a.kredit) as total_kredit
+            FROM tr_jurnal a
+            WHERE a.jenis_transaksi = 'Petty Cash'
+              AND a.sts IN ('', '0')
+              {$where_company}
+              {$where_search}
+            GROUP BY a.no_transaksi, a.jenis_transaksi
+        ";
+
+        // Build search condition for payment_approve query
+        $where_search_pa = '';
+        if (!empty($search)) {
+            $escaped_search = $this->db->escape_like_str($search);
+            $where_search_pa = " AND (p.no_transaksi LIKE '%{$escaped_search}%' OR a.nm_company LIKE '%{$escaped_search}%' OR p.keterangan_pembayaran LIKE '%{$escaped_search}%')";
+        }
+
+        // Query 2: Refill Pettycash & Payment Hutang Petty Cash — join payment_approve
+        $sql_payment = "
+            SELECT 
+                MAX(a.id) as id,
+                MAX(a.tgl_jurnal) as tgl_jurnal,
+                MAX(p.no_transaksi) as no_transaksi,
+                a.jenis_transaksi,
+                MAX(a.nm_company) as nm_company,
+                MAX(a.id_company) as id_company,
+                MAX(p.keterangan_pembayaran) as keterangan,
+                MAX(p.total_jumlah) as total_debit,
+                MAX(p.total_jumlah) as total_kredit
+            FROM tr_jurnal a
+            INNER JOIN (
+                SELECT 
+                    id_payment as join_key, 
+                    MAX(tipe) as tipe,
+                    GROUP_CONCAT(no_doc SEPARATOR ', ') as no_transaksi,
+                    GROUP_CONCAT(keterangan_pembayaran SEPARATOR ', ') as keterangan_pembayaran,
+                    SUM(jumlah) as total_jumlah
+                FROM payment_approve
+                GROUP BY id_payment
+                UNION
+                SELECT 
+                    CAST(id AS CHAR) as join_key,
+                    tipe,
+                    no_doc as no_transaksi,
+                    keterangan_pembayaran,
+                    jumlah as total_jumlah
+                FROM payment_approve
+            ) p ON p.join_key = a.no_transaksi
+            WHERE a.jenis_transaksi IN ('Refill Pettycash', 'Payment Hutang Petty Cash')
+              AND (p.tipe IN ('refill_pettycash', 'petty_cash_hutang') OR p.no_transaksi LIKE '%RPC%')
+              AND a.sts IN ('', '0')
+              {$where_company}
+              {$where_search_pa}
+            GROUP BY a.no_transaksi, a.jenis_transaksi
+        ";
+
+        // UNION both queries
+        $union_sql = "({$sql_petty_cash}) UNION ALL ({$sql_payment})";
+
+        $this->db->select('*');
+        $this->db->from("({$union_sql}) as combined", FALSE);
     }
 
     /**
@@ -188,6 +224,9 @@ class Jurnal_payment_petty_cash_model extends BF_Model
                 GROUP BY id_payment
                 UNION
                 SELECT CAST(id AS CHAR) as join_key, no_doc as no_doc_gabung
+                FROM payment_approve
+                UNION
+                SELECT no_doc as join_key, no_doc as no_doc_gabung
                 FROM payment_approve
             ) sub
             GROUP BY join_key
@@ -313,11 +352,13 @@ class Jurnal_payment_petty_cash_model extends BF_Model
      */
     public function post_jurnal_intercompany($company, $jurnal_header, $jurnal_details, $nomor_buk_company, $nomor_buk_stm)
     {
-        // 1. Determine target database based on company
-        if ($company == '4') {
+        // 1. Determine target database based on company (supports nm_company or id_company)
+        if ($company == '4' || strtoupper($company) == 'VUCA') {
             $target_db = $this->accounting_vuca;
-        } elseif ($company == '6') {
+            $company_id = '4';
+        } elseif ($company == '6' || strtoupper($company) == 'SUSTAIN') {
             $target_db = $this->accounting_sustain;
+            $company_id = '6';
         } else {
             return false;
         }
@@ -343,11 +384,15 @@ class Jurnal_payment_petty_cash_model extends BF_Model
                     'kredit'       => $kredit
                 ];
 
-                if ($row->id_company == $company) {
+                // Match by id_company or nm_company
+                $row_company = isset($row->id_company) ? $row->id_company : '';
+                $row_nm_company = isset($row->nm_company) ? strtoupper($row->nm_company) : '';
+
+                if ($row_company == $company_id || $row_nm_company == strtoupper($company)) {
                     $detail['nomor'] = $nomor_buk_company;
                     $batch_company[] = $detail;
                     $jml_company += $debit;
-                } elseif ($row->id_company == '5') {
+                } elseif ($row_company == '5' || $row_nm_company == 'STM') {
                     $detail['nomor'] = $nomor_buk_stm;
                     $batch_stm[] = $detail;
                     $jml_stm += $debit;
@@ -519,7 +564,7 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         $this->db->select('id, no_transaksi, tgl_jurnal, coa, nm_coa, id_company, nm_company, keterangan, debit, kredit, jenis_transaksi');
         $this->db->from('tr_jurnal');
-        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash']);
+        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash', 'Payment Hutang Petty Cash']);
         $this->db->where('sts', '1');
         $this->db->where('tgl_jurnal >=', $tgl_from);
         $this->db->where('tgl_jurnal <=', $tgl_to);
@@ -539,7 +584,7 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         $this->db->select('COALESCE(SUM(debit), 0) - COALESCE(SUM(kredit), 0) as saldo_awal', FALSE);
         $this->db->from('tr_jurnal');
-        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash']);
+        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash', 'Payment Hutang Petty Cash']);
         $this->db->where('sts', '1');
         $this->db->where('tgl_jurnal <', $tgl_from);
         $result = $this->db->get()->row();
@@ -556,7 +601,7 @@ class Jurnal_payment_petty_cash_model extends BF_Model
         $this->db->distinct();
         $this->db->select('id_company, nm_company');
         $this->db->from('tr_jurnal');
-        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash']);
+        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash', 'Payment Hutang Petty Cash']);
         $this->db->where_in('sts', ['', '0']);
         $this->db->order_by('nm_company', 'ASC');
         return $this->db->get()->result_array();

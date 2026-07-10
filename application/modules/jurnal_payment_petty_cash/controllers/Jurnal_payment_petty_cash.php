@@ -179,10 +179,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
         // --- Detect refill scenario ---
         // Explicit: POST parameter jenis_posting = 'refill'
         // Implicit: any row's keterangan contains "Refill" (case-insensitive)
+        // Exception: jenis_transaksi 'Petty Cash' is never treated as refill
         $jenis_posting = $this->input->post('jenis_posting');
         $is_refill = ($jenis_posting === 'refill');
 
-        if (!$is_refill) {
+        if (!$is_refill && $jenis_transaksi !== 'Petty Cash') {
             $is_refill = $this->_detect_refill_from_rows($rows);
         }
 
