@@ -908,14 +908,7 @@ class Invoicing extends Admin_Controller
     {
         $post = $this->input->post();
 
-        // Validasi duplikat no_invoice (per company Sentral)
-        if ($this->Invoicing_model->is_no_invoice_exists($post['nomor_invoice'], '0')) {
-            echo json_encode([
-                'status' => 0,
-                'msg' => 'No. Invoice "' . $post['nomor_invoice'] . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
-            ]);
-            return;
-        }
+        // Validasi duplikat manual dihapus karena auto-generate
 
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
 
@@ -923,6 +916,8 @@ class Invoicing extends Admin_Controller
         $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
         $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
 
+        $id_company_gen = (!empty($get_penawaran->company)) ? $get_penawaran->company : '1';
+        $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '0');
         $id = $this->Invoicing_model->generate_id();
 
         $arr_insert = [
@@ -941,7 +936,7 @@ class Invoicing extends Admin_Controller
             'id_sales' => $get_spk_penawaran->id_sales,
             'nm_sales' => $get_spk_penawaran->nm_sales,
             'tanggal_invoice' => $post['tanggal_invoice'],
-            'no_invoice' => $post['nomor_invoice'],
+            'no_invoice' => $no_invoice_baru,
             'no_po' => $post['nomor_po'],
             'no_faktur' => $post['nomor_faktur'],
             'total_nominal' => $post['total_nominal'],
@@ -1048,14 +1043,7 @@ class Invoicing extends Admin_Controller
     {
         $post = $this->input->post();
 
-        // Validasi duplikat no_invoice (per company VUCA)
-        if ($this->Invoicing_model->is_no_invoice_exists($post['nomor_invoice'], '1')) {
-            echo json_encode([
-                'status' => 0,
-                'msg' => 'No. Invoice "' . $post['nomor_invoice'] . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
-            ]);
-            return;
-        }
+        // Validasi duplikat manual dihapus karena auto-generate
 
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
 
@@ -1063,6 +1051,8 @@ class Invoicing extends Admin_Controller
         $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
         $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
 
+        $id_company_gen = (!empty($get_penawaran->company)) ? $get_penawaran->company : '1';
+        $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '1');
         $id = $this->Invoicing_model->generate_id();
 
         $arr_insert = [
@@ -1081,7 +1071,7 @@ class Invoicing extends Admin_Controller
             'id_sales' => $get_spk_penawaran->id_sales,
             'nm_sales' => $get_spk_penawaran->nm_sales,
             'tanggal_invoice' => $post['tanggal_invoice'],
-            'no_invoice' => $post['nomor_invoice'],
+            'no_invoice' => $no_invoice_baru,
             'no_po' => $post['nomor_po'],
             'no_faktur' => $post['nomor_faktur'],
             'total_nominal' => $post['total_nominal'],
@@ -1887,21 +1877,15 @@ class Invoicing extends Admin_Controller
 
         $id_penawaran = $this->input->post('id_penawaran', true);
 
-        // Validasi duplikat no_invoice (per company Sentral)
-        $nomor_invoice = $this->input->post('nomor_invoice', true);
-        if ($this->Invoicing_model->is_no_invoice_exists($nomor_invoice, '0')) {
-            echo json_encode([
-                'status' => 0,
-                'msg' => 'No. Invoice "' . $nomor_invoice . '" sudah pernah digunakan. Silakan gunakan nomor lain.'
-            ]);
-            return;
-        }
+        // Validasi duplikat manual dihapus karena auto-generate
 
         $this->db->trans_begin();
 
         try {
             $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
 
+            $id_company_gen = (!empty($get_penawaran->id_company)) ? $get_penawaran->id_company : '1';
+            $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '0');
             $id = $this->Invoicing_model->generate_id();
 
             // Server-side DPP calculation from submitted items
@@ -1967,7 +1951,7 @@ class Invoicing extends Admin_Controller
                 'id_sales' => '',
                 'nm_sales' => $get_penawaran->nm_pic_penawaran,
                 'tanggal_invoice' => $this->input->post('tanggal_invoice', true),
-                'no_invoice' => $this->input->post('nomor_invoice', true),
+                'no_invoice' => $no_invoice_baru,
                 'no_po' => $this->input->post('nomor_po', true),
                 'no_faktur' => $this->input->post('nomor_faktur', true),
                 'total_nominal' => $dpp,

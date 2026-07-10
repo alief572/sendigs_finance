@@ -406,6 +406,78 @@ class Invoicing_model extends BF_Model
         return $get_data->total;
     }
 
+    public function generate_no_invoice($id_company, $tipe_invoice = '0')
+    {
+        $tahun = date('Y');
+
+        $kode_entitas = 'SSC';
+        if (in_array($id_company, [1, 6, 7])) {
+            $kode_entitas = 'STM';
+        } elseif ($id_company == 4 || $tipe_invoice == '1') {
+            $kode_entitas = 'VSB';
+        }
+
+        // Cek apakah tabel sequence exist
+        $table_exists = $this->db->query("SHOW TABLES LIKE 'ms_invoice_sequence'")->num_rows() > 0;
+
+        if ($table_exists) {
+            // Cek tabel sequence
+            $seq_row = $this->db->get_where('ms_invoice_sequence', [
+                'kode_entitas' => $kode_entitas,
+                'tahun' => $tahun
+            ])->row();
+
+            if ($seq_row) {
+                // Ada di tabel sequence → increment
+                $sequence = (int)$seq_row->last_sequence + 1;
+                $this->db->where('id', $seq_row->id);
+                $this->db->update('ms_invoice_sequence', [
+                    'last_sequence' => $sequence,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'updated_by' => $this->auth->user_id()
+                ]);
+            } else {
+                // Belum ada row untuk entitas+tahun ini → fallback ke MAX lalu insert
+                $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+
+                $this->db->insert('ms_invoice_sequence', [
+                    'kode_entitas' => $kode_entitas,
+                    'tahun' => $tahun,
+                    'last_sequence' => $sequence,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'updated_by' => $this->auth->user_id()
+                ]);
+            }
+        } else {
+            // Tabel belum ada → fallback ke logic lama (MAX dari tr_invoicing)
+            $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+        }
+
+        return sprintf('%03d/%s/%d', $sequence, $kode_entitas, $tahun);
+    }
+
+    /**
+     * Helper: ambil MAX sequence dari tr_invoicing (fallback logic)
+     *
+     * @param string $kode_entitas  STM/VSB/SSC
+     * @param string $tahun         Year (e.g. 2026)
+     * @return int   Next sequence number
+     */
+    private function _get_max_sequence_from_invoicing($kode_entitas, $tahun)
+    {
+        $query = "SELECT MAX(CAST(SUBSTRING_INDEX(no_invoice, '/', 1) AS UNSIGNED)) as max_seq 
+                  FROM tr_invoicing 
+                  WHERE no_invoice LIKE '%/" . $this->db->escape_like_str($kode_entitas) . "/" . $this->db->escape_like_str($tahun) . "'";
+        $result = $this->db->query($query)->row();
+
+        $sequence = 1;
+        if (!empty($result) && !empty($result->max_seq)) {
+            $sequence = (int)$result->max_seq + 1;
+        }
+
+        return $sequence;
+    }
+
     /**
      * Cek apakah no_invoice sudah pernah digunakan (per company/tipe_invoice)
      *

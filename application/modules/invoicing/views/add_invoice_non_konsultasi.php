@@ -35,7 +35,7 @@
                         </td>
                         <th width="13%">Nomor Invoice</th>
                         <td width="12%">
-                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="Nomor Invoice">
+                            <input type="text" name="nomor_invoice" id="" class="form-control form-control-sm" placeholder="- Auto Generated -" readonly>
                         </td>
                     </tr>
                     <tr>
