@@ -1026,6 +1026,9 @@ class Non_rutin_model extends BF_Model
         $this->db->select('GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon', FALSE);
         $this->db->select('GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ", ") as no_doc_non_po', FALSE);
         $this->db->select('GROUP_CONCAT(DISTINCT po.no_po SEPARATOR ", ") as no_doc_po', FALSE);
+        $this->db->select('MIN(kb.created_on) as tgl_proses_kasbon', FALSE);
+        $this->db->select('MIN(np.created_date) as tgl_proses_non_po', FALSE);
+        $this->db->select('MIN(po.created_on) as tgl_proses_po', FALSE);
         $this->db->from('rutin_non_planning_detail z');
         $this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
         $this->db->join('users c', 'c.id_user = a.created_by', 'left');
@@ -1111,6 +1114,16 @@ class Non_rutin_model extends BF_Model
             }
             $no_dokumen = implode(', ', $no_dokumen_parts);
 
+            // Tentukan tanggal diproses berdasarkan metode pembelian
+            $tgl_diproses = '-';
+            if (!empty($item->tgl_proses_po)) {
+                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_po));
+            } elseif (!empty($item->tgl_proses_kasbon)) {
+                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_kasbon));
+            } elseif (!empty($item->tgl_proses_non_po)) {
+                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_non_po));
+            }
+
             $hasil[] = [
                 'no' => $no,
                 'no_pr' => (!empty($item->no_pr)) ? $item->no_pr : '<span class="text-red">' . $item->no_pengajuan . '</span>',
@@ -1121,6 +1134,7 @@ class Non_rutin_model extends BF_Model
                 'tingkat_pr' => $tingkat_pr,
                 'pic' => $item->nm_lengkap,
                 'created_date' => date('d F Y H:i:s', strtotime($item->created_date)),
+                'tgl_diproses' => $tgl_diproses,
                 'status' => $status,
                 'option' => $options
             ];
