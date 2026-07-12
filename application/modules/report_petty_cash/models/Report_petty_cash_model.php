@@ -53,47 +53,34 @@ class Report_petty_cash_model extends CI_Model
 
     public function get_report_data($start_date = null, $end_date = null)
     {
-        $where_expense = "h.status = 'approved'";
+        $where_expense = "a.jenis_transaksi = 'Petty Cash' AND a.sts = '1' AND a.debit > 0";
         $where_refill = "status = 'approved'";
 
         if (!empty($start_date) && !empty($end_date)) {
-            $where_expense .= " AND h.tanggal >= '{$start_date}' AND h.tanggal <= '{$end_date}'";
+            $where_expense .= " AND a.tgl_jurnal >= '{$start_date}' AND a.tgl_jurnal <= '{$end_date}'";
             $where_refill .= " AND DATE(approved_on) >= '{$start_date}' AND DATE(approved_on) <= '{$end_date}'";
         } elseif (!empty($start_date)) {
-            $where_expense .= " AND h.tanggal >= '{$start_date}'";
+            $where_expense .= " AND a.tgl_jurnal >= '{$start_date}'";
             $where_refill .= " AND DATE(approved_on) >= '{$start_date}'";
         } elseif (!empty($end_date)) {
-            $where_expense .= " AND h.tanggal <= '{$end_date}'";
+            $where_expense .= " AND a.tgl_jurnal <= '{$end_date}'";
             $where_refill .= " AND DATE(approved_on) <= '{$end_date}'";
         }
 
         $sql = "
             SELECT 
-                h.no_pencatatan AS no_transaksi,
-                h.tanggal AS tanggal,
-                d.coa_code AS coa,
-                h.company AS company,
-                d.pengeluaran AS pengeluaran,
+                a.no_transaksi AS no_transaksi,
+                a.tgl_jurnal AS tanggal,
+                a.coa AS coa,
+                a.nm_company AS company,
+                a.nm_coa AS pengeluaran,
                 'Transaksi' AS jenis_jurnal,
                 0 AS debit,
-                d.total AS kredit,
-                h.keterangan AS keterangan,
-                h.created_on AS sort_date
-            FROM tr_expense_petty_cash h
-            JOIN tr_expense_petty_cash_detail d ON d.pencatatan_id = h.id
+                a.debit AS kredit,
+                a.keterangan AS keterangan,
+                a.tgl_jurnal AS sort_date
+            FROM tr_jurnal a
             WHERE {$where_expense}
-            AND (
-                (h.company = 'STM')
-                OR
-                (h.company != 'STM' AND EXISTS (
-                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
-                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
-                    JOIN tr_petty_cash_vuca_sustain vs ON vs.no_pelaporan = p.no_pelaporan
-                    JOIN payment_approve pa ON pa.no_doc = vs.no_payment_hutang
-                    JOIN tr_jurnal j ON j.no_transaksi = pa.id
-                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
-                ))
-            )
 
             UNION ALL
 
