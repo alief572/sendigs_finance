@@ -8,55 +8,50 @@ Dokumen ini membedah arsitektur teknis dan rancangan algoritma agregasi data dar
 ## 1. Arsitektur Komponen (CodeIgniter HMVC)
 Lokasi Modul: `/application/modules/report_petty_cash/`
 
-- **Controllers (`Report_petty_cash.php`):** *Entry point* yang menjembatani *View* dan *Model*. Controller ini bertugas menerima parameter dari permintaan HTTP POST (`start_date`, `end_date`), mengkalkulasi pergerakan *running balance*, serta mengembalikan *response* berupa JSON untuk DataTables maupun HTML *view* untuk ekspor ke Excel.
-- **Models (`Report_petty_cash_model.php`):** Otak agregasi database. Model ini mengompilasi logika bisnis yang kompleks (seperti pengakuan biaya beda entitas dan status jurnal) ke dalam bentuk *Query Builder* dan *Raw SQL Query*.
+- **Controllers (`Report_petty_cash.php`):** *Entry point* yang menjembatani *View* dan *Model*. Mengendalikan logika HTTP GET/POST (`start_date`, `end_date`), menjalankan perulangan *running balance* di level *backend*, serta merespon dalam format JSON untuk DataTables atau HTML View untuk export Excel.
+- **Models (`Report_petty_cash_model.php`):** Otak agregasi database. Menyatukan data dari berbagai sumber ke dalam bentuk antarmuka laporan yang tunggal dengan bantuan *Query Builder* dan fungsi `UNION ALL`.
 - **Views:**
-  - `index.php`: Menginisialisasi tabel laporan dan merender DataTables dengan fitur pemanggilan AJAX.
-  - `export_excel.php`: Merender tabel HTML dasar tanpa CSS, di mana PHP mengatur modifikasi HTTP *Header* (`Content-Type: application/vnd.ms-excel`) sehingga *browser* mengenali keluaran sebagai format Excel (.xls).
+  - `index.php`: Antarmuka yang memuat input filter tanggal dan merender tabel DataTables.
+  - `export_excel.php`: Modifikasi *header* PHP murni untuk mengelabui *browser* agar mengunduh tabel HTML ke dalam format MS Excel (`application/vnd.ms-excel`).
 
 ## 2. Bedah Logika & Query SQL (Database Architecture)
-Karena sistem keuangan ini tidak mengenal penyimpanan "Saldo Tetap" bulanan, sistem menerapkan pendekatan agregasi total (Total Aggregation) dari riwayat transaksi.
+Karena sistem keuangan tidak menggunakan skema "Tutup Buku Bersaldo", sistem menerapkan pendekatan agregasi total (Total Aggregation) dari awal riwayat transaksi untuk menentukan saldo kas berjalan.
 
 ### 2.1. Logic Pencarian Saldo Awal (Opening Balance)
 Fungsi: `get_saldo_awal($start_date)`
-Mengkalkulasi semua total transaksi yang terjadi *sebelum* `start_date` yang dipilih pengguna. Rumusnya adalah `Saldo Awal = (Total Refill - Total Expense)`.
-
+Mengkalkulasi saldo dari seluruh waktu *sebelum* parameter `start_date`.
 - **Total Refill Query:** 
-  Menggunakan fungsi `SUM(grand_total)` dari tabel `tr_pelaporan_petty_cash`. 
-  *Syarat:* Status dokumen harus *'approved'*, tanggal `< start_date`, DAN wajib lulus validasi `EXISTS` di `tr_jurnal` (via join ke tabel perantara `payment_approve`). Artinya, pengajuan pelaporan sudah dibayarkan dan jurnal terposting lunas.
+  Menjumlahkan `SUM(grand_total)` dari `tr_pelaporan_petty_cash` yang berstatus *'approved'*, sebelum tanggal awal, dan dibuktikan lewat relasi `EXISTS` ke tabel `tr_jurnal` bahwa jurnal `payment_approve`-nya telah diposting (`sts = 1`).
 - **Total Expense Query:**
-  Menggunakan `SUM(d.total)` dari relasi tabel *header* `tr_expense_petty_cash` dan detailnya. 
-  *Syarat Spesial Lintas Entitas:* Query dibungkus menggunakan operasi `OR` logika bisnis:
-  1. Jika Company = 'STM', langsung diterima asalkan *status* = 'approved'.
-  2. Jika Company != 'STM', wajib lolos pengecekan `EXISTS` bertingkat yang menelusuri alur: Detail Pelaporan ➔ Header Pelaporan ➔ Relasi Hutang Lintas Entitas (`tr_petty_cash_vuca_sustain`) ➔ Payment Approve ➔ Tr Jurnal posting.
-  
+  *(Catatan Teknis: Kalkulasi saldo awal untuk pengeluaran saat ini masih menggunakan warisan arsitektur tabel `tr_expense_petty_cash` lintas entitas. Kedepannya akan disinkronisasi ke sumber tunggal `tr_jurnal`)*.
+  Menjumlahkan `SUM(d.total)` dari tabel historikal `tr_expense_petty_cash` yang telah *approved* dan lolos validasi hierarki pembayaran antar-perusahaan jika perusahaan bukan 'STM'.
+
 ### 2.2. Logic Agregasi Data Laporan (Query UNION ALL)
 Fungsi: `get_report_data($start_date, $end_date)`
-Bertujuan menggabungkan data pengeluaran (Expense) dan pemasukan (Refill) ke dalam satu bentuk *result set* menggunakan `UNION ALL`.
+Sistem menggabungkan data pemasukan dan pengeluaran ke dalam 1 output array (*result set*) dengan menggunakan `UNION ALL`.
 
-1. **Sub-Query Expense (Sebagai Kolom Kredit):** 
-   - Menarik data dari `tr_expense_petty_cash`.
-   - Menginjeksikan nilai statis `'Transaksi'` ke kolom *jenis_jurnal*, nilai `0` ke kolom *Debit*.
-   - Mengambil nominal `total` sebagai nilai *Kredit*.
-   - Filter `WHERE` menerapkan logika bisnis Lintas Entitas yang sama persis seperti pada kalkulasi *Saldo Awal*.
-2. **Sub-Query Refill (Sebagai Kolom Debit):**
-   - Menarik data dari `tr_pelaporan_petty_cash`.
-   - Menginjeksikan nilai statis `1101-01-02` (COA Kas Kecil), `STM` (Company), `'Refill'` (jenis_jurnal).
-   - Nilai *Kredit* di set `0`, sedangkan *Debit* mengambil nilai `grand_total`.
+1. **Sub-Query Expense (Sebagai Kolom Kredit/Pengeluaran):** 
+   - **Sumber Data:** Diambil faktual langsung dari tabel staging `tr_jurnal`.
+   - **Filter Wajib:** `jenis_transaksi = 'Petty Cash'`, `sts = '1'` (Sudah Diposting), dan nilai mutlak pengeluaran ada (`debit > 0`). Filter tanggal merujuk secara akurat pada kolom `tgl_jurnal`.
+   - **Pemetaan (Mapping):** Nilai statis `'Transaksi'` dialiaskan sebagai *jenis_jurnal*. Nilai asli dari kolom `debit` jurnal di-mapping (dipindahkan) posisinya menjadi kolom **Kredit** dalam laporan, sedangkan nilai **Debit** laporan dipaksa `0`. Data nomor transaksi, kode COA, nama pengeluaran (dari `nm_coa`), keterangan detail, serta entitas perusahaan ditarik murni secara 1:1 dari rekaman jurnal tanpa proses *join* eksternal.
+2. **Sub-Query Refill (Sebagai Kolom Debit/Pemasukan):**
+   - **Sumber Data:** Diambil dari tabel pelaporan `tr_pelaporan_petty_cash`.
+   - **Filter Wajib:** Pengajuan `status = 'approved'`. Dilengkapi relasi wajib ke tabel `tr_jurnal` (via `payment_approve`) untuk memastikan dana sudah disahkan cair (`sts = 1`). Filter tanggal merujuk pada histori `approved_on`.
+   - **Pemetaan (Mapping):** Kolom COA direkayasa statis menjadi `1101-01-02` (Kas Kecil). Kolom **Debit** diisi penuh dari `grand_total` pencairan, dan **Kredit** di-set `0`.
 3. **Pengurutan Laporan (Sorting):**
-   Seluruh gabungan data `UNION ALL` diurutkan secara waktu (*chronological order*) menggunakan sintaks `ORDER BY tanggal ASC, sort_date ASC`. `sort_date` berfungsi sebagai validasi urutan waktu hingga satuan detik (*timestamp*) jika terdapat banyak transaksi di tanggal yang sama.
+   Seluruh matriks data gabungan tersebut akan diurutkan berdasarkan waktu agar tampilan laporan kronologis dan masuk akal secara finansial. Query menggunakan `ORDER BY tanggal ASC, sort_date ASC`. (Pada *expense*, variabel `sort_date` merujuk murni ke `tgl_jurnal`, sementara pada *refill* merujuk ke jejak waktu `approved_on`).
 
 ### 2.3. Eksekusi Kalkulasi Berjalan (Server-Side Running Balance Loop)
-Setelah hasil Query `UNION ALL` dikembalikan ke Controller, PHP mengambil alih proses hitung *running balance* menggunakan blok iterasi (looping) array:
+Hasil raw query `UNION ALL` di atas belum berisi saldo berjalan. Proses akumulasi saldo ini di-kalkulasi efisien pada layer eksekusi PHP Controller.
 ```php
 $running_balance = $saldo_awal;
 foreach ($records as $row) {
     $running_balance = $running_balance + $row->debit - $row->kredit;
-    // ... insert data to response array ...
+    $row->saldo = number_format($running_balance, 2);
 }
 ```
-Hasil akhirnya di-*format* sebagai *Currency* (menggunakan `number_format`) sebelum dikembalikan via JSON untuk dirender oleh *library* DataTables di sisi *client*.
+Arsitektur terpisah ini dirancang untuk memastikan beban kalkulasi finansial tidak terlalu memberatkan *resource query planner* memori database, dan jauh lebih luwes (*flexible*) saat merender komponen antarmuka tabel.
 
 ## 3. Sistem Keamanan & Otorisasi
-- **Layer Akses Kontroler:** Menggunakan fungsi *middleware* kustom CodeIgniter (misalnya, via base class `Admin_Controller`). Metode seperti `$this->auth->restrict('Permission.Name')` diterapkan secara *rigid* (kaku) di awal setiap *method* (`index`, `get_data`, `export_excel`) sehingga pencegahan kebocoran data dilakukan sejak fase validasi akses *backend*.
-- **Otorisasi Tombol (UI-Level):** Tombol *Export to Excel* di-*render* secara *conditional* di *View*, disembunyikan menggunakan pengecekan boolean PHP jika `$has_download` bernilai *false*, mencegah pengguna awam mengetahui keberadaan *endpoint* export data.
+- **Layer Akses Kontroler:** Menggunakan fungsi *middleware* kustom (contoh `$this->auth->restrict()`) yang diblok di awal *method* konstruktor. Eksekusi kode akan ditolak sejak fase inisialisasi jika *Role* tidak sesuai.
+- **Otorisasi Elemen Antarmuka (UI-Level):** Fitur vital ekspor Excel hanya ditampilkan (di-render) apabila akun login mengantongi variabel boolean hak akses `$has_download == true`. Metode ini secara pasif mengurangi celah keamanan data internal dari tindakan unduh paksa oleh akun tak berwenang.

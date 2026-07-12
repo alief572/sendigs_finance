@@ -99,7 +99,7 @@
         }
 
         .header-logo {
-            width: 120px;
+            width: 190px;
         }
 
         .header-company {
@@ -226,12 +226,14 @@
     <!-- HEADER -->
     <div class="header-wrap">
         <div class="header-logo">
-            <img src="<?= base_url('assets/images/logo_sbf.png') ?>" alt="Logo" width="100" height="60">
+            <img src="<?= base_url('assets/images/logo_sentral-removebg-preview.png') ?>" alt="Logo" width="180" height="60">
         </div>
         <div class="header-company">
-            <strong style="font-size:13px;">PT Surya Bangun Fajar</strong><br>
-            Jl. Kalijaga No.35 Kel. Pegambiran Kec. Lemahwungkuk<br>
-            Kota Cirebon, Jawa Barat 45113 &mdash; Indonesia
+            <strong style="font-size:13px;">PT Sentral Sistem Consulting</strong><br>
+            Jalan Letnan Jendral M.T. Haryono KAV.10 <br> 
+            MTH Square Lt.3A No.2, RT.6/RW.12, Cawang, <br> 
+            Kecamatan Jatinegara, Kota Jakarta Timur, <br>
+            Daerah Khusus Ibukota Jakarta 13330
         </div>
         <div class="header-title">
             <?php
