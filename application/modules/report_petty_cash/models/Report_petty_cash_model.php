@@ -48,23 +48,35 @@ class Report_petty_cash_model extends CI_Model
         ");
         $expense = $this->db->get()->row()->total_expense;
 
-        return $refill - $expense;
+        // Sum Transaksi Bank (Masuk ke Kas Kecil STM)
+        $this->db->select('COALESCE(SUM(transaksi), 0) as total_transaksi_bank');
+        $this->db->from('tr_request_mutasi_admin');
+        $this->db->where('target_accounting', 'accounting_stm');
+        $this->db->where('bank_tujuan', '1101-01-02');
+        $this->db->where('tgl_request <', $start_date);
+        $transaksi_bank = $this->db->get()->row()->total_transaksi_bank;
+
+        return ($refill + $transaksi_bank) - $expense;
     }
 
     public function get_report_data($start_date = null, $end_date = null)
     {
         $where_expense = "a.jenis_transaksi = 'Petty Cash' AND a.sts = '1' AND a.debit > 0";
         $where_refill = "status = 'approved'";
+        $where_transaksi_bank = "target_accounting = 'accounting_stm' AND bank_tujuan = '1101-01-02'";
 
         if (!empty($start_date) && !empty($end_date)) {
             $where_expense .= " AND a.tgl_jurnal >= '{$start_date}' AND a.tgl_jurnal <= '{$end_date}'";
             $where_refill .= " AND DATE(approved_on) >= '{$start_date}' AND DATE(approved_on) <= '{$end_date}'";
+            $where_transaksi_bank .= " AND tgl_request >= '{$start_date}' AND tgl_request <= '{$end_date}'";
         } elseif (!empty($start_date)) {
             $where_expense .= " AND a.tgl_jurnal >= '{$start_date}'";
             $where_refill .= " AND DATE(approved_on) >= '{$start_date}'";
+            $where_transaksi_bank .= " AND tgl_request >= '{$start_date}'";
         } elseif (!empty($end_date)) {
             $where_expense .= " AND a.tgl_jurnal <= '{$end_date}'";
             $where_refill .= " AND DATE(approved_on) <= '{$end_date}'";
+            $where_transaksi_bank .= " AND tgl_request <= '{$end_date}'";
         }
 
         $sql = "
@@ -102,6 +114,22 @@ class Report_petty_cash_model extends CI_Model
                 JOIN payment_approve pa ON pa.id = j.no_transaksi
                 WHERE pa.no_doc = tr_pelaporan_petty_cash.no_pelaporan AND j.sts = '1'
             )
+
+            UNION ALL
+
+            SELECT 
+                kd_mutasi AS no_transaksi,
+                tgl_request AS tanggal,
+                '1101-01-02' AS coa,
+                'STM' AS company,
+                keterangan AS pengeluaran,
+                'Transaksi Bank' AS jenis_jurnal,
+                transaksi AS debit,
+                0 AS kredit,
+                keterangan AS keterangan,
+                tgl_request AS sort_date
+            FROM tr_request_mutasi_admin
+            WHERE {$where_transaksi_bank}
 
             ORDER BY tanggal ASC, sort_date ASC
         ";

@@ -175,6 +175,12 @@
         border: 1px solid #c6f6d5;
     }
 
+    .badge-bank {
+        background-color: #ebf8ff;
+        color: #3182ce;
+        border: 1px solid #bee3f8;
+    }
+
     .table-jurnal-transaksi td {
         /* color: #e53e3e; */
     }
@@ -264,10 +270,10 @@
             <div class="modern-alert">
                 <p><b><i class="fa fa-info-circle"></i> Petunjuk Membaca Laporan:</b></p>
                 <ol>
-                    <li><b>Debet</b> : Kas kecil BERTAMBAH &rarr; sumber: Jurnal Refill (RPC)</li>
+                    <li><b>Debet</b> : Kas kecil BERTAMBAH &rarr; sumber: Jurnal Refill (RPC) & Transaksi Bank (KM/KK)</li>
                     <li><b>Kredit</b> : Kas kecil BERKURANG &rarr; sumber: Jurnal Pencatatan (PCP)</li>
                     <li><b>Saldo</b> : Running balance = Saldo sebelumnya + Debet - Kredit</li>
-                    <li><b>Jenis Jurnal ditandai warna</b>: <span class="badge-modern badge-transaksi">Transaksi (Merah)</span> | <span class="badge-modern badge-refill">Refill (Hijau)</span></li>
+                    <li><b>Jenis Jurnal ditandai warna</b>: <span class="badge-modern badge-transaksi">Transaksi (Merah)</span> | <span class="badge-modern badge-refill">Refill (Hijau)</span> | <span class="badge-modern badge-bank">Transaksi Bank (Biru)</span></li>
                 </ol>
             </div>
 
@@ -331,6 +337,7 @@
                   "render": function(data, type, row) {
                       if(data == 'Transaksi') return '<span class="badge-modern badge-transaksi">' + data + '</span>';
                       if(data == 'Refill') return '<span class="badge-modern badge-refill">' + data + '</span>';
+                      if(data == 'Transaksi Bank') return '<span class="badge-modern badge-bank">' + data + '</span>';
                       return data;
                   }
                 },
