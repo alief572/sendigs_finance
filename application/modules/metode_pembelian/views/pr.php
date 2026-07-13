@@ -61,6 +61,22 @@ $this->load->view('include/side_menu');
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="ModalHistory" style='overflow-y: auto;'>
+		<div class="modal-dialog modal-md">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="head_title_history"><span class="fa fa-history"></span>&nbsp; Tracking History PR</h4>
+				</div>
+				<div class="modal-body" id="history_content">
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </form>
 <?php $this->load->view('include/footer'); ?>
 <script>
@@ -77,6 +93,28 @@ $this->load->view('include/side_menu');
 		$(document).on('click', '.look_hide', function() {
 			var idOfParent = $(this).parents('tr').attr('id');
 			$('.child-' + idOfParent).toggle('slow');
+		});
+
+		$(document).on('click', '.view_history', function(e) {
+			e.preventDefault();
+			var no_pr = $(this).data('no_pr');
+			$.ajax({
+				url: base_url + active_controller + '/view_tracking_pr',
+				type: "POST",
+				data: {no_pr: no_pr},
+				dataType: 'json',
+				success: function(data) {
+					if(data.status == 1) {
+						$('#history_content').html(data.html);
+						$('#ModalHistory').modal('show');
+					} else {
+						swal("Error", data.html, "error");
+					}
+				},
+				error: function() {
+					swal("Error", "Server error saat mengambil data history", "error");
+				}
+			});
 		});
 	});
 

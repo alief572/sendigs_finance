@@ -141,6 +141,7 @@ class Metode_pembelian_model extends BF_Model
 			$nestedData[]	= "<div align='left'><span class='badge' style='background-color: " . $warna2 . "'>" . $sts . "</span>" . $sts2 . "</div>";
 			$nestedData[]	= "<div align='center'>
 								<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "'><i class='fa fa-eye'></i></button>
+								<button type='button' class='btn btn-sm btn-info view_history' title='View History' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-history'></i></button>
 								</div>";
 			$data[] = $nestedData;
 
@@ -1051,6 +1052,13 @@ class Metode_pembelian_model extends BF_Model
 		} else {
 			$status = 1;
 			$pesan  = ($kode_jenis_pembelian == '1') ? 'PO PR Grouping Success!' : 'Non PO PR Grouping Success!';
+
+			if (!empty($data['check'])) {
+				foreach ($data['check'] as $no_pr) {
+					$aksi_desc = ($kode_jenis_pembelian == '1') ? 'Grouping PO' : (($kode_jenis_pembelian == '2') ? 'Grouping Non-PO' : 'Grouping PR');
+					$this->insert_tracking_pr('PR', $no_pr, $aksi_desc, 'User mengelompokkan PR (metode: '.$jenis_pembelian.')');
+				}
+			}
 		}
 
 		echo json_encode(['pesan' => $pesan, 'status' => $status]);
@@ -1317,6 +1325,7 @@ class Metode_pembelian_model extends BF_Model
 				'status'	=> 1
 			);
 			history('Update RFQ ' . $no_rfq);
+			$this->insert_tracking_pr('RFQ', $no_rfq, 'Save RFQ / Update RFQ', 'User menyimpan atau mengupdate RFQ');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -1373,6 +1382,7 @@ class Metode_pembelian_model extends BF_Model
 				'no_po'		=> $no_rfq
 			);
 			history('Cancel Sebagian RFQ ' . $no_rfq . '/' . $id_barang . '/' . $no_pr);
+			$this->insert_tracking_pr('RFQ', $no_rfq, 'Cancel Sebagian', 'User membatalkan sebagian RFQ');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -1441,6 +1451,7 @@ class Metode_pembelian_model extends BF_Model
 				'no_po'		=> $no_rfq
 			);
 			history('Delete RFQ ' . $no_rfq);
+			$this->insert_tracking_pr('RFQ', $no_rfq, 'Delete RFQ', 'User menghapus RFQ');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -1747,6 +1758,7 @@ class Metode_pembelian_model extends BF_Model
 				'status'	=> 1
 			);
 			history('Pengajuan Purchasing RFQ ' . $no_rfq);
+			$this->insert_tracking_pr('PENGAJUAN', $no_rfq, 'Create Pengajuan', 'User membuat Pengajuan dari RFQ');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -2693,6 +2705,7 @@ class Metode_pembelian_model extends BF_Model
 				'status'	=> 1
 			);
 			history('Delete sebagian PO : ' . $no_po);
+			$this->insert_tracking_pr('PO', $no_po, 'Delete Sebagian', 'User menghapus sebagian PO');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -2854,6 +2867,7 @@ class Metode_pembelian_model extends BF_Model
 				'status'	=> 1
 			);
 			history('Delete sebagian PO : ' . $no_po);
+			$this->insert_tracking_pr('PO', $no_po, 'Delete Sebagian', 'User menghapus sebagian PO');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -3018,6 +3032,7 @@ class Metode_pembelian_model extends BF_Model
 				'status'	=> 1
 			);
 			history('Delete semua PO : ' . $no_po . ' / ' . $no_pr_group);
+			$this->insert_tracking_pr('PO', $no_po, 'Delete PO', 'User menghapus semua PO');
 		}
 		echo json_encode($Arr_Data);
 	}
@@ -3586,6 +3601,7 @@ class Metode_pembelian_model extends BF_Model
 					'status'	=> 1
 				);
 				history('Create PO ' . $no_po . '/' . $valx22['hub_rfq'] . '/' . $valx22['id']);
+				$this->insert_tracking_pr('PO', $no_po, 'Create PO', 'User membuat PO');
 			}
 			echo json_encode($Arr_Kembali);
 		} else {
@@ -3959,5 +3975,46 @@ class Metode_pembelian_model extends BF_Model
 			history('Edit PO custom TOP : ' . $data['no_po']);
 		}
 		echo json_encode($Arr_Data);
+	}
+
+	public function insert_tracking_pr($tipe_dokumen, $no_dokumen, $aksi, $keterangan = '')
+	{
+		$created_by = $this->auth->user_name();
+		
+		// $list_pr = [];
+		// if ($tipe_dokumen == 'PR') {
+		// 	$list_pr[] = $no_dokumen;
+		// } elseif ($tipe_dokumen == 'RFQ' || $tipe_dokumen == 'PERBANDINGAN' || $tipe_dokumen == 'PENGAJUAN' || $tipe_dokumen == 'APPROVAL') {
+		// 	$this->db->select('no_pr');
+		// 	$this->db->group_by('no_pr');
+		// 	$res = $this->db->get_where('tran_rfq_detail', ['no_rfq' => $no_dokumen])->result();
+		// 	foreach ($res as $r) { $list_pr[] = $r->no_pr; }
+		// } elseif ($tipe_dokumen == 'PO') {
+		// 	$this->db->select('no_pr');
+		// 	$this->db->group_by('no_pr');
+		// 	$res = $this->db->get_where('tran_po_detail', ['no_po' => $no_dokumen])->result();
+		// 	foreach ($res as $r) { $list_pr[] = $r->no_pr; }
+		// }
+		$list_pr[] = $no_dokumen;
+
+		if (!empty($list_pr)) {
+			$insert_data = [];
+			foreach ($list_pr as $pr) {
+				if(!empty($pr)){
+					$insert_data[] = [
+						'no_pr' => $pr,
+						'tipe_dokumen' => $tipe_dokumen,
+						'no_dokumen' => $no_dokumen,
+						'aksi' => $aksi,
+						'keterangan' => $keterangan,
+						'created_by' => $created_by,
+						'created_at' => date('Y-m-d H:i:s')
+					];
+				}
+			}
+			if (!empty($insert_data)) {
+				$this->db->insert_batch('tr_tracking_pembelian', $insert_data);
+			}
+		}
 	}
 }
