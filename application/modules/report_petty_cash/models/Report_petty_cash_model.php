@@ -26,26 +26,13 @@ class Report_petty_cash_model extends CI_Model
         )");
         $refill = $this->db->get()->row()->total_refill;
 
-        // Sum Expense (menggunakan detail agar akurat dengan data report)
-        $this->db->select('COALESCE(SUM(d.total), 0) as total_expense');
-        $this->db->from('tr_expense_petty_cash h');
-        $this->db->join('tr_expense_petty_cash_detail d', 'd.pencatatan_id = h.id');
-        $this->db->where('h.status', 'approved');
-        $this->db->where('h.tanggal <', $start_date);
-        $this->db->where("
-            (
-                (h.company = 'STM')
-                OR
-                (h.company != 'STM' AND EXISTS (
-                    SELECT 1 FROM tr_pelaporan_petty_cash_detail pd 
-                    JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
-                    JOIN tr_petty_cash_vuca_sustain vs ON vs.no_pelaporan = p.no_pelaporan
-                    JOIN payment_approve pa ON pa.no_doc = vs.no_payment_hutang
-                    JOIN tr_jurnal j ON j.no_transaksi = pa.id
-                    WHERE pd.pencatatan_id = h.id AND j.sts = '1'
-                ))
-            )
-        ");
+        // Sum Expense (menggunakan tr_jurnal agar sinkron dengan report)
+        $this->db->select('COALESCE(SUM(debit), 0) as total_expense');
+        $this->db->from('tr_jurnal');
+        $this->db->where("jenis_transaksi", "Petty Cash");
+        $this->db->where("sts", "1");
+        $this->db->where("debit >", 0);
+        $this->db->where('tgl_jurnal <', $start_date);
         $expense = $this->db->get()->row()->total_expense;
 
         // Sum Transaksi Bank (Masuk ke Kas Kecil STM)

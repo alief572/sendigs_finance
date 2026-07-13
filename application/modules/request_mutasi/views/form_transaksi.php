@@ -39,7 +39,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="dari" class="col-sm-4 control-label">COA Tujuan </label>
+                        <label for="dari" class="col-sm-4 control-label">COA Asal </label>
                         <div class="col-sm-8">
                             <?php
                             echo form_dropdown('dari', $datacoa, '', array('id' => 'dari', 'required' => 'required', 'class' => 'form-control select2'));
@@ -48,7 +48,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="ke" class="col-sm-4 control-label">COA Bank </label>
+                        <label for="ke" class="col-sm-4 control-label">COA Tujuan </label>
                         <div class="col-sm-8">
                             <?php
                             echo form_dropdown('ke', $datbank, '', array('id' => 'ke', 'required' => 'required', 'class' => 'form-control select2'));
