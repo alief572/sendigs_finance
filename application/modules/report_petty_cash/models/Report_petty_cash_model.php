@@ -63,7 +63,7 @@ class Report_petty_cash_model extends CI_Model
                 0 AS debit,
                 a.debit AS kredit,
                 a.keterangan AS keterangan,
-                a.tgl_jurnal AS sort_date
+                a.created_date AS sort_date
             FROM tr_jurnal a
             JOIN tr_expense_petty_cash b ON a.no_transaksi = b.no_pencatatan
             WHERE {$where_expense}
@@ -80,7 +80,7 @@ class Report_petty_cash_model extends CI_Model
                 grand_total AS debit,
                 0 AS kredit,
                 'Dari Bank STM' AS keterangan,
-                approved_on AS sort_date
+                created_on AS sort_date
             FROM tr_pelaporan_petty_cash
             WHERE {$where_refill}
             AND EXISTS (
@@ -101,7 +101,7 @@ class Report_petty_cash_model extends CI_Model
                 transaksi AS debit,
                 0 AS kredit,
                 keterangan AS keterangan,
-                tgl_request AS sort_date
+                created_on AS sort_date
             FROM tr_request_mutasi_admin
             WHERE {$where_transaksi_bank}
 

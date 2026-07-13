@@ -64,7 +64,7 @@ class Report_petty_cash extends Admin_Controller
             'debit' => 'saldo awal >>',
             'kredit' => '',
             'saldo' => number_format($saldo_awal),
-            'keterangan' => 'Saldo Awal Petty Cash'
+            'keterangan' => 'Transaksi Bank'
         ];
 
         foreach ($records as $row) {
