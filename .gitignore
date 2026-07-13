@@ -38,3 +38,5 @@ application/config/config.php
 /vendor
 /application/config
 analisis_bug_pph_vuca.md
+/application/modules/invoicing/md
+/assets/expense_petty_cash
