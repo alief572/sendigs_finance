@@ -20,8 +20,9 @@ Karena sistem keuangan tidak menggunakan skema "Tutup Buku Bersaldo", sistem men
 ### 2.1. Logic Pencarian Saldo Awal (Opening Balance)
 Fungsi: `get_saldo_awal($start_date)`
 Mengkalkulasi saldo dari seluruh waktu *sebelum* parameter `start_date`.
-- **Total Refill Query:** 
-  Menjumlahkan `SUM(grand_total)` dari `tr_pelaporan_petty_cash` yang berstatus *'approved'*, sebelum tanggal awal, dan dibuktikan lewat relasi `EXISTS` ke tabel `tr_jurnal` bahwa jurnal `payment_approve`-nya telah diposting (`sts = 1`).
+- **Total Pemasukan (Debit) Query:** 
+  - **Refill:** Menjumlahkan `SUM(grand_total)` dari `tr_pelaporan_petty_cash` yang berstatus *'approved'*, sebelum tanggal awal, dan dibuktikan lewat relasi `EXISTS` ke tabel `tr_jurnal` bahwa jurnal `payment_approve`-nya telah diposting (`sts = 1`).
+  - **Transaksi Bank:** Menjumlahkan `SUM(transaksi)` dari tabel `tr_request_mutasi_admin` di mana dana secara riil disalurkan ke kas kecil (`bank_tujuan = '1101-01-02'`) khusus untuk entitas STM (`target_accounting = 'accounting_stm'`) sebelum tanggal awal.
 - **Total Expense Query:**
   *(Catatan Teknis: Kalkulasi saldo awal untuk pengeluaran saat ini masih menggunakan warisan arsitektur tabel `tr_expense_petty_cash` lintas entitas. Kedepannya akan disinkronisasi ke sumber tunggal `tr_jurnal`)*.
   Menjumlahkan `SUM(d.total)` dari tabel historikal `tr_expense_petty_cash` yang telah *approved* dan lolos validasi hierarki pembayaran antar-perusahaan jika perusahaan bukan 'STM'.
@@ -34,12 +35,16 @@ Sistem menggabungkan data pemasukan dan pengeluaran ke dalam 1 output array (*re
    - **Sumber Data:** Diambil faktual langsung dari tabel staging `tr_jurnal`.
    - **Filter Wajib:** `jenis_transaksi = 'Petty Cash'`, `sts = '1'` (Sudah Diposting), dan nilai mutlak pengeluaran ada (`debit > 0`). Filter tanggal merujuk secara akurat pada kolom `tgl_jurnal`.
    - **Pemetaan (Mapping):** Nilai statis `'Transaksi'` dialiaskan sebagai *jenis_jurnal*. Nilai asli dari kolom `debit` jurnal di-mapping (dipindahkan) posisinya menjadi kolom **Kredit** dalam laporan, sedangkan nilai **Debit** laporan dipaksa `0`. Data nomor transaksi, kode COA, nama pengeluaran (dari `nm_coa`), keterangan detail, serta entitas perusahaan ditarik murni secara 1:1 dari rekaman jurnal tanpa proses *join* eksternal.
-2. **Sub-Query Refill (Sebagai Kolom Debit/Pemasukan):**
+2. **Sub-Query Refill (Sebagai Kolom Debit/Pemasukan Utama):**
    - **Sumber Data:** Diambil dari tabel pelaporan `tr_pelaporan_petty_cash`.
    - **Filter Wajib:** Pengajuan `status = 'approved'`. Dilengkapi relasi wajib ke tabel `tr_jurnal` (via `payment_approve`) untuk memastikan dana sudah disahkan cair (`sts = 1`). Filter tanggal merujuk pada histori `approved_on`.
    - **Pemetaan (Mapping):** Kolom COA direkayasa statis menjadi `1101-01-02` (Kas Kecil). Kolom **Debit** diisi penuh dari `grand_total` pencairan, dan **Kredit** di-set `0`.
-3. **Pengurutan Laporan (Sorting):**
-   Seluruh matriks data gabungan tersebut akan diurutkan berdasarkan waktu agar tampilan laporan kronologis dan masuk akal secara finansial. Query menggunakan `ORDER BY tanggal ASC, sort_date ASC`. (Pada *expense*, variabel `sort_date` merujuk murni ke `tgl_jurnal`, sementara pada *refill* merujuk ke jejak waktu `approved_on`).
+3. **Sub-Query Transaksi Bank (Sebagai Kolom Debit/Pemasukan Tambahan):**
+   - **Sumber Data:** Diambil dari fitur transaksi langsung admin (`tr_request_mutasi_admin`).
+   - **Filter Wajib:** Terjadi di entitas STM (`target_accounting = 'accounting_stm'`) dan spesifik diarahkan masuk ke brankas kas kecil (`bank_tujuan = '1101-01-02'`).
+   - **Pemetaan (Mapping):** Label kolom *jenis_jurnal* di-hardcode dengan string `'Transaksi Bank'`, COA direkayasa ke `1101-01-02`. Nilai `transaksi` IDR disalurkan seutuhnya ke kolom **Debit**, sedangkan **Kredit** di-set `0`.
+4. **Pengurutan Laporan (Sorting):**
+   Seluruh matriks data gabungan (UNION ALL) dari ketiga sub-query di atas diurutkan berdasarkan waktu agar tampilan laporan kronologis dan masuk akal secara finansial. Query menggunakan `ORDER BY tanggal ASC, sort_date ASC`. (Variabel `sort_date` masing-masing merujuk ke parameter urutan waktu terkecilnya).
 
 ### 2.3. Eksekusi Kalkulasi Berjalan (Server-Side Running Balance Loop)
 Hasil raw query `UNION ALL` di atas belum berisi saldo berjalan. Proses akumulasi saldo ini di-kalkulasi efisien pada layer eksekusi PHP Controller.

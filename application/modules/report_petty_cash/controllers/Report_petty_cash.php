@@ -35,6 +35,16 @@ class Report_petty_cash extends Admin_Controller
         $start_date = $this->input->post('start_date');
         $end_date = $this->input->post('end_date');
 
+        if (empty($start_date) && empty($end_date)) {
+            echo json_encode([
+                'draw' => intval($this->input->post('draw')),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => []
+            ]);
+            return;
+        }
+
         $saldo_awal = $this->Report_petty_cash_model->get_saldo_awal($start_date);
         $records = $this->Report_petty_cash_model->get_report_data($start_date, $end_date);
 
@@ -89,6 +99,11 @@ class Report_petty_cash extends Admin_Controller
 
         $start_date = $this->input->get('start_date');
         $end_date = $this->input->get('end_date');
+
+        if (empty($start_date) && empty($end_date)) {
+            echo "<script>alert('Silakan pilih filter periode laporan terlebih dahulu!'); window.close();</script>";
+            return;
+        }
 
         $saldo_awal = $this->Report_petty_cash_model->get_saldo_awal($start_date);
         $records = $this->Report_petty_cash_model->get_report_data($start_date, $end_date);
