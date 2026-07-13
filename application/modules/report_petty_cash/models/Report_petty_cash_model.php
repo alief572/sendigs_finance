@@ -27,12 +27,14 @@ class Report_petty_cash_model extends CI_Model
         $refill = $this->db->get()->row()->total_refill;
 
         // Sum Expense (menggunakan tr_jurnal agar sinkron dengan report)
-        $this->db->select('COALESCE(SUM(debit), 0) as total_expense');
-        $this->db->from('tr_jurnal');
-        $this->db->where("jenis_transaksi", "Petty Cash");
-        $this->db->where("sts", "1");
-        $this->db->where("debit >", 0);
-        $this->db->where('tgl_jurnal <', $start_date);
+        $this->db->select('COALESCE(SUM(a.debit), 0) as total_expense');
+        $this->db->from('tr_jurnal a');
+        $this->db->join('tr_expense_petty_cash b', 'a.no_transaksi = b.no_pencatatan');
+        $this->db->where("a.jenis_transaksi", "Petty Cash");
+        $this->db->where("a.sts", "1");
+        $this->db->where("a.debit >", 0);
+        $this->db->where("a.nm_company = b.company");
+        $this->db->where('a.tgl_jurnal <', $start_date);
         $expense = $this->db->get()->row()->total_expense;
 
         // Sum Transaksi Bank (Masuk ke Kas Kecil STM)
@@ -48,7 +50,7 @@ class Report_petty_cash_model extends CI_Model
 
     public function get_report_data($start_date = null, $end_date = null)
     {
-        $where_expense = "a.jenis_transaksi = 'Petty Cash' AND a.sts = '1' AND a.debit > 0";
+        $where_expense = "a.jenis_transaksi = 'Petty Cash' AND a.sts = '1' AND a.debit > 0 AND a.nm_company = b.company";
         $where_refill = "status = 'approved'";
         $where_transaksi_bank = "target_accounting = 'accounting_stm' AND bank_tujuan = '1101-01-02'";
 
@@ -79,6 +81,7 @@ class Report_petty_cash_model extends CI_Model
                 a.keterangan AS keterangan,
                 a.tgl_jurnal AS sort_date
             FROM tr_jurnal a
+            JOIN tr_expense_petty_cash b ON a.no_transaksi = b.no_pencatatan
             WHERE {$where_expense}
 
             UNION ALL
