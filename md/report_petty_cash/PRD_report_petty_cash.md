@@ -40,8 +40,7 @@ Pemasukan kas kecil memiliki dua sumber aliran dana yang sah:
 *Catatan: Dengan menarik data langsung dari `tr_jurnal` yang sudah diposting, sistem menjamin tidak adanya "pengeluaran menggantung" (unposted) yang secara prematur dapat mengurangi saldo riil buku kas kecil.*
 
 ### 3.3. Algoritma Buku Besar (Ledger Calculation)
-- **Auto-Kalkulasi Saldo Awal (Opening Balance):** Sebelum menampilkan data di rentang waktu pencarian, sistem menelusuri seluruh riwayat transaksi di masa lalu. Saldo awal didapat dari akumulasi Total Pemasukan dikurangi Total Pengeluaran *sebelum* periode awal (Start Date) yang dipilih pengguna. 
-*(Saat ini, khusus untuk kalkulasi komponen pengeluaran di saldo awal, sistem masih mempergunakan algoritma pengecekan lintas entitas lama berbasis tabel `tr_expense_petty_cash`. Sinkronisasi ke `tr_jurnal` masih direncanakan di fase berikutnya).*
+- **Auto-Kalkulasi Saldo Awal (Opening Balance):** Sistem mengambil nilai mutlak dari database *Accounting* (`accounting_stm`), pada tabel `coa` untuk nomor perkiraan kas kecil (`1101-01-02`). Sistem akan mencocokkan kolom bulan (`bln`) dan tahun (`thn`) berdasarkan parameter bulan dan tahun dari rentang *Start Date* yang dipilih oleh pengguna. Jika data tidak ditemukan, saldo awal di-set `0`.
 - **Running Balance:** Di setiap baris mutasi yang tampil di layar, saldo akhir baris dihitung otomatis secara kronologis dengan rumus: 
   **`Saldo Berjalan = Saldo Baris Sebelumnya + Nominal Debit - Nominal Kredit`**
 

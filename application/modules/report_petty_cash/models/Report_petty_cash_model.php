@@ -14,38 +14,22 @@ class Report_petty_cash_model extends CI_Model
             return 0;
         }
 
-        // Sum Refill
-        $this->db->select('COALESCE(SUM(grand_total), 0) as total_refill');
-        $this->db->from('tr_pelaporan_petty_cash');
-        $this->db->where('status', 'approved');
-        $this->db->where('DATE(approved_on) <', $start_date);
-        $this->db->where("EXISTS (
-            SELECT 1 FROM tr_jurnal j 
-            JOIN payment_approve pa ON pa.id = j.no_transaksi
-            WHERE pa.no_doc = tr_pelaporan_petty_cash.no_pelaporan AND j.sts = '1'
-        )");
-        $refill = $this->db->get()->row()->total_refill;
+        $bln = (int) date('m', strtotime($start_date));
+        $thn = (int) date('Y', strtotime($start_date));
 
-        // Sum Expense (menggunakan tr_jurnal agar sinkron dengan report)
-        $this->db->select('COALESCE(SUM(a.debit), 0) as total_expense');
-        $this->db->from('tr_jurnal a');
-        $this->db->join('tr_expense_petty_cash b', 'a.no_transaksi = b.no_pencatatan');
-        $this->db->where("a.jenis_transaksi", "Petty Cash");
-        $this->db->where("a.sts", "1");
-        $this->db->where("a.debit >", 0);
-        $this->db->where("a.nm_company = b.company");
-        $this->db->where('a.tgl_jurnal <', $start_date);
-        $expense = $this->db->get()->row()->total_expense;
+        $db_accounting = $this->load->database('accounting_stm', TRUE);
+        $db_accounting->select('saldoawal');
+        $db_accounting->from('coa');
+        $db_accounting->where('no_perkiraan', '1101-01-02');
+        $db_accounting->where('bln', $bln);
+        $db_accounting->where('thn', $thn);
+        $query = $db_accounting->get();
 
-        // Sum Transaksi Bank (Masuk ke Kas Kecil STM)
-        $this->db->select('COALESCE(SUM(transaksi), 0) as total_transaksi_bank');
-        $this->db->from('tr_request_mutasi_admin');
-        $this->db->where('target_accounting', 'accounting_stm');
-        $this->db->where('bank_tujuan', '1101-01-02');
-        $this->db->where('tgl_request <', $start_date);
-        $transaksi_bank = $this->db->get()->row()->total_transaksi_bank;
+        if ($query->num_rows() > 0) {
+            return (float) $query->row()->saldoawal;
+        }
 
-        return ($refill + $transaksi_bank) - $expense;
+        return 0;
     }
 
     public function get_report_data($start_date = null, $end_date = null)
