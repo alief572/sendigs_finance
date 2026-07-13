@@ -583,9 +583,9 @@ class Request_payment_model extends BF_Model
                 $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
             if ($item->kategori == 'Cash') {
-                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item->no_dokumen])->row();
                 if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
-                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->no_dokumen) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 
