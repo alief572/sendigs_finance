@@ -19,12 +19,12 @@ Karena sistem keuangan tidak menggunakan skema "Tutup Buku Bersaldo", sistem men
 
 ### 2.1. Logic Pencarian Saldo Awal (Opening Balance)
 Fungsi: `get_saldo_awal($start_date)`
-Mengkalkulasi saldo dari seluruh waktu *sebelum* parameter `start_date`.
-- **Total Pemasukan (Debit) Query:** 
-  - **Refill:** Menjumlahkan `SUM(grand_total)` dari `tr_pelaporan_petty_cash` yang berstatus *'approved'*, sebelum tanggal awal, dan dibuktikan lewat relasi `EXISTS` ke tabel `tr_jurnal` bahwa jurnal `payment_approve`-nya telah diposting (`sts = 1`).
-  - **Transaksi Bank:** Menjumlahkan `SUM(transaksi)` dari tabel `tr_request_mutasi_admin` di mana dana secara riil disalurkan ke kas kecil (`bank_tujuan = '1101-01-02'`) khusus untuk entitas STM (`target_accounting = 'accounting_stm'`) sebelum tanggal awal.
-- **Total Expense Query:**
-  Menjumlahkan `SUM(debit)` langsung dari tabel staging `tr_jurnal` di mana `jenis_transaksi = 'Petty Cash'`, status jurnal sudah diposting (`sts = 1`), dan `debit > 0` sebelum tanggal awal. Metode ini menjamin saldo awal tersinkronisasi 100% secara matematis dengan baris data laporan.
+Mengkalkulasi saldo awal dengan melakukan *query* lintas-database ke database *Accounting* (`accounting_stm`).
+- **Sumber Data:** Tabel `coa` dari database `accounting_stm`.
+- **Kondisi Filter:** 
+  - `no_perkiraan = '1101-01-02'` (Kas Kecil).
+  - Kolom `bln` dan `thn` diselaraskan (di-ekstrak) dari parameter `start_date` yang dipilih pengguna.
+- **Mekanisme Fallback:** Apabila rekaman saldo untuk bulan dan tahun terkait tidak ditemukan (nilai kembalian *null* / kosong), maka sistem akan me-*return* nilai *integer* `0`.
 
 ### 2.2. Logic Agregasi Data Laporan (Query UNION ALL)
 Fungsi: `get_report_data($start_date, $end_date)`
