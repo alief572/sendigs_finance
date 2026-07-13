@@ -126,6 +126,9 @@ $default_date_to   = date('Y-m-d');
 							<option value="Kasbon">Kasbon</option>
 							<option value="Periodik">Periodik</option>
 							<option value="Expense">Expense</option>
+							<option value="Petty Cash">Petty Cash</option>
+							<option value="Petty Cash Hutang">Petty Cash Hutang</option>
+							<option value="Refill Pettycash">Refill Pettycash</option>
 							<option value="Non-PO">Non-PO</option>
 							<option value="Purchase Invoice">Purchase Invoice</option>
 							<option value="Direct Payment">Direct Payment</option>
@@ -196,7 +199,7 @@ $default_date_to   = date('Y-m-d');
 		</div>
 		<div class="row" style="margin-bottom: 20px;">
 			<!-- Card 5: Expense -->
-			<div class="col-md-4">
+			<div class="col-md-3">
 				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">EXPENSE</div>
 					<div style="font-size: 22px; font-weight: bold; color: #F44336;">
@@ -205,7 +208,7 @@ $default_date_to   = date('Y-m-d');
 				</div>
 			</div>
 			<!-- Card 6: Periodik -->
-			<div class="col-md-4">
+			<div class="col-md-3">
 				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">PERIODIK</div>
 					<div style="font-size: 22px; font-weight: bold; color: #9C27B0;">
@@ -214,11 +217,20 @@ $default_date_to   = date('Y-m-d');
 				</div>
 			</div>
 			<!-- Card 7: Transport -->
-			<div class="col-md-4">
+			<div class="col-md-3">
 				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
 					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">TRANSPORT</div>
 					<div style="font-size: 22px; font-weight: bold; color: #4CAF50;">
 						<span style="font-size: 14px;">Rp</span> <span id="card_total_transport">0</span>
+					</div>
+				</div>
+			</div>
+			<!-- Card 8: Petty Cash -->
+			<div class="col-md-3">
+				<div class="card-summary" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; background-color: #fff; height: 100%;">
+					<div style="font-size: 11px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 5px;">PETTY CASH</div>
+					<div style="font-size: 22px; font-weight: bold; color: #00BCD4;">
+						<span style="font-size: 14px;">Rp</span> <span id="card_total_petty_cash">0</span>
 					</div>
 				</div>
 			</div>
@@ -552,6 +564,7 @@ $default_date_to   = date('Y-m-d');
 					$('#card_total_expense').text(formatNumber(response.total_expense || 0));
 					$('#card_total_periodik').text(formatNumber(response.total_periodik || 0));
 					$('#card_total_transport').text(formatNumber(response.total_transport || 0));
+					$('#card_total_petty_cash').text(formatNumber(response.total_petty_cash || 0));
 				},
 				error: function() {
 					$('#card_total_pengajuan').text('-');
@@ -561,6 +574,7 @@ $default_date_to   = date('Y-m-d');
 					$('#card_total_expense').text('-');
 					$('#card_total_periodik').text('-');
 					$('#card_total_transport').text('-');
+					$('#card_total_petty_cash').text('-');
 				}
 			});
 		}

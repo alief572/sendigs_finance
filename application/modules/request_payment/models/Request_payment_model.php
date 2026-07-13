@@ -503,7 +503,11 @@ class Request_payment_model extends BF_Model
 
         // Apply kategori filter if non-null
         if (!empty($kategori)) {
-            $this->db->where('a.kategori', $kategori);
+            if ($kategori === 'Refill Pettycash') {
+                $this->db->where('a.kategori', 'refill_pettycash');
+            } else {
+                $this->db->where('a.kategori', $kategori);
+            }
         }
 
         // Apply company_id filter if non-null
@@ -546,6 +550,9 @@ class Request_payment_model extends BF_Model
 
         // Kategori badge color mapping
         $badge_colors = [
+            'Petty Cash'       => 'badge-primary',
+            'Petty Cash Hutang' => 'badge-primary',
+            'Refill Pettycash' => 'badge-primary',
             'Cash'             => 'badge-primary',
             'Kasbon'           => 'badge-warning',
             'Transport'        => 'badge-info',
@@ -583,9 +590,23 @@ class Request_payment_model extends BF_Model
                 $btn_print = ' <a href="' . base_url('expense/expense_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
             if ($item->kategori == 'Cash') {
-                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item->no_dokumen])->row();
+                $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
                 if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
                     $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->no_dokumen) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+            // Print button untuk RPC (Petty Cash - pelaporan)
+            if (strpos($item->no_dokumen, 'RPC-') === 0) {
+                $get_rpc_data = $this->db->select('id')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                if ($get_rpc_data) {
+                    $btn_print = ' <a href="' . base_url('expense_petty_cash/print_pelaporan/' . $get_rpc_data->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
+            }
+            // Print button untuk PHP (Petty Cash Hutang)
+            if ($item->kategori == 'Petty Cash Hutang' || strpos($item->no_dokumen, 'PHP-') === 0) {
+                $get_php_data = $this->db->select('id')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                if ($get_php_data) {
+                    $btn_print = ' <a href="' . base_url('petty_cash_vuca_sustain/print_pdf/' . $get_php_data->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 
@@ -595,6 +616,25 @@ class Request_payment_model extends BF_Model
                 $mapped_id = $company_map[$item->id_company];
                 if (isset($company_names[$mapped_id])) {
                     $company_display = $company_names[$mapped_id];
+                }
+            }
+
+            // Fallback untuk Petty Cash Hutang dan Petty Cash biasa: ambil company dari pencatatan petty cash
+            if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
+                // Cek dulu di tr_petty_cash_vuca_sustain (untuk PHP-xxxx)
+                $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                if (!empty($get_petty_cash)) {
+                    $company_display = $get_petty_cash->company;
+                }
+
+                // Fallback ke tr_pelaporan_petty_cash (untuk RPC-xxxx)
+                if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
+                    $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                    if (!empty($get_rpc) && !empty($get_rpc->company)) {
+                        $company_display = $get_rpc->company;
+                    } else {
+                        $company_display = 'STM';
+                    }
                 }
             }
 
@@ -653,8 +693,14 @@ class Request_payment_model extends BF_Model
             $no_dokumen_html = '<span>' . $item->no_dokumen . '</span><br><small class="text-muted">' . $tanggal_formatted . '</small>';
 
             // Kategori badge
-            $badge_class = isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default';
-            $kategori_html = '<span class="badge ' . $badge_class . '">' . $item->kategori . '</span>';
+            // Map refill_pettycash to Refill Pettycash for display
+            $display_kategori = $item->kategori;
+            if ($item->kategori == 'refill_pettycash') {
+                $display_kategori = 'Refill Pettycash';
+            }
+
+            $badge_class = isset($badge_colors[$display_kategori]) ? $badge_colors[$display_kategori] : (isset($badge_colors[$item->kategori]) ? $badge_colors[$item->kategori] : 'badge-default');
+            $kategori_html = '<span class="badge ' . $badge_class . '">' . $display_kategori . '</span>';
 
             // Nilai (right-aligned formatted)
             $nilai = (!empty($item->nilai_pengajuan)) ? number_format($item->nilai_pengajuan, 0, ',', '.') : '0';
@@ -720,6 +766,21 @@ class Request_payment_model extends BF_Model
                     $row_approval = $this->db->select('created_date')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
                     if ($row_approval && !empty($row_approval->created_date)) {
                         $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_date));
+                    }
+                    break;
+                case 'refill_pettycash':
+                case 'Refill Pettycash':
+                case 'Petty Cash':
+                    $row_approval = $this->db->select('approved_on')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->approved_on)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->approved_on));
+                    }
+                    break;
+                case 'petty_cash_hutang':
+                case 'Petty Cash Hutang':
+                    $row_approval = $this->db->select('created_on')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+                    if ($row_approval && !empty($row_approval->created_on)) {
+                        $tanggal_approval = date('d-M-Y', strtotime($row_approval->created_on));
                     }
                     break;
                 // Purchase Invoice: kosongkan
@@ -1094,7 +1155,7 @@ class Request_payment_model extends BF_Model
         }
 
         if (!empty($arr_update_req_payment)) {
-            $this->db->update_batch('request_payment', $arr_update_req_payment);
+            $this->db->update_batch('request_payment', $arr_update_req_payment, 'no_doc');
         }
 
         if ($this->db->trans_status() === false) {
@@ -1202,7 +1263,8 @@ class Request_payment_model extends BF_Model
             IFNULL(SUM(CASE WHEN a.kategori = "Kasbon" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_kasbon,
             IFNULL(SUM(CASE WHEN a.kategori = "Expense" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_expense,
             IFNULL(SUM(CASE WHEN a.kategori = "Periodik" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_periodik,
-            IFNULL(SUM(CASE WHEN a.kategori = "Transport" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_transport
+            IFNULL(SUM(CASE WHEN a.kategori = "Transport" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_transport,
+            IFNULL(SUM(CASE WHEN a.kategori = "Petty Cash Hutang" THEN a.nilai_pengajuan ELSE 0 END), 0) as total_petty_cash
         ');
         $this->db->from('v_request_payment a');
 
@@ -1242,6 +1304,7 @@ class Request_payment_model extends BF_Model
             'total_expense'   => (float) ($result ? $result->total_expense : 0),
             'total_periodik'  => (float) ($result ? $result->total_periodik : 0),
             'total_transport' => (float) ($result ? $result->total_transport : 0),
+            'total_petty_cash' => (float) ($result ? $result->total_petty_cash : 0),
         ];
     }
 

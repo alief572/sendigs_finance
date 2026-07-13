@@ -1411,15 +1411,94 @@ class Pembayaran_material extends Admin_Controller
 
 			$arr_jurnal = [];
 			$no_jurnal = 1;
-			if (isset($post['jurnal_ls'])) {
+
+			// Cek apakah semua payment bertipe petty_cash_hutang
+			$processed_ids_check = explode(',', $post['id_payment']);
+			$this->db->where_in('id', $processed_ids_check);
+			$this->db->where('tipe !=', 'petty_cash_hutang');
+			$non_petty_count = $this->db->count_all_results('payment_approve');
+			$is_all_petty_cash_hutang = ($non_petty_count == 0);
+
+			// Debug: log data jurnal_refill_pettycash yang diterima
+			log_message('error', 'DEBUG save_payment - is_all_petty_cash_hutang: ' . ($is_all_petty_cash_hutang ? 'true' : 'false'));
+			log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash isset: ' . (isset($post['jurnal_refill_pettycash']) ? 'YES' : 'NO'));
+			if (isset($post['jurnal_refill_pettycash'])) {
+				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash count: ' . count($post['jurnal_refill_pettycash']));
+				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash data: ' . json_encode($post['jurnal_refill_pettycash']));
+			}
+
+			// Save Jurnal Hutang if it's all petty cash hutang
+			if ($is_all_petty_cash_hutang) {
+				if (isset($post['jurnal_hutang_1'])) {
+					foreach ($post['jurnal_hutang_1'] as $jr) {
+						$coa_nm = $jr['nama_account'];
+						if (!empty($jr['coa'])) {
+							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							if (!empty($nm_coa)) {
+								$coa_nm = $nm_coa->nama;
+							}
+						}
+						
+						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+						$arr_jurnal[] = [
+							'no_jurnal' => $id_jurnal,
+							'tgl_jurnal' => $jr['tanggal_jurnal'],
+							'coa' => $jr['coa'],
+							'id_company' => ($jr['company'] == 'STM') ? 1 : 1, // Defaulting to 1, or can map VUCA/SUSTAIN
+							'nm_company' => $jr['company'],
+							'nm_coa' => $coa_nm,
+							'debit' => str_replace(',', '', $jr['debit']),
+							'kredit' => str_replace(',', '', $jr['kredit']),
+							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'sts' => '0',
+							'no_transaksi' => $id_payment_paid,
+							'jenis_transaksi' => 'Payment Hutang Petty Cash',
+							'created_by' => $this->auth->user_id(),
+							'created_date' => date('Y-m-d H:i:s')
+						];
+						$no_jurnal++;
+					}
+				}
+				if (isset($post['jurnal_hutang_2'])) {
+					foreach ($post['jurnal_hutang_2'] as $jr) {
+						$coa_nm = $jr['nama_account'];
+						if (!empty($jr['coa'])) {
+							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							if (!empty($nm_coa)) {
+								$coa_nm = $nm_coa->nama;
+							}
+						}
+
+						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+						$arr_jurnal[] = [
+							'no_jurnal' => $id_jurnal,
+							'tgl_jurnal' => $jr['tanggal_jurnal'],
+							'coa' => $jr['coa'],
+							'id_company' => ($jr['company'] == 'STM') ? 1 : 1,
+							'nm_company' => $jr['company'],
+							'nm_coa' => $coa_nm,
+							'debit' => str_replace(',', '', $jr['debit']),
+							'kredit' => str_replace(',', '', $jr['kredit']),
+							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'sts' => '0',
+							'no_transaksi' => $id_payment_paid,
+							'jenis_transaksi' => 'Payment Hutang Petty Cash',
+							'created_by' => $this->auth->user_id(),
+							'created_date' => date('Y-m-d H:i:s')
+						];
+						$no_jurnal++;
+					}
+				}
+			}
+
+			// Jurnal utama hanya diproses jika BUKAN petty_cash_hutang semua
+			if (!$is_all_petty_cash_hutang && isset($post['jurnal_ls'])) {
 				// print_r($post['jurnal_ls']);
 				// exit;
 				foreach ($post['jurnal_ls'] as $item_jurnal) {
 					// if (isset($item_jurnal['tanggal_jurnal'])) {
 
-					$get_data_payment = $this->db->get_where('payment_approve', ['id' => $item_jurnal['id_payment_ref']])->row();
-
-					$tipe_jurnal = ucfirst($get_data_payment->tipe) ?? '';
+					$tipe_jurnal = 'Payment';
 
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
 
@@ -1445,6 +1524,34 @@ class Pembayaran_material extends Admin_Controller
 					// }
 				}
 			}
+
+			if (isset($post['jurnal_refill_pettycash'])) {
+				foreach ($post['jurnal_refill_pettycash'] as $item_jurnal) {
+					$tipe_jurnal = 'Payment';
+
+					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+
+					$arr_jurnal[] = [
+						'no_jurnal' => $id_jurnal,
+						'tgl_jurnal' => date('Y-m-d'),
+						'coa' => $item_jurnal['coa'],
+						'id_company' => 1,
+						'nm_company' => $item_jurnal['nm_company'],
+						'nm_coa' => isset($item_jurnal['nm_coa']) ? $item_jurnal['nm_coa'] : (isset($item_jurnal['nm_account']) ? $item_jurnal['nm_account'] : ''),
+						'debit' => $item_jurnal['debit'],
+						'kredit' => $item_jurnal['kredit'],
+						'keterangan' => isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : ''),
+						'no_transaksi' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['id_payment_ref'] : $post['id_payment'],
+						'jenis_transaksi' => 'Refill Pettycash',
+						'id_divisi' => (isset($item_jurnal['id_divisi']) ? $item_jurnal['id_divisi'] : ''),
+						'nm_divisi' => (isset($item_jurnal['nm_divisi']) ? $item_jurnal['nm_divisi'] : ''),
+						'created_by' => $this->auth->user_id(),
+						'created_date' => date('Y-m-d')
+					];
+
+					$no_jurnal++;
+				}
+			}
 			// else {
 			// 	throw new Exception('Data jurnal tidak terdeteksi !');
 			// }
@@ -1459,99 +1566,67 @@ class Pembayaran_material extends Admin_Controller
 
 			$no_payment = $post['id_payment'];
 
-			if ($post['mata_uang'] == 'IDR') {
-				$jenis_jurnal = 'BUK001';
-				$kurs         = 1;
-				$selisih      = 0;
-				$hutang       = ($total_payment_clean * $kurs) + ($last_detail_ppn * $kurs);
-			} else {
-				$jenis_jurnal = 'BUK004';
-				$kurs         = $kurs_payment_clean;
-				$selisih      = $kurs - $kurs_invoice;
-				$hutang       = ($total_payment_clean * $kurs_invoice) + ($last_detail_ppn * $kurs_invoice);
-			}
+			// Proses jurnal accounting (jurnaltras, DBACC.jurnal, japh, kartu_hutang)
+			// hanya jika BUKAN petty_cash_hutang semua
+			if (!$is_all_petty_cash_hutang) {
 
-			$bank_coa     = $post['bank'];
-			$no_request   = $post['id_payment'];
-			$keterangan   = $post['keterangan_pembayaran'];
-			$bankcharge   = (str_replace(',', '', $post['bank_charge'])) * $kurs;
-			$bank_nilai   = $payment_bank_clean * $kurs;
-			$ap           = $total_payment_clean;
-			$selisihkurs  = $selisih * $ap;
+				if ($post['mata_uang'] == 'IDR') {
+					$jenis_jurnal = 'BUK001';
+					$kurs         = 1;
+					$selisih      = 0;
+					$hutang       = ($total_payment_clean * $kurs) + ($last_detail_ppn * $kurs);
+				} else {
+					$jenis_jurnal = 'BUK004';
+					$kurs         = $kurs_payment_clean;
+					$selisih      = $kurs - $kurs_invoice;
+					$hutang       = ($total_payment_clean * $kurs_invoice) + ($last_detail_ppn * $kurs_invoice);
+				}
 
-			$selisihdebet  = 0;
-			$selisihkredit = 0;
-			if ($selisihkurs < 0) {
+				$bank_coa     = $post['bank'];
+				$no_request   = $post['id_payment'];
+				$keterangan   = $post['keterangan_pembayaran'];
+				$bankcharge   = (str_replace(',', '', $post['bank_charge'])) * $kurs;
+				$bank_nilai   = $payment_bank_clean * $kurs;
+				$ap           = $total_payment_clean;
+				$selisihkurs  = $selisih * $ap;
+
 				$selisihdebet  = 0;
-				$selisihkredit = $selisihkurs * (-1);
-			} elseif ($selisihkurs > 0) {
-				$selisihdebet  = $selisihkurs;
 				$selisihkredit = 0;
-			}
-
-			$nomor_jurnal = $nomor_jurnal = $jenis_jurnal . $no_payment . rand(100, 999);
-			$payment_date = $post['tgl_bayar'];
-			$id_supplier = $post['supplier_input'];
-			$nm_supplier = $post['nm_supplier_input'];
-			$no_reff     = $post['id_payment'];
-			$Username    = $this->auth->user_id();
-
-			$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? order by parameter_no", [$jenis_jurnal])->result();
-			$det_Jurnaltes1 = array();
-			foreach ($datajurnal1 as $rec) {
-				if ($rec->parameter_no == "1") {
-					$det_Jurnaltes1[] = array(
-						'nomor' => $nomor_jurnal,
-						'tanggal' => $payment_date,
-						'tipe' => 'BUK',
-						'no_perkiraan' => $bank_coa,
-						'keterangan' => $no_request . '. ' . $keterangan,
-						'no_request' => $id_payment_paid,
-						'kredit' => ($bank_nilai),
-						'debet' => 0,
-						'no_reff' => $no_request,
-						'jenis_jurnal' => $jenis_jurnal,
-						'nocust' => $id_supplier,
-						'stspos' => '1'
-					);
-				}
-				if ($rec->parameter_no == "2") {
-					$det_Jurnaltes1[] = array(
-						'nomor' => $nomor_jurnal,
-						'tanggal' => $payment_date,
-						'tipe' => 'BUK',
-						'no_perkiraan' => $rec->no_perkiraan,
-						'keterangan' => $no_request . '. ' . $keterangan,
-						'no_request' => $id_payment_paid,
-						'kredit' => 0,
-						'debet' => $hutang,
-						'no_reff' => $no_request,
-						'jenis_jurnal' => $jenis_jurnal,
-						'nocust' => $id_supplier,
-						'stspos' => '1'
-					);
+				if ($selisihkurs < 0) {
+					$selisihdebet  = 0;
+					$selisihkredit = $selisihkurs * (-1);
+				} elseif ($selisihkurs > 0) {
+					$selisihdebet  = $selisihkurs;
+					$selisihkredit = 0;
 				}
 
-				if ($rec->parameter_no == "4") {
-					$admin_debit = ($admin_charge_bearer === 'recipient') ? 0 : $bankcharge;
-					$det_Jurnaltes1[] = array(
-						'nomor' => $nomor_jurnal,
-						'tanggal' => $payment_date,
-						'tipe' => 'BUK',
-						'no_perkiraan' => $rec->no_perkiraan,
-						'keterangan' => $no_request . '. ' . $keterangan,
-						'no_request' => $id_payment_paid,
-						'kredit' => 0,
-						'debet' => $admin_debit,
-						'no_reff' => $no_request,
-						'jenis_jurnal' => $jenis_jurnal,
-						'nocust' => $id_supplier,
-						'stspos' => '1'
-					);
-				}
+				$nomor_jurnal = $nomor_jurnal = $jenis_jurnal . $no_payment . rand(100, 999);
+				$payment_date = $post['tgl_bayar'];
+				$id_supplier = $post['supplier_input'];
+				$nm_supplier = $post['nm_supplier_input'];
+				$no_reff     = $post['id_payment'];
+				$Username    = $this->auth->user_id();
 
-				if ($jenis_jurnal == 'BUK004') {
-					if ($rec->parameter_no == "5") {
+				$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? order by parameter_no", [$jenis_jurnal])->result();
+				$det_Jurnaltes1 = array();
+				foreach ($datajurnal1 as $rec) {
+					if ($rec->parameter_no == "1") {
+						$det_Jurnaltes1[] = array(
+							'nomor' => $nomor_jurnal,
+							'tanggal' => $payment_date,
+							'tipe' => 'BUK',
+							'no_perkiraan' => $bank_coa,
+							'keterangan' => $no_request . '. ' . $keterangan,
+							'no_request' => $id_payment_paid,
+							'kredit' => ($bank_nilai),
+							'debet' => 0,
+							'no_reff' => $no_request,
+							'jenis_jurnal' => $jenis_jurnal,
+							'nocust' => $id_supplier,
+							'stspos' => '1'
+						);
+					}
+					if ($rec->parameter_no == "2") {
 						$det_Jurnaltes1[] = array(
 							'nomor' => $nomor_jurnal,
 							'tanggal' => $payment_date,
@@ -1559,87 +1634,125 @@ class Pembayaran_material extends Admin_Controller
 							'no_perkiraan' => $rec->no_perkiraan,
 							'keterangan' => $no_request . '. ' . $keterangan,
 							'no_request' => $id_payment_paid,
-							'kredit' => $selisihkredit,
-							'debet' => $selisihdebet,
+							'kredit' => 0,
+							'debet' => $hutang,
 							'no_reff' => $no_request,
 							'jenis_jurnal' => $jenis_jurnal,
 							'nocust' => $id_supplier,
 							'stspos' => '1'
 						);
 					}
-				}
-			}
-			$insert_jurnal_tras = $this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
-			if (!$insert_jurnal_tras) {
-				throw new Exception('Input JurnalTras gagal !');
-			}
 
-			//auto jurnal
-			$tanggal = $payment_date;
-			$Bln	= substr($tanggal, 5, 2);
-			$Thn	= substr($tanggal, 0, 4);
-			$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
-			$total = 0;
-			foreach ($det_Jurnaltes1 as $vals) {
-				$datadetail = array(
-					'tipe'			=> 'BUK',
-					'nomor'			=> $Nomor_JV,
-					'tanggal'		=> $tanggal,
-					'no_perkiraan'	=> $vals['no_perkiraan'],
-					'keterangan'	=> $vals['keterangan'],
-					'no_reff'		=> $vals['no_reff'],
-					'debet'			=> $vals['debet'],
-					'kredit'		=> $vals['kredit'],
+					if ($rec->parameter_no == "4") {
+						$admin_debit = ($admin_charge_bearer === 'recipient') ? 0 : $bankcharge;
+						$det_Jurnaltes1[] = array(
+							'nomor' => $nomor_jurnal,
+							'tanggal' => $payment_date,
+							'tipe' => 'BUK',
+							'no_perkiraan' => $rec->no_perkiraan,
+							'keterangan' => $no_request . '. ' . $keterangan,
+							'no_request' => $id_payment_paid,
+							'kredit' => 0,
+							'debet' => $admin_debit,
+							'no_reff' => $no_request,
+							'jenis_jurnal' => $jenis_jurnal,
+							'nocust' => $id_supplier,
+							'stspos' => '1'
+						);
+					}
+
+					if ($jenis_jurnal == 'BUK004') {
+						if ($rec->parameter_no == "5") {
+							$det_Jurnaltes1[] = array(
+								'nomor' => $nomor_jurnal,
+								'tanggal' => $payment_date,
+								'tipe' => 'BUK',
+								'no_perkiraan' => $rec->no_perkiraan,
+								'keterangan' => $no_request . '. ' . $keterangan,
+								'no_request' => $id_payment_paid,
+								'kredit' => $selisihkredit,
+								'debet' => $selisihdebet,
+								'no_reff' => $no_request,
+								'jenis_jurnal' => $jenis_jurnal,
+								'nocust' => $id_supplier,
+								'stspos' => '1'
+							);
+						}
+					}
+				}
+				$insert_jurnal_tras = $this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
+				if (!$insert_jurnal_tras) {
+					throw new Exception('Input JurnalTras gagal !');
+				}
+
+				//auto jurnal
+				$tanggal = $payment_date;
+				$Bln	= substr($tanggal, 5, 2);
+				$Thn	= substr($tanggal, 0, 4);
+				$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
+				$total = 0;
+				foreach ($det_Jurnaltes1 as $vals) {
+					$datadetail = array(
+						'tipe'			=> 'BUK',
+						'nomor'			=> $Nomor_JV,
+						'tanggal'		=> $tanggal,
+						'no_perkiraan'	=> $vals['no_perkiraan'],
+						'keterangan'	=> $vals['keterangan'],
+						'no_reff'		=> $vals['no_reff'],
+						'debet'			=> $vals['debet'],
+						'kredit'		=> $vals['kredit'],
+					);
+					$total = ($total + $vals['debet']);
+					$insert_jurnal_det = $this->db->insert(DBACC . '.jurnal', $datadetail);
+					if (!$insert_jurnal_det) {
+						throw new Exception('Input Jurnal Detail gagal !');
+					}
+				}
+
+				$keterangan		= 'Pembayaran ' . $no_reff;
+				$dataJVhead = array(
+					'nomor' 	    	=> $Nomor_JV,
+					'tgl'	         	=> $tanggal,
+					'jml'	            => $total,
+					'jenis_ap'	        => 'V',
+					'bayar_kepada'		=> $nm_supplier,
+					'kdcab'				=> '101',
+					'jenis_reff' 		=> 'BUK',
+					'no_reff' 			=> $no_reff,
+					'note'				=> $keterangan,
+					'user_id'			=> $Username,
+					'ho_valid'			=> '',
 				);
-				$total = ($total + $vals['debet']);
-				$insert_jurnal_det = $this->db->insert(DBACC . '.jurnal', $datadetail);
-				if (!$insert_jurnal_det) {
-					throw new Exception('Input Jurnal Detail gagal !');
+
+				$insert_japh = $this->db->insert(DBACC . '.japh', $dataJVhead);
+				if (!$insert_japh) {
+					throw new Exception('Insert JAPH gagak !');
 				}
-			}
+				$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
+				$this->db->query($Qry_Update_Cabang_acc);
 
-			$keterangan		= 'Pembayaran ' . $no_reff;
-			$dataJVhead = array(
-				'nomor' 	    	=> $Nomor_JV,
-				'tgl'	         	=> $tanggal,
-				'jml'	            => $total,
-				'jenis_ap'	        => 'V',
-				'bayar_kepada'		=> $nm_supplier,
-				'kdcab'				=> '101',
-				'jenis_reff' 		=> 'BUK',
-				'no_reff' 			=> $no_reff,
-				'note'				=> $keterangan,
-				'user_id'			=> $Username,
-				'ho_valid'			=> '',
-			);
+				$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? and parameter_no='3'", [$jenis_jurnal])->row();
+				$datahutang = array(
+					'tipe'       	 => 'BUK',
+					'nomor'       	 => $Nomor_JV,
+					'tanggal'        => $tanggal,
+					'no_perkiraan'   => $data_coa->no_perkiraan,
+					'keterangan'     => $keterangan,
+					'no_reff'     	 => $no_reff,
+					'debet'      	 => $hutang,
+					'kredit'         => 0,
+					'id_supplier'    => $id_supplier,
+					'nama_supplier'  => $nm_supplier,
+					'no_request'     => $no_request,
+				);
+				$insert_kartu_hutang = $this->db->insert('tr_kartu_hutang', $datahutang);
+				if (!$insert_kartu_hutang) {
+					throw new Exception('Insert Kartu Hutang gagal !');
+				}
 
-			$insert_japh = $this->db->insert(DBACC . '.japh', $dataJVhead);
-			if (!$insert_japh) {
-				throw new Exception('Insert JAPH gagak !');
-			}
-			$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
-			$this->db->query($Qry_Update_Cabang_acc);
+				//end auto jurnal
 
-			$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? and parameter_no='3'", [$jenis_jurnal])->row();
-			$datahutang = array(
-				'tipe'       	 => 'BUK',
-				'nomor'       	 => $Nomor_JV,
-				'tanggal'        => $tanggal,
-				'no_perkiraan'   => $data_coa->no_perkiraan,
-				'keterangan'     => $keterangan,
-				'no_reff'     	 => $no_reff,
-				'debet'      	 => $hutang,
-				'kredit'         => 0,
-				'id_supplier'    => $id_supplier,
-				'nama_supplier'  => $nm_supplier,
-				'no_request'     => $no_request,
-			);
-			$insert_kartu_hutang = $this->db->insert('tr_kartu_hutang', $datahutang);
-			if (!$insert_kartu_hutang) {
-				throw new Exception('Insert Kartu Hutang gagal !');
-			}
-
-			//end auto jurnal
+			} // end if (!$is_all_petty_cash_hutang)
 
 			// }
 
@@ -1650,6 +1763,27 @@ class Pembayaran_material extends Admin_Controller
 
 			if ($this->db->trans_status() === FALSE) {
 				throw new Exception('Transaksi gagal, data telah di-rollback.');
+			}
+
+			// Update status done payment for petty_cash_hutang records
+			try {
+				$processed_ids = explode(',', $post['id_payment']);
+				$this->db->where_in('id', $processed_ids);
+				$this->db->group_start();
+				$this->db->where('tipe', 'petty_cash_hutang');
+				$this->db->or_like('no_doc', 'RPC', 'after');
+				$this->db->group_end();
+				$petty_cash_payments = $this->db->get('payment_approve')->result();
+
+				if (!empty($petty_cash_payments)) {
+					$CI = &get_instance();
+					$CI->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
+					foreach ($petty_cash_payments as $pc_payment) {
+						$CI->pcvs_model->update_status_done($pc_payment->no_doc, $this->auth->user_id());
+					}
+				}
+			} catch (Exception $e) {
+				log_message('error', 'Failed to update petty_cash_vuca_sustain status: ' . $e->getMessage());
 			}
 
 			echo json_encode([

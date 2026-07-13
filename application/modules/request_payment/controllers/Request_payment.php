@@ -836,6 +836,29 @@ class Request_payment extends Admin_Controller
 				$Harga[] 		= $nilai;
 			}
 
+			if ($Data['tipe'] == 'petty_cash_hutang') {
+				$dtl = $this->db->get_where('request_payment', ['no_doc' => $detail['no_doc'], 'tipe' => 'petty_cash_hutang'])->row();
+
+				$nilai = $dtl->jumlah;
+
+				$ArrDetail[] 		= [
+					'id' 			=> $id_detail,
+					'payment_id' 	=> $Id,
+					'no_doc' 		=> $dtl->no_doc,
+					'tgl_doc' 		=> $dtl->tgl_doc,
+					'deskripsi' 	=> $dtl->keperluan,
+					'qty' 			=> '1',
+					'harga' 		=> $nilai,
+					'total' 		=> $nilai,
+					'keterangan' 	=> $dtl->keperluan,
+					'doc_file' 		=> '',
+					'coa' 			=> '',
+					'created_by' 	=> $this->auth->user_name(),
+					'created_on' 	=> date("Y-m-d h:i:s"),
+				];
+				$Harga[] 		= $nilai;
+			}
+
 			$id_detail++;
 		}
 
@@ -991,6 +1014,11 @@ class Request_payment extends Admin_Controller
 				$data_request_payment = $this->db->select('id')->get_where('request_payment', ['no_doc' => $get_kasbon['no_doc']])->row_array();
 
 				$this->db->update('request_payment', ['status' => '2'], ['id' => $data_request_payment['id']]);
+			}
+
+			if ($Data['tipe'] == 'petty_cash_hutang') {
+				$this->db->insert_batch('payment_approve_details', $ArrDetail);
+				$this->db->update('request_payment', ['status' => '2'], ['no_doc' => $Data['no_doc'], 'tipe' => 'petty_cash_hutang']);
 			}
 		}
 
@@ -2754,6 +2782,22 @@ class Request_payment extends Admin_Controller
 						$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $item->no_doc]);
 					}
 				}
+
+				// Data yang sudah ada di request_payment, update status saja
+				$tipe_lower = strtolower($item->tipe);
+				if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang' || $tipe_lower == 'petty cash' || $tipe_lower == 'petty_cash' || $tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
+					$tipe_update = $item->tipe;
+					if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang') {
+						$tipe_update = 'petty_cash_hutang';
+					} else if ($tipe_lower == 'petty cash' || $tipe_lower == 'petty_cash') {
+						$tipe_update = 'petty_cash';
+					} else if ($tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
+						$tipe_update = 'refill_pettycash';
+					}
+					
+					// Ensure we also update the tipe in request_payment to be consistent
+					$this->db->update('request_payment', ['status' => 2, 'tipe' => $tipe_update], ['no_doc' => $item->no_doc]);
+				}
 			}
 		}
 
@@ -2764,12 +2808,13 @@ class Request_payment extends Admin_Controller
 
 				print_r($this->db->error($insert_req_payment));
 				exit;
-			} else {
-				$this->db->from('tr_added_req_payment');
-				$this->db->where('no_doc IS NOT NULL');
-				$this->db->delete();
 			}
 		}
+
+		// Selalu clear tr_added_req_payment setelah proses
+		$this->db->from('tr_added_req_payment');
+		$this->db->where('no_doc IS NOT NULL');
+		$this->db->delete();
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
