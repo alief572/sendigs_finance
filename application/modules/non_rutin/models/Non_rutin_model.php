@@ -1029,6 +1029,7 @@ class Non_rutin_model extends BF_Model
         $this->db->select('MIN(kb.created_on) as tgl_proses_kasbon', FALSE);
         $this->db->select('MIN(np.created_date) as tgl_proses_non_po', FALSE);
         $this->db->select('MIN(po.created_on) as tgl_proses_po', FALSE);
+        $this->db->select('MIN(tp.created_at) as tgl_tracking_pembelian', FALSE);
         $this->db->from('rutin_non_planning_detail z');
         $this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
         $this->db->join('users c', 'c.id_user = a.created_by', 'left');
@@ -1038,6 +1039,7 @@ class Non_rutin_model extends BF_Model
         $this->db->join('tr_kasbon kb', 'kb.no_doc = pdk.id_kasbon', 'left');
         $this->db->join('tr_pr_non_po np', "np.no_pr = a.no_pr AND np.jenis_pr = 'pr departemen'", 'left', FALSE);
         $this->db->join('tr_purchase_order po', 'po.no_pr = a.no_pr', 'left');
+        $this->db->join('tr_tracking_pembelian tp', 'tp.no_pr = a.no_pr', 'left');
         $this->db->where('a.status_id', 1);
         if ($this->auth->user_id() !== '7') {
             $this->db->where('a.created_by', $this->auth->user_id()); // penyesuaian berdasarkan department_id user
@@ -1116,7 +1118,9 @@ class Non_rutin_model extends BF_Model
 
             // Tentukan tanggal diproses berdasarkan metode pembelian
             $tgl_diproses = '-';
-            if (!empty($item->tgl_proses_po)) {
+            if (!empty($item->tgl_tracking_pembelian)) {
+                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_tracking_pembelian));
+            } elseif (!empty($item->tgl_proses_po)) {
                 $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_po));
             } elseif (!empty($item->tgl_proses_kasbon)) {
                 $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_kasbon));
