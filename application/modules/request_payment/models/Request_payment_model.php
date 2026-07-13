@@ -592,7 +592,7 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Cash') {
                 $get_check_non_po = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
                 if ($get_check_non_po->jenis_pr == 'pr departemen' || $get_check_non_po->jenis_pr == 'pr asset') {
-                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                    $btn_print = '<a href="' . base_url('request_payment/print_cash/' . $item->no_dokumen) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
             // Print button untuk RPC (Petty Cash - pelaporan)
