@@ -2995,8 +2995,8 @@ class Request_payment extends Admin_Controller
 
 	public function print_cash($id)
 	{
-		$get_data_cash = $this->db->get_where('tr_pr_non_po', ['id' => $id])->row();
-		$get_v_req_payment = $this->db->get_where('v_request_payment', ['id' => $id])->row();
+		$get_data_cash = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $id])->row();
+		$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
 
 		if ($get_data_cash->jenis_pr == 'pr departemen') {
 			$this->db->select('CONCAT("assets/pr/", a.document) as doc_file, a.no_pr as no_doc');
