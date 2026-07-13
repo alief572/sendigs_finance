@@ -2168,4 +2168,45 @@ class Metode_pembelian extends Admin_Controller
 		}
 		echo json_encode($Arr_Kembali);
 	}
+
+	public function view_tracking_pr()
+	{
+		$no_pr = $this->input->post('no_pr');
+		if(empty($no_pr)) {
+			echo json_encode(['status' => 0, 'html' => '<div class="alert alert-danger">No PR provided</div>']);
+			return;
+		}
+
+		$this->db->select('*');
+		$this->db->from('tr_tracking_pembelian');
+		$this->db->where('no_pr', $no_pr);
+		$this->db->order_by('created_at', 'ASC');
+		$history = $this->db->get()->result_array();
+
+		$html = '<div class="timeline">';
+		if(!empty($history)) {
+			foreach($history as $h) {
+				$html .= '<div class="timeline-item" style="border-left: 2px solid #ccc; padding-left: 15px; margin-bottom: 15px; position: relative;">';
+				$html .= '<div class="timeline-badge" style="width: 12px; height: 12px; border-radius: 50%; background: #007bff; position: absolute; left: -7px; top: 0;"></div>';
+				$html .= '<div class="timeline-panel">';
+				$html .= '<div class="timeline-heading">';
+				$html .= '<h4 class="timeline-title" style="margin-top:0;">'.strtoupper($h['tipe_dokumen']).' - '.$h['aksi'].'</h4>';
+				$html .= '<p><small class="text-muted"><i class="fa fa-calendar"></i> '.date('d-M-Y H:i:s', strtotime($h['created_at'])).' by '.$h['created_by'].'</small></p>';
+				$html .= '</div>';
+				$html .= '<div class="timeline-body">';
+				$html .= '<p style="margin-bottom:5px;"><b>No Dokumen:</b> '.$h['no_dokumen'].'</p>';
+				if(!empty($h['keterangan'])) {
+					$html .= '<p>'.$h['keterangan'].'</p>';
+				}
+				$html .= '</div>';
+				$html .= '</div>';
+				$html .= '</div>';
+			}
+		} else {
+			$html .= '<div class="alert alert-warning">Belum ada riwayat proses (history) untuk PR ini.</div>';
+		}
+		$html .= '</div>';
+
+		echo json_encode(['status' => 1, 'html' => $html]);
+	}
 }
