@@ -265,4 +265,8 @@ class Budget_rutin extends Admin_Controller
 
         $this->load->view('excel_list_budget_detail', $data);
     }
+
+    public function get_data() {
+        $this->Budget_rutin_model->get_data();
+    }
 }
