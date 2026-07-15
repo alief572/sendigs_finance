@@ -806,6 +806,10 @@ class Pembayaran_material_model extends BF_Model
 						$id_department = $get_department->id_depart ?? '';
 						$nm_department = $get_department->nm_depart ?? '';
 
+						$pph_data = $this->input->post('pph_data');
+						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
+						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
+
 						$arr_coa_jurnal = ['9999-99-99', '7201-01-04', '1106-01-06', $coa_pph];
 						if (!empty($coa_bank)) $arr_coa_jurnal[] = $coa_bank;
 
@@ -816,7 +820,7 @@ class Pembayaran_material_model extends BF_Model
 							$no_jurnal++;
 							$debit = 0;
 							$kredit = 0;
-							$keterangan = $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+							$keterangan = $item_coa->nm_coa;
 
 							if ($item_coa->no_coa == '9999-99-99') {
 								$debit = $item_payment->jumlah;
