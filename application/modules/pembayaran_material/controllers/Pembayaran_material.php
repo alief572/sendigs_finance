@@ -203,12 +203,14 @@ class Pembayaran_material extends Admin_Controller
 		// history('Form Payment');
 		// $this->load->view('Pembayaran_material/form_payment_new.php', $data);
 
+
+
 		$check_transpoty_driver = $this->Pembayaran_material_model->check_transport_payment($id_payment);
 
 		$jurnal_refill_petty_cash = '';
-		if ($check_transpoty_driver > 0) {
-			$jurnal_refill_petty_cash = $this->Pembayaran_material_model->jurnal_refill_petty_cash($id_payment);
-		}
+		// if ($check_transpoty_driver > 0) {
+		// 	$jurnal_refill_petty_cash = $this->Pembayaran_material_model->jurnal_refill_petty_cash($id_payment);
+		// }
 
 		$get_payment = $this->db
 			->select('a.*')
