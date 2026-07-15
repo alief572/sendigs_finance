@@ -44,6 +44,8 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script> -->
 <!-- page script -->
 <script type="text/javascript">
+	var url_edit = siteurl + 'expense/kasbon_edit/';
+	var url_delete = siteurl + 'expense/kasbon_delete/';
 	var url_view = siteurl + 'expense/kasbon_view/';
 	// $("#mytabledata2").DataTable({
 	// 	dom: "<'row'<'col-sm-2'B><'col-sm-4'l><'col-sm-6'f>>rtip",
