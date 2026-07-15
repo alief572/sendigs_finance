@@ -481,7 +481,7 @@ class Pembayaran_material_model extends BF_Model
 				foreach ($get_coa_jurnal as $item_coa) {
 					$debit = 0;
 					$kredit = 0;
-					$keterangan = $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+					$keterangan = $item_coa->nm_coa;
 
 					if ($item_coa->no_coa == '1103-01-14') {
 						if (!empty($id_kasbon_consultant)) {
@@ -504,12 +504,7 @@ class Pembayaran_material_model extends BF_Model
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
-									$debit = $item_kasbon->total_pengajuan;
-									$kredit = 0;
-
-									$keterangan = $item_kasbon->nm_item;
-
-									$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, $item_kasbon->no_coa, $item_kasbon->nm_coa, $keterangan, $debit, $kredit);
+									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '3') {
 								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
@@ -527,12 +522,7 @@ class Pembayaran_material_model extends BF_Model
 								// exit;
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
-									$debit = $item_kasbon->total_pengajuan;
-									$kredit = 0;
-
-									$keterangan = $item_kasbon->nm_item;
-
-									$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, $item_kasbon->no_coa, $item_kasbon->nm_coa, $keterangan, $debit, $kredit);
+									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '4') {
 								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
@@ -547,12 +537,7 @@ class Pembayaran_material_model extends BF_Model
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
-									$debit = $item_kasbon->total_pengajuan;
-									$kredit = 0;
-
-									$keterangan = $item_kasbon->nm_item;
-
-									$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, $item_kasbon->no_coa, $item_kasbon->nm_coa, $keterangan, $debit, $kredit);
+									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '5') {
 								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
@@ -567,12 +552,7 @@ class Pembayaran_material_model extends BF_Model
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
-									$debit = $item_kasbon->total_pengajuan;
-									$kredit = 0;
-
-									$keterangan = $item_kasbon->nm_item;
-
-									$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, $item_kasbon->no_coa, $item_kasbon->nm_coa, $keterangan, $debit, $kredit);
+									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else {
 								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
@@ -587,14 +567,11 @@ class Pembayaran_material_model extends BF_Model
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
-									$debit = $item_kasbon->total_pengajuan;
-									$kredit = 0;
-
-									$keterangan = $item_kasbon->nm_item;
-
-									$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, $item_kasbon->no_coa, $item_kasbon->nm_coa, $keterangan, $debit, $kredit);
+									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							}
+
+							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, '1103-01-14', 'Piutang Lain-lain Konsultan', $keterangan, $debit, $kredit);
 						} else {
 							$debit = $item_payment->jumlah;
 							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
