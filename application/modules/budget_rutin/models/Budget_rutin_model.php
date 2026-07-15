@@ -107,4 +107,99 @@ class Budget_rutin_model extends BF_Model
 
         return $get_data;
     }
+
+    public function get_data()
+    {
+        $draw = $this->input->post('draw');
+        $length = $this->input->post('length');
+        $start = $this->input->post('start');
+        $search = $this->input->post('search');
+
+        // Total records before filtering
+        $this->db->select('a.code_budget');
+        $this->db->from('budget_rutin_header a');
+        $this->db->join('warehouse b', 'a.department=b.id', 'left');
+        $this->db->group_by('a.code_budget');
+        $total_records = $this->db->get()->num_rows();
+
+        // Total records after filtering
+        $this->db->select('a.code_budget');
+        $this->db->from('budget_rutin_header a');
+        $this->db->join('warehouse b', 'a.department=b.id', 'left');
+        
+        if (!empty($search['value'])) {
+            $this->db->group_start();
+            $this->db->like('a.tanggal', $search['value']);
+            $this->db->or_like('b.nm_gudang', $search['value']);
+            $this->db->group_end();
+        }
+
+        $this->db->group_by('a.code_budget');
+        $total_filtered = $this->db->get()->num_rows();
+
+        // Data query
+        $this->db->select('a.*, b.nm_gudang AS nm_dept');
+        $this->db->from('budget_rutin_header a');
+        $this->db->join('warehouse b', 'a.department=b.id', 'left');
+
+        if (!empty($search['value'])) {
+            $this->db->group_start();
+            $this->db->like('a.tanggal', $search['value']);
+            $this->db->or_like('b.nm_gudang', $search['value']);
+            $this->db->group_end();
+        }
+
+        $this->db->group_by('a.code_budget');
+        
+        $order = $this->input->post('order');
+        if (!empty($order)) {
+            $order_column = $order[0]['column'];
+            $order_dir = $order[0]['dir'];
+            $columns = array(
+                0 => '',
+                1 => 'a.tanggal',
+                2 => 'b.nm_gudang',
+                3 => 'a.rev'
+            );
+            if (isset($columns[$order_column])) {
+                $this->db->order_by($columns[$order_column], $order_dir);
+            }
+        } else {
+            $this->db->order_by('a.id', 'DESC');
+        }
+
+        $this->db->limit($length, $start);
+        $query = $this->db->get();
+
+        $data = array();
+        $no = $start;
+        foreach ($query->result() as $row) {
+            $no++;
+            $action = '';
+
+            if (has_permission('Budget_Rutin.Manage')) {
+                $action .= '<a class="btn btn-sm btn-primary" href="javascript:void(0)" title="Edit" onclick="edit_data(\'' . $row->code_budget . '\')"><i class="fa fa-edit"></i></a> ';
+            }
+            if (has_permission('Budget_Rutin.Delete')) {
+                $action .= '<a class="btn btn-sm btn-danger" href="javascript:void(0)" title="Delete" onclick="delete_data(\'' . $row->code_budget . '\')"><i class="fa fa-trash"></i></a>';
+            }
+
+            $data[] = array(
+                'no' => $no,
+                'tanggal' => date('d-M-Y', strtotime($row->tanggal)),
+                'warehouse' => $row->nm_dept,
+                'rev' => $row->rev,
+                'action' => $action
+            );
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $total_records,
+            "recordsFiltered" => $total_filtered,
+            "data" => $data,
+        );
+
+        echo json_encode($output);
+    }
 }
