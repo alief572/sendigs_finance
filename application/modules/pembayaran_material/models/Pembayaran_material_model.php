@@ -854,8 +854,8 @@ class Pembayaran_material_model extends BF_Model
 				$id_company = '';
 				$nm_company = '';
 
-				if (!empty($get_penawaran->id_company)) {
-					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->id_company])->row();
+				if (!empty($get_penawaran->company)) {
+					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
 					$id_company = $get_company->id ?? '';
 					$nm_company = $get_company->nm_company ?? '';
 				} else {
@@ -898,6 +898,10 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $no_coa, $nm_coa, $nm_biaya, $debit, $kredit);
 				endforeach;
 
+				$pph_data = $this->input->post('pph_data');
+				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
+				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
+
 				$arr_coa_jurnal = [$coa_pph, '7201-01-04', '1106-01-06'];
 				if (!empty($coa_bank)) $arr_coa_jurnal[] = $coa_bank;
 
@@ -908,7 +912,7 @@ class Pembayaran_material_model extends BF_Model
 					$nm_coa = $item_coa->nm_coa;
 					$debit = 0;
 					$kredit = 0;
-					$keterangan = $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+					$keterangan = $item_coa->nm_coa;
 
 					if ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
 						$kredit = $nilai_pph;
