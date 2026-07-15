@@ -671,7 +671,7 @@ class Pembayaran_material_model extends BF_Model
 				foreach ($get_coa_jurnal as $item_coa) {
 					$debit = 0;
 					$kredit = 0;
-					$keterangan = $item_coa->nm_coa . ' - ' . $item_payment->no_doc;
+					$keterangan = $item_coa->nm_coa;
 
 					if ($item_coa->no_coa == $coa_transport) {
 						$debit = $item_payment->jumlah;
