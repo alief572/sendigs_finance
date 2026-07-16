@@ -175,11 +175,18 @@ class Penerimaan_uang extends Admin_Controller
             $coa_bank = (!empty($get_bank)) ? $get_bank['coa_bank'] : '';
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
-            $saldo_piutang = $get_inv['saldo_piutang'];
-            if (abs($saldo_piutang - $get_inv['total_akhir_jurnal']) < 10) {
-                $saldo_piutang = round($get_inv['tagihan_ppn_jurnal']) - round($get_inv['pph_jurnal']);
+            // Kalkulasi piutang_dagang berdasarkan mekanisme PPN
+            if ($ppn_dipotong == 'Y') {
+                // BUMN: DPP - PPh (gunakan saldo_piutang_tanpa_ppn)
+                $piutang_dagang = round($get_inv['saldo_piutang_tanpa_ppn']);
             } else {
-                $saldo_piutang = round($saldo_piutang);
+                // Non-BUMN: Tagihan + PPN - PPh (gunakan saldo_piutang existing)
+                $saldo_piutang = $get_inv['saldo_piutang'];
+                if (abs($saldo_piutang - $get_inv['total_akhir_jurnal']) < 10) {
+                    $piutang_dagang = round($get_inv['tagihan_ppn_jurnal']) - round($get_inv['pph_jurnal']);
+                } else {
+                    $piutang_dagang = round($saldo_piutang);
+                }
             }
 
             $hasil .= '<tr>';
@@ -195,7 +202,7 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
             $hasil .= '<td>';
-            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="piutang_dagang_' . $no . '" value="' . $saldo_piutang . '" onkeyup="hitungAll()" readonly>';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="piutang_dagang_' . $no . '" value="' . $piutang_dagang . '" onkeyup="hitungAll()" readonly>';
             $hasil .= '</td>';
             $hasil .= '<td class="text-left">';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" onkeyup="hitungAll()">';
@@ -208,9 +215,16 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-            $total_piutang += ($pph23_dipotong == 'N') ? round($get_inv['tagihan_ppn_jurnal']) : round($get_inv['total_akhir_jurnal']);
+            // Total piutang berdasarkan mekanisme PPN
+            if ($ppn_dipotong == 'Y') {
+                // BUMN: Total Piutang = sum of total_nominal_jurnal (DPP only)
+                $total_piutang += round($get_inv['total_nominal_jurnal']);
+            } else {
+                // Non-BUMN: Total Piutang berdasarkan pph23_dipotong
+                $total_piutang += ($pph23_dipotong == 'N') ? round($get_inv['tagihan_ppn_jurnal']) : round($get_inv['total_akhir_jurnal']);
+            }
             // $total_piutang += $get_inv['total_akhir_jurnal'];
-            $total_piutang_dagang += round($saldo_piutang);
+            $total_piutang_dagang += round($piutang_dagang);
 
             if ($no == 1) {
                 $hasil_jurnal .= '<tr>';
@@ -252,7 +266,18 @@ class Penerimaan_uang extends Admin_Controller
 
                 // Tentukan COA PPh berdasarkan tipe_invoice (VUCA = 1106-01-05, lainnya = 1106-01-02)
                 $coa_pph = (!empty($get_inv['tipe_invoice']) && $get_inv['tipe_invoice'] == '1') ? '1106-01-05' : '1106-01-02';
-                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+
+                // Branching jurnal generation: BUMN vs Non-BUMN
+                if ($ppn_dipotong == 'Y') {
+                    // BUMN: COA hanya Piutang Dagang + Biaya Admin, TIDAK ADA baris PPN
+                    $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
+                    if ($pph23_dipotong == 'Y') {
+                        $arr_coa_jurnal[] = $coa_pph;
+                    }
+                } else {
+                    // Non-BUMN: Include all COAs (termasuk PPh)
+                    $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+                }
 
                 $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
                 $this->accounting->from('coa_master a');
@@ -264,7 +289,19 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                    // PPh kredit logic
+                    // Jika PPh TIDAK dipotong (N): tampilkan nominal PPh sebagai kredit
+                    // Jika PPh dipotong (Y): baris muncul tapi kredit = 0 (sudah tercermin di piutang dagang)
+                    if ($ppn_dipotong == 'Y' && $pph23_dipotong == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                        // BUMN tanpa PPh dipotong: ambil nilai PPh sebagai kredit
+                        $this->db->select('a.pph_jurnal as ttl_kredit');
+                        $this->db->from('tr_invoicing a');
+                        $this->db->where('a.id', $item);
+                        $get_kredit = $this->db->get()->row_array();
+
+                        $value_kredit = round($get_kredit['ttl_kredit']);
+                    } elseif ($ppn_dipotong == 'N' && $post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                        // Non-BUMN tanpa PPh dipotong: ambil nilai PPh sebagai kredit
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
@@ -274,10 +311,8 @@ class Penerimaan_uang extends Admin_Controller
                     }
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
-                        // $value_kredit = $get_inv['tagihan_ppn_jurnal'];
-                        // if ($post['pph23_dipotong'] == 'N') {
-                        $value_kredit = $saldo_piutang;
-                        // }
+                        // Piutang Dagang Kredit = piutang_dagang per invoice
+                        $value_kredit = $piutang_dagang;
                     }
 
                     $hasil_jurnal .= '<tr>';
@@ -321,7 +356,18 @@ class Penerimaan_uang extends Admin_Controller
             } else {
                 // Tentukan COA PPh berdasarkan tipe_invoice (VUCA = 1106-01-05, lainnya = 1106-01-02)
                 $coa_pph = (!empty($get_inv['tipe_invoice']) && $get_inv['tipe_invoice'] == '1') ? '1106-01-05' : '1106-01-02';
-                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+
+                // Branching jurnal generation: BUMN vs Non-BUMN
+                if ($ppn_dipotong == 'Y') {
+                    // BUMN: COA hanya Piutang Dagang + Biaya Admin, TIDAK ADA baris PPN
+                    $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
+                    if ($pph23_dipotong == 'Y') {
+                        $arr_coa_jurnal[] = $coa_pph;
+                    }
+                } else {
+                    // Non-BUMN: Include all COAs (termasuk PPh)
+                    $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+                }
 
                 $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
                 $this->accounting->from('coa_master a');
@@ -332,16 +378,30 @@ class Penerimaan_uang extends Admin_Controller
                     $value_debit = 0;
                     $value_kredit = 0;
 
-                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                    // PPh kredit logic
+                    // Jika PPh TIDAK dipotong (N): tampilkan nominal PPh sebagai kredit
+                    // Jika PPh dipotong (Y): baris muncul tapi kredit = 0 (sudah tercermin di piutang dagang)
+                    if ($ppn_dipotong == 'Y' && $pph23_dipotong == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                        // BUMN tanpa PPh dipotong: ambil nilai PPh sebagai kredit
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
                         $get_kredit = $this->db->get()->row_array();
 
-                        $value_kredit = $get_kredit['ttl_kredit'];
+                        $value_kredit = round($get_kredit['ttl_kredit']);
+                    } elseif ($ppn_dipotong == 'N' && $post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+                        // Non-BUMN tanpa PPh dipotong: ambil nilai PPh sebagai kredit
+                        $this->db->select('a.pph_jurnal as ttl_kredit');
+                        $this->db->from('tr_invoicing a');
+                        $this->db->where('a.id', $item);
+                        $get_kredit = $this->db->get()->row_array();
+
+                        $value_kredit = round($get_kredit['ttl_kredit']);
                     }
+
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
-                        $value_kredit = $saldo_piutang;
+                        // Piutang Dagang Kredit = piutang_dagang per invoice
+                        $value_kredit = $piutang_dagang;
                     }
 
                     $hasil_jurnal .= '<tr>';
@@ -449,6 +509,8 @@ class Penerimaan_uang extends Admin_Controller
 
         $total_penerimaan = 0;
 
+        $this->db->trans_begin();
+
         $no_jurnal = 0;
         for ($i = 1; $i <= $post['no_inv']; $i++) {
 
@@ -478,7 +540,7 @@ class Penerimaan_uang extends Admin_Controller
             if ($post['pph23_dipotong'] == 'N') {
                 $pph = 0; // Force PPh to 0 if not deducted
             }
-            
+
             $total = (!empty($get_inv)) ? $get_inv['total_akhir_jurnal'] : 0;
             $saldo_piutang = (!empty($get_inv)) ? $get_inv['saldo_piutang'] : 0;
             $tgl_inv = (!empty($get_inv)) ? date('Y-m-d', strtotime($get_inv['created_date'])) : '';
@@ -514,20 +576,48 @@ class Penerimaan_uang extends Admin_Controller
                 'created_date' => date('Y-m-d H:i:s')
             ];
 
-            $arr_update_inv[] = [
-                'id' => $post['id_inv_' . $i],
-                'saldo_piutang' => $sisa_piutang
-            ];
+            // Branching update invoice berdasarkan mekanisme PPN
+            if ($post['ppn_dipotong'] == 'Y') {
+                // BUMN: Update saldo_piutang_tanpa_ppn
+                $current_saldo_tanpa_ppn = isset($get_inv['saldo_piutang_tanpa_ppn']) ? $get_inv['saldo_piutang_tanpa_ppn'] : 0;
+                $new_saldo_tanpa_ppn = $current_saldo_tanpa_ppn - $penerimaan - $biaya_admin;
+
+                if ($new_saldo_tanpa_ppn < 0) {
+                    $this->db->trans_rollback();
+                    $no_invoice_err = isset($get_inv['no_invoice']) ? $get_inv['no_invoice'] : $post['id_inv_' . $i];
+                    echo json_encode(['status' => 0, 'msg' => 'Saldo piutang tanpa PPN tidak mencukupi untuk invoice ' . $no_invoice_err]);
+                    return;
+                }
+
+                $arr_update_inv[] = [
+                    'id' => $post['id_inv_' . $i],
+                    'saldo_piutang' => $sisa_piutang,
+                    'saldo_piutang_tanpa_ppn' => $new_saldo_tanpa_ppn
+                ];
+            } else {
+                // Non-BUMN: Hanya update saldo_piutang, TIDAK ubah saldo_piutang_tanpa_ppn
+                $arr_update_inv[] = [
+                    'id' => $post['id_inv_' . $i],
+                    'saldo_piutang' => $sisa_piutang
+                ];
+            }
 
             $total_penerimaan += $penerimaan;
 
             // Tentukan COA PPh berdasarkan tipe_invoice (VUCA = 1106-01-05, lainnya = 1106-01-02)
             $coa_pph = (!empty($get_inv['tipe_invoice']) && $get_inv['tipe_invoice'] == '1') ? '1106-01-05' : '1106-01-02';
-            
-            $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
-            // if ($post['pph23_dipotong'] == 'Y') {
-            $arr_coa_jurnal[] = $coa_pph;
-            // }
+
+            // Branching jurnal COA: BUMN vs Non-BUMN (sesuai dengan process_alokasi)
+            if ($post['ppn_dipotong'] == 'Y') {
+                // BUMN: COA hanya Piutang Dagang + Biaya Admin, TIDAK ADA baris PPN
+                $arr_coa_jurnal = ['1102-01-01', '7201-01-04'];
+                if ($post['pph23_dipotong'] == 'Y') {
+                    $arr_coa_jurnal[] = $coa_pph;
+                }
+            } else {
+                // Non-BUMN: Include all COAs (termasuk PPh)
+                $arr_coa_jurnal = ['1102-01-01', '7201-01-04', $coa_pph];
+            }
 
             $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
             $this->accounting->from('coa_master a');
@@ -602,47 +692,54 @@ class Penerimaan_uang extends Admin_Controller
             }
         }
 
-        $this->db->trans_begin();
+        // Server-side debit == kredit validation sebelum commit
+        $total_debit_jurnal = 0;
+        $total_kredit_jurnal = 0;
+        foreach ($arr_insert_jurnal as $jurnal_row) {
+            $total_debit_jurnal += floatval($jurnal_row['debit']);
+            $total_kredit_jurnal += floatval($jurnal_row['kredit']);
+        }
+        if (abs($total_debit_jurnal - $total_kredit_jurnal) > 1) {
+            $this->db->trans_rollback();
+            $selisih = $total_debit_jurnal - $total_kredit_jurnal;
+            echo json_encode(['status' => 0, 'msg' => 'Jurnal tidak balance. Selisih debit - kredit: ' . number_format($selisih, 2)]);
+            return;
+        }
 
         $insert_penerimaan_header = $this->db->insert('tr_penerimaan_piutang', $arr_insert_header);
         if (!$insert_penerimaan_header) {
             $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
+            echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+            return;
         }
 
         $insert_penerimaan_detail = $this->db->insert_batch('tr_penerimaan_piutang_detail', $arr_insert_detail);
         if (!$insert_penerimaan_detail) {
             $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
+            echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+            return;
         }
 
         $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
         if (!$insert_jurnal) {
             $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
+            echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+            return;
         }
 
         $update_inv = $this->db->update_batch('tr_invoicing', $arr_update_inv, 'id');
         if (!$update_inv) {
             $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
+            echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+            return;
         }
 
         $detail_id_for_update = $resolved['is_legacy'] ? $post['id_alokasi'] : $split['id_alokasi_detail'];
         $update_alokasi = $this->db->update('tr_alokasi_detail', ['nilai_terpakai' => $total_penerimaan], ['id' => $detail_id_for_update]);
         if (!$update_alokasi) {
             $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
+            echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+            return;
         }
 
         // Update nilai_terpakai di tr_alokasi_split agar status per-split akurat
@@ -650,9 +747,8 @@ class Penerimaan_uang extends Admin_Controller
             $update_split = $this->db->update('tr_alokasi_split', ['nilai_terpakai' => $total_penerimaan], ['id' => $post['id_alokasi']]);
             if (!$update_split) {
                 $this->db->trans_rollback();
-
-                print_r($this->db->last_query());
-                exit;
+                echo json_encode(['status' => 0, 'msg' => 'Please try again later!']);
+                return;
             }
         }
 
@@ -783,6 +879,22 @@ class Penerimaan_uang extends Admin_Controller
             $this->db->set('saldo_piutang', 'saldo_piutang + ' . $amount_to_add, FALSE);
             $this->db->where('id', $id_inv);
             $this->db->update('tr_invoicing');
+
+            // Restore saldo_piutang_tanpa_ppn untuk BUMN (ppn_dipotong == 'Y')
+            if ($get_penerimaan['ppn_dipotong'] == 'Y') {
+                if ($is_old_data) {
+                    // Old data (created_date < 2026-06-09): restore hanya penerimaan
+                    $amount_tanpa_ppn = $penerimaan;
+                } else {
+                    // New data (created_date >= 2026-06-09): restore penerimaan + biaya_admin
+                    $amount_tanpa_ppn = $penerimaan + $biaya_admin;
+                }
+
+                $this->db->set('saldo_piutang_tanpa_ppn', 'saldo_piutang_tanpa_ppn + ' . $amount_tanpa_ppn, FALSE);
+                $this->db->where('id', $id_inv);
+                $this->db->update('tr_invoicing');
+            }
+            // Non-BUMN (ppn_dipotong == 'N'): TIDAK modifikasi saldo_piutang_tanpa_ppn
         }
 
         // Revert nilai_terpakai in tr_alokasi_detail, hapus split, dan kembalikan sts ke 0

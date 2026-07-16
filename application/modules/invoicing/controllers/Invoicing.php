@@ -960,6 +960,7 @@ class Invoicing extends Admin_Controller
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
             'saldo_piutang_tanpa_pph' => $post['total_tagihan_ppn'],
+            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s')
         ];
@@ -1093,6 +1094,7 @@ class Invoicing extends Admin_Controller
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
             'tagihan_ppn_jurnal' => $post['total_nominal'],
+            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s'),
             'tipe_invoice' => '1'
@@ -1980,6 +1982,7 @@ class Invoicing extends Admin_Controller
                 'total_akhir_jurnal' => $total_tagihan_all,
                 'saldo_piutang' => $total_tagihan_all,
                 'saldo_piutang_tanpa_pph' => $total_tagihan_ppn,
+                'saldo_piutang_tanpa_ppn' => max(0, ($dpp ?? 0) - ($pph ?? 0)),
                 'non_kons' => '1',
                 'biaya_kirim' => $biaya_kirim,
                 'created_by' => $this->auth->user_id(),
@@ -2165,7 +2168,8 @@ class Invoicing extends Admin_Controller
                 'pph_jurnal' => $pph,
                 'total_akhir_jurnal' => $total_tagihan_all,
                 'saldo_piutang' => $total_tagihan_all,
-                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn
+                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn,
+                'saldo_piutang_tanpa_ppn' => max(0, ($dpp ?? 0) - ($pph ?? 0))
             ];
 
             // Server-side journal calculation
