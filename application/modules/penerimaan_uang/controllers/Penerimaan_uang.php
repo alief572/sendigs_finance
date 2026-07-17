@@ -189,6 +189,9 @@ class Penerimaan_uang extends Admin_Controller
                 }
             }
 
+            $nilai_awal = ($ppn_dipotong == 'Y') ? ($get_inv['total_nominal_jurnal'] - $get_inv['pph_jurnal']) : $get_inv['tagihan_ppn_jurnal'];
+            $nilai_piutang = ($ppn_dipotong == 'Y') ? ($get_inv['total_nominal_jurnal'] - $get_inv['pph_jurnal']) : $get_inv['total_akhir_jurnal'];
+
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
             $hasil .= date('d-F-Y', strtotime($get_inv['tanggal_invoice']));
@@ -199,8 +202,8 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '<td class="text-right">' . number_format($get_inv['dpp_lain_lain_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($nilai_awal) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($nilai_piutang) . '</td>';
             $hasil .= '<td>';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="piutang_dagang_' . $no . '" value="' . $piutang_dagang . '" onkeyup="hitungAll()" readonly>';
             $hasil .= '</td>';
