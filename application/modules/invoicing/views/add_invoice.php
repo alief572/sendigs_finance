@@ -41,8 +41,13 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                         </td>
                     </tr>
                     <tr>
-                        <th width="13%"></th>
-                        <td width="12%"></td>
+                        <th width="13%">PPN</th>
+                        <td width="12%">
+                            <select name="ppn_persen" id="ppn_persen" class="form-control form-control-sm">
+                                <option value="12">12%</option>
+                                <option value="0">0%</option>
+                            </select>
+                        </td>
                         <th width="13%">Nomor Faktur <span class="text-red">*</span></th>
                         <td width="12%">
                             <br>
@@ -98,16 +103,16 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">PPn 12% dari DPP Lain</th>
+                    <th width="10%">PPN dari DPP Lain</th>
                     <td class="text-right">
-                        Rp. <?= number_format($ppn, 2) ?>
+                        Rp. <span id="text_ppn_jurnal"><?= number_format($ppn, 2) ?></span>
                         <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
                     </td>
                 </tr>
                 <tr>
                     <th width="10%">Total Tagihan + PPN</th>
                     <td class="text-right">
-                        Rp. <?= number_format(($total_nominal + $ppn), 2) ?>
+                        Rp. <span id="text_total_tagihan_ppn"><?= number_format(($total_nominal + $ppn), 2) ?></span>
                         <input type="hidden" name="total_tagihan_ppn" value="<?= ($total_nominal + $ppn) ?>">
                     </td>
                 </tr>
@@ -121,7 +126,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
                 <tr>
                     <th width="10%">Total Akhir</th>
                     <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format(($total_nominal + $ppn) - $pph, 2) ?></span>
+                        <span style="font-weight: bold;">Rp. <span id="text_total_akhir_jurnal"><?= number_format(($total_nominal + $ppn) - $pph, 2) ?></span></span>
                         <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal + $ppn) - $pph ?>">
                     </td>
                 </tr>
@@ -167,6 +172,72 @@ $total_akhir_jurnal = ($total_nominal_jurnal + $ppn - $pph);
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function format_num(x, decimals) {
+        if(decimals > 0){
+            return parseFloat(x).toLocaleString('en-US', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+        } else {
+            return parseFloat(x).toLocaleString('en-US');
+        }
+    }
+
+    $(document).on('change', '#ppn_persen', function() {
+        var ppn_persen = parseFloat($(this).val());
+        var total_nominal = parseFloat($('input[name="total_nominal"]').val()) || 0;
+        var dpp_lain_lain = parseFloat($('input[name="dpp_lain_lain"]').val()) || 0;
+        
+        var ppn = dpp_lain_lain * ppn_persen / 100;
+        var pph = total_nominal * 2 / 100;
+        var total_tagihan_ppn = total_nominal + ppn;
+        var total_akhir = total_tagihan_ppn - pph;
+
+        // Update main table
+        $('#text_ppn_jurnal').text(format_num(ppn, 2));
+        $('#text_total_tagihan_ppn').text(format_num(total_tagihan_ppn, 2));
+        $('#text_total_akhir_jurnal').text(format_num(total_akhir, 2));
+
+        $('input[name="ppn_jurnal"]').val(ppn);
+        $('input[name="total_tagihan_ppn"]').val(total_tagihan_ppn);
+        $('input[name="total_akhir_jurnal"]').val(total_akhir);
+        $('input[name="pajak"]').val(ppn); // update pajak as well
+        $('input[name="total_akhir"]').val(total_tagihan_ppn); // update total_akhir before pph
+        
+        // Update journal table
+        $('input[name^="coa_jurnal_"]').each(function() {
+            var coa = $(this).val();
+            var idx = $(this).attr('name').replace('coa_jurnal_', '');
+            
+            var debit = 0;
+            var kredit = 0;
+            
+            if (coa == '1102-01-01') {
+                debit = total_nominal + ppn - pph;
+            } else if (coa == '2104-01-07') {
+                kredit = ppn;
+            } else if (coa == '1106-01-02') {
+                debit = pph;
+            } else if (coa == '4101-01-01') {
+                kredit = total_nominal;
+            }
+            
+            $('input[name="debit_' + idx + '"]').val(debit);
+            $('input[name="kredit_' + idx + '"]').val(kredit);
+            
+            $('input[name="debit_' + idx + '"]').parent().contents().filter(function() { return this.nodeType === 3; }).remove();
+            $('input[name="debit_' + idx + '"]').parent().prepend(format_num(debit, 0)); 
+            
+            $('input[name="kredit_' + idx + '"]').parent().contents().filter(function() { return this.nodeType === 3; }).remove();
+            $('input[name="kredit_' + idx + '"]').parent().prepend(format_num(kredit, 0)); 
+        });
+        
+        // Update balancing
+        var total_debit = 0;
+        var total_kredit = 0;
+        $('input[name^="debit_"]').each(function() { total_debit += parseFloat($(this).val()) || 0; });
+        $('input[name^="kredit_"]').each(function() { total_kredit += parseFloat($(this).val()) || 0; });
+        $('.th_total_debit').text(format_num(total_debit, 0));
+        $('.th_total_kredit').text(format_num(total_kredit, 0));
+    });
+
     function syncTanggalJurnal(val) {
         if (!val) return;
         var dateObj = new Date(val);

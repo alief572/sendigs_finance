@@ -47,8 +47,13 @@
                         </td>
                     </tr>
                     <tr>
-                        <th width="13%"></th>
-                        <td width="12%"></td>
+                        <th width="13%">PPN</th>
+                        <td width="12%">
+                            <select name="ppn_persen" id="ppn_persen" class="form-control form-control-sm" onchange="hitung_all();">
+                                <option value="12" <?= (isset($data_invoicing->ppn_persen) && $data_invoicing->ppn_persen == 12) ? 'selected' : '' ?>>12%</option>
+                                <option value="0" <?= (isset($data_invoicing->ppn_persen) && $data_invoicing->ppn_persen == 0) ? 'selected' : '' ?>>0%</option>
+                            </select>
+                        </td>
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
@@ -149,13 +154,13 @@
                                 </td>
                             </tr>
                             <tr>
-                                <td>PPN 12% dari DPP lain</td>
+                                <td>PPN <span id="label_ppn_persen"><?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</span> dari DPP lain</td>
                                 <td>
                                     <input type="text" name="ppn" id="ppn" class="form-control form-control-sm text-right auto_num" value="0" readonly>
                                 </td>
                             </tr>
                             <tr>
-                                <td>Total Tagihan + PPN 12%</td>
+                                <td>Total Tagihan + PPN <span id="label_total_tagihan_ppn_persen"><?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</span></td>
                                 <td>
                                     <input type="text" name="total_tagihan_ppn" id="total_tagihan_ppn" class="form-control form-control-sm text-right auto_num" value="0" readonly>
                                 </td>
@@ -489,7 +494,11 @@
         var dpp_lain_lain = totall * 11 / 12;
         $('#dpp_lain_lain').autoNumeric('set', dpp_lain_lain);
 
-        var ppn = dpp_lain_lain * 12 / 100;
+        var ppn_persen = parseFloat($('#ppn_persen').val()) || 0;
+        $('#label_ppn_persen').text(ppn_persen + '%');
+        $('#label_total_tagihan_ppn_persen').text(ppn_persen + '%');
+
+        var ppn = dpp_lain_lain * ppn_persen / 100;
         $('#ppn').autoNumeric('set', ppn);
 
         var tagihan_ppn = totall + ppn;

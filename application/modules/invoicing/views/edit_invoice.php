@@ -43,8 +43,13 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         </td>
                     </tr>
                     <tr>
-                        <th width="13%"></th>
-                        <td width="12%"></td>
+                        <th width="13%">PPN</th>
+                        <td width="12%">
+                            <select name="ppn_persen" id="ppn_persen" class="form-control form-control-sm">
+                                <option value="12" <?= (isset($data_invoice->ppn_persen) && $data_invoice->ppn_persen == 12) ? 'selected' : '' ?>>12%</option>
+                                <option value="0" <?= (isset($data_invoice->ppn_persen) && $data_invoice->ppn_persen == 0) ? 'selected' : '' ?>>0%</option>
+                            </select>
+                        </td>
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
@@ -95,16 +100,16 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">PPn 12% dari DPP Lain</th>
+                    <th width="10%">PPN <span id="label_ppn_persen"><?= isset($data_invoice->ppn_persen) ? $data_invoice->ppn_persen : 12 ?>%</span> dari DPP Lain</th>
                     <td class="text-right">
-                        Rp. <?= number_format($ppn, 2) ?>
+                        Rp. <span id="text_ppn_jurnal"><?= number_format($ppn, 2) ?></span>
                         <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
                     </td>
                 </tr>
                 <tr>
                     <th width="10%">Total Tagihan + PPN</th>
                     <td class="text-right">
-                        Rp. <?= number_format($tagihan_ppn, 2) ?>
+                        Rp. <span id="text_tagihan_ppn"><?= number_format($tagihan_ppn, 2) ?></span>
                         <input type="hidden" name="tagihan_ppn_jurnal" value="<?= $tagihan_ppn ?>">
                     </td>
                 </tr>
@@ -118,7 +123,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                 <tr>
                     <th width="10%">Total Akhir</th>
                     <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format($total_akhir_jurnal, 2) ?></span>
+                        <span style="font-weight: bold;">Rp. <span id="text_total_akhir_jurnal"><?= number_format($total_akhir_jurnal, 2) ?></span></span>
                         <input type="hidden" name="total_akhir_jurnal" value="<?= $total_akhir_jurnal ?>">
                     </td>
                 </tr>
@@ -164,6 +169,68 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function format_num(x, decimals) {
+        if(decimals > 0){
+            return parseFloat(x).toLocaleString('en-US', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+        } else {
+            return parseFloat(x).toLocaleString('en-US');
+        }
+    }
+
+    $(document).on('change', '#ppn_persen', function() {
+        var ppn_persen = parseFloat($(this).val()) || 0;
+        var dpp = parseFloat($('input[name="total_nominal_jurnal"]').val()) || 0;
+        var dpp_lain_lain = parseFloat($('input[name="dpp_lain_lain_jurnal"]').val()) || 0;
+        var pph = parseFloat($('input[name="pph_jurnal"]').val()) || 0;
+        
+        var ppn = dpp_lain_lain * ppn_persen / 100;
+        var tagihan_ppn = dpp + ppn;
+        var total_akhir = tagihan_ppn - pph;
+        
+        $('#label_ppn_persen').text(ppn_persen + '%');
+        $('#text_ppn_jurnal').text(format_num(ppn, 2));
+        $('#text_tagihan_ppn').text(format_num(tagihan_ppn, 2));
+        $('#text_total_akhir_jurnal').text(format_num(total_akhir, 2));
+        
+        $('input[name="ppn_jurnal"]').val(ppn);
+        $('input[name="tagihan_ppn_jurnal"]').val(tagihan_ppn);
+        $('input[name="total_akhir_jurnal"]').val(total_akhir);
+        
+        $('input[name^="coa_jurnal_"]').each(function() {
+            var coa = $(this).val();
+            var idx = $(this).attr('name').replace('coa_jurnal_', '');
+            
+            var debit = 0;
+            var kredit = 0;
+            
+            if (coa == '1102-01-01') {
+                debit = tagihan_ppn - pph;
+            } else if (coa == '2104-01-07') {
+                kredit = ppn;
+            } else if (coa == '1106-01-02') {
+                debit = pph;
+            } else if (coa == '4101-01-01') {
+                kredit = dpp;
+            }
+            
+            $('input[name="debit_' + idx + '"]').val(debit);
+            $('input[name="kredit_' + idx + '"]').val(kredit);
+            
+            $('input[name="debit_' + idx + '"]').parent().contents().filter(function() { return this.nodeType === 3; }).remove();
+            $('input[name="debit_' + idx + '"]').parent().prepend(format_num(debit, 0)); 
+            
+            $('input[name="kredit_' + idx + '"]').parent().contents().filter(function() { return this.nodeType === 3; }).remove();
+            $('input[name="kredit_' + idx + '"]').parent().prepend(format_num(kredit, 0)); 
+        });
+        
+        var total_debit = 0;
+        var total_kredit = 0;
+        $('input[name^="debit_"]').each(function() { total_debit += parseFloat($(this).val()) || 0; });
+        $('input[name^="kredit_"]').each(function() { total_kredit += parseFloat($(this).val()) || 0; });
+        $('.th_total_debit').text(format_num(total_debit, 0));
+        $('.th_total_kredit').text(format_num(total_kredit, 0));
+    });
+
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 

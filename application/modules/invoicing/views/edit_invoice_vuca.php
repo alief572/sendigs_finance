@@ -7,9 +7,7 @@ $total_akhir = $data_invoice->total_akhir;
 $total_nominal_jurnal = $data_invoice->total_nominal_jurnal;
 $dpp = $data_invoice->total_nominal_jurnal;
 $dpp_lain_lain = $data_invoice->dpp_lain_lain_jurnal;
-$ppn = $data_invoice->ppn_jurnal;
 $pph = $data_invoice->pph_jurnal;
-$tagihan_ppn = $data_invoice->tagihan_ppn_jurnal;
 $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 ?>
 <div class="box">
@@ -94,18 +92,6 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <input type="hidden" name="dpp_lain_lain_jurnal" value="<?= $dpp_lain_lain ?>">
                     </td>
                 </tr>
-                <tr>
-                    <th width="10%">PPn 12% dari DPP Lain</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($ppn, 2) ?>
-                        <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">
-                    </td>
-                </tr>
-                <tr>
-                    <th width="10%">Total Tagihan + PPN</th>
-                    <td class="text-right">
-                        Rp. <?= number_format($tagihan_ppn, 2) ?>
-                        <input type="hidden" name="tagihan_ppn_jurnal" value="<?= $tagihan_ppn ?>">
                     </td>
                 </tr>
                 <tr>
@@ -118,7 +104,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                 <tr>
                     <th width="10%">Total Akhir</th>
                     <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format($total_akhir_jurnal, 2) ?></span>
+                        <span style="font-weight: bold;">Rp. <span id="text_total_akhir_jurnal"><?= number_format($total_akhir_jurnal, 2) ?></span></span>
                         <input type="hidden" name="total_akhir_jurnal" value="<?= $total_akhir_jurnal ?>">
                     </td>
                 </tr>
@@ -164,6 +150,14 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function format_num(x, decimals) {
+        if(decimals > 0){
+            return parseFloat(x).toLocaleString('en-US', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+        } else {
+            return parseFloat(x).toLocaleString('en-US');
+        }
+    }
+
     $(document).on('submit', '#frm-data', function(e) {
         e.preventDefault();
 
