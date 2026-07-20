@@ -130,17 +130,17 @@ $budgets = 0;
 							<select name="pettycash" id="pettycash" class="form-control" placeholder="Petty Cash" required>
 								<?php
 								echo '<option value="">Select an option</option>';
-								foreach ($data_pc as $record) {
-									$selected = '';
-									if (isset($data->pettycash)) {
-										if ($record->nama == $data->pettycash) {
-											$selected = ' selected';
-											$budgets = $record->budget;
-											$datacombocoa = $record->coa;
-										}
-									}
-									echo '<option value="' . $record->nama . '" ' . $selected . ' data-budget="' . $record->budget . '" data-approval="' . $record->approval . '" data-coa="' . $record->coa . '">' . $record->nama . '</option>';
-								}
+								// foreach ($data_pc as $record) {
+								// 	$selected = '';
+								// 	if (isset($data->pettycash)) {
+								// 		if ($record->nama == $data->pettycash) {
+								// 			$selected = ' selected';
+								// 			$budgets = $record->budget;
+								// 			$datacombocoa = $record->coa;
+								// 		}
+								// 	}
+								// 	echo '<option value="' . $record->nama . '" ' . $selected . ' data-budget="' . $record->budget . '" data-approval="' . $record->approval . '" data-coa="' . $record->coa . '">' . $record->nama . '</option>';
+								// }
 								?>
 							</select>
 						</div>
