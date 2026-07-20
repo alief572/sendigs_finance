@@ -94,7 +94,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                     </td>
                 </tr>
                 <tr>
-                    <th width="10%">PPn 12% dari DPP Lain</th>
+                    <th width="10%">PPN <?= isset($data_invoice->ppn_persen) ? $data_invoice->ppn_persen : 12 ?>% dari DPP Lain</th>
                     <td class="text-right">
                         Rp. <?= number_format($ppn, 2) ?>
                         <input type="hidden" name="ppn_jurnal" value="<?= $ppn ?>">

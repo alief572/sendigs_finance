@@ -124,13 +124,13 @@ $no_faktur = $data_invoicing->no_faktur ?? '';
                             </td>
                         </tr>
                         <tr>
-                            <td>PPN 12% dari DPP lain</td>
+                            <td>PPN <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>% dari DPP lain</td>
                             <td>
                                 <input type="text" name="ppn" id="ppn" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->pajak ?>" readonly>
                             </td>
                         </tr>
                         <tr>
-                            <td>Total Tagihan + PPN 12%</td>
+                            <td>Total Tagihan + PPN <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</td>
                             <td>
                                 <input type="text" name="total_tagihan_ppn" id="total_tagihan_ppn" class="form-control form-control-sm text-right auto_num" value="<?= $data_invoicing->tagihan_ppn_jurnal ?>" readonly>
                             </td>
