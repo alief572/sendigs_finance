@@ -1154,11 +1154,11 @@ class Expense extends Admin_Controller
 		}
 		$this->template->set('stsview', 'approval');
 		$this->template->page_icon('fa fa-list');
-		if ($data->pettycash != "") {
-			$data_budget = $this->All_model->GetPettyCashComboCoa($data->pettycash);
-			$data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
-			$this->template->set('data_pc', $data_pc);
-			$this->template->set('data_budget', $data_budget);
+		if ($data->pettycash !== "") {
+			// $data_budget = $this->All_model->GetPettyCashComboCoa($data->pettycash);
+			// $data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
+			// $this->template->set('data_pc', $data_pc);
+			// $this->template->set('data_budget', $data_budget);
 			$this->template->render('form_pc');
 		} else {
 			$this->template->render('form');
