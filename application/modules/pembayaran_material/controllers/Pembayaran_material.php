@@ -1506,7 +1506,7 @@ class Pembayaran_material extends Admin_Controller
 
 					$arr_jurnal[] = [
 						'no_jurnal' => $id_jurnal,
-						'tgl_jurnal' => date('Y-m-d'),
+						'tgl_jurnal' => $item_jurnal['tanggal_jurnal'],
 						'coa' => $item_jurnal['coa'],
 						'id_company' => $item_jurnal['id_company'],
 						'nm_company' => $item_jurnal['nm_company'],
@@ -1535,7 +1535,7 @@ class Pembayaran_material extends Admin_Controller
 
 					$arr_jurnal[] = [
 						'no_jurnal' => $id_jurnal,
-						'tgl_jurnal' => date('Y-m-d'),
+						'tgl_jurnal' => $item_jurnal['tanggal_jurnal'],
 						'coa' => $item_jurnal['coa'],
 						'id_company' => 1,
 						'nm_company' => $item_jurnal['nm_company'],
