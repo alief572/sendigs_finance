@@ -1453,7 +1453,7 @@ class Pembayaran_material extends Admin_Controller
 							'kredit' => str_replace(',', '', $jr['kredit']),
 							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
 							'sts' => '0',
-							'no_transaksi' => $id_payment_paid,
+							'no_transaksi' => $post['id_payment'],
 							'jenis_transaksi' => 'Payment Hutang Petty Cash',
 							'created_by' => $this->auth->user_id(),
 							'created_date' => date('Y-m-d H:i:s')
@@ -1514,7 +1514,7 @@ class Pembayaran_material extends Admin_Controller
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
 						'keterangan' => $item_jurnal['keterangan'],
-						'no_transaksi' => $id_payment_paid,
+						'no_transaksi' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['id_payment_ref'] : $post['id_payment'],
 						'jenis_transaksi' => $tipe_jurnal,
 						'id_divisi' => $item_jurnal['id_divisi'],
 						'nm_divisi' => $item_jurnal['nm_divisi'],
@@ -1557,6 +1557,9 @@ class Pembayaran_material extends Admin_Controller
 			// else {
 			// 	throw new Exception('Data jurnal tidak terdeteksi !');
 			// }
+
+			// print_r($arr_jurnal);
+			// exit;
 
 			// if (!empty($arr_jurnal)) {
 			if (!empty($arr_jurnal)) {
