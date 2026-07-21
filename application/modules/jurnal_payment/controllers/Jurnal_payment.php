@@ -173,7 +173,8 @@ class Jurnal_payment extends Admin_Controller
                 ];
 
                 if (!$acc->db->insert('javh', $dataJVhead)) {
-                    throw new Exception('Gagal insert jurnal header');
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal insert jurnal header. ' . ($db_error['message'] ?? ''));
                 }
 
                 $get_jurnal_all = $this->db->get_where('tr_jurnal', [
@@ -204,14 +205,21 @@ class Jurnal_payment extends Admin_Controller
 
                 if (!empty($details)) {
                     if (!$acc->db->insert_batch('jurnal', $details)) {
-                        throw new Exception('Gagal insert jurnal detail');
+                        $db_error = $acc->db->error();
+                        throw new Exception('Gagal insert jurnal detail. ' . ($db_error['message'] ?? ''));
                     }
                 }
                 if (!empty($ids)) {
-                    $this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1']);
+                    if (!$this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1'])) {
+                        $db_error = $this->db->error();
+                        throw new Exception('Gagal update status tr_jurnal. ' . ($db_error['message'] ?? ''));
+                    }
                 }
 
-                $acc->db->set('nomorJC', 'nomorJC + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang');
+                if (!$acc->db->set('nomorJC', 'nomorJC + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang')) {
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal update nomorJC cabang. ' . ($db_error['message'] ?? ''));
+                }
 
                 $datapiutang = [
                     'tipe'          => 'JV',
@@ -227,7 +235,8 @@ class Jurnal_payment extends Admin_Controller
                 ];
 
                 if (!$this->db->insert('tr_kartu_piutang', $datapiutang)) {
-                    throw new Exception('Gagal insert kartu piutang');
+                    $db_error = $this->db->error();
+                    throw new Exception('Gagal insert kartu piutang. ' . ($db_error['message'] ?? ''));
                 }
             } else if ($get_jurnal->jenis_transaksi == 'Penerimaan Piutang PPH 23') {
                 $this->load->model('Jurnal_payment_penerimaan/Jurnal_payment_penerimaan_nomor_model');
@@ -287,18 +296,30 @@ class Jurnal_payment extends Admin_Controller
                     }
                 }
 
-                $acc->db->insert('jarh', $arr_insert_jarh);
+                if (!$acc->db->insert('jarh', $arr_insert_jarh)) {
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal insert jurnal header BUM. ' . ($db_error['message'] ?? ''));
+                }
                 if (!empty($arr_jurnal)) {
-                    $acc->db->insert_batch('jurnal', $arr_jurnal);
+                    if (!$acc->db->insert_batch('jurnal', $arr_jurnal)) {
+                        $db_error = $acc->db->error();
+                        throw new Exception('Gagal insert jurnal detail BUM. ' . ($db_error['message'] ?? ''));
+                    }
                 }
 
                 // Semua baris tetap di-update sts = 1
-                $this->db->where([
+                if (!$this->db->where([
                     'no_transaksi'    => $get_jurnal->no_transaksi,
                     'jenis_transaksi' => $get_jurnal->jenis_transaksi,
-                ])->update('tr_jurnal', ['sts' => '1']);
+                ])->update('tr_jurnal', ['sts' => '1'])) {
+                    $db_error = $this->db->error();
+                    throw new Exception('Gagal update status tr_jurnal PPH 23. ' . ($db_error['message'] ?? ''));
+                }
 
-                $acc->db->set('nobum', 'nobum + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang');
+                if (!$acc->db->set('nobum', 'nobum + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang')) {
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal update nobum cabang. ' . ($db_error['message'] ?? ''));
+                }
             } else {
                 $get_payment_approve = $this->db->get_where('payment_approve', ['id' => $get_jurnal->no_transaksi])->row();
                 if (!$get_payment_approve) {
@@ -333,11 +354,15 @@ class Jurnal_payment extends Admin_Controller
 
                 if (!empty($details)) {
                     if (!$acc->db->insert_batch('jurnal', $details)) {
-                        throw new Exception('Gagal insert jurnal detail payment');
+                        $db_error = $acc->db->error();
+                        throw new Exception('Gagal insert jurnal detail payment. ' . ($db_error['message'] ?? ''));
                     }
                 }
                 if (!empty($ids)) {
-                    $this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1']);
+                    if (!$this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1'])) {
+                        $db_error = $this->db->error();
+                        throw new Exception('Gagal update status tr_jurnal payment. ' . ($db_error['message'] ?? ''));
+                    }
                 }
 
                 $dataJVheader = [
@@ -355,10 +380,14 @@ class Jurnal_payment extends Admin_Controller
                 ];
 
                 if (!$acc->db->insert('japh', $dataJVheader)) {
-                    throw new Exception('Gagal insert jurnal header payment');
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal insert jurnal header payment. ' . ($db_error['message'] ?? ''));
                 }
 
-                $acc->db->set('nobuk', 'nobuk + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang');
+                if (!$acc->db->set('nobuk', 'nobuk + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang')) {
+                    $db_error = $acc->db->error();
+                    throw new Exception('Gagal update nobuk cabang. ' . ($db_error['message'] ?? ''));
+                }
             }
 
             if ($this->db->trans_status() === FALSE) {
