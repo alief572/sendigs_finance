@@ -30,6 +30,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 					<tr>
 						<th>#</th>
 						<th>No Dokumen</th>
+						<th>No Transaksi Payment</th>
 						<th>Request By</th>
 						<th>Tanggal</th>
 						<th>Keperluan</th>
@@ -95,6 +96,8 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 
 							$diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
 
+							$no_payment = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['no_payment'] : '';
+
 							$this->db->select('c.nm_lengkap, a.created_on');
 							$this->db->from('tr_payment_paid a');
 							$this->db->join('payment_approve b', 'b.id_payment = a.id', 'left');
@@ -105,10 +108,13 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 							$dibayar_oleh = (!empty($get_payment_details)) ? $get_payment_details->nm_lengkap : '';
 							$tgl_pembayaran = (!empty($get_payment_details)) ? $get_payment_details->created_on : '';
 
+
+
 							$numb++; ?>
 							<tr>
 								<td><?= $numb; ?></td>
 								<td><?= $no_doc ?></td>
+								<td><?= $no_payment ?></td>
 								<td><?= $nmuser ?></td>
 								<td><?= $record->tgl_doc ?></td>
 								<td><?= $record->keperluan ?></td>
