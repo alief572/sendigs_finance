@@ -143,7 +143,6 @@ class Jurnal_payment_model extends BF_Model
             $hasil[] = [
                 'no'              => $no,
                 'no_transaksi'    => $item->no_transaksi,
-                'jenis_transaksi' => $item->jenis_transaksi,
                 'kategori_payment' => ucfirst($tipe_payment),
                 'tanggal_jurnal'  => date('d F Y', strtotime($item->tgl_jurnal)),
                 'company'         => $item->nm_company,
