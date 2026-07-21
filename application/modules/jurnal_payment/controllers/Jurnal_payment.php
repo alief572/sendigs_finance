@@ -334,6 +334,8 @@ class Jurnal_payment extends Admin_Controller
 
                 $details = [];
                 $ids = [];
+
+                $total_debit = 0;
                 foreach ($get_jurnal_all as $item) {
                     // Hanya insert ke tras jika debit atau kredit > 0
                     if ($item->debit > 0 || $item->kredit > 0) {
@@ -347,6 +349,8 @@ class Jurnal_payment extends Admin_Controller
                             'debet'        => $item->debit,
                             'kredit'       => $item->kredit,
                         ];
+
+                        $total_debit += $item->debit;
                     }
                     // Semua baris tetap di-update sts = 1
                     $ids[] = $item->id;
@@ -368,7 +372,7 @@ class Jurnal_payment extends Admin_Controller
                 $dataJVheader = [
                     'nomor'      => $Nomor_JV,
                     'tgl'        => $get_jurnal->tgl_jurnal,
-                    'jml'        => $get_payment_approve->jumlah,
+                    'jml'        => $total_debit,
                     'kdcab'      => '101',
                     'jenis_reff' => 'BUK',
                     'no_reff'    => $get_jurnal->no_transaksi,
