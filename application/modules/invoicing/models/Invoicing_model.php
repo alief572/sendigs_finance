@@ -87,6 +87,7 @@ class Invoicing_model extends BF_Model
         $count_all = $db_clone->count_all_results();
 
         $this->db->group_by('a.id');
+        $this->db->order_by('a.sts_invoice', 'asc');
         $this->db->order_by('a.id', 'desc');
         $this->db->limit($length, $start);
 
