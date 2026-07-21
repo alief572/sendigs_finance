@@ -61,6 +61,7 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
+        $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) >= 2026)");
 
         // Filter status berdasarkan sts_invoice di kons_tr_plan_tagih_detail
         if ($filter_status == 'uninvoiced') {
