@@ -89,8 +89,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 <tr>
                     <th class="text-center">No.</th>
                     <th class="text-center">No. Transaksi</th>
-                    <th class="text-center">Jenis Transaksi</th>
-                    <th class="text-center">Kategori Payment</th>
+                    <th class="text-center">Kategori Transaksi</th>
                     <th class="text-center">Tanggal Jurnal</th>
                     <th class="text-center">Company</th>
                     <th class="text-center">Action</th>
@@ -314,9 +313,6 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
                 },
                 {
                     data: 'no_transaksi'
-                },
-                {
-                    data: 'jenis_transaksi'
                 },
                 {
                     data: 'kategori_payment'
