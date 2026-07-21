@@ -290,10 +290,17 @@ class Metode_pembelian_model extends BF_Model
 				}
 			}
 
+			$get_tracking = $this->db->select('a.created_at')->from('tr_tracking_pembelian a')->where('a.no_pr', $row['no_pr'])->order_by('a.id', 'DESC')->limit(1)->get()->row();
+			if (!empty($get_tracking->created_at)) {
+				$tgl_buat = date('d-M-Y H:i:s', strtotime($get_tracking->created_at));
+			} else {
+				$tgl_buat = date('d-M-Y H:i:s', strtotime($row['tgl_buat']));
+			}
+
 			$nestedData[]	= "<div align='center'><span class='badge' style='background-color: " . $warna . ";'>" . strtoupper($category) . "</span></div>";
 			$nestedData[]	= "<div align='center'>" . $metode_pembelian . "</div>";
 			$nestedData[]	= "<div align='center'>" . strtoupper($row['by_name']) . "</div>";
-			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i:s', strtotime($row['tgl_buat'])) . "</div>";
+			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i:s', strtotime($tgl_buat)) . "</div>";
 			$nestedData[]	= "<div align='center'>
 								<button type='button' class='btn btn-sm btn-primary detail_pr' title='Detail' data-no_pr_group='" . $row['no_pr'] . "' data-tipe_pr='" . $row['category'] . "'><i class='fa fa-eye'></i></button>
 								</div>";
