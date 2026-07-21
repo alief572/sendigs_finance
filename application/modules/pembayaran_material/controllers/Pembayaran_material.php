@@ -1760,6 +1760,8 @@ class Pembayaran_material extends Admin_Controller
 
 			$valid = 1;
 			$pesan = 'Selamat, data telah berhasil dibayar !';
+
+			$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
 			// }
 			$this->db->trans_complete();
 
