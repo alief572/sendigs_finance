@@ -184,10 +184,14 @@ class Jurnal_payment_nomor_model extends CI_Model
         $nocab            = 'A';
         $bulan_Proses    = date('Y', strtotime($Tgl_Inv));
         $Urut            = 1;
-        if ($comp == '1' || $comp == '4') {
-            $Query_Cab        = "SELECT subcab,nomorJC FROM " . DBACC_VUCA . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
-        } else {
-            $Query_Cab        = "SELECT subcab,nomorJC FROM " . DBACC_SUST . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        if ($id_company == '4') {
+            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
+        }
+        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
+            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
+        } 
+        else {
+            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         }
         $Pros_Cab        = $this->db->query($Query_Cab);
         $det_Cab        = $Pros_Cab->result_array();
@@ -536,9 +540,13 @@ class Jurnal_payment_nomor_model extends CI_Model
     {
         //$db2=$this->load->database('accounting', TRUE);
         //$no_cab		= '101';
-        if ($id_company == '1' || $id_company == '4') {
+        if ($id_company == '4') {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        } else {
+        }
+        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
+            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
+        } 
+        else {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         }
         $q         = $this->db->query($ambil);
