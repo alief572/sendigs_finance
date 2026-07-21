@@ -94,7 +94,7 @@
 
 <!-- Modal Admin Charge -->
 <div class="modal fade modal-admin-charge" id="modalAdminCharge" tabindex="-1" role="dialog" aria-labelledby="modalAdminChargeLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-md" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -176,7 +176,7 @@
     $(document).on('click', '.clear_choosed_payment', function() {
         swal({
                 title: "Are you sure?",
-                text: "Your choosed payment data will be clearef!",
+                text: "Your choosed payment data will be cleared!",
                 type: "warning",
                 showCancelButton: true,
                 confirmButtonClass: "btn-danger",
