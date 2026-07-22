@@ -7,28 +7,39 @@ class Metode_pembelian_model extends BF_Model
 		parent::__construct();
 	}
 
-	public function generate_no_pr_non_po($no)
+	public function generate_no_pr_non_po($no, $tipe_data = 'format_direct_payment')
 	{
-		$prefix = "PCH-";
-		$date_part = date('ymd');
-		$like_pattern = $prefix . $date_part;
+		$no_doc = '';
+        $newcode = '';
+        $query_data = 'SELECT * FROM ms_generate WHERE tipe = "' . $tipe_data . '";';
+        $data = $this->db->query($query_data)->row();
+        if ($data !== false) {
+            if (stripos($data->info, 'YEAR', 0) !== false) {
+                if ($data->info3 != date("Y")) {
+                    $years = date("Y");
+                    $number = 1;
+                    $newnumber = sprintf('%0' . $data->info4 . 'd', $number);
+                } else {
+                    $years = $data->info3;
+                    $number = ($data->info2 + 1);
+                    $newnumber = sprintf('%0' . $data->info4 . 'd', $number);
+                }
+                $newcode = str_ireplace('XXXX', $newnumber, $data->info);
+                $newcode = str_ireplace('YEAR', $years, $newcode);
+                $newdata = array('info2' => $number, 'info3' => $years);
+            } else {
+                $number = ($data->info2 + 1);
+                $newnumber = sprintf('%0' . $data->info4 . 'd', $number);
+                $newcode = str_ireplace('XXXX', $newnumber, $data->info);
+                $newdata = array('info2' => $number);
+            }
 
-		$this->db->select('MAX(RIGHT(no_non_po, 4)) AS max_number');
-		$this->db->like('no_non_po', $like_pattern, 'both');
-		$query = $this->db->get('tr_pr_non_po');
+            $this->db->update('ms_generate', $newdata, array('tipe' => $tipe_data));
 
-		$max_number = 0;
-		if ($query->num_rows() > 0) {
-			$row = $query->row();
-			$max_number = (int)$row->max_number;
-		}
-
-		$new_number = $max_number + $no;
-		$new_number_padded = str_pad($new_number, 4, '0', STR_PAD_LEFT);
-
-		$new_no_non_po = $prefix . $date_part . $new_number_padded;
-
-		return $new_no_non_po;
+            $no_doc = $newcode;
+        }
+        
+        return $no_doc;
 	}
 
 	//==================================================================================================================
