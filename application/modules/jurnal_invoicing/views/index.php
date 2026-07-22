@@ -95,22 +95,27 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     <!-- /.box-body -->
 </div>
 
-<div class="modal modal-default fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog" style="width: 1200px;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-users"></span> Posting Jurnal</h4>
+<div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="width: 95%; max-width: 1200px;">
+        <div class="modal-content" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0073b7 0%, #00a65a 100%); color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; padding: 15px 20px;">
+                <button type="button" class="close" data-dismiss="modal" style="color: white; opacity: 0.9; font-size: 24px;"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel" style="font-weight: 600; letter-spacing: 0.5px;"><span class="fa fa-file-text-o" style="margin-right: 8px;"></span> Posting Jurnal</h4>
             </div>
             <form action="" method="post" id="frm-data">
-                <div class="modal-body" id="ModalView">
-
+                <div class="modal-body" id="ModalView" style="padding: 20px; background-color: #f9fafc;">
+                    
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary save_btn_modal"><i class="fa fa-save"></i> Save</button>
-                    <button type="button" class="btn btn-warning" onclick="revisi_jurnal()"><i class="fa fa-pencil"></i> Revisi</button>
-                    <button type="button" class="btn btn-danger" data-dismiss="modal">
-                        <span class="glyphicon glyphicon-remove"></span> Close</button>
+                <div class="modal-footer" style="background-color: #f1f4f9; border-top: 1px solid #e1e6ef; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; padding: 15px 20px;">
+                    <button type="button" class="btn btn-danger pull-left" data-dismiss="modal" style="min-width: 100px;">
+                        <i class="fa fa-times"></i> Close
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="revisi_jurnal()" style="min-width: 100px; color: #fff; font-weight: bold;">
+                        <i class="fa fa-pencil"></i> Revisi
+                    </button>
+                    <button type="submit" class="btn btn-success save_btn_modal" style="min-width: 100px; font-weight: bold;">
+                        <i class="fa fa-save"></i> Save
+                    </button>
                 </div>
             </form>
         </div>
