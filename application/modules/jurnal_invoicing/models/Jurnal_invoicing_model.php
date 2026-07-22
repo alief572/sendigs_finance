@@ -106,13 +106,20 @@ class Jurnal_invoicing_model extends BF_Model
 
             // Insert jurnal detail — satu baris per item
             foreach ($get_jurnal_detail as $item) {
+                $get_invoice = $this->db->get_where('tr_invoicing', array('id' => $item->no_transaksi))->row();
+                $no_invoice = $get_invoice->no_invoice ?? $item->no_transaksi;
+
+                $ket = explode(' - ', $item->keterangan);
+
+                $keterangan = $ket[0].' - '.$no_invoice ?? $item->keterangan;
+
                 $insert_jurnal = $acc_db->insert('jurnal', [
                     'tipe'          => 'JV',
                     'nomor'         => $Nomor_JV,
                     'tanggal'       => $item->tgl_jurnal,
                     'no_perkiraan'  => $item->coa,
-                    'keterangan'    => $item->keterangan,
-                    'no_reff'       => $item->no_transaksi,
+                    'keterangan'    => $keterangan,
+                    'no_reff'       => $no_invoice,
                     'debet'         => $item->debit,
                     'kredit'        => $item->kredit,
                 ]);
