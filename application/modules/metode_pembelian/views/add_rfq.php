@@ -14,7 +14,7 @@
 						<option value='0'>Select Type</option>
 						<option value='po'>PO</option>
 						<option value='non po'>NON PO</option>
-						<option value="cash">Cash</option>
+						<option value="cash">Cash / Direct Payment</option>
 					</select>
 				</div>
 			</div>

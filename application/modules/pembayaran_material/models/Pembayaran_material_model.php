@@ -918,7 +918,7 @@ class Pembayaran_material_model extends BF_Model
 						$kredit = $nilai_pph;
 						$keterangan = ($item_coa->no_coa == '2104-01-02') ? 'PPh 21' : 'PPh 23';
 					} elseif ($item_coa->no_coa == '7201-01-04') {
-						$kredit = $bank_charge;
+						$debit = $bank_charge;
 						$keterangan = 'Admin Charge';
 					} elseif ($item_coa->no_coa == '1106-01-06') {
 						$kredit = $nilai_ppn;
