@@ -1,15 +1,49 @@
-<table class="table table-bordered w-100">
-    <thead>
-        <tr>
-            <th class="text-center">Tanggal</th>
-            <th class="text-center">Tipe</th>
-            <th class="text-center">No. COA</th>
-            <th class="text-center">Keterangan</th>
-            <th class="text-center">No. Reff</th>
-            <th class="text-center">Debit</th>
-            <th class="text-center">Kredit</th>
-        </tr>
-    </thead>
+<style>
+    .table-jurnal th {
+        background-color: #0073b7 !important;
+        color: #fff !important;
+        vertical-align: middle !important;
+        padding: 12px 8px !important;
+        border-bottom: 2px solid #0056b3 !important;
+    }
+    .table-jurnal td {
+        vertical-align: middle !important;
+        padding: 8px !important;
+    }
+    .input-readonly {
+        background-color: #f4f6f9 !important;
+        border: 1px solid #ddd !important;
+        color: #444 !important;
+        font-weight: 600;
+    }
+    .textarea-keterangan {
+        resize: vertical;
+        min-height: 50px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    .tfoot-jurnal th {
+        background-color: #f1f4f9;
+        font-size: 15px;
+        font-weight: bold;
+        color: #333;
+        padding: 12px 8px !important;
+        border-top: 2px solid #0073b7 !important;
+    }
+</style>
+<div class="table-responsive" style="border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+    <table class="table table-bordered table-striped table-hover w-100 table-jurnal" style="margin-bottom: 0;">
+        <thead>
+            <tr>
+                <th class="text-center" width="10%">Tanggal</th>
+                <th class="text-center" width="10%">Tipe</th>
+                <th class="text-center" width="15%">No. COA</th>
+                <th class="text-center" width="25%">Keterangan</th>
+                <th class="text-center" width="15%">No. Reff</th>
+                <th class="text-center" width="12%">Debit</th>
+                <th class="text-center" width="13%">Kredit</th>
+            </tr>
+        </thead>
     <tbody>
         <?php
         $no = 0;
@@ -19,19 +53,25 @@
         foreach ($data_jurnal as $row) {
             $no++;
 
+            $get_invoice = $this->db->get_where('tr_invoicing', array('id' => $row->no_transaksi))->row();
+            $no_invoice = $get_invoice->no_invoice ?? $row->no_transaksi;
+
+            $ket = explode(' - ', $row->keterangan);
+            $keterangan = $ket[0].' - '.$no_invoice ?? $row->keterangan;
+
             echo '<tr>';
-            echo '<td class="text-center">' . date('d F Y', strtotime($row->tgl_jurnal)) . '</td>';
+            echo '<td class="text-center">' . date('d M Y', strtotime($row->tgl_jurnal)) . '</td>';
             echo '<td class="text-center">' . $row->jenis_transaksi . '</td>';
-            echo '<td class="text-center">' . $row->coa . '</td>';
+            echo '<td class="text-center"><strong>' . $row->coa . '</strong></td>';
             echo '<td class="text-left">';
-            echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm" readonly>' . $row->keterangan . '</textarea>';
+            echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm textarea-keterangan" readonly style="background-color: #fafafa; border: 1px dashed #ccc;">' . $keterangan . '</textarea>';
             echo '</td>';
-            echo '<td class="text-center">' . $row->no_transaksi . '</td>';
+            echo '<td class="text-center"><span class="label label-info" style="font-size:12px;">' . $no_invoice . '</span></td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit autonum" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit autonum input-readonly" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
             echo '</td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit autonum" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit autonum input-readonly" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
             echo '</td>';
             echo '</tr>';
 
@@ -41,18 +81,19 @@
         ?>
 
     </tbody>
-    <tfoot>
+    <tfoot class="tfoot-jurnal">
         <tr>
-            <th colspan="5" class="text-right">Grand Total</th>
-            <th class="text-right total_debit">
+            <th colspan="5" class="text-right" style="vertical-align: middle;">GRAND TOTAL</th>
+            <th class="text-right total_debit" style="color: #00a65a; font-size: 16px;">
                 <?= number_format($ttl_debit) ?>
             </th>
-            <th class="text-right total_kredit">
+            <th class="text-right total_kredit" style="color: #00a65a; font-size: 16px;">
                 <?= number_format($ttl_kredit) ?>
             </th>
         </tr>
     </tfoot>
-</table>
+    </table>
+</div>
 <!-- </div> -->
 
 <script>

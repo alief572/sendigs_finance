@@ -1,17 +1,51 @@
+<style>
+    .table-jurnal th {
+        background-color: #0073b7 !important;
+        color: #fff !important;
+        vertical-align: middle !important;
+        padding: 12px 8px !important;
+        border-bottom: 2px solid #0056b3 !important;
+    }
+    .table-jurnal td {
+        vertical-align: middle !important;
+        padding: 8px !important;
+    }
+    .input-readonly {
+        background-color: #f4f6f9 !important;
+        border: 1px solid #ddd !important;
+        color: #444 !important;
+        font-weight: 600;
+    }
+    .textarea-keterangan {
+        resize: vertical;
+        min-height: 50px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    .tfoot-jurnal th {
+        background-color: #f1f4f9;
+        font-size: 15px;
+        font-weight: bold;
+        color: #333;
+        padding: 12px 8px !important;
+        border-top: 2px solid #0073b7 !important;
+    }
+</style>
 <input type="hidden" name="id" value="<?= $id ?>">
-<table class="table table-bordered w-100">
-    <thead>
-        <tr>
-            <th class="text-center">Tanggal</th>
-            <th class="text-center">Tipe</th>
-            <th class="text-center">No. COA</th>
-            <th class="text-center">Nama COA</th>
-            <th class="text-center">Keterangan</th>
-            <th class="text-center">No. Reff</th>
-            <th class="text-center">Debit</th>
-            <th class="text-center">Kredit</th>
-        </tr>
-    </thead>
+<div class="table-responsive" style="border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+    <table class="table table-bordered table-striped table-hover w-100 table-jurnal" style="margin-bottom: 0;">
+        <thead>
+            <tr>
+                <th class="text-center" width="10%">Tanggal</th>
+                <th class="text-center" width="10%">Tipe</th>
+                <th class="text-center" width="10%">No. COA</th>
+                <th class="text-center" width="15%">Nama COA</th>
+                <th class="text-center" width="20%">Keterangan</th>
+                <th class="text-center" width="15%">No. Reff</th>
+                <th class="text-center" width="10%">Debit</th>
+                <th class="text-center" width="10%">Kredit</th>
+            </tr>
+        </thead>
     <tbody>
         <?php
         $no = 0;
@@ -21,20 +55,26 @@
         foreach ($jurnal_header as $row) {
             $no++;
 
+            $get_invoice = $this->db->get_where('tr_invoicing', array('id' => $row->no_transaksi))->row();
+            $no_invoice = $get_invoice->no_invoice ?? $row->no_transaksi;
+
+            $ket = explode(' - ', $row->keterangan);
+            $keterangan = $ket[0].' - '.$no_invoice ?? $row->keterangan;
+
             echo '<tr>';
-            echo '<td class="text-center">' . date('d F Y', strtotime($row->tgl_jurnal)) . '</td>';
+            echo '<td class="text-center">' . date('d M Y', strtotime($row->tgl_jurnal)) . '</td>';
             echo '<td class="text-center">' . $row->jenis_transaksi . '</td>';
-            echo '<td class="text-center">' . $row->coa . '</td>';
+            echo '<td class="text-center"><strong>' . $row->coa . '</strong></td>';
             echo '<td class="text-left">' . $row->nm_coa . '</td>';
             echo '<td class="text-left">';
-            echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm" readonly>' . $row->keterangan . '</textarea>';
+            echo '<textarea name="dt_jurnal[' . $no . '][keterangan]" class="form-control form-control-sm textarea-keterangan" readonly style="background-color: #fafafa; border: 1px dashed #ccc;">' . $keterangan . '</textarea>';
             echo '</td>';
-            echo '<td class="text-center">' . $row->no_transaksi . '</td>';
+            echo '<td class="text-center"><span class="label label-info" style="font-size:12px;">' . $no_invoice . '</span></td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][debit]" class="form-control form-control-sm text-right debit input-readonly" value="' . number_format($row->debit) . '" onchange="hitungDebit();" readonly>';
             echo '</td>';
             echo '<td>';
-            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
+            echo '<input type="text" name="dt_jurnal[' . $no . '][kredit]" class="form-control form-control-sm text-right kredit input-readonly" value="' . number_format($row->kredit) . '" onchange="hitungKredit();" readonly>';
             echo '</td>';
             echo '</tr>';
 
@@ -44,27 +84,30 @@
         ?>
 
     </tbody>
-    <tfoot>
+    <tfoot class="tfoot-jurnal">
         <tr>
-            <th colspan="6" class="text-right">Grand Total</th>
-            <th class="text-right total_debit">
+            <th colspan="6" class="text-right" style="vertical-align: middle;">GRAND TOTAL</th>
+            <th class="text-right total_debit" style="color: #00a65a; font-size: 16px;">
                 <?= number_format($ttl_debit) ?>
                 <input type="hidden" name="ttl_debit" value="<?= $ttl_debit ?>">
             </th>
-            <th class="text-right total_kredit">
+            <th class="text-right total_kredit" style="color: #00a65a; font-size: 16px;">
                 <?= number_format($ttl_kredit) ?>
                 <input type="hidden" name="ttl_kredit" value="<?= $ttl_kredit ?>">
             </th>
         </tr>
     </tfoot>
-</table>
-
-<!-- <div class="col-md-6"> -->
-<div class="form-group" style="width: 50%;">
-    <label for="">Alasan Revisi</label>
-    <textarea name="alasan_revisi" id="" class="form-control form-control-sm"></textarea>
+    </table>
 </div>
-<!-- </div> -->
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group" style="background-color: #fff9e6; padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <label for="" style="color: #e67e22; font-size: 14px;"><i class="fa fa-info-circle"></i> Alasan Revisi <span class="text-muted" style="font-size: 12px; font-weight: normal;">(Isi jika diperlukan)</span></label>
+            <textarea name="alasan_revisi" id="" class="form-control" style="resize: vertical; min-height: 80px; border-radius: 4px; border: 1px solid #f39c12;"></textarea>
+        </div>
+    </div>
+</div>
 
 <script>
     function number_format(number, decimals, dec_point, thousands_sep) {
