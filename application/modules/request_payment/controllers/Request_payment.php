@@ -40,14 +40,109 @@ class Request_payment extends Admin_Controller
 
 	public function payment_list()
 	{
-		$data = $this->Request_payment_model->GetListDataPaymentList();
-		$list_tgl_pengajuan_pembayaran = $this->Request_payment_model->get_payment_paid();
-
-		$this->template->set('data', $data);
-		$this->template->set('list_tgl_pengajuan_pembayaran', $list_tgl_pengajuan_pembayaran);
 		$this->template->title('Payment List');
 		$this->template->render('payment_list');
 	}
+
+    public function server_side_payment_list()
+    {
+        $list = $this->Request_payment_model->get_payment_list_data();
+        $list_tgl_pengajuan_pembayaran = $this->Request_payment_model->get_payment_paid();
+
+        $data = array();
+        $no = $this->input->post('start');
+        
+        foreach ($list as $record) {
+            $no++;
+            $row = array();
+
+            $nmuser = $record->nama;
+            $no_doc = $record->no_doc;
+            if ($record->tipe == 'kasbon') {
+                $get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $record->no_doc))->row();
+                
+                if (!empty($get_kasbon) && $get_kasbon->no_kasbon_consultant !== null) {
+                    $no_doc = $get_kasbon->no_kasbon_consultant;
+                }
+
+                $check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
+                if (count($check_detail) && !empty($get_kasbon)) {
+                    if ($get_kasbon->tipe_pr == 'pr departemen') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('rutin_non_planning_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+                        if(!empty($get_single_detail)) $nmuser = $get_single_detail->nm_lengkap;
+                    }
+                    if ($get_kasbon->tipe_pr == 'pr stok') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('material_planning_base_on_produksi a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+                        if(!empty($get_single_detail)) $nmuser = $get_single_detail->nm_lengkap;
+                    }
+                    if ($get_kasbon->tipe_pr == 'pr asset') {
+                        $this->db->select('b.nm_lengkap');
+                        $this->db->from('tran_pr_header a');
+                        $this->db->join('users b', 'b.id_user = a.created_by');
+                        $this->db->where('a.no_pr', $get_kasbon->id_pr);
+                        $get_single_detail = $this->db->get()->row();
+                        if(!empty($get_single_detail)) $nmuser = $get_single_detail->nm_lengkap;
+                    }
+                }
+            }
+
+            $tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
+            $diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
+            $no_payment = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['no_payment'] : '';
+
+            $this->db->select('c.nm_lengkap, a.created_on');
+            $this->db->from('tr_payment_paid a');
+            $this->db->join('payment_approve b', 'b.id_payment = a.id', 'left');
+            $this->db->join('users c', 'c.id_user = a.created_by', 'left');
+            $this->db->where('b.no_doc', $record->no_doc);
+            $get_payment_details = $this->db->get()->row();
+
+            $dibayar_oleh = (!empty($get_payment_details)) ? $get_payment_details->nm_lengkap : '';
+            $tgl_pembayaran = (!empty($get_payment_details)) ? $get_payment_details->created_on : '';
+
+            $get_payment = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc, 'tgl_bayar <>' => null])->result();
+            if (!empty($get_payment)) {
+                $status_badge = '<div class="badge bg-green text-light">Paid</div>';
+            } else {
+                $status_badge = '<div class="badge bg-blue">Open</div>';
+            }
+
+            $nilai = ($record->tipe == 'expense' && $record->id_kasbon != null && $record->kurang_bayar > 0) ? number_format($record->kurang_bayar) : number_format($record->jumlah);
+
+            $row[] = $no;
+            $row[] = $no_doc;
+            $row[] = $no_payment;
+            $row[] = $nmuser;
+            $row[] = date('Y-m-d', strtotime($record->tgl_doc));
+            $row[] = $record->keperluan;
+            $row[] = $record->tipe;
+            $row[] = $nilai;
+            $row[] = '<div class="text-center">'.$diajukan_oleh.'</div>';
+            $row[] = '<div class="text-center">'.$tgl_pengajuan.'</div>';
+            $row[] = '<div class="text-center">'.$dibayar_oleh.'</div>';
+            $row[] = '<div class="text-center">'.$tgl_pembayaran.'</div>';
+            $row[] = $status_badge;
+
+            $data[] = $row;
+        }
+
+        $output = array(
+            "draw" => $this->input->post('draw'),
+            "recordsTotal" => $this->Request_payment_model->count_all_payment_list(),
+            "recordsFiltered" => $this->Request_payment_model->count_filtered_payment_list(),
+            "data" => $data,
+        );
+
+        echo json_encode($output);
+    }
 
 	public function save_request()
 	{
@@ -2270,7 +2365,7 @@ class Request_payment extends Admin_Controller
 		$tgl_to = $this->uri->segment(4);
 		$bank = $this->uri->segment(5);
 
-		$this->Request_payment_model->excel_payment_list($tgl_from, $tgl_to, $bank);
+		$this->Request_payment_model->excel_payment_list();
 	}
 
 	public function view_receive_invoice()

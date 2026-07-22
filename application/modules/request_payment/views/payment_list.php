@@ -11,6 +11,61 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 
+<style>
+    /* Table Styling */
+    #mytabledata {
+        width: 100% !important;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    #mytabledata thead th {
+        background-color: #3c8dbc;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+        padding: 12px 10px;
+        vertical-align: middle;
+        border-bottom: 2px solid #367fa9;
+    }
+    #mytabledata tbody td {
+        padding: 10px 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 13px;
+        color: #333;
+        transition: background-color 0.2s ease;
+    }
+    #mytabledata tbody tr:hover td {
+        background-color: #f4f6f9;
+    }
+    #mytabledata tbody tr:last-child td {
+        border-bottom: none;
+    }
+    /* Button Styling */
+    .excel_data {
+        background: #00a65a;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-weight: bold;
+        transition: all 0.3s;
+        box-shadow: 0 2px 4px rgba(0,166,90,0.3);
+    }
+    .excel_data:hover {
+        background: #008d4c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,166,90,0.4);
+    }
+    .table_container {
+        margin-top: 15px;
+    }
+</style>
+
 <div class="box">
 	<div class="box-body">
 		<!-- <div class="col-md-6"> -->
@@ -24,8 +79,8 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 		</div>
 		<!-- </div> -->
 		<!-- </div> -->
-		<div class="col-md-12 table_container">
-			<table id="mytabledata" class="table table-bordered">
+		<div class="col-md-12 table_container table-responsive">
+			<table id="mytabledata" class="table table-striped table-hover">
 				<thead>
 					<tr>
 						<th>#</th>
@@ -44,102 +99,6 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 					</tr>
 				</thead>
 				<tbody>
-					<?php
-					if (!empty($data)) {
-						$numb = 0;
-						foreach ($data as $record) {
-
-							$nmuser = $record->nama;
-							$no_doc = $record->no_doc;
-							if ($record->tipe == 'kasbon') {
-								$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $record->no_doc))->row();
-
-								if ($get_kasbon->no_kasbon_consultant !== null) {
-									$no_doc = $get_kasbon->no_kasbon_consultant;
-								}
-
-								$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
-								if (count($check_detail)) {
-									if ($get_kasbon->tipe_pr == 'pr departemen') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('rutin_non_planning_header a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-
-									if ($get_kasbon->tipe_pr == 'pr stok') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('material_planning_base_on_produksi a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-
-									if ($get_kasbon->tipe_pr == 'pr asset') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('tran_pr_header a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-								}
-							}
-
-							$tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
-
-							$diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
-
-							$no_payment = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['no_payment'] : '';
-
-							$this->db->select('c.nm_lengkap, a.created_on');
-							$this->db->from('tr_payment_paid a');
-							$this->db->join('payment_approve b', 'b.id_payment = a.id', 'left');
-							$this->db->join('users c', 'c.id_user = a.created_by', 'left');
-							$this->db->where('b.no_doc', $record->no_doc);
-							$get_payment_details = $this->db->get()->row();
-
-							$dibayar_oleh = (!empty($get_payment_details)) ? $get_payment_details->nm_lengkap : '';
-							$tgl_pembayaran = (!empty($get_payment_details)) ? $get_payment_details->created_on : '';
-
-
-
-							$numb++; ?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= $no_doc ?></td>
-								<td><?= $no_payment ?></td>
-								<td><?= $nmuser ?></td>
-								<td><?= $record->tgl_doc ?></td>
-								<td><?= $record->keperluan ?></td>
-								<td><?= $record->tipe ?></td>
-								<td><?= (($record->tipe == 'expense' and $record->id_kasbon != null and $record->kurang_bayar > 0) ? number_format($record->kurang_bayar) : number_format($record->jumlah)) ?></td>
-								<td class="text-center"><?= $diajukan_oleh ?></td>
-								<td class="text-center"><?= $tgl_pengajuan ?></td>
-								<td class="text-center"><?= $dibayar_oleh ?></td>
-								<td class="text-center"><?= $tgl_pembayaran ?></td>
-								<td>
-									<?php
-									$get_payment = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc, 'tgl_bayar <>' => null])->result();
-
-									if (!empty($get_payment)) {
-										echo '<div class="badge bg-green text-light">Paid</div>';
-									} else {
-										echo '<div class="badge bg-blue">Open</div>';
-									}
-									?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
-
 				</tbody>
 			</table>
 		</div>
@@ -153,7 +112,36 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script type="text/javascript">
 	$(".divide").autoNumeric('init');
-	$("#mytabledata").DataTable();
+	
+    $(document).ready(function() {
+        var table = $('#mytabledata').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": siteurl + active_controller + "server_side_payment_list",
+                "type": "POST"
+            },
+            "columns": [
+                { "data": 0 },
+                { "data": 1 },
+                { "data": 2 },
+                { "data": 3 },
+                { "data": 4 },
+                { "data": 5 },
+                { "data": 6 },
+                { "data": 7 },
+                { "data": 8 },
+                { "data": 9 },
+                { "data": 10 },
+                { "data": 11 },
+                { "data": 12 }
+            ],
+            "order": [[4, 'desc']], // Default order by Tanggal
+            "columnDefs": [
+                { "orderable": false, "targets": [0, 8, 9, 10, 11, 12] }
+            ]
+        });
+    });
 
 	$('.select2').select2({
 		width: '100%'
@@ -276,10 +264,10 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 	});
 
 	$(document).on('click', '.excel_data', function() {
-		var tgl_from = $('.tgl_from').val();
-		var tgl_to = $('.tgl_to').val();
-		var bank = $('.bank').val();
+		// var tgl_from = $('.tgl_from').val();
+		// var tgl_to = $('.tgl_to').val();
+		// var bank = $('.bank').val();
 
-		window.open(siteurl + active_controller + 'excel_payment_list/' + tgl_from + '/' + tgl_to + '/' + bank, '_blank');
+		window.open(siteurl + active_controller + 'excel_payment_list', '_blank');
 	});
 </script>

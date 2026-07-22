@@ -1,6 +1,6 @@
 <?php
 header("Content-type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Excel Payment List (" . date('d F Y', strtotime($tgl_from)) . " - " . date('d F Y', strtotime($tgl_to)) . ") - " . $bank . ".xls");
+header("Content-Disposition: attachment; filename=Excel_Payment_List_" . date('Ymd_His') . ".xls");
 ?>
 <!DOCTYPE html>
 <html lang="en">
