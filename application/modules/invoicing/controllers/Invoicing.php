@@ -42,11 +42,12 @@ class Invoicing extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
 
         // Get plan tagih detail data
-        $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
+        $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = c.id_company', 'left');
         $this->db->where('a.id', $id_plan_tagih_detail);
         $get_actual_plan_tagih = $this->db->get()->row();
 
@@ -185,11 +186,12 @@ class Invoicing extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
 
         // Get plan tagih detail data
-        $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
+        $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
-        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = c.id_company', 'left');
         $this->db->where('a.id', $id_plan_tagih_detail);
         $get_actual_plan_tagih = $this->db->get()->row();
 
@@ -229,19 +231,13 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
                 $pph = ($total_nominal * 0.5 / 100);
                 $debit = ($total_nominal - $pph);
             }
 
-            // if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
-            //     $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-            //     $dpp_lain_lain = ($total_nominal * 11 / 12);
-            //     $ppn = ($dpp_lain_lain * 12 / 100);
-
-            //     $kredit = $ppn;
-            // }
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
+                $kredit = 0;
+            }
 
             if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
@@ -251,10 +247,6 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 0.5 / 100);
-
                 $kredit = $total_nominal;
             }
 
@@ -350,7 +342,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
                 $pph = ($total_nominal * 2 / 100);
                 $debit = ($total_nominal + $ppn - $pph);
             }
@@ -358,7 +351,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
 
                 $kredit = $ppn;
             }
@@ -372,7 +366,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
                 $pph = ($total_nominal * 2 / 100);
 
                 $kredit = $total_nominal;
@@ -468,17 +463,11 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
                 $pph = ($total_nominal * 0.5 / 100);
                 $debit = ($total_nominal - $pph);
             }
 
             if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
-                $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-
                 $kredit = 0;
             }
 
@@ -490,10 +479,6 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
                 $total_nominal = (!empty($get_plan_tagih)) ? $get_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 0.5 / 100);
-
                 $kredit = $total_nominal;
             }
 
@@ -589,7 +574,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
                 $pph = ($total_nominal * 2 / 100);
                 $debit = ($total_nominal + $ppn - $pph);
             }
@@ -597,7 +583,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
 
                 $kredit = $ppn;
             }
@@ -611,7 +598,8 @@ class Invoicing extends Admin_Controller
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
                 $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
+                $ppn_persen = isset($get_invoicing->ppn_persen) ? (float)$get_invoicing->ppn_persen : 12;
+                $ppn = ($dpp_lain_lain * $ppn_persen / 100);
                 $pph = ($total_nominal * 2 / 100);
 
                 $kredit = $total_nominal;
@@ -709,19 +697,13 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
                 $pph = ($total_nominal * 0.5 / 100);
                 $debit = ($total_nominal - $pph);
             }
 
-            // if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
-            //     $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-            //     $dpp_lain_lain = ($total_nominal * 11 / 12);
-            //     $ppn = ($dpp_lain_lain * 12 / 100);
-
-            //     $kredit = $ppn;
-            // }
+            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
+                $kredit = 0;
+            }
 
             if ($item_coa_jurnal['no_perkiraan'] == '1106-01-05') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
@@ -731,10 +713,6 @@ class Invoicing extends Admin_Controller
 
             if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
                 $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 0.5 / 100);
-
                 $kredit = $total_nominal;
             }
 
@@ -960,6 +938,8 @@ class Invoicing extends Admin_Controller
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
             'saldo_piutang_tanpa_pph' => $post['total_tagihan_ppn'],
+            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
+            'ppn_persen' => $post['ppn_persen'],
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s')
         ];
@@ -1092,7 +1072,10 @@ class Invoicing extends Admin_Controller
             'pph_jurnal' => $post['pph_jurnal'],
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
-            'tagihan_ppn_jurnal' => $post['total_nominal'],
+            'tagihan_ppn_jurnal' => $post['total_tagihan_ppn'],
+            'ppn_jurnal' => $post['ppn_jurnal'],
+            'ppn_persen' => $post['ppn_persen'],
+            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s'),
             'tipe_invoice' => '1'
@@ -1177,7 +1160,15 @@ class Invoicing extends Admin_Controller
             'tanggal_invoice' => $post['tanggal_invoice'],
             'no_invoice' => $post['nomor_invoice'],
             'no_po' => $post['no_po'],
-            'no_faktur' => $post['nomor_faktur']
+            'no_faktur' => $post['nomor_faktur'],
+            'ppn_persen' => $post['ppn_persen'] ?? 12,
+            'pajak' => $post['ppn_jurnal'] ?? 0,
+            'total_akhir' => $post['tagihan_ppn_jurnal'] ?? 0,
+            'ppn_jurnal' => $post['ppn_jurnal'] ?? 0,
+            'tagihan_ppn_jurnal' => $post['tagihan_ppn_jurnal'] ?? 0,
+            'total_akhir_jurnal' => $post['total_akhir_jurnal'] ?? 0,
+            'saldo_piutang' => $post['total_akhir_jurnal'] ?? 0,
+            'saldo_piutang_tanpa_pph' => $post['tagihan_ppn_jurnal'] ?? 0
         ];
 
         $arr_coa_jurnal = ['1102-01-01', '1106-01-02', '2104-01-07', '4101-01-01'];
@@ -1287,7 +1278,15 @@ class Invoicing extends Admin_Controller
             'tanggal_invoice' => $post['tanggal_invoice'],
             'no_invoice' => $post['nomor_invoice'],
             'no_po' => $post['no_po'],
-            'no_faktur' => $post['nomor_faktur']
+            'no_faktur' => $post['nomor_faktur'],
+            'ppn_persen' => $post['ppn_persen'] ?? 12,
+            'pajak' => $post['ppn_jurnal'] ?? 0,
+            'total_akhir' => $post['tagihan_ppn_jurnal'] ?? 0,
+            'ppn_jurnal' => $post['ppn_jurnal'] ?? 0,
+            'tagihan_ppn_jurnal' => $post['tagihan_ppn_jurnal'] ?? 0,
+            'total_akhir_jurnal' => $post['total_akhir_jurnal'] ?? 0,
+            'saldo_piutang' => $post['total_akhir_jurnal'] ?? 0,
+            'saldo_piutang_tanpa_pph' => $post['tagihan_ppn_jurnal'] ?? 0
         ];
 
         $arr_coa_jurnal = ['1102-01-01', '1106-01-05', '2104-01-07', '4101-01-01'];
@@ -1944,8 +1943,9 @@ class Invoicing extends Admin_Controller
             }
 
             // Server-side derived financial values
+            $ppn_persen = (float) $this->input->post('ppn_persen', true);
             $dpp_lain_lain = $dpp * 11 / 12;
-            $ppn = $dpp_lain_lain * 12 / 100;
+            $ppn = $dpp_lain_lain * $ppn_persen / 100;
             $pph = $dpp * 2 / 100;
             $total_tagihan_ppn = $dpp + $ppn;
             $total_tagihan_all = $dpp + $ppn - $pph;
@@ -1980,7 +1980,9 @@ class Invoicing extends Admin_Controller
                 'total_akhir_jurnal' => $total_tagihan_all,
                 'saldo_piutang' => $total_tagihan_all,
                 'saldo_piutang_tanpa_pph' => $total_tagihan_ppn,
+                'saldo_piutang_tanpa_ppn' => max(0, ($dpp ?? 0) - ($pph ?? 0)),
                 'non_kons' => '1',
+                'ppn_persen' => $ppn_persen,
                 'biaya_kirim' => $biaya_kirim,
                 'created_by' => $this->auth->user_id(),
                 'created_date' => date('Y-m-d H:i:s')
@@ -2140,8 +2142,9 @@ class Invoicing extends Admin_Controller
             $dpp += $biaya_kirim;
 
             // Server-side derived financial values
+            $ppn_persen = (float) $this->input->post('ppn_persen', true);
             $dpp_lain_lain = $dpp * 11 / 12;
-            $ppn = $dpp_lain_lain * 12 / 100;
+            $ppn = $dpp_lain_lain * $ppn_persen / 100;
             $pph = $dpp * 2 / 100;
             $total_tagihan_ppn = $dpp + $ppn;
             $total_tagihan_all = $dpp + $ppn - $pph;
@@ -2165,7 +2168,9 @@ class Invoicing extends Admin_Controller
                 'pph_jurnal' => $pph,
                 'total_akhir_jurnal' => $total_tagihan_all,
                 'saldo_piutang' => $total_tagihan_all,
-                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn
+                'saldo_piutang_tanpa_pph' => $total_tagihan_ppn,
+                'saldo_piutang_tanpa_ppn' => max(0, ($dpp ?? 0) - ($pph ?? 0)),
+                'ppn_persen' => $ppn_persen
             ];
 
             // Server-side journal calculation
@@ -2321,11 +2326,11 @@ class Invoicing extends Admin_Controller
 
         $id_invoice = (isset($get['id_invoice'])) ? $get['id_invoice'] : '';
 
-        // Server-side recalculation from DPP only
-        $dpp_lain_lain = $dpp * 11 / 12;
-        $ppn = $dpp_lain_lain * 12 / 100;
-        $pph = $dpp * 2 / 100;
-        $total_tagihan_all = $dpp + $ppn - $pph;
+        // Use variables passed from frontend instead of recalculating with hardcoded 12%
+        $dpp_lain_lain = (float) $get['dpp_lain_lain'];
+        $ppn = (float) $get['ppn'];
+        $pph = (float) $get['pph'];
+        $total_tagihan_all = (float) $get['total_tagihan_all'];
 
         // $get_penawaran_non_kons = $this->db->get_where(DBCNL . '.kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $id_penawaran])->row();
 

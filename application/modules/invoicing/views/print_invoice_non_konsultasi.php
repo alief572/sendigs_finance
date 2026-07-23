@@ -205,7 +205,7 @@
             </tr>
             <tr>
                 <td style="" colspan="3"></td>
-                <td style="">Pajak 12%</td>
+                <td style="">Pajak <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</td>
                 <td style="text-align: right;">
                     <table border="0" style="width: 100%">
                         <tr>
@@ -375,7 +375,7 @@
             </tr>
             <tr>
                 <td style="" colspan="3"></td>
-                <td style="">Pajak 12%</td>
+                <td style="">Pajak <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</td>
                 <td style="text-align: right; ">
                     <table border="0" style="width: 100%">
                         <tr>

@@ -6,7 +6,6 @@ $total_akhir = ($total_nominal + $pajak);
 $dpp_lain_lain = ($total_nominal * 11 / 12);
 
 $total_nominal_jurnal = (!empty($data_actual)) ? $data_actual->nominal_payment : 0;
-$ppn = ($dpp_lain_lain * 12 / 100);
 $pph = ($total_nominal * 0.5 / 100);
 $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
 ?>
@@ -107,7 +106,7 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
                 <tr>
                     <th width="10%">Total Akhir</th>
                     <td class="text-right">
-                        <span style="font-weight: bold;">Rp. <?= number_format(($total_nominal) - $pph, 2) ?></span>
+                        <span style="font-weight: bold;">Rp. <span id="text_total_akhir_jurnal"><?= number_format(($total_nominal) - $pph, 2) ?></span></span>
                         <input type="hidden" name="total_akhir_jurnal" value="<?= ($total_nominal) - $pph ?>">
                     </td>
                 </tr>
@@ -153,6 +152,14 @@ $total_akhir_jurnal = ($total_nominal_jurnal - $pph);
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function format_num(x, decimals) {
+        if(decimals > 0){
+            return parseFloat(x).toLocaleString('en-US', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+        } else {
+            return parseFloat(x).toLocaleString('en-US');
+        }
+    }
+
     function syncTanggalJurnal(val) {
         if (!val) return;
         var dateObj = new Date(val);
