@@ -1040,6 +1040,8 @@ class Invoicing extends Admin_Controller
         $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
         $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
 
+        $nm_paket = $get_konsultasi->nm_paket ?? '';
+
         $id_company_gen = (!empty($get_penawaran->company)) ? $get_penawaran->company : '1';
         $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '1');
         $id = $this->Invoicing_model->generate_id();
@@ -1054,7 +1056,7 @@ class Invoicing extends Admin_Controller
             'nm_customer' => $get_spk_penawaran->nm_customer,
             'address' => $get_spk_penawaran->address,
             'id_project' => $get_spk_penawaran->id_project,
-            'nm_project' => $get_konsultasi->nm_paket,
+            'nm_project' => $nm_paket,
             'id_project_leader' => $get_spk_penawaran->id_project_leader,
             'nm_project_leader' => $get_spk_penawaran->nm_project_leader,
             'id_sales' => $get_spk_penawaran->id_sales,
