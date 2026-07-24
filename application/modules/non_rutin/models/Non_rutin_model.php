@@ -1022,6 +1022,9 @@ class Non_rutin_model extends BF_Model
 
     private function _main_query($limit = null, $offset = 0, $where = null)
     {
+        $is_admin = $this->auth->is_admin();
+        $user_id = $this->auth->user_id();
+
         $this->db->select('a.*, c.nm_lengkap, d.name as nm_dept, e.name as nm_company');
         $this->db->select('GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon', FALSE);
         $this->db->select('GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ", ") as no_doc_non_po', FALSE);
@@ -1041,13 +1044,15 @@ class Non_rutin_model extends BF_Model
         $this->db->join('tr_purchase_order po', 'po.no_pr = a.no_pr', 'left');
         $this->db->join('tr_tracking_pembelian tp', 'tp.no_pr = a.no_pr', 'left');
         $this->db->where('a.status_id', 1);
-        if ($this->auth->user_id() !== '7') {
-            $this->db->where('a.created_by', $this->auth->user_id()); // penyesuaian berdasarkan department_id user
+
+        if (!$is_admin) {
+            $this->db->where('a.created_by', $user_id); // penyesuaian berdasarkan department_id user
         }
 
         if (!empty($where)) {
             $arr_where = $where;
 
+            $this->db->group_start();
             $no = 1;
             foreach ($arr_where as $key => $value) {
                 if ($no == 1) : $this->db->like($key, $value);
@@ -1055,6 +1060,7 @@ class Non_rutin_model extends BF_Model
                 endif;
                 $no++;
             }
+            $this->db->group_end();
         }
 
         $this->db->where('a.close_pr', null);
@@ -1066,7 +1072,7 @@ class Non_rutin_model extends BF_Model
         $this->db->order_by('a.no_pr IS NOT NULL', 'ASC', FALSE);
         $this->db->order_by('a.created_date', 'DESC');
 
-        if ($limit !== null) {
+        if ($limit !== null && $limit != -1) {
             $this->db->limit($limit, $offset);
         }
 
@@ -1078,6 +1084,18 @@ class Non_rutin_model extends BF_Model
     public function get_data_non_rutin($draw, $length, $start, $search, $order, $columns)
     {
         $query_all = $this->_main_query();
+
+        if (!$query_all) {
+            $error = $this->db->error();
+            echo json_encode([
+                'draw' => intval($draw),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => "SQL Error: " . $error['message'] . " | Query: " . $this->db->last_query()
+            ]);
+            exit;
+        }
 
         $total_all = $query_all->num_rows();
 
