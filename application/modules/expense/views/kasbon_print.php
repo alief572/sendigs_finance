@@ -2,9 +2,6 @@
 
 <head>
 	<title> EXPENSES REPORT BENSIN & TOL </title>
-</head>
-
-<body>
 	<style>
 		body {
 			font-family: sans-serif;
@@ -16,14 +13,33 @@
 			font-family: sans-serif;
 		}
 
+		.pdf-page-canvas {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 10px 0;
+			border: 1px solid #ddd;
+		}
+
 		@media print {
 			.pagebreak {
 				page-break-before: always;
 			}
 
+			.pdf-page-canvas {
+				max-width: 100% !important;
+				height: auto !important;
+				page-break-inside: avoid;
+				border: none;
+			}
+
 			/* page-break-after works, as well */
 		}
 	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+
+<body>
 	<table cellpadding=2 cellspacing=0 border=0 width=650>
 		<tr>
 			<th colspan=6>KASBON<br /><br /><br /></th>
@@ -79,29 +95,82 @@
 	if (isset($data)) {
 		//	echo '<div class="pagebreak"> </div>';
 		if ($data->doc_file != '') {
-			if (strpos($data->doc_file, 'pdf', 0) > 1) {
-				echo '<div class="col-md-12">
-			<iframe src="' . base_url('assets/expense/' . $data->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-					 <a href="' . base_url('assets/expense/' . $data->doc_file) . '">Download PDF</a>
-			</iframe>
-			<br />' . $data->no_doc . '</div>';
+			$is_pdf = (stripos($data->doc_file, '.pdf') !== false);
+			if ($is_pdf) {
+				$pdf_url = base_url('assets/expense/' . $data->doc_file);
+				echo '<div class="col-md-12" style="margin-bottom:20px;">
+					<div class="pdf-render-container" data-pdf-url="' . $pdf_url . '">
+						<iframe src="' . $pdf_url . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+							<a href="' . $pdf_url . '">Download PDF</a>
+						</iframe>
+					</div>
+					<br />' . $data->no_doc . '</div>';
 			} else {
 				echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
 			}
 		}
 		if ($data->doc_file_2 != '') {
-			if (strpos($data->doc_file_2, 'pdf', 0) > 1) {
-				echo '<div class="col-md-12">
-			<iframe src="' . base_url('assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-					 <a href="' . base_url('assets/expense/' . $data->doc_file_2) . '">Download PDF</a>
-			</iframe>
-			<br />' . $data->no_doc . '</div>';
+			$is_pdf2 = (stripos($data->doc_file_2, '.pdf') !== false);
+			if ($is_pdf2) {
+				$pdf_url2 = base_url('assets/expense/' . $data->doc_file_2);
+				echo '<div class="col-md-12" style="margin-bottom:20px;">
+					<div class="pdf-render-container" data-pdf-url="' . $pdf_url2 . '">
+						<iframe src="' . $pdf_url2 . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+							<a href="' . $pdf_url2 . '">Download PDF</a>
+						</iframe>
+					</div>
+					<br />' . $data->no_doc . '</div>';
 			} else {
 				echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
 			}
 		}
 	}
 	?>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			if (typeof pdfjsLib !== 'undefined') {
+				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+				var containers = document.querySelectorAll('.pdf-render-container');
+				containers.forEach(function(container) {
+					var url = container.getAttribute('data-pdf-url');
+					if (!url) return;
+
+					pdfjsLib.getDocument(url).promise.then(function(pdf) {
+						container.innerHTML = ''; // Hapus iframe fallback
+						
+						var renderPage = function(num) {
+							pdf.getPage(num).then(function(page) {
+								var scale = 1.5;
+								var viewport = page.getViewport({ scale: scale });
+								var canvas = document.createElement('canvas');
+								canvas.className = 'pdf-page-canvas';
+								var context = canvas.getContext('2d');
+								canvas.height = viewport.height;
+								canvas.width = viewport.width;
+
+								container.appendChild(canvas);
+
+								var renderContext = {
+									canvasContext: context,
+									viewport: viewport
+								};
+								page.render(renderContext);
+
+								if (num < pdf.numPages) {
+									renderPage(num + 1);
+								}
+							});
+						};
+						renderPage(1);
+					}).catch(function(err) {
+						console.error("PDF.js render error:", err);
+					});
+				});
+			}
+		});
+	</script>
 </body>
 
 </html>
