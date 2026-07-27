@@ -1231,6 +1231,7 @@ class Pembayaran_material extends Admin_Controller
 
 	public function list_request_payment($jenis_payment)
 	{
+		$this->Pembayaran_material_model->refresh_list();
 		$this->template->set('jenis_payment', $jenis_payment);
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');

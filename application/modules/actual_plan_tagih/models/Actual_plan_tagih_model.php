@@ -209,8 +209,11 @@ class Actual_plan_tagih_model extends BF_Model
 
     private function _get_option_button($item, $bulan_sekarang)
     {
+
+        $list_btn = '';
+
         if ($item->status_terakhir == '3') {
-            return '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
+            $list_btn .= '<button type="button" class="btn btn-sm btn-warning aktual_tagihan_macet" data-id="' . $item->id . '"><i class="fa fa-pencil"></i></button>';
         }
 
         if ($item->status_terakhir != '1') {
@@ -234,7 +237,7 @@ class Actual_plan_tagih_model extends BF_Model
             ->row();
 
         if (!empty($get_last_actual_mundur->file_surat_mundur)) {
-            return '<a class="btn btn-sm btn-danger" href="' . base_url($get_last_actual_mundur->file_surat_mundur) . '" target="_blank" title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
+            $list_btn .= '<a class="btn btn-sm btn-danger" href="' . base_url($get_last_actual_mundur->file_surat_mundur) . '" target="_blank" title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
         }
 
         $get_last_actual_progress = $this->db->select('a.file_laporan_progress')
@@ -248,10 +251,19 @@ class Actual_plan_tagih_model extends BF_Model
             ->row();
 
         if (!empty($get_last_actual_progress->file_laporan_progress)) {
-            return '<a class="btn btn-sm btn-warning" href="' . base_url($get_last_actual_progress->file_laporan_progress) . '" target="_blank" title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
+            $list_btn .= '<a class="btn btn-sm btn-warning" href="' . base_url($get_last_actual_progress->file_laporan_progress) . '" target="_blank" title="Download Surat Mundur"><i class="fa fa-download"></i></a>';
         }
 
-        return '';
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id_detail_plan_tagih', $item->id);
+        $this->db->where('a.tagih_mundur', '1');
+        $get_last_actual_input = $this->db->get()->row();
+
+        if(!empty($get_last_actual_input)) {
+            $list_btn .= '<button type="button" class="btn btn-sm btn-info view_last_input" data-id="'.$get_last_actual_input->id.'" data-id_detail_plan_tagih="'.$item->id.'" title="View Actual Plan Tagih"><i class="fa fa-eye"></i></button>';
+        }
+        return $list_btn;
     }
 
     public function dataDownloadExcel($tahun = null, $status = null)

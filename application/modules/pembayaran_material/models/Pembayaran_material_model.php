@@ -675,6 +675,7 @@ class Pembayaran_material_model extends BF_Model
 
 					if ($item_coa->no_coa == $coa_transport) {
 						$debit = $item_payment->jumlah;
+						$keterangan = 'Transportasi';
 					} elseif (!empty($coa_bank) && $item_coa->no_coa == $coa_bank) {
 						$kredit = $total_payment;
 					} elseif ($item_coa->no_coa == '1106-01-06') {
@@ -1235,5 +1236,18 @@ class Pembayaran_material_model extends BF_Model
 
 		echo json_encode($response);
 	}
+
+	public function refresh_list() {
+		$this->db->trans_begin();
+
+		$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
+
+		$this->db->trans_complete();
+		if ($this->db->trans_status()) {
+			$this->db->trans_commit();
+		} else {
+			$this->db->trans_rollback();
+		}
+	}
 }
-// 
+
