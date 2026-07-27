@@ -1,22 +1,7 @@
-<?php
-$gambar = '';
-foreach ($data_detail as $item_detail) {
-	if ($item_detail->doc_file !== '') {
-		if (strpos($item_detail->doc_file, 'pdf', 0) > 1) {
-			$gambar .= '<iframe src="asset/expense/' . base_url($item_detail->doc_file) . '" #toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
-		} else {
-			$gambar .= '<img src="asset/expense/' . base_url($item_detail->doc_file) . '" width="500"><br />';
-		}
-	}
-}
-?>
 <html>
 
 <head>
 	<title> EXPENSES REPORT BENSIN & TOL </title>
-</head>
-
-<body>
 	<style>
 		body {
 			font-family: sans-serif;
@@ -27,7 +12,32 @@ foreach ($data_detail as $item_detail) {
 			font-size: 0.9em;
 			font-family: sans-serif;
 		}
+
+		.pdf-page-canvas {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 10px 0;
+			border: 1px solid #ddd;
+		}
+
+		@media print {
+			.pagebreak {
+				page-break-before: always;
+			}
+
+			.pdf-page-canvas {
+				max-width: 100% !important;
+				height: auto !important;
+				page-break-inside: avoid;
+				border: none;
+			}
+		}
 	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+
+<body>
 	<table cellpadding=2 cellspacing=0 border=0 width=650>
 		<tr>
 			<th colspan=8>Form Permintaan Pembelian Barang dan Jasa</th>
@@ -53,7 +63,6 @@ foreach ($data_detail as $item_detail) {
 					$total_km = 0;
 					$grand_total = 0;
 					$i = 0;
-					// $gambar = "";
 					if (!empty($data_detail)) {
 						foreach ($data_detail as $record) {
 							$i++; ?>
@@ -114,22 +123,14 @@ foreach ($data_detail as $item_detail) {
 		</tr>
 		<tr height=120>
 			<td colspan=2 align=center nowrap valign="bottom" width=100><?php
-																		// if ($pelapor->ttd != '') {
-																		// 	echo '<img src="https://sentral.dutastudy.com/hrsentral/assets/profile/' . $pelapor->ttd . '" height=120><br>';
-																		// } else {
 																		echo '<br><br><br>';
-																		// }
 																		?>
 
 			</td>
 			<td width=25>&nbsp;</td>
 			<td colspan=3 align=center nowrap valign="bottom" width=120><?php
 																		if (!empty($mengetahui)) {
-																			// if ($mengetahui->ttd != '') {
-																			// 	echo '<img src="https://sentral.dutastudy.com/hrsentral/assets/profile/' . $mengetahui->ttd . '" height=120><br>';
-																			// } else {
 																			echo '<br><br><br>';
-																			// }
 																		}
 																		?>
 
@@ -144,14 +145,67 @@ foreach ($data_detail as $item_detail) {
 	<?php
 	foreach ($data_detail as $item_detail) {
 		if (!empty($item_detail->doc_file)) {
-			if (strpos($item_detail->doc_file, 'pdf', 0) > 1) {
-				echo '<iframe src="' . base_url('assets/expense/' . $item_detail->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe><br /><br />';
+			$is_pdf = (stripos($item_detail->doc_file, '.pdf') !== false);
+			if ($is_pdf) {
+				$pdf_url = base_url('assets/expense/' . $item_detail->doc_file);
+				echo '<div class="col-md-12" style="margin-bottom:20px;">
+					<div class="pdf-render-container" data-pdf-url="' . $pdf_url . '">
+						<iframe src="' . $pdf_url . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+							<a href="' . $pdf_url . '">Download PDF</a>
+						</iframe>
+					</div>
+				</div>';
 			} else {
 				echo '<img src="' . base_url('assets/expense/' . $item_detail->doc_file) . '" width="500"><br />';
 			}
 		}
 	}
 	?>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			if (typeof pdfjsLib !== 'undefined') {
+				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+				var containers = document.querySelectorAll('.pdf-render-container');
+				containers.forEach(function(container) {
+					var url = container.getAttribute('data-pdf-url');
+					if (!url) return;
+
+					pdfjsLib.getDocument(url).promise.then(function(pdf) {
+						container.innerHTML = ''; // Hapus iframe fallback
+						
+						var renderPage = function(num) {
+							pdf.getPage(num).then(function(page) {
+								var scale = 1.5;
+								var viewport = page.getViewport({ scale: scale });
+								var canvas = document.createElement('canvas');
+								canvas.className = 'pdf-page-canvas';
+								var context = canvas.getContext('2d');
+								canvas.height = viewport.height;
+								canvas.width = viewport.width;
+
+								container.appendChild(canvas);
+
+								var renderContext = {
+									canvasContext: context,
+									viewport: viewport
+								};
+								page.render(renderContext);
+
+								if (num < pdf.numPages) {
+									renderPage(num + 1);
+								}
+							});
+						};
+						renderPage(1);
+					}).catch(function(err) {
+						console.error("PDF.js render error:", err);
+					});
+				});
+			}
+		});
+	</script>
 </body>
 
 </html>

@@ -2,9 +2,6 @@
 
 <head>
 	<title> EXPENSES REPORT BENSIN & TOL </title>
-</head>
-
-<body>
 	<style>
 		body {
 			font-family: sans-serif;
@@ -15,7 +12,32 @@
 			font-size: 0.9em;
 			font-family: sans-serif;
 		}
+
+		.pdf-page-canvas {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 10px 0;
+			border: 1px solid #ddd;
+		}
+
+		@media print {
+			.pagebreak {
+				page-break-before: always;
+			}
+
+			.pdf-page-canvas {
+				max-width: 100% !important;
+				height: auto !important;
+				page-break-inside: avoid;
+				border: none;
+			}
+		}
 	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+
+<body>
 	<table cellpadding=2 cellspacing=0 border=0 width=650>
 		<tr>
 			<th colspan=11>EXPENSES REPORT BENSIN & TOL</th>
@@ -75,12 +97,16 @@
 							$total_km = ($total_km + ($record->km_akhir - $record->km_awal));
 							$lainnya = ($lainnya + $record->lainnya);
 							if ($record->doc_file != '') {
-								if (strpos($record->doc_file, 'pdf', 0) > 1) {
-									$gambar .= '<div class="col-md-12">
-					<iframe src="' . base_url('assets/expense/' . $record->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-							 Presss me: <a href="' . base_url('assets/expense/' . $record->doc_file) . '">Download PDF</a>
-					</iframe>
-					<br />' . $record->no_doc . '</div>';
+								$is_pdf = (stripos($record->doc_file, '.pdf') !== false);
+								if ($is_pdf) {
+									$pdf_url = base_url('assets/expense/' . $record->doc_file);
+									$gambar .= '<div class="col-md-12" style="margin-bottom:20px;">
+										<div class="pdf-render-container" data-pdf-url="' . $pdf_url . '">
+											<iframe src="' . $pdf_url . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
+												<a href="' . $pdf_url . '">Download PDF</a>
+											</iframe>
+										</div>
+										<br />' . $record->no_doc . '</div>';
 								} else {
 									$gambar .= '<img src="' . base_url("assets/expense/" . $record->doc_file) . '" width="500"><br />';
 								}
@@ -167,6 +193,51 @@
 
 	<br />
 	<?= $gambar ?>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			if (typeof pdfjsLib !== 'undefined') {
+				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+				var containers = document.querySelectorAll('.pdf-render-container');
+				containers.forEach(function(container) {
+					var url = container.getAttribute('data-pdf-url');
+					if (!url) return;
+
+					pdfjsLib.getDocument(url).promise.then(function(pdf) {
+						container.innerHTML = ''; // Hapus iframe fallback
+						
+						var renderPage = function(num) {
+							pdf.getPage(num).then(function(page) {
+								var scale = 1.5;
+								var viewport = page.getViewport({ scale: scale });
+								var canvas = document.createElement('canvas');
+								canvas.className = 'pdf-page-canvas';
+								var context = canvas.getContext('2d');
+								canvas.height = viewport.height;
+								canvas.width = viewport.width;
+
+								container.appendChild(canvas);
+
+								var renderContext = {
+									canvasContext: context,
+									viewport: viewport
+								};
+								page.render(renderContext);
+
+								if (num < pdf.numPages) {
+									renderPage(num + 1);
+								}
+							});
+						};
+						renderPage(1);
+					}).catch(function(err) {
+						console.error("PDF.js render error:", err);
+					});
+				});
+			}
+		});
+	</script>
 </body>
 
 </html>
