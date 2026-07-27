@@ -118,6 +118,27 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     </div>
 </div>
 
+<div class="modal modal-default fade" id="dialog-popup-last-input" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">View Actual Plan Tagih</h4>
+            </div>
+            <form action="" method="post" id="frm-data-last-input" enctype="multipart/form-data">
+                <div class="modal-body" id="ModalViewLastInput">
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <span class="glyphicon glyphicon-remove"></span> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal modal-default fade" id="dialog-popup-macet" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -526,6 +547,31 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             text: 'Terjadi kesalahan saat memproses batch. Silakan coba lagi.'
                         });
                     }
+                });
+            }
+        });
+    });
+
+    $(document).on('click', '.view_last_input', function() {
+        var id = $(this).data('id');
+        var id_detail_plan_tagih = $(this).data('id_detail_plan_tagih');
+
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'view_last_input',
+            data: {
+                id: id,
+                id_detail_plan_tagih: id_detail_plan_tagih
+            },
+            success: function(response) {
+                $('#ModalViewLastInput').html(response);
+                $('#dialog-popup-last-input').modal('show');
+            },
+            error: function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !'
                 });
             }
         });
