@@ -654,4 +654,38 @@ class Actual_plan_tagih extends Admin_Controller
             ]));
         }
     }
+
+    public function view_last_input() {
+        $id = $this->input->post('id', true);
+        $id_detail_plan_tagih = $this->input->post('id_detail_plan_tagih', true);
+
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id', $id);
+        $get_actual_plan_tagih = $this->db->get()->row_array();
+
+        $this->db->select('a.*');
+        $this->db->from('kons_tr_plan_tagih_detail a');
+        $this->db->where('a.id', $id_detail_plan_tagih);
+        $get_data_plan_tagih_detail = $this->db->get()->row_array();
+
+        $this->db->select('a.alasan_mundur');
+        $this->db->from('kons_tr_actual_plan_tagih a');
+        $this->db->where('a.id_detail_plan_tagih', $id_detail_plan_tagih);
+        $this->db->where('a.alasan_mundur IS NOT NULL');
+        $this->db->where('a.alasan_mundur <>', '');
+        $this->db->order_by('a.created_date', 'DESC');
+        $this->db->limit(1);
+        $get_last_reason = $this->db->get()->row_array();
+
+        $alasan_mundur = $get_last_reason['alasan_mundur'] ?? '';
+
+        $data = [
+            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'data_plan_tagih_detail' => $get_data_plan_tagih_detail,
+            'alasan_mundur' => $alasan_mundur
+        ];
+
+        $this->load->view('view_actual_plan_tagih', $data);
+    }
 }
