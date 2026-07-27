@@ -2696,99 +2696,124 @@ class Request_payment extends Admin_Controller
 		if (!empty($get_added)) {
 			foreach ($get_added as $item) {
 				$tanggal_pembayaran = isset($post['tanggal_pembayaran_' . $item->no_doc]) ? $post['tanggal_pembayaran_' . $item->no_doc] : '';
+				if (is_array($tanggal_pembayaran)) {
+					$tanggal_pembayaran = !empty($tanggal_pembayaran) ? reset($tanggal_pembayaran) : '';
+				}
+				if (!empty($tanggal_pembayaran) && strpos($tanggal_pembayaran, '/') !== false) {
+					$parts = explode('/', $tanggal_pembayaran);
+					if (count($parts) == 3) {
+						$tanggal_pembayaran = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+					}
+				}
+
 				$kategori = isset($post['kategori_' . $item->no_doc]) ? $post['kategori_' . $item->no_doc] : $item->tipe;
+				if (is_array($kategori)) {
+					$kategori = !empty($kategori) ? reset($kategori) : $item->tipe;
+				}
+
 				$nilai_pengajuan = isset($post['nilai_pengajuan_' . $item->no_doc]) ? $post['nilai_pengajuan_' . $item->no_doc] : 0;
+				if (is_array($nilai_pengajuan)) {
+					$nilai_pengajuan = !empty($nilai_pengajuan) ? reset($nilai_pengajuan) : 0;
+				}
+				$nilai_pengajuan = (float) str_replace(['.', ','], '', (string)$nilai_pengajuan);
 
-				if ($item->tipe == 'Kasbon') {
+				$tipe_lower = strtolower($item->tipe);
 
+				if ($tipe_lower == 'kasbon') {
 					$this->db->select('a.created_by, a.tgl_doc, a.keperluan, a.jumlah_kasbon, a.bank_id, a.accnumber, a.accname, a.id');
 					$this->db->from('tr_kasbon a');
 					$this->db->where('a.no_doc', $item->no_doc);
 					$get_kasbon = $this->db->get()->row();
 
-					$arr_insert[] = [
-						'no_doc' => $item->no_doc,
-						'nama' => $get_kasbon->created_by,
-						'tgl_doc' => $get_kasbon->tgl_doc,
-						'keperluan' => $get_kasbon->keperluan,
-						'tipe' => 'kasbon',
-						'jumlah' => $get_kasbon->jumlah_kasbon,
-						'status' => 0,
-						'tanggal' => $tanggal_pembayaran,
-						'created_by' => $this->auth->user_name(),
-						'created_on' => date('Y-m-d H:i:s'),
-						'bank_id' => $get_kasbon->bank_id,
-						'accnumber' => $get_kasbon->accnumber,
-						'accname' => $get_kasbon->accname,
-						'ids' => $get_kasbon->id,
-						'currency' => 'IDR',
-						'admin_bank' => 0,
-						'total_pph' => 0
-					];
+					if ($get_kasbon) {
+						$arr_insert[] = [
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_kasbon->created_by,
+							'tgl_doc'    => (string)$get_kasbon->tgl_doc,
+							'keperluan'  => (string)$get_kasbon->keperluan,
+							'tipe'       => 'kasbon',
+							'jumlah'     => (float)$get_kasbon->jumlah_kasbon,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id'    => $get_kasbon->bank_id,
+							'accnumber'  => $get_kasbon->accnumber,
+							'accname'    => $get_kasbon->accname,
+							'ids'        => $get_kasbon->id,
+							'currency'   => 'IDR',
+							'admin_bank' => 0,
+							'total_pph'  => 0
+						];
 
-					$this->db->update('tr_kasbon', ['status' => 2], ['no_doc' => $item->no_doc]);
+						$this->db->update('tr_kasbon', ['status' => 2], ['no_doc' => $item->no_doc]);
+					}
 				}
 
-				if ($item->tipe == 'Expense') {
+				if ($tipe_lower == 'expense') {
 					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.bank_id, a.accnumber, a.accname, a.id, a.informasi');
 					$this->db->from('tr_expense a');
 					$this->db->where('a.no_doc', $item->no_doc);
 					$get_expense = $this->db->get()->row();
 
-					$arr_insert[] = [
-						'no_doc' => $item->no_doc,
-						'nama' => $get_expense->nama,
-						'tgl_doc' => $get_expense->tgl_doc,
-						'keperluan' => $get_expense->informasi,
-						'tipe' => 'expense',
-						'jumlah' => $nilai_pengajuan,
-						'status' => 0,
-						'tanggal' => $tanggal_pembayaran,
-						'created_by' => $this->auth->user_name(),
-						'created_on' => date('Y-m-d H:i:s'),
-						'bank_id' => $get_expense->bank_id,
-						'accnumber' => $get_expense->accnumber,
-						'accname' => $get_expense->accname,
-						'ids' => $get_expense->id,
-						'currency' => 'IDR',
-						'admin_bank' => 0,
-						'total_pph' => 0
-					];
+					if ($get_expense) {
+						$arr_insert[] = [
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_expense->nama,
+							'tgl_doc'    => (string)$get_expense->tgl_doc,
+							'keperluan'  => (string)$get_expense->informasi,
+							'tipe'       => 'expense',
+							'jumlah'     => (float)$nilai_pengajuan,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id'    => $get_expense->bank_id,
+							'accnumber'  => $get_expense->accnumber,
+							'accname'    => $get_expense->accname,
+							'ids'        => $get_expense->id,
+							'currency'   => 'IDR',
+							'admin_bank' => 0,
+							'total_pph'  => 0
+						];
 
-					$this->db->update('tr_expense', ['status' => 2], ['no_doc' => $item->no_doc]);
+						$this->db->update('tr_expense', ['status' => 2], ['no_doc' => $item->no_doc]);
+					}
 				}
 
-				if ($item->tipe == 'Transport') {
+				if ($tipe_lower == 'transport') {
 					$this->db->select('a.no_doc, a.tgl_doc, a.nama, a.jumlah_kasbon, a.keterangan, b.bank_id, b.accnumber, b.accname, b.id, b.jumlah_expense');
 					$this->db->from('tr_transport a');
 					$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req', 'left');
 					$this->db->where('a.no_req', $item->no_doc);
 					$get_transport = $this->db->get()->row();
 
-					$arr_insert[] = [
-						'no_doc' => $item->no_doc,
-						'nama' => $get_transport->nama,
-						'tgl_doc' => $get_transport->tgl_doc,
-						'keperluan' => $get_transport->keterangan,
-						'tipe' => 'transport',
-						'jumlah' => $get_transport->jumlah_expense,
-						'status' => 0,
-						'tanggal' => $tanggal_pembayaran,
-						'created_by' => $this->auth->user_name(),
-						'created_on' => date('Y-m-d H:i:s'),
-						'bank_id' => $get_transport->bank_id,
-						'accnumber' => $get_transport->accnumber,
-						'accname' => $get_transport->accname,
-						'ids' => $get_transport->id,
-						'currency' => 'IDR',
-						'admin_bank' => 0,
-						'total_pph' => 0
-					];
+					if ($get_transport) {
+						$arr_insert[] = [
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_transport->nama,
+							'tgl_doc'    => (string)$get_transport->tgl_doc,
+							'keperluan'  => (string)$get_transport->keterangan,
+							'tipe'       => 'transport',
+							'jumlah'     => (float)$get_transport->jumlah_expense,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id'    => $get_transport->bank_id,
+							'accnumber'  => $get_transport->accnumber,
+							'accname'    => $get_transport->accname,
+							'ids'        => $get_transport->id,
+							'currency'   => 'IDR',
+							'admin_bank' => 0,
+							'total_pph'  => 0
+						];
 
-					$this->db->update('tr_transport_req', ['status' => 2], ['no_doc' => $item->no_doc]);
+						$this->db->update('tr_transport_req', ['status' => 2], ['no_doc' => $item->no_doc]);
+					}
 				}
 
-				if ($item->tipe == 'Periodik') {
+				if ($tipe_lower == 'periodik') {
 					$this->db->select('a.*, SUM(b.nilai) as nilai_pengajuan, b.bank_id, b.accnumber, b.accname, c.nm_lengkap as nama');
 					$this->db->from('tr_pengajuan_rutin a');
 					$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc');
@@ -2797,56 +2822,63 @@ class Request_payment extends Admin_Controller
 					$this->db->group_by('a.no_doc');
 					$get_periodik = $this->db->get()->row();
 
-					$arr_insert[] = [
-						'no_doc' => $item->no_doc,
-						'nama' => $get_periodik->nama,
-						'tgl_doc' => $get_periodik->tanggal_doc,
-						'keperluan' => $get_periodik->keterangan,
-						'tipe' => 'periodik',
-						'jumlah' => $nilai_pengajuan,
-						'status' => 0,
-						'tanggal' => $tanggal_pembayaran,
-						'created_by' => $this->auth->user_name(),
-						'created_on' => date('Y-m-d H:i:s'),
-						'bank_id' => $get_periodik->bank_id,
-						'accnumber' => $get_periodik->accnumber,
-						'accname' => $get_periodik->accname,
-						'ids' => $get_periodik->id,
-						'currency' => 'IDR',
-						'admin_bank' => 0,
-						'total_pph' => 0
-					];
+					if ($get_periodik) {
+						$arr_insert[] = [
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_periodik->nama,
+							'tgl_doc'    => (string)$get_periodik->tanggal_doc,
+							'keperluan'  => (string)$get_periodik->keterangan,
+							'tipe'       => 'periodik',
+							'jumlah'     => (float)$nilai_pengajuan,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id'    => $get_periodik->bank_id,
+							'accnumber'  => $get_periodik->accnumber,
+							'accname'    => $get_periodik->accname,
+							'ids'        => $get_periodik->id,
+							'currency'   => 'IDR',
+							'admin_bank' => 0,
+							'total_pph'  => 0
+						];
 
-					$this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc]);
+						$this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc]);
+					}
 				}
 
-				if ($item->tipe == 'Cash') {
+				if ($tipe_lower == 'cash') {
 					$this->db->select('a.*');
 					$this->db->from('tr_pr_non_po a');
 					$this->db->where('a.no_non_po', $item->no_doc);
 					$get_data_non_po = $this->db->get()->row();
 
-					$arr_insert[] = [
-						'no_doc' => $item->no_doc,
-						'nama' => $get_data_non_po->nm_pic,
-						'tgl_doc' => date('Y-m-d', strtotime($get_data_non_po->created_date)),
-						'keperluan' => 'PR Cash - ' . $get_data_non_po->no_pr . ' - ' . ucfirst($get_data_non_po->jenis_pr),
-						'tipe' => 'Cash',
-						'jumlah' => $get_data_non_po->total_pr,
-						'status' => 0,
-						'tanggal' => $tanggal_pembayaran,
-						'created_by' => $this->auth->user_name(),
-						'created_on' => date('Y-m-d H:i:s'),
-						'ids' => $get_data_non_po->id,
-						'currency' => 'IDR',
-						'admin_bank' => 0,
-						'total_pph' => 0
-					];
+					if ($get_data_non_po) {
+						$arr_insert[] = [
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_data_non_po->nm_pic,
+							'tgl_doc'    => date('Y-m-d', strtotime($get_data_non_po->created_date)),
+							'keperluan'  => 'PR Cash - ' . $get_data_non_po->no_pr . ' - ' . ucfirst($get_data_non_po->jenis_pr),
+							'tipe'       => 'Cash',
+							'jumlah'     => (float)$get_data_non_po->total_pr,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
+							'created_on' => date('Y-m-d H:i:s'),
+							'bank_id'    => isset($get_data_non_po->bank_id) ? $get_data_non_po->bank_id : null,
+							'accnumber'  => isset($get_data_non_po->accnumber) ? $get_data_non_po->accnumber : null,
+							'accname'    => isset($get_data_non_po->accname) ? $get_data_non_po->accname : null,
+							'ids'        => $get_data_non_po->id,
+							'currency'   => 'IDR',
+							'admin_bank' => 0,
+							'total_pph'  => 0
+						];
 
-					$this->db->update('tr_pr_non_po', ['sts' => '2'], ['no_non_po' => $item->no_doc]);
+						$this->db->update('tr_pr_non_po', ['sts' => '2'], ['no_non_po' => $item->no_doc]);
+					}
 				}
 
-				if ($item->tipe == 'Direct Payment') {
+				if ($tipe_lower == 'direct payment' || $tipe_lower == 'direct_payment') {
 					$this->db->select('a.ids, a.no_doc, a.tgl_doc, a.deskripsi, a.grand_total, a.bank, a.bank_number, a.bank_account, b.nm_lengkap as nama');
 					$this->db->from('tr_direct_payment a');
 					$this->db->join('users b', 'b.id_user = a.created_by', 'left');
@@ -2855,23 +2887,23 @@ class Request_payment extends Admin_Controller
 
 					if ($get_direct_payment) {
 						$arr_insert[] = [
-							'no_doc' => $item->no_doc,
-							'nama' => $get_direct_payment->nama,
-							'tgl_doc' => $get_direct_payment->tgl_doc,
-							'keperluan' => $get_direct_payment->deskripsi,
-							'tipe' => 'direct_payment',
-							'jumlah' => $get_direct_payment->grand_total,
-							'status' => 0,
-							'tanggal' => $tanggal_pembayaran,
-							'created_by' => $this->auth->user_name(),
+							'no_doc'     => (string)$item->no_doc,
+							'nama'       => (string)$get_direct_payment->nama,
+							'tgl_doc'    => (string)$get_direct_payment->tgl_doc,
+							'keperluan'  => (string)$get_direct_payment->deskripsi,
+							'tipe'       => 'direct_payment',
+							'jumlah'     => (float)$get_direct_payment->grand_total,
+							'status'     => 0,
+							'tanggal'    => (string)$tanggal_pembayaran,
+							'created_by' => (string)$this->auth->user_name(),
 							'created_on' => date('Y-m-d H:i:s'),
-							'bank_id' => $get_direct_payment->bank,
-							'accnumber' => $get_direct_payment->bank_number,
-							'accname' => $get_direct_payment->bank_account,
-							'ids' => $get_direct_payment->ids,
-							'currency' => 'IDR',
+							'bank_id'    => $get_direct_payment->bank,
+							'accnumber'  => $get_direct_payment->bank_number,
+							'accname'    => $get_direct_payment->bank_account,
+							'ids'        => $get_direct_payment->ids,
+							'currency'   => 'IDR',
 							'admin_bank' => 0,
-							'total_pph' => 0
+							'total_pph'  => 0
 						];
 
 						$this->db->update('tr_direct_payment', ['sts' => 2], ['no_doc' => $item->no_doc]);
@@ -2879,7 +2911,6 @@ class Request_payment extends Admin_Controller
 				}
 
 				// Data yang sudah ada di request_payment, update status saja
-				$tipe_lower = strtolower($item->tipe);
 				if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang' || $tipe_lower == 'petty cash' || $tipe_lower == 'petty_cash' || $tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
 					$tipe_update = $item->tipe;
 					if ($tipe_lower == 'petty cash hutang' || $tipe_lower == 'petty_cash_hutang') {
@@ -2901,7 +2932,11 @@ class Request_payment extends Admin_Controller
 			if (!$insert_req_payment) {
 				$this->db->trans_rollback();
 
-				print_r($this->db->error($insert_req_payment));
+				$db_error = $this->db->error();
+				echo json_encode([
+					'status' => 0,
+					'msg'    => 'Gagal simpan data batch: ' . (!empty($db_error['message']) ? $db_error['message'] : 'Database error')
+				]);
 				exit;
 			}
 		}
