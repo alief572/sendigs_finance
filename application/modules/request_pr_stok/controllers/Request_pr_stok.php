@@ -1,9 +1,9 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-require_once 'vendor/autoload.php';
+// require_once 'vendor/autoload.php';
 
-use Mpdf\Mpdf;
+// use Mpdf\Mpdf;
 
 class Request_pr_stok extends Admin_Controller
 {
