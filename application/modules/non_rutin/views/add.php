@@ -437,6 +437,8 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 		var id_dept = $('#id_dept').val();
 		var coa = $('#coa').val();
 		var sts_app = $('#sts_app').val();
+		var app = $("#approve").val();
+
 		// alert('Tahan'); return false;
 		if (id_dept == '0') {
 			Swal.fire({
@@ -447,6 +449,72 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 
 			$('#save').prop('disabled', false);
 			return false;
+		}
+
+		// Validasi item barang - hanya untuk mode input (bukan approve/view)
+		if (app == '' || app == null) {
+			// Cek minimal 1 item barang harus ada
+			var totalItems = $("tr[class^='header_']").length;
+			if (totalItems == 0) {
+				Swal.fire({
+					title: "Peringatan!",
+					text: 'Item barang harus diisi minimal 1 item sebelum menyimpan.',
+					icon: "warning"
+				});
+				$('#save').prop('disabled', false);
+				return false;
+			}
+
+			// Cek setiap item harus punya Qty dan Harga yang valid
+			var itemValid = true;
+			var pesanError = '';
+			$("tr[class^='header_']").each(function(index) {
+				var nomorItem = index + 1;
+				var nmBarang = $(this).find("textarea[name*='[nm_barang]']").val();
+				var qtyVal = $(this).find("input[name*='[qty]']").val();
+				var hargaVal = $(this).find("input[name*='[harga]']").val();
+
+				// Bersihkan format angka (hapus koma)
+				var qty = 0;
+				var harga = 0;
+				if (qtyVal != null && qtyVal != '') {
+					qty = parseFloat(qtyVal.toString().split(",").join("").split(" ").join(""));
+				}
+				if (hargaVal != null && hargaVal != '') {
+					harga = parseFloat(hargaVal.toString().split(",").join("").split(" ").join(""));
+				}
+
+				// Cek nama barang
+				if (nmBarang == null || nmBarang.trim() == '') {
+					itemValid = false;
+					pesanError = 'Nama Barang/Jasa pada item ke-' + nomorItem + ' harus diisi.';
+					return false; // break loop
+				}
+
+				// Cek qty
+				if (isNaN(qty) || qty <= 0) {
+					itemValid = false;
+					pesanError = 'Qty pada item ke-' + nomorItem + ' harus diisi dan lebih dari 0.';
+					return false; // break loop
+				}
+
+				// Cek harga
+				if (isNaN(harga) || harga <= 0) {
+					itemValid = false;
+					pesanError = 'Est Harga pada item ke-' + nomorItem + ' harus diisi dan lebih dari 0.';
+					return false; // break loop
+				}
+			});
+
+			if (!itemValid) {
+				Swal.fire({
+					title: "Peringatan!",
+					text: pesanError,
+					icon: "warning"
+				});
+				$('#save').prop('disabled', false);
+				return false;
+			}
 		}
 		//if (coa == '0' || coa == '') {
 		//	swal({
@@ -460,7 +528,6 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 		//}
 
 
-		var app = $("#approve").val();
 		var tanda = "";
 		if (app == 'approve') {
 			if (sts_app == '0') {

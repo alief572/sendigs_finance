@@ -156,6 +156,46 @@ class Non_rutin extends Admin_Controller
 			$sts_app        = (!empty($data['sts_app'])) ? $data['sts_app'] : '';
 			$reason        	= (!empty($data['reason'])) ? $data['reason'] : '';
 
+			// Validasi item barang (hanya untuk mode input, bukan approve)
+			if (empty($approve)) {
+				if (empty($detail) || !is_array($detail)) {
+					echo json_encode(array(
+						'pesan'  => 'Item barang harus diisi minimal 1 item sebelum menyimpan.',
+						'status' => 0
+					));
+					return;
+				}
+
+				foreach ($detail as $idx => $item) {
+					$qty_check   = str_replace(',', '', $item['qty']);
+					$harga_check = str_replace(',', '', $item['harga']);
+
+					if (empty($item['nm_barang']) || trim($item['nm_barang']) == '') {
+						echo json_encode(array(
+							'pesan'  => 'Nama Barang/Jasa pada item ke-' . $idx . ' harus diisi.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($qty_check) || floatval($qty_check) <= 0) {
+						echo json_encode(array(
+							'pesan'  => 'Qty pada item ke-' . $idx . ' harus diisi dan lebih dari 0.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($harga_check) || floatval($harga_check) <= 0) {
+						echo json_encode(array(
+							'pesan'  => 'Est Harga pada item ke-' . $idx . ' harus diisi dan lebih dari 0.',
+							'status' => 0
+						));
+						return;
+					}
+				}
+			}
+
 			$ym = date('ym');
 
 
