@@ -903,7 +903,7 @@ class Invoicing extends Admin_Controller
         $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
 
         $nm_paket = '';
-        if (!empty($get_penawaran)) {
+        if (!empty($get_spk_penawaran->id_project)) {
             $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
             $nm_paket = $get_konsultasi->nm_paket ?? '';
         }
