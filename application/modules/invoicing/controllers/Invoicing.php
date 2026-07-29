@@ -1048,50 +1048,82 @@ class Invoicing extends Admin_Controller
 
         // Validasi duplikat manual dihapus karena auto-generate
 
+        // Tarik data actual plan tagih
         $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
+        $actual_id = $get_actual_plan_tagih->id ?? null;
+        $actual_id_detail_plan_tagih = $get_actual_plan_tagih->id_detail_plan_tagih ?? null;
+        $actual_id_penawaran = $get_actual_plan_tagih->id_penawaran ?? null;
+        $actual_id_spk_penawaran = $get_actual_plan_tagih->id_spk_penawaran ?? null;
 
-        $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_actual_plan_tagih->id_spk_penawaran])->row();
-        $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
-        $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
+        // Tarik data SPK penawaran
+        $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $actual_id_spk_penawaran])->row();
+        $spk_id_customer = $get_spk_penawaran->id_customer ?? null;
+        $spk_nm_customer = $get_spk_penawaran->nm_customer ?? '';
+        $spk_address = $get_spk_penawaran->address ?? '';
+        $spk_id_project = $get_spk_penawaran->id_project ?? null;
+        $spk_id_project_leader = $get_spk_penawaran->id_project_leader ?? null;
+        $spk_nm_project_leader = $get_spk_penawaran->nm_project_leader ?? '';
+        $spk_id_sales = $get_spk_penawaran->id_sales ?? null;
+        $spk_nm_sales = $get_spk_penawaran->nm_sales ?? '';
 
+        // Tarik data penawaran
+        $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $actual_id_penawaran])->row();
+        $penawaran_company = $get_penawaran->company ?? null;
+
+        // Tarik data konsultasi
+        $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $spk_id_project])->row();
         $nm_paket = $get_konsultasi->nm_paket ?? '';
 
-        $id_company_gen = (!empty($get_penawaran->company)) ? $get_penawaran->company : '1';
+        // Generate nomor invoice
+        $id_company_gen = (!empty($penawaran_company)) ? $penawaran_company : '1';
         $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '1');
         $id = $this->Invoicing_model->generate_id();
 
+        // Data dari POST dengan null-safe
+        $tanggal_invoice = $post['tanggal_invoice'] ?? null;
+        $nomor_po = $post['nomor_po'] ?? null;
+        $nomor_faktur = $post['nomor_faktur'] ?? null;
+        $total_nominal = $post['total_nominal'] ?? 0;
+        $dpp_nilai_lain = $post['dpp_nilai_lain'] ?? 0;
+        $pajak = $post['pajak'] ?? 0;
+        $total_akhir = $post['total_akhir'] ?? 0;
+        $total_nominal_jurnal = $post['total_nominal_jurnal'] ?? 0;
+        $dpp_lain_lain = $post['dpp_lain_lain'] ?? 0;
+        $pph_jurnal = $post['pph_jurnal'] ?? 0;
+        $total_akhir_jurnal = $post['total_akhir_jurnal'] ?? 0;
+
         $arr_insert = [
             'id' => $id,
-            'id_actual_plan_tagih' => $get_actual_plan_tagih->id,
-            'id_detail_plan_tagih' => $get_actual_plan_tagih->id_detail_plan_tagih,
-            'id_penawaran' => $get_actual_plan_tagih->id_penawaran,
-            'id_spk_penawaran' => $get_actual_plan_tagih->id_spk_penawaran,
-            'id_customer' => $get_spk_penawaran->id_customer,
-            'nm_customer' => $get_spk_penawaran->nm_customer,
-            'address' => $get_spk_penawaran->address,
-            'id_project' => $get_spk_penawaran->id_project,
+            'id_actual_plan_tagih' => $actual_id,
+            'id_detail_plan_tagih' => $actual_id_detail_plan_tagih,
+            'id_penawaran' => $actual_id_penawaran,
+            'id_spk_penawaran' => $actual_id_spk_penawaran,
+            'id_customer' => $spk_id_customer,
+            'nm_customer' => $spk_nm_customer,
+            'address' => $spk_address,
+            'id_project' => $spk_id_project,
             'nm_project' => $nm_paket,
-            'id_project_leader' => $get_spk_penawaran->id_project_leader,
-            'nm_project_leader' => $get_spk_penawaran->nm_project_leader,
-            'id_sales' => $get_spk_penawaran->id_sales,
-            'nm_sales' => $get_spk_penawaran->nm_sales,
-            'tanggal_invoice' => $post['tanggal_invoice'],
+            'id_project_leader' => $spk_id_project_leader,
+            'nm_project_leader' => $spk_nm_project_leader,
+            'id_sales' => $spk_id_sales,
+            'nm_sales' => $spk_nm_sales,
+            'tanggal_invoice' => $tanggal_invoice,
             'no_invoice' => $no_invoice_baru,
-            'no_po' => $post['nomor_po'],
-            'no_faktur' => $post['nomor_faktur'],
-            'total_nominal' => $post['total_nominal'],
-            'dpp_nilai_lain' => $post['dpp_nilai_lain'],
-            'pajak' => $post['pajak'],
-            'total_akhir' => $post['total_akhir'],
-            'total_nominal_jurnal' => $post['total_nominal_jurnal'],
-            'dpp_lain_lain_jurnal' => $post['dpp_lain_lain'],
-            'pph_jurnal' => $post['pph_jurnal'],
-            'total_akhir_jurnal' => $post['total_akhir_jurnal'],
-            'saldo_piutang' => $post['total_akhir_jurnal'],
+            'no_po' => $nomor_po,
+            'no_faktur' => $nomor_faktur,
+            'total_nominal' => $total_nominal,
+            'dpp_nilai_lain' => $dpp_nilai_lain,
+            'pajak' => $pajak,
+            'total_akhir' => $total_akhir,
+            'total_nominal_jurnal' => $total_nominal_jurnal,
+            'dpp_lain_lain_jurnal' => $dpp_lain_lain,
+            'pph_jurnal' => $pph_jurnal,
+            'total_akhir_jurnal' => $total_akhir_jurnal,
+            'saldo_piutang' => $total_akhir_jurnal,
             'tagihan_ppn_jurnal' => 0,
             'ppn_jurnal' => 0,
             'ppn_persen' => 0,
-            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
+            'saldo_piutang_tanpa_ppn' => max(0, $total_nominal_jurnal - $pph_jurnal),
             'created_by' => $this->auth->user_id(),
             'created_date' => date('Y-m-d H:i:s'),
             'tipe_invoice' => '1'
@@ -1111,15 +1143,15 @@ class Invoicing extends Admin_Controller
             $no_coa_jurnal++;
 
             $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
-            $keterangan = $item['nm_coa'] . ' - ' . $id;
-            $tgl_jurnal = $post['tgl_jurnal_' . $no_coa_jurnal];
-            $coa_jurnal = $post['coa_jurnal_' . $no_coa_jurnal];
-            $id_company = $post['id_company_' . $no_coa_jurnal];
-            $nm_company = $post['nm_company_' . $no_coa_jurnal];
-            $nm_coa = $post['nm_coa_' . $no_coa_jurnal];
-            $debit = $post['debit_' . $no_coa_jurnal];
-            $kredit = $post['kredit_' . $no_coa_jurnal];
-
+            $nm_coa_item = $item['nm_coa'] ?? '';
+            $keterangan = $nm_coa_item . ' - ' . $id;
+            $tgl_jurnal = $post['tgl_jurnal_' . $no_coa_jurnal] ?? null;
+            $coa_jurnal = $post['coa_jurnal_' . $no_coa_jurnal] ?? null;
+            $id_company = $post['id_company_' . $no_coa_jurnal] ?? null;
+            $nm_company = $post['nm_company_' . $no_coa_jurnal] ?? '';
+            $nm_coa = $post['nm_coa_' . $no_coa_jurnal] ?? '';
+            $debit = $post['debit_' . $no_coa_jurnal] ?? 0;
+            $kredit = $post['kredit_' . $no_coa_jurnal] ?? 0;
 
             $arr_insert_jurnal[] = [
                 'no_jurnal' => $no_jurnal,
@@ -1146,7 +1178,7 @@ class Invoicing extends Admin_Controller
             $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $post['id']]);
 
             // Update sts_invoice di kons_tr_plan_tagih_detail
-            $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
+            $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $actual_id_detail_plan_tagih]);
 
             $this->db->trans_commit();
 
