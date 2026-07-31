@@ -145,6 +145,9 @@ class Non_rutin extends Admin_Controller
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
+			$bank_name 		= (!empty($data['bank_name'])) ? $data['bank_name'] : NULL;
+			$bank_account_no 	= (!empty($data['bank_account_no'])) ? $data['bank_account_no'] : NULL;
+			$bank_account_name 	= (!empty($data['bank_account_name'])) ? $data['bank_account_name'] : NULL;
 			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
 			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
 			// $budget 		= str_replace(',', '', $data['budget']);
@@ -463,6 +466,9 @@ class Non_rutin extends Admin_Controller
 						'document' 		=> $file_name,
 						'coa' 		=> $coa,
 						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => $bank_name,
+						'bank_account_no' => $bank_account_no,
+						'bank_account_name' => $bank_account_name,
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
 					);
@@ -497,7 +503,10 @@ class Non_rutin extends Admin_Controller
 						'keterangan_3' 		=> $data['keterangan_3'],
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
-						'tingkat_pr' => $data['tingkat_pr']
+						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => $bank_name,
+						'bank_account_no' => $bank_account_no,
+						'bank_account_name' => $bank_account_name
 					];
 				}
 			}
@@ -649,6 +658,9 @@ class Non_rutin extends Admin_Controller
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
+			$bank_name 		= (!empty($data['bank_name'])) ? $data['bank_name'] : NULL;
+			$bank_account_no 	= (!empty($data['bank_account_no'])) ? $data['bank_account_no'] : NULL;
+			$bank_account_name 	= (!empty($data['bank_account_name'])) ? $data['bank_account_name'] : NULL;
 			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
 			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
 			// $budget 		= str_replace(',', '', $data['budget']);
@@ -883,6 +895,9 @@ class Non_rutin extends Admin_Controller
 						'document' 		=> $file_name,
 						'coa' 		=> $coa,
 						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => $bank_name,
+						'bank_account_no' => $bank_account_no,
+						'bank_account_name' => $bank_account_name,
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
 					);
@@ -917,7 +932,10 @@ class Non_rutin extends Admin_Controller
 						'keterangan_3' 		=> $data['keterangan_3'],
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
-						'tingkat_pr' => $data['tingkat_pr']
+						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => $bank_name,
+						'bank_account_no' => $bank_account_no,
+						'bank_account_name' => $bank_account_name
 					];
 				}
 			}
