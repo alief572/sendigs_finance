@@ -1005,13 +1005,13 @@ class Expense extends Admin_Controller
 	public function create()
 	{
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		$data_pc 		= $this->All_model->GetPettyCashCombo();
+		// $data_pc 		= $this->All_model->GetPettyCashCombo();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
 
-		$this->template->set('data_pc', $data_pc);
+		// $this->template->set('data_pc', $data_pc);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_coa', $data_coa);
 		$this->template->set('option_coa', $option_coa);
