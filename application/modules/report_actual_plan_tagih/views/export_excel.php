@@ -32,6 +32,8 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
             <th>Company</th>
             <th>No. SPK</th>
             <th>Customer</th>
+            <th>Consultant</th>
+            <th>Sales</th>
             <th>Project</th>
             <th>Nominal SPK</th>
             <th>Nominal Invoice</th>
@@ -68,6 +70,13 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
                 <td align="left"><?= $item->nm_company ?></td>
                 <td><?= $item->id_spk_penawaran ?></td>
                 <td><?= $item->nm_customer ?></td>
+                <td><?php
+                    $arr_konsultan = [];
+                    if (!empty($item->nm_konsultan_1)) $arr_konsultan[] = $item->nm_konsultan_1;
+                    if (!empty($item->nm_konsultan_2)) $arr_konsultan[] = $item->nm_konsultan_2;
+                    echo implode(', ', $arr_konsultan);
+                    ?></td>
+                <td><?= $item->nm_sales ?? '' ?></td>
                 <td><?= $item->nm_paket ?></td>
                 <td align="right"><?= $item->nilai_kontrak ?></td>
                 <td align="right"><?= $current_invoice ?></td>
@@ -93,7 +102,7 @@ if (!empty($nm_company)) echo '<h3>Company : ' . $nm_company . '</h3>';
         ?>
 
         <tr style="font-weight: bold; background-color: #f2f2f2;">
-            <td colspan="5" align="right">Grand Total</td>
+            <td colspan="7" align="right">Grand Total</td>
             <td align="right"><?= $ttl_nominal_spk ?></td>
             <td align="right"><?= $ttl_invoice ?></td>
             <td align="right"><?= $ttl_uninvoice ?></td>
