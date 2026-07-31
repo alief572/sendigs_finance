@@ -3886,6 +3886,8 @@ class Expense extends Admin_Controller
 			$this->db->where('a.nama', $this->auth->user_name());
 		}
 
+		$this->db->order_by('a.created_on', 'DESC');
+
 		$db_clone = clone $this->db;
 		$count_all = $db_clone->count_all_results();
 
