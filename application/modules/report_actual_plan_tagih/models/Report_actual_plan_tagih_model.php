@@ -32,7 +32,7 @@ class Report_actual_plan_tagih_model extends Admin_Controller
 
     public function list_report_filterable($client = null, $company = null, $tahun)
     {
-        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
+        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
 
         $list_bulan = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
         foreach ($list_bulan as $bln) {

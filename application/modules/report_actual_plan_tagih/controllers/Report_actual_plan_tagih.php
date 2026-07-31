@@ -52,22 +52,178 @@ class Report_actual_plan_tagih extends Admin_Controller
         $get = $this->input->get();
 
         $data = $this->Report_actual_plan_tagih_model->list_report_filterable($get['client'], $get['company'], $get['tahun']);
+        $tahun = $get['tahun'];
 
         $nm_client = '';
         if (!empty($get['client'])) {
-            $get_client = $this->db->get_where('view_report_actual_plan_tagih', ['id_customer' => $get['client']])->row();
-
+            $get_client = $this->db->get_where('view_rekap_actual_plan_tagih_dev', ['id_customer' => $get['client']])->row();
             $nm_client = (!empty($get_client->nm_customer)) ? $get_client->nm_customer : '';
         }
 
         $nm_company = '';
         if (!empty($get['company'])) {
-            $get_company = $this->db->get_where('view_report_actual_plan_tagih', ['id_company' => $get['company']])->row();
-
+            $get_company = $this->db->get_where('view_rekap_actual_plan_tagih_dev', ['id_company' => $get['company']])->row();
             $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
         }
 
-        $this->load->view('export_excel', ['list_report' => $data, 'nm_client' => $nm_client, 'nm_company' => $nm_company, 'tahun' => $get['tahun']]);
+        // Load PHPExcel
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
+        $this->load->library('PHPExcel');
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->getActiveSheet();
+        $sheet->setTitle('Report APT');
+
+        // Mapping bulan
+        $list_bulan_map = [
+            1 => 'jan',
+            2 => 'feb',
+            3 => 'mar',
+            4 => 'apr',
+            5 => 'may',
+            6 => 'jun',
+            7 => 'jul',
+            8 => 'aug',
+            9 => 'sep',
+            10 => 'oct',
+            11 => 'nov',
+            12 => 'dec'
+        ];
+
+        // Title
+        $row = 1;
+        $sheet->setCellValue('A' . $row, 'Report Actual Plan Tagih (' . $tahun . ')');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $row++;
+
+        if (!empty($nm_client)) {
+            $sheet->setCellValue('A' . $row, 'Client : ' . $nm_client);
+            $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $row++;
+        }
+        if (!empty($nm_company)) {
+            $sheet->setCellValue('A' . $row, 'Company : ' . $nm_company);
+            $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $row++;
+        }
+        $row++;
+
+        // Header row
+        $headerRow = $row;
+        $headers = ['No.', 'Company', 'No. SPK', 'Customer', 'Consultant', 'Sales', 'Project', 'Nominal SPK', 'Nominal Invoice', 'Nominal Un-Invoiced', 'Macet'];
+        foreach ($list_bulan_map as $num => $key) {
+            $headers[] = date('M', strtotime($tahun . '-' . sprintf('%02d', $num) . '-01'));
+        }
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+            $col++;
+        }
+
+        // Style header
+        $lastCol = chr(ord('A') + count($headers) - 1);
+        // Karena kolom lebih dari Z, hitung pakai angka
+        $lastColIndex = count($headers) - 1;
+        $lastColLetter = PHPExcel_Cell::stringFromColumnIndex($lastColIndex);
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => '3C8DBC']],
+            'alignment' => ['horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $sheet->getStyle('A' . $headerRow . ':' . $lastColLetter . $headerRow)->applyFromArray($headerStyle);
+
+        $row++;
+
+        // Data rows
+        $no = 0;
+        $ttl_nominal_spk = 0;
+        $ttl_invoice     = 0;
+        $ttl_uninvoice   = 0;
+        $ttl_macet       = 0;
+        $total_per_bulan = array_fill(1, 12, 0);
+
+        foreach ($data as $item) {
+            $no++;
+            $current_invoice   = $item->nominal_invoice ?? 0;
+            $current_uninvoice = $item->nominal_uninvoice ?? 0;
+            $current_macet     = $item->macet ?? 0;
+            $is_same_year      = ($item->tahun_data == $tahun);
+
+            // Consultant
+            $arr_konsultan = [];
+            if (!empty($item->nm_konsultan_1)) $arr_konsultan[] = $item->nm_konsultan_1;
+            if (!empty($item->nm_konsultan_2)) $arr_konsultan[] = $item->nm_konsultan_2;
+            $nm_consultant = implode(', ', $arr_konsultan);
+
+            $colIdx = 0;
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $no);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_company);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->id_spk_penawaran);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_customer);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $nm_consultant);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_sales ?? '');
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_paket);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nilai_kontrak);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_invoice);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_uninvoice);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_macet);
+
+            // Bulan
+            foreach ($list_bulan_map as $num => $key) {
+                $val_bulan = ($is_same_year) ? ($item->$key ?? 0) : 0;
+                $sheet->setCellValueByColumnAndRow($colIdx++, $row, $val_bulan);
+                $total_per_bulan[$num] += $val_bulan;
+            }
+
+            $row++;
+
+            $ttl_nominal_spk += $item->nilai_kontrak;
+            $ttl_invoice     += $current_invoice;
+            $ttl_uninvoice   += $current_uninvoice;
+            $ttl_macet       += $current_macet;
+        }
+
+        // Grand Total row
+        $colIdx = 0;
+        $sheet->setCellValueByColumnAndRow($colIdx, $row, 'Grand Total');
+        $sheet->mergeCellsByColumnAndRow(0, $row, 6, $row);
+        $colIdx = 7;
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_nominal_spk);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_invoice);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_uninvoice);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_macet);
+
+        foreach ($total_per_bulan as $total_bln) {
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $total_bln);
+        }
+
+        // Style grand total
+        $totalStyle = [
+            'font' => ['bold' => true],
+            'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => 'F2F2F2']],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+        ];
+        $sheet->getStyle('A' . $row . ':' . $lastColLetter . $row)->applyFromArray($totalStyle);
+
+        // Output
+        $filename = 'Report Actual Plan Tagih (' . $tahun . ') - ' . $nm_client . ' - ' . $nm_company . '.xls';
+
+        // Bersihkan output buffer jika ada
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
     }
 
     public function get_data_report_apt()
@@ -83,7 +239,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $company  = $get['company'];
 
         // 1. Query Builder & Filtering
-        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
+        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
 
         $list_bulan_select = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
         foreach ($list_bulan_select as $bln) {
@@ -137,7 +293,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $count_filter = count($get_filter);
 
         // 3. Order & Limit
-        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
+        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
 
         foreach ($list_bulan_select as $bln) {
             $this->db->select("SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`$bln` ELSE 0 END) AS `$bln`", FALSE);
@@ -202,11 +358,26 @@ class Report_actual_plan_tagih extends Admin_Controller
             // VALIDASI TAHUN: Cek apakah baris ini memang jadwal tahun yang difilter
             $is_same_year = ($item->tahun_data == $tahun);
 
+            // Data consultant & sales langsung dari view (tanpa query tambahan)
+            $arr_nm_konsultan = [];
+            if (!empty($item->nm_konsultan_1)) {
+                $arr_nm_konsultan[] = $item->nm_konsultan_1;
+            }
+            if (!empty($item->nm_konsultan_2)) {
+                $arr_nm_konsultan[] = $item->nm_konsultan_2;
+            }
+
+            $nm_consultant = implode(', ', $arr_nm_konsultan);
+            $nm_sales = $item->nm_sales ?? '';
+
+
             $row = [
                 'no'                => ++$no,
                 'company'           => $item->nm_company,
                 'no_spk'            => $item->id_spk_penawaran,
                 'customer'          => $item->nm_customer,
+                'consultant'        => $nm_consultant,
+                'sales'             => $nm_sales,
                 'project'           => $item->nm_paket,
                 'nominal_spk'       => number_format($item->nilai_kontrak),
                 'nominal_invoice'   => number_format($total_invoice),

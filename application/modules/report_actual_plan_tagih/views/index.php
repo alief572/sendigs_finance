@@ -102,6 +102,8 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
                         <th class="text-center" width="300px">Company</th>
                         <th class="text-center" width="300px">No. SPK</th>
                         <th class="text-center" width="300px">Customer</th>
+                        <th class="text-center" width="300px">Consultant</th>
+                        <th class="text-center" width="300px">Sales</th>
                         <th class="text-center" width="300px">Project</th>
                         <th class="text-center" width="300px">Nominal SPK</th>
                         <th class="text-center" width="300px">Nominal Invoice</th>
@@ -310,6 +312,12 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
                     data: 'customer'
                 },
                 {
+                    data: 'consultant'
+                },
+                {
+                    data: 'sales'
+                },
+                {
                     data: 'project'
                 },
                 {
@@ -368,7 +376,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
                 // Cek apakah kolom masih lengkap (mencegah double manipulasi)
                 if ($('th', row).length > 17) {
                     // Gabungkan index 0 sampai 4 (5 kolom pertama)
-                    $('th', row).eq(0).attr('colspan', 5).html('Grand Total').addClass('text-center font-weight-bold');
+                    $('th', row).eq(0).attr('colspan', 7).html('Grand Total').addClass('text-center font-weight-bold');
 
                     // Sembunyikan th index 1, 2, 3, dan 4 supaya colspan-nya gak berantakan
                     $('th', row).eq(1).hide();
