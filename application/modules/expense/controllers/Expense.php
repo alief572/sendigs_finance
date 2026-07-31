@@ -1048,7 +1048,7 @@ class Expense extends Admin_Controller
 		$data = $this->Expense_model->GetDataHeader($id);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		$data_pc = $this->All_model->GetPettyCashCombo();
+		// $data_pc = $this->All_model->GetPettyCashCombo();
 
 		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
@@ -1058,7 +1058,7 @@ class Expense extends Admin_Controller
 
 		$this->template->set('option_coa', $option_coa);
 
-		$this->template->set('data_pc', $data_pc);
+		// $this->template->set('data_pc', $data_pc);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
