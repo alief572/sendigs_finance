@@ -83,6 +83,8 @@ foreach ($results['result_payment'] as $item) {
 		}
 	}
 }
+
+$tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
@@ -111,7 +113,7 @@ foreach ($results['result_payment'] as $item) {
 					<td width="15%" style="">Tgl Bayar</td>
 					<td width="5%" class="text-center">:</td>
 					<td width="25%">
-						<input type="date" name="tgl_bayar" id="" class="form-control form-control-sm tgl_bayar" value="<?= date('Y-m-d') ?>">
+						<input type="date" name="tgl_bayar" id="" class="form-control form-control-sm tgl_bayar" value="<?= $tgl_bayar ?>">
 					</td>
 					<td width="15%" style="">Supplier</td>
 					<td width="5%" class="text-center">:</td>
