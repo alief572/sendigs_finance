@@ -11,6 +11,9 @@ $pr_coa 	= (!empty($header)) ? $header[0]->coa : '';
 $tingkat_pr = (!empty($header)) ? $header[0]->tingkat_pr : '';
 $nm_pembuat  = (!empty($header)) ? $header[0]->nm_pembuat : '';
 $tgl_dibuat  = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
+$bank_name = (!empty($header)) ? $header[0]->bank_name : '';
+$bank_account_no = (!empty($header)) ? $header[0]->bank_account_no : '';
+$bank_account_name = (!empty($header)) ? $header[0]->bank_account_name : '';
 
 // Detail Approval
 $alasan_reject1 = (!empty($header)) ? $header[0]->reject_reason1 : '';
@@ -121,12 +124,14 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 			<div class='form-group row'>
 				<label class='label-control col-sm-2'><b>Tingkat PR</b></label>
 				<div class='col-sm-4  text-right'>
-					<select name="tingkat_pr" id="" class="form-control input-md">
+					<select name="tingkat_pr" id="" class="form-control input-md" <?= $disabled2; ?>>
 						<option value="1" <?= ($tingkat_pr == '1') ? 'selected' : null ?>>Normal</option>
 						<option value="2" <?= ($tingkat_pr == '2') ? 'selected' : null ?>>Urgent</option>
 					</select>
 				</div>
 			</div>
+
+
 
 			<div class='form-group row'>
 				<label class='label-control col-sm-2'><b>Nama Pembuat PR</b></label>
@@ -264,6 +269,38 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 					<?php } ?>
 				</tbody>
 			</table>
+			<br>
+			<div class='row'>
+				<div class='col-md-6'>
+					<table class='table table-bordered' style='width: 100%; max-width: 500px;'>
+						<thead>
+							<tr>
+								<th colspan='2' class='bg-blue' style='font-size: 14px;'>Informasi Bank</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td width='35%' style='vertical-align: middle;'><b>Bank <span class='text-red'>*</span></b></td>
+								<td>
+									<input type='text' id='bank_name' name='bank_name' class='form-control input-md' placeholder='Nama Bank (e.g. BCA, Mandiri)' value='<?= $bank_name; ?>' <?= $disabled3; ?>>
+								</td>
+							</tr>
+							<tr>
+								<td style='vertical-align: middle;'><b>No Rekening <span class='text-red'>*</span></b></td>
+								<td>
+									<input type='text' id='bank_account_no' name='bank_account_no' class='form-control input-md' placeholder='No. Rekening' value='<?= $bank_account_no; ?>' <?= $disabled3; ?>>
+								</td>
+							</tr>
+							<tr>
+								<td style='vertical-align: middle;'><b>Nama Rekening <span class='text-red'>*</span></b></td>
+								<td>
+									<input type='text' id='bank_account_name' name='bank_account_name' class='form-control input-md' placeholder='Nama Pemilik Rekening' value='<?= $bank_account_name; ?>' <?= $disabled3; ?>>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 			<div class='box-footer'>
 				<?php
 				echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-danger', 'style' => 'float:right; margin-left:5px;', 'value' => 'back', 'content' => 'Back', 'id' => 'back'));
@@ -453,6 +490,38 @@ $disabled3		= ($approve == 'view') ? 'readonly' : '';
 
 		// Validasi item barang - hanya untuk mode input (bukan approve/view)
 		if (app == '' || app == null) {
+			var bank_name = $('#bank_name').val();
+			var bank_account_no = $('#bank_account_no').val();
+			var bank_account_name = $('#bank_account_name').val();
+
+			if (bank_name == null || bank_name.trim() == '') {
+				Swal.fire({
+					title: "Peringatan!",
+					text: 'Nama Bank wajib diisi.',
+					icon: "warning"
+				});
+				$('#save').prop('disabled', false);
+				return false;
+			}
+			if (bank_account_no == null || bank_account_no.trim() == '') {
+				Swal.fire({
+					title: "Peringatan!",
+					text: 'No. Rekening wajib diisi.',
+					icon: "warning"
+				});
+				$('#save').prop('disabled', false);
+				return false;
+			}
+			if (bank_account_name == null || bank_account_name.trim() == '') {
+				Swal.fire({
+					title: "Peringatan!",
+					text: 'Nama Rekening wajib diisi.',
+					icon: "warning"
+				});
+				$('#save').prop('disabled', false);
+				return false;
+			}
+
 			// Cek minimal 1 item barang harus ada
 			var totalItems = $("tr[class^='header_']").length;
 			if (totalItems == 0) {
