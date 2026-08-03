@@ -745,4 +745,75 @@ class Expense_model extends BF_Model
 			return [];
 		}
 	}
+
+	// get PR Department header data
+	public function GetPrDeptHeader($no_pr)
+	{
+		$this->db->select('a.*');
+		$this->db->from('rutin_non_planning_header a');
+		$this->db->where('a.no_pr', $no_pr);
+		$query = $this->db->get();
+		return ($query->num_rows() > 0) ? $query->row() : null;
+	}
+
+	// get PR Department detail items
+	public function GetPrDeptDetails($no_pr)
+	{
+		$this->db->select('a.*');
+		$this->db->from('rutin_non_planning_detail a');
+		$this->db->where('a.no_pr', $no_pr);
+		$query = $this->db->get();
+		return ($query->num_rows() > 0) ? $query->result() : [];
+	}
+
+	// get department name from HRIS database
+	public function GetDepartmentName($id_dept)
+	{
+		if (empty($id_dept)) return '';
+		$query = $this->hr->get_where('departments', ['id' => $id_dept]);
+		if ($query->num_rows() > 0) {
+			return $query->row()->name;
+		}
+		return '';
+	}
+
+	// get PR Stok header data
+	public function GetPrStokHeader($no_pr)
+	{
+		$this->db->select('a.*, b.nm_lengkap as nama_user');
+		$this->db->from('material_planning_base_on_produksi a');
+		$this->db->join('users b', 'b.id_user = a.created_by', 'left');
+		$this->db->where('a.no_pr', $no_pr);
+		$query = $this->db->get();
+		return ($query->num_rows() > 0) ? $query->row() : null;
+	}
+
+	// get PR Stok detail items with material info
+	public function GetPrStokDetails($so_number)
+	{
+		$this->db->select('a.*, IF(b.nama IS NULL, e.stock_name, b.nama) as material_name, IF(b.code IS NULL, e.id_stock, b.code) as code_material, IF(b.konversi IS NULL, IF(e.konversi <= 0, 1, e.konversi), b.konversi) as konversi, IF(b.max_stok IS NULL, 0, b.max_stok) as max_stok, IF(b.min_stok IS NULL, 0, b.min_stok) as min_stok, IF(c.code IS NULL, f.code, c.code) as unit_packing, IF(d.code IS NULL, g.code, d.code) as unit_measurement');
+		$this->db->from('material_planning_base_on_produksi_detail a');
+		$this->db->join('new_inventory_4 b', 'b.code_lv4 = a.id_material', 'left');
+		$this->db->join('ms_satuan c', 'c.id = b.id_unit_packing', 'left');
+		$this->db->join('ms_satuan d', 'd.id = b.id_unit', 'left');
+		$this->db->join('accessories e', 'e.id = a.id_material', 'left');
+		$this->db->join('ms_satuan f', 'f.id = e.id_unit_gudang', 'left');
+		$this->db->join('ms_satuan g', 'g.id = e.id_unit', 'left');
+		$this->db->where('a.so_number', $so_number);
+		$this->db->where('a.status_app', 'Y');
+		$query = $this->db->get();
+		return ($query->num_rows() > 0) ? $query->result() : [];
+	}
+
+	// get PR Asset header and detail (1 PR = 1 item from asset_planning)
+	public function GetPrAssetData($no_pr)
+	{
+		$this->db->select('a.*, b.nama_asset, b.budget, b.qty, b.keterangan, b.no_coa, b.nm_coa, b.id_dept, c.nm_lengkap as nama_user');
+		$this->db->from('tran_pr_header a');
+		$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
+		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+		$this->db->where('a.no_pr', $no_pr);
+		$query = $this->db->get();
+		return ($query->num_rows() > 0) ? $query->row() : null;
+	}
 }

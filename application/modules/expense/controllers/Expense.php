@@ -748,111 +748,130 @@ class Expense extends Admin_Controller
 	{
 		$results = $this->Expense_model->GetDataKasbon($id);
 
-		$nmuser = $results->created_by;
-		if ($results->tipe_pr !== '') {
-			if ($results->tipe_pr == 'pr departemen') {
-				$this->db->select('b.nm_lengkap');
-				$this->db->from('rutin_non_planning_header a');
-				$this->db->join('users b', 'b.id_user = a.created_by');
-				$this->db->where('a.no_pr', $results->id_pr);
-				$get_single_detail = $this->db->get()->row();
+		if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr departemen') {
+			// PR Department print flow
+			$pr_header = $this->Expense_model->GetPrDeptHeader($results->id_pr);
+			$pr_details = $this->Expense_model->GetPrDeptDetails($results->id_pr);
+			$dept_name = $this->Expense_model->GetDepartmentName($pr_header->id_dept ?? '');
 
-				$nmuser = $get_single_detail->nm_lengkap;
+			// Get request by name from users table
+			$request_by = '';
+			if (!empty($pr_header->created_by)) {
+				$user = $this->db->get_where('users', ['id_user' => $pr_header->created_by])->row();
+				$request_by = !empty($user) ? $user->nm_lengkap : '';
 			}
 
-			if ($results->tipe_pr == 'pr stok') {
-				$this->db->select('b.nm_lengkap');
-				$this->db->from('material_planning_base_on_produksi a');
-				$this->db->join('users b', 'b.id_user = a.created_by');
-				$this->db->where('a.no_pr', $results->id_pr);
-				$get_single_detail = $this->db->get()->row();
+			$data = array(
+				'title'      => 'Print Pengajuan Kasbon',
+				'kasbon'     => $results,
+				'pr_header'  => $pr_header,
+				'pr_details' => $pr_details,
+				'dept_name'  => $dept_name,
+				'request_by' => $request_by,
+			);
+			$this->load->view('kasbon_pr_dept_print', $data);
+		} else if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr stok') {
+			// PR Stok print flow
+			$pr_header = $this->Expense_model->GetPrStokHeader($results->id_pr);
+			$pr_details = $this->Expense_model->GetPrStokDetails($pr_header->so_number ?? '');
 
-				$nmuser = $get_single_detail->nm_lengkap;
+			// Get request by name
+			$request_by = !empty($pr_header->nama_user) ? $pr_header->nama_user : '';
+
+			$data = array(
+				'title'      => 'Print Pengajuan Kasbon',
+				'kasbon'     => $results,
+				'pr_header'  => $pr_header,
+				'pr_details' => $pr_details,
+				'request_by' => $request_by,
+			);
+			$this->load->view('kasbon_pr_stok_print', $data);
+		} else if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr asset') {
+			// PR Asset print flow
+			$pr_asset = $this->Expense_model->GetPrAssetData($results->id_pr);
+			$dept_name = $this->Expense_model->GetDepartmentName($pr_asset->id_dept ?? '');
+
+			// Get request by name
+			$request_by = !empty($pr_asset->nama_user) ? $pr_asset->nama_user : '';
+
+			$data = array(
+				'title'      => 'Print Pengajuan Kasbon',
+				'kasbon'     => $results,
+				'pr_asset'   => $pr_asset,
+				'dept_name'  => $dept_name,
+				'request_by' => $request_by,
+			);
+			$this->load->view('kasbon_pr_asset_print', $data);
+		} else {
+			// Existing flow (unchanged)
+			$nmuser = $results->created_by;
+			if ($results->tipe_pr !== '') {
+				if ($results->tipe_pr == 'pr stok') {
+					$this->db->select('b.nm_lengkap');
+					$this->db->from('material_planning_base_on_produksi a');
+					$this->db->join('users b', 'b.id_user = a.created_by');
+					$this->db->where('a.no_pr', $results->id_pr);
+					$get_single_detail = $this->db->get()->row();
+
+					$nmuser = $get_single_detail->nm_lengkap;
+				}
+
+				if ($results->tipe_pr == 'pr asset') {
+					$this->db->select('b.nm_lengkap');
+					$this->db->from('tran_pr_header a');
+					$this->db->join('users b', 'b.id_user = a.created_by');
+					$this->db->where('a.no_pr', $results->id_pr);
+					$get_single_detail = $this->db->get()->row();
+
+					$nmuser = $get_single_detail->nm_lengkap;
+				}
 			}
 
-			if ($results->tipe_pr == 'pr asset') {
-				$this->db->select('b.nm_lengkap');
-				$this->db->from('tran_pr_header a');
-				$this->db->join('users b', 'b.id_user = a.created_by');
-				$this->db->where('a.no_pr', $results->id_pr);
-				$get_single_detail = $this->db->get()->row();
-
-				$nmuser = $get_single_detail->nm_lengkap;
-			}
+			$data = array(
+				'title'			=> 'Print Kasbon',
+				'stsview'		=> 'print',
+				'data'			=> $results,
+				'nmuser'			=> $nmuser
+			);
+			$this->load->view('kasbon_print', $data);
 		}
-
-		$data = array(
-			'title'			=> 'Print Kasbon',
-			'stsview'		=> 'print',
-			'data'			=> $results,
-			'nmuser'			=> $nmuser
-		);
-		$this->load->view('kasbon_print', $data);
 	}
 
 	public function periodik_print($id)
 	{
-		$this->db->select('
-			a.*, 
-			a.tanggal_doc as tgl_doc, 
-			a.created_by as created_by_user, 
-			a.created_on as created_on_header,
-			COALESCE(SUM(b.nilai), 0) as jumlah_kasbon, 
-			b.keterangan as keperluan, 
-		');
-		$this->db->from('tr_pengajuan_rutin a');
-		$this->db->join('tr_pengajuan_rutin_detail b', 'a.no_doc = b.no_doc', 'left');
-		$this->db->where('a.id', $id);
+		// Fetch header record
+		$header = $this->db->get_where('tr_pengajuan_rutin', ['id' => $id])->row();
 
-		$query = $this->db->get();
-
-		if (!$query) {
-			show_error('Database Error: ' . $this->db->error()['message']);
-			return;
-		}
-
-		$results = $query->row();
-
-		if (empty($results)) {
+		if (empty($header)) {
 			show_404();
 		}
 
-		if (empty($results->doc_file)) {
-			$results->doc_file = '';
+		// Fetch detail records
+		$detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $header->no_doc])->result();
+
+		// Resolve department name
+		$dept_name = $this->Expense_model->GetDepartmentName($header->departement);
+		if ($dept_name === null) {
+			$dept_name = '';
 		}
 
-		$nmuser = '-';
-		$results->created_by = 'FINANCE';
-
-		$id_user_create = !empty($results->created_by_user) ? $results->created_by_user : $results->created_by;
-
-		if (!empty($id_user_create)) {
-			$q_user = $this->db->get_where('users', ['id_user' => $id_user_create]);
-			if ($q_user && $q_user->num_rows() > 0) {
-				$get_user = $q_user->row();
-				$nmuser = $get_user->nm_lengkap;
-				$results->created_by = $get_user->username;
-			}
+		// Resolve COA display for each detail record
+		foreach ($detail as $item) {
+			$coa_row = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $item->coa])->row();
+			$item->coa_display = $coa_row
+				? $coa_row->no_perkiraan . ' - ' . $coa_row->nama
+				: $item->coa;
 		}
 
-		$results->approved_by = 'FINANCE';
-		$results->approved_on = '';
-		$results->doc_file_2 = '';
-
-		$this->db->select('a.*');
-		$this->db->from('tr_pengajuan_rutin_detail a');
-		$this->db->where('a.no_doc', $results->no_doc);
-		$get_detail = $this->db->get()->result();
-
-		$data = array(
-			'title' => 'Print Periodik',
-			'stsview' => 'print',
-			'data' => $results,
-			'nmuser' => $nmuser,
-			'detail' => $get_detail
+		// Pass resolved data to view
+		$view_data = array(
+			'title'     => 'Print Pengajuan Periodik',
+			'data'      => $header,
+			'detail'    => $detail,
+			'dept_name' => $dept_name,
 		);
 
-		$this->load->view('periodik_print', $data);
+		$this->load->view('periodik_print', $view_data);
 	}
 
 	// kasbon view
@@ -2164,11 +2183,34 @@ class Expense extends Admin_Controller
 	{
 		$results = $this->Expense_model->GetDataTransportReq($id);
 		$data_detail = $this->Expense_model->GetDataTransportInReq($results->no_doc);
+
+		// Resolve department name from HRIS
+		$dept_name = '';
+		if (!empty($results->departement)) {
+			$dept_name = $this->Expense_model->GetDepartmentName($results->departement);
+		}
+
+		// Resolve request by name from users table
+		$request_by = '';
+		if (!empty($results->nama)) {
+			$user = $this->db->get_where('users', ['username' => $results->nama])->row();
+			$request_by = !empty($user) ? $user->nm_lengkap : $results->nama;
+		}
+
+		// Get COA from first detail record
+		$coa_display = '';
+		if (!empty($data_detail) && isset($data_detail[0])) {
+			$coa_display = $data_detail[0]->no_coa . ' - ' . $data_detail[0]->nm_coa;
+		}
+
 		$data = array(
 			'title'			=> 'Print Transportasi Request',
 			'stsview'		=> 'print',
 			'data_detail'	=> $data_detail,
-			'data'			=> $results
+			'data'			=> $results,
+			'dept_name'		=> $dept_name,
+			'request_by'	=> $request_by,
+			'coa_display'	=> $coa_display,
 		);
 		$this->load->view('transport_req_print', $data);
 	}
