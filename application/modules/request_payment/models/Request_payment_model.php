@@ -581,7 +581,12 @@ class Request_payment_model extends BF_Model
                 $btn_print = ' <a href="' . base_url('expense/periodik_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
             if ($item->kategori == 'Kasbon') {
-                $btn_print = ' <a href="' . base_url('expense/kasbon_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                $get_kasbon =  $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
+                if (!empty($get_kasbon->no_kasbon_consultant)) {
+                    $btn_print = ' <a href="' . 'https://sendigs.com/consultant_new/approval_request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                } else {
+                    $btn_print = ' <a href="' . base_url('expense/kasbon_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                }
             }
             if ($item->kategori == 'Transport') {
                 $btn_print = ' <a href="' . base_url('expense/transport_req_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
