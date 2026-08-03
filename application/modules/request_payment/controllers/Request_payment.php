@@ -2825,7 +2825,7 @@ class Request_payment extends Admin_Controller
 					} else if ($tipe_lower == 'refill pettycash' || $tipe_lower == 'refill_pettycash') {
 						$tipe_update = 'refill_pettycash';
 					}
-					
+
 					// Ensure we also update the tipe in request_payment to be consistent
 					$this->db->update('request_payment', ['status' => 2, 'tipe' => $tipe_update], ['no_doc' => $item->no_doc]);
 				}
@@ -3030,27 +3030,87 @@ class Request_payment extends Admin_Controller
 
 	public function print_cash($id)
 	{
+		// Validate ID and fetch Direct_Payment_Record
+		if (empty($id)) {
+			show_404();
+		}
+
 		$get_data_cash = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $id])->row();
-		$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
+
+		if (empty($get_data_cash)) {
+			show_404();
+		}
 
 		if ($get_data_cash->jenis_pr == 'pr departemen') {
-			$this->db->select('CONCAT("assets/pr/", a.document) as doc_file, a.no_pr as no_doc');
-			$this->db->from('rutin_non_planning_header a');
-			$this->db->where('a.no_pr', $get_data_cash->no_pr);
-			$get_doc_pr = $this->db->get()->row();
+			// Fetch PR_Header from rutin_non_planning_header
+			$pr_header = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_data_cash->no_pr])->row();
+
+			// Fetch PR_Detail rows from rutin_non_planning_detail
+			$pr_details = $this->db->get_where('rutin_non_planning_detail', ['no_pr' => $get_data_cash->no_pr])->result_array();
+			if (empty($pr_details)) {
+				$pr_details = [];
+			}
+
+			// Resolve dept_name from HRIS departments
+			$dept_name = '';
+			if (!empty($pr_header->id_dept)) {
+				$hris = $this->load->database('hris', true);
+				$dept_row = $hris->get_where('departments', ['id' => $pr_header->id_dept])->row();
+				if (!empty($dept_row)) {
+					$dept_name = $dept_row->name;
+				}
+			}
+
+			// Resolve coa_display from DBACC.coa_master
+			$coa_display = '';
+			if (!empty($pr_header->coa)) {
+				$coa_row = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $pr_header->coa])->row();
+				if (!empty($coa_row)) {
+					$coa_display = $coa_row->no_perkiraan . ' ' . $coa_row->nama;
+				} else {
+					$coa_display = $pr_header->coa;
+				}
+			}
+
+			// Resolve request_by from users table
+			$request_by = '';
+			if (!empty($pr_header->created_by)) {
+				$user_row = $this->db->get_where('users', ['id_user' => $pr_header->created_by])->row();
+				if (!empty($user_row)) {
+					$request_by = $user_row->nm_lengkap;
+				}
+			}
+
+			$data = [
+				'title' => 'Pengajuan Direct Payment',
+				'data_pr' => $get_data_cash,
+				'pr_header' => $pr_header,
+				'pr_details' => $pr_details,
+				'dept_name' => $dept_name,
+				'coa_display' => $coa_display,
+				'request_by' => $request_by,
+				'bank_name' => !empty($pr_header->bank_name) ? $pr_header->bank_name : '',
+				'bank_account_no' => !empty($pr_header->bank_account_no) ? $pr_header->bank_account_no : '',
+				'bank_account_name' => !empty($pr_header->bank_account_name) ? $pr_header->bank_account_name : ''
+			];
+
+			$this->load->view('print_cash', $data);
 		} else {
+			// Preserve existing non-PR-departemen rendering path
+			$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
+
 			$this->db->select('CONCAT("assets/pr/", a.dokument_pendukung) as doc_file, a.no_pr as no_doc');
 			$this->db->from('tran_pr_header a');
 			$this->db->where('a.no_pr', $get_data_cash->no_pr);
 			$get_doc_pr = $this->db->get()->row();
+
+			$data = [
+				'data_pr' => $get_data_cash,
+				'v_req_payment' => $get_v_req_payment,
+				'doc_pr' => $get_doc_pr
+			];
+
+			$this->load->view('print_cash_non_pr', $data);
 		}
-
-		$data = [
-			'data_pr' => $get_data_cash,
-			'v_req_payment' => $get_v_req_payment,
-			'doc_pr' => $get_doc_pr
-		];
-
-		$this->load->view('print_cash', $data);
 	}
 }

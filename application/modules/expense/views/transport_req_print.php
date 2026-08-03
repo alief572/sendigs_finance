@@ -1,189 +1,173 @@
+<?php
+
+/**
+ * Transport Request Print View - Manual Verification Checklist
+ * 
+ * Test Scenarios:
+ * 1. Valid ID: Load /expense/transport_req_print/{valid_id} — all 5 sections render correctly
+ * 2. Empty Detail: Test with a transport request with no detail records — empty tbody, totals show Rp 0
+ * 3. Multiple Attachments: Test with mixed PDF and image attachments — PDFs in iframes, images inline
+ * 4. Print Preview: Use browser Ctrl+P — page break before attachments, clean layout
+ * 5. Long Text: Test with long keperluan/rute values — no overflow issues
+ * 6. Empty Bank Info: Test with empty bank fields — shows "-" placeholder
+ * 7. Null Dates: Test with 0000-00-00 dates — shows "-" via formatDate()
+ */
+?>
+<?php
+function formatDate($date)
+{
+	if (empty($date) || $date == '0000-00-00') return '-';
+	return date('d-M-y', strtotime($date));
+}
+?>
 <html>
 
 <head>
-	<title> EXPENSES REPORT BENSIN & TOL </title>
+	<title><?= $title ?></title>
+	<link rel="stylesheet" href="<?= base_url('assets/AdminLTE/bootstrap/css/bootstrap.min.css') ?>">
 	<style>
 		body {
 			font-family: sans-serif;
+			font-size: 11px;
+			padding: 15px;
+			margin: 0;
 		}
 
-		table.garis {
+		.document-header {
+			text-align: center;
+			padding: 8px 0;
+			border-top: 2px solid #333;
+			border-bottom: 1px solid #333;
+			margin-bottom: 10px;
+		}
+
+		.document-header h4 {
+			margin: 0 0 3px 0;
+			font-size: 13px;
+			font-weight: bold;
+		}
+
+		.document-header p {
+			margin: 0;
+			font-size: 11px;
+		}
+
+		table.info-table {
+			width: 100%;
 			border-collapse: collapse;
-			font-size: 0.9em;
-			font-family: sans-serif;
 		}
 
-		.pdf-page-canvas {
+		table.info-table td {
+			padding: 2px 5px;
+			vertical-align: top;
+			font-size: 11px;
+		}
+
+		table.detail-table {
+			border-collapse: collapse;
+			width: 100%;
+			font-size: 11px;
+		}
+
+		table.detail-table th,
+		table.detail-table td {
+			border: 1px solid #333;
+			padding: 4px 6px;
+		}
+
+		table.detail-table th {
+			text-align: center;
+			font-weight: bold;
+			font-style: italic;
+		}
+
+		.section-title {
+			font-weight: bold;
+			margin: 10px 0 3px 0;
+			font-size: 11px;
+		}
+
+		.signature-table td {
+			text-align: center;
+			padding: 5px 20px;
+			vertical-align: top;
+			font-size: 11px;
+		}
+
+		.bank-signature-wrapper {
+			display: table;
+			width: 100%;
+			margin-top: 8px;
+		}
+
+		.bank-section {
+			display: table-cell;
+			vertical-align: top;
+			width: 35%;
+		}
+
+		.signature-section {
+			display: table-cell;
+			vertical-align: top;
+			width: 65%;
+			text-align: center;
+		}
+
+		.attachment-separator {
+			border-top: 3px solid #4CAF50;
+			margin: 20px 0 15px 0;
+		}
+
+		.attachment-img {
 			max-width: 100%;
-			height: auto;
-			display: block;
 			margin: 10px 0;
-			border: 1px solid #ddd;
 		}
 
 		@media print {
-			.pagebreak {
+			.attachment-separator {
 				page-break-before: always;
+				border-top: 3px solid #4CAF50;
 			}
 
-			.pdf-page-canvas {
-				max-width: 100% !important;
-				height: auto !important;
-				page-break-inside: avoid;
-				border: none;
+			body {
+				padding: 10px;
 			}
 		}
 	</style>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 
 <body>
-	<table cellpadding=2 cellspacing=0 border=0 width=650>
-		<tr>
-			<th colspan=11>EXPENSES REPORT BENSIN & TOL</th>
-		</tr>
-		<tr>
-			<td colspan=11>
-				<table cellpadding=2 cellspacing=0 border=1 width=650 class="garis">
-					<tr>
-						<th rowspan=3>TGL</th>
-						<th rowspan=3>Mobil</th>
-						<th rowspan=3>AKTIVITAS<br />(PT.)</th>
-						<th rowspan=3>RUTE</th>
-						<th colspan=5>Jenis Jenis Bukti</th>
-						<th rowspan=3>Total</th>
-						<th rowspan=3>Ket</th>
-					</tr>
-					<tr>
-						<th colspan=3>Bensin</th>
-						<th rowspan=2 nowrap>Tol &<br />Parkir</th>
-						<th rowspan=2 nowrap>Transport /<br />Lain Lain</th>
-					</tr>
-					<tr>
-						<th>Mobil</th>
-						<th>KM</th>
-						<th>Jumlah</th>
-					</tr>
-					<?php $total_bensin = 0;
-					$total_tol = 0;
-					$total_parkir = 0;
-					$total_kasbon = 0;
-					$idd = 1;
-					$total_km = 0;
-					$grand_total = 0;
-					$i = 0;
-					$lainnya = 0;
-					$gambar = '';
-					if (!empty($data_detail)) {
-						foreach ($data_detail as $record) {
-							$i++; ?>
-							<tr>
-								<td><?= tgl_indo($record->tgl_doc); ?></td>
-								<td><?= $record->nopol; ?></td>
-								<td><?= $record->keperluan; ?></td>
-								<td><?= $record->rute; ?></td>
-								<td align="right"><?= number_format($record->bensin); ?></td>
-								<td align="right"><?= number_format($record->km_akhir - $record->km_awal); ?></td>
-								<td></td>
-								<td align="right"><?= number_format($record->tol + $record->parkir); ?></td>
-								<td align="right"><?= number_format($record->lainnya); ?></td>
-								<td align="right"><?= number_format($record->bensin + $record->tol + $record->parkir + $record->lainnya); ?></td>
-								<td align="right"><?= ($record->keterangan); ?></td>
-							</tr>
-					<?php
-							$total_bensin = ($total_bensin + ($record->bensin));
-							$total_tol = ($total_tol + ($record->tol));
-							$total_parkir = ($total_parkir + ($record->parkir));
-							$total_km = ($total_km + ($record->km_akhir - $record->km_awal));
-							$lainnya = ($lainnya + $record->lainnya);
-							if ($record->doc_file != '') {
-								$is_pdf = (stripos($record->doc_file, '.pdf') !== false);
-								if ($is_pdf) {
-									$pdf_url = base_url('assets/expense/' . $record->doc_file);
-									$gambar .= '<div class="col-md-12" style="margin-bottom:20px;">
-										<div class="pdf-render-container" data-pdf-url="' . $pdf_url . '">
-											<iframe src="' . $pdf_url . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-												<a href="' . $pdf_url . '">Download PDF</a>
-											</iframe>
-										</div>
-										<br />' . $record->no_doc . '</div>';
-								} else {
-									$gambar .= '<img src="' . base_url("assets/expense/" . $record->doc_file) . '" width="500"><br />';
-								}
-							}
+	<!-- Document Header -->
+	<div class="document-header">
+		<h4>Pengajuan Transportasi</h4>
+		<p><?= $data->no_doc ?></p>
+	</div>
 
-							$idd++;
-						}
-					}
-					$grand_total = ($total_bensin + $total_tol + $total_parkir + $lainnya);
-					for ($x = 0; $x < (9 - $i); $x++) {
-						echo '
+	<!-- Informasi Pengajuan -->
+	<div class="section-title">Informasi Pengajuan</div>
+	<table class="info-table">
 		<tr>
-			<td>&nbsp;</td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-		</tr>
-	';
-					}
-					?>
-				</table>
-			</td>
+			<td width="120">Department</td>
+			<td width="5">:</td>
+			<td width="150"><?= $dept_name ?></td>
+			<td width="40"></td>
+			<td width="110">Keterangan</td>
+			<td width="5">:</td>
+			<td>Transportasi <?= date('d/m/Y', strtotime($data->date1)) ?> - <?= date('d/m/Y', strtotime($data->date2)) ?></td>
 		</tr>
 		<tr>
+			<td>Request By</td>
+			<td>:</td>
+			<td><?= $request_by ?></td>
 			<td></td>
-			<td></td>
-			<td>Mengetahui<br /><?= date("d-m-Y", strtotime(($data->fin_check_on))) ?></td>
-			<td></td>
-			<td align=center>Pelapor</td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td align="right"><?= number_format($grand_total); ?></td>
-			<td></td>
+			<td>COA</td>
+			<td>:</td>
+			<td><?= $coa_display ?></td>
 		</tr>
 		<tr>
-			<td>&nbsp;</td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-		</tr>
-		<?php
-		$pelapor = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE username='" . $data->created_by . "'")->row();
-		$mengetahui = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE username='" . $data->fin_check_by . "'")->row();
-		?>
-		<tr height=120>
-			<td colspan=2 nowrap valign="bottom"><em>SSPM/ADM/17/Rev. 01</em></td>
-			<td align=center nowrap valign="bottom"><?php
-													if (!empty($mengetahui)) {
-														// if ($mengetahui->ttd != '') {
-														// 	echo '<img src="https://sentral.dutastudy.com/hrsentral/assets/profile/' . $mengetahui->ttd . '" height=120><br>';
-														// }
-													}
-													?><u>&nbsp; &nbsp; <?= (($mengetahui) ? $mengetahui->name : ' &nbsp; &nbsp;  &nbsp; &nbsp;  &nbsp; &nbsp; ') ?> &nbsp; &nbsp; </u></td>
-			<td></td>
-			<td align=center nowrap valign="bottom"><?php
-													// if ($pelapor->ttd != '') {
-													// 	echo '<img src="https://sentral.dutastudy.com/hrsentral/assets/profile/' . $pelapor->ttd . '" height=120><br>';
-													// }
-													?><u>&nbsp; &nbsp; <?= (($pelapor) ? $pelapor->name : ' &nbsp; &nbsp;  &nbsp; &nbsp;  &nbsp; &nbsp; ') ?> &nbsp; &nbsp; </u></td>
-			<td></td>
-			<td></td>
+			<td>Tanggal Pengajuan</td>
+			<td>:</td>
+			<td><?= formatDate($data->tgl_doc) ?></td>
 			<td></td>
 			<td></td>
 			<td></td>
@@ -191,53 +175,126 @@
 		</tr>
 	</table>
 
-	<br />
-	<?= $gambar ?>
+	<!-- Detail Pengajuan -->
+	<div class="section-title">Detail Pengajuan</div>
+	<table class="detail-table">
+		<thead>
+			<tr>
+				<th width="30">No</th>
+				<th width="70">Tanggal</th>
+				<th>Keperluan</th>
+				<th>Rute</th>
+				<th width="90">Bensin</th>
+				<th width="80">Tol</th>
+				<th width="80">Parkir</th>
+				<th width="90">Lain-lain</th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php
+			$total_bensin = 0;
+			$total_tol = 0;
+			$total_parkir = 0;
+			$total_lainnya = 0;
+			$no = 1;
+			if (!empty($data_detail)) :
+				foreach ($data_detail as $record) :
+					$total_bensin += $record->bensin;
+					$total_tol += $record->tol;
+					$total_parkir += $record->parkir;
+					$total_lainnya += $record->lainnya;
+			?>
+					<tr>
+						<td style="text-align: center;"><?= $no++ ?></td>
+						<td style="text-align: center;"><?= formatDate($record->tgl_doc) ?></td>
+						<td><?= $record->keperluan ?></td>
+						<td><?= $record->rute ?></td>
+						<td style="text-align: right;"><?= 'Rp ' . number_format($record->bensin, 0, ',', '.') ?></td>
+						<td style="text-align: right;"><?= 'Rp ' . number_format($record->tol, 0, ',', '.') ?></td>
+						<td style="text-align: right;"><?= 'Rp ' . number_format($record->parkir, 0, ',', '.') ?></td>
+						<td style="text-align: right;"><?= 'Rp ' . number_format($record->lainnya, 0, ',', '.') ?></td>
+					</tr>
+			<?php
+				endforeach;
+			endif;
+			?>
+		</tbody>
+		<tfoot>
+			<tr>
+				<td colspan="4" style="text-align: right; font-weight: bold;">Subtotal</td>
+				<td style="text-align: right;"><?= 'Rp ' . number_format($total_bensin, 0, ',', '.') ?></td>
+				<td style="text-align: right;"><?= 'Rp ' . number_format($total_tol, 0, ',', '.') ?></td>
+				<td style="text-align: right;"><?= 'Rp ' . number_format($total_parkir, 0, ',', '.') ?></td>
+				<td style="text-align: right;"><?= 'Rp ' . number_format($total_lainnya, 0, ',', '.') ?></td>
+			</tr>
+			<tr>
+				<td colspan="4" style="text-align: right; font-weight: bold;">Total</td>
+				<td colspan="4" style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_bensin + $total_tol + $total_parkir + $total_lainnya, 0, ',', '.') ?></td>
+			</tr>
+		</tfoot>
+	</table>
 
-	<script>
-		document.addEventListener("DOMContentLoaded", function() {
-			if (typeof pdfjsLib !== 'undefined') {
-				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+	<!-- Informasi Bank + Signature -->
+	<div class="bank-signature-wrapper">
+		<div class="bank-section">
+			<div class="section-title">Informasi Bank</div>
+			<table class="info-table">
+				<tr>
+					<td width="90">Bank</td>
+					<td width="5">:</td>
+					<td><?= !empty($data->bank_id) ? $data->bank_id : '-' ?></td>
+				</tr>
+				<tr>
+					<td>No Rekening</td>
+					<td>:</td>
+					<td><?= !empty($data->accnumber) ? $data->accnumber : '-' ?></td>
+				</tr>
+				<tr>
+					<td>Nama Rekening</td>
+					<td>:</td>
+					<td><?= !empty($data->accname) ? $data->accname : '-' ?></td>
+				</tr>
+			</table>
+		</div>
+		<div class="signature-section">
+			<table class="signature-table" style="margin: 0 auto;">
+				<tr>
+					<td style="width: 150px;"><strong>Finance</strong></td>
+					<td style="width: 150px;"><strong>Management</strong></td>
+				</tr>
+				<tr>
+					<td style="height: 50px;"></td>
+					<td style="height: 50px;"></td>
+				</tr>
+				<tr>
+					<td><u>Fikri</u><br><small><?= !empty($data->approved_on) ? date('d-M-Y', strtotime($data->approved_on)) : '' ?></small></td>
+					<td><u>Imanuel Iman</u><br><small><?= !empty($data->approved_on) ? date('d-M-Y', strtotime($data->approved_on)) : '' ?></small></td>
+				</tr>
+			</table>
+		</div>
+	</div>
 
-				var containers = document.querySelectorAll('.pdf-render-container');
-				containers.forEach(function(container) {
-					var url = container.getAttribute('data-pdf-url');
-					if (!url) return;
-
-					pdfjsLib.getDocument(url).promise.then(function(pdf) {
-						container.innerHTML = ''; // Hapus iframe fallback
-						
-						var renderPage = function(num) {
-							pdf.getPage(num).then(function(page) {
-								var scale = 1.5;
-								var viewport = page.getViewport({ scale: scale });
-								var canvas = document.createElement('canvas');
-								canvas.className = 'pdf-page-canvas';
-								var context = canvas.getContext('2d');
-								canvas.height = viewport.height;
-								canvas.width = viewport.width;
-
-								container.appendChild(canvas);
-
-								var renderContext = {
-									canvasContext: context,
-									viewport: viewport
-								};
-								page.render(renderContext);
-
-								if (num < pdf.numPages) {
-									renderPage(num + 1);
-								}
-							});
-						};
-						renderPage(1);
-					}).catch(function(err) {
-						console.error("PDF.js render error:", err);
-					});
-				});
+	<!-- Attachments -->
+	<?php
+	$attachments = [];
+	if (!empty($data_detail)) {
+		foreach ($data_detail as $record) {
+			if (!empty($record->doc_file)) {
+				$attachments[] = $record->doc_file;
 			}
-		});
-	</script>
+		}
+	}
+	?>
+	<?php if (!empty($attachments)) : ?>
+		<div class="attachment-separator"></div>
+		<?php foreach ($attachments as $doc_file) : ?>
+			<?php if (strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
+				<iframe src="<?= base_url('assets/expense/' . $doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
+			<?php else : ?>
+				<img src="<?= base_url('assets/expense/' . $doc_file) ?>" class="attachment-img">
+			<?php endif; ?>
+		<?php endforeach; ?>
+	<?php endif; ?>
 </body>
 
 </html>

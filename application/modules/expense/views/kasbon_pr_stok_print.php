@@ -51,7 +51,7 @@ function formatDate($date)
         table.detail-table {
             border-collapse: collapse;
             width: 100%;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         table.detail-table th,
@@ -127,45 +127,37 @@ function formatDate($date)
 
 <body>
 
+    <!-- Document Header -->
     <div class="document-header">
-        <h4>Pengajuan Direct Payment</h4>
-        <p><?= $pr_header->no_pr ?? '' ?> - <?= $data_pr->no_non_po ?? '' ?></p>
+        <h4>Pengajuan Kasbon</h4>
+        <p><?= $pr_header->no_pr ?? '' ?> - <?= $kasbon->no_doc ?></p>
     </div>
 
     <!-- Informasi Pengajuan -->
     <div class="section-title">Informasi Pengajuan</div>
     <table class="info-table">
         <tr>
-            <td width="100">Department</td>
+            <td width="100">Request By</td>
             <td width="5">:</td>
-            <td width="150"><?= $dept_name !== '' ? $dept_name : '-' ?></td>
+            <td width="150"><?= !empty($request_by) ? $request_by : '-' ?></td>
             <td width="40"></td>
-            <td width="110">Project Name</td>
+            <td width="110">No PR</td>
             <td width="5">:</td>
-            <td><?= !empty($pr_header->project_name) ? $pr_header->project_name : '-' ?></td>
+            <td><?= !empty($pr_header->no_pr) ? $pr_header->no_pr : '-' ?></td>
         </tr>
         <tr>
-            <td>Request By</td>
+            <td>Tanggal Kasbon</td>
             <td>:</td>
-            <td><?= $request_by !== '' ? $request_by : '-' ?></td>
+            <td><?= formatDate($kasbon->tgl_doc) ?></td>
             <td></td>
-            <td>COA</td>
+            <td>Kategori</td>
             <td>:</td>
-            <td><?= $coa_display !== '' ? $coa_display : '-' ?></td>
+            <td><?= !empty($pr_header->category) ? $pr_header->category : '-' ?></td>
         </tr>
         <tr>
-            <td>Tanggal PR</td>
+            <td>Approval Kasbon</td>
             <td>:</td>
-            <td><?= formatDate($pr_header->created_date ?? '') ?></td>
-            <td></td>
-            <td>Approval PR</td>
-            <td>:</td>
-            <td><?= formatDate($pr_header->app_3_date ?? '') ?></td>
-        </tr>
-        <tr>
-            <td>Tanggal Direct Payment</td>
-            <td>:</td>
-            <td><?= formatDate($data_pr->created_date ?? '') ?></td>
+            <td><?= formatDate($kasbon->approved_on ?? '') ?></td>
             <td></td>
             <td></td>
             <td></td>
@@ -178,14 +170,17 @@ function formatDate($date)
     <table class="detail-table">
         <thead>
             <tr>
-                <th width="30">No</th>
-                <th>Nama Barang / Jasa</th>
-                <th>Spec / Requirement</th>
-                <th width="40">Qty</th>
-                <th width="100">Harga</th>
-                <th width="110">Tanggal Dibutuhkan</th>
-                <th width="100">Total Harga</th>
-                <th>Keterangan</th>
+                <th width="25">#</th>
+                <th>Material Name</th>
+                <th width="65">Min Stock</th>
+                <th width="65">Max Stock</th>
+                <th width="65">Min Order</th>
+                <th width="70">Qty PR (Pack)</th>
+                <th width="60">Unit Pack</th>
+                <th width="45">Qty</th>
+                <th width="75">Unit Measurement</th>
+                <th width="70">Price Ref</th>
+                <th width="80">Total Price</th>
             </tr>
         </thead>
         <tbody>
@@ -193,30 +188,32 @@ function formatDate($date)
             $grand_total = 0;
             $no = 1;
             foreach ($pr_details as $detail) :
-                $qty = isset($detail['qty']) && $detail['qty'] !== null ? $detail['qty'] : 0;
-                $harga = isset($detail['harga']) && $detail['harga'] !== null ? $detail['harga'] : 0;
-                $total_harga = $qty * $harga;
-                $grand_total += $total_harga;
+                $konversi = (!empty($detail->konversi) && $detail->konversi > 0) ? $detail->konversi : 1;
+                $qty_pack = $detail->propose_purchase;
+                $qty = $detail->propose_purchase * $konversi;
+                $price_ref = !empty($detail->price_ref) ? $detail->price_ref : 0;
+                $total_price = $qty * $price_ref;
+                $grand_total += $total_price;
             ?>
                 <tr>
                     <td style="text-align: center;"><?= $no++ ?></td>
-                    <td><?= $detail['nm_barang'] ?></td>
-                    <td><?= $detail['spec'] ?></td>
-                    <td style="text-align: center;"><?= $detail['qty'] ?></td>
-                    <td style="text-align: right;"><?= 'Rp ' . number_format($harga, 0, ',', '.') ?></td>
-                    <td style="text-align: center;"><?= formatDate($detail['tanggal']) ?></td>
-                    <td style="text-align: right;"><?= 'Rp ' . number_format($total_harga, 0, ',', '.') ?></td>
-                    <td><?= !empty($detail['keterangan']) ? $detail['keterangan'] : '' ?></td>
+                    <td><?= $detail->material_name ?></td>
+                    <td style="text-align: right;"><?= number_format($detail->min_stok, 2) ?></td>
+                    <td style="text-align: right;"><?= number_format($detail->max_stok, 2) ?></td>
+                    <td style="text-align: right;"><?= number_format(0, 2) ?></td>
+                    <td style="text-align: right;"><?= number_format($qty_pack, 2) ?></td>
+                    <td style="text-align: center;"><?= strtoupper($detail->unit_packing ?? '') ?></td>
+                    <td style="text-align: right;"><?= number_format($qty, 2) ?></td>
+                    <td style="text-align: center;"><?= strtoupper($detail->unit_measurement ?? '') ?></td>
+                    <td style="text-align: right;"><?= number_format($price_ref, 2) ?></td>
+                    <td style="text-align: right;"><?= number_format($total_price, 2) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4" style="border: none; border-top: 1px solid #333;"></td>
-                <td style="text-align: center; border-top: 1px solid #333; border-left: none; border-bottom: none; border-right: none;">Total</td>
-                <td style="border: none; border-top: 1px solid #333;"></td>
-                <td style="text-align: right; border: 1px solid #333;"><?= 'Rp ' . number_format($grand_total, 0, ',', '.') ?></td>
-                <td style="border: none; border-top: 1px solid #333;"></td>
+                <td colspan="10" style="text-align: right; font-weight: bold; border: none; border-top: 1px solid #333;">Total</td>
+                <td style="text-align: right; font-weight: bold; border: 1px solid #333;"><?= number_format($grand_total, 2) ?></td>
             </tr>
         </tfoot>
     </table>
@@ -229,17 +226,17 @@ function formatDate($date)
                 <tr>
                     <td width="90">Bank</td>
                     <td width="5">:</td>
-                    <td><?= !empty($bank_name) ? $bank_name : '-' ?></td>
+                    <td><?= !empty($kasbon->bank_id) ? $kasbon->bank_id : '-' ?></td>
                 </tr>
                 <tr>
                     <td>No Rekening</td>
                     <td>:</td>
-                    <td><?= !empty($bank_account_no) ? $bank_account_no : '-' ?></td>
+                    <td><?= !empty($kasbon->accnumber) ? $kasbon->accnumber : '-' ?></td>
                 </tr>
                 <tr>
                     <td>Nama Rekening</td>
                     <td>:</td>
-                    <td><?= !empty($bank_account_name) ? $bank_account_name : '-' ?></td>
+                    <td><?= !empty($kasbon->accname) ? $kasbon->accname : '-' ?></td>
                 </tr>
             </table>
         </div>
@@ -254,21 +251,33 @@ function formatDate($date)
                     <td style="height: 50px;"></td>
                 </tr>
                 <tr>
-                    <td><u>Fikri</u><br><small><?= formatDate($pr_header->app_2_date ?? '') ?></small></td>
-                    <td><u>Imanuel Iman</u><br><small><?= formatDate($pr_header->app_3_date ?? '') ?></small></td>
+                    <td><u>Fikri</u><br><small><?= formatDate($kasbon->approved_on ?? '') ?></small></td>
+                    <td><u>Imanuel Iman</u><br><small><?= formatDate($kasbon->approved_on ?? '') ?></small></td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <?php if (!empty($pr_header->document)) : ?>
-        <?php $ext = strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)); ?>
+    <!-- Attachments -->
+    <?php if (!empty($kasbon->doc_file)) : ?>
+        <?php $ext = strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)); ?>
         <?php if ($ext == 'pdf') : ?>
             <div class="attachment-separator"></div>
-            <iframe src="<?= base_url('assets/pr/' . $pr_header->document) ?>" width="100%" height="600px" style="border: none;"></iframe>
+            <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
         <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
             <div class="attachment-separator"></div>
-            <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img">
+            <img src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" class="attachment-img">
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if (!empty($kasbon->doc_file_2)) : ?>
+        <?php $ext2 = strtolower(pathinfo($kasbon->doc_file_2, PATHINFO_EXTENSION)); ?>
+        <?php if ($ext2 == 'pdf') : ?>
+            <div class="attachment-separator"></div>
+            <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" width="100%" height="600px" style="border: none;"></iframe>
+        <?php elseif (in_array($ext2, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+            <div class="attachment-separator"></div>
+            <img src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" class="attachment-img">
         <?php endif; ?>
     <?php endif; ?>
 

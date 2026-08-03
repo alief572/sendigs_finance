@@ -127,9 +127,10 @@ function formatDate($date)
 
 <body>
 
+    <!-- Document Header -->
     <div class="document-header">
-        <h4>Pengajuan Direct Payment</h4>
-        <p><?= $pr_header->no_pr ?? '' ?> - <?= $data_pr->no_non_po ?? '' ?></p>
+        <h4>Pengajuan Kasbon</h4>
+        <p><?= $pr_header->no_pr ?? '' ?> - <?= $kasbon->no_doc ?></p>
     </div>
 
     <!-- Informasi Pengajuan -->
@@ -138,20 +139,20 @@ function formatDate($date)
         <tr>
             <td width="100">Department</td>
             <td width="5">:</td>
-            <td width="150"><?= $dept_name !== '' ? $dept_name : '-' ?></td>
+            <td width="150"><?= $dept_name ?></td>
             <td width="40"></td>
             <td width="110">Project Name</td>
             <td width="5">:</td>
-            <td><?= !empty($pr_header->project_name) ? $pr_header->project_name : '-' ?></td>
+            <td><?= $pr_header->project_name ?? '-' ?></td>
         </tr>
         <tr>
             <td>Request By</td>
             <td>:</td>
-            <td><?= $request_by !== '' ? $request_by : '-' ?></td>
+            <td><?= $request_by ?? '' ?></td>
             <td></td>
             <td>COA</td>
             <td>:</td>
-            <td><?= $coa_display !== '' ? $coa_display : '-' ?></td>
+            <td><?= $kasbon->no_coa . ' ' . $kasbon->nm_coa ?></td>
         </tr>
         <tr>
             <td>Tanggal PR</td>
@@ -163,13 +164,13 @@ function formatDate($date)
             <td><?= formatDate($pr_header->app_3_date ?? '') ?></td>
         </tr>
         <tr>
-            <td>Tanggal Direct Payment</td>
+            <td>Tanggal Kasbon</td>
             <td>:</td>
-            <td><?= formatDate($data_pr->created_date ?? '') ?></td>
+            <td><?= formatDate($kasbon->tgl_doc) ?></td>
             <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td>Approval Kasbon</td>
+            <td>:</td>
+            <td><?= formatDate($kasbon->approved_on) ?></td>
         </tr>
     </table>
 
@@ -193,20 +194,18 @@ function formatDate($date)
             $grand_total = 0;
             $no = 1;
             foreach ($pr_details as $detail) :
-                $qty = isset($detail['qty']) && $detail['qty'] !== null ? $detail['qty'] : 0;
-                $harga = isset($detail['harga']) && $detail['harga'] !== null ? $detail['harga'] : 0;
-                $total_harga = $qty * $harga;
+                $total_harga = $detail->qty * $detail->harga;
                 $grand_total += $total_harga;
             ?>
                 <tr>
                     <td style="text-align: center;"><?= $no++ ?></td>
-                    <td><?= $detail['nm_barang'] ?></td>
-                    <td><?= $detail['spec'] ?></td>
-                    <td style="text-align: center;"><?= $detail['qty'] ?></td>
-                    <td style="text-align: right;"><?= 'Rp ' . number_format($harga, 0, ',', '.') ?></td>
-                    <td style="text-align: center;"><?= formatDate($detail['tanggal']) ?></td>
-                    <td style="text-align: right;"><?= 'Rp ' . number_format($total_harga, 0, ',', '.') ?></td>
-                    <td><?= !empty($detail['keterangan']) ? $detail['keterangan'] : '' ?></td>
+                    <td><?= $detail->nm_barang ?></td>
+                    <td><?= $detail->spec ?></td>
+                    <td style="text-align: center;"><?= $detail->qty ?></td>
+                    <td style="text-align: right;">Rp &nbsp;&nbsp; <?= number_format($detail->harga, 0, ',', '.') ?></td>
+                    <td style="text-align: center;"><?= formatDate($detail->tanggal) ?></td>
+                    <td style="text-align: right;">Rp &nbsp;&nbsp; <?= number_format($total_harga, 0, ',', '.') ?></td>
+                    <td><?= $detail->keterangan ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
@@ -215,13 +214,13 @@ function formatDate($date)
                 <td colspan="4" style="border: none; border-top: 1px solid #333;"></td>
                 <td style="text-align: center; border-top: 1px solid #333; border-left: none; border-bottom: none; border-right: none;">Total</td>
                 <td style="border: none; border-top: 1px solid #333;"></td>
-                <td style="text-align: right; border: 1px solid #333;"><?= 'Rp ' . number_format($grand_total, 0, ',', '.') ?></td>
+                <td style="text-align: right; border: 1px solid #333;">Rp &nbsp;&nbsp; <?= number_format($grand_total, 0, ',', '.') ?></td>
                 <td style="border: none; border-top: 1px solid #333;"></td>
             </tr>
         </tfoot>
     </table>
 
-    <!-- Informasi Bank + Signature -->
+    <!-- Informasi Bank + Signature side by side -->
     <div class="bank-signature-wrapper">
         <div class="bank-section">
             <div class="section-title">Informasi Bank</div>
@@ -229,17 +228,17 @@ function formatDate($date)
                 <tr>
                     <td width="90">Bank</td>
                     <td width="5">:</td>
-                    <td><?= !empty($bank_name) ? $bank_name : '-' ?></td>
+                    <td><?= !empty($kasbon->bank_id) ? $kasbon->bank_id : '-' ?></td>
                 </tr>
                 <tr>
                     <td>No Rekening</td>
                     <td>:</td>
-                    <td><?= !empty($bank_account_no) ? $bank_account_no : '-' ?></td>
+                    <td><?= !empty($kasbon->accnumber) ? $kasbon->accnumber : '-' ?></td>
                 </tr>
                 <tr>
                     <td>Nama Rekening</td>
                     <td>:</td>
-                    <td><?= !empty($bank_account_name) ? $bank_account_name : '-' ?></td>
+                    <td><?= !empty($kasbon->accname) ? $kasbon->accname : '-' ?></td>
                 </tr>
             </table>
         </div>
@@ -254,21 +253,39 @@ function formatDate($date)
                     <td style="height: 50px;"></td>
                 </tr>
                 <tr>
-                    <td><u>Fikri</u><br><small><?= formatDate($pr_header->app_2_date ?? '') ?></small></td>
-                    <td><u>Imanuel Iman</u><br><small><?= formatDate($pr_header->app_3_date ?? '') ?></small></td>
+                    <td><u>Fikri</u><br><small>tgl approval terakhir</small></td>
+                    <td><u>Imanuel Iman</u><br><small>tgl approval terakhir</small></td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <?php if (!empty($pr_header->document)) : ?>
-        <?php $ext = strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)); ?>
-        <?php if ($ext == 'pdf') : ?>
-            <div class="attachment-separator"></div>
-            <iframe src="<?= base_url('assets/pr/' . $pr_header->document) ?>" width="100%" height="600px" style="border: none;"></iframe>
-        <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
-            <div class="attachment-separator"></div>
-            <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img">
+    <!-- Attachments -->
+    <?php if (!empty($pr_header->document) || !empty($kasbon->doc_file) || !empty($kasbon->doc_file_2)) : ?>
+        <div class="attachment-separator"></div>
+
+        <?php if (!empty($pr_header->document)) : ?>
+            <?php if (strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)) == 'pdf') : ?>
+                <iframe src="<?= base_url('assets/pr/' . $pr_header->document) ?>" width="100%" height="600px" style="border: none;"></iframe>
+            <?php else : ?>
+                <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img">
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($kasbon->doc_file)) : ?>
+            <?php if (strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
+                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
+            <?php else : ?>
+                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" class="attachment-img">
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($kasbon->doc_file_2)) : ?>
+            <?php if (strtolower(pathinfo($kasbon->doc_file_2, PATHINFO_EXTENSION)) == 'pdf') : ?>
+                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" width="100%" height="600px" style="border: none;"></iframe>
+            <?php else : ?>
+                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" class="attachment-img">
+            <?php endif; ?>
         <?php endif; ?>
     <?php endif; ?>
 
