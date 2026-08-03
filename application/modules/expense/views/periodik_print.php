@@ -252,6 +252,9 @@ function formatDate($date)
 		<?php endforeach; ?>
 	<?php endif; ?>
 
+	<script>
+		window.print();
+	</script>
 </body>
 
 </html>

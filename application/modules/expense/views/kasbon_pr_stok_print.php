@@ -281,6 +281,9 @@ function formatDate($date)
         <?php endif; ?>
     <?php endif; ?>
 
+    <script>
+        window.print();
+    </script>
 </body>
 
 </html>
