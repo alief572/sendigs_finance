@@ -261,16 +261,8 @@ function formatDate($date)
     </div>
 
     <!-- Attachments -->
-    <?php if (!empty($pr_header->document) || !empty($kasbon->doc_file) || !empty($kasbon->doc_file_2)) : ?>
+    <?php if (!empty($kasbon->doc_file) || !empty($kasbon->doc_file_2)) : ?>
         <div class="attachment-separator"></div>
-
-        <?php if (!empty($pr_header->document)) : ?>
-            <?php if (strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)) == 'pdf') : ?>
-                <iframe src="<?= base_url('assets/pr/' . $pr_header->document) ?>" width="100%" height="600px" style="border: none;"></iframe>
-            <?php else : ?>
-                <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img">
-            <?php endif; ?>
-        <?php endif; ?>
 
         <?php if (!empty($kasbon->doc_file)) : ?>
             <?php if (strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
