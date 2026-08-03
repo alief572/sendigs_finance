@@ -116,11 +116,6 @@ function formatDate($date)
             body {
                 padding: 10px;
             }
-
-            .attachment-separator {
-                page-break-before: always;
-                border-top: 3px solid #4CAF50;
-            }
         }
     </style>
 </head>
