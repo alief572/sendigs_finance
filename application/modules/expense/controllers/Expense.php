@@ -3513,7 +3513,11 @@ class Expense extends Admin_Controller
 		// View & Print
 		if (has_permission($this->viewPermissionKasbon)) {
 			if (!empty($item['approved_by'])) {
-				$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url('expense/kasbon_print/' . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
+				if (!empty($item['no_kasbon_consultant'])) {
+					$action .= ' <a class="btn btn-default btn-sm print" href="https://sendigs.com/consultant_new/approval_request_payment/print_kasbon/' . str_replace('/', '|', $item['no_kasbon_consultant']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
+				} else {
+					$action .= ' <a class="btn btn-default btn-sm print" href="' . base_url('expense/kasbon_print/' . $item['id']) . '" target="_blank" title="Print"><i class="fa fa-print"></i></a>';
+				}
 			}
 			$action .= ' <a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i></a>';
 		}
