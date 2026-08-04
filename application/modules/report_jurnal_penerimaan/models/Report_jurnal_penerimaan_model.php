@@ -282,7 +282,9 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $draw = $post['draw'];
         $length = $post['length'];
         $start = $post['start'];
-        $search = $post['search'];
+        $search = isset($post['search']['value']) ? $post['search']['value'] : '';
+
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
 
         // Query untuk menghitung count_all (total data tanpa filter pencarian)
         $db_clone = clone $this->db;
@@ -291,8 +293,13 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
         $db_clone->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left');
+        $db_clone->join(DBHRIS . '.divisions g', 'g.id = c.id_divisi', 'left');
+        $db_clone->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left');
         $db_clone->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $db_clone->where('a.sts', '1');
         if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
@@ -302,13 +309,20 @@ class Report_jurnal_penerimaan_model extends BF_Model
             $db_clone->where('a.tgl_jurnal <=', $post['tgl_to']);
         }
         if (isset($post['client']) && !empty($post['client'])) {
-            $db_clone->where('c.id_customer', $post['client']);
+            $db_clone->where('b.id_customer', $post['client']);
         }
         if (isset($post['company']) && !empty($post['company'])) {
+            $db_clone->group_start();
             $db_clone->where('d.id', $post['company']);
+            $db_clone->or_where('f.id', $post['company']);
+            $db_clone->or_where('j.id', $post['company']);
+            $db_clone->group_end();
         }
         if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $db_clone->where('e.id', $post['divisi']);
+            $db_clone->group_start();
+            $db_clone->where('g.id', $post['divisi']);
+            $db_clone->or_where('h.id', $post['divisi']);
+            $db_clone->group_end();
         }
         $db_clone->group_start();
         $db_clone->where('a.debit >', 0);
@@ -325,8 +339,13 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd2', 'ppd2.id_header = a.no_transaksi', 'left', FALSE);
         $db_clone->join('tr_invoicing b', 'b.id = ppd2.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $db_clone->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left');
+        $db_clone->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left');
+        $db_clone->join(DBHRIS . '.divisions g', 'g.id = c.id_divisi', 'left');
+        $db_clone->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left');
         $db_clone->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $db_clone->where('a.sts', '1');
         if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
@@ -336,13 +355,20 @@ class Report_jurnal_penerimaan_model extends BF_Model
             $db_clone->where('a.tgl_jurnal <=', $post['tgl_to']);
         }
         if (isset($post['client']) && !empty($post['client'])) {
-            $db_clone->where('c.id_customer', $post['client']);
+            $db_clone->where('b.id_customer', $post['client']);
         }
         if (isset($post['company']) && !empty($post['company'])) {
+            $db_clone->group_start();
             $db_clone->where('d.id', $post['company']);
+            $db_clone->or_where('f.id', $post['company']);
+            $db_clone->or_where('j.id', $post['company']);
+            $db_clone->group_end();
         }
         if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $db_clone->where('e.id', $post['divisi']);
+            $db_clone->group_start();
+            $db_clone->where('g.id', $post['divisi']);
+            $db_clone->or_where('h.id', $post['divisi']);
+            $db_clone->group_end();
         }
         $db_clone->group_start();
         $db_clone->where('a.debit >', 0);
@@ -350,19 +376,23 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone->group_end();
 
         // Jika ada pencarian, tambahkan kondisi pencarian
-        if (!empty($search['value'])) {
+        if (!empty($search)) {
             $db_clone->group_start();
-            $db_clone->like('a.tgl_jurnal', $search['value'], 'both');
-            $db_clone->or_like('b.nm_customer', $search['value'], 'both');
-            $db_clone->or_like('b.nm_project', $search['value'], 'both');
-            $db_clone->or_like('b.no_invoice', $search['value'], 'both');
-            $db_clone->or_like('d.nm_company', $search['value'], 'both');
-            $db_clone->or_like('e.name', $search['value'], 'both');
-            $db_clone->or_like('a.coa', $search['value'], 'both');
-            $db_clone->or_like('a.nm_coa', $search['value'], 'both');
-            $db_clone->or_like('b.id_spk_penawaran', $search['value'], 'both');
-            $db_clone->or_like('a.debit', $search['value'], 'both');
-            $db_clone->or_like('a.kredit', $search['value'], 'both');
+            $db_clone->like('a.tgl_jurnal', $search, 'both');
+            $db_clone->or_like('b.nm_customer', $search, 'both');
+            $db_clone->or_like('b.nm_project', $search, 'both');
+            $db_clone->or_like('b.no_invoice', $search, 'both');
+            $db_clone->or_like('d.nm_company', $search, 'both');
+            $db_clone->or_like('f.nm_company', $search, 'both');
+            $db_clone->or_like('j.nm_company', $search, 'both');
+            $db_clone->or_like('g.name', $search, 'both');
+            $db_clone->or_like('h.name', $search, 'both');
+            $db_clone->or_like('a.coa', $search, 'both');
+            $db_clone->or_like('a.nm_coa', $search, 'both');
+            $db_clone->or_like('b.id_spk_penawaran', $search, 'both');
+            $db_clone->or_like('e.id_penawaran', $search, 'both');
+            $db_clone->or_like('a.debit', $search, 'both');
+            $db_clone->or_like('a.kredit', $search, 'both');
             $db_clone->group_end();
         }
 
@@ -370,13 +400,18 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $count_filter = $query->count_all_results('', false);
 
         // Query untuk mendapatkan data yang akan ditampilkan di tabel
-        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi, SUM(a.debit) as total_debit');
+        $this->db->select($select_fields, FALSE);
         $this->db->from('tr_jurnal a');
         $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd3', 'ppd3.id_header = a.no_transaksi', 'left', FALSE);
         $this->db->join('tr_invoicing b', 'b.id = ppd3.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left');
+        $this->db->join(DBHRIS . '.divisions g', 'g.id = c.id_divisi', 'left');
+        $this->db->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left');
         $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $this->db->where('a.sts', '1');
         if (isset($post['tgl_from']) && !empty($post['tgl_from'])) {
@@ -386,13 +421,20 @@ class Report_jurnal_penerimaan_model extends BF_Model
             $this->db->where('a.tgl_jurnal <=', $post['tgl_to']);
         }
         if (isset($post['client']) && !empty($post['client'])) {
-            $this->db->where('c.id_customer', $post['client']);
+            $this->db->where('b.id_customer', $post['client']);
         }
         if (isset($post['company']) && !empty($post['company'])) {
+            $this->db->group_start();
             $this->db->where('d.id', $post['company']);
+            $this->db->or_where('f.id', $post['company']);
+            $this->db->or_where('j.id', $post['company']);
+            $this->db->group_end();
         }
         if (isset($post['divisi']) && !empty($post['divisi'])) {
-            $this->db->where('e.id', $post['divisi']);
+            $this->db->group_start();
+            $this->db->where('g.id', $post['divisi']);
+            $this->db->or_where('h.id', $post['divisi']);
+            $this->db->group_end();
         }
         $this->db->group_start();
         $this->db->where('a.debit >', 0);
@@ -400,19 +442,23 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $this->db->group_end();
 
         // Jika ada pencarian, tambahkan kondisi pencarian
-        if (!empty($search['value'])) {
+        if (!empty($search)) {
             $this->db->group_start();
-            $this->db->like('a.tgl_jurnal', $search['value'], 'both');
-            $this->db->or_like('b.nm_customer', $search['value'], 'both');
-            $this->db->or_like('b.nm_project', $search['value'], 'both');
-            $this->db->or_like('b.no_invoice', $search['value'], 'both');
-            $this->db->or_like('d.nm_company', $search['value'], 'both');
-            $this->db->or_like('e.name', $search['value'], 'both');
-            $this->db->or_like('a.coa', $search['value'], 'both');
-            $this->db->or_like('a.nm_coa', $search['value'], 'both');
-            $this->db->or_like('b.id_spk_penawaran', $search['value'], 'both');
-            $this->db->or_like('a.debit', $search['value'], 'both');
-            $this->db->or_like('a.kredit', $search['value'], 'both');
+            $this->db->like('a.tgl_jurnal', $search, 'both');
+            $this->db->or_like('b.nm_customer', $search, 'both');
+            $this->db->or_like('b.nm_project', $search, 'both');
+            $this->db->or_like('b.no_invoice', $search, 'both');
+            $this->db->or_like('d.nm_company', $search, 'both');
+            $this->db->or_like('f.nm_company', $search, 'both');
+            $this->db->or_like('j.nm_company', $search, 'both');
+            $this->db->or_like('g.name', $search, 'both');
+            $this->db->or_like('h.name', $search, 'both');
+            $this->db->or_like('a.coa', $search, 'both');
+            $this->db->or_like('a.nm_coa', $search, 'both');
+            $this->db->or_like('b.id_spk_penawaran', $search, 'both');
+            $this->db->or_like('e.id_penawaran', $search, 'both');
+            $this->db->or_like('a.debit', $search, 'both');
+            $this->db->or_like('a.kredit', $search, 'both');
             $this->db->group_end();
         }
 
@@ -433,12 +479,32 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
             $action = $btn_view_jurnal;
 
+            $keterangan = $row->keterangan_penawaran;
+            if (empty($keterangan)) {
+                $get_keterangan_spk = $this->db->select('a.nm_project, b.nm_paket as keterangan')
+                    ->from(DBCNL . '.kons_tr_spk_penawaran a')
+                    ->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left')
+                    ->where('a.id_spk_penawaran', $row->id_spk_penawaran)
+                    ->get()
+                    ->row();
+
+                $keterangan = isset($get_keterangan_spk->nm_project) ? $get_keterangan_spk->nm_project : '';
+            }
+
+            if (empty($keterangan)) {
+                $keterangan = $row->nm_project;
+            }
+
+            $keterangan_tagihan = (!empty($row->non_kons) && $row->non_kons == '1')
+                ? ((!empty($row->keterangan_penawaran) ? $row->keterangan_penawaran : $row->nm_project) . ' - <span style="font-weight:bold;">' . $row->id_penawaran_non_kons . '</span>')
+                : ($keterangan . ' - <span style="font-weight:bold;">' . $row->id_spk_penawaran . '</span>');
+
             $hasil[] = [
                 'no' => $no,
                 'tgl' => date('d F Y', strtotime($row->tgl_jurnal)),
                 'klien' => $row->nm_customer,
                 'no_invoice' => $row->no_invoice,
-                'keterangan_tagihan' => $row->nm_project . ' - <span style="font-weight: bold;">' . $row->id_spk_penawaran . '</span>',
+                'keterangan_tagihan' => $keterangan_tagihan,
                 'company' => $row->nm_company,
                 'nm_divisi' => $row->nm_divisi,
                 'coa' => $row->coa,
@@ -462,16 +528,20 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
     public function get_jurnal_invoicing($tgl_from = null, $tgl_to = null, $client = null, $company = null, $divisi = null)
     {
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
 
-
-
-        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, SUM(a.debit) as total_debit, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, d.nm_company, e.name as nm_divisi');
+        $this->db->select($select_fields, FALSE);
         $this->db->from('tr_jurnal a');
         $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd4', 'ppd4.id_header = a.no_transaksi', 'left', FALSE);
         $this->db->join('tr_invoicing b', 'b.id = ppd4.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi e', 'e.id_penawaran = b.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company f', 'f.id = e.id_company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company j', 'j.id = i.id_company', 'left');
+        $this->db->join(DBHRIS . '.divisions g', 'g.id = c.id_divisi', 'left');
+        $this->db->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left');
         $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
         $this->db->where('a.sts', '1');
         if (isset($tgl_from) && !empty($tgl_from)) {
@@ -481,13 +551,20 @@ class Report_jurnal_penerimaan_model extends BF_Model
             $this->db->where('a.tgl_jurnal <=', $tgl_to);
         }
         if (isset($client) && !empty($client)) {
-            $this->db->where('c.id_customer', $client);
+            $this->db->where('b.id_customer', $client);
         }
         if (isset($company) && !empty($company)) {
+            $this->db->group_start();
             $this->db->where('d.id', $company);
+            $this->db->or_where('f.id', $company);
+            $this->db->or_where('j.id', $company);
+            $this->db->group_end();
         }
         if (isset($divisi) && !empty($divisi)) {
-            $this->db->where('e.id', $divisi);
+            $this->db->group_start();
+            $this->db->where('g.id', $divisi);
+            $this->db->or_where('h.id', $divisi);
+            $this->db->group_end();
         }
         $this->db->group_start();
         $this->db->where('a.debit >', 0);
@@ -497,9 +574,6 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $this->db->group_by('a.no_transaksi');
 
         $get_data = $this->db->get()->result();
-
-        // print_r($this->db->last_query());
-        // exit;
 
         return $get_data;
     }

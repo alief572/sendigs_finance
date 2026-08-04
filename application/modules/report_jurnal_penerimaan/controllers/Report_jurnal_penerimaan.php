@@ -35,25 +35,22 @@ class Report_jurnal_penerimaan extends Admin_Controller
     {
         $this->consultant->select('a.id_customer, a.nm_customer');
         $this->consultant->from('customer a');
-        $this->consultant->where('a.deleted', 'N');
+        $this->consultant->group_start();
+        $this->consultant->where('a.deleted IS NULL', null, false);
+        $this->consultant->or_where('a.deleted', '');
+        $this->consultant->or_where('a.deleted', 'N');
+        $this->consultant->group_end();
+        $this->consultant->order_by('a.nm_customer', 'ASC');
         $get_customer = $this->consultant->get()->result();
 
-        $this->db->select('a.id_company, a.nm_company');
-        $this->db->from('tr_jurnal a');
-        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-        $this->db->where('a.sts', '1');
-        $this->db->group_by('a.id_company');
-        $get_company = $this->db->get()->result();
-
-        // $this->db->select('a.id_divisi, a.nm_divisi');
-        // $this->db->from('tr_jurnal a');
-        // $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-        // $this->db->where('a.sts', '1');
-        // $this->db->group_by('a.id_divisi');
-        // $get_divisi = $this->db->get()->result();
+        $this->consultant->select('a.id as id_company, a.nm_company');
+        $this->consultant->from('kons_tr_company a');
+        $this->consultant->order_by('a.nm_company', 'ASC');
+        $get_company = $this->consultant->get()->result();
 
         $this->hris->select('a.id as id_divisi, a.name as nm_divisi');
         $this->hris->from('divisions a');
+        $this->hris->order_by('a.name', 'ASC');
         $get_divisi = $this->hris->get()->result();
 
         $data = [
