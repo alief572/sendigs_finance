@@ -201,21 +201,19 @@ $grand_total = (int) $pelaporan->header->grand_total;
             margin-bottom: 10px;
         }
 
-        .evidence-item embed {
+        .evidence-item iframe {
             display: block;
             width: 100%;
-            height: 600px;
             border: 1px solid #ddd;
             margin-bottom: 10px;
+            overflow: hidden;
         }
 
         @media print {
-            .evidence-item embed {
-                display: none;
-            }
-
-            .evidence-item .pdf-print-notice {
-                display: block !important;
+            .evidence-item iframe {
+                height: auto !important;
+                min-height: 800px;
+                page-break-inside: avoid;
             }
         }
 
@@ -348,11 +346,7 @@ $grand_total = (int) $pelaporan->header->grand_total;
                             <?php if ($is_image): ?>
                                 <img src="<?= $file_url ?>" alt="<?= htmlspecialchars($file->original_name) ?>">
                             <?php elseif ($is_pdf): ?>
-                                <embed src="<?= $file_url ?>" type="application/pdf">
-                                <p class="pdf-print-notice">
-                                    File PDF: <?= htmlspecialchars($file->original_name) ?><br>
-                                    <a href="<?= $file_url ?>" target="_blank"><?= $file_url ?></a>
-                                </p>
+                                <iframe src="<?= $file_url ?>" style="width: 100%; height: 900px; overflow: hidden;" scrolling="no" frameborder="0"></iframe>
                             <?php else: ?>
                                 <a href="<?= $file_url ?>" target="_blank" style="font-size: 10px; color: #337ab7; text-decoration: underline;">
                                     📎 <?= htmlspecialchars($file->original_name) ?> (Download)
