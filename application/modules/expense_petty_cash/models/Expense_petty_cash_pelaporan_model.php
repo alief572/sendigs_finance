@@ -192,6 +192,18 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         $query_pencatatan = $this->db->get();
         $pencatatan_list = $query_pencatatan->result();
 
+        // Get evidence files for each pencatatan
+        foreach ($pencatatan_list as &$pencatatan) {
+            $this->db->select('e.id, e.original_name, e.encrypted_name, e.file_type');
+            $this->db->from('tr_expense_petty_cash_evidence e');
+            $this->db->join('tr_expense_petty_cash_detail d', 'd.id = e.detail_id', 'inner');
+            $this->db->where('d.pencatatan_id', $pencatatan->id);
+            $this->db->order_by('e.uploaded_on', 'asc');
+            $evidence_query = $this->db->get();
+            $pencatatan->evidence_files = $evidence_query->result();
+        }
+        unset($pencatatan); // break reference
+
         // Compose result
         $result = new stdClass();
         $result->header          = $header;
@@ -510,7 +522,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         $this->db->join('tr_expense_petty_cash pc', 'pc.id = pd.pencatatan_id', 'inner');
         $this->db->where('pd.pelaporan_id', $pelaporan->id);
         $keterangan_query = $this->db->get();
-        
+
         $keterangan_list = [];
         foreach ($keterangan_query->result() as $row) {
             if (!empty(trim($row->keterangan))) {
