@@ -195,27 +195,34 @@ $grand_total = (int) $pelaporan->header->grand_total;
         .evidence-item img {
             display: block;
             max-width: 100%;
-            max-height: 500px;
             border: 1px solid #ddd;
             padding: 5px;
             margin-bottom: 10px;
         }
 
-        .evidence-item embed {
+        .evidence-item iframe {
             display: block;
             width: 100%;
-            height: 600px;
             border: 1px solid #ddd;
             margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .pdf-pages-container {
+            width: 100%;
+        }
+
+        .pdf-pages-container canvas {
+            display: block;
+            max-width: 100%;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
         }
 
         @media print {
-            .evidence-item embed {
-                display: none;
-            }
-
-            .evidence-item .pdf-print-notice {
-                display: block !important;
+            .pdf-pages-container canvas {
+                page-break-inside: avoid;
+                max-width: 100%;
             }
         }
 
@@ -348,11 +355,18 @@ $grand_total = (int) $pelaporan->header->grand_total;
                             <?php if ($is_image): ?>
                                 <img src="<?= $file_url ?>" alt="<?= htmlspecialchars($file->original_name) ?>">
                             <?php elseif ($is_pdf): ?>
-                                <embed src="<?= $file_url ?>" type="application/pdf">
-                                <p class="pdf-print-notice">
-                                    File PDF: <?= htmlspecialchars($file->original_name) ?><br>
-                                    <a href="<?= $file_url ?>" target="_blank"><?= $file_url ?></a>
-                                </p>
+                                <div class="pdf-pages-container" id="pdf-container-<?= $file->id ?>"></div>
+                                <script>
+                                    (function() {
+                                        var pdfUrl = '<?= $file_url ?>';
+                                        var containerId = 'pdf-container-<?= $file->id ?>';
+                                        window._pdfRenderQueue = window._pdfRenderQueue || [];
+                                        window._pdfRenderQueue.push({
+                                            url: pdfUrl,
+                                            containerId: containerId
+                                        });
+                                    })();
+                                </script>
                             <?php else: ?>
                                 <a href="<?= $file_url ?>" target="_blank" style="font-size: 10px; color: #337ab7; text-decoration: underline;">
                                     📎 <?= htmlspecialchars($file->original_name) ?> (Download)
@@ -365,10 +379,85 @@ $grand_total = (int) $pelaporan->header->grand_total;
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Auto-trigger print dialog -->
+    <!-- PDF.js Library for rendering PDF as images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
+        // Render all queued PDFs then trigger print
         window.onload = function() {
-            window.print();
+            var queue = window._pdfRenderQueue || [];
+
+            if (queue.length === 0) {
+                window.print();
+                return;
+            }
+
+            var completed = 0;
+
+            function checkComplete() {
+                completed++;
+                if (completed >= queue.length) {
+                    // Small delay to let canvases render
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                }
+            }
+
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+            queue.forEach(function(item) {
+                var container = document.getElementById(item.containerId);
+
+                pdfjsLib.getDocument(item.url).promise.then(function(pdf) {
+                    var totalPages = pdf.numPages;
+                    var pagesRendered = 0;
+
+                    for (var pageNum = 1; pageNum <= totalPages; pageNum++) {
+                        (function(num) {
+                            pdf.getPage(num).then(function(page) {
+                                // Scale to fit ~550px width (A4 print area)
+                                var viewport = page.getViewport({
+                                    scale: 1
+                                });
+                                var scale = 550 / viewport.width;
+                                var scaledViewport = page.getViewport({
+                                    scale: scale
+                                });
+
+                                var canvas = document.createElement('canvas');
+                                canvas.width = scaledViewport.width;
+                                canvas.height = scaledViewport.height;
+                                canvas.setAttribute('data-page', num);
+                                container.appendChild(canvas);
+
+                                var context = canvas.getContext('2d');
+                                page.render({
+                                    canvasContext: context,
+                                    viewport: scaledViewport
+                                }).promise.then(function() {
+                                    pagesRendered++;
+                                    if (pagesRendered >= totalPages) {
+                                        // Sort canvases by page number
+                                        var canvases = container.querySelectorAll('canvas');
+                                        var sorted = Array.prototype.slice.call(canvases).sort(function(a, b) {
+                                            return parseInt(a.getAttribute('data-page')) - parseInt(b.getAttribute('data-page'));
+                                        });
+                                        container.innerHTML = '';
+                                        sorted.forEach(function(c) {
+                                            container.appendChild(c);
+                                        });
+                                        checkComplete();
+                                    }
+                                });
+                            });
+                        })(pageNum);
+                    }
+                }).catch(function(err) {
+                    console.error('Error loading PDF:', err);
+                    container.innerHTML = '<p style="color: red; font-size: 10px;">Gagal memuat PDF: ' + item.url + '</p>';
+                    checkComplete();
+                });
+            });
         };
     </script>
 </body>
