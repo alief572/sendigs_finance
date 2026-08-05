@@ -90,19 +90,20 @@ $dept = $datauser->department_id;
 						<thead>
 							<tr>
 								<th width="5">#</th>
-								<th>Tanggal</th>
-								<th>COA</th>
-								<th width="100">Keperluan</th>
-								<th width="100">Rute</th>
-								<th>Bensin</th>
-								<th>T o l</th>
-								<th>Parkir</th>
-								<th>Lain Lain</th>
-								<th>KM Awal</th>
-								<th>KM Akhir</th>
-								<th>Total KM</th>
-								<th width="50">Bukti</th>
-								<th width="30" class="stsview">Aksi</th>
+								<th style="min-width: 100px;">Tanggal</th>
+								<th style="min-width: 120px;">No. Polisi</th>
+								<th style="min-width: 250px;">COA</th>
+								<th style="min-width: 150px;">Keperluan</th>
+								<th style="min-width: 150px;">Rute</th>
+								<th style="min-width: 120px;">Bensin</th>
+								<th style="min-width: 120px;">T o l</th>
+								<th style="min-width: 120px;">Parkir</th>
+								<th style="min-width: 120px;">Lain Lain</th>
+								<th style="min-width: 100px;">KM Awal</th>
+								<th style="min-width: 100px;">KM Akhir</th>
+								<th style="min-width: 100px;">Total KM</th>
+								<th style="min-width: 60px;">Bukti</th>
+								<th style="min-width: 50px;" class="stsview">Aksi</th>
 							</tr>
 						</thead>
 						<tbody id="detail_body">
@@ -123,16 +124,30 @@ $dept = $datauser->department_id;
 											<input type="hidden" name="id_transport[]" id="id_transport_<?= $idd ?>" value="<?= $record->id; ?>"><?= $record->no_doc; ?>
 										</td>
 										<td><?= $record->tgl_doc; ?></td>
-										<td style="font-weight: bold;"><?= $record->no_coa . ' - ' . $record->nm_coa ?></td>
-										<td><?= $record->keperluan; ?></td>
-										<td><?= $record->rute; ?></td>
+										<td><input type='text' class='form-control input-sm detail-edit' name='nopol[]' value='<?= $record->nopol; ?>' id='nopol_<?= $idd ?>' /></td>
+										<td>
+											<select class="form-control select2 input-sm" name="coa[]" id="coa_<?= $idd ?>" onchange="set_nm_coa(<?= $idd ?>)" style="width:100%; min-width:200px;">
+												<option value="" data-name="">- Pilih COA -</option>
+												<?php
+												if (!empty($list_coa)) {
+													foreach ($list_coa as $item_coa) {
+														$selected = ($record->no_coa == $item_coa->no_coa) ? 'selected' : '';
+														echo '<option value="' . $item_coa->no_coa . '" data-name="' . $item_coa->nm_coa . '" ' . $selected . '>' . $item_coa->no_coa . ' - ' . $item_coa->nm_coa . '</option>';
+													}
+												}
+												?>
+											</select>
+											<input type="hidden" name="nm_coa[]" id="nm_coa_<?= $idd ?>" value="<?= $record->nm_coa ?>">
+										</td>
+										<td><input type='text' class='form-control input-sm detail-edit' name='keperluan[]' value='<?= $record->keperluan; ?>' id='keperluan_<?= $idd ?>' /></td>
+										<td><input type='text' class='form-control input-sm detail-edit' name='rute[]' value='<?= $record->rute; ?>' id='rute_<?= $idd ?>' /></td>
 										<td><input type='text' class='form-control fben input-sm detail-edit' name='bensin[]' value='<?= $record->bensin; ?>' id='bensin_<?= $idd ?>' onblur='cektotal()' /></td>
 										<td><input type='text' class='form-control ftol input-sm detail-edit' name='tol[]' value='<?= $record->tol; ?>' id='tol_<?= $idd ?>' onblur='cektotal()' /></td>
 										<td><input type='text' class='form-control fpark input-sm detail-edit' name='parkir[]' value='<?= $record->parkir; ?>' id='parkir_<?= $idd ?>' onblur='cektotal()' /></td>
 										<td><input type='text' class='form-control flainnya input-sm detail-edit' name='lainnya[]' value='<?= $record->lainnya; ?>' id='lainnya_<?= $idd ?>' onblur='cektotal()' /></td>
-										<td class="divide"><?= $record->km_awal; ?></td>
-										<td class="divide"><?= $record->km_akhir; ?></td>
-										<td class="divide"><?= ($record->km_akhir - $record->km_awal); ?></td>
+										<td><input type='text' class='form-control divide input-sm detail-edit fkm_awal' name='km_awal[]' value='<?= $record->km_awal; ?>' id='km_awal_<?= $idd ?>' onblur='cek_km(<?= $idd ?>)' /></td>
+										<td><input type='text' class='form-control divide input-sm detail-edit fkm_akhir' name='km_akhir[]' value='<?= $record->km_akhir; ?>' id='km_akhir_<?= $idd ?>' onblur='cek_km(<?= $idd ?>)' /></td>
+										<td><input type='text' class='form-control divide fkm input-sm' name='total_km[]' value='<?= ($record->km_akhir - $record->km_awal); ?>' id='total_km_<?= $idd ?>' tabindex='-1' readonly /></td>
 										<td><span class="pull-right"><?= ($record->doc_file != '' ? '<a href="' . base_url('assets/expense/' . $record->doc_file) . '" target="_blank"><i class="fa fa-download"></i></a>' : '') ?></span>
 										</td>
 										<td class="stsview"><a href="javascript:void(0)" class="btn btn-danger btn-xs" onclick="remove_detail(<?= $idd ?>, <?= $record->id ?>)" title="Hapus detail"><i class="fa fa-trash"></i></a>
@@ -164,7 +179,7 @@ $dept = $datauser->department_id;
 						</tbody>
 						<tfoot>
 							<tr class="info">
-								<td colspan="5" align=right>SUB TOTAL</td>
+								<td colspan="6" align=right>SUB TOTAL</td>
 								<td><input type="text" class="form-control divide input-sm" id="total_bensin" name="total_bensin" value="<?= $total_bensin ?>" placeholder="Total Bensin" tabindex="-1" readonly></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_tol" name="total_tol" value="<?= $total_tol ?>" placeholder="Total Tol" tabindex="-1" readonly></td>
 								<td><input type="text" class="form-control divide input-sm" id="total_parkir" name="total_parkir" value="<?= $total_parkir ?>" placeholder="Total Parkir" tabindex="-1" readonly></td>
@@ -174,7 +189,7 @@ $dept = $datauser->department_id;
 								<td colspan="2"></td>
 							</tr>
 							<tr class="warning">
-								<td colspan="5" align=right>TOTAL</td>
+								<td colspan="6" align=right>TOTAL</td>
 								<td colspan="4"><input type="text" class="form-control divide input-sm" id="jumlah_expense" name="jumlah_expense" value="<?= $grand_total ?>" placeholder="Total" tabindex="-1" readonly></td>
 								<td colspan=5></td>
 							</tr>
@@ -302,6 +317,7 @@ $dept = $datauser->department_id;
 				endDate: "0",
 				autoclose: true
 			});
+			$(".select2").select2({width: '100%'});
 		});
 
 		function cektotal() {
@@ -331,6 +347,23 @@ $dept = $datauser->department_id;
 			});
 			$("#total_lainnya").val(sum4);
 			$("#jumlah_expense").val(sum + sum1 + sum2 + sum4);
+		}
+
+		function cek_km(id) {
+			var km_awal = Number(String($("#km_awal_"+id).val()).replace(/\./g, '').replace(/,/g, ''));
+			var km_akhir = Number(String($("#km_akhir_"+id).val()).replace(/\./g, '').replace(/,/g, ''));
+			var total_km = km_akhir - km_awal;
+			if(total_km < 0) total_km = 0;
+			
+			$("#total_km_"+id).val(total_km);
+			cektotal();
+		}
+
+		function set_nm_coa(id) {
+			var nm_coa = $("#coa_"+id).find(':selected').data('name');
+			if(nm_coa !== undefined) {
+				$("#nm_coa_"+id).val(nm_coa);
+			}
 		}
 
 		function add_detail() {
@@ -370,9 +403,20 @@ $dept = $datauser->department_id;
 						Rows += "<td><input type='hidden' name='id_transport[]' id='id_transport_" + nomor + "' value='" + data[i].id + "'>";
 						Rows += data[i].no_doc + "</td>";
 						Rows += "<td>" + data[i].tgl_doc + "</td>";
-						Rows += "<td style='font-weight: bold;'>" + data[i].no_coa + " - " + data[i].nm_coa + "</td>";
-						Rows += "<td>" + data[i].keperluan + "</td>";
-						Rows += "<td>" + data[i].rute + "</td>";
+						Rows += "<td><input type='text' class='form-control input-sm detail-edit' name='nopol[]' value='" + (data[i].nopol ? data[i].nopol : '') + "' id='nopol_" + nomor + "' /></td>";
+						var coa_options = '<option value="" data-name="">- Pilih COA -</option>';
+						<?php
+						if (!empty($list_coa)) {
+							foreach ($list_coa as $item_coa) {
+								echo "coa_options += '<option value=\"".$item_coa->no_coa."\" data-name=\"".$item_coa->nm_coa."\">".$item_coa->no_coa." - ".$item_coa->nm_coa."</option>';\n";
+							}
+						}
+						?>
+						Rows += "<td><select class='form-control select2 input-sm' name='coa[]' id='coa_" + nomor + "' onchange='set_nm_coa(" + nomor + ")' style='width:100%; min-width:200px;'>";
+						Rows += coa_options;
+						Rows += "</select><input type='hidden' name='nm_coa[]' id='nm_coa_" + nomor + "' value='" + data[i].nm_coa + "'></td>";
+						Rows += "<td><input type='text' class='form-control input-sm detail-edit' name='keperluan[]' value='" + data[i].keperluan + "' id='keperluan_" + nomor + "' /></td>";
+						Rows += "<td><input type='text' class='form-control input-sm detail-edit' name='rute[]' value='" + data[i].rute + "' id='rute_" + nomor + "' /></td>";
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control fben input-sm detail-edit' name='bensin[]' value='" + data[i].bensin + "' id='bensin_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
@@ -386,10 +430,10 @@ $dept = $datauser->department_id;
 						Rows += "<input type='text' class='form-control flainnya input-sm detail-edit' name='lainnya[]' value='" + data[i].lainnya + "' id='lainnya_" + nomor + "' onblur='cektotal()' />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide input-sm' name='km_awal[]' value='" + data[i].km_awal + "' id='km_awal_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control divide input-sm detail-edit fkm_awal' name='km_awal[]' value='" + data[i].km_awal + "' id='km_awal_" + nomor + "' onblur='cek_km(" + nomor + ")' />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide input-sm' name='km_akhir[]' value='" + data[i].km_akhir + "' id='km_akhir_" + nomor + "' tabindex='-1' readonly />";
+						Rows += "<input type='text' class='form-control divide input-sm detail-edit fkm_akhir' name='km_akhir[]' value='" + data[i].km_akhir + "' id='km_akhir_" + nomor + "' onblur='cek_km(" + nomor + ")' />";
 						Rows += "</td>";
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control divide fkm input-sm' name='total_km[]' value='" + (data[i].km_akhir - data[i].km_awal) + "' id='total_km_" + nomor + "' tabindex='-1' readonly />";
@@ -402,8 +446,12 @@ $dept = $datauser->department_id;
 						Rows += "</span></td>";
 						Rows += "<td class='stsview'><a href='javascript:void(0)' class='btn btn-danger btn-xs' onclick='remove_detail(" + nomor + ", " + data[i].id + ")' title='Hapus detail'><i class='fa fa-trash'></i></a></td>";
 						Rows += "</tr>";
-						nomor++;
 						$('#detail_body').append(Rows);
+						$("#coa_" + nomor).val(data[i].no_coa);
+						setTimeout(function(){
+							$("#coa_" + (nomor - 1)).select2();
+						}, 100);
+						nomor++;
 					}
 					$(".divide").divide();
 					cektotal();
