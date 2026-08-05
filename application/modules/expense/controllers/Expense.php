@@ -2039,6 +2039,7 @@ class Expense extends Admin_Controller
 		$keperluan_arr	= $this->input->post("keperluan");
 		$rute_arr		= $this->input->post("rute");
 		$nopol_arr		= $this->input->post("nopol");
+		$tgl_doc_detail_arr = $this->input->post("tgl_doc_detail");
 
 		// Clean numeric values (remove thousand separators)
 		if (!empty($bensin_arr)) {
@@ -2075,6 +2076,15 @@ class Expense extends Admin_Controller
 		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
 
 		$this->db->trans_begin();
+		
+		// Configure upload library
+		$config['upload_path'] = 'assets/expense/';
+		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
+		$config['remove_spaces'] = TRUE;
+		$config['encrypt_name'] = TRUE;
+		$this->load->library('upload', $config);
+		$this->upload->initialize($config);
+
 		if ($id != "") {
 			$data = array(
 				'tgl_doc' => $tgl_doc,
@@ -2151,17 +2161,39 @@ class Expense extends Admin_Controller
 					if (isset($nopol_arr[$keys])) {
 						$detail_data['nopol'] = $nopol_arr[$keys];
 					}
+					if (isset($tgl_doc_detail_arr[$keys])) {
+						$detail_data['tgl_doc'] = date('Y-m-d', strtotime(str_replace('/', '-', $tgl_doc_detail_arr[$keys])));
+					}
 					// Recalculate jumlah_kasbon
 					if (isset($bensin_arr[$keys]) && isset($tol_arr[$keys]) && isset($parkir_arr[$keys]) && isset($lainnya_arr[$keys])) {
 						$detail_data['jumlah_kasbon'] = ($bensin_arr[$keys] + $tol_arr[$keys] + $parkir_arr[$keys] + $lainnya_arr[$keys]);
 					}
+
+					// Handle file upload
+					if (!empty($_FILES['doc_file_' . $val]['name'])) {
+						$_FILES['file']['name'] = $_FILES['doc_file_' . $val]['name'];
+						$_FILES['file']['type'] = $_FILES['doc_file_' . $val]['type'];
+						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $val]['tmp_name'];
+						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
+						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
+						
+						if ($this->upload->do_upload('file')) {
+							$uploadData = $this->upload->data();
+							$detail_data['doc_file'] = $uploadData['file_name'];
+						}
+					}
+
 					$result = $this->All_model->dataUpdate('tr_transport', $detail_data, array('id' => $val));
 				}
 			}
 			if ($this->db->trans_status() === FALSE) {
 				$this->db->trans_rollback();
+				$result = 0;
+				$error_msg = $this->db->error()['message'];
 			} else {
 				$this->db->trans_commit();
+				$result = 1;
+				$error_msg = '';
 			}
 		} else {
 			$no_doc = $this->All_model->GetAutoGenerate('format_transport_req');
@@ -2217,9 +2249,27 @@ class Expense extends Admin_Controller
 					if (isset($nopol_arr[$keys])) {
 						$detail_data['nopol'] = $nopol_arr[$keys];
 					}
+					if (isset($tgl_doc_detail_arr[$keys])) {
+						$detail_data['tgl_doc'] = date('Y-m-d', strtotime(str_replace('/', '-', $tgl_doc_detail_arr[$keys])));
+					}
 					if (isset($bensin_arr[$keys]) && isset($tol_arr[$keys]) && isset($parkir_arr[$keys]) && isset($lainnya_arr[$keys])) {
 						$detail_data['jumlah_kasbon'] = ($bensin_arr[$keys] + $tol_arr[$keys] + $parkir_arr[$keys] + $lainnya_arr[$keys]);
 					}
+
+					// Handle file upload
+					if (!empty($_FILES['doc_file_' . $val]['name'])) {
+						$_FILES['file']['name'] = $_FILES['doc_file_' . $val]['name'];
+						$_FILES['file']['type'] = $_FILES['doc_file_' . $val]['type'];
+						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $val]['tmp_name'];
+						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
+						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
+						
+						if ($this->upload->do_upload('file')) {
+							$uploadData = $this->upload->data();
+							$detail_data['doc_file'] = $uploadData['file_name'];
+						}
+					}
+
 					$result = $this->All_model->dataUpdate('tr_transport', $detail_data, array('id' => $val));
 				}
 			}
@@ -2230,13 +2280,18 @@ class Expense extends Admin_Controller
 			}
 			if ($this->db->trans_status() === FALSE) {
 				$this->db->trans_rollback();
+				$result = 0;
+				$error_msg = $this->db->error()['message'];
 			} else {
 				$this->db->trans_commit();
+				$result = 1;
+				$error_msg = '';
 			}
 		}
 		$param = array(
 			'save' => $result,
-			'id' => $id
+			'id' => $id,
+			'msg' => isset($error_msg) ? $error_msg : ''
 		);
 		echo json_encode($param);
 	}
