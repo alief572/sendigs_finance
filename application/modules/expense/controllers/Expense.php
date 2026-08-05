@@ -1987,6 +1987,8 @@ class Expense extends Admin_Controller
 	// transport pengajuan create
 	public function transport_req_create()
 	{
+		$list_coa = $this->Expense_model->getCoaTransport();
+		$this->template->set('list_coa', $list_coa);
 		$this->template->set('mod', '');
 		$this->template->render('transport_req_form');
 	}
@@ -2011,6 +2013,13 @@ class Expense extends Admin_Controller
 		$tol_arr		= $this->input->post("tol");
 		$parkir_arr		= $this->input->post("parkir");
 		$lainnya_arr	= $this->input->post("lainnya");
+		$km_awal_arr	= $this->input->post("km_awal");
+		$km_akhir_arr	= $this->input->post("km_akhir");
+		$coa_arr		= $this->input->post("coa");
+		$nm_coa_arr		= $this->input->post("nm_coa");
+		$keperluan_arr	= $this->input->post("keperluan");
+		$rute_arr		= $this->input->post("rute");
+		$nopol_arr		= $this->input->post("nopol");
 
 		// Clean numeric values (remove thousand separators)
 		if (!empty($bensin_arr)) {
@@ -2032,6 +2041,16 @@ class Expense extends Admin_Controller
 			$lainnya_arr = array_map(function ($v) {
 				return str_replace(['.', ','], '', $v);
 			}, $lainnya_arr);
+		}
+		if (!empty($km_awal_arr)) {
+			$km_awal_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $km_awal_arr);
+		}
+		if (!empty($km_akhir_arr)) {
+			$km_akhir_arr = array_map(function ($v) {
+				return str_replace(['.', ','], '', $v);
+			}, $km_akhir_arr);
 		}
 		// Clean jumlah_expense
 		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
@@ -2092,6 +2111,27 @@ class Expense extends Admin_Controller
 					if (isset($lainnya_arr[$keys])) {
 						$detail_data['lainnya'] = $lainnya_arr[$keys];
 					}
+					if (isset($km_awal_arr[$keys])) {
+						$detail_data['km_awal'] = $km_awal_arr[$keys];
+					}
+					if (isset($km_akhir_arr[$keys])) {
+						$detail_data['km_akhir'] = $km_akhir_arr[$keys];
+					}
+					if (isset($coa_arr[$keys])) {
+						$detail_data['no_coa'] = $coa_arr[$keys];
+					}
+					if (isset($nm_coa_arr[$keys])) {
+						$detail_data['nm_coa'] = $nm_coa_arr[$keys];
+					}
+					if (isset($keperluan_arr[$keys])) {
+						$detail_data['keperluan'] = $keperluan_arr[$keys];
+					}
+					if (isset($rute_arr[$keys])) {
+						$detail_data['rute'] = $rute_arr[$keys];
+					}
+					if (isset($nopol_arr[$keys])) {
+						$detail_data['nopol'] = $nopol_arr[$keys];
+					}
 					// Recalculate jumlah_kasbon
 					if (isset($bensin_arr[$keys]) && isset($tol_arr[$keys]) && isset($parkir_arr[$keys]) && isset($lainnya_arr[$keys])) {
 						$detail_data['jumlah_kasbon'] = ($bensin_arr[$keys] + $tol_arr[$keys] + $parkir_arr[$keys] + $lainnya_arr[$keys]);
@@ -2124,7 +2164,44 @@ class Expense extends Admin_Controller
 			$id = $this->All_model->dataSave('tr_transport_req', $data);
 			if (!empty($id_transport)) {
 				foreach ($id_transport as $keys => $val) {
-					$result = $this->All_model->dataUpdate('tr_transport', array('no_req' => $no_doc, 'status' => '1'), array('id' => $val));
+					$detail_data = array('no_req' => $no_doc, 'status' => '1');
+					if (isset($bensin_arr[$keys])) {
+						$detail_data['bensin'] = $bensin_arr[$keys];
+					}
+					if (isset($tol_arr[$keys])) {
+						$detail_data['tol'] = $tol_arr[$keys];
+					}
+					if (isset($parkir_arr[$keys])) {
+						$detail_data['parkir'] = $parkir_arr[$keys];
+					}
+					if (isset($lainnya_arr[$keys])) {
+						$detail_data['lainnya'] = $lainnya_arr[$keys];
+					}
+					if (isset($km_awal_arr[$keys])) {
+						$detail_data['km_awal'] = $km_awal_arr[$keys];
+					}
+					if (isset($km_akhir_arr[$keys])) {
+						$detail_data['km_akhir'] = $km_akhir_arr[$keys];
+					}
+					if (isset($coa_arr[$keys])) {
+						$detail_data['no_coa'] = $coa_arr[$keys];
+					}
+					if (isset($nm_coa_arr[$keys])) {
+						$detail_data['nm_coa'] = $nm_coa_arr[$keys];
+					}
+					if (isset($keperluan_arr[$keys])) {
+						$detail_data['keperluan'] = $keperluan_arr[$keys];
+					}
+					if (isset($rute_arr[$keys])) {
+						$detail_data['rute'] = $rute_arr[$keys];
+					}
+					if (isset($nopol_arr[$keys])) {
+						$detail_data['nopol'] = $nopol_arr[$keys];
+					}
+					if (isset($bensin_arr[$keys]) && isset($tol_arr[$keys]) && isset($parkir_arr[$keys]) && isset($lainnya_arr[$keys])) {
+						$detail_data['jumlah_kasbon'] = ($bensin_arr[$keys] + $tol_arr[$keys] + $parkir_arr[$keys] + $lainnya_arr[$keys]);
+					}
+					$result = $this->All_model->dataUpdate('tr_transport', $detail_data, array('id' => $val));
 				}
 			}
 			if (is_numeric($id)) {
@@ -2151,6 +2228,9 @@ class Expense extends Admin_Controller
 		$data = $this->Expense_model->GetDataTransportReq($id);
 		$data_detail = $this->Expense_model->GetDataTransportInReq($data->no_doc);
 
+		$list_coa = $this->Expense_model->getCoaTransport();
+
+		$this->template->set('list_coa', $list_coa);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
@@ -2177,6 +2257,9 @@ class Expense extends Admin_Controller
 	{
 		$data = $this->Expense_model->GetDataTransportReq($id);
 		$data_detail = $this->Expense_model->GetDataTransportInReq($data->no_doc);
+		$list_coa = $this->Expense_model->getCoaTransport();
+
+		$this->template->set('list_coa', $list_coa);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
