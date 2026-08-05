@@ -123,7 +123,7 @@ $dept = $datauser->department_id;
 										<td>
 											<input type="hidden" name="id_transport[]" id="id_transport_<?= $idd ?>" value="<?= $record->id; ?>"><?= $record->no_doc; ?>
 										</td>
-										<td><?= $record->tgl_doc; ?></td>
+										<td><input type='date' class='form-control input-sm detail-edit' name='tgl_doc_detail[]' value='<?= $record->tgl_doc; ?>' id='tgl_doc_detail_<?= $idd ?>' /></td>
 										<td><input type='text' class='form-control input-sm detail-edit' name='nopol[]' value='<?= $record->nopol; ?>' id='nopol_<?= $idd ?>' /></td>
 										<td>
 											<select class="form-control select2 input-sm" name="coa[]" id="coa_<?= $idd ?>" onchange="set_nm_coa(<?= $idd ?>)" style="width:100%; min-width:200px;">
@@ -149,6 +149,7 @@ $dept = $datauser->department_id;
 										<td><input type='text' class='form-control divide input-sm detail-edit fkm_akhir' name='km_akhir[]' value='<?= $record->km_akhir; ?>' id='km_akhir_<?= $idd ?>' onblur='cek_km(<?= $idd ?>)' /></td>
 										<td><input type='text' class='form-control divide fkm input-sm' name='total_km[]' value='<?= ($record->km_akhir - $record->km_awal); ?>' id='total_km_<?= $idd ?>' tabindex='-1' readonly /></td>
 										<td><span class="pull-right"><?= ($record->doc_file != '' ? '<a href="' . base_url('assets/expense/' . $record->doc_file) . '" target="_blank"><i class="fa fa-download"></i></a>' : '') ?></span>
+											<input type="file" name="doc_file_<?= $record->id ?>" id="doc_file_<?= $idd ?>" class="form-control input-sm detail-edit" accept=".jpg,.jpeg,.png,.pdf" style="width: 150px; margin-top: 5px;" />
 										</td>
 										<td class="stsview"><a href="javascript:void(0)" class="btn btn-danger btn-xs" onclick="remove_detail(<?= $idd ?>, <?= $record->id ?>)" title="Hapus detail"><i class="fa fa-trash"></i></a>
 										</td>
@@ -273,9 +274,9 @@ $dept = $datauser->department_id;
 									} else {
 										swal({
 											title: "Gagal!",
-											text: "Data Gagal Di Simpan",
+											text: msg['msg'] ? "Gagal: " + msg['msg'] : "Data Gagal Di Simpan",
 											type: "error",
-											timer: 1500,
+											timer: 3000,
 											showConfirmButton: false
 										});
 									};
@@ -310,13 +311,6 @@ $dept = $datauser->department_id;
 			}
 		} ?>
 		$(function() {
-			$(".tanggal").datepicker({
-				todayHighlight: true,
-				format: "yyyy-mm-dd",
-				showInputs: true,
-				endDate: "0",
-				autoclose: true
-			});
 			$(".select2").select2({width: '100%'});
 		});
 
@@ -402,7 +396,7 @@ $dept = $datauser->department_id;
 						var Rows = "<tr id='tr1_" + nomor + "' class='delAll kasbonrow'>";
 						Rows += "<td><input type='hidden' name='id_transport[]' id='id_transport_" + nomor + "' value='" + data[i].id + "'>";
 						Rows += data[i].no_doc + "</td>";
-						Rows += "<td>" + data[i].tgl_doc + "</td>";
+						Rows += "<td><input type='date' class='form-control input-sm detail-edit' name='tgl_doc_detail[]' value='" + data[i].tgl_doc + "' id='tgl_doc_detail_" + nomor + "' /></td>";
 						Rows += "<td><input type='text' class='form-control input-sm detail-edit' name='nopol[]' value='" + (data[i].nopol ? data[i].nopol : '') + "' id='nopol_" + nomor + "' /></td>";
 						var coa_options = '<option value="" data-name="">- Pilih COA -</option>';
 						<?php
@@ -443,7 +437,8 @@ $dept = $datauser->department_id;
 						if (data[i].doc_file != '' && data[i].doc_file != null) {
 							Rows += "<a href='<?= base_url('assets/expense/') ?>" + data[i].doc_file + "' target='_blank'><i class='fa fa-download'></i></a>";
 						}
-						Rows += "</span></td>";
+						Rows += "</span>";
+						Rows += "<input type='file' name='doc_file_" + data[i].id + "' id='doc_file_" + nomor + "' class='form-control input-sm detail-edit' accept='.jpg,.jpeg,.png,.pdf' style='width: 150px; margin-top: 5px;' /></td>";
 						Rows += "<td class='stsview'><a href='javascript:void(0)' class='btn btn-danger btn-xs' onclick='remove_detail(" + nomor + ", " + data[i].id + ")' title='Hapus detail'><i class='fa fa-trash'></i></a></td>";
 						Rows += "</tr>";
 						$('#detail_body').append(Rows);
