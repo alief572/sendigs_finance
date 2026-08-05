@@ -346,7 +346,9 @@ $grand_total = (int) $pelaporan->header->grand_total;
                             <?php if ($is_image): ?>
                                 <img src="<?= $file_url ?>" alt="<?= htmlspecialchars($file->original_name) ?>">
                             <?php elseif ($is_pdf): ?>
-                                <iframe src="<?= $file_url ?>" style="width: 100%; height: 900px; overflow: hidden;" scrolling="no" frameborder="0"></iframe>
+                                <iframe src="<?= $file_url ?>#toolbar=0&navpanes=0" title="PDF" style="width: 100%; height:100%;" frameborder="0">
+                                    <a href="<?= $file_url ?>">Download PDF</a>
+                                </iframe>
                             <?php else: ?>
                                 <a href="<?= $file_url ?>" target="_blank" style="font-size: 10px; color: #337ab7; text-decoration: underline;">
                                     📎 <?= htmlspecialchars($file->original_name) ?> (Download)
