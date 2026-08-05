@@ -186,6 +186,48 @@ $grand_total = (int) $pelaporan->header->grand_total;
             font-size: 11px;
             font-weight: bold;
         }
+
+        /* Lampiran/Evidence Section */
+        .lampiran-section {
+            page-break-before: always;
+        }
+
+        .evidence-item img {
+            display: block;
+            max-width: 100%;
+            max-height: 500px;
+            border: 1px solid #ddd;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .evidence-item embed {
+            display: block;
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        @media print {
+            .evidence-item embed {
+                display: none;
+            }
+
+            .evidence-item .pdf-print-notice {
+                display: block !important;
+            }
+        }
+
+        .pdf-print-notice {
+            display: none;
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+            border: 1px dashed #ccc;
+            padding: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -268,6 +310,60 @@ $grand_total = (int) $pelaporan->header->grand_total;
             </td>
         </tr>
     </table>
+
+    <!-- Lampiran / Bukti Section -->
+    <?php
+    $has_evidence = false;
+    if (!empty($pelaporan->pencatatan_list)) {
+        foreach ($pelaporan->pencatatan_list as $item) {
+            if (!empty($item->evidence_files)) {
+                $has_evidence = true;
+                break;
+            }
+        }
+    }
+    ?>
+    <?php if ($has_evidence): ?>
+        <div style="page-break-before: always;"></div>
+        <div class="header-section">
+            <h2>LAMPIRAN BUKTI PENGELUARAN</h2>
+        </div>
+
+        <?php foreach ($pelaporan->pencatatan_list as $item): ?>
+            <?php if (!empty($item->evidence_files)): ?>
+                <div style="margin-bottom: 20px;">
+                    <p style="font-weight: bold; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">
+                        <?= htmlspecialchars($item->no_pencatatan) ?> — <?= format_tanggal_tabel($item->tanggal) ?>
+                    </p>
+                    <?php foreach ($item->evidence_files as $file): ?>
+                        <?php
+                        $file_url = base_url('assets/expense_petty_cash/' . $file->encrypted_name);
+                        $is_image = in_array($file->file_type, ['png', 'jpg', 'jpeg']);
+                        $is_pdf   = ($file->file_type === 'pdf');
+                        ?>
+                        <div class="evidence-item" style="margin-bottom: 15px;">
+                            <p style="font-size: 10px; color: #555; margin-bottom: 5px;">
+                                <strong><?= htmlspecialchars($file->original_name) ?></strong>
+                            </p>
+                            <?php if ($is_image): ?>
+                                <img src="<?= $file_url ?>" alt="<?= htmlspecialchars($file->original_name) ?>">
+                            <?php elseif ($is_pdf): ?>
+                                <embed src="<?= $file_url ?>" type="application/pdf">
+                                <p class="pdf-print-notice">
+                                    File PDF: <?= htmlspecialchars($file->original_name) ?><br>
+                                    <a href="<?= $file_url ?>" target="_blank"><?= $file_url ?></a>
+                                </p>
+                            <?php else: ?>
+                                <a href="<?= $file_url ?>" target="_blank" style="font-size: 10px; color: #337ab7; text-decoration: underline;">
+                                    📎 <?= htmlspecialchars($file->original_name) ?> (Download)
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
 
     <!-- Auto-trigger print dialog -->
     <script>
