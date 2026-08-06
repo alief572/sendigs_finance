@@ -3107,6 +3107,9 @@ class Request_payment extends Admin_Controller
 
 	public function download_excel_request_payment()
 	{
+		set_time_limit(0);
+		ini_set('memory_limit', '512M');
+
 		$filters = [
 			'company_id' => $this->input->get('company_id'),
 			'date_from'  => $this->input->get('date_from'),
@@ -3116,11 +3119,185 @@ class Request_payment extends Admin_Controller
 
 		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment($filters);
 
-		$data = [
-			'list_all_request_payment' => $list_all_request_payment
+		$this->load->library('PHPExcel');
+
+		$objPHPExcel = new PHPExcel();
+		$sheet = $objPHPExcel->getActiveSheet();
+		$sheet->setTitle('Request Payment');
+
+		// Header style
+		$headerStyle = [
+			'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+			'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => '4472C4']],
+			'alignment' => ['horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER],
+			'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
 		];
 
-		$this->load->view('download_excel', $data);
+		$bodyStyle = [
+			'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
+		];
+
+		// Column headers
+		$headers = ['#', 'No. Dokumen', 'Request By', 'Tanggal Pengajuan', 'Keperluan', 'Kategori', 'Nilai Pengajuan', 'Tanggal di Approve'];
+		$cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+		$row = 1;
+		foreach ($headers as $i => $header) {
+			$sheet->setCellValue($cols[$i] . $row, $header);
+		}
+		$sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
+
+		// Column widths
+		$sheet->getColumnDimension('A')->setWidth(5);
+		$sheet->getColumnDimension('B')->setWidth(25);
+		$sheet->getColumnDimension('C')->setWidth(25);
+		$sheet->getColumnDimension('D')->setWidth(18);
+		$sheet->getColumnDimension('E')->setWidth(40);
+		$sheet->getColumnDimension('F')->setWidth(18);
+		$sheet->getColumnDimension('G')->setWidth(20);
+		$sheet->getColumnDimension('H')->setWidth(20);
+
+		// Data rows
+		$row = 2;
+		$no = 0;
+
+		if (!empty($list_all_request_payment)) {
+			foreach ($list_all_request_payment as $item) {
+				$no++;
+
+				// Request By (with Kasbon special logic)
+				$nmuser = $item->request_by;
+				if ($item->kategori == 'Kasbon') {
+					$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
+					if ($get_kasbon) {
+						$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
+						if (count($check_detail)) {
+							if ($get_kasbon->tipe_pr == 'pr departemen') {
+								$this->db->select('b.nm_lengkap');
+								$this->db->from('rutin_non_planning_header a');
+								$this->db->join('users b', 'b.id_user = a.created_by');
+								$this->db->where('a.no_pr', $get_kasbon->id_pr);
+								$get_single_detail = $this->db->get()->row();
+								if ($get_single_detail) $nmuser = $get_single_detail->nm_lengkap;
+							}
+							if ($get_kasbon->tipe_pr == 'pr stok') {
+								$this->db->select('b.nm_lengkap');
+								$this->db->from('material_planning_base_on_produksi a');
+								$this->db->join('users b', 'b.id_user = a.created_by');
+								$this->db->where('a.no_pr', $get_kasbon->id_pr);
+								$get_single_detail = $this->db->get()->row();
+								if ($get_single_detail) $nmuser = $get_single_detail->nm_lengkap;
+							}
+						}
+					}
+				}
+
+				// Tanggal Pengajuan
+				$tanggal_pengajuan = (!empty($item->tanggal) && strtotime($item->tanggal) !== false) ? date('d-M-Y', strtotime($item->tanggal)) : '';
+
+				// Tanggal di Approve
+				$tgl_approve = $this->_get_tanggal_approval($item);
+				$tgl_approve_formatted = (!empty($tgl_approve) && strtotime($tgl_approve) !== false) ? date('d-M-Y', strtotime($tgl_approve)) : '';
+
+				// Nilai Pengajuan
+				$nilai = (!empty($item->nilai_pengajuan)) ? (float) $item->nilai_pengajuan : 0;
+
+				// Keperluan
+				$keperluan = (!empty($item->keperluan)) ? $item->keperluan : '';
+
+				// Write data
+				$sheet->setCellValue('A' . $row, $no);
+				$sheet->setCellValue('B' . $row, $item->no_dokumen);
+				$sheet->setCellValue('C' . $row, $nmuser);
+				$sheet->setCellValue('D' . $row, $tanggal_pengajuan);
+				$sheet->setCellValue('E' . $row, $keperluan);
+				$sheet->setCellValue('F' . $row, $item->kategori);
+				$sheet->setCellValue('G' . $row, $nilai);
+				$sheet->setCellValue('H' . $row, $tgl_approve_formatted);
+
+				// Apply body style
+				$sheet->getStyle('A' . $row . ':H' . $row)->applyFromArray($bodyStyle);
+
+				// Center alignment for specific columns
+				$sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('H' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+
+				// Number format for nilai pengajuan
+				$sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0');
+				$sheet->getStyle('G' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
+
+				$row++;
+			}
+		}
+
+		// Output file
+		$filename = 'Request_Payment_' . date('d-m-Y') . '.xls';
+
+		if (ob_get_level()) {
+			ob_end_clean();
+		}
+
+		header('Content-Type: application/vnd.ms-excel');
+		header('Content-Disposition: attachment;filename="' . $filename . '"');
+		header('Cache-Control: max-age=0');
+
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+		$objWriter->save('php://output');
+		exit;
+	}
+
+	/**
+	 * Helper: Get tanggal approval dari tabel tagihan berdasarkan kategori
+	 */
+	private function _get_tanggal_approval($item)
+	{
+		$tgl_approve = '';
+		switch ($item->kategori) {
+			case 'Kasbon':
+				$row = $this->db->select('approved_on')->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
+				if ($row && !empty($row->approved_on)) {
+					$tgl_approve = $row->approved_on;
+				}
+				break;
+			case 'Transport':
+				$row = $this->db->select('approved_on')->get_where('tr_transport_req', ['no_doc' => $item->no_dokumen])->row();
+				if ($row && !empty($row->approved_on)) {
+					$tgl_approve = $row->approved_on;
+				}
+				break;
+			case 'Cash':
+			case 'Non-PO':
+				$row = $this->db->select('created_date')->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+				if ($row && !empty($row->created_date)) {
+					$tgl_approve = $row->created_date;
+				}
+				break;
+			case 'Expense':
+				$row = $this->db->select('approved_on')->get_where('tr_expense', ['no_doc' => $item->no_dokumen])->row();
+				if ($row && !empty($row->approved_on)) {
+					$tgl_approve = $row->approved_on;
+				}
+				break;
+			case 'Periodik':
+				$row = $this->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
+				if ($row && !empty($row->approved_date)) {
+					$tgl_approve = $row->approved_date;
+				}
+				break;
+			case 'Direct Payment':
+				$row = $this->db->select('created_date as approved_on')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
+				if ($row && !empty($row->approved_on)) {
+					$tgl_approve = $row->approved_on;
+				}
+				break;
+			default:
+				$tgl_approve = '';
+				break;
+		}
+		return $tgl_approve;
 	}
 
 	public function print_cash($id)
