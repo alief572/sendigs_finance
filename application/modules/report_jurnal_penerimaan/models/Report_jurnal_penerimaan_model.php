@@ -284,13 +284,13 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $start = $post['start'];
         $search = isset($post['search']['value']) ? $post['search']['value'] : '';
 
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, ppd1.all_invoices as no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
 
         // Query untuk menghitung count_all (total data tanpa filter pencarian)
         $db_clone = clone $this->db;
         $db_clone->select('a.id');
         $db_clone->from('tr_jurnal a');
-        $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
+        $db_clone->join('(SELECT ppd.id_header, MIN(ppd.id_inv) as id_inv, GROUP_CONCAT(b2.no_invoice SEPARATOR ", ") as all_invoices FROM tr_penerimaan_piutang_detail ppd LEFT JOIN tr_invoicing b2 ON b2.id = ppd.id_inv GROUP BY ppd.id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
         $db_clone->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
@@ -336,8 +336,8 @@ class Report_jurnal_penerimaan_model extends BF_Model
         $db_clone = clone $this->db;
         $db_clone->select('a.id');
         $db_clone->from('tr_jurnal a');
-        $db_clone->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd2', 'ppd2.id_header = a.no_transaksi', 'left', FALSE);
-        $db_clone->join('tr_invoicing b', 'b.id = ppd2.id_inv', 'left');
+        $db_clone->join('(SELECT ppd.id_header, MIN(ppd.id_inv) as id_inv, GROUP_CONCAT(b2.no_invoice SEPARATOR ", ") as all_invoices FROM tr_penerimaan_piutang_detail ppd LEFT JOIN tr_invoicing b2 ON b2.id = ppd.id_inv GROUP BY ppd.id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
+        $db_clone->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $db_clone->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $db_clone->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
@@ -379,9 +379,10 @@ class Report_jurnal_penerimaan_model extends BF_Model
         if (!empty($search)) {
             $db_clone->group_start();
             $db_clone->like('a.tgl_jurnal', $search, 'both');
+            $db_clone->or_like('a.no_transaksi', $search, 'both');
             $db_clone->or_like('b.nm_customer', $search, 'both');
             $db_clone->or_like('b.nm_project', $search, 'both');
-            $db_clone->or_like('b.no_invoice', $search, 'both');
+            $db_clone->or_like('ppd1.all_invoices', $search, 'both');
             $db_clone->or_like('d.nm_company', $search, 'both');
             $db_clone->or_like('f.nm_company', $search, 'both');
             $db_clone->or_like('j.nm_company', $search, 'both');
@@ -402,8 +403,8 @@ class Report_jurnal_penerimaan_model extends BF_Model
         // Query untuk mendapatkan data yang akan ditampilkan di tabel
         $this->db->select($select_fields, FALSE);
         $this->db->from('tr_jurnal a');
-        $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd3', 'ppd3.id_header = a.no_transaksi', 'left', FALSE);
-        $this->db->join('tr_invoicing b', 'b.id = ppd3.id_inv', 'left');
+        $this->db->join('(SELECT ppd.id_header, MIN(ppd.id_inv) as id_inv, GROUP_CONCAT(b2.no_invoice SEPARATOR ", ") as all_invoices FROM tr_penerimaan_piutang_detail ppd LEFT JOIN tr_invoicing b2 ON b2.id = ppd.id_inv GROUP BY ppd.id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
+        $this->db->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
@@ -445,9 +446,10 @@ class Report_jurnal_penerimaan_model extends BF_Model
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.tgl_jurnal', $search, 'both');
+            $this->db->or_like('a.no_transaksi', $search, 'both');
             $this->db->or_like('b.nm_customer', $search, 'both');
             $this->db->or_like('b.nm_project', $search, 'both');
-            $this->db->or_like('b.no_invoice', $search, 'both');
+            $this->db->or_like('ppd1.all_invoices', $search, 'both');
             $this->db->or_like('d.nm_company', $search, 'both');
             $this->db->or_like('f.nm_company', $search, 'both');
             $this->db->or_like('j.nm_company', $search, 'both');
@@ -528,12 +530,12 @@ class Report_jurnal_penerimaan_model extends BF_Model
 
     public function get_jurnal_invoicing($tgl_from = null, $tgl_to = null, $client = null, $company = null, $divisi = null)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, b.nm_customer, b.nm_project, ppd1.all_invoices as no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi, SUM(a.debit) as total_debit';
 
         $this->db->select($select_fields, FALSE);
         $this->db->from('tr_jurnal a');
-        $this->db->join('(SELECT id_header, MIN(id_inv) as id_inv FROM tr_penerimaan_piutang_detail GROUP BY id_header) ppd4', 'ppd4.id_header = a.no_transaksi', 'left', FALSE);
-        $this->db->join('tr_invoicing b', 'b.id = ppd4.id_inv', 'left');
+        $this->db->join('(SELECT ppd.id_header, MIN(ppd.id_inv) as id_inv, GROUP_CONCAT(b2.no_invoice SEPARATOR ", ") as all_invoices FROM tr_penerimaan_piutang_detail ppd LEFT JOIN tr_invoicing b2 ON b2.id = ppd.id_inv GROUP BY ppd.id_header) ppd1', 'ppd1.id_header = a.no_transaksi', 'left', FALSE);
+        $this->db->join('tr_invoicing b', 'b.id = ppd1.id_inv', 'left');
         $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran i', 'i.id_spk_penawaran = b.id_spk_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
