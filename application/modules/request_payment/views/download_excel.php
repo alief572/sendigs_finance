@@ -65,7 +65,7 @@ function get_tanggal_approval_tagihan($item, $CI)
             }
             break;
         case 'Direct Payment':
-            $row = $CI->db->select('approved_on')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
+            $row = $CI->db->select('created_date as approved_on')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
             if ($row && !empty($row->approved_on)) {
                 $tgl_approve = $row->approved_on;
             }
