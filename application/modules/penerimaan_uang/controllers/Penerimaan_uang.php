@@ -159,7 +159,9 @@ class Penerimaan_uang extends Admin_Controller
 
                 $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran['id_penawaran']])->row_array();
 
-                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran['company']])->row_array();
+                $company = (!empty($get_penawaran['company'])) ? $get_penawaran['company'] : $get_spk_penawaran['id_company'];
+
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $company])->row_array();
                 $id_company = (!empty($get_company)) ? $get_company['id'] : '';
                 $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
             }
