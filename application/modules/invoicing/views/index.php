@@ -31,6 +31,17 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         </ul>
         <div class="col_1">
             <div class="row" style="margin-bottom: 10px;">
+                <div class="col-md-2">
+                    <label for="filter_tahun">Filter Tahun:</label>
+                    <select name="filter_tahun" id="filter_tahun" class="form-control form-control-sm">
+                        <?php
+                        $tahun_sekarang = date('Y');
+                        for ($y = $tahun_sekarang; $y >= 2020; $y--) :
+                        ?>
+                            <option value="<?= $y ?>" <?= ($y == $tahun_sekarang) ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
                 <div class="col-md-3">
                     <label for="filter_status">Filter Status:</label>
                     <select name="filter_status" id="filter_status" class="form-control form-control-sm">
@@ -62,7 +73,21 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             </table>
         </div>
         <div class="col_2" style="display: none;">
-            <br>
+            <div class="row" style="margin-bottom: 10px;">
+                <div class="col-md-2">
+                    <label for="filter_tahun_non_kons">Filter Tahun:</label>
+                    <select name="filter_tahun_non_kons" id="filter_tahun_non_kons" class="form-control form-control-sm">
+                        <?php
+                        for ($y = $tahun_sekarang; $y >= 2020; $y--) :
+                        ?>
+                            <option value="<?= $y ?>" <?= ($y == $tahun_sekarang) ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="col-md-2" style="padding-top: 25px;">
+                    <button type="button" class="btn btn-sm btn-primary btn_filter_non_kons"><i class="fa fa-search"></i> Filter</button>
+                </div>
+            </div>
             <a href="<?= base_url('invoicing/list_penawaran_non_kons') ?>" class="btn btn-sm btn-success" title="Add Invoice"><i class="fa fa-plus"></i> Add Invoice</a>
             <br><br>
             <table id="table_penawaran_non_konsultasi" class="table table-bordered table-striped">
@@ -487,10 +512,15 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         DataTables();
     });
 
+    $(document).on('click', '.btn_filter_non_kons', function() {
+        DataTablesNonKonsultasi();
+    });
+
     $(document).on('click', '.btn_download_excel', function(e) {
         e.preventDefault();
         var filter_status = $('#filter_status').val();
-        var url = siteurl + active_controller + 'download_excel?filter_status=' + filter_status;
+        var filter_tahun = $('#filter_tahun').val();
+        var url = siteurl + active_controller + 'download_excel?filter_status=' + filter_status + '&filter_tahun=' + filter_tahun;
         window.open(url, '_blank');
     });
 
@@ -608,6 +638,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 dataType: "JSON",
                 data: function(d) {
                     d.filter_status = $('#filter_status').val();
+                    d.filter_tahun = $('#filter_tahun').val();
                 }
             },
             columns: [{
@@ -657,7 +688,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {
-
+                    d.filter_tahun = $('#filter_tahun_non_kons').val();
                 }
             },
             columns: [{
