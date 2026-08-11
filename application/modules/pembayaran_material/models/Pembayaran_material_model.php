@@ -840,7 +840,7 @@ class Pembayaran_material_model extends BF_Model
 								$kredit = $total_payment;
 							}
 
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
+							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan . ' - ' . $item_payment->no_doc, $debit, $kredit);
 						}
 
 						if ($bank_charge > 0 && !empty($coa_bank)) {
