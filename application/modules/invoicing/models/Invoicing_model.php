@@ -51,6 +51,12 @@ class Invoicing_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
         $filter_status = $this->input->post('filter_status');
+        $filter_tahun = $this->input->post('filter_tahun');
+
+        // Default tahun sekarang jika kosong
+        if (empty($filter_tahun)) {
+            $filter_tahun = date('Y');
+        }
 
         $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
@@ -61,7 +67,7 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
-        $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) >= 2026)");
+        $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) = " . (int)$filter_tahun . ")");
 
         // Filter status berdasarkan sts_invoice di kons_tr_plan_tagih_detail
         if ($filter_status == 'uninvoiced') {
