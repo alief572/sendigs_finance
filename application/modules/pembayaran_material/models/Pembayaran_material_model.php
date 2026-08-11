@@ -825,6 +825,18 @@ class Pembayaran_material_model extends BF_Model
 
 							if ($item_coa->no_coa == '9999-99-99') {
 								$debit = $item_payment->jumlah;
+
+								$get_expense = $this->db->get_where('tr_expense', array('no_doc' => $item_payment->no_doc))->row();
+
+								$this->consultant->select('d.nm_paket');
+								$this->consultant->from('kons_tr_expense_report_project_header a');
+								$this->consultant->join('kons_tr_kasbon_project_header b', 'b.id = a.id_header');
+								$this->consultant->join('kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran');
+								$this->consultant->join('kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
+								$this->consultant->where('a.id', $get_expense->no_expense_consultant);
+								$get_expense_cons = $this->consultant->get()->row();
+
+								$keterangan = $get_expense_cons->nm_paket ?? $item_coa->nm_coa;
 							} elseif ($item_coa->no_coa == '7201-01-04') {
 								$debit = $bank_charge;
 								$keterangan = 'Admin Charge';
