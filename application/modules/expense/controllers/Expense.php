@@ -88,6 +88,7 @@ class Expense extends Admin_Controller
 			->join('ms_satuan f', 'f.id = e.id_unit', 'left')
 			->where('b.metode_pembelian', '2')
 			->where('a.kasbon_created', null)
+			->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = b.no_pr)', null, false)
 			->group_by('b.no_pr');
 		$get_detail_pr_stok_material = $this->db->get()->result_array();
 		foreach ($get_detail_pr_stok_material as $item) {
@@ -103,6 +104,7 @@ class Expense extends Admin_Controller
 			->join('ms_satuan c', 'c.id = a.satuan', 'left')
 			->where('b.metode_pembelian', '2')
 			->where('a.kasbon_created', null)
+			->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = b.no_pr)', null, false)
 			->group_by('b.no_pr');
 		$get_detail_pr_departemen = $this->db->get()->result_array();
 		foreach ($get_detail_pr_departemen as $item) {
@@ -112,12 +114,14 @@ class Expense extends Admin_Controller
 			];
 		}
 
-		$this->db->select('b.no_pr, b.nama_asset');
+		$this->db->select('a.no_pr, b.nama_asset');
 		$this->db->from('tran_pr_header a');
 		$this->db->join('asset_planning b', 'b.no_pr = a.no_pr', 'left');
 		$this->db->where('a.metode_pembelian', 2);
 		$this->db->where('a.kasbon_created', null);
-		$this->db->group_by('b.no_pr');
+		$this->db->where('b.no_pr IS NOT NULL');
+		$this->db->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = a.no_pr)', null, false);
+		$this->db->group_by('a.no_pr');
 		$get_pr_asset = $this->db->get()->result_array();
 		foreach ($get_pr_asset as $item) {
 			$list_pr_non_po[] = [
@@ -2076,7 +2080,7 @@ class Expense extends Admin_Controller
 		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
 
 		$this->db->trans_begin();
-		
+
 		// Configure upload library
 		$config['upload_path'] = 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
@@ -2176,7 +2180,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $val]['tmp_name'];
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
-						
+
 						if ($this->upload->do_upload('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
@@ -2263,7 +2267,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $val]['tmp_name'];
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
-						
+
 						if ($this->upload->do_upload('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
@@ -3545,34 +3549,49 @@ class Expense extends Admin_Controller
 		$start  = isset($post['start']) ? $post['start'] : 0;
 		$search = isset($post['search']['value']) ? $post['search']['value'] : '';
 
-		// 1. Panggil dari VIEW (Logic CASE WHEN sudah ada di dalam View)
-		$this->db->from('v_kasbon_list');
+		$is_admin = $this->auth->is_admin();
 
-		// Filter User (ID 7 dianggap Superadmin/Full Access)
-		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '202') {
+		// 1. Count all (tanpa search)
+		$this->db->from('v_kasbon_list');
+		if (!$is_admin) {
 			$this->db->where('nmuser_fix', $this->auth->user_name());
 		}
+		$count_all = $this->db->count_all_results();
 
-		// Get total records (tanpa filter search)
-		$count_all = $this->db->count_all_results('', false);
-
-		// 2. Fitur Search (Sekarang nmuser_fix tinggal dipanggil namanya)
+		// 2. Count filtered (dengan search)
+		$this->db->from('v_kasbon_list');
+		if (!$is_admin) {
+			$this->db->where('nmuser_fix', $this->auth->user_name());
+		}
 		if (!empty($search)) {
 			$this->db->group_start();
 			$this->db->like('no_doc', $search);
 			$this->db->or_like('tgl_doc', $search);
 			$this->db->or_like('keperluan', $search);
 			$this->db->or_like('keterangan', $search);
-			$this->db->or_like('nmuser_fix', $search); // Gak perlu ngetik subquery lagi
+			$this->db->or_like('nmuser_fix', $search);
+			$this->db->group_end();
+		}
+		$count_filter = $this->db->count_all_results();
+
+		// 3. Fetch data
+		$this->db->from('v_kasbon_list');
+		if (!$is_admin) {
+			$this->db->where('nmuser_fix', $this->auth->user_name());
+		}
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('no_doc', $search);
+			$this->db->or_like('tgl_doc', $search);
+			$this->db->or_like('keperluan', $search);
+			$this->db->or_like('keterangan', $search);
+			$this->db->or_like('nmuser_fix', $search);
 			$this->db->group_end();
 		}
 
-		$count_filter = $this->db->count_all_results('', false);
-
-		// 3. Ordering
-		// Sesuaikan index array dengan urutan kolom di view/datatable kamu
+		// 4. Ordering
 		$columns = [
-			0 => 'no_doc', // Biasanya kolom 0 itu nomor urut, sesuaikan mappingnya
+			0 => 'no_doc',
 			1 => 'no_doc',
 			2 => 'tgl_doc',
 			3 => 'nmuser_fix',
@@ -3587,7 +3606,7 @@ class Expense extends Admin_Controller
 			$this->db->order_by('no_doc', 'desc');
 		}
 
-		// 4. Limit & Fetch
+		// 5. Limit & Fetch
 		$this->db->limit($length, $start);
 		$get_data = $this->db->get()->result_array();
 
@@ -3675,6 +3694,7 @@ class Expense extends Admin_Controller
 
 	public function get_dat_kasbon_list()
 	{
+		$is_admin = $this->auth->is_admin();
 		$post = $this->input->post();
 		$draw = intval($post['draw']);
 		$length = $post['length'];
@@ -3684,7 +3704,7 @@ class Expense extends Admin_Controller
 		// SEKARANG KITA PAKAI VIEW
 		$this->db->from('v_kasbon_list');
 
-		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '202') {
+		if (!$is_admin) {
 			$this->db->where('nmuser_fix', $this->auth->user_name());
 		}
 
