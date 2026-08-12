@@ -121,8 +121,9 @@ class Stok_gudang_barang_model extends BF_Model
 		// 	$where_barang = " AND a.id_category IN (2,3,6) ";
 		// }
 
+		// Query tanpa @row variable — @row tidak stabil ketika digabung dengan GROUP BY + ORDER BY
+		// sehingga mengakibatkan baris duplikat saat pagination. Penomoran ditangani di PHP.
 		$sql = "SELECT
-              (@row:=@row+1) AS nomor,
               a.id AS code_lv4,
               a.id_stock AS code,
               a.stock_name AS nama,
@@ -132,26 +133,26 @@ class Stok_gudang_barang_model extends BF_Model
 			  b.nm_category
             FROM
 				accessories a
-				LEFT JOIN accessories_category b ON a.id_category=b.id,
-              (SELECT @row:=0) r
+				LEFT JOIN accessories_category b ON a.id_category=b.id
             WHERE a.deleted_date IS NULL " . $where_category . " " . $where_barang . " AND (
               a.id_stock LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR a.stock_name LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               OR b.nm_category LIKE '%" . $this->db->escape_like_str($like_value) . "%'
               )
+			  GROUP BY a.id
           ";
 		// echo $sql; exit;
 
 		$data['totalData'] = $this->db->query($sql)->num_rows();
 		$data['totalFiltered'] = $this->db->query($sql)->num_rows();
 		$columns_order_by = array(
-			0 => 'nomor',
+			0 => 'a.id',
 			1 => 'b.nm_category',
 			2 => 'code',
 			3 => 'nama'
 		);
 
-		$sql .= " ORDER BY " . $columns_order_by[$column_order] . " " . $column_dir . " ";
+		$sql .= " ORDER BY " . $columns_order_by[$column_order] . " " . $column_dir . ", a.id ASC ";
 		$sql .= " LIMIT " . $limit_start . " ," . $limit_length . " ";
 
 		$data['query'] = $this->db->query($sql);

@@ -181,7 +181,6 @@
     var dataTable = $('#example1').DataTable({
       "processing": true,
       "serverSide": true,
-      "stateSave": true,
       "bAutoWidth": true,
       "destroy": true,
       "responsive": true,
