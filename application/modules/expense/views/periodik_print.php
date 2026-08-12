@@ -230,31 +230,95 @@ function formatDate($date)
 	<!-- Attachments -->
 	<?php
 	$has_attachments = false;
+	$pdf_files = [];
+	$image_files = [];
 	foreach ($detail as $item) {
 		if (!empty($item->doc_file)) {
 			$has_attachments = true;
-			break;
+			$ext = strtolower(pathinfo($item->doc_file, PATHINFO_EXTENSION));
+			if ($ext == 'pdf') {
+				$pdf_files[] = base_url('assets/bayar_rutin/' . $item->doc_file);
+			} elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+				$image_files[] = base_url('assets/bayar_rutin/' . $item->doc_file);
+			}
 		}
 	}
 	?>
 	<?php if ($has_attachments): ?>
-		<div class="attachment-separator"></div>
-		<?php foreach ($detail as $item): ?>
-			<?php if (!empty($item->doc_file)):
-				$ext = strtolower(pathinfo($item->doc_file, PATHINFO_EXTENSION));
-			?>
-				<?php if ($ext == 'pdf'): ?>
-					<iframe src="<?= base_url('assets/bayar_rutin/' . $item->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
-				<?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])): ?>
-					<img src="<?= base_url('assets/bayar_rutin/' . $item->doc_file) ?>" class="attachment-img">
-				<?php endif; ?>
-			<?php endif; ?>
+		<?php foreach ($image_files as $img_url): ?>
+			<div style="page-break-before: always;"></div>
+			<img src="<?= $img_url ?>" style="max-width: 100%; height: auto;">
 		<?php endforeach; ?>
-	<?php endif; ?>
 
-	<script>
-		window.print();
-	</script>
+		<div id="pdf-pages"></div>
+
+		<?php if (!empty($pdf_files)): ?>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+			<script>
+				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+				var pdfFiles = <?= json_encode($pdf_files) ?>;
+				var container = document.getElementById('pdf-pages');
+				var totalFilesProcessed = 0;
+
+				pdfFiles.forEach(function(pdfUrl) {
+					pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+						var totalPages = pdf.numPages;
+						var pagesRendered = 0;
+
+						for (var i = 1; i <= totalPages; i++) {
+							(function(pageNum) {
+								pdf.getPage(pageNum).then(function(page) {
+									var scale = 1.5;
+									var viewport = page.getViewport({
+										scale: scale
+									});
+
+									var wrapper = document.createElement('div');
+									wrapper.style.pageBreakBefore = 'always';
+									wrapper.style.marginBottom = '0';
+
+									var canvas = document.createElement('canvas');
+									canvas.width = viewport.width;
+									canvas.height = viewport.height;
+									canvas.style.width = '100%';
+									canvas.style.height = 'auto';
+									canvas.style.display = 'block';
+
+									wrapper.appendChild(canvas);
+									container.appendChild(wrapper);
+
+									var context = canvas.getContext('2d');
+									page.render({
+										canvasContext: context,
+										viewport: viewport
+									}).promise.then(function() {
+										pagesRendered++;
+										if (pagesRendered === totalPages) {
+											totalFilesProcessed++;
+											if (totalFilesProcessed === pdfFiles.length) {
+												setTimeout(function() {
+													window.print();
+												}, 500);
+											}
+										}
+									});
+								});
+							})(i);
+						}
+					});
+				});
+			</script>
+		<?php else: ?>
+			<script>
+				window.print();
+			</script>
+		<?php endif; ?>
+	<?php else: ?>
+		<script>
+			window.print();
+		</script>
+	<?php endif; ?>
 </body>
 
 </html>
