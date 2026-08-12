@@ -1033,6 +1033,13 @@ class Non_rutin_model extends BF_Model
         $this->db->select('MIN(np.created_date) as tgl_proses_non_po', FALSE);
         $this->db->select('MIN(po.created_on) as tgl_proses_po', FALSE);
         $this->db->select('MIN(tp.created_at) as tgl_tracking_pembelian', FALSE);
+        // Status fields dari dokumen terkait
+        $this->db->select('MAX(kb.status) as kasbon_status', FALSE);
+        $this->db->select('MAX(kb.sts_finance) as kasbon_sts_finance', FALSE);
+        $this->db->select('MAX(kb.sts_reject) as kasbon_sts_reject', FALSE);
+        $this->db->select('MAX(kb.sts_reject_manage) as kasbon_sts_reject_manage', FALSE);
+        $this->db->select('MAX(po.status) as po_status', FALSE);
+        $this->db->select('MAX(CASE WHEN po.reject_reason IS NOT NULL AND po.reject_reason != "" THEN 1 ELSE 0 END) as po_rejected', FALSE);
         $this->db->from('rutin_non_planning_detail z');
         $this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
         $this->db->join('users c', 'c.id_user = a.created_by', 'left');
@@ -1207,8 +1214,58 @@ class Non_rutin_model extends BF_Model
                 }
             } else {
                 if ($data->sts_app == 'Y') {
-                    $warna = "green";
-                    $sts = "Approved";
+                    $warna = 'green';
+                    $sts   = 'Approved';
+
+                    // Jika PR sudah Approved, tampilkan status dari PO atau Kasbon yang terkait
+                    $metode = $data->metode_pembelian;
+
+                    if ($metode == '1' && !empty($data->no_doc_po)) {
+                        // Metode PO: cek status dari tr_purchase_order
+                        $po_status   = $data->po_status;
+                        $po_rejected = $data->po_rejected;
+
+                        if ($po_rejected == '1') {
+                            $warna = 'red';
+                            $sts   = 'PO: Ditolak';
+                        } elseif ($po_status >= 2) {
+                            $warna = 'green';
+                            $sts   = 'PO: Disetujui';
+                        } else {
+                            $warna = 'orange';
+                            $sts   = 'PO: Menunggu Persetujuan';
+                        }
+                    } elseif ($metode == '2' && !empty($data->no_doc_kasbon)) {
+                        // Metode Kasbon: cek status dari tr_kasbon
+                        // status: 0=waiting, 1/2=approved, 3=paid/close, 9=reject
+                        // sts_finance: 0=waiting approval finance, 1=waiting approval management
+                        $kasbon_status       = $data->kasbon_status;
+                        $kasbon_sts_finance  = $data->kasbon_sts_finance;
+
+                        if ($kasbon_status == '9') {
+                            // Ditolak
+                            $warna = 'red';
+                            $sts   = 'Kasbon: Ditolak';
+                        } elseif ($kasbon_status == '3') {
+                            // Sudah dibayar / close
+                            $warna = 'purple';
+                            $sts   = 'Kasbon: Lunas';
+                        } elseif ($kasbon_status == '1' || $kasbon_status == '2') {
+                            // Approved oleh management
+                            $warna = 'green';
+                            $sts   = 'Kasbon: Disetujui';
+                        } elseif ($kasbon_status == '0' || $kasbon_status === null) {
+                            // Masih dalam proses approval
+                            if ($kasbon_sts_finance == '1') {
+                                $warna = 'orange';
+                                $sts   = 'Kasbon: Waiting Approval Management';
+                            } else {
+                                $warna = 'orange';
+                                $sts   = 'Kasbon: Waiting Approval Finance';
+                            }
+                        }
+                    }
+                    // Metode Cash (metode_pembelian = 3) tidak ditampilkan status lanjutan
                 }
             }
         }
