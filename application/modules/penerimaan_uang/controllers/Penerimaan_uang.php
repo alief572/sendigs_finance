@@ -234,7 +234,7 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil_jurnal .= '</td>';
 
                 $hasil_jurnal .= '<td class="text-center">';
-                $hasil_jurnal .= $nm_coa_bank;
+                $hasil_jurnal .= $nm_coa_bank . ' - ' . $get_inv['no_invoice'];
                 $hasil_jurnal .= '<input type="hidden" name="nm_coa_bank_debit" value="' . $nm_coa_bank . '">';
                 $hasil_jurnal .= '</td>';
 
@@ -301,7 +301,7 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
+                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'];
                     $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
                     $hasil_jurnal .= '</td>';
 
@@ -365,7 +365,7 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil_jurnal .= '</td>';
 
                     $hasil_jurnal .= '<td class="text-center">';
-                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' (' . $get_inv['id'] . ')';
+                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'];
                     $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
                     $hasil_jurnal .= '</td>';
 
@@ -465,8 +465,13 @@ class Penerimaan_uang extends Admin_Controller
                 $id_company = '1';
                 $nm_company = 'STM-Vuca';
             } else {
-                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_inv['id_penawaran']])->row_array();
-                $get_company = $this->consultant->get_where('kons_tr_company', $get_penawaran['company'])->row_array();
+                $get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_inv['id_spk_penawaran']])->row_array();
+
+                $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran['id_penawaran']])->row_array();
+                
+                $company = (!empty($get_penawaran['company'])) ? $get_penawaran['company'] : $get_spk_penawaran['id_company'];
+
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $company])->row_array();
 
                 $id_company = (!empty($get_company)) ? $get_company['id'] : '';
                 $nm_company = (!empty($get_company)) ? $get_company['nm_company'] : '';
