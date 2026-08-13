@@ -3024,6 +3024,16 @@ class Request_payment extends Admin_Controller
 
 		$list_all_request_payment = $this->Request_payment_model->list_all_request_payment($filters);
 
+		// Build company names lookup (same logic as DataTable)
+		$company_map = ['COM003' => 7, 'COM006' => 3, 'COM012' => 4];
+		$company_names = [];
+		$company_query = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
+		if ($company_query) {
+			foreach ($company_query->result() as $comp) {
+				$company_names[$comp->id] = $comp->nama;
+			}
+		}
+
 		$this->load->library('PHPExcel');
 
 		$objPHPExcel = new PHPExcel();
@@ -3043,24 +3053,25 @@ class Request_payment extends Admin_Controller
 		];
 
 		// Column headers
-		$headers = ['#', 'No. Dokumen', 'Request By', 'Tanggal Pengajuan', 'Keperluan', 'Kategori', 'Nilai Pengajuan', 'Tanggal di Approve'];
-		$cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+		$headers = ['#', 'No. Dokumen', 'Request By', 'Company', 'Tanggal Pengajuan', 'Keperluan', 'Kategori', 'Nilai Pengajuan', 'Tanggal di Approve'];
+		$cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
 		$row = 1;
 		foreach ($headers as $i => $header) {
 			$sheet->setCellValue($cols[$i] . $row, $header);
 		}
-		$sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
+		$sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
 
 		// Column widths
 		$sheet->getColumnDimension('A')->setWidth(5);
 		$sheet->getColumnDimension('B')->setWidth(25);
 		$sheet->getColumnDimension('C')->setWidth(25);
-		$sheet->getColumnDimension('D')->setWidth(18);
-		$sheet->getColumnDimension('E')->setWidth(40);
-		$sheet->getColumnDimension('F')->setWidth(18);
-		$sheet->getColumnDimension('G')->setWidth(20);
+		$sheet->getColumnDimension('D')->setWidth(25);
+		$sheet->getColumnDimension('E')->setWidth(18);
+		$sheet->getColumnDimension('F')->setWidth(40);
+		$sheet->getColumnDimension('G')->setWidth(18);
 		$sheet->getColumnDimension('H')->setWidth(20);
+		$sheet->getColumnDimension('I')->setWidth(20);
 
 		// Data rows
 		$row = 2;
@@ -3097,6 +3108,32 @@ class Request_payment extends Admin_Controller
 					}
 				}
 
+				// Company display - derive from hris_companies.id via mapping
+				$company_display = '';
+				if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
+					$mapped_id = $company_map[$item->id_company];
+					if (isset($company_names[$mapped_id])) {
+						$company_display = $company_names[$mapped_id];
+					}
+				}
+
+				// Fallback untuk Petty Cash Hutang dan Petty Cash biasa
+				if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
+					$get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
+					if (!empty($get_petty_cash)) {
+						$company_display = $get_petty_cash->company;
+					}
+
+					if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
+						$get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
+						if (!empty($get_rpc) && !empty($get_rpc->company)) {
+							$company_display = $get_rpc->company;
+						} else {
+							$company_display = 'STM';
+						}
+					}
+				}
+
 				// Tanggal Pengajuan
 				$tanggal_pengajuan = (!empty($item->tanggal) && strtotime($item->tanggal) !== false) ? date('d-M-Y', strtotime($item->tanggal)) : '';
 
@@ -3114,25 +3151,27 @@ class Request_payment extends Admin_Controller
 				$sheet->setCellValue('A' . $row, $no);
 				$sheet->setCellValue('B' . $row, $item->no_dokumen);
 				$sheet->setCellValue('C' . $row, $nmuser);
-				$sheet->setCellValue('D' . $row, $tanggal_pengajuan);
-				$sheet->setCellValue('E' . $row, $keperluan);
-				$sheet->setCellValue('F' . $row, $item->kategori);
-				$sheet->setCellValue('G' . $row, $nilai);
-				$sheet->setCellValue('H' . $row, $tgl_approve_formatted);
+				$sheet->setCellValue('D' . $row, $company_display);
+				$sheet->setCellValue('E' . $row, $tanggal_pengajuan);
+				$sheet->setCellValue('F' . $row, $keperluan);
+				$sheet->setCellValue('G' . $row, $item->kategori);
+				$sheet->setCellValue('H' . $row, $nilai);
+				$sheet->setCellValue('I' . $row, $tgl_approve_formatted);
 
 				// Apply body style
-				$sheet->getStyle('A' . $row . ':H' . $row)->applyFromArray($bodyStyle);
+				$sheet->getStyle('A' . $row . ':I' . $row)->applyFromArray($bodyStyle);
 
 				// Center alignment for specific columns
 				$sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 				$sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 				$sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$sheet->getStyle('H' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('E' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('G' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$sheet->getStyle('I' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 
 				// Number format for nilai pengajuan
-				$sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0');
-				$sheet->getStyle('G' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
+				$sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0');
+				$sheet->getStyle('H' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
 
 				$row++;
 			}

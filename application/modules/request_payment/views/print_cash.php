@@ -259,11 +259,11 @@ function formatDate($date)
     <?php if (!empty($pr_header->document)) : ?>
         <?php $ext = strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)); ?>
         <?php if ($ext == 'pdf') : ?>
-            <div class="attachment-separator"></div>
-            <iframe src="<?= base_url('assets/pr/' . $pr_header->document) ?>" width="100%" height="600px" style="border: none;"></iframe>
+            <div class="pagebreak"></div>
+            <embed src="<?= base_url('assets/pr/' . $pr_header->document) ?>" type="application/pdf" width="100%" style="height: 100vh; border: none;">
         <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
-            <div class="attachment-separator"></div>
-            <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img">
+            <div class="pagebreak"></div>
+            <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img" style="max-width: 100%; height: auto;">
         <?php endif; ?>
     <?php endif; ?>
 

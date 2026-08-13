@@ -1216,7 +1216,7 @@ class Request_payment_model extends BF_Model
         $date_to    = isset($filters['date_to']) ? $filters['date_to'] : null;
         $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
 
-        $this->db->select('a.*');
+        $this->db->select('a.*, d.id as id_company');
         $this->db->from('v_request_payment a');
 
         // JOIN for company filter
