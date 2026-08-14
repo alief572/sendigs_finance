@@ -108,7 +108,7 @@
                 class="btn btn-secondary">Helpdesk</a>
             </li>
             <li>
-              <a href="<?= base_url('assets/pdf/manual-book.pdf') ?>"
+              <a href="<?= base_url('assets/pdf/manual book non operation.pdf') ?>"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="btn btn-secondary">
