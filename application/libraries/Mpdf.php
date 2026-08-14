@@ -46,7 +46,7 @@ if (!defined('_MPDF_TTFONTPATH')) { define('_MPDF_TTFONTPATH',_MPDF_PATH.'ttfont
 if (!defined('_MPDF_TTFONTDATAPATH')) { define('_MPDF_TTFONTDATAPATH',_MPDF_PATH.'ttfontdata/'); }
 
 $errorlevel=error_reporting();
-$errorlevel=error_reporting($errorlevel & ~E_NOTICE);
+$errorlevel=error_reporting($errorlevel & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
 
 //error_reporting(E_ALL);
 
@@ -28272,7 +28272,7 @@ function _generateencryptionkey($user_pass, $owner_pass, $protection) {
 	$owner_pass = substr($owner_pass.$this->padding,0,32);
 	$chars = 'ABCDEF1234567890';
 	$id = '';
-	for ($i=0; $i<32; $i++) { $id .= $chars{rand(0, 15)}; }
+	for ($i=0; $i<32; $i++) { $id .= $chars[rand(0, 15)]; }
 	$this->uniqid = md5($id);
 	// Compute O value
 	$this->Ovalue = $this->_Ovalue($user_pass,$owner_pass);
