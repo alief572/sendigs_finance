@@ -351,8 +351,10 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Gagal update nobum cabang. ' . ($db_error['message'] ?? ''));
                 }
             } else {
-                $get_payment_approve = $this->db->get_where('payment_approve', ['id' => $get_jurnal->no_transaksi])->row();
-                if (!$get_payment_approve) {
+                $arr_no_transaksi = array_map('trim', explode(',', $get_jurnal->no_transaksi));
+                $this->db->where_in('id', $arr_no_transaksi);
+                $get_payment_approve = $this->db->get('payment_approve')->num_rows();
+                if ($get_payment_approve == 0) {
                     throw new Exception('Data Payment Approve tidak ditemukan');
                 }
 
