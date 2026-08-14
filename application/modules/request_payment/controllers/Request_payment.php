@@ -3087,7 +3087,7 @@ class Request_payment extends Admin_Controller
 				// Request By (with Kasbon special logic)
 				$nmuser = $item->request_by;
 				if ($item->kategori == 'Kasbon') {
-					$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
+					$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $item->no_dokumen))->row();
 					if ($get_kasbon) {
 						$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $item->no_dokumen])->result();
 						if (count($check_detail)) {
@@ -3097,7 +3097,9 @@ class Request_payment extends Admin_Controller
 								$this->db->join('users b', 'b.id_user = a.created_by');
 								$this->db->where('a.no_pr', $get_kasbon->id_pr);
 								$get_single_detail = $this->db->get()->row();
-								if ($get_single_detail) $nmuser = $get_single_detail->nm_lengkap;
+								if ($get_single_detail) {
+									$nmuser = $get_single_detail->nm_lengkap;
+								}
 							}
 							if ($get_kasbon->tipe_pr == 'pr stok') {
 								$this->db->select('b.nm_lengkap');
@@ -3105,8 +3107,30 @@ class Request_payment extends Admin_Controller
 								$this->db->join('users b', 'b.id_user = a.created_by');
 								$this->db->where('a.no_pr', $get_kasbon->id_pr);
 								$get_single_detail = $this->db->get()->row();
-								if ($get_single_detail) $nmuser = $get_single_detail->nm_lengkap;
+								if ($get_single_detail) {
+									$nmuser = $get_single_detail->nm_lengkap;
+								}
 							}
+						}
+						if (!empty($get_kasbon->no_kasbon_consultant)) {
+							$get_kasbon_consultant = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $get_kasbon->no_kasbon_consultant))->row();
+							$created_by = $get_kasbon_consultant->created_by ?? '';
+
+							if (!empty($created_by)) {
+								$get_user = $this->consultant->get_where('users', array('id_user' => $created_by))->row();
+								$nmuser = $get_user->nm_lengkap;
+							}
+						}
+					}
+				}
+				if ($item->kategori == 'Direct Payment') {
+					$get_direct_payment = $this->db->get_where('tr_direct_payment', array('no_doc' => $item->no_dokumen))->row();
+					$id_create = $get_direct_payment->created_by ?? '';
+
+					if (!empty($id_create)) {
+						$get_user = $this->consultant->get_where('users', array('id_user' => $id_create))->row();
+						if (!empty($get_user)) {
+							$nmuser = $get_user->nm_lengkap;
 						}
 					}
 				}

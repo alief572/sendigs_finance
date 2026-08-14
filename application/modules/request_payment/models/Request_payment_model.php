@@ -14,6 +14,8 @@ if (!defined('DBHRIS')) define('DBHRIS', 'hr_sentral');
 class Request_payment_model extends BF_Model
 {
 
+    protected $consultant;
+
     /**
      * @var string  User Table Name
      */
@@ -66,6 +68,8 @@ class Request_payment_model extends BF_Model
     public function __construct()
     {
         parent::__construct();
+
+        $this->consultant = $this->load->database('consultant', true);
     }
 
     // list data request
@@ -678,6 +682,26 @@ class Request_payment_model extends BF_Model
                                 $nmuser = $get_single_detail->nm_lengkap;
                             }
                         }
+                    }
+                    if (!empty($get_kasbon->no_kasbon_consultant)) {
+                        $get_kasbon_consultant = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $get_kasbon->no_kasbon_consultant))->row();
+                        $created_by = $get_kasbon_consultant->created_by ?? '';
+
+                        if (!empty($created_by)) {
+                            $get_user = $this->consultant->get_where('users', array('id_user' => $created_by))->row();
+                            $nmuser = $get_user->nm_lengkap;
+                        }
+                    }
+                }
+            }
+            if ($item->kategori == 'Direct Payment') {
+                $get_direct_payment = $this->db->get_where('tr_direct_payment', array('no_doc' => $item->no_dokumen))->row();
+                $id_create = $get_direct_payment->created_by ?? '';
+
+                if (!empty($id_create)) {
+                    $get_user = $this->consultant->get_where('users', array('id_user' => $id_create))->row();
+                    if (!empty($get_user)) {
+                        $nmuser = $get_user->nm_lengkap;
                     }
                 }
             }
