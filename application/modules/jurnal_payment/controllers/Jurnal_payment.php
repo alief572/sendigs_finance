@@ -93,11 +93,21 @@ class Jurnal_payment extends Admin_Controller
             $hasil .= '<td class="text-center">' . $item->jenis_transaksi . '</td>';
             $hasil .= '<td class="text-center">' . $item->coa . '</td>';
             $hasil .= '<td class="text-center">' . $item->nm_coa . '</td>';
+            $no_reff = $item->no_transaksi;
+            $keterangan = $item->keterangan;
+            if (strpos($keterangan, '{REF:') !== false) {
+                preg_match('/\{REF:(.*?)\}/', $keterangan, $matches);
+                if (isset($matches[1])) {
+                    $no_reff = $matches[1];
+                    $keterangan = trim(str_replace($matches[0], '', $keterangan));
+                }
+            }
+
             $hasil .= '<td class="text-center">';
-            $hasil .= '<textarea class="form-control form-control-sm" name="jurnal[' . $no . '][keterangan]">' . $item->keterangan . '</textarea>';
+            $hasil .= '<textarea class="form-control form-control-sm" name="jurnal[' . $no . '][keterangan]">' . $keterangan . '</textarea>';
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">';
-            $hasil .= $item->no_transaksi;
+            $hasil .= $no_reff;
             $hasil .= '<input type="hidden" name="jurnal[' . $no . '][no_transaksi]">';
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">';
@@ -187,13 +197,23 @@ class Jurnal_payment extends Admin_Controller
                 foreach ($get_jurnal_all as $item) {
                     // Hanya insert ke tras jika debit atau kredit > 0
                     if ($item->debit > 0 || $item->kredit > 0) {
+                        $no_reff = $item->no_transaksi;
+                        $keterangan = $item->keterangan;
+                        if (strpos($keterangan, '{REF:') !== false) {
+                            preg_match('/\{REF:(.*?)\}/', $keterangan, $matches);
+                            if (isset($matches[1])) {
+                                $no_reff = $matches[1];
+                                $keterangan = trim(str_replace($matches[0], '', $keterangan));
+                            }
+                        }
+
                         $details[] = [
                             'tipe'         => 'JV',
                             'nomor'        => $Nomor_JV,
                             'tanggal'      => $item->tgl_jurnal,
                             'no_perkiraan' => $item->coa,
-                            'keterangan'   => $item->keterangan,
-                            'no_reff'      => $item->no_transaksi,
+                            'keterangan'   => $keterangan,
+                            'no_reff'      => $no_reff,
                             'debet'        => $item->debit,
                             'kredit'       => $item->kredit,
                             'stspos'       => 1
@@ -281,13 +301,23 @@ class Jurnal_payment extends Admin_Controller
                 foreach ($get_jurnal_detail as $item) {
                     // Hanya insert ke tras jika debit atau kredit > 0
                     if ($item->debit > 0 || $item->kredit > 0) {
+                        $no_reff = $get_inv->id;
+                        $keterangan = $item->keterangan;
+                        if (strpos($keterangan, '{REF:') !== false) {
+                            preg_match('/\{REF:(.*?)\}/', $keterangan, $matches);
+                            if (isset($matches[1])) {
+                                $no_reff = $matches[1];
+                                $keterangan = trim(str_replace($matches[0], '', $keterangan));
+                            }
+                        }
+
                         $arr_jurnal[] = [
                             'tipe'          => 'BUM',
                             'nomor'         => $Nomor_BUM,
                             'tanggal'       => $item->tgl_jurnal,
                             'no_perkiraan'  => $item->coa,
-                            'keterangan'    => $item->keterangan,
-                            'no_reff'       => $get_inv->id,
+                            'keterangan'    => $keterangan,
+                            'no_reff'       => $no_reff,
                             'debet'         => $item->debit,
                             'kredit'        => $item->kredit,
                             'id_perusahaan' => $item->id_company,
@@ -339,13 +369,23 @@ class Jurnal_payment extends Admin_Controller
                 foreach ($get_jurnal_all as $item) {
                     // Hanya insert ke tras jika debit atau kredit > 0
                     if ($item->debit > 0 || $item->kredit > 0) {
+                        $no_reff = $item->no_transaksi;
+                        $keterangan = $item->keterangan;
+                        if (strpos($keterangan, '{REF:') !== false) {
+                            preg_match('/\{REF:(.*?)\}/', $keterangan, $matches);
+                            if (isset($matches[1])) {
+                                $no_reff = $matches[1];
+                                $keterangan = trim(str_replace($matches[0], '', $keterangan));
+                            }
+                        }
+
                         $details[] = [
                             'tipe'         => 'BUK',
                             'nomor'        => $Nomor_JV,
                             'tanggal'      => $item->tgl_jurnal,
-                            'no_reff'      => $item->no_transaksi,
+                            'no_reff'      => $no_reff,
                             'no_perkiraan' => $item->coa,
-                            'keterangan'   => $item->keterangan,
+                            'keterangan'   => $keterangan,
                             'debet'        => $item->debit,
                             'kredit'       => $item->kredit,
                         ];
