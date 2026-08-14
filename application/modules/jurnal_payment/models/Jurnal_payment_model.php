@@ -125,10 +125,11 @@ class Jurnal_payment_model extends BF_Model
         foreach ($get_data as $item) {
             $no++;
 
+            $arr_no_transaksi = array_map('trim', explode(',', $item->no_transaksi));
             $get_kategori_payment = $this->db->select('a.tipe')
                 ->from('request_payment a')
                 ->join('payment_approve b', 'b.no_doc = a.no_doc')
-                ->where('b.id', $item->no_transaksi)
+                ->where_in('b.id', $arr_no_transaksi)
                 ->group_by('a.tipe')
                 ->get()
                 ->result_array();
