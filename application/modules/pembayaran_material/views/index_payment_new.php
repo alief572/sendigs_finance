@@ -82,7 +82,7 @@
 								$no = 1;
 								foreach ($results2 as $item) {
 									echo '<tr>';
-									echo '<td class="text-center">' . $item->id_payment . '</td>';
+									echo '<td class="text-center">' . $item->id . '</td>';
 									echo '<td class="text-center">' . $item->no_doc . '</td>';
 									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
 									echo '<td class="text-center">' . $item->created_by . '</td>';
