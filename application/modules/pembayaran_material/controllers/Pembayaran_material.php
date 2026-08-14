@@ -151,7 +151,7 @@ class Pembayaran_material extends Admin_Controller
 			->get()
 			->result();
 
-		$results2 = $this->db->query("SELECT a.* FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND (a.id_payment IS NOT NULL AND a.id_payment <> '') GROUP BY a.id_payment ORDER BY a.created_on DESC")->result();
+		$results2 = $this->db->query("SELECT a.* FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND (a.id_payment IS NOT NULL AND a.id_payment <> '') GROUP BY a.id ORDER BY a.created_on DESC")->result();
 		// ->select('a.*')
 		// ->from('payment_approve a')
 		// ->join('tr_expense b', 'b.no_doc = a.no_doc', 'left')
@@ -1441,7 +1441,7 @@ class Pembayaran_material extends Admin_Controller
 								$coa_nm = $nm_coa->nama;
 							}
 						}
-						
+
 						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
 						$arr_jurnal[] = [
 							'no_jurnal' => $id_jurnal,
@@ -1514,8 +1514,8 @@ class Pembayaran_material extends Admin_Controller
 						'nm_coa' => $item_jurnal['nm_coa'],
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
-						'keterangan' => $item_jurnal['keterangan'],
-						'no_transaksi' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['id_payment_ref'] : $post['id_payment'],
+						'keterangan' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['keterangan'] . ' {REF:' . $item_jurnal['id_payment_ref'] . '}' : $item_jurnal['keterangan'],
+						'no_transaksi' => $post['id_payment'],
 						'jenis_transaksi' => $tipe_jurnal,
 						'id_divisi' => $item_jurnal['id_divisi'],
 						'nm_divisi' => $item_jurnal['nm_divisi'],
@@ -1543,8 +1543,8 @@ class Pembayaran_material extends Admin_Controller
 						'nm_coa' => isset($item_jurnal['nm_coa']) ? $item_jurnal['nm_coa'] : (isset($item_jurnal['nm_account']) ? $item_jurnal['nm_account'] : ''),
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
-						'keterangan' => isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : ''),
-						'no_transaksi' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['id_payment_ref'] : $post['id_payment'],
+						'keterangan' => (isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : '')) . (isset($item_jurnal['id_payment_ref']) ? ' {REF:' . $item_jurnal['id_payment_ref'] . '}' : ''),
+						'no_transaksi' => $post['id_payment'],
 						'jenis_transaksi' => 'Refill Pettycash',
 						'id_divisi' => (isset($item_jurnal['id_divisi']) ? $item_jurnal['id_divisi'] : ''),
 						'nm_divisi' => (isset($item_jurnal['nm_divisi']) ? $item_jurnal['nm_divisi'] : ''),

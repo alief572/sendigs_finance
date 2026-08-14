@@ -383,6 +383,15 @@ class Pembayaran_material_model extends BF_Model
 		$hasil_jurnal = '';
 		$hasil_jurnal_refill = '';
 		$no = 1;
+		$first_id_company = '';
+		$first_nm_company = '';
+		$first_id_divisi = '';
+		$first_nm_divisi = '';
+		$is_first = true;
+		
+		$no_jurnal = 1;
+		$no_jurnal_refill = 1;
+
 		foreach ($get_payment as $item_payment) :
 
 			if ($item_payment->tipe == 'kasbon') {
@@ -470,14 +479,15 @@ class Pembayaran_material_model extends BF_Model
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-				$arr_coa_jurnal = ['1103-01-14', '7201-01-04', '1106-01-06', $coa_pph];
-				if (!empty($coa_bank)) {
-					array_push($arr_coa_jurnal, $coa_bank);
-				}
+				$item_ppn_arr = $this->input->post('item_ppn');
+				$item_pph_arr = $this->input->post('item_pph');
+				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
+
+				$arr_coa_jurnal = ['1103-01-14', '1106-01-06', $coa_pph];
 
 				$get_coa_jurnal = $get_coa_list($arr_coa_jurnal);
 
-				$no_jurnal = 1;
 				foreach ($get_coa_jurnal as $item_coa) {
 					$debit = 0;
 					$kredit = 0;
@@ -580,10 +590,10 @@ class Pembayaran_material_model extends BF_Model
 						$debit = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
 						$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, 'Admin Charge', $debit, $kredit);
 					} elseif ($item_coa->no_coa == '1106-01-06') {
-						$debit = $nilai_ppn;
+						$debit = $nilai_ppn_item;
 						$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, 'PPN', $debit, $kredit);
 					} elseif ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
-						$kredit = $nilai_pph;
+						$kredit = $nilai_pph_item;
 						$keterangan = ($item_coa->no_coa == '2104-01-02') ? 'PPh 21' : 'PPh 23';
 						$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
 					} elseif (!empty($coa_bank) && $coa_bank == $item_coa->no_coa) {
@@ -619,10 +629,7 @@ class Pembayaran_material_model extends BF_Model
 				$nm_department = $get_department->name ?? '';
 				$idd_company = (!empty($get_department->company_id)) ? $get_department->company_id : '';
 
-				$arr_coa_jurnal = [$coa_transport, '1106-01-06', '7201-01-04', '1106-01-01'];
-				if (!empty($coa_bank)) {
-					$arr_coa_jurnal[] = $coa_bank;
-				}
+				$arr_coa_jurnal = [$coa_transport, '1106-01-06', '1106-01-01'];
 
 				$get_coa_jurnal = $get_coa_list($arr_coa_jurnal);
 
@@ -666,8 +673,12 @@ class Pembayaran_material_model extends BF_Model
 					$id_divisi = (!empty($get_title)) ? $get_title->id : '';
 					$nm_divisi = (!empty($get_title)) ? $get_title->name : '';
 				}
+				
+				$item_ppn_arr = $this->input->post('item_ppn');
+				$item_pph_arr = $this->input->post('item_pph');
+				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
-				$no_jurnal = 1;
 				foreach ($get_coa_jurnal as $item_coa) {
 					$debit = 0;
 					$kredit = 0;
@@ -679,16 +690,16 @@ class Pembayaran_material_model extends BF_Model
 					} elseif (!empty($coa_bank) && $item_coa->no_coa == $coa_bank) {
 						$kredit = $total_payment;
 					} elseif ($item_coa->no_coa == '1106-01-06') {
-						$debit = $nilai_ppn;
+						$debit = $nilai_ppn_item;
 						$keterangan = 'PPN';
 					} elseif ($item_coa->no_coa == '7201-01-04') {
 						$debit = $bank_charge;
 						$keterangan = 'Admin Charge';
 					} elseif ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
-						$kredit = $nilai_pph;
+						$kredit = $nilai_pph_item;
 						$keterangan = ($item_coa->no_coa == '2104-01-02') ? 'PPh 21' : 'PPh 23';
 					} elseif ($item_coa->no_coa == '1106-01-01') {
-						$kredit = $nilai_pph;
+						$kredit = $nilai_pph_item;
 					}
 
 					if ($debit == '') $debit = 0;
@@ -697,9 +708,6 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
 				}
 
-				if ($bank_charge > 0 && !empty($coa_bank)) {
-					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
-				}
 			} else if ($item_payment->tipe == 'expense') {
 				$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc])->row();
 
@@ -752,14 +760,10 @@ class Pembayaran_material_model extends BF_Model
 					}
 
 					if ($get_top_po->group_top == '75' || $get_top_po->group_top == '76') {
-						$arr_coa_jurnal = ['2010-10-0', '7010-20-5'];
-						if (!empty($coa_bank)) {
-							$arr_coa_jurnal[] = $coa_bank;
-						}
+						$arr_coa_jurnal = ['2010-10-0'];
 
 						$get_coa_jurnal = $get_coa_list($arr_coa_jurnal);
 
-						$no_jurnal = 0;
 						foreach ($get_coa_jurnal as $item_coa) {
 							$id_coa = $item_coa->no_coa;
 							$nm_coa = $item_coa->nm_coa;
@@ -810,13 +814,15 @@ class Pembayaran_material_model extends BF_Model
 						$pph_data = $this->input->post('pph_data');
 						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
+						
+						$item_ppn_arr = $this->input->post('item_ppn');
+						$item_pph_arr = $this->input->post('item_pph');
+						$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+						$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
-						$arr_coa_jurnal = ['9999-99-99', '7201-01-04', '1106-01-06', $coa_pph];
-						if (!empty($coa_bank)) $arr_coa_jurnal[] = $coa_bank;
+						$arr_coa_jurnal = ['9999-99-99', '1106-01-06', $coa_pph];
 
 						$get_coa_jurnal = $get_coa_list($arr_coa_jurnal);
-
-						$no_jurnal = 0;
 						foreach ($get_coa_jurnal as $item_coa) {
 							$no_jurnal++;
 							$debit = 0;
@@ -841,10 +847,10 @@ class Pembayaran_material_model extends BF_Model
 								$debit = $bank_charge;
 								$keterangan = 'Admin Charge';
 							} elseif ($item_coa->no_coa == '1106-01-06') {
-								$debit = $nilai_ppn;
+								$debit = $nilai_ppn_item;
 								$keterangan = 'PPN';
 							} elseif ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
-								$kredit = $nilai_pph;
+								$kredit = $nilai_pph_item;
 								$keterangan = ($item_coa->no_coa == '2104-01-02') ? 'PPh 21' : 'PPh 23';
 							} elseif ($item_coa->no_coa == $coa_bank) {
 								$kredit = $total_payment;
@@ -853,10 +859,6 @@ class Pembayaran_material_model extends BF_Model
 							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan . ' - ' . $item_payment->no_doc, $debit, $kredit);
 						}
 
-						if ($bank_charge > 0 && !empty($coa_bank)) {
-							$no_jurnal++;
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
-						}
 					}
 				}
 			} else if ($item_payment->tipe == 'direct_payment') {
@@ -900,7 +902,6 @@ class Pembayaran_material_model extends BF_Model
 					}
 				}
 
-				$no_jurnal = 1;
 				foreach ($get_kasbon_cons_detail as $item_detail) :
 					$debit = $item_detail->total_pengajuan ?? 0;
 					$kredit = 0;
@@ -915,8 +916,12 @@ class Pembayaran_material_model extends BF_Model
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-				$arr_coa_jurnal = [$coa_pph, '7201-01-04', '1106-01-06'];
-				if (!empty($coa_bank)) $arr_coa_jurnal[] = $coa_bank;
+				$item_ppn_arr = $this->input->post('item_ppn');
+				$item_pph_arr = $this->input->post('item_pph');
+				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
+
+				$arr_coa_jurnal = [$coa_pph, '1106-01-06'];
 
 				$get_coa_jurnal = $get_coa_list($arr_coa_jurnal);
 
@@ -928,13 +933,13 @@ class Pembayaran_material_model extends BF_Model
 					$keterangan = $item_coa->nm_coa;
 
 					if ($item_coa->no_coa == '2104-01-02' || $item_coa->no_coa == '2104-01-03') {
-						$kredit = $nilai_pph;
+						$kredit = $nilai_pph_item;
 						$keterangan = ($item_coa->no_coa == '2104-01-02') ? 'PPh 21' : 'PPh 23';
 					} elseif ($item_coa->no_coa == '7201-01-04') {
 						$debit = $bank_charge;
 						$keterangan = 'Admin Charge';
 					} elseif ($item_coa->no_coa == '1106-01-06') {
-						$kredit = $nilai_ppn;
+						$kredit = $nilai_ppn_item;
 						$keterangan = 'PPN';
 					} elseif ($item_coa->no_coa == $coa_bank) {
 						$kredit = $total_payment;
@@ -943,9 +948,6 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $no_coa, $nm_coa, $keterangan, $debit, $kredit);
 				endforeach;
 
-				if ($bank_charge > 0 && !empty($coa_bank)) {
-					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
-				}
 			} else if ($item_payment->tipe == 'petty_cash_hutang' || $item_payment->tipe == 'refill_pettycash' || strpos($item_payment->no_doc, 'RPC') === 0) {
 				$nm_company = '';
 				$pelaporan_id = '';
@@ -967,7 +969,6 @@ class Pembayaran_material_model extends BF_Model
 							$id_company = $get_company->id;
 						}
 
-						$no_jurnal = 0;
 						$jumlah = $item_payment->jumlah;
 
 						// Ambil detail expenses dari pencatatan petty cash
@@ -988,17 +989,21 @@ class Pembayaran_material_model extends BF_Model
 						$no_jurnal++;
 						$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Kas Kecil', 0, $jumlah);
 
-						if ($bank_charge > 0) {
-							$no_jurnal++;
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $bank_charge, 0);
-						}
 						if ($nilai_ppn > 0) {
-							$no_jurnal++;
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1106-01-06', 'PPN', 'PPN', $nilai_ppn, 0);
+							$item_ppn_arr = $this->input->post('item_ppn');
+							$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+							if ($nilai_ppn_item > 0) {
+								$no_jurnal++;
+								$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1106-01-06', 'PPN', 'PPN', $nilai_ppn_item, 0);
+							}
 						}
 						if ($nilai_pph > 0) {
-							$no_jurnal++;
-							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '2104-01-02', 'PPh', 'PPh', 0, $nilai_pph);
+							$item_pph_arr = $this->input->post('item_pph');
+							$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
+							if ($nilai_pph_item > 0) {
+								$no_jurnal++;
+								$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '2104-01-02', 'PPh', 'PPh', 0, $nilai_pph_item);
+							}
 						}
 					}
 				} else if (strpos($item_payment->no_doc, 'RPC') === 0 || $item_payment->tipe == 'refill_pettycash') {
@@ -1022,7 +1027,6 @@ class Pembayaran_material_model extends BF_Model
 					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
 					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
 
-					$no_jurnal_refill = 0;
 					$jumlah = $item_payment->jumlah;
 
 					// Expense details are omitted for RPC as per user request to only show Refill STM journals
@@ -1049,8 +1053,35 @@ class Pembayaran_material_model extends BF_Model
 				}
 			}
 
+			if ($is_first) {
+				$first_id_company = isset($id_company) ? $id_company : '';
+				$first_nm_company = isset($nm_company) ? $nm_company : '';
+				$first_id_divisi = isset($id_divisi) ? $id_divisi : '';
+				$first_nm_divisi = isset($nm_divisi) ? $nm_divisi : '';
+				
+				if (empty($first_id_divisi) && isset($id_department)) $first_id_divisi = $id_department;
+				if (empty($first_nm_divisi) && isset($nm_department)) $first_nm_divisi = $nm_department;
+				if (empty($first_id_divisi) && isset($id_div)) $first_id_divisi = $id_div;
+				if (empty($first_nm_divisi) && isset($nm_div)) $first_nm_divisi = $nm_div;
+				
+				$is_first = false;
+			}
 			$no++;
 		endforeach;
+
+		if (!$is_refill_pettycash && $is_all_petty_cash_hutang === false) {
+			$debit_admin = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
+			if ($debit_admin > 0) {
+				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $debit_admin, 0);
+			}
+			if (!empty($coa_bank) && $payment_bank > 0) {
+				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $payment_bank);
+			}
+		} elseif ($is_all_petty_cash_hutang) {
+			if ($bank_charge > 0) {
+				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $bank_charge, 0);
+			}
+		}
 
 		$response = [
 			'hasil_jurnal' => $hasil_jurnal,

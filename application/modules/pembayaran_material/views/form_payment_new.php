@@ -815,6 +815,26 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			pph_data[id] = tipe;
 		});
 
+		var item_ppn = {};
+		$('.nilai_ppn').each(function() {
+			var id = $(this).data('id');
+			var val = $(this).val();
+			if (val !== '') {
+				val = val.split(',').join('');
+			}
+			item_ppn[id] = parseFloat(val) || 0;
+		});
+
+		var item_pph = {};
+		$('.nilai_pph').each(function() {
+			var id = $(this).data('id');
+			var val = $(this).val();
+			if (val !== '') {
+				val = val.split(',').join('');
+			}
+			item_pph[id] = parseFloat(val) || 0;
+		});
+
 		$.ajax({
 			type: 'post',
 			url: siteurl + active_controller + 'set_jurnal',
@@ -828,7 +848,9 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 				'tgl_bayar': tgl_bayar,
 				'total_payment': total_payment,
 				'admin_charge_bearer': admin_charge_bearer,
-				'pph_data': pph_data
+				'pph_data': pph_data,
+				'item_ppn': item_ppn,
+				'item_pph': item_pph
 			},
 			cache: false,
 			dataType: 'json',
