@@ -160,6 +160,25 @@ class Accessories extends Admin_Controller
     }
   }
 
+  public function detail($id = '')
+  {
+    $header         = $this->db->get_where('accessories', array('id' => $id))->result();
+    $satuan         = $this->db->get_where('ms_satuan', array('deleted_date' => NULL, 'category' => 'unit'))->result();
+    $satuan_packing = $this->db->get_where('ms_satuan', array('deleted_date' => NULL, 'category' => 'packing'))->result();
+    $category       = $this->db->get_where('accessories_category', array('deleted_date' => NULL))->result();
+    $coa            = $this->accessories_model->all_coa();
+
+    $data = [
+      'header'         => $header,
+      'satuan'         => $satuan,
+      'satuan_packing' => $satuan_packing,
+      'category'       => $category,
+      'list_coa'       => $coa
+    ];
+
+    $this->load->view('accessories/detail', $data);
+  }
+
   public function hapus()
   {
     $data = $this->input->post();
