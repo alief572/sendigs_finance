@@ -109,7 +109,7 @@ class Pembayaran_material_model extends BF_Model
 			])->num_rows() > 0;
 
 			$requestor = $item->requestor;
-			
+
 			if (strpos($item->no_doc, 'PHP') !== false) {
 				$get_vuca = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc])->row();
 				if (!empty($get_vuca)) {
@@ -226,7 +226,7 @@ class Pembayaran_material_model extends BF_Model
 			if (!empty($get_bank_detail)) {
 				$coa_bank = $get_bank_detail->coa_bank;
 				$nm_bank = $get_bank_detail->rekening . ' - ' . $get_bank_detail->nama_bank . ' - ' . $get_bank_detail->nama;
-				
+
 				$get_coa_bank = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_bank)->get()->row();
 				if (!empty($get_coa_bank)) {
 					$nm_coa_bank = $get_coa_bank->nama;
@@ -388,7 +388,7 @@ class Pembayaran_material_model extends BF_Model
 		$first_id_divisi = '';
 		$first_nm_divisi = '';
 		$is_first = true;
-		
+
 		$no_jurnal = 1;
 		$no_jurnal_refill = 1;
 
@@ -673,7 +673,7 @@ class Pembayaran_material_model extends BF_Model
 					$id_divisi = (!empty($get_title)) ? $get_title->id : '';
 					$nm_divisi = (!empty($get_title)) ? $get_title->name : '';
 				}
-				
+
 				$item_ppn_arr = $this->input->post('item_ppn');
 				$item_pph_arr = $this->input->post('item_pph');
 				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
@@ -707,7 +707,6 @@ class Pembayaran_material_model extends BF_Model
 
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
 				}
-
 			} else if ($item_payment->tipe == 'expense') {
 				$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc])->row();
 
@@ -814,7 +813,7 @@ class Pembayaran_material_model extends BF_Model
 						$pph_data = $this->input->post('pph_data');
 						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
-						
+
 						$item_ppn_arr = $this->input->post('item_ppn');
 						$item_pph_arr = $this->input->post('item_pph');
 						$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
@@ -858,7 +857,6 @@ class Pembayaran_material_model extends BF_Model
 
 							$hasil_jurnal .= $generate_tr($no_jurnal, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan . ' - ' . $item_payment->no_doc, $debit, $kredit);
 						}
-
 					}
 				}
 			} else if ($item_payment->tipe == 'direct_payment') {
@@ -947,11 +945,10 @@ class Pembayaran_material_model extends BF_Model
 
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $no_coa, $nm_coa, $keterangan, $debit, $kredit);
 				endforeach;
-
 			} else if ($item_payment->tipe == 'petty_cash_hutang' || $item_payment->tipe == 'refill_pettycash' || strpos($item_payment->no_doc, 'RPC') === 0) {
 				$nm_company = '';
 				$pelaporan_id = '';
-				
+
 				if (strpos($item_payment->no_doc, 'PHP') === 0) {
 					$get_petty_cash = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc])->row();
 					if (!empty($get_petty_cash)) {
@@ -1035,7 +1032,7 @@ class Pembayaran_material_model extends BF_Model
 					$no_jurnal_refill++;
 					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Refill Kas Kecil', $jumlah, 0);
 					$ttl_debit_refill += $jumlah;
-					
+
 					// 4. Bank (Kredit)
 					$no_jurnal_refill++;
 					$hasil_jurnal_refill .= $generate_tr_refill($no_jurnal_refill, $item_payment->id, $tgl_bayar_display, $tgl_bayar_value, $id_company_stm, 'STM', $id_divisi, $nm_divisi, (!empty($coa_bank) ? $coa_bank : '1101-02-09'), (!empty($nm_coa_bank) ? $nm_coa_bank : 'Bank STM'), (!empty($nm_bank) ? $nm_bank : 'Bank STM'), 0, $jumlah);
@@ -1058,12 +1055,12 @@ class Pembayaran_material_model extends BF_Model
 				$first_nm_company = isset($nm_company) ? $nm_company : '';
 				$first_id_divisi = isset($id_divisi) ? $id_divisi : '';
 				$first_nm_divisi = isset($nm_divisi) ? $nm_divisi : '';
-				
+
 				if (empty($first_id_divisi) && isset($id_department)) $first_id_divisi = $id_department;
 				if (empty($first_nm_divisi) && isset($nm_department)) $first_nm_divisi = $nm_department;
 				if (empty($first_id_divisi) && isset($id_div)) $first_id_divisi = $id_div;
 				if (empty($first_nm_divisi) && isset($nm_div)) $first_nm_divisi = $nm_div;
-				
+
 				$is_first = false;
 			}
 			$no++;
@@ -1280,7 +1277,8 @@ class Pembayaran_material_model extends BF_Model
 		echo json_encode($response);
 	}
 
-	public function refresh_list() {
+	public function refresh_list()
+	{
 		$this->db->trans_begin();
 
 		$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
@@ -1333,7 +1331,7 @@ class Pembayaran_material_model extends BF_Model
 			5 => 'a.keterangan_pembayaran'
 		];
 
-		$order_by = "ORDER BY a.created_on DESC";
+		$order_by = "ORDER BY a.tgl_bayar DESC, a.id DESC";
 		if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
 			$dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
 			$order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
@@ -1392,7 +1390,7 @@ class Pembayaran_material_model extends BF_Model
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 		$order  = isset($post['order']) ? $post['order'] : [];
 
-		$where_sql = "a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND (a.id_payment IS NOT NULL AND a.id_payment <> '')";
+		$where_sql = "a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND a.id_payment IS NOT NULL";
 
 		$sql_total = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$where_sql}";
 		$recordsTotal = (int) $this->db->query($sql_total)->row()->total;
@@ -1423,7 +1421,7 @@ class Pembayaran_material_model extends BF_Model
 			5 => 'a.keterangan_pembayaran'
 		];
 
-		$order_by = "ORDER BY a.created_on DESC";
+		$order_by = "ORDER BY a.tgl_bayar DESC, a.id DESC";
 		if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
 			$dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
 			$order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
@@ -1476,4 +1474,3 @@ class Pembayaran_material_model extends BF_Model
 		]);
 	}
 }
-
