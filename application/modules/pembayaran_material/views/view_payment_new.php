@@ -240,7 +240,6 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 					<thead>
 						<tr style="background-color: #00a65a; color: #fff;">
 							<th class="text-center" width="40px">#</th>
-							<th class="text-center">No Jurnal</th>
 							<th class="text-center">Tanggal Jurnal</th>
 							<th class="text-center">Jenis Transaksi / Company</th>
 							<th class="text-center">No Perkiraan (COA)</th>
@@ -268,7 +267,6 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 
 								echo '<tr>';
 								echo '<td class="text-center">' . $j_no . '</td>';
-								echo '<td class="text-center"><span class="badge bg-gray">' . htmlspecialchars($jr->no_jurnal ?? '-') . '</span></td>';
 								echo '<td class="text-center">' . $tgl_jurnal_fmt . '</td>';
 								echo '<td class="text-center">' . htmlspecialchars($jenis_or_comp) . '</td>';
 								echo '<td class="text-center"><strong>' . htmlspecialchars($jr->coa ?? '-') . '</strong></td>';
@@ -281,26 +279,26 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 								$j_no++;
 							}
 						} else {
-							echo '<tr><td colspan="9" class="text-center text-muted" style="padding: 20px;"><em>Tidak ada data jurnal yang tersimpan untuk transaksi payment ini.</em></td></tr>';
+							echo '<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;"><em>Tidak ada data jurnal yang tersimpan untuk transaksi payment ini.</em></td></tr>';
 						}
 						?>
 					</tbody>
 					<?php if (!empty($list_jurnal)): ?>
 					<tfoot>
 						<tr style="background-color: #f4f4f4; font-weight: bold;">
-							<td colspan="7" class="text-right">TOTAL JURNAL :</td>
+							<td colspan="6" class="text-right">TOTAL JURNAL :</td>
 							<td class="text-right text-navy">Rp <?= number_format($total_debit, 2) ?></td>
 							<td class="text-right text-navy">Rp <?= number_format($total_kredit, 2) ?></td>
 						</tr>
 						<?php if (round($total_debit, 2) === round($total_kredit, 2)): ?>
 						<tr style="background-color: #e8f5e9;">
-							<td colspan="9" class="text-center text-green" style="font-weight: 600;">
+							<td colspan="8" class="text-center text-green" style="font-weight: 600;">
 								<i class="fa fa-check-circle"></i> Status Jurnal: <strong>BALANCE (Seimbang)</strong>
 							</td>
 						</tr>
 						<?php else: ?>
 						<tr style="background-color: #ffebee;">
-							<td colspan="9" class="text-center text-red" style="font-weight: 600;">
+							<td colspan="8" class="text-center text-red" style="font-weight: 600;">
 								<i class="fa fa-exclamation-triangle"></i> Status Jurnal: <strong>TIDAK BALANCE (Selisih: Rp <?= number_format(abs($total_debit - $total_kredit), 2) ?>)</strong>
 							</td>
 						</tr>
