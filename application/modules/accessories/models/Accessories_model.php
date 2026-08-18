@@ -84,33 +84,29 @@ class Accessories_model extends BF_Model
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['brand'])) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['spec'])) . "</div>";
 
-			$status = ($row['status'] == '1') ? 'Active' : 'Non-Active';
-			$warna = ($row['status'] == '1') ? 'green' : 'red';
+			$status = ($row['status'] == '1') ? 'Aktif' : 'Non-Aktif';
+			$badge_class = ($row['status'] == '1') ? 'active' : 'inactive';
 
-			$nestedData[]	= "<div align='left'><span class='badge bg-" . $warna . "'>" . $status . "</span></div>";
+			$nestedData[]	= "<div align='center'><span class='status-badge " . $badge_class . "'>" . $status . "</span></div>";
 
 			$last_create = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
-			$nestedData[]	= "<div align='left'>" . strtolower(get_name('users', 'username', 'id_user', $last_create)) . "</div>";
+			$nestedData[]	= "<div align='left'><span class='text-muted' style='font-size: 12px;'>" . strtolower(get_name('users', 'username', 'id_user', $last_create)) . "</span></div>";
 
 			$last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
-			$nestedData[]	= "<div align='center'>" . date('d-M-Y H:i', strtotime($last_date)) . "</div>";
+			$nestedData[]	= "<div align='center'><span style='font-size: 12px; color: #64748b;'>" . date('d-M-Y H:i', strtotime($last_date)) . "</span></div>";
 
 			$view	= "";
 			$edit	= "";
 			$delete	= "";
 
-			$view	= "&nbsp;<a href='" . site_url($this->uri->segment(1)) . '/add/' . $row['id'] . "/view' class='btn btn-sm btn-warning' title='Detail Data' data-role='qtip'><i class='fa fa-eye'></i></a>";
+			$view	= "<a href='" . site_url($this->uri->segment(1)) . '/add/' . $row['id'] . "/view' class='btn btn-warning' title='Detail Data' data-toggle='tooltip'><i class='fa fa-eye'></i></a>";
 			if ($this->ENABLE_MANAGE) {
-				$edit	= "&nbsp;<a href='" . site_url($this->uri->segment(1)) . '/add/' . $row['id'] . "' class='btn btn-sm btn-primary' title='Edit Data' data-role='qtip'><i class='fa fa-edit'></i></a>";
+				$edit	= "<a href='" . site_url($this->uri->segment(1)) . '/add/' . $row['id'] . "' class='btn btn-primary' title='Edit Data' data-toggle='tooltip'><i class='fa fa-pencil'></i></a>";
 			}
 			if ($this->ENABLE_DELETE) {
-				$delete	= "&nbsp;<button type='button' class='btn btn-sm btn-danger delete' title='Delete data' data-id='" . $row['id'] . "'><i class='fa fa-trash'></i></button>";
+				$delete	= "<button type='button' class='btn btn-danger delete' title='Delete data' data-id='" . $row['id'] . "' data-toggle='tooltip'><i class='fa fa-trash'></i></button>";
 			}
-			$nestedData[]	= "<div align='left'>
-								" . $view . "
-								" . $edit . "
-								" . $delete . "
-								</div>";
+			$nestedData[]	= "<div align='center'><div class='table-action-btns'>" . $view . $edit . $delete . "</div></div>";
 			$data[] = $nestedData;
 			$urut1++;
 			$urut2++;

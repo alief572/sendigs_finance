@@ -162,19 +162,6 @@ $nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 				<td class="mid" width='33%'><?= $header[0]->nm_coa; ?></td>
 				<td colspan="3"></td>
 			</tr>
-			<tr>
-				<td class="mid" width='15%'>Bank</td>
-				<td class="mid" width='2%'>:</td>
-				<td class="mid" width='33%'><?= $header[0]->bank_name; ?></td>
-				<td class="mid" width='15%'>No. Rekening</td>
-				<td class="mid" width='2%'>:</td>
-				<td class="mid"><?= $header[0]->bank_account_no; ?></td>
-			</tr>
-			<tr>
-				<td class="mid" width='15%'>Nama Rekening</td>
-				<td class="mid" width='2%'>:</td>
-				<td class="mid" colspan="4"><?= $header[0]->bank_account_name; ?></td>
-			</tr>
 		</thead>
 	</table><br>
 	<table class="gridtable" width='100%' border='1' cellpadding='2'>
