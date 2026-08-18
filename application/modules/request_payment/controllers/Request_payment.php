@@ -43,13 +43,13 @@ class Request_payment extends Admin_Controller
 
 	public function payment_list()
 	{
-		$data = $this->Request_payment_model->GetListDataPaymentList();
-		$list_tgl_pengajuan_pembayaran = $this->Request_payment_model->get_payment_paid();
-
-		$this->template->set('data', $data);
-		$this->template->set('list_tgl_pengajuan_pembayaran', $list_tgl_pengajuan_pembayaran);
 		$this->template->title('Payment List');
 		$this->template->render('payment_list');
+	}
+
+	public function get_data_payment_list()
+	{
+		$this->Request_payment_model->get_server_side_payment_list();
 	}
 
 	public function save_request()
@@ -2269,11 +2269,12 @@ class Request_payment extends Admin_Controller
 
 	public function excel_payment_list()
 	{
-		$tgl_from = $this->uri->segment(3);
-		$tgl_to = $this->uri->segment(4);
-		$bank = $this->uri->segment(5);
+		$tgl_from = $this->input->get('tgl_from') !== null ? $this->input->get('tgl_from') : $this->uri->segment(3);
+		$tgl_to   = $this->input->get('tgl_to') !== null ? $this->input->get('tgl_to') : $this->uri->segment(4);
+		$tipe     = $this->input->get('tipe') !== null ? $this->input->get('tipe') : '';
+		$status   = $this->input->get('status') !== null ? $this->input->get('status') : '';
 
-		$this->Request_payment_model->excel_payment_list($tgl_from, $tgl_to, $bank);
+		$this->Request_payment_model->excel_payment_list($tgl_from, $tgl_to, $tipe, $status);
 	}
 
 	public function view_receive_invoice()
