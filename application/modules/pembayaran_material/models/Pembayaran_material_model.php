@@ -1292,5 +1292,188 @@ class Pembayaran_material_model extends BF_Model
 			$this->db->trans_rollback();
 		}
 	}
+
+	public function get_server_side_payment_list_pr()
+	{
+		$post = $this->input->post();
+
+		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+		$length = isset($post['length']) ? intval($post['length']) : 10;
+		$start  = isset($post['start']) ? intval($post['start']) : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$order  = isset($post['order']) ? $post['order'] : [];
+
+		$where_sql = "a.status = 2 AND b.exp_inv_po = 1 AND a.id_payment IS NOT NULL AND a.id_payment <> ''";
+
+		$sql_total = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$where_sql}";
+		$recordsTotal = (int) $this->db->query($sql_total)->row()->total;
+
+		$search_sql = "";
+		if (!empty($search)) {
+			$escaped_search = $this->db->escape_like_str($search);
+			$search_sql = " AND (
+				a.id_payment LIKE '%{$escaped_search}%' OR
+				a.no_doc LIKE '%{$escaped_search}%' OR
+				a.nm_supplier LIKE '%{$escaped_search}%' OR
+				a.keterangan_pembayaran LIKE '%{$escaped_search}%'
+			)";
+		}
+
+		$final_where = $where_sql . $search_sql;
+
+		$sql_filtered = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$final_where}";
+		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
+
+		$sort_cols = [
+			0 => 'a.id_payment',
+			1 => 'a.no_doc',
+			2 => 'a.tgl_bayar',
+			3 => 'a.nm_supplier',
+			4 => 'a.payment_bank',
+			5 => 'a.keterangan_pembayaran'
+		];
+
+		$order_by = "ORDER BY a.created_on DESC";
+		if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
+			$dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
+			$order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
+		}
+
+		$limit_clause = "";
+		if ($length != -1) {
+			$limit_clause = "LIMIT " . intval($start) . ", " . intval($length);
+		}
+
+		$sql_data = "
+			SELECT a.*
+			FROM payment_approve a
+			JOIN tr_expense b ON b.no_doc = a.no_doc
+			WHERE {$final_where}
+			GROUP BY a.id
+			{$order_by}
+			{$limit_clause}
+		";
+
+		$query_data = $this->db->query($sql_data)->result();
+
+		$hasil = [];
+		foreach ($query_data as $item) {
+			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
+			if (!empty($item->link_doc) && file_exists('assets/expense/' . $item->link_doc)) {
+				$opt .= '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+			}
+
+			$hasil[] = [
+				'no_payment'  => $item->id_payment,
+				'no_doc'      => $item->no_doc,
+				'tgl_bayar'   => !empty($item->tgl_bayar) ? date('d F Y', strtotime($item->tgl_bayar)) : '-',
+				'supplier'    => !empty($item->nm_supplier) ? $item->nm_supplier : '-',
+				'nilai_bayar' => number_format($item->payment_bank, 2),
+				'keterangan'  => $item->keterangan_pembayaran,
+				'option'      => $opt
+			];
+		}
+
+		echo json_encode([
+			'draw'            => $draw,
+			'recordsTotal'    => $recordsTotal,
+			'recordsFiltered' => $recordsFiltered,
+			'data'            => $hasil
+		]);
+	}
+
+	public function get_server_side_payment_list_non_pr()
+	{
+		$post = $this->input->post();
+
+		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+		$length = isset($post['length']) ? intval($post['length']) : 10;
+		$start  = isset($post['start']) ? intval($post['start']) : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$order  = isset($post['order']) ? $post['order'] : [];
+
+		$where_sql = "a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND (a.id_payment IS NOT NULL AND a.id_payment <> '')";
+
+		$sql_total = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$where_sql}";
+		$recordsTotal = (int) $this->db->query($sql_total)->row()->total;
+
+		$search_sql = "";
+		if (!empty($search)) {
+			$escaped_search = $this->db->escape_like_str($search);
+			$search_sql = " AND (
+				a.id_payment LIKE '%{$escaped_search}%' OR
+				a.no_doc LIKE '%{$escaped_search}%' OR
+				a.created_by LIKE '%{$escaped_search}%' OR
+				a.nm_supplier LIKE '%{$escaped_search}%' OR
+				a.keterangan_pembayaran LIKE '%{$escaped_search}%'
+			)";
+		}
+
+		$final_where = $where_sql . $search_sql;
+
+		$sql_filtered = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$final_where}";
+		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
+
+		$sort_cols = [
+			0 => 'a.id_payment',
+			1 => 'a.no_doc',
+			2 => 'a.tgl_bayar',
+			3 => 'a.created_by',
+			4 => 'a.payment_bank',
+			5 => 'a.keterangan_pembayaran'
+		];
+
+		$order_by = "ORDER BY a.created_on DESC";
+		if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
+			$dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
+			$order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
+		}
+
+		$limit_clause = "";
+		if ($length != -1) {
+			$limit_clause = "LIMIT " . intval($start) . ", " . intval($length);
+		}
+
+		$sql_data = "
+			SELECT a.*
+			FROM payment_approve a
+			LEFT JOIN tr_expense b ON b.no_doc = a.no_doc
+			WHERE {$final_where}
+			GROUP BY a.id
+			{$order_by}
+			{$limit_clause}
+		";
+
+		$query_data = $this->db->query($sql_data)->result();
+
+		$hasil = [];
+		foreach ($query_data as $item) {
+			$nilai_bayar = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
+			$no_payment  = !empty($item->id_payment) ? $item->id_payment : $item->id;
+			$requestor   = !empty($item->created_by) ? $item->created_by : $item->nm_supplier;
+
+			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
+			if (!empty($item->link_doc) && file_exists('assets/expense/' . $item->link_doc)) {
+				$opt .= '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+			}
+
+			$hasil[] = [
+				'no_payment'  => $no_payment,
+				'no_doc'      => $item->no_doc,
+				'tgl_bayar'   => !empty($item->tgl_bayar) ? date('d F Y', strtotime($item->tgl_bayar)) : '-',
+				'requestor'   => $requestor,
+				'nilai_bayar' => number_format($nilai_bayar, 2),
+				'keterangan'  => $item->keterangan_pembayaran,
+				'option'      => $opt
+			];
+		}
+
+		echo json_encode([
+			'draw'            => $draw,
+			'recordsTotal'    => $recordsTotal,
+			'recordsFiltered' => $recordsFiltered,
+			'data'            => $hasil
+		]);
+	}
 }
 

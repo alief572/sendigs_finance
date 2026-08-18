@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
 <div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
 	<div class="box-header">
@@ -13,96 +13,38 @@
 		</ul>
 		<div class="tab-content">
 			<div role="tabpanel" class="tab-pane active" id="material">
-				<div class="box-body">
+				<div class="box-body table-responsive">
 					<table class="table table-bordered table-striped" id="mytabledata" width='100%'>
 						<thead>
 							<tr class='bg-blue'>
 								<th class="text-center">No Payment</th>
 								<th class="text-center">No Dokumen</th>
 								<th class="text-center">Tgl Bayar</th>
-								<th class="text-center">Requesto / Supplier</th>
+								<th class="text-center">Requestor / Supplier</th>
 								<th class="text-center">Nilai Bayar</th>
 								<th class="text-center">Keterangan</th>
 								<th class="text-center" width='110px'>Option</th>
 							</tr>
 						</thead>
-
-						<tbody>
-							<?php
-
-							if (!empty($results)) {
-								$no = 1;
-								foreach ($results as $item) {
-
-									$nm_supplier = $item->nm_supplier;
-
-									echo '<tr>';
-									echo '<td class="text-center">' . $item->id_payment . '</td>';
-									echo '<td class="text-center">' . $item->no_doc . '</td>';
-									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
-									echo '<td class="text-center">' . $nm_supplier . '</td>';
-									echo '<td class="text-right">' . number_format($item->payment_bank, 2) . '</td>';
-									echo '<td class="text-left">' . $item->keterangan_pembayaran . '</td>';
-									echo '<td>';
-									echo '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-									if (file_exists('assets/expense/' . $item->link_doc) && $item->link_doc !== '') {
-										echo '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
-									}
-									echo '</td>';
-									echo '</tr>';
-
-									$no++;
-								}
-							}
-
-							?>
-						</tbody>
+						<tbody></tbody>
 					</table>
 				</div>
 			</div>
 			<div role="tabpanel" class="tab-pane" id="non_material">
-				<div class="box-body">
+				<div class="box-body table-responsive">
 					<table class="table table-bordered table-striped" id="mytabledatanonmaterial" width='100%'>
 						<thead>
 							<tr class='bg-blue'>
 								<th class="text-center">No Payment</th>
 								<th class="text-center">No Dokumen</th>
 								<th class="text-center">Tgl Bayar</th>
-								<th class="text-center">Requesto / Supplier</th>
+								<th class="text-center">Requestor / Supplier</th>
 								<th class="text-center">Nilai Bayar</th>
 								<th class="text-center">Keterangan</th>
 								<th class="text-center" width='110px'>Option</th>
 							</tr>
 						</thead>
-
-						<tbody>
-							<?php
-
-							if (!empty($results2)) {
-								$no = 1;
-								foreach ($results2 as $item) {
-									$nilai_bayar = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
-									echo '<tr>';
-									echo '<td class="text-center">' . (!empty($item->id_payment) ? $item->id_payment : $item->id) . '</td>';
-									echo '<td class="text-center">' . $item->no_doc . '</td>';
-									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
-									echo '<td class="text-center">' . $item->created_by . '</td>';
-									echo '<td class="text-right">' . number_format($nilai_bayar, 2) . '</td>';
-									echo '<td class="text-left">' . $item->keterangan_pembayaran . '</td>';
-									echo '<td>';
-									echo '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-									if (file_exists('assets/expense/' . $item->link_doc) && $item->link_doc !== '') {
-										echo '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
-									}
-									echo '</td>';
-									echo '</tr>';
-
-									$no++;
-								}
-							}
-
-							?>
-						</tbody>
+						<tbody></tbody>
 					</table>
 				</div>
 			</div>
@@ -136,22 +78,72 @@
 	<div id="form-data">
 	</div>
 
-	<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+	<script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 
 	<!-- page script -->
 	<script>
+		var tablePR;
+		var tableNonPR;
+
 		$(document).ready(function() {
-			$("#mytabledata").DataTable({
-				"order": [
-					[0, "asc"]
-				]
+			tablePR = $("#mytabledata").DataTable({
+				ajax: {
+					url: siteurl + active_controller + 'get_data_payment_list_pr',
+					type: "POST",
+					dataType: "JSON"
+				},
+				columns: [
+					{ data: 'no_payment', className: 'text-center' },
+					{ data: 'no_doc', className: 'text-center' },
+					{ data: 'tgl_bayar', className: 'text-center' },
+					{ data: 'supplier', className: 'text-center' },
+					{ data: 'nilai_bayar', className: 'text-right' },
+					{ data: 'keterangan', className: 'text-left' },
+					{ data: 'option', className: 'text-center' }
+				],
+				columnDefs: [
+					{ targets: [6], orderable: false, searchable: false }
+				],
+				responsive: true,
+				processing: true,
+				serverSide: true,
+				stateSave: true,
+				destroy: true,
+				pageLength: 10,
+				order: [[0, "asc"]]
 			});
+
+			tableNonPR = $("#mytabledatanonmaterial").DataTable({
+				ajax: {
+					url: siteurl + active_controller + 'get_data_payment_list_non_pr',
+					type: "POST",
+					dataType: "JSON"
+				},
+				columns: [
+					{ data: 'no_payment', className: 'text-center' },
+					{ data: 'no_doc', className: 'text-center' },
+					{ data: 'tgl_bayar', className: 'text-center' },
+					{ data: 'requestor', className: 'text-center' },
+					{ data: 'nilai_bayar', className: 'text-right' },
+					{ data: 'keterangan', className: 'text-left' },
+					{ data: 'option', className: 'text-center' }
+				],
+				columnDefs: [
+					{ targets: [6], orderable: false, searchable: false }
+				],
+				responsive: true,
+				processing: true,
+				serverSide: true,
+				stateSave: true,
+				destroy: true,
+				pageLength: 10,
+				order: [[0, "asc"]]
+			});
+
 			$("#form-data").hide();
 
-			$("#mytabledatanonmaterial").DataTable({
-				"order": [
-					[0, "asc"]
-				]
+			$('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+				$.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
 			});
 		});
 

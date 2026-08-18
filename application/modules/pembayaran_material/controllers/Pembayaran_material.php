@@ -136,45 +136,23 @@ class Pembayaran_material extends Admin_Controller
 	//==================================================================================================================
 	public function payment_list()
 	{
-		// $results = $this->pembayaran_material_model->get_data_json_request_payment_header("status>0 and tipe='material'");
-		// $results = $this->db->get_where('payment_approve', ['status' => 2])->result();
-		$results = $this->db
-			->select('a.*')
-			->from('payment_approve a')
-			->join('tr_expense b', 'b.no_doc = a.no_doc')
-			->where('a.status', 2)
-			->where('b.exp_inv_po', 1)
-			->where('a.id_payment <>', null)
-			->where('a.id_payment <>', '')
-			->group_by('a.id')
-			->order_by('a.created_on', 'DESC')
-			->get()
-			->result();
-
-		$results2 = $this->db->query("SELECT a.* FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND (a.id_payment IS NOT NULL AND a.id_payment <> '') GROUP BY a.id ORDER BY a.created_on DESC")->result();
-		// ->select('a.*')
-		// ->from('payment_approve a')
-		// ->join('tr_expense b', 'b.no_doc = a.no_doc', 'left')
-		// ->where('a.status', 2)
-		// ->where('(SELECT COUNT(aa.id) FROM tr_expense aa WHERE aa.no_doc = a.no_doc AND (aa.exp_inv_po IS NULL OR aa.exp_inv_po = "")) <=', 0)
-		// ->group_by('a.id')
-		// ->order_by('a.created_on', 'DESC')
-		// ->get()
-		// ->result();
-
-
-		// $results2 = $this->pembayaran_material_model->get_data_json_request_payment_header("status>0 and tipe='nonmaterial'");
-		// $data_Group			= $this->master_model->getArray('groups', array(), 'id', 'name');
 		$data = array(
 			'title'			=> 'Payment List',
 			'action'		=> 'index',
-			'data_status'	=> $this->data_status,
-			'results'		=> $results,
-			'results2' => $results2
+			'data_status'	=> $this->data_status
 		);
-		// history('List Payment');
 		$this->template->set($data);
 		$this->template->render('index_payment_new');
+	}
+
+	public function get_data_payment_list_pr()
+	{
+		$this->Pembayaran_material_model->get_server_side_payment_list_pr();
+	}
+
+	public function get_data_payment_list_non_pr()
+	{
+		$this->Pembayaran_material_model->get_server_side_payment_list_non_pr();
 	}
 
 
@@ -747,27 +725,24 @@ class Pembayaran_material extends Admin_Controller
 	{
 		$list_id_payment = [];
 		$get_id_payment = $this->db->select('a.id')->get_where('payment_approve a', ['a.id_payment' => $id])->result();
-		foreach ($get_id_payment as $item_id_payment) {
-			$list_id_payment[] = $item_id_payment->id;
+		if (!empty($get_id_payment)) {
+			foreach ($get_id_payment as $item_id_payment) {
+				$list_id_payment[] = $item_id_payment->id;
+			}
+		} else {
+			$get_id_payment = $this->db->select('a.id')->get_where('payment_approve a', ['a.id' => $id])->result();
+			if (!empty($get_id_payment)) {
+				foreach ($get_id_payment as $item_id_payment) {
+					$list_id_payment[] = $item_id_payment->id;
+				}
+			}
 		}
-		$list_id_payment = implode(';', $list_id_payment);
 
-		$id_payment = explode(';', $list_id_payment);
-
-		// $dataid = implode("','", $request_id);
-		// $results = $this->pembayaran_material_model->get_data_json_request_payment("id in ('" . $dataid . "')");
-		// $data_Group	= $this->master_model->getArray('groups', array(), 'id', 'name');
-		// $datacoa	= $this->All_model->GetCoaCombo('5', " a.no_perkiraan like '1101%'");
-		// $data = array(
-		// 	'title'			=> 'Form Payment',
-		// 	'action'		=> 'index',
-		// 	'datacoa'		=> $datacoa,
-		// 	'row_group'		=> $data_Group,
-		// 	'akses_menu'	=> $Arr_Akses,
-		// 	'results'		=> $results,
-		// );
-		// history('Form Payment');
-		// $this->load->view('Pembayaran_material/form_payment_new.php', $data);
+		if (empty($list_id_payment)) {
+			$id_payment = [$id];
+		} else {
+			$id_payment = $list_id_payment;
+		}
 
 		$get_payment = $this->db
 			->select('a.*')
@@ -775,32 +750,80 @@ class Pembayaran_material extends Admin_Controller
 			->where_in('a.id', $id_payment)
 			->get()
 			->result();
+
 		$get_supplier = $this->db->get('new_supplier')->result();
-		$get_bank = $this->db->get_where(DBACC . '.coa_master', ['kode_bank <>' => '', 'kode_bank <>' => null])->result();
 		$get_mata_uang = $this->db->get_where('mata_uang', ['deleted_by' => 0, 'activation' => 'active'])->result();
+
+		// Query Bank dengan sumber yang sama persis seperti saat input proses payment
+		$this->db->select('a.id, a.rekening, a.nama, a.coa_bank, b.nama_bank, c.nama as nm_coa');
+		$this->db->from('ms_bank a');
+		$this->db->join('list_bank b', 'b.id = a.bank', 'left');
+		$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = a.coa_bank', 'left');
+		$this->db->where('a.deleted', '0');
+		$get_bank = $this->db->get()->result();
 
 		$get_payment_header = $this->db
 			->select('a.*')
 			->from('payment_approve a')
 			->where_in('a.id', $id_payment)
-			->group_by('a.id_payment')
+			->order_by('a.id', 'ASC')
 			->get()
 			->row();
 
 		$bank_charge = 0;
-		$get_bank_charge = $this->db->get_where('tr_payment_paid a', ['a.id' => $id])->row();
+		$id_paid_voucher = !empty($get_payment_header->id_payment) ? $get_payment_header->id_payment : $id;
+		$get_bank_charge = $this->db->get_where('tr_payment_paid a', ['a.id' => $id_paid_voucher])->row();
 		if (!empty($get_bank_charge)) {
 			$bank_charge = $get_bank_charge->bank_charge;
 		}
 
+		// 1. Kumpulkan semua identifier terkait transaksi pembayaran ini
+		$search_keys = array_unique(array_filter([
+			$id,
+			$id_paid_voucher,
+			implode(',', $id_payment),
+			implode(';', $id_payment)
+		]));
+		foreach ($get_payment as $p) {
+			if (!empty($p->id)) $search_keys[] = (string)$p->id;
+			if (!empty($p->no_doc)) $search_keys[] = $p->no_doc;
+			if (!empty($p->id_payment)) $search_keys[] = $p->id_payment;
+		}
+		$search_keys = array_values(array_unique($search_keys));
+
+		// 2. Query dari tr_jurnal
+		$list_jurnal = [];
+		if (!empty($search_keys)) {
+			$this->db->where_in('no_transaksi', $search_keys);
+			$this->db->order_by('id', 'ASC');
+			$list_jurnal = $this->db->get('tr_jurnal')->result();
+		}
+
+		// 3. Jika tr_jurnal belum ditemukan dengan exact match, coba LIKE no_transaksi
+		if (empty($list_jurnal) && !empty($id_paid_voucher)) {
+			$list_jurnal = $this->db->like('no_transaksi', $id_paid_voucher)->order_by('id', 'ASC')->get('tr_jurnal')->result();
+		}
+
+		// 4. Jika masih kosong, coba query dari jurnaltras (Accounting)
+		if (empty($list_jurnal) && !empty($search_keys)) {
+			$this->db->select('a.nomor as no_jurnal, a.tanggal as tgl_jurnal, a.tipe as jenis_transaksi, a.no_perkiraan as coa, b.nama as nm_coa, a.keterangan, a.debet as debit, a.kredit, a.no_reff');
+			$this->db->from('jurnaltras a');
+			$this->db->join(DBACC . '.coa_master b', 'b.no_perkiraan = a.no_perkiraan', 'left');
+			$this->db->where_in('a.no_reff', $search_keys);
+			$this->db->order_by('a.id', 'ASC');
+			$list_jurnal = $this->db->get()->result();
+		}
+
 		$data = [
-			'id_payment' => implode(',', $id_payment),
-			'result_header' => $get_payment_header,
-			'result_payment' => $get_payment,
-			'list_supplier' => $get_supplier,
-			'list_bank' => $get_bank,
-			'list_mata_uang' => $get_mata_uang,
-			'bank_charge' => $bank_charge
+			'id_payment'       => implode(',', $id_payment),
+			'no_payment_paid'  => $id_paid_voucher,
+			'result_header'    => $get_payment_header,
+			'result_payment'   => $get_payment,
+			'list_supplier'    => $get_supplier,
+			'list_bank'        => $get_bank,
+			'list_mata_uang'   => $get_mata_uang,
+			'bank_charge'      => $bank_charge,
+			'list_jurnal'      => $list_jurnal
 		];
 		$this->template->set('results', $data);
 		$this->template->render('view_payment_new');
