@@ -4,282 +4,232 @@ $ENABLE_MANAGE  = has_permission('Payment_List.Manage');
 $ENABLE_DELETE  = has_permission('Payment_List.Delete');
 $ENABLE_VIEW    = has_permission('Payment_List.View');
 ?>
-<!-- <script src="//cdn.rawgit.com/rainabba/jquery-table2excel/1.1.0/dist/jquery.table2excel.min.js"></script> -->
 
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+    .btn {
+        border-radius: 8px;
+    }
+
+    .filter-card {
+        background: #fdfdfd;
+        border: 1px solid #e1e6ef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .filter-actions {
+        margin-top: 25px;
+    }
+
+    #mytabledata th {
+        background-color: #f4f6f9;
+        font-weight: 600;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    #mytabledata td {
+        vertical-align: middle;
+    }
+</style>
 
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 
-<div class="box">
-	<div class="box-body">
-		<!-- <div class="col-md-6"> -->
-		<!-- <div class="form-inline"> -->
-		<div class="row">
+<div class="box box-primary">
+    <div class="box-header with-border">
+        <h3 class="box-title"><i class="fa fa-list-alt"></i> Payment List</h3>
+    </div>
+    <div class="box-body">
+        <!-- Filter Card -->
+        <div class="filter-card">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label><i class="fa fa-calendar"></i> Tanggal Dokumen</label>
+                        <input type="text" class="form-control form-control-sm" id="filter_tgl" placeholder="Pilih rentang tanggal">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label><i class="fa fa-tags"></i> Tipe Pengajuan</label>
+                        <select id="filter_tipe" class="form-control form-control-sm select2">
+                            <option value="">- Semua Tipe -</option>
+                            <option value="kasbon">Kasbon</option>
+                            <option value="expense">Expense</option>
+                            <option value="transportasi">Transportasi</option>
+                            <option value="periodik">Periodik / Rutin</option>
+                            <option value="direct_payment">Direct Payment</option>
+                            <option value="nonpo">Non PO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label><i class="fa fa-check-circle"></i> Status Bayar</label>
+                        <select id="filter_status" class="form-control form-control-sm select2">
+                            <option value="">- Semua Status -</option>
+                            <option value="paid">Paid</option>
+                            <option value="open">Open</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group filter-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="search_data()"><i class="fa fa-search"></i> Search</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="reset_filter()"><i class="fa fa-refresh"></i> Reset</button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="export_excel()"><i class="fa fa-file-excel-o"></i> Excel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-			<div class="col-md-2">
-				<!-- <button type="button" class="btn btn-sm btn-primary search_data"><i class="fa fa-search"></i> Search</button> -->
-				<button type="button" class="btn btn-sm btn-success excel_data"><i class="fa fa-download"></i> Excel</button>
-			</div>
-		</div>
-		<!-- </div> -->
-		<!-- </div> -->
-		<div class="col-md-12 table_container">
-			<table id="mytabledata" class="table table-bordered">
-				<thead>
-					<tr>
-						<th>#</th>
-						<th>No Dokumen</th>
-						<th>No Transaksi Payment</th>
-						<th>Request By</th>
-						<th>Tanggal</th>
-						<th>Keperluan</th>
-						<th>Tipe</th>
-						<th>Nilai Pengajuan</th>
-						<th>Diajukan Oleh</th>
-						<th>Tanggal Pengajuan</th>
-						<th>Dibayar Oleh</th>
-						<th>Tanggal Pembayaran</th>
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					if (!empty($data)) {
-						$numb = 0;
-						foreach ($data as $record) {
-
-							$nmuser = $record->nama;
-							$no_doc = $record->no_doc;
-							if ($record->tipe == 'kasbon') {
-								$get_kasbon = $this->db->get_where('tr_kasbon', array('no_doc' => $record->no_doc))->row();
-
-								if ($get_kasbon->no_kasbon_consultant !== null) {
-									$no_doc = $get_kasbon->no_kasbon_consultant;
-								}
-
-								$check_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $record->no_doc])->result();
-								if (count($check_detail)) {
-									if ($get_kasbon->tipe_pr == 'pr departemen') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('rutin_non_planning_header a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-
-									if ($get_kasbon->tipe_pr == 'pr stok') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('material_planning_base_on_produksi a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-
-									if ($get_kasbon->tipe_pr == 'pr asset') {
-										$this->db->select('b.nm_lengkap');
-										$this->db->from('tran_pr_header a');
-										$this->db->join('users b', 'b.id_user = a.created_by');
-										$this->db->where('a.no_pr', $get_kasbon->id_pr);
-										$get_single_detail = $this->db->get()->row();
-
-										$nmuser = $get_single_detail->nm_lengkap;
-									}
-								}
-							}
-
-							$tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['tgl_pengajuan'] : '';
-
-							$diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['diajukan_oleh'] : '';
-
-							$no_payment = (isset($list_tgl_pengajuan_pembayaran[$record->no_doc])) ? $list_tgl_pengajuan_pembayaran[$record->no_doc]['no_payment'] : '';
-
-							$this->db->select('c.nm_lengkap, a.created_on');
-							$this->db->from('tr_payment_paid a');
-							$this->db->join('payment_approve b', 'b.id_payment = a.id', 'left');
-							$this->db->join('users c', 'c.id_user = a.created_by', 'left');
-							$this->db->where('b.no_doc', $record->no_doc);
-							$get_payment_details = $this->db->get()->row();
-
-							$dibayar_oleh = (!empty($get_payment_details)) ? $get_payment_details->nm_lengkap : '';
-							$tgl_pembayaran = (!empty($get_payment_details)) ? $get_payment_details->created_on : '';
-
-
-
-							$numb++; ?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= $no_doc ?></td>
-								<td><?= $no_payment ?></td>
-								<td><?= $nmuser ?></td>
-								<td><?= $record->tgl_doc ?></td>
-								<td><?= $record->keperluan ?></td>
-								<td><?= $record->tipe ?></td>
-								<td><?= (($record->tipe == 'expense' and $record->id_kasbon != null and $record->kurang_bayar > 0) ? number_format($record->kurang_bayar) : number_format($record->jumlah)) ?></td>
-								<td class="text-center"><?= $diajukan_oleh ?></td>
-								<td class="text-center"><?= $tgl_pengajuan ?></td>
-								<td class="text-center"><?= $dibayar_oleh ?></td>
-								<td class="text-center"><?= $tgl_pembayaran ?></td>
-								<td>
-									<?php
-									$get_payment = $this->db->get_where('payment_approve', ['no_doc' => $record->no_doc, 'tgl_bayar <>' => null])->result();
-
-									if (!empty($get_payment)) {
-										echo '<div class="badge bg-green text-light">Paid</div>';
-									} else {
-										echo '<div class="badge bg-blue">Open</div>';
-									}
-									?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
-
-				</tbody>
-			</table>
-		</div>
-	</div>
-	<!-- /.box-body -->
+        <div class="table-responsive">
+            <table id="mytabledata" class="table table-bordered table-striped table-hover" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th class="text-center" width="30">#</th>
+                        <th class="text-center">No Dokumen</th>
+                        <th class="text-center">No Transaksi Payment</th>
+                        <th class="text-center">Request By</th>
+                        <th class="text-center">Tanggal Dokumen</th>
+                        <th class="text-center">Keperluan</th>
+                        <th class="text-center">Tipe</th>
+                        <th class="text-center">Nilai Pengajuan</th>
+                        <th class="text-center">Diajukan Oleh</th>
+                        <th class="text-center">Tanggal Pengajuan</th>
+                        <th class="text-center">Dibayar Oleh</th>
+                        <th class="text-center">Tanggal Pembayaran</th>
+                        <th class="text-center" width="60">Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- /.box-body -->
 </div>
 
-<script src="https://cdn.datatables.net/2.0.7/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script type="text/javascript">
-	$(".divide").autoNumeric('init');
-	$("#mytabledata").DataTable();
+    var table_payment;
 
-	$('.select2').select2({
-		width: '100%'
-	});
+    $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%'
+        });
 
-	function cektotal() {
-		var total_req = 0;
-		$('.dtlloop').each(function() {
-			if (this.checked) {
-				var ids = $(this).val();
-				total_req += Number($("#jumlah_" + ids).val());
-			}
-		});
-		$("#total_req").autoNumeric('set', total_req);
-	}
-	var url_save = siteurl + 'request_payment/save_request/';
-	$(function() {
-		$(".tanggal").datepicker({
-			todayHighlight: true,
-			format: "yyyy-mm-dd",
-			showInputs: true,
-			autoclose: true
-		});
-	});
-	//Save
-	$('#frm_data').on('submit', function(e) {
-		e.preventDefault();
-		var errors = "";
-		if (errors == "") {
-			swal({
-					title: "Anda Yakin?",
-					text: "Data Akan Disimpan!",
-					type: "info",
-					showCancelButton: true,
-					confirmButtonText: "Ya, simpan!",
-					cancelButtonText: "Tidak!",
-					closeOnConfirm: false,
-					closeOnCancel: true
-				},
-				function(isConfirm) {
-					if (isConfirm) {
-						var formdata = new FormData($('#frm_data')[0]);
-						$.ajax({
-							url: url_save,
-							dataType: "json",
-							type: 'POST',
-							data: formdata,
-							processData: false,
-							contentType: false,
-							success: function(msg) {
-								if (msg['save'] == '1') {
-									swal({
-										title: "Sukses!",
-										text: "Data Berhasil Di Update",
-										type: "success",
-										timer: 1500,
-										showConfirmButton: false
-									});
-									window.location.href = window.location.href;
-								} else {
-									swal({
-										title: "Gagal!",
-										text: "Data Gagal Di Update",
-										type: "error",
-										timer: 1500,
-										showConfirmButton: false
-									});
-								};
-								console.log(msg);
-							},
-							error: function(msg) {
-								swal({
-									title: "Gagal!",
-									text: "Ajax Data Gagal Di Proses",
-									type: "error",
-									timer: 1500,
-									showConfirmButton: false
-								});
-								console.log(msg);
-							}
-						});
-					}
-				});
-		} else {
-			swal(errors);
-			return false;
-		}
-	});
+        $('#filter_tgl').flatpickr({
+            dateFormat: 'Y-m-d',
+            allowInput: true,
+            mode: 'range',
+            placeholder: 'Pilih rentang tanggal'
+        });
 
-	$(document).on('click', '.search_data', function() {
-		var tgl_from = $('.tgl_from').val();
-		var tgl_to = $('.tgl_to').val();
-		var bank = $('.bank').val();
+        load_data();
+    });
 
-		$.ajax({
-			type: "POST",
-			url: siteurl + active_controller + 'search_payment_list',
-			data: {
-				'tgl_from': tgl_from,
-				'tgl_to': tgl_to,
-				'bank': bank
-			},
-			cache: false,
-			beforeSend: function(result) {
-				$('.search_data').html('<i class="fa fa-spin fa-spinner"></i>');
-			},
-			success: function(result) {
-				$('.table_container').html(result);
-				$('.search_data').html('<i class="fa fa-search"></i> Search');
-			},
-			error: function(result) {
-				swal({
-					title: 'Error !',
-					text: 'Please try again later !',
-					type: 'error'
-				});
-				$('.search_data').html('<i class="fa fa-search"></i> Search');
-			}
-		});
-	});
+    function load_data() {
+        var filter_tgl = $('#filter_tgl').val();
+        var tgl_from = '';
+        var tgl_to = '';
 
-	$(document).on('click', '.excel_data', function() {
-		var tgl_from = $('.tgl_from').val();
-		var tgl_to = $('.tgl_to').val();
-		var bank = $('.bank').val();
+        if (filter_tgl) {
+            var exp = filter_tgl.split(' to ');
+            tgl_from = exp[0] ? exp[0].trim() : '';
+            tgl_to = exp[1] ? exp[1].trim() : exp[0].trim();
+        }
 
-		window.open(siteurl + active_controller + 'excel_payment_list/' + tgl_from + '/' + tgl_to + '/' + bank, '_blank');
-	});
-</script>
+        var tipe = $('#filter_tipe').val();
+        var status = $('#filter_status').val();
+
+        table_payment = $('#mytabledata').DataTable({
+            ajax: {
+                url: siteurl + active_controller + 'get_data_payment_list',
+                type: "POST",
+                dataType: "JSON",
+                data: function(d) {
+                    d.tgl_from = tgl_from;
+                    d.tgl_to   = tgl_to;
+                    d.tipe     = tipe;
+                    d.status   = status;
+                }
+            },
+            columns: [
+                { data: 'no', className: 'text-center' },
+                { data: 'no_doc', className: 'text-center' },
+                { data: 'no_payment', className: 'text-center' },
+                { data: 'nama', className: 'text-left' },
+                { data: 'tgl_doc', className: 'text-center' },
+                { data: 'keperluan', className: 'text-left' },
+                { data: 'tipe', className: 'text-center' },
+                { data: 'nilai_pengajuan', className: 'text-right' },
+                { data: 'diajukan_oleh', className: 'text-center' },
+                { data: 'tgl_pengajuan', className: 'text-center' },
+                { data: 'dibayar_oleh', className: 'text-center' },
+                { data: 'tgl_pembayaran', className: 'text-center' },
+                { data: 'status', className: 'text-center' }
+            ],
+            columnDefs: [
+                {
+                    targets: [0, 12],
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            responsive: true,
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            paging: true,
+            destroy: true,
+            searchDelay: 500,
+            lengthMenu: [
+                [10, 25, 50, 100],
+                [10, 25, 50, 100]
+            ],
+            pageLength: 10,
+            order: [[4, 'desc']]
+        });
+    }
+
+    function search_data() {
+        load_data();
+    }
+
+    function reset_filter() {
+        $('#filter_tgl').val('');
+        var fp = document.querySelector('#filter_tgl')._flatpickr;
+        if (fp) fp.clear();
+
+        $('#filter_tipe').val('').trigger('change');
+        $('#filter_status').val('').trigger('change');
+
+        load_data();
+    }
+
+    function export_excel() {
+        var filter_tgl = $('#filter_tgl').val();
+        var tgl_from = '';
+        var tgl_to = '';
+
+        if (filter_tgl) {
+            var exp = filter_tgl.split(' to ');
+            tgl_from = exp[0] ? exp[0].trim() : '';
+            tgl_to = exp[1] ? exp[1].trim() : exp[0].trim();
+        }
+
+        var tipe = $('#filter_tipe').val();
+        var status = $('#filter_status').val();
+
+        window.open(siteurl + active_controller + 'excel_payment_list?tgl_from=' + encodeURIComponent(tgl_from) + '&tgl_to=' + encodeURIComponent(tgl_to) + '&tipe=' + encodeURIComponent(tipe) + '&status=' + encodeURIComponent(status), '_blank');
+    }
+</script>

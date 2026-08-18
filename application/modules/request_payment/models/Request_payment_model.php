@@ -186,6 +186,17 @@ class Request_payment_model extends BF_Model
         FROM tr_pengajuan_rutin a 
         JOIN tr_pengajuan_rutin_detail b ON a.no_doc = b.no_doc 
         JOIN users c ON a.created_by = c.id_user
+
+        UNION ALL
+
+        SELECT a.ids, a.no_doc, b.nm_lengkap as nama, a.tgl_doc, a.deskripsi as keperluan, 'direct_payment' as tipe, a.grand_total as jumlah, null as tanggal, a.no_doc as id, a.bank as bank_id, a.bank_number as accnumber, a.bank_account as accname, a.sts_reject, a.sts_reject_manage, a.reject_reason, null as kurang_bayar, null as id_kasbon
+        FROM tr_direct_payment a
+        LEFT JOIN users b ON b.id_user = a.created_by
+
+        UNION ALL
+
+        SELECT a.id as ids, a.no_doc, a.pic as nama, a.tanggal_doc as tgl_doc, a.info as keperluan, 'nonpo' as tipe, a.nilai_request as jumlah, null as tanggal, a.no_doc as id, a.bank_id, a.accnumber, a.accname, a.sts_reject, a.sts_reject_manage, null as reject_reason, null as kurang_bayar, null as id_kasbon
+        FROM tr_non_po_header a
     ")->result();
 
         return $data;
@@ -318,76 +329,180 @@ class Request_payment_model extends BF_Model
         $this->template->render('search_payment_list');
     }
 
-    public function excel_payment_list($tgl_from = '', $tgl_to = '', $bank = '')
+    public function excel_payment_list($tgl_from = '', $tgl_to = '', $tipe = '', $status = '')
     {
-        $filter_tgl1 = '';
-        $filter_tgl2 = '';
-        $filter_tgl3 = '';
-        $filter_tgl4 = '';
-        $filter_tgl5 = '';
+        $tgl_from = trim((string)$tgl_from);
+        $tgl_to   = trim((string)$tgl_to);
+        $tipe     = trim((string)$tipe);
+        $status   = trim((string)$status);
 
-        $filter_bank1 = '';
-        $filter_bank2 = '';
+        $subquery = "
+            SELECT 
+                a.id as ids, 
+                a.no_doc, 
+                a.nama, 
+                a.tgl_doc, 
+                'Transportasi' as keperluan, 
+                'transportasi' as tipe, 
+                a.jumlah_expense as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_transport_req a 
+            
+            UNION ALL
+            
+            SELECT 
+                k.id as ids, 
+                k.no_doc, 
+                k.nama, 
+                k.tgl_doc, 
+                k.keperluan, 
+                'kasbon' as tipe, 
+                k.jumlah_kasbon as jumlah, 
+                k.kurang_bayar, 
+                null as id_kasbon,
+                k.no_kasbon_consultant,
+                k.id_pr,
+                k.tipe_pr
+            FROM tr_kasbon k
+            
+            UNION ALL
+            
+            SELECT 
+                e.id as ids, 
+                e.no_doc, 
+                e.nama, 
+                e.tgl_doc, 
+                e.informasi as keperluan, 
+                'expense' as tipe, 
+                e.jumlah, 
+                e.kurang_bayar, 
+                e.id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_expense e 
+            WHERE (e.jumlah >= 0 OR (e.id_kasbon IS NOT NULL AND e.kurang_bayar IS NOT NULL AND e.kurang_bayar > 0 AND e.status = 2))
+            
+            UNION ALL
+            
+            SELECT 
+                b.id as ids, 
+                a.no_doc, 
+                c.nm_lengkap as nama, 
+                a.tanggal_doc as tgl_doc, 
+                b.nama as keperluan, 
+                'periodik' as tipe, 
+                b.nilai as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_pengajuan_rutin a 
+            JOIN tr_pengajuan_rutin_detail b ON a.no_doc = b.no_doc 
+            LEFT JOIN users c ON a.created_by = c.id_user
 
-        if ($tgl_from !== '' && $tgl_to !== '') {
-            $filter_tgl1 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl2 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl3 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl4 = " AND a.tanggal_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl5 = " AND a.tanggal_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-        } else {
-            if ($tgl_from !== '' && $tgl_to == '') {
-                $filter_tgl1 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl2 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl3 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl4 = " AND a.tanggal_doc >= '" . $tgl_from . "'";
-                $filter_tgl5 = " AND a.tanggal_doc >= '" . $tgl_from . "'";
-            } else if ($tgl_from == '' && $tgl_to !== '') {
-                $filter_tgl1 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl2 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl3 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl4 = " AND a.tanggal_doc <= '" . $tgl_to . "'";
-                $filter_tgl5 = " AND a.tanggal_doc <= '" . $tgl_to . "'";
-            }
+            UNION ALL
+
+            SELECT 
+                dp.ids, 
+                dp.no_doc, 
+                u_dp.nm_lengkap as nama, 
+                dp.tgl_doc, 
+                dp.deskripsi as keperluan, 
+                'direct_payment' as tipe, 
+                dp.grand_total as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_direct_payment dp
+            LEFT JOIN users u_dp ON u_dp.id_user = dp.created_by
+
+            UNION ALL
+
+            SELECT 
+                np.id as ids, 
+                np.no_doc, 
+                np.pic as nama, 
+                np.tanggal_doc as tgl_doc, 
+                np.info as keperluan, 
+                'nonpo' as tipe, 
+                np.nilai_request as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_non_po_header np
+        ";
+
+        $where_clauses = ["1=1"];
+
+        if (!empty($tgl_from) && !empty($tgl_to)) {
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
+        } elseif (!empty($tgl_from)) {
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
+        } elseif (!empty($tgl_to)) {
+            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
         }
 
-        if ($bank !== '') {
-            $filter_bank1 = ' AND b.bank_name LIKE "%' . $bank . '%"';
-            $filter_bank2 = ' AND d.bank_name LIKE "%' . $bank . '%"';
+        if (!empty($tipe)) {
+            $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
         }
 
-        $data    = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,'Transportasi' as keperluan, 'transportasi' as tipe,a.jumlah_expense as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname FROM tr_transport_req a LEFT JOIN request_payment b ON b.no_doc = a.no_doc WHERE a.id != '' " . $filter_tgl1 . " " . $filter_bank1 . "
-        GROUP BY a.no_doc
-		union all
-		SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.keperluan, 'kasbon' as tipe,a.jumlah_kasbon as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname FROM tr_kasbon a LEFT JOIN request_payment b ON b.no_doc = a.no_doc WHERE a.id != '' " . $filter_tgl2 . " " . $filter_bank1 . "
-        GROUP BY a.no_doc
-		union all
-		SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname FROM tr_expense a LEFT JOIN request_payment b ON b.no_doc = a.no_doc WHERE a.jumlah >= 0 " . $filter_tgl3 . " " . $filter_bank1 . "
-        GROUP BY a.no_doc
-		union all
-		SELECT a.id as ids,a.no_doc,a.pic nama,a.tanggal_doc as tgl_doc,a.info as keperluan, 'nonpo' as tipe,a.nilai_request jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname FROM tr_non_po_header a LEFT JOIN request_payment b ON b.no_doc = a.no_doc  WHERE a.id != '' " . $filter_tgl4 . " " . $filter_bank1 . "
-        GROUP BY a.no_doc
-		union all
-		SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc join users c on a.created_by=c.id_user left join request_payment d ON d.no_doc = a.no_doc WHERE b.id != '' " . $filter_tgl5 . " " . $filter_bank2 . "
+        if ($status === 'paid') {
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <> '')";
+        } elseif ($status === 'open') {
+            $where_clauses[] = "(pa.tgl_bayar IS NULL OR pa.tgl_bayar = '')";
+        }
 
-		")->result();
+        $final_where = implode(" AND ", $where_clauses);
+
+        $sql_data = "
+            SELECT 
+                doc.*,
+                pa.id as pa_id,
+                pa.id_payment as pa_id_payment,
+                pa.created_by as pa_diajukan_oleh,
+                pa.created_on as pa_tgl_pengajuan,
+                pa.tgl_bayar as pa_tgl_bayar,
+                u_pay.nm_lengkap as dibayar_oleh_nama,
+                pp.created_on as tgl_pembayaran_paid
+            FROM ({$subquery}) as doc
+            LEFT JOIN payment_approve pa ON pa.no_doc = doc.no_doc
+            LEFT JOIN tr_payment_paid pp ON pp.id = pa.id_payment
+            LEFT JOIN users u_pay ON u_pay.id_user = pp.created_by
+            WHERE {$final_where}
+            ORDER BY doc.tgl_doc DESC, doc.ids DESC
+        ";
+
+        $query_data = $this->db->query($sql_data)->result();
 
         $list_tgl_pengajuan_pembayaran = [];
-        $get_payment_approve = $this->db->select('no_doc, created_by, pay_by, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(pay_on IS NULL, "", DATE_FORMAT(pay_on, "%d %M %Y")) as tgl_pembayaran')->get('payment_approve')->result();
-        foreach ($get_payment_approve as $item_payment) {
-            $list_tgl_pengajuan_pembayaran[$item_payment->no_doc] = [
-                'diajukan_oleh' => $item_payment->created_by,
-                'dibayar_oleh' => $item_payment->pay_by,
-                'tgl_pengajuan' => $item_payment->tgl_pengajuan,
-                'tgl_pembayaran' => $item_payment->tgl_pembayaran
+        foreach ($query_data as $row) {
+            $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
+            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+
+            $list_tgl_pengajuan_pembayaran[$row->no_doc] = [
+                'no_payment'     => $no_payment,
+                'diajukan_oleh'  => !empty($row->pa_diajukan_oleh) ? $row->pa_diajukan_oleh : '-',
+                'dibayar_oleh'   => !empty($row->dibayar_oleh_nama) ? $row->dibayar_oleh_nama : '-',
+                'tgl_pengajuan'  => $tgl_pengajuan_fmt,
+                'tgl_pembayaran' => $tgl_bayar_fmt
             ];
         }
 
         $dataa = [
-            'tgl_from' => $tgl_from,
-            'tgl_to' => $tgl_to,
-            'bank' => $bank,
-            'data_payment_list' => $data,
+            'tgl_from'                      => $tgl_from,
+            'tgl_to'                        => $tgl_to,
+            'data_payment_list'             => $query_data,
             'list_tgl_pengajuan_pembayaran' => $list_tgl_pengajuan_pembayaran
         ];
         $this->load->view('excel_payment_list', $dataa);
@@ -1208,12 +1323,12 @@ class Request_payment_model extends BF_Model
 
     public function get_payment_paid()
     {
-        $get_payment_approve = $this->db->select('id, no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(tgl_bayar, "%d %M %Y")) as tgl_pembayaran')->get_where('payment_approve', ['tgl_bayar <>' => null])->result();
+        $get_payment_approve = $this->db->select('id, id_payment, no_doc, created_by, created_by as by_pay, DATE_FORMAT(created_on, "%d %M %Y") as tgl_pengajuan, IF(created_on IS NULL, "", DATE_FORMAT(tgl_bayar, "%d %M %Y")) as tgl_pembayaran')->get_where('payment_approve', ['tgl_bayar <>' => null])->result();
 
         $list_tgl_pengajuan_pembayaran = [];
         foreach ($get_payment_approve as $item_payment) {
             $list_tgl_pengajuan_pembayaran[$item_payment->no_doc] = [
-                'no_payment' => $item_payment->id,
+                'no_payment' => !empty($item_payment->id_payment) ? $item_payment->id_payment : $item_payment->id,
                 'diajukan_oleh' => $item_payment->created_by,
                 'dibayar_oleh' => $item_payment->by_pay,
                 'tgl_pengajuan' => $item_payment->tgl_pengajuan,
@@ -1379,6 +1494,318 @@ class Request_payment_model extends BF_Model
      *
      * @return array Result set with id and nama columns, ordered by nama ASC
      */
+    /**
+     * Server-side DataTables query for payment_list
+     */
+    public function get_server_side_payment_list()
+    {
+        $post = $this->input->post();
+
+        $draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+        $length = isset($post['length']) ? intval($post['length']) : 10;
+        $start  = isset($post['start']) ? intval($post['start']) : 0;
+        $search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+        $order  = isset($post['order']) ? $post['order'] : [];
+
+        $tgl_from = isset($post['tgl_from']) ? trim($post['tgl_from']) : '';
+        $tgl_to   = isset($post['tgl_to']) ? trim($post['tgl_to']) : '';
+        $tipe     = isset($post['tipe']) ? trim($post['tipe']) : '';
+        $status   = isset($post['status']) ? trim($post['status']) : '';
+
+        // Base Union Subquery with all relevant document fields
+        $subquery = "
+            SELECT 
+                a.id as ids, 
+                a.no_doc, 
+                a.nama, 
+                a.tgl_doc, 
+                'Transportasi' as keperluan, 
+                'transportasi' as tipe, 
+                a.jumlah_expense as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_transport_req a 
+            
+            UNION ALL
+            
+            SELECT 
+                k.id as ids, 
+                k.no_doc, 
+                k.nama, 
+                k.tgl_doc, 
+                k.keperluan, 
+                'kasbon' as tipe, 
+                k.jumlah_kasbon as jumlah, 
+                k.kurang_bayar, 
+                null as id_kasbon,
+                k.no_kasbon_consultant,
+                k.id_pr,
+                k.tipe_pr
+            FROM tr_kasbon k
+            
+            UNION ALL
+            
+            SELECT 
+                e.id as ids, 
+                e.no_doc, 
+                e.nama, 
+                e.tgl_doc, 
+                e.informasi as keperluan, 
+                'expense' as tipe, 
+                e.jumlah, 
+                e.kurang_bayar, 
+                e.id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_expense e 
+            WHERE (e.jumlah >= 0 OR (e.id_kasbon IS NOT NULL AND e.kurang_bayar IS NOT NULL AND e.kurang_bayar > 0 AND e.status = 2))
+            
+            UNION ALL
+            
+            SELECT 
+                b.id as ids, 
+                a.no_doc, 
+                c.nm_lengkap as nama, 
+                a.tanggal_doc as tgl_doc, 
+                b.nama as keperluan, 
+                'periodik' as tipe, 
+                b.nilai as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_pengajuan_rutin a 
+            JOIN tr_pengajuan_rutin_detail b ON a.no_doc = b.no_doc 
+            LEFT JOIN users c ON a.created_by = c.id_user
+
+            UNION ALL
+
+            SELECT 
+                dp.ids, 
+                dp.no_doc, 
+                u_dp.nm_lengkap as nama, 
+                dp.tgl_doc, 
+                dp.deskripsi as keperluan, 
+                'direct_payment' as tipe, 
+                dp.grand_total as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_direct_payment dp
+            LEFT JOIN users u_dp ON u_dp.id_user = dp.created_by
+
+            UNION ALL
+
+            SELECT 
+                np.id as ids, 
+                np.no_doc, 
+                np.pic as nama, 
+                np.tanggal_doc as tgl_doc, 
+                np.info as keperluan, 
+                'nonpo' as tipe, 
+                np.nilai_request as jumlah, 
+                null as kurang_bayar, 
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_non_po_header np
+        ";
+
+        // Query builder on top of subquery with joins to payment_approve & payment_paid
+        $where_clauses = ["1=1"];
+
+        if (!empty($tgl_from) && !empty($tgl_to)) {
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
+        } elseif (!empty($tgl_from)) {
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
+        } elseif (!empty($tgl_to)) {
+            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
+        }
+
+        if (!empty($tipe)) {
+            $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
+        }
+
+        if ($status === 'paid') {
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <> '')";
+        } elseif ($status === 'open') {
+            $where_clauses[] = "(pa.tgl_bayar IS NULL OR pa.tgl_bayar = '')";
+        }
+
+        $base_where = implode(" AND ", $where_clauses);
+
+        // Count Total before search filter
+        $sql_total = "SELECT COUNT(*) as total FROM ({$subquery}) as doc LEFT JOIN payment_approve pa ON pa.no_doc = doc.no_doc LEFT JOIN tr_payment_paid pp ON pp.id = pa.id_payment LEFT JOIN users u_pay ON u_pay.id_user = pp.created_by WHERE {$base_where}";
+        $recordsTotal = (int) $this->db->query($sql_total)->row()->total;
+
+        // Search Filter
+        $search_where = "";
+        if (!empty($search)) {
+            $escaped_search = $this->db->escape_like_str($search);
+            $search_where = " AND (
+                doc.no_doc LIKE '%{$escaped_search}%' OR
+                doc.no_kasbon_consultant LIKE '%{$escaped_search}%' OR
+                pa.id_payment LIKE '%{$escaped_search}%' OR
+                pa.id LIKE '%{$escaped_search}%' OR
+                doc.nama LIKE '%{$escaped_search}%' OR
+                doc.keperluan LIKE '%{$escaped_search}%' OR
+                doc.tipe LIKE '%{$escaped_search}%' OR
+                pa.created_by LIKE '%{$escaped_search}%' OR
+                u_pay.nm_lengkap LIKE '%{$escaped_search}%'
+            )";
+        }
+
+        $final_where = $base_where . $search_where;
+
+        // Count Filtered
+        $sql_filtered = "SELECT COUNT(*) as total FROM ({$subquery}) as doc LEFT JOIN payment_approve pa ON pa.no_doc = doc.no_doc LEFT JOIN tr_payment_paid pp ON pp.id = pa.id_payment LEFT JOIN users u_pay ON u_pay.id_user = pp.created_by WHERE {$final_where}";
+        $recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
+
+        // Sorting mapping
+        $sort_cols = [
+            1 => 'doc.no_doc',
+            2 => 'pa.id_payment',
+            3 => 'doc.nama',
+            4 => 'doc.tgl_doc',
+            5 => 'doc.keperluan',
+            6 => 'doc.tipe',
+            7 => 'doc.jumlah',
+            8 => 'pa.created_by',
+            9 => 'pa.created_on',
+            10 => 'u_pay.nm_lengkap',
+            11 => 'pp.created_on',
+            12 => 'pa.tgl_bayar'
+        ];
+
+        $order_by = "ORDER BY doc.tgl_doc DESC, doc.ids DESC";
+        if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
+            $dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
+            $order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
+        }
+
+        // Limit & Pagination
+        $limit_clause = "";
+        if ($length != -1) {
+            $limit_clause = "LIMIT " . intval($start) . ", " . intval($length);
+        }
+
+        $sql_data = "
+            SELECT 
+                doc.*,
+                pa.id as pa_id,
+                pa.id_payment as pa_id_payment,
+                pa.created_by as pa_diajukan_oleh,
+                pa.created_on as pa_tgl_pengajuan,
+                pa.tgl_bayar as pa_tgl_bayar,
+                u_pay.nm_lengkap as dibayar_oleh_nama,
+                pp.created_on as tgl_pembayaran_paid
+            FROM ({$subquery}) as doc
+            LEFT JOIN payment_approve pa ON pa.no_doc = doc.no_doc
+            LEFT JOIN tr_payment_paid pp ON pp.id = pa.id_payment
+            LEFT JOIN users u_pay ON u_pay.id_user = pp.created_by
+            WHERE {$final_where}
+            {$order_by}
+            {$limit_clause}
+        ";
+
+        $query_data = $this->db->query($sql_data)->result();
+
+        $hasil = [];
+        $no = $start;
+        foreach ($query_data as $row) {
+            $no++;
+
+            $display_no_doc = $row->no_doc;
+            $display_nama   = $row->nama;
+
+            if ($row->tipe == 'kasbon') {
+                if (!empty($row->no_kasbon_consultant)) {
+                    $display_no_doc = $row->no_kasbon_consultant;
+                }
+
+                if (!empty($row->id_pr)) {
+                    if ($row->tipe_pr == 'pr departemen') {
+                        $pr_creator = $this->db->select('b.nm_lengkap')
+                            ->from('rutin_non_planning_header a')
+                            ->join('users b', 'b.id_user = a.created_by')
+                            ->where('a.no_pr', $row->id_pr)
+                            ->get()->row();
+                        if (!empty($pr_creator)) $display_nama = $pr_creator->nm_lengkap;
+                    } elseif ($row->tipe_pr == 'pr stok') {
+                        $pr_creator = $this->db->select('b.nm_lengkap')
+                            ->from('material_planning_base_on_produksi a')
+                            ->join('users b', 'b.id_user = a.created_by')
+                            ->where('a.no_pr', $row->id_pr)
+                            ->get()->row();
+                        if (!empty($pr_creator)) $display_nama = $pr_creator->nm_lengkap;
+                    } elseif ($row->tipe_pr == 'pr asset') {
+                        $pr_creator = $this->db->select('b.nm_lengkap')
+                            ->from('tran_pr_header a')
+                            ->join('users b', 'b.id_user = a.created_by')
+                            ->where('a.no_pr', $row->id_pr)
+                            ->get()->row();
+                        if (!empty($pr_creator)) $display_nama = $pr_creator->nm_lengkap;
+                    }
+                }
+            }
+
+            // Calculation for nilai pengajuan
+            $nilai_pengajuan = $row->jumlah;
+            if ($row->tipe == 'expense' && !empty($row->id_kasbon) && $row->kurang_bayar > 0) {
+                $nilai_pengajuan = $row->kurang_bayar;
+            }
+
+            // Payment voucher number
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+
+            // Status Badge
+            $is_paid = (!empty($row->pa_tgl_bayar));
+            $status_badge = $is_paid 
+                ? '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>' 
+                : '<span class="badge bg-blue" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Open</span>';
+
+            $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
+            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
+
+            $hasil[] = [
+                'no'               => $no,
+                'no_doc'           => $display_no_doc,
+                'no_payment'       => $no_payment,
+                'nama'             => $display_nama,
+                'tgl_doc'          => !empty($row->tgl_doc) ? date('d F Y', strtotime($row->tgl_doc)) : '-',
+                'keperluan'        => $row->keperluan,
+                'tipe'             => ucfirst($row->tipe),
+                'nilai_pengajuan'  => number_format($nilai_pengajuan, 2),
+                'diajukan_oleh'    => !empty($row->pa_diajukan_oleh) ? $row->pa_diajukan_oleh : '-',
+                'tgl_pengajuan'    => $tgl_pengajuan_fmt,
+                'dibayar_oleh'     => !empty($row->dibayar_oleh_nama) ? $row->dibayar_oleh_nama : '-',
+                'tgl_pembayaran'   => $tgl_bayar_fmt,
+                'status'           => $status_badge
+            ];
+        }
+
+        echo json_encode([
+            'draw'            => $draw,
+            'recordsTotal'    => intval($recordsTotal),
+            'recordsFiltered' => intval($recordsFiltered),
+            'data'            => $hasil
+        ]);
+    }
+
+    /**
+     * Get list of companies for COMPANY filter dropdown.
+     * Queries db_consultant_new.kons_tr_company for mapped companies (IDs 7, 3, 4).
+     *
+     * @return array Result set with id and nama columns, ordered by nama ASC
+     */
     public function get_companies_list()
     {
         $this->db->select('id, nm_company as nama');
@@ -1392,3 +1819,4 @@ class Request_payment_model extends BF_Model
         return $query->result();
     }
 }
+

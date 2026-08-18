@@ -1,103 +1,67 @@
 <?php
 header("Content-type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Excel Payment List (" . date('d F Y', strtotime($tgl_from)) . " - " . date('d F Y', strtotime($tgl_to)) . ") - " . $bank . ".xls");
+header("Content-Disposition: attachment; filename=Payment_List_" . date('YmdHis') . ".xls");
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel Payment List</title>
+    <title>Payment List</title>
 </head>
 
 <body>
 
-    <table class="table table-bordered" id="myTable" border="1">
+    <table border="1" width="100%">
         <thead>
-            <tr>
-                <th class="text-center">#</th>
-                <th class="text-left">No Dokumen</th>
-                <th class="text-left">Request By</th>
-                <th class="text-left">Tanggal</th>
-                <th class="text-left">Keperluan</th>
-                <th class="text-tipe">Tipe</th>
-                <th class="text-left">Nilai Pengajuan</th>
-                <th class="text-center">Diajukan Oleh</th>
-                <th class="text-center">Tanggal Pengajuan</th>
-                <th class="text-center">Dibayar Oleh</th>
-                <th class="text-center">Tanggal Pembayaran</th>
-                <th class="text-center">Status</th>
+            <tr style="background-color: #f2f2f2; font-weight: bold;">
+                <th style="text-align: center;">#</th>
+                <th style="text-align: center;">No Dokumen</th>
+                <th style="text-align: center;">No Transaksi Payment</th>
+                <th style="text-align: center;">Request By</th>
+                <th style="text-align: center;">Tanggal Dokumen</th>
+                <th style="text-align: center;">Keperluan</th>
+                <th style="text-align: center;">Tipe</th>
+                <th style="text-align: center;">Nilai Pengajuan</th>
+                <th style="text-align: center;">Diajukan Oleh</th>
+                <th style="text-align: center;">Tanggal Pengajuan</th>
+                <th style="text-align: center;">Dibayar Oleh</th>
+                <th style="text-align: center;">Tanggal Pembayaran</th>
+                <th style="text-align: center;">Status</th>
             </tr>
         </thead>
         <tbody>
             <?php
             $no = 1;
             foreach ($data_payment_list as $item) {
-                $tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pengajuan'] : '';
+                $tgl_pengajuan = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pengajuan'] : '-';
+                $tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pembayaran'] : '-';
+                $diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['diajukan_oleh'] : '-';
+                $dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['dibayar_oleh'] : '-';
+                $no_payment = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['no_payment'] : '-';
 
-                $tgl_pembayaran = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['tgl_pembayaran'] : '';
+                $get_payment = $this->db->get_where('payment_approve', ['no_doc' => $item->no_doc, 'tgl_bayar <>' => null])->row();
+                $status = (!empty($get_payment)) ? 'Paid' : 'Open';
 
-                $diajukan_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['diajukan_oleh'] : '';
-
-                $dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['dibayar_oleh'] : '';
+                $nilai_pengajuan = $item->jumlah;
+                if ($item->tipe == 'expense' && !empty($item->id_kasbon) && $item->kurang_bayar > 0) {
+                    $nilai_pengajuan = $item->kurang_bayar;
+                }
 
                 echo '<tr>';
-                echo '<td class="text-center">' . $no . '</td>';
-                echo '<td class="text-left">' . $item->no_doc . '</td>';
-                echo '<td class="text-left">' . $item->nama . '</td>';
-                echo '<td class="text-left">' . $item->tgl_doc . '</td>';
-                echo '<td class="text-left">' . $item->keperluan . '</td>';
-                echo '<td class="text-left">' . $item->tipe . '</td>';
-                echo '<td class="text-right">' . number_format($item->jumlah) . '</td>';
-                echo '<td class="text-center">' . $diajukan_oleh . '</td>';
-                echo '<td class="text-center">' . $tgl_pengajuan . '</td>';
-                echo '<td class="text-center">' . $dibayar_oleh . '</td>';
-                echo '<td class="text-center">' . $tgl_pembayaran . '</td>';
-                echo '<td class="text-center">';
-                $get_request_payment = $this->db->get_where('request_payment', ['no_doc' => $item->no_doc])->row();
-                if (!empty($get_request_payment)) {
-                    if ($get_request_payment->status == '0') {
-                        echo '<div class="badge bg-yellow text-light">Process</div>';
-                    }
-                    if ($get_request_payment->status == '1' || $get_request_payment->status == '2') {
-                        $get_payment_approve = $this->db->get_where('payment_approve', ['no_doc' => $item->no_doc])->row();
-                        if (count($get_payment_approve) > 0) {
-                            if ($get_payment_approve->status == '2') {
-                                echo '<div class="badge bg-green text-light">Paid</div>';
-                            } else {
-                                echo '<div class="badge bg-yellow text-light">Approved</div>';
-                            }
-                        } else {
-                            echo '<div class="badge bg-yellow text-light">Approved</div>';
-                        }
-                    }
-                } else {
-                    $get_sts_reject = '';
-                    if ($item->tipe == 'transportasi') {
-                        $get_sts_reject = $this->db->get_where('tr_transport_req', ['no_doc' => $item->no_doc])->row();
-                    }
-                    if ($item->tipe == 'kasbon') {
-                        $get_sts_reject = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_doc])->row();
-                    }
-                    if ($item->tipe == 'expense') {
-                        $get_sts_reject = $this->db->get_where('tr_expense', ['no_doc' => $item->no_doc])->row();
-                    }
-                    if ($item->tipe == 'periodik') {
-                        $get_sts_reject = $this->db->get_where('tr_expense', ['no_doc' => $item->no_doc])->row();
-                    }
-
-                    if (!empty($get_sts_reject)) {
-                        if ($get_sts_reject->sts_reject == '1') {
-                            echo '<div class="badge bg-red text-light">Rejected</div>';
-                        } else {
-                            echo '<div class="badge bg-blue text-light">New</div>';
-                        }
-                    } else {
-                        echo '<div class="badge bg-blue text-light">New</div>';
-                    }
-                }
-                echo '</td>';
+                echo '<td style="text-align: center;">' . $no . '</td>';
+                echo '<td style="text-align: center;">' . $item->no_doc . '</td>';
+                echo '<td style="text-align: center;">' . $no_payment . '</td>';
+                echo '<td style="text-align: left;">' . $item->nama . '</td>';
+                echo '<td style="text-align: center;">' . (!empty($item->tgl_doc) ? date('d F Y', strtotime($item->tgl_doc)) : '-') . '</td>';
+                echo '<td style="text-align: left;">' . $item->keperluan . '</td>';
+                echo '<td style="text-align: center;">' . ucfirst($item->tipe) . '</td>';
+                echo '<td style="text-align: right;">' . number_format($nilai_pengajuan, 2) . '</td>';
+                echo '<td style="text-align: center;">' . $diajukan_oleh . '</td>';
+                echo '<td style="text-align: center;">' . $tgl_pengajuan . '</td>';
+                echo '<td style="text-align: center;">' . $dibayar_oleh . '</td>';
+                echo '<td style="text-align: center;">' . $tgl_pembayaran . '</td>';
+                echo '<td style="text-align: center;">' . $status . '</td>';
                 echo '</tr>';
 
                 $no++;
