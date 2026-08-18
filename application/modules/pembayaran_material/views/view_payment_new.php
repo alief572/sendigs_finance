@@ -6,7 +6,8 @@ $bank_charge = isset($results['bank_charge']) ? $results['bank_charge'] : 0;
 $no_payment_paid = isset($results['no_payment_paid']) ? $results['no_payment_paid'] : ($header->id_payment ?? '-');
 
 // Helper function to format document type (remove underscore/hyphen, title case)
-function format_doc_type($type_str) {
+function format_doc_type($type_str)
+{
 	if (empty($type_str)) return '-';
 	$low = strtolower(trim($type_str));
 	if ($low === 'nonpo' || $low === 'non_po') return 'Non PO';
@@ -74,7 +75,7 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 							<th width="35%" style="border: none; padding: 6px 4px; color: #495057;">No Payment</th>
 							<td width="5%" style="border: none; padding: 6px 0;">:</td>
 							<td style="border: none; padding: 6px 4px;">
-								<span class="badge bg-navy" style="font-size: 13px; padding: 6px 12px;"><?= $no_payment_paid ?></span>
+								<span class="badge bg-navy" style="font-size: 13px; padding: 6px 12px;"><?= $header->id ?></span>
 							</td>
 						</tr>
 						<tr>
@@ -284,26 +285,26 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 						?>
 					</tbody>
 					<?php if (!empty($list_jurnal)): ?>
-					<tfoot>
-						<tr style="background-color: #f4f4f4; font-weight: bold;">
-							<td colspan="6" class="text-right">TOTAL JURNAL :</td>
-							<td class="text-right text-navy">Rp <?= number_format($total_debit, 2) ?></td>
-							<td class="text-right text-navy">Rp <?= number_format($total_kredit, 2) ?></td>
-						</tr>
-						<?php if (round($total_debit, 2) === round($total_kredit, 2)): ?>
-						<tr style="background-color: #e8f5e9;">
-							<td colspan="8" class="text-center text-green" style="font-weight: 600;">
-								<i class="fa fa-check-circle"></i> Status Jurnal: <strong>BALANCE (Seimbang)</strong>
-							</td>
-						</tr>
-						<?php else: ?>
-						<tr style="background-color: #ffebee;">
-							<td colspan="8" class="text-center text-red" style="font-weight: 600;">
-								<i class="fa fa-exclamation-triangle"></i> Status Jurnal: <strong>TIDAK BALANCE (Selisih: Rp <?= number_format(abs($total_debit - $total_kredit), 2) ?>)</strong>
-							</td>
-						</tr>
-						<?php endif; ?>
-					</tfoot>
+						<tfoot>
+							<tr style="background-color: #f4f4f4; font-weight: bold;">
+								<td colspan="6" class="text-right">TOTAL JURNAL :</td>
+								<td class="text-right text-navy">Rp <?= number_format($total_debit, 2) ?></td>
+								<td class="text-right text-navy">Rp <?= number_format($total_kredit, 2) ?></td>
+							</tr>
+							<?php if (round($total_debit, 2) === round($total_kredit, 2)): ?>
+								<tr style="background-color: #e8f5e9;">
+									<td colspan="8" class="text-center text-green" style="font-weight: 600;">
+										<i class="fa fa-check-circle"></i> Status Jurnal: <strong>BALANCE (Seimbang)</strong>
+									</td>
+								</tr>
+							<?php else: ?>
+								<tr style="background-color: #ffebee;">
+									<td colspan="8" class="text-center text-red" style="font-weight: 600;">
+										<i class="fa fa-exclamation-triangle"></i> Status Jurnal: <strong>TIDAK BALANCE (Selisih: Rp <?= number_format(abs($total_debit - $total_kredit), 2) ?>)</strong>
+									</td>
+								</tr>
+							<?php endif; ?>
+						</tfoot>
 					<?php endif; ?>
 				</table>
 			</div>
