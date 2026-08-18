@@ -146,7 +146,7 @@ class Pembayaran_material extends Admin_Controller
 			->where('b.exp_inv_po', 1)
 			->where('a.id_payment <>', null)
 			->where('a.id_payment <>', '')
-			->group_by('a.id_payment')
+			->group_by('a.id')
 			->order_by('a.created_on', 'DESC')
 			->get()
 			->result();

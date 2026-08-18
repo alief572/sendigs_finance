@@ -81,18 +81,20 @@
 							if (!empty($results2)) {
 								$no = 1;
 								foreach ($results2 as $item) {
+									$nilai_bayar = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
 									echo '<tr>';
-									echo '<td class="text-center">' . $item->id . '</td>';
+									echo '<td class="text-center">' . (!empty($item->id_payment) ? $item->id_payment : $item->id) . '</td>';
 									echo '<td class="text-center">' . $item->no_doc . '</td>';
 									echo '<td class="text-center">' . date('d F Y', strtotime($item->tgl_bayar)) . '</td>';
 									echo '<td class="text-center">' . $item->created_by . '</td>';
-									echo '<td class="text-right">' . number_format($item->payment_bank, 2) . '</td>';
+									echo '<td class="text-right">' . number_format($nilai_bayar, 2) . '</td>';
 									echo '<td class="text-left">' . $item->keterangan_pembayaran . '</td>';
 									echo '<td>';
 									echo '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
 									if (file_exists('assets/expense/' . $item->link_doc) && $item->link_doc !== '') {
 										echo '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
 									}
+									echo '</td>';
 									echo '</tr>';
 
 									$no++;
