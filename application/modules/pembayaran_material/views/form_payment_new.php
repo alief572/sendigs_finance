@@ -30,14 +30,23 @@ foreach ($list_coa as $c) {
 }
 
 
+$arr_no_doc_php = [];
 foreach ($results['result_payment'] as $item) {
-	if ($item->tipe == 'petty_cash_hutang') {
+	if ($item->tipe == 'petty_cash_hutang' || (isset($item->no_doc) && strpos($item->no_doc, 'PHP') !== false)) {
 		$total_hutang += $item->jumlah;
+		if (!empty($item->no_doc)) {
+			$arr_no_doc_php[] = $item->no_doc;
+		}
 		$get_company = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc])->row();
 		if (!empty($get_company)) {
 			$company_hutang = strtoupper($get_company->company);
 		}
 	}
+}
+
+$suffix_php = !empty($arr_no_doc_php) ? ' - ' . implode(', ', array_unique($arr_no_doc_php)) : '';
+
+foreach ($results['result_payment'] as $item) {
 
 	$get_rec_invoice = $this->db->get_where('tr_invoice_po', ['id' => $item->no_doc])->row();
 
@@ -447,8 +456,8 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_1[1][nama_account]" value="Hutang Hubungan Istimewa">
 							</td>
 							<td class="text-center">
-								Hutang ke STM
-								<input type="hidden" name="jurnal_hutang_1[1][keterangan]" value="Hutang ke STM">
+								Hutang ke STM<?= $suffix_php ?>
+								<input type="hidden" name="jurnal_hutang_1[1][keterangan]" value="Hutang ke STM<?= $suffix_php ?>">
 							</td>
 							<td class="text-right">
 								<?= number_format($total_hutang) ?>
@@ -565,8 +574,8 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_2[2][nama_account]" value="Piutang Hubungan Istimewa">
 							</td>
 							<td class="text-center">
-								Piutang <?= $company_hutang ?>
-								<input type="hidden" name="jurnal_hutang_2[2][keterangan]" value="Piutang <?= $company_hutang ?>">
+								Piutang <?= $company_hutang ?><?= $suffix_php ?>
+								<input type="hidden" name="jurnal_hutang_2[2][keterangan]" value="Piutang <?= $company_hutang ?><?= $suffix_php ?>">
 							</td>
 							<td class="text-right">
 								0
