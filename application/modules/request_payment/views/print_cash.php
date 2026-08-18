@@ -259,71 +259,17 @@ function formatDate($date)
     <?php if (!empty($pr_header->document)) : ?>
         <?php $ext = strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)); ?>
         <?php if ($ext == 'pdf') : ?>
-            <div id="pdf-pages"></div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-            <script>
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-                var pdfUrl = '<?= base_url("assets/pr/" . $pr_header->document) ?>';
-                var container = document.getElementById('pdf-pages');
-
-                pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-                    var totalPages = pdf.numPages;
-                    var pagesRendered = 0;
-
-                    for (var i = 1; i <= totalPages; i++) {
-                        (function(pageNum) {
-                            pdf.getPage(pageNum).then(function(page) {
-                                var scale = 1.5;
-                                var viewport = page.getViewport({
-                                    scale: scale
-                                });
-
-                                var wrapper = document.createElement('div');
-                                wrapper.className = 'pagebreak';
-                                wrapper.style.marginBottom = '0';
-
-                                var canvas = document.createElement('canvas');
-                                canvas.width = viewport.width;
-                                canvas.height = viewport.height;
-                                canvas.style.width = '100%';
-                                canvas.style.height = 'auto';
-                                canvas.style.display = 'block';
-
-                                wrapper.appendChild(canvas);
-                                container.appendChild(wrapper);
-
-                                var context = canvas.getContext('2d');
-                                page.render({
-                                    canvasContext: context,
-                                    viewport: viewport
-                                }).promise.then(function() {
-                                    pagesRendered++;
-                                    if (pagesRendered === totalPages) {
-                                        setTimeout(function() {
-                                            window.print();
-                                        }, 500);
-                                    }
-                                });
-                            });
-                        })(i);
-                    }
-                });
-            </script>
+            <div class="pagebreak"></div>
+            <embed src="<?= base_url('assets/pr/' . $pr_header->document) ?>" type="application/pdf" width="100%" style="height: 100vh; border: none;">
         <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
             <div class="pagebreak"></div>
             <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img" style="max-width: 100%; height: auto;">
-            <script>
-                window.print();
-            </script>
         <?php endif; ?>
     <?php endif; ?>
 
-    <?php if (empty($pr_header->document)) : ?>
-        <script>
-            window.print();
-        </script>
-    <?php endif; ?>
+    <script>
+        window.print();
+    </script>
 </body>
 
 </html>

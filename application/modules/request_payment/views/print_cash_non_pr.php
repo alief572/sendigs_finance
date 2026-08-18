@@ -73,62 +73,18 @@ $nmuser = (!empty($data_pr->nm_pic)) ? $data_pr->nm_pic : '';
     if (isset($doc_pr)) {
         if ($doc_pr->doc_file != '') {
             if (strpos($doc_pr->doc_file, 'pdf', 0) > 1) {
-                echo '<div id="pdf-pages"></div>';
-                echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>';
-                echo '<script>
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-                    var pdfUrl = "' . base_url($doc_pr->doc_file) . '";
-                    var container = document.getElementById("pdf-pages");
-
-                    pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-                        var totalPages = pdf.numPages;
-                        var pagesRendered = 0;
-
-                        for (var i = 1; i <= totalPages; i++) {
-                            (function(pageNum) {
-                                pdf.getPage(pageNum).then(function(page) {
-                                    var scale = 1.5;
-                                    var viewport = page.getViewport({ scale: scale });
-
-                                    var wrapper = document.createElement("div");
-                                    wrapper.className = "pagebreak";
-                                    wrapper.style.marginBottom = "0";
-
-                                    var canvas = document.createElement("canvas");
-                                    canvas.width = viewport.width;
-                                    canvas.height = viewport.height;
-                                    canvas.style.width = "100%";
-                                    canvas.style.height = "auto";
-                                    canvas.style.display = "block";
-
-                                    wrapper.appendChild(canvas);
-                                    container.appendChild(wrapper);
-
-                                    var context = canvas.getContext("2d");
-                                    page.render({ canvasContext: context, viewport: viewport }).promise.then(function() {
-                                        pagesRendered++;
-                                        if (pagesRendered === totalPages) {
-                                            setTimeout(function() { window.print(); }, 500);
-                                        }
-                                    });
-                                });
-                            })(i);
-                        }
-                    });
-                </script>';
+                echo '<div class="pagebreak"></div>
+                <embed src="' . base_url($doc_pr->doc_file) . '" type="application/pdf" width="100%" style="height: 100vh; border: none;">';
             } else {
                 echo '<div class="pagebreak"></div>
                 <div class="col-md-12"><img src="' . base_url($doc_pr->doc_file) . '" style="max-width:100%; height:auto;"><br />' . $doc_pr->no_doc . '</div>';
-                echo '<script>window.print();</script>';
             }
-        } else {
-            echo '<script>window.print();</script>';
         }
-    } else {
-        echo '<script>window.print();</script>';
     }
     ?>
+    <script>
+        window.print();
+    </script>
 </body>
 
 </html>
