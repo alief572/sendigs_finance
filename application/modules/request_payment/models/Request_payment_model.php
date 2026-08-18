@@ -457,9 +457,9 @@ class Request_payment_model extends BF_Model
         }
 
         if ($status === 'paid') {
-            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <> '')";
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
         } elseif ($status === 'open') {
-            $where_clauses[] = "(pa.tgl_bayar IS NULL OR pa.tgl_bayar = '')";
+            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
         }
 
         $final_where = implode(" AND ", $where_clauses);
@@ -1635,9 +1635,9 @@ class Request_payment_model extends BF_Model
         }
 
         if ($status === 'paid') {
-            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <> '')";
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
         } elseif ($status === 'open') {
-            $where_clauses[] = "(pa.tgl_bayar IS NULL OR pa.tgl_bayar = '')";
+            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
         }
 
         $base_where = implode(" AND ", $where_clauses);
