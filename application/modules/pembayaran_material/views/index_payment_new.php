@@ -110,7 +110,7 @@
 				stateSave: true,
 				destroy: true,
 				pageLength: 10,
-				order: [[0, "asc"]]
+				order: [[2, "desc"]]
 			});
 
 			tableNonPR = $("#mytabledatanonmaterial").DataTable({
@@ -134,10 +134,10 @@
 				responsive: true,
 				processing: true,
 				serverSide: true,
-				stateSave: true,
+				stateSave: false,
 				destroy: true,
 				pageLength: 10,
-				order: [[0, "asc"]]
+				order: [[2, "desc"]]
 			});
 
 			$("#form-data").hide();
