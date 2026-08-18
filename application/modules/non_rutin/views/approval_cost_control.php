@@ -4,29 +4,62 @@ $ENABLE_MANAGE  = has_permission('PR_Departemen.Manage');
 $ENABLE_VIEW    = has_permission('PR_Departemen.View');
 $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.2/css/dataTables.dataTables.min.css">
-<form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data" autocomplete='off'>
+<style>
+	.section-title {
+		font-size: 13px;
+		font-weight: 700;
+		color: #3c8dbc;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		border-bottom: 2px solid #3c8dbc;
+		padding-bottom: 6px;
+		margin-bottom: 15px;
+	}
+
+	#my-grid thead tr th {
+		background-color: #3c8dbc;
+		color: #fff;
+		font-size: 12px;
+		border-color: #357ca5;
+	}
+
+	.breadcrumb {
+		background: none;
+		padding: 0;
+		font-size: 12px;
+		margin-bottom: 5px;
+	}
+</style>
+
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+
+<form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data" autocomplete="off">
 	<div class="box box-primary">
-		<div class="box-header">
-			<h3 class="box-title"><?php echo $title; ?></h3>
-			
+		<div class="box-header with-border">
+			<div>
+				<ol class="breadcrumb">
+					<li><i class="fa fa-shopping-cart"></i> Procurement</li>
+					<li class="active">Approval Cost Control PR Dept</li>
+				</ol>
+				<h3 class="box-title" style="font-size:16px; font-weight:700;"><?php echo $title; ?></h3>
+			</div>
 		</div>
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
-			<input type='hidden' id='tanda' value='<?= $tanda; ?>'>
-			<table class="table table-bordered table-striped" id="my-grid" width='100%'>
+			<input type="hidden" id="tanda" value="<?= $tanda; ?>">
+			<table class="table table-bordered table-striped" id="my-grid" width="100%">
 				<thead>
-					<tr class='bg-blue'>
+					<tr>
 						<th class="text-center">#</th>
 						<th class="text-center">No PR</th>
 						<th class="text-center">Departemen</th>
 						<th class="text-center no-sort">Nama Barang/Jasa</th>
 						<th class="text-center no-sort">Spec / Requirement</th>
-						<th class="text-center no-sort" width='7%'>Qty</th>
+						<th class="text-center no-sort" width="7%">Qty</th>
 						<th class="text-center no-sort">Dibutuhkan</th>
 						<th class="text-center no-sort">Keterangan</th>
 						<th class="text-center no-sort">Status</th>
-						<th class="text-center no-sort" width='13%'>Option</th>
+						<th class="text-center no-sort" width="13%">Option</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -35,28 +68,29 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		<!-- /.box-body -->
 	</div>
 	<!-- /.box -->
-	<!-- modal -->
-	<div class="modal fade" id="ModalView2" style='overflow-y: auto;'>
-		<div class="modal-dialog" style='width:80%; '>
+
+	<!-- Modal View PR -->
+	<div class="modal fade" id="ModalView2" style="overflow-y: auto;">
+		<div class="modal-dialog" style="width:80%;">
 			<div class="modal-content">
-				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span></button>
+				<div class="modal-header" style="background:#3c8dbc; color:#fff; border-radius:3px 3px 0 0;">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:1;">
+						<span aria-hidden="true">&times;</span>
+					</button>
 					<h4 class="modal-title" id="head_title2"></h4>
 				</div>
-				<div class="modal-body" id="view2">
-				</div>
+				<div class="modal-body" id="view2"></div>
 				<div class="modal-footer">
-					<!--<button type="button" class="btn btn-primary">Save</button>-->
-					<button type="button" class="btn btn-default " data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
 	</div>
-	<!-- modal -->
+	<!-- /modal -->
 </form>
 
-<script src="https://cdn.datatables.net/2.0.2/js/dataTables.min.js"></script>
+<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script>
 	$(document).ready(function() {

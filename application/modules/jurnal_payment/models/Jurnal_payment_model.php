@@ -59,15 +59,18 @@ class Jurnal_payment_model extends BF_Model
         // Define sortable columns mapping
         $sort_columns = [
             1 => 'a.no_transaksi',
-            2 => 'a.jenis_transaksi',
-            3 => 'a.tgl_jurnal',
-            4 => 'a.nm_company'
+            3 => 'a.jenis_transaksi',
+            4 => 'a.tgl_jurnal',
+            5 => 'a.nm_company'
         ];
 
         $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
 
         // Base filter criteria
         $this->db->from('tr_jurnal a');
+        $this->db->join('payment_approve b', 'a.no_transaksi = b.id OR FIND_IN_SET(b.id, REPLACE(a.no_transaksi, \' \', \'\')) > 0', 'left');
+        $this->db->join('tr_kasbon k', 'k.no_doc = b.no_doc', 'left');
+        $this->db->join('tr_expense e', 'e.no_doc = b.no_doc', 'left');
         $this->db->where('a.sts <>', '1');
         $this->db->where_in('a.jenis_transaksi', $arr_jenis_transaksi);
         $this->db->where('a.nm_company <>', '');
@@ -98,6 +101,9 @@ class Jurnal_payment_model extends BF_Model
             $this->db->like('a.no_transaksi', $search['value'], 'both');
             $this->db->or_like('a.jenis_transaksi', $search['value'], 'both');
             $this->db->or_like('a.nm_company', $search['value'], 'both');
+            $this->db->or_like('b.no_doc', $search['value'], 'both');
+            $this->db->or_like('k.no_kasbon_consultant', $search['value'], 'both');
+            $this->db->or_like('e.no_expense_consultant', $search['value'], 'both');
             $this->db->group_end();
         }
 
@@ -126,24 +132,40 @@ class Jurnal_payment_model extends BF_Model
             $no++;
 
             $arr_no_transaksi = array_map('trim', explode(',', $item->no_transaksi));
-            $get_kategori_payment = $this->db->select('a.tipe')
-                ->from('request_payment a')
-                ->join('payment_approve b', 'b.no_doc = a.no_doc')
+            $get_payment_info = $this->db->select('b.id, b.no_doc, b.tipe, k.no_kasbon_consultant, e.no_expense_consultant')
+                ->from('payment_approve b')
+                ->join('tr_kasbon k', 'k.no_doc = b.no_doc', 'left')
+                ->join('tr_expense e', 'e.no_doc = b.no_doc', 'left')
                 ->where_in('b.id', $arr_no_transaksi)
-                ->group_by('a.tipe')
                 ->get()
                 ->result_array();
 
+            $arr_no_pengajuan = [];
             $arr_tipe_payment = [];
-            foreach ($get_kategori_payment as $item_payment) {
-                $arr_tipe_payment[] = $item_payment['tipe'];
+            foreach ($get_payment_info as $row_pa) {
+                if (!empty($row_pa['tipe'])) {
+                    $arr_tipe_payment[] = $row_pa['tipe'];
+                }
+
+                $no_doc = $row_pa['no_doc'];
+                if ($row_pa['tipe'] == 'kasbon' && !empty($row_pa['no_kasbon_consultant'])) {
+                    $no_doc = $row_pa['no_kasbon_consultant'];
+                } elseif ($row_pa['tipe'] == 'expense' && !empty($row_pa['no_expense_consultant'])) {
+                    $no_doc = $row_pa['no_expense_consultant'];
+                }
+
+                if (!empty($no_doc)) {
+                    $arr_no_pengajuan[] = $no_doc;
+                }
             }
 
-            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', $arr_tipe_payment) : '';
+            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '';
+            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : '';
 
             $hasil[] = [
                 'no'              => $no,
                 'no_transaksi'    => $item->no_transaksi,
+                'no_pengajuan'    => $no_pengajuan,
                 'kategori_payment' => ucfirst($tipe_payment),
                 'tanggal_jurnal'  => date('d F Y', strtotime($item->tgl_jurnal)),
                 'company'         => $item->nm_company,
@@ -161,10 +183,12 @@ class Jurnal_payment_model extends BF_Model
 
     public function get_list_jurnal($filter = null)
     {
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+
         $this->db->select('a.*');
         $this->db->from('tr_jurnal a');
         $this->db->where('a.sts <>', '1');
-        $this->db->where('a.jenis_transaksi', 'Payment');
+        $this->db->where_in('a.jenis_transaksi', $arr_jenis_transaksi);
         $this->db->where('a.nm_company <>', '');
 
         if (!empty($filter['tgl_from']) && !empty($filter['tgl_to'])) {
@@ -181,17 +205,60 @@ class Jurnal_payment_model extends BF_Model
         }
 
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
+        $this->db->order_by('a.id', 'desc');
         $get_data = $this->db->get()->result_array();
 
-        return $get_data;
+        $hasil = [];
+        foreach ($get_data as $item) {
+            $arr_no_transaksi = array_map('trim', explode(',', $item['no_transaksi']));
+            $get_payment_info = $this->db->select('b.id, b.no_doc, b.tipe, k.no_kasbon_consultant, e.no_expense_consultant')
+                ->from('payment_approve b')
+                ->join('tr_kasbon k', 'k.no_doc = b.no_doc', 'left')
+                ->join('tr_expense e', 'e.no_doc = b.no_doc', 'left')
+                ->where_in('b.id', $arr_no_transaksi)
+                ->get()
+                ->result_array();
+
+            $arr_no_pengajuan = [];
+            $arr_tipe_payment = [];
+            foreach ($get_payment_info as $row_pa) {
+                if (!empty($row_pa['tipe'])) {
+                    $arr_tipe_payment[] = $row_pa['tipe'];
+                }
+
+                $no_doc = $row_pa['no_doc'];
+                if ($row_pa['tipe'] == 'kasbon' && !empty($row_pa['no_kasbon_consultant'])) {
+                    $no_doc = $row_pa['no_kasbon_consultant'];
+                } elseif ($row_pa['tipe'] == 'expense' && !empty($row_pa['no_expense_consultant'])) {
+                    $no_doc = $row_pa['no_expense_consultant'];
+                }
+
+                if (!empty($no_doc)) {
+                    $arr_no_pengajuan[] = $no_doc;
+                }
+            }
+
+            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '';
+            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : '';
+
+            $item['no_pengajuan'] = $no_pengajuan;
+            $item['kategori_payment'] = ucfirst($tipe_payment);
+
+            $hasil[] = $item;
+        }
+
+        return $hasil;
     }
 
     public function get_no_payment_jurnal()
     {
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+
         $get_no_payment_jurnal = $this->db->select('a.no_transaksi')
             ->from('tr_jurnal a')
             ->where('a.sts <>', '1')
-            ->where('a.jenis_transaksi', 'Payment')
+            ->where_in('a.jenis_transaksi', $arr_jenis_transaksi)
+            ->where('a.nm_company <>', '')
             ->group_by(['a.no_transaksi', 'a.jenis_transaksi'])
             ->order_by('a.created_date', 'desc')
             ->get()

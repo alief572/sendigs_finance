@@ -4,31 +4,59 @@ $ENABLE_MANAGE  = has_permission('PR_Departemen.Manage');
 $ENABLE_VIEW    = has_permission('PR_Departemen.View');
 $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.2/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data" autocomplete='off'>
+<style>
+	.section-title {
+		font-size: 13px;
+		font-weight: 700;
+		color: #3c8dbc;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		border-bottom: 2px solid #3c8dbc;
+		padding-bottom: 6px;
+		margin-bottom: 15px;
+	}
+
+	#my-grid thead tr th {
+		background-color: #3c8dbc;
+		color: #fff;
+		font-size: 12px;
+		border-color: #357ca5;
+	}
+
+	.breadcrumb {
+		background: none;
+		padding: 0;
+		font-size: 12px;
+		margin-bottom: 5px;
+	}
+</style>
+
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+
+<form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data" autocomplete="off">
 	<div class="box box-primary">
-		<div class="box-header">
-			<h3 class="box-title"><?php echo $title; ?></h3>
-			<div class="box-tool pull-right">
-				<?php
-				if ($ENABLE_ADD) {
-				?>
-					<a href="<?php echo site_url('non_rutin/add') ?>" class="btn btn-sm btn-success" style='float:right;' id='btn-add'>
-						<i class="fa fa-plus"></i> &nbsp;&nbsp;Add
+		<div class="box-header with-border">
+			<div>
+				<ol class="breadcrumb">
+					<li><i class="fa fa-shopping-cart"></i> Procurement</li>
+					<li class="active">PR Non-Rutin</li>
+				</ol>
+				<h3 class="box-title" style="font-size:16px; font-weight:700;"><?php echo $title; ?></h3>
+			</div>
+			<div class="box-tools pull-right">
+				<?php if ($ENABLE_ADD) { ?>
+					<a href="<?php echo site_url('non_rutin/add') ?>" class="btn btn-sm btn-success" id="btn-add">
+						<i class="fa fa-plus"></i>&nbsp; Tambah PR
 					</a>
-				<?php
-				}
-				?>
+				<?php } ?>
 			</div>
 		</div>
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
-			<input type='hidden' id='tanda' value='<?= $tanda; ?>'>
+			<input type="hidden" id="tanda" value="<?= $tanda; ?>">
 			<!-- <div class="col-md-4">
-				<select name="" id="" class="form-control form-control-sm search_depart" style="margin-top: 5px;">
-
-					<?php
+                <select name="" id="" class="form-control form-control-sm search_depart" style="margin-top: 5px;">
+                    <?php
 					if ($this->auth->user_id() == '7') {
 						echo '<option value="">- Department -</option>';
 					}
@@ -36,13 +64,13 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 						echo '<option value="' . $item->id . '">' . strtoupper($item->name) . ' - ' . strtoupper($item->nm_company) . '</option>';
 					}
 					?>
-				</select>
-				<button type="button" class="btn btn-sm btn-primary search_btn" style=''><i class="fa fa-search"></i> Cari</button>
-			</div> -->
+                </select>
+                <button type="button" class="btn btn-sm btn-primary search_btn" style=""><i class="fa fa-search"></i> Cari</button>
+            </div> -->
 			<div class="col-12 col_table">
-				<table class="table table-bordered table-striped" id="my-grid" width='100%'>
+				<table class="table table-bordered table-striped" id="my-grid" width="100%">
 					<thead>
-						<tr class='bg-blue'>
+						<tr>
 							<th class="text-center">#</th>
 							<th class="text-center">No PR</th>
 							<th class="text-center no-sort">No. Dokumen</th>
@@ -54,61 +82,67 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 							<th class="text-center no-sort">PIC</th>
 							<th class="text-center no-sort">Created Date</th>
 							<th class="text-center no-sort">Status PR</th>
-							<th class="text-center no-sort" width='13%'>Option</th>
+							<th class="text-center no-sort" width="13%">Option</th>
 						</tr>
 					</thead>
-					<tbody>
-
-					</tbody>
+					<tbody></tbody>
 				</table>
 			</div>
 		</div>
 		<!-- /.box-body -->
 	</div>
 	<!-- /.box -->
-	<!-- modal -->
-	<div class="modal fade" id="ModalView2" style='overflow-y: auto;'>
-		<div class="modal-dialog" style='width:80%; '>
+
+	<!-- Modal View PR -->
+	<div class="modal fade" id="ModalView2" style="overflow-y: auto;">
+		<div class="modal-dialog" style="width:80%;">
 			<div class="modal-content">
-				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span></button>
+				<div class="modal-header" style="background:#3c8dbc; color:#fff; border-radius:3px 3px 0 0;">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:1;">
+						<span aria-hidden="true">&times;</span>
+					</button>
 					<h4 class="modal-title" id="head_title2"></h4>
 				</div>
-				<div class="modal-body" id="view2">
-				</div>
+				<div class="modal-body" id="view2"></div>
 				<div class="modal-footer">
-					<!--<button type="button" class="btn btn-primary">Save</button>-->
-					<button type="button" class="btn btn-default " data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
 	</div>
-	<!-- modal -->
+	<!-- /modal -->
 </form>
 
+<!-- Modal Closing PR -->
 <div class="modal modal-default fade" id="dialog-popup" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-md">
 		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-				<h4 class="modal-title" id="myModalLabel">Closing PR</h4>
+			<div class="modal-header" style="background:#dd4b39; color:#fff; border-radius:3px 3px 0 0;">
+				<button type="button" class="close" data-dismiss="modal" style="color:#fff; opacity:1;">
+					<span aria-hidden="true">&times;</span>
+					<span class="sr-only">Close</span>
+				</button>
+				<h4 class="modal-title" id="myModalLabel"><i class="fa fa-times-circle"></i>&nbsp; Closing PR</h4>
 			</div>
 			<form action="" method="post" id="frm-data">
 				<div class="modal-body" id="ModalView">
 					...
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-sm btn-secondary" onclick="$('#dialog-popup').modal('hide')">Cancel</button>
-					<button type="submit" class="btn btn-sm btn-danger">Close PR</button>
+					<button type="button" class="btn btn-sm btn-default" onclick="$('#dialog-popup').modal('hide')">
+						<i class="fa fa-times"></i> Cancel
+					</button>
+					<button type="submit" class="btn btn-sm btn-danger">
+						<i class="fa fa-lock"></i> Close PR
+					</button>
 				</div>
 			</form>
 		</div>
 	</div>
 </div>
 
-<script src="https://cdn.datatables.net/2.0.2/js/dataTables.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script>
 	$(document).ready(function() {

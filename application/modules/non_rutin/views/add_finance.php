@@ -1,334 +1,133 @@
 <?php
-$id_dept         = (!empty($header)) ? $header[0]->id_dept : '';
-$id_costcenter     = (!empty($header)) ? $header[0]->id_costcenter : '';
+$id_dept        = (!empty($header)) ? $header[0]->id_dept : '';
+$id_costcenter  = (!empty($header)) ? $header[0]->id_costcenter : '';
 $budget         = (!empty($header)) ? number_format($header[0]->budget) : '0';
-$sisa_budget     = (!empty($header)) ? number_format($header[0]->sisa_budget) : '0';
-$coa             = (!empty($header)) ? $header[0]->coa : '';
+$sisa_budget    = (!empty($header)) ? number_format($header[0]->sisa_budget) : '0';
+$coa            = (!empty($header)) ? $header[0]->coa : '';
 $upload_spk     = (!empty($header)) ? $header[0]->document : '';
-$no_so             = (!empty($header)) ? $header[0]->no_so : '';
-$project_name     = (!empty($header)) ? $header[0]->project_name : '';
-$pr_coa     = (!empty($header)) ? $header[0]->coa : '';
-$tingkat_pr = (!empty($header)) ? $header[0]->tingkat_pr : '';
-$nm_pembuat  = (!empty($header)) ? $header[0]->nm_pembuat : '';
-$tgl_dibuat  = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
-$bank_name = (!empty($header)) ? $header[0]->bank_name : '';
-$bank_account_no = (!empty($header)) ? $header[0]->bank_account_no : '';
-$bank_account_name = (!empty($header)) ? $header[0]->bank_account_name : '';
+$no_so          = (!empty($header)) ? $header[0]->no_so : '';
+$project_name   = (!empty($header)) ? $header[0]->project_name : '';
+$pr_coa         = (!empty($header)) ? $header[0]->coa : '';
+$tingkat_pr     = (!empty($header)) ? $header[0]->tingkat_pr : '';
+$nm_pembuat     = (!empty($header)) ? $header[0]->nm_pembuat : '';
+$tgl_dibuat     = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
+
 // Detail Approval
 $alasan_reject1 = (!empty($header)) ? $header[0]->reject_reason1 : '';
 $alasan_reject2 = (!empty($header)) ? $header[0]->reject_reason2 : '';
 $alasan_reject3 = (!empty($header)) ? $header[0]->reject_reason3 : '';
 
-$keterangan_1 = (!empty($header)) ? $header[0]->keterangan_1 : '';
-$keterangan_2 = (!empty($header)) ? $header[0]->keterangan_2 : '';
-$keterangan_3 = (!empty($header)) ? $header[0]->keterangan_3 : '';
+$keterangan_1   = (!empty($header)) ? $header[0]->keterangan_1 : '';
+$keterangan_2   = (!empty($header)) ? $header[0]->keterangan_2 : '';
+$keterangan_3   = (!empty($header)) ? $header[0]->keterangan_3 : '';
 
-$status1 = '';
-$tgl_appre_1 = '';
-$status2 = '';
-$tgl_appre_2 = '';
-$status3 = '';
-$tgl_appre_3 = '';
+$status1        = '';
+$tgl_appre_1    = '';
+$status2        = '';
+$tgl_appre_2    = '';
+$status3        = '';
+$tgl_appre_3    = '';
+
 if (!empty($header)) {
     if ($header[0]->app_3 == '1') {
-        $status3 = '<div class="badge bg-green">Approved</div>';
+        $status3     = '<span class="badge" style="background:#00a65a; font-size:11px;">Approved</span>';
         $tgl_appre_3 = date('d F Y', strtotime($header[0]->app_3_date));
     } else {
         if ($header[0]->sts_reject3 == '1') {
-            $status3 = '<div class="badge bg-red">Rejected</div>';
+            $status3     = '<span class="badge" style="background:#dd4b39; font-size:11px;">Rejected</span>';
             $tgl_appre_3 = date('d F Y', strtotime($header[0]->sts_reject3_date));
+        } else {
+            $status3 = '<span class="badge" style="background:#f39c12; font-size:11px;">Waiting</span>';
         }
     }
 }
 // End Detail Status
 
-$tanda             = (!empty($code)) ? 'Update' : 'Insert';
-$disabled        = (!empty($approve)) ? 'disabled' : '';
-$disabled2        = ($approve == 'view') ? 'disabled' : '';
-$disabled3        = ($approve == 'view') ? 'readonly' : '';
-
-// $dataso = $this->db->query("select a.project, b.so_number from table_sales_order a LEFT JOIN so_bf_header b ON a.no_ipp=b.no_ipp order by so_number")->result();
+$tanda     = (!empty($code)) ? 'Update' : 'Insert';
+$disabled  = (!empty($approve)) ? 'disabled' : '';
+$disabled2 = ($approve == 'view') ? 'disabled' : '';
+$disabled3 = ($approve == 'view') ? 'readonly' : '';
 ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.2/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.css" integrity="sha512-0nkKORjFgcyxv3HbE4rzFUlENUMNqic/EzDIeYCgsKa/nwqr2B91Vu/tNAu4Q0cBuG4Xe/D1f/freEci/7GDRA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<form action="#" method="POST" id="form_ct" enctype="multipart/form-data" autocomplete='off'>
-    <input type="hidden" name="id" value="<?= $id; ?>">
-    <input type="hidden" name="tanda" value="<?= $tanda; ?>">
-    <input type="hidden" id="approve" name="approve" value="<?= $approve; ?>">
-    <input type="hidden" name="tingkat_approval" id="tingkat_approval" value="<?= $tingkat_approval ?>">
-    <div class="box box-primary">
-        <div class="box-header">
-            <h3 class="box-title"><?php echo $title; ?></h3>
-            <div class="box-tool pull-right">
+<style>
+    .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #3c8dbc;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #3c8dbc;
+        padding-bottom: 6px;
+        margin-bottom: 15px;
+    }
 
-            </div>
-        </div>
-        <!-- /.box-header -->
+    .breadcrumb {
+        background: none;
+        padding: 0;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
 
-        <div class="box-body">
-            <div class='form-group row'>
-                <label class='label-control col-sm-2'><b>Department <span class='text-red'>*</span></b></label>
-                <div class='col-sm-4'>
-                    <select name='id_dept' id='id_dept' class='form-control input-md chosen_select' <?= $disabled; ?>>
-                        <option value='0'>Select An Department</option>
-                        <?php
-                        // foreach (get_list_dept() as $val => $valx) {
-                        // 	$dept = ($valx['id'] == $id_dept) ? 'selected' : '';
-                        // 	echo "<option value='" . $valx['id'] . "' " . $dept . ">" . $valx['nm_dept'] . "</option>";
-                        // }
+    .approval-progress {
+        display: flex;
+        gap: 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
 
+    .approval-step {
+        flex: 1;
+        padding: 12px 15px;
+        border-right: 1px solid #ddd;
+        background: #f9f9f9;
+    }
 
-                        foreach ($list_departement as $departement) {
-                            $selected = '';
-                            if ($departement->id == $id_dept) {
-                                $selected = 'selected';
-                            }
-                            echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->name . ' - ' . $departement->nm_company) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <label class='label-control col-sm-2'><b>Project Name</b></label>
-                <div class='col-sm-4'>
-                    <?php
-                    echo form_input(array('id' => 'project_name', 'name' => 'project_name', 'class' => 'form-control input-md', 'placeholder' => 'Project Name'), $project_name);
-                    ?>
-                </div>
-            </div>
+    .approval-step:last-child {
+        border-right: none;
+    }
 
-            <div class='form-group row'>
-                <label class='label-control col-sm-2'><b>Upload Document</b></label>
-                <div class='col-sm-4  text-right'>
-                    <input type='file' id='upload_spk' name='upload_spk' class='form-control input-md' placeholder='Upload Document'>
-                    <?php if (!empty($upload_spk)) { ?>
-                        <a href='<?= base_url('assets/pr/' . $upload_spk); ?>' target='_blank' title='Download' data-role='qtip'>Download</a>
-                    <?php } ?>
-                </div>
-                <label class='label-control col-sm-2'><b>COA <span class='text-red'>*</span></b> </label>
-                <div class='col-sm-4'>
-                    <select name="coa" id="coa" class="form-control chosen_select" required>
-                        <option value="">- Select COA -</option>
-                        <?php
-                        foreach ($list_coa as $coa) :
-                            $selected = "";
-                            if ($coa['no_perkiraan'] == $pr_coa) {
-                                $selected = "selected";
-                            }
-                            echo '<option value="' . $coa['no_perkiraan'] . '" ' . $selected . '>' . $coa['no_perkiraan'] . ' - ' . $coa['nama'] . '</option>';
-                        endforeach;
-                        ?>
-                    </select>
-                </div>
-            </div>
-            <div class='form-group row'>
-                <label class='label-control col-sm-2'><b>Tingkat PR</b></label>
-                <div class='col-sm-4  text-right'>
-                    <select name="tingkat_pr" id="" class="form-control input-md" <?= $disabled2; ?>>
-                        <option value="1" <?= ($tingkat_pr == '1') ? 'selected' : null ?>>Normal</option>
-                        <option value="2" <?= ($tingkat_pr == '2') ? 'selected' : null ?>>Urgent</option>
-                    </select>
-                </div>
-            </div>
+    .approval-step .step-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: #777;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
 
+    .approval-step .step-status {
+        margin-bottom: 4px;
+    }
 
+    .approval-step .step-date {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 4px;
+    }
 
-            <div class='form-group row'>
-                <label class='label-control col-sm-2'><b>Nama Pembuat PR</b></label>
-                <div class='col-sm-4'>
-                    <input type='text' class='form-control' value='<?= ucwords(strtolower($nm_pembuat)) ?>' readonly>
-                </div>
-                <label class='label-control col-sm-2'><b>Tgl Dibuat PR</b></label>
-                <div class='col-sm-4'>
-                    <input type='text' class='form-control' value='<?= $tgl_dibuat ?>' readonly>
-                </div>
-            </div>
+    .approval-step .step-reason {
+        font-size: 11px;
+        color: #c0392b;
+        font-style: italic;
+    }
 
-            <div class="form-group row">
-                <div class="col-md-8">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th class="text-center">Approval By</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Tgl Approve / Reject</th>
-                                <th class="text-center">Alasan Reject</th>
-                                <th class="text-center">Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+    .detail-table thead tr th {
+        background-color: #3c8dbc;
+        color: #fff;
+        font-size: 12px;
+        border-color: #357ca5;
+    }
 
-                            <tr>
-                                <td class="text-center">Management</td>
-                                <td class="text-center">
-                                    <?= $status3 ?>
-                                </td>
-                                <td class="text-center">
-                                    <?= $tgl_appre_3 ?>
-                                </td>
-                                <td>
-                                    <input type="text" name="reject_reason3" id="" class="form-control" value="<?= $alasan_reject3 ?>" readonly>
-                                </td>
-                                <td>
-                                    <input type="text" name="keterangan_3" id="" class="form-control" value="<?= $keterangan_3 ?>">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    .action-footer {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
 
-            <?php
-            if ($approve == 'approve') {
-            ?>
-                <div class='form-group row'>
-                    <label class='label-control col-sm-2'><b>Approve <span class='text-red'>*</span></b></label>
-                    <div class='col-sm-2'>
-                        <select name='sts_app' id='sts_app' class='form-control input-md'>
-                            <option value='0'>Select Approve</option>
-                            <option value='Y'>Approve</option>
-                            <option value='D'>Reject</option>
-                        </select>
-                    </div>
-                    <div class='col-sm-2'>
-
-                    </div>
-                    <label class='label-control col-sm-2 tnd_reason'><b>Reason <span class='text-red'>*</span></b></label>
-                    <div class='col-sm-4 tnd_reason'>
-                        <?php
-                        echo form_textarea(array('id' => 'reason', 'name' => 'reason', 'class' => 'form-control input-md', 'rows' => '2', 'cols' => '75', 'placeholder' => 'Reason'));
-                        ?>
-                    </div>
-                </div>
-            <?php
-            }
-            ?>
-            <table class='table table-striped table-bordered table-hover table-condensed' width='100%'>
-                <thead>
-                    <tr class='bg-blue'>
-                        <th class='text-center' style='width: 3%;'>#</th>
-                        <th class='text-center'>Nama Barang/Jasa</th>
-                        <th class='text-center' style='width: 13%;'>Spec/ Requirement</th>
-                        <th class='text-center' style='width: 7%;'>Qty</th>
-                        <th class='text-center' style='width: 8%;'>Satuan</th>
-                        <th class='text-center' style='width: 9%;'>Est Harga</th>
-                        <th class='text-center' style='width: 9%;'>Est Total Harga</th>
-                        <th class='text-center' style='width: 9%;'>Tanggal Dibutuhkan</th>
-                        <th class='text-center' style='width: 15%;'>Keterangan</th>
-                        <?php
-                        if (empty($approve)) {
-                        ?>
-                            <th class='text-center' style='width: 8%;'>#</th>
-                        <?php } ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $nomor = 0;
-                    if (!empty($detail)) {
-                        foreach ($detail as $val => $valx) {
-                            $nomor++;
-                            echo "<tr class='header_" . $nomor . "'>";
-                            echo "<td align='center'>" . $nomor . "<input type='hidden' name='detail[" . $nomor . "][id]' value='" . $valx['id'] . "'></td>";
-                            echo "<td align='left'>
-								<textarea class='form-control input-md nm_barang_" . $nomor . "' name='detail[" . $nomor . "][nm_barang]' " . $disabled3 . ">" . strtoupper($valx['nm_barang']) . "</textarea>
-							</td>";
-                            echo "<td align='left'>
-								<textarea class='form-control input-md spec_" . $nomor . "' name='detail[" . $nomor . "][spec]' " . $disabled3 . ">" . strtoupper($valx['spec']) . "</textarea>
-							</td>";
-                            echo "<td align='left'><input type='text' " . $disabled2 . " id='qty_" . $nomor . "' name='detail[" . $nomor . "][qty]' class='form-control input-md text-right autoNumeric2 sum_tot qty_" . $nomor . "' value='" . $valx['qty'] . "'></td>";
-                            echo "<td align='left'>
-									<select name='detail[" . $nomor . "][satuan]' class='form-control wajib satuan_" . $nomor . "' " . $disabled2 . " required>";
-                            echo "<option value=''>Pilih</option>";
-                            foreach ($satuan as $key => $value) {
-                                $selected = ($value['id'] == $valx['satuan']) ? 'selected' : '';
-                                echo "<option value='" . $value['id'] . "' " . $selected . ">" . $value['code'] . "</option>";
-                            }
-                            echo "	</select>
-									</td>";
-                            echo "<td align='left'><input type='text' " . $disabled2 . " id='harga_" . $nomor . "' name='detail[" . $nomor . "][harga]' class='form-control input-md text-right maskM sum_tot harga_" . $nomor . "' value='" . $valx['harga'] . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
-                            echo "<td align='left'><input type='text' " . $disabled2 . " id='total_harga_" . $nomor . "' name='detail[" . $nomor . "][total_harga]' class='form-control input-md text-right maskM jumlah_all total_harga_" . $nomor . "' value='" . ($valx['qty'] * $valx['harga']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
-                            echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan tanggal_" . $nomor . "' readonly value='" . strtoupper($valx['tanggal']) . "'></td>";
-                            echo "<td align='left'>
-								<textarea class='form-control input-md keterangan_" . $nomor . "' name='detail[" . $nomor . "][keterangan]' " . $disabled3 . ">" . strtoupper($valx['keterangan']) . "</textarea>
-							</td>";
-                            if (empty($approve)) {
-                                echo "<td align='center'><button type='button' class='btn btn-sm btn-warning edit_detail edit_detail_" . $nomor . "' data-id='" . $valx['id'] . "' data-nomor='" . $nomor . "' style='margin-right: 0.5em;'><i class='fa fa-pencil'></i>
-								</button><button type='button' class='btn btn-sm btn-danger delPart' title='Delete Part'><i class='fa fa-close'></i></button></td>";
-                            }
-                            echo "</tr>";
-                        }
-                    }
-                    if (empty($approve)) {
-                    ?>
-                        <tr id='add_<?= $nomor; ?>'>
-                            <td align='center'></td>
-                            <td align='left'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button type='button' class='btn btn-sm btn-warning addPart' title='Add Barang'><i class='fa fa-plus'></i>&nbsp;&nbsp;Add Barang</button></td>
-                            <td align='center' colspan='8'></td>
-                        </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
-            <br>
-            <div class='row'>
-                <div class='col-md-6'>
-                    <table class='table table-bordered' style='width: 100%; max-width: 500px;'>
-                        <thead>
-                            <tr>
-                                <th colspan='2' class='bg-blue' style='font-size: 14px;'>Informasi Bank</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td width='35%' style='vertical-align: middle;'><b>Bank <span class='text-red'>*</span></b></td>
-                                <td>
-                                    <input type='text' id='bank_name' name='bank_name' class='form-control input-md' placeholder='Nama Bank (e.g. BCA, Mandiri)' value='<?= $bank_name; ?>' <?= $disabled3; ?>>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='vertical-align: middle;'><b>No Rekening <span class='text-red'>*</span></b></td>
-                                <td>
-                                    <input type='text' id='bank_account_no' name='bank_account_no' class='form-control input-md' placeholder='No. Rekening' value='<?= $bank_account_no; ?>' <?= $disabled3; ?>>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='vertical-align: middle;'><b>Nama Rekening <span class='text-red'>*</span></b></td>
-                                <td>
-                                    <input type='text' id='bank_account_name' name='bank_account_name' class='form-control input-md' placeholder='Nama Pemilik Rekening' value='<?= $bank_account_name; ?>' <?= $disabled3; ?>>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class='box-footer'>
-                <?php
-                echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-danger', 'style' => 'float:right; margin-left:5px;', 'value' => 'back', 'content' => 'Back', 'id' => 'back'));
-                if ($approve <> 'view') {
-                    echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-primary', 'style' => 'float:right;', 'value' => 'save', 'content' => 'Save', 'id' => 'save')) . ' ';
-                }
-                ?>
-            </div>
-
-            <?php
-            if (strpos($header[0]->document, 'pdf', 0) > 1) :
-                echo '<div class="col-md-12">
-						<iframe src="' . base_url('assets/pr/' . $header[0]->document) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-						</iframe>
-						<a href="' . base_url('assets/pr/' . $header[0]->document) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-						<br />' . $header[0]->no_pengajuan . '</div>';
-            else :
-                if (file_exists('assets/pr/' . $header[0]->document)) {
-                    echo '<div class="col-md-12"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
-                }
-            endif;
-            ?>
-        </div>
-        <!-- /.box-body -->
-    </div>
-    <!-- /.box -->
-
-</form>
-<style type="text/css">
     .chosen-container-active .chosen-single {
         border: none;
         box-shadow: none;
@@ -352,8 +151,248 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         cursor: pointer;
     }
 </style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.css" integrity="sha512-0nkKORjFgcyxv3HbE4rzFUlENUMNqic/EzDIeYCgsKa/nwqr2B91Vu/tNAu4Q0cBuG4Xe/D1f/freEci/7GDRA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<form action="#" method="POST" id="form_ct" enctype="multipart/form-data" autocomplete="off">
+    <input type="hidden" name="id" value="<?= $id; ?>">
+    <input type="hidden" name="tanda" value="<?= $tanda; ?>">
+    <input type="hidden" id="approve" name="approve" value="<?= $approve; ?>">
+    <input type="hidden" name="tingkat_approval" id="tingkat_approval" value="<?= $tingkat_approval ?>">
+
+    <div class="box box-primary">
+        <div class="box-header with-border">
+            <div>
+                <ol class="breadcrumb">
+                    <li><i class="fa fa-shopping-cart"></i> Procurement</li>
+                    <li><a href="<?= site_url('non_rutin') ?>">PR Non-Rutin</a></li>
+                    <li class="active">Form PR (Finance)</li>
+                </ol>
+                <h3 class="box-title" style="font-size:16px; font-weight:700;"><?php echo $title; ?></h3>
+            </div>
+            <div class="box-tools pull-right">
+                <button type="button" class="btn btn-sm btn-default" id="back">
+                    <i class="fa fa-arrow-left"></i>&nbsp; Kembali
+                </button>
+            </div>
+        </div>
+        <!-- /.box-header -->
+
+        <div class="box-body">
+
+            <!-- Section: Informasi PR -->
+            <div class="section-title"><i class="fa fa-info-circle"></i>&nbsp; Informasi PR</div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Department <span class="text-red">*</span></b></label>
+                <div class="col-sm-4">
+                    <select name="id_dept" id="id_dept" class="form-control input-md chosen_select" <?= $disabled; ?>>
+                        <option value="0">Select An Department</option>
+                        <?php
+                        foreach ($list_departement as $departement) {
+                            $selected = '';
+                            if ($departement->id == $id_dept) {
+                                $selected = 'selected';
+                            }
+                            echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->name . ' - ' . $departement->nm_company) . "</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <label class="label-control col-sm-2"><b>Project Name</b></label>
+                <div class="col-sm-4">
+                    <?php
+                    echo form_input(array('id' => 'project_name', 'name' => 'project_name', 'class' => 'form-control input-md', 'placeholder' => 'Project Name'), $project_name);
+                    ?>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Upload Document</b></label>
+                <div class="col-sm-4 text-right">
+                    <input type="file" id="upload_spk" name="upload_spk" class="form-control input-md" placeholder="Upload Document">
+                    <?php if (!empty($upload_spk)) { ?>
+                        <a href="<?= base_url('assets/pr/' . $upload_spk); ?>" target="_blank" title="Download" data-role="qtip">Download</a>
+                    <?php } ?>
+                </div>
+                <label class="label-control col-sm-2"><b>COA <span class="text-red">*</span></b></label>
+                <div class="col-sm-4">
+                    <select name="coa" id="coa" class="form-control chosen_select" required>
+                        <option value="">- Select COA -</option>
+                        <?php
+                        foreach ($list_coa as $coa) :
+                            $selected = "";
+                            if ($coa['no_perkiraan'] == $pr_coa) {
+                                $selected = "selected";
+                            }
+                            echo '<option value="' . $coa['no_perkiraan'] . '" ' . $selected . '>' . $coa['no_perkiraan'] . ' - ' . $coa['nama'] . '</option>';
+                        endforeach;
+                        ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Tingkat PR</b></label>
+                <div class="col-sm-4">
+                    <select name="tingkat_pr" id="" class="form-control input-md">
+                        <option value="1" <?= ($tingkat_pr == '1') ? 'selected' : null ?>>Normal</option>
+                        <option value="2" <?= ($tingkat_pr == '2') ? 'selected' : null ?>>Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Nama Pembuat PR</b></label>
+                <div class="col-sm-4">
+                    <input type="text" class="form-control" value="<?= ucwords(strtolower($nm_pembuat)) ?>" readonly>
+                </div>
+                <label class="label-control col-sm-2"><b>Tgl Dibuat PR</b></label>
+                <div class="col-sm-4">
+                    <input type="text" class="form-control" value="<?= $tgl_dibuat ?>" readonly>
+                </div>
+            </div>
+
+            <!-- Section: Status Approval -->
+            <div class="section-title" style="margin-top:20px;"><i class="fa fa-check-circle"></i>&nbsp; Status Approval</div>
+
+            <div class="approval-progress">
+                <div class="approval-step">
+                    <div class="step-label"><i class="fa fa-building"></i>&nbsp; Management</div>
+                    <div class="step-status"><?= $status3 ?: '<span class="badge" style="background:#aaa; font-size:11px;">Belum Diproses</span>' ?></div>
+                    <?php if (!empty($tgl_appre_3)) { ?>
+                        <div class="step-date"><i class="fa fa-calendar"></i>&nbsp; <?= $tgl_appre_3 ?></div>
+                    <?php } ?>
+                    <?php if (!empty($alasan_reject3)) { ?>
+                        <div class="step-reason"><i class="fa fa-times"></i>&nbsp; <?= $alasan_reject3 ?></div>
+                    <?php } ?>
+                    <div style="margin-top:8px;">
+                        <input type="hidden" name="reject_reason3" value="<?= $alasan_reject3 ?>">
+                        <input type="text" name="keterangan_3" class="form-control input-sm" placeholder="Keterangan..." value="<?= $keterangan_3 ?>" style="font-size:11px;">
+                    </div>
+                </div>
+            </div>
+
+            <?php if ($approve == 'approve') { ?>
+                <div class="form-group row">
+                    <label class="label-control col-sm-2"><b>Approve <span class="text-red">*</span></b></label>
+                    <div class="col-sm-2">
+                        <select name="sts_app" id="sts_app" class="form-control input-md">
+                            <option value="0">Select Approve</option>
+                            <option value="Y">Approve</option>
+                            <option value="D">Reject</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="label-control col-sm-2 tnd_reason"><b>Reason <span class="text-red">*</span></b></label>
+                    <div class="col-sm-4 tnd_reason">
+                        <?php
+                        echo form_textarea(array('id' => 'reason', 'name' => 'reason', 'class' => 'form-control input-md', 'rows' => '2', 'cols' => '75', 'placeholder' => 'Reason'));
+                        ?>
+                    </div>
+                </div>
+            <?php } ?>
+
+            <!-- Section: Detail Barang/Jasa -->
+            <div class="section-title" style="margin-top:20px;"><i class="fa fa-list"></i>&nbsp; Detail Barang / Jasa</div>
+
+            <table class="table table-striped table-bordered table-hover table-condensed detail-table" width="100%">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width:3%;">#</th>
+                        <th class="text-center">Nama Barang/Jasa</th>
+                        <th class="text-center" style="width:13%;">Spec/ Requirement</th>
+                        <th class="text-center" style="width:7%;">Qty</th>
+                        <th class="text-center" style="width:8%;">Satuan</th>
+                        <th class="text-center" style="width:9%;">Est Harga</th>
+                        <th class="text-center" style="width:9%;">Est Total Harga</th>
+                        <th class="text-center" style="width:9%;">Tanggal Dibutuhkan</th>
+                        <th class="text-center" style="width:15%;">Keterangan</th>
+                        <?php if (empty($approve)) { ?>
+                            <th class="text-center" style="width:8%;">#</th>
+                        <?php } ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $nomor = 0;
+                    if (!empty($detail)) {
+                        foreach ($detail as $val => $valx) {
+                            $nomor++;
+                            echo "<tr class='header_" . $nomor . "'>";
+                            echo "<td align='center'>" . $nomor . "<input type='hidden' name='detail[" . $nomor . "][id]' value='" . $valx['id'] . "'></td>";
+                            echo "<td align='left'>
+                                <textarea class='form-control input-md nm_barang_" . $nomor . "' name='detail[" . $nomor . "][nm_barang]' " . $disabled3 . ">" . strtoupper($valx['nm_barang']) . "</textarea>
+                            </td>";
+                            echo "<td align='left'>
+                                <textarea class='form-control input-md spec_" . $nomor . "' name='detail[" . $nomor . "][spec]' " . $disabled3 . ">" . strtoupper($valx['spec']) . "</textarea>
+                            </td>";
+                            echo "<td align='left'><input type='text' " . $disabled2 . " id='qty_" . $nomor . "' name='detail[" . $nomor . "][qty]' class='form-control input-md text-right autoNumeric2 sum_tot qty_" . $nomor . "' value='" . $valx['qty'] . "'></td>";
+                            echo "<td align='left'>
+                                <select name='detail[" . $nomor . "][satuan]' class='form-control wajib satuan_" . $nomor . "' " . $disabled2 . " required>";
+                            echo "<option value=''>Pilih</option>";
+                            foreach ($satuan as $key => $value) {
+                                $selected = ($value['id'] == $valx['satuan']) ? 'selected' : '';
+                                echo "<option value='" . $value['id'] . "' " . $selected . ">" . $value['code'] . "</option>";
+                            }
+                            echo "</select></td>";
+                            echo "<td align='left'><input type='text' " . $disabled2 . " id='harga_" . $nomor . "' name='detail[" . $nomor . "][harga]' class='form-control input-md text-right maskM sum_tot harga_" . $nomor . "' value='" . $valx['harga'] . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
+                            echo "<td align='left'><input type='text' " . $disabled2 . " id='total_harga_" . $nomor . "' name='detail[" . $nomor . "][total_harga]' class='form-control input-md text-right maskM jumlah_all total_harga_" . $nomor . "' value='" . ($valx['qty'] * $valx['harga']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
+                            echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan tanggal_" . $nomor . "' readonly value='" . strtoupper($valx['tanggal']) . "'></td>";
+                            echo "<td align='left'>
+                                <textarea class='form-control input-md keterangan_" . $nomor . "' name='detail[" . $nomor . "][keterangan]' " . $disabled3 . ">" . strtoupper($valx['keterangan']) . "</textarea>
+                            </td>";
+                            if (empty($approve)) {
+                                echo "<td align='center'><button type='button' class='btn btn-sm btn-warning edit_detail edit_detail_" . $nomor . "' data-id='" . $valx['id'] . "' data-nomor='" . $nomor . "' style='margin-right:0.5em;'><i class='fa fa-pencil'></i></button><button type='button' class='btn btn-sm btn-danger delPart' title='Delete Part'><i class='fa fa-close'></i></button></td>";
+                            }
+                            echo "</tr>";
+                        }
+                    }
+                    if (empty($approve)) {
+                    ?>
+                        <tr id="add_<?= $nomor; ?>">
+                            <td align="center"></td>
+                            <td align="left">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button type="button" class="btn btn-sm btn-warning addPart" title="Add Barang"><i class="fa fa-plus"></i>&nbsp;&nbsp;Add Barang</button></td>
+                            <td align="center" colspan="8"></td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+
+            <!-- Action Footer -->
+            <div class="action-footer">
+                <?php if ($approve <> 'view') { ?>
+                    <button type="button" class="btn btn-md btn-primary" id="save">
+                        <i class="fa fa-save"></i>&nbsp; Save
+                    </button>
+                <?php } ?>
+                <button type="button" class="btn btn-md btn-default" id="back">
+                    <i class="fa fa-arrow-left"></i>&nbsp; Back
+                </button>
+            </div>
+
+            <?php
+            if (!empty($header)) :
+                if (strpos($header[0]->document, 'pdf', 0) > 1) :
+                    echo '<div class="col-md-12" style="margin-top:15px;">
+                    <iframe src="' . base_url('assets/pr/' . $header[0]->document) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe>
+                    <a href="' . base_url('assets/pr/' . $header[0]->document) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
+                    <br />' . $header[0]->no_pengajuan . '</div>';
+                else :
+                    if (file_exists('assets/pr/' . $header[0]->document)) {
+                        echo '<div class="col-md-12" style="margin-top:15px;"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
+                    }
+                endif;
+            endif;
+            ?>
+
+        </div>
+        <!-- /.box-body -->
+    </div>
+    <!-- /.box -->
+</form>
+
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
-<script src="https://cdn.datatables.net/2.0.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -370,10 +409,12 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         });
         $('.tnd_reason').hide();
     });
+
     $('#no_so').on('change', function(evt, params) {
         var data = $("select#no_so").find(":selected").data("project");
         $("#project_name").val(data);
     });
+
     $(document).on('change', '#sts_app', function(e) {
         var sts = $(this).val();
         if (sts == 'D') {
@@ -394,9 +435,7 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
     });
 
     $(document).on('click', '.addPart', function() {
-        // loading_spinner();
         var get_id = $(this).parent().parent().attr('id');
-        // console.log(get_id);
         var split_id = get_id.split('_');
         var id = parseInt(split_id[1]) + 1;
         var id_bef = split_id[1];
@@ -434,7 +473,7 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         });
     });
 
-    //delete part
+    // delete part
     $(document).on('click', '.delPart', function() {
         var get_id = $(this).parent().parent().attr('class');
         $("." + get_id).remove();
@@ -447,8 +486,7 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         sum_total(a);
     });
 
-
-    //SAVE
+    // SAVE
     $(document).on('click', '#save', function(e) {
         e.preventDefault();
         $('#save').prop('disabled', true);
@@ -457,65 +495,19 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
         var id_dept = $('#id_dept').val();
         var coa = $('#coa').val();
         var sts_app = $('#sts_app').val();
-        // alert('Tahan'); return false;
+
         if (id_dept == '0') {
             Swal.fire({
                 title: "Error Message!",
                 text: 'Department name empty, select first ...',
                 icon: "warning"
             });
-
             $('#save').prop('disabled', false);
             return false;
         }
-        //if (coa == '0' || coa == '') {
-        //	swal({
-        //		title: "Error Message!",
-        //		text: 'COA is empty, select first ...',
-        //		type: "warning"
-        //	});
-
-        //	$('#save').prop('disabled', false);
-        //	return false;
-        //}
-
 
         var app = $("#approve").val();
         var tanda = "";
-
-        if (app == '' || app == null) {
-            var bank_name = $('#bank_name').val();
-            var bank_account_no = $('#bank_account_no').val();
-            var bank_account_name = $('#bank_account_name').val();
-
-            if (bank_name == null || bank_name.trim() == '') {
-                Swal.fire({
-                    title: "Peringatan!",
-                    text: 'Nama Bank wajib diisi.',
-                    icon: "warning"
-                });
-                $('#save').prop('disabled', false);
-                return false;
-            }
-            if (bank_account_no == null || bank_account_no.trim() == '') {
-                Swal.fire({
-                    title: "Peringatan!",
-                    text: 'No. Rekening wajib diisi.',
-                    icon: "warning"
-                });
-                $('#save').prop('disabled', false);
-                return false;
-            }
-            if (bank_account_name == null || bank_account_name.trim() == '') {
-                Swal.fire({
-                    title: "Peringatan!",
-                    text: 'Nama Rekening wajib diisi.',
-                    icon: "warning"
-                });
-                $('#save').prop('disabled', false);
-                return false;
-            }
-        }
         if (app == 'approve') {
             if (sts_app == '0') {
                 Swal.fire({
@@ -527,19 +519,17 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
                     allowOutsideClick: false,
                     timer: 2000
                 });
-
                 $('#save').prop('disabled', false);
                 return false;
             }
         }
-        let wajib
-        let FALIDASIwajib = true
+
+        let wajib;
+        let FALIDASIwajib = true;
         $(".wajib").each(function() {
-            satuan = $(this).val()
-            // console.log(tgl_butuh)
-            // console.log(typeof(tgl_butuh))
+            satuan = $(this).val();
             if (satuan == '' || satuan == '0') {
-                FALIDASIwajib = false
+                FALIDASIwajib = false;
                 return false;
             }
         });
@@ -553,18 +543,16 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
                 allowOutsideClick: false,
                 timer: 2000
             });
-
             $('#save').prop('disabled', false);
             return false;
         }
-        let tgl_butuh
-        let FALIDASI = true
+
+        let tgl_butuh;
+        let FALIDASI = true;
         $(".tgl_dibutuhkan").each(function() {
-            tgl_butuh = $(this).val()
-            // console.log(tgl_butuh)
-            // console.log(typeof(tgl_butuh))
+            tgl_butuh = $(this).val();
             if (tgl_butuh == '' || tgl_butuh == '0000-00-00') {
-                FALIDASI = false
+                FALIDASI = false;
                 return false;
             }
         });
@@ -578,7 +566,6 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
                 allowOutsideClick: false,
                 timer: 2000
             });
-
             $('#save').prop('disabled', false);
             return false;
         }
@@ -597,7 +584,6 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
             closeOnCancel: false
         }).then((isConfirm) => {
             if (isConfirm.isConfirmed) {
-                // loading_spinner();
                 var formData = new FormData($('#form_ct')[0]);
                 var baseurl = base_url + active_controller + '/add_finance';
                 $.ajax({
@@ -677,14 +663,12 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
             qty = qty.split(',').join();
             qty = parseFloat(qty);
         }
-
         if (harga == '' || harga == null) {
             harga = 0;
         } else {
             harga = harga.split(',').join();
             harga = parseFloat(harga);
         }
-
         if (total_harga == '' || total_harga == null) {
             total_harga = 0;
         } else {
@@ -758,21 +742,17 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
     function sum_total(a) {
         var qty = getNum($('#qty_' + a).val().split(",").join(""));
         var harga = getNum($('#harga_' + a).val().split(",").join(""));
-
         var total = qty * harga;
-        // console.log(total);
         $('#total_harga_' + a).val(number_format(total));
 
         var SUM = 0;
         $(".jumlah_all").each(function() {
             SUM += Number(getNum($(this).val().split(",").join("")));
         });
-
         $('#budget').val(number_format(SUM));
     }
 
     function number_format(number, decimals, dec_point, thousands_sep) {
-        // Strip all characters but numerical ones.
         number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
         var n = !isFinite(+number) ? 0 : +number,
             prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
@@ -783,7 +763,6 @@ $disabled3        = ($approve == 'view') ? 'readonly' : '';
                 var k = Math.pow(10, prec);
                 return '' + Math.round(n * k) / k;
             };
-        // Fix for IE parseFloat(0.55).toFixed(0) = 0;
         s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
         if (s[0].length > 3) {
             s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
