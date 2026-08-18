@@ -1475,7 +1475,7 @@ class Pembayaran_material extends Admin_Controller
 							'nm_coa' => $coa_nm,
 							'debit' => str_replace(',', '', $jr['debit']),
 							'kredit' => str_replace(',', '', $jr['kredit']),
-							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'keterangan' => $jr['keterangan'],
 							'sts' => '0',
 							'no_transaksi' => $post['id_payment'],
 							'jenis_transaksi' => 'Payment Hutang Petty Cash',
@@ -1505,7 +1505,7 @@ class Pembayaran_material extends Admin_Controller
 							'nm_coa' => $coa_nm,
 							'debit' => str_replace(',', '', $jr['debit']),
 							'kredit' => str_replace(',', '', $jr['kredit']),
-							'keterangan' => $jr['keterangan'] . ' - ' . $post['id_payment'],
+							'keterangan' => $jr['keterangan'],
 							'sts' => '0',
 							'no_transaksi' => $id_payment_paid,
 							'jenis_transaksi' => 'Payment Hutang Petty Cash',
@@ -1528,6 +1528,13 @@ class Pembayaran_material extends Admin_Controller
 
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
 
+					$ket_jurnal = $item_jurnal['keterangan'];
+					if (isset($item_jurnal['id_payment_ref']) && !empty($item_jurnal['id_payment_ref'])) {
+						if (strpos($ket_jurnal, ' - ' . $item_jurnal['id_payment_ref']) === false) {
+							$ket_jurnal .= ' - ' . $item_jurnal['id_payment_ref'];
+						}
+					}
+
 					$arr_jurnal[] = [
 						'no_jurnal' => $id_jurnal,
 						'tgl_jurnal' => $item_jurnal['tanggal_jurnal'],
@@ -1537,7 +1544,7 @@ class Pembayaran_material extends Admin_Controller
 						'nm_coa' => $item_jurnal['nm_coa'],
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
-						'keterangan' => isset($item_jurnal['id_payment_ref']) ? $item_jurnal['keterangan'] . ' {REF:' . $item_jurnal['id_payment_ref'] . '}' : $item_jurnal['keterangan'],
+						'keterangan' => $ket_jurnal,
 						'no_transaksi' => $post['id_payment'],
 						'jenis_transaksi' => $tipe_jurnal,
 						'id_divisi' => $item_jurnal['id_divisi'],
@@ -1557,6 +1564,13 @@ class Pembayaran_material extends Admin_Controller
 
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
 
+					$ket_jurnal = (isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : ''));
+					if (isset($item_jurnal['id_payment_ref']) && !empty($item_jurnal['id_payment_ref'])) {
+						if (strpos($ket_jurnal, ' - ' . $item_jurnal['id_payment_ref']) === false) {
+							$ket_jurnal .= ' - ' . $item_jurnal['id_payment_ref'];
+						}
+					}
+
 					$arr_jurnal[] = [
 						'no_jurnal' => $id_jurnal,
 						'tgl_jurnal' => $item_jurnal['tanggal_jurnal'],
@@ -1566,7 +1580,7 @@ class Pembayaran_material extends Admin_Controller
 						'nm_coa' => isset($item_jurnal['nm_coa']) ? $item_jurnal['nm_coa'] : (isset($item_jurnal['nm_account']) ? $item_jurnal['nm_account'] : ''),
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
-						'keterangan' => (isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : '')) . (isset($item_jurnal['id_payment_ref']) ? ' {REF:' . $item_jurnal['id_payment_ref'] . '}' : ''),
+						'keterangan' => $ket_jurnal,
 						'no_transaksi' => $post['id_payment'],
 						'jenis_transaksi' => 'Refill Pettycash',
 						'id_divisi' => (isset($item_jurnal['id_divisi']) ? $item_jurnal['id_divisi'] : ''),
