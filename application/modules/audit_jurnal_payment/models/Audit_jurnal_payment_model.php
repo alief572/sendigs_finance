@@ -244,15 +244,11 @@ class Audit_jurnal_payment_model extends BF_Model
      */
     public function reconstruct_expected_jurnal($item_payment, $existing_jurnal = [])
     {
-        // Prioritaskan id_payment seperti pada set_jurnal() modul payment
+        // Suffix referensi murni menggunakan id dari payment_approve (kecuali RPC/PHP menggunakan no_doc)
         if (!empty($item_payment->no_doc) && (strpos($item_payment->no_doc, 'RPC') !== false || strpos($item_payment->no_doc, 'PHP') !== false)) {
             $primary_ref = $item_payment->no_doc;
-        } elseif (!empty($item_payment->id_payment)) {
-            $primary_ref = $item_payment->id_payment;
-        } elseif (!empty($item_payment->id)) {
-            $primary_ref = $item_payment->id;
         } else {
-            $primary_ref = $item_payment->no_doc ?? '';
+            $primary_ref = $item_payment->id;
         }
 
         $tgl_bayar = !empty($item_payment->tgl_bayar) ? $item_payment->tgl_bayar : date('Y-m-d');
@@ -801,7 +797,7 @@ class Audit_jurnal_payment_model extends BF_Model
             (string)($payment->no_doc ?? '')
         ]));
 
-        $primary_ref = !empty($payment->id_payment) ? $payment->id_payment : (!empty($payment->no_doc) ? $payment->no_doc : $payment->id);
+        $primary_ref = (!empty($payment->no_doc) && (strpos($payment->no_doc, 'RPC') !== false || strpos($payment->no_doc, 'PHP') !== false)) ? $payment->no_doc : $payment->id;
 
         foreach ($existing as $row) {
             $existing_ttl_deb += floatval($row->debit);
