@@ -61,6 +61,8 @@ class Audit_jurnal_payment extends Admin_Controller
                 $badge_tipe = '<span class="label label-warning" style="font-size:11px; padding:3px 7px; border-radius:4px;">' . htmlspecialchars($tipe_raw) . '</span>';
             } elseif (strpos(strtolower($p->tipe), 'transport') !== false) {
                 $badge_tipe = '<span class="label label-info" style="font-size:11px; padding:3px 7px; border-radius:4px;">' . htmlspecialchars($tipe_raw) . '</span>';
+            } elseif (strpos(strtolower($p->tipe), 'periodik') !== false) {
+                $badge_tipe = '<span class="label" style="background:#8e44ad; color:#fff; font-size:11px; padding:3px 7px; border-radius:4px;">' . htmlspecialchars($tipe_raw) . '</span>';
             }
 
             // Issue Badges
@@ -135,17 +137,13 @@ class Audit_jurnal_payment extends Admin_Controller
             return;
         }
 
-        // Get existing jurnal
+        // Get existing jurnal (hanya berdasarkan id payment_approve)
         $target_id = $payment->id;
         $this->db->select('j.*');
         $this->db->from('tr_jurnal j');
         $this->db->group_start();
         $this->db->where('j.no_transaksi', (string)$target_id);
         $this->db->or_where("FIND_IN_SET('{$target_id}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-        if (!empty($payment->id_payment)) {
-            $this->db->or_where('j.no_transaksi', (string)$payment->id_payment);
-            $this->db->or_where("FIND_IN_SET('{$payment->id_payment}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-        }
         $this->db->group_end();
         $existing_jurnal = $this->db->get()->result();
 

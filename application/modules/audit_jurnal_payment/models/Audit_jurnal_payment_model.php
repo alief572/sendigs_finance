@@ -80,16 +80,12 @@ class Audit_jurnal_payment_model extends BF_Model
             $target_id = $payment->id;
             $id_payment_ref = $payment->no_doc ?? $payment->id;
 
-            // Cek data existing tr_jurnal berdasarkan no_transaksi
+            // Cek data existing tr_jurnal berdasarkan no_transaksi (menggunakan id payment_approve)
             $this->db->select('j.*');
             $this->db->from('tr_jurnal j');
             $this->db->group_start();
             $this->db->where('j.no_transaksi', (string)$target_id);
             $this->db->or_where("FIND_IN_SET('{$target_id}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-            if (!empty($payment->id_payment)) {
-                $this->db->or_where('j.no_transaksi', (string)$payment->id_payment);
-                $this->db->or_where("FIND_IN_SET('{$payment->id_payment}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-            }
             $this->db->group_end();
             $existing_jurnal = $this->db->get()->result();
 
@@ -671,6 +667,177 @@ class Audit_jurnal_payment_model extends BF_Model
                     'jenis'       => 'Payment'
                 ];
             }
+        } elseif ($item_payment->tipe == 'periodik') {
+            $get_rutin = $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $item_payment->no_doc])->row();
+
+            $id_divisi = '';
+            $nm_divisi = '';
+            $idd_company = '';
+
+            if (!empty($get_rutin) && !empty($get_rutin->departement)) {
+                $get_department = $this->hris->get_where('departments', ['id' => $get_rutin->departement])->row();
+                $id_divisi = $get_department->id ?? '';
+                $nm_divisi = $get_department->name ?? '';
+                $idd_company = $get_department->company_id ?? '';
+            }
+
+            if (empty($id_divisi) && !empty($get_rutin->created_by)) {
+                $this->db->select('a.department_id');
+                $this->db->from('users a');
+                $this->db->where('a.id_user', $get_rutin->created_by);
+                $get_user = $this->db->get()->row();
+                if (!empty($get_user->department_id)) {
+                    $get_department = $this->hris->get_where('departments', ['id' => $get_user->department_id])->row();
+                    $id_divisi = $get_department->id ?? '';
+                    $nm_divisi = $get_department->name ?? '';
+                    $idd_company = $get_department->company_id ?? '';
+                }
+            }
+
+            $target_comp_id = '';
+            if (!empty($idd_company)) {
+                if ($idd_company == 'COM003') {
+                    $target_comp_id = '7'; // STM
+                } else if ($idd_company == 'COM004') {
+                    $target_comp_id = '2'; // Calibration
+                } else if ($idd_company == 'COM006') {
+                    $target_comp_id = '3'; // Sustain
+                } else if ($idd_company == 'COM012') {
+                    $target_comp_id = '4'; // Vuca
+                }
+            }
+
+            if ($target_comp_id !== '') {
+                $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $target_comp_id])->row();
+                $id_company = (!empty($get_company)) ? $get_company->id : '';
+                $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
+            }
+
+            // 1. Details Debit
+            $get_rutin_detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item_payment->no_doc])->result();
+
+            if (!empty($get_rutin_detail)) {
+                foreach ($get_rutin_detail as $item_detail) {
+                    $no_coa = $item_detail->coa;
+                    $nm_coa = $get_coa_name($no_coa, $item_detail->nama);
+                    $keterangan = !empty($item_detail->nama) ? $item_detail->nama : $nm_coa;
+                    $debit = floatval($item_detail->nilai);
+                    $kredit = 0;
+
+                    $expected[] = [
+                        'coa'         => $no_coa,
+                        'nm_coa'      => $nm_coa,
+                        'keterangan'  => $keterangan . ' - ' . $item_ref_id,
+                        'debit'       => $debit,
+                        'kredit'      => $kredit,
+                        'id_company'  => $id_company,
+                        'nm_company'  => $nm_company,
+                        'id_divisi'   => $id_divisi,
+                        'nm_divisi'   => $nm_divisi,
+                        'tgl_jurnal'  => $tgl_bayar,
+                        'jenis'       => 'Payment'
+                    ];
+                }
+            } else {
+                $debit = $total_payment;
+                $kredit = 0;
+                $no_coa = '2103-01-07';
+                $nm_coa = $get_coa_name($no_coa, 'Hutang Asuransi BPJS Ketenagakerjaan');
+                $keterangan = !empty($item_payment->keperluan) ? $item_payment->keperluan : $nm_coa;
+
+                $expected[] = [
+                    'coa'         => $no_coa,
+                    'nm_coa'      => $nm_coa,
+                    'keterangan'  => $keterangan . ' - ' . $item_ref_id,
+                    'debit'       => $debit,
+                    'kredit'      => $kredit,
+                    'id_company'  => $id_company,
+                    'nm_company'  => $nm_company,
+                    'id_divisi'   => $id_divisi,
+                    'nm_divisi'   => $nm_divisi,
+                    'tgl_jurnal'  => $tgl_bayar,
+                    'jenis'       => 'Payment'
+                ];
+            }
+
+            // 2. PPN (selalu muncul walau 0)
+            $expected[] = [
+                'coa'         => '1106-01-06',
+                'nm_coa'      => $get_coa_name('1106-01-06', 'PPN DN Disetor'),
+                'keterangan'  => 'PPN - ' . $item_ref_id,
+                'debit'       => $nilai_ppn,
+                'kredit'      => 0,
+                'id_company'  => $id_company,
+                'nm_company'  => $nm_company,
+                'id_divisi'   => $id_divisi,
+                'nm_divisi'   => $nm_divisi,
+                'tgl_jurnal'  => $tgl_bayar,
+                'jenis'       => 'Payment'
+            ];
+
+            // 3. PPh (selalu muncul walau 0)
+            $expected[] = [
+                'coa'         => $coa_pph,
+                'nm_coa'      => $get_coa_name($coa_pph, ($coa_pph == '2104-01-03') ? 'Hutang PPh 23' : 'Hutang PPh 21'),
+                'keterangan'  => (($coa_pph == '2104-01-03') ? 'PPh 23' : 'PPh 21') . ' - ' . $item_ref_id,
+                'debit'       => 0,
+                'kredit'      => $nilai_pph,
+                'id_company'  => $id_company,
+                'nm_company'  => $nm_company,
+                'id_divisi'   => $id_divisi,
+                'nm_divisi'   => $nm_divisi,
+                'tgl_jurnal'  => $tgl_bayar,
+                'jenis'       => 'Payment'
+            ];
+
+            // 4. Admin Charge (selalu muncul walau 0)
+            $expected[] = [
+                'coa'         => '7201-01-04',
+                'nm_coa'      => $get_coa_name('7201-01-04', 'Admin Charge'),
+                'keterangan'  => 'Admin Charge',
+                'debit'       => $debit_admin,
+                'kredit'      => 0,
+                'id_company'  => $id_company,
+                'nm_company'  => $nm_company,
+                'id_divisi'   => $id_divisi,
+                'nm_divisi'   => $nm_divisi,
+                'tgl_jurnal'  => $tgl_bayar,
+                'jenis'       => 'Payment'
+            ];
+
+            // 5. Bank Pokok
+            if (!empty($coa_bank)) {
+                $expected[] = [
+                    'coa'         => $coa_bank,
+                    'nm_coa'      => $nm_coa_bank,
+                    'keterangan'  => $nm_bank,
+                    'debit'       => 0,
+                    'kredit'      => $nominal_bank_utama,
+                    'id_company'  => $id_company,
+                    'nm_company'  => $nm_company,
+                    'id_divisi'   => $id_divisi,
+                    'nm_divisi'   => $nm_divisi,
+                    'tgl_jurnal'  => $tgl_bayar,
+                    'jenis'       => 'Payment'
+                ];
+
+                // 6. Bank Admin
+                if ($bank_charge > 0) {
+                    $expected[] = [
+                        'coa'         => $coa_bank,
+                        'nm_coa'      => $nm_coa_bank,
+                        'keterangan'  => $nm_bank,
+                        'debit'       => 0,
+                        'kredit'      => $bank_charge,
+                        'id_company'  => $id_company,
+                        'nm_company'  => $nm_company,
+                        'id_divisi'   => $id_divisi,
+                        'nm_divisi'   => $nm_divisi,
+                        'tgl_jurnal'  => $tgl_bayar,
+                        'jenis'       => 'Payment'
+                    ];
+                }
+            }
         } else {
             // General direct payment / Non PO fallback
             $expected[] = [
@@ -869,10 +1036,6 @@ class Audit_jurnal_payment_model extends BF_Model
         $this->db->group_start();
         $this->db->where('j.no_transaksi', (string)$target_id);
         $this->db->or_where("FIND_IN_SET('{$target_id}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-        if (!empty($payment->id_payment)) {
-            $this->db->or_where('j.no_transaksi', (string)$payment->id_payment);
-            $this->db->or_where("FIND_IN_SET('{$payment->id_payment}', REPLACE(j.no_transaksi, ' ', '')) > 0", null, false);
-        }
         $this->db->group_end();
         $existing_jurnal = $this->db->get()->result();
 
@@ -887,10 +1050,6 @@ class Audit_jurnal_payment_model extends BF_Model
         $this->db->group_start();
         $this->db->where('no_transaksi', (string)$target_id);
         $this->db->or_where("FIND_IN_SET('{$target_id}', REPLACE(no_transaksi, ' ', '')) > 0", null, false);
-        if (!empty($payment->id_payment)) {
-            $this->db->or_where('no_transaksi', (string)$payment->id_payment);
-            $this->db->or_where("FIND_IN_SET('{$payment->id_payment}', REPLACE(no_transaksi, ' ', '')) > 0", null, false);
-        }
         $this->db->group_end();
         $this->db->where('sts <>', '1');
         $this->db->delete('tr_jurnal');

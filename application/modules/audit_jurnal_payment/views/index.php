@@ -244,6 +244,7 @@
                         <option value="transport">Transport / Transportasi</option>
                         <option value="expense">Expense</option>
                         <option value="direct_payment">Direct Payment</option>
+                        <option value="periodik">Periodik</option>
                     </select>
                 </div>
             </div>
