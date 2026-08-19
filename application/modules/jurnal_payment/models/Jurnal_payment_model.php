@@ -159,17 +159,36 @@ class Jurnal_payment_model extends BF_Model
                 }
             }
 
-            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '';
-            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : '';
+            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
+            $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item->jenis_transaksi;
+
+            // Format kategori: replace '_' menjadi spasi dan jadikan setiap kata berawalan huruf kapital
+            $clean_kategori = ucwords(str_replace('_', ' ', strtolower(trim($raw_tipe_payment))));
+            $tipe_payment_lower = strtolower($raw_tipe_payment);
+
+            // Badge styling untuk kategori transaksi dengan warna senada
+            if (strpos($tipe_payment_lower, 'kasbon') !== false) {
+                $badge_kategori = '<span class="label label-warning" style="font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600;"><i class="fa fa-money"></i> ' . htmlspecialchars($clean_kategori) . '</span>';
+            } elseif (strpos($tipe_payment_lower, 'expense') !== false) {
+                $badge_kategori = '<span class="label label-primary" style="font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600;"><i class="fa fa-file-text-o"></i> ' . htmlspecialchars($clean_kategori) . '</span>';
+            } elseif (strpos($tipe_payment_lower, 'transport') !== false) {
+                $badge_kategori = '<span class="label label-info" style="font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600;"><i class="fa fa-car"></i> ' . htmlspecialchars($clean_kategori) . '</span>';
+            } else {
+                $badge_kategori = '<span class="label label-success" style="font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600;"><i class="fa fa-check-circle"></i> ' . htmlspecialchars($clean_kategori) . '</span>';
+            }
+
+            $badge_company = '<span class="label" style="background-color: #3c8dbc; color: #fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600;">' . htmlspecialchars($item->nm_company) . '</span>';
+
+            $action_btn = '<button type="button" class="btn btn-sm btn-primary" onclick="add_jurnal(' . $item->id . ')" title="Posting Jurnal" style="border-radius: 6px; padding: 4px 10px; font-weight: 600;"><i class="fa fa-plus"></i> Post</button>';
 
             $hasil[] = [
-                'no'              => $no,
-                'no_transaksi'    => $item->no_transaksi,
-                'no_pengajuan'    => $no_pengajuan,
-                'kategori_payment' => ucfirst($tipe_payment),
-                'tanggal_jurnal'  => date('d F Y', strtotime($item->tgl_jurnal)),
-                'company'         => $item->nm_company,
-                'action'          => '<button type="button" class="btn btn-sm btn-primary" onclick="add_jurnal(' . $item->id . ')" title="Posting Jurnal"><i class="fa fa-plus"></i></button>'
+                'no'               => '<span class="text-muted" style="font-weight:600;">' . $no . '</span>',
+                'no_transaksi'     => '<span style="font-weight: 700; color: #0073b7;">' . htmlspecialchars($item->no_transaksi) . '</span>',
+                'no_pengajuan'     => '<span style="font-weight: 600; color: #444;">' . htmlspecialchars($no_pengajuan) . '</span>',
+                'kategori_payment' => $badge_kategori,
+                'tanggal_jurnal'   => date('d F Y', strtotime($item->tgl_jurnal)),
+                'company'          => $badge_company,
+                'action'           => $action_btn
             ];
         }
 
@@ -238,11 +257,12 @@ class Jurnal_payment_model extends BF_Model
                 }
             }
 
-            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '';
-            $tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : '';
+            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
+            $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item['jenis_transaksi'];
+            $clean_kategori = ucwords(str_replace('_', ' ', strtolower(trim($raw_tipe_payment))));
 
             $item['no_pengajuan'] = $no_pengajuan;
-            $item['kategori_payment'] = ucfirst($tipe_payment);
+            $item['kategori_payment'] = $clean_kategori;
 
             $hasil[] = $item;
         }
