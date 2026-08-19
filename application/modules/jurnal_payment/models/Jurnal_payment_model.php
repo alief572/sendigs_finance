@@ -116,6 +116,7 @@ class Jurnal_payment_model extends BF_Model
         if (!empty($order) && isset($sort_columns[$order[0]['column']])) {
             $this->db->order_by($sort_columns[$order[0]['column']], $order[0]['dir']);
         } else {
+            $this->db->order_by('a.tgl_jurnal', 'desc');
             $this->db->order_by('a.id', 'desc');
         }
 

@@ -354,6 +354,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
                     searchable: false
                 }
             ],
+            order: [[4, 'desc']],
             responsive: true,
             processing: true,
             serverSide: true,
