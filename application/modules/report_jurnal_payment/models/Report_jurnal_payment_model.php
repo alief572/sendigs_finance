@@ -180,7 +180,7 @@ class Report_jurnal_payment_model extends BF_Model
                 'no_transaksi'     => '<span style="font-weight: 700; color: #0073b7;">' . htmlspecialchars($item->no_transaksi) . '</span>',
                 'no_pengajuan'     => '<span style="font-weight: 600; color: #444;">' . htmlspecialchars($no_pengajuan) . '</span>',
                 'kategori_payment' => $badge_kategori,
-                'tanggal_jurnal'   => '<span style="color: #555;"><i class="fa fa-calendar-o" style="margin-right: 4px; color: #888;"></i>' . date('d F Y', strtotime($item->tgl_jurnal)) . '</span>',
+                'tanggal_jurnal'   => date('d F Y', strtotime($item->tgl_jurnal)),
                 'company'          => $badge_company,
                 'action'           => $action_btn
             ];
