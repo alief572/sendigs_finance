@@ -1087,7 +1087,15 @@ class Pembayaran_material_model extends BF_Model
 				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $debit_admin, 0);
 			}
 			if (!empty($coa_bank) && $payment_bank > 0) {
-				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $payment_bank);
+				if ($bank_charge > 0) {
+					$nominal_bank_utama = ($admin_charge_bearer === 'recipient') ? ($total_payment - $bank_charge) : $total_payment;
+					if ($nominal_bank_utama > 0) {
+						$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $nominal_bank_utama);
+					}
+					$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $bank_charge);
+				} else {
+					$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $payment_bank);
+				}
 			}
 		} elseif ($is_all_petty_cash_hutang) {
 			if ($bank_charge > 0) {
