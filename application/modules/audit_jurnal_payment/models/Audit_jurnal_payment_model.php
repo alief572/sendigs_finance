@@ -244,15 +244,11 @@ class Audit_jurnal_payment_model extends BF_Model
      */
     public function reconstruct_expected_jurnal($item_payment, $existing_jurnal = [])
     {
-        // Prioritaskan id_payment seperti pada set_jurnal() modul payment
+        // Suffix referensi murni menggunakan id dari payment_approve (kecuali RPC/PHP menggunakan no_doc)
         if (!empty($item_payment->no_doc) && (strpos($item_payment->no_doc, 'RPC') !== false || strpos($item_payment->no_doc, 'PHP') !== false)) {
             $primary_ref = $item_payment->no_doc;
-        } elseif (!empty($item_payment->id_payment)) {
-            $primary_ref = $item_payment->id_payment;
-        } elseif (!empty($item_payment->id)) {
-            $primary_ref = $item_payment->id;
         } else {
-            $primary_ref = $item_payment->no_doc ?? '';
+            $primary_ref = $item_payment->id;
         }
 
         $tgl_bayar = !empty($item_payment->tgl_bayar) ? $item_payment->tgl_bayar : date('Y-m-d');
@@ -795,13 +791,7 @@ class Audit_jurnal_payment_model extends BF_Model
         $existing_ttl_krd = 0;
         $has_missing_suffix = false;
         
-        $ref_candidates = array_unique(array_filter([
-            (string)($payment->id_payment ?? ''),
-            (string)($payment->id ?? ''),
-            (string)($payment->no_doc ?? '')
-        ]));
-
-        $primary_ref = !empty($payment->id_payment) ? $payment->id_payment : (!empty($payment->no_doc) ? $payment->no_doc : $payment->id);
+        $target_suffix = (!empty($payment->no_doc) && (strpos($payment->no_doc, 'RPC') !== false || strpos($payment->no_doc, 'PHP') !== false)) ? $payment->no_doc : $payment->id;
 
         foreach ($existing as $row) {
             $existing_ttl_deb += floatval($row->debit);
@@ -812,18 +802,7 @@ class Audit_jurnal_payment_model extends BF_Model
             $is_admin = ($row->coa === '7201-01-04');
 
             if (!$is_bank && !$is_admin) {
-                $has_suffix_on_row = false;
-                foreach ($ref_candidates as $ref) {
-                    if (!empty($ref) && strpos($row->keterangan, $ref) !== false) {
-                        $has_suffix_on_row = true;
-                        break;
-                    }
-                }
-                if (!$has_suffix_on_row && preg_match('/ - [A-Za-z0-9\-\/]+$/', trim($row->keterangan))) {
-                    $has_suffix_on_row = true;
-                }
-
-                if (!$has_suffix_on_row) {
+                if (empty($target_suffix) || strpos($row->keterangan, (string)$target_suffix) === false) {
                     $has_missing_suffix = true;
                 }
             }
@@ -842,7 +821,7 @@ class Audit_jurnal_payment_model extends BF_Model
         // 3. Cek Suffix
         if ($has_missing_suffix) {
             $issue_types[] = 'Missing Suffix';
-            $issue_details[] = 'Suffix referensi ID (' . $primary_ref . ') belum tercantum di keterangan ayat jurnal.';
+            $issue_details[] = 'Suffix referensi ID (' . $target_suffix . ') belum tercantum di keterangan ayat jurnal.';
         }
 
         // 4. Cek Selisih Nominal dengan Seharusnya
