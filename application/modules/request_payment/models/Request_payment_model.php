@@ -485,7 +485,7 @@ class Request_payment_model extends BF_Model
         foreach ($query_data as $row) {
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
             $tgl_bayar_fmt = !empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : (!empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : '-');
-            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+            $no_payment = !empty($row->pa_id) ? $row->pa_id : (!empty($row->pa_id_payment) ? $row->pa_id_payment : '-');
 
             $list_tgl_pengajuan_pembayaran[$row->no_doc] = [
                 'no_payment'     => $no_payment,
@@ -1666,7 +1666,7 @@ class Request_payment_model extends BF_Model
         // Sorting mapping
         $sort_cols = [
             1 => 'doc.no_doc',
-            2 => 'pa.id_payment',
+            2 => 'pa.id',
             3 => 'doc.nama',
             4 => 'doc.tgl_doc',
             5 => 'doc.keperluan',
@@ -1758,7 +1758,7 @@ class Request_payment_model extends BF_Model
             }
 
             // Payment voucher number
-            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+            $no_payment = !empty($row->pa_id) ? $row->pa_id : (!empty($row->pa_id_payment) ? $row->pa_id_payment : '-');
 
             // Status Badge
             $status_badge = '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>';

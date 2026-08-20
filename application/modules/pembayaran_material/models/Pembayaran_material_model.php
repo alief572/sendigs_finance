@@ -206,6 +206,14 @@ class Pembayaran_material_model extends BF_Model
 			}
 		}
 
+		$has_periodik = false;
+		foreach ($get_payment as $_check_item) {
+			if ($_check_item->tipe == 'periodik') {
+				$has_periodik = true;
+				break;
+			}
+		}
+
 		$nilai_pph = $this->input->post('nilai_pph', true);
 		$nilai_ppn = $this->input->post('nilai_ppn', true);
 
@@ -1189,7 +1197,7 @@ class Pembayaran_material_model extends BF_Model
 
 		if (!$is_refill_pettycash && $is_all_petty_cash_hutang === false) {
 			$debit_admin = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
-			if ($debit_admin > 0) {
+			if ($debit_admin > 0 || $has_periodik) {
 				$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, '7201-01-04', 'Admin Charge', 'Admin Charge', $debit_admin, 0);
 			}
 			if (!empty($coa_bank) && $payment_bank > 0) {
@@ -1439,6 +1447,7 @@ class Pembayaran_material_model extends BF_Model
 		if (!empty($search)) {
 			$escaped_search = $this->db->escape_like_str($search);
 			$search_sql = " AND (
+				a.id LIKE '%{$escaped_search}%' OR
 				a.id_payment LIKE '%{$escaped_search}%' OR
 				a.no_doc LIKE '%{$escaped_search}%' OR
 				a.nm_supplier LIKE '%{$escaped_search}%' OR
@@ -1452,7 +1461,7 @@ class Pembayaran_material_model extends BF_Model
 		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
 
 		$sort_cols = [
-			0 => 'a.id_payment',
+			0 => 'a.id',
 			1 => 'a.no_doc',
 			2 => 'a.tgl_bayar',
 			3 => 'a.nm_supplier',
@@ -1491,7 +1500,7 @@ class Pembayaran_material_model extends BF_Model
 			}
 
 			$hasil[] = [
-				'no_payment'  => $item->id_payment,
+				'no_payment'  => !empty($item->id) ? $item->id : (!empty($item->id_payment) ? $item->id_payment : '-'),
 				'no_doc'      => $item->no_doc,
 				'tgl_bayar'   => !empty($item->tgl_bayar) ? date('d F Y', strtotime($item->tgl_bayar)) : '-',
 				'supplier'    => !empty($item->nm_supplier) ? $item->nm_supplier : '-',
@@ -1528,6 +1537,7 @@ class Pembayaran_material_model extends BF_Model
 		if (!empty($search)) {
 			$escaped_search = $this->db->escape_like_str($search);
 			$search_sql = " AND (
+				a.id LIKE '%{$escaped_search}%' OR
 				a.id_payment LIKE '%{$escaped_search}%' OR
 				a.no_doc LIKE '%{$escaped_search}%' OR
 				a.created_by LIKE '%{$escaped_search}%' OR
@@ -1542,7 +1552,7 @@ class Pembayaran_material_model extends BF_Model
 		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
 
 		$sort_cols = [
-			0 => 'a.id_payment',
+			0 => 'a.id',
 			1 => 'a.no_doc',
 			2 => 'a.tgl_bayar',
 			3 => 'a.created_by',
@@ -1576,7 +1586,7 @@ class Pembayaran_material_model extends BF_Model
 		$hasil = [];
 		foreach ($query_data as $item) {
 			$nilai_bayar = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
-			$no_payment  = !empty($item->id_payment) ? $item->id_payment : $item->id;
+			$no_payment  = !empty($item->id) ? $item->id : (!empty($item->id_payment) ? $item->id_payment : '-');
 			$requestor   = !empty($item->created_by) ? $item->created_by : $item->nm_supplier;
 
 			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
