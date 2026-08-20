@@ -40,8 +40,7 @@ header("Content-Disposition: attachment; filename=Payment_List_" . date('YmdHis'
                 $dibayar_oleh = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['dibayar_oleh'] : '-';
                 $no_payment = (isset($list_tgl_pengajuan_pembayaran[$item->no_doc])) ? $list_tgl_pengajuan_pembayaran[$item->no_doc]['no_payment'] : '-';
 
-                $get_payment = $this->db->get_where('payment_approve', ['no_doc' => $item->no_doc, 'tgl_bayar <>' => null])->row();
-                $status = (!empty($get_payment)) ? 'Paid' : 'Open';
+                $status = 'Paid';
 
                 $nilai_pengajuan = $item->jumlah;
                 if ($item->tipe == 'expense' && !empty($item->id_kasbon) && $item->kurang_bayar > 0) {

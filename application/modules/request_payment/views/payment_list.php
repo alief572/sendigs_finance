@@ -49,13 +49,13 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
         <!-- Filter Card -->
         <div class="filter-card">
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label><i class="fa fa-calendar"></i> Tanggal Dokumen</label>
                         <input type="text" class="form-control form-control-sm" id="filter_tgl" placeholder="Pilih rentang tanggal">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label><i class="fa fa-tags"></i> Tipe Pengajuan</label>
                         <select id="filter_tipe" class="form-control form-control-sm select2">
@@ -66,16 +66,6 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                             <option value="periodik">Periodik / Rutin</option>
                             <option value="direct_payment">Direct Payment</option>
                             <option value="nonpo">Non PO</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label><i class="fa fa-check-circle"></i> Status Bayar</label>
-                        <select id="filter_status" class="form-control form-control-sm select2">
-                            <option value="">- Semua Status -</option>
-                            <option value="paid">Paid</option>
-                            <option value="open">Open</option>
                         </select>
                     </div>
                 </div>
@@ -149,7 +139,6 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
         }
 
         var tipe = $('#filter_tipe').val();
-        var status = $('#filter_status').val();
 
         table_payment = $('#mytabledata').DataTable({
             ajax: {
@@ -160,7 +149,6 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                     d.tgl_from = tgl_from;
                     d.tgl_to   = tgl_to;
                     d.tipe     = tipe;
-                    d.status   = status;
                 }
             },
             columns: [
@@ -211,7 +199,6 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
         if (fp) fp.clear();
 
         $('#filter_tipe').val('').trigger('change');
-        $('#filter_status').val('').trigger('change');
 
         load_data();
     }
@@ -228,8 +215,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
         }
 
         var tipe = $('#filter_tipe').val();
-        var status = $('#filter_status').val();
 
-        window.open(siteurl + active_controller + 'excel_payment_list?tgl_from=' + encodeURIComponent(tgl_from) + '&tgl_to=' + encodeURIComponent(tgl_to) + '&tipe=' + encodeURIComponent(tipe) + '&status=' + encodeURIComponent(status), '_blank');
+        window.open(siteurl + active_controller + 'excel_payment_list?tgl_from=' + encodeURIComponent(tgl_from) + '&tgl_to=' + encodeURIComponent(tgl_to) + '&tipe=' + encodeURIComponent(tipe), '_blank');
     }
 </script>

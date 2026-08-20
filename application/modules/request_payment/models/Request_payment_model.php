@@ -456,11 +456,8 @@ class Request_payment_model extends BF_Model
             $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
         }
 
-        if ($status === 'paid') {
-            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
-        } elseif ($status === 'open') {
-            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
-        }
+        // Filter only Paid records
+        $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
 
         $final_where = implode(" AND ", $where_clauses);
 
@@ -1634,11 +1631,8 @@ class Request_payment_model extends BF_Model
             $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
         }
 
-        if ($status === 'paid') {
-            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
-        } elseif ($status === 'open') {
-            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
-        }
+        // Filter only Paid records
+        $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
 
         $base_where = implode(" AND ", $where_clauses);
 
@@ -1767,10 +1761,7 @@ class Request_payment_model extends BF_Model
             $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
 
             // Status Badge
-            $is_paid = (!empty($row->pa_tgl_bayar));
-            $status_badge = $is_paid 
-                ? '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>' 
-                : '<span class="badge bg-blue" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Open</span>';
+            $status_badge = '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>';
 
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
             $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
