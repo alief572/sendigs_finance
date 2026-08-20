@@ -20,7 +20,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
         border-radius: 8px;
         padding: 15px;
         margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .filter-actions {
@@ -84,15 +84,15 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                 <thead>
                     <tr>
                         <th class="text-center" width="30">#</th>
-                        <th class="text-center">No Dokumen</th>
+                        <th class="text-center">No Pengajuan</th>
                         <th class="text-center">No Transaksi Payment</th>
-                        <th class="text-center">Request By</th>
-                        <th class="text-center">Tanggal Dokumen</th>
+                        <th class="text-center">Pengajuan Oleh</th>
+                        <th class="text-center">Tanggal Pengajuan</th>
                         <th class="text-center">Keperluan</th>
                         <th class="text-center">Tipe</th>
                         <th class="text-center">Nilai Pengajuan</th>
-                        <th class="text-center">Diajukan Oleh</th>
-                        <th class="text-center">Tanggal Pengajuan</th>
+                        <th class="text-center">Request Payment Oleh</th>
+                        <th class="text-center">Tanggal Request Payment</th>
                         <th class="text-center">Dibayar Oleh</th>
                         <th class="text-center">Tanggal Pembayaran</th>
                         <th class="text-center" width="60">Status</th>
@@ -147,32 +147,68 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                 dataType: "JSON",
                 data: function(d) {
                     d.tgl_from = tgl_from;
-                    d.tgl_to   = tgl_to;
-                    d.tipe     = tipe;
+                    d.tgl_to = tgl_to;
+                    d.tipe = tipe;
                 }
             },
-            columns: [
-                { data: 'no', className: 'text-center' },
-                { data: 'no_doc', className: 'text-center' },
-                { data: 'no_payment', className: 'text-center' },
-                { data: 'nama', className: 'text-left' },
-                { data: 'tgl_doc', className: 'text-center' },
-                { data: 'keperluan', className: 'text-left' },
-                { data: 'tipe', className: 'text-center' },
-                { data: 'nilai_pengajuan', className: 'text-right' },
-                { data: 'diajukan_oleh', className: 'text-center' },
-                { data: 'tgl_pengajuan', className: 'text-center' },
-                { data: 'dibayar_oleh', className: 'text-center' },
-                { data: 'tgl_pembayaran', className: 'text-center' },
-                { data: 'status', className: 'text-center' }
-            ],
-            columnDefs: [
+            columns: [{
+                    data: 'no',
+                    className: 'text-center'
+                },
                 {
-                    targets: [0, 12],
-                    orderable: false,
-                    searchable: false
+                    data: 'no_doc',
+                    className: 'text-center'
+                },
+                {
+                    data: 'no_payment',
+                    className: 'text-center'
+                },
+                {
+                    data: 'nama',
+                    className: 'text-left'
+                },
+                {
+                    data: 'tgl_doc',
+                    className: 'text-center'
+                },
+                {
+                    data: 'keperluan',
+                    className: 'text-left'
+                },
+                {
+                    data: 'tipe',
+                    className: 'text-center'
+                },
+                {
+                    data: 'nilai_pengajuan',
+                    className: 'text-right'
+                },
+                {
+                    data: 'diajukan_oleh',
+                    className: 'text-center'
+                },
+                {
+                    data: 'tgl_pengajuan',
+                    className: 'text-center'
+                },
+                {
+                    data: 'dibayar_oleh',
+                    className: 'text-center'
+                },
+                {
+                    data: 'tgl_pembayaran',
+                    className: 'text-center'
+                },
+                {
+                    data: 'status',
+                    className: 'text-center'
                 }
             ],
+            columnDefs: [{
+                targets: [0, 12],
+                orderable: false,
+                searchable: false
+            }],
             responsive: true,
             processing: true,
             serverSide: true,
@@ -185,7 +221,9 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                 [10, 25, 50, 100]
             ],
             pageLength: 10,
-            order: [[4, 'desc']]
+            order: [
+                [4, 'desc']
+            ]
         });
     }
 
@@ -218,4 +256,4 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
 
         window.open(siteurl + active_controller + 'excel_payment_list?tgl_from=' + encodeURIComponent(tgl_from) + '&tgl_to=' + encodeURIComponent(tgl_to) + '&tipe=' + encodeURIComponent(tipe), '_blank');
     }
-</script>
+</script>
