@@ -51,7 +51,7 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-calendar"></i> Tanggal Dokumen</label>
+                        <label><i class="fa fa-calendar"></i> Tanggal (Dokumen / Pengajuan / Bayar)</label>
                         <input type="text" class="form-control form-control-sm" id="filter_tgl" placeholder="Pilih rentang tanggal">
                     </div>
                 </div>

@@ -445,11 +445,23 @@ class Request_payment_model extends BF_Model
         $where_clauses = ["1=1"];
 
         if (!empty($tgl_from) && !empty($tgl_to)) {
-            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
+            $where_clauses[] = "(
+                (doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
+                (DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.tgl_bayar >= " . $this->db->escape($tgl_from) . " AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
+            )";
         } elseif (!empty($tgl_from)) {
-            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
+            $where_clauses[] = "(
+                doc.tgl_doc >= " . $this->db->escape($tgl_from) . " OR
+                DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " OR
+                pa.tgl_bayar >= " . $this->db->escape($tgl_from) . "
+            )";
         } elseif (!empty($tgl_to)) {
-            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
+            $where_clauses[] = "(
+                (doc.tgl_doc IS NOT NULL AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.created_on IS NOT NULL AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
+            )";
         }
 
         if (!empty($tipe)) {
@@ -1620,11 +1632,23 @@ class Request_payment_model extends BF_Model
         $where_clauses = ["1=1"];
 
         if (!empty($tgl_from) && !empty($tgl_to)) {
-            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
+            $where_clauses[] = "(
+                (doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
+                (DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.tgl_bayar >= " . $this->db->escape($tgl_from) . " AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
+            )";
         } elseif (!empty($tgl_from)) {
-            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
+            $where_clauses[] = "(
+                doc.tgl_doc >= " . $this->db->escape($tgl_from) . " OR
+                DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " OR
+                pa.tgl_bayar >= " . $this->db->escape($tgl_from) . "
+            )";
         } elseif (!empty($tgl_to)) {
-            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
+            $where_clauses[] = "(
+                (doc.tgl_doc IS NOT NULL AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.created_on IS NOT NULL AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
+                (pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
+            )";
         }
 
         if (!empty($tipe)) {
