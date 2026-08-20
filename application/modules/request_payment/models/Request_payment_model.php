@@ -484,7 +484,7 @@ class Request_payment_model extends BF_Model
         $list_tgl_pengajuan_pembayaran = [];
         foreach ($query_data as $row) {
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
-            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
+            $tgl_bayar_fmt = !empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : (!empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : '-');
             $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
 
             $list_tgl_pengajuan_pembayaran[$row->no_doc] = [
@@ -1764,7 +1764,7 @@ class Request_payment_model extends BF_Model
             $status_badge = '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>';
 
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
-            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
+            $tgl_bayar_fmt = !empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : (!empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : '-');
 
             $hasil[] = [
                 'no'               => $no,
