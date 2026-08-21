@@ -311,7 +311,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-success" onclick="saveSplitAlokasi()"><i class="fa fa-check"></i> Simpan</button>
+                <button type="button" class="btn btn-success" id="btn-save-split" onclick="saveSplitAlokasi()"><i class="fa fa-check"></i> Simpan</button>
                 <button type="button" class="btn btn-danger" data-dismiss="modal">
                     <span class="glyphicon glyphicon-remove"></span> Batal</button>
             </div>
@@ -414,6 +414,12 @@
         // Event delegation: recalculate total when any .split-nominal input changes
         $('#split-table-body').on('keyup', '.split-nominal', function() {
             recalculateTotal();
+        });
+
+        // Ensure body scroll is restored and backdrops are cleaned when modals close
+        $('#dialog-popup-alokasi, #dialog-view-split, #dialog-popup').on('hidden.bs.modal', function() {
+            $('body').removeClass('modal-open').css('overflow', '');
+            $('.modal-backdrop').remove();
         });
     });
 
@@ -839,8 +845,9 @@
 
     /**
      * Save split allocation data to the server.
-     * Validates form, shows confirmation, collects data, and POSTs to save_split_alokasi.
-     * On success: closes modal and reloads DataTable.
+     * Validates form, collects data, disables button to prevent double submit,
+     * and POSTs to save_split_alokasi.
+     * On success: immediately closes modal, restores body scroll, shows SweetAlert, and reloads DataTable.
      * On error: shows error SweetAlert with server message.
      */
     function saveSplitAlokasi() {
@@ -849,69 +856,64 @@
             return;
         }
 
-        // 2. Count rows for confirmation message
-        var rowCount = $('#split-table-body tr.split-row').length;
+        // 2. Collect data from all rows
+        var splits = [];
+        $('#split-table-body tr.split-row').each(function() {
+            var jenisAlokasi = $(this).find('.split-jenis-alokasi').val();
+            var nominal = $(this).find('.split-nominal').autoNumeric('get');
+            splits.push({
+                jenis_alokasi: jenisAlokasi,
+                nominal: nominal
+            });
+        });
 
-        // 3. Show SweetAlert confirmation
-        swal({
-            title: 'Konfirmasi',
-            text: 'Simpan ' + rowCount + ' baris alokasi?',
-            type: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Simpan',
-            cancelButtonText: 'Batal'
-        }, function(isConfirm) {
-            if (isConfirm) {
-                // 4. Collect data from all rows
-                var splits = [];
-                $('#split-table-body tr.split-row').each(function() {
-                    var jenisAlokasi = $(this).find('.split-jenis-alokasi').val();
-                    var nominal = $(this).find('.split-nominal').autoNumeric('get');
-                    splits.push({
-                        jenis_alokasi: jenisAlokasi,
-                        nominal: nominal
+        // Get transaction ID
+        var id = $('#split_transaction_id').val();
+
+        // 3. Disable submit button to prevent double submission
+        var $btn = $('#btn-save-split');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+
+        // 4. AJAX POST to save directly without intermediate confirmation prompt
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'save_split_alokasi',
+            data: {
+                id: id,
+                splits: splits
+            },
+            dataType: 'json',
+            cache: false,
+            success: function(result) {
+                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
+                if (result.status == '1') {
+                    // Close modal immediately and clean up body scroll locks
+                    $('#dialog-popup-alokasi').modal('hide');
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('.modal-backdrop').remove();
+
+                    swal({
+                        type: 'success',
+                        title: 'Success !',
+                        text: result.msg,
+                        timer: 2000,
+                        showConfirmButton: true
                     });
-                });
-
-                // Get transaction ID
-                var id = $('#split_transaction_id').val();
-
-                // 5. AJAX POST to save
-                $.ajax({
-                    type: 'post',
-                    url: siteurl + active_controller + 'save_split_alokasi',
-                    data: {
-                        id: id,
-                        splits: splits
-                    },
-                    dataType: 'json',
-                    cache: false,
-                    success: function(result) {
-                        if (result.status == '1') {
-                            swal({
-                                type: 'success',
-                                title: 'Success !',
-                                text: result.msg,
-                                timer: 3000
-                            }, function() {
-                                $('#dialog-popup-alokasi').modal('hide');
-                                DataTables();
-                            });
-                        } else {
-                            swal({
-                                type: 'warning',
-                                title: 'Warning !',
-                                text: result.msg
-                            });
-                        }
-                    },
-                    error: function(result) {
-                        swal({
-                            type: 'error',
-                            title: 'Error !',
-                            text: 'Please try again later !'
-                        });
-                    }
+                    DataTables();
+                } else {
+                    swal({
+                        type: 'warning',
+                        title: 'Warning !',
+                        text: result.msg
+                    });
+                }
+            },
+            error: function(result) {
+                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
+                swal({
+                    type: 'error',
+                    title: 'Error !',
+                    text: 'Please try again later !'
                 });
             }
         });
@@ -923,6 +925,8 @@
      * initializes first allocation row, and shows the modal.
      */
     function openSplitModal(id) {
+        // Reset save button state
+        $('#btn-save-split').prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
         $.ajax({
             type: 'post',
             url: siteurl + active_controller + 'get_alokasi_split_detail',
