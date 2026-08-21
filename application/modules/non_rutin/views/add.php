@@ -11,6 +11,9 @@ $pr_coa         = (!empty($header)) ? $header[0]->coa : '';
 $tingkat_pr     = (!empty($header)) ? $header[0]->tingkat_pr : '';
 $nm_pembuat     = (!empty($header)) ? $header[0]->nm_pembuat : '';
 $tgl_dibuat     = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
+$bank_name         = (!empty($header)) ? $header[0]->bank_name : '';
+$bank_account_no   = (!empty($header)) ? $header[0]->bank_account_no : '';
+$bank_account_name = (!empty($header)) ? $header[0]->bank_account_name : '';
 
 // Detail Approval
 $alasan_reject1 = (!empty($header)) ? $header[0]->reject_reason1 : '';
@@ -364,14 +367,43 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 				</tbody>
 			</table>
 
+			<!-- Section: Informasi Bank -->
+			<div class="box-bank-info" style="border: 1px solid #dce2e6; border-radius: 4px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; background: #fff;">
+				<div style="background: #e9ecf0; padding: 9px 15px; font-weight: 700; font-size: 11px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #dce2e6;">
+					INFORMASI BANK
+				</div>
+				<div style="padding: 15px 15px 5px 15px;">
+					<div class="form-group row">
+						<label class="label-control col-sm-2" style="font-weight: 600;">Bank <span class="text-red">*</span></label>
+						<div class="col-sm-5">
+							<input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (e.g. BCA, Mandiri)" value="<?= $bank_name; ?>" <?= $disabled3; ?>>
+						</div>
+					</div>
+
+					<div class="form-group row">
+						<label class="label-control col-sm-2" style="font-weight: 600;">No Rekening <span class="text-red">*</span></label>
+						<div class="col-sm-5">
+							<input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="No. Rekening" value="<?= $bank_account_no; ?>" <?= $disabled3; ?>>
+						</div>
+					</div>
+
+					<div class="form-group row">
+						<label class="label-control col-sm-2" style="font-weight: 600;">Nama Rekening <span class="text-red">*</span></label>
+						<div class="col-sm-5">
+							<input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= $bank_account_name; ?>" <?= $disabled3; ?>>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Action Footer -->
 			<div class="action-footer">
 				<?php if ($approve <> 'view') { ?>
-					<button type="button" class="btn btn-md btn-primary" id="save">
+					<button type="button" class="btn btn-md btn-success" id="save">
 						<i class="fa fa-save"></i>&nbsp; Save
 					</button>
 				<?php } ?>
-				<button type="button" class="btn btn-md btn-default" id="back">
+				<button type="button" class="btn btn-md btn-danger" id="back">
 					<i class="fa fa-arrow-left"></i>&nbsp; Back
 				</button>
 			</div>

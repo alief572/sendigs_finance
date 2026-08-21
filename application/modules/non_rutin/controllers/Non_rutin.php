@@ -144,6 +144,9 @@ class Non_rutin extends Admin_Controller
 			endif;
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
+			$bank_name      = (!empty($data['bank_name'])) ? $data['bank_name'] : NULL;
+			$bank_account_no   = (!empty($data['bank_account_no'])) ? $data['bank_account_no'] : NULL;
+			$bank_account_name = (!empty($data['bank_account_name'])) ? $data['bank_account_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
 			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
 			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
@@ -458,6 +461,9 @@ class Non_rutin extends Admin_Controller
 						'id_dept' 		=> $id_dept,
 						'no_pengajuan' 	=> $code_plan,
 						'project_name'	=> $project_name,
+						'bank_name'		=> $bank_name,
+						'bank_account_no'	=> $bank_account_no,
+						'bank_account_name'	=> $bank_account_name,
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
@@ -470,6 +476,9 @@ class Non_rutin extends Admin_Controller
 					$ArrHeader		= [
 						'id_dept' 		=> $id_dept,
 						'project_name'	=> $project_name,
+						'bank_name'		=> $bank_name,
+						'bank_account_no'	=> $bank_account_no,
+						'bank_account_name'	=> $bank_account_name,
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
@@ -648,6 +657,9 @@ class Non_rutin extends Admin_Controller
 			endif;
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
+			$bank_name      = (!empty($data['bank_name'])) ? $data['bank_name'] : NULL;
+			$bank_account_no   = (!empty($data['bank_account_no'])) ? $data['bank_account_no'] : NULL;
+			$bank_account_name = (!empty($data['bank_account_name'])) ? $data['bank_account_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
 			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
 			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
@@ -878,6 +890,9 @@ class Non_rutin extends Admin_Controller
 						'id_dept' 		=> $id_dept,
 						'no_pengajuan' 	=> $code_plan,
 						'project_name'	=> $project_name,
+						'bank_name'		=> $bank_name,
+						'bank_account_no'	=> $bank_account_no,
+						'bank_account_name'	=> $bank_account_name,
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
@@ -890,6 +905,9 @@ class Non_rutin extends Admin_Controller
 					$ArrHeader		= [
 						'id_dept' 		=> $id_dept,
 						'project_name'	=> $project_name,
+						'bank_name'		=> $bank_name,
+						'bank_account_no'	=> $bank_account_no,
+						'bank_account_name'	=> $bank_account_name,
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
