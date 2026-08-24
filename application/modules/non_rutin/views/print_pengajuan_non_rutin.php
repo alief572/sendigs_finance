@@ -224,9 +224,9 @@ $nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 		<tr>
 			<td></td>
 			<td align='center'></td>
-			<td align='center'>(____________________)</td>
+			<td align='center'>(<?= !empty($header[0]->nm_user) ? ucwords(strtolower($header[0]->nm_user)) : '____________________'; ?>)</td>
 			<td></td>
-			<td align='center'>(____________________)</td>
+			<td align='center'>(<?= !empty($header[0]->nm_approver) ? ucwords(strtolower($header[0]->nm_approver)) : (!empty($header[0]->app_3_date) ? 'Imanuel Iman' : '____________________'); ?>)</td>
 			<td></td>
 		</tr>
 	</table>
