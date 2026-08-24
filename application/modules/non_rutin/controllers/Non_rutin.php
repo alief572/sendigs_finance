@@ -301,6 +301,18 @@ class Non_rutin extends Admin_Controller
 
 			//header approve
 			if (!empty($approve)) {
+				// Validasi wewenang approval Management (Tingkat 3)
+				if ($tingkat_approval == '3') {
+					$check_auth = $this->non_rutin_model->check_approval_authority($code_plan, $this->auth->user_id());
+					if (isset($check_auth['status']) && !$check_auth['status']) {
+						echo json_encode(array(
+							'pesan'  => $check_auth['message'],
+							'status' => 0
+						));
+						return;
+					}
+				}
+
 				$ArrDetail = array();
 				$ArrDetailPR = array();
 
@@ -1164,7 +1176,7 @@ class Non_rutin extends Admin_Controller
 		$data_session	= $this->session->userdata;
 		$printby		= $this->auth->user_id();
 
-		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
+		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, approver.nm_lengkap as nm_approver, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN users approver ON approver.id_user = a.app_3_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
 		$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $kode_trans . "' ")->result_array();
 		$datacoa 	= $this->db->query("SELECT * FROM coa_category WHERE tipe='NONRUTIN' ")->result_array();
 

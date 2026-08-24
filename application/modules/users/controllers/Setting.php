@@ -122,18 +122,38 @@ class Setting extends Admin_Controller
         $this->pager['per_page']            = $limit;
         $this->pager['page_query_string']   = TRUE;
 
-        $this->pagination->initialize($this->pager);
+        $this->db->select("
+            users.*, 
+            emp.name as nm_karyawan, 
+            dept.name as nm_dept, 
+            pos.name as nm_pos,
+            title.name as nm_title
+        ");
+        $this->db->from("users");
+        $this->db->join(HRIS . ".employees emp", "emp.id = users.employee_id", "left");
+        $this->db->join(HRIS . ".departments dept", "dept.id = COALESCE(emp.department_id, users.department_id)", "left");
+        $this->db->join(HRIS . ".positions pos", "pos.id = emp.position_id", "left");
+        $this->db->join(HRIS . ".titles title", "title.id = users.title_id", "left");
+        $this->db->where("users.deleted", 0);
+        $this->db->where("users.username <>", "json");
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like("users.username", $search);
+            $this->db->or_like("users.nm_lengkap", $search);
+            $this->db->or_like("users.email", $search);
+            $this->db->or_like("emp.name", $search);
+            $this->db->or_like("dept.name", $search);
+            $this->db->group_end();
+        }
+        $this->db->order_by("users.nm_lengkap", "ASC");
+        $data = $this->db->get()->result();
 
-        $data = $this->users_model->select("users.*")
-            ->where($where)
-            ->order_by('nm_lengkap', 'ASC')
-            ->limit($limit, $offset)->find_all();
         history("View users");
         $this->template->set('results', $data);
         $this->template->set('search', $search);
 
         $this->template->title(lang('users_manage_title'));
-        $this->template->set("numb", $offset + 1);
+        $this->template->set("numb", 1);
         $this->template->render('list');
     }
 
@@ -150,11 +170,11 @@ class Setting extends Admin_Controller
 
         $cabang = $this->Cabang_model->find_all();
         $department = $this->users_model->get_list_department();
-
-
+        $employees = $this->users_model->get_list_employees();
 
         $this->template->set('cabang', $cabang);
         $this->template->set('department', $department);
+        $this->template->set('employees', $employees);
         $this->template->title(lang('users_new_title'));
         $this->template->page_icon('fa fa-user');
         $this->template->render('users_form');
@@ -201,7 +221,9 @@ class Setting extends Admin_Controller
         //$cabang = $this->Cabang_model->find_all();
         //$this->template->set('cabang', $cabang);
         $department = $this->users_model->get_list_department();
+        $employees = $this->users_model->get_list_employees();
         $this->template->set('department', $department);
+        $this->template->set('employees', $employees);
         $this->template->set('data', $data);
         $this->template->set('list_titles', $list_titles);
         $this->template->title(lang('users_edit_title'));
@@ -388,6 +410,7 @@ class Setting extends Admin_Controller
         $kdcab      = $this->input->post('kdcab');
         $department_id    = $this->input->post('department_id');
         $title    = $this->input->post('title');
+        $employee_id = $this->input->post('employee_id');
 
         /**
          * This code will benchmark your server to determine how high of a cost you can
@@ -426,7 +449,8 @@ class Setting extends Admin_Controller
                 'st_aktif' => $st_aktif,
                 'kdcab'     => $kdcab,
                 'department_id'    => $department_id,
-                'title_id' => $title
+                'title_id' => $title,
+                'employee_id' => $employee_id
             );
 
             $result = $this->users_model->insert($data_insert);
@@ -462,7 +486,8 @@ class Setting extends Admin_Controller
                 'st_aktif' => $st_aktif,
                 'kdcab'     => $kdcab,
                 'department_id'    => $department_id,
-                'title_id' => $title
+                'title_id' => $title,
+                'employee_id' => $employee_id
             );
             if (isset($_POST['password']) && $_POST['password'] !== '') {
                 $data_insert['password'] = $password;
