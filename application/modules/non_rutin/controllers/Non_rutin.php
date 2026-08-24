@@ -52,37 +52,31 @@ class Non_rutin extends Admin_Controller
 
 	public function index()
 	{
+		$is_admin           = $this->auth->is_admin();
+		$user_id            = $this->auth->user_id();
 		$data_Group			= $this->db->get('groups')->result();
 		$tanda				= $this->uri->segment(2);
 		// $get_department = $this->db->get_where('ms_department', ['deleted_by' => null])->result();
 
-
-
-		// Ambil department_id user yang sedang login
-		$get_user_dept_id = $this->db->select('department_id')
-			->get_where(
-				'users',
-				['id_user' => $this->auth->user_id()]
-			)
-			->row_array();
-		$user_dept_id = $get_user_dept_id['department_id'] ?? '';
+		// Ambil department_id user yang sedang login via data employee HRIS
+		$get_emp = $this->non_rutin_model->get_employee_hierarchy_info($user_id);
+		$user_dept_id = $get_emp->department_id ?? '';
 
 		$this->hris->select('a.id, a.name, b.name as nm_company');
 		$this->hris->from('departments a');
 		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-		if ($this->auth->user_id() !== '7') {
+		if (!$is_admin) {
 			$this->hris->where('a.id', $user_dept_id);
 		}
 		$get_department = $this->hris->get()->result();
-
 
 		$this->db->select('a.*, c.nm_lengkap');
 		$this->db->from('rutin_non_planning_detail z');
 		$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
 		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 		$this->db->where('a.status_id', 1);
-		if ($this->auth->user_id() !== '7') {
-			$this->db->where('a.created_by', $this->auth->user_id()); // penyesuaian berdasarkan department_id user
+		if (!$is_admin) {
+			$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan departemen user login
 		}
 		$this->db->where('a.close_pr', null);
 		$this->db->group_by('z.no_pengajuan');
@@ -145,6 +139,12 @@ class Non_rutin extends Admin_Controller
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
+			if (!$this->auth->is_admin()) {
+				$get_emp = $this->non_rutin_model->get_employee_hierarchy_info($this->auth->user_id());
+				if (!empty($get_emp->department_id)) {
+					$id_dept = $get_emp->department_id;
+				}
+			}
 			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
 			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
 			// $budget 		= str_replace(',', '', $data['budget']);
@@ -596,6 +596,16 @@ class Non_rutin extends Admin_Controller
 				$tanda 		= ($approve == 'view') ? 'View' : 'Approve';
 			}
 
+			// Validasi wewenang approval Management (Tingkat 3) pada saat membuka form
+			if ($approve == 'approve' && $tingkat_approval == '3') {
+				$check_auth = $this->non_rutin_model->check_approval_authority($id, $this->auth->user_id());
+				if (isset($check_auth['status']) && !$check_auth['status']) {
+					$this->template->set_message($check_auth['message'], 'error');
+					$approve = 'view';
+					$tanda = 'View';
+				}
+			}
+
 			$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
 			$coa_pr_dept = (!empty($get_coa_pr_dept->coa)) ? explode(';', $get_coa_pr_dept->coa) : '';
 
@@ -617,9 +627,16 @@ class Non_rutin extends Admin_Controller
 
 			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
 
+			$is_admin = $this->auth->is_admin();
+			$get_emp = $this->non_rutin_model->get_employee_hierarchy_info($this->auth->user_id());
+			$user_dept_id = (!empty($get_emp->department_id)) ? $get_emp->department_id : '';
+
 			$this->hris->select('a.id, a.name, b.name as nm_company');
 			$this->hris->from(HRIS . '.departments a');
 			$this->hris->join(HRIS . '.companies b', 'b.id = a.company_id', 'left');
+			if (!$is_admin) {
+				$this->hris->where('a.id', $user_dept_id);
+			}
 			$get_department = $this->hris->get()->result();
 
 			$data = array(
@@ -633,7 +650,9 @@ class Non_rutin extends Admin_Controller
 				'id'			=> $id,
 				'list_departement' => $get_department,
 				'tingkat_approval'			=> $tingkat_approval,
-				'list_coa' => $get_list_coa
+				'list_coa' => $get_list_coa,
+				'is_admin' => $is_admin,
+				'user_dept_id' => $user_dept_id
 			);
 
 			$this->template->set($data);
@@ -1239,53 +1258,33 @@ class Non_rutin extends Admin_Controller
 
 	public function search_by_depart()
 	{
+		$is_admin       = $this->auth->is_admin();
+		$user_id        = $this->auth->user_id();
 		$ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 
 		$depart = $this->input->post('depart');
 
+		// mengambil data department user yang melakukan login via data employee HRIS
+		$get_emp = $this->non_rutin_model->get_employee_hierarchy_info($user_id);
+		$user_dept_id = $get_emp->department_id ?? '';
+
+		$this->db->select('a.*, c.nm_lengkap');
+		$this->db->from('rutin_non_planning_detail z');
+		$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
+		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
+		$this->db->where('a.status_id', 1);
 		if ($depart !== '') {
-
-			//mengambil data department user yang melakukan login 
-			$get_user_dept_id = $this->db->select('department_id')
-				->get_where('users', ['id_user' => $this->auth->user_id()])
-				->row_array();
-			$user_dept_id = $get_user_dept_id['department_id'] ?? '';
-
-			$this->db->select('a.*, c.nm_lengkap');
-			$this->db->from('rutin_non_planning_detail z');
-			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
-			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
-			$this->db->where('a.status_id', 1);
-			if ($this->auth->user_id() !== '7') {
-				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
-			}
-			$this->db->where('a.close_pr', null);
-			$this->db->group_by('z.no_pengajuan');
-			$this->db->order_by('a.created_date', 'DESC');
-
-			$get_list_data = $this->db->get()->result();
+			$this->db->where('a.id_dept', $depart);
 		} else {
-
-			// mengambil data deparment user yang melakukan login 
-			$get_user_dept_id = $this->db->select('department_id')
-				->get_where('users', ['id_user' => $this->auth->user_id()])
-				->row_array();
-			$user_dept_id = $get_user_dept_id['department_id'] ?? '';
-
-			$this->db->select('a.*, c.nm_lengkap');
-			$this->db->from('rutin_non_planning_detail z');
-			$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
-			$this->db->join('users c', 'c.id_user = a.created_by', 'left');
-			$this->db->where('a.status_id', 1);
-			if ($this->auth->user_id() !== '7') {
-				$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan department_id user
+			if (!$is_admin) {
+				$this->db->where('a.id_dept', $user_dept_id);
 			}
-			$this->db->where('a.close_pr', null);
-			$this->db->group_by('z.no_pengajuan');
-			$this->db->order_by('a.created_date', 'DESC');
-
-			$get_list_data = $this->db->get()->result();
 		}
+		$this->db->where('a.close_pr', null);
+		$this->db->group_by('z.no_pengajuan');
+		$this->db->order_by('a.created_date', 'DESC');
+
+		$get_list_data = $this->db->get()->result();
 
 		$hasil = '
 			<table class="table table-bordered table-striped" id="my-grid" width="100%">

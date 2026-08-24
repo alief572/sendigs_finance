@@ -144,6 +144,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 	$(document).ready(function() {
 		$('.maskM').autoNumeric();
@@ -172,11 +173,11 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 				$('#dialog-popup').modal('show');
 			},
 			error: function(result) {
-				swal({
+				Swal.fire({
 					title: 'Error !',
 					text: 'Please try again later !',
-					type: 'error'
-				})
+					icon: 'error'
+				});
 			}
 		});
 	});
@@ -184,14 +185,15 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 	$(document).on('click', '.close_pr', function() {
 		var no_pengajuan = $(this).data('no_pengajuan');
 
-		swal({
+		Swal.fire({
 			title: 'Are you sure to close this PR ?',
+			icon: 'warning',
 			showCancelButton: true,
 			confirmButtonText: 'Close',
-			confirmButtonColor: 'red',
-			type: 'warning'
-		}, function(onConfirm) {
-			if (onConfirm) {
+			confirmButtonColor: '#d33',
+			cancelButtonText: 'Batal'
+		}).then((result) => {
+			if (result.isConfirmed) {
 				$.ajax({
 					type: 'POST',
 					url: siteurl + active_controller + 'close_pr',
@@ -202,26 +204,26 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					dataType: 'json',
 					success: function(result) {
 						if (result.status == '1') {
-							swal({
+							Swal.fire({
 								title: 'Success !',
 								text: 'PR has been closed',
-								type: 'success'
-							}, function(onConfirm) {
+								icon: 'success'
+							}).then(() => {
 								location.reload(true);
 							});
 						} else {
-							swal({
+							Swal.fire({
 								title: 'Failed !',
 								text: 'PR has not been closed',
-								type: 'warning'
+								icon: 'warning'
 							});
 						}
 					},
 					error: function(result) {
-						swal({
+						Swal.fire({
 							title: 'Error !',
 							text: 'Please try again later !',
-							type: 'error'
+							icon: 'error'
 						});
 					}
 				});
@@ -243,26 +245,26 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 			contentType: false,
 			success: function(result) {
 				if (result.status == '1') {
-					swal({
+					Swal.fire({
 						title: 'Success !',
 						text: 'PR has been closed',
-						type: 'success'
-					}, function(onConfirm) {
+						icon: 'success'
+					}).then(() => {
 						location.reload(true);
 					});
 				} else {
-					swal({
+					Swal.fire({
 						title: 'Failed !',
 						text: 'PR has not been closed',
-						type: 'warning'
+						icon: 'warning'
 					});
 				}
 			},
 			error: function(result) {
-				swal({
+				Swal.fire({
 					title: 'Error !',
 					text: 'Please try again later !',
-					type: 'error'
+					icon: 'error'
 				});
 			}
 		});
@@ -283,10 +285,10 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 				DataTables();
 			},
 			error: function(result) {
-				swal({
+				Swal.fire({
 					title: 'Error !',
 					text: 'Please try again later !',
-					type: 'error'
+					icon: 'error'
 				});
 			}
 		});

@@ -457,7 +457,7 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                     //minDate: 0
                 });
                 $('.chosen_select').chosen();
-                swal.close();
+                Swal.close();
             },
             error: function() {
                 Swal.fire({
@@ -724,10 +724,10 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                 }
             },
             error: function(result) {
-                swal({
+                Swal.fire({
                     title: 'Failed !',
                     text: 'Failed, item data has not been updated !',
-                    type: 'error',
+                    icon: 'error',
                     timer: 2000,
                     showCancelButton: false,
                     showConfirmButton: false,
