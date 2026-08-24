@@ -89,17 +89,4 @@ class Users_model extends BF_Model
 
         return $get_titles;
     }
-
-    public function get_list_employees()
-    {
-        $this->hris->select('a.id, a.name as nm_karyawan, b.name as nm_dept, c.name as nm_pos');
-        $this->hris->from('employees a');
-        $this->hris->join('departments b', 'b.id = a.department_id', 'left');
-        $this->hris->join('positions c', 'c.id = a.position_id', 'left');
-        $this->hris->where('a.flag_active', 'Y');
-        $this->hris->order_by('a.name', 'asc');
-        $get_list_employees = $this->hris->get();
-
-        return $get_list_employees->result_array();
-    }
 }

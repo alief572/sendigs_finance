@@ -150,11 +150,9 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 
 		DataTables();
 
-		if ($.fn.chosen) {
-			$('.search_depart').chosen({
-				width: '250px',
-			});
-		}
+		$('.search_depart').chosen({
+			width: '250px',
+		});
 	});
 
 	$(document).on('click', '.close_pr_modal', function() {
