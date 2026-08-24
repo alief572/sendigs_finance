@@ -230,50 +230,52 @@ class Report_actual_plan_tagih extends Admin_Controller
     {
         $get = $this->input->get();
 
-        $draw     = intval($get['draw']);
-        $length   = $get['length'];
-        $start    = $get['start'];
-        $search   = $get['search']['value'];
-        $tahun    = $get['tahun'];
-        $client   = $get['client'];
-        $company  = $get['company'];
+        $draw     = intval($get['draw'] ?? 1);
+        $length   = intval($get['length'] ?? 10);
+        $start    = intval($get['start'] ?? 0);
+        $search   = $get['search']['value'] ?? '';
+        $tahun    = !empty($get['tahun']) ? $get['tahun'] : date('Y');
+        $client   = $get['client'] ?? '';
+        $company  = $get['company'] ?? '';
 
-        // 1. Query Builder & Filtering
-        $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
-
-        $list_bulan_select = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-        foreach ($list_bulan_select as $bln) {
-            $this->db->select("SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`$bln` ELSE 0 END) AS `$bln`", FALSE);
-        }
-
-        $this->db->from('view_rekap_actual_plan_tagih_dev a');
-
-        // Logic: Ambil yang sesuai tahun terpilih ATAU yang masih nunggak (macet)
-        $this->db->group_start();
-        $this->db->where('a.tahun_data', $tahun);
-        $this->db->or_where('a.macet >', 0);
-        $this->db->group_end();
-
-        // Safety filter untuk data tahun yang valid
-        $this->db->where('a.tahun_data >=', 2000);
-
-        if (!empty($client))  $this->db->where('a.id_customer', $client);
-        if (!empty($company)) $this->db->where('a.id_company', $company);
-
-        $this->db->group_by('a.id_spk_penawaran');
-        $get_all = $this->db->get()->result();
-
-        $count_all = count($get_all);
-
+        // 1. Total records (without search keyword)
         $this->db->select('a.id_spk_penawaran');
         $this->db->from('view_rekap_actual_plan_tagih_dev a');
-
         $this->db->group_start();
         $this->db->where('a.tahun_data', $tahun);
         $this->db->or_where('a.macet >', 0);
         $this->db->group_end();
+        $this->db->where('a.tahun_data >=', 2000);
+        if (!empty($client))  $this->db->where('a.id_customer', $client);
+        if (!empty($company)) $this->db->where('a.id_company', $company);
+        $this->db->group_by('a.id_spk_penawaran');
+        $count_all = $this->db->get()->num_rows();
 
-        // Safety filter untuk data tahun yang valid
+        // 2. Summary query (with all active filters & search) for Grand Totals across entire dataset
+        $this->db->select("
+            a.id_spk_penawaran,
+            a.nilai_kontrak,
+            a.nominal_invoice,
+            a.nominal_uninvoice,
+            a.macet,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`jan` ELSE 0 END) AS `jan`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`feb` ELSE 0 END) AS `feb`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`mar` ELSE 0 END) AS `mar`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`apr` ELSE 0 END) AS `apr`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`may` ELSE 0 END) AS `may`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`jun` ELSE 0 END) AS `jun`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`jul` ELSE 0 END) AS `jul`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`aug` ELSE 0 END) AS `aug`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`sep` ELSE 0 END) AS `sep`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`oct` ELSE 0 END) AS `oct`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`nov` ELSE 0 END) AS `nov`,
+            SUM(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.`dec` ELSE 0 END) AS `dec`
+        ", FALSE);
+        $this->db->from('view_rekap_actual_plan_tagih_dev a');
+        $this->db->group_start();
+        $this->db->where('a.tahun_data', $tahun);
+        $this->db->or_where('a.macet >', 0);
+        $this->db->group_end();
         $this->db->where('a.tahun_data >=', 2000);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
@@ -288,11 +290,35 @@ class Report_actual_plan_tagih extends Admin_Controller
             $this->db->group_end();
         }
         $this->db->group_by('a.id_spk_penawaran');
-        $get_filter = $this->db->get()->result();
+        $subquery_sql = $this->db->get_compiled_select();
 
-        $count_filter = count($get_filter);
+        $summary_sql = "
+            SELECT 
+                COUNT(*) AS total_count,
+                COALESCE(SUM(sub.nilai_kontrak), 0) AS total_nominal_spk,
+                COALESCE(SUM(sub.nominal_invoice), 0) AS total_invoice,
+                COALESCE(SUM(sub.nominal_uninvoice), 0) AS total_uninvoice,
+                COALESCE(SUM(sub.macet), 0) AS total_macet,
+                COALESCE(SUM(sub.jan), 0) AS total_jan,
+                COALESCE(SUM(sub.feb), 0) AS total_feb,
+                COALESCE(SUM(sub.mar), 0) AS total_mar,
+                COALESCE(SUM(sub.apr), 0) AS total_apr,
+                COALESCE(SUM(sub.may), 0) AS total_may,
+                COALESCE(SUM(sub.jun), 0) AS total_jun,
+                COALESCE(SUM(sub.jul), 0) AS total_jul,
+                COALESCE(SUM(sub.aug), 0) AS total_aug,
+                COALESCE(SUM(sub.sep), 0) AS total_sep,
+                COALESCE(SUM(sub.oct), 0) AS total_oct,
+                COALESCE(SUM(sub.nov), 0) AS total_nov,
+                COALESCE(SUM(sub.dec), 0) AS total_dec
+            FROM ({$subquery_sql}) AS sub
+        ";
+        $summary = $this->db->query($summary_sql)->row();
+        $count_filter = !empty($summary->total_count) ? intval($summary->total_count) : 0;
 
-        // 3. Order & Limit
+        // 3. Paginated Data
+        $list_bulan_select = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
         $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.input_date, a.id_company_ref, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
 
         foreach ($list_bulan_select as $bln) {
@@ -306,7 +332,6 @@ class Report_actual_plan_tagih extends Admin_Controller
         $this->db->or_where('a.macet >', 0);
         $this->db->group_end();
 
-        // Safety filter untuk data tahun yang valid
         $this->db->where('a.tahun_data >=', 2000);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
@@ -322,43 +347,21 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
         $this->db->group_by('a.id_spk_penawaran');
         $this->db->order_by('a.id_spk_penawaran', 'DESC');
-        $this->db->limit($length, $start);
+        if ($length > 0) {
+            $this->db->limit($length, $start);
+        }
         $get_data = $this->db->get()->result();
 
-
-        // 4. Processing Data
+        // 4. Processing Data for Page
         $no = $start;
         $hasil = [];
-        $totals = [
-            'jan' => 0,
-            'feb' => 0,
-            'mar' => 0,
-            'apr' => 0,
-            'may' => 0,
-            'jun' => 0,
-            'jul' => 0,
-            'aug' => 0,
-            'sep' => 0,
-            'oct' => 0,
-            'nov' => 0,
-            'dec' => 0,
-            'spk' => 0,
-            'inv' => 0,
-            'uninv' => 0,
-            'macet' => 0
-        ];
-
-        $list_bulan = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
         foreach ($get_data as $item) {
-            $total_invoice = $item->nominal_invoice ?? 0;
+            $total_invoice   = $item->nominal_invoice ?? 0;
             $total_uninvoice = $item->nominal_uninvoice ?? 0;
-            $total_macet = $item->macet ?? 0;
+            $total_macet     = $item->macet ?? 0;
+            $is_same_year    = ($item->tahun_data == $tahun);
 
-            // VALIDASI TAHUN: Cek apakah baris ini memang jadwal tahun yang difilter
-            $is_same_year = ($item->tahun_data == $tahun);
-
-            // Data consultant & sales langsung dari view (tanpa query tambahan)
             $arr_nm_konsultan = [];
             if (!empty($item->nm_konsultan_1)) {
                 $arr_nm_konsultan[] = $item->nm_konsultan_1;
@@ -370,61 +373,50 @@ class Report_actual_plan_tagih extends Admin_Controller
             $nm_consultant = implode(', ', $arr_nm_konsultan);
             $nm_sales = $item->nm_sales ?? '';
 
-
             $row = [
                 'no'                => ++$no,
-                'company'           => $item->nm_company,
-                'no_spk'            => $item->id_spk_penawaran,
-                'customer'          => $item->nm_customer,
+                'company'           => $item->nm_company ?? '',
+                'customer'          => $item->nm_customer ?? '',
+                'no_spk'            => $item->id_spk_penawaran ?? '',
                 'consultant'        => $nm_consultant,
                 'sales'             => $nm_sales,
-                'project'           => $item->nm_paket,
-                'nominal_spk'       => number_format($item->nilai_kontrak),
-                'nominal_invoice'   => number_format($total_invoice),
-                'nominal_uninvoice' => number_format($total_uninvoice),
-                'macet'             => number_format($total_macet)
+                'project'           => $item->nm_paket ?? '',
+                'nominal_spk'       => number_format($item->nilai_kontrak, 0, ',', '.'),
+                'nominal_invoice'   => number_format($total_invoice, 0, ',', '.'),
+                'nominal_uninvoice' => number_format($total_uninvoice, 0, ',', '.'),
+                'macet'             => number_format($total_macet, 0, ',', '.')
             ];
 
-            // Loop kolom bulan secara dinamis
-            foreach ($list_bulan as $bln) {
-                // Jika tahun tidak cocok, kita paksa jadi 0 biar gak "nyasar" nominalnya
+            foreach ($list_bulan_select as $bln) {
                 $val = ($is_same_year) ? ($item->$bln ?? 0) : 0;
-
-                $row[$bln] = number_format($val);
-                $totals[$bln] += $val;
+                $row[$bln] = number_format($val, 0, ',', '.');
             }
 
             $hasil[] = $row;
-
-            // Summary totals untuk footer
-            $totals['spk']   += $item->nilai_kontrak;
-            $totals['inv']   += $total_invoice;
-            $totals['uninv'] += $total_uninvoice;
-            $totals['macet'] += $total_macet;
         }
 
-        // 5. Final Response
+        // 5. Final Response with full dataset summary
         $response = [
             'draw'              => $draw,
             'recordsTotal'      => $count_all,
             'recordsFiltered'   => $count_filter,
             'data'              => $hasil,
-            'total_nominal_spk' => $totals['spk'],
-            'total_invoice'     => $totals['inv'],
-            'total_uninvoice'   => $totals['uninv'],
-            'total_macet'       => $totals['macet'],
-            'total_jan' => $totals['jan'],
-            'total_feb' => $totals['feb'],
-            'total_mar' => $totals['mar'],
-            'total_apr' => $totals['apr'],
-            'total_may' => $totals['may'],
-            'total_jun' => $totals['jun'],
-            'total_jul' => $totals['jul'],
-            'total_aug' => $totals['aug'],
-            'total_sep' => $totals['sep'],
-            'total_oct' => $totals['oct'],
-            'total_nov' => $totals['nov'],
-            'total_dec' => $totals['dec']
+            'total_nominal_spk' => $summary->total_nominal_spk ?? 0,
+            'total_invoice'     => $summary->total_invoice ?? 0,
+            'total_uninvoice'   => $summary->total_uninvoice ?? 0,
+            'total_macet'       => $summary->total_macet ?? 0,
+            'total_jan'         => $summary->total_jan ?? 0,
+            'total_feb'         => $summary->total_feb ?? 0,
+            'total_mar'         => $summary->total_mar ?? 0,
+            'total_apr'         => $summary->total_apr ?? 0,
+            'total_may'         => $summary->total_may ?? 0,
+            'total_jun'         => $summary->total_jun ?? 0,
+            'total_jul'         => $summary->total_jul ?? 0,
+            'total_aug'         => $summary->total_aug ?? 0,
+            'total_sep'         => $summary->total_sep ?? 0,
+            'total_oct'         => $summary->total_oct ?? 0,
+            'total_nov'         => $summary->total_nov ?? 0,
+            'total_dec'         => $summary->total_dec ?? 0
         ];
 
         echo json_encode($response);
