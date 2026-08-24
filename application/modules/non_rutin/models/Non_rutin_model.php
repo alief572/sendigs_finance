@@ -454,55 +454,27 @@ class Non_rutin_model extends BF_Model
         $ENABLE_DELETE  = has_permission('Approval_PR_Depart_Management.Delete');
 
         $requestData    = $_REQUEST;
-        $tanda          = $requestData['tanda'] ?? 'approval_management';
-        $search_value   = (isset($requestData['search']) && is_array($requestData['search'])) ? ($requestData['search']['value'] ?? NULL) : ($requestData['search'] ?? NULL);
-        $order_col      = isset($requestData['order'][0]['column']) ? $requestData['order'][0]['column'] : NULL;
-        $order_dir      = isset($requestData['order'][0]['dir']) ? $requestData['order'][0]['dir'] : 'desc';
-        $start          = isset($requestData['start']) ? intval($requestData['start']) : 0;
-        $length         = isset($requestData['length']) ? intval($requestData['length']) : 10;
-        $draw           = isset($requestData['draw']) ? intval($requestData['draw']) : 1;
-
-        $fetch            = $this->query_data_json_non_rutin_approval_management(
-            $tanda,
-            $search_value,
-            $order_col,
-            $order_dir,
-            $start,
-            $length
-        );
-        $totalData        = $fetch['totalData'] ?? 0;
-        $totalFiltered    = $fetch['totalFiltered'] ?? $totalData;
+        $totalData        = $fetch['totalData'];
+        $totalFiltered    = $fetch['totalFiltered'];
         $query            = $fetch['query'];
 
         $data    = array();
         $urut1  = 1;
         $urut2  = 0;
-        foreach ($query->result_array() as $row) {
-            $total_data     = $totalData;
-            $start_dari     = $start;
-            $asc_desc       = $order_dir;
-            if ($asc_desc == 'asc') {
-                $nomor = $urut1 + $start_dari;
             }
             if ($asc_desc == 'desc') {
                 $nomor = ($total_data - $start_dari) - $urut2;
-            }
+            $this->hris->select('a.id, a.name, b.name as nm_company');
+            $this->hris->from('departments a');
+            $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+            $this->hris->where('a.id', $row['id_dept']);
+            $get_department = $this->hris->get()->row();
 
-            $get_department = null;
-            if (!empty($row['id_dept'])) {
-                $this->hris->select('a.id, a.name, b.name as nm_company');
-                $this->hris->from('departments a');
-                $this->hris->join('companies b', 'b.id = a.company_id', 'left');
-                $this->hris->where('a.id', $row['id_dept']);
-                $get_department = $this->hris->get()->row();
-            }
-            $dept_name = (!empty($get_department)) ? strtoupper($get_department->name . ' - ' . $get_department->nm_company) : '-';
+            $tanda = $requestData['tanda'];
 
             $nestedData     = array();
-            $nestedData[]    = "<div align='center'>" . $nomor . "</div>";
-            $no_pr = (!empty($row['no_pr'])) ? $row['no_pr'] : "<span class='text-red' title='No Pengajuan'>" . $row['no_pengajuan'] . "</span>";
             $nestedData[]    = "<div align='left'>" . $no_pr . "</div>";
-            $nestedData[]    = "<div align='left'>" . $dept_name . "</div>";
+            $nestedData[]    = "<div align='left'>" . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . "</div>";
 
             $list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $row['no_pengajuan']))->result_array();
             $arr_nmbarang = array();
@@ -513,15 +485,6 @@ class Non_rutin_model extends BF_Model
             foreach ($list_barang as $val => $valx) {
                 $get_satuan = $this->db->get_where('ms_satuan', array('id' => $valx['satuan']))->result();
                 $nm_satuan = (!empty($get_satuan)) ? strtolower($get_satuan[0]->code) : '';
-                $arr_nmbarang[$val] = "&bull; " . strtoupper($valx['nm_barang']);
-                $arr_spec[$val] = "&bull; " . strtoupper($valx['spec']);
-                $arr_qty[$val] = "&bull; " . floatval($valx['qty']) . ' ' . $nm_satuan;
-                $tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
-                $arr_tanggal[$val] = "&bull; " . date('d F Y H:i:s', strtotime($valx['created_date']));
-                $arr_ket[$val] = "&bull; " . strtoupper($valx['keterangan']);
-            }
-            $dt_nama_barang    = implode("<br>", $arr_nmbarang);
-            $dt_spec    = implode("<br>", $arr_spec);
             $dt_qty    = implode("<br>", $arr_qty);
             $dt_tanggal    = implode("<br>", $arr_tanggal);
             $dt_ket    = implode("<br>", $arr_ket);
@@ -530,7 +493,6 @@ class Non_rutin_model extends BF_Model
             $nestedData[]    = "<div align='left'>" . $row['nm_lengkap'] . "</div>";
             $nestedData[]    = "<div align='left'>" . $dt_tanggal . "</div>";
             $nestedData[]    = "<div align='left'>" . ucwords(strtolower($row['nm_lengkap'])) . "</div>";
-            $nestedData[]    = "<div align='left'>" . (!empty($row['created_date']) ? date('d-M-Y', strtotime($row['created_date'])) : '-') . "</div>";
 
             $last_by     = (!empty($row['updated_by'])) ? $row['updated_by'] : $row['created_by'];
             $last_date = (!empty($row['updated_date'])) ? $row['updated_date'] : $row['created_date'];
@@ -601,14 +563,12 @@ class Non_rutin_model extends BF_Model
         }
 
         $json_data = array(
-            "draw"                => intval($draw),
+            "draw"                => intval($requestData['draw']),
             "recordsTotal"        => intval($totalData),
             "recordsFiltered"     => intval($totalFiltered),
             "data"                => $data
         );
 
-        if (ob_get_length()) ob_clean();
-        header('Content-Type: application/json');
         echo json_encode($json_data);
     }
 
@@ -632,14 +592,11 @@ class Non_rutin_model extends BF_Model
         $this->db->from('users a');
         $this->db->join(HRIS . '.employees b', '((a.employee_id IS NOT NULL AND a.employee_id != \'\' AND b.id = a.employee_id) OR ((a.employee_id IS NULL OR a.employee_id = \'\') AND (b.name LIKE CONCAT(\'%\', a.nm_lengkap, \'%\') OR b.name LIKE CONCAT(\'%\', a.username, \'%\'))))', 'left', false);
         $this->db->join(HRIS . '.positions c', 'c.id = b.position_id', 'left');
-        $this->db->join(HRIS . '.departments d', 'd.id = COALESCE(b.department_id, a.department_id)', 'left');
         $this->db->join(HRIS . '.divisions e', 'e.id = b.division_id', 'left');
         $this->db->where('a.id_user', $id_user);
         $user_info = $this->db->get()->row();
 
         if (!$user_info) {
-            return null;
-        }
 
         $pos_name = strtolower($user_info->position_name ?? '');
         $nm_lengkap = strtolower($user_info->nm_lengkap ?? '');
