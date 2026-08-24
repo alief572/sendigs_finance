@@ -19,7 +19,7 @@ select
     coalesce(`inv`.`total_invoice`,0) AS `nominal_invoice`,
     (`a`.`nilai_kontrak` - coalesce(`inv`.`total_invoice`,0)) AS `nominal_uninvoice`,
     coalesce(`mct`.`total_macet`,0) AS `macet`,
-    coalesce(`mt`.`thn`,year(`a`.`input_date`)) AS `tahun_data`,
+    `mt`.`thn` AS `tahun_data`,
     coalesce(sum((case when (`mt`.`bln` = 1) then `mt`.`nominal` end)),0) AS `jan`,
     coalesce(sum((case when (`mt`.`bln` = 2) then `mt`.`nominal` end)),0) AS `feb`,
     coalesce(sum((case when (`mt`.`bln` = 3) then `mt`.`nominal` end)),0) AS `mar`,
@@ -32,7 +32,8 @@ select
     coalesce(sum((case when (`mt`.`bln` = 10) then `mt`.`nominal` end)),0) AS `oct`,
     coalesce(sum((case when (`mt`.`bln` = 11) then `mt`.`nominal` end)),0) AS `nov`,
     coalesce(sum((case when (`mt`.`bln` = 12) then `mt`.`nominal` end)),0) AS `dec`
-from ((((((`db_consultant_new_dev`.`kons_tr_spk_penawaran` `a`
+from (((((((`db_consultant_new_dev`.`kons_tr_spk_penawaran` `a`
+    join `db_sendigs_ss_dev`.`kons_tr_plan_tagih_header` `pth` on((`pth`.`id_spk_penawaran` = `a`.`id_spk_penawaran`)))
     left join `db_consultant_new_dev`.`kons_tr_penawaran` `b` on((`b`.`id_quotation` = `a`.`id_penawaran`)))
     left join `db_consultant_new_dev`.`kons_tr_company` `c` on((`c`.`id` = `b`.`company`)))
     left join `db_consultant_new_dev`.`kons_master_konsultasi_header` `d` on((`d`.`id_konsultasi_h` = `a`.`id_project`)))
