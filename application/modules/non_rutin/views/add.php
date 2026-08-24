@@ -1,5 +1,7 @@
 <?php
-$id_dept        = (!empty($header)) ? $header[0]->id_dept : '';
+$is_admin       = isset($is_admin) ? $is_admin : $this->auth->is_admin();
+$user_dept_id   = isset($user_dept_id) ? $user_dept_id : '';
+$id_dept        = (!empty($header)) ? $header[0]->id_dept : ((!$is_admin) ? $user_dept_id : '');
 $id_costcenter  = (!empty($header)) ? $header[0]->id_costcenter : '';
 $budget         = (!empty($header)) ? number_format($header[0]->budget) : '0';
 $sisa_budget    = (!empty($header)) ? number_format($header[0]->sisa_budget) : '0';
@@ -192,11 +194,13 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 				<label class="label-control col-sm-2"><b>Department <span class="text-red">*</span></b></label>
 				<div class="col-sm-4">
 					<select name="id_dept" id="id_dept" class="form-control input-md chosen_select" <?= $disabled; ?>>
-						<option value="0">Select An Department</option>
+						<?php if ($is_admin) { ?>
+							<option value="0">Select An Department</option>
+						<?php } ?>
 						<?php
 						foreach ($list_departement as $departement) {
 							$selected = '';
-							if ($departement->id == $id_dept) {
+							if ($departement->id == $id_dept || (!$is_admin && count($list_departement) == 1)) {
 								$selected = 'selected';
 							}
 							echo "<option value='" . $departement->id . "' " . $selected . ">" . strtoupper($departement->name . ' - ' . $departement->nm_company) . "</option>";
@@ -470,7 +474,7 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 					//minDate: 0
 				});
 				$('.chosen_select').chosen();
-				swal.close();
+				Swal.close();
 			},
 			error: function() {
 				Swal.fire({
@@ -804,13 +808,11 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 				}
 			},
 			error: function(result) {
-				swal({
+				Swal.fire({
 					title: 'Failed !',
-					text: 'Failed, item data has not been updated !',
-					type: 'error',
+					icon: 'error',
 					timer: 2000,
 					showCancelButton: false,
-					showConfirmButton: false,
 					allowOutsideClick: false
 				}).then((next) => {
 					location.reload();

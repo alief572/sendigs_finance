@@ -573,7 +573,10 @@ class Non_rutin_model extends BF_Model
             $view = "";
             $approve = '';
             if ($ENABLE_MANAGE) {
-                $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
+                $check_auth = $this->check_approval_authority($row['no_pengajuan'], $this->auth->user_id());
+                if (isset($check_auth['status']) && $check_auth['status']) {
+                    $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
+                }
             }
             $nestedData[]    = "<div align='left'>
 									" . $view . "
@@ -634,18 +637,25 @@ class Non_rutin_model extends BF_Model
         $is_director = (
             strpos($pos_name, 'director') !== false ||
             strpos($pos_name, 'direktur') !== false ||
+            strpos($pos_name, 'komisaris') !== false ||
             strpos($nm_lengkap, 'imanuel') !== false ||
             strpos($username, 'imanuel') !== false ||
-            $id_user == '7'
+            $id_user == '7' ||
+            $this->auth->is_admin()
         );
 
-        $is_staff = (strpos($pos_name, 'staff') !== false);
+        $is_staff = (
+            strpos($pos_name, 'staff') !== false ||
+            strpos($pos_name, 'magang') !== false
+        );
         $is_head = (
             strpos($pos_name, 'head') !== false ||
             strpos($pos_name, 'manager') !== false ||
             strpos($pos_name, 'leader') !== false ||
             strpos($pos_name, 'supervisor') !== false ||
-            strpos($pos_name, 'spv') !== false
+            strpos($pos_name, 'spv') !== false ||
+            strpos($pos_name, 'kepala') !== false ||
+            strpos($pos_name, 'penyelia') !== false
         );
 
         $user_info->is_director = $is_director;
@@ -664,7 +674,7 @@ class Non_rutin_model extends BF_Model
         }
 
         // Superadmin bypass
-        if ($approver_user_id == '7') {
+        if ($approver_user_id == '7' || $this->auth->is_admin()) {
             return ['status' => true];
         }
 
@@ -676,11 +686,21 @@ class Non_rutin_model extends BF_Model
             return ['status' => false, 'message' => 'Informasi akun approver tidak valid.'];
         }
 
+        // Approver yang merupakan Staff / Magang TIDAK BERHAK melakukan approval
+        if ($approver_info->is_staff || !$approver_info->is_above_staff) {
+            return ['status' => false, 'message' => 'Anda tidak memiliki wewenang untuk melakukan approval PR. Approval hanya dapat dilakukan oleh Supervisor / Head Department terkait atau Management.'];
+        }
+
+        // User tidak boleh menyetujui PR yang dibuat oleh dirinya sendiri
+        if ($approver_user_id == $creator_user_id) {
+            return ['status' => false, 'message' => 'Anda tidak dapat menyetujui pengajuan PR yang Anda buat sendiri.'];
+        }
+
         // Cek posisi pembuat
         $is_creator_staff = ($creator_info && $creator_info->is_staff);
 
         if ($is_creator_staff) {
-            // Pembuat adalah Staff -> Di-approve oleh Head Department / Division pembuat
+            // Pembuat adalah Staff -> Di-approve oleh Head Department / SPV departemen pembuat atau Direktur
             if ($approver_info->is_director) {
                 return ['status' => true];
             }
@@ -696,14 +716,8 @@ class Non_rutin_model extends BF_Model
                 strtolower(trim($approver_info->department_name)) === strtolower(trim($creator_info->department_name))
             );
 
-            $div_match = (
-                !empty($approver_info->division_id) &&
-                !empty($creator_info->division_id) &&
-                $approver_info->division_id === $creator_info->division_id
-            );
-
-            if (!$has_dept_match && !$dept_name_match && !$div_match) {
-                return ['status' => false, 'message' => 'Pengajuan ini dibuat oleh Staff departemen lain dan hanya dapat disetujui oleh Head Department terkait.'];
+            if (!$has_dept_match && !$dept_name_match) {
+                return ['status' => false, 'message' => 'Pengajuan ini dibuat oleh Staff departemen lain dan hanya dapat disetujui oleh Supervisor / Head Department terkait.'];
             }
 
             return ['status' => true];
@@ -721,6 +735,7 @@ class Non_rutin_model extends BF_Model
     {
         $current_user_id = $this->auth->user_id();
         $curr_user = $this->get_employee_hierarchy_info($current_user_id);
+        $is_admin = $this->auth->is_admin();
 
         $where = "";
         if ($tanda == 'approval') {
@@ -729,19 +744,21 @@ class Non_rutin_model extends BF_Model
 
         // Filter berdasarkan hierarki approver
         if ($curr_user) {
-            if ($curr_user->is_director || $current_user_id == '7') {
+            if ($curr_user->is_director || $current_user_id == '7' || $is_admin) {
                 // Direktur / Superadmin:
-                // Jika bukan superadmin 7, Direktur melihat PR yang dibuat oleh user dengan posisi > Staff (bukan Staff)
-                if ($current_user_id != '7') {
+                // Jika bukan superadmin, Direktur melihat PR yang dibuat oleh user dengan posisi > Staff (bukan Staff)
+                if ($current_user_id != '7' && !$is_admin) {
                     $where .= " AND (LOWER(creator_pos.name) NOT LIKE '%staff%' OR creator_pos.name IS NULL) ";
+                    $where .= " AND a.created_by != " . $this->db->escape($current_user_id) . " ";
                 }
-            } else {
-                // Head Department / Division:
-                // Hanya melihat PR yang dibuat oleh Staff di departemen / divisi yang sama
+            } elseif ($curr_user->is_head || $curr_user->is_above_staff) {
+                // Head Department / Supervisor:
+                // Hanya melihat PR yang dibuat oleh Staff di departemen yang sama (dan bukan buatannya sendiri)
                 $dept_filters = array_unique(array_filter([$curr_user->department_id, $curr_user->user_dept_id]));
                 $dept_quoted = array_map(function($d) { return $this->db->escape($d); }, $dept_filters);
 
-                $where .= " AND (LOWER(creator_pos.name) LIKE '%staff%') ";
+                $where .= " AND (LOWER(creator_pos.name) LIKE '%staff%' OR LOWER(creator_pos.name) LIKE '%magang%') ";
+                $where .= " AND a.created_by != " . $this->db->escape($current_user_id) . " ";
 
                 $dept_conditions = [];
                 if (!empty($dept_quoted)) {
@@ -751,13 +768,19 @@ class Non_rutin_model extends BF_Model
                 if (!empty($curr_user->department_name)) {
                     $dept_conditions[] = "LOWER(creator_dept.name) = " . $this->db->escape(strtolower(trim($curr_user->department_name)));
                 }
-                if (!empty($curr_user->division_id)) {
-                    $dept_conditions[] = "creator_emp.division_id = " . $this->db->escape($curr_user->division_id);
-                }
 
                 if (!empty($dept_conditions)) {
                     $where .= " AND (" . implode(" OR ", $dept_conditions) . ") ";
+                } else {
+                    $where .= " AND 1=0 ";
                 }
+            } else {
+                // User adalah Staff / Magang / bukan approver -> Tidak berhak melihat antrean approval
+                $where .= " AND 1=0 ";
+            }
+        } else {
+            if (!$is_admin && $current_user_id != '7') {
+                $where .= " AND 1=0 ";
             }
         }
 
@@ -1185,6 +1208,11 @@ class Non_rutin_model extends BF_Model
     {
         $is_admin = $this->auth->is_admin();
         $user_id = $this->auth->user_id();
+        $user_dept_id = '';
+        if (!$is_admin) {
+            $get_emp = $this->get_employee_hierarchy_info($user_id);
+            $user_dept_id = $get_emp->department_id ?? '';
+        }
 
         $this->db->select('a.*, c.nm_lengkap, d.name as nm_dept, e.name as nm_company');
         $this->db->select('GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon', FALSE);
@@ -1214,7 +1242,7 @@ class Non_rutin_model extends BF_Model
         $this->db->where('a.status_id', 1);
 
         if (!$is_admin) {
-            $this->db->where('a.created_by', $user_id); // penyesuaian berdasarkan department_id user
+            $this->db->where('a.id_dept', $user_dept_id);
         }
 
         if (!empty($where)) {
