@@ -157,17 +157,9 @@ class Dashboard_model extends BF_Model
         $this->db->group_by('a.id');
         $get_ttl_app_dept_finance = $this->db->get()->num_rows();
 
-        $this->db->select('a.id');
-        $this->db->from('rutin_non_planning_header a');
-        $this->db->join('rutin_non_planning_detail b', 'b.no_pengajuan = a.no_pengajuan');
-        $this->db->where('a.status_id', 1);
-        $this->db->where('a.no_pr', null);
-        $this->db->where('a.app_1_by <>', null);
-        $this->db->where('a.app_2_by <>', null);
-        $this->db->where('a.close_pr', null);
-        $this->db->where('a.sts_app', 'N');
-        $this->db->group_by('a.id');
-        $get_ttl_app_dept_management = $this->db->get()->num_rows();
+        $this->load->model('non_rutin/non_rutin_model');
+        $data_app_management = $this->non_rutin_model->query_data_json_non_rutin_approval_management('approval');
+        $get_ttl_app_dept_management = $data_app_management['totalData'] ?? 0;
 
         // $this->db->select('a.no_pengajuan');
         // $this->db->from('rutin_non_planning_header a');
