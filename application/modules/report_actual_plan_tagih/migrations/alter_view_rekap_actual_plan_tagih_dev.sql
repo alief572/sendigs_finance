@@ -20,7 +20,7 @@ SELECT
     COALESCE(`inv`.`total_invoice`, 0) AS `nominal_invoice`,
     COALESCE(`uninv`.`total_uninvoice`, 0) AS `nominal_uninvoice`,
     COALESCE(`mct`.`total_macet`, 0) AS `macet`,
-    COALESCE(`mt`.`thn`, YEAR(`a`.`input_date`)) AS `tahun_data`,
+    `mt`.`thn` AS `tahun_data`,
     COALESCE(SUM(CASE WHEN `mt`.`bln` = 1 THEN `mt`.`nominal` END), 0) AS `jan`,
     COALESCE(SUM(CASE WHEN `mt`.`bln` = 2 THEN `mt`.`nominal` END), 0) AS `feb`,
     COALESCE(SUM(CASE WHEN `mt`.`bln` = 3 THEN `mt`.`nominal` END), 0) AS `mar`,
@@ -34,6 +34,8 @@ SELECT
     COALESCE(SUM(CASE WHEN `mt`.`bln` = 11 THEN `mt`.`nominal` END), 0) AS `nov`,
     COALESCE(SUM(CASE WHEN `mt`.`bln` = 12 THEN `mt`.`nominal` END), 0) AS `dec`
 FROM `db_consultant_new`.`kons_tr_spk_penawaran` `a`
+JOIN `db_sendigs_ss`.`kons_tr_plan_tagih_header` `pth`
+    ON `pth`.`id_spk_penawaran` = `a`.`id_spk_penawaran`
 LEFT JOIN `db_consultant_new`.`kons_tr_penawaran` `b`
     ON `b`.`id_quotation` = `a`.`id_penawaran`
 LEFT JOIN `db_consultant_new`.`kons_tr_company` `c`

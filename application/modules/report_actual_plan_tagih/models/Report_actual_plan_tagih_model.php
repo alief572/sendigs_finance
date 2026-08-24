@@ -49,7 +49,11 @@ class Report_actual_plan_tagih_model extends Admin_Controller
         $this->db->where('a.tahun_data >=', 2000);
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
-        if (!empty($company)) $this->db->where('a.id_company', $company);
+        if (!empty($company)) {
+            $this->db->where('a.id_company', $company);
+        } else {
+            $this->db->where_in('a.id_company', [1, 3, 4, 6, 7]);
+        }
 
         $this->db->group_by('a.id_spk_penawaran');
         $this->db->order_by('a.id_spk_penawaran', 'DESC');
