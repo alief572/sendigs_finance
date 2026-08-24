@@ -123,19 +123,14 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 				[10, 20, 50, 100, 150]
 			],
 			"ajax": {
-				url: siteurl + active_controller + 'server_side_non_rutin_approval_management',
-				type: "post",
+				url: base_url + active_controller + '/server_side_non_rutin_approval_management',
 				data: function(d) {
 					d.tanda = tanda
 				},
 				cache: false,
-				error: function(xhr, error, code) {
-					console.error("DataTables Ajax Error: ", xhr.responseText);
+				error: function() {
 					$(".my-grid-error").html("");
-					$("#my-grid").append('<tbody class="my-grid-error"><tr><th colspan="11" class="text-center text-danger">No data found in the server</th></tr></tbody>');
-					$("#my-grid_processing").css("display", "none");
 				}
 			}
-		});
 	}
 </script>
