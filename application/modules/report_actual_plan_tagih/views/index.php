@@ -153,6 +153,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
     color: var(--text-muted);
     margin-bottom: 4px;
     display: block;
+    text-align: left !important;
   }
 
   .summary-card .value {
@@ -160,6 +161,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
     font-weight: 700;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
+    text-align: right !important;
   }
 
   .summary-note {
