@@ -454,16 +454,24 @@ class Non_rutin_model extends BF_Model
         $ENABLE_DELETE  = has_permission('Approval_PR_Depart_Management.Delete');
 
         $requestData    = $_REQUEST;
+        $tanda          = $requestData['tanda'] ?? 'approval_management';
+        $search_value   = (isset($requestData['search']) && is_array($requestData['search'])) ? ($requestData['search']['value'] ?? NULL) : ($requestData['search'] ?? NULL);
+        $order_col      = isset($requestData['order'][0]['column']) ? $requestData['order'][0]['column'] : NULL;
+        $order_dir      = isset($requestData['order'][0]['dir']) ? $requestData['order'][0]['dir'] : 'desc';
+        $start          = isset($requestData['start']) ? intval($requestData['start']) : 0;
+        $length         = isset($requestData['length']) ? intval($requestData['length']) : 10;
+        $draw           = isset($requestData['draw']) ? intval($requestData['draw']) : 1;
+
         $fetch            = $this->query_data_json_non_rutin_approval_management(
-            $requestData['tanda'],
-            $requestData['search']['value'],
-            $requestData['order'][0]['column'],
-            $requestData['order'][0]['dir'],
-            $requestData['start'],
-            $requestData['length']
+            $tanda,
+            $search_value,
+            $order_col,
+            $order_dir,
+            $start,
+            $length
         );
-        $totalData        = $fetch['totalData'];
-        $totalFiltered    = $fetch['totalFiltered'];
+        $totalData        = $fetch['totalData'] ?? 0;
+        $totalFiltered    = $fetch['totalFiltered'] ?? $totalData;
         $query            = $fetch['query'];
 
         $data    = array();
@@ -471,8 +479,8 @@ class Non_rutin_model extends BF_Model
         $urut2  = 0;
         foreach ($query->result_array() as $row) {
             $total_data     = $totalData;
-            $start_dari     = $requestData['start'];
-            $asc_desc       = $requestData['order'][0]['dir'];
+            $start_dari     = $start;
+            $asc_desc       = $order_dir;
             if ($asc_desc == 'asc') {
                 $nomor = $urut1 + $start_dari;
             }
@@ -480,19 +488,21 @@ class Non_rutin_model extends BF_Model
                 $nomor = ($total_data - $start_dari) - $urut2;
             }
 
-            $this->hris->select('a.id, a.name, b.name as nm_company');
-            $this->hris->from('departments a');
-            $this->hris->join('companies b', 'b.id = a.company_id', 'left');
-            $this->hris->where('a.id', $row['id_dept']);
-            $get_department = $this->hris->get()->row();
-
-            $tanda = $requestData['tanda'];
+            $get_department = null;
+            if (!empty($row['id_dept'])) {
+                $this->hris->select('a.id, a.name, b.name as nm_company');
+                $this->hris->from('departments a');
+                $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+                $this->hris->where('a.id', $row['id_dept']);
+                $get_department = $this->hris->get()->row();
+            }
+            $dept_name = (!empty($get_department)) ? strtoupper($get_department->name . ' - ' . $get_department->nm_company) : '-';
 
             $nestedData     = array();
             $nestedData[]    = "<div align='center'>" . $nomor . "</div>";
             $no_pr = (!empty($row['no_pr'])) ? $row['no_pr'] : "<span class='text-red' title='No Pengajuan'>" . $row['no_pengajuan'] . "</span>";
             $nestedData[]    = "<div align='left'>" . $no_pr . "</div>";
-            $nestedData[]    = "<div align='left'>" . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . "</div>";
+            $nestedData[]    = "<div align='left'>" . $dept_name . "</div>";
 
             $list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $row['no_pengajuan']))->result_array();
             $arr_nmbarang = array();
@@ -591,12 +601,14 @@ class Non_rutin_model extends BF_Model
         }
 
         $json_data = array(
-            "draw"                => intval($requestData['draw']),
+            "draw"                => intval($draw),
             "recordsTotal"        => intval($totalData),
             "recordsFiltered"     => intval($totalFiltered),
             "data"                => $data
         );
 
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json');
         echo json_encode($json_data);
     }
 
@@ -821,15 +833,22 @@ class Non_rutin_model extends BF_Model
         // exit;
 
         $data['totalData'] = $this->db->query($sql)->num_rows();
-        $data['totalFiltered'] = $this->db->query($sql)->num_rows();
         $columns_order_by = array(
             0 => 'nomor',
             1 => 'no_pr',
             2 => 'b.nama'
         );
 
-        $sql .= " ORDER BY a.tingkat_pr DESC, id DESC, " . $columns_order_by[$column_order] . " " . $column_dir . " ";
-        $sql .= " LIMIT " . $limit_start . " ," . $limit_length . " ";
+        if ($column_order !== NULL && isset($columns_order_by[$column_order])) {
+            $col_dir = (!empty($column_dir)) ? $column_dir : 'DESC';
+            $sql .= " ORDER BY a.tingkat_pr DESC, a.id DESC, " . $columns_order_by[$column_order] . " " . $col_dir . " ";
+        } else {
+            $sql .= " ORDER BY a.tingkat_pr DESC, a.id DESC ";
+        }
+
+        if ($limit_start !== NULL && $limit_length !== NULL) {
+            $sql .= " LIMIT " . $limit_start . " ," . $limit_length . " ";
+        }
 
         $data['query'] = $this->db->query($sql);
         return $data;
