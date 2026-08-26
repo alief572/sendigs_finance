@@ -156,12 +156,6 @@ $nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 				<td class="mid" width='33%'><?= $header[0]->nm_user; ?></td>
 				<td colspan="3"></td>
 			</tr>
-			<tr>
-				<td class="mid" width='15%'>COA</td>
-				<td class="mid" width='2%'>:</td>
-				<td class="mid" width='33%'><?= $header[0]->nm_coa; ?></td>
-				<td colspan="3"></td>
-			</tr>
 		</thead>
 	</table><br>
 	<table class="gridtable" width='100%' border='1' cellpadding='2'>
@@ -170,12 +164,13 @@ $nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 				<th class='text-center' style='width: 3%;'>#</th>
 				<th class='text-center'>Nama Barang/Jasa</th>
 				<th class='text-center' style='width: 15%;'>Spesifikasi</th>
-				<th class='text-center' style='width: 7%;'>Qty</th>
+				<th class='text-center' style='width: 6%;'>Qty</th>
 				<th class='text-center' style='width: 7%;'>Satuan</th>
+				<th class='text-center' style='width: 14%;'>COA</th>
 				<th class='text-center' style='width: 8%;'>Est Harga</th>
-				<th class='text-center' style='width: 8%;'>Est Total Harga</th>
+				<th class='text-center' style='width: 9%;'>Est Total Harga</th>
 				<th class='text-center' style='width: 10%;'>Tgl Dibutuhkan</th>
-				<th class='text-center' style='width: 15%;'>Keterangan</th>
+				<th class='text-center' style='width: 13%;'>Keterangan</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -188,12 +183,14 @@ $nm_department = $get_department->name . ' - ' . $get_department->nm_company;
 					$get_satuan		= $this->db->get_where('ms_satuan', array('id' => $valx['satuan']))->row();
 					$nm_satuan = (!empty($get_satuan)) ? strtoupper($get_satuan->code) : '';
 					$tgl_dibutuhkan = ($valx['tanggal'] <> '0000-00-00' and $valx['tanggal'] != NULL) ? date('d-M-Y', strtotime($valx['tanggal'])) : 'not set';
+					$display_coa = !empty($valx['nm_coa']) ? $valx['nm_coa'] : (!empty($valx['coa']) ? $valx['coa'] : '-');
 					echo "<tr class='header_" . $nomor . "'>";
 					echo "<td align='center'>" . $nomor . "</td>";
 					echo "<td align='left'>" . strtoupper($valx['nm_barang']) . "</td>";
 					echo "<td align='left'>" . strtoupper($valx['spec']) . "</td>";
 					echo "<td align='right'>" . number_format($valx['qty'], 2) . "</td>";
 					echo "<td align='center'>" . $nm_satuan . "</td>";
+					echo "<td align='left' style='font-size:9px;'>" . $display_coa . "</td>";
 					echo "<td align='right'>" . number_format($valx['harga']) . "</td>";
 					echo "<td align='right'>" . number_format($valx['qty'] * $valx['harga']) . "</td>";
 					echo "<td align='center'>" . $tgl_dibutuhkan . "</td>";

@@ -356,6 +356,11 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 		var to_doc_pr = $('.to_doc_pr').val();
 		var search_pr_non_po = $('#search_pr_non_po').val();
 
+		// Validasi: PR wajib dipilih
+		if (search_pr_non_po == '' || search_pr_non_po == null) {
+			errors = "No. PR wajib dipilih terlebih dahulu";
+		}
+
 		if ($("#filename").val() == "" && search_pr_non_po == '') {
 			if ($('#doc_file').get(0).files.length === 0) {
 				errors = "Dokumen 1 harus diupload";
