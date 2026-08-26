@@ -1,261 +1,317 @@
-<?php
-	$id 		= (!empty($listData[0]->id))?$listData[0]->id:'';
-	$nama 		= (!empty($listData[0]->nama))?$listData[0]->nama:'';
-	$spec 		= (!empty($listData[0]->spec))?$listData[0]->spec:'';
-	$status_app = (!empty($listData[0]->status_app))?$listData[0]->status_app:'';
-
-	$price_ref 				= (!empty($listData[0]->price_ref))?$listData[0]->price_ref:0;
-	$price_ref_high 		= (!empty($listData[0]->price_ref_high))?$listData[0]->price_ref_high:0;
-	$price_ref_new 			= (!empty($listData[0]->price_ref_new))?$listData[0]->price_ref_new:0;
-	$price_ref_high_new 	= (!empty($listData[0]->price_ref_high_new))?$listData[0]->price_ref_high_new:0;
-	$price_ref_use 			= (!empty($listData[0]->price_ref_use))?$listData[0]->price_ref_use:0;
-
-	$price_ref_usd 				= (!empty($listData[0]->price_ref_usd))?$listData[0]->price_ref_usd:0;
-	$price_ref_high_usd 		= (!empty($listData[0]->price_ref_high_usd))?$listData[0]->price_ref_high_usd:0;
-	$price_ref_new_usd 			= (!empty($listData[0]->price_ref_new_usd))?$listData[0]->price_ref_new_usd:0;
-	$price_ref_high_new_usd 	= (!empty($listData[0]->price_ref_high_new_usd))?$listData[0]->price_ref_high_new_usd:0;
-	$price_ref_use_usd 			= (!empty($listData[0]->price_ref_use_usd))?$listData[0]->price_ref_use_usd:0;
-
-	$price_ref_date 		= (!empty($listData[0]->price_ref_date))?$listData[0]->price_ref_date:0;
-	$price_ref_new_date 	= (!empty($listData[0]->price_ref_new_date))?$listData[0]->price_ref_new_date:0;
-	$price_ref_date_use 	= (!empty($listData[0]->price_ref_date_use))?$listData[0]->price_ref_date_use:0;
-
-	$price_ref_expired 		= (!empty($listData[0]->price_ref_expired))?$listData[0]->price_ref_expired:0;
-	$price_ref_new_expired 	= (!empty($listData[0]->price_ref_new_expired))?$listData[0]->price_ref_new_expired:0;
-	$price_ref_expired_use 	= (!empty($listData[0]->price_ref_expired_use))?$listData[0]->price_ref_expired_use:0;
-
-	$kurs 	= (!empty($listData[0]->kurs))?$listData[0]->kurs:0;
-
-	$tgl_expired 		= '';
-	$tgl_expired_new 	= '';
-	$tgl_expired_use 	= '';
-
-	if($price_ref_date != 0){
-		$tgl_expired 		= date('d-M-Y', strtotime('+'.$price_ref_expired.' month', strtotime($price_ref_date)));
+<link rel="stylesheet" href="<?= base_url('assets/plugins/select2/select2.min.css')?>">
+<style>
+	.table-custom th, .table-custom td {
+		vertical-align: middle !important;
+		padding: 6px 8px !important;
 	}
-	if($price_ref_new_date != 0){
-		$tgl_expired_new 	= date('d-M-Y', strtotime('+'.$price_ref_new_expired.' month', strtotime($price_ref_new_date)));
+	.nav-tabs-custom > .nav-tabs > li.active {
+		border-top-color: #00a65a;
 	}
-	if($price_ref_date_use != 0){
-		$tgl_expired_use 	= date('d-M-Y', strtotime('+'.$price_ref_expired_use.' month', strtotime($price_ref_date_use)));
+	.highlight-new {
+		background-color: #eafaf1 !important;
 	}
+</style>
 
-	$note 			= (!empty($listData[0]->note))?$listData[0]->note:'';
-
-	$expired1 = (!empty($listData[0]->price_ref_new_expired) AND $listData[0]->price_ref_new_expired == '1')?'selected':'';
-	$expired3 = (!empty($listData[0]->price_ref_new_expired) AND $listData[0]->price_ref_new_expired == '3')?'selected':'';
-	$expired6 = (!empty($listData[0]->price_ref_new_expired) AND $listData[0]->price_ref_new_expired == '6')?'selected':'';
-	$expired12 = (!empty($listData[0]->price_ref_new_expired) AND $listData[0]->price_ref_new_expired == '12')?'selected':'';
-
-?>
-<div class="box box-primary">
-	<div class="box-body">
-		<form id="data_form" method="post"  autocomplete="off" enctype='multiple/form-data'>
-			<div class="form-group row">
-				<div class="col-md-2">
-				<label for="">Stok Name</label>
-				</div>
-				<div class="col-md-10">
-				<input type="hidden" class="form-control" id="id" name="id" value='<?=$id;?>'>
-				<input type="text" class="form-control" id="nama" required name="nama" placeholder="Stok Name" value='<?=$nama;?>' readonly>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-				<label for="">Spesification</label>
-				</div>
-				<div class="col-md-10">
-				<input type="text" class="form-control" id="spec" required name="spec" placeholder="Spesification" value='<?=$spec;?>' readonly>
-				</div>
-			</div>
-			<hr>
-			<div class="form-group row">
-				<div class="col-md-2">
-					
-				</div>
-				<div class="col-md-5">
-					<span class='text-red text-bold'>Lower Price</span>
-				</div>
-				<div class="col-md-5">
-					<span class='text-green text-bold'>Higher Price</span>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Before</label>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref" name="price_ref" value='<?=$price_ref;?>' readonly>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_usd" name="price_ref_usd" value='<?=$price_ref_usd;?>' readonly>
-					</div>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref_high" name="price_ref_high" value='<?=$price_ref_high;?>' readonly>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_high_usd" name="price_ref_high_usd" value='<?=$price_ref_high_usd;?>' readonly>
-					</div>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>After</label>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref_new" name="price_ref_new" value='<?=$price_ref_new;?>' readonly>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_new_usd" name="price_ref_new_usd" value='<?=$price_ref_new_usd;?>' readonly>
-					</div>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref_high_new" name="price_ref_high_new" value='<?=$price_ref_high_new;?>' readonly>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_high_new_usd" name="price_ref_high_new_usd" value='<?=$price_ref_high_new_usd;?>' readonly>
-					</div>
-				</div>
-			</div>
-			<hr>
-			<div class="form-group row">
-				<div class="col-md-2">
-					
-				</div>
-				<div class="col-md-5">
-					<span class='text-red text-bold'>Before</span>
-				</div>
-				<div class="col-md-5">
-					<span class='text-green text-bold'>After</span>
-				</div>
-			</div>
-			<div class="form-group row" hidden>
-				<div class="col-md-2">
-					<label>Expired Purchase</label>
-				</div>
-				<div class="col-md-5">
-					<input type="text" class="form-control" id="tgl_expired" name="tgl_expired" value='<?=$tgl_expired;?>' placeholder="Expired Purchase Before" readonly>
-				</div>
-				<div class="col-md-5">
-					<input type="text" class="form-control" id="tgl_expired_new" name="tgl_expired_new" value='<?=$tgl_expired_new;?>' placeholder="Expired Purchase After" readonly>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Price Reference</label>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref_use" name="price_ref_use" value='<?=$price_ref_use;?>' readonly>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_use_usd" name="price_ref_use_usd" value='<?=$price_ref_use_usd;?>' readonly>
-					</div>
-				</div>
-				<div class="col-md-5">
-					<div class='input-group'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">IDR</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric" id="price_ref_use_after" required name="price_ref_use_after" value='<?=$price_ref_high_new;?>'>
-						<span class="input-group-btn">
-							<button type="button" class="btn btn-default btn-flat">USD</button>
-						</span>
-						<input type="text" class="form-control text-center autoNumeric6" id="price_ref_use_after_usd" required name="price_ref_use_after_usd" value='<?=$price_ref_high_new_usd;?>'>
-					</div>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Expired Reference</label>
-				</div>
-				<div class="col-md-5">
-					<input type="text" class="form-control" id="tgl_expired_use" name="tgl_expired_use" value='<?=$tgl_expired_use;?>' placeholder="Expired Price Reference Before" readonly>
-				</div>
-				<div class="col-md-5">
-					<select id="price_ref_expired_use_after" name="price_ref_expired_use_after" class="form-control input-md chosen-select" required>
-						<option value="0">Select An Expired</option>
-						<option value="1" <?=$expired1;?>>1 Bulan</option>
-						<option value="3" <?=$expired3;?>>3 Bulan</option>
-						<option value="6" <?=$expired6;?>>Semester</option>
-						<option value="12" <?=$expired12;?>>Tahunan</option>
-					</select>
-				</div>
-			</div>
-			<hr>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Note</label>
-				</div>
-				<div class="col-md-5">
-					<textarea class="form-control" id="note" name="note" row='3' placeholder="Note" readonly><?=$note;?></textarea>
-				</div>
-				<div class="col-md-2">
-					<label>Kurs</label>
-				</div>
-				<div class="col-md-3">
-				<input type="text" class="form-control text-center autoNumeric" id="kurs" required name="kurs" value='<?=$kurs;?>' readonly>
-				</div>
-			</div>
-			<hr>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Action</label>
-				</div>
-				<div class="col-md-10">
-					<select id="action_app" name="action_app" class="form-control input-md chosen-select" required>
-						<option value="1">Approve</option>
-						<option value="0">Reject</option>
-					</select>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2">
-					<label>Reason</label>
-				</div>
-				<div class="col-md-10">
-					<textarea class="form-control" id="status_reject" name="status_reject" row='3' placeholder="Reason"></textarea>
-				</div>
-			</div>
-			<div class="form-group row">
-				<div class="col-md-2"></div>
-				<div class="col-md-10">
-				<button type="submit" class="btn btn-primary" name="save" id="save"><i class="fa fa-save"></i> Save</button>
-				</div>
-			</div>
-		</form>
+<div class="box box-success">
+	<div class="box-header with-border">
+		<h3 class="box-title"><i class="fa fa-check-square-o"></i> Review & Approval Pengajuan Price Reference (Barang Stok)</h3>
+		<div class="box-tools pull-right">
+			<a href="<?= base_url('price_ref_barang_stok') ?>" class="btn btn-sm btn-default"><i class="fa fa-arrow-left"></i> Kembali</a>
+		</div>
 	</div>
+	
+	<form id="form_approval" method="post" autocomplete="off">
+		<input type="hidden" name="no_doc" id="no_doc" value="<?= $no_doc ?>">
+
+		<div class="box-body">
+			<!-- Header Card Info -->
+			<div class="panel panel-default">
+				<div class="panel-heading" style="background:#eafaf1; font-weight:bold;"><i class="fa fa-info-circle"></i> Informasi Pengajuan Dokumen</div>
+				<div class="panel-body">
+					<div class="row">
+						<div class="col-md-3">
+							<div class="form-group">
+								<label>No. Dokumen Pengajuan</label>
+								<input type="text" class="form-control" value="<?= $no_doc ?>" readonly style="font-weight:bold; background:#f9f9f9;">
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group">
+								<label>Tanggal Pengajuan</label>
+								<input type="text" class="form-control" value="<?= date('d-M-Y', strtotime($header->tanggal_doc)) ?>" readonly>
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group">
+								<label>Kurs Saat Ini (USD -> IDR)</label>
+								<input type="text" class="form-control text-right" id="kurs" value="<?= number_format($header->kurs, 2) ?>" readonly>
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group">
+								<label>Diajukan Oleh</label>
+								<input type="text" class="form-control" value="<?= $header->pembuat ? $header->pembuat : '-' ?>" readonly>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Catatan Pengaju</label>
+								<textarea class="form-control" rows="2" readonly><?= htmlspecialchars($header->note ?? '-') ?></textarea>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>File Evidence Terlampir</label>
+								<div>
+									<?php if(!empty($files)): ?>
+										<?php foreach($files as $f): ?>
+											<a href="<?= base_url($f->file_path) ?>" target="_blank" class="btn btn-sm btn-primary" style="margin-right:5px; margin-bottom:5px;">
+												<i class="fa fa-download"></i> <?= htmlspecialchars($f->file_name) ?>
+											</a>
+										<?php endforeach; ?>
+									<?php else: ?>
+										<span class="text-muted">- Tidak ada file bukti terlampir -</span>
+									<?php endif; ?>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Nav-Tabs Kategori -->
+			<div class="nav-tabs-custom">
+				<ul class="nav nav-tabs">
+					<?php 
+					$tab_idx = 0;
+					foreach($details_by_cat as $cat_name => $items): 
+						$is_active = ($tab_idx == 0) ? 'active' : '';
+						$tab_idx++;
+					?>
+						<li class="<?= $is_active ?>">
+							<a href="#tab_review_<?= md5($cat_name) ?>" data-toggle="tab">
+								<b><?= strtoupper($cat_name) ?></b> 
+								<span class="badge bg-green" style="margin-left:4px;"><?= count($items) ?></span>
+							</a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+
+				<div class="tab-content" style="padding: 15px 0;">
+					<?php 
+					$tab_idx = 0;
+					foreach($details_by_cat as $cat_name => $items): 
+						$is_active = ($tab_idx == 0) ? 'active' : '';
+						$tab_idx++;
+					?>
+						<div class="tab-pane <?= $is_active ?>" id="tab_review_<?= md5($cat_name) ?>">
+							<div class="table-responsive">
+								<table class="table table-bordered table-striped table-hover table-custom" width="100%">
+									<thead>
+										<tr class="bg-green">
+											<th rowspan="2" class="text-center" width="3%">#</th>
+											<th rowspan="2" class="text-center" width="9%">Kode Stok</th>
+											<th rowspan="2" class="text-center" width="18%">Nama Barang & Spesifikasi</th>
+											<th rowspan="2" class="text-center" width="5%">Satuan</th>
+											<th colspan="2" class="text-center bg-gray-active" width="16%">Harga Lama (Before)</th>
+											<th colspan="2" class="text-center" style="background:#1e824c; color:#fff;" width="20%">Pengajuan Lower Price</th>
+											<th colspan="2" class="text-center" style="background:#145a32; color:#fff;" width="20%">Pengajuan Higher Price</th>
+											<th rowspan="2" class="text-center" width="9%">Expired</th>
+										</tr>
+										<tr class="bg-green">
+											<!-- Before -->
+											<th class="text-center bg-gray">Lower (IDR)</th>
+											<th class="text-center bg-gray">Higher (IDR)</th>
+											<!-- New Lower -->
+											<th class="text-center" style="background:#27ae60; color:#fff;">IDR</th>
+											<th class="text-center" style="background:#27ae60; color:#fff;">USD</th>
+											<!-- New Higher -->
+											<th class="text-center" style="background:#1e824c; color:#fff;">IDR</th>
+											<th class="text-center" style="background:#1e824c; color:#fff;">USD</th>
+										</tr>
+									</thead>
+									<tbody>
+										<?php 
+										$no = 0;
+										foreach($items as $d): 
+											$no++;
+											$id_item = $d->id_barang;
+										?>
+											<tr class="highlight-new">
+												<td class="text-center">
+													<?= $no ?>
+													<input type="hidden" name="items[<?= $id_item ?>][id_barang]" value="<?= $id_item ?>">
+												</td>
+												<td><b><?= strtoupper($d->id_stock ?? '-') ?></b></td>
+												<td>
+													<b><?= strtoupper($d->stock_name) ?></b>
+													<?php if(!empty($d->spec)): ?>
+														<br><small class="text-muted"><?= $d->spec ?></small>
+													<?php endif; ?>
+												</td>
+												<td class="text-center"><?= $d->nm_satuan ?? '-' ?></td>
+												
+												<!-- Before IDR -->
+												<td class="text-right bg-gray"><?= number_format($d->price_ref_before, 0) ?></td>
+												<td class="text-right bg-gray"><?= number_format($d->price_ref_high_before, 0) ?></td>
+
+												<!-- New Lower -->
+												<td class="text-right text-bold text-success"><?= number_format($d->price_ref_new, 0) ?></td>
+												<td class="text-right text-bold text-success">$ <?= number_format($d->price_ref_new_usd, 4) ?></td>
+
+												<!-- New Higher -->
+												<td class="text-right text-bold text-success"><?= number_format($d->price_ref_high_new, 0) ?></td>
+												<td class="text-right text-bold text-success">$ <?= number_format($d->price_ref_high_new_usd, 4) ?></td>
+
+												<!-- Expired -->
+												<td class="text-center">
+													<?php
+														$exp_text = $d->expired . ' Bulan';
+														if ($d->expired == 6) $exp_text = 'Semester';
+														if ($d->expired == 12) $exp_text = 'Tahunan';
+														echo $exp_text;
+													?>
+												</td>
+											</tr>
+										<?php endforeach; ?>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+
+			<!-- Decision Box -->
+			<div class="panel panel-default" style="margin-top: 15px; border-top: 3px solid #00a65a;">
+				<div class="panel-heading" style="font-weight:bold;"><i class="fa fa-gavel"></i> Keputusan Approval</div>
+				<div class="panel-body">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label>Alasan Penolakan / Catatan Approval <span class="text-danger" id="lbl-reason-req" style="display:none;">* Wajib diisi jika Reject</span></label>
+								<textarea class="form-control" name="reason" id="reason" rows="3" placeholder="Masukkan alasan penolakan jika menolak, atau catatan approval jika diperlukan..."></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="panel-footer text-right">
+					<a href="<?= base_url('price_ref_barang_stok') ?>" class="btn btn-default btn-lg pull-left"><i class="fa fa-arrow-left"></i> Batal</a>
+					<button type="button" class="btn btn-danger btn-lg" id="btn-do-reject" style="margin-right:10px;"><i class="fa fa-times"></i> Reject Pengajuan</button>
+					<button type="button" class="btn btn-success btn-lg" id="btn-do-approve"><i class="fa fa-check"></i> Approve Pengajuan</button>
+				</div>
+			</div>
+		</div>
+	</form>
 </div>
 
-<script>
-	$(document).ready(function(){
-    	$('.chosen-select').select2({width: '100%'});
-		$('.autoNumeric').autoNumeric('init', {mDec: '0', aPad: false});
-		$(".autoNumeric6").autoNumeric('init', {mDec: '6', aPad: false});
-  	});
+<script src="<?= base_url('assets/plugins/select2/select2.full.min.js')?>"></script>
+
+<script type="text/javascript">
+	$(document).on('click', '#btn-do-approve', function() {
+		var no_doc = $('#no_doc').val();
+		var reason = $('#reason').val();
+
+		swal({
+			title: "Konfirmasi Approve",
+			text: "Apakah Anda yakin ingin menyetujui pengajuan harga pada dokumen " + no_doc + "? Harga master barang akan langsung diperbarui.",
+			type: "warning",
+			showCancelButton: true,
+			confirmButtonColor: "#00a65a",
+			confirmButtonText: "Ya, Approve!",
+			cancelButtonText: "Batal",
+			closeOnConfirm: false
+		}, function(isConfirm) {
+			if (isConfirm) {
+				$('#btn-do-approve').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
+				
+				$.ajax({
+					url: siteurl + 'price_ref_barang_stok/process_approval',
+					type: 'POST',
+					dataType: 'json',
+					data: {
+						no_doc: no_doc,
+						action: 'approve',
+						reason: reason
+					},
+					success: function(res) {
+						$('#btn-do-approve').prop('disabled', false).html('<i class="fa fa-check"></i> Approve Pengajuan');
+						if (res.status == 1) {
+							swal({
+								title: "Disetujui!",
+								text: res.pesan,
+								type: "success"
+							}, function() {
+								window.location.href = siteurl + 'price_ref_barang_stok';
+							});
+						} else {
+							swal("Gagal!", res.pesan, "error");
+						}
+					},
+					error: function() {
+						$('#btn-do-approve').prop('disabled', false).html('<i class="fa fa-check"></i> Approve Pengajuan');
+						swal("Error!", "Terjadi kesalahan pada server saat memproses approval.", "error");
+					}
+				});
+			}
+		});
+	});
+
+	$(document).on('click', '#btn-do-reject', function() {
+		var no_doc = $('#no_doc').val();
+		var reason = $('#reason').val();
+
+		if (!reason || reason.trim() === '') {
+			$('#lbl-reason-req').show();
+			$('#reason').focus();
+			swal("Peringatan!", "Harap masukkan alasan penolakan pada kolom catatan/alasan!", "warning");
+			return;
+		}
+
+		swal({
+			title: "Konfirmasi Reject",
+			text: "Apakah Anda yakin ingin menolak pengajuan harga pada dokumen " + no_doc + "?",
+			type: "warning",
+			showCancelButton: true,
+			confirmButtonColor: "#dd4b39",
+			confirmButtonText: "Ya, Reject!",
+			cancelButtonText: "Batal",
+			closeOnConfirm: false
+		}, function(isConfirm) {
+			if (isConfirm) {
+				$('#btn-do-reject').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
+				
+				$.ajax({
+					url: siteurl + 'price_ref_barang_stok/process_approval',
+					type: 'POST',
+					dataType: 'json',
+					data: {
+						no_doc: no_doc,
+						action: 'reject',
+						reason: reason
+					},
+					success: function(res) {
+						$('#btn-do-reject').prop('disabled', false).html('<i class="fa fa-times"></i> Reject Pengajuan');
+						if (res.status == 1) {
+							swal({
+								title: "Ditolak!",
+								text: res.pesan,
+								type: "success"
+							}, function() {
+								window.location.href = siteurl + 'price_ref_barang_stok';
+							});
+						} else {
+							swal("Gagal!", res.pesan, "error");
+						}
+					},
+					error: function() {
+						$('#btn-do-reject').prop('disabled', false).html('<i class="fa fa-times"></i> Reject Pengajuan');
+						swal("Error!", "Terjadi kesalahan pada server saat memproses penolakan.", "error");
+					}
+				});
+			}
+		});
+	});
 </script>
