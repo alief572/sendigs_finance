@@ -691,128 +691,30 @@ class Non_rutin_model extends BF_Model
         }
 
         $creator_user_id = $header->created_by;
-        $creator_info = $this->get_employee_hierarchy_info($creator_user_id);
-        $approver_info = $this->get_employee_hierarchy_info($approver_user_id);
-
-        if (!$approver_info) {
-            return ['status' => false, 'message' => 'Informasi akun approver tidak valid.'];
-        }
-
-        // Approver yang merupakan Staff / Magang TIDAK BERHAK melakukan approval
-        if ($approver_info->is_staff || !$approver_info->is_above_staff) {
-            return ['status' => false, 'message' => 'Anda tidak memiliki wewenang untuk melakukan approval PR. Approval hanya dapat dilakukan oleh Supervisor / Head Department terkait atau Management.'];
-        }
 
         // User tidak boleh menyetujui PR yang dibuat oleh dirinya sendiri
         if ($approver_user_id == $creator_user_id) {
             return ['status' => false, 'message' => 'Anda tidak dapat menyetujui pengajuan PR yang Anda buat sendiri.'];
         }
 
-        // Cek posisi pembuat
-        $is_creator_staff = ($creator_info && $creator_info->is_staff);
-
-        if ($is_creator_staff) {
-            // Pembuat adalah Staff -> Di-approve oleh Head Department / SPV departemen pembuat atau Direktur
-            if ($approver_info->is_director) {
-                return ['status' => true];
-            }
-
-            $approver_depts = array_unique(array_filter([$approver_info->department_id, $approver_info->user_dept_id]));
-            $creator_depts = array_unique(array_filter([$header->id_dept, $creator_info->department_id ?? null, $creator_info->user_dept_id ?? null]));
-
-            $has_dept_match = !empty(array_intersect($approver_depts, $creator_depts));
-
-            $dept_name_match = (
-                !empty($approver_info->department_name) &&
-                !empty($creator_info->department_name) &&
-                strtolower(trim($approver_info->department_name)) === strtolower(trim($creator_info->department_name))
-            );
-
-            if (!$has_dept_match && !$dept_name_match) {
-                return ['status' => false, 'message' => 'Pengajuan ini dibuat oleh Staff departemen lain dan hanya dapat disetujui oleh Supervisor / Head Department terkait.'];
-            }
-
-            return ['status' => true];
-        } else {
-            // Pembuat adalah > Staff (Head / Manager / SPV / dll.) -> Di-approve oleh Direktur (Imanuel Iman)
-            if (!$approver_info->is_director) {
-                return ['status' => false, 'message' => 'Pengajuan ini dibuat oleh posisi di atas Staff sehingga harus disetujui oleh Direktur (Imanuel Iman).'];
-            }
-
-            return ['status' => true];
-        }
+        return ['status' => true];
     }
 
     public function query_data_json_non_rutin_approval_management($tanda, $like_value = NULL, $column_order = NULL, $column_dir = NULL, $limit_start = NULL, $limit_length = NULL)
     {
-        $current_user_id = $this->auth->user_id();
-        $curr_user = $this->get_employee_hierarchy_info($current_user_id);
-        $is_admin = $this->auth->is_admin();
-
         $where = "";
         if ($tanda == 'approval') {
             $where .= " AND a.sts_app = 'N' ";
         }
 
-        // Filter berdasarkan hierarki approver
-        if ($curr_user) {
-            if ($curr_user->is_director || $current_user_id == '7' || $is_admin) {
-                // Direktur / Superadmin:
-                // Jika bukan superadmin, Direktur melihat PR yang dibuat oleh user dengan posisi > Staff (bukan Staff)
-                if ($current_user_id != '7' && !$is_admin) {
-                    $where .= " AND (LOWER(creator_pos.name) NOT LIKE '%staff%' OR creator_pos.name IS NULL) ";
-                    $where .= " AND a.created_by != " . $this->db->escape($current_user_id) . " ";
-                }
-            } elseif ($curr_user->is_head || $curr_user->is_above_staff) {
-                // Head Department / Supervisor:
-                // Hanya melihat PR yang dibuat oleh Staff di departemen yang sama (dan bukan buatannya sendiri)
-                $dept_filters = array_unique(array_filter([$curr_user->department_id, $curr_user->user_dept_id]));
-                $dept_quoted = array_map(function($d) { return $this->db->escape($d); }, $dept_filters);
-
-                $where .= " AND (LOWER(creator_pos.name) LIKE '%staff%' OR LOWER(creator_pos.name) LIKE '%magang%') ";
-                $where .= " AND a.created_by != " . $this->db->escape($current_user_id) . " ";
-
-                $dept_conditions = [];
-                if (!empty($dept_quoted)) {
-                    $dept_conditions[] = "a.id_dept IN (" . implode(',', $dept_quoted) . ")";
-                    $dept_conditions[] = "creator_emp.department_id IN (" . implode(',', $dept_quoted) . ")";
-                }
-                if (!empty($curr_user->department_name)) {
-                    $dept_conditions[] = "LOWER(creator_dept.name) = " . $this->db->escape(strtolower(trim($curr_user->department_name)));
-                }
-
-                if (!empty($dept_conditions)) {
-                    $where .= " AND (" . implode(" OR ", $dept_conditions) . ") ";
-                } else {
-                    $where .= " AND 1=0 ";
-                }
-            } else {
-                // User adalah Staff / Magang / bukan approver -> Tidak berhak melihat antrean approval
-                $where .= " AND 1=0 ";
-            }
-        } else {
-            if (!$is_admin && $current_user_id != '7') {
-                $where .= " AND 1=0 ";
-            }
-        }
-
         $sql = "
 			SELECT
 				(@row:=@row+1) AS nomor,
-				a.*, c.nm_lengkap,
-                creator_pos.name as creator_position_name,
-                creator_emp.department_id as creator_dept_id,
-                creator_emp.division_id as creator_div_id
+				a.*, c.nm_lengkap
 			FROM
 				rutin_non_planning_detail z
 				LEFT JOIN rutin_non_planning_header a ON z.no_pengajuan=a.no_pengajuan
                 LEFT JOIN users c ON c.id_user = a.created_by
-                LEFT JOIN " . HRIS . ".employees creator_emp ON (
-                    (c.employee_id IS NOT NULL AND c.employee_id != '' AND creator_emp.id = c.employee_id)
-                    OR ((c.employee_id IS NULL OR c.employee_id = '') AND (creator_emp.name LIKE CONCAT('%', c.nm_lengkap, '%') OR creator_emp.name LIKE CONCAT('%', c.username, '%')))
-                )
-                LEFT JOIN " . HRIS . ".positions creator_pos ON creator_pos.id = creator_emp.position_id
-                LEFT JOIN " . HRIS . ".departments creator_dept ON creator_dept.id = COALESCE(creator_emp.department_id, a.id_dept)
 		    WHERE 1=1 " . $where . " AND 
             a.status_id = 1 AND
             a.rejected IS NULL AND 
