@@ -215,6 +215,15 @@ class Expense extends Admin_Controller
 
 			if (file_exists($doc_pr)) {
 				copy('' . $doc_pr . '', '' . $to_doc_pr . '');
+			} else {
+				$decoded_files = json_decode($file_name, true);
+				if (is_array($decoded_files)) {
+					foreach ($decoded_files as $df) {
+						if (file_exists('assets/pr/' . $df)) {
+							copy('assets/pr/' . $df, 'assets/expense/' . $df);
+						}
+					}
+				}
 			}
 		}
 
@@ -3480,9 +3489,17 @@ class Expense extends Admin_Controller
 		$to_doc_file = '';
 		if (!empty($get_pr_dept)) {
 			if (!empty($get_pr_dept->document)) {
-				$doc_file = 'assets/pr/' . $get_pr_dept->document;
-				$to_doc_file = 'assets/expense/' . $get_pr_dept->document;
-				$file_name = $get_pr_dept->document;
+				$decoded = json_decode($get_pr_dept->document, true);
+				if (is_array($decoded)) {
+					$first_file = $decoded[0] ?? '';
+					$doc_file = !empty($first_file) ? 'assets/pr/' . $first_file : '';
+					$to_doc_file = !empty($first_file) ? 'assets/expense/' . $first_file : '';
+					$file_name = $get_pr_dept->document;
+				} else {
+					$doc_file = 'assets/pr/' . $get_pr_dept->document;
+					$to_doc_file = 'assets/expense/' . $get_pr_dept->document;
+					$file_name = $get_pr_dept->document;
+				}
 			}
 		}
 		if (!empty($get_pr_asset)) {

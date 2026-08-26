@@ -44,6 +44,11 @@ class Non_rutin extends Admin_Controller
 		// $this->load->library(array('Mpdf'));
 
 		$this->hris = $this->load->database('hris', true);
+
+		// Pastikan kolom coa tersedia di rutin_non_planning_detail
+		if (!$this->db->field_exists('coa', 'rutin_non_planning_detail')) {
+			$this->db->query("ALTER TABLE rutin_non_planning_detail ADD COLUMN coa VARCHAR(50) NULL AFTER satuan");
+		}
 	}
 
 	//===============================================================================================================================
@@ -131,7 +136,6 @@ class Non_rutin extends Admin_Controller
 			$tanda        	= $data['tanda'];
 			$approve        = $data['approve'];
 			$tingkat_approval = $data['tingkat_approval'];
-			$coa = $data['coa'];
 			$code_planx  	= $data['id'];
 			if (empty($code_planx)) :
 				$code_planx = '';
@@ -145,12 +149,8 @@ class Non_rutin extends Admin_Controller
 					$id_dept = $get_emp->department_id;
 				}
 			}
-			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
-			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
-			// $budget 		= str_replace(',', '', $data['budget']);
-			// $sisa_budget 	= str_replace(',', '', $data['sisa_budget']);
 
-			$detail 		= $data['detail'];
+			$detail 		= $data['detail'] ?? [];
 
 			//approve
 			$sts_app        = (!empty($data['sts_app'])) ? $data['sts_app'] : '';
@@ -167,12 +167,20 @@ class Non_rutin extends Admin_Controller
 				}
 
 				foreach ($detail as $idx => $item) {
-					$qty_check   = str_replace(',', '', $item['qty']);
-					$harga_check = str_replace(',', '', $item['harga']);
+					$qty_check   = str_replace(',', '', $item['qty'] ?? 0);
+					$harga_check = str_replace(',', '', $item['harga'] ?? 0);
 
 					if (empty($item['nm_barang']) || trim($item['nm_barang']) == '') {
 						echo json_encode(array(
 							'pesan'  => 'Nama Barang/Jasa pada item ke-' . $idx . ' harus diisi.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($item['coa']) || trim($item['coa']) == '') {
+						echo json_encode(array(
+							'pesan'  => 'COA pada item ke-' . $idx . ' wajib dipilih.',
 							'status' => 0
 						));
 						return;
@@ -198,8 +206,6 @@ class Non_rutin extends Admin_Controller
 
 			$ym = date('ym');
 
-
-			// if ($tingkat_approval == '3') :
 			if (empty($code_plan)) {
 				$srcMtr			= "SELECT MAX(no_pengajuan) as maxP FROM rutin_non_planning_header WHERE no_pengajuan LIKE 'PLN" . $ym . "%' ";
 				$numrowMtr		= $this->db->query($srcMtr)->num_rows();
@@ -210,8 +216,6 @@ class Non_rutin extends Admin_Controller
 				$urut2			= sprintf('%03s', $urutan2);
 				$code_plan		= "PLN" . $ym . $urut2;
 			}
-			// endif;
-
 
 			$SUM_QTY = 0;
 			$SUM_HARGA = 0;
@@ -229,6 +233,7 @@ class Non_rutin extends Admin_Controller
 						$ArrDetail[$val]['nm_barang'] 		= strtolower($valx['nm_barang']);
 						$ArrDetail[$val]['spec'] 			= strtolower($valx['spec']);
 						$ArrDetail[$val]['satuan'] 			= $valx['satuan'];
+						$ArrDetail[$val]['coa'] 			= !empty($valx['coa']) ? $valx['coa'] : NULL;
 						$ArrDetail[$val]['qty'] 			= $qty;
 						$ArrDetail[$val]['harga'] 			= $harga;
 						$ArrDetail[$val]['keterangan'] 		= strtolower($valx['keterangan']);
@@ -239,44 +244,80 @@ class Non_rutin extends Admin_Controller
 				}
 			}
 
-			//UPLOAD DOCUMENT
-			$file_name = NULL;
-			if (!empty($_FILES["upload_spk"]["name"])) {
+			//UPLOAD DOCUMENT (MULTIPLE FILES)
+			$arr_files = array();
 
-				$config['upload_path'] = './assets/pr/';
-				$config['allowed_types'] = '*';
-				$config['remove_spaces'] = TRUE;
-				$config['encrypt_name'] = TRUE;
-				$file_name = '';
-				if (!empty($_FILES['upload_spk']['name'])) {
-					$_FILES['file']['name'] = $_FILES['upload_spk']['name'];
-					$_FILES['file']['type'] = $_FILES['upload_spk']['type'];
-					$_FILES['file']['tmp_name'] = $_FILES['upload_spk']['tmp_name'];
-					$_FILES['file']['error'] = $_FILES['upload_spk']['error'];
-					$_FILES['file']['size'] = $_FILES['upload_spk']['size'];
-					$this->load->library('upload', $config);
-					$this->upload->initialize($config);
-					if ($this->upload->do_upload('file')) {
-						$uploadData = $this->upload->data();
-						$file_name = $uploadData['file_name'];
-					} else {
-						print_r($this->upload->display_errors());
-						exit;
+			// 1. Dokumen existing yang dipertahankan saat edit
+			if (!empty($data['existing_docs']) && is_array($data['existing_docs'])) {
+				foreach ($data['existing_docs'] as $old_file) {
+					if (!empty($old_file)) {
+						$arr_files[] = $old_file;
 					}
 				}
-				// $target_dir     = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
-				// $target_dir_u   = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
-				// $name_file      = 'lampiran_pr_dept_' . date('Ymdhis');
-				// $target_file    = $target_dir . basename($_FILES["upload_spk"]["name"]);
-				// $name_file_ori  = basename($_FILES["upload_spk"]["name"]);
-				// $imageFileType  = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-				// $nama_upload    = $target_dir_u . $name_file . "." . $imageFileType;
-				// $file_name    	= $name_file . "." . $imageFileType;
-
-				// if (!empty($_FILES["upload_spk"]["tmp_name"])) {
-				// 	move_uploaded_file($_FILES["upload_spk"]["tmp_name"], $nama_upload);
-				// }
 			}
+
+			// 2. Upload file baru jika ada
+			if (!empty($_FILES["upload_spk"]["name"])) {
+				$uploadDirectory = './assets/pr/';
+				if (!is_dir($uploadDirectory)) {
+					mkdir($uploadDirectory, 0777, true);
+				}
+
+				$config['upload_path']   = $uploadDirectory;
+				$config['allowed_types'] = 'jpg|jpeg|png|pdf|xls|xlsx';
+				$config['max_size']      = 5120; // maks 5MB
+				$config['remove_spaces'] = TRUE;
+				$config['encrypt_name']  = TRUE;
+				$this->load->library('upload', $config);
+
+				if (is_array($_FILES['upload_spk']['name'])) {
+					foreach ($_FILES['upload_spk']['name'] as $idx => $name) {
+						if (!empty($name)) {
+							$_FILES['file_single']['name']     = $_FILES['upload_spk']['name'][$idx];
+							$_FILES['file_single']['type']     = $_FILES['upload_spk']['type'][$idx];
+							$_FILES['file_single']['tmp_name'] = $_FILES['upload_spk']['tmp_name'][$idx];
+							$_FILES['file_single']['error']    = $_FILES['upload_spk']['error'][$idx];
+							$_FILES['file_single']['size']     = $_FILES['upload_spk']['size'][$idx];
+
+							$this->upload->initialize($config);
+							if ($this->upload->do_upload('file_single')) {
+								$uploadData = $this->upload->data();
+								$arr_files[] = $uploadData['file_name'];
+							} else {
+								$upload_err = $this->upload->display_errors('', '');
+								echo json_encode(array(
+									'pesan'  => 'Gagal upload file (' . $name . '): ' . $upload_err,
+									'status' => 0
+								));
+								return;
+							}
+						}
+					}
+				} else {
+					if (!empty($_FILES['upload_spk']['name'])) {
+						$_FILES['file_single']['name']     = $_FILES['upload_spk']['name'];
+						$_FILES['file_single']['type']     = $_FILES['upload_spk']['type'];
+						$_FILES['file_single']['tmp_name'] = $_FILES['upload_spk']['tmp_name'];
+						$_FILES['file_single']['error']    = $_FILES['upload_spk']['error'];
+						$_FILES['file_single']['size']     = $_FILES['upload_spk']['size'];
+
+						$this->upload->initialize($config);
+						if ($this->upload->do_upload('file_single')) {
+							$uploadData = $this->upload->data();
+							$arr_files[] = $uploadData['file_name'];
+						} else {
+							$upload_err = $this->upload->display_errors('', '');
+							echo json_encode(array(
+								'pesan'  => 'Gagal upload file: ' . $upload_err,
+								'status' => 0
+							));
+							return;
+						}
+					}
+				}
+			}
+
+			$file_name = !empty($arr_files) ? json_encode(array_values(array_unique($arr_files))) : NULL;
 
 			//header edit
 			// $ArrHeader		= array(
@@ -473,7 +514,7 @@ class Non_rutin extends Admin_Controller
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
-						'coa' 		=> $coa,
+						'coa' 		=> NULL,
 						'tingkat_pr' => $data['tingkat_pr'],
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
@@ -485,7 +526,7 @@ class Non_rutin extends Admin_Controller
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
-						'coa' 		=> $coa,
+						'coa' 		=> NULL,
 						'app_1' => null,
 						'app_2' => null,
 						'app_3' => null,
@@ -672,7 +713,6 @@ class Non_rutin extends Admin_Controller
 			$tanda        	= $data['tanda'];
 			$approve        = $data['approve'];
 			$tingkat_approval = $data['tingkat_approval'];
-			$coa = $data['coa'];
 			$code_planx  	= $data['id'];
 			if (empty($code_planx)) :
 				$code_planx = '';
@@ -680,21 +720,63 @@ class Non_rutin extends Admin_Controller
 			$no_so        	= (!empty($data['no_so'])) ? $data['no_so'] : NULL;
 			$project_name   = (!empty($data['project_name'])) ? $data['project_name'] : NULL;
 			$id_dept 		= (!empty($data['id_dept'])) ? $data['id_dept'] : NULL;
-			// $id_costcenter 	= (!empty($data['id_costcenter'])) ? $data['id_costcenter'] : NULL;
-			// $coa 			= (!empty($data['coa'])) ? $data['coa'] : NULL;
-			// $budget 		= str_replace(',', '', $data['budget']);
-			// $sisa_budget 	= str_replace(',', '', $data['sisa_budget']);
 
-			$detail 		= $data['detail'];
+			$detail 		= $data['detail'] ?? [];
 
 			//approve
 			$sts_app        = (!empty($data['sts_app'])) ? $data['sts_app'] : '';
 			$reason        	= (!empty($data['reason'])) ? $data['reason'] : '';
 
+			// Validasi item barang (hanya untuk mode input, bukan approve)
+			if (empty($approve)) {
+				if (empty($detail) || !is_array($detail)) {
+					echo json_encode(array(
+						'pesan'  => 'Item barang harus diisi minimal 1 item sebelum menyimpan.',
+						'status' => 0
+					));
+					return;
+				}
+
+				foreach ($detail as $idx => $item) {
+					$qty_check   = str_replace(',', '', $item['qty'] ?? 0);
+					$harga_check = str_replace(',', '', $item['harga'] ?? 0);
+
+					if (empty($item['nm_barang']) || trim($item['nm_barang']) == '') {
+						echo json_encode(array(
+							'pesan'  => 'Nama Barang/Jasa pada item ke-' . $idx . ' harus diisi.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($item['coa']) || trim($item['coa']) == '') {
+						echo json_encode(array(
+							'pesan'  => 'COA pada item ke-' . $idx . ' wajib dipilih.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($qty_check) || floatval($qty_check) <= 0) {
+						echo json_encode(array(
+							'pesan'  => 'Qty pada item ke-' . $idx . ' harus diisi dan lebih dari 0.',
+							'status' => 0
+						));
+						return;
+					}
+
+					if (empty($harga_check) || floatval($harga_check) <= 0) {
+						echo json_encode(array(
+							'pesan'  => 'Est Harga pada item ke-' . $idx . ' harus diisi dan lebih dari 0.',
+							'status' => 0
+						));
+						return;
+					}
+				}
+			}
+
 			$ym = date('ym');
 
-
-			// if ($tingkat_approval == '3') :
 			if (empty($code_plan)) {
 				$srcMtr			= "SELECT MAX(no_pengajuan) as maxP FROM rutin_non_planning_header WHERE no_pengajuan LIKE 'PLN" . $ym . "%' ";
 				$numrowMtr		= $this->db->query($srcMtr)->num_rows();
@@ -705,8 +787,6 @@ class Non_rutin extends Admin_Controller
 				$urut2			= sprintf('%03s', $urutan2);
 				$code_plan		= "PLN" . $ym . $urut2;
 			}
-			// endif;
-
 
 			$SUM_QTY = 0;
 			$SUM_HARGA = 0;
@@ -724,6 +804,7 @@ class Non_rutin extends Admin_Controller
 						$ArrDetail[$val]['nm_barang'] 		= strtolower($valx['nm_barang']);
 						$ArrDetail[$val]['spec'] 			= strtolower($valx['spec']);
 						$ArrDetail[$val]['satuan'] 			= $valx['satuan'];
+						$ArrDetail[$val]['coa'] 			= !empty($valx['coa']) ? $valx['coa'] : NULL;
 						$ArrDetail[$val]['qty'] 			= $qty;
 						$ArrDetail[$val]['harga'] 			= $harga;
 						$ArrDetail[$val]['keterangan'] 		= strtolower($valx['keterangan']);
@@ -734,62 +815,80 @@ class Non_rutin extends Admin_Controller
 				}
 			}
 
-			//UPLOAD DOCUMENT
-			$file_name = NULL;
-			if (!empty($_FILES["upload_spk"]["name"])) {
+			//UPLOAD DOCUMENT (MULTIPLE FILES)
+			$arr_files = array();
 
-				$config['upload_path'] = './assets/pr/';
-				$config['allowed_types'] = '*';
-				$config['remove_spaces'] = TRUE;
-				$config['encrypt_name'] = TRUE;
-				$file_name = '';
-				if (!empty($_FILES['upload_spk']['name'])) {
-					$_FILES['file']['name'] = $_FILES['upload_spk']['name'];
-					$_FILES['file']['type'] = $_FILES['upload_spk']['type'];
-					$_FILES['file']['tmp_name'] = $_FILES['upload_spk']['tmp_name'];
-					$_FILES['file']['error'] = $_FILES['upload_spk']['error'];
-					$_FILES['file']['size'] = $_FILES['upload_spk']['size'];
-					$this->load->library('upload', $config);
-					$this->upload->initialize($config);
-					if ($this->upload->do_upload('file')) {
-						$uploadData = $this->upload->data();
-						$file_name = $uploadData['file_name'];
-					} else {
-						print_r($this->upload->display_errors());
-						exit;
+			// 1. Dokumen existing yang dipertahankan saat edit
+			if (!empty($data['existing_docs']) && is_array($data['existing_docs'])) {
+				foreach ($data['existing_docs'] as $old_file) {
+					if (!empty($old_file)) {
+						$arr_files[] = $old_file;
 					}
 				}
-				// $target_dir     = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
-				// $target_dir_u   = $_SERVER['DOCUMENT_ROOT'] . "origa_dev/uploads/PR/";
-				// $name_file      = 'lampiran_pr_dept_' . date('Ymdhis');
-				// $target_file    = $target_dir . basename($_FILES["upload_spk"]["name"]);
-				// $name_file_ori  = basename($_FILES["upload_spk"]["name"]);
-				// $imageFileType  = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-				// $nama_upload    = $target_dir_u . $name_file . "." . $imageFileType;
-				// $file_name    	= $name_file . "." . $imageFileType;
-
-				// if (!empty($_FILES["upload_spk"]["tmp_name"])) {
-				// 	move_uploaded_file($_FILES["upload_spk"]["tmp_name"], $nama_upload);
-				// }
 			}
 
-			//header edit
-			// $ArrHeader		= array(
-			// 	'id_dept' 		=> $id_dept,
-			// 	'id_costcenter' => $id_costcenter,
-			// 	'coa' 			=> $coa,
-			// 	'budget' 		=> $budget,
-			// 	'no_so' 		=> $no_so,
-			// 	'project_name'	=> $project_name,
-			// 	'sisa_budget' 	=> $sisa_budget,
-			// 	'qty' 			=> $SUM_QTY,
-			// 	'harga' 		=> $SUM_HARGA,
-			// 	'document' 		=> $file_name,
-			// 	'updated_by'	=> $this->auth->user_id(),
-			// 	'updated_date'	=> $dateTime
-			// );
+			// 2. Upload file baru jika ada
+			if (!empty($_FILES["upload_spk"]["name"])) {
+				$uploadDirectory = './assets/pr/';
+				if (!is_dir($uploadDirectory)) {
+					mkdir($uploadDirectory, 0777, true);
+				}
 
+				$config['upload_path']   = $uploadDirectory;
+				$config['allowed_types'] = 'jpg|jpeg|png|pdf|xls|xlsx';
+				$config['max_size']      = 5120; // maks 5MB
+				$config['remove_spaces'] = TRUE;
+				$config['encrypt_name']  = TRUE;
+				$this->load->library('upload', $config);
 
+				if (is_array($_FILES['upload_spk']['name'])) {
+					foreach ($_FILES['upload_spk']['name'] as $idx => $name) {
+						if (!empty($name)) {
+							$_FILES['file_single']['name']     = $_FILES['upload_spk']['name'][$idx];
+							$_FILES['file_single']['type']     = $_FILES['upload_spk']['type'][$idx];
+							$_FILES['file_single']['tmp_name'] = $_FILES['upload_spk']['tmp_name'][$idx];
+							$_FILES['file_single']['error']    = $_FILES['upload_spk']['error'][$idx];
+							$_FILES['file_single']['size']     = $_FILES['upload_spk']['size'][$idx];
+
+							$this->upload->initialize($config);
+							if ($this->upload->do_upload('file_single')) {
+								$uploadData = $this->upload->data();
+								$arr_files[] = $uploadData['file_name'];
+							} else {
+								$upload_err = $this->upload->display_errors('', '');
+								echo json_encode(array(
+									'pesan'  => 'Gagal upload file (' . $name . '): ' . $upload_err,
+									'status' => 0
+								));
+								return;
+							}
+						}
+					}
+				} else {
+					if (!empty($_FILES['upload_spk']['name'])) {
+						$_FILES['file_single']['name']     = $_FILES['upload_spk']['name'];
+						$_FILES['file_single']['type']     = $_FILES['upload_spk']['type'];
+						$_FILES['file_single']['tmp_name'] = $_FILES['upload_spk']['tmp_name'];
+						$_FILES['file_single']['error']    = $_FILES['upload_spk']['error'];
+						$_FILES['file_single']['size']     = $_FILES['upload_spk']['size'];
+
+						$this->upload->initialize($config);
+						if ($this->upload->do_upload('file_single')) {
+							$uploadData = $this->upload->data();
+							$arr_files[] = $uploadData['file_name'];
+						} else {
+							$upload_err = $this->upload->display_errors('', '');
+							echo json_encode(array(
+								'pesan'  => 'Gagal upload file: ' . $upload_err,
+								'status' => 0
+							));
+							return;
+						}
+					}
+				}
+			}
+
+			$file_name = !empty($arr_files) ? json_encode(array_values(array_unique($arr_files))) : NULL;
 
 			//header approve
 			if (!empty($approve)) {
@@ -798,7 +897,6 @@ class Non_rutin extends Admin_Controller
 
 				$no_pr = '';
 				$no_pr_group = '';
-
 
 				$ArrHeaderPR = array(
 					'no_pr' => $no_pr,
@@ -827,7 +925,6 @@ class Non_rutin extends Admin_Controller
 						$ArrDetail[$val]['sts_app_by'] 	= $this->auth->user_id();
 						$ArrDetail[$val]['sts_app_date'] = $dateTime;
 
-
 						$ArrDetailPR[$val]['no_pr'] 		= $no_pr;
 						$ArrDetailPR[$val]['no_pr_group'] 	= $no_pr_group;
 						$ArrDetailPR[$val]['category'] 		= 'non rutin';
@@ -851,7 +948,7 @@ class Non_rutin extends Admin_Controller
 					$ArrHeader		= array(
 						'qty_rev' 		=> $SUM_QTY,
 						'harga_rev' 	=> $SUM_HARGA,
-						'coa' => $coa,
+						'coa' => NULL,
 						'reason' 		=> $reason,
 						'app_1' 		=> 1,
 						'app_2' 		=> 1,
@@ -866,25 +963,10 @@ class Non_rutin extends Admin_Controller
 						'app_post' => 2
 					);
 				else :
-					// $ArrHeader		= array(
-					// 	'qty_rev' 		=> $SUM_QTY,
-					// 	'harga_rev' 	=> $SUM_HARGA,
-					// 	'sts_reject' . $tingkat_approval => '1',
-					// 	'reject_reason' . $tingkat_approval => $reason,
-					// 	'sts_reject3_by' => $this->auth->user_id(),
-					// 	'sts_reject3_date' => date('Y-m-d H:i:s'),
-					// 	'no_pr' => null,
-					// 	'sts_app' => 0,
-					// 	'keterangan_3' => $data['keterangan_3'],
-					// 	'reject_reason' . $tingkat_approval => $reason,
-					// 	'app_post' => null,
-					// 	'rejected' => 1
-					// );
-
 					$ArrHeader = array(
 						'qty_rev' 		=> $SUM_QTY,
 						'harga_rev' 	=> $SUM_HARGA,
-						'coa' => $coa,
+						'coa' => NULL,
 						'sts_reject1' => '1',
 						'sts_reject2' => '1',
 						'reject_reason1' => $reason,
@@ -900,9 +982,6 @@ class Non_rutin extends Admin_Controller
 					);
 				endif;
 
-
-				// print_r($ArrHeaderPR);
-				// print_r($ArrDetailPR);
 			} else {
 				if (empty($code_planx)) {
 					$ArrHeader		= array(
@@ -912,7 +991,7 @@ class Non_rutin extends Admin_Controller
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
-						'coa' 		=> $coa,
+						'coa' 		=> NULL,
 						'tingkat_pr' => $data['tingkat_pr'],
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
@@ -924,7 +1003,7 @@ class Non_rutin extends Admin_Controller
 						'qty' 			=> $SUM_QTY,
 						'harga' 		=> $SUM_HARGA,
 						'document' 		=> $file_name,
-						'coa' 		=> $coa,
+						'coa' 		=> NULL,
 						'app_1' => null,
 						'app_2' => null,
 						'app_3' => null,
@@ -1036,7 +1115,7 @@ class Non_rutin extends Admin_Controller
 			}
 
 			$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
-			$coa_pr_dept = explode(';', $get_coa_pr_dept->coa);
+			$coa_pr_dept = (!empty($get_coa_pr_dept->coa)) ? explode(';', $get_coa_pr_dept->coa) : [];
 
 			$title_tingkat = 'Finance';
 			// if ($tingkat_approval == '1') :
@@ -1049,10 +1128,13 @@ class Non_rutin extends Admin_Controller
 
 			// $get_list_coa = $this->db->get(DBACC . '.coa_master')->result_array();
 
-			$this->db->select('*');
-			$this->db->from(DBACC . '.coa_master');
-			$this->db->where_in('no_perkiraan', $coa_pr_dept);
-			$get_list_coa = $this->db->get()->result_array();
+			$get_list_coa = [];
+			if (!empty($coa_pr_dept)) {
+				$this->db->select('*');
+				$this->db->from(DBACC . '.coa_master');
+				$this->db->where_in('no_perkiraan', $coa_pr_dept);
+				$get_list_coa = $this->db->get()->result_array();
+			}
 
 			// $get_departement = $this->db->get_where('ms_department', ['deleted_by' => null])->result_array();
 
@@ -1084,7 +1166,17 @@ class Non_rutin extends Admin_Controller
 	{
 		$id 	= $this->uri->segment(3);
 		$no 	= 0;
-		$satuan		= $this->db->get_where('ms_satuan', array('deleted' => 'N', 'category' => 'packing'))->result_array();
+		$satuan		= $this->db->get_where('ms_satuan', array('deleted' => 'N'))->result_array();
+
+		$get_coa_pr_dept = $this->db->get_where('coa_expense', ['jenis_pengeluaran' => 'PR Department'])->row();
+		$coa_pr_dept = (!empty($get_coa_pr_dept->coa)) ? explode(';', $get_coa_pr_dept->coa) : '';
+		$list_coa = [];
+		if (!empty($coa_pr_dept)) {
+			$this->db->select('*');
+			$this->db->from(DBACC . '.coa_master');
+			$this->db->where_in('no_perkiraan', $coa_pr_dept);
+			$list_coa = $this->db->get()->result_array();
+		}
 
 		$d_Header = "";
 		$d_Header .= "<tr class='header_" . $id . "'>";
@@ -1100,6 +1192,15 @@ class Non_rutin extends Admin_Controller
 			$d_Header .= "<option value='" . $value['id'] . "'>" . $value['code'] . "</option>";
 		}
 		$d_Header .= "	</select></td>";
+
+		// COA Dropdown
+		$d_Header .= "<td align='left'><select name='detail[" . $id . "][coa]' class='form-control chosen_select wajib_coa coa_" . $id . "' required>";
+		$d_Header .= "<option value=''>- Pilih COA -</option>";
+		foreach ($list_coa as $c) {
+			$d_Header .= "<option value='" . $c['no_perkiraan'] . "'>" . $c['no_perkiraan'] . ' - ' . $c['nama'] . "</option>";
+		}
+		$d_Header .= "</select></td>";
+
 		$d_Header .= "<td align='left'><input type='text' id='harga_" . $id . "' name='detail[" . $id . "][harga]' class='form-control input-md text-right maskM sum_tot' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
 		$d_Header .= "<td align='left'><input type='text' id='total_harga_" . $id . "' name='detail[" . $id . "][total_harga]' class='form-control input-md text-right maskM jumlah_all' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
 		$d_Header .= "<td align='left'><input type='text' name='detail[" . $id . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan' readonly></td>";
@@ -1114,7 +1215,7 @@ class Non_rutin extends Admin_Controller
 		$d_Header .= "<tr id='add_" . $id . "'>";
 		$d_Header .= "<td align='center'></td>";
 		$d_Header .= "<td align='left'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button type='button' class='btn btn-sm btn-warning addPart' title='Add Barang'><i class='fa fa-plus'></i>&nbsp;&nbsp;Add Barang</button></td>";
-		$d_Header .= "<td align='center' colspan='7'></td>";
+		$d_Header .= "<td align='center' colspan='8'></td>";
 		$d_Header .= "</tr><script>$('.autoNumeric2').autoNumeric('init', {mDec: '2', aPad: false});</script>";
 
 		echo json_encode(array(
@@ -1177,8 +1278,8 @@ class Non_rutin extends Admin_Controller
 		$data_session	= $this->session->userdata;
 		$printby		= $this->auth->user_id();
 
-		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, approver.nm_lengkap as nm_approver, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN users approver ON approver.id_user = a.app_3_by LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
-		$detail 	= $this->db->query("SELECT * FROM rutin_non_planning_detail WHERE no_pengajuan='" . $kode_trans . "' ")->result_array();
+		$header 	= $this->db->query("SELECT a.*, c.nm_lengkap as nm_user, approver.nm_lengkap as nm_approver FROM rutin_non_planning_header a LEFT JOIN users c ON c.id_user = a.created_by LEFT JOIN users approver ON approver.id_user = a.app_3_by WHERE a.no_pengajuan='" . $kode_trans . "' ")->result();
+		$detail 	= $this->db->query("SELECT a.*, CONCAT(d.no_perkiraan,' - ',d.nama) as nm_coa FROM rutin_non_planning_detail a LEFT JOIN " . DBACC . ".coa_master d ON d.no_perkiraan = a.coa WHERE a.no_pengajuan='" . $kode_trans . "' ")->result_array();
 		$datacoa 	= $this->db->query("SELECT * FROM coa_category WHERE tipe='NONRUTIN' ")->result_array();
 
 		$data_url		= base_url();
@@ -1238,6 +1339,7 @@ class Non_rutin extends Admin_Controller
 			'spec' => $post['spec'],
 			'qty' => $post['qty'],
 			'satuan' => $post['satuan'],
+			'coa' => !empty($post['coa']) ? $post['coa'] : NULL,
 			'harga' => $post['harga'],
 			'keterangan' => $post['keterangan']
 		];

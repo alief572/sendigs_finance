@@ -257,14 +257,25 @@ function formatDate($date)
     </div>
 
     <?php if (!empty($pr_header->document)) : ?>
-        <?php $ext = strtolower(pathinfo($pr_header->document, PATHINFO_EXTENSION)); ?>
-        <?php if ($ext == 'pdf') : ?>
-            <div class="pagebreak"></div>
-            <embed src="<?= base_url('assets/pr/' . $pr_header->document) ?>" type="application/pdf" width="100%" style="height: 100vh; border: none;">
-        <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
-            <div class="pagebreak"></div>
-            <img src="<?= base_url('assets/pr/' . $pr_header->document) ?>" class="attachment-img" style="max-width: 100%; height: auto;">
-        <?php endif; ?>
+        <?php
+        $doc_files = [];
+        $decoded = json_decode($pr_header->document, true);
+        if (is_array($decoded)) {
+            $doc_files = $decoded;
+        } else {
+            $doc_files = [$pr_header->document];
+        }
+        foreach ($doc_files as $doc_item) :
+            $ext = strtolower(pathinfo($doc_item, PATHINFO_EXTENSION));
+            if ($ext == 'pdf') : ?>
+                <div class="pagebreak"></div>
+                <embed src="<?= base_url('assets/pr/' . $doc_item) ?>" type="application/pdf" width="100%" style="height: 100vh; border: none;">
+            <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+                <div class="pagebreak"></div>
+                <img src="<?= base_url('assets/pr/' . $doc_item) ?>" class="attachment-img" style="max-width: 100%; height: auto;">
+            <?php endif;
+        endforeach;
+        ?>
     <?php endif; ?>
 
     <script>
