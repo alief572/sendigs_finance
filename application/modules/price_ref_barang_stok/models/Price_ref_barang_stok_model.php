@@ -12,8 +12,9 @@ class Price_ref_barang_stok_model extends CI_Model
 
     public function get_header($no_doc)
     {
-        $this->db->select('h.*, u.nm_lengkap as pembuat, u_app.nm_lengkap as approver, u_rej.nm_lengkap as rejector');
+        $this->db->select('h.*, c.nm_category, u.nm_lengkap as pembuat, u_app.nm_lengkap as approver, u_rej.nm_lengkap as rejector');
         $this->db->from('tr_price_sup_barang_stok_header h');
+        $this->db->join('accessories_category c', 'c.id = h.id_category', 'left');
         $this->db->join('users u', 'u.id_user = h.created_by', 'left');
         $this->db->join('users u_app', 'u_app.id_user = h.approved_by', 'left');
         $this->db->join('users u_rej', 'u_rej.id_user = h.rejected_by', 'left');
@@ -29,7 +30,6 @@ class Price_ref_barang_stok_model extends CI_Model
         $this->db->join('accessories_category c', 'c.id = d.id_category', 'left');
         $this->db->join('ms_satuan s', 's.id = a.id_unit', 'left');
         $this->db->where('d.no_doc', $no_doc);
-        $this->db->order_by('c.nm_category', 'ASC');
         $this->db->order_by('a.stock_name', 'ASC');
         return $this->db->get()->result();
     }
@@ -46,14 +46,18 @@ class Price_ref_barang_stok_model extends CI_Model
         $start  = $this->input->post('start') ? intval($this->input->post('start')) : 0;
         $search = $this->input->post('search');
 
-        // Total count
+        // Total count (Only Waiting Approval: status = 0)
+        $this->db->where('status', '0');
         $total_records = $this->db->count_all_results('tr_price_sup_barang_stok_header');
 
         // Filter count
         $this->db->from('tr_price_sup_barang_stok_header h');
+        $this->db->join('accessories_category c', 'c.id = h.id_category', 'left');
+        $this->db->where('h.status', '0');
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('h.no_doc', $search['value']);
+            $this->db->or_like('c.nm_category', $search['value']);
             $this->db->or_like('h.tanggal_doc', $search['value']);
             $this->db->or_like('h.note', $search['value']);
             $this->db->group_end();
@@ -61,20 +65,21 @@ class Price_ref_barang_stok_model extends CI_Model
         $total_filtered = $this->db->count_all_results();
 
         // Data query
-        $this->db->select('h.*, COUNT(d.id) as total_item, u.nm_lengkap as pembuat');
+        $this->db->select('h.*, c.nm_category, COUNT(d.id) as total_item, u.nm_lengkap as pembuat');
         $this->db->from('tr_price_sup_barang_stok_header h');
+        $this->db->join('accessories_category c', 'c.id = h.id_category', 'left');
         $this->db->join('tr_price_sup_barang_stok_detail d', 'd.no_doc = h.no_doc', 'left');
         $this->db->join('users u', 'u.id_user = h.created_by', 'left');
+        $this->db->where('h.status', '0');
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('h.no_doc', $search['value']);
+            $this->db->or_like('c.nm_category', $search['value']);
             $this->db->or_like('h.tanggal_doc', $search['value']);
             $this->db->or_like('h.note', $search['value']);
             $this->db->group_end();
         }
         $this->db->group_by('h.no_doc');
-        // Order: Waiting approval first (status=0), then by id DESC
-        $this->db->order_by("FIELD(h.status, '0', '1', '2')", "ASC", false);
         $this->db->order_by('h.id', 'DESC');
         $this->db->limit($length, $start);
         $query = $this->db->get();
@@ -85,21 +90,13 @@ class Price_ref_barang_stok_model extends CI_Model
             $no++;
 
             // Status badge
-            if ($row->status == '1') {
-                $status_badge = '<span class="badge bg-green">Approved</span>';
-            } elseif ($row->status == '2') {
-                $status_badge = '<span class="badge bg-red">Rejected</span>';
-            } else {
-                $status_badge = '<span class="badge bg-yellow">Waiting Approval</span>';
-            }
+            $status_badge = '<span class="badge bg-yellow">Waiting Approval</span>';
 
-            // Files
+            // Files count & popup modal button
             $files = $this->get_files($row->no_doc);
-            $file_links = '';
-            if (!empty($files)) {
-                foreach ($files as $f) {
-                    $file_links .= '<a href="' . base_url($f->file_path) . '" target="_blank" class="btn btn-xs btn-default" style="margin-bottom:2px;" title="' . htmlspecialchars($f->file_name) . '"><i class="fa fa-paperclip"></i> ' . (strlen($f->file_name) > 15 ? substr($f->file_name, 0, 12) . '...' : $f->file_name) . '</a> ';
-                }
+            $file_count = count($files);
+            if ($file_count > 0) {
+                $file_links = '<button type="button" class="btn btn-xs btn-primary btn-view-evidence" data-no_doc="' . $row->no_doc . '" title="Lihat Evidence Files"><i class="fa fa-paperclip"></i> ' . $file_count . ' File</button>';
             } else {
                 $file_links = '<span class="text-muted">-</span>';
             }
@@ -107,15 +104,15 @@ class Price_ref_barang_stok_model extends CI_Model
             // Actions
             $action = '<button type="button" class="btn btn-sm btn-info view_doc" data-no_doc="' . $row->no_doc . '" title="View Detail"><i class="fa fa-eye"></i></button> ';
             
-            if ($row->status == '0' && has_permission('Price_Ref_Barang_Stok.Manage')) {
+            if (has_permission('Price_Ref_Barang_Stok.Manage')) {
                 $action .= '<a class="btn btn-sm btn-success" href="' . base_url('price_ref_barang_stok/approval/' . $row->no_doc) . '" title="Proses Approval"><i class="fa fa-check-square-o"></i> Approval</a> ';
             }
 
             $data[] = [
                 'no'           => $no,
                 'no_doc'       => '<b>' . $row->no_doc . '</b>',
+                'nm_category'  => $row->nm_category ? '<b>' . strtoupper($row->nm_category) . '</b>' : '-',
                 'tanggal_doc'  => date('d-M-Y', strtotime($row->tanggal_doc)),
-                'kurs'         => number_format($row->kurs, 2),
                 'total_item'   => '<span class="badge bg-blue">' . $row->total_item . ' Item</span>',
                 'pembuat'      => $row->pembuat ? $row->pembuat : '-',
                 'status'       => $status_badge,
@@ -149,6 +146,8 @@ class Price_ref_barang_stok_model extends CI_Model
         $now = date('Y-m-d H:i:s');
 
         $this->db->trans_begin();
+
+        $history_logs = [];
 
         if ($action == 'approve') {
             // Update Header
@@ -210,7 +209,39 @@ class Price_ref_barang_stok_model extends CI_Model
 
                 $this->db->where('id', $id_barang);
                 $this->db->update('accessories', $update_acc);
+
+                // Auto-sync to budget_rutin_detail if item exists in budget stock
+                $this->db->query("UPDATE budget_rutin_detail 
+                                  SET price_reference = ?, total_price = kebutuhan_month * ? 
+                                  WHERE id_barang = ?", [$use_idr, $use_idr, $id_barang]);
+
+                // Prepare History Snapshot Log
+                $history_logs[] = [
+                    'no_doc'                  => $no_doc,
+                    'id_category'             => $d->id_category ? $d->id_category : $header->id_category,
+                    'id_barang'               => $id_barang,
+                    'price_ref_before'        => $d->price_ref_before,
+                    'price_ref_high_before'   => $d->price_ref_high_before,
+                    'price_ref_usd_before'    => $d->price_ref_usd_before,
+                    'price_ref_high_usd_before' => $d->price_ref_high_usd_before,
+                    'price_ref_new'           => $d->price_ref_new,
+                    'price_ref_high_new'      => $d->price_ref_high_new,
+                    'price_ref_new_usd'       => $d->price_ref_new_usd,
+                    'price_ref_high_new_usd'  => $d->price_ref_high_new_usd,
+                    'kurs'                    => $header->kurs,
+                    'expired'                 => $d->expired,
+                    'action'                  => 'approved',
+                    'note'                    => $header->note,
+                    'rejected_reason'         => null,
+                    'created_by'              => $header->created_by,
+                    'processed_by'            => $user_id,
+                    'processed_date'          => $now
+                ];
             }
+
+            // Touch budget_rutin_header modified_on
+            $this->db->set('modified_on', $now);
+            $this->db->update('budget_rutin_header');
 
             $log_msg = "Approve pengajuan price supplier barang stok: " . $no_doc;
         } else {
@@ -227,7 +258,36 @@ class Price_ref_barang_stok_model extends CI_Model
                 'status' => '2'
             ]);
 
+            foreach ($details as $d) {
+                $history_logs[] = [
+                    'no_doc'                  => $no_doc,
+                    'id_category'             => $d->id_category ? $d->id_category : $header->id_category,
+                    'id_barang'               => $d->id_barang,
+                    'price_ref_before'        => $d->price_ref_before,
+                    'price_ref_high_before'   => $d->price_ref_high_before,
+                    'price_ref_usd_before'    => $d->price_ref_usd_before,
+                    'price_ref_high_usd_before' => $d->price_ref_high_usd_before,
+                    'price_ref_new'           => $d->price_ref_new,
+                    'price_ref_high_new'      => $d->price_ref_high_new,
+                    'price_ref_new_usd'       => $d->price_ref_new_usd,
+                    'price_ref_high_new_usd'  => $d->price_ref_high_new_usd,
+                    'kurs'                    => $header->kurs,
+                    'expired'                 => $d->expired,
+                    'action'                  => 'rejected',
+                    'note'                    => $header->note,
+                    'rejected_reason'         => $reason,
+                    'created_by'              => $header->created_by,
+                    'processed_by'            => $user_id,
+                    'processed_date'          => $now
+                ];
+            }
+
             $log_msg = "Reject pengajuan price supplier barang stok: " . $no_doc . " (Alasan: " . $reason . ")";
+        }
+
+        // Insert snapshot history logs
+        if (!empty($history_logs)) {
+            $this->db->insert_batch('tr_price_history_log', $history_logs);
         }
 
         if ($this->db->trans_status() === FALSE) {
@@ -243,4 +303,5 @@ class Price_ref_barang_stok_model extends CI_Model
         }
     }
 }
+
 

@@ -60,23 +60,15 @@ class Price_ref_barang_stok extends Admin_Controller
         $details = $this->Price_ref_barang_stok_model->get_details($no_doc);
         $files   = $this->Price_ref_barang_stok_model->get_files($no_doc);
 
-        // Group details by category
-        $details_by_cat = [];
-        foreach ($details as $d) {
-            $cat_name = !empty($d->nm_category) ? $d->nm_category : 'Lainnya';
-            $details_by_cat[$cat_name][] = $d;
-        }
-
         $data = [
-            'no_doc'         => $no_doc,
-            'header'         => $header,
-            'details'        => $details,
-            'details_by_cat' => $details_by_cat,
-            'files'          => $files
+            'no_doc'   => $no_doc,
+            'header'   => $header,
+            'details'  => $details,
+            'files'    => $files
         ];
 
         $this->template->set($data);
-        $this->template->title('Approval Pengajuan Price Reference >> Barang Stok');
+        $this->template->title('Approval Pengajuan Price Reference >> ' . (!empty($header->nm_category) ? strtoupper($header->nm_category) : 'Barang Stok'));
         $this->template->render('add');
     }
 
@@ -108,21 +100,14 @@ class Price_ref_barang_stok extends Admin_Controller
         $details = $this->Price_ref_barang_stok_model->get_details($no_doc);
         $files   = $this->Price_ref_barang_stok_model->get_files($no_doc);
 
-        // Group details by category
-        $details_by_cat = [];
-        foreach ($details as $d) {
-            $cat_name = !empty($d->nm_category) ? $d->nm_category : 'Lainnya';
-            $details_by_cat[$cat_name][] = $d;
-        }
-
         $data = [
-            'header'         => $header,
-            'details'        => $details,
-            'details_by_cat' => $details_by_cat,
-            'files'          => $files
+            'header'   => $header,
+            'details'  => $details,
+            'files'    => $files
         ];
 
         $this->load->view('price_sup_barang_stok/view', $data);
     }
 }
+
 

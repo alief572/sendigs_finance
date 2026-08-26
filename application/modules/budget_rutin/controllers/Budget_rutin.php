@@ -72,195 +72,112 @@ class Budget_rutin extends Admin_Controller
         $this->template->render('kompilasi');
     }
 
-    public function edit($id)
+    public function edit($id = null)
     {
-        $data  = $this->Budget_rutin_model->find_by(array('code_budget' => $id));
+        $data = $this->Budget_rutin_model->find_by(array('code_budget' => $id));
         if (!$data) {
-            $this->template->set_message("Invalid Budget Stock", 'error');
-            redirect('budget_rutin');
+            $data = $this->Budget_rutin_model->find_by(array('department' => 1));
         }
 
-        $this->db->select('a.jenis_barang as id_jenis, b.nm_category as nm_jenis');
-        $this->db->from('budget_rutin_detail a');
-        $this->db->join('accessories_category b', 'b.id = a.jenis_barang');
-        $this->db->where('a.code_budget', $id);
-        $this->db->group_by('a.jenis_barang');
-        $data_jenis = $this->db->get()->result();
+        $code_budget = $data ? $data->code_budget : ($id ? $id : 'BR-00002');
+        $warehouse   = $this->db->get_where('warehouse', ['id' => $data ? $data->department : 1])->row();
+        
+        $this->db->where('deleted_date IS NULL');
+        $this->db->order_by('nm_category', 'ASC');
+        $categories  = $this->db->get('accessories_category')->result();
 
-        $data_detail  = $this->Budget_rutin_model->GetBudgetRutinDetail($data->code_budget);
-        $datdepartemen  = $this->All_model->GetWarehouseStok();
-        $datcostcenter  = [];
-        $this->template->set('id', $id);
+        $items_by_cat = [];
+        foreach ($categories as $cat) {
+            $items_by_cat[$cat->id] = $this->Budget_rutin_model->get_category_budget_items($code_budget, $cat->id);
+        }
+
+        $this->template->set('id', $code_budget);
+        $this->template->set('code_budget', $code_budget);
+        $this->template->set('categories', $categories);
+        $this->template->set('items_by_cat', $items_by_cat);
         $this->template->set('data', $data);
-        $this->template->set('data_detail', $data_detail);
-        $this->template->set('datcostcenter', $datcostcenter);
-        $this->template->set('datdepartemen', $datdepartemen);
-        $this->template->set('data_jenis', $data_jenis);
-        $this->template->title('Edit Budget Stock');
+        $this->template->set('warehouse', $warehouse);
+        $this->template->title('Budget Stock >> ' . (!empty($warehouse) ? strtoupper($warehouse->nm_gudang) : 'SENTRAL SISTEM'));
         $this->template->render('budget_rutin_form');
     }
 
     public function save_data()
     {
-        $type           = $this->input->post("type");
-        $id             = $this->input->post("id");
-        $rev             = $this->input->post("rev");
-        $department        = $this->input->post("department");
-        $costcenter     = $this->input->post("costcenter");
-        $jenis_barang    = $this->input->post("jenis_barang");
-        $id_barang        = $this->input->post("id_barang");
-        $kebutuhan_month = $this->input->post("kebutuhan_month");
-        $satuan           = $this->input->post("satuan");
-        $price_reference = $this->input->post('price_reference');
-        $total_price = $this->input->post('total_price');
-        $this->db->trans_begin();
-        if ($type == "edit") {
-            $data = array(
-                'department' => $department,
-                'costcenter' => $costcenter,
-                'rev' => ($rev + 1),
-                'modified_by' => $this->auth->user_id(),
-                'modified_on' => date("Y-m-d h:i:s")
-            );
-            $this->All_model->dataUpdate('budget_rutin_header', $data, array('code_budget' => $id));
-            $keterangan = "SUKSES, Edit data " . $id;
-        } else {
-            $id = $this->All_model->GetAutoGenerate('format_budget_rutin');
-            $data =  array(
-                'code_budget' => $id,
-                'department' => $department,
-                'costcenter' => $costcenter,
-                'tanggal' => date('Y-m-d'),
-                'rev' => 0,
-                'created_by' => $this->auth->user_id(),
-                'created_on' => date("Y-m-d h:i:s")
-            );
-            $this->All_model->dataSave('budget_rutin_header', $data);
-            $keterangan = "SUKSES, New data " . $id;
+        $code_budget = $this->input->post("id");
+        $items       = $this->input->post("items");
+
+        if (empty($code_budget)) {
+            $code_budget = 'BR-00002';
         }
-        $sql = $this->db->last_query();
-        if (!empty($id_barang)) {
-            $this->All_model->dataDelete('budget_rutin_detail', array('code_budget' => $id));
-            for ($i = 0; $i < count($id_barang); $i++) {
-                if ($kebutuhan_month[$i] > 0) {
-                    $data_detail =  array(
-                        'code_budget' => $id,
-                        'jenis_barang' => $jenis_barang[$i],
-                        'id_barang' => $id_barang[$i],
-                        'kebutuhan_month' => str_replace(',', '', $kebutuhan_month[$i]),
-                        'satuan' => $satuan[$i],
-                        'price_reference' => str_replace(',', '', $price_reference[$i]),
-                        'total_price' => str_replace(',', '', $total_price[$i])
-                    );
-                    $this->All_model->dataSave('budget_rutin_detail', $data_detail);
+
+        $this->db->trans_begin();
+
+        // 1. Delete all existing details for this code_budget
+        $this->db->where('code_budget', $code_budget);
+        $this->db->delete('budget_rutin_detail');
+
+        // 2. Insert items that have kebutuhan_month > 0
+        if (!empty($items)) {
+            $insert_batch = [];
+            foreach ($items as $id_barang => $row) {
+                $qty    = floatval(str_replace(',', '', $row['kebutuhan_month'] ?? 0));
+                $price  = floatval(str_replace(',', '', $row['price_reference'] ?? 0));
+                $total  = $qty * $price;
+                $cat_id = intval($row['jenis_barang'] ?? 0);
+
+                if ($qty > 0) {
+                    $insert_batch[] = [
+                        'code_budget'     => $code_budget,
+                        'jenis_barang'    => $cat_id,
+                        'id_barang'       => $id_barang,
+                        'kebutuhan_month' => $qty,
+                        'satuan'          => $row['satuan'] ?? '',
+                        'price_reference' => $price,
+                        'total_price'     => $total,
+                        'keterangan'      => $row['keterangan'] ?? ''
+                    ];
                 }
             }
-        }
-        if ($this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-            $result = false;
-        } else {
-            $this->db->trans_commit();
-            $result = true;
-        }
-        $nm_hak_akses   = $this->managePermission;
-        $kode_universal   = $id;
-        simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, 1, $sql, 1);
-        $param = array(
-            'save' => $result,
-            'id' => $id
-        );
-        echo json_encode($param);
-    }
 
-    function hapus_data($id)
-    {
-        $this->auth->restrict($this->deletePermission);
-        if ($id != '') {
-            $result         = true;
-            $this->All_model->dataDelete('budget_rutin_detail', array('code_budget' => $id));
-            $this->All_model->dataDelete('budget_rutin_header', array('code_budget' => $id));
-            $keterangan     = "SUKSES, Delete data Budget " . $id;
-            $status         = 1;
-            $nm_hak_akses   = $this->deletePermission;
-            $kode_universal = $id;
-            $jumlah = 1;
-            $sql            = $this->db->last_query();
-        } else {
-            $result         = 0;
-            $keterangan     = "GAGAL, Delete data Budget " . $id;
-            $status         = 0;
-            $nm_hak_akses   = $this->deletePermission;
-            $kode_universal = $id;
-            $jumlah = 1;
-            $sql            = $this->db->last_query();
-        }
-        simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
-        $param = array(
-            'delete' => $result,
-            'idx' => $id
-        );
-        echo json_encode($param);
-    }
-
-    public function getPriceRef()
-    {
-        $id_barang = $this->input->post('id_barang');
-
-        $get_price_ref = $this->db->get_where('accessories', ['id' => $id_barang])->row();
-
-        $price_ref = (!empty($get_price_ref)) ? $get_price_ref->price_ref_use : 0;
-
-        echo json_encode([
-            'nilai_price_ref' => $price_ref
-        ]);
-    }
-
-    public function update_price_reference()
-    {
-        $get_detail = $this->db->get('budget_rutin_detail')->result();
-
-        $arr_update = array();
-        foreach ($get_detail as $item) {
-            $get_stok = $this->db->get_where('accessories', ['id' => $item->id_barang])->row();
-
-            $price_ref = (!empty($get_stok)) ? $get_stok->price_ref_use : 0;
-            $total_price = $item->kebutuhan_month * $price_ref;
-
-            $arr_update[] = array(
-                'id' => $item->id,
-                'price_reference' => $price_ref,
-                'total_price' => $total_price
-            );
+            if (!empty($insert_batch)) {
+                $this->db->insert_batch('budget_rutin_detail', $insert_batch);
+            }
         }
 
-        $this->db->trans_begin();
-
-        $update_price_ref = $this->db->update_batch('budget_rutin_detail', $arr_update, 'id');
+        // 3. Update header audit
+        $this->db->set('rev', 'rev+1', FALSE);
+        $this->db->set('modified_by', $this->auth->user_id());
+        $this->db->set('modified_on', date('Y-m-d H:i:s'));
+        $this->db->where('code_budget', $code_budget);
+        $this->db->update('budget_rutin_header');
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
-
-            $valid = 'failed';
+            echo json_encode([
+                'status' => 0,
+                'save'   => false,
+                'pesan'  => 'Gagal menyimpan budget stock!'
+            ]);
         } else {
             $this->db->trans_commit();
-
-            $valid = 'success';
+            history("Update Budget Stock on " . $code_budget);
+            echo json_encode([
+                'status' => 1,
+                'save'   => true,
+                'pesan'  => 'Seluruh data Budget Stock berhasil disimpan!'
+            ]);
         }
-
-        $response = array(
-            'status' => $valid
-        );
-
-        echo json_encode($response);
     }
 
     public function download_budget_stock($id_budget)
     {
         $get_data_detail = $this->Budget_rutin_model->get_detail_budget($id_budget);
+        $header = $this->db->get_where('budget_rutin_header', ['code_budget' => $id_budget])->row();
+        $warehouse = $this->db->get_where('warehouse', ['id' => $header ? $header->department : 1])->row();
 
         $data = [
-            'data_detail' => $get_data_detail
+            'data_detail' => $get_data_detail,
+            'warehouse'   => $warehouse
         ];
 
         $this->load->view('excel_list_budget_detail', $data);
@@ -270,3 +187,4 @@ class Budget_rutin extends Admin_Controller
         $this->Budget_rutin_model->get_data();
     }
 }
+

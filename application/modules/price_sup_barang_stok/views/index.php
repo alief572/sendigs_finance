@@ -13,7 +13,7 @@
 		<span class="pull-right">
 			<button type="button" class="btn btn-sm btn-info" id="btn-history-price"><i class="fa fa-history"></i> History Harga Barang</button>
 			<?php if($ENABLE_ADD) : ?>
-				<a class="btn btn-sm btn-success" href="<?= base_url('price_sup_barang_stok/add') ?>"><i class="fa fa-plus"></i> Tambah Pengajuan Baru</a>
+				<button type="button" class="btn btn-sm btn-success" id="btn-modal-add"><i class="fa fa-plus"></i> Tambah Pengajuan Baru</button>
 			<?php endif; ?>
 		</span>
 	</div>
@@ -22,21 +22,49 @@
 		<table id="table-pengajuan" class="table table-bordered table-striped table-hover" width="100%">
 			<thead>
 				<tr class="bg-blue">
-					<th class="text-center" width="4%">#</th>
+					<th class="text-center" width="3%">#</th>
 					<th class="text-center" width="15%">No. Dokumen</th>
-					<th class="text-center" width="10%">Tanggal</th>
-					<th class="text-center" width="10%">Kurs (IDR/USD)</th>
-					<th class="text-center" width="10%">Total Item</th>
+					<th class="text-center" width="14%">Kategori</th>
+					<th class="text-center" width="11%">Tanggal</th>
+					<th class="text-center" width="9%">Total Item</th>
 					<th class="text-center" width="12%">Dibuat Oleh</th>
 					<th class="text-center" width="12%">Status</th>
-					<th class="text-center" width="15%">Evidence Files</th>
-					<th class="text-center" width="12%">Aksi</th>
+					<th class="text-center" width="13%">Evidence Files</th>
+					<th class="text-center" width="11%">Aksi</th>
 				</tr>
 			</thead>
 			<tbody></tbody>
 		</table>
 	</div>
 	<!-- /.box-body -->
+</div>
+
+<!-- Modal Dialog Pilih Kategori Sebelum Input -->
+<div class="modal fade" id="modal-select-category" role="dialog" aria-labelledby="modalSelectCatLabel" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-blue">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><i class="fa fa-tags"></i> Pilih Kategori Barang Stok</h4>
+      </div>
+      <div class="modal-body">
+		<p class="text-muted">Silakan pilih kategori barang stok yang ingin diajukan harganya:</p>
+		<div class="form-group">
+			<label>Kategori Stok <span class="text-danger">*</span></label>
+			<select id="modal_category_id" class="form-control select2" style="width:100%;">
+				<option value="">-- Pilih Kategori --</option>
+				<?php if(!empty($categories)): foreach($categories as $cat): ?>
+					<option value="<?= $cat->id ?>"><?= strtoupper($cat->nm_category) ?></option>
+				<?php endforeach; endif; ?>
+			</select>
+		</div>
+      </div>
+	  <div class="modal-footer">
+		<button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Batal</button>
+		<button type="button" class="btn btn-success" id="btn-proceed-add"><i class="fa fa-arrow-right"></i> Lanjutkan ke Form Input</button>
+	  </div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal Dialog Popup View Detail -->
@@ -75,6 +103,24 @@
   </div>
 </div>
 
+<!-- Modal Evidence Files -->
+<div class="modal fade" id="modal-evidence" role="dialog" aria-labelledby="modalEvidenceLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-blue">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><i class="fa fa-paperclip"></i> Daftar File Evidence Terlampir</h4>
+      </div>
+      <div class="modal-body" id="modal-evidence-body">
+		<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat file...</div>
+      </div>
+	  <div class="modal-footer">
+		<button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-close"></i> Tutup</button>
+	  </div>
+    </div>
+  </div>
+</div>
+
 <!-- DataTables & Select2 Scripts -->
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js')?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js')?>"></script>
@@ -83,6 +129,7 @@
 <script type="text/javascript">
 	$(document).ready(function() {
 		load_table();
+		$('.select2').select2({ width: '100%' });
 	});
 
 	function load_table() {
@@ -95,12 +142,12 @@
 			columns: [
 				{ data: 'no', className: 'text-center' },
 				{ data: 'no_doc', className: 'text-center' },
+				{ data: 'nm_category', className: 'text-center' },
 				{ data: 'tanggal_doc', className: 'text-center' },
-				{ data: 'kurs', className: 'text-right' },
 				{ data: 'total_item', className: 'text-center' },
 				{ data: 'pembuat', className: 'text-center' },
 				{ data: 'status', className: 'text-center' },
-				{ data: 'files', className: 'text-left' },
+				{ data: 'files', className: 'text-center' },
 				{ data: 'action', className: 'text-center', orderable: false, searchable: false }
 			],
 			processing: true,
@@ -110,6 +157,22 @@
 			paging: true
 		});
 	}
+
+	// Trigger Modal Pilih Kategori
+	$(document).on('click', '#btn-modal-add', function() {
+		$('#modal_category_id').val('').trigger('change');
+		$('#modal-select-category').modal('show');
+	});
+
+	// Proceed to Add Form with Selected Category
+	$(document).on('click', '#btn-proceed-add', function() {
+		var cat_id = $('#modal_category_id').val();
+		if (!cat_id) {
+			swal("Peringatan!", "Silakan pilih salah satu kategori terlebih dahulu!", "warning");
+			return;
+		}
+		window.location.href = siteurl + 'price_sup_barang_stok/add/' + encodeURIComponent(cat_id);
+	});
 
 	$(document).on('click', '.view_doc', function() {
 		var no_doc = $(this).data('no_doc');
@@ -123,6 +186,22 @@
 			},
 			error: function() {
 				$('#modal-view-body').html('<div class="alert alert-danger">Gagal memuat detail dokumen.</div>');
+			}
+		});
+	});
+
+	$(document).on('click', '.btn-view-evidence', function() {
+		var no_doc = $(this).data('no_doc');
+		$('#modal-evidence-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat data file...</div>');
+		$('#modal-evidence').modal('show');
+		$.ajax({
+			url: siteurl + 'price_sup_barang_stok/get_evidence_modal/' + encodeURIComponent(no_doc),
+			type: 'GET',
+			success: function(html) {
+				$('#modal-evidence-body').html(html);
+			},
+			error: function() {
+				$('#modal-evidence-body').html('<div class="alert alert-danger">Gagal memuat daftar file.</div>');
 			}
 		});
 	});
@@ -182,3 +261,5 @@
 		});
 	});
 </script>
+
+

@@ -1,4 +1,4 @@
-﻿<div class="row" style="margin-bottom: 15px;">
+<div class="row" style="margin-bottom: 15px;">
     <div class="col-md-5">
         <label>Filter Kategori</label>
         <select id="filter_history_category" class="form-control select2" style="width:100%;">
@@ -27,15 +27,15 @@
     <table id="table-history-data" class="table table-bordered table-striped table-hover" width="100%">
         <thead>
             <tr class="bg-purple">
-                <th class="text-center" width="4%">#</th>
-                <th class="text-center" width="10%">Tanggal</th>
-                <th class="text-center" width="12%">No. Dokumen</th>
+                <th class="text-center" width="3%">#</th>
+                <th class="text-center" width="11%">Waktu Proses</th>
+                <th class="text-center" width="14%">No. Dokumen</th>
                 <th class="text-center" width="18%">Nama Barang</th>
                 <th class="text-center" width="10%">Kategori</th>
-                <th class="text-center" width="11%">Harga Before (IDR)</th>
+                <th class="text-center" width="12%">Harga Before (IDR)</th>
                 <th class="text-center" width="13%">Harga New (IDR)</th>
                 <th class="text-center" width="8%">Status</th>
-                <th class="text-center" width="14%">Audit Info</th>
+                <th class="text-center" width="11%">Audit Info</th>
             </tr>
         </thead>
         <tbody id="tbody-history">
@@ -86,27 +86,25 @@
                     no++;
                     var item = data[i];
 
-                    var status_badge = '<span class="badge bg-yellow">Waiting</span>';
-                    if (item.status === '1') {
-                        status_badge = '<span class="badge bg-green">Approved</span>';
-                    } else if (item.status === '2') {
+                    var status_badge = '<span class="badge bg-green">Approved</span>';
+                    if (item.action === 'rejected') {
                         status_badge = '<span class="badge bg-red">Rejected</span>';
                     }
 
-                    var before_str = 'Low: ' + format_num(item.price_ref_before) + '<br>High: ' + format_num(item.price_ref_high_before);
-                    var after_str = '<b class="text-primary">Low: ' + format_num(item.price_ref_new) + '</b><br><b class="text-primary">High: ' + format_num(item.price_ref_high_new) + '</b>';
+                    var before_str = 'Low: Rp ' + format_num(item.price_ref_before) + '<br>High: Rp ' + format_num(item.price_ref_high_before);
+                    var after_str = '<b class="text-primary">Low: Rp ' + format_num(item.price_ref_new) + '</b><br><b class="text-primary">High: Rp ' + format_num(item.price_ref_high_new) + '</b>';
 
                     var audit = '<small><b>Pengaju:</b> ' + (item.creator_name ? item.creator_name : '-') + '<br>';
-                    if (item.status === '1') {
-                        audit += '<b>Approve:</b> ' + (item.approver_name ? item.approver_name : '-') + '<br>(' + (item.approved_date ? item.approved_date : '') + ')';
-                    } else if (item.status === '2') {
+                    if (item.action === 'approved') {
+                        audit += '<b>Approver:</b> ' + (item.approver_name ? item.approver_name : '-');
+                    } else if (item.action === 'rejected') {
                         audit += '<b class="text-danger">Alasan:</b> ' + (item.rejected_reason ? item.rejected_reason : '-');
                     }
                     audit += '</small>';
 
                     html += '<tr>' +
                         '<td class="text-center">' + no + '</td>' +
-                        '<td class="text-center">' + (item.tanggal_doc ? item.tanggal_doc : '-') + '</td>' +
+                        '<td class="text-center">' + (item.processed_date ? item.processed_date : '-') + '</td>' +
                         '<td class="text-center"><b>' + item.no_doc + '</b></td>' +
                         '<td><b>' + (item.stock_name ? item.stock_name : '-') + '</b><br><small class="text-muted">' + (item.spec ? item.spec : '') + '</small></td>' +
                         '<td class="text-center">' + (item.nm_category ? item.nm_category : '-') + '</td>' +
@@ -129,3 +127,4 @@
         return parseFloat(num).toLocaleString('id-ID');
     }
 </script>
+
