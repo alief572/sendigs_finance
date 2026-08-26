@@ -1,492 +1,301 @@
-<div class="nav-tabs-area">
-	<!-- /.tab-content -->
-	<div class="tab-content">
-		<div class="tab-pane active" id="area">
-			<!-- Biodata Mitra -->
-			<div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
-			<!-- form start-->
-			<div class="box box-primary">
-				<?= form_open($this->uri->uri_string(), array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal')) ?>
-				<div class="box-body">
-					<div class="form-group row">
-						<div class="col-md-2 text-bold">Warehouse</div>
-						<div class="col-md-3">
-							<?php
-							$datdepartemen[0]	= 'Select An Option';
-							echo form_dropdown('department', $datdepartemen, set_value('department', isset($data->department) ? $data->department : '0'), array('id' => 'department', 'class' => 'form-control select2', 'style' => 'width:100%;', 'required' => 'required'));
-							?>
-						</div>
-						<div class="col-md-6">
-							<button type="button" class="btn btn-sm btn-primary" id="update_price_ref"><i class="fa fa-refresh"></i> Update Price Reference</button>
-							<button type="button" class="btn btn-sm btn-success" id="download_budget_stock" title="Download List Budget Stock" data-id="<?= $id ?>"><i class="fa fa-download"></i>Budget Stock</button>
+<div class="box box-primary">
+	<div class="box-header with-border">
+		<h3 class="box-title">
+			<i class="fa fa-cubes"></i> Kelola Budget Stock &mdash; 
+			<span class="text-primary font-weight-bold"><?= !empty($warehouse) ? strtoupper($warehouse->nm_gudang) : 'SENTRAL SISTEM' ?></span>
+		</h3>
+		<div class="pull-right">
+			<button type="button" class="btn btn-sm btn-success" id="btn-download-excel" title="Download Excel Budget Stock">
+				<i class="fa fa-download"></i> Download Excel
+			</button>
+			<button type="button" class="btn btn-sm btn-default" onclick="cancel()" title="Kembali ke Daftar">
+				<i class="fa fa-arrow-left"></i> Kembali
+			</button>
+		</div>
+	</div>
 
+	<?= form_open('budget_rutin/save_data', ['id' => 'frm_budget_all', 'name' => 'frm_budget_all', 'role' => 'form']) ?>
+	<div class="box-body">
+		<!-- Header Info Bar -->
+		<div class="row" style="margin-bottom: 15px; background: #f9f9f9; padding: 12px 15px; border-radius: 4px; border: 1px solid #e3e3e3;">
+			<div class="col-md-4">
+				<label class="text-muted" style="margin-bottom:2px; font-size:12px;">Warehouse / Gudang:</label>
+				<div style="font-size: 15px; font-weight: bold; color: #333;">
+					<i class="fa fa-building-o text-primary"></i> <?= !empty($warehouse) ? strtoupper($warehouse->nm_gudang) : 'SENTRAL SISTEM' ?>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<label class="text-muted" style="margin-bottom:2px; font-size:12px;">Terakhir Diperbarui:</label>
+				<div style="font-size: 15px; font-weight: bold; color: #333;">
+					<i class="fa fa-calendar text-primary"></i> <?= !empty($data->modified_on) ? date('d-M-Y H:i', strtotime($data->modified_on)) : date('d-M-Y') ?>
+				</div>
+			</div>
+			<div class="col-md-4 text-right">
+				<label class="text-muted" style="margin-bottom:2px; font-size:12px;">Grand Total Budget Stock:</label>
+				<div style="font-size: 18px; font-weight: bold; color: #008d4c;" id="header_grand_total">
+					Rp 0
+				</div>
+			</div>
+		</div>
+
+		<input type="hidden" id="id" name="id" value="<?= !empty($code_budget) ? $code_budget : 'BR-00002' ?>">
+
+		<!-- Nav Tabs Kategori -->
+		<div class="nav-tabs-custom">
+			<ul class="nav nav-tabs" role="tablist" id="categoryTabs">
+				<?php 
+				$first = true;
+				if (!empty($categories)):
+					foreach ($categories as $cat):
+				?>
+					<li class="<?= $first ? 'active' : '' ?>">
+						<a href="#tab_cat_<?= $cat->id ?>" data-toggle="tab" aria-expanded="<?= $first ? 'true' : 'false' ?>">
+							<i class="fa fa-tags text-primary"></i> <b><?= strtoupper($cat->nm_category) ?></b> 
+							<span class="badge bg-blue" id="tab_badge_<?= $cat->id ?>">Rp 0</span>
+						</a>
+					</li>
+				<?php 
+						$first = false;
+					endforeach;
+				endif; 
+				?>
+			</ul>
+
+			<div class="tab-content" style="padding: 15px 5px;">
+				<?php 
+				$first_tab = true;
+				$overall_grand_total = 0;
+				if (!empty($categories)):
+					foreach ($categories as $cat):
+						$cat_items = $items_by_cat[$cat->id] ?? [];
+						$cat_subtotal = 0;
+				?>
+					<div class="tab-pane <?= $first_tab ? 'active' : '' ?>" id="tab_cat_<?= $cat->id ?>">
+						<div style="margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+							<h4 style="margin: 0; font-weight: bold; color: #333;">
+								<i class="fa fa-list text-primary"></i> Daftar Barang: <?= strtoupper($cat->nm_category) ?>
+								<small class="text-muted">(<?= count($cat_items) ?> item)</small>
+							</h4>
 						</div>
-						<div class="col-md-5"></div>
-					</div>
-					<div class="row" hidden>
-						<div class="col-md-6">
-							<?php if (isset($data->code_budget)) {
-								$type = 'edit';
-							} ?>
-							<input type="hidden" id="type" name="type" value="<?= isset($type) ? $type : 'add' ?>">
-							<input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->code_budget) ? $data->code_budget : ''); ?>">
-							<input type="hidden" id="rev" name="rev" value="<?php echo (isset($data->rev) ? $data->rev : '0'); ?>">
-						</div>
-						<div class="col-md-6">
-							<div class="form-group ">
-								<label class="col-sm-4 control-label">Cost Center</label>
-								<div class="col-sm-8">
-									<div class="input-group">
-										<?php
-										$datcostcenter[0]	= 'Select An Option';
-										echo form_dropdown('costcenter', $datcostcenter, set_value('costcenter', isset($data->costcenter) ? $data->costcenter : '0'), array('id' => 'costcenter', 'class' => 'form-control', 'style' => 'width:100%;'));
-										?>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					<hr>
-					<?php
-					$totals = 0;
-					if (isset($jenisrutin)) {
-						foreach ($jenisrutin as $key) {
-							echo "<h4>" . strtoupper($key->nm_category) . " <button type='button' data-id_barang='" . $key->id . "' class='btn btn-sm btn-success addPart pull-right' title='Add Item'>Add Item</button></h4>
-						<table class='table table-striped table-bordered table-hover table-condensed' width='100%' id='tbl_" . $key->id . "'>
+
+						<table class="table table-bordered table-striped table-hover" width="100%">
 							<thead>
-								<tr class='bg-blue'>
-									<th class='text-center' style='width: 5%;'>#</th>
-									<th class='text-center' style='width: 30%;'>Nama Barang</th>
-									<th class='text-center'>Spesifikasi</th>
-									<th class='text-center' style='width: 15%;'>Kebutuhan 1 Bulan</th>
-									<th class='text-center' style='width: 15%;'>Satuan Product</th>
-									<th class='text-center' style='width: 15%;'>Price Reference</th>
-									<th class='text-center' style='width: 15%;'>Total Price</th>
-									<th class='text-center' style='width: 5%;'>#</th>
+								<tr class="bg-blue">
+									<th class="text-center" width="4%">#</th>
+									<th class="text-center" width="12%">Kode Stok</th>
+									<th width="26%">Nama Barang</th>
+									<th width="16%">Spesifikasi</th>
+									<th class="text-center" width="8%">Satuan</th>
+									<th class="text-right" width="12%">Price Reference (IDR)</th>
+									<th class="text-center" width="10%">Kebutuhan 1 Bulan</th>
+									<th class="text-right" width="12%">Total Price (IDR)</th>
 								</tr>
 							</thead>
-							<tbody class='tbody_" . $key->id . "'>						
+							<tbody>
+								<?php 
+								$no = 0;
+								if (!empty($cat_items)):
+									foreach ($cat_items as $item):
+										$no++;
+										$price_ref = floatval($item->price_ref_use ?? 0);
+										$qty = floatval($item->kebutuhan_month ?? 0);
+										$total_item_price = $qty * $price_ref;
+										$cat_subtotal += $total_item_price;
+										$overall_grand_total += $total_item_price;
+								?>
+									<tr>
+										<td class="text-center" style="vertical-align: middle;"><?= $no ?></td>
+										<td class="text-center" style="vertical-align: middle;">
+											<span class="label label-default"><?= htmlspecialchars($item->id_stock ?? '-') ?></span>
+										</td>
+										<td style="vertical-align: middle;">
+											<b><?= htmlspecialchars($item->stock_name) ?></b>
+										</td>
+										<td style="vertical-align: middle; font-size: 12px; color: #555;">
+											<?= htmlspecialchars($item->spec ?? '-') ?>
+										</td>
+										<td class="text-center" style="vertical-align: middle;">
+											<input type="hidden" name="items[<?= $item->id_barang ?>][jenis_barang]" value="<?= $cat->id ?>">
+											<input type="hidden" name="items[<?= $item->id_barang ?>][satuan]" value="<?= $item->id_unit ?>">
+											<span class="badge bg-navy"><?= strtoupper($item->nm_satuan ?? 'PCS') ?></span>
+										</td>
+										<td class="text-right" style="vertical-align: middle;">
+											<input type="hidden" name="items[<?= $item->id_barang ?>][price_reference]" value="<?= $price_ref ?>" id="price_val_<?= $item->id_barang ?>">
+											<span class="text-bold" style="color: #2e6da4;">Rp <?= number_format($price_ref, 0, ',', '.') ?></span>
+										</td>
+										<td class="text-center" style="vertical-align: middle;">
+											<input type="text" 
+												   name="items[<?= $item->id_barang ?>][kebutuhan_month]" 
+												   class="form-control input-sm text-center autoNumeric0 input_kebutuhan" 
+												   id="kebutuhan_<?= $item->id_barang ?>" 
+												   data-id="<?= $item->id_barang ?>" 
+												   data-cat="<?= $cat->id ?>" 
+												   data-price="<?= $price_ref ?>" 
+												   value="<?= $qty > 0 ? $qty : '' ?>" 
+												   placeholder="0">
+										</td>
+										<td class="text-right" style="vertical-align: middle;">
+											<input type="hidden" class="item_total_raw item_cat_<?= $cat->id ?>" id="total_raw_<?= $item->id_barang ?>" value="<?= $total_item_price ?>">
+											<span class="text-bold item_total_display" id="total_display_<?= $item->id_barang ?>" style="color: #008d4c;">
+												Rp <?= number_format($total_item_price, 0, ',', '.') ?>
+											</span>
+										</td>
+									</tr>
+								<?php 
+									endforeach;
+								else:
+								?>
+									<tr>
+										<td colspan="8" class="text-center text-muted">Tidak ada data master barang pada kategori ini.</td>
+									</tr>
+								<?php endif; ?>
 							</tbody>
 							<tfoot>
-								<tr class='bg-blue'>
-									<th colspan='6' class='text-center'>Total Budget Stock</th>
-									<th class='text-right tfoot_" . $key->id . "'></th>
-									<th></th>
+								<tr class="bg-blue" style="font-size: 13px;">
+									<th colspan="7" class="text-right" style="vertical-align: middle;">
+										SUBTOTAL KATEGORI <?= strtoupper($cat->nm_category) ?>:
+									</th>
+									<th class="text-right subtotal_cat_display" id="subtotal_display_<?= $cat->id ?>" style="vertical-align: middle;">
+										Rp <?= number_format($cat_subtotal, 0, ',', '.') ?>
+									</th>
 								</tr>
 							</tfoot>
-						</table>	  
-						";
-						}
-					} else {
-						$nojenis = 0;
-						foreach ($data_jenis as $item_jenis) {
-							echo "<h4>" . strtoupper($item_jenis->nm_jenis);
-							echo '<button type="button" data-id_barang="' . $item_jenis->id_jenis . '" class="btn btn-sm btn-success addPart pull-right" title="Add Item">Add Item</button></h4>';
-							echo '<table class="table table-striped table-bordered table-hover table-condensed" width="100%" id="tbl_' . $item_jenis->id_jenis . '">';
-							echo '<thead>';
-							echo '
-								<tr class="bg-blue">
-									<th class="text-center" style="width: 5%;">#</th>
-									<th class="text-center" style="width: 30%;">Nama Barang</th>
-									<th class="text-center">Spesifikasi</th>
-									<th class="text-center" style="width: 15%;">Kebutuhan 1 Bulan</th>
-									<th class="text-center" style="width: 15%;">Satuan Product</th>
-									<th class="text-center" style="width: 15%;">Price Reference</th>
-									<th class="text-center" style="width: 15%;">Total Price</th>
-									<th class="text-center" style="width: 5%;">#</th>
-								</tr>
-							';
-							echo '</thead>';
-							echo '<tbody class="tbody_' . $item_jenis->id_jenis . '">';
-							$total_budget_stock = 0;
-							foreach ($data_detail as $key) {
-								if ($key->id_type == $item_jenis->id_jenis) {
-									$nojenis++;
-									echo '
-										<tr>
-											<td class="text-center">' . $nojenis . '<input type="hidden" name="jenis_barang[]" value="' . $key->jenis_barang . '"></td>
-											<td><input type="hidden" name="id_barang[]" value="' . $key->id_barang . '">' . $key->id_barang . ' - ' . $key->nama_barang . '</td>
-											<td>' . $key->spec1 . '</td>
-											<td><input type="text" class="form-control input-md text-center autoNumeric0 hitung_total_budget_stock" name="kebutuhan_month[]" id="kebutuhan_month_' . $nojenis . '" onchange="hitungPrice(' . $nojenis . ')" data-id_type="' . $key->id_type . '" value="' . $key->kebutuhan_month . '"></td>
-											<td class="text-center"><input type="hidden" name="satuan[]" value="' . $key->id_satuan . '">' . $key->nm_satuan . '</td>
-											<td class="text-center"><input type="text" name="price_reference[]" class="form-control form-control-sm text-right hitung_total_budget_stock autoNumeric0" id="price_reference_' . $nojenis . '" onchange="hitungPrice(' . $nojenis . ')" data-id_type="' . $key->id_type . '" value="' . $key->price_reference . '"></td>
-											<td class="text-center"><input type="text" name="total_price[]" class="form-control form-control-sm text-right autoNumeric0 total_price_' . $key->id_type . '" id="total_price_' . $nojenis . '" onchange="hitungPrice(' . $nojenis . ')" value="' . $key->total_price . '" readonly></td>
-											<td class="text-center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td>
-										</tr>
-									';
+						</table>
+					</div>
+				<?php 
+						$first_tab = false;
+					endforeach;
+				endif; 
+				?>
+			</div>
+		</div>
 
-									$total_budget_stock += $key->total_price;
-								}
-							}
-							echo '</tbody>';
-
-							echo '<tfoot>';
-							echo '<tr class="bg-blue">';
-							echo '<th colspan="6" class="text-center">Total Budget Stock</th>';
-							echo '<th class="text-right tfoot_' . $item_jenis->id_jenis . '">' . number_format($total_budget_stock) . '</th>';
-							echo '<th></th>';
-							echo '</tr>';
-							echo '</tfoot>';
-
-							echo '</table>';
-						}
-						// 			if (isset($data_detail)) {
-						// 				$jenisrutin = '';
-						// 				$nojenis = 1;
-						// 				$total_budget_stock = 0;
-						// 				foreach ($data_detail as $key) {
-						// 					if ($jenisrutin != $key->id_type) {
-						// 						if ($totals > 0) echo '</tbody></table>'; // Menutup tbody dan tabel sebelumnya
-						// 						echo "<h4>" . strtoupper($key->nm_jenis) . "
-						// <button type='button' data-id_barang='" . $key->id_type . "' class='btn btn-sm btn-success addPart pull-right' title='Add Item'>Add Item</button></h4>
-						// <table class='table table-striped table-bordered table-hover table-condensed' width='100%' id='tbl_" . $key->id_type . "'>
-						//     <thead>
-						//         <tr class='bg-blue'>
-						//             <th class='text-center' style='width: 5%;'>#</th>
-						//             <th class='text-center' style='width: 30%;'>Nama Barang</th>
-						//             <th class='text-center'>Spesifikasi</th>
-						//             <th class='text-center' style='width: 15%;'>Kebutuhan 1 Bulan</th>
-						//             <th class='text-center' style='width: 15%;'>Satuan Product</th>
-						//             <th class='text-center' style='width: 15%;'>Price Reference</th>
-						//             <th class='text-center' style='width: 15%;'>Total Price</th>
-						//             <th class='text-center' style='width: 5%;'>#</th>
-						//         </tr>
-						//     </thead>
-						//     <tbody>";
-
-						// 						$nojenis = 1;
-						// 					}
-
-						// 					$jenisrutin = $key->id_type;
-
-						// 					if ($key->id_barang != '') {
-						// 						echo '
-						// <tr>
-						//     <td class="text-center">' . $nojenis . '<input type="hidden" name="jenis_barang[]" value="' . $key->jenis_barang . '"></td>
-						//     <td><input type="hidden" name="id_barang[]" value="' . $key->id_barang . '">' . $key->id_barang . ' - ' . $key->nama_barang . '</td>
-						//     <td>' . $key->spec1 . '</td>
-						//     <td><input type="text" class="form-control input-md text-center autoNumeric0 hitung_total_budget_stock" name="kebutuhan_month[]" id="kebutuhan_month_' . $totals . '" onchange="hitungPrice(' . $totals . ')" data-id_type="' . $key->id_type . '" value="' . $key->kebutuhan_month . '"></td>
-						//     <td class="text-center"><input type="hidden" name="satuan[]" value="' . $key->id_satuan . '">' . $key->nm_satuan . '</td>
-						//     <td class="text-center"><input type="text" name="price_reference[]" class="form-control form-control-sm text-right hitung_total_budget_stock autoNumeric0" id="price_reference_' . $totals . '" onchange="hitungPrice(' . $totals . ')" data-id_type="' . $key->id_type . '" value="' . $key->price_reference . '"></td>
-						//     <td class="text-center"><input type="text" name="total_price[]" class="form-control form-control-sm text-right autoNumeric0" id="total_price_' . $totals . '" onchange="hitungPrice(' . $totals . ')" value="' . $key->total_price . '" readonly></td>
-						//     <td class="text-center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td>
-						// </tr>';
-						// 						$nojenis++;
-
-						// 						$total_budget_stock += $key->total_price;
-						// 					}
-						// 					$totals++;
-						// 				}
-
-						// 				// Menambahkan footer setelah setiap tabel
-						// 				echo '</tbody>';
-
-						// 				echo '<tfoot>';
-						// 				echo '<tr>';
-						// 				echo '<td colspan="6" class="text-center">Total Budget Stock</td>';
-						// 				echo '<td class="text-right">' . number_format($total_budget_stock) . '</td>';
-						// 				echo '<td></td>';
-						// 				echo '</tr>';
-						// 				echo '</tfoot>';
-
-						// 				echo '</table>';
-						// 			}
-					} ?>
-				</div>
-				<div class="box-footer">
-					<button type="submit" name="save" class="btn btn-success" id="submit">Save</button>
-					<a class="btn btn-danger" data-toggle="modal" onclick="cancel()">Back</a>
-				</div>
-				<?= form_close() ?>
+		<!-- Grand Total Bar -->
+		<div class="row" style="background: #e8f4f8; padding: 15px; border-radius: 4px; border: 1px solid #bce8f1; margin: 10px 0;">
+			<div class="col-md-6" style="font-size: 16px; font-weight: bold; color: #31708f; line-height: 35px;">
+				<i class="fa fa-calculator"></i> TOTAL KESELURUHAN BUDGET STOCK (SEMUA KATEGORI):
+			</div>
+			<div class="col-md-6 text-right" style="font-size: 22px; font-weight: bold; color: #008d4c;" id="footer_grand_total">
+				Rp <?= number_format($overall_grand_total, 0, ',', '.') ?>
 			</div>
 		</div>
 	</div>
+
+	<div class="box-footer">
+		<button type="submit" class="btn btn-success btn-lg" id="btn-save-all">
+			<i class="fa fa-save"></i> Simpan Seluruh Budget Stock
+		</button>
+		<button type="button" class="btn btn-default btn-lg" onclick="cancel()">
+			<i class="fa fa-arrow-left"></i> Kembali ke Daftar
+		</button>
+	</div>
+	<?= form_close() ?>
 </div>
-<script src="<?= base_url('/assets/js/number-divider.min.js') ?>"></script>
+
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script type="text/javascript">
-	var row = <?= $totals ?>;
 	$(document).ready(function() {
-		$(".divide").divide();
-		$('.select2').select2()
-
-		$(".autoNumeric0").autoNumeric('init', {
+		$('.autoNumeric0').autoNumeric('init', {
 			mDec: '0',
-			aPad: false
+			aPad: false,
+			vMin: '0'
 		});
-	});
-	$(document).on('click', '.addPart', function() {
-		var jenis_barang = $(this).data('id_barang');
-		$.ajax({
-			url: siteurl + 'budget_rutin/get_material/' + jenis_barang,
-			cache: false,
-			type: "POST",
-			dataType: "json",
-			success: function(data) {
-				var options = '<option value="">Select An Option</option>';
-				var i;
-				for (i = 0; i < data.length; i++) {
-					row++;
-					options += '<option value=' + data[i].id + ' data-id_spec="' + data[i].spec + '">' + data[i].stock_name + '</option>';
-				}
-				$('.tbody_' + jenis_barang).append('<tr><td align="center">#<input type="hidden" name="jenis_barang[]" value="' + jenis_barang + '"></td><td><select id="id_barang' + row + '" name="id_barang[]" class="form-control select2 input-md" required onchange="getsatuan(' + row + ')">' + options + '</select></td><td id="spek' + row + '"></td><td><input type="text" class="form-control input-md text-center hitung_total_budget_stock autoNumeric0" data-id_type="' + jenis_barang + '" name="kebutuhan_month[]" id="kebutuhan_month_' + row + '" onchange="hitungPrice(' + row + ')"></td><td><select id="satuan' + row + '" name="satuan[]" class="form-control input-md select2 text-center" required></select></td><td class="text-center"><input type="text" class="form-control form-control-sm text-right autoNumeric0 hitung_total_budget_stock" data-id_type="' + jenis_barang + '" name="price_reference[]" id="price_reference_' + row + '" onchange="hitungPrice(' + row + ')"></td><td class="text-center"><input type="text" class="form-control form-control-sm autoNumeric0 text-right total_price_' + jenis_barang + '" name="total_price[]" id="total_price_' + row + '" readonly></td><td align="center"><button type="button" class="btn btn-sm btn-danger delPart" title="Delete Part"><i class="fa fa-close"></i></button></td></tr>');
-				$(".select2").select2();
-				$(".autoNumeric0").autoNumeric('init', {
-					mDec: '0',
-					aPad: false
-				});
-			},
-			error: function() {
-				swal({
-					title: "Error Message !",
-					text: 'Connection Time Out. Please try again..',
-					type: "warning",
-					timer: 3000,
-					showCancelButton: false,
-					showConfirmButton: false,
-					allowOutsideClick: false
-				});
-			}
-		});
+
+		recalc_all();
 	});
 
-	function getsatuan(id) {
-		idbarang = $("#id_barang" + id).val();
-		var idspec = $("#id_barang" + id).find(':selected').attr('data-id_spec');
-		$("#spek" + id).html(idspec);
-		if (idbarang != '') {
-			$.ajax({
-				url: siteurl + 'budget_rutin/get_satuan/' + idbarang,
-				method: "POST",
-				dataType: 'json',
-				success: function(data) {
-					// var html = '<option value="">Select An Option</option>';
-					var html = '';
-					var i;
-					for (i = 0; i < data.length; i++) {
-						html += '<option value=' + data[i].id + '>' + data[i].code + '</option>';
-					}
-					$('#satuan' + id).html(html);
-					//					console.log(data);
-				}
-			});
+	// Real-time calculation on input change
+	$(document).on('keyup change', '.input_kebutuhan', function() {
+		var id = $(this).data('id');
+		var cat_id = $(this).data('cat');
+		var price = parseFloat($(this).data('price')) || 0;
+		var qty_val = $(this).val().replace(/,/g, '');
+		var qty = parseFloat(qty_val) || 0;
 
-			$.ajax({
-				type: 'post',
-				url: siteurl + active_controller + 'getPriceRef',
-				data: {
-					'id_barang': idbarang
-				},
-				cache: false,
-				dataType: 'json',
-				success: function(result) {
-					var price_ref = result.nilai_price_ref;
-					var kebutuhan_month = $('#kebutuhan_month_' + id).val();
-					if (kebutuhan_month !== '') {
-						kebutuhan_month = kebutuhan_month.split(',').join('');
-						kebutuhan_month = parseFloat(kebutuhan_month);
-					} else {
-						kebutuhan_month = 0;
-					}
+		var total = qty * price;
 
-					var total_price = (price_ref * kebutuhan_month);
+		$('#total_raw_' + id).val(total);
+		$('#total_display_' + id).text('Rp ' + formatRupiah(total));
 
-					$('#price_reference_' + id).autoNumeric('set', price_ref);
-					$('#total_price_' + id).autoNumeric('set', total_price);
-				},
-				error: function(result) {
-					swal({
-						type: 'error',
-						title: 'Error !',
-						text: 'Please try again later !',
-						allowOutsideClick: false,
-						showCancelButton: false,
-						showConfirmButton: false,
-						timer: 3000
-					});
-				}
-			});
-		} else {
-			$('#satuan').html('');
-		}
+		recalc_category(cat_id);
+		recalc_grand_total();
+	});
+
+	function recalc_category(cat_id) {
+		var subtotal = 0;
+		$('.item_cat_' + cat_id).each(function() {
+			var val = parseFloat($(this).val()) || 0;
+			subtotal += val;
+		});
+		$('#subtotal_display_' + cat_id).text('Rp ' + formatRupiah(subtotal));
+		$('#tab_badge_' + cat_id).text('Rp ' + formatRupiah(subtotal));
 	}
 
-
-	$(document).on('click', '.delPart', function() {
-		$(this).closest("tr").remove();
-	});
-
-	function getcostcentre() {
-		dept = $("#department").val();
-		if (dept != '0') {
-			$.ajax({
-				url: siteurl + 'budget_rutin/get_cost_center/' + dept,
-				method: "POST",
-				dataType: 'json',
-				success: function(data) {
-					var html = '<option value="">Select An Option</option>';
-					var i;
-					for (i = 0; i < data.length; i++) {
-						html += '<option value=' + data[i].id + '>' + data[i].cost_center + '</option>';
-					}
-					$('#costcenter').html(html);
-					//					console.log(data);
-				}
-			});
-		} else {
-			$('#costcenter').html('');
-		}
+	function recalc_grand_total() {
+		var grand = 0;
+		$('.item_total_raw').each(function() {
+			var val = parseFloat($(this).val()) || 0;
+			grand += val;
+		});
+		var formatted = 'Rp ' + formatRupiah(grand);
+		$('#header_grand_total').text(formatted);
+		$('#footer_grand_total').text(formatted);
 	}
 
-	$('#frm_data').on('submit', function(e) {
+	function recalc_all() {
+		<?php if (!empty($categories)): foreach ($categories as $cat): ?>
+			recalc_category(<?= $cat->id ?>);
+		<?php endforeach; endif; ?>
+		recalc_grand_total();
+	}
+
+	function formatRupiah(number) {
+		return Math.round(number).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+	}
+
+	// Submit via AJAX
+	$('#frm_budget_all').on('submit', function(e) {
 		e.preventDefault();
-		var formdata = $("#frm_data").serialize();
+		var btn = $('#btn-save-all');
+		btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+
 		$.ajax({
 			url: siteurl + "budget_rutin/save_data",
+			type: "POST",
 			dataType: "json",
-			type: 'POST',
-			data: formdata,
-			success: function(msg) {
-				if (msg['save'] == '1') {
+			data: $(this).serialize(),
+			success: function(res) {
+				btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Seluruh Budget Stock');
+				if (res.status == 1 || res.save == 1) {
 					swal({
-						title: "Sukses!",
-						text: "Data Berhasil Di Simpan",
+						title: "Berhasil!",
+						text: res.pesan || "Seluruh data Budget Stock berhasil disimpan!",
 						type: "success",
 						timer: 1500,
 						showConfirmButton: false
 					});
-					console.log(msg);
 					cancel();
 				} else {
-					swal({
-						title: "Gagal!",
-						text: "Data Gagal Di Simpan",
-						type: "error",
-						timer: 1500,
-						showConfirmButton: false
-					});
-				};
-				console.log(msg);
+					swal("Gagal!", res.pesan || "Terjadi kesalahan saat menyimpan data.", "error");
+				}
 			},
-			error: function(msg) {
-				swal({
-					title: "Gagal!",
-					text: "Ajax Data Gagal Di Proses",
-					type: "error",
-					timer: 1500,
-					showConfirmButton: false
-				});
-				console.log(msg);
+			error: function() {
+				btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Seluruh Budget Stock');
+				swal("Error!", "Terjadi kesalahan koneksi saat menyimpan data.", "error");
 			}
 		});
 	});
 
-	function hitungPrice(id) {
-		var kebutuhan_month = $('#kebutuhan_month_' + id).val();
-		if (kebutuhan_month !== '') {
-			var kebutuhan_month = kebutuhan_month.split(',').join('');
-			var kebutuhan_month = parseFloat(kebutuhan_month);
-		}
-		var price_reference = $('#price_reference_' + id).val();
-		if (price_reference !== '') {
-			var price_reference = price_reference.split(',').join('');
-			var price_reference = parseFloat(price_reference);
-		}
-
-		var total_price = (kebutuhan_month * price_reference);
-
-		$('#total_price_' + id).autoNumeric('set', total_price);
-	}
-
-	$(document).on('change', '.hitung_total_budget_stock', function() {
-		var id_type = $(this).data('id_type');
-
-		var totalPrice = 0;
-
-		$('.total_price_' + id_type).each(function() {
-			var total = $(this).val();
-			if (total !== '') {
-				total = total.split(',').join('');
-				total = parseFloat(total);
-			} else {
-				total = 0;
-			}
-
-			totalPrice += total;
-		})
-
-		$('.tfoot_' + id_type).html(number_format(totalPrice));
+	// Download Excel
+	$(document).on('click', '#btn-download-excel', function() {
+		var code_budget = $('#id').val();
+		window.open(siteurl + 'budget_rutin/download_budget_stock/' + encodeURIComponent(code_budget), '_blank');
 	});
-
-	$(document).on('click', '#update_price_ref', function() {
-		swal({
-			title: 'Are you sure?',
-			text: "to update all Price Reference based on the latest data!",
-			type: 'warning',
-			showCancelButton: true,
-			confirmButtonColor: '#3085d6',
-			cancelButtonColor: '#d33',
-			confirmButtonText: 'Yes, update it!'
-		}, function(next) {
-			if (next) {
-				$.ajax({
-					url: siteurl + active_controller + 'update_price_reference',
-					type: 'POST',
-					dataType: 'json',
-					success: function(response) {
-						if (response.status == 'success') {
-							swal({
-								title: 'Updated!',
-								text: 'Price Reference has been updated.',
-								type: 'success',
-								timer: 2000,
-								showConfirmButton: false
-							}, function(next) {
-								location.reload();
-							});
-						} else {
-							swal('Error!', 'Failed to update Price Reference.', 'error');
-						}
-					},
-					error: function() {
-						swal('Error!', 'An error occurred while updating Price Reference.', 'error');
-					}
-				});
-			}
-		});
-	});
-
-	$(document).on('click', '#download_budget_stock', function() {
-		var id = $(this).data('id');
-
-		window.open(siteurl + active_controller + 'download_budget_stock/' + id, '_blank');
-	});
-
-	function number_format(number, decimals, dec_point, thousands_sep) {
-		// Strip all characters but numerical ones.
-		number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
-		var n = !isFinite(+number) ? 0 : +number,
-			prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-			sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-			dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-			s = '',
-			toFixedFix = function(n, prec) {
-				var k = Math.pow(10, prec);
-				return '' + Math.round(n * k) / k;
-			};
-		// Fix for IE parseFloat(0.55).toFixed(0) = 0;
-		s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-		if (s[0].length > 3) {
-			s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-		}
-		if ((s[1] || '').length < prec) {
-			s[1] = s[1] || '';
-			s[1] += new Array(prec - s[1].length + 1).join('0');
-		}
-		return s.join(dec);
-	}
 
 	function cancel() {
-		window.location.reload();
+		$("#form-data").hide();
+		$(".box").show();
+		$('#example1').DataTable().ajax.reload(null, false);
 	}
 </script>
+

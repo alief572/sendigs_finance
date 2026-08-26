@@ -31,7 +31,15 @@ class Price_sup_barang_stok extends Admin_Controller
     public function index()
     {
         $this->auth->restrict($this->viewPermission);
-        history("View index price from supplier barang stok (batch)");
+        history("View index price from supplier barang stok");
+
+        $categories = $this->Price_sup_barang_stok_model->get_categories();
+
+        $data = [
+            'categories' => $categories
+        ];
+
+        $this->template->set($data);
         $this->template->title('Price From Supplier >> Barang Stok');
         $this->template->render('index');
     }
@@ -42,9 +50,20 @@ class Price_sup_barang_stok extends Admin_Controller
         echo json_encode($data);
     }
 
-    public function add()
+    public function add($id_category = null)
     {
         $this->auth->restrict($this->addPermission);
+
+        if (empty($id_category)) {
+            $this->template->set_message("Silakan pilih kategori terlebih dahulu.", 'error');
+            redirect('price_sup_barang_stok');
+        }
+
+        $category = $this->Price_sup_barang_stok_model->get_category_by_id($id_category);
+        if (!$category) {
+            $this->template->set_message("Kategori tidak ditemukan.", 'error');
+            redirect('price_sup_barang_stok');
+        }
 
         $no_doc = $this->All_model->GetAutoGenerate('format_price_sup_stok');
         if (empty($no_doc)) {
@@ -52,22 +71,24 @@ class Price_sup_barang_stok extends Admin_Controller
         }
 
         $kurs = $this->Price_sup_barang_stok_model->get_latest_kurs();
-        $categories_items = $this->Price_sup_barang_stok_model->get_all_categories_with_items();
+        $items = $this->Price_sup_barang_stok_model->get_items_by_category($id_category);
 
         $data = [
             'type'             => 'add',
             'no_doc'           => $no_doc,
+            'id_category'      => $id_category,
+            'category'         => $category,
             'tanggal_doc'      => date('Y-m-d'),
             'kurs'             => $kurs,
             'note'             => '',
             'header'           => null,
-            'categories_items' => $categories_items,
+            'items'            => $items,
             'existing_details' => [],
             'existing_files'   => []
         ];
 
         $this->template->set($data);
-        $this->template->title('Add Pengajuan Price Supplier >> Barang Stok');
+        $this->template->title('Form Input Pengajuan Price Supplier >> ' . strtoupper($category->nm_category));
         $this->template->render('add');
     }
 
@@ -81,35 +102,33 @@ class Price_sup_barang_stok extends Admin_Controller
             redirect('price_sup_barang_stok');
         }
 
-        if ($header->status == '1') {
-            $this->template->set_message("Dokumen sudah disetujui (Approved) dan tidak dapat diedit.", 'warning');
-            redirect('price_sup_barang_stok');
-        }
-
-        $details = $this->Price_sup_barang_stok_model->get_details($no_doc);
-        $files   = $this->Price_sup_barang_stok_model->get_files($no_doc);
+        $id_category = $header->id_category;
+        $category = $this->Price_sup_barang_stok_model->get_category_by_id($id_category);
+        $items    = $this->Price_sup_barang_stok_model->get_items_by_category($id_category);
+        $details  = $this->Price_sup_barang_stok_model->get_details($no_doc);
+        $files    = $this->Price_sup_barang_stok_model->get_files($no_doc);
 
         $existing_details = [];
         foreach ($details as $d) {
             $existing_details[$d->id_barang] = $d;
         }
 
-        $categories_items = $this->Price_sup_barang_stok_model->get_all_categories_with_items();
-
         $data = [
             'type'             => 'edit',
             'no_doc'           => $header->no_doc,
+            'id_category'      => $id_category,
+            'category'         => $category,
             'tanggal_doc'      => $header->tanggal_doc,
             'kurs'             => $header->kurs,
             'note'             => $header->note,
             'header'           => $header,
-            'categories_items' => $categories_items,
+            'items'            => $items,
             'existing_details' => $existing_details,
             'existing_files'   => $files
         ];
 
         $this->template->set($data);
-        $this->template->title('Edit Pengajuan Price Supplier >> Barang Stok');
+        $this->template->title('Edit Pengajuan Price Supplier >> ' . (!empty($category) ? strtoupper($category->nm_category) : 'Barang Stok'));
         $this->template->render('add');
     }
 
@@ -119,18 +138,10 @@ class Price_sup_barang_stok extends Admin_Controller
         $details = $this->Price_sup_barang_stok_model->get_details($no_doc);
         $files   = $this->Price_sup_barang_stok_model->get_files($no_doc);
 
-        // Group details by category
-        $details_by_cat = [];
-        foreach ($details as $d) {
-            $cat_name = !empty($d->nm_category) ? $d->nm_category : 'Lainnya';
-            $details_by_cat[$cat_name][] = $d;
-        }
-
         $data = [
-            'header'         => $header,
-            'details'        => $details,
-            'details_by_cat' => $details_by_cat,
-            'files'          => $files
+            'header'   => $header,
+            'details'  => $details,
+            'files'    => $files
         ];
 
         $this->load->view('view', $data);
@@ -142,9 +153,18 @@ class Price_sup_barang_stok extends Admin_Controller
 
         $type        = $post['type'] ?? 'add';
         $no_doc      = $post['no_doc'];
+        $id_category = intval($post['id_category'] ?? 0);
         $tanggal_doc = !empty($post['tanggal_doc']) ? date('Y-m-d', strtotime($post['tanggal_doc'])) : date('Y-m-d');
-        $kurs        = !empty($post['kurs']) ? floatval(str_replace(',', '', $post['kurs'])) : 1;
+        $kurs        = 1; // Default Kurs 1
         $note        = $post['note'] ?? '';
+
+        if (empty($id_category)) {
+            echo json_encode([
+                'status' => 0,
+                'pesan'  => 'Kategori dokumen tidak valid!'
+            ]);
+            return;
+        }
 
         $items = $post['items'] ?? [];
 
@@ -161,13 +181,13 @@ class Price_sup_barang_stok extends Admin_Controller
         foreach ($items as $item) {
             $price_new = floatval(str_replace(',', '', $item['price_ref_new'] ?? 0));
             $price_high_new = floatval(str_replace(',', '', $item['price_ref_high_new'] ?? 0));
-            $price_new_usd = floatval(str_replace(',', '', $item['price_ref_new_usd'] ?? 0));
-            $price_high_new_usd = floatval(str_replace(',', '', $item['price_ref_high_new_usd'] ?? 0));
+            $price_new_usd = $price_new;
+            $price_high_new_usd = $price_high_new;
 
-            if ($price_new > 0 || $price_high_new > 0 || $price_new_usd > 0 || $price_high_new_usd > 0) {
+            if ($price_new > 0 || $price_high_new > 0) {
                 $valid_items[] = [
                     'no_doc'                  => $no_doc,
-                    'id_category'             => intval($item['id_category']),
+                    'id_category'             => $id_category,
                     'id_barang'               => intval($item['id_barang']),
                     'price_ref_before'        => floatval(str_replace(',', '', $item['price_ref_before'] ?? 0)),
                     'price_ref_high_before'   => floatval(str_replace(',', '', $item['price_ref_high_before'] ?? 0)),
@@ -196,12 +216,15 @@ class Price_sup_barang_stok extends Admin_Controller
 
         if ($type == 'edit') {
             $dataHeader = [
+                'id_category'     => $id_category,
                 'tanggal_doc'     => $tanggal_doc,
                 'kurs'            => $kurs,
                 'note'            => $note,
-                'status'          => '0',
+                'status'          => '0', // Reset to Waiting Approval
                 'updated_by'      => $this->id_user,
                 'updated_date'    => $this->datetime,
+                'approved_by'     => null,
+                'approved_date'   => null,
                 'rejected_by'     => null,
                 'rejected_date'   => null,
                 'rejected_reason' => null
@@ -215,6 +238,7 @@ class Price_sup_barang_stok extends Admin_Controller
         } else {
             $dataHeader = [
                 'no_doc'       => $no_doc,
+                'id_category'  => $id_category,
                 'tanggal_doc'  => $tanggal_doc,
                 'kurs'         => $kurs,
                 'note'         => $note,
@@ -228,8 +252,20 @@ class Price_sup_barang_stok extends Admin_Controller
         // Insert Detail Items
         $this->db->insert_batch('tr_price_sup_barang_stok_detail', $valid_items);
 
-        // Handle Multiple File Upload
+        // Handle Multiple File Upload (Replace old files if new files are uploaded during edit)
         if (!empty($_FILES['evidence_files']['name'][0])) {
+            if ($type == 'edit') {
+                $old_files = $this->db->get_where('tr_price_sup_barang_stok_files', ['no_doc' => $no_doc])->result();
+                if (!empty($old_files)) {
+                    foreach ($old_files as $of) {
+                        if (!empty($of->file_path) && file_exists($of->file_path)) {
+                            @unlink($of->file_path);
+                        }
+                    }
+                    $this->db->where('no_doc', $no_doc)->delete('tr_price_sup_barang_stok_files');
+                }
+            }
+
             $upload_dir = 'assets/files/evidence_price_sup/';
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
@@ -270,7 +306,7 @@ class Price_sup_barang_stok extends Admin_Controller
             history("Pengajuan Price Supplier Barang Stok: " . $no_doc);
             echo json_encode([
                 'status' => 1,
-                'pesan'  => 'Pengajuan harga supplier berhasil disimpan (No. ' . $no_doc . ')',
+                'pesan'  => 'Pengajuan harga supplier berhasil disimpan (No. ' . $no_doc . '). Menunggu persetujuan (Waiting Approval).',
                 'no_doc' => $no_doc
             ]);
         }
@@ -282,10 +318,10 @@ class Price_sup_barang_stok extends Admin_Controller
         $no_doc = $this->input->post('no_doc');
 
         $header = $this->Price_sup_barang_stok_model->get_header($no_doc);
-        if (!$header || $header->status != '0') {
+        if (!$header || $header->status == '1') {
             echo json_encode([
                 'status' => 0,
-                'pesan'  => 'Data tidak dapat dihapus atau sudah diproses approval!'
+                'pesan'  => 'Data yang sudah disetujui (Approved) tidak dapat dihapus!'
             ]);
             return;
         }
@@ -335,10 +371,16 @@ class Price_sup_barang_stok extends Admin_Controller
         echo json_encode($history);
     }
 
-    public function get_kurs()
+    public function get_evidence_modal($no_doc = null)
     {
-        $kurs = $this->Price_sup_barang_stok_model->get_latest_kurs();
-        echo json_encode(['status' => 1, 'kurs' => $kurs]);
+        $files = $this->Price_sup_barang_stok_model->get_files($no_doc);
+        $data = [
+            'no_doc' => $no_doc,
+            'files'  => $files
+        ];
+        $this->load->view('modal_evidence', $data);
     }
 }
+
+
 

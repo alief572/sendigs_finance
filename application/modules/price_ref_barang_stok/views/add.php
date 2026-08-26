@@ -1,11 +1,11 @@
+<?php
+	$nm_cat = !empty($header->nm_category) ? strtoupper($header->nm_category) : 'Kategori';
+?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/select2/select2.min.css')?>">
 <style>
 	.table-custom th, .table-custom td {
 		vertical-align: middle !important;
 		padding: 6px 8px !important;
-	}
-	.nav-tabs-custom > .nav-tabs > li.active {
-		border-top-color: #00a65a;
 	}
 	.highlight-new {
 		background-color: #eafaf1 !important;
@@ -14,7 +14,7 @@
 
 <div class="box box-success">
 	<div class="box-header with-border">
-		<h3 class="box-title"><i class="fa fa-check-square-o"></i> Review & Approval Pengajuan Price Reference (Barang Stok)</h3>
+		<h3 class="box-title"><i class="fa fa-check-square-o"></i> Review & Approval Pengajuan Price Reference &mdash; <b><?= $nm_cat ?></b></h3>
 		<div class="box-tools pull-right">
 			<a href="<?= base_url('price_ref_barang_stok') ?>" class="btn btn-sm btn-default"><i class="fa fa-arrow-left"></i> Kembali</a>
 		</div>
@@ -37,14 +37,14 @@
 						</div>
 						<div class="col-md-3">
 							<div class="form-group">
-								<label>Tanggal Pengajuan</label>
-								<input type="text" class="form-control" value="<?= date('d-M-Y', strtotime($header->tanggal_doc)) ?>" readonly>
+								<label>Kategori Barang Stok</label>
+								<input type="text" class="form-control" value="<?= $nm_cat ?>" readonly style="font-weight:bold; background:#f9f9f9; color:#00a65a;">
 							</div>
 						</div>
 						<div class="col-md-3">
 							<div class="form-group">
-								<label>Kurs Saat Ini (USD -> IDR)</label>
-								<input type="text" class="form-control text-right" id="kurs" value="<?= number_format($header->kurs, 2) ?>" readonly>
+								<label>Tanggal Pengajuan</label>
+								<input type="text" class="form-control" value="<?= date('d-M-Y', strtotime($header->tanggal_doc)) ?>" readonly>
 							</div>
 						</div>
 						<div class="col-md-3">
@@ -66,11 +66,9 @@
 								<label>File Evidence Terlampir</label>
 								<div>
 									<?php if(!empty($files)): ?>
-										<?php foreach($files as $f): ?>
-											<a href="<?= base_url($f->file_path) ?>" target="_blank" class="btn btn-sm btn-primary" style="margin-right:5px; margin-bottom:5px;">
-												<i class="fa fa-download"></i> <?= htmlspecialchars($f->file_name) ?>
-											</a>
-										<?php endforeach; ?>
+										<button type="button" class="btn btn-sm btn-primary btn-view-evidence" data-no_doc="<?= $header->no_doc ?? '' ?>" title="Lihat Evidence Files">
+											<i class="fa fa-paperclip"></i> <b><?= count($files) ?> File Terlampir</b> (Lihat File)
+										</button>
 									<?php else: ?>
 										<span class="text-muted">- Tidak ada file bukti terlampir -</span>
 									<?php endif; ?>
@@ -81,106 +79,78 @@
 				</div>
 			</div>
 
-			<!-- Nav-Tabs Kategori -->
-			<div class="nav-tabs-custom">
-				<ul class="nav nav-tabs">
-					<?php 
-					$tab_idx = 0;
-					foreach($details_by_cat as $cat_name => $items): 
-						$is_active = ($tab_idx == 0) ? 'active' : '';
-						$tab_idx++;
-					?>
-						<li class="<?= $is_active ?>">
-							<a href="#tab_review_<?= md5($cat_name) ?>" data-toggle="tab">
-								<b><?= strtoupper($cat_name) ?></b> 
-								<span class="badge bg-green" style="margin-left:4px;"><?= count($items) ?></span>
-							</a>
-						</li>
-					<?php endforeach; ?>
-				</ul>
+			<!-- Rincian Barang Pengajuan -->
+			<div class="panel panel-success">
+				<div class="panel-heading" style="font-weight:bold;">
+					<i class="fa fa-tags"></i> DAFTAR BARANG YANG DIAJUKAN &mdash; <?= $nm_cat ?> (<?= count($details) ?> item)
+				</div>
+				<div class="panel-body" style="padding: 0;">
+					<div class="table-responsive">
+						<table class="table table-bordered table-striped table-hover table-custom" width="100%" style="margin:0;">
+							<thead>
+								<tr class="bg-green">
+									<th rowspan="2" class="text-center" width="3%">#</th>
+									<th rowspan="2" class="text-center" width="12%">Kode Stok</th>
+									<th rowspan="2" class="text-center" width="27%">Nama Barang & Spesifikasi</th>
+									<th rowspan="2" class="text-center" width="8%">Satuan</th>
+									<th colspan="2" class="text-center bg-gray-active" width="22%">Harga Lama (Before)</th>
+									<th colspan="2" class="text-center" style="background:#1e824c; color:#fff;" width="22%">Pengajuan Harga Baru (After)</th>
+									<th rowspan="2" class="text-center" width="10%">Expired</th>
+								</tr>
+								<tr class="bg-green">
+									<!-- Before -->
+									<th class="text-center bg-gray">Lower (IDR)</th>
+									<th class="text-center bg-gray">Higher (IDR)</th>
+									<!-- New -->
+									<th class="text-center" style="background:#27ae60; color:#fff;">Lower (IDR)</th>
+									<th class="text-center" style="background:#1e824c; color:#fff;">Higher (IDR)</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php 
+								$no = 0;
+								foreach($details as $d): 
+									$no++;
+									$id_item = $d->id_barang;
+								?>
+									<tr class="highlight-new">
+										<td class="text-center">
+											<?= $no ?>
+											<input type="hidden" name="items[<?= $id_item ?>][id_barang]" value="<?= $id_item ?>">
+										</td>
+										<td><b><?= strtoupper($d->id_stock ?? '-') ?></b></td>
+										<td>
+											<b><?= strtoupper($d->stock_name) ?></b>
+											<?php if(!empty($d->spec)): ?>
+												<br><small class="text-muted"><?= $d->spec ?></small>
+											<?php endif; ?>
+										</td>
+										<td class="text-center"><?= $d->nm_satuan ?? '-' ?></td>
+										
+										<!-- Before IDR -->
+										<td class="text-right bg-gray"><?= number_format($d->price_ref_before, 0) ?></td>
+										<td class="text-right bg-gray"><?= number_format($d->price_ref_high_before, 0) ?></td>
 
-				<div class="tab-content" style="padding: 15px 0;">
-					<?php 
-					$tab_idx = 0;
-					foreach($details_by_cat as $cat_name => $items): 
-						$is_active = ($tab_idx == 0) ? 'active' : '';
-						$tab_idx++;
-					?>
-						<div class="tab-pane <?= $is_active ?>" id="tab_review_<?= md5($cat_name) ?>">
-							<div class="table-responsive">
-								<table class="table table-bordered table-striped table-hover table-custom" width="100%">
-									<thead>
-										<tr class="bg-green">
-											<th rowspan="2" class="text-center" width="3%">#</th>
-											<th rowspan="2" class="text-center" width="9%">Kode Stok</th>
-											<th rowspan="2" class="text-center" width="18%">Nama Barang & Spesifikasi</th>
-											<th rowspan="2" class="text-center" width="5%">Satuan</th>
-											<th colspan="2" class="text-center bg-gray-active" width="16%">Harga Lama (Before)</th>
-											<th colspan="2" class="text-center" style="background:#1e824c; color:#fff;" width="20%">Pengajuan Lower Price</th>
-											<th colspan="2" class="text-center" style="background:#145a32; color:#fff;" width="20%">Pengajuan Higher Price</th>
-											<th rowspan="2" class="text-center" width="9%">Expired</th>
-										</tr>
-										<tr class="bg-green">
-											<!-- Before -->
-											<th class="text-center bg-gray">Lower (IDR)</th>
-											<th class="text-center bg-gray">Higher (IDR)</th>
-											<!-- New Lower -->
-											<th class="text-center" style="background:#27ae60; color:#fff;">IDR</th>
-											<th class="text-center" style="background:#27ae60; color:#fff;">USD</th>
-											<!-- New Higher -->
-											<th class="text-center" style="background:#1e824c; color:#fff;">IDR</th>
-											<th class="text-center" style="background:#1e824c; color:#fff;">USD</th>
-										</tr>
-									</thead>
-									<tbody>
-										<?php 
-										$no = 0;
-										foreach($items as $d): 
-											$no++;
-											$id_item = $d->id_barang;
-										?>
-											<tr class="highlight-new">
-												<td class="text-center">
-													<?= $no ?>
-													<input type="hidden" name="items[<?= $id_item ?>][id_barang]" value="<?= $id_item ?>">
-												</td>
-												<td><b><?= strtoupper($d->id_stock ?? '-') ?></b></td>
-												<td>
-													<b><?= strtoupper($d->stock_name) ?></b>
-													<?php if(!empty($d->spec)): ?>
-														<br><small class="text-muted"><?= $d->spec ?></small>
-													<?php endif; ?>
-												</td>
-												<td class="text-center"><?= $d->nm_satuan ?? '-' ?></td>
-												
-												<!-- Before IDR -->
-												<td class="text-right bg-gray"><?= number_format($d->price_ref_before, 0) ?></td>
-												<td class="text-right bg-gray"><?= number_format($d->price_ref_high_before, 0) ?></td>
+										<!-- New Lower IDR -->
+										<td class="text-right text-bold text-success">Rp <?= number_format($d->price_ref_new, 0) ?></td>
 
-												<!-- New Lower -->
-												<td class="text-right text-bold text-success"><?= number_format($d->price_ref_new, 0) ?></td>
-												<td class="text-right text-bold text-success">$ <?= number_format($d->price_ref_new_usd, 4) ?></td>
+										<!-- New Higher IDR -->
+										<td class="text-right text-bold text-success">Rp <?= number_format($d->price_ref_high_new, 0) ?></td>
 
-												<!-- New Higher -->
-												<td class="text-right text-bold text-success"><?= number_format($d->price_ref_high_new, 0) ?></td>
-												<td class="text-right text-bold text-success">$ <?= number_format($d->price_ref_high_new_usd, 4) ?></td>
-
-												<!-- Expired -->
-												<td class="text-center">
-													<?php
-														$exp_text = $d->expired . ' Bulan';
-														if ($d->expired == 6) $exp_text = 'Semester';
-														if ($d->expired == 12) $exp_text = 'Tahunan';
-														echo $exp_text;
-													?>
-												</td>
-											</tr>
-										<?php endforeach; ?>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					<?php endforeach; ?>
+										<!-- Expired -->
+										<td class="text-center">
+											<?php
+												$exp_text = $d->expired . ' Bulan';
+												if ($d->expired == 6) $exp_text = 'Semester';
+												if ($d->expired == 12) $exp_text = 'Tahunan';
+												echo $exp_text;
+											?>
+										</td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 
@@ -206,6 +176,7 @@
 		</div>
 	</form>
 </div>
+
 
 <script src="<?= base_url('assets/plugins/select2/select2.full.min.js')?>"></script>
 
@@ -315,3 +286,40 @@
 		});
 	});
 </script>
+
+<!-- Modal Evidence Files -->
+<div class="modal fade" id="modal-evidence" role="dialog" aria-labelledby="modalEvidenceLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-green">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><i class="fa fa-paperclip"></i> Daftar File Evidence Terlampir</h4>
+      </div>
+      <div class="modal-body" id="modal-evidence-body">
+		<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat file...</div>
+      </div>
+	  <div class="modal-footer">
+		<button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-close"></i> Tutup</button>
+	  </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+	$(document).on('click', '.btn-view-evidence', function() {
+		var no_doc = $(this).data('no_doc');
+		$('#modal-evidence-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat data file...</div>');
+		$('#modal-evidence').modal('show');
+		$.ajax({
+			url: siteurl + 'price_sup_barang_stok/get_evidence_modal/' + encodeURIComponent(no_doc),
+			type: 'GET',
+			success: function(html) {
+				$('#modal-evidence-body').html(html);
+			},
+			error: function() {
+				$('#modal-evidence-body').html('<div class="alert alert-danger">Gagal memuat daftar file.</div>');
+			}
+		});
+	});
+</script>
+
