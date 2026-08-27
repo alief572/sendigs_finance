@@ -503,14 +503,14 @@ class All_model extends BF_Model
 	function GetPettyCashCombo()
 	{
 		$combos = array();
-		$this->db->select('a.nama, a.pengelola');
+		$this->db->select('a.nama');
 		$this->db->from('ms_petty_cash a');
 		$this->db->order_by('a.nama', 'asc');
 		$query = $this->db->get();
 		$results	= $query->result_array();
 		if ($results) {
 			foreach ($results as $key => $vals) {
-				$combos[$vals['nama']]	= $vals['nama'] . ' - ' . $vals['pengelola'];
+				$combos[$vals['nama']]	= $vals['nama'];
 			}
 		}
 		return $combos;
