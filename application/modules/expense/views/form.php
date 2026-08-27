@@ -19,6 +19,48 @@ if (!isset($data->departement)) {
 		$app = $data_head->employee_id;
 	}
 }
+
+$list_bon_bukti = array();
+if (isset($data->bon_bukti) && !empty($data->bon_bukti)) {
+	$files_header = explode(';', $data->bon_bukti);
+	foreach ($files_header as $fh) {
+		$fh_clean = trim($fh);
+		if (!empty($fh_clean)) {
+			$list_bon_bukti[] = array(
+				'source' => 'Header Dokumen',
+				'path'   => $fh_clean,
+				'name'   => basename($fh_clean)
+			);
+		}
+	}
+}
+if (!empty($data_detail)) {
+	foreach ($data_detail as $dd) {
+		if (!empty($dd->doc_file)) {
+			$files_detail = explode(';', $dd->doc_file);
+			foreach ($files_detail as $fd) {
+				$fd_clean = trim($fd);
+				if (!empty($fd_clean)) {
+					$is_dup = false;
+					foreach ($list_bon_bukti as $lbb) {
+						if ($lbb['path'] == $fd_clean || basename($lbb['path']) == basename($fd_clean)) {
+							$is_dup = true;
+							break;
+						}
+					}
+					if (!$is_dup) {
+						$path_final = (strpos($fd_clean, 'assets/') === 0) ? $fd_clean : 'assets/expense/' . $fd_clean;
+						$list_bon_bukti[] = array(
+							'source' => !empty($dd->deskripsi) ? $dd->deskripsi : 'Baris Pengeluaran',
+							'path'   => $path_final,
+							'name'   => basename($fd_clean)
+						);
+					}
+				}
+			}
+		}
+	}
+}
 ?>
 <?= form_open($this->uri->uri_string(), array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal', 'enctype' => 'multipart/form-data')); ?>
 <input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->id) ? $data->id : ''); ?>">
@@ -157,13 +199,15 @@ if (!isset($data->departement)) {
 					<div class="form-group">
 						<label class="col-sm-3 control-label">Bon / Bukti <b class="text-red">*</b></label>
 						<div class="col-sm-9">
-							<input class="form-control input-sm" type="file" name="doc_file[]" id="id_doc_file" multiple <?= (isset($data->bon_bukti) ? "" : "required") ?> accept=".jpg,.jpeg,.png,.pdf" />
+							<input class="form-control input-sm" type="file" name="doc_file[]" id="id_doc_file" multiple <?= (!empty($list_bon_bukti) ? "" : "required") ?> accept=".jpg,.jpeg,.png,.pdf" />
 							<small class="text-muted"><i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF (Bisa pilih multi-file)</small>
-							<?php
-							if (isset($data->bon_bukti) && $data->bon_bukti != '') {
-								echo '<div style="margin-top:5px;"><a href="' . base_url($data->bon_bukti) . '" class="btn btn-xs btn-info" download target="_blank"><i class="fa fa-download"></i> Lihat Bon Bukti</a></div>';
-							}
-							?>
+							<?php if (!empty($list_bon_bukti)): ?>
+								<div style="margin-top:6px;">
+									<button type="button" class="btn btn-xs btn-info btn-flat-custom" data-toggle="modal" data-target="#modalBonBukti">
+										<i class="fa fa-paperclip"></i> Lihat Bon Bukti (<?= count($list_bon_bukti) ?> File)
+									</button>
+								</div>
+							<?php endif; ?>
 						</div>
 					</div>
 
@@ -288,18 +332,6 @@ if (!isset($data->departement)) {
 										</td>
 									</tr>
 							<?php
-									if ($record->doc_file != '') {
-										if (strpos($record->doc_file, 'pdf', 0) > 1) {
-											$gambar .= '<div class="col-md-12" style="margin-bottom:15px;">
-												<iframe src="' . base_url('assets/expense/' . $record->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:100%; height:400px; border:1px solid #ddd; border-radius:6px;" frameborder="0">
-													<a href="' . base_url('assets/expense/' . $record->doc_file) . '">Download PDF</a>
-												</iframe>
-												<div style="font-weight:600; margin-top:5px;">' . $record->no_doc . '</div>
-											</div>';
-										} else {
-											$gambar .= '<div class="col-md-4" style="margin-bottom:15px;"><a href="' . base_url('assets/expense/' . $record->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $record->doc_file) . '" class="img-responsive img-thumbnail"></a><div style="font-weight:600; margin-top:5px;">' . $record->no_doc . '</div></div>';
-										}
-									}
 									$idd++;
 								}
 							}
@@ -441,14 +473,81 @@ if (!isset($data->departement)) {
 						<i class="fa fa-reply">&nbsp;</i> Kembali / Batal
 					</a>
 				</div>
-				<div class="row" style="margin-top:15px;">
-					<?= $gambar ?>
-				</div>
 			</div>
 		</div>
 	</div>
 </div>
 <?= form_close() ?>
+
+<!-- MODAL LIHAT BON BUKTI -->
+<div class="modal fade" id="modalBonBukti" tabindex="-1" role="dialog" aria-labelledby="modalBonBuktiLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg" style="width: 75%;">
+		<div class="modal-content" style="border-radius: 8px;">
+			<div class="modal-header bg-primary" style="border-radius: 8px 8px 0 0;">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<h4 class="modal-title" id="modalBonBuktiLabel"><i class="fa fa-file-image-o"></i> Daftar Lampiran Bon / Bukti Pengeluaran</h4>
+			</div>
+			<div class="modal-body" style="padding: 20px;">
+				<?php if (!empty($list_bon_bukti)): ?>
+					<div class="table-responsive">
+						<table class="table table-bordered table-striped" width="100%">
+							<thead>
+								<tr class="bg-gray">
+									<th width="35" class="text-center">#</th>
+									<th width="200">Keterangan / Sumber</th>
+									<th>Nama File Lampiran</th>
+									<th width="120" class="text-center">Preview</th>
+									<th width="120" class="text-center">Aksi</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php $bno = 1; foreach ($list_bon_bukti as $bb): 
+									$file_url = base_url($bb['path']);
+									$is_pdf = (stripos($bb['name'], '.pdf') !== false);
+								?>
+								<tr>
+									<td class="text-center"><?= $bno++ ?></td>
+									<td><span class="badge bg-gray text-dark" style="color:#333;"><?= htmlspecialchars($bb['source']) ?></span></td>
+									<td><b><?= htmlspecialchars($bb['name']) ?></b></td>
+									<td class="text-center">
+										<?php if ($is_pdf): ?>
+											<a href="<?= $file_url ?>" target="_blank" class="text-red">
+												<i class="fa fa-file-pdf-o fa-2x"></i><br><small>Dokumen PDF</small>
+											</a>
+										<?php else: ?>
+											<a href="<?= $file_url ?>" target="_blank">
+												<img src="<?= $file_url ?>" style="max-height: 60px; max-width: 90px; border: 1px solid #ddd; padding: 2px; border-radius: 4px;">
+											</a>
+										<?php endif; ?>
+									</td>
+									<td class="text-center">
+										<a href="<?= $file_url ?>" target="_blank" class="btn btn-xs btn-primary btn-flat-custom" title="Buka File">
+											<i class="fa fa-external-link"></i> Buka
+										</a>
+										<a href="<?= $file_url ?>" download class="btn btn-xs btn-default btn-flat-custom" title="Unduh File">
+											<i class="fa fa-download"></i>
+										</a>
+									</td>
+								</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					</div>
+				<?php else: ?>
+					<div class="text-center text-muted" style="padding: 30px;">
+						<i class="fa fa-file-o fa-3x"></i>
+						<p style="margin-top: 10px;">Belum ada file bon / bukti yang dilampirkan pada dokumen ini.</p>
+					</div>
+				<?php endif; ?>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default btn-flat-custom" data-dismiss="modal">Tutup</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <?php
 $datacombocoa = "";
