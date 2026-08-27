@@ -218,14 +218,28 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
             </div>
 
             <div class="form-group row">
-                <label class="label-control col-sm-2"><b>Upload Document <small class="text-muted">(bisa lebih dari 1 file)</small></b></label>
+                <label class="label-control col-sm-2"><b>Upload Document</b></label>
                 <div class="col-sm-10">
-                    <input type="file" id="upload_spk" name="upload_spk[]" class="form-control input-md" multiple <?= $disabled; ?>>
-                    <small class="text-muted" style="font-size:11px; display:block; margin-top:4px;">Format diterima: JPG, PNG, PDF, XLS/XLSX - Maks. 5 MB per file</small>
+                    <?php if (empty($approve)) { ?>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="btn btn-sm btn-primary btn-flat" style="margin-bottom:0; cursor:pointer; font-weight:600;">
+                                <i class="fa fa-folder-open"></i> Pilih File Lampiran
+                                <input type="file" id="temp_file_picker" style="display:none;" accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx" multiple>
+                            </label>
+                            <span id="selected_files_count" class="text-muted" style="font-size:12px;">Belum ada file baru dipilih</span>
+                        </div>
+                    <?php } ?>
+
+                    <!-- Hidden actual input holding accumulated files -->
+                    <input type="file" id="upload_spk" name="upload_spk[]" multiple style="display:none;">
+
+                    <!-- List of newly selected files -->
+                    <div id="new_files_list" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+                    <small class="text-muted" style="font-size:11px; display:block; margin-top:4px;">Format diterima: JPG, PNG, PDF, XLS/XLSX - Maks. 5 MB per file. Anda bisa klik tombol <b>Pilih File Lampiran</b> berkali-kali untuk memilih file dari folder mana saja satu per satu.</small>
 
                     <?php if (!empty($docs_list)) { ?>
                         <div class="existing-files-container" style="margin-top:10px;">
-                            <label style="font-size:12px; font-weight:600; color:#555;"><i class="fa fa-paperclip"></i> Dokumen Terlampir:</label>
+                            <label style="font-size:12px; font-weight:600; color:#555;"><i class="fa fa-paperclip"></i> Dokumen Terlampir Sebelumnya:</label>
                             <div class="file-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
                                 <?php foreach ($docs_list as $doc_file) { ?>
                                     <span class="badge file-item-badge" style="background:#3c8dbc; padding:6px 10px; font-size:11px; font-weight:normal; border-radius:3px; display:inline-flex; align-items:center; gap:6px;">
@@ -486,6 +500,74 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
         });
         $('.tnd_reason').hide();
         calculate_all_total();
+    });
+
+    // Single Button Multi-Directory File Upload Accumulator
+    var dtUpload = new DataTransfer();
+
+    $(document).on('change', '#temp_file_picker', function() {
+        var newFiles = this.files;
+        if (newFiles.length > 0) {
+            for (var i = 0; i < newFiles.length; i++) {
+                var file = newFiles[i];
+                var exists = false;
+                for (var j = 0; j < dtUpload.items.length; j++) {
+                    var existingFile = dtUpload.items[j].getAsFile();
+                    if (existingFile && existingFile.name === file.name && existingFile.size === file.size) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    dtUpload.items.add(file);
+                }
+            }
+            var hiddenInput = document.getElementById('upload_spk');
+            if (hiddenInput) {
+                hiddenInput.files = dtUpload.files;
+            }
+            $(this).val('');
+            render_new_files_list();
+        }
+    });
+
+    function render_new_files_list() {
+        var container = $('#new_files_list');
+        container.empty();
+        var count = dtUpload.files.length;
+        if (count > 0) {
+            $('#selected_files_count').text(count + ' file baru dipilih:');
+            for (var i = 0; i < count; i++) {
+                var file = dtUpload.files[i];
+                var sizeKb = Math.round(file.size / 1024);
+                var badgeHtml = '<span class="badge" style="background:#00a65a; padding:6px 10px; font-size:11px; font-weight:normal; border-radius:3px; display:inline-flex; align-items:center; gap:6px;">' +
+                    '<i class="fa fa-file-o"></i> ' + file.name + ' (' + sizeKb + ' KB) ' +
+                    '<button type="button" class="btn btn-xs btn-danger remove-new-file" data-index="' + i + '" style="padding:1px 5px; line-height:1; font-size:10px; border-radius:2px; margin-left:4px;" title="Hapus file ini">' +
+                    '<i class="fa fa-times"></i>' +
+                    '</button>' +
+                    '</span>';
+                container.append(badgeHtml);
+            }
+        } else {
+            $('#selected_files_count').text('Belum ada file baru dipilih');
+        }
+    }
+
+    $(document).on('click', '.remove-new-file', function(e) {
+        e.preventDefault();
+        var idx = parseInt($(this).data('index'));
+        var newDt = new DataTransfer();
+        for (var i = 0; i < dtUpload.files.length; i++) {
+            if (i !== idx) {
+                newDt.items.add(dtUpload.files[i]);
+            }
+        }
+        dtUpload = newDt;
+        var hiddenInput = document.getElementById('upload_spk');
+        if (hiddenInput) {
+            hiddenInput.files = dtUpload.files;
+        }
+        render_new_files_list();
     });
 
     // Hapus file existing
