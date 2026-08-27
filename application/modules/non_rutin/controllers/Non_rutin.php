@@ -516,6 +516,9 @@ class Non_rutin extends Admin_Controller
 						'document' 		=> $file_name,
 						'coa' 		=> NULL,
 						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => isset($data['bank_name']) ? $data['bank_name'] : null,
+						'bank_account_no' => isset($data['bank_account_no']) ? $data['bank_account_no'] : null,
+						'bank_account_name' => isset($data['bank_account_name']) ? $data['bank_account_name'] : null,
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
 					);
@@ -548,6 +551,9 @@ class Non_rutin extends Admin_Controller
 						'rejected' => null,
 						'app_post' => null,
 						'keterangan_3' 		=> $data['keterangan_3'],
+						'bank_name' => isset($data['bank_name']) ? $data['bank_name'] : null,
+						'bank_account_no' => isset($data['bank_account_no']) ? $data['bank_account_no'] : null,
+						'bank_account_name' => isset($data['bank_account_name']) ? $data['bank_account_name'] : null,
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
 						'tingkat_pr' => $data['tingkat_pr']
@@ -993,6 +999,9 @@ class Non_rutin extends Admin_Controller
 						'document' 		=> $file_name,
 						'coa' 		=> NULL,
 						'tingkat_pr' => $data['tingkat_pr'],
+						'bank_name' => isset($data['bank_name']) ? $data['bank_name'] : null,
+						'bank_account_no' => isset($data['bank_account_no']) ? $data['bank_account_no'] : null,
+						'bank_account_name' => isset($data['bank_account_name']) ? $data['bank_account_name'] : null,
 						'created_by'	=> $this->auth->user_id(),
 						'created_date'	=> $dateTime
 					);
@@ -1025,6 +1034,9 @@ class Non_rutin extends Admin_Controller
 						'rejected' => null,
 						'app_post' => null,
 						'keterangan_3' 		=> $data['keterangan_3'],
+						'bank_name' => isset($data['bank_name']) ? $data['bank_name'] : null,
+						'bank_account_no' => isset($data['bank_account_no']) ? $data['bank_account_no'] : null,
+						'bank_account_name' => isset($data['bank_account_name']) ? $data['bank_account_name'] : null,
 						'updated_by'	=> $this->auth->user_id(),
 						'updated_date'	=> $dateTime,
 						'tingkat_pr' => $data['tingkat_pr']

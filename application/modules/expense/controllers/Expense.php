@@ -4659,4 +4659,230 @@ class Expense extends Admin_Controller
 			'data'            => $data,
 		));
 	}
+
+	public function set_jurnal_expense()
+	{
+		$post = $this->input->post();
+		$tgl_doc = !empty($post['tgl_doc']) ? date('d F Y', strtotime($post['tgl_doc'])) : date('d F Y');
+		$tgl_jurnal_val = !empty($post['tgl_doc']) ? date('Y-m-d', strtotime($post['tgl_doc'])) : date('Y-m-d');
+		$no_doc = !empty($post['no_doc']) ? $post['no_doc'] : '';
+		
+		$total_expense = isset($post['total_expense']) ? floatval(str_replace(',', '', $post['total_expense'])) : 0;
+		$total_kasbon = isset($post['total_kasbon']) ? floatval(str_replace(',', '', $post['total_kasbon'])) : 0;
+		$selisih = $total_kasbon - $total_expense;
+
+		$hasil_jurnal = '';
+		$ttl_debit = 0;
+		$ttl_kredit = 0;
+		$no_jurnal = 0;
+
+		// Jika tidak ada kasbon, tidak perlu generate jurnal kasbon
+		if ($total_kasbon <= 0) {
+			echo json_encode([
+				'status' => 1,
+				'hasil' => '',
+				'ttl_debit' => '0',
+				'ttl_kredit' => '0'
+			]);
+			return;
+		}
+
+		$arr_id_kasbon = isset($post['id_kasbon']) ? (array)$post['id_kasbon'] : [];
+		$arr_coa = isset($post['coa']) ? (array)$post['coa'] : [];
+		$arr_deskripsi = isset($post['deskripsi']) ? (array)$post['deskripsi'] : [];
+		$arr_expense = isset($post['expense']) ? (array)$post['expense'] : [];
+		$arr_kasbon = isset($post['kasbon']) ? (array)$post['kasbon'] : [];
+
+		// 1. DEBIT: Item Pengeluaran
+		// Cek apakah ada kasbon yang terhubung dengan PR Stok / PR Department di tr_pr_detail_kasbon
+		$pr_items = [];
+		foreach ($arr_id_kasbon as $k_doc) {
+			if (!empty($k_doc)) {
+				$this->db->select('a.*, IF(b.code IS NULL, "Pcs", b.code) AS satuan');
+				$this->db->from('tr_pr_detail_kasbon a');
+				$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
+				$this->db->where('a.id_kasbon', $k_doc);
+				$q_pr = $this->db->get()->result_array();
+				if (!empty($q_pr)) {
+					foreach ($q_pr as $item_pr) {
+						$pr_items[] = $item_pr;
+					}
+				}
+			}
+		}
+
+		// Jika ada item dari PR Stok / PR Department
+		if (!empty($pr_items)) {
+			foreach ($pr_items as $item_pr) {
+				$no_jurnal++;
+				$debit = floatval($item_pr['total_harga']);
+				$kredit = 0;
+				$coa_code = '5101-01-03';
+				$coa_name = 'Biaya Pengeluaran Lainnya';
+
+				if ($item_pr['tipe_pr'] == 'pr stok') {
+					$this->db->select('a.no_coa, a.nm_coa');
+					$this->db->from('accessories a');
+					$this->db->where('a.id', $item_pr['id_material']);
+					$get_acc = $this->db->get()->row();
+					if (!empty($get_acc) && !empty($get_acc->no_coa)) {
+						$coa_code = $get_acc->no_coa;
+						$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : 'Biaya Stok Material';
+					}
+				} else if ($item_pr['tipe_pr'] == 'pr departemen') {
+					$this->db->select('a.coa');
+					$this->db->from('rutin_non_planning_header a');
+					$this->db->where('a.no_pr', $item_pr['no_pr']);
+					$get_dept = $this->db->get()->row();
+					if (!empty($get_dept) && !empty($get_dept->coa)) {
+						$coa_code = $get_dept->coa;
+					}
+					// Ambil nama COA dari DBACC
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+					if (!empty($q_coa_acc)) {
+						$coa_name = $q_coa_acc->nama;
+					}
+				} else {
+					// Ambil nama COA dari DBACC jika ada
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+					if (!empty($q_coa_acc)) {
+						$coa_name = $q_coa_acc->nama;
+					}
+				}
+
+				$deskripsi = $item_pr['nm_material'] . (!empty($item_pr['no_pr']) ? ' (No. PR: ' . $item_pr['no_pr'] . ')' : '');
+
+				$hasil_jurnal .= '<tr>';
+				$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+				$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+				$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
+				$hasil_jurnal .= '<td>' . $deskripsi . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi . '"></td>';
+				$hasil_jurnal .= '<td class="text-right">' . number_format($debit) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $debit . '"></td>';
+				$hasil_jurnal .= '<td class="text-right">' . number_format($kredit) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $kredit . '"></td>';
+				$hasil_jurnal .= '</tr>';
+
+				$ttl_debit += $debit;
+			}
+		}
+
+		// Tambahkan juga baris realisasi expense yang diisi di form tabel
+		if (!empty($arr_expense)) {
+			foreach ($arr_expense as $idx => $exp_val) {
+				$exp_num = floatval(str_replace(',', '', $exp_val));
+				$id_k = isset($arr_id_kasbon[$idx]) ? $arr_id_kasbon[$idx] : '';
+				if ($exp_num > 0 && empty($id_k)) {
+					$no_jurnal++;
+					$coa_code = isset($arr_coa[$idx]) && !empty($arr_coa[$idx]) ? $arr_coa[$idx] : '5101-01-03';
+					$coa_name = 'Biaya Pengeluaran';
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+					if (!empty($q_coa_acc)) {
+						$coa_name = $q_coa_acc->nama;
+					}
+
+					$desk = isset($arr_deskripsi[$idx]) && !empty($arr_deskripsi[$idx]) ? $arr_deskripsi[$idx] : 'Pengeluaran Expense';
+
+					$hasil_jurnal .= '<tr>';
+					$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+					$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+					$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
+					$hasil_jurnal .= '<td>' . $desk . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $desk . '"></td>';
+					$hasil_jurnal .= '<td class="text-right">' . number_format($exp_num) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $exp_num . '"></td>';
+					$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+					$hasil_jurnal .= '</tr>';
+
+					$ttl_debit += $exp_num;
+				}
+			}
+		}
+
+		// Jika ttl_debit masih 0 tapi total_expense > 0, buat baris fallback biaya
+		if ($ttl_debit == 0 && $total_expense > 0) {
+			$no_jurnal++;
+			$coa_code = '5101-01-03';
+			$coa_name = 'Biaya Pengeluaran Expense';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+			if (!empty($q_coa_acc)) $coa_name = $q_coa_acc->nama;
+
+			$hasil_jurnal .= '<tr>';
+			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+			$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+			$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
+			$hasil_jurnal .= '<td>Realisasi Pengeluaran Expense</td>';
+			$hasil_jurnal .= '<td class="text-right">' . number_format($total_expense) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $total_expense . '"></td>';
+			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+			$hasil_jurnal .= '</tr>';
+
+			$ttl_debit += $total_expense;
+		}
+
+		// Jika LEBIH BAYAR (Kasbon > Expense / Selisih > 0): Sisi DEBIT Bank Pengembalian
+		if ($selisih > 0) {
+			$no_jurnal++;
+			$coa_bank = '1101-02-01';
+			$nm_bank = 'Bank BCA (Pengembalian Kasbon)';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_bank . "'")->row();
+			if (!empty($q_coa_acc)) $nm_bank = $q_coa_acc->nama;
+
+			$hasil_jurnal .= '<tr style="background:#e8fadf;">';
+			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_bank . '"></td>';
+			$hasil_jurnal .= '<td><b>' . $nm_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_bank . '"></td>';
+			$hasil_jurnal .= '<td><span class="text-green"><i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon (Transfer ke Rekening Perusahaan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Pengembalian Kelebihan Kasbon"></td>';
+			$hasil_jurnal .= '<td class="text-right"><b>' . number_format($selisih) . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $selisih . '"></td>';
+			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+			$hasil_jurnal .= '</tr>';
+
+			$ttl_debit += $selisih;
+		}
+
+		// 2. KREDIT: Akun Kasbon / Uang Muka Karyawan (1103-01-14)
+		$no_jurnal++;
+		$coa_kasbon = '1103-01-14';
+		$nm_kasbon = 'Kasbon / Uang Muka Karyawan';
+		$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
+		if (!empty($q_coa_acc)) $nm_kasbon = $q_coa_acc->nama;
+
+		$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_filter($arr_id_kasbon)) . ')' : '');
+
+		$hasil_jurnal .= '<tr>';
+		$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+		$hasil_jurnal .= '<td class="text-center">' . $coa_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_kasbon . '"></td>';
+		$hasil_jurnal .= '<td>' . $nm_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_kasbon . '"></td>';
+		$hasil_jurnal .= '<td>' . $deskripsi_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi_kasbon . '"></td>';
+		$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="0"></td>';
+		$hasil_jurnal .= '<td class="text-right">' . number_format($total_kasbon) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $total_kasbon . '"></td>';
+		$hasil_jurnal .= '</tr>';
+
+		$ttl_kredit += $total_kasbon;
+
+		// 3. Jika KURANG BAYAR (Expense > Kasbon / Selisih < 0): Sisi KREDIT Hutang Reimburse Karyawan (9999-99-99)
+		if ($selisih < 0) {
+			$kurang_bayar = abs($selisih);
+			$no_jurnal++;
+			$coa_hutang = '9999-99-99';
+			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
+			if (!empty($q_coa_acc)) $nm_hutang = $q_coa_acc->nama;
+
+			$hasil_jurnal .= '<tr style="background:#fde8e8;">';
+			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_hutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_hutang . '"></td>';
+			$hasil_jurnal .= '<td><b>' . $nm_hutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_hutang . '"></td>';
+			$hasil_jurnal .= '<td><span class="text-red"><i class="fa fa-exclamation-circle"></i> Kurang Bayar Kasbon (Reimburse Kantor ke Karyawan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Kurang Bayar Kasbon Reimburse"></td>';
+			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="0"></td>';
+			$hasil_jurnal .= '<td class="text-right"><b>' . number_format($kurang_bayar) . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $kurang_bayar . '"></td>';
+			$hasil_jurnal .= '</tr>';
+
+			$ttl_kredit += $kurang_bayar;
+		}
+
+		echo json_encode([
+			'status' => 1,
+			'hasil' => $hasil_jurnal,
+			'ttl_debit' => number_format($ttl_debit),
+			'ttl_kredit' => number_format($ttl_kredit),
+			'is_balance' => ($ttl_debit == $ttl_kredit)
+		]);
+	}
+
 }
