@@ -11,6 +11,9 @@ $no_so          = (!empty($header)) ? $header[0]->no_so : '';
 $project_name   = (!empty($header)) ? $header[0]->project_name : '';
 $pr_coa         = (!empty($header)) ? $header[0]->coa : '';
 $tingkat_pr     = (!empty($header)) ? $header[0]->tingkat_pr : '';
+$bank_name      = (!empty($header)) ? $header[0]->bank_name : '';
+$bank_account_no   = (!empty($header)) ? $header[0]->bank_account_no : '';
+$bank_account_name = (!empty($header)) ? $header[0]->bank_account_name : '';
 $nm_pembuat     = (!empty($header)) ? $header[0]->nm_pembuat : '';
 $tgl_dibuat     = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
 
@@ -270,6 +273,21 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 			</div>
 
 			<div class="form-group row">
+				<label class="label-control col-sm-2"><b>Bank Penerima</b></label>
+				<div class="col-sm-4">
+					<input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (misal: BCA / Mandiri / BRI)" value="<?= htmlspecialchars($bank_name); ?>" <?= $disabled; ?>>
+				</div>
+				<label class="label-control col-sm-2"><b>No. Rekening</b></label>
+				<div class="col-sm-4">
+					<input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="Nomor Rekening Penerima Transfer" value="<?= htmlspecialchars($bank_account_no); ?>" <?= $disabled; ?>>
+				</div>
+			</div>
+
+			<div class="form-group row">
+				<label class="label-control col-sm-2"><b>Atas Nama Rekening</b></label>
+				<div class="col-sm-4">
+					<input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= htmlspecialchars($bank_account_name); ?>" <?= $disabled; ?>>
+				</div>
 				<label class="label-control col-sm-2"><b>Tingkat PR</b></label>
 				<div class="col-sm-4">
 					<select name="tingkat_pr" id="" class="form-control input-md" <?= $disabled; ?>>
