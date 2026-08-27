@@ -93,11 +93,11 @@ if (!empty($data_detail)) {
 		padding: 15px;
 		margin-top: 5px;
 	}
-	.table-expense {
+	.table-expense, .table-jurnal-custom {
 		border: 1px solid #d2d6de;
 		background: #fff;
 	}
-	.table-expense thead th {
+	.table-expense thead th, .table-jurnal-custom thead th {
 		background-color: #3c8dbc;
 		color: #ffffff;
 		font-weight: 600;
@@ -107,13 +107,13 @@ if (!empty($data_detail)) {
 		font-size: 13px;
 		padding: 10px 6px;
 	}
-	.table-expense tbody td {
+	.table-expense tbody td, .table-jurnal-custom tbody td {
 		vertical-align: middle !important;
 		font-size: 13px;
 		border: 1px solid #e9ecef;
 		padding: 6px;
 	}
-	.table-expense tfoot td {
+	.table-expense tfoot td, .table-jurnal-custom tfoot th {
 		vertical-align: middle !important;
 		font-size: 13px;
 		border: 1px solid #d2d6de;
@@ -300,7 +300,7 @@ if (!empty($data_detail)) {
 										<td>
 											<?php
 											if (!$is_kasbon_row) {
-												echo form_dropdown('coa[]', $option_coa, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2 input-sm'));
+												echo form_dropdown('coa[]', $option_coa, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2 input-sm', 'onchange' => 'set_jurnal()'));
 											} else {
 												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $record->coa . '"><span class="badge bg-blue">' . $record->coa . '</span>';
 											}
@@ -310,7 +310,7 @@ if (!empty($data_detail)) {
 											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>" <?= $is_kasbon_row ? 'readonly' : '' ?>>
 										</td>
 										<td>
-											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" rows="2" style="font-size:13px;" <?= $is_kasbon_row ? 'readonly' : '' ?>><?= $record->deskripsi; ?></textarea>
+											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" rows="2" style="font-size:13px;" <?= $is_kasbon_row ? 'readonly' : '' ?> onblur="set_jurnal()"><?= $record->deskripsi; ?></textarea>
 										</td>
 										<td>
 											<textarea class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" rows="2" style="font-size:13px;" <?= $is_kasbon_row ? 'readonly' : '' ?>><?= $record->keterangan; ?></textarea>
@@ -414,6 +414,40 @@ if (!empty($data_detail)) {
 							</div>
 							<div class="panel-body">
 								<textarea class="form-control input-sm" name="keterangan_kurang_bayar" id="keterangan_kurang_bayar" rows="3" placeholder="Alasan mengapa pengeluaran melebihi kasbon awal (opsional)..."><?= (isset($data->keterangan_kurang_bayar) ? $data->keterangan_kurang_bayar : "") ?></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- SECTION TABLE JURNAL (HANYA MUNCUL JIKA TERKAIT KASBON) -->
+				<div id="section_jurnal" <?= ($total_kasbon > 0) ? "" : "hidden" ?> style="margin-top: 25px;">
+					<div class="panel panel-default" style="border-radius: 6px; border: 1px solid #d2d6de; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+						<div class="panel-heading" style="background:#f8fafc; font-weight: 700; color: #2d3748; font-size: 14px;">
+							<i class="fa fa-book text-primary"></i> <b>Daftar Jurnal Expense & Pertanggungjawaban Kasbon</b>
+						</div>
+						<div class="panel-body" style="padding: 15px;">
+							<div class="table-responsive">
+								<table class="table table-bordered table-striped table-jurnal-custom" width="100%">
+									<thead>
+										<tr>
+											<th width="120" class="text-center">Tanggal Jurnal</th>
+											<th width="130" class="text-center">COA</th>
+											<th width="230">Nama Account</th>
+											<th>Deskripsi / Keterangan</th>
+											<th width="140" class="text-right">Debit (Rp)</th>
+											<th width="140" class="text-right">Kredit (Rp)</th>
+										</tr>
+									</thead>
+									<tbody class="tbody_jurnal">
+									</tbody>
+									<tfoot>
+										<tr style="background:#f1f5f9; font-weight:bold;">
+											<th colspan="4" class="text-center">TOTAL BALANCING</th>
+											<th class="text-right ttl_debit">0</th>
+											<th class="text-right ttl_kredit">0</th>
+										</tr>
+									</tfoot>
+								</table>
 							</div>
 						</div>
 					</div>
@@ -566,6 +600,7 @@ foreach ($option_coa as $keys => $val) {
 <script type="text/javascript">
 	var url_save = siteurl + 'expense/save/';
 	var url_approve = siteurl + 'expense/approve/';
+	var url_set_jurnal = siteurl + 'expense/set_jurnal_expense';
 	var nomor = parseInt("<?= $idd ?>");
 	$('.divide').divide();
 	$('.select2').select2({ width: '100%' });
@@ -583,6 +618,7 @@ foreach ($option_coa as $keys => $val) {
 			showInputs: true,
 			autoclose: true
 		});
+		set_jurnal();
 	});
 
 	// Initial calculation check
@@ -591,6 +627,7 @@ foreach ($option_coa as $keys => $val) {
 	if (totalKasbon > 0 || grandTotal !== 0) {
 		$("#total_kasbon_row").show();
 		$("#selisih_row").show();
+		$("#section_jurnal").show();
 	}
 
 	// Save Expense
@@ -691,11 +728,13 @@ foreach ($option_coa as $keys => $val) {
 		if (sumKasbon > 0) {
 			$("#total_kasbon_row").show();
 			$("#selisih_row").show();
+			$("#section_jurnal").show();
 			$("#total_kasbon").prop("disabled", false);
 			$("#grand_total").prop("disabled", false);
 		} else {
 			$("#total_kasbon_row").hide();
 			$("#selisih_row").hide();
+			$("#section_jurnal").hide();
 			$("#total_kasbon").prop("disabled", true);
 			$("#grand_total").prop("disabled", true);
 		}
@@ -752,6 +791,43 @@ foreach ($option_coa as $keys => $val) {
 		}
 
 		$(".divide").divide();
+		set_jurnal();
+	}
+
+	function set_jurnal() {
+		var sumKasbon = 0;
+		$('.subkasbon').each(function() {
+			var v = $(this).val();
+			if (v) sumKasbon += Number(v.toString().replace(/,/g, ''));
+		});
+
+		// Jika tidak ada kasbon, sembunyikan section jurnal dan return
+		if (sumKasbon <= 0) {
+			$("#section_jurnal").hide();
+			return;
+		} else {
+			$("#section_jurnal").show();
+		}
+
+		var formdata = new FormData($('#frm_data')[0]);
+		$.ajax({
+			url: url_set_jurnal,
+			dataType: "json",
+			type: 'POST',
+			data: formdata,
+			processData: false,
+			contentType: false,
+			success: function(res) {
+				if (res && res.status === 1) {
+					$('.tbody_jurnal').html(res.hasil);
+					$('.ttl_debit').text(res.ttl_debit);
+					$('.ttl_kredit').text(res.ttl_kredit);
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Gagal generate jurnal: " + error);
+			}
+		});
 	}
 
 	function updateGrandTotal() {
@@ -759,6 +835,7 @@ foreach ($option_coa as $keys => $val) {
 		var kontrolVal = parseFloat($("#kontrol").val()) || 0;
 		var newGrandTotal = initialGrandTotal - kontrolVal;
 		$("#grand_total").val(newGrandTotal);
+		set_jurnal();
 	}
 
 	function add_kasbon() {
@@ -825,7 +902,7 @@ foreach ($option_coa as $keys => $val) {
 		Rows += nomor + " </td>";
 		Rows += "<td class='text-center'><span class='badge-kasbon'><i class='fa fa-ticket'></i> Kasbon</span></td>";
 		Rows += "<td>";
-		Rows += "<select name='coa[]' id='coa_" + nomor + "' class='form-control select2 input-sm'><?= $datacoa ?></select>";
+		Rows += "<select name='coa[]' id='coa_" + nomor + "' class='form-control select2 input-sm' onchange='set_jurnal()'><?= $datacoa ?></select>";
 		Rows += "</td>";
 		Rows += "<td>";
 		Rows += "<input type='text' class='form-control tanggal input-sm' name='tanggal[]' id='tanggal_" + nomor + "' tabindex='-1' value='" + tgl_doc + "' readonly />";
@@ -878,13 +955,13 @@ foreach ($option_coa as $keys => $val) {
 		Rows += nomor + "</td>";
 		Rows += "<td class='text-center'><span class='badge-expense'><i class='fa fa-money'></i> Realisasi</span></td>";
 		Rows += "<td>";
-		Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2 input-sm'><?= $datacoa ?></select>";
+		Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2 input-sm' onchange='set_jurnal()'><?= $datacoa ?></select>";
 		Rows += "</td>";
 		Rows += "<td>";
 		Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='YYYY-MM-DD' name='tanggal[]' id='tanggal_" + nomor + "' value='<?= date("Y-m-d") ?>' />";
 		Rows += "</td>";
 		Rows += "<td>";
-		Rows += "<textarea class='form-control input-sm' placeholder='Nama barang/jasa...' name='deskripsi[]' id='deskripsi_" + nomor + "' rows='2' style='font-size:13px;'></textarea>";
+		Rows += "<textarea class='form-control input-sm' placeholder='Nama barang/jasa...' name='deskripsi[]' id='deskripsi_" + nomor + "' rows='2' style='font-size:13px;' onblur='set_jurnal()'></textarea>";
 		Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
 		Rows += "</td>";
 		Rows += "<td>";
