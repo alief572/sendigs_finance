@@ -57,14 +57,26 @@
 						</div>
 						<div class="col-md-3">
 							<div class="form-group">
-								<label>Evidence Files (Multiple) <?= empty($existing_files) ? '<span class="text-danger">*</span>' : '' ?></label>
-								<input type="file" name="evidence_files[]" id="evidence_files" class="form-control" multiple <?= empty($existing_files) ? 'required' : '' ?>>
-								<small class="text-muted">Bisa memilih lebih dari 1 file</small>
-								
+								<label>Evidence Files <?= empty($existing_files) ? '<span class="text-danger">*</span>' : '' ?></label>
+								<div style="display:flex; align-items:center; gap:8px;">
+									<label class="btn btn-sm btn-primary btn-flat" style="margin-bottom:0; cursor:pointer; font-weight:600;">
+										<i class="fa fa-folder-open"></i> Pilih File Evidence
+										<input type="file" id="temp_evidence_picker" style="display:none;" accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx" multiple>
+									</label>
+									<span id="selected_evidence_count" class="text-muted" style="font-size:11px;">Belum ada file dipilih</span>
+								</div>
+
+								<!-- Hidden actual input holding accumulated files -->
+								<input type="file" name="evidence_files[]" id="evidence_files" multiple style="display:none;" <?= empty($existing_files) ? 'required' : '' ?>>
+
+								<!-- List of newly selected files -->
+								<div id="new_evidence_list" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;"></div>
+								<small class="text-muted" style="font-size:11px; display:block; margin-top:3px;">Format: JPG, PNG, PDF, XLS/XLSX, DOC/DOCX. Bisa klik pilih file berkali-kali dari folder berbeda.</small>
+
 								<?php if(!empty($existing_files)): ?>
 									<div style="margin-top:6px;">
-										<button type="button" class="btn btn-xs btn-primary btn-view-evidence" data-no_doc="<?= $no_doc ?>" title="Lihat Evidence Files">
-											<i class="fa fa-paperclip"></i> <b><?= count($existing_files) ?> File Terlampir</b> (Lihat)
+										<button type="button" class="btn btn-xs btn-info btn-view-evidence" data-no_doc="<?= $no_doc ?>" title="Lihat Evidence Files">
+											<i class="fa fa-paperclip"></i> <b><?= count($existing_files) ?> File Terlampir Sebelumnya</b> (Lihat)
 										</button>
 									</div>
 								<?php endif; ?>
@@ -225,6 +237,74 @@
 		if (idr_val > 0) {
 			$('#row_item_' + id_item).addClass('item-row-highlight');
 		}
+	});
+
+	// Evidence File Accumulator
+	var dtEvidence = new DataTransfer();
+
+	$(document).on('change', '#temp_evidence_picker', function() {
+		var newFiles = this.files;
+		if (newFiles.length > 0) {
+			for (var i = 0; i < newFiles.length; i++) {
+				var file = newFiles[i];
+				var exists = false;
+				for (var j = 0; j < dtEvidence.items.length; j++) {
+					var existingFile = dtEvidence.items[j].getAsFile();
+					if (existingFile && existingFile.name === file.name && existingFile.size === file.size) {
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					dtEvidence.items.add(file);
+				}
+			}
+			var hiddenInput = document.getElementById('evidence_files');
+			if (hiddenInput) {
+				hiddenInput.files = dtEvidence.files;
+			}
+			$(this).val('');
+			render_new_evidence_list();
+		}
+	});
+
+	function render_new_evidence_list() {
+		var container = $('#new_evidence_list');
+		container.empty();
+		var count = dtEvidence.files.length;
+		if (count > 0) {
+			$('#selected_evidence_count').text(count + ' file baru dipilih:');
+			for (var i = 0; i < count; i++) {
+				var file = dtEvidence.files[i];
+				var sizeKb = Math.round(file.size / 1024);
+				var badgeHtml = '<span class="badge" style="background:#00a65a; padding:5px 8px; font-size:11px; font-weight:normal; border-radius:3px; display:inline-flex; align-items:center; gap:5px;">' +
+					'<i class="fa fa-file-o"></i> ' + file.name + ' (' + sizeKb + ' KB) ' +
+					'<button type="button" class="btn btn-xs btn-danger remove-new-evidence" data-index="' + i + '" style="padding:0 4px; line-height:1; font-size:10px; border-radius:2px; margin-left:3px;" title="Hapus file ini">' +
+					'<i class="fa fa-times"></i>' +
+					'</button>' +
+					'</span>';
+				container.append(badgeHtml);
+			}
+		} else {
+			$('#selected_evidence_count').text('Belum ada file dipilih');
+		}
+	}
+
+	$(document).on('click', '.remove-new-evidence', function(e) {
+		e.preventDefault();
+		var idx = parseInt($(this).data('index'));
+		var newDt = new DataTransfer();
+		for (var i = 0; i < dtEvidence.files.length; i++) {
+			if (i !== idx) {
+				newDt.items.add(dtEvidence.files[i]);
+			}
+		}
+		dtEvidence = newDt;
+		var hiddenInput = document.getElementById('evidence_files');
+		if (hiddenInput) {
+			hiddenInput.files = dtEvidence.files;
+		}
+		render_new_evidence_list();
 	});
 
 	// Form Submit Handling
