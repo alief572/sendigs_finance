@@ -273,21 +273,6 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 			</div>
 
 			<div class="form-group row">
-				<label class="label-control col-sm-2"><b>Bank Penerima</b></label>
-				<div class="col-sm-4">
-					<input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (misal: BCA / Mandiri / BRI)" value="<?= htmlspecialchars($bank_name); ?>" <?= $disabled; ?>>
-				</div>
-				<label class="label-control col-sm-2"><b>No. Rekening</b></label>
-				<div class="col-sm-4">
-					<input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="Nomor Rekening Penerima Transfer" value="<?= htmlspecialchars($bank_account_no); ?>" <?= $disabled; ?>>
-				</div>
-			</div>
-
-			<div class="form-group row">
-				<label class="label-control col-sm-2"><b>Atas Nama Rekening</b></label>
-				<div class="col-sm-4">
-					<input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= htmlspecialchars($bank_account_name); ?>" <?= $disabled; ?>>
-				</div>
 				<label class="label-control col-sm-2"><b>Tingkat PR</b></label>
 				<div class="col-sm-4">
 					<select name="tingkat_pr" id="" class="form-control input-md" <?= $disabled; ?>>
@@ -443,6 +428,30 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 			<div class="row" style="margin-top:10px;">
 				<div class="col-sm-12 text-right">
 					<h4 style="font-weight:700; margin:0; color:#333;">Total PR Keseluruhan: <span style="color:#3c8dbc;" id="total_pr_display">Rp 0</span></h4>
+				</div>
+			</div>
+
+			<!-- Section: INFORMASI BANK -->
+			<div class="section-title" style="margin-top:25px;"><i class="fa fa-university"></i>&nbsp; INFORMASI BANK</div>
+
+			<div class="form-group row">
+				<label class="label-control col-sm-2"><b>Bank <span class="text-red">*</span></b></label>
+				<div class="col-sm-5">
+					<input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (e.g. BCA, Mandiri)" value="<?= htmlspecialchars($bank_name); ?>" <?= $disabled; ?>>
+				</div>
+			</div>
+
+			<div class="form-group row">
+				<label class="label-control col-sm-2"><b>No Rekening <span class="text-red">*</span></b></label>
+				<div class="col-sm-5">
+					<input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="No. Rekening" value="<?= htmlspecialchars($bank_account_no); ?>" <?= $disabled; ?>>
+				</div>
+			</div>
+
+			<div class="form-group row">
+				<label class="label-control col-sm-2"><b>Nama Rekening <span class="text-red">*</span></b></label>
+				<div class="col-sm-5">
+					<input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= htmlspecialchars($bank_account_name); ?>" <?= $disabled; ?>>
 				</div>
 			</div>
 
