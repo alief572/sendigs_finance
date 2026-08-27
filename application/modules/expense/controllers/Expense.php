@@ -598,8 +598,11 @@ class Expense extends Admin_Controller
 				(a.nama = '" . $nama . "' AND
 				a.departement = '" . $departement . "' AND
 				a.status = 3 AND
+				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
 				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NULL) <= 0) OR
 				(
+					a.status = 3 AND
+					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
 					(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON aa.no_doc = ab.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NOT NULL) <= 0
 				)
 			
@@ -664,11 +667,13 @@ class Expense extends Admin_Controller
 					a.nama = '" . $nama . "' AND
 					a.departement = '" . $departement . "' AND
 					a.status = 3 AND
+					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
 					(SELECT COUNT(aa.id) FROM tr_expense_detail aa WHERE aa.id_kasbon = a.no_doc) <= 0
 				) OR
 				(
 					a.id_pr IS NOT NULL AND
 					a.status = 3 AND
+					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
 					(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NULL) <= 0
 				)
 			
@@ -1057,16 +1062,18 @@ class Expense extends Admin_Controller
 		$data 			= $this->Expense_model->GetDataHeader($id);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		$data_pc 		= $this->All_model->GetPettyCashCombo();
+		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
 
 		$this->template->set('option_coa', $option_coa);
-		$this->template->set('data_pc', $data_pc);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_detail', $data_detail);
+		if (!empty($get_exp_kasbon)) {
+			$this->template->set('data_exp_kasbon', $get_exp_kasbon);
+		}
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('stsview', '');
@@ -1377,9 +1384,22 @@ class Expense extends Admin_Controller
 		//proses utama update tr_expense
 		$this->db->trans_begin();
 		if ($id != "") {
+			$grand_total = $total_kasbon - $total_expense;
+			if ($grand_total < 0) {
+				$kurang_bayar 	= abs($grand_total);
+				$lebih_bayar	= null;
+			} else if ($grand_total > 0 && $total_kasbon > 0) {
+				$kurang_bayar 	= null;
+				$lebih_bayar	= $grand_total;
+			} else {
+				$kurang_bayar 	= null;
+				$lebih_bayar	= null;
+			}
+
 			$data = array(
 				'tgl_doc' => $tgl_doc,
 				'jumlah' => $total_expense,
+				'total_kasbon' => $total_kasbon,
 				'informasi' => $informasi,
 				'bank_id' => $bank_id,
 				'accnumber' => $accnumber,
@@ -1388,9 +1408,12 @@ class Expense extends Admin_Controller
 				'pettycash' => $pettycash,
 				'tipe_pengembalian' => $pengembalian,
 				'tipe_penggantian' => $penggantian,
+				'lebih_bayar' => $lebih_bayar,
+				'kurang_bayar' => $kurang_bayar,
+				'keterangan_kurang_bayar' => $this->input->post('keterangan_kurang_bayar'),
 				'st_reject' => null,
 				'modified_by' => $this->auth->user_name(),
-				'modified_on' => date("Y-m-d h:i:s")
+				'modified_on' => date("Y-m-d H:i:s")
 			);
 			$this->db->update('tr_expense', $data, ['id' => $id]);
 
@@ -1708,9 +1731,12 @@ class Expense extends Admin_Controller
 			if ($grand_total < 0) {
 				$kurang_bayar 	= abs($grand_total);
 				$lebih_bayar	= null;
-			} else {
+			} else if ($grand_total > 0 && $total_kasbon > 0) {
 				$kurang_bayar 	= null;
 				$lebih_bayar	= $grand_total;
+			} else {
+				$kurang_bayar 	= null;
+				$lebih_bayar	= null;
 			}
 
 			$data =  array(
@@ -1726,15 +1752,17 @@ class Expense extends Admin_Controller
 				'approval' 				=> $approval,
 				'status' 				=> 0,
 				'jumlah' 				=> $total_expense,
+				'total_kasbon' 			=> $total_kasbon,
 				'tipe_penggantian' 		=> $penggantian,
 				'tipe_pengembalian' 	=> $pengembalian,
 				'bon_bukti' 			=> $bonBukti,
 				'bukti_pengembalian' 	=> $buktiPengembalian,
 				'lebih_bayar' 			=> $lebih_bayar ?: null,
 				'kurang_bayar' 			=> $kurang_bayar ?: null,
+				'keterangan_kurang_bayar'=> $this->input->post('keterangan_kurang_bayar'),
 				'id_kasbon'				=> $no_doc_kasbon ?: null,
 				'created_by' 			=> $this->auth->user_name(),
-				'created_on' 			=> date("Y-m-d h:i:s")
+				'created_on' 			=> date("Y-m-d H:i:s")
 			);
 
 			$insert_expense = $this->db->insert('tr_expense', $data);

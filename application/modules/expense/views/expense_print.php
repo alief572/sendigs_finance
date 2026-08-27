@@ -99,9 +99,27 @@
 					}
 					?>
 					<tr>
-						<td colspan=7 align=center><strong>Total</strong></td>
-						<td align="right"><?= number_format($grand_total); ?></td>
+						<td colspan=7 align=right><strong>Total Expense</strong></td>
+						<td align="right"><strong><?= number_format($total_expense); ?></strong></td>
 					</tr>
+					<?php if (!empty($data->total_kasbon) && $data->total_kasbon > 0): ?>
+					<tr>
+						<td colspan=7 align=right><strong>Kasbon</strong></td>
+						<td align="right"><?= number_format($data->total_kasbon); ?></td>
+					</tr>
+					<?php endif; ?>
+					<?php if (!empty($data->lebih_bayar) && $data->lebih_bayar > 0): ?>
+					<tr>
+						<td colspan=7 align=right><strong>Lebih Bayar (Pengembalian Kasbon)</strong></td>
+						<td align="right"><strong><?= number_format($data->lebih_bayar); ?></strong></td>
+					</tr>
+					<?php endif; ?>
+					<?php if (!empty($data->kurang_bayar) && $data->kurang_bayar > 0): ?>
+					<tr>
+						<td colspan=7 align=right><strong>Kurang Bayar (Reimburse Kantor)</strong></td>
+						<td align="right"><strong><?= number_format($data->kurang_bayar); ?></strong></td>
+					</tr>
+					<?php endif; ?>
 				</table>
 			</td>
 		</tr>
