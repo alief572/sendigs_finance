@@ -919,18 +919,16 @@ class Non_rutin_model extends BF_Model
     }
     public function query_data_json_non_rutin($tanda, $like_value = NULL, $column_order = NULL, $column_dir = NULL, $limit_start = NULL, $limit_length = NULL)
     {
-        // mengambil department_id user yang sedang login
-        $get_user_dept_id = $this->db->select('department_id')
-            ->get_where('users', ['id_user' => $this->auth->user_id()])
-            ->row_array();
-        $user_dept_id = '';
-        if (!empty($get_user_dept_id)) {
-            $user_dept_id = $get_user_dept_id['department_id'];
-        }
+        $is_admin = $this->auth->is_admin();
+        $user_id = $this->auth->user_id();
 
         $where = "";
         if ($tanda == 'approval') {
             $where = "AND a.sts_app = 'N' ";
+        }
+        $where_user = "";
+        if (!$is_admin) {
+            $where_user = "AND a.created_by = '" . $user_id . "' ";
         }
         $sql = "
 			SELECT
@@ -942,7 +940,7 @@ class Non_rutin_model extends BF_Model
 				LEFT JOIN rutin_non_planning_header a ON z.no_pengajuan=a.no_pengajuan
 				LEFT JOIN ms_department b ON a.id_dept=b.id,
 				(SELECT @row:=0) r
-		    WHERE 1=1 " . $where . " AND a.id_dept = '" . $user_dept_id . "' AND a.status_id = 1 AND (
+		    WHERE 1=1 " . $where . $where_user . " AND a.status_id = 1 AND (
 				a.no_pengajuan LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.tanggal LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
@@ -1163,7 +1161,7 @@ class Non_rutin_model extends BF_Model
         $this->db->where('a.status_id', 1);
 
         if (!$is_admin) {
-            $this->db->where('a.id_dept', $user_dept_id);
+            $this->db->where('a.created_by', $user_id);
         }
 
         if (!empty($where)) {
