@@ -9,11 +9,21 @@ $no_so          = (!empty($header)) ? $header[0]->no_so : '';
 $project_name   = (!empty($header)) ? $header[0]->project_name : '';
 $pr_coa         = (!empty($header)) ? $header[0]->coa : '';
 $tingkat_pr     = (!empty($header)) ? $header[0]->tingkat_pr : '';
-$nm_pembuat     = (!empty($header)) ? $header[0]->nm_pembuat : '';
-$tgl_dibuat     = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
-$bank_name         = (!empty($header)) ? $header[0]->bank_name : '';
+$bank_name      = (!empty($header)) ? $header[0]->bank_name : '';
 $bank_account_no   = (!empty($header)) ? $header[0]->bank_account_no : '';
 $bank_account_name = (!empty($header)) ? $header[0]->bank_account_name : '';
+$nm_pembuat     = (!empty($header)) ? $header[0]->nm_pembuat : '';
+$tgl_dibuat     = (!empty($header) && !empty($header[0]->created_date)) ? date('d-M-Y', strtotime($header[0]->created_date)) : '-';
+
+$docs_list = [];
+if (!empty($upload_spk)) {
+    $decoded = json_decode($upload_spk, true);
+    if (is_array($decoded)) {
+        $docs_list = $decoded;
+    } else {
+        $docs_list = [$upload_spk];
+    }
+}
 
 // Detail Approval
 $alasan_reject1 = (!empty($header)) ? $header[0]->reject_reason1 : '';
@@ -212,33 +222,51 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 
             <div class="form-group row">
                 <label class="label-control col-sm-2"><b>Upload Document</b></label>
-                <div class="col-sm-4 text-right">
-                    <input type="file" id="upload_spk" name="upload_spk" class="form-control input-md" placeholder="Upload Document">
-                    <?php if (!empty($upload_spk)) { ?>
-                        <a href="<?= base_url('assets/pr/' . $upload_spk); ?>" target="_blank" title="Download" data-role="qtip">Download</a>
+                <div class="col-sm-10">
+                    <?php if (empty($approve)) { ?>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="btn btn-sm btn-primary btn-flat" style="margin-bottom:0; cursor:pointer; font-weight:600;">
+                                <i class="fa fa-folder-open"></i> Pilih File Lampiran
+                                <input type="file" id="temp_file_picker" style="display:none;" accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx" multiple>
+                            </label>
+                            <span id="selected_files_count" class="text-muted" style="font-size:12px;">Belum ada file baru dipilih</span>
+                        </div>
                     <?php } ?>
-                </div>
-                <label class="label-control col-sm-2"><b>COA <span class="text-red">*</span></b></label>
-                <div class="col-sm-4">
-                    <select name="coa" id="coa" class="form-control chosen_select" required>
-                        <option value="">- Select COA -</option>
-                        <?php
-                        foreach ($list_coa as $coa) :
-                            $selected = "";
-                            if ($coa['no_perkiraan'] == $pr_coa) {
-                                $selected = "selected";
-                            }
-                            echo '<option value="' . $coa['no_perkiraan'] . '" ' . $selected . '>' . $coa['no_perkiraan'] . ' - ' . $coa['nama'] . '</option>';
-                        endforeach;
-                        ?>
-                    </select>
+
+                    <!-- Hidden actual input holding accumulated files -->
+                    <input type="file" id="upload_spk" name="upload_spk[]" multiple style="display:none;">
+
+                    <!-- List of newly selected files -->
+                    <div id="new_files_list" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+                    <small class="text-muted" style="font-size:11px; display:block; margin-top:4px;">Format diterima: JPG, PNG, PDF, XLS/XLSX - Maks. 5 MB per file. Anda bisa klik tombol <b>Pilih File Lampiran</b> berkali-kali untuk memilih file dari folder mana saja satu per satu.</small>
+
+                    <?php if (!empty($docs_list)) { ?>
+                        <div class="existing-files-container" style="margin-top:10px;">
+                            <label style="font-size:12px; font-weight:600; color:#555;"><i class="fa fa-paperclip"></i> Dokumen Terlampir Sebelumnya:</label>
+                            <div class="file-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
+                                <?php foreach ($docs_list as $doc_file) { ?>
+                                    <span class="badge file-item-badge" style="background:#3c8dbc; padding:6px 10px; font-size:11px; font-weight:normal; border-radius:3px; display:inline-flex; align-items:center; gap:6px;">
+                                        <a href="<?= base_url('assets/pr/' . $doc_file); ?>" target="_blank" style="color:#fff; text-decoration:none;" title="Buka / Download">
+                                            <i class="fa fa-file"></i> <?= $doc_file; ?>
+                                        </a>
+                                        <input type="hidden" name="existing_docs[]" value="<?= htmlspecialchars($doc_file); ?>">
+                                        <?php if (empty($approve)) { ?>
+                                            <button type="button" class="btn btn-xs btn-danger remove-existing-file" style="padding:1px 5px; line-height:1; font-size:10px; border-radius:2px;" title="Hapus file ini">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        <?php } ?>
+                                    </span>
+                                <?php } ?>
+                            </div>
+                        </div>
+                    <?php } ?>
                 </div>
             </div>
 
             <div class="form-group row">
                 <label class="label-control col-sm-2"><b>Tingkat PR</b></label>
                 <div class="col-sm-4">
-                    <select name="tingkat_pr" id="" class="form-control input-md">
+                    <select name="tingkat_pr" id="" class="form-control input-md" <?= $disabled; ?>>
                         <option value="1" <?= ($tingkat_pr == '1') ? 'selected' : null ?>>Normal</option>
                         <option value="2" <?= ($tingkat_pr == '2') ? 'selected' : null ?>>Urgent</option>
                     </select>
@@ -305,14 +333,15 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                         <th class="text-center" style="width:3%;">#</th>
                         <th class="text-center">Nama Barang/Jasa</th>
                         <th class="text-center" style="width:13%;">Spec/ Requirement</th>
-                        <th class="text-center" style="width:7%;">Qty</th>
-                        <th class="text-center" style="width:8%;">Satuan</th>
-                        <th class="text-center" style="width:9%;">Est Harga</th>
+                        <th class="text-center" style="width:6%;">Qty</th>
+                        <th class="text-center" style="width:7%;">Satuan</th>
+                        <th class="text-center" style="width:14%;">COA</th>
+                        <th class="text-center" style="width:8%;">Est Harga</th>
                         <th class="text-center" style="width:9%;">Est Total Harga</th>
                         <th class="text-center" style="width:9%;">Tanggal Dibutuhkan</th>
-                        <th class="text-center" style="width:15%;">Keterangan</th>
+                        <th class="text-center" style="width:13%;">Keterangan</th>
                         <?php if (empty($approve)) { ?>
-                            <th class="text-center" style="width:8%;">#</th>
+                            <th class="text-center" style="width:6%;">#</th>
                         <?php } ?>
                     </tr>
                 </thead>
@@ -322,8 +351,9 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                     if (!empty($detail)) {
                         foreach ($detail as $val => $valx) {
                             $nomor++;
+                            $item_coa = isset($valx['coa']) ? $valx['coa'] : '';
                             echo "<tr class='header_" . $nomor . "'>";
-                            echo "<td align='center'>" . $nomor . "<input type='hidden' name='detail[" . $nomor . "][id]' value='" . $valx['id'] . "'></td>";
+                            echo "<td align='center'>" . $nomor . "<input type='hidden' name='detail[" . $nomor . "][id]' value='" . ($valx['id'] ?? '') . "'></td>";
                             echo "<td align='left'>
                                 <textarea class='form-control input-md nm_barang_" . $nomor . "' name='detail[" . $nomor . "][nm_barang]' " . $disabled3 . ">" . strtoupper($valx['nm_barang']) . "</textarea>
                             </td>";
@@ -339,6 +369,30 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                                 echo "<option value='" . $value['id'] . "' " . $selected . ">" . $value['code'] . "</option>";
                             }
                             echo "</select></td>";
+
+                            // COA Dropdown per item
+                            echo "<td align='left'>";
+                            if ($approve == 'view') {
+                                $nm_coa_display = $item_coa;
+                                foreach ($list_coa as $c) {
+                                    if ($c['no_perkiraan'] == $item_coa) {
+                                        $nm_coa_display = $c['no_perkiraan'] . ' - ' . $c['nama'];
+                                        break;
+                                    }
+                                }
+                                echo "<input type='text' class='form-control input-md' value='" . htmlspecialchars($nm_coa_display) . "' readonly>";
+                                echo "<input type='hidden' name='detail[" . $nomor . "][coa]' value='" . htmlspecialchars($item_coa) . "'>";
+                            } else {
+                                echo "<select name='detail[" . $nomor . "][coa]' class='form-control chosen_select wajib_coa coa_" . $nomor . "' " . $disabled2 . " required>";
+                                echo "<option value=''>- Pilih COA -</option>";
+                                foreach ($list_coa as $c) {
+                                    $selected = ($c['no_perkiraan'] == $item_coa) ? 'selected' : '';
+                                    echo "<option value='" . $c['no_perkiraan'] . "' " . $selected . ">" . $c['no_perkiraan'] . ' - ' . $c['nama'] . "</option>";
+                                }
+                                echo "</select>";
+                            }
+                            echo "</td>";
+
                             echo "<td align='left'><input type='text' " . $disabled2 . " id='harga_" . $nomor . "' name='detail[" . $nomor . "][harga]' class='form-control input-md text-right maskM sum_tot harga_" . $nomor . "' value='" . $valx['harga'] . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero=''></td>";
                             echo "<td align='left'><input type='text' " . $disabled2 . " id='total_harga_" . $nomor . "' name='detail[" . $nomor . "][total_harga]' class='form-control input-md text-right maskM jumlah_all total_harga_" . $nomor . "' value='" . ($valx['qty'] * $valx['harga']) . "' data-decimal='.' data-thousand='' data-precision='0' data-allow-zero='' readonly></td>";
                             echo "<td align='left'><input type='text' " . $disabled3 . " name='detail[" . $nomor . "][tanggal]' class='form-control input-md text-center datepicker tgl_dibutuhkan tanggal_" . $nomor . "' readonly value='" . strtoupper($valx['tanggal']) . "'></td>";
@@ -356,67 +410,97 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                         <tr id="add_<?= $nomor; ?>">
                             <td align="center"></td>
                             <td align="left">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button type="button" class="btn btn-sm btn-warning addPart" title="Add Barang"><i class="fa fa-plus"></i>&nbsp;&nbsp;Add Barang</button></td>
-                            <td align="center" colspan="8"></td>
+                            <td align="center" colspan="9"></td>
                         </tr>
                     <?php } ?>
                 </tbody>
             </table>
 
-            <!-- Section: Informasi Bank -->
-            <div class="box-bank-info" style="border: 1px solid #dce2e6; border-radius: 4px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; background: #fff;">
-                <div style="background: #e9ecf0; padding: 9px 15px; font-weight: 700; font-size: 11px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #dce2e6;">
-                    INFORMASI BANK
+            <div class="row" style="margin-top:10px;">
+                <div class="col-sm-12 text-right">
+                    <h4 style="font-weight:700; margin:0; color:#333;">Total PR Keseluruhan: <span style="color:#3c8dbc;" id="total_pr_display">Rp 0</span></h4>
                 </div>
-                <div style="padding: 15px 15px 5px 15px;">
-                    <div class="form-group row">
-                        <label class="label-control col-sm-2" style="font-weight: 600;">Bank <span class="text-red">*</span></label>
-                        <div class="col-sm-5">
-                            <input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (e.g. BCA, Mandiri)" value="<?= $bank_name; ?>" <?= $disabled3; ?>>
-                        </div>
-                    </div>
+            </div>
 
-                    <div class="form-group row">
-                        <label class="label-control col-sm-2" style="font-weight: 600;">No Rekening <span class="text-red">*</span></label>
-                        <div class="col-sm-5">
-                            <input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="No. Rekening" value="<?= $bank_account_no; ?>" <?= $disabled3; ?>>
-                        </div>
-                    </div>
+            <!-- Section: INFORMASI BANK -->
+            <div class="section-title" style="margin-top:25px;"><i class="fa fa-university"></i>&nbsp; INFORMASI BANK</div>
 
-                    <div class="form-group row">
-                        <label class="label-control col-sm-2" style="font-weight: 600;">Nama Rekening <span class="text-red">*</span></label>
-                        <div class="col-sm-5">
-                            <input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= $bank_account_name; ?>" <?= $disabled3; ?>>
-                        </div>
-                    </div>
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Bank <span class="text-red">*</span></b></label>
+                <div class="col-sm-5">
+                    <input type="text" name="bank_name" id="bank_name" class="form-control input-md" placeholder="Nama Bank (e.g. BCA, Mandiri)" value="<?= htmlspecialchars($bank_name); ?>" <?= $disabled; ?>>
                 </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>No Rekening <span class="text-red">*</span></b></label>
+                <div class="col-sm-5">
+                    <input type="text" name="bank_account_no" id="bank_account_no" class="form-control input-md" placeholder="No. Rekening" value="<?= htmlspecialchars($bank_account_no); ?>" <?= $disabled; ?>>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="label-control col-sm-2"><b>Nama Rekening <span class="text-red">*</span></b></label>
+                <div class="col-sm-5">
+                    <input type="text" name="bank_account_name" id="bank_account_name" class="form-control input-md" placeholder="Nama Pemilik Rekening" value="<?= htmlspecialchars($bank_account_name); ?>" <?= $disabled; ?>>
+                </div>
+            </div>
+
+            <div class="alert" style="background-color:#fffdf0; border:1px solid #f9e29d; color:#8a6d3b; margin-top:15px; font-size:12px; border-radius:4px; padding:10px 15px;">
+                <strong>Catatan desain:</strong> COA kini dipilih per baris item, bukan satu COA untuk seluruh PR. Setiap baris wajib memilih COA sebelum PR bisa disimpan — baris dengan COA kosong akan ditandai merah. Ini mengantisipasi kasus satu PR berisi barang dan jasa dengan akun biaya yang berbeda, supaya jurnal expense di belakang tidak salah alokasi akun.
             </div>
 
             <!-- Action Footer -->
             <div class="action-footer">
                 <?php if ($approve <> 'view') { ?>
-                    <button type="button" class="btn btn-md btn-success" id="save">
+                    <button type="button" class="btn btn-md btn-primary" id="save">
                         <i class="fa fa-save"></i>&nbsp; Save
                     </button>
                 <?php } ?>
-                <button type="button" class="btn btn-md btn-danger" id="back">
+                <button type="button" class="btn btn-md btn-default" id="back">
                     <i class="fa fa-arrow-left"></i>&nbsp; Back
                 </button>
             </div>
 
-            <?php
-            if (!empty($header)) :
-                if (strpos($header[0]->document, 'pdf', 0) > 1) :
-                    echo '<div class="col-md-12" style="margin-top:15px;">
-                    <iframe src="' . base_url('assets/pr/' . $header[0]->document) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0"></iframe>
-                    <a href="' . base_url('assets/pr/' . $header[0]->document) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-                    <br />' . $header[0]->no_pengajuan . '</div>';
-                else :
-                    if (file_exists('assets/pr/' . $header[0]->document)) {
-                        echo '<div class="col-md-12" style="margin-top:15px;"><a href="' . base_url('assets/pr/' . $header[0]->document) . '" target="_blank"><img src="' . base_url('assets/pr/' . $header[0]->document) . '" class="img-responsive"></a><br />' . $header[0]->no_pengajuan . '</div>';
-                    }
-                endif;
-            endif;
-            ?>
+            <?php if (!empty($docs_list)) : ?>
+                <div class="col-md-12" style="margin-top:25px; padding:0;">
+                    <div class="section-title"><i class="fa fa-paperclip"></i>&nbsp; Lampiran Dokumen PR (<?= count($docs_list) ?> file)</div>
+                    <div class="row">
+                        <?php foreach ($docs_list as $doc_item) :
+                            $ext = strtolower(pathinfo($doc_item, PATHINFO_EXTENSION));
+                            $file_path = 'assets/pr/' . $doc_item;
+                            $file_url = base_url($file_path);
+                            if (file_exists($file_path)) :
+                        ?>
+                            <div class="col-md-6" style="margin-bottom:15px;">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading" style="font-size:12px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        <i class="fa fa-file"></i> <?= htmlspecialchars($doc_item) ?>
+                                        <a href="<?= $file_url ?>" target="_blank" class="btn btn-xs btn-primary pull-right"><i class="fa fa-download"></i> Buka / Download</a>
+                                    </div>
+                                    <div class="panel-body text-center" style="max-height:420px; overflow:auto; padding:10px;">
+                                        <?php if ($ext == 'pdf') : ?>
+                                            <iframe src="<?= $file_url ?>#toolbar=0&navpanes=0" style="width:100%; height:380px;" frameborder="0"></iframe>
+                                        <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+                                            <a href="<?= $file_url ?>" target="_blank">
+                                                <img src="<?= $file_url ?>" class="img-responsive img-thumbnail" style="max-height:380px; margin:0 auto;">
+                                            </a>
+                                        <?php else : ?>
+                                            <div style="padding:40px 0;">
+                                                <i class="fa fa-file-text-o fa-4x text-muted"></i>
+                                                <p style="margin-top:10px; font-weight:600; color:#555;"><?= htmlspecialchars($doc_item) ?></p>
+                                                <a href="<?= $file_url ?>" target="_blank" class="btn btn-sm btn-info"><i class="fa fa-download"></i> Download File (<?= strtoupper($ext) ?>)</a>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php 
+                            endif;
+                        endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
 
         </div>
         <!-- /.box-body -->
@@ -434,12 +518,99 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
             mDec: '2',
             aPad: false
         });
-        $('.chosen_select').chosen();
+        $('.chosen_select').chosen({
+            width: '100%'
+        });
         $('.datepicker').datepicker({
             dateFormat: 'yy-mm-dd',
             //minDate: 0
         });
         $('.tnd_reason').hide();
+        calculate_all_total();
+    });
+
+    // Single Button Multi-Directory File Upload Accumulator
+    var dtUpload = new DataTransfer();
+
+    $(document).on('change', '#temp_file_picker', function() {
+        var newFiles = this.files;
+        if (newFiles.length > 0) {
+            for (var i = 0; i < newFiles.length; i++) {
+                var file = newFiles[i];
+                var exists = false;
+                for (var j = 0; j < dtUpload.items.length; j++) {
+                    var existingFile = dtUpload.items[j].getAsFile();
+                    if (existingFile && existingFile.name === file.name && existingFile.size === file.size) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    dtUpload.items.add(file);
+                }
+            }
+            var hiddenInput = document.getElementById('upload_spk');
+            if (hiddenInput) {
+                hiddenInput.files = dtUpload.files;
+            }
+            $(this).val('');
+            render_new_files_list();
+        }
+    });
+
+    function render_new_files_list() {
+        var container = $('#new_files_list');
+        container.empty();
+        var count = dtUpload.files.length;
+        if (count > 0) {
+            $('#selected_files_count').text(count + ' file baru dipilih:');
+            for (var i = 0; i < count; i++) {
+                var file = dtUpload.files[i];
+                var sizeKb = Math.round(file.size / 1024);
+                var badgeHtml = '<span class="badge" style="background:#00a65a; padding:6px 10px; font-size:11px; font-weight:normal; border-radius:3px; display:inline-flex; align-items:center; gap:6px;">' +
+                    '<i class="fa fa-file-o"></i> ' + file.name + ' (' + sizeKb + ' KB) ' +
+                    '<button type="button" class="btn btn-xs btn-danger remove-new-file" data-index="' + i + '" style="padding:1px 5px; line-height:1; font-size:10px; border-radius:2px; margin-left:4px;" title="Hapus file ini">' +
+                    '<i class="fa fa-times"></i>' +
+                    '</button>' +
+                    '</span>';
+                container.append(badgeHtml);
+            }
+        } else {
+            $('#selected_files_count').text('Belum ada file baru dipilih');
+        }
+    }
+
+    $(document).on('click', '.remove-new-file', function(e) {
+        e.preventDefault();
+        var idx = parseInt($(this).data('index'));
+        var newDt = new DataTransfer();
+        for (var i = 0; i < dtUpload.files.length; i++) {
+            if (i !== idx) {
+                newDt.items.add(dtUpload.files[i]);
+            }
+        }
+        dtUpload = newDt;
+        var hiddenInput = document.getElementById('upload_spk');
+        if (hiddenInput) {
+            hiddenInput.files = dtUpload.files;
+        }
+        render_new_files_list();
+    });
+
+    // Hapus file existing
+    $(document).on('click', '.remove-existing-file', function(e) {
+        e.preventDefault();
+        $(this).closest('.file-item-badge').fadeOut(200, function() {
+            $(this).remove();
+        });
+    });
+
+    // Reset error border on COA change
+    $(document).on('change', '.wajib_coa', function() {
+        if ($(this).val() != '') {
+            $(this).css('border', '');
+            $(this).next('.chosen-container').find('.chosen-single').css('border', '');
+        }
     });
 
     $('#no_so').on('change', function(evt, params) {
@@ -488,8 +659,7 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                     dateFormat: 'yy-mm-dd',
                     //minDate: 0
                 });
-                $('.chosen_select').chosen();
-                swal.close();
+                Swal.close();
             },
             error: function() {
                 Swal.fire({
@@ -509,6 +679,7 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
     $(document).on('click', '.delPart', function() {
         var get_id = $(this).parent().parent().attr('class');
         $("." + get_id).remove();
+        calculate_all_total();
     });
 
     $(document).on('keyup', '.sum_tot', function() {
@@ -525,8 +696,8 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
 
         var tingkat_approval = $('#tingkat_approval').val();
         var id_dept = $('#id_dept').val();
-        var coa = $('#coa').val();
         var sts_app = $('#sts_app').val();
+        var app = $("#approve").val();
 
         if (id_dept == '0') {
             Swal.fire({
@@ -538,7 +709,80 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
             return false;
         }
 
-        var app = $("#approve").val();
+        // Validasi item barang - hanya untuk mode input (bukan approve/view)
+        if (app == '' || app == null) {
+            var totalItems = $("tr[class^='header_']").length;
+            if (totalItems == 0) {
+                Swal.fire({
+                    title: "Peringatan!",
+                    text: 'Item barang harus diisi minimal 1 item sebelum menyimpan.',
+                    icon: "warning"
+                });
+                $('#save').prop('disabled', false);
+                return false;
+            }
+
+            var itemValid = true;
+            var pesanError = '';
+
+            // Reset styling error border
+            $('.wajib_coa').each(function() {
+                $(this).css('border', '');
+                $(this).next('.chosen-container').find('.chosen-single').css('border', '');
+            });
+
+            $("tr[class^='header_']").each(function(index) {
+                var nomorItem = index + 1;
+                var nmBarang = $(this).find("textarea[name*='[nm_barang]']").val();
+                var coaSelect = $(this).find("select[name*='[coa]']");
+                var coaVal = coaSelect.val();
+                var qtyVal = $(this).find("input[name*='[qty]']").val();
+                var hargaVal = $(this).find("input[name*='[harga]']").val();
+
+                var qty = 0;
+                var harga = 0;
+                if (qtyVal != null && qtyVal != '') {
+                    qty = parseFloat(qtyVal.toString().split(",").join("").split(" ").join(""));
+                }
+                if (hargaVal != null && hargaVal != '') {
+                    harga = parseFloat(hargaVal.toString().split(",").join("").split(" ").join(""));
+                }
+
+                if (nmBarang == null || nmBarang.trim() == '') {
+                    itemValid = false;
+                    pesanError = 'Nama Barang/Jasa pada item ke-' + nomorItem + ' harus diisi.';
+                    return false;
+                }
+                if (coaVal == null || coaVal == '' || coaVal == '0') {
+                    itemValid = false;
+                    pesanError = 'COA pada item ke-' + nomorItem + ' wajib dipilih!';
+                    coaSelect.css('border', '1px solid red');
+                    coaSelect.next('.chosen-container').find('.chosen-single').css('border', '1px solid red');
+                    return false;
+                }
+                if (isNaN(qty) || qty <= 0) {
+                    itemValid = false;
+                    pesanError = 'Qty pada item ke-' + nomorItem + ' harus diisi dan lebih dari 0.';
+                    return false;
+                }
+                if (isNaN(harga) || harga <= 0) {
+                    itemValid = false;
+                    pesanError = 'Est Harga pada item ke-' + nomorItem + ' harus diisi dan lebih dari 0.';
+                    return false;
+                }
+            });
+
+            if (!itemValid) {
+                Swal.fire({
+                    title: "Peringatan!",
+                    text: pesanError,
+                    icon: "warning"
+                });
+                $('#save').prop('disabled', false);
+                return false;
+            }
+        }
+
         var tanda = "";
         if (app == 'approve') {
             if (sts_app == '0') {
@@ -684,27 +928,37 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
         var spec = $('.spec_' + nomor).val();
         var qty = $('.qty_' + nomor).val();
         var satuan = $('.satuan_' + nomor).val();
+        var coa = $('.coa_' + nomor).val();
         var harga = $('.harga_' + nomor).val();
         var total_harga = $('.total_harga_' + nomor).val();
         var tanggal = $('.tanggal_' + nomor).val();
         var keterangan = $('.keterangan_' + nomor).val();
 
+        if (coa == '' || coa == null) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'COA wajib dipilih sebelum update item!',
+                icon: 'warning'
+            });
+            return false;
+        }
+
         if (qty == '' || qty == null) {
             qty = 0;
         } else {
-            qty = qty.split(',').join();
+            qty = qty.split(',').join('');
             qty = parseFloat(qty);
         }
         if (harga == '' || harga == null) {
             harga = 0;
         } else {
-            harga = harga.split(',').join();
+            harga = harga.split(',').join('');
             harga = parseFloat(harga);
         }
         if (total_harga == '' || total_harga == null) {
             total_harga = 0;
         } else {
-            total_harga = total_harga.split(',').join();
+            total_harga = total_harga.split(',').join('');
             total_harga = parseFloat(total_harga);
         }
 
@@ -717,6 +971,7 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                 'spec': spec,
                 'qty': qty,
                 'satuan': satuan,
+                'coa': coa,
                 'harga': harga,
                 'total_harga': total_harga,
                 'tanggal': tanggal,
@@ -756,13 +1011,11 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
                 }
             },
             error: function(result) {
-                swal({
+                Swal.fire({
                     title: 'Failed !',
-                    text: 'Failed, item data has not been updated !',
-                    type: 'error',
+                    icon: 'error',
                     timer: 2000,
                     showCancelButton: false,
-                    showConfirmButton: false,
                     allowOutsideClick: false
                 }).then((next) => {
                     location.reload();
@@ -776,12 +1029,16 @@ $disabled3 = ($approve == 'view') ? 'readonly' : '';
         var harga = getNum($('#harga_' + a).val().split(",").join(""));
         var total = qty * harga;
         $('#total_harga_' + a).val(number_format(total));
+        calculate_all_total();
+    }
 
+    function calculate_all_total() {
         var SUM = 0;
         $(".jumlah_all").each(function() {
             SUM += Number(getNum($(this).val().split(",").join("")));
         });
         $('#budget').val(number_format(SUM));
+        $('#total_pr_display').text('Rp ' + number_format(SUM));
     }
 
     function number_format(number, decimals, dec_point, thousands_sep) {

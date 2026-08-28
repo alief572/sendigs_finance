@@ -454,16 +454,24 @@ class Non_rutin_model extends BF_Model
         $ENABLE_DELETE  = has_permission('Approval_PR_Depart_Management.Delete');
 
         $requestData    = $_REQUEST;
+        $tanda          = $requestData['tanda'] ?? 'approval_management';
+        $search_value   = (isset($requestData['search']) && is_array($requestData['search'])) ? ($requestData['search']['value'] ?? NULL) : ($requestData['search'] ?? NULL);
+        $order_col      = isset($requestData['order'][0]['column']) ? $requestData['order'][0]['column'] : NULL;
+        $order_dir      = isset($requestData['order'][0]['dir']) ? $requestData['order'][0]['dir'] : 'desc';
+        $start          = isset($requestData['start']) ? intval($requestData['start']) : 0;
+        $length         = isset($requestData['length']) ? intval($requestData['length']) : 10;
+        $draw           = isset($requestData['draw']) ? intval($requestData['draw']) : 1;
+
         $fetch            = $this->query_data_json_non_rutin_approval_management(
-            $requestData['tanda'],
-            $requestData['search']['value'],
-            $requestData['order'][0]['column'],
-            $requestData['order'][0]['dir'],
-            $requestData['start'],
-            $requestData['length']
+            $tanda,
+            $search_value,
+            $order_col,
+            $order_dir,
+            $start,
+            $length
         );
-        $totalData        = $fetch['totalData'];
-        $totalFiltered    = $fetch['totalFiltered'];
+        $totalData        = $fetch['totalData'] ?? 0;
+        $totalFiltered    = $fetch['totalFiltered'] ?? $totalData;
         $query            = $fetch['query'];
 
         $data    = array();
@@ -471,8 +479,8 @@ class Non_rutin_model extends BF_Model
         $urut2  = 0;
         foreach ($query->result_array() as $row) {
             $total_data     = $totalData;
-            $start_dari     = $requestData['start'];
-            $asc_desc       = $requestData['order'][0]['dir'];
+            $start_dari     = $start;
+            $asc_desc       = $order_dir;
             if ($asc_desc == 'asc') {
                 $nomor = $urut1 + $start_dari;
             }
@@ -480,19 +488,21 @@ class Non_rutin_model extends BF_Model
                 $nomor = ($total_data - $start_dari) - $urut2;
             }
 
-            $this->hris->select('a.id, a.name, b.name as nm_company');
-            $this->hris->from('departments a');
-            $this->hris->join('companies b', 'b.id = a.company_id', 'left');
-            $this->hris->where('a.id', $row['id_dept']);
-            $get_department = $this->hris->get()->row();
-
-            $tanda = $requestData['tanda'];
+            $get_department = null;
+            if (!empty($row['id_dept'])) {
+                $this->hris->select('a.id, a.name, b.name as nm_company');
+                $this->hris->from('departments a');
+                $this->hris->join('companies b', 'b.id = a.company_id', 'left');
+                $this->hris->where('a.id', $row['id_dept']);
+                $get_department = $this->hris->get()->row();
+            }
+            $dept_name = (!empty($get_department)) ? strtoupper($get_department->name . ' - ' . $get_department->nm_company) : '-';
 
             $nestedData     = array();
             $nestedData[]    = "<div align='center'>" . $nomor . "</div>";
             $no_pr = (!empty($row['no_pr'])) ? $row['no_pr'] : "<span class='text-red' title='No Pengajuan'>" . $row['no_pengajuan'] . "</span>";
             $nestedData[]    = "<div align='left'>" . $no_pr . "</div>";
-            $nestedData[]    = "<div align='left'>" . strtoupper($get_department->name . ' - ' . $get_department->nm_company) . "</div>";
+            $nestedData[]    = "<div align='left'>" . $dept_name . "</div>";
 
             $list_barang    = $this->db->get_where('rutin_non_planning_detail', array('no_pengajuan' => $row['no_pengajuan']))->result_array();
             $arr_nmbarang = array();
@@ -573,7 +583,10 @@ class Non_rutin_model extends BF_Model
             $view = "";
             $approve = '';
             if ($ENABLE_MANAGE) {
-                $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
+                $check_auth = $this->check_approval_authority($row['no_pengajuan'], $this->auth->user_id());
+                if (isset($check_auth['status']) && $check_auth['status']) {
+                    $approve    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $row['no_pengajuan'] . '/approve/3') . "' class='btn btn-sm btn-info' title='Approve' data-role='qtip'><i class='fa fa-check'></i></a>";
+                }
             }
             $nestedData[]    = "<div align='left'>
 									" . $view . "
@@ -588,28 +601,112 @@ class Non_rutin_model extends BF_Model
         }
 
         $json_data = array(
-            "draw"                => intval($requestData['draw']),
+            "draw"                => intval($draw),
             "recordsTotal"        => intval($totalData),
             "recordsFiltered"     => intval($totalFiltered),
             "data"                => $data
         );
 
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json');
         echo json_encode($json_data);
+    }
+
+    public function get_employee_hierarchy_info($id_user)
+    {
+        $this->db->select('
+            a.id_user,
+            a.username,
+            a.nm_lengkap,
+            a.employee_id,
+            a.department_id as user_dept_id,
+            b.id as emp_id,
+            b.name as employee_name,
+            COALESCE(b.department_id, a.department_id) as department_id,
+            b.division_id,
+            b.position_id,
+            c.name as position_name,
+            d.name as department_name,
+            e.name as division_name
+        ');
+        $this->db->from('users a');
+        $this->db->join(HRIS . '.employees b', '((a.employee_id IS NOT NULL AND a.employee_id != \'\' AND b.id = a.employee_id) OR ((a.employee_id IS NULL OR a.employee_id = \'\') AND (b.name LIKE CONCAT(\'%\', a.nm_lengkap, \'%\') OR b.name LIKE CONCAT(\'%\', a.username, \'%\'))))', 'left', false);
+        $this->db->join(HRIS . '.positions c', 'c.id = b.position_id', 'left');
+        $this->db->join(HRIS . '.departments d', 'd.id = COALESCE(b.department_id, a.department_id)', 'left');
+        $this->db->join(HRIS . '.divisions e', 'e.id = b.division_id', 'left');
+        $this->db->where('a.id_user', $id_user);
+        $user_info = $this->db->get()->row();
+
+        if (!$user_info) {
+            return null;
+        }
+
+        $pos_name = strtolower($user_info->position_name ?? '');
+        $nm_lengkap = strtolower($user_info->nm_lengkap ?? '');
+        $username = strtolower($user_info->username ?? '');
+
+        // Identifikasi Level / Role
+        $is_director = (
+            strpos($pos_name, 'director') !== false ||
+            strpos($pos_name, 'direktur') !== false ||
+            strpos($pos_name, 'komisaris') !== false ||
+            strpos($nm_lengkap, 'imanuel') !== false ||
+            strpos($username, 'imanuel') !== false ||
+            $id_user == '7' ||
+            $this->auth->is_admin()
+        );
+
+        $is_staff = (
+            strpos($pos_name, 'staff') !== false ||
+            strpos($pos_name, 'magang') !== false
+        );
+        $is_head = (
+            strpos($pos_name, 'head') !== false ||
+            strpos($pos_name, 'manager') !== false ||
+            strpos($pos_name, 'leader') !== false ||
+            strpos($pos_name, 'supervisor') !== false ||
+            strpos($pos_name, 'spv') !== false ||
+            strpos($pos_name, 'kepala') !== false ||
+            strpos($pos_name, 'penyelia') !== false
+        );
+
+        $user_info->is_director = $is_director;
+        $user_info->is_staff = $is_staff;
+        $user_info->is_head = $is_head;
+        $user_info->is_above_staff = (!$is_staff && !empty($pos_name)) || $is_head || $is_director;
+
+        return $user_info;
+    }
+
+    public function check_approval_authority($no_pengajuan, $approver_user_id)
+    {
+        $header = $this->db->get_where('rutin_non_planning_header', ['no_pengajuan' => $no_pengajuan])->row();
+        if (!$header) {
+            return ['status' => false, 'message' => 'Data pengajuan tidak ditemukan.'];
+        }
+
+        // Superadmin bypass
+        if ($approver_user_id == '7' || $this->auth->is_admin()) {
+            return ['status' => true];
+        }
+
+        $creator_user_id = $header->created_by;
+
+        // User tidak boleh menyetujui PR yang dibuat oleh dirinya sendiri
+        if ($approver_user_id == $creator_user_id) {
+            return ['status' => false, 'message' => 'Anda tidak dapat menyetujui pengajuan PR yang Anda buat sendiri.'];
+        }
+
+        return ['status' => true];
     }
 
     public function query_data_json_non_rutin_approval_management($tanda, $like_value = NULL, $column_order = NULL, $column_dir = NULL, $limit_start = NULL, $limit_length = NULL)
     {
-
-        $get_user_dept_id = $this->db->select('department_id')->get_where('users', ['id_user' => $this->auth->user_id()])->row_array();
-        $user_dept_id = '';
-        if (!empty($get_user_dept_id)) {
-            $user_dept_id = $get_user_dept_id['department_id'];
-        }
-
         $where = "";
         if ($tanda == 'approval') {
-            $where = "AND a.sts_app = 'N' ";
+            $where .= " AND a.sts_app = 'N' ";
         }
+
         $sql = "
 			SELECT
 				(@row:=@row+1) AS nomor,
@@ -630,6 +727,7 @@ class Non_rutin_model extends BF_Model
                 OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.tanggal LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 				OR a.no_pr LIKE '%" . $this->db->escape_like_str($like_value) . "%'
+				OR c.nm_lengkap LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
 			GROUP BY z.no_pengajuan
 		";
@@ -637,15 +735,22 @@ class Non_rutin_model extends BF_Model
         // exit;
 
         $data['totalData'] = $this->db->query($sql)->num_rows();
-        $data['totalFiltered'] = $this->db->query($sql)->num_rows();
         $columns_order_by = array(
             0 => 'nomor',
             1 => 'no_pr',
             2 => 'b.nama'
         );
 
-        $sql .= " ORDER BY a.tingkat_pr DESC, id DESC, " . $columns_order_by[$column_order] . " " . $column_dir . " ";
-        $sql .= " LIMIT " . $limit_start . " ," . $limit_length . " ";
+        if ($column_order !== NULL && isset($columns_order_by[$column_order])) {
+            $col_dir = (!empty($column_dir)) ? $column_dir : 'DESC';
+            $sql .= " ORDER BY a.tingkat_pr DESC, a.id DESC, " . $columns_order_by[$column_order] . " " . $col_dir . " ";
+        } else {
+            $sql .= " ORDER BY a.tingkat_pr DESC, a.id DESC ";
+        }
+
+        if ($limit_start !== NULL && $limit_length !== NULL) {
+            $sql .= " LIMIT " . $limit_start . " ," . $limit_length . " ";
+        }
 
         $data['query'] = $this->db->query($sql);
         return $data;
@@ -1024,6 +1129,11 @@ class Non_rutin_model extends BF_Model
     {
         $is_admin = $this->auth->is_admin();
         $user_id = $this->auth->user_id();
+        $user_dept_id = '';
+        if (!$is_admin) {
+            $get_emp = $this->get_employee_hierarchy_info($user_id);
+            $user_dept_id = $get_emp->department_id ?? '';
+        }
 
         $this->db->select('a.*, c.nm_lengkap, d.name as nm_dept, e.name as nm_company');
         $this->db->select('GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon', FALSE);
@@ -1053,7 +1163,7 @@ class Non_rutin_model extends BF_Model
         $this->db->where('a.status_id', 1);
 
         if (!$is_admin) {
-            $this->db->where('a.created_by', $user_id); // penyesuaian berdasarkan department_id user
+            $this->db->where('a.id_dept', $user_dept_id);
         }
 
         if (!empty($where)) {
