@@ -572,8 +572,12 @@ class Expense extends Admin_Controller
 
 	public function get_kasbon($nama = '', $departement = '')
 	{
-		$data = $this->db->query("SELECT * FROM tr_kasbon WHERE status = 3")->result();
-		$query1 = $this->db->query("
+		$where_filter = "";
+		if (!empty($nama) && !empty($departement)) {
+			$where_filter = " AND a.nama = " . $this->db->escape($nama) . " AND a.departement = " . $this->db->escape($departement) . " ";
+		}
+
+		$sql_kasbon = "
 			SELECT
 				a.id as id, 
 				a.no_doc as no_doc, 
@@ -595,16 +599,9 @@ class Expense extends Admin_Controller
 			FROM
 				tr_kasbon a
 			WHERE
-				(a.nama = '" . $nama . "' AND
-				a.departement = '" . $departement . "' AND
-				a.status = 3 AND
-				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
-				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NULL) <= 0) OR
-				(
-					a.status = 3 AND
-					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
-					(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON aa.no_doc = ab.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NOT NULL) <= 0
-				)
+				a.status IN ('2', '3') AND
+				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . " AND
+				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.status IN ('0','1','2','3')) <= 0
 			
 			UNION ALL
 
@@ -630,81 +627,12 @@ class Expense extends Admin_Controller
 				tr_pengajuan_rutin_detail a
 				LEFT JOIN tr_pengajuan_rutin b ON b.no_doc = a.no_doc
 			WHERE
-				a.status = '3' AND
+				a.status IN ('2', '3') AND
 				a.metode_pembelian = '2' AND 
 				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3')) < 1
-		")->num_rows();
-		if (!$query1) {
-			print_r($this->db->error($query1));
-			exit;
-		}
+		";
 
-		if ($query1 > 0) {
-
-			$data = $this->db->query("
-			SELECT
-				a.id as id, 
-				a.no_doc as no_doc, 
-				a.tgl_doc as tgl_doc, 
-				a.departement as departement, 
-				a.nama as nama, 
-				a.jumlah_kasbon as jumlah_kasbon, 
-				a.keperluan as keperluan, 
-				a.doc_file as doc_file, 
-				a.status as status, 
-				a.coa as coa, 
-				a.doc_file_2 as doc_file_2, 
-				a.bank_id as bank_id, 
-				a.accnumber as accnumber, 
-				a.accname as accname, 
-				a.project as project, 
-				a.keterangan as keterangan,
-				'' as id_expense_detail
-			FROM
-				tr_kasbon a
-			WHERE
-				(
-					a.nama = '" . $nama . "' AND
-					a.departement = '" . $departement . "' AND
-					a.status = 3 AND
-					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
-					(SELECT COUNT(aa.id) FROM tr_expense_detail aa WHERE aa.id_kasbon = a.no_doc) <= 0
-				) OR
-				(
-					a.id_pr IS NOT NULL AND
-					a.status = 3 AND
-					(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') AND
-					(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.pettycash IS NULL) <= 0
-				)
-			
-			UNION ALL
-
-			SELECT
-				a.id as id, 
-				a.no_doc as no_doc, 
-				a.tanggal as tgl_doc, 
-				b.departement as departement, 
-				'' as nama, 
-				a.nilai as jumlah_kasbon, 
-				a.nama as keperluan, 
-				a.doc_file as doc_file, 
-				a.status as status, 
-				'' as coa, 
-				'' as doc_file_2, 
-				a.bank_id as bank_id, 
-				a.accnumber as accnumber, 
-				a.accname as accname, 
-				'' as project, 
-				a.keterangan as keterangan,
-				a.id as id_expense_detail
-			FROM
-				tr_pengajuan_rutin_detail a
-				LEFT JOIN tr_pengajuan_rutin b ON b.no_doc = a.no_doc
-			WHERE
-				a.status = '3' AND
-				a.metode_pembelian = '2' AND 
-				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3')) < 1
-		")->result();
+		$data = $this->db->query($sql_kasbon)->result();
 			if (!$data) {
 				print_r($this->db->error($data));
 				exit;
@@ -785,9 +713,7 @@ class Expense extends Admin_Controller
 					$item->coa_name = $coa_name;
 				}
 			}
-		} else {
-			$data = false;
-		}
+
 		echo json_encode($data);
 	}
 
@@ -1114,25 +1040,186 @@ class Expense extends Admin_Controller
 		$this->template->render('index');
 	}
 
-	// create
+	// create (Direct Expense)
 	public function create()
 	{
 		$detail_files = [];
 		$this->template->set('detail_files', $detail_files);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		// $data_pc 		= $this->All_model->GetPettyCashCombo();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
 
-		// $this->template->set('data_pc', $data_pc);
+		// Pre-ID No. Dokumen
+		$pre_id = '';
+		$data_gen = $this->All_model->GetOneData('ms_generate', array('tipe' => 'format_expense'));
+		if ($data_gen !== false) {
+			if (stripos($data_gen->info, 'YEAR', 0) !== false) {
+				$years = ($data_gen->info3 != date("Y")) ? date("Y") : $data_gen->info3;
+				$number = ($data_gen->info3 != date("Y")) ? 1 : ($data_gen->info2 + 1);
+				$newnumber = sprintf('%0' . $data_gen->info4 . 'd', $number);
+				$pre_id = str_ireplace('XXXX', $newnumber, $data_gen->info);
+				$pre_id = str_ireplace('YEAR', $years, $pre_id);
+			} else {
+				$number = ($data_gen->info2 + 1);
+				$newnumber = sprintf('%0' . $data_gen->info4 . 'd', $number);
+				$pre_id = str_ireplace('XXXX', $newnumber, $data_gen->info);
+			}
+		}
+
+		$this->template->set('pre_id', $pre_id);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_coa', $data_coa);
 		$this->template->set('option_coa', $option_coa);
+		$this->template->set('stsview', '');
 
 		$this->template->render('form');
 	}
+	// create_report (Pertanggungjawaban Kasbon Sendigs)
+	public function create_report($id_kasbon = '')
+	{
+		$id_kasbon = urldecode($id_kasbon);
+		$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $id_kasbon])->row();
+
+		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
+		$coa_field 		= $data_coa->coa;
+		$coa_array 		= explode(';', $coa_field);
+		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+
+		// Pre-ID No. Dokumen
+		$pre_id = '';
+		$data_gen = $this->All_model->GetOneData('ms_generate', array('tipe' => 'format_expense'));
+		if ($data_gen !== false) {
+			if (stripos($data_gen->info, 'YEAR', 0) !== false) {
+				$years = ($data_gen->info3 != date("Y")) ? date("Y") : $data_gen->info3;
+				$number = ($data_gen->info3 != date("Y")) ? 1 : ($data_gen->info2 + 1);
+				$newnumber = sprintf('%0' . $data_gen->info4 . 'd', $number);
+				$pre_id = str_ireplace('XXXX', $newnumber, $data_gen->info);
+				$pre_id = str_ireplace('YEAR', $years, $pre_id);
+			} else {
+				$number = ($data_gen->info2 + 1);
+				$newnumber = sprintf('%0' . $data_gen->info4 . 'd', $number);
+				$pre_id = str_ireplace('XXXX', $newnumber, $data_gen->info);
+			}
+		}
+
+		// Ambil rincian item PR / Kasbon
+		$detail_items = [];
+		if (!empty($id_kasbon)) {
+			$this->db->select('a.*, IF(b.code IS NULL, "Pcs", b.code) as satuan_name');
+			$this->db->from('tr_pr_detail_kasbon a');
+			$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
+			$this->db->where('a.id_kasbon', $id_kasbon);
+			$q_pr = $this->db->get()->result_array();
+
+			if (!empty($q_pr)) {
+				$no = 1;
+				foreach ($q_pr as $item_pr) {
+					$coa_code = '';
+					$coa_name = '';
+
+					if ($item_pr['tipe_pr'] == 'pr stok') {
+						if (!empty($item_pr['id_material'])) {
+							$get_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']])->row();
+							if (!empty($get_acc) && !empty($get_acc->no_coa)) {
+								$coa_code = $get_acc->no_coa;
+								$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
+							}
+						}
+					} else if ($item_pr['tipe_pr'] == 'pr departemen') {
+						if (!empty($item_pr['id_detail'])) {
+							$get_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
+							if (!empty($get_dtl) && !empty($get_dtl->coa)) {
+								$coa_code = $get_dtl->coa;
+							}
+						}
+						if (empty($coa_code) && !empty($item_pr['no_pr'])) {
+							$get_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
+							if (!empty($get_dept) && !empty($get_dept->coa)) {
+								$coa_code = $get_dept->coa;
+							}
+						}
+					}
+
+					if (empty($coa_code) && !empty($data_kasbon)) {
+						$coa_code = !empty($data_kasbon->no_coa) ? $data_kasbon->no_coa : (!empty($data_kasbon->coa) ? $data_kasbon->coa : '');
+					}
+					if (empty($coa_code)) {
+						$coa_code = '1304-01-01';
+					}
+
+					if (empty($coa_name)) {
+						$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+						if (!empty($q_coa_acc)) {
+							$coa_name = $q_coa_acc->nama;
+						} else {
+							$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
+						}
+					}
+
+					$qty_k = floatval($item_pr['qty']);
+					$harga_k = floatval($item_pr['harga']);
+					$total_k = floatval($item_pr['total_harga']);
+
+					$detail_items[] = [
+						'id' => $no,
+						'no_pr' => $item_pr['no_pr'],
+						'tipe_pr' => $item_pr['tipe_pr'],
+						'deskripsi' => $item_pr['nm_material'],
+						'keterangan' => !empty($item_pr['no_pr']) ? 'No. PR: ' . $item_pr['no_pr'] : '',
+						'tanggal' => !empty($data_kasbon->tgl_doc) ? $data_kasbon->tgl_doc : date('Y-m-d'),
+						'coa' => $coa_code,
+						'coa_name' => $coa_name,
+						'qty_kasbon' => $qty_k,
+						'harga_kasbon' => $harga_k,
+						'total_kasbon' => $total_k,
+						'qty' => $qty_k,
+						'harga' => $harga_k,
+						'expense' => $total_k,
+						'id_expense_detail' => $item_pr['id_detail']
+					];
+					$no++;
+				}
+			} else {
+				// Kasbon umum
+				$coa_code = !empty($data_kasbon->no_coa) ? $data_kasbon->no_coa : (!empty($data_kasbon->coa) ? $data_kasbon->coa : '1304-01-01');
+				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+				$coa_name = !empty($q_coa_acc) ? $q_coa_acc->nama : 'Peralatan Kantor';
+
+				$j_kasbon = !empty($data_kasbon->jumlah_kasbon) ? floatval($data_kasbon->jumlah_kasbon) : 0;
+				$detail_items[] = [
+					'id' => 1,
+					'no_pr' => '',
+					'tipe_pr' => 'kasbon',
+					'deskripsi' => !empty($data_kasbon->keperluan) ? $data_kasbon->keperluan : 'Pengeluaran Kasbon',
+					'keterangan' => !empty($data_kasbon->keterangan) ? $data_kasbon->keterangan : '',
+					'tanggal' => !empty($data_kasbon->tgl_doc) ? $data_kasbon->tgl_doc : date('Y-m-d'),
+					'coa' => $coa_code,
+					'coa_name' => $coa_name,
+					'qty_kasbon' => 1,
+					'harga_kasbon' => $j_kasbon,
+					'total_kasbon' => $j_kasbon,
+					'qty' => 1,
+					'harga' => $j_kasbon,
+					'expense' => $j_kasbon,
+					'id_expense_detail' => ''
+				];
+			}
+		}
+
+		$this->template->set('detail_files', []);
+		$this->template->set('data_budget', $data_budget);
+		$this->template->set('data_coa', $data_coa);
+		$this->template->set('option_coa', $option_coa);
+		$this->template->set('data_kasbon', $data_kasbon);
+		$this->template->set('pre_id', $pre_id);
+		$this->template->set('detail_items', $detail_items);
+		$this->template->set('stsview', '');
+		$this->template->render('form_report');
+	}
+
 
 	// edit
 	public function edit($id)
@@ -1148,7 +1235,6 @@ class Expense extends Admin_Controller
 		$this->template->set('detail_files', $detail_files);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
@@ -1157,14 +1243,41 @@ class Expense extends Admin_Controller
 		$this->template->set('option_coa', $option_coa);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_detail', $data_detail);
-		if (!empty($get_exp_kasbon)) {
-			$this->template->set('data_exp_kasbon', $get_exp_kasbon);
-		}
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('stsview', '');
 		$this->template->page_icon('fa fa-list');
-		$this->template->render('form');
+
+		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
+		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
+			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+			$detail_items = [];
+			foreach ($data_detail as $rec) {
+				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
+				$detail_items[] = [
+					'id' => $rec->id,
+					'deskripsi' => $rec->deskripsi,
+					'keterangan' => $rec->keterangan,
+					'tanggal' => $rec->tanggal,
+					'coa' => $row_coa,
+					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
+					'qty_kasbon' => floatval($rec->qty),
+					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
+					'total_kasbon' => floatval($rec->kasbon),
+					'qty' => floatval($rec->qty),
+					'harga' => floatval($rec->harga),
+					'expense' => floatval($rec->expense),
+					'doc_file' => $rec->doc_file,
+					'id_expense_detail' => $rec->id_expense_detail
+				];
+			}
+			$this->template->set('data_kasbon', $data_kasbon);
+			$this->template->set('detail_items', $detail_items);
+			$this->template->render('form_report');
+		} else {
+			$this->template->render('form');
+		}
 	}
 
 	// view
@@ -1181,25 +1294,49 @@ class Expense extends Admin_Controller
 		$this->template->set('detail_files', $detail_files);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		// $data_pc = $this->All_model->GetPettyCashCombo();
-
-		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
 
 		$this->template->set('option_coa', $option_coa);
-
-		// $this->template->set('data_pc', $data_pc);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('stsview', 'view');
-		$this->template->set('data_exp_kasbon', $get_exp_kasbon);
 		$this->template->page_icon('fa fa-list');
-		$this->template->render('form');
+
+		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
+		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
+			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+			$detail_items = [];
+			foreach ($data_detail as $rec) {
+				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
+				$detail_items[] = [
+					'id' => $rec->id,
+					'deskripsi' => $rec->deskripsi,
+					'keterangan' => $rec->keterangan,
+					'tanggal' => $rec->tanggal,
+					'coa' => $row_coa,
+					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
+					'qty_kasbon' => floatval($rec->qty),
+					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
+					'total_kasbon' => floatval($rec->kasbon),
+					'qty' => floatval($rec->qty),
+					'harga' => floatval($rec->harga),
+					'expense' => floatval($rec->expense),
+					'doc_file' => $rec->doc_file,
+					'id_expense_detail' => $rec->id_expense_detail
+				];
+			}
+			$this->template->set('data_kasbon', $data_kasbon);
+			$this->template->set('detail_items', $detail_items);
+			$this->template->render('form_report');
+		} else {
+			$this->template->render('form');
+		}
 	}
 	// print
 	public function expense_print($id)
@@ -1280,7 +1417,6 @@ class Expense extends Admin_Controller
 		$this->template->set('detail_files', $detail_files);
 		$data_detail 	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
-		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
@@ -1290,17 +1426,37 @@ class Expense extends Admin_Controller
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
-		if (!empty($get_exp_kasbon)) {
-			$this->template->set('data_exp_kasbon', $get_exp_kasbon);
-		}
 		$this->template->set('stsview', 'approval');
 		$this->template->page_icon('fa fa-list');
+
 		if ($data->pettycash !== "") {
-			// $data_budget = $this->All_model->GetPettyCashComboCoa($data->pettycash);
-			// $data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
-			// $this->template->set('data_pc', $data_pc);
-			// $this->template->set('data_budget', $data_budget);
 			$this->template->render('form_pc');
+		} else if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
+			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+			$detail_items = [];
+			foreach ($data_detail as $rec) {
+				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
+				$detail_items[] = [
+					'id' => $rec->id,
+					'deskripsi' => $rec->deskripsi,
+					'keterangan' => $rec->keterangan,
+					'tanggal' => $rec->tanggal,
+					'coa' => $row_coa,
+					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
+					'qty_kasbon' => floatval($rec->qty),
+					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
+					'total_kasbon' => floatval($rec->kasbon),
+					'qty' => floatval($rec->qty),
+					'harga' => floatval($rec->harga),
+					'expense' => floatval($rec->expense),
+					'doc_file' => $rec->doc_file,
+					'id_expense_detail' => $rec->id_expense_detail
+				];
+			}
+			$this->template->set('data_kasbon', $data_kasbon);
+			$this->template->set('detail_items', $detail_items);
+			$this->template->render('form_report');
 		} else {
 			$this->template->render('form');
 		}
@@ -1477,6 +1633,21 @@ class Expense extends Admin_Controller
 				$param = array(
 					'save' => false,
 					'message' => implode(', ', $upload_errors)
+				);
+				echo json_encode($param);
+				return;
+			}
+		}
+
+		// Validasi server-side: jika LEBIH KASBON (Kasbon > Expense), bukti transfer pengembalian WAJIB diupload
+		$grand_total_check = $total_kasbon - $total_expense;
+		if ($grand_total_check > 0 && $total_kasbon > 0) {
+			$has_existing_bukti = !empty($post['existing_bukti_pengembalian']);
+			$has_new_bukti = !empty($_FILES['bukti_pengembalian']['name'][0]);
+			if (!$has_existing_bukti && !$has_new_bukti) {
+				$param = array(
+					'save' => false,
+					'message' => 'Terdapat Lebih Kasbon sebesar Rp ' . number_format($grand_total_check) . '. Bukti Transfer Balik (Pengembalian ke Kantor) WAJIB diupload!'
 				);
 				echo json_encode($param);
 				return;
@@ -1888,7 +2059,7 @@ class Expense extends Admin_Controller
 				'bank_id' 				=> $bank_id,
 				'accnumber' 			=> $accnumber,
 				'accname' 				=> $accname,
-				'pettycash' 			=> $pettycash,
+				'pettycash' 			=> (!empty($pettycash)) ? $pettycash : null,
 				'approval' 				=> $approval,
 				'status' 				=> 0,
 				'jumlah' 				=> $total_expense,
@@ -4269,12 +4440,22 @@ class Expense extends Admin_Controller
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->join('users c', 'a.approval=c.username', 'left');
 		if (empty($all)) {
+			$this->db->group_start();
 			$this->db->where('a.pettycash', null);
+			$this->db->or_where('a.pettycash', '');
+			$this->db->group_end();
+
+			$this->db->group_start();
 			$this->db->where('a.exp_pib', null);
+			$this->db->or_where('a.exp_pib', '');
+			$this->db->group_end();
 		}
 
-		if ($this->auth->user_id() !== '7') {
+		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '1' && !has_permission('Expense.Manage')) {
+			$this->db->group_start();
 			$this->db->where('a.nama', $this->auth->user_name());
+			$this->db->or_where('a.created_by', $this->auth->user_name());
+			$this->db->group_end();
 		}
 
 		$this->db->order_by('a.created_on', 'DESC');
@@ -4287,6 +4468,7 @@ class Expense extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.tgl_doc', $search, 'both');
 			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->or_like('a.nama', $search, 'both');
 			$this->db->or_like('c.username', $search, 'both');
 			$this->db->or_like('a.approved_on', $search, 'both');
 			$this->db->or_like('a.informasi', $search, 'both');
@@ -4366,7 +4548,7 @@ class Expense extends Admin_Controller
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
 				'tgl_doc' => $item['tgl_doc'],
-				'nama' => $item['nmuser'],
+				'nama' => !empty($item['nmuser']) ? $item['nmuser'] : $item['nama'],
 				'approval' => $item['nmapproval'],
 				'approval_date' => $item['approved_on'],
 				'keterangan' => $item['informasi'],
@@ -4818,8 +5000,8 @@ class Expense extends Admin_Controller
 		$ttl_kredit = 0;
 		$no_jurnal = 0;
 
-		// Jika tidak ada kasbon, tidak perlu generate jurnal kasbon
-		if ($total_kasbon <= 0) {
+		// Jika tidak ada kasbon dan expense, tidak perlu generate jurnal
+		if ($total_kasbon <= 0 && $total_expense <= 0) {
 			echo json_encode([
 				'status' => 1,
 				'hasil' => '',
@@ -4834,168 +5016,75 @@ class Expense extends Admin_Controller
 		$arr_deskripsi = isset($post['deskripsi']) ? (array)$post['deskripsi'] : [];
 		$arr_expense = isset($post['expense']) ? (array)$post['expense'] : [];
 		$arr_kasbon = isset($post['kasbon']) ? (array)$post['kasbon'] : [];
+		$arr_tanggal = isset($post['tanggal']) ? (array)$post['tanggal'] : [];
 
-		// 1. DEBIT: Item Pengeluaran
-		// Cek apakah ada kasbon yang terhubung dengan PR Stok / PR Department di tr_pr_detail_kasbon
-		$pr_items = [];
-		foreach ($arr_id_kasbon as $k_doc) {
-			if (!empty($k_doc)) {
-				$this->db->select('a.*, IF(b.code IS NULL, "Pcs", b.code) AS satuan');
-				$this->db->from('tr_pr_detail_kasbon a');
-				$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
-				$this->db->where('a.id_kasbon', $k_doc);
-				$q_pr = $this->db->get()->result_array();
-				if (!empty($q_pr)) {
-					foreach ($q_pr as $item_pr) {
-						$pr_items[] = $item_pr;
-					}
-				}
+		// Tarik Nama Company dari database db_consultant_new (kons_tr_company)
+		$id_company = '';
+		$nm_company = '';
+		$first_kasbon_doc = '';
+		foreach ($arr_id_kasbon as $kb_item) {
+			if (!empty($kb_item)) {
+				$first_kasbon_doc = $kb_item;
+				break;
 			}
 		}
 
-		// Jika ada item dari PR Stok / PR Department
-		if (!empty($pr_items)) {
-			foreach ($pr_items as $item_pr) {
-				$no_jurnal++;
-				$debit = floatval($item_pr['total_harga']);
-				$kredit = 0;
-				$coa_code = '';
-				$coa_name = '';
-
-				if ($item_pr['tipe_pr'] == 'pr stok') {
-					// 1. Ambil COA dari master accessories
-					if (!empty($item_pr['id_material'])) {
-						$this->db->select('a.no_coa, a.nm_coa');
-						$this->db->from('accessories a');
-						$this->db->where('a.id', $item_pr['id_material']);
-						$get_acc = $this->db->get()->row();
-						if (!empty($get_acc) && !empty($get_acc->no_coa)) {
-							$coa_code = $get_acc->no_coa;
-							$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
-						}
+		try {
+			$consultant = $this->load->database('consultant', true);
+			if (!empty($first_kasbon_doc)) {
+				$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
+				if (!empty($get_kb) && !empty($get_kb->project)) {
+					$consultant->select('a.id, a.nm_company');
+					$consultant->from('kons_tr_company a');
+					$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+					$consultant->where('b.id_quotation', $get_kb->project);
+					$get_comp = $consultant->get()->row();
+					if (!empty($get_comp)) {
+						$id_company = $get_comp->id;
+						$nm_company = $get_comp->nm_company;
 					}
-					// 2. Jika kosong, cek COA kasbon
-					if (empty($coa_code) && !empty($item_pr['id_kasbon'])) {
-						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item_pr['id_kasbon']])->row();
-						if (!empty($get_kb)) {
-							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
-						}
-					}
-				} else if ($item_pr['tipe_pr'] == 'pr departemen') {
-					// 1. Ambil COA dari detail baris rutin_non_planning_detail
-					if (!empty($item_pr['id_detail'])) {
-						$get_dtl = $this->db->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
-						if (!empty($get_dtl) && !empty($get_dtl->coa)) {
-							$coa_code = $get_dtl->coa;
-						}
-					}
-					// 2. Jika detail kosong, ambil COA dari header rutin_non_planning_header
-					if (empty($coa_code) && !empty($item_pr['no_pr'])) {
-						$get_dept = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
-						if (!empty($get_dept) && !empty($get_dept->coa)) {
-							$coa_code = $get_dept->coa;
-						}
-					}
-					// 3. Jika masih kosong, ambil COA dari kasbon
-					if (empty($coa_code) && !empty($item_pr['id_kasbon'])) {
-						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item_pr['id_kasbon']])->row();
-						if (!empty($get_kb)) {
-							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
-						}
-					}
-				}
-
-				// 4. Default fallback jika masih kosong: 1304-01-01 (Peralatan Kantor)
-				if (empty($coa_code)) {
-					$coa_code = '1304-01-01';
-				}
-
-				// Ambil nama COA dari DBACC jika nama belum terisi
-				if (empty($coa_name)) {
-					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-					if (!empty($q_coa_acc)) {
-						$coa_name = $q_coa_acc->nama;
-					} else {
-						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
-					}
-				}
-
-				$deskripsi = $item_pr['nm_material'] . (!empty($item_pr['no_pr']) ? ' (No. PR: ' . $item_pr['no_pr'] . ')' : '');
-
-				$hasil_jurnal .= '<tr>';
-				$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
-				$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
-				$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
-				$hasil_jurnal .= '<td>' . $deskripsi . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi . '"></td>';
-				$hasil_jurnal .= '<td class="text-right">' . number_format($debit) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $debit . '"></td>';
-				$hasil_jurnal .= '<td class="text-right">' . number_format($kredit) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $kredit . '"></td>';
-				$hasil_jurnal .= '</tr>';
-
-				$ttl_debit += $debit;
-			}
-		}
-
-		// Jika kasbon tidak memiliki rincian tr_pr_detail_kasbon, tampilkan 1 baris debit dari kasbon tersebut
-		if (empty($pr_items) && !empty($arr_id_kasbon)) {
-			foreach ($arr_id_kasbon as $k_idx => $k_doc) {
-				if (!empty($k_doc)) {
-					$no_jurnal++;
-					$k_val = isset($arr_kasbon[$k_idx]) ? floatval(str_replace(',', '', $arr_kasbon[$k_idx])) : 0;
-					if ($k_val <= 0 && isset($post['total_kasbon'])) {
-						$k_val = floatval(str_replace(',', '', $post['total_kasbon']));
-					}
-					$coa_code = '';
-					$coa_name = '';
-					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $k_doc])->row();
-					if (!empty($get_kb)) {
-						$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
-					}
-					if (empty($coa_code)) {
-						$coa_code = '1304-01-01';
-					}
-					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-					if (!empty($q_coa_acc)) {
-						$coa_name = $q_coa_acc->nama;
-					} else {
-						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
-					}
-					$deskripsi = 'Pengeluaran Kasbon ' . $k_doc . (!empty($get_kb->keperluan) ? ' - ' . $get_kb->keperluan : '');
-
-					$hasil_jurnal .= '<tr>';
-					$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
-					$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
-					$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
-					$hasil_jurnal .= '<td>' . $deskripsi . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi . '"></td>';
-					$hasil_jurnal .= '<td class="text-right">' . number_format($k_val) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $k_val . '"></td>';
-					$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
-					$hasil_jurnal .= '</tr>';
-
-					$ttl_debit += $k_val;
 				}
 			}
+
+			if (empty($nm_company)) {
+				$get_first_comp = $consultant->get('kons_tr_company')->row();
+				if (!empty($get_first_comp)) {
+					$id_company = $get_first_comp->id;
+					$nm_company = $get_first_comp->nm_company;
+				}
+			}
+		} catch (Exception $e) {
+			$id_company = '';
+			$nm_company = '';
 		}
 
-		// Tambahkan juga baris realisasi expense yang diisi di form tabel
+		// 1. DEBIT: Setiap baris item Realisasi Expense yang diinput di form
 		if (!empty($arr_expense)) {
 			foreach ($arr_expense as $idx => $exp_val) {
 				$exp_num = floatval(str_replace(',', '', $exp_val));
-				$id_k = isset($arr_id_kasbon[$idx]) ? $arr_id_kasbon[$idx] : '';
-				if ($exp_num > 0 && empty($id_k)) {
+				if ($exp_num > 0) {
 					$no_jurnal++;
-					$coa_code = isset($arr_coa[$idx]) && !empty($arr_coa[$idx]) ? $arr_coa[$idx] : '5101-01-03';
-					$coa_name = 'Biaya Pengeluaran';
+					$coa_code = isset($arr_coa[$idx]) && !empty($arr_coa[$idx]) ? $arr_coa[$idx] : '1304-01-01';
+					$coa_name = 'Peralatan Kantor';
 					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 					if (!empty($q_coa_acc)) {
 						$coa_name = $q_coa_acc->nama;
+					} else {
+						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
 					}
 
 					$desk = isset($arr_deskripsi[$idx]) && !empty($arr_deskripsi[$idx]) ? $arr_deskripsi[$idx] : 'Pengeluaran Expense';
+					$k_doc = isset($arr_id_kasbon[$idx]) ? $arr_id_kasbon[$idx] : '';
+					if (!empty($k_doc)) {
+						$desk = 'Pengeluaran Kasbon ' . $k_doc . ' - ' . $desk;
+					}
 
 					$hasil_jurnal .= '<tr>';
 					$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
 					$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+					$hasil_jurnal .= '<td class="text-center">' . $nm_company . '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
 					$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
-					$hasil_jurnal .= '<td>' . $desk . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $desk . '"></td>';
+					$hasil_jurnal .= '<td>' . htmlspecialchars($desk) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . htmlspecialchars($desk) . '"></td>';
 					$hasil_jurnal .= '<td class="text-right">' . number_format($exp_num) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $exp_num . '"></td>';
 					$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
 					$hasil_jurnal .= '</tr>';
@@ -5005,17 +5094,18 @@ class Expense extends Admin_Controller
 			}
 		}
 
-		// Jika ttl_debit masih 0 tapi total_expense > 0, buat baris fallback biaya
+		// Jika ttl_debit masih 0 tapi total_expense > 0, fallback
 		if ($ttl_debit == 0 && $total_expense > 0) {
 			$no_jurnal++;
-			$coa_code = '5101-01-03';
-			$coa_name = 'Biaya Pengeluaran Expense';
+			$coa_code = '1304-01-01';
+			$coa_name = 'Peralatan Kantor';
 			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 			if (!empty($q_coa_acc)) $coa_name = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr>';
 			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
 			$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+			$hasil_jurnal .= '<td class="text-center">' . $nm_company . '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
 			$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
 			$hasil_jurnal .= '<td>Realisasi Pengeluaran Expense</td>';
 			$hasil_jurnal .= '<td class="text-right">' . number_format($total_expense) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $total_expense . '"></td>';
@@ -5025,7 +5115,7 @@ class Expense extends Admin_Controller
 			$ttl_debit += $total_expense;
 		}
 
-		// Jika LEBIH BAYAR (Kasbon > Expense / Selisih > 0): Sisi DEBIT Bank Pengembalian
+		// Jika LEBIH KASBON (Kasbon > Expense / Selisih > 0): Sisi DEBIT Bank Pengembalian
 		if ($selisih > 0) {
 			$no_jurnal++;
 			$coa_bank = '1101-02-01';
@@ -5036,6 +5126,7 @@ class Expense extends Admin_Controller
 			$hasil_jurnal .= '<tr style="background:#e8fadf;">';
 			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
 			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_bank . '"></td>';
+			$hasil_jurnal .= '<td class="text-center"><b>' . $nm_company . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
 			$hasil_jurnal .= '<td><b>' . $nm_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_bank . '"></td>';
 			$hasil_jurnal .= '<td><span class="text-green"><i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon (Transfer ke Rekening Perusahaan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Pengembalian Kelebihan Kasbon"></td>';
 			$hasil_jurnal .= '<td class="text-right"><b>' . number_format($selisih) . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $selisih . '"></td>';
@@ -5046,26 +5137,29 @@ class Expense extends Admin_Controller
 		}
 
 		// 2. KREDIT: Akun Kasbon / Uang Muka Karyawan (1103-01-14)
-		$no_jurnal++;
-		$coa_kasbon = '1103-01-14';
-		$nm_kasbon = 'Kasbon / Uang Muka Karyawan';
-		$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
-		if (!empty($q_coa_acc)) $nm_kasbon = $q_coa_acc->nama;
+		if ($total_kasbon > 0) {
+			$no_jurnal++;
+			$coa_kasbon = '1103-01-14';
+			$nm_kasbon = 'Piutang Lain-lain Konsultan';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
+			if (!empty($q_coa_acc)) $nm_kasbon = $q_coa_acc->nama;
 
-		$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_filter($arr_id_kasbon)) . ')' : '');
+			$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_unique(array_filter($arr_id_kasbon))) . ')' : '');
 
-		$hasil_jurnal .= '<tr>';
-		$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
-		$hasil_jurnal .= '<td class="text-center">' . $coa_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_kasbon . '"></td>';
-		$hasil_jurnal .= '<td>' . $nm_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_kasbon . '"></td>';
-		$hasil_jurnal .= '<td>' . $deskripsi_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi_kasbon . '"></td>';
-		$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="0"></td>';
-		$hasil_jurnal .= '<td class="text-right">' . number_format($total_kasbon) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $total_kasbon . '"></td>';
-		$hasil_jurnal .= '</tr>';
+			$hasil_jurnal .= '<tr>';
+			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+			$hasil_jurnal .= '<td class="text-center">' . $coa_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_kasbon . '"></td>';
+			$hasil_jurnal .= '<td class="text-center">' . $nm_company . '<input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
+			$hasil_jurnal .= '<td>' . $nm_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_kasbon . '"></td>';
+			$hasil_jurnal .= '<td>' . $deskripsi_kasbon . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi_kasbon . '"></td>';
+			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="0"></td>';
+			$hasil_jurnal .= '<td class="text-right">' . number_format($total_kasbon) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $total_kasbon . '"></td>';
+			$hasil_jurnal .= '</tr>';
 
-		$ttl_kredit += $total_kasbon;
+			$ttl_kredit += $total_kasbon;
+		}
 
-		// 3. Jika KURANG BAYAR (Expense > Kasbon / Selisih < 0): Sisi KREDIT Hutang Reimburse Karyawan (9999-99-99)
+		// 3. Jika LEBIH EXPENSE (Expense > Kasbon / Selisih < 0): Sisi KREDIT Hutang Reimburse Karyawan (9999-99-99)
 		if ($selisih < 0) {
 			$kurang_bayar = abs($selisih);
 			$no_jurnal++;
@@ -5077,8 +5171,9 @@ class Expense extends Admin_Controller
 			$hasil_jurnal .= '<tr style="background:#fde8e8;">';
 			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
 			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_hutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_hutang . '"></td>';
+			$hasil_jurnal .= '<td class="text-center"><b>' . $nm_company . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
 			$hasil_jurnal .= '<td><b>' . $nm_hutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_hutang . '"></td>';
-			$hasil_jurnal .= '<td><span class="text-red"><i class="fa fa-exclamation-circle"></i> Kurang Bayar Kasbon (Reimburse Kantor ke Karyawan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Kurang Bayar Kasbon Reimburse"></td>';
+			$hasil_jurnal .= '<td><span class="text-red"><i class="fa fa-exclamation-circle"></i> Lebih Expense (Reimburse Kantor ke Karyawan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Lebih Expense Reimburse"></td>';
 			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="0"></td>';
 			$hasil_jurnal .= '<td class="text-right"><b>' . number_format($kurang_bayar) . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="' . $kurang_bayar . '"></td>';
 			$hasil_jurnal .= '</tr>';
@@ -5090,8 +5185,7 @@ class Expense extends Admin_Controller
 			'status' => 1,
 			'hasil' => $hasil_jurnal,
 			'ttl_debit' => number_format($ttl_debit),
-			'ttl_kredit' => number_format($ttl_kredit),
-			'is_balance' => ($ttl_debit == $ttl_kredit)
+			'ttl_kredit' => number_format($ttl_kredit)
 		]);
 	}
 

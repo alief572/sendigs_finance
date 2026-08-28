@@ -49,9 +49,12 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 	<div class="box-custom-header">
 		<h4 class="box-custom-title"><i class="fa fa-money text-primary"></i> Daftar Laporan & Pertanggungjawaban Expense</h4>
 		<?php if ($ENABLE_ADD) : ?>
-			<div>
-				<button class="btn btn-success btn-sm btn-rounded" type="button" onclick="data_add()">
+			<div style="display: flex; gap: 8px;">
+				<button class="btn btn-success btn-sm btn-rounded" type="button" onclick="data_add()" title="Buat Pengeluaran Langsung / Manual">
 					<i class="fa fa-plus">&nbsp;</i> Tambah Expense
+				</button>
+				<button class="btn btn-primary btn-sm btn-rounded" type="button" onclick="data_add_report()" title="Pertanggungjawaban Kasbon Sendigs">
+					<i class="fa fa-ticket">&nbsp;</i> Tambah Expense Report
 				</button>
 			</div>
 		<?php endif; ?>
@@ -82,7 +85,7 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 
 <div id="form-data"></div>
 
-<!-- MODAL PILIH KASBON -->
+<!-- MODAL PILIH KASBON UNTUK EXPENSE REPORT -->
 <div class="modal fade" id="modalKasbon" tabindex="-1" role="dialog" aria-labelledby="modalKasbonLabel" aria-hidden="true">
 	<div class="modal-dialog modal-lg" style="width: 85%;">
 		<div class="modal-content" style="border-radius: 8px;">
@@ -90,7 +93,7 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
-				<h4 class="modal-title" id="modalKasbonLabel"><i class="fa fa-ticket"></i> Pilih Kasbon Sendigs (Approved)</h4>
+				<h4 class="modal-title" id="modalKasbonLabel"><i class="fa fa-ticket"></i> Pilih Kasbon Sendigs untuk Dibuatkan Expense Report</h4>
 			</div>
 			<div class="modal-body" style="padding: 15px;">
 				<div class="table-responsive">
@@ -103,7 +106,7 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 								<th>Keperluan</th>
 								<th>Keterangan</th>
 								<th width="130" class="text-right">Jumlah (Rp)</th>
-								<th width="70" class="text-center">Aksi</th>
+								<th width="110" class="text-center">Aksi</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -126,6 +129,7 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 <!-- page script -->
 <script type="text/javascript">
 	var url_add = siteurl + 'expense/create/';
+	var url_add_report = siteurl + 'expense/create_report/';
 	var url_edit = siteurl + 'expense/edit/';
 	var url_delete = siteurl + 'expense/delete/';
 	var url_view = siteurl + 'expense/view/';
@@ -140,6 +144,62 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 		$(".box").hide();
 		$("#form-data").show();
 		$("#form-data").load(url_add);
+	}
+
+	function data_add_report() {
+		$.ajax({
+			url: siteurl + 'expense/get_kasbon',
+			type: "POST",
+			dataType: "json",
+			success: function(data) {
+				if ($.fn.DataTable.isDataTable('#tableKasbon')) {
+					$('#tableKasbon').DataTable().destroy();
+				}
+
+				var tbody = '';
+				if (data && data.length > 0) {
+					for (var i = 0; i < data.length; i++) {
+						tbody += '<tr>';
+						tbody += '<td class="text-center">' + (i + 1) + '</td>';
+						tbody += '<td><b>' + data[i].no_doc + '</b></td>';
+						tbody += '<td>' + data[i].tgl_doc + '</td>';
+						tbody += '<td>' + (data[i].keperluan || '-') + '</td>';
+						tbody += '<td>' + (data[i].keterangan || '-') + '</td>';
+						tbody += '<td class="text-right" style="font-weight:bold; color:#2e59d9;">' + Number(data[i].jumlah_kasbon).toLocaleString('en-US') + '</td>';
+						tbody += '<td class="text-center"><button type="button" class="btn btn-primary btn-xs btn-rounded btn-pilih-kasbon-report" data-doc="' + data[i].no_doc + '"><i class="fa fa-arrow-right"></i> Proses Report</button></td>';
+						tbody += '</tr>';
+					}
+				}
+				$('#tableKasbon tbody').html(tbody);
+				$('#tableKasbon').DataTable({
+					paging: true,
+					pageLength: 10,
+					lengthMenu: [10, 25, 50, 100],
+					ordering: true,
+					searching: true
+				});
+				$('#modalKasbon').modal('show');
+			},
+			error: function() {
+				Swal.fire({
+					title: "Gagal!",
+					text: 'Gagal mengambil data kasbon dari server.',
+					icon: "warning"
+				});
+			}
+		});
+	}
+
+	$(document).on('click', '.btn-pilih-kasbon-report', function() {
+		var no_doc_kasbon = $(this).data('doc');
+		select_kasbon_report(no_doc_kasbon);
+	});
+
+	function select_kasbon_report(no_doc_kasbon) {
+		$('#modalKasbon').modal('hide');
+		$(".box").hide();
+		$("#form-data").show();
+		$("#form-data").load(url_add_report + encodeURIComponent(no_doc_kasbon));
 	}
 
 	function data_edit(id) {
