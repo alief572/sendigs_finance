@@ -81,7 +81,7 @@ class Non_rutin extends Admin_Controller
 		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 		$this->db->where('a.status_id', 1);
 		if (!$is_admin) {
-			$this->db->where('a.id_dept', $user_dept_id); // penyesuaian berdasarkan departemen user login
+			$this->db->where('a.created_by', $user_id); // selain admin hanya bisa melihat PR yang dibuat sendiri
 		}
 		$this->db->where('a.close_pr', null);
 		$this->db->group_by('z.no_pengajuan');
@@ -1387,11 +1387,11 @@ class Non_rutin extends Admin_Controller
 		$this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
 		$this->db->join('users c', 'c.id_user = a.created_by', 'left');
 		$this->db->where('a.status_id', 1);
-		if ($depart !== '') {
-			$this->db->where('a.id_dept', $depart);
+		if (!$is_admin) {
+			$this->db->where('a.created_by', $user_id);
 		} else {
-			if (!$is_admin) {
-				$this->db->where('a.id_dept', $user_dept_id);
+			if ($depart !== '') {
+				$this->db->where('a.id_dept', $depart);
 			}
 		}
 		$this->db->where('a.close_pr', null);
