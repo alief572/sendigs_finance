@@ -4783,36 +4783,64 @@ class Expense extends Admin_Controller
 				$no_jurnal++;
 				$debit = floatval($item_pr['total_harga']);
 				$kredit = 0;
-				$coa_code = '5101-01-03';
-				$coa_name = 'Biaya Pengeluaran Lainnya';
+				$coa_code = '';
+				$coa_name = '';
 
 				if ($item_pr['tipe_pr'] == 'pr stok') {
-					$this->db->select('a.no_coa, a.nm_coa');
-					$this->db->from('accessories a');
-					$this->db->where('a.id', $item_pr['id_material']);
-					$get_acc = $this->db->get()->row();
-					if (!empty($get_acc) && !empty($get_acc->no_coa)) {
-						$coa_code = $get_acc->no_coa;
-						$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : 'Biaya Stok Material';
+					// 1. Ambil COA dari master accessories
+					if (!empty($item_pr['id_material'])) {
+						$this->db->select('a.no_coa, a.nm_coa');
+						$this->db->from('accessories a');
+						$this->db->where('a.id', $item_pr['id_material']);
+						$get_acc = $this->db->get()->row();
+						if (!empty($get_acc) && !empty($get_acc->no_coa)) {
+							$coa_code = $get_acc->no_coa;
+							$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
+						}
+					}
+					// 2. Jika kosong, cek COA kasbon
+					if (empty($coa_code) && !empty($item_pr['id_kasbon'])) {
+						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item_pr['id_kasbon']])->row();
+						if (!empty($get_kb)) {
+							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
+						}
 					}
 				} else if ($item_pr['tipe_pr'] == 'pr departemen') {
-					$this->db->select('a.coa');
-					$this->db->from('rutin_non_planning_header a');
-					$this->db->where('a.no_pr', $item_pr['no_pr']);
-					$get_dept = $this->db->get()->row();
-					if (!empty($get_dept) && !empty($get_dept->coa)) {
-						$coa_code = $get_dept->coa;
+					// 1. Ambil COA dari detail baris rutin_non_planning_detail
+					if (!empty($item_pr['id_detail'])) {
+						$get_dtl = $this->db->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
+						if (!empty($get_dtl) && !empty($get_dtl->coa)) {
+							$coa_code = $get_dtl->coa;
+						}
 					}
-					// Ambil nama COA dari DBACC
+					// 2. Jika detail kosong, ambil COA dari header rutin_non_planning_header
+					if (empty($coa_code) && !empty($item_pr['no_pr'])) {
+						$get_dept = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
+						if (!empty($get_dept) && !empty($get_dept->coa)) {
+							$coa_code = $get_dept->coa;
+						}
+					}
+					// 3. Jika masih kosong, ambil COA dari kasbon
+					if (empty($coa_code) && !empty($item_pr['id_kasbon'])) {
+						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item_pr['id_kasbon']])->row();
+						if (!empty($get_kb)) {
+							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
+						}
+					}
+				}
+
+				// 4. Default fallback jika masih kosong: 1304-01-01 (Peralatan Kantor)
+				if (empty($coa_code)) {
+					$coa_code = '1304-01-01';
+				}
+
+				// Ambil nama COA dari DBACC jika nama belum terisi
+				if (empty($coa_name)) {
 					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 					if (!empty($q_coa_acc)) {
 						$coa_name = $q_coa_acc->nama;
-					}
-				} else {
-					// Ambil nama COA dari DBACC jika ada
-					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-					if (!empty($q_coa_acc)) {
-						$coa_name = $q_coa_acc->nama;
+					} else {
+						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
 					}
 				}
 
@@ -4828,6 +4856,46 @@ class Expense extends Admin_Controller
 				$hasil_jurnal .= '</tr>';
 
 				$ttl_debit += $debit;
+			}
+		}
+
+		// Jika kasbon tidak memiliki rincian tr_pr_detail_kasbon, tampilkan 1 baris debit dari kasbon tersebut
+		if (empty($pr_items) && !empty($arr_id_kasbon)) {
+			foreach ($arr_id_kasbon as $k_idx => $k_doc) {
+				if (!empty($k_doc)) {
+					$no_jurnal++;
+					$k_val = isset($arr_kasbon[$k_idx]) ? floatval(str_replace(',', '', $arr_kasbon[$k_idx])) : 0;
+					if ($k_val <= 0 && isset($post['total_kasbon'])) {
+						$k_val = floatval(str_replace(',', '', $post['total_kasbon']));
+					}
+					$coa_code = '';
+					$coa_name = '';
+					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $k_doc])->row();
+					if (!empty($get_kb)) {
+						$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
+					}
+					if (empty($coa_code)) {
+						$coa_code = '1304-01-01';
+					}
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+					if (!empty($q_coa_acc)) {
+						$coa_name = $q_coa_acc->nama;
+					} else {
+						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
+					}
+					$deskripsi = 'Pengeluaran Kasbon ' . $k_doc . (!empty($get_kb->keperluan) ? ' - ' . $get_kb->keperluan : '');
+
+					$hasil_jurnal .= '<tr>';
+					$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
+					$hasil_jurnal .= '<td class="text-center">' . $coa_code . '<input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_code . '"></td>';
+					$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
+					$hasil_jurnal .= '<td>' . $deskripsi . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . $deskripsi . '"></td>';
+					$hasil_jurnal .= '<td class="text-right">' . number_format($k_val) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $k_val . '"></td>';
+					$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+					$hasil_jurnal .= '</tr>';
+
+					$ttl_debit += $k_val;
+				}
 			}
 		}
 
