@@ -709,6 +709,82 @@ class Expense extends Admin_Controller
 				print_r($this->db->error($data));
 				exit;
 			}
+
+			if (!empty($data) && is_array($data)) {
+				foreach ($data as &$item) {
+					$coa_code = '';
+					$coa_name = '';
+
+					if (!empty($item->no_doc)) {
+						// Cek apakah ada di tr_pr_detail_kasbon
+						$this->db->select('a.*');
+						$this->db->from('tr_pr_detail_kasbon a');
+						$this->db->where('a.id_kasbon', $item->no_doc);
+						$q_pr = $this->db->get()->result_array();
+
+						if (!empty($q_pr)) {
+							foreach ($q_pr as $item_pr) {
+								if ($item_pr['tipe_pr'] == 'pr stok') {
+									// 1. Ambil COA dari accessories
+									if (!empty($item_pr['id_material'])) {
+										$get_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']])->row();
+										if (!empty($get_acc) && !empty($get_acc->no_coa)) {
+											$coa_code = $get_acc->no_coa;
+											$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
+											break;
+										}
+									}
+								} else if ($item_pr['tipe_pr'] == 'pr departemen') {
+									// 1. Ambil COA dari detail baris rutin_non_planning_detail
+									if (!empty($item_pr['id_detail'])) {
+										$get_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
+										if (!empty($get_dtl) && !empty($get_dtl->coa)) {
+											$coa_code = $get_dtl->coa;
+											break;
+										}
+									}
+									// 2. Jika detail kosong, ambil COA dari header rutin_non_planning_header
+									if (empty($coa_code) && !empty($item_pr['no_pr'])) {
+										$get_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
+										if (!empty($get_dept) && !empty($get_dept->coa)) {
+											$coa_code = $get_dept->coa;
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+
+					// Fallback ke field coa / no_coa pada kasbon
+					if (empty($coa_code)) {
+						$coa_code = !empty($item->coa) ? $item->coa : '';
+					}
+					if (empty($coa_code) && !empty($item->no_doc)) {
+						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_doc])->row();
+						if (!empty($get_kb)) {
+							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
+						}
+					}
+
+					// Default fallback 1304-01-01
+					if (empty($coa_code)) {
+						$coa_code = '1304-01-01';
+					}
+
+					if (empty($coa_name)) {
+						$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+						if (!empty($q_coa_acc)) {
+							$coa_name = $q_coa_acc->nama;
+						} else {
+							$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
+						}
+					}
+
+					$item->coa = $coa_code;
+					$item->coa_name = $coa_name;
+				}
+			}
 		} else {
 			$data = false;
 		}

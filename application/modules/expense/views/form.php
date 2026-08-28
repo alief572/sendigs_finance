@@ -288,7 +288,14 @@ if (!empty($data_detail)) {
 											if (!$is_kasbon_row) {
 												echo form_dropdown('coa[]', $option_coa, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2 input-sm', 'onchange' => 'set_jurnal()'));
 											} else {
-												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $record->coa . '"><span class="badge bg-blue">' . $record->coa . '</span>';
+												$k_coa = !empty($record->coa) ? $record->coa : '1304-01-01';
+												$q_kcoa = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $k_coa . "'")->row();
+												$k_coaname = !empty($q_kcoa) ? $q_kcoa->nama : 'Peralatan Kantor';
+												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $k_coa . '">';
+												echo '<div style="display:flex; flex-direction:column; gap:2px;">';
+												echo '<span class="badge bg-blue" style="font-size:11px; text-align:left; white-space:normal;"><i class="fa fa-tag"></i> ' . $k_coa . '</span>';
+												echo '<small class="text-muted" style="font-weight:600; font-size:11px;">' . $k_coaname . '</small>';
+												echo '</div>';
 											}
 											?>
 										</td>
@@ -916,6 +923,8 @@ foreach ($option_coa as $keys => $val) {
 						tbody += '<td style="display:none">' + (data[i].accnumber || '') + '</td>';
 						tbody += '<td style="display:none">' + (data[i].accname || '') + '</td>';
 						tbody += '<td style="display:none">' + (data[i].id || '') + '</td>';
+						tbody += '<td style="display:none">' + (data[i].coa || '1304-01-01') + '</td>';
+						tbody += '<td style="display:none">' + (data[i].coa_name || 'Peralatan Kantor') + '</td>';
 						tbody += '<td class="text-center"><button type="button" class="btn btn-primary btn-xs btn-flat-custom" onclick="selectKasbon(' + i + ')"><i class="fa fa-check"></i> Pilih</button></td>';
 						tbody += '</tr>';
 					}
@@ -946,6 +955,8 @@ foreach ($option_coa as $keys => $val) {
 		var accnumber = row.find('td').eq(7).text();
 		var accname = row.find('td').eq(8).text();
 		var id = row.find('td').eq(9).text();
+		var coa = row.find('td').eq(10).text() || '1304-01-01';
+		var coa_name = row.find('td').eq(11).text() || 'Peralatan Kantor';
 
 		var nomor = $("#detail_body tr").length + 1;
 		var datacoa = "<?= $datacoa ?>";
@@ -957,7 +968,11 @@ foreach ($option_coa as $keys => $val) {
 		Rows += nomor + " </td>";
 		Rows += "<td class='text-center'><span class='badge-kasbon'><i class='fa fa-ticket'></i> Kasbon</span></td>";
 		Rows += "<td>";
-		Rows += "<select name='coa[]' id='coa_" + nomor + "' class='form-control select2 input-sm' onchange='set_jurnal()'><?= $datacoa ?></select>";
+		Rows += "<input type='hidden' name='coa[]' id='coa_" + nomor + "' value='" + coa + "'>";
+		Rows += "<div style='display:flex; flex-direction:column; gap:2px;'>";
+		Rows += "<span class='badge bg-blue' style='font-size:11px; text-align:left; white-space:normal;'><i class='fa fa-tag'></i> " + coa + "</span>";
+		Rows += "<small class='text-muted' style='font-weight:600; font-size:11px;'>" + coa_name + "</small>";
+		Rows += "</div>";
 		Rows += "</td>";
 		Rows += "<td>";
 		Rows += "<input type='text' class='form-control tanggal input-sm' name='tanggal[]' id='tanggal_" + nomor + "' tabindex='-1' value='" + tgl_doc + "' readonly />";
