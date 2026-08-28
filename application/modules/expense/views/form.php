@@ -414,23 +414,49 @@ if (!empty($data_detail)) {
 							<div class="panel-body">
 								<div class="form-group" style="margin-left:0; margin-right:0; margin-bottom: 0;">
 									<label class="control-label">Upload Bukti Transfer Balik <b class="text-red">*</b></label>
-									<input type="file" name="bukti_pengembalian[]" class="form-control input-sm" multiple accept=".jpg,.jpeg,.png,.pdf">
-									<small class="text-muted"><i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF (Bisa upload beberapa file)</small>
-									<?php
-									$file = '';
-									if (isset($data->bukti_pengembalian) && !empty($data->bukti_pengembalian)) {
+
+									<div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+										<label class="btn btn-sm btn-primary btn-flat-custom stsview" style="cursor:pointer; margin-bottom:0;" title="Pilih File Bukti Transfer">
+											<i class="fa fa-folder-open"></i> Pilih Bukti Transfer
+											<input type="file" id="temp_bukti_pengembalian_picker" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
+										</label>
+										<span id="selected_bukti_count" class="text-muted" style="font-size:12px;"></span>
+									</div>
+
+									<!-- Hidden real file input -->
+									<input type="file" name="bukti_pengembalian[]" id="id_bukti_pengembalian" multiple style="display:none;" accept=".jpg,.jpeg,.png,.pdf">
+
+									<!-- Container of new chosen files -->
+									<div id="new_bukti_pengembalian_list" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;"></div>
+									<small class="text-muted" style="font-size:11px; display:block; margin-top:4px;"><i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF. Bisa klik <b>Pilih Bukti Transfer</b> berkali-kali untuk memilih file dari berbagai folder satu per satu.</small>
+
+									<?php if (isset($data->bukti_pengembalian) && !empty($data->bukti_pengembalian)): 
 										$arr_files = explode(';', $data->bukti_pengembalian);
-										foreach ($arr_files as $f_item) {
-											if (empty($f_item)) continue;
-											if (strpos($f_item, 'pdf') !== false) {
-												$file .= '<div style="margin-top:5px;"><a href="' . base_url($f_item) . '" class="btn btn-xs btn-default" target="_blank"><i class="fa fa-file-pdf-o text-red"></i> ' . basename($f_item) . '</a></div>';
-											} else {
-												$file .= '<div style="margin-top:5px;"><a href="' . base_url($f_item) . '" target="_blank"><img src="' . base_url($f_item) . '" style="max-height:80px; border:1px solid #ddd; padding:2px; border-radius:4px;"></a></div>';
-											}
-										}
-									}
 									?>
-									<?= $file ?>
+										<div class="existing-bukti-container" style="margin-top:10px;">
+											<label style="font-size:12px; font-weight:600; color:#555;"><i class="fa fa-paperclip"></i> Bukti Transfer Terlampir Sebelumnya:</label>
+											<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+												<?php foreach ($arr_files as $f_item): 
+													if (empty($f_item)) continue;
+													$furl = base_url($f_item);
+													$is_fpdf = (stripos($f_item, '.pdf') !== false);
+													$fname = basename($f_item);
+												?>
+													<span class="badge file-badge-item" style="background:#3c8dbc; font-size:11px; font-weight:normal; padding:5px 8px; display:inline-flex; align-items:center; gap:6px;">
+														<a href="<?= $furl ?>" target="_blank" style="color:#fff; text-decoration:none;" title="<?= htmlspecialchars($fname) ?>">
+															<i class="fa <?= $is_fpdf ? 'fa-file-pdf-o' : 'fa-file-image-o' ?>"></i> <?= htmlspecialchars($fname) ?>
+														</a>
+														<input type="hidden" name="existing_bukti_pengembalian[]" value="<?= htmlspecialchars($f_item) ?>">
+														<?php if ($stsview != 'view' && $stsview != 'approval'): ?>
+															<button type="button" class="btn btn-xs btn-danger remove-existing-bukti" style="padding:0 4px; font-size:10px; line-height:1; border-radius:2px;" title="Hapus file ini">
+																<i class="fa fa-times"></i>
+															</button>
+														<?php endif; ?>
+													</span>
+												<?php endforeach; ?>
+											</div>
+										</div>
+									<?php endif; ?>
 								</div>
 							</div>
 						</div>
@@ -1037,6 +1063,83 @@ foreach ($option_coa as $keys => $val) {
 
 	
 	// ==========================================
+	
+	// ==========================================
+	// BUKTI PENGEMBALIAN MULTI-FILE ACCUMULATOR (DataTransfer)
+	// ==========================================
+	var dtBuktiPengembalian = new DataTransfer();
+
+	$(document).on('change', '#temp_bukti_pengembalian_picker', function() {
+		var newFiles = this.files;
+		if (newFiles.length > 0) {
+			for (var i = 0; i < newFiles.length; i++) {
+				var file = newFiles[i];
+				var exists = false;
+				for (var j = 0; j < dtBuktiPengembalian.items.length; j++) {
+					var existingFile = dtBuktiPengembalian.items[j].getAsFile();
+					if (existingFile && existingFile.name === file.name && existingFile.size === file.size) {
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					dtBuktiPengembalian.items.add(file);
+				}
+			}
+			var hiddenInput = document.getElementById('id_bukti_pengembalian');
+			if (hiddenInput) {
+				hiddenInput.files = dtBuktiPengembalian.files;
+			}
+			$(this).val('');
+			render_bukti_pengembalian_list();
+		}
+	});
+
+	function render_bukti_pengembalian_list() {
+		var container = $('#new_bukti_pengembalian_list');
+		container.empty();
+		var count = dtBuktiPengembalian.files.length;
+		if (count > 0) {
+			$('#selected_bukti_count').text(count + ' file baru dipilih:');
+			for (var i = 0; i < count; i++) {
+				var file = dtBuktiPengembalian.files[i];
+				var isPdf = file.name.toLowerCase().endsWith('.pdf');
+				var sizeKb = Math.round(file.size / 1024);
+				var badge = '<span class="badge" style="background:#00a65a; font-size:11px; font-weight:normal; text-align:left; padding:4px 7px; display:inline-flex; align-items:center; gap:5px;">' +
+					'<i class="fa ' + (isPdf ? 'fa-file-pdf-o' : 'fa-file-image-o') + '"></i> ' + file.name + ' (' + sizeKb + ' KB) ' +
+					'<button type="button" class="btn btn-xs btn-danger remove-new-bukti" data-index="' + i + '" style="padding:0 4px; font-size:10px; line-height:1; border-radius:2px;" title="Hapus file ini">' +
+					'<i class="fa fa-times"></i>' +
+					'</button>' +
+					'</span>';
+				container.append(badge);
+			}
+		} else {
+			$('#selected_bukti_count').text('');
+		}
+	}
+
+	$(document).on('click', '.remove-new-bukti', function(e) {
+		e.preventDefault();
+		var idx = parseInt($(this).data('index'));
+		var newDt = new DataTransfer();
+		for (var i = 0; i < dtBuktiPengembalian.files.length; i++) {
+			if (i !== idx) {
+				newDt.items.add(dtBuktiPengembalian.files[i]);
+			}
+		}
+		dtBuktiPengembalian = newDt;
+		var hiddenInput = document.getElementById('id_bukti_pengembalian');
+		if (hiddenInput) {
+			hiddenInput.files = dtBuktiPengembalian.files;
+		}
+		render_bukti_pengembalian_list();
+	});
+
+	$(document).on('click', '.remove-existing-bukti', function(e) {
+		e.preventDefault();
+		$(this).closest('.file-badge-item').remove();
+	});
+
 	// DETAIL MULTI-FILE ACCUMULATOR (DataTransfer)
 	// ==========================================
 	var dtDetailMap = {};

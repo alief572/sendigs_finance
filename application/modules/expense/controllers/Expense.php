@@ -1422,6 +1422,30 @@ class Expense extends Admin_Controller
 				$lebih_bayar	= null;
 			}
 
+			$pathBuktiPengembalian = [];
+			if (!empty($post['existing_bukti_pengembalian'])) {
+				foreach ($post['existing_bukti_pengembalian'] as $eb) {
+					if (!empty($eb)) $pathBuktiPengembalian[] = $eb;
+				}
+			}
+			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
+				$uploadDirectory = 'assets/expense_bukti_pengembalian/';
+				if (!is_dir($uploadDirectory)) {
+					mkdir($uploadDirectory, 0777, true);
+				}
+				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
+					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
+						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
+						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
+						$filePath = $uploadDirectory . $cleanName;
+						if (move_uploaded_file($tmpName, $filePath)) {
+							$pathBuktiPengembalian[] = $filePath;
+						}
+					}
+				}
+			}
+			$buktiPengembalian = ($pengembalian == 2 && !empty($pathBuktiPengembalian)) ? implode(";", $pathBuktiPengembalian) : null;
+
 			$data = array(
 				'tgl_doc' => $tgl_doc,
 				'jumlah' => $total_expense,
@@ -1434,6 +1458,7 @@ class Expense extends Admin_Controller
 				'pettycash' => $pettycash,
 				'tipe_pengembalian' => $pengembalian,
 				'tipe_penggantian' => $penggantian,
+				'bukti_pengembalian' => $buktiPengembalian,
 				'lebih_bayar' => $lebih_bayar,
 				'kurang_bayar' => $kurang_bayar,
 				'keterangan_kurang_bayar' => $this->input->post('keterangan_kurang_bayar'),
@@ -1738,15 +1763,24 @@ class Expense extends Admin_Controller
 			}
 			$bonBukti = implode(";", $pathBonBukti);
 
+			if (!empty($post['existing_bukti_pengembalian'])) {
+				foreach ($post['existing_bukti_pengembalian'] as $eb) {
+					if (!empty($eb)) $pathBuktiPengembalian[] = $eb;
+				}
+			}
 			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
+				if (!is_dir($uploadDirectory)) {
+					mkdir($uploadDirectory, 0777, true);
+				}
 				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
-					$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
-					$filePath = $uploadDirectory . basename($name);
+					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
+						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
+						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
+						$filePath = $uploadDirectory . $cleanName;
 
-					if (move_uploaded_file($tmpName, $filePath)) {
-						$pathBuktiPengembalian[] = $filePath;
-					} else {
-						echo "Gagal mengunggah file: $name<br>";
+						if (move_uploaded_file($tmpName, $filePath)) {
+							$pathBuktiPengembalian[] = $filePath;
+						}
 					}
 				}
 			}
