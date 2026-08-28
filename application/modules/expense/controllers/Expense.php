@@ -1041,6 +1041,8 @@ class Expense extends Admin_Controller
 	// create
 	public function create()
 	{
+		$detail_files = [];
+		$this->template->set('detail_files', $detail_files);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		// $data_pc 		= $this->All_model->GetPettyCashCombo();
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
@@ -1060,6 +1062,14 @@ class Expense extends Admin_Controller
 	public function edit($id)
 	{
 		$data 			= $this->Expense_model->GetDataHeader($id);
+		$detail_files = [];
+		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			foreach ($get_df as $df) {
+				$detail_files[$df->id_detail][] = $df;
+			}
+		}
+		$this->template->set('detail_files', $detail_files);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
@@ -1085,6 +1095,14 @@ class Expense extends Admin_Controller
 	public function view($id)
 	{
 		$data = $this->Expense_model->GetDataHeader($id);
+		$detail_files = [];
+		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			foreach ($get_df as $df) {
+				$detail_files[$df->id_detail][] = $df;
+			}
+		}
+		$this->template->set('detail_files', $detail_files);
 		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		// $data_pc = $this->All_model->GetPettyCashCombo();
@@ -1176,6 +1194,14 @@ class Expense extends Admin_Controller
 	public function approval($id)
 	{
 		$data 			= $this->Expense_model->GetDataHeader($id);
+		$detail_files = [];
+		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			foreach ($get_df as $df) {
+				$detail_files[$df->id_detail][] = $df;
+			}
+		}
+		$this->template->set('detail_files', $detail_files);
 		$data_detail 	= $this->Expense_model->GetDataDetail($data->no_doc);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$get_exp_kasbon = $this->db->select('id_kasbon')->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon <>' => ''])->result_array();
@@ -1541,6 +1567,8 @@ class Expense extends Admin_Controller
 								);
 							}
 							$this->db->update('tr_expense_detail', $data_detail, ['id' => $id_detail[$keys]]);
+							$existing_kept = isset($post['existing_files_' . $val]) ? $post['existing_files_' . $val] : [];
+							$this->_handle_detail_files($no_doc, $id_detail[$keys], $val, $existing_kept);
 						}
 					}
 
@@ -1663,6 +1691,8 @@ class Expense extends Admin_Controller
 								);
 							}
 							$this->All_model->dataSave('tr_expense_detail', $data_detail);
+							$new_dtl_id = $this->db->insert_id();
+							$this->_handle_detail_files($no_doc, $new_dtl_id, $val);
 						}
 					}
 				}
@@ -1904,6 +1934,8 @@ class Expense extends Admin_Controller
 							print_r($this->db->error($insert_detail_expense));
 							exit;
 						}
+						$new_dtl_id = $this->db->insert_id();
+						$this->_handle_detail_files($no_doc, $new_dtl_id, $val);
 					}
 				}
 			}
@@ -4883,6 +4915,65 @@ class Expense extends Admin_Controller
 			'ttl_kredit' => number_format($ttl_kredit),
 			'is_balance' => ($ttl_debit == $ttl_kredit)
 		]);
+	}
+
+
+	/**
+	 * Helper untuk menyimpan multiple file evidence per baris detail expense ke tabel tr_expense_detail_file
+	 */
+	private function _handle_detail_files($no_doc, $id_detail, $row_key, $existing_kept_ids = [])
+	{
+		if (!$this->db->table_exists('tr_expense_detail_file')) {
+			return;
+		}
+
+		if (empty($no_doc) || empty($id_detail)) {
+			return;
+		}
+
+		// 1. Hapus file existing yang dihapus user di UI
+		if (!empty($existing_kept_ids) && is_array($existing_kept_ids)) {
+			$this->db->where('no_doc', $no_doc);
+			$this->db->where('id_detail', $id_detail);
+			$this->db->where_not_in('id', $existing_kept_ids);
+			$this->db->delete('tr_expense_detail_file');
+		} else if (isset($_POST['has_existing_files_' . $row_key]) && empty($existing_kept_ids)) {
+			$this->db->delete('tr_expense_detail_file', ['no_doc' => $no_doc, 'id_detail' => $id_detail]);
+		}
+
+		// 2. Upload file-file baru untuk baris ini
+		if (!empty($_FILES['doc_files_' . $row_key]['name'])) {
+			$files = $_FILES['doc_files_' . $row_key];
+			$count = is_array($files['name']) ? count($files['name']) : 0;
+
+			$config['upload_path']   = './assets/expense/';
+			$config['allowed_types'] = '*';
+			$config['remove_spaces'] = TRUE;
+			$config['encrypt_name']  = TRUE;
+			$this->load->library('upload', $config);
+
+			for ($i = 0; $i < $count; $i++) {
+				if (!empty($files['tmp_name'][$i])) {
+					$_FILES['single_dtl_file']['name']     = $files['name'][$i];
+					$_FILES['single_dtl_file']['type']     = $files['type'][$i];
+					$_FILES['single_dtl_file']['tmp_name'] = $files['tmp_name'][$i];
+					$_FILES['single_dtl_file']['error']    = $files['error'][$i];
+					$_FILES['single_dtl_file']['size']     = $files['size'][$i];
+
+					$this->upload->initialize($config);
+					if ($this->upload->do_upload('single_dtl_file')) {
+						$uData = $this->upload->data();
+						$this->db->insert('tr_expense_detail_file', [
+							'no_doc'     => $no_doc,
+							'id_detail'  => $id_detail,
+							'doc_file'   => $uData['file_name'],
+							'created_by' => $this->auth->user_name(),
+							'created_at' => date('Y-m-d H:i:s')
+						]);
+					}
+				}
+			}
+		}
 	}
 
 }

@@ -197,21 +197,6 @@ if (!empty($data_detail)) {
 
 				<div class="col-md-6">
 					<div class="form-group">
-						<label class="col-sm-3 control-label">Bon / Bukti <b class="text-red">*</b></label>
-						<div class="col-sm-9">
-							<input class="form-control input-sm" type="file" name="doc_file[]" id="id_doc_file" multiple <?= (!empty($list_bon_bukti) ? "" : "required") ?> accept=".jpg,.jpeg,.png,.pdf" />
-							<small class="text-muted"><i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF (Bisa pilih multi-file)</small>
-							<?php if (!empty($list_bon_bukti)): ?>
-								<div style="margin-top:6px;">
-									<button type="button" class="btn btn-xs btn-info btn-flat-custom" data-toggle="modal" data-target="#modalBonBukti">
-										<i class="fa fa-paperclip"></i> Lihat Bon Bukti (<?= count($list_bon_bukti) ?> File)
-									</button>
-								</div>
-							<?php endif; ?>
-						</div>
-					</div>
-
-					<div class="form-group">
 						<label class="col-sm-3 control-label">Bank Penerima</label>
 						<div class="col-sm-9">
 							<input type="text" class="form-control input-sm" id="bank_id" name="bank_id" value="<?php echo (isset($data->bank_id) ? $data->bank_id : $bank_id); ?>" placeholder="Nama Bank">
@@ -258,14 +243,15 @@ if (!empty($data_detail)) {
 							<tr>
 								<th width="35">#</th>
 								<th width="80">Tipe</th>
-								<th width="200">Akun COA / Jenis</th>
-								<th width="110">Tanggal</th>
-								<th width="220">Barang / Jasa</th>
-								<th width="180">Spesifikasi</th>
-								<th width="70">Qty</th>
-								<th width="120">Harga Satuan</th>
-								<th width="140">Total Nominal</th>
-								<th width="50">Aksi</th>
+								<th width="190">Akun COA / Jenis</th>
+								<th width="105">Tanggal</th>
+								<th width="200">Barang / Jasa</th>
+								<th width="160">Spesifikasi</th>
+								<th width="65">Qty</th>
+								<th width="115">Harga Satuan</th>
+								<th width="130">Total Nominal</th>
+								<th width="160">Bon / Bukti</th>
+								<th width="45">Aksi</th>
 							</tr>
 						</thead>
 						<tbody id="detail_body">
@@ -328,6 +314,49 @@ if (!empty($data_detail)) {
 											<?php endif; ?>
 										</td>
 										<td class="text-center">
+											<?php if (!$is_kasbon_row): 
+												$row_files = isset($detail_files[$record->id]) ? $detail_files[$record->id] : [];
+											?>
+												<div class="file-upload-cell-<?= $idd ?>">
+													<label class="btn btn-xs btn-primary btn-flat-custom stsview" style="cursor:pointer; margin-bottom:2px;" title="Pilih File Bon/Bukti">
+														<i class="fa fa-folder-open"></i> Pilih File
+														<input type="file" id="temp_file_<?= $idd ?>" class="temp-detail-file-picker" data-row="<?= $idd ?>" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
+													</label>
+													
+													<!-- Hidden real file input -->
+													<input type="file" name="doc_files_<?= $idd ?>[]" id="doc_files_<?= $idd ?>" multiple style="display:none;">
+
+													<!-- Container of new files -->
+													<div id="new_files_list_<?= $idd ?>" style="display:flex; flex-direction:column; gap:3px; margin-top:3px;"></div>
+
+													<!-- Container of existing files -->
+													<?php if (!empty($row_files)): ?>
+														<div class="existing-files-row-<?= $idd ?>" style="margin-top:4px; display:flex; flex-direction:column; gap:3px;">
+															<input type="hidden" name="has_existing_files_<?= $idd ?>" value="1">
+															<?php foreach ($row_files as $rf): 
+																$furl = base_url('assets/expense/' . $rf->doc_file);
+																$is_fpdf = (stripos($rf->doc_file, '.pdf') !== false);
+															?>
+																<span class="badge file-badge-item" style="background:#3c8dbc; font-size:10px; font-weight:normal; text-align:left; padding:3px 5px; display:inline-flex; align-items:center; justify-content:space-between;">
+																	<a href="<?= $furl ?>" target="_blank" style="color:#fff; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="<?= htmlspecialchars($rf->doc_file) ?>">
+																		<i class="fa <?= $is_fpdf ? 'fa-file-pdf-o' : 'fa-file-image-o' ?>"></i> <?= htmlspecialchars($rf->doc_file) ?>
+																	</a>
+																	<input type="hidden" name="existing_files_<?= $idd ?>[]" value="<?= htmlspecialchars($rf->id) ?>">
+																	<?php if ($stsview != 'view' && $stsview != 'approval'): ?>
+																		<button type="button" class="btn btn-xs btn-danger remove-existing-detail-file" style="padding:0 3px; font-size:9px; line-height:1; margin-left:4px;" title="Hapus file ini">
+																			<i class="fa fa-times"></i>
+																		</button>
+																	<?php endif; ?>
+																</span>
+															<?php endforeach; ?>
+														</div>
+													<?php endif; ?>
+												</div>
+											<?php else: ?>
+												<span class="text-muted"><i class="fa fa-minus"></i></span>
+											<?php endif; ?>
+										</td>
+										<td class="text-center">
 											<button type='button' class='btn btn-danger btn-xs stsview' data-toggle='tooltip' onClick='delDetail(<?= $idd ?>)' title='Hapus'><i class='fa fa-trash'></i></button>
 										</td>
 									</tr>
@@ -340,31 +369,31 @@ if (!empty($data_detail)) {
 						</tbody>
 						<tfoot>
 							<tr style="background:#f8fafc; font-weight:bold;">
-								<td colspan="8" align="right">TOTAL REALISASI EXPENSE</td>
+								<td colspan="9" align="right">TOTAL REALISASI EXPENSE</td>
 								<td colspan="2">
 									<input type="text" class="form-control divide input-sm summary-field" id="total_expense" name="total_expense" value="<?= $total_expense ?>" placeholder="0" tabindex="-1" readonly style="background:#ffffff; color:#333;">
 								</td>
 							</tr>
 							<tr id="total_kasbon_row" <?= ($total_kasbon > 0) ? "" : "hidden" ?> style="background:#eaf2fd; font-weight:bold;">
-								<td colspan="8" align="right" style="color:#2e59d9;"><i class="fa fa-ticket"></i> TOTAL PENGAJUAN KASBON</td>
+								<td colspan="9" align="right" style="color:#2e59d9;"><i class="fa fa-ticket"></i> TOTAL PENGAJUAN KASBON</td>
 								<td colspan="2">
 									<input type="text" class="form-control divide input-sm summary-field" id="total_kasbon" name="total_kasbon" value="<?= $total_kasbon ?>" placeholder="0" tabindex="-1" readonly style="color:#2e59d9; background:#ffffff;">
 								</td>
 							</tr>
 							<tr id="kontrol_row" <?= (isset($data->lebih_bayar) && $data->lebih_bayar > 0) ? "" : "hidden" ?> style="background:#e8fadf; font-weight:bold;">
-								<td colspan="8" align="right" style="color:#00a65a;"><i class="fa fa-reply"></i> LEBIH BAYAR (PENGEMBALIAN KE KANTOR)</td>
+								<td colspan="9" align="right" style="color:#00a65a;"><i class="fa fa-reply"></i> LEBIH BAYAR (PENGEMBALIAN KE KANTOR)</td>
 								<td colspan="2">
 									<input type="text" class="form-control divide input-sm summary-field" onblur="updateGrandTotal()" id="kontrol" placeholder="0" tabindex="-1" value="<?= (isset($data->lebih_bayar)) ? $data->lebih_bayar : "" ?>" style="color:#00a65a; background:#ffffff;">
 								</td>
 							</tr>
 							<tr id="kurang_bayar_row" <?= (isset($data->kurang_bayar) && $data->kurang_bayar > 0) ? "" : "hidden" ?> style="background:#fde8e8; font-weight:bold;">
-								<td colspan="8" align="right" style="color:#dd4b39;"><i class="fa fa-exclamation-circle"></i> KURANG BAYAR (REIMBURSE KE KARYAWAN)</td>
+								<td colspan="9" align="right" style="color:#dd4b39;"><i class="fa fa-exclamation-circle"></i> KURANG BAYAR (REIMBURSE KE KARYAWAN)</td>
 								<td colspan="2">
 									<input type="text" class="form-control divide input-sm summary-field" id="kurang_bayar" name="kurang_bayar" value="<?= (isset($data->kurang_bayar)) ? $data->kurang_bayar : "" ?>" placeholder="0" tabindex="-1" readonly style="color:#dd4b39; background:#ffffff;">
 								</td>
 							</tr>
 							<tr id="selisih_row" <?= ($total_kasbon > 0) ? "" : "hidden" ?> style="background:#f1f5f9; font-weight:bold;">
-								<td colspan="8" align="right">SELISIH KONTROL (KASBON - EXPENSE)</td>
+								<td colspan="9" align="right">SELISIH KONTROL (KASBON - EXPENSE)</td>
 								<td colspan="2">
 									<input type="text" class="form-control divide input-sm summary-field" id="grand_total" name="grand_total" value="<?= $grand_total ?>" placeholder="0" tabindex="-1" readonly style="background:#ffffff;">
 									<input type="hidden" id="initial_grand_total">
@@ -925,6 +954,7 @@ foreach ($option_coa as $keys => $val) {
 		Rows += "<input type='hidden' class='subtotal' name='expense[]' id='expense_" + nomor + "' value='0' />";
 		Rows += "<input type='hidden' class='subkasbon' name='kasbon[]' value='" + jumlah + "' id='kasbon_" + nomor + "' />";
 		Rows += "</td>";
+		Rows += "<td class='text-center'><span class='text-muted'><i class='fa fa-minus'></i></span></td>";
 		Rows += "<td class='text-center'>";
 		Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus'><i class='fa fa-trash'></i></button>";
 		Rows += "</td>";
@@ -978,6 +1008,16 @@ foreach ($option_coa as $keys => $val) {
 		Rows += "<input type='hidden' class='subkasbon' name='kasbon[]' id='kasbon_" + nomor + "' value='0' />";
 		Rows += "</td>";
 		Rows += "<td class='text-center'>";
+		Rows += "<div class='file-upload-cell-" + nomor + "'>";
+		Rows += "<label class='btn btn-xs btn-primary btn-flat-custom' style='cursor:pointer; margin-bottom:2px;' title='Pilih File Bon/Bukti'>";
+		Rows += "<i class='fa fa-folder-open'></i> Pilih File";
+		Rows += "<input type='file' id='temp_file_" + nomor + "' class='temp-detail-file-picker' data-row='" + nomor + "' style='display:none;' accept='.jpg,.jpeg,.png,.pdf' multiple>";
+		Rows += "</label>";
+		Rows += "<input type='file' name='doc_files_" + nomor + "[]' id='doc_files_" + nomor + "' multiple style='display:none;'>";
+		Rows += "<div id='new_files_list_" + nomor + "' style='display:flex; flex-direction:column; gap:3px; margin-top:3px;'></div>";
+		Rows += "</div>";
+		Rows += "</td>";
+		Rows += "<td class='text-center'>";
 		Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus'><i class='fa fa-trash'></i></button>";
 		Rows += "</td>";
 		Rows += "</tr>";
@@ -994,6 +1034,90 @@ foreach ($option_coa as $keys => $val) {
 		$(".divide").divide();
 		cektotal();
 	}
+
+	
+	// ==========================================
+	// DETAIL MULTI-FILE ACCUMULATOR (DataTransfer)
+	// ==========================================
+	var dtDetailMap = {};
+
+	$(document).on('change', '.temp-detail-file-picker', function() {
+		var row = $(this).data('row');
+		if (!dtDetailMap[row]) {
+			dtDetailMap[row] = new DataTransfer();
+		}
+		var dt = dtDetailMap[row];
+		var newFiles = this.files;
+		if (newFiles.length > 0) {
+			for (var i = 0; i < newFiles.length; i++) {
+				var file = newFiles[i];
+				var exists = false;
+				for (var j = 0; j < dt.items.length; j++) {
+					var existing = dt.items[j].getAsFile();
+					if (existing && existing.name === file.name && existing.size === file.size) {
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					dt.items.add(file);
+				}
+			}
+			var hiddenInput = document.getElementById('doc_files_' + row);
+			if (hiddenInput) {
+				hiddenInput.files = dt.files;
+			}
+			$(this).val('');
+			render_detail_files(row);
+		}
+	});
+
+	function render_detail_files(row) {
+		var container = $('#new_files_list_' + row);
+		container.empty();
+		if (!dtDetailMap[row]) return;
+		var dt = dtDetailMap[row];
+		for (var i = 0; i < dt.files.length; i++) {
+			var file = dt.files[i];
+			var isPdf = file.name.toLowerCase().endsWith('.pdf');
+			var sizeKb = Math.round(file.size / 1024);
+			var badge = '<span class="badge" style="background:#00a65a; font-size:10px; font-weight:normal; text-align:left; padding:3px 5px; display:inline-flex; align-items:center; justify-content:space-between;">' +
+				'<span style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.name + ' (' + sizeKb + ' KB)">' +
+				'<i class="fa ' + (isPdf ? 'fa-file-pdf-o' : 'fa-file-image-o') + '"></i> ' + file.name +
+				'</span>' +
+				'<button type="button" class="btn btn-xs btn-danger remove-new-detail-file" data-row="' + row + '" data-index="' + i + '" style="padding:0 3px; font-size:9px; line-height:1; margin-left:4px;" title="Hapus file ini">' +
+				'<i class="fa fa-times"></i>' +
+				'</button>' +
+				'</span>';
+			container.append(badge);
+		}
+	}
+
+	$(document).on('click', '.remove-new-detail-file', function(e) {
+		e.preventDefault();
+		var row = $(this).data('row');
+		var idx = parseInt($(this).data('index'));
+		if (dtDetailMap[row]) {
+			var dt = dtDetailMap[row];
+			var newDt = new DataTransfer();
+			for (var i = 0; i < dt.files.length; i++) {
+				if (i !== idx) {
+					newDt.items.add(dt.files[i]);
+				}
+			}
+			dtDetailMap[row] = newDt;
+			var hiddenInput = document.getElementById('doc_files_' + row);
+			if (hiddenInput) {
+				hiddenInput.files = newDt.files;
+			}
+			render_detail_files(row);
+		}
+	});
+
+	$(document).on('click', '.remove-existing-detail-file', function(e) {
+		e.preventDefault();
+		$(this).closest('.file-badge-item').remove();
+	});
 
 	function delDetail(row) {
 		$('#tr1_' + row).remove();
