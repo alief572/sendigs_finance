@@ -29,7 +29,7 @@ class Users extends Front_Controller
         //$identitas = $this->identitas_model->find(1); => ERROR variable nama_program not define krn ga ada fieldnya di tabel identitas
         $identitas = $this->identitas_model->find_by(array('ididentitas' => 1)); // By Muhaemin => Di Form Login
 
-        if (isset($_POST['login'])) {
+        if (isset($_POST['login']) || $this->input->post('username')) {
             $username = $this->input->post('username');
             $password = $this->input->post('password');
 
@@ -85,19 +85,19 @@ class Users extends Front_Controller
         $data['secret'] = $secret;
         $data['qrCodeUrl'] = $qrCodeUrl;
 
-        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1)); // By Muhaemin => Di Form Login
+        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1));
         $this->template->set('idt', $identitas);
-        // $this->template->set_theme('bracket');
-        // $this->template->set_layout('login');
-        $this->template->title('Login');
+        $this->template->set_theme('default');
+        $this->template->set_layout('login');
+        $this->template->title('Setup 2FA');
         $this->template->render('setup_2fa', $data);
     }
 
     public function verify_2fa()
     {
-        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1)); // By Muhaemin => Di Form Login
+        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1));
         $user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
-        $secret = $user->ga_secret;
+        $secret = isset($user->ga_secret) ? $user->ga_secret : null;
 
         if (!$secret) {
             $this->session->set_flashdata('error', '2FA belum diaktifkan. Silakan aktifkan terlebih dahulu.');
@@ -105,44 +105,50 @@ class Users extends Front_Controller
         }
 
         $this->template->set('idt', $identitas);
-        // $this->template->set_theme('bracket');
-        // $this->template->set_layout('login');
-        $this->template->title('Login');
+        $this->template->set_theme('default');
+        $this->template->set_layout('login');
+        $this->template->title('Verifikasi 2FA');
         $this->template->render('verify_2fa');
     }
 
     public function confirm_reset_2fa()
     {
-        if ($this->input->post()) {
-            $username = $this->input->post('username');
-            $password = $this->input->post('password');
-            if (!$username || !$password) {
-                $this->session->set_flashdata('error', 'Username dan Password tidak boleh kosong.');
-                $this->template->render('users/confirm_reset_2fa');
-            }
-            // Verifikasi username dan password
-            $user = $this->db->get_where('users', ['username' => $username])->row();
-            if (!$user) {
-                $this->session->set_flashdata('error', 'Username tidak ditemukan.');
-                $this->template->render('users/confirm_reset_2fa');
-            }
-            if (!password_verify($password, $user->password)) {
-                $this->session->set_flashdata('error', 'Password salah.');
-                $this->template->render('users/confirm_reset_2fa');
-            }
-
-            $this->template->render('users/reset_2fa');
-            return;
-        }
-
+        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1));
+        $this->template->set('idt', $identitas);
+        $this->template->set_theme('default');
+        $this->template->set_layout('login');
+        $this->template->title('Konfirmasi Reset 2FA');
 
         $user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
         $data = [
             'user' => $user,
         ];
-        // $this->template->set_theme('bracket');
-        // $this->template->set_layout('login');
-        // $this->template->set_layout('index');
+
+        if ($this->input->post()) {
+            $username = $this->input->post('username');
+            $password = $this->input->post('password');
+            if (!$username || !$password) {
+                $this->session->set_flashdata('error', 'Username dan Password tidak boleh kosong.');
+                $this->template->render('confirm_reset_2fa', $data);
+                return;
+            }
+            // Verifikasi username dan password
+            $user_check = $this->db->get_where('users', ['username' => $username])->row();
+            if (!$user_check) {
+                $this->session->set_flashdata('error', 'Username tidak ditemukan.');
+                $this->template->render('confirm_reset_2fa', $data);
+                return;
+            }
+            if (!password_verify($password, $user_check->password)) {
+                $this->session->set_flashdata('error', 'Password salah.');
+                $this->template->render('confirm_reset_2fa', $data);
+                return;
+            }
+
+            redirect('users/reset_2fa');
+            return;
+        }
+
         $this->template->render('confirm_reset_2fa', $data);
     }
 
@@ -163,35 +169,42 @@ class Users extends Front_Controller
 
     public function confirm_setup_2fa()
     {
+        $identitas = $this->identitas_model->find_by(array('ididentitas' => 1));
+        $this->template->set('idt', $identitas);
+        $this->template->set_theme('default');
+        $this->template->set_layout('login');
+        $this->template->title('Konfirmasi Setup 2FA');
+
+        $user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
+        $data = [
+            'user' => $user,
+        ];
+
         if ($this->input->post()) {
             $username = $this->input->post('username');
             $password = $this->input->post('password');
             if (!$username || !$password) {
                 $this->session->set_flashdata('error', 'Username dan Password tidak boleh kosong.');
-                redirect('users/confirm_setup_2fa');
+                $this->template->render('confirm_setup_2fa', $data);
+                return;
             }
             // Verifikasi username dan password
-            $user = $this->db->get_where('users', ['username' => $username])->row();
-            if (!$user) {
+            $user_check = $this->db->get_where('users', ['username' => $username])->row();
+            if (!$user_check) {
                 $this->session->set_flashdata('error', 'Username tidak ditemukan.');
-                redirect('users/confirm_setup_2fa');
+                $this->template->render('confirm_setup_2fa', $data);
+                return;
             }
-            if (!password_verify($password, $user->password)) {
+            if (!password_verify($password, $user_check->password)) {
                 $this->session->set_flashdata('error', 'Password salah.');
-                redirect('users/confirm_setup_2fa');
+                $this->template->render('confirm_setup_2fa', $data);
+                return;
             }
 
             redirect('users/setup_2fa');
             return;
         }
 
-
-        $user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
-        $data = [
-            'user' => $user,
-        ];
-        // $this->template->set_theme('bracket');
-        // $this->template->set_layout('login');
         $this->template->render('confirm_setup_2fa', $data);
     }
 
@@ -201,7 +214,7 @@ class Users extends Front_Controller
 
         $otp    = $this->input->post('otp');
         $user   = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
-        $secret = $user->ga_secret;
+        $secret = isset($user->ga_secret) ? $user->ga_secret : null;
 
         if (!$secret) {
             $this->session->set_flashdata('error', '2FA belum diaktifkan. Silakan aktifkan terlebih dahulu.');
@@ -210,7 +223,7 @@ class Users extends Front_Controller
 
         if (!$otp) {
             $this->session->set_flashdata('error', 'Kode OTP tidak boleh kosong.');
-            $this->template->render('users/verify_2fa');
+            redirect('users/verify_2fa');
         }
 
         // Verifikasi kode OTP
@@ -222,8 +235,8 @@ class Users extends Front_Controller
         } else {
             // Jika verifikasi gagal, tampilkan pesan error
             $this->session->set_userdata('2fa_verified', false);
-            $this->session->set_flashdata('error', 'Kode OTP salah');
-            $this->template->render('users/verify_2fa');
+            $this->session->set_flashdata('error', 'Kode OTP salah. Pastikan waktu pada perangkat sesuai.');
+            redirect('users/verify_2fa');
         }
     }
 }
