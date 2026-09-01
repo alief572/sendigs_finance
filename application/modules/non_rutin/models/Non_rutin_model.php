@@ -1138,6 +1138,7 @@ class Non_rutin_model extends BF_Model
         $this->db->select('GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ", ") as no_doc_non_po', FALSE);
         $this->db->select('GROUP_CONCAT(DISTINCT po.no_po SEPARATOR ", ") as no_doc_po', FALSE);
         $this->db->select('MIN(kb.created_on) as tgl_proses_kasbon', FALSE);
+        $this->db->select('MAX(kb.approved_on) as tgl_kasbon_approved', FALSE);
         $this->db->select('MIN(np.created_date) as tgl_proses_non_po', FALSE);
         $this->db->select('MIN(po.created_on) as tgl_proses_po', FALSE);
         $this->db->select('MIN(tp.created_at) as tgl_tracking_pembelian', FALSE);
@@ -1148,6 +1149,8 @@ class Non_rutin_model extends BF_Model
         $this->db->select('MAX(kb.sts_reject_manage) as kasbon_sts_reject_manage', FALSE);
         $this->db->select('MAX(po.status) as po_status', FALSE);
         $this->db->select('MAX(CASE WHEN po.reject_reason IS NOT NULL AND po.reject_reason != "" THEN 1 ELSE 0 END) as po_rejected', FALSE);
+        $this->db->select('MAX(pa_np.tgl_bayar) as tgl_bayar_dp', FALSE);
+        $this->db->select('MAX(CASE WHEN pa_np.status = 2 OR np.sts = "2" THEN 1 ELSE 0 END) as dp_paid', FALSE);
         $this->db->from('rutin_non_planning_detail z');
         $this->db->join('rutin_non_planning_header a', 'z.no_pengajuan = a.no_pengajuan', 'left');
         $this->db->join('users c', 'c.id_user = a.created_by', 'left');
@@ -1156,6 +1159,7 @@ class Non_rutin_model extends BF_Model
         $this->db->join('tr_pr_detail_kasbon pdk', 'pdk.id_detail = z.id', 'left');
         $this->db->join('tr_kasbon kb', 'kb.no_doc = pdk.id_kasbon', 'left');
         $this->db->join('tr_pr_non_po np', "np.no_pr = a.no_pr AND np.jenis_pr = 'pr departemen'", 'left', FALSE);
+        $this->db->join('payment_approve pa_np', 'pa_np.no_doc = np.no_non_po AND pa_np.status = 2', 'left');
         $this->db->join('tr_purchase_order po', 'po.no_pr = a.no_pr', 'left');
         $this->db->join('tr_tracking_pembelian tp', 'tp.no_pr = a.no_pr', 'left');
         $this->db->where('a.status_id', 1);
@@ -1235,44 +1239,23 @@ class Non_rutin_model extends BF_Model
         $no = (0 + $start);
         foreach ($query_final->result() as $item) {
             $no++;
-            $status = $this->get_status($item);
             $options = $this->get_option($item);
             $tingkat_pr = $this->get_tingkat_pr($item);
-            $status_dokumen = $this->get_status_dokumen($item);
+            $progress_pr = $this->render_progress_pr($item);
 
-            $no_dokumen_parts = [];
-            if (!empty($item->no_doc_kasbon)) {
-                $no_dokumen_parts[] = $item->no_doc_kasbon;
-            }
-            if (!empty($item->no_doc_non_po)) {
-                $no_dokumen_parts[] = $item->no_doc_non_po;
-            }
-            $no_dokumen = implode(', ', $no_dokumen_parts);
-
-            // Tentukan tanggal diproses berdasarkan metode pembelian
-            $tgl_diproses = '-';
-            if (!empty($item->tgl_tracking_pembelian)) {
-                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_tracking_pembelian));
-            } elseif (!empty($item->tgl_proses_po)) {
-                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_po));
-            } elseif (!empty($item->tgl_proses_kasbon)) {
-                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_kasbon));
-            } elseif (!empty($item->tgl_proses_non_po)) {
-                $tgl_diproses = date('d M Y H:i', strtotime($item->tgl_proses_non_po));
-            }
+            $no_pr_display = (!empty($item->no_pr)) 
+                ? '<span style="font-weight:600; color:#1f2937;">' . $item->no_pr . '</span>' 
+                : '<span class="no-pr">' . $item->no_pengajuan . '</span>';
 
             $hasil[] = [
                 'no' => $no,
-                'no_pr' => (!empty($item->no_pr)) ? $item->no_pr : '<span class="text-red">' . $item->no_pengajuan . '</span>',
-                'no_dokumen' => $no_dokumen,
-                'status_dokumen' => $status_dokumen,
-                'departemen' => strtoupper($item->nm_dept . ' - ' . $item->nm_company),
-                'keterangan' => $item->project_name,
+                'no_pr' => $no_pr_display,
+                'keterangan' => '<div class="proj">' . htmlspecialchars($item->project_name ?? '-') . '</div>',
+                'departemen' => '<div class="dept">' . strtoupper(($item->nm_dept ?? '-') . ' - ' . ($item->nm_company ?? '-')) . '</div>',
                 'tingkat_pr' => $tingkat_pr,
-                'pic' => $item->nm_lengkap,
-                'created_date' => date('d F Y H:i:s', strtotime($item->created_date)),
-                'tgl_diproses' => $tgl_diproses,
-                'status' => $status,
+                'pic' => $item->nm_lengkap ?? '-',
+                'created_date' => date('d M Y H:i', strtotime($item->created_date)),
+                'progress_pr' => $progress_pr,
                 'option' => $options
             ];
         }
@@ -1285,6 +1268,219 @@ class Non_rutin_model extends BF_Model
         ];
 
         echo json_encode($response);
+    }
+
+    public function render_progress_pr($item)
+    {
+        $stage = 1;
+        $status = 'active'; // active, done, reject
+        $status_text = '';
+        $doc_meta = '';
+        $metode = $item->metode_pembelian;
+        $method_name = null;
+
+        if ($metode == '1') {
+            $method_name = 'PO';
+        } elseif ($metode == '2') {
+            $method_name = 'Kasbon';
+        } elseif ($metode == '3') {
+            $method_name = 'Direct Payment';
+        }
+
+        // Cek Penolakan (Reject)
+        if (($item->sts_reject1 !== null || $item->sts_reject2 !== null || $item->sts_reject3 !== null) && $item->rejected == 1) {
+            if ($item->sts_reject3 == '1') {
+                $stage = 2;
+                $status = 'reject';
+                $status_text = 'Ditolak — Direktur';
+                $doc_meta = 'Pengajuan ditolak oleh Direktur';
+            } elseif ($item->sts_reject1 == '1' || $item->sts_reject2 == '1') {
+                $stage = 1;
+                $status = 'reject';
+                $status_text = 'Ditolak — Finance';
+                $doc_meta = 'Pengajuan ditolak oleh Finance';
+            } else {
+                $stage = 1;
+                $status = 'reject';
+                $status_text = 'Ditolak';
+                $doc_meta = 'Pengajuan ditolak';
+            }
+        } elseif ($item->app_3 == null) {
+            // Belum di-approve Direktur
+            if (empty($item->app_1_by) && empty($item->app_2_by)) {
+                $stage = 1;
+                $status = 'active';
+                $status_text = 'Menunggu Approval — Finance';
+                $doc_meta = 'Belum masuk ke tahap Direktur';
+            } else {
+                $stage = 2;
+                $status = 'active';
+                $status_text = 'Menunggu Approval — Direktur';
+                $doc_meta = 'Disetujui Finance &middot; Menunggu persetujuan Direktur';
+            }
+        } else {
+            // PR sudah Approved oleh Direktur (app_3 == 1)
+            if (empty($metode)) {
+                // Belum pilih metode pembelian
+                $stage = 3;
+                $status = 'active';
+                $status_text = 'Menunggu Pemilihan Metode Pembelian';
+                $doc_meta = 'Belum masuk metode pembelian';
+            } elseif ($metode == '2') {
+                // Kasbon
+                $method_name = 'Kasbon';
+                if (empty($item->no_doc_kasbon)) {
+                    $stage = 3;
+                    $status = 'active';
+                    $status_text = 'Menunggu Pembuatan Kasbon';
+                    $doc_meta = 'Kasbon belum dibuat';
+                } else {
+                    $tgl_kb_created = !empty($item->tgl_proses_kasbon) ? date('d M Y H:i', strtotime($item->tgl_proses_kasbon)) : '';
+                    $tgl_kb_app = !empty($item->tgl_kasbon_approved) ? date('d M Y', strtotime($item->tgl_kasbon_approved)) : (!empty($item->tgl_proses_kasbon) ? date('d M Y', strtotime($item->tgl_proses_kasbon)) : '');
+
+                    if ($item->kasbon_status == '9') {
+                        $stage = ($item->kasbon_sts_finance == '1') ? 5 : 4;
+                        $status = 'reject';
+                        $status_text = 'Kasbon Ditolak';
+                        $doc_meta = $item->no_doc_kasbon . ($tgl_kb_created ? ' &middot; dibuat ' . $tgl_kb_created : '');
+                    } elseif ($item->kasbon_status == '3') {
+                        $stage = 5;
+                        $status = 'done';
+                        $status_text = 'Kasbon Lunas';
+                        $doc_meta = $item->no_doc_kasbon . ($tgl_kb_app ? ' &middot; disetujui ' . $tgl_kb_app : '');
+                    } elseif ($item->kasbon_status == '1' || $item->kasbon_status == '2') {
+                        $stage = 5;
+                        $status = 'done';
+                        $status_text = 'Kasbon Disetujui — Direktur';
+                        $doc_meta = $item->no_doc_kasbon . ($tgl_kb_app ? ' &middot; disetujui ' . $tgl_kb_app : '');
+                    } elseif ($item->kasbon_sts_finance == '1') {
+                        $stage = 5;
+                        $status = 'active';
+                        $status_text = 'Menunggu Approval Kasbon — Direktur';
+                        $doc_meta = $item->no_doc_kasbon . ($tgl_kb_created ? ' &middot; dibuat ' . $tgl_kb_created : '');
+                    } else {
+                        $stage = 4;
+                        $status = 'active';
+                        $status_text = 'Menunggu Approval Kasbon — Finance';
+                        $doc_meta = $item->no_doc_kasbon . ($tgl_kb_created ? ' &middot; dibuat ' . $tgl_kb_created : '');
+                    }
+                }
+            } elseif ($metode == '3') {
+                // Direct Payment (Non-PO / Pembelian Cash)
+                $method_name = 'Direct Payment';
+                if (empty($item->no_doc_non_po)) {
+                    $stage = 3;
+                    $status = 'active';
+                    $status_text = 'Menunggu Request Payment';
+                    $doc_meta = 'Belum dibuat request payment';
+                } else {
+                    $tgl_np_created = !empty($item->tgl_proses_non_po) ? date('d M Y H:i', strtotime($item->tgl_proses_non_po)) : '';
+                    $tgl_payment = !empty($item->tgl_bayar_dp) ? date('d M Y', strtotime($item->tgl_bayar_dp)) : '';
+
+                    if (!empty($item->dp_paid) && $item->dp_paid == 1) {
+                        $stage = 5;
+                        $status = 'done';
+                        $disp_tgl = $tgl_payment ? $tgl_payment : (!empty($item->tgl_proses_non_po) ? date('d M Y', strtotime($item->tgl_proses_non_po)) : date('d M Y'));
+                        $status_text = 'Payment — ' . $disp_tgl;
+                        $doc_meta = $item->no_doc_non_po . ' &middot; tgl payment ' . $disp_tgl;
+                    } else {
+                        $stage = 4;
+                        $status = 'active';
+                        $status_text = 'Menunggu Tanggal Payment';
+                        $doc_meta = $item->no_doc_non_po . ($tgl_np_created ? ' &middot; request dibuat ' . $tgl_np_created : '');
+                    }
+                }
+            } elseif ($metode == '1') {
+                // PO
+                $method_name = 'PO';
+                if (empty($item->no_doc_po)) {
+                    $stage = 3;
+                    $status = 'active';
+                    $status_text = 'Menunggu Pembuatan PO';
+                    $doc_meta = 'PO belum dibuat';
+                } else {
+                    $tgl_po_created = !empty($item->tgl_proses_po) ? date('d M Y H:i', strtotime($item->tgl_proses_po)) : '';
+                    $tgl_po_app = !empty($item->tgl_proses_po) ? date('d M Y', strtotime($item->tgl_proses_po)) : '';
+
+                    if ($item->po_rejected == '1') {
+                        $stage = 4;
+                        $status = 'reject';
+                        $status_text = 'PO Ditolak';
+                        $doc_meta = $item->no_doc_po;
+                    } elseif ($item->po_status >= 2) {
+                        $stage = 5;
+                        $status = 'done';
+                        $status_text = 'PO Disetujui';
+                        $doc_meta = $item->no_doc_po . ($tgl_po_app ? ' &middot; disetujui ' . $tgl_po_app : '');
+                    } else {
+                        $stage = 4;
+                        $status = 'active';
+                        $status_text = 'Menunggu Persetujuan PO';
+                        $doc_meta = $item->no_doc_po . ($tgl_po_created ? ' &middot; dibuat ' . $tgl_po_created : '');
+                    }
+                }
+            }
+        }
+
+        // Labels for 5 stages
+        $stage_labels = [
+            1 => 'PR — Finance',
+            2 => 'PR — Direktur',
+            3 => 'Metode Pembelian',
+            4 => ($method_name == 'Kasbon') ? 'Kasbon — Finance' : (($method_name == 'PO') ? 'PO — Pembuatan PO' : 'Request Payment'),
+            5 => ($method_name == 'Kasbon') ? 'Kasbon — Direktur' : (($method_name == 'PO') ? 'PO — Selesai' : 'Payment')
+        ];
+        $current_stage_label = $stage_labels[$stage] ?? 'PR — Finance';
+
+        // Dots & Lines HTML
+        $dots_html = '';
+        for ($i = 1; $i <= 5; $i++) {
+            $cls = 'pending';
+            if ($i < $stage) {
+                $cls = 'done';
+            } elseif ($i == $stage) {
+                if ($status == 'reject') {
+                    $cls = 'reject';
+                } elseif ($status == 'done') {
+                    $cls = 'done';
+                } else {
+                    $cls = 'active';
+                }
+            }
+
+            $line_cls = ($cls == 'done') ? 'done' : '';
+            $line_html = ($i < 5) ? '<span class="step-line ' . $line_cls . '"></span>' : '';
+            $dots_html .= '<span class="step-dot ' . $cls . '"></span>' . $line_html;
+        }
+
+        // Badge class
+        $badge_cls = 'st-wait';
+        if ($status == 'reject') {
+            $badge_cls = 'st-reject';
+        } elseif ($status == 'done') {
+            $badge_cls = 'st-final';
+        }
+
+        // Doc meta html
+        $doc_meta_html = '';
+        if (!empty($doc_meta)) {
+            if ($method_name) {
+                $doc_meta_html = '<div class="doc-meta">' . $method_name . ' &middot; ' . $doc_meta . '</div>';
+            } else {
+                $doc_meta_html = '<div class="doc-meta">' . $doc_meta . '</div>';
+            }
+        } else {
+            $doc_meta_html = '<div class="doc-meta">Belum masuk metode pembelian</div>';
+        }
+
+        $html = '<div class="progress-cell">';
+        $html .= '  <div class="steps">' . $dots_html . '</div>';
+        $html .= '  <div class="stage-label">' . $current_stage_label . '</div>';
+        $html .= '  <span class="status-badge ' . $badge_cls . '">' . $status_text . '</span>';
+        $html .= '  ' . $doc_meta_html;
+        $html .= '</div>';
+
+        return $html;
     }
 
     public function get_status($data)
@@ -1302,8 +1498,6 @@ class Non_rutin_model extends BF_Model
 
         if (($data->sts_reject1 !== null || $data->sts_reject2 !== null || $data->sts_reject3 !== null) && $data->rejected == 1) {
             $warna = 'red';
-            // Finance reject: sts_reject1 dan sts_reject2 di-set bersamaan oleh add_finance
-            // Management reject: sts_reject3 di-set oleh add (tingkat 3)
             if ($data->sts_reject3 == '1') {
                 $sts = 'Rejected by Management';
             } elseif ($data->sts_reject1 == '1' || $data->sts_reject2 == '1') {
@@ -1314,7 +1508,6 @@ class Non_rutin_model extends BF_Model
         } else {
             if ($data->app_3 == null) {
                 $warna = 'blue';
-                // Tentukan waiting approval di level mana
                 if (empty($data->app_1_by) && empty($data->app_2_by)) {
                     $sts = 'Waiting Approval: Finance';
                 } else {
@@ -1325,11 +1518,9 @@ class Non_rutin_model extends BF_Model
                     $warna = 'green';
                     $sts   = 'Approved';
 
-                    // Jika PR sudah Approved, tampilkan status dari PO atau Kasbon yang terkait
                     $metode = $data->metode_pembelian;
 
                     if ($metode == '1' && !empty($data->no_doc_po)) {
-                        // Metode PO: cek status dari tr_purchase_order
                         $po_status   = $data->po_status;
                         $po_rejected = $data->po_rejected;
 
@@ -1344,26 +1535,19 @@ class Non_rutin_model extends BF_Model
                             $sts   = 'PO: Menunggu Persetujuan';
                         }
                     } elseif ($metode == '2' && !empty($data->no_doc_kasbon)) {
-                        // Metode Kasbon: cek status dari tr_kasbon
-                        // status: 0=waiting, 1/2=approved, 3=paid/close, 9=reject
-                        // sts_finance: 0=waiting approval finance, 1=waiting approval management
                         $kasbon_status       = $data->kasbon_status;
                         $kasbon_sts_finance  = $data->kasbon_sts_finance;
 
                         if ($kasbon_status == '9') {
-                            // Ditolak
                             $warna = 'red';
                             $sts   = 'Kasbon: Ditolak';
                         } elseif ($kasbon_status == '3') {
-                            // Sudah dibayar / close
                             $warna = 'purple';
                             $sts   = 'Kasbon: Lunas';
                         } elseif ($kasbon_status == '1' || $kasbon_status == '2') {
-                            // Approved oleh management
                             $warna = 'green';
                             $sts   = 'Kasbon: Disetujui';
                         } elseif ($kasbon_status == '0' || $kasbon_status === null) {
-                            // Masih dalam proses approval
                             if ($kasbon_sts_finance == '1') {
                                 $warna = 'orange';
                                 $sts   = 'Kasbon: Waiting Approval Management';
@@ -1373,7 +1557,6 @@ class Non_rutin_model extends BF_Model
                             }
                         }
                     }
-                    // Metode Cash (metode_pembelian = 3) tidak ditampilkan status lanjutan
                 }
             }
         }
@@ -1385,25 +1568,24 @@ class Non_rutin_model extends BF_Model
     {
         $metode = $data->metode_pembelian;
 
-        // Belum ditentukan metode pembelian
         if (empty($metode)) {
             return '<span class="badge bg-gray">Belum Diproses</span>';
         }
 
         switch ($metode) {
-            case '1': // PO
+            case '1':
                 if (!empty($data->no_doc_po)) {
                     return '<span class="badge bg-green">PO Dibuat</span>';
                 }
                 return '<span class="badge bg-yellow">Menunggu PO</span>';
 
-            case '2': // Kasbon
+            case '2':
                 if (!empty($data->no_doc_kasbon)) {
                     return '<span class="badge bg-green">Kasbon Dibuat</span>';
                 }
                 return '<span class="badge bg-yellow">Menunggu Kasbon</span>';
 
-            case '3': // Cash / Non-PO
+            case '3':
                 if (!empty($data->no_doc_non_po)) {
                     return '<span class="badge bg-green">Pembelian Cash Dibuat</span>';
                 }
@@ -1421,30 +1603,27 @@ class Non_rutin_model extends BF_Model
         $ENABLE_VIEW    = has_permission('PR_Departemen.View');
         $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 
-        $view        = "<a href='" . base_url('non_rutin/add/' . $data->no_pengajuan . '/view') . "' class='btn btn-sm btn-warning' title='View' data-role='qtip'><i class='fa fa-eye'></i></a>";
-        $edit        = "";
-        $approve    = "";
-        $cancel        = "";
-        $print    = "&nbsp;<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $data->no_pengajuan) . "' target='_blank' class='btn btn-sm btn-success' title='Print'><i class='fa fa-print'></i></a>";
+        $view = "<a href='" . base_url('non_rutin/add/' . $data->no_pengajuan . '/view') . "' class='opt-btn b-view' title='View' data-role='qtip'><i class='fa fa-eye'></i></a>";
+        $edit = "";
+        $print = "<a href='" . base_url('non_rutin/print_pengajuan_non_rutin/' . $data->no_pengajuan) . "' target='_blank' class='opt-btn b-print' title='Print'><i class='fa fa-print'></i></a>";
 
         if ($data->sts_app == 'N' || $data->sts_app == '') {
-            $edit    = "&nbsp;<a href='" . base_url('non_rutin/add/' . $data->no_pengajuan) . "' class='btn btn-sm btn-primary' title='Edit' data-role='qtip'><i class='fa fa-edit'></i></a>";
+            $edit = "<a href='" . base_url('non_rutin/add/' . $data->no_pengajuan) . "' class='opt-btn b-edit' title='Edit' data-role='qtip'><i class='fa fa-pencil'></i></a>";
         }
 
         $close = '';
         if ($ENABLE_DELETE) {
-            $close = '<button type="button" class="btn btn-sm btn-danger close_pr_modal" data-no_pengajuan="' . $data->no_pengajuan . '" title="Close PR"><i class="fa fa-close"></i></button>';
+            $close = '<button type="button" class="opt-btn b-del close_pr_modal" data-no_pengajuan="' . $data->no_pengajuan . '" title="Close PR"><i class="fa fa-times"></i></button>';
         }
 
-        $hasil = $view . ' ' . $edit . ' ' . $approve . ' ' . $cancel . ' ' . $print . ' ' . $close;
-        return $hasil;
+        return '<div class="opts">' . $view . $edit . $print . $close . '</div>';
     }
 
     public function get_tingkat_pr($data)
     {
-        $tingkat_pr = '<span class="badge bg-blue">Normal</span>';
+        $tingkat_pr = '<span class="badge badge-normal">Normal</span>';
         if ($data->tingkat_pr == '2') {
-            $tingkat_pr = '<span class="badge bg-red">Urgent</span>';
+            $tingkat_pr = '<span class="badge badge-urgent">Urgent</span>';
         }
 
         return $tingkat_pr;
@@ -1452,9 +1631,9 @@ class Non_rutin_model extends BF_Model
 
     public function get_tingkat_pr2($data)
     {
-        $tingkat_pr = '<span class="badge bg-blue">Normal</span>';
+        $tingkat_pr = '<span class="badge badge-normal">Normal</span>';
         if ($data['tingkat_pr'] == '2') {
-            $tingkat_pr = '<span class="badge bg-red">Urgent</span>';
+            $tingkat_pr = '<span class="badge badge-urgent">Urgent</span>';
         }
 
         return $tingkat_pr;

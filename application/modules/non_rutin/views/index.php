@@ -5,6 +5,22 @@ $ENABLE_VIEW    = has_permission('PR_Departemen.View');
 $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 ?>
 <style>
+	:root {
+		--state-neutral-bg: #eef1f5;
+		--state-neutral-fg: #475569;
+		--state-wait-bg: #fdf1d9;
+		--state-wait-fg: #a1670d;
+		--state-final-bg: #e2f6ea;
+		--state-final-fg: #1f7a45;
+		--state-reject-bg: #fbe4e4;
+		--state-reject-fg: #b32b2b;
+
+		--dot-done: #1f7a45;
+		--dot-active: #a1670d;
+		--dot-pending: #cbd2d9;
+		--dot-reject: #b32b2b;
+	}
+
 	.section-title {
 		font-size: 13px;
 		font-weight: 700;
@@ -21,6 +37,12 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		color: #fff;
 		font-size: 12px;
 		border-color: #357ca5;
+		vertical-align: middle;
+	}
+
+	#my-grid tbody td {
+		vertical-align: top;
+		font-size: 13px;
 	}
 
 	.breadcrumb {
@@ -28,6 +50,174 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		padding: 0;
 		font-size: 12px;
 		margin-bottom: 5px;
+	}
+
+	.no-pr {
+		color: #b3261e;
+		font-weight: 600;
+	}
+
+	.proj {
+		max-width: 250px;
+		word-break: break-word;
+	}
+
+	.dept {
+		color: #555;
+		font-size: 12px;
+	}
+
+	.badge-urgent {
+		background-color: #fbe4e4 !important;
+		color: #b3261e !important;
+		font-weight: 600;
+		padding: 3px 8px;
+		border-radius: 12px;
+	}
+
+	.badge-normal {
+		background-color: #e8f4fd !important;
+		color: #1e6bb8 !important;
+		font-weight: 600;
+		padding: 3px 8px;
+		border-radius: 12px;
+	}
+
+	.progress-cell {
+		min-width: 230px;
+	}
+
+	.steps {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		margin-bottom: 6px;
+	}
+
+	.step-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--dot-pending);
+		flex: none;
+	}
+
+	.step-dot.done {
+		background: var(--dot-done);
+	}
+
+	.step-dot.active {
+		background: var(--dot-active);
+		box-shadow: 0 0 0 3px rgba(161, 103, 13, 0.22);
+	}
+
+	.step-dot.reject {
+		background: var(--dot-reject);
+	}
+
+	.step-line {
+		flex: 1;
+		height: 2px;
+		background: var(--dot-pending);
+		min-width: 8px;
+	}
+
+	.step-line.done {
+		background: var(--dot-done);
+	}
+
+	.stage-label {
+		font-size: 12px;
+		font-weight: 700;
+		margin-bottom: 2px;
+		color: #333;
+	}
+
+	.status-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border-radius: 4px;
+		font-size: 11px;
+		font-weight: 600;
+		margin-bottom: 4px;
+	}
+
+	.st-neutral {
+		background: var(--state-neutral-bg);
+		color: var(--state-neutral-fg);
+	}
+
+	.st-wait {
+		background: var(--state-wait-bg);
+		color: var(--state-wait-fg);
+	}
+
+	.st-final {
+		background: var(--state-final-bg);
+		color: var(--state-final-fg);
+	}
+
+	.st-reject {
+		background: var(--state-reject-bg);
+		color: var(--state-reject-fg);
+	}
+
+	.doc-meta {
+		font-size: 11px;
+		color: #777;
+		line-height: 1.35;
+	}
+
+	.opts {
+		display: flex;
+		gap: 4px;
+		flex-wrap: wrap;
+	}
+
+	.opt-btn {
+		width: 28px;
+		height: 28px;
+		border-radius: 4px;
+		border: none;
+		color: #fff !important;
+		font-size: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		text-decoration: none !important;
+	}
+
+	.b-view {
+		background: #f39c12;
+	}
+
+	.b-view:hover {
+		background: #e08e0b;
+	}
+
+	.b-edit {
+		background: #3c8dbc;
+	}
+
+	.b-edit:hover {
+		background: #357ca5;
+	}
+
+	.b-print {
+		background: #00a65a;
+	}
+
+	.b-print:hover {
+		background: #008d4c;
+	}
+
+	.b-del {
+		background: #dd4b39;
+	}
+
+	.b-del:hover {
+		background: #d73925;
 	}
 </style>
 
@@ -71,18 +261,15 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 				<table class="table table-bordered table-striped" id="my-grid" width="100%">
 					<thead>
 						<tr>
-							<th class="text-center">#</th>
-							<th class="text-center">No PR</th>
-							<th class="text-center no-sort">No. Dokumen</th>
-							<th class="text-center no-sort">Status Dokumen</th>
-							<th class="text-center no-sort">Tgl. Diproses</th>
-							<th class="text-center">Departemen</th>
-							<th class="text-center no-sort">Keterangan Project</th>
-							<th class="text-center no-sort">Tingkat PR</th>
-							<th class="text-center no-sort">PIC</th>
-							<th class="text-center no-sort">Created Date</th>
-							<th class="text-center no-sort">Status PR</th>
-							<th class="text-center no-sort" width="13%">Option</th>
+							<th class="text-center" width="3%">#</th>
+							<th class="text-center" width="11%">No PR</th>
+							<th class="text-center no-sort" width="17%">Keterangan PR</th>
+							<th class="text-center" width="15%">Departemen</th>
+							<th class="text-center no-sort" width="8%">Tingkat PR</th>
+							<th class="text-center no-sort" width="10%">Request By</th>
+							<th class="text-center no-sort" width="11%">Tanggal PR Dibuat</th>
+							<th class="text-center no-sort" width="25%">Progress PR</th>
+							<th class="text-center no-sort" width="10%">Option Action</th>
 						</tr>
 					</thead>
 					<tbody></tbody>
@@ -311,19 +498,10 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					data: 'no_pr'
 				},
 				{
-					data: 'no_dokumen'
-				},
-				{
-					data: 'status_dokumen'
-				},
-				{
-					data: 'tgl_diproses'
+					data: 'keterangan'
 				},
 				{
 					data: 'departemen'
-				},
-				{
-					data: 'keterangan'
 				},
 				{
 					data: 'tingkat_pr'
@@ -335,7 +513,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					data: 'created_date'
 				},
 				{
-					data: 'status'
+					data: 'progress_pr'
 				},
 				{
 					data: 'option'
