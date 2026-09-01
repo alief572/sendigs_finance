@@ -36,24 +36,33 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->hris = $this->load->database('hris', true);
 	}
 
+	public function get_user_department()
+	{
+		$user_id = $this->auth->user_id();
+		$user = $this->db->select('users.department_id as user_dept, emp.department_id as emp_dept')
+			->from('users')
+			->join(HRIS . '.employees emp', 'emp.id = users.employee_id', 'left')
+			->where('users.id_user', $user_id)
+			->get()->row();
+
+		if ($user) {
+			return !empty($user->user_dept) ? $user->user_dept : (!empty($user->emp_dept) ? $user->emp_dept : null);
+		}
+		return null;
+	}
+
 	public function index()
 	{
 		//        $this->auth->restrict($this->viewPermission);
-		$departemen = '';
-		$datauser = $this->All_model->GetInfoUser($this->auth->user_id());
-		//		if($datauser) $departemen=$datauser->department_id;
-		// $data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.created_by' => $this->auth->user_id()));
-
-		// $this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
-		// $this->db->from('tr_pengajuan_rutin a');
-		// $this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		// // $this->db->where('a.created_by', $this->auth->user_id());
-		// $this->db->group_by('a.no_doc');
-		// $data = $this->db->get()->result();
+		$is_admin = $this->auth->is_admin();
+		$user_dept = $this->get_user_department();
 
 		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
 		$this->hris->from('departments a');
 		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
+		if (!$is_admin && !empty($user_dept)) {
+			$this->hris->where('a.id', $user_dept);
+		}
 		$get_departments = $this->hris->get()->result();
 
 		$arr_dept = [];
@@ -65,9 +74,11 @@ class Pengajuan_rutin extends Admin_Controller
 			];
 		}
 
-		$datdept  = $this->All_model->GetDeptCombo($departemen);
+		$datdept  = $this->All_model->GetDeptCombo($is_admin ? '' : ($user_dept ? $user_dept : 'none'));
 
 		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll();
+		$this->template->set('is_admin', $is_admin);
+		$this->template->set('user_dept', $user_dept);
 		$this->template->set('datdept', $datdept);
 		// $this->template->set('results', $data);
 		$this->template->set('dept', $arr_dept);
@@ -102,9 +113,21 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->template->render('app_list');
 	}
 
-	public function create($key)
+	public function create($key = '')
 	{
 		$this->auth->restrict($this->addPermission);
+		$is_admin = $this->auth->is_admin();
+		$user_dept = $this->get_user_department();
+
+		if (!$is_admin) {
+			if (empty($user_dept)) {
+				$this->template->set_message("Departemen akun Anda belum disetting. Silakan hubungi Administrator.", 'error');
+				redirect('pengajuan_rutin');
+				return;
+			}
+			$key = $user_dept;
+		}
+
 		$datdept  = $this->All_model->GetDeptCombo($key);
 		$this->template->set('datdept', $datdept);
 		$this->template->title('Input Pengajuan Pembayaran Periodik');
@@ -120,6 +143,14 @@ class Pengajuan_rutin extends Admin_Controller
 			$this->template->set_message("Invalid Data", 'error');
 			redirect('pengajuan_rutin');
 		}
+
+		$is_admin = $this->auth->is_admin();
+		$user_dept = $this->get_user_department();
+		if (!$is_admin && $data->departement != $user_dept) {
+			$this->template->set_message("Anda tidak memiliki akses ke data departemen ini.", 'error');
+			redirect('pengajuan_rutin');
+		}
+
 		$datdept  = $this->All_model->GetDeptCombo($data->departement);
 		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinDetail($data->no_doc);
 		$this->template->set('type', 'edit');
@@ -138,6 +169,14 @@ class Pengajuan_rutin extends Admin_Controller
 			$this->template->set_message("Invalid Data", 'error');
 			redirect('pengajuan_rutin');
 		}
+
+		$is_admin = $this->auth->is_admin();
+		$user_dept = $this->get_user_department();
+		if ($app != 'app' && !$is_admin && $data->departement != $user_dept) {
+			$this->template->set_message("Anda tidak memiliki akses ke data departemen ini.", 'error');
+			redirect('pengajuan_rutin');
+		}
+
 		$datdept  = $this->All_model->GetDeptCombo($data->departement);
 		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinDetail($data->no_doc);
 		$this->template->set('type', 'view');
@@ -247,6 +286,11 @@ class Pengajuan_rutin extends Admin_Controller
 							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
 							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
 							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
+							
+							if (!is_dir('./assets/bayar_rutin/')) {
+								mkdir('./assets/bayar_rutin/', 0755, TRUE);
+							}
+							
 							$config['upload_path'] = './assets/bayar_rutin/';
 							$config['allowed_types'] = '*';
 							$config['remove_spaces'] = TRUE;
@@ -290,6 +334,10 @@ class Pengajuan_rutin extends Admin_Controller
 							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
 							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
 							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
+
+							if (!is_dir('./assets/bayar_rutin/')) {
+								mkdir('./assets/bayar_rutin/', 0755, TRUE);
+							}
 
 							$config['upload_path'] = './assets/bayar_rutin/';
 							$config['allowed_types'] = '*';
@@ -355,6 +403,16 @@ class Pengajuan_rutin extends Admin_Controller
 	{
 		$this->auth->restrict($this->deletePermission);
 		if ($id != '') {
+			$is_admin = $this->auth->is_admin();
+			$user_dept = $this->get_user_department();
+			if (!$is_admin) {
+				$check = $this->db->get_where('tr_pengajuan_rutin', array('no_doc' => $id))->row();
+				if (!$check || $check->departement != $user_dept) {
+					echo json_encode(array('delete' => 0, 'idx' => $id, 'msg' => 'Akses ditolak'));
+					return;
+				}
+			}
+
 			$this->db->trans_begin();
 			$this->All_model->dataDelete('tr_pengajuan_rutin', array('no_doc' => $id));
 			$this->All_model->dataDelete('tr_pengajuan_rutin_detail', array('no_doc' => $id));
@@ -451,15 +509,32 @@ class Pengajuan_rutin extends Admin_Controller
 		$start = $post['start'];
 		$search = $post['search']['value'];
 
+		$is_admin = $this->auth->is_admin();
+		$user_dept = $this->get_user_department();
+
 		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+		if (!$is_admin) {
+			if (!empty($user_dept)) {
+				$this->db->where('a.departement', $user_dept);
+			} else {
+				$this->db->where('1 = 0');
+			}
+		}
 		$this->db->group_by('a.no_doc');
 		$count_all = $this->db->get()->num_rows();
 
 		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+		if (!$is_admin) {
+			if (!empty($user_dept)) {
+				$this->db->where('a.departement', $user_dept);
+			} else {
+				$this->db->where('1 = 0');
+			}
+		}
 
 		if (!empty($search)) {
 			$this->db->group_start();
@@ -475,6 +550,13 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
 		$this->db->from('tr_pengajuan_rutin a');
 		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
+		if (!$is_admin) {
+			if (!empty($user_dept)) {
+				$this->db->where('a.departement', $user_dept);
+			} else {
+				$this->db->where('1 = 0');
+			}
+		}
 
 		if (!empty($search)) {
 			$this->db->group_start();

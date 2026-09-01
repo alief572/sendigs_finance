@@ -3,34 +3,49 @@ $ENABLE_ADD     = has_permission('Pengajuan_Pembayaran_Rutin.Add');
 $ENABLE_MANAGE  = has_permission('Pengajuan_Pembayaran_Rutin.Manage');
 $ENABLE_VIEW    = has_permission('Pengajuan_Pembayaran_Rutin.View');
 $ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
+
+$is_admin       = isset($is_admin) ? $is_admin : $this->auth->is_admin();
+$user_dept      = isset($user_dept) ? $user_dept : '';
 ?>
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 <div class="box">
 	<div class="box-header">
 		<?php if ($ENABLE_ADD) : ?>
-			<div class="dropdown">
-				<button class="btn btn-success dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-					<i class="fa fa-plus">&nbsp;</i> New
-				</button>
-				<ul class="dropdown-menu dept-dropdown-menu" aria-labelledby="dropdownMenu1">
-					<li class="dept-search-wrap">
-						<span class="dept-search-icon"><i class="fa fa-search"></i></span>
-						<input type="text" id="dept_search" class="dept-search-input" placeholder="Cari department..." autocomplete="off">
-					</li>
-					<li class="dept-header">
-						<i class="fa fa-university"></i>&nbsp; DEPARTEMEN
-					</li>
-					<div id="dept_list">
-						<?php foreach ($datdept as $key => $val) : ?>
-							<li class="dept-item"><a href="javascript:void(0)" onclick="new_data('<?= $key ?>')"><i class="fa fa-university"></i>&nbsp; <?= $val ?></a></li>
-						<?php endforeach; ?>
-						<li class="dept-no-result" style="display:none;">
-							<span><i class="fa fa-info-circle"></i>&nbsp; Tidak ada hasil</span>
+			<?php if ($is_admin) : ?>
+				<div class="dropdown">
+					<button class="btn btn-success dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+						<i class="fa fa-plus">&nbsp;</i> New
+					</button>
+					<ul class="dropdown-menu dept-dropdown-menu" aria-labelledby="dropdownMenu1">
+						<li class="dept-search-wrap">
+							<span class="dept-search-icon"><i class="fa fa-search"></i></span>
+							<input type="text" id="dept_search" class="dept-search-input" placeholder="Cari department..." autocomplete="off">
 						</li>
-					</div>
-				</ul>
-			</div>
+						<li class="dept-header">
+							<i class="fa fa-university"></i>&nbsp; DEPARTEMEN
+						</li>
+						<div id="dept_list">
+							<?php foreach ($datdept as $key => $val) : ?>
+								<li class="dept-item"><a href="javascript:void(0)" onclick="new_data('<?= $key ?>')"><i class="fa fa-university"></i>&nbsp; <?= $val ?></a></li>
+							<?php endforeach; ?>
+							<li class="dept-no-result" style="display:none;">
+								<span><i class="fa fa-info-circle"></i>&nbsp; Tidak ada hasil</span>
+							</li>
+						</div>
+					</ul>
+				</div>
+			<?php else : ?>
+				<?php if (!empty($user_dept)) : ?>
+					<button class="btn btn-success" type="button" onclick="new_data('<?= $user_dept ?>')">
+						<i class="fa fa-plus">&nbsp;</i> New
+					</button>
+				<?php else : ?>
+					<button class="btn btn-success" type="button" onclick="swal('Peringatan', 'Departemen belum disetting pada akun Anda. Silakan hubungi Administrator.', 'warning');">
+						<i class="fa fa-plus">&nbsp;</i> New
+					</button>
+				<?php endif; ?>
+			<?php endif; ?>
 		<?php endif; ?>
 	</div>
 	<!-- /.box-header -->
