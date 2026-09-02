@@ -231,7 +231,7 @@ class App_pr_stock extends Admin_Controller
       ->result_array();
     if ($header[0]['category'] == 'pr stok') {
       $detail     = $this->db
-        ->select('a.*, b.max_stok, b.min_stok, b.stock_name AS nm_material')
+        ->select('a.*, b.max_stok, b.min_stok, b.stock_name AS nm_material, b.no_coa, b.nm_coa')
         ->join('accessories b', 'a.id_material=b.id', 'left')
         ->get_where(
           'material_planning_base_on_produksi_detail a',

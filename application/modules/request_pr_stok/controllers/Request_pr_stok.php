@@ -194,6 +194,7 @@ class Request_pr_stok extends Admin_Controller
 
     $ArrSaveDetail = [];
     $SUM = 0;
+    $nilai_pengajuan = 0;
     foreach ($getraw_materials as $key => $value) {
       $SUM += $value['request'];
 
@@ -208,6 +209,8 @@ class Request_pr_stok extends Admin_Controller
       $ArrSaveDetail[$key]['id_material'] = $value['id'];
       $ArrSaveDetail[$key]['propose_purchase'] = $value['request'];
       $ArrSaveDetail[$key]['price_ref'] = $price_ref;
+
+      $nilai_pengajuan += ($value['request'] * $price_ref);
     }
 
     $ArrSaveHeader = array(
@@ -225,7 +228,7 @@ class Request_pr_stok extends Admin_Controller
       'booking_date'    => $this->datetime,
       'tingkat_pr' => $data['tingkat_pr'],
       'nilai_budget' => $data['nilai_budget'],
-      'nilai_pengajuan' => $data['nilai_pengajuan']
+      'nilai_pengajuan' => $nilai_pengajuan
     );
 
     // print_r($ArrSaveHeader);
@@ -743,6 +746,7 @@ class Request_pr_stok extends Admin_Controller
     $this->db->from('budget_rutin_detail a');
     $this->db->join('accessories b', 'b.id = a.id_barang');
     $this->db->where('b.id_category', $category);
+    $this->db->group_by('a.id_barang');
     $get_hitung_budget = $this->db->get()->result();
 
     $nilai_budget = 0;
@@ -766,6 +770,7 @@ class Request_pr_stok extends Admin_Controller
     $this->db->join('budget_rutin_detail b', 'b.id_barang = a.id', 'left');
     $this->db->where('a.id_category', $category);
     $this->db->where('a.request >', 0);
+    $this->db->group_by('a.id');
     $get_hitung_pengajuan = $this->db->get()->result();
 
     $nilai_pengajuan = 0;

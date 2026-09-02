@@ -100,7 +100,7 @@ if (!empty($header)) {
 				</div>
 				<div class="col-md-6">
 					<label for="">Nilai Pengajuan</label>
-					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr) ?>" readonly>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr, 2) ?>" readonly>
 				</div>
 				<div class="col-md-12">
 					<br><br>
@@ -140,6 +140,8 @@ if (!empty($header)) {
 								echo "<tr>";
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><input type='checkbox' name='check[" . $value['id'] . "]' class='chk_personal' value='" . $value['id'] . "'></td>";
+								} else {
+									echo "<td class='text-center'></td>";
 								}
 								echo "<td class='text-left'>" . $nm_material . "
 										<input type='hidden' name='detail[" . $key . "][id]' value='" . $value['id'] . "'>
@@ -148,8 +150,8 @@ if (!empty($header)) {
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format($stock, 2) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose, 2) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format($value['price_ref']) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format(($propose) * $value['price_ref']) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format($value['price_ref'], 2) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose) * $value['price_ref'], 2) . "</td>";
 
 								echo "</tr>";
 
@@ -160,7 +162,7 @@ if (!empty($header)) {
 						<tfoot>
 							<tr class="bg-blue">
 								<th colspan="7" class="text-center">Total Price Pengajuan</th>
-								<th class="text-right">Rp. <?= number_format($grand_total_price) ?></th>
+								<th class="text-right">Rp. <?= number_format($grand_total_price, 2) ?></th>
 							</tr>
 						</tfoot>
 					</table>
