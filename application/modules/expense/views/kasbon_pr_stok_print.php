@@ -184,8 +184,8 @@ function formatDate($date)
             $no = 1;
             foreach ($pr_details as $detail) :
                 $konversi = (!empty($detail->konversi) && $detail->konversi > 0) ? $detail->konversi : 1;
-                $qty_pack = $detail->propose_purchase;
-                $qty = $detail->propose_purchase * $konversi;
+                $qty = $detail->propose_purchase;
+                $qty_pack = $qty / $konversi;
                 $price_ref = !empty($detail->price_ref) ? $detail->price_ref : 0;
                 $total_price = $qty * $price_ref;
                 $grand_total += $total_price;
