@@ -84,7 +84,7 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 	}
 
 	.progress-cell {
-		min-width: 230px;
+		min-width: 160px;
 	}
 
 	.steps {
@@ -262,14 +262,14 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 					<thead>
 						<tr>
 							<th class="text-center" width="3%">#</th>
-							<th class="text-center" width="11%">No PR</th>
-							<th class="text-center no-sort" width="17%">Keterangan PR</th>
-							<th class="text-center" width="15%">Departemen</th>
-							<th class="text-center no-sort" width="8%">Tingkat PR</th>
-							<th class="text-center no-sort" width="10%">Request By</th>
-							<th class="text-center no-sort" width="11%">Tanggal PR Dibuat</th>
-							<th class="text-center no-sort" width="25%">Progress PR</th>
-							<th class="text-center no-sort" width="10%">Option Action</th>
+							<th class="text-center" width="10%">No PR</th>
+							<th class="text-center no-sort" width="16%">Keterangan PR</th>
+							<th class="text-center" width="13%">Departemen</th>
+							<th class="text-center no-sort" width="7%">Tingkat PR</th>
+							<th class="text-center no-sort" width="8%">Request By</th>
+							<th class="text-center no-sort" width="9%">Tanggal PR Dibuat</th>
+							<th class="text-center no-sort" width="19%">Progress PR</th>
+							<th class="text-center no-sort" width="15%">Option Action</th>
 						</tr>
 					</thead>
 					<tbody></tbody>
