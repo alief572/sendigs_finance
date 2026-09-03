@@ -204,6 +204,66 @@
                         <label for="">Upload File CSV</label>
                         <input type="file" name="upload_csv" id="" class="form-control form-control-sm" accept=".csv" required>
                     </div>
+                    <!-- Box Peringatan Format Tanggal CSV -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 5px solid #e53e3e; border-radius: 8px; padding: 16px 18px; margin-top: 14px; margin-bottom: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.04);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #edf2f7; padding-bottom: 8px;">
+                            <span style="font-weight: 700; font-size: 13px; color: #c53030;">
+                                <i class="fa fa-exclamation-triangle" style="margin-right: 6px;"></i> PENTING: Ketentuan Format Tanggal File CSV
+                            </span>
+                            <span class="label label-danger" style="font-size: 10px; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">Wajib Diperhatikan</span>
+                        </div>
+
+                        <p style="font-size: 12px; color: #4a5568; margin-bottom: 10px; line-height: 1.5;">
+                            Kolom pertama (tanggal transaksi) <strong>harus berformat Hari/Bulan/Tahun (DD/MM/YYYY)</strong>. Sistem otomatis membaca tanggal dengan urutan <strong>Hari terlebih dahulu baru Bulan</strong>.
+                        </p>
+
+                        <!-- Tabel Komparasi Format -->
+                        <div style="display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <!-- Kolom Benar -->
+                            <div style="flex: 1; min-width: 250px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 6px; padding: 10px 12px;">
+                                <div style="font-weight: 700; font-size: 11px; color: #22543d; margin-bottom: 6px;">
+                                    <i class="fa fa-check-circle" style="color: #38a169;"></i> FORMAT YANG BENAR (DITERIMA):
+                                </div>
+                                <table style="width: 100%; font-size: 11px; color: #2d3748;">
+                                    <tr style="border-bottom: 1px dashed #c6f6d5;">
+                                        <td style="padding: 3px 0; font-family: monospace; font-weight: 600; color: #276749;">31/07/2026</td>
+                                        <td style="padding: 3px 0; text-align: right; color: #4a5568;">&rarr; 31 Juli 2026</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px dashed #c6f6d5;">
+                                        <td style="padding: 3px 0; font-family: monospace; font-weight: 600; color: #276749;">05/08/2026</td>
+                                        <td style="padding: 3px 0; text-align: right; color: #4a5568;">&rarr; 5 Agustus 2026</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-family: monospace; font-weight: 600; color: #276749;">2026-07-31</td>
+                                        <td style="padding: 3px 0; text-align: right; color: #4a5568;">&rarr; 31 Juli 2026</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Kolom Salah -->
+                            <div style="flex: 1; min-width: 250px; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 6px; padding: 10px 12px;">
+                                <div style="font-weight: 700; font-size: 11px; color: #742a2a; margin-bottom: 6px;">
+                                    <i class="fa fa-times-circle" style="color: #e53e3e;"></i> FORMAT SALAH (DILARANG):
+                                </div>
+                                <table style="width: 100%; font-size: 11px; color: #2d3748;">
+                                    <tr style="border-bottom: 1px dashed #fed7d7;">
+                                        <td style="padding: 3px 0; font-family: monospace; font-weight: 600; color: #9b2c2c; text-decoration: line-through;">08/05/2026</td>
+                                        <td style="padding: 3px 0; text-align: right; color: #c53030; font-weight: 600;">Terbaca 8 Mei (Bulan tertukar!)</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 3px 0; font-family: monospace; font-weight: 600; color: #9b2c2c; text-decoration: line-through;">07/31/2026</td>
+                                        <td style="padding: 3px 0; text-align: right; color: #c53030; font-weight: 600;">ERROR (Tidak ada bulan 31)</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Contoh Baris CSV -->
+                        <div style="background: #2d3748; color: #edf2f7; border-radius: 5px; padding: 8px 12px; font-family: monospace; font-size: 11px;">
+                            <div style="color: #a0aec0; font-size: 10px; margin-bottom: 3px;">// Contoh baris data transaksi pada file CSV:</div>
+                            <span style="color: #68d391; font-weight: bold;">31/07/2026</span>,TRANSFER MASUK BI FAST,...,100000000,0,165650551
+                        </div>
+                    </div>
                     <br><br>
                     <table class="table table-bordered">
                         <thead>
