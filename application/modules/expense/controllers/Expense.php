@@ -1421,6 +1421,9 @@ class Expense extends Admin_Controller
 		$coa_field 		= $data_coa->coa;
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+		$list_bank 		= $this->db->get_where('ms_bank', ['deleted' => 0])->result_array();
+		$this->template->set('list_bank', $list_bank);
+		$this->template->set('data_coa', $data_coa);
 		$this->template->set('option_coa', $option_coa);
 		$this->template->set('data_budget', $data_budget);
 		$this->template->set('data_detail', $data_detail);
@@ -1429,7 +1432,7 @@ class Expense extends Admin_Controller
 		$this->template->set('stsview', 'approval');
 		$this->template->page_icon('fa fa-list');
 
-		if ($data->pettycash !== "") {
+		if (!empty($data->pettycash)) {
 			$this->template->render('form_pc');
 		} else if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
 			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
