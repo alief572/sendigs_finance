@@ -91,7 +91,8 @@ foreach ($option_coa as $keys => $val) {
 <div class="box box-custom">
 	<div class="box-custom-header">
 		<h4 class="box-custom-title">
-			<i class="fa fa-pencil-square-o text-success"></i> Form Pengajuan Expense Langsung (Direct Expense)
+			<i class="fa fa-pencil-square-o text-success"></i> 
+			<?= ($stsview == 'approval') ? 'Approval Expense Langsung (Direct Expense)' : (($stsview == 'view') ? 'Detail Expense Langsung (Direct Expense)' : 'Form Pengajuan Expense Langsung (Direct Expense)') ?>
 		</h4>
 		<div>
 			<a class="btn btn-default btn-sm btn-flat-custom" onclick="window.location.reload();return false;">
@@ -609,7 +610,7 @@ foreach ($option_coa as $keys => $val) {
 		}).then((res) => {
 			if (res.isConfirmed) {
 				var id = $("#id").val();
-				$.post(siteurl + 'expense/reject', { id: id, reason: res.value }, function(result) {
+				$.post(siteurl + 'expense/reject', { id: id, reason: res.value, table: 'tr_expense' }, function(result) {
 					Swal.fire("Ditolak!", "Dokumen telah ditolak.", "info").then(() => {
 						window.location.reload();
 					});

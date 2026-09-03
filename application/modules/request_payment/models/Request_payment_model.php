@@ -92,7 +92,7 @@ class Request_payment_model extends BF_Model
                 $data = $this->db->query("SELECT id as ids,no_doc,nama,tgl_doc,keperluan, 'kasbon' as tipe,jumlah_kasbon as jumlah,null as tanggal,no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, status, kurang_bayar FROM tr_kasbon WHERE (status=1 AND (metode_pembayaran = 1 OR metode_pembayaran IS NULL))  " . $where_date2 . " GROUP BY no_doc")->result();
             }
             if ($tab == 'expense' || $tab == 'pembayaran_po') {
-                $data = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE a.status=1 AND a.jumlah > 0 " . $where_date1 . " OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1) GROUP BY a.no_doc")->result();
+                $data = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe, IF(a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0, a.kurang_bayar, a.jumlah) as jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE ((a.status=1 AND a.jumlah > 0) OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1)) " . $where_date1 . " GROUP BY a.no_doc")->result();
             }
             if ($tab == 'periodik') {
                 $data = $this->db->query(" SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname, b.sts_reject, b.sts_reject_manage, b.reject_reason FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc left join users c on a.created_by = c.id_user WHERE a.status='1' and (b.id_payment='0' OR b.id_payment IS NULL)" . $where_date3)->result();
@@ -108,9 +108,6 @@ class Request_payment_model extends BF_Model
                 $this->db->or_where('a.metode_pembayaran IS NULL');
                 $this->db->group_end();
                 $data = $this->db->get()->result();
-
-                // print_r($this->db->last_query());
-                // exit;
             }
         } else {
             $data    = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,'Transportasi' as keperluan, 'transportasi' as tipe,(SELECT IF(SUM(aa.jumlah_kasbon) IS NULL, 0, SUM(aa.jumlah_kasbon)) FROM tr_transport aa WHERE aa.no_req = a.no_doc AND aa.req_payment = 0) as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname, a.sts_reject, a.sts_reject_manage, a.reject_reason FROM tr_transport_req a WHERE a.status = 1 " . $where_date1 . "
@@ -119,7 +116,7 @@ class Request_payment_model extends BF_Model
             SELECT id as ids,no_doc,nama,tgl_doc,keperluan, 'kasbon' as tipe,jumlah_kasbon as jumlah,null as tanggal,no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason FROM tr_kasbon WHERE status=1 AND (metode_pembayaran = 1 OR metode_pembayaran IS NULL) " . $where_date1 . "
             GROUP BY no_doc
             union all
-            SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE a.status=1 AND a.jumlah > 0  " . $where_date1 . "
+            SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe, IF(a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0, a.kurang_bayar, a.jumlah) as jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE ((a.status=1 AND a.jumlah > 0) OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1)) " . $where_date1 . "
             GROUP BY a.no_doc
             union all
             SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname, b.sts_reject, b.sts_reject_manage, b.reject_reason FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc left join users c on a.created_by = c.id_user WHERE a.status='1' and (b.id_payment='0' OR b.id_payment IS NULL) " . $where_date3 . "
@@ -201,7 +198,6 @@ class Request_payment_model extends BF_Model
 
         return $data;
     }
-
     // list data payment
     // public function GetListDataPayment($where = '')
     // {
@@ -1040,21 +1036,26 @@ class Request_payment_model extends BF_Model
 
             if ($item['tipe'] == 'expense') {
                 $get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $item['no_doc']])->result_array();
+                $get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item['no_doc']])->row_array();
+                if (!empty($get_expense)) {
+                    $updateExpense[] = [
+                        'id'             => $get_expense['id'],
+                        'status'         => '3',
+                        'modified_by'    => $this->auth->user_name(),
+                        'modified_on'    => date("Y-m-d H:i:s"),
+                    ];
+                }
 
                 foreach ($get_expense_detail as $item_expense) {
 
                     $id_detail = $this->Request_payment_model->generate_id_detail($no2);
 
-                    if ($item_expense['id_kasbon'] != null) {
-                        $harga = $item_expense['kurang_bayar'];
-                        $total = $item_expense['kurang_bayar'];
+                    if (!empty($item_expense['kasbon']) && $item_expense['kasbon'] > 0) {
+                        $harga = ($item_expense['kasbon'] * -1);
+                        $total = ($item_expense['kasbon'] * -1);
                     } else {
                         $harga = $item_expense['harga'];
                         $total = $item_expense['total_harga'];
-                        if ($item_expense['kasbon'] > 0) {
-                            $harga = ($item_expense['kasbon'] * -1);
-                            $total = ($item_expense['kasbon'] * -1);
-                        }
                     }
 
                     $arr_detail[]         = [
@@ -1079,23 +1080,6 @@ class Request_payment_model extends BF_Model
                         'modified_by'     => $this->auth->user_name(),
                         'modified_on'     => date("Y-m-d h:i:s"),
                     ];
-
-                    $updateExpense[] = [
-                        'id'             => $item_expense['id'],
-                        'status'         => '3',
-                        'modified_by'     => $this->auth->user_name(),
-                        'modified_on'     => date("Y-m-d h:i:s"),
-                    ];
-
-                    // if ($item_expense['id_kasbon'] != null) {
-                    //     $Harga[]            = $item_expense['kurang_bayar'];
-                    // } else {
-                    //     if ($item_expense['id_kasbon'] == '') {
-                    //         $Harga[]         = ($item_expense['harga'] * $item_expense['qty']);
-                    //     } else {
-                    //         $Harga[]         = ($item_expense['kasbon'] * -1);
-                    //     }
-                    // }
 
                     $no2++;
                 }
@@ -1298,7 +1282,7 @@ class Request_payment_model extends BF_Model
             $this->db->insert_batch('payment_approve_details', $arr_detail);
         }
 
-        if (!empty($updateDetail)) {
+        if (!empty($updateExpense)) {
             $this->db->update_batch('tr_expense', $updateExpense, 'id');
         }
 

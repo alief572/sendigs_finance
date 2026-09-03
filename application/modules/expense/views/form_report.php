@@ -84,6 +84,7 @@ $pettycash = (isset($data->pettycash)) ? $data->pettycash : '';
 $no_doc_kasbon = (isset($data->id_kasbon) && !empty($data->id_kasbon)) ? $data->id_kasbon : (isset($data_kasbon->no_doc) ? $data_kasbon->no_doc : '');
 $stsview = (isset($stsview)) ? $stsview : '';
 $option_coa = (isset($option_coa) && is_array($option_coa)) ? $option_coa : [];
+$list_bank = (isset($list_bank)) ? $list_bank : [];
 $datacoa = '';
 foreach ($option_coa as $keys => $val) {
 	$datacoa .= '<option value="' . $keys . '">' . $val . '</option>';
@@ -100,7 +101,8 @@ foreach ($option_coa as $keys => $val) {
 <div class="box box-custom">
 	<div class="box-custom-header">
 		<h4 class="box-custom-title">
-			<i class="fa fa-ticket text-primary"></i> Form Pertanggungjawaban Kasbon (Expense Report)
+			<i class="fa fa-ticket text-primary"></i> 
+			<?= ($stsview == 'approval') ? 'Approval Pertanggungjawaban Kasbon (Expense Report)' : (($stsview == 'view') ? 'Detail Pertanggungjawaban Kasbon (Expense Report)' : 'Form Pertanggungjawaban Kasbon (Expense Report)') ?>
 		</h4>
 		<div>
 			<a class="btn btn-default btn-sm btn-flat-custom" onclick="window.location.reload();return false;">
@@ -353,6 +355,35 @@ foreach ($option_coa as $keys => $val) {
 								<i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon (Transfer ke Rekening Perusahaan)
 							</div>
 							<div class="panel-body">
+								<?php
+								// Bank pengembalian: bank yang tersimpan (edit/view) > fallback default lama (dokumen lama pra-fitur, BCA 1101-02-01) > kosong (dokumen baru)
+								$selected_bank_pengembalian = (isset($data->id_bank_pengembalian) && $data->id_bank_pengembalian !== '' && $data->id_bank_pengembalian !== null)
+									? $data->id_bank_pengembalian
+									: '';
+								if ($selected_bank_pengembalian === '' && isset($data) && $grand_total > 0) {
+									// Dokumen lama (sudah tersimpan sebelum fitur ini ada) tanpa id_bank_pengembalian -> fallback BCA
+									foreach ($list_bank as $lb_item) {
+										if ($lb_item->coa_bank == '1101-02-01') {
+											$selected_bank_pengembalian = $lb_item->id;
+											break;
+										}
+									}
+								}
+								?>
+								<div class="form-group" style="margin-left:0; margin-right:0;">
+									<label class="control-label">Bank Pengembalian (Tujuan Transfer) <b class="text-red">*</b></label>
+									<select class="form-control input-sm" name="bank_pengembalian" id="bank_pengembalian" onchange="set_jurnal()">
+										<option value="">- Pilih Bank -</option>
+										<?php
+										if (!empty($list_bank)) {
+											foreach ($list_bank as $lb_item) {
+												$lb_selected = ((string)$lb_item->id === (string)$selected_bank_pengembalian) ? 'selected' : '';
+												echo '<option value="' . $lb_item->id . '" ' . $lb_selected . '>(' . $lb_item->rekening . ' a/n ' . $lb_item->nama . ') - ' . $lb_item->nama_bank . '</option>';
+											}
+										}
+										?>
+									</select>
+								</div>
 								<div class="form-group" style="margin-left:0; margin-right:0; margin-bottom: 0;">
 									<label class="control-label">Upload Bukti Transfer Balik <b class="text-red">*</b></label>
 
@@ -561,6 +592,16 @@ foreach ($option_coa as $keys => $val) {
 
 	function set_jurnal() {
 		var formdata = new FormData($('#frm_data')[0]);
+
+		// Pada mode view/approval semua field di-disable, sehingga tidak ikut
+		// terkirim di FormData. Pastikan bank pengembalian yang dipilih tetap
+		// dikirim agar baris jurnal Bank menampilkan rekening yang benar
+		// (bukan fallback default BCA).
+		var bankPengembalianVal = $('#bank_pengembalian').val();
+		if (bankPengembalianVal) {
+			formdata.set('bank_pengembalian', bankPengembalianVal);
+		}
+
 		$.ajax({
 			url: url_set_jurnal,
 			dataType: "json",
@@ -753,9 +794,14 @@ foreach ($option_coa as $keys => $val) {
 		var selisih = total_kasbon - total_expense;
 
 		if (selisih > 0) {
+			var bankPengembalian = $('#bank_pengembalian').val();
+			if (!bankPengembalian) {
+				errors = "Terdapat Lebih Kasbon sebesar Rp " + Number(selisih).toLocaleString('en-US') + ". Bank Pengembalian (Tujuan Transfer) WAJIB dipilih!";
+			}
+
 			var hasNewBukti = (typeof dtBuktiPengembalian !== 'undefined' && dtBuktiPengembalian.files.length > 0);
 			var hasExistingBukti = ($('input[name="existing_bukti_pengembalian[]"]').length > 0);
-			if (!hasNewBukti && !hasExistingBukti) {
+			if (errors == "" && !hasNewBukti && !hasExistingBukti) {
 				errors = "Terdapat Lebih Kasbon sebesar Rp " + Number(selisih).toLocaleString('en-US') + ". Bukti Transfer Balik (Pengembalian ke Kantor) WAJIB diupload!";
 			}
 		}
@@ -854,7 +900,7 @@ foreach ($option_coa as $keys => $val) {
 		}).then((res) => {
 			if (res.isConfirmed) {
 				var id = $("#id").val();
-				$.post(siteurl + 'expense/reject', { id: id, reason: res.value }, function(result) {
+				$.post(siteurl + 'expense/reject', { id: id, reason: res.value, table: 'tr_expense' }, function(result) {
 					Swal.fire("Ditolak!", "Dokumen telah ditolak.", "info").then(() => {
 						window.location.reload();
 					});
