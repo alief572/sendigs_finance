@@ -1535,6 +1535,9 @@ class Expense extends Admin_Controller
 					$this->db->update('tr_expense_detail', $detail, ['id' => $item->id]);
 				}
 
+				// Posting otomatis ke tr_jurnal jika Expense Report (Lebih Expense atau Impas)
+				$this->_post_jurnal_expense_report($id);
+
 				// if ($get_expense->pettycash !== '' && $get_expense->pettycash !== null) {
 				// 	$get_pettycash = $this->db->get_where('ms_petty_cash', ['nama' => $get_expense->pettycash])->row();
 
@@ -5248,4 +5251,212 @@ class Expense extends Admin_Controller
 		}
 	}
 
+	/**
+	 * Posting otomatis ke tr_jurnal saat Expense Report di-approve final (Lebih Expense atau Impas)
+	 */
+	private function _post_jurnal_expense_report($id)
+	{
+		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($data)) {
+			return;
+		}
+
+		// Pastikan ini adalah Expense Report (memiliki id_kasbon)
+		if (empty($data->id_kasbon)) {
+			return;
+		}
+
+		// Cek apakah sudah pernah di-insert ke tr_jurnal (mencegah duplikasi)
+		$cek_existing = $this->db->get_where('tr_jurnal', [
+			'no_transaksi' => $data->no_doc,
+			'jenis_transaksi' => 'Expense Report'
+		])->num_rows();
+		if ($cek_existing > 0) {
+			return;
+		}
+
+		$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc])->result();
+		if (empty($get_expense_detail)) {
+			return;
+		}
+
+		$total_expense = 0;
+		$total_kasbon = 0;
+		foreach ($get_expense_detail as $dtl) {
+			$total_expense += floatval($dtl->expense);
+			$total_kasbon += floatval($dtl->kasbon);
+		}
+
+		if ($total_kasbon <= 0 && !empty($data->id_kasbon)) {
+			$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+			if (!empty($get_kb)) {
+				$total_kasbon = floatval($get_kb->jumlah_kasbon);
+			}
+		}
+
+		$selisih = $total_kasbon - $total_expense;
+
+		// Hanya untuk kondisi Lebih Expense ($selisih < 0) atau Impas ($selisih == 0)
+		if ($selisih > 0) {
+			return;
+		}
+
+		$tgl_doc = !empty($data->tgl_doc) ? $data->tgl_doc : date('Y-m-d');
+		$month_num = (int) date('m', strtotime($tgl_doc));
+		$month_roman = int_to_roman($month_num);
+		$year_short = date('y', strtotime($tgl_doc));
+
+		// Generate nomor jurnal otomatis NNNNN-AJV-{MM}-{YY}
+		$srcMtr = "SELECT MAX(no_jurnal) as maxP FROM tr_jurnal WHERE no_jurnal LIKE '%-AJV-" . $month_roman . "-" . $year_short . "%'";
+		$resultMtr = $this->db->query($srcMtr)->row_array();
+		$urutan = 0;
+		if (!empty($resultMtr['maxP'])) {
+			$urutan = (int) substr($resultMtr['maxP'], 0, 5);
+		}
+		$urutan++;
+		$no_jurnal = sprintf('%05s', $urutan) . '-AJV-' . $month_roman . '-' . $year_short;
+
+		// Tarik info company
+		$id_company = '';
+		$nm_company = '';
+		try {
+			$consultant = $this->load->database('consultant', true);
+			if (!empty($data->id_kasbon)) {
+				$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+				if (!empty($get_kb) && !empty($get_kb->project)) {
+					$consultant->select('a.id, a.nm_company');
+					$consultant->from('kons_tr_company a');
+					$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+					$consultant->where('b.id_quotation', $get_kb->project);
+					$get_comp = $consultant->get()->row();
+					if (!empty($get_comp)) {
+						$id_company = $get_comp->id;
+						$nm_company = $get_comp->nm_company;
+					}
+				}
+			}
+
+			if (empty($nm_company)) {
+				$get_first_comp = $consultant->get('kons_tr_company')->row();
+				if (!empty($get_first_comp)) {
+					$id_company = $get_first_comp->id;
+					$nm_company = $get_first_comp->nm_company;
+				}
+			}
+		} catch (Exception $e) {
+			$id_company = '';
+			$nm_company = '';
+		}
+
+		$id_divisi = !empty($data->departement) ? $data->departement : '';
+		$nm_divisi = !empty($data->departement) ? $data->departement : '';
+
+		$arr_insert = [];
+
+		// 1. Sisi DEBIT: Detail item expense
+		foreach ($get_expense_detail as $dtl) {
+			$exp_num = floatval($dtl->expense);
+			if ($exp_num > 0) {
+				$coa_code = !empty($dtl->coa) ? $dtl->coa : '1304-01-01';
+				$coa_name = 'Peralatan Kantor';
+				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+				if (!empty($q_coa_acc)) {
+					$coa_name = $q_coa_acc->nama;
+				} else {
+					$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
+				}
+
+				$desk = !empty($dtl->deskripsi) ? $dtl->deskripsi : (!empty($dtl->keterangan) ? $dtl->keterangan : 'Pengeluaran Expense');
+				if (!empty($dtl->id_kasbon)) {
+					$desk = 'Pengeluaran Kasbon ' . $dtl->id_kasbon . ' - ' . $desk;
+				}
+
+				$arr_insert[] = [
+					'no_jurnal'       => $no_jurnal,
+					'tgl_jurnal'      => $tgl_doc,
+					'coa'             => $coa_code,
+					'id_company'      => $id_company,
+					'nm_company'      => $nm_company,
+					'nm_coa'          => $coa_name,
+					'debit'           => $exp_num,
+					'kredit'          => 0,
+					'keterangan'      => $desk,
+					'sts'             => '0',
+					'no_transaksi'    => $data->no_doc,
+					'jenis_transaksi' => 'Expense Report',
+					'id_divisi'       => $id_divisi,
+					'nm_divisi'       => $nm_divisi,
+					'created_by'      => $this->auth->user_id(),
+					'created_date'    => date('Y-m-d H:i:s')
+				];
+			}
+		}
+
+		// 2. Sisi KREDIT: Kasbon Awal (Piutang Lain-lain Konsultan)
+		if ($total_kasbon > 0) {
+			$coa_kasbon = '1103-01-14';
+			$nm_kasbon = 'Piutang Lain-lain Konsultan';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
+			if (!empty($q_coa_acc)) {
+				$nm_kasbon = $q_coa_acc->nama;
+			}
+
+			$desk_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($data->id_kasbon) ? ' (' . $data->id_kasbon . ')' : '');
+
+			$arr_insert[] = [
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_doc,
+				'coa'             => $coa_kasbon,
+				'id_company'      => $id_company,
+				'nm_company'      => $nm_company,
+				'nm_coa'          => $nm_kasbon,
+				'debit'           => 0,
+				'kredit'          => $total_kasbon,
+				'keterangan'      => $desk_kasbon,
+				'sts'             => '0',
+				'no_transaksi'    => $data->no_doc,
+				'jenis_transaksi' => 'Expense Report',
+				'id_divisi'       => $id_divisi,
+				'nm_divisi'       => $nm_divisi,
+				'created_by'      => $this->auth->user_id(),
+				'created_date'    => date('Y-m-d H:i:s')
+			];
+		}
+
+		// 3. Sisi KREDIT: Hutang Expense / Reimburse (Jika Lebih Expense / Selisih < 0)
+		if ($selisih < 0) {
+			$kurang_bayar = abs($selisih);
+			$coa_hutang = '9999-99-99';
+			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
+			if (!empty($q_coa_acc)) {
+				$nm_hutang = $q_coa_acc->nama;
+			}
+
+			$desk_hutang = 'Lebih Expense (Reimburse Kantor ke Karyawan) - ' . $data->no_doc;
+
+			$arr_insert[] = [
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_doc,
+				'coa'             => $coa_hutang,
+				'id_company'      => $id_company,
+				'nm_company'      => $nm_company,
+				'nm_coa'          => $nm_hutang,
+				'debit'           => 0,
+				'kredit'          => $kurang_bayar,
+				'keterangan'      => $desk_hutang,
+				'sts'             => '0',
+				'no_transaksi'    => $data->no_doc,
+				'jenis_transaksi' => 'Expense Report',
+				'id_divisi'       => $id_divisi,
+				'nm_divisi'       => $nm_divisi,
+				'created_by'      => $this->auth->user_id(),
+				'created_date'    => date('Y-m-d H:i:s')
+			];
+		}
+
+		if (!empty($arr_insert)) {
+			$this->db->insert_batch('tr_jurnal', $arr_insert);
+		}
+	}
 }

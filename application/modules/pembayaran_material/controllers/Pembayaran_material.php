@@ -1360,20 +1360,44 @@ class Pembayaran_material extends Admin_Controller
 			$config['allowed_types'] = '*';
 			$config['remove_spaces'] = TRUE;
 			$config['encrypt_name'] = TRUE;
-			$filenames = '';
+			$uploaded_files = [];
 
 			if (!empty($_FILES['upload_doc']['name'])) {
-				$_FILES['file']['name'] = $_FILES['upload_doc']['name'];
-				$_FILES['file']['type'] = $_FILES['upload_doc']['type'];
-				$_FILES['file']['tmp_name'] = $_FILES['upload_doc']['tmp_name'];
-				$_FILES['file']['error'] = $_FILES['upload_doc']['error'];
-				$_FILES['file']['size'] = $_FILES['upload_doc']['size'];
-				// $this->load->library('upload', $config);
-				$this->upload->initialize($config);
-				if ($this->upload->do_upload('file')) {
-					$uploadData = $this->upload->data();
-					$filenames = $uploadData['file_name'];
+				if (is_array($_FILES['upload_doc']['name'])) {
+					$count_files = count($_FILES['upload_doc']['name']);
+					for ($i = 0; $i < $count_files; $i++) {
+						if (!empty($_FILES['upload_doc']['name'][$i])) {
+							$_FILES['file']['name']     = $_FILES['upload_doc']['name'][$i];
+							$_FILES['file']['type']     = $_FILES['upload_doc']['type'][$i];
+							$_FILES['file']['tmp_name'] = $_FILES['upload_doc']['tmp_name'][$i];
+							$_FILES['file']['error']    = $_FILES['upload_doc']['error'][$i];
+							$_FILES['file']['size']     = $_FILES['upload_doc']['size'][$i];
+
+							$this->upload->initialize($config);
+							if ($this->upload->do_upload('file')) {
+								$uploadData = $this->upload->data();
+								$uploaded_files[] = $uploadData['file_name'];
+							}
+						}
+					}
+				} else {
+					$_FILES['file']['name']     = $_FILES['upload_doc']['name'];
+					$_FILES['file']['type']     = $_FILES['upload_doc']['type'];
+					$_FILES['file']['tmp_name'] = $_FILES['upload_doc']['tmp_name'];
+					$_FILES['file']['error']    = $_FILES['upload_doc']['error'];
+					$_FILES['file']['size']     = $_FILES['upload_doc']['size'];
+
+					$this->upload->initialize($config);
+					if ($this->upload->do_upload('file')) {
+						$uploadData = $this->upload->data();
+						$uploaded_files[] = $uploadData['file_name'];
+					}
 				}
+			}
+
+			$filenames = '';
+			if (!empty($uploaded_files)) {
+				$filenames = (count($uploaded_files) === 1) ? $uploaded_files[0] : json_encode($uploaded_files);
 			}
 
 			$insert_payment_paid = $this->db->insert('tr_payment_paid', [

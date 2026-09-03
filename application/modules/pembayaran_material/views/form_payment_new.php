@@ -386,10 +386,34 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			<input type="hidden" name="kontrol" class="kontrol" value="0">
 
 			<br><br>
-			<div class="col-md-4">
+			<div class="col-md-6">
 				<div class="form-group">
-					<label for="">Upload Bukti Bayar <span class="text-danger">*</span></label>
-					<input type="file" class="form-control form-control-sm" name="upload_doc" id="" required>
+					<label style="font-weight: 600; font-size: 13px;">Upload Bukti Bayar <span class="text-danger">*</span></label>
+					
+					<!-- Drag & Drop Zone -->
+					<div id="dropzone_bukti_bayar" style="border: 2px dashed #3c8dbc; border-radius: 8px; padding: 22px 16px; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s ease-in-out;">
+						<i class="fa fa-cloud-upload" style="font-size: 38px; color: #3c8dbc; margin-bottom: 6px;"></i>
+						<div style="font-size: 14px; font-weight: 600; color: #2d3748;">
+							Tarik &amp; letakkan file bukti bayar di sini, atau <span style="color: #3c8dbc; text-decoration: underline;">pilih file</span>
+						</div>
+						<div style="font-size: 11px; color: #718096; margin-top: 4px;">
+							Mendukung JPG, JPEG, PNG, PDF, DOC, DOCX, XLS, XLSX (Bisa pilih lebih dari 1 file)
+						</div>
+						<input type="file" name="upload_doc[]" id="upload_doc_input" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;">
+					</div>
+
+					<!-- Preview File Terpilih -->
+					<div id="preview_bukti_container" style="margin-top: 12px; display: none;">
+						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+							<span style="font-size: 12px; font-weight: 600; color: #4a5568;">
+								<i class="fa fa-files-o text-primary"></i> File Terpilih (<span id="count_file_terpilih">0</span>):
+							</span>
+							<button type="button" id="btn_clear_files" class="btn btn-xs btn-default text-danger" style="font-size: 11px; border: 1px solid #fed7d7;">
+								<i class="fa fa-trash-o"></i> Hapus Semua
+							</button>
+						</div>
+						<div id="preview_bukti_list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+					</div>
 				</div>
 			</div>
 
@@ -1127,9 +1151,8 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			payment_bank = 0;
 		}
 
-		// Validasi file bukti bayar wajib di-upload
-		var upload_doc = $('input[name="upload_doc"]').val();
-		if (!upload_doc || upload_doc.trim() === '') {
+		// Validasi file bukti bayar wajib di-upload (multi-file)
+		if (typeof storeBuktiBayar === 'undefined' || !storeBuktiBayar.files || storeBuktiBayar.files.length === 0) {
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Upload Bukti Bayar wajib diisi sebelum menyimpan data!',
@@ -1201,7 +1224,10 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			},
 			function(isConfirm) {
 				if (isConfirm) {
-
+					var fileInputEl = document.getElementById('upload_doc_input');
+					if (fileInputEl && typeof storeBuktiBayar !== 'undefined') {
+						fileInputEl.files = storeBuktiBayar.files;
+					}
 					var formData = new FormData($('#frm-data')[0]);
 					var baseurl = siteurl + active_controller + 'save_payment';
 					$.ajax({
@@ -1269,4 +1295,142 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 				}
 			});
 	});
+
+	// ==================== DRAG & DROP MULTI-FILE UPLOAD BUKTI BAYAR ====================
+	var storeBuktiBayar = new DataTransfer();
+
+	function humanFileSize(bytes) {
+		if (bytes < 1024) return bytes + ' B';
+		if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+		return (bytes / 1048576).toFixed(1) + ' MB';
+	}
+
+	function getFileIcon(filename) {
+		var ext = filename.split('.').pop().toLowerCase();
+		if (['jpg', 'jpeg', 'png', 'gif'].indexOf(ext) !== -1) return 'fa-file-image-o text-success';
+		if (ext === 'pdf') return 'fa-file-pdf-o text-danger';
+		if (['doc', 'docx'].indexOf(ext) !== -1) return 'fa-file-word-o text-primary';
+		if (['xls', 'xlsx'].indexOf(ext) !== -1) return 'fa-file-excel-o text-success';
+		return 'fa-file-o text-info';
+	}
+
+	function renderBuktiBayarPreview() {
+		var $previewList = $('#preview_bukti_list');
+		var $container = $('#preview_bukti_container');
+		var $count = $('#count_file_terpilih');
+		var fileInput = document.getElementById('upload_doc_input');
+
+		$previewList.empty();
+		var total = storeBuktiBayar.files.length;
+		$count.text(total);
+
+		if (total === 0) {
+			$container.hide();
+			if (fileInput) fileInput.files = storeBuktiBayar.files;
+			return;
+		}
+
+		$container.show();
+
+		Array.prototype.forEach.call(storeBuktiBayar.files, function(file, index) {
+			var ext = file.name.split('.').pop().toLowerCase();
+			var isImg = ['jpg', 'jpeg', 'png', 'gif'].indexOf(ext) !== -1;
+			var iconClass = getFileIcon(file.name);
+
+			var thumbHtml = '<div style="width: 36px; height: 36px; border-radius: 4px; background: #edf2f7; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="fa ' + iconClass + '"></i></div>';
+			if (isImg && window.URL && window.URL.createObjectURL) {
+				var objUrl = URL.createObjectURL(file);
+				thumbHtml = '<img src="' + objUrl + '" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; flex-shrink: 0;" alt="preview">';
+			}
+
+			var itemHtml = $(
+				'<div class="file-preview-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; transition: background .15s;">' +
+					'<div style="display: flex; align-items: center; gap: 10px; overflow: hidden; margin-right: 8px;">' +
+						thumbHtml +
+						'<div style="overflow: hidden; text-align: left;">' +
+							'<div style="font-size: 12px; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + file.name + '">' + file.name + '</div>' +
+							'<div style="font-size: 11px; color: #a0aec0;">' + humanFileSize(file.size) + '</div>' +
+						'</div>' +
+					'</div>' +
+					'<button type="button" class="btn btn-xs btn-default text-danger btn-remove-file" data-idx="' + index + '" style="border: 1px solid #fed7d7; border-radius: 4px;" title="Hapus file ini">' +
+						'<i class="fa fa-trash"></i>' +
+					'</button>' +
+				'</div>'
+			);
+
+			$previewList.append(itemHtml);
+		});
+
+		if (fileInput) fileInput.files = storeBuktiBayar.files;
+	}
+
+	function addBuktiBayarFiles(fileList) {
+		Array.prototype.forEach.call(fileList, function(f) {
+			storeBuktiBayar.items.add(f);
+		});
+		renderBuktiBayarPreview();
+	}
+
+	function removeBuktiBayarFile(index) {
+		var dt = new DataTransfer();
+		Array.prototype.forEach.call(storeBuktiBayar.files, function(f, i) {
+			if (i !== index) dt.items.add(f);
+		});
+		storeBuktiBayar = dt;
+		renderBuktiBayarPreview();
+	}
+
+	$(document).on('click', '#dropzone_bukti_bayar', function(e) {
+		if (e.target.id !== 'upload_doc_input') {
+			$('#upload_doc_input').trigger('click');
+		}
+	});
+
+	$(document).on('change', '#upload_doc_input', function(e) {
+		if (e.target.files && e.target.files.length) {
+			addBuktiBayarFiles(e.target.files);
+		}
+	});
+
+	$(document).on('click', '.btn-remove-file', function(e) {
+		e.stopPropagation();
+		var idx = parseInt($(this).data('idx'));
+		removeBuktiBayarFile(idx);
+	});
+
+	$(document).on('click', '#btn_clear_files', function(e) {
+		e.stopPropagation();
+		storeBuktiBayar = new DataTransfer();
+		renderBuktiBayarPreview();
+	});
+
+	// Drag & Drop event listener
+	var dropzoneEl = document.getElementById('dropzone_bukti_bayar');
+	if (dropzoneEl) {
+		['dragenter', 'dragover'].forEach(function(eventName) {
+			dropzoneEl.addEventListener(eventName, function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				dropzoneEl.style.borderColor = '#205081';
+				dropzoneEl.style.background = '#e8f4fd';
+				dropzoneEl.style.transform = 'scale(1.01)';
+			});
+		});
+
+		['dragleave', 'drop'].forEach(function(eventName) {
+			dropzoneEl.addEventListener(eventName, function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				dropzoneEl.style.borderColor = '#3c8dbc';
+				dropzoneEl.style.background = '#f8fafc';
+				dropzoneEl.style.transform = 'scale(1)';
+			});
+		});
+
+		dropzoneEl.addEventListener('drop', function(e) {
+			if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+				addBuktiBayarFiles(e.dataTransfer.files);
+			}
+		});
+	}
 </script>

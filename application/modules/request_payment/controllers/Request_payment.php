@@ -304,7 +304,7 @@ class Request_payment extends Admin_Controller
 		/* Expense */
 		if (isset($type) && $type == 'expense') {
 			$data 			= $this->db->get_where('tr_expense', ['id' => $id])->row();
-			$data_detail	= $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc, 'id_kasbon' => null])->result();
+			$data_detail	= $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc])->result();
 		}
 
 		/* Kasbon */
@@ -520,7 +520,7 @@ class Request_payment extends Admin_Controller
 				'tgl_doc' => $get_expense->tgl_doc,
 				'keperluan' => $get_expense->informasi,
 				'tipe' => 'expense',
-				'jumlah' => $get_expense->jumlah,
+				'jumlah' => (!empty($get_expense->id_kasbon) && !empty($get_expense->kurang_bayar) && $get_expense->kurang_bayar > 0) ? $get_expense->kurang_bayar : (!empty($get_request_payment->jumlah) ? $get_request_payment->jumlah : $get_expense->jumlah),
 				'status' => '1',
 				'tanggal' => date('Y-m-d'),
 				'created_by' => $get_user->nm_lengkap,
@@ -543,8 +543,8 @@ class Request_payment extends Admin_Controller
 				'tgl_doc' => $get_expense->tgl_doc,
 				'deskripsi' => $get_expense->informasi,
 				'qty' => 1,
-				'harga' => $get_expense->jumlah,
-				'total' => $get_expense->jumlah,
+				'harga' => (!empty($get_expense->id_kasbon) && !empty($get_expense->kurang_bayar) && $get_expense->kurang_bayar > 0) ? $get_expense->kurang_bayar : (!empty($get_request_payment->jumlah) ? $get_request_payment->jumlah : $get_expense->jumlah),
+				'total' => (!empty($get_expense->id_kasbon) && !empty($get_expense->kurang_bayar) && $get_expense->kurang_bayar > 0) ? $get_expense->kurang_bayar : (!empty($get_request_payment->jumlah) ? $get_request_payment->jumlah : $get_expense->jumlah),
 				'keterangan' => $get_expense->informasi,
 				'created_by' => $get_user->nm_lengkap,
 				'created_on' => date('Y-m-d H:i:s')
@@ -643,16 +643,12 @@ class Request_payment extends Admin_Controller
 				$dtl 				= $this->db->get_where('tr_expense_detail', ['id' => $detail['id']])->row();
 				$expense			= $this->db->get_where('tr_expense', ['id' => $Data['id']])->row();
 
-				if ($expense->id_kasbon != null) {
-					$harga = $expense->kurang_bayar;
-					$total = $expense->kurang_bayar;
+				if (!empty($dtl->kasbon) && $dtl->kasbon > 0) {
+					$harga = ($dtl->kasbon * -1);
+					$total = ($dtl->kasbon * -1);
 				} else {
 					$harga = $dtl->harga;
 					$total = $dtl->total_harga;
-					if ($dtl->kasbon > 0) {
-						$harga = ($dtl->kasbon * -1);
-						$total = ($dtl->kasbon * -1);
-					}
 				}
 
 				$ArrDetail[] 		= [
@@ -685,14 +681,10 @@ class Request_payment extends Admin_Controller
 					'modified_on' 	=> date("Y-m-d h:i:s"),
 				];
 
-				if ($expense->id_kasbon != null) {
-					$Harga[]			= $expense->kurang_bayar;
+				if (!empty($dtl->kasbon) && $dtl->kasbon > 0) {
+					$Harga[] 		= ($dtl->kasbon * -1);
 				} else {
-					if ($dtl->id_kasbon == '') {
-						$Harga[] 		= ($dtl->harga * $dtl->qty);
-					} else {
-						$Harga[] 		= ($dtl->kasbon * -1);
-					}
+					$Harga[] 		= ($dtl->harga * $dtl->qty);
 				}
 			}
 
@@ -865,7 +857,11 @@ class Request_payment extends Admin_Controller
 			$id_detail++;
 		}
 
-		$header['jumlah'] 	= array_sum($Harga);
+		if ($Data['tipe'] == 'expense' && isset($expense) && !empty($expense->id_kasbon) && !empty($expense->kurang_bayar) && $expense->kurang_bayar > 0) {
+			$header['jumlah'] 	= $expense->kurang_bayar;
+		} else {
+			$header['jumlah'] 	= array_sum($Harga);
+		}
 		$header['status'] 	= '1';
 
 		$this->db->trans_rollback();
@@ -1242,12 +1238,12 @@ class Request_payment extends Admin_Controller
 					}
 
 					if ($tipe[$keys] == 'expense') {
-						$rec = $this->db->query("select * from tr_expense_detail where no_doc='" . $no_doc[$keys] . "' and status = '1'")->result();
+						$rec = $this->db->query("select * from tr_expense_detail where no_doc='" . $no_doc[$keys] . "' and status IN ('1', '2')")->result();
 						// $rec = $this->db->get_where('payment_approve_details', ['payment_id' => $val])->result();
-						$this->db->update('tr_expense_detail', ['status' => '2'], ['no_doc' => $no_doc[$keys], 'status' => '1']);
+						$this->db->update('tr_expense_detail', ['status' => '2'], ['no_doc' => $no_doc[$keys]]);
 						foreach ($rec as $record) {
 							$coa = $record->coa;
-							if ($record->id_kasbon != '') {
+							if (!empty($record->id_kasbon) || (!empty($record->kasbon) && $record->kasbon > 0)) {
 								$det_Jurnaltes1[] = array(
 									'nomor' => $nomor_jurnal,
 									'tanggal' => $payment_date,
@@ -1262,6 +1258,7 @@ class Request_payment extends Admin_Controller
 									'nocust' => $nama[$keys]
 								);
 							} else {
+								$nilai_detail_expense = ($record->expense > 0) ? $record->expense : $record->total_harga;
 								$det_Jurnaltes1[] = array(
 									'nomor' => $nomor_jurnal,
 									'tanggal' => $payment_date,
@@ -1269,7 +1266,7 @@ class Request_payment extends Admin_Controller
 									'no_perkiraan' => $record->coa,
 									'keterangan' => $keterangan[$keys],
 									'no_request' => $no_doc[$keys],
-									'debet' => $record->expense,
+									'debet' => $nilai_detail_expense,
 									'kredit' => 0,
 									'no_reff' =>  $no_doc[$keys],
 									'jenis_jurnal' => $jenis_jurnal,
@@ -1549,8 +1546,16 @@ class Request_payment extends Admin_Controller
 		// 	$this->session->set_flashdata("alert_data", "<div class=\"alert alert-warning\" id=\"flash-message\">You Don't Have Right To Access This Page, Please Contact Your Administrator....</div>");
 		// 	redirect(site_url('dashboard'));
 		// }
-		$get_Data			= $this->db->query("SELECT a.id as ids,a.no_doc,a.created_by,c.nm_lengkap as nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan
-		left join users c on a.nama=c.nm_lengkap WHERE a.status=1 and a.jumlah <> 0 AND a.exp_pib IS NULL AND a.exp_inv_po IS NULL AND (a.tipe_penggantian = '2' OR a.tipe_penggantian IS NULL) AND (a.tipe_pengembalian = '2' OR a.tipe_pengembalian IS NULL)")->result();
+		// Hanya tampilkan EXPENSE REPORT (Pertanggungjawaban Kasbon) yang SUDAH DISETUJUI.
+		// - Expense Report ditandai dengan adanya kasbon: id_kasbon IS NOT NULL ATAU total_kasbon > 0.
+		//   (Membedakan dari Direct Expense biasa yang tidak punya kasbon.)
+		// - "Disetujui" mencakup status 1 (Disetujui), 2 (Disetujui Management), dan
+		//   3 (Selesai). Untuk kasus LEBIH KASBON, approve() men-set status = 3, jadi
+		//   status=1 saja tidak cukup.
+		// - Kolom tipe_penggantian / tipe_pengembalian bisa berisi '' (string kosong),
+		//   NULL, atau '2'. Perlakukan '' & NULL sama seperti "belum diisi".
+		$get_Data			= $this->db->query("SELECT a.id as ids,a.no_doc,a.created_by,c.nm_lengkap as nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,a.total_kasbon,a.id_kasbon,null as tanggal,a.no_doc as id, bank_id, accnumber, accname FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan
+		left join users c on a.nama=c.nm_lengkap WHERE a.status IN (1,2,3) and a.jumlah <> 0 AND a.exp_pib IS NULL AND a.exp_inv_po IS NULL AND (a.tipe_penggantian = '2' OR a.tipe_penggantian IS NULL OR a.tipe_penggantian = '') AND (a.tipe_pengembalian = '2' OR a.tipe_pengembalian IS NULL OR a.tipe_pengembalian = '') AND (a.id_kasbon IS NOT NULL OR a.total_kasbon > 0) ORDER BY a.tgl_doc DESC, a.id DESC")->result();
 		// $menu_akses			= $this->master_model->getMenu();
 		$data = array(
 			'title'			=> 'Pengembalian Expense',
@@ -1569,7 +1574,7 @@ class Request_payment extends Admin_Controller
 
 	public function list_return_approval()
 	{
-		$data_pengembalian_expense = $this->db->query('SELECT * FROM tr_pengembalian_expense WHERE status IS null OR status = 2')->result();
+		$data_pengembalian_expense = $this->db->query('SELECT * FROM tr_pengembalian_expense WHERE status IS null')->result();
 
 		$this->template->set('data_pengembalian', $data_pengembalian_expense);
 		$this->template->title('Approval Pengembalian Expense');
@@ -1651,7 +1656,15 @@ class Request_payment extends Admin_Controller
 
 		$this->db->trans_begin();
 
+		$get_pengembalian = $this->db->get_where('tr_pengembalian_expense', ['id' => $id])->row();
+
 		$this->db->update('tr_pengembalian_expense', ['status' => 1, 'app_by' => $this->auth->user_id(), 'app_date' => date('Y-m-d H:i:s')], ['id' => $id]);
+
+		// Generate jurnal Expense Report (sama seperti preview di modul pengembalian expense)
+		if (!empty($get_pengembalian)) {
+			$tgl_jurnal = !empty($get_pengembalian->transfer_tanggal) ? $get_pengembalian->transfer_tanggal : date('Y-m-d');
+			$this->_generate_jurnal_pengembalian_expense($get_pengembalian->no_doc, $tgl_jurnal);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
@@ -1665,6 +1678,171 @@ class Request_payment extends Admin_Controller
 			'status' => $valid
 		]);
 	}
+
+	/**
+	 * Generate & simpan jurnal Expense Report (Pertanggungjawaban Kasbon) ke tabel tr_jurnal
+	 * (staging jurnal, sts = '0' / belum diposting), BUKAN langsung ke jurnal transaksi (DBACC.jurnal).
+	 * Baris jurnal dibuat identik dengan preview pada modul pengembalian expense
+	 * (Expense::set_jurnal_expense):
+	 *   - DEBIT  : tiap item realisasi expense (COA detail, nilai = expense)
+	 *   - DEBIT  : bank pengembalian, sebesar selisih (jika LEBIH KASBON / kasbon > expense)
+	 *   - KREDIT : akun kasbon / uang muka (1103-01-14) sebesar total kasbon
+	 *   - KREDIT : hutang reimburse (9999-99-99) sebesar |selisih| (jika LEBIH EXPENSE)
+	 * selisih = total_kasbon - total_expense.
+	 *
+	 * @param string $no_doc   No dokumen Expense Report (tr_expense.no_doc)
+	 * @param string $tgl_doc  Tanggal jurnal (Y-m-d)
+	 */
+	private function _generate_jurnal_pengembalian_expense($no_doc, $tgl_doc)
+	{
+		if (empty($no_doc)) return;
+
+		$tgl_jurnal = !empty($tgl_doc) ? date('Y-m-d', strtotime($tgl_doc)) : date('Y-m-d');
+
+		$expense = $this->db->get_where('tr_expense', ['no_doc' => $no_doc])->row();
+		if (empty($expense)) return;
+
+		// Cegah double-posting: jika jurnal (tr_jurnal) utk dokumen ini sudah pernah dibuat, skip.
+		$already = $this->db->get_where('tr_jurnal', [
+			'no_transaksi'    => $no_doc,
+			'jenis_transaksi' => 'Pengembalian Expense',
+		])->num_rows();
+		if ($already > 0) return;
+
+		$details = $this->db->get_where('tr_expense_detail', ['no_doc' => $no_doc])->result();
+
+		$total_expense = 0;
+		$total_kasbon  = 0;
+		$arr_id_kasbon = [];
+		foreach ($details as $d) {
+			$total_expense += floatval($d->expense);
+			$total_kasbon  += floatval($d->kasbon);
+			if (!empty($d->id_kasbon)) $arr_id_kasbon[] = $d->id_kasbon;
+		}
+		$selisih = $total_kasbon - $total_expense;
+
+		if ($total_kasbon <= 0 && $total_expense <= 0) return;
+
+		// Resolve nama company dari db_consultant_new (mengikuti logika preview)
+		$id_company = '';
+		$nm_company = '';
+		$first_kasbon_doc = '';
+		foreach ($arr_id_kasbon as $kb) {
+			if (!empty($kb)) {
+				$first_kasbon_doc = $kb;
+				break;
+			}
+		}
+		try {
+			if (!empty($first_kasbon_doc)) {
+				$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
+				if (!empty($get_kb) && !empty($get_kb->project)) {
+					$this->consultant->select('a.id, a.nm_company');
+					$this->consultant->from('kons_tr_company a');
+					$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+					$this->consultant->where('b.id_quotation', $get_kb->project);
+					$get_comp = $this->consultant->get()->row();
+					if (!empty($get_comp)) {
+						$id_company = $get_comp->id;
+						$nm_company = $get_comp->nm_company;
+					}
+				}
+			}
+			if (empty($nm_company)) {
+				$get_first_comp = $this->consultant->get('kons_tr_company')->row();
+				if (!empty($get_first_comp)) {
+					$id_company = $get_first_comp->id;
+					$nm_company = $get_first_comp->nm_company;
+				}
+			}
+		} catch (Exception $e) {
+			$id_company = '';
+			$nm_company = '';
+		}
+
+		// Helper resolve nama COA
+		$get_coa_name = function ($coa) {
+			$row = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = ?", [$coa])->row();
+			return !empty($row) ? $row->nama : '';
+		};
+
+		// Nomor jurnal staging tr_jurnal (format: NNNNN-AJV-{bulan romawi}-{YY}),
+		// mengikuti konvensi modul lain yang menulis ke tr_jurnal.
+		$romans = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'];
+		$month_roman = isset($romans[(int)date('n', strtotime($tgl_jurnal))]) ? $romans[(int)date('n', strtotime($tgl_jurnal))] : '';
+		$year_short  = date('y', strtotime($tgl_jurnal));
+		$suffix      = '-AJV-' . $month_roman . '-' . $year_short;
+		$query_last  = $this->db->query("SELECT no_jurnal FROM tr_jurnal WHERE no_jurnal LIKE ? ORDER BY id DESC LIMIT 1", ['%' . $suffix]);
+		$next_seq    = 1;
+		if ($query_last->num_rows() > 0) {
+			$next_seq = (int) substr($query_last->row()->no_jurnal, 0, 5) + 1;
+		}
+		$no_jurnal = str_pad($next_seq, 5, '0', STR_PAD_LEFT) . $suffix;
+
+		$rows = [];
+
+		// 1. DEBIT: tiap item realisasi expense
+		foreach ($details as $d) {
+			$exp_num = floatval($d->expense);
+			if ($exp_num <= 0) continue;
+			$coa_code = !empty($d->coa) ? $d->coa : '1304-01-01';
+			$desk = !empty($d->deskripsi) ? $d->deskripsi : 'Pengeluaran Expense';
+			if (!empty($d->id_kasbon)) {
+				$desk = 'Pengeluaran Kasbon ' . $d->id_kasbon . ' - ' . $desk;
+			}
+			$rows[] = ['coa' => $coa_code, 'nm_coa' => $get_coa_name($coa_code), 'keterangan' => $desk, 'debit' => $exp_num, 'kredit' => 0];
+		}
+
+		// Fallback DEBIT jika tidak ada baris expense terisi tapi total_expense > 0
+		if (empty($rows) && $total_expense > 0) {
+			$rows[] = ['coa' => '1304-01-01', 'nm_coa' => $get_coa_name('1304-01-01'), 'keterangan' => 'Realisasi Pengeluaran Expense ' . $no_doc, 'debit' => $total_expense, 'kredit' => 0];
+		}
+
+		// DEBIT bank pengembalian bila LEBIH KASBON (selisih > 0)
+		if ($selisih > 0) {
+			$coa_bank = '1101-02-01';
+			$bank_pengembalian_id = isset($expense->id_bank_pengembalian) ? trim($expense->id_bank_pengembalian) : '';
+			if (!empty($bank_pengembalian_id)) {
+				$gb = $this->db->select('coa_bank')->get_where('ms_bank', ['id' => $bank_pengembalian_id])->row();
+				if (!empty($gb) && !empty($gb->coa_bank)) $coa_bank = $gb->coa_bank;
+			}
+			$rows[] = ['coa' => $coa_bank, 'nm_coa' => $get_coa_name($coa_bank), 'keterangan' => 'Pengembalian Kelebihan Kasbon ' . $no_doc, 'debit' => $selisih, 'kredit' => 0];
+		}
+
+		// 2. KREDIT: akun kasbon / uang muka
+		if ($total_kasbon > 0) {
+			$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_unique(array_filter($arr_id_kasbon))) . ')' : '');
+			$rows[] = ['coa' => '1103-01-14', 'nm_coa' => $get_coa_name('1103-01-14'), 'keterangan' => $deskripsi_kasbon, 'debit' => 0, 'kredit' => $total_kasbon];
+		}
+
+		// 3. KREDIT: hutang reimburse bila LEBIH EXPENSE (selisih < 0)
+		if ($selisih < 0) {
+			$rows[] = ['coa' => '9999-99-99', 'nm_coa' => $get_coa_name('9999-99-99'), 'keterangan' => 'Lebih Expense Reimburse ' . $no_doc, 'debit' => 0, 'kredit' => abs($selisih)];
+		}
+
+		$created_by = $this->auth->user_id();
+		$created_date = date('Y-m-d H:i:s');
+		foreach ($rows as $r) {
+			$this->db->insert('tr_jurnal', [
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_jurnal,
+				'coa'             => $r['coa'],
+				'id_company'      => $id_company,
+				'nm_company'      => $nm_company,
+				'nm_coa'          => $r['nm_coa'],
+				'debit'           => $r['debit'],
+				'kredit'          => $r['kredit'],
+				'keterangan'      => $r['keterangan'],
+				'sts'             => '0', // belum diposting ke jurnal transaksi
+				'no_transaksi'    => $no_doc,
+				'jenis_transaksi' => 'Pengembalian Expense',
+				'created_by'      => $created_by,
+				'created_date'    => $created_date,
+			]);
+		}
+	}
+
+
 
 	public function reject_pengembalian_expense()
 	{

@@ -238,6 +238,16 @@ class Expense_model extends BF_Model
 		}
 	}
 
+	// get header data by no_doc
+	public function GetDataHeaderByNoDoc($no_doc)
+	{
+		$this->db->select('a.*');
+		$this->db->from($this->table_name . ' a');
+		$this->db->where('a.no_doc', $no_doc);
+		$query = $this->db->get();
+		return ($query->num_rows() != 0) ? $query->row() : false;
+	}
+
 	public function GetDetailPurchaseRequest($id)
 	{
 		$this->db->select('a.*');

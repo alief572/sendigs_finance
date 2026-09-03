@@ -254,7 +254,11 @@ class Pembayaran_material_model extends BF_Model
 				}
 				foreach ($missing as $coa) {
 					if (!isset($coa_cache[$coa])) {
-						$coa_cache[$coa] = '';
+						if ($coa == '9999-99-99') {
+							$coa_cache[$coa] = 'Hutang Expense / Reimburse Karyawan';
+						} else {
+							$coa_cache[$coa] = '';
+						}
 					}
 				}
 			}
@@ -872,6 +876,106 @@ class Pembayaran_material_model extends BF_Model
 
 							$hasil_jurnal .= $generate_tr($no_jurnal, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan . ' - ' . $item_payment->no_doc, $debit, $kredit);
 						}
+					} else {
+						// Sendigs Expense Report / General Expense (e.g. ER-2026-00031)
+						$id_company = '';
+						$nm_company = '';
+						$id_department = '';
+						$nm_department = '';
+
+						if (!empty($get_expense->id_kasbon)) {
+							$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $get_expense->id_kasbon])->row();
+							if (!empty($get_kb) && !empty($get_kb->project)) {
+								$this->consultant->select('a.id, a.nm_company');
+								$this->consultant->from('kons_tr_company a');
+								$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+								$this->consultant->where('b.id_quotation', $get_kb->project);
+								$get_comp = $this->consultant->get()->row();
+								if (!empty($get_comp)) {
+									$id_company = $get_comp->id;
+									$nm_company = $get_comp->nm_company;
+								}
+							}
+						}
+
+						if (empty($nm_company)) {
+							$get_first_comp = $this->consultant->get('kons_tr_company')->row();
+							if (!empty($get_first_comp)) {
+								$id_company = $get_first_comp->id;
+								$nm_company = $get_first_comp->nm_company;
+							}
+						}
+
+						if (!empty($get_expense->departement)) {
+							$id_department = $get_expense->departement;
+							$nm_department = $get_expense->departement;
+							$user_check = !empty($get_expense->nama) ? $get_expense->nama : (!empty($get_expense->created_by) ? $get_expense->created_by : '');
+							if (!empty($user_check)) {
+								$get_usr = $this->db->get_where('users', ['username' => $user_check])->row();
+								if (empty($get_usr)) {
+									$get_usr = $this->db->get_where('users', ['nm_lengkap' => $user_check])->row();
+								}
+								if (!empty($get_usr) && !empty($get_usr->department_id)) {
+									$get_ms_dept = $this->db->get_where('ms_department', ['id' => $get_usr->department_id])->row();
+									if (!empty($get_ms_dept)) {
+										$nm_department = $get_ms_dept->nama;
+									}
+								}
+							}
+						}
+
+						// 1. Hutang Expense (Debit)
+						$coa_hutang = '9999-99-99';
+						$nm_hutang  = 'Hutang Expense / Reimburse Karyawan';
+						if (isset($coa_cache[$coa_hutang]) && $coa_cache[$coa_hutang] !== '') {
+							$nm_hutang = $coa_cache[$coa_hutang];
+						} else {
+							$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_hutang)->get()->row();
+							if (!empty($q_coa_acc)) {
+								$nm_hutang = $q_coa_acc->nama;
+							}
+						}
+
+						$debit = $item_payment->jumlah;
+						$kredit = 0;
+						$keterangan = 'Pelunasan Hutang Expense ' . $item_payment->no_doc . (!empty($get_expense->informasi) ? ' - ' . $get_expense->informasi : '');
+
+						$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_hutang, $nm_hutang, $keterangan, $debit, $kredit);
+
+						// 2. Data PPh & PPN
+						$pph_data = $this->input->post('pph_data');
+						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
+						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
+						$nm_pph = ($row_tipe_pph == '23') ? 'PPh 23' : 'PPh 21';
+
+						$item_ppn_arr = $this->input->post('item_ppn');
+						$item_pph_arr = $this->input->post('item_pph');
+						$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
+						$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
+
+						if (!empty($nilai_ppn_item)) {
+							$nilai_ppn_item = is_numeric($nilai_ppn_item) ? floatval($nilai_ppn_item) : floatval(str_replace(',', '', $nilai_ppn_item));
+						} else {
+							$nilai_ppn_item = 0;
+						}
+
+						if (!empty($nilai_pph_item)) {
+							$nilai_pph_item = is_numeric($nilai_pph_item) ? floatval($nilai_pph_item) : floatval(str_replace(',', '', $nilai_pph_item));
+						} else {
+							$nilai_pph_item = 0;
+						}
+
+						// 3. Jurnal PPN Masukan (Debit)
+						if ($nilai_ppn_item > 0) {
+							$coa_ppn = '1106-01-06';
+							$nm_ppn = 'PPN';
+							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_ppn, $nm_ppn, 'PPN - ' . $item_payment->no_doc, $nilai_ppn_item, 0);
+						}
+
+						// 4. Jurnal Hutang PPh (Kredit)
+						if ($nilai_pph_item > 0) {
+							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_pph, $nm_pph, $nm_pph . ' - ' . $item_payment->no_doc, 0, $nilai_pph_item);
+						}
 					}
 				}
 			} else if ($item_payment->tipe == 'direct_payment') {
@@ -1486,8 +1590,22 @@ class Pembayaran_material_model extends BF_Model
 		$hasil = [];
 		foreach ($query_data as $item) {
 			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-			if (!empty($item->link_doc) && file_exists('assets/expense/' . $item->link_doc)) {
-				$opt .= '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+			if (!empty($item->link_doc)) {
+				$docs = [];
+				$decoded = json_decode($item->link_doc, true);
+				if (is_array($decoded)) {
+					$docs = $decoded;
+				} else if (strpos($item->link_doc, ',') !== false) {
+					$docs = explode(',', $item->link_doc);
+				} else {
+					$docs = [$item->link_doc];
+				}
+				foreach ($docs as $doc_item) {
+					$doc_item = trim($doc_item);
+					if (!empty($doc_item) && file_exists('assets/expense/' . $doc_item)) {
+						$opt .= '<a href="' . base_url('assets/expense/' . $doc_item) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-left: 5px;" title="Unduh Bukti Bayar (' . htmlspecialchars($doc_item) . ')"><i class="fa fa-download"></i></a>';
+					}
+				}
 			}
 
 			$hasil[] = [
@@ -1580,8 +1698,22 @@ class Pembayaran_material_model extends BF_Model
 			$requestor   = !empty($item->created_by) ? $item->created_by : $item->nm_supplier;
 
 			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-			if (!empty($item->link_doc) && file_exists('assets/expense/' . $item->link_doc)) {
-				$opt .= '<a href="' . base_url('assets/expense/' . $item->link_doc) . '" class="btn btn-sm btn-primary" style="margin-left: 5px;"><i class="fa fa-download"></i></a>';
+			if (!empty($item->link_doc)) {
+				$docs = [];
+				$decoded = json_decode($item->link_doc, true);
+				if (is_array($decoded)) {
+					$docs = $decoded;
+				} else if (strpos($item->link_doc, ',') !== false) {
+					$docs = explode(',', $item->link_doc);
+				} else {
+					$docs = [$item->link_doc];
+				}
+				foreach ($docs as $doc_item) {
+					$doc_item = trim($doc_item);
+					if (!empty($doc_item) && file_exists('assets/expense/' . $doc_item)) {
+						$opt .= '<a href="' . base_url('assets/expense/' . $doc_item) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-left: 5px;" title="Unduh Bukti Bayar (' . htmlspecialchars($doc_item) . ')"><i class="fa fa-download"></i></a>';
+					}
+				}
 			}
 
 			$hasil[] = [
