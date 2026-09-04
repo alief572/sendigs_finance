@@ -177,12 +177,16 @@
 	flex-direction: column;
 	justify-content: space-between;
 
-	/* Sizing */
-	min-height: 140px;
+	/* Sizing - Strictly equal dimensions */
+	height: 160px;
+	min-height: 160px;
+	max-height: 160px;
+	box-sizing: border-box;
+	width: 100%;
 
 	/* Spacing */
 	padding: var(--spacing-lg);
-	margin-bottom: var(--spacing-lg);
+	margin-bottom: 0;
 
 	/* Appearance */
 	border: var(--border-subtle);
@@ -216,7 +220,15 @@
 	line-height: var(--line-height-title);
 
 	/* Spacing */
-	margin: 0 0 var(--spacing-md) 0;
+	margin: 0;
+
+	/* Fixed height for identical layout across 1 and 2 lines */
+	height: 52px;
+	min-height: 52px;
+	max-height: 52px;
+	display: flex;
+	align-items: flex-start;
+	overflow: hidden;
 
 	/* Appearance */
 	color: var(--text-white-secondary);
@@ -307,6 +319,18 @@
 	background: linear-gradient(135deg, var(--color-primary-slate) 0%, var(--color-primary-slate-dark) 100%);
 }
 
+/* Indigo - Approval Asset Budget Finance */
+.bg-indigo {
+	background-color: #483D8B;
+	background: linear-gradient(135deg, #6A5ACD 0%, #483D8B 100%);
+}
+
+/* Coral - Approval Asset Budget Management */
+.bg-coral {
+	background-color: #CD5C5C;
+	background: linear-gradient(135deg, #FF6B6B 0%, #CD5C5C 100%);
+}
+
 /* ============================================================================
    5. HOVER STATE - Interactive feedback for mouse users
    ============================================================================ */
@@ -372,11 +396,16 @@
 	}
 
 	.card {
-		min-height: 140px;
+		height: 160px;
+		min-height: 160px;
+		max-height: 160px;
 	}
 
 	.card-title {
 		font-size: var(--font-size-title-desktop);
+		height: 52px;
+		min-height: 52px;
+		max-height: 52px;
 	}
 
 	.card h2 {
@@ -398,11 +427,16 @@
 	}
 
 	.card {
-		min-height: 135px;
+		height: 160px;
+		min-height: 160px;
+		max-height: 160px;
 	}
 
 	.card-title {
 		font-size: var(--font-size-title-tablet);
+		height: 52px;
+		min-height: 52px;
+		max-height: 52px;
 	}
 
 	.card h2 {
@@ -424,13 +458,18 @@
 	}
 
 	.card {
-		min-height: 120px;
+		height: 145px;
+		min-height: 145px;
+		max-height: 145px;
 		padding: var(--spacing-md);
 	}
 
 	.card-title {
 		font-size: var(--font-size-title-mobile);
-		margin-bottom: var(--spacing-sm);
+		height: 48px;
+		min-height: 48px;
+		max-height: 48px;
+		margin: 0;
 	}
 
 	.card h2 {
@@ -454,25 +493,30 @@
 	width: 100%;
 }
 
-/* Remove margin-bottom from last card in row */
-.col-md-4:last-child .card {
-	margin-bottom: 0;
-}
-
-/* Ensure cards fill their grid cells */
+/* Ensure cards fill their grid cells uniformly */
 .col-md-4 {
 	display: flex;
 	flex-direction: column;
+	padding: 0;
 }
 
 .col-md-4 a {
 	display: flex;
 	flex-direction: column;
+	width: 100%;
 	height: 100%;
+	text-decoration: none;
+}
+
+.col-md-4 a:hover,
+.col-md-4 a:focus {
+	text-decoration: none;
 }
 
 .col-md-4 .card {
 	flex: 1;
+	width: 100%;
+	margin-bottom: 0 !important;
 }
 
 /* ============================================================================
