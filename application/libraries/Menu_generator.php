@@ -58,9 +58,22 @@ class Menu_generator
 
 			if(is_array($menu) && count($menu))
 			{
+				$current_username = strtolower($this->ci->auth->user_name());
+				$allowed_approval_users = ['admin', 'finance', 'imanuel'];
+				$is_approval_user = ($this->is_admin || in_array($current_username, $allowed_approval_users) || in_array($this->user_id, [7, 96, 203]));
+
 				foreach ($menu as $rw) {
 					$id 		= $rw->id;
 					$title 		= $rw->title;
+					$clean_title = strtolower(trim($title));
+
+					// Batasi menu utama "Approval" dan "Approval PR" hanya untuk Admin, finance, dan Imanuel
+					if (in_array($clean_title, ['approval', 'approval pr']) || in_array($id, [295, 322])) {
+						if (!$is_approval_user) {
+							continue;
+						}
+					}
+
 					$titleID 	= strtolower(str_replace(' ','',$rw->title)).$id;
 					$link 		= $rw->link;
 					$icon 		= $rw->icon;
@@ -271,9 +284,22 @@ class Menu_generator
 
 			if(is_array($menu) && count($menu))
 			{
+				$current_username = strtolower($this->ci->auth->user_name());
+				$allowed_approval_users = ['admin', 'finance', 'imanuel'];
+				$is_approval_user = ($this->is_admin || in_array($current_username, $allowed_approval_users) || in_array($this->user_id, [7, 96, 203]));
+
 				foreach ($menu as $rw) {
 					$id 		= $rw->id;
 					$title 		= $rw->title;
+					$clean_title = strtolower(trim($title));
+
+					// Batasi menu utama "Approval" dan "Approval PR" hanya untuk Admin, finance, dan Imanuel
+					if (in_array($clean_title, ['approval', 'approval pr']) || in_array($id, [295, 322])) {
+						if (!$is_approval_user) {
+							continue;
+						}
+					}
+
 					$link 		= $rw->link;
 					$icon 		= $rw->icon;
 					$target 	= $rw->target;
