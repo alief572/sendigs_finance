@@ -250,6 +250,20 @@ class Dashboard_model extends BF_Model
         $this->db->where('a.sts_reject', null);
         $get_ttl_app_periodik = $this->db->get()->num_rows();
 
+        $this->db->select('a.id');
+        $this->db->from('asset_planning a');
+        $this->db->where('a.deleted', 'N');
+        $this->db->where('a.status', 'N');
+        $this->db->where('a.sts_finance', '0');
+        $get_ttl_app_asset_budget_finance = $this->db->get()->num_rows();
+
+        $this->db->select('a.id');
+        $this->db->from('asset_planning a');
+        $this->db->where('a.deleted', 'N');
+        $this->db->where('a.status', 'N');
+        $this->db->where('a.sts_finance', '1');
+        $get_ttl_app_asset_budget_management = $this->db->get()->num_rows();
+
         // print_r($this->db->last_query());
         // exit;
 
@@ -263,7 +277,9 @@ class Dashboard_model extends BF_Model
             'ttl_app_kasbon_management' => $get_ttl_app_kasbon_management,
             'ttl_app_expense_finance' => $get_ttl_app_expense_finance,
             'ttl_app_expense_management' => $get_ttl_app_expense_management,
-            'ttl_app_periodik' => $get_ttl_app_periodik
+            'ttl_app_periodik' => $get_ttl_app_periodik,
+            'ttl_app_asset_budget_finance' => $get_ttl_app_asset_budget_finance,
+            'ttl_app_asset_budget_management' => $get_ttl_app_asset_budget_management
         ];
 
         return $response;
