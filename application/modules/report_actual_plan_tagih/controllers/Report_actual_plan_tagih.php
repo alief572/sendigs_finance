@@ -929,4 +929,380 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         echo json_encode($response);
     }
+
+    public function get_data_report_macet()
+    {
+        $get = $this->input->get();
+
+        $draw    = intval($get['draw'] ?? 1);
+        $length  = intval($get['length'] ?? 10);
+        $start   = intval($get['start'] ?? 0);
+        $search  = $get['search']['value'] ?? '';
+        $client  = $get['client'] ?? '';
+        $company = $get['company'] ?? '';
+
+        $dbcnl = defined('DBCNL') ? DBCNL : 'db_consultant_new';
+
+        // 1. Total records (without search keyword)
+        $this->db->select('p.id_spk_penawaran');
+        $this->db->from('kons_tr_plan_tagih_detail p');
+        $this->db->join("{$dbcnl}.kons_tr_spk_penawaran a", 'a.id_spk_penawaran = p.id_spk_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_penawaran b", 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->where('p.status_terakhir', '3');
+        $this->db->where('p.sts_invoice <>', '1');
+
+        if (!empty($client)) {
+            $this->db->where('a.id_customer', $client);
+        }
+        if (!empty($company)) {
+            $this->db->where('b.company', $company);
+        }
+        $this->db->group_by('p.id_spk_penawaran');
+        $count_all = $this->db->get()->num_rows();
+
+        // 2. Summary query (with active search and filters) for KPI cards & Grand Totals
+        $this->db->select("
+            p.id_spk_penawaran,
+            COALESCE(a.nilai_kontrak, 0) AS nilai_kontrak,
+            COALESCE(inv.total_invoice, 0) AS total_invoice,
+            SUM(p.nominal_payment) AS nominal_macet
+        ", FALSE);
+        $this->db->from('kons_tr_plan_tagih_detail p');
+        $this->db->join("{$dbcnl}.kons_tr_spk_penawaran a", 'a.id_spk_penawaran = p.id_spk_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_penawaran b", 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_company c", 'c.id = b.company', 'left');
+        $this->db->join("{$dbcnl}.kons_master_konsultasi_header d", 'd.id_konsultasi_h = a.id_project', 'left');
+        $this->db->join("(
+            SELECT id_spk_penawaran, SUM(nominal_payment) AS total_invoice
+            FROM kons_tr_plan_tagih_detail
+            WHERE sts_invoice = '1'
+            GROUP BY id_spk_penawaran
+        ) inv", 'inv.id_spk_penawaran = p.id_spk_penawaran', 'left');
+
+        $this->db->where('p.status_terakhir', '3');
+        $this->db->where('p.sts_invoice <>', '1');
+
+        if (!empty($client)) {
+            $this->db->where('a.id_customer', $client);
+        }
+        if (!empty($company)) {
+            $this->db->where('b.company', $company);
+        }
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('p.id_spk_penawaran', $search, 'both');
+            $this->db->or_like('a.nm_customer', $search, 'both');
+            $this->db->or_like('c.nm_company', $search, 'both');
+            $this->db->or_like('d.nm_paket', $search, 'both');
+            $this->db->or_like('a.nm_sales', $search, 'both');
+            $this->db->or_like('a.nm_konsultan_1', $search, 'both');
+            $this->db->or_like('a.nm_konsultan_2', $search, 'both');
+            $this->db->group_end();
+        }
+        $this->db->group_by('p.id_spk_penawaran');
+        $subquery_sql = $this->db->get_compiled_select();
+
+        $summary_sql = "
+            SELECT 
+                COUNT(*) AS total_count,
+                COALESCE(SUM(sub.nilai_kontrak), 0) AS total_nilai_spk,
+                COALESCE(SUM(sub.total_invoice), 0) AS total_invoice,
+                COALESCE(SUM(sub.nominal_macet), 0) AS grand_total_macet
+            FROM ({$subquery_sql}) AS sub
+        ";
+        $summary = $this->db->query($summary_sql)->row();
+        $count_filter = !empty($summary->total_count) ? intval($summary->total_count) : 0;
+
+        // 3. Paginated Data
+        $this->db->select("
+            p.id_spk_penawaran,
+            COALESCE(c.nm_company, '-') AS nm_company,
+            COALESCE(a.nm_customer, '-') AS nm_customer,
+            COALESCE(a.nm_konsultan_1, '') AS nm_konsultan_1,
+            COALESCE(a.nm_konsultan_2, '') AS nm_konsultan_2,
+            COALESCE(a.nm_sales, '') AS nm_sales,
+            COALESCE(d.nm_paket, '-') AS nm_paket,
+            COALESCE(a.nilai_kontrak, 0) AS nilai_kontrak,
+            COALESCE(inv.total_invoice, 0) AS total_invoice,
+            SUM(p.nominal_payment) AS nominal_macet,
+            COUNT(p.id) AS jml_termin_macet
+        ", FALSE);
+        $this->db->from('kons_tr_plan_tagih_detail p');
+        $this->db->join("{$dbcnl}.kons_tr_spk_penawaran a", 'a.id_spk_penawaran = p.id_spk_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_penawaran b", 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_company c", 'c.id = b.company', 'left');
+        $this->db->join("{$dbcnl}.kons_master_konsultasi_header d", 'd.id_konsultasi_h = a.id_project', 'left');
+        $this->db->join("(
+            SELECT id_spk_penawaran, SUM(nominal_payment) AS total_invoice
+            FROM kons_tr_plan_tagih_detail
+            WHERE sts_invoice = '1'
+            GROUP BY id_spk_penawaran
+        ) inv", 'inv.id_spk_penawaran = p.id_spk_penawaran', 'left');
+
+        $this->db->where('p.status_terakhir', '3');
+        $this->db->where('p.sts_invoice <>', '1');
+
+        if (!empty($client)) {
+            $this->db->where('a.id_customer', $client);
+        }
+        if (!empty($company)) {
+            $this->db->where('b.company', $company);
+        }
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('p.id_spk_penawaran', $search, 'both');
+            $this->db->or_like('a.nm_customer', $search, 'both');
+            $this->db->or_like('c.nm_company', $search, 'both');
+            $this->db->or_like('d.nm_paket', $search, 'both');
+            $this->db->or_like('a.nm_sales', $search, 'both');
+            $this->db->or_like('a.nm_konsultan_1', $search, 'both');
+            $this->db->or_like('a.nm_konsultan_2', $search, 'both');
+            $this->db->group_end();
+        }
+        $this->db->group_by('p.id_spk_penawaran');
+        $this->db->order_by('nominal_macet', 'DESC');
+        if ($length > 0) {
+            $this->db->limit($length, $start);
+        }
+        $get_data = $this->db->get()->result();
+
+        // 4. Format rows for client
+        $no = $start;
+        $hasil = [];
+        foreach ($get_data as $item) {
+            $arr_nm_konsultan = [];
+            if (!empty($item->nm_konsultan_1)) {
+                $arr_nm_konsultan[] = $item->nm_konsultan_1;
+            }
+            if (!empty($item->nm_konsultan_2)) {
+                $arr_nm_konsultan[] = $item->nm_konsultan_2;
+            }
+            $nm_consultant = !empty($arr_nm_konsultan) ? implode(', ', $arr_nm_konsultan) : '-';
+
+            $hasil[] = [
+                'no'                => ++$no,
+                'company'           => $item->nm_company,
+                'customer'          => $item->nm_customer,
+                'no_spk'            => $item->id_spk_penawaran,
+                'consultant'        => $nm_consultant,
+                'sales'             => !empty($item->nm_sales) ? $item->nm_sales : '-',
+                'project'           => $item->nm_paket,
+                'nominal_spk'       => number_format($item->nilai_kontrak, 0, ',', '.'),
+                'nominal_invoice'   => number_format($item->total_invoice, 0, ',', '.'),
+                'nominal_macet'     => number_format($item->nominal_macet, 0, ',', '.'),
+                'jml_termin_macet'  => $item->jml_termin_macet,
+                'id_spk_penawaran'  => $item->id_spk_penawaran
+            ];
+        }
+
+        $response = [
+            'draw'            => $draw,
+            'recordsTotal'    => $count_all,
+            'recordsFiltered' => $count_filter,
+            'data'            => $hasil,
+            'total_spk_macet' => $count_filter,
+            'total_nilai_spk' => $summary->total_nilai_spk ?? 0,
+            'total_invoice'   => $summary->total_invoice ?? 0,
+            'total_macet'     => $summary->grand_total_macet ?? 0
+        ];
+
+        echo json_encode($response);
+    }
+
+    public function get_detail_termin_macet()
+    {
+        $id_spk_penawaran = $this->input->get('id_spk_penawaran');
+        if (empty($id_spk_penawaran)) {
+            echo json_encode(['status' => 0, 'message' => 'No. SPK tidak boleh kosong!']);
+            return;
+        }
+
+        $dbcnl = defined('DBCNL') ? DBCNL : 'db_consultant_new';
+
+        $spk = $this->db->select("a.id_spk_penawaran, a.nm_customer, COALESCE(c.nm_company, '-') AS nm_company, COALESCE(d.nm_paket, '-') AS nm_paket, a.nilai_kontrak")
+            ->from("{$dbcnl}.kons_tr_spk_penawaran a")
+            ->join("{$dbcnl}.kons_tr_penawaran b", 'b.id_quotation = a.id_penawaran', 'left')
+            ->join("{$dbcnl}.kons_tr_company c", 'c.id = b.company', 'left')
+            ->join("{$dbcnl}.kons_master_konsultasi_header d", 'd.id_konsultasi_h = a.id_project', 'left')
+            ->where('a.id_spk_penawaran', $id_spk_penawaran)
+            ->get()->row();
+
+        $termin = $this->db->select("
+            p.id,
+            p.id_spk_penawaran,
+            p.urutan,
+            p.term_payment,
+            p.persen_payment,
+            p.nominal_payment,
+            p.desc_payment,
+            COALESCE(p.tgl_aktual_plan_tagih, p.tgl_plan_tagih) AS tgl_tagih,
+            p.status_terakhir
+        ")
+            ->from('kons_tr_plan_tagih_detail p')
+            ->where('p.id_spk_penawaran', $id_spk_penawaran)
+            ->where('p.status_terakhir', '3')
+            ->where('p.sts_invoice <>', '1')
+            ->order_by('p.urutan', 'ASC')
+            ->get()->result();
+
+        $rows = [];
+        $total_macet_spk = 0;
+        foreach ($termin as $t) {
+            $total_macet_spk += $t->nominal_payment;
+            $rows[] = [
+                'urutan'          => $t->urutan,
+                'term_payment'    => $t->term_payment ?? ('Termin ' . $t->urutan),
+                'persen_payment'  => number_format($t->persen_payment, 2, ',', '.') . '%',
+                'nominal_payment' => number_format($t->nominal_payment, 0, ',', '.'),
+                'tgl_tagih'       => !empty($t->tgl_tagih) ? date('d-m-Y', strtotime($t->tgl_tagih)) : '-',
+                'desc_payment'    => !empty($t->desc_payment) ? $t->desc_payment : '-'
+            ];
+        }
+
+        echo json_encode([
+            'status'          => 1,
+            'spk'             => $spk,
+            'termin'          => $rows,
+            'total_macet_spk' => number_format($total_macet_spk, 0, ',', '.')
+        ]);
+    }
+
+    public function download_excel_macet()
+    {
+        $get = $this->input->get();
+        $client = $get['client'] ?? '';
+        $company = $get['company'] ?? '';
+        $dbcnl = defined('DBCNL') ? DBCNL : 'db_consultant_new';
+
+        $this->db->select("
+            p.id_spk_penawaran,
+            COALESCE(c.nm_company, '-') AS nm_company,
+            COALESCE(a.nm_customer, '-') AS nm_customer,
+            COALESCE(a.nm_konsultan_1, '') AS nm_konsultan_1,
+            COALESCE(a.nm_konsultan_2, '') AS nm_konsultan_2,
+            COALESCE(a.nm_sales, '') AS nm_sales,
+            COALESCE(d.nm_paket, '-') AS nm_paket,
+            COALESCE(a.nilai_kontrak, 0) AS nilai_kontrak,
+            COALESCE(inv.total_invoice, 0) AS total_invoice,
+            SUM(p.nominal_payment) AS nominal_macet,
+            COUNT(p.id) AS jml_termin_macet
+        ", FALSE);
+        $this->db->from('kons_tr_plan_tagih_detail p');
+        $this->db->join("{$dbcnl}.kons_tr_spk_penawaran a", 'a.id_spk_penawaran = p.id_spk_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_penawaran b", 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join("{$dbcnl}.kons_tr_company c", 'c.id = b.company', 'left');
+        $this->db->join("{$dbcnl}.kons_master_konsultasi_header d", 'd.id_konsultasi_h = a.id_project', 'left');
+        $this->db->join("(
+            SELECT id_spk_penawaran, SUM(nominal_payment) AS total_invoice
+            FROM kons_tr_plan_tagih_detail
+            WHERE sts_invoice = '1'
+            GROUP BY id_spk_penawaran
+        ) inv", 'inv.id_spk_penawaran = p.id_spk_penawaran', 'left');
+
+        $this->db->where('p.status_terakhir', '3');
+        $this->db->where('p.sts_invoice <>', '1');
+
+        if (!empty($client)) {
+            $this->db->where('a.id_customer', $client);
+        }
+        if (!empty($company)) {
+            $this->db->where('b.company', $company);
+        }
+        $this->db->group_by('p.id_spk_penawaran');
+        $this->db->order_by('nominal_macet', 'DESC');
+        $data = $this->db->get()->result();
+
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
+        $this->load->library('PHPExcel');
+
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->getActiveSheet();
+        $sheet->setTitle('Laporan Tagihan Macet');
+
+        $row = 1;
+        $sheet->setCellValue('A' . $row, 'Laporan Tagihan Macet (All-Time)');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Ekspor: ' . date('d-m-Y H:i:s'));
+        $row += 2;
+
+        $headers = ['No.', 'Company', 'Customer', 'No. SPK', 'Consultant', 'Sales', 'Project', 'Nilai Kontrak', 'Sudah Terinvoice', 'Nominal Macet', 'Jml Termin Macet'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+            $col++;
+        }
+
+        $headerRow = $row;
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'alignment' => ['horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER],
+            'fill' => [
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'startcolor' => ['rgb' => 'C0392B']
+            ],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A' . $headerRow . ':K' . $headerRow)->applyFromArray($headerStyle);
+        $row++;
+
+        $no = 1;
+        $ttl_spk = 0;
+        $ttl_inv = 0;
+        $ttl_macet = 0;
+        foreach ($data as $item) {
+            $arr_nm_konsultan = [];
+            if (!empty($item->nm_konsultan_1)) $arr_nm_konsultan[] = $item->nm_konsultan_1;
+            if (!empty($item->nm_konsultan_2)) $arr_nm_konsultan[] = $item->nm_konsultan_2;
+            $nm_consultant = !empty($arr_nm_konsultan) ? implode(', ', $arr_nm_konsultan) : '-';
+
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nm_company);
+            $sheet->setCellValue('C' . $row, $item->nm_customer);
+            $sheet->setCellValue('D' . $row, $item->id_spk_penawaran);
+            $sheet->setCellValue('E' . $row, $nm_consultant);
+            $sheet->setCellValue('F' . $row, $item->nm_sales ?: '-');
+            $sheet->setCellValue('G' . $row, $item->nm_paket);
+            $sheet->setCellValue('H' . $row, $item->nilai_kontrak);
+            $sheet->setCellValue('I' . $row, $item->total_invoice);
+            $sheet->setCellValue('J' . $row, $item->nominal_macet);
+            $sheet->setCellValue('K' . $row, $item->jml_termin_macet);
+
+            $sheet->getStyle('H' . $row . ':J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('K' . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+
+            $ttl_spk += $item->nilai_kontrak;
+            $ttl_inv += $item->total_invoice;
+            $ttl_macet += $item->nominal_macet;
+            $row++;
+        }
+
+        // Footer / Total
+        $sheet->setCellValue('A' . $row, 'Total (' . count($data) . ' SPK)');
+        $sheet->mergeCells('A' . $row . ':G' . $row);
+        $sheet->setCellValue('H' . $row, $ttl_spk);
+        $sheet->setCellValue('I' . $row, $ttl_inv);
+        $sheet->setCellValue('J' . $row, $ttl_macet);
+        $sheet->getStyle('H' . $row . ':J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+        $footerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'type' => PHPExcel_Style_Fill::FILL_SOLID,
+                'startcolor' => ['rgb' => '2B3A45']
+            ],
+            'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A' . $row . ':K' . $row)->applyFromArray($footerStyle);
+
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="Report_Tagihan_Macet_' . date('Ymd_His') . '.xls"');
+        header('Cache-Control: max-age=0');
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
 }
