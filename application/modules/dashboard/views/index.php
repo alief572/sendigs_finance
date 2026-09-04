@@ -48,7 +48,7 @@ $is_imanuel = ($current_username === 'imanuel' || $user_id == 96);
 			?>
 
 			<?php
-			if ($is_admin || $is_finance) {
+			if ($is_admin || $is_imanuel) {
 			?>
 				<div class="col-md-4">
 					<a href="<?= base_url('app_pr_stock/approval_management') ?>">
