@@ -64,7 +64,7 @@ class Jurnal_payment_model extends BF_Model
             5 => 'a.nm_company'
         ];
 
-        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense', 'Expense Report'];
 
         // Base filter criteria
         $this->db->from('tr_jurnal a');
@@ -160,8 +160,13 @@ class Jurnal_payment_model extends BF_Model
                 }
             }
 
-            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
-            $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item->jenis_transaksi;
+            if ($item->jenis_transaksi == 'Expense Report') {
+                $no_pengajuan = $item->no_transaksi;
+                $raw_tipe_payment = 'Expense Report';
+            } else {
+                $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
+                $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item->jenis_transaksi;
+            }
 
             // Format kategori: replace '_' menjadi spasi dan jadikan setiap kata berawalan huruf kapital
             $clean_kategori = ucwords(str_replace('_', ' ', strtolower(trim($raw_tipe_payment))));
@@ -203,7 +208,7 @@ class Jurnal_payment_model extends BF_Model
 
     public function get_list_jurnal($filter = null)
     {
-        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense', 'Expense Report'];
 
         $this->db->select('a.*');
         $this->db->from('tr_jurnal a');
@@ -258,8 +263,13 @@ class Jurnal_payment_model extends BF_Model
                 }
             }
 
-            $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
-            $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item['jenis_transaksi'];
+            if ($item['jenis_transaksi'] == 'Expense Report') {
+                $no_pengajuan = $item['no_transaksi'];
+                $raw_tipe_payment = 'Expense Report';
+            } else {
+                $no_pengajuan = (!empty($arr_no_pengajuan)) ? implode(', ', array_unique($arr_no_pengajuan)) : '-';
+                $raw_tipe_payment = (!empty($arr_tipe_payment)) ? implode(', ', array_unique($arr_tipe_payment)) : $item['jenis_transaksi'];
+            }
             $clean_kategori = ucwords(str_replace('_', ' ', strtolower(trim($raw_tipe_payment))));
 
             $item['no_pengajuan'] = $no_pengajuan;
@@ -273,7 +283,7 @@ class Jurnal_payment_model extends BF_Model
 
     public function get_no_payment_jurnal()
     {
-        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense'];
+        $arr_jenis_transaksi = ['Payment', 'Transport', 'Transportasi', 'Kasbon', 'Expense', 'Expense Report'];
 
         $get_no_payment_jurnal = $this->db->select('a.no_transaksi')
             ->from('tr_jurnal a')
