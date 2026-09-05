@@ -924,23 +924,63 @@ class Pembayaran_material_model extends BF_Model
 							}
 						}
 
-						// 1. Hutang Expense (Debit)
-						$coa_hutang = '9999-99-99';
-						$nm_hutang  = 'Hutang Expense / Reimburse Karyawan';
-						if (isset($coa_cache[$coa_hutang]) && $coa_cache[$coa_hutang] !== '') {
-							$nm_hutang = $coa_cache[$coa_hutang];
-						} else {
-							$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_hutang)->get()->row();
-							if (!empty($q_coa_acc)) {
-								$nm_hutang = $q_coa_acc->nama;
-							}
+						// 1. Sisi DEBIT:
+						// Jika EXPENSE BIASA (tanpa id_kasbon), debit langsung ke COA Biaya/Detail barang & jasa (BUKAN Hutang Expense 9999-99-99)
+						$is_direct_expense = empty($get_expense->id_kasbon);
+						$expense_details = [];
+						if ($is_direct_expense) {
+							$expense_details = $this->db->get_where('tr_expense_detail', ['no_doc' => $item_payment->no_doc])->result();
 						}
 
-						$debit = $item_payment->jumlah;
-						$kredit = 0;
-						$keterangan = 'Pelunasan Hutang Expense ' . $item_payment->no_doc . (!empty($get_expense->informasi) ? ' - ' . $get_expense->informasi : '');
+						if ($is_direct_expense && !empty($expense_details)) {
+							$arr_detail_coas = [];
+							foreach ($expense_details as $dtl) {
+								if (!empty($dtl->coa)) $arr_detail_coas[] = $dtl->coa;
+							}
+							$load_coas($arr_detail_coas);
 
-						$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_hutang, $nm_hutang, $keterangan, $debit, $kredit);
+							foreach ($expense_details as $dtl) {
+								$coa_item = !empty($dtl->coa) ? $dtl->coa : '1304-01-01';
+								$nm_item_coa = isset($coa_cache[$coa_item]) && $coa_cache[$coa_item] !== '' ? $coa_cache[$coa_item] : '';
+								if (empty($nm_item_coa)) {
+									$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_item)->get()->row();
+									if (!empty($q_coa_acc)) {
+										$nm_item_coa = $q_coa_acc->nama;
+										$coa_cache[$coa_item] = $nm_item_coa;
+									} else {
+										$nm_item_coa = 'Biaya Expense';
+									}
+								}
+
+								$debit_item = floatval(!empty($dtl->total_harga) && $dtl->total_harga > 0 ? $dtl->total_harga : $dtl->expense);
+								if ($debit_item <= 0 && count($expense_details) == 1) {
+									$debit_item = floatval($item_payment->jumlah);
+								}
+
+								$desc_detail = !empty($dtl->deskripsi) ? $dtl->deskripsi : (!empty($dtl->keterangan) ? $dtl->keterangan : (!empty($get_expense->informasi) ? $get_expense->informasi : ''));
+								$keterangan = $item_payment->no_doc . (!empty($desc_detail) ? ' - ' . $desc_detail : '');
+
+								$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_item, $nm_item_coa, $keterangan, $debit_item, 0);
+							}
+						} else {
+							// Expense Report (ada Kasbon / Pelunasan Lebih Expense Reimburse)
+							$coa_hutang = '9999-99-99';
+							$nm_hutang  = 'Hutang Expense / Reimburse Karyawan';
+							if (isset($coa_cache[$coa_hutang]) && $coa_cache[$coa_hutang] !== '') {
+								$nm_hutang = $coa_cache[$coa_hutang];
+							} else {
+								$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_hutang)->get()->row();
+								if (!empty($q_coa_acc)) {
+									$nm_hutang = $q_coa_acc->nama;
+								}
+							}
+
+							$debit = $item_payment->jumlah;
+							$kredit = 0;
+							$keterangan = 'Pelunasan Hutang Expense ' . $item_payment->no_doc . (!empty($get_expense->informasi) ? ' - ' . $get_expense->informasi : '');
+
+							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $coa_hutang, $nm_hutang, $keterangan, $debit, $kredit);
+						}
 
 						// 2. Data PPh & PPN
 						$pph_data = $this->input->post('pph_data');

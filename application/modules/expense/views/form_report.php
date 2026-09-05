@@ -98,6 +98,8 @@ foreach ($option_coa as $keys => $val) {
 <input type="hidden" id="departement" name="departement" value="<?php echo (isset($data->departement) ? $data->departement : (isset($data_kasbon->departement) ? $data_kasbon->departement : $dept)); ?>">
 <input type="hidden" id="no_doc_kasbon" name="no_doc_kasbon" value="<?= $no_doc_kasbon ?>">
 
+<?php include __DIR__ . '/reject_card.php'; ?>
+
 <div class="box box-custom">
 	<div class="box-custom-header">
 		<h4 class="box-custom-title">
@@ -146,13 +148,6 @@ foreach ($option_coa as $keys => $val) {
 						<label class="col-sm-3 control-label">Keterangan <b class="text-red">*</b></label>
 						<div class="col-sm-9">
 							<textarea class="form-control input-sm" id="informasi" name="informasi" rows="2" required placeholder="Tuliskan keterangan laporan expense..."><?php echo $keterangan; ?></textarea>
-							<?php
-							if (isset($data->st_reject) && !empty($data->st_reject)) {
-								echo '<div class="alert alert-danger" style="margin-top:5px; padding:6px 10px; font-size:12px;">
-									<b><i class="fa fa-ban"></i> Catatan Reject:</b><br>' . $data->st_reject . '
-								</div>';
-							}
-							?>
 						</div>
 					</div>
 				</div>
@@ -515,6 +510,10 @@ foreach ($option_coa as $keys => $val) {
 	var url_set_jurnal = siteurl + 'expense/set_jurnal_expense';
 
 	$(document).ready(function() {
+		var companyName = (document.title.indexOf('|') !== -1) ? document.title.split('|')[0].trim() : 'SENDIGS SS';
+		document.title = companyName + ' | Expense Report';
+		$('.content-header h1').html('<i class="fa fa-ticket"></i> Expense Report');
+
 		$('.select2').select2({ width: '100%' });
 		$(".divide").divide();
 		$(".tanggal").datepicker({

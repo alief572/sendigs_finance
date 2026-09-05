@@ -46,13 +46,11 @@ class Expense extends Admin_Controller
 	{
 		parent::__construct();
 		$this->load->model(array('all/All_model', 'Expense/Expense_model', 'All/All_model', 'Jurnal_nomor/Jurnal_model', 'Coa_expense/Coa_expense_model'));
-		$this->template->title('Expense Report');
+		$this->template->title('Expense');
 		$this->template->page_icon('fa fa-cubes');
 		date_default_timezone_set('Asia/Bangkok');
-		$this->status = array("0" => "Baru", "1" => "Disetujui", "2" => "Disetujui Management", "3" => "Selesai", "9" => "Ditolak");
+		$this->status = array("0" => "Waiting Approval Finance", "1" => "Approved", "2" => "Approved", "3" => "Approved", "9" => "Rejected");
 	}
-
-	// list kasbon
 	public function kasbon()
 	{
 		// $where = array('a.nama' => $this->auth->user_name());
@@ -1035,8 +1033,8 @@ class Expense extends Admin_Controller
 		// $this->template->set('results', $data);
 		// $this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $this->status);
-		$this->template->page_icon('fa fa-list');
-		$this->template->title('Expense Report');
+		$this->template->page_icon('fa fa-cubes');
+		$this->template->title('Expense');
 		$this->template->render('index');
 	}
 
@@ -1073,6 +1071,8 @@ class Expense extends Admin_Controller
 		$this->template->set('data_coa', $data_coa);
 		$this->template->set('option_coa', $option_coa);
 		$this->template->set('stsview', '');
+		$this->template->page_icon('fa fa-cubes');
+		$this->template->title('Expense');
 
 		$this->template->render('form');
 	}
@@ -1217,6 +1217,8 @@ class Expense extends Admin_Controller
 		$this->template->set('pre_id', $pre_id);
 		$this->template->set('detail_items', $detail_items);
 		$this->template->set('stsview', '');
+		$this->template->page_icon('fa fa-ticket');
+		$this->template->title('Expense Report');
 		$this->template->render('form_report');
 	}
 
@@ -1246,7 +1248,6 @@ class Expense extends Admin_Controller
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('stsview', '');
-		$this->template->page_icon('fa fa-list');
 
 		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
 		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
@@ -1274,8 +1275,12 @@ class Expense extends Admin_Controller
 			}
 			$this->template->set('data_kasbon', $data_kasbon);
 			$this->template->set('detail_items', $detail_items);
+			$this->template->page_icon('fa fa-ticket');
+			$this->template->title('Expense Report');
 			$this->template->render('form_report');
 		} else {
+			$this->template->page_icon('fa fa-cubes');
+			$this->template->title('Expense');
 			$this->template->render('form');
 		}
 	}
@@ -1305,7 +1310,6 @@ class Expense extends Admin_Controller
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('stsview', 'view');
-		$this->template->page_icon('fa fa-list');
 
 		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
 		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
@@ -1333,8 +1337,12 @@ class Expense extends Admin_Controller
 			}
 			$this->template->set('data_kasbon', $data_kasbon);
 			$this->template->set('detail_items', $detail_items);
+			$this->template->page_icon('fa fa-ticket');
+			$this->template->title('Expense Report');
 			$this->template->render('form_report');
 		} else {
+			$this->template->page_icon('fa fa-cubes');
+			$this->template->title('Expense');
 			$this->template->render('form');
 		}
 	}
@@ -1343,10 +1351,20 @@ class Expense extends Admin_Controller
 	{
 		$response = $this->Expense_model->GetDataHeader($id);
 		$data_detail	= $this->Expense_model->GetDataDetail($response->no_doc);
+
+		$detail_files = [];
+		if (!empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc])->result();
+			foreach ($get_df as $df) {
+				$detail_files[$df->id_detail][] = $df;
+			}
+		}
+
 		$data = array(
 			'status'		=> $this->status,
 			'data_detail'	=> $data_detail,
 			'data'			=> $response,
+			'detail_files'	=> $detail_files,
 		);
 		$this->load->view('expense_print', $data);
 	}
@@ -1354,10 +1372,20 @@ class Expense extends Admin_Controller
 	{
 		$response = $this->Expense_model->GetDataHeader($id);
 		$data_detail	= $this->Expense_model->GetDataDetail($response->no_doc);
+
+		$detail_files = [];
+		if (!empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc])->result();
+			foreach ($get_df as $df) {
+				$detail_files[$df->id_detail][] = $df;
+			}
+		}
+
 		$data = array(
 			'status'		=> $this->status,
 			'data_detail'	=> $data_detail,
 			'data'			=> $response,
+			'detail_files'	=> $detail_files,
 		);
 		$this->load->view('expense_pettycash_print', $data);
 	}
@@ -1716,6 +1744,12 @@ class Expense extends Admin_Controller
 				'kurang_bayar' => $kurang_bayar,
 				'keterangan_kurang_bayar' => $this->input->post('keterangan_kurang_bayar'),
 				'st_reject' => null,
+				'reject_reason' => null,
+				'reject_reason_finance' => null,
+				'rejected_by' => null,
+				'rejected_on' => null,
+				'sts_reject' => null,
+				'sts_reject_manage' => null,
 				'modified_by' => $this->auth->user_name(),
 				'modified_on' => date("Y-m-d H:i:s")
 			);
@@ -3181,7 +3215,11 @@ class Expense extends Admin_Controller
 				'status'                => 9,
 				'sts_finance'           => '0',
 				'app_finance_date'      => null,
-				'reject_reason_finance' => $reason
+				'reject_reason_finance' => $reason,
+				'reject_reason'         => $reason,
+				'st_reject'             => $reason,
+				'rejected_by'           => $this->auth->user_name(),
+				'rejected_on'           => date('Y-m-d H:i:s')
 			);
 
 			$this->db->where('id', $id);
@@ -3230,7 +3268,10 @@ class Expense extends Admin_Controller
 				'reject_reason_finance' => $reason,
 				'sts_reject' => '1',
 				'sts_reject_manage' => '1',
-				'reject_reason' => $reason
+				'reject_reason' => $reason,
+				'st_reject' => $reason,
+				'rejected_by' => $this->auth->user_name(),
+				'rejected_on' => date('Y-m-d H:i:s')
 			);
 			$result = $this->All_model->dataUpdate($table, $data, array('id' => $id));
 			$keterangan     = "SUKSES, Reject data " . $id;
@@ -4026,6 +4067,43 @@ class Expense extends Admin_Controller
 		return $sts;
 	}
 
+	// --- Helper Badge Status Khusus Modul Expense ---
+	private function _render_expense_status_badge($item)
+	{
+		$status_val = is_array($item) ? (isset($item['status']) ? (string)$item['status'] : '') : (isset($item->status) ? (string)$item->status : '');
+		$sts_fin    = is_array($item) ? (isset($item['sts_finance']) ? (string)$item['sts_finance'] : '') : (isset($item->sts_finance) ? (string)$item->sts_finance : '');
+
+		// 4. Rejected
+		if ($status_val === '9') {
+			$sts = '<span class="badge bg-red" style="font-size:11px; padding:4px 8px;">Rejected</span>';
+			$reason = '';
+			if (is_array($item)) {
+				$reason = !empty($item['reject_reason']) ? $item['reject_reason'] : (!empty($item['reject_reason_finance']) ? $item['reject_reason_finance'] : (!empty($item['st_reject']) ? $item['st_reject'] : ''));
+			} else {
+				$reason = !empty($item->reject_reason) ? $item->reject_reason : (!empty($item->reject_reason_finance) ? $item->reject_reason_finance : (!empty($item->st_reject) ? $item->st_reject : ''));
+			}
+			if (!empty($reason)) {
+				$sts .= '<br><span class="badge" style="background:#fde8e8; color:#c53030; border:1px solid #feb2b2; font-weight:normal; margin-top:4px; font-size:10px; display:inline-block; max-width:200px; white-space:normal; text-align:center; padding:3px 6px;" title="Alasan Reject: ' . htmlspecialchars($reason) . '"><i class="fa fa-info-circle"></i> ' . htmlspecialchars($reason) . '</span>';
+			}
+			return $sts;
+		}
+
+		// 3. Approved
+		if (in_array($status_val, ['1', '2', '3'])) {
+			return '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;">Approved</span>';
+		}
+
+		// 1 & 2. Waiting Approval
+		if ($status_val === '0' || $status_val === '') {
+			if ($sts_fin === '1') {
+				return '<span class="badge" style="background-color:#f39c12 !important; color:#fff; font-size:11px; padding:4px 8px;">Waiting Approval Management</span>';
+			}
+			return '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;">Waiting Approval Finance</span>';
+		}
+
+		return '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">-</span>';
+	}
+
 	// --- Helper Tombol Action ---
 	private function _render_action_buttons($item)
 	{
@@ -4441,10 +4519,10 @@ class Expense extends Admin_Controller
 		$start = $post['start'];
 		$search = $post['search']['value'];
 
-		$this->db->select('a.*, b.nm_lengkap as nmuser, c.username as nmapproval');
+		$this->db->select('a.*, b.nm_lengkap as nmuser, c.nm_lengkap as nmapproval');
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
-		$this->db->join('users c', 'a.approval=c.username', 'left');
+		$this->db->join('users c', 'COALESCE(NULLIF(a.approved_by, ""), a.approval) = c.username', 'left');
 		if (empty($all)) {
 			$this->db->group_start();
 			$this->db->where('a.pettycash', null);
@@ -4475,9 +4553,15 @@ class Expense extends Admin_Controller
 			$this->db->or_like('a.tgl_doc', $search, 'both');
 			$this->db->or_like('b.nm_lengkap', $search, 'both');
 			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('a.jumlah', $search, 'both');
+			$this->db->or_like('c.nm_lengkap', $search, 'both');
 			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.approved_by', $search, 'both');
 			$this->db->or_like('a.approved_on', $search, 'both');
 			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.reject_reason', $search, 'both');
+			$this->db->or_like('a.reject_reason_finance', $search, 'both');
+			$this->db->or_like('a.st_reject', $search, 'both');
 			$this->db->group_end();
 		}
 
@@ -4489,13 +4573,16 @@ class Expense extends Admin_Controller
 			1 => 'a.no_doc',
 			2 => 'a.tgl_doc',
 			3 => 'b.nm_lengkap',
-			4 => 'c.username',
-			5 => 'a.approved_on'
+			4 => 'a.jumlah',
+			5 => 'c.nm_lengkap',
+			6 => 'a.approved_on',
+			7 => 'a.informasi',
+			8 => 'a.status'
 		];
 
 		if (isset($post['order']) && !empty($post['order'])) {
 			$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
-			$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
+			$column_name = (isset($column_order[$column_index]) && !empty($column_order[$column_index])) ? $column_order[$column_index] : 'a.created_on';
 			$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
 			$this->db->order_by($column_name, $column_dir);
 		} else {
@@ -4512,19 +4599,7 @@ class Expense extends Admin_Controller
 		foreach ($get_data as $item) :
 			$no++;
 
-			$status = '<span class="badge bg-yellow">Baru</span>';
-			if ($item['status'] == '1') {
-				$status = '<span class="badge bg-green">Disetujui</span>';
-			}
-			if ($item['status'] == '2') {
-				$status = '<span class="badge bg-green">Disetujui Management</span>';
-			}
-			if ($item['status'] == '3') {
-				$status = '<span class="badge bg-green">Selesai</span>';
-			}
-			if ($item['status'] == '9') {
-				$status = '<span class="badge bg-red">Ditolak</span>';
-			}
+			$status = $this->_render_expense_status_badge($item);
 
 			$action = '';
 
@@ -4550,18 +4625,22 @@ class Expense extends Admin_Controller
 				}
 			}
 
+			$approval_name = !empty($item['nmapproval']) ? $item['nmapproval'] : (!empty($item['approved_by']) ? $item['approved_by'] : (!empty($item['approval']) ? $item['approval'] : '-'));
+
 			$hasil[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
 				'tgl_doc' => $item['tgl_doc'],
 				'nama' => !empty($item['nmuser']) ? $item['nmuser'] : $item['nama'],
-				'approval' => $item['nmapproval'],
-				'approval_date' => $item['approved_on'],
+				'total_realisasi' => number_format($item['jumlah']),
+				'approval' => $approval_name,
+				'approval_date' => (!empty($item['approved_on']) && $item['approved_on'] != '0000-00-00 00:00:00') ? $item['approved_on'] : '-',
 				'keterangan' => $item['informasi'],
 				'status' => $status,
 				'action' => $action
 			];
 		endforeach;
+
 
 		$response = [
 			'draw' => $draw,
@@ -4582,10 +4661,10 @@ class Expense extends Admin_Controller
 		$start = $post['start'];
 		$search = $post['search']['value'];
 
-		$this->db->select('a.*, b.nm_lengkap as nmuser, c.username as nmapproval');
+		$this->db->select('a.*, b.nm_lengkap as nmuser, c.nm_lengkap as nmapproval');
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
-		$this->db->join('users c', 'a.approval=c.username', 'left');
+		$this->db->join('users c', 'COALESCE(NULLIF(a.approved_by, ""), a.approval) = c.username', 'left');
 		$this->db->where('a.pettycash IS NOT NULL');
 		$this->db->where('a.exp_pib', null);
 
@@ -4601,31 +4680,19 @@ class Expense extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.tgl_doc', $search, 'both');
 			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('c.nm_lengkap', $search, 'both');
 			$this->db->or_like('c.username', $search, 'both');
+			$this->db->or_like('a.approved_by', $search, 'both');
 			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.reject_reason', $search, 'both');
+			$this->db->or_like('a.reject_reason_finance', $search, 'both');
+			$this->db->or_like('a.st_reject', $search, 'both');
 			$this->db->group_end();
 		}
 
 		$db_clone = clone $this->db;
 		$count_filter = $db_clone->count_all_results();
-
-		// $column_order = [
-		// 	0 => '',
-		// 	1 => 'a.no_doc',
-		// 	2 => 'a.tgl_doc',
-		// 	3 => 'b.nm_lengkap',
-		// 	4 => 'c.username',
-		// 	5 => 'a.approved_on'
-		// ];
-
-		// if (isset($post['order']) && !empty($post['order'])) {
-		// 	$column_index = $post['order'][0]['column']; // Mendapatkan index kolom yang diurutkan
-		// 	$column_name = $column_order[$column_index]; // Menentukan nama kolom berdasarkan index
-		// 	$column_dir = $post['order'][0]['dir']; // Mendapatkan arah pengurutan (ASC/DESC)
-		// 	$this->db->order_by($column_name, $column_dir);
-		// } else {
-		// 	$this->db->order_by('a.created_on', 'desc');
-		// }
 
 		$this->db->order_by('a.created_on', 'desc');
 
@@ -4639,19 +4706,7 @@ class Expense extends Admin_Controller
 		foreach ($get_data as $item) :
 			$no++;
 
-			$status = '<span class="badge bg-yellow">Baru</span>';
-			if ($item['status'] == '1') {
-				$status = '<span class="badge bg-green">Disetujui</span>';
-			}
-			if ($item['status'] == '2') {
-				$status = '<span class="badge bg-green">Disetujui Management</span>';
-			}
-			if ($item['status'] == '3') {
-				$status = '<span class="badge bg-green">Selesai</span>';
-			}
-			if ($item['status'] == '9') {
-				$status = '<span class="badge bg-red">Ditolak</span>';
-			}
+			$status = $this->_render_expense_status_badge($item);
 
 			$action = '';
 
@@ -4675,18 +4730,21 @@ class Expense extends Admin_Controller
 				}
 			}
 
+			$approval_name = !empty($item['nmapproval']) ? $item['nmapproval'] : (!empty($item['approved_by']) ? $item['approved_by'] : (!empty($item['approval']) ? $item['approval'] : '-'));
+
 			$hasil[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
 				'tgl_doc' => $item['tgl_doc'],
-				'nama' => $item['nmuser'],
-				'approval' => $item['nmapproval'],
+				'nama' => !empty($item['nmuser']) ? $item['nmuser'] : $item['nama'],
+				'approval' => $approval_name,
 				'keterangan' => $item['informasi'],
 				'nominal' => number_format($item['jumlah']),
 				'status' => $status,
 				'action' => $action
 			];
 		endforeach;
+
 
 		$response = [
 			'draw' => $draw,
@@ -4835,7 +4893,7 @@ class Expense extends Admin_Controller
 		$count_filter = (int) $this->db->get()->row()->cnt;
 
 		// Data aktual
-		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status,
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status, a.sts_finance, a.reject_reason, a.reject_reason_finance, a.st_reject,
 			IFNULL(SUM(b.total_harga), 0) as nominal,
 			c.username as nmuser');
 		$this->db->from('tr_expense a');
@@ -4883,7 +4941,7 @@ class Expense extends Admin_Controller
 				'nmuser'    => $row->nmuser,
 				'informasi' => $row->informasi,
 				'nominal'   => number_format($row->nominal),
-				'status'    => isset($status_label[$row->status]) ? $status_label[$row->status] : $row->status,
+				'status'    => $this->_render_expense_status_badge($row),
 				'action'    => $action,
 			);
 		}
@@ -4905,11 +4963,11 @@ class Expense extends Admin_Controller
 		$keyword = (!empty($search['value'])) ? trim($search['value']) : '';
 
 		$status_label = array(
-			"0" => "Baru",
-			"1" => "Disetujui",
-			"2" => "Disetujui Management",
-			"3" => "Selesai",
-			"9" => "Ditolak"
+			"0" => "Waiting Approval Finance",
+			"1" => "Approved",
+			"2" => "Approved",
+			"3" => "Approved",
+			"9" => "Rejected"
 		);
 
 		// Total semua record (tanpa filter)
@@ -4939,7 +4997,7 @@ class Expense extends Admin_Controller
 		$count_filtered = (int) $this->db->get()->row()->cnt;
 
 		// Data aktual dengan limit & offset
-		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status,
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status, a.sts_finance, a.reject_reason, a.reject_reason_finance, a.st_reject,
 			IFNULL(SUM(b.total_harga), 0) as nominal,
 			c.username as nmuser');
 		$this->db->from('tr_expense a');
@@ -4977,7 +5035,7 @@ class Expense extends Admin_Controller
 				'nmuser'    => $row->nmuser,
 				'informasi' => $row->informasi,
 				'nominal'   => number_format($row->nominal),
-				'status'    => isset($status_label[$row->status]) ? $status_label[$row->status] : $row->status,
+				'status'    => $this->_render_expense_status_badge($row),
 				'action'    => $action,
 			);
 		}
@@ -5165,8 +5223,10 @@ class Expense extends Admin_Controller
 			$ttl_kredit += $total_kasbon;
 		}
 
-		// 3. Jika LEBIH EXPENSE (Expense > Kasbon / Selisih < 0): Sisi KREDIT Hutang Reimburse Karyawan (9999-99-99)
-		if ($selisih < 0) {
+		// 3. Sisi KREDIT: Hutang Expense / Reimburse Karyawan (9999-99-99)
+		// HANYA untuk Expense Report jika LEBIH EXPENSE (ada kasbon & selisih < 0).
+		// Untuk Expense Biasa (Direct Expense tanpa kasbon), tidak ada akun perantara Hutang Expense.
+		if ($selisih < 0 && $total_kasbon > 0) {
 			$kurang_bayar = abs($selisih);
 			$no_jurnal++;
 			$coa_hutang = '9999-99-99';

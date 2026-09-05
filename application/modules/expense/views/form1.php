@@ -68,6 +68,7 @@ if (!isset($data->departement)) {
         }
     }
 </style>
+<?php include __DIR__ . '/reject_card.php'; ?>
 <div class="tab-content">
     <div class="tab-pane active">
         <div class="box box-primary">
@@ -86,19 +87,6 @@ if (!isset($data->departement)) {
                     <label class="col-sm-2 col-md-2 control-label">Keterangan <b class="text-red">*</b></label>
                     <div class="col-sm-4 col-md-6">
                         <input type="text" class="form-control" id="informasi" name="informasi" value="<?php echo (isset($data->informasi) ? $data->informasi : ""); ?>" placeholder="Keterangan" required>
-                    </div>
-                    <div class="col-md-4">
-                        <?php
-                        if (isset($data->st_reject)) {
-                            if ($data->st_reject != '') {
-                                echo '
-							  <div class="alert alert-danger alert-dismissible">
-								<h4><i class="icon fa fa-ban"></i> Alasan Penolakan!</h4>
-								' . $data->st_reject . '
-							  </div>';
-                            }
-                        }
-                        ?>
                     </div>
                 </div>
                 <div>
