@@ -29,7 +29,7 @@ $ENABLE_DELETE  = has_permission('Expense_Petty_Cash.Delete');
 						<th>Approval</th>
 						<th>Keterangan</th>
 						<th>Nominal</th>
-						<th>Status</th>
+						<th width="160" class="text-center">Status</th>
 						<th width="120">Action</th>
 					</tr>
 				</thead>

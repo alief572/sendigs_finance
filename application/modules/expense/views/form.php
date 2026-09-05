@@ -88,6 +88,8 @@ foreach ($option_coa as $keys => $val) {
 <input type="hidden" id="nama" name="nama" value="<?php echo (isset($data->nama) ? $data->nama : $this->auth->user_name()); ?>">
 <input type="hidden" id="departement" name="departement" value="<?php echo (isset($data->departement) ? $data->departement : $dept); ?>">
 
+<?php include __DIR__ . '/reject_card.php'; ?>
+
 <div class="box box-custom">
 	<div class="box-custom-header">
 		<h4 class="box-custom-title">
@@ -124,13 +126,6 @@ foreach ($option_coa as $keys => $val) {
 						<label class="col-sm-3 control-label">Keterangan <b class="text-red">*</b></label>
 						<div class="col-sm-9">
 							<textarea class="form-control input-sm" id="informasi" name="informasi" rows="3" required placeholder="Tuliskan keterangan pengeluaran..."><?php echo $keterangan; ?></textarea>
-							<?php
-							if (isset($data->st_reject) && !empty($data->st_reject)) {
-								echo '<div class="alert alert-danger" style="margin-top:5px; padding:6px 10px; font-size:12px;">
-									<b><i class="fa fa-ban"></i> Catatan Reject:</b><br>' . $data->st_reject . '
-								</div>';
-							}
-							?>
 						</div>
 					</div>
 				</div>
@@ -284,6 +279,41 @@ foreach ($option_coa as $keys => $val) {
 				</div>
 			</div>
 
+			<!-- SECTION TABLE JURNAL / ALOKASI COA REALISASI EXPENSE -->
+			<div id="section_jurnal" style="margin-top: 25px;">
+				<div class="panel panel-default" style="border-radius: 6px; border: 1px solid #d2d6de; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+					<div class="panel-heading" style="background:#f8fafc; font-weight: 700; color: #2d3748; font-size: 14px;">
+						<i class="fa fa-book text-primary"></i> <b>Daftar Alokasi COA Realisasi Expense</b>
+					</div>
+					<div class="panel-body" style="padding: 10px;">
+						<div class="table-responsive">
+							<table class="table table-bordered table-striped" width="100%" style="font-size:12px; margin-bottom:0;">
+								<thead>
+									<tr style="background:#e2e8f0; color:#333;">
+										<th width="120" class="text-center">Tanggal Jurnal</th>
+										<th width="110" class="text-center">COA</th>
+										<th width="160" class="text-center">Nama Company</th>
+										<th width="180">Nama Account</th>
+										<th>Deskripsi / Keterangan</th>
+										<th width="130" class="text-right">Debit (Rp)</th>
+										<th width="130" class="text-right">Kredit (Rp)</th>
+									</tr>
+								</thead>
+								<tbody class="tbody_jurnal">
+								</tbody>
+								<tfoot>
+									<tr style="background:#edf2f7; font-weight:bold;">
+										<td colspan="5" class="text-center"><b>TOTAL REALISASI BIAYA</b></td>
+										<td class="text-right ttl_debit" style="color:#00a65a; font-size:13px;">0</td>
+										<td class="text-right ttl_kredit" style="color:#999; font-size:13px;">0</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- FOOTER CONTROLS -->
 			<div style="border-top: 2px solid #f4f4f4; padding-top: 15px; margin-top: 20px;">
 				<div class="text-right">
@@ -317,8 +347,13 @@ foreach ($option_coa as $keys => $val) {
 
 <script type="text/javascript">
 	var stsview = "<?= $stsview ?>";
+	var url_set_jurnal = siteurl + 'expense/set_jurnal_expense';
 
 	$(document).ready(function() {
+		var companyName = (document.title.indexOf('|') !== -1) ? document.title.split('|')[0].trim() : 'SENDIGS SS';
+		document.title = companyName + ' | Expense';
+		$('.content-header h1').html('<i class="fa fa-cubes"></i> Expense');
+
 		$('.select2').select2({ width: '100%' });
 		$(".divide").divide();
 		$(".tanggal").datepicker({
@@ -326,6 +361,20 @@ foreach ($option_coa as $keys => $val) {
 			format: "yyyy-mm-dd",
 			showInputs: true,
 			autoclose: true
+		}).on('changeDate change', function() {
+			set_jurnal();
+		});
+
+		$(document).on('change changeDate', '#tgl_doc, input[name="tanggal[]"]', function() {
+			set_jurnal();
+		});
+
+		$(document).on('change', 'select[name="coa[]"]', function() {
+			set_jurnal();
+		});
+
+		$(document).on('blur change', 'textarea[name="deskripsi[]"]', function() {
+			set_jurnal();
 		});
 
 		if (stsview == 'view' || stsview == 'approval') {
@@ -335,6 +384,8 @@ foreach ($option_coa as $keys => $val) {
 
 		if ($("#detail_body tr").length === 0) {
 			add_detail();
+		} else {
+			set_jurnal();
 		}
 	});
 
@@ -392,6 +443,8 @@ foreach ($option_coa as $keys => $val) {
 			format: "yyyy-mm-dd",
 			showInputs: true,
 			autoclose: true
+		}).on('changeDate change', function() {
+			set_jurnal();
 		});
 		$('.select2').select2({ width: '100%' });
 		$(".divide").divide();
@@ -422,7 +475,40 @@ foreach ($option_coa as $keys => $val) {
 			total_expense += parseFloat($(this).val().replace(/,/g, '')) || 0;
 		});
 		$("#total_expense").val(total_expense);
+		$("#grand_total").val(-total_expense);
 		$(".divide").divide();
+		set_jurnal();
+	}
+
+	function set_jurnal() {
+		var $form = $('#frm_data');
+		if ($form.length === 0) return;
+
+		// Pada mode view/approval semua field di-disable, sehingga tidak ikut terkirim di FormData.
+		// Buka disable sejenak agar FormData membaca seluruh field, lalu kembalikan statusnya.
+		var $disabled = $form.find(':disabled');
+		$disabled.prop('disabled', false);
+		var formdata = new FormData($form[0]);
+		$disabled.prop('disabled', true);
+
+		$.ajax({
+			url: url_set_jurnal,
+			dataType: "json",
+			type: 'POST',
+			data: formdata,
+			processData: false,
+			contentType: false,
+			success: function(res) {
+				if (res && res.status === 1) {
+					$('.tbody_jurnal').html(res.hasil);
+					$('.ttl_debit').text(res.ttl_debit);
+					$('.ttl_kredit').text(res.ttl_kredit);
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Gagal generate preview jurnal: " + error);
+			}
+		});
 	}
 
 	// ==========================================

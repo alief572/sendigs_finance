@@ -66,13 +66,14 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 				<thead>
 					<tr>
 						<th width="30" class="text-center">#</th>
-						<th width="140">No Dokumen</th>
-						<th width="100">Tanggal</th>
-						<th width="150">Nama Pemohon</th>
-						<th width="130">Approval</th>
+						<th width="130">No Dokumen</th>
+						<th width="90">Tanggal</th>
+						<th width="130">Nama Pemohon</th>
+						<th width="120" class="text-right">Total Realisasi</th>
+						<th width="110">Approval</th>
 						<th width="120">Approval Date</th>
 						<th>Keterangan</th>
-						<th width="110" class="text-center">Status</th>
+						<th width="160" class="text-center">Status</th>
 						<th width="100" class="text-center">Aksi</th>
 					</tr>
 				</thead>
@@ -141,6 +142,9 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 	});
 
 	function data_add() {
+		var companyName = (document.title.indexOf('|') !== -1) ? document.title.split('|')[0].trim() : 'SENDIGS SS';
+		document.title = companyName + ' | Expense';
+		$('.content-header h1').html('<i class="fa fa-cubes"></i> Expense');
 		$(".box").hide();
 		$("#form-data").show();
 		$("#form-data").load(url_add);
@@ -197,6 +201,9 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 
 	function select_kasbon_report(no_doc_kasbon) {
 		$('#modalKasbon').modal('hide');
+		var companyName = (document.title.indexOf('|') !== -1) ? document.title.split('|')[0].trim() : 'SENDIGS SS';
+		document.title = companyName + ' | Expense Report';
+		$('.content-header h1').html('<i class="fa fa-ticket"></i> Expense Report');
 		$(".box").hide();
 		$("#form-data").show();
 		$("#form-data").load(url_add_report + encodeURIComponent(no_doc_kasbon));
@@ -265,6 +272,7 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 				{ data: 'no_doc' },
 				{ data: 'tgl_doc' },
 				{ data: 'nama' },
+				{ data: 'total_realisasi', className: 'text-right' },
 				{ data: 'approval' },
 				{ data: 'approval_date' },
 				{ data: 'keterangan' },
