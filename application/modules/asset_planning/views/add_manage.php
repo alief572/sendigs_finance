@@ -24,6 +24,8 @@ $rev_keterangan     = (!empty($header)) ? strtoupper($header[0]->rev_keterangan)
 ?>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css'); ?>">
+<script src="<?= base_url('assets/dist/sweetalert2.min.js'); ?>"></script>
 <form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data" autocomplete='off'>
     <input type="hidden" name="id" value="<?= $id; ?>">
     <input type="hidden" name="tanda" value="<?= $tanda; ?>">
@@ -324,8 +326,8 @@ $rev_keterangan     = (!empty($header)) ? strtoupper($header[0]->rev_keterangan)
             var status = $('#status').val();
 
             if (status == '0') {
-                swal({
-                    type: 'warning',
+                Swal.fire({
+                    icon: 'warning',
                     title: 'Warning !',
                     text: 'Approve status must be choosen !'
                 });
@@ -335,70 +337,56 @@ $rev_keterangan     = (!empty($header)) ? strtoupper($header[0]->rev_keterangan)
             }
         }
 
-        var department = $('#department').val();
+        var department = $('#id_dept').val();
 
-        if (department == '0') {
-            swal({
+        if (approve === '' && (department == '0' || !department)) {
+            Swal.fire({
                 title: "Error Message!",
                 text: 'Department empty, select first ...',
-                type: "warning"
+                icon: "warning"
             });
 
             $('#save').attr('disabled', false);
             return false;
         }
 
-        swal({
-                title: "Are you sure?",
-                text: "You will save be able to process again this data!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonClass: "btn-danger",
-                confirmButtonText: "Yes, Process it!",
-                cancelButtonText: "No, cancel process!",
-                closeOnConfirm: false,
-                closeOnCancel: false
-            },
-            function(isConfirm) {
-                if (isConfirm) {
-                    var formData = new FormData($('#form_proses_bro')[0]);
-                    $.ajax({
-                        url: base_url + active_controller + '/add_asset_manage',
-                        type: "POST",
-                        data: formData,
-                        cache: false,
-                        dataType: 'json',
-                        processData: false,
-                        contentType: false,
-                        success: function(data) {
-                            if (data.status == 1) {
-                                swal({
-                                    title: "Save Success!",
-                                    text: data.pesan,
-                                    type: "success",
-                                    timer: 7000,
-                                    showCancelButton: false,
-                                    showConfirmButton: false,
-                                    allowOutsideClick: false
-                                });
-                                window.location.href = base_url + active_controller + '/index_asset_management/' + data.approve;
-                            } else if (data.status == 0) {
-                                swal({
-                                    title: "Save Failed!",
-                                    text: data.pesan,
-                                    type: "warning",
-                                    timer: 7000,
-                                    showCancelButton: false,
-                                    showConfirmButton: false,
-                                    allowOutsideClick: false
-                                });
-                            }
-                        },
-                        error: function() {
-                            swal({
-                                title: "Error Message !",
-                                text: 'An Error Occured During Process. Please try again..',
-                                type: "warning",
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You will save be able to process again this data!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Yes, Process it!",
+            cancelButtonText: "No, cancel process!"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var formData = new FormData($('#form_proses_bro')[0]);
+                $.ajax({
+                    url: base_url + active_controller + '/add_asset_manage',
+                    type: "POST",
+                    data: formData,
+                    cache: false,
+                    dataType: 'json',
+                    processData: false,
+                    contentType: false,
+                    success: function(data) {
+                        if (data.status == 1) {
+                            Swal.fire({
+                                title: "Save Success!",
+                                text: data.pesan,
+                                icon: "success",
+                                timer: 7000,
+                                showCancelButton: false,
+                                showConfirmButton: false,
+                                allowOutsideClick: false
+                            });
+                            window.location.href = base_url + active_controller + '/index_asset_management/' + data.approve;
+                        } else if (data.status == 0) {
+                            Swal.fire({
+                                title: "Save Failed!",
+                                text: data.pesan,
+                                icon: "warning",
                                 timer: 7000,
                                 showCancelButton: false,
                                 showConfirmButton: false,
@@ -406,12 +394,25 @@ $rev_keterangan     = (!empty($header)) ? strtoupper($header[0]->rev_keterangan)
                             });
                             $('#save').prop('disabled', false);
                         }
-                    });
-                } else {
-                    swal("Cancelled", "Data can be process again :)", "error");
-                    $('#save').prop('disabled', false);
-                    return false;
-                }
-            });
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: "Error Message ! ",
+                            text: 'An Error Occured During Process. Please try again..',
+                            icon: "warning",
+                            timer: 7000,
+                            showCancelButton: false,
+                            showConfirmButton: false,
+                            allowOutsideClick: false
+                        });
+                        $('#save').prop('disabled', false);
+                    }
+                });
+            } else {
+                Swal.fire("Cancelled", "Data can be process again :)", "error");
+                $('#save').prop('disabled', false);
+                return false;
+            }
+        });
     });
 </script>
