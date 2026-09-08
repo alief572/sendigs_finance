@@ -622,7 +622,7 @@ class Non_rutin_model extends BF_Model
             a.department_id as user_dept_id,
             b.id as emp_id,
             b.name as employee_name,
-            COALESCE(b.department_id, a.department_id) as department_id,
+            COALESCE(NULLIF(a.department_id, ""), b.department_id) as department_id,
             b.division_id,
             b.position_id,
             c.name as position_name,
@@ -632,7 +632,7 @@ class Non_rutin_model extends BF_Model
         $this->db->from('users a');
         $this->db->join(HRIS . '.employees b', '((a.employee_id IS NOT NULL AND a.employee_id != \'\' AND b.id = a.employee_id) OR ((a.employee_id IS NULL OR a.employee_id = \'\') AND (b.name LIKE CONCAT(\'%\', a.nm_lengkap, \'%\') OR b.name LIKE CONCAT(\'%\', a.username, \'%\'))))', 'left', false);
         $this->db->join(HRIS . '.positions c', 'c.id = b.position_id', 'left');
-        $this->db->join(HRIS . '.departments d', 'd.id = COALESCE(b.department_id, a.department_id)', 'left');
+        $this->db->join(HRIS . '.departments d', 'd.id = COALESCE(NULLIF(a.department_id, ""), b.department_id)', 'left');
         $this->db->join(HRIS . '.divisions e', 'e.id = b.division_id', 'left');
         $this->db->where('a.id_user', $id_user);
         $user_info = $this->db->get()->row();
