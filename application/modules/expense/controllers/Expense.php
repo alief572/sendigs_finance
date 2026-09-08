@@ -5058,6 +5058,7 @@ class Expense extends Admin_Controller
 		$total_expense = isset($post['total_expense']) ? floatval(str_replace(',', '', $post['total_expense'])) : 0;
 		$total_kasbon = isset($post['total_kasbon']) ? floatval(str_replace(',', '', $post['total_kasbon'])) : 0;
 		$selisih = $total_kasbon - $total_expense;
+		$is_direct_expense = !empty($post['is_direct_expense']) || ($total_kasbon <= 0);
 
 		$hasil_jurnal = '';
 		$ttl_debit = 0;
@@ -5150,7 +5151,9 @@ class Expense extends Admin_Controller
 					$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
 					$hasil_jurnal .= '<td>' . htmlspecialchars($desk) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="' . htmlspecialchars($desk) . '"></td>';
 					$hasil_jurnal .= '<td class="text-right">' . number_format($exp_num) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $exp_num . '"></td>';
-					$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+					if (!$is_direct_expense) {
+						$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+					}
 					$hasil_jurnal .= '</tr>';
 
 					$ttl_debit += $exp_num;
@@ -5173,7 +5176,9 @@ class Expense extends Admin_Controller
 			$hasil_jurnal .= '<td>' . $coa_name . '<input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $coa_name . '"></td>';
 			$hasil_jurnal .= '<td>Realisasi Pengeluaran Expense</td>';
 			$hasil_jurnal .= '<td class="text-right">' . number_format($total_expense) . '<input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $total_expense . '"></td>';
-			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+			if (!$is_direct_expense) {
+				$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
+			}
 			$hasil_jurnal .= '</tr>';
 
 			$ttl_debit += $total_expense;

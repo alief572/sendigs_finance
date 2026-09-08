@@ -85,6 +85,7 @@ foreach ($option_coa as $keys => $val) {
 <?= form_open_multipart($this->uri->segment(1) . '/save', array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal')) ?>
 <input type="hidden" id="id" name="id" value="<?php echo $id; ?>">
 <input type="hidden" id="pettycash" name="pettycash" value="<?php echo $pettycash; ?>">
+<input type="hidden" id="is_direct_expense" name="is_direct_expense" value="1">
 <input type="hidden" id="nama" name="nama" value="<?php echo (isset($data->nama) ? $data->nama : $this->auth->user_name()); ?>">
 <input type="hidden" id="departement" name="departement" value="<?php echo (isset($data->departement) ? $data->departement : $dept); ?>">
 
@@ -279,33 +280,31 @@ foreach ($option_coa as $keys => $val) {
 				</div>
 			</div>
 
-			<!-- SECTION TABLE JURNAL / ALOKASI COA REALISASI EXPENSE -->
+			<!-- SECTION TABLE ALOKASI AKUN PEMBEBANAN (COA) -->
 			<div id="section_jurnal" style="margin-top: 25px;">
 				<div class="panel panel-default" style="border-radius: 6px; border: 1px solid #d2d6de; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
 					<div class="panel-heading" style="background:#f8fafc; font-weight: 700; color: #2d3748; font-size: 14px;">
-						<i class="fa fa-book text-primary"></i> <b>Daftar Alokasi COA Realisasi Expense</b>
+						<i class="fa fa-list-alt text-primary"></i> <b>Daftar Alokasi Akun Pembebanan (COA)</b>
 					</div>
 					<div class="panel-body" style="padding: 10px;">
 						<div class="table-responsive">
 							<table class="table table-bordered table-striped" width="100%" style="font-size:12px; margin-bottom:0;">
 								<thead>
 									<tr style="background:#e2e8f0; color:#333;">
-										<th width="120" class="text-center">Tanggal Jurnal</th>
+										<th width="120" class="text-center">Tanggal</th>
 										<th width="110" class="text-center">COA</th>
 										<th width="160" class="text-center">Nama Company</th>
 										<th width="180">Nama Account</th>
 										<th>Deskripsi / Keterangan</th>
-										<th width="130" class="text-right">Debit (Rp)</th>
-										<th width="130" class="text-right">Kredit (Rp)</th>
+										<th width="140" class="text-right">Nominal Alokasi (Rp)</th>
 									</tr>
 								</thead>
 								<tbody class="tbody_jurnal">
 								</tbody>
 								<tfoot>
 									<tr style="background:#edf2f7; font-weight:bold;">
-										<td colspan="5" class="text-center"><b>TOTAL REALISASI BIAYA</b></td>
+										<td colspan="5" class="text-center"><b>TOTAL ALOKASI BIAYA</b></td>
 										<td class="text-right ttl_debit" style="color:#00a65a; font-size:13px;">0</td>
-										<td class="text-right ttl_kredit" style="color:#999; font-size:13px;">0</td>
 									</tr>
 								</tfoot>
 							</table>
