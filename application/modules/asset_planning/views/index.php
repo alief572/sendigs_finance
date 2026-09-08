@@ -5,6 +5,8 @@ $ENABLE_MANAGE = has_permission('Rencana_Pembelian_Asset.Manage');
 $ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css'); ?>">
+<script src="<?= base_url('assets/dist/sweetalert2.min.js'); ?>"></script>
 <form action="#" method="POST" id="form_proses_bro" enctype="multipart/form-data">
 	<div class="box box-primary">
 		<div class="box-header">
@@ -107,10 +109,10 @@ $ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 
 			},
 			error: function() {
-				swal({
+				Swal.fire({
 					title: "Error Message !",
 					text: 'Connection Timed Out ...',
-					type: "warning",
+					icon: "warning",
 					timer: 5000,
 					showCancelButton: false,
 					showConfirmButton: false,
@@ -124,69 +126,67 @@ $ENABLE_DELETE = has_permission('Rencana_Pembelian_Asset.Delete');
 		e.preventDefault();
 		var id = $(this).data('id');
 
-		swal({
-				title: "Are you sure?",
-				text: "You will save be able to process again this data!",
-				type: "warning",
-				showCancelButton: true,
-				confirmButtonClass: "btn-danger",
-				confirmButtonText: "Yes, Process it!",
-				cancelButtonText: "No, cancel process!",
-				closeOnConfirm: false,
-				closeOnCancel: false
-			},
-			function(isConfirm) {
-				if (isConfirm) {
-					var formData = new FormData($('#form_proses_bro')[0]);
-					$.ajax({
-						url: base_url + active_controller + 'hapus_asset/' + id,
-						type: "POST",
-						data: formData,
-						cache: false,
-						dataType: 'json',
-						processData: false,
-						contentType: false,
-						success: function(data) {
-							if (data.status == 1) {
-								swal({
-									title: "Save Success!",
-									text: data.pesan,
-									type: "success",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-								window.location.href = base_url + active_controller + 'index_asset';
-							} else if (data.status == 0) {
-								swal({
-									title: "Save Failed!",
-									text: data.pesan,
-									type: "warning",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-							}
-						},
-						error: function() {
-							swal({
-								title: "Error Message !",
-								text: 'An Error Occured During Process. Please try again..',
-								type: "warning",
+		Swal.fire({
+			title: "Are you sure?",
+			text: "You will not be able to process again this data!",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonColor: "#d33",
+			cancelButtonColor: "#3085d6",
+			confirmButtonText: "Yes, Process it!",
+			cancelButtonText: "No, cancel process!"
+		}).then((result) => {
+			if (result.isConfirmed) {
+				var formData = new FormData($('#form_proses_bro')[0]);
+				$.ajax({
+					url: base_url + active_controller + 'hapus_asset/' + id,
+					type: "POST",
+					data: formData,
+					cache: false,
+					dataType: 'json',
+					processData: false,
+					contentType: false,
+					success: function(data) {
+						if (data.status == 1) {
+							Swal.fire({
+								title: "Save Success!",
+								text: data.pesan,
+								icon: "success",
+								timer: 7000,
+								showCancelButton: false,
+								showConfirmButton: false,
+								allowOutsideClick: false
+							});
+							window.location.href = base_url + active_controller + 'index_asset';
+						} else if (data.status == 0) {
+							Swal.fire({
+								title: "Save Failed!",
+								text: data.pesan,
+								icon: "warning",
 								timer: 7000,
 								showCancelButton: false,
 								showConfirmButton: false,
 								allowOutsideClick: false
 							});
 						}
-					});
-				} else {
-					swal("Cancelled", "Data can be process again :)", "error");
-					return false;
-				}
-			});
+					},
+					error: function() {
+						Swal.fire({
+							title: "Error Message ! ",
+							text: 'An Error Occured During Process. Please try again..',
+							icon: "warning",
+							timer: 7000,
+							showCancelButton: false,
+							showConfirmButton: false,
+							allowOutsideClick: false
+						});
+					}
+				});
+			} else {
+				Swal.fire("Cancelled", "Data can be process again :)", "error");
+				return false;
+			}
+		});
 	});
 
 
