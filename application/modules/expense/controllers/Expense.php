@@ -2498,6 +2498,7 @@ class Expense extends Admin_Controller
 					'jumlah_kasbon' => ($bensin + $tol + $parkir + $lainnya),
 					'doc_file' => $filenames,
 					'status' => 0,
+					'req_payment' => 0,
 					'no_coa' => $no_coa,
 					'nm_coa' => $nm_coa,
 					'created_by' => $this->auth->user_name(),
