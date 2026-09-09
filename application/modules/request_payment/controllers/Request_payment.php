@@ -1,5 +1,9 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+require_once 'vendor/autoload.php';
+
+use Mpdf\Mpdf;
+
 /*
  * @author Harboens
  * @copyright Copyright (c) 2022
@@ -3363,17 +3367,28 @@ class Request_payment extends Admin_Controller
 		$id = urldecode($id);
 		$id = str_replace('|', '/', $id);
 
+		if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
 
-		$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $id))->row();
+		$get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $id))->row();
 
 		// Fallback jika tidak ditemukan dengan ID langsung, cari melalui tr_direct_payment
 		$get_dp = null;
+		$target_header_id = $id;
 		if (empty($get_kasbon_header)) {
 			$get_dp = $this->db->get_where('tr_direct_payment', array('no_doc' => $id))->row();
+			if (empty($get_dp)) {
+				$get_dp = $this->db->get_where('tr_direct_payment', array('ids' => $id))->row();
+			}
 			if (!empty($get_dp) && !empty($get_dp->ids)) {
-				$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $get_dp->ids))->row();
+				$get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $get_dp->ids))->row();
 				if (!empty($get_kasbon_header)) {
-					$id = $get_dp->ids;
+					$target_header_id = $get_dp->ids;
+				}
+			}
+			if (empty($get_kasbon_header) && !empty($get_dp) && !empty($get_dp->no_doc)) {
+				$get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $get_dp->no_doc))->row();
+				if (!empty($get_kasbon_header)) {
+					$target_header_id = $get_dp->no_doc;
 				}
 			}
 		} else {
@@ -3381,6 +3396,22 @@ class Request_payment extends Admin_Controller
 			if (empty($get_dp)) {
 				$get_dp = $this->db->get_where('tr_direct_payment', array('ids' => $id))->row();
 			}
+		}
+
+		// Fallback jika kasbon header belum ada di kons_tr_kasbon_project_header tapi ada di tr_direct_payment
+		if (empty($get_kasbon_header) && !empty($get_dp)) {
+			$get_kasbon_header = (object) [
+				'id' => $get_dp->no_doc,
+				'id_spk_penawaran' => $get_dp->id_spk_penawaran,
+				'tipe' => $get_dp->tipe,
+				'deskripsi' => $get_dp->deskripsi,
+				'bank' => $get_dp->bank,
+				'bank_number' => $get_dp->bank_number,
+				'bank_account' => $get_dp->bank_account,
+				'created_by' => $get_dp->created_by,
+				'created_date' => $get_dp->created_date
+			];
+			$target_header_id = $get_dp->no_doc;
 		}
 
 		if (!empty($get_kasbon_header)) {
@@ -3396,49 +3427,61 @@ class Request_payment extends Admin_Controller
 					$get_kasbon_header->bank_account = $get_dp->bank_account;
 				}
 			}
-			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
+			$id_spk_penawaran = !empty($get_kasbon_header->id_spk_penawaran) ? $get_kasbon_header->id_spk_penawaran : (!empty($get_dp->id_spk_penawaran) ? $get_dp->id_spk_penawaran : '');
 
-			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
+			$this->db->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, COALESCE(NULLIF(b.nm_paket, ""), a.nm_project) as nm_paket');
+			$this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
+			$this->db->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+			$this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+			$get_spk_penawaran = $this->db->get()->row();
 
-			$this->consultant->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, b.nm_paket');
-			$this->consultant->from('kons_tr_spk_penawaran a');
-			$this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-			$this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
-			$get_spk_penawaran = $this->consultant->get()->row();
+			if (empty($get_spk_penawaran)) {
+				$get_spk_penawaran = (object) [
+					'id_spk_penawaran' => !empty($id_spk_penawaran) ? $id_spk_penawaran : '-',
+					'nm_project_leader' => '-',
+					'nm_sales' => '-',
+					'nm_customer' => '-',
+					'waktu_from' => '',
+					'waktu_to' => '',
+					'alamat' => '-',
+					'nm_paket' => '-'
+				];
+			}
 
 			$tipe = '';
-			if ($get_kasbon_header->tipe == '1') {
+			$tipe_num = !empty($get_kasbon_header->tipe) ? $get_kasbon_header->tipe : (!empty($get_dp->tipe) ? $get_dp->tipe : '');
+			if ($tipe_num == '1') {
 				$tipe = 'Direct Payment Subcont';
 			}
-			if ($get_kasbon_header->tipe == '2') {
+			if ($tipe_num == '2') {
 				$tipe = 'Direct Payment Akomodasi';
 			}
-			if ($get_kasbon_header->tipe == '3') {
+			if ($tipe_num == '3') {
 				$tipe = 'Direct Payment Others';
 			}
-			if ($get_kasbon_header->tipe == '4') {
+			if ($tipe_num == '4') {
 				$tipe = 'Direct Payment Lab';
 			}
-			if ($get_kasbon_header->tipe == '5') {
+			if ($tipe_num == '5') {
 				$tipe = 'Direct Payment Subcont Tenaga Ahli';
 			}
-			if ($get_kasbon_header->tipe == '6') {
+			if ($tipe_num == '6') {
 				$tipe = 'Direct Payment Subcont Perusahaan';
 			}
 
+			// ID matching list for detail queries
+			$match_ids = array_unique(array_filter([$target_header_id, $id, !empty($get_dp->ids) ? $get_dp->ids : '', !empty($get_dp->no_doc) ? $get_dp->no_doc : '']));
+
 			// ============================================================
 			// FIX: Real-time Sisa Qty & Sisa Budget Calculation
-			// Issue: Snapshot (aktual_terpakai, sisa_budget) gives wrong values
-			// when multiple kasbons exist for the same item in same SPK
-			// Solution: Calculate real-time by querying all other kasbons
 			// ============================================================
 
 			// [START] KASBON SUBCONT - Real-time calculation
-			$this->consultant->select('a.*,
+			$this->db->select('a.*,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_aktifitas = a.id_aktifitas
 					AND b.id_spk_budgeting = a.id_spk_budgeting
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
@@ -3446,154 +3489,162 @@ class Request_payment extends Admin_Controller
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_aktifitas = a.id_aktifitas
 					AND b.id_spk_budgeting = a.id_spk_budgeting
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont a');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont a');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont = $this->db->get()->result();
 			// [END] KASBON SUBCONT
 
 			// [START] KASBON AKOMODASI - Real-time calculation (with qty_budget_tambahan & budget_tambahan)
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi + COALESCE(a.qty_budget_tambahan, 0) - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_akomodasi b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_akomodasi b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_akomodasi = a.id_akomodasi
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi + COALESCE(a.budget_tambahan, 0) - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_akomodasi b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_akomodasi b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_akomodasi = a.id_akomodasi
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_akomodasi a');
-			$this->consultant->join('kons_tr_penawaran_akomodasi b', 'b.id = a.id_akomodasi', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_akomodasi = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_akomodasi a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_akomodasi b', 'b.id = a.id_akomodasi', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_akomodasi = $this->db->get()->result();
 			// [END] KASBON AKOMODASI
 
 			// [START] KASBON OTHERS - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_others b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_others b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_others = a.id_others
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_others b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_others b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_others = a.id_others
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_others a');
-			$this->consultant->join('kons_tr_penawaran_others b', 'b.id = a.id_others', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_others = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_others a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_others b', 'b.id = a.id_others', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_others = $this->db->get()->result();
 			// [END] KASBON OTHERS
 
 			// [START] KASBON LAB - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_lab b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_lab b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_lab = a.id_lab
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_lab b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_lab b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_lab = a.id_lab
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_lab a');
-			$this->consultant->join('kons_tr_penawaran_lab b', 'b.id = a.id_lab', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_lab = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_lab a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_lab b', 'b.id = a.id_lab', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_lab = $this->db->get()->result();
 			// [END] KASBON LAB
 
 			// [START] KASBON SUBCONT TENAGA AHLI - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_tenaga_ahli b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_tenaga_ahli b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont_tenaga_ahli a');
-			$this->consultant->join('kons_tr_penawaran_subcont_tenaga_ahli b', 'b.id = a.id_subcont', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont_tenaga_ahli = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_subcont_tenaga_ahli b', 'b.id = a.id_subcont', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont_tenaga_ahli = $this->db->get()->result();
 			// [END] KASBON SUBCONT TENAGA AHLI
 
 			// [START] KASBON SUBCONT PERUSAHAAN - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_perusahaan b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_perusahaan b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont_perusahaan a');
-			$this->consultant->join('kons_tr_penawaran_subcont_perusahaan b', 'b.id = a.id_subcont', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont_perusahaan = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_subcont_perusahaan b', 'b.id = a.id_subcont', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont_perusahaan = $this->db->get()->result();
 			// [END] KASBON SUBCONT PERUSAHAAN
 
-			$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
 			$tgl_approve_direktur = !empty($get_request_payment) ? $get_request_payment->created_on : null;
+			if (empty($tgl_approve_direktur) && !empty($get_dp) && !empty($get_dp->no_doc)) {
+				$get_rp_dp = $this->db->get_where('request_payment', array('no_doc' => $get_dp->no_doc))->row();
+				if (!empty($get_rp_dp)) {
+					$tgl_approve_direktur = $get_rp_dp->created_on;
+				}
+			}
 			if (empty($tgl_approve_direktur) && !empty($get_dp) && !empty($get_dp->created_date)) {
 				$tgl_approve_direktur = $get_dp->created_date;
 			}
-			if (empty($tgl_approve_direktur)) {
-				$get_rp_local = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
-				if (!empty($get_rp_local)) {
-					$tgl_approve_direktur = $get_rp_local->created_on;
-				}
+
+			// Created by name lookup
+			$nm_created_by = '-';
+			$cr_user = !empty($get_kasbon_header->created_by) ? $get_kasbon_header->created_by : (!empty($get_dp->created_by) ? $get_dp->created_by : '');
+			if (!empty($cr_user)) {
+				$u_cr = $this->db->query("SELECT nm_lengkap FROM users WHERE id_user = '" . $this->db->escape_str($cr_user) . "' OR username = '" . $this->db->escape_str($cr_user) . "'")->row();
+				$nm_created_by = !empty($u_cr->nm_lengkap) ? $u_cr->nm_lengkap : $cr_user;
 			}
 
 			$data = [
@@ -3608,89 +3659,102 @@ class Request_payment extends Admin_Controller
 				'data_kasbon_subcont_tenaga_ahli' => $get_kasbon_subcont_tenaga_ahli,
 				'data_kasbon_subcont_perusahaan' => $get_kasbon_subcont_perusahaan,
 				'tipe' => $tipe,
-				'tgl_approve_direktur' => $tgl_approve_direktur
+				'tgl_approve_direktur' => $tgl_approve_direktur,
+				'nm_created_by' => $nm_created_by
 			];
 		} else {
-			$this->consultant->select('a.*, b.id_spk_penawaran');
-			$this->consultant->from('kons_tr_expense_report_project_header a');
-			$this->consultant->join('kons_tr_kasbon_project_header b', 'b.id = a.id_header');
-			$this->consultant->where('a.id', $id);
-			$get_expense = $this->consultant->get()->row();
+			$this->db->select('a.*, b.id_spk_penawaran');
+			$this->db->from(DBCNL . '.kons_tr_expense_report_project_header a');
+			$this->db->join(DBCNL . '.kons_tr_kasbon_project_header b', 'b.id = a.id_header');
+			$this->db->where('a.id', $id);
+			$get_expense = $this->db->get()->row();
 
-			$id_spk_penawaran = $get_expense->id_spk_penawaran;
+			$id_spk_penawaran = !empty($get_expense) ? $get_expense->id_spk_penawaran : '';
 
-			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
+			$this->db->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, COALESCE(NULLIF(b.nm_paket, ""), a.nm_project) as nm_paket');
+			$this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
+			$this->db->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+			$this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+			$get_spk_penawaran = $this->db->get()->row();
 
-			$this->consultant->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, b.nm_paket');
-			$this->consultant->from('kons_tr_spk_penawaran a');
-			$this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-			$this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
-			$get_spk_penawaran = $this->consultant->get()->row();
+			if (empty($get_spk_penawaran)) {
+				$get_spk_penawaran = (object) [
+					'id_spk_penawaran' => !empty($id_spk_penawaran) ? $id_spk_penawaran : '-',
+					'nm_project_leader' => '-',
+					'nm_sales' => '-',
+					'nm_customer' => '-',
+					'waktu_from' => '',
+					'waktu_to' => '',
+					'alamat' => '-',
+					'nm_paket' => '-'
+				];
+			}
 
 			$tipe = 'Expense';
 
-			$get_expense_detail = $this->consultant->get_where('kons_tr_expense_report_project_detail', array('id_header_expense' => $id))->result();
+			$get_expense_detail = $this->db->get_where(DBCNL . '.kons_tr_expense_report_project_detail', array('id_header_expense' => $id))->result();
 
 			$list_detail_expense_detail = [];
 			foreach ($get_expense_detail as $item_expense_detail) :
 				if ($item_expense_detail->tipe == '1') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_aktifitas', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_subcont', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_aktifitas' => $get_spk_budgeting->id_aktifitas))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_aktifitas', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_subcont', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_aktifitas' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_aktifitas : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_aktifitas,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_aktifitas : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 				if ($item_expense_detail->tipe == '2') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_akomodasi', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_akomodasi', array('id_spk_budgeting' => $get_spk_budgeting->id_spk_budgeting, 'id_akomodasi' => $item_expense_detail->id_akomodasi))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_akomodasi', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_akomodasi', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_akomodasi' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_akomodasi : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_item,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_item : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 				if ($item_expense_detail->tipe == '3') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_others', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_others', array('id_spk_budgeting' => $get_spk_budgeting->id_spk_budgeting, 'id_others' => $item_expense_detail->id_others))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_others', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_others', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_others' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_others : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_item,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_item : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 			endforeach;
 
-
 			$title_expense = '';
-			if ($get_expense->tipe == '1') {
-				$title_expense = 'Expense Subcont';
-			}
-			if ($get_expense->tipe == '2') {
-				$title_expense = 'Expense Akomodasi';
-			}
-			if ($get_expense->tipe == '3') {
-				$title_expense = 'Expense Others';
-			}
-			if ($get_expense->tipe == '4') {
-				$title_expense = 'Expense Lab';
+			if (!empty($get_expense)) {
+				if ($get_expense->tipe == '1') {
+					$title_expense = 'Expense Subcont';
+				}
+				if ($get_expense->tipe == '2') {
+					$title_expense = 'Expense Akomodasi';
+				}
+				if ($get_expense->tipe == '3') {
+					$title_expense = 'Expense Others';
+				}
+				if ($get_expense->tipe == '4') {
+					$title_expense = 'Expense Lab';
+				}
 			}
 
-			$this->consultant->select('a.*');
-			$this->consultant->from('kons_tr_kasbon_project_header a');
-			$this->consultant->join('kons_tr_expense_report_project_header b', 'b.id_header = a.id');
-			$this->consultant->where('b.id', $id);
-			$get_kasbon = $this->consultant->get()->row();
+			$this->db->select('a.*');
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_header a');
+			$this->db->join(DBCNL . '.kons_tr_expense_report_project_header b', 'b.id_header = a.id');
+			$this->db->where('b.id', $id);
+			$get_kasbon = $this->db->get()->row();
 
 			$data = [
 				'id' => $id,
@@ -3704,24 +3768,42 @@ class Request_payment extends Admin_Controller
 			];
 		}
 
-		$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+		if (empty($get_request_payment) && !empty($get_dp) && !empty($get_dp->no_doc)) {
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_dp->no_doc))->row();
+		}
 
 		$today = date('l, d F Y [H:i:s]');
 
-		// $this->load->library(array('Mpdf'));
-		$mpdf = new Mpdf();
-		// $mpdf->SetImportUse();
+		$mpdf = new Mpdf([
+			'mode' => 'utf-8',
+			'format' => 'A4',
+			'margin_top' => 10,
+			'margin_bottom' => 10,
+			'margin_left' => 15,
+			'margin_right' => 15
+		]);
 		$mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_direct_payment', $data);
 
-		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id . '';
-		// $mpdf->SetWatermarkText('ORI Group');
+		$clean_id = str_replace(['/', '\\'], '_', $id);
+		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id;
 		$mpdf->showWatermarkText = true;
-		$mpdf->SetTitle($id . "/" . date('ymdhis'));
+		$mpdf->SetTitle($clean_id . "_" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
 		$mpdf->WriteHTML($show);
-		$mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', 'D');
+
+		if (!empty($id_spk_penawaran)) {
+			$spk_penawaran_data = $this->_get_spk_penawaran_data($id_spk_penawaran);
+			if (!empty($spk_penawaran_data)) {
+				$show_spk = $this->template->load_view('print_spk_penawaran', $spk_penawaran_data);
+				$mpdf->AddPage();
+				$mpdf->WriteHTML($show_spk);
+			}
+		}
+
+		$mpdf->Output($clean_id . '_' . date('ymdhis') . '.pdf', 'I');
 	}
 
 	public function print_kasbon($id)
@@ -3729,19 +3811,59 @@ class Request_payment extends Admin_Controller
 		$id = urldecode($id);
 		$id = str_replace('|', '/', $id);
 
+		if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
 
-		$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $id))->row();
+		$get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $id))->row();
+
+		// Fallback: check if $id is no_doc in tr_kasbon
+		$get_kasbon_local = null;
+		$target_header_id = $id;
+		if (empty($get_kasbon_header)) {
+			$get_kasbon_local = $this->db->get_where('tr_kasbon', array('no_doc' => $id))->row();
+			if (!empty($get_kasbon_local) && !empty($get_kasbon_local->no_kasbon_consultant)) {
+				$get_kasbon_header = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_header', array('id' => $get_kasbon_local->no_kasbon_consultant))->row();
+				if (!empty($get_kasbon_header)) {
+					$target_header_id = $get_kasbon_local->no_kasbon_consultant;
+				}
+			}
+		} else {
+			$get_kasbon_local = $this->db->get_where('tr_kasbon', array('no_kasbon_consultant' => $id))->row();
+		}
 
 		if (!empty($get_kasbon_header)) {
+			// Fallback bank info from tr_kasbon if empty in consultant header
+			if (!empty($get_kasbon_local)) {
+				if (empty($get_kasbon_header->bank) && !empty($get_kasbon_local->bank_id)) {
+					$get_kasbon_header->bank = $get_kasbon_local->bank_id;
+				}
+				if (empty($get_kasbon_header->bank_number) && !empty($get_kasbon_local->accnumber)) {
+					$get_kasbon_header->bank_number = $get_kasbon_local->accnumber;
+				}
+				if (empty($get_kasbon_header->bank_account) && !empty($get_kasbon_local->accname)) {
+					$get_kasbon_header->bank_account = $get_kasbon_local->accname;
+				}
+			}
+
 			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
 
-			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
+			$this->db->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, COALESCE(NULLIF(b.nm_paket, ""), a.nm_project) as nm_paket');
+			$this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
+			$this->db->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+			$this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+			$get_spk_penawaran = $this->db->get()->row();
 
-			$this->consultant->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, b.nm_paket');
-			$this->consultant->from('kons_tr_spk_penawaran a');
-			$this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-			$this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
-			$get_spk_penawaran = $this->consultant->get()->row();
+			if (empty($get_spk_penawaran)) {
+				$get_spk_penawaran = (object) [
+					'id_spk_penawaran' => !empty($id_spk_penawaran) ? $id_spk_penawaran : '-',
+					'nm_project_leader' => '-',
+					'nm_sales' => '-',
+					'nm_customer' => '-',
+					'waktu_from' => '',
+					'waktu_to' => '',
+					'alamat' => '-',
+					'nm_paket' => '-'
+				];
+			}
 
 			$tipe = '';
 			if ($get_kasbon_header->tipe == '1') {
@@ -3763,19 +3885,19 @@ class Request_payment extends Admin_Controller
 				$tipe = 'Kasbon Subcont Perusahaan';
 			}
 
+			// ID matching list for detail queries
+			$match_ids = array_unique(array_filter([$target_header_id, $id, !empty($get_kasbon_local->no_kasbon_consultant) ? $get_kasbon_local->no_kasbon_consultant : '', !empty($get_kasbon_local->no_doc) ? $get_kasbon_local->no_doc : '']));
+
 			// ============================================================
 			// FIX: Real-time Sisa Qty & Sisa Budget Calculation
-			// Issue: Snapshot (aktual_terpakai, sisa_budget) gives wrong values
-			// when multiple kasbons exist for the same item in same SPK
-			// Solution: Calculate real-time by querying all other kasbons
 			// ============================================================
 
 			// [START] KASBON SUBCONT - Real-time calculation
-			$this->consultant->select('a.*,
+			$this->db->select('a.*,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_aktifitas = a.id_aktifitas
 					AND b.id_spk_budgeting = a.id_spk_budgeting
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
@@ -3783,151 +3905,162 @@ class Request_payment extends Admin_Controller
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_aktifitas = a.id_aktifitas
 					AND b.id_spk_budgeting = a.id_spk_budgeting
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont a');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont a');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont = $this->db->get()->result();
 			// [END] KASBON SUBCONT
 
 			// [START] KASBON AKOMODASI - Real-time calculation (with qty_budget_tambahan & budget_tambahan)
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi + COALESCE(a.qty_budget_tambahan, 0) - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_akomodasi b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_akomodasi b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_akomodasi = a.id_akomodasi
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi + COALESCE(a.budget_tambahan, 0) - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_akomodasi b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_akomodasi b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_akomodasi = a.id_akomodasi
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_akomodasi a');
-			$this->consultant->join('kons_tr_penawaran_akomodasi b', 'b.id = a.id_akomodasi', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_akomodasi = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_akomodasi a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_akomodasi b', 'b.id = a.id_akomodasi', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_akomodasi = $this->db->get()->result();
 			// [END] KASBON AKOMODASI
 
 			// [START] KASBON OTHERS - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_others b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_others b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_others = a.id_others
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_others b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_others b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_others = a.id_others
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_others a');
-			$this->consultant->join('kons_tr_penawaran_others b', 'b.id = a.id_others', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_others = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_others a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_others b', 'b.id = a.id_others', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_others = $this->db->get()->result();
 			// [END] KASBON OTHERS
 
 			// [START] KASBON LAB - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_lab b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_lab b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_lab = a.id_lab
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_lab b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_lab b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_lab = a.id_lab
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_lab a');
-			$this->consultant->join('kons_tr_penawaran_lab b', 'b.id = a.id_lab', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_lab = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_lab a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_lab b', 'b.id = a.id_lab', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_lab = $this->db->get()->result();
 			// [END] KASBON LAB
 
 			// [START] KASBON SUBCONT TENAGA AHLI - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_tenaga_ahli b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_tenaga_ahli b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont_tenaga_ahli a');
-			$this->consultant->join('kons_tr_penawaran_subcont_tenaga_ahli b', 'b.id = a.id_subcont', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont_tenaga_ahli = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont_tenaga_ahli a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_subcont_tenaga_ahli b', 'b.id = a.id_subcont', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont_tenaga_ahli = $this->db->get()->result();
 			// [END] KASBON SUBCONT TENAGA AHLI
 
 			// [START] KASBON SUBCONT PERUSAHAAN - Real-time calculation
-			$this->consultant->select('a.*, b.keterangan,
+			$this->db->select('a.*, b.keterangan,
 				(a.qty_estimasi - COALESCE(
 					(SELECT SUM(b.qty_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_perusahaan b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.qty_pengajuan) as sisa_qty_realtime,
 				(a.total_budget_estimasi - COALESCE(
 					(SELECT SUM(b.total_pengajuan)
-					FROM kons_tr_kasbon_project_subcont_perusahaan b
-					JOIN kons_tr_kasbon_project_header h ON h.id = b.id_header
+					FROM ' . DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan b
+					JOIN ' . DBCNL . '.kons_tr_kasbon_project_header h ON h.id = b.id_header
 					WHERE b.id_subcont = a.id_subcont
 					AND h.id_spk_penawaran = "' . $id_spk_penawaran . '"
 					AND b.id_header != a.id_header
 					), 0) - a.total_pengajuan) as sisa_budget_realtime
 			');
-			$this->consultant->from('kons_tr_kasbon_project_subcont_perusahaan a');
-			$this->consultant->join('kons_tr_penawaran_subcont_perusahaan b', 'b.id = a.id_subcont', 'left');
-			$this->consultant->where('a.id_header', $id);
-			$get_kasbon_subcont_perusahaan = $this->consultant->get()->result();
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_subcont_perusahaan a');
+			$this->db->join(DBCNL . '.kons_tr_penawaran_subcont_perusahaan b', 'b.id = a.id_subcont', 'left');
+			$this->db->where_in('a.id_header', $match_ids);
+			$get_kasbon_subcont_perusahaan = $this->db->get()->result();
 			// [END] KASBON SUBCONT PERUSAHAAN
 
-			$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
 			$tgl_approve_direktur = !empty($get_request_payment) ? $get_request_payment->created_on : null;
-			if (empty($tgl_approve_direktur)) {
-				$get_rp_local = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+			if (empty($tgl_approve_direktur) && !empty($get_kasbon_local) && !empty($get_kasbon_local->no_doc)) {
+				$get_rp_local = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon_local->no_doc))->row();
 				if (!empty($get_rp_local)) {
 					$tgl_approve_direktur = $get_rp_local->created_on;
 				}
+			}
+			if (empty($tgl_approve_direktur) && !empty($get_kasbon_local) && !empty($get_kasbon_local->approved_on)) {
+				$tgl_approve_direktur = $get_kasbon_local->approved_on;
+			}
+
+			// Created by name lookup
+			$nm_created_by = '-';
+			$cr_user = !empty($get_kasbon_header->created_by) ? $get_kasbon_header->created_by : (!empty($get_kasbon_local->created_by) ? $get_kasbon_local->created_by : '');
+			if (!empty($cr_user)) {
+				$u_cr = $this->db->query("SELECT nm_lengkap FROM users WHERE id_user = '" . $this->db->escape_str($cr_user) . "' OR username = '" . $this->db->escape_str($cr_user) . "'")->row();
+				$nm_created_by = !empty($u_cr->nm_lengkap) ? $u_cr->nm_lengkap : $cr_user;
 			}
 
 			$data = [
@@ -3942,89 +4075,102 @@ class Request_payment extends Admin_Controller
 				'data_kasbon_subcont_tenaga_ahli' => $get_kasbon_subcont_tenaga_ahli,
 				'data_kasbon_subcont_perusahaan' => $get_kasbon_subcont_perusahaan,
 				'tipe' => $tipe,
-				'tgl_approve_direktur' => $tgl_approve_direktur
+				'tgl_approve_direktur' => $tgl_approve_direktur,
+				'nm_created_by' => $nm_created_by
 			];
 		} else {
-			$this->consultant->select('a.*, b.id_spk_penawaran');
-			$this->consultant->from('kons_tr_expense_report_project_header a');
-			$this->consultant->join('kons_tr_kasbon_project_header b', 'b.id = a.id_header');
-			$this->consultant->where('a.id', $id);
-			$get_expense = $this->consultant->get()->row();
+			$this->db->select('a.*, b.id_spk_penawaran');
+			$this->db->from(DBCNL . '.kons_tr_expense_report_project_header a');
+			$this->db->join(DBCNL . '.kons_tr_kasbon_project_header b', 'b.id = a.id_header');
+			$this->db->where('a.id', $id);
+			$get_expense = $this->db->get()->row();
 
-			$id_spk_penawaran = $get_expense->id_spk_penawaran;
+			$id_spk_penawaran = !empty($get_expense) ? $get_expense->id_spk_penawaran : '';
 
-			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
+			$this->db->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, COALESCE(NULLIF(b.nm_paket, ""), a.nm_project) as nm_paket');
+			$this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
+			$this->db->join(DBCNL . '.kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
+			$this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+			$get_spk_penawaran = $this->db->get()->row();
 
-			$this->consultant->select('a.id_spk_penawaran, a.nm_project_leader, a.nm_sales, a.nm_customer, a.waktu_from, a.waktu_to, a.address as alamat, b.nm_paket');
-			$this->consultant->from('kons_tr_spk_penawaran a');
-			$this->consultant->join('kons_master_konsultasi_header b', 'b.id_konsultasi_h = a.id_project', 'left');
-			$this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
-			$get_spk_penawaran = $this->consultant->get()->row();
+			if (empty($get_spk_penawaran)) {
+				$get_spk_penawaran = (object) [
+					'id_spk_penawaran' => !empty($id_spk_penawaran) ? $id_spk_penawaran : '-',
+					'nm_project_leader' => '-',
+					'nm_sales' => '-',
+					'nm_customer' => '-',
+					'waktu_from' => '',
+					'waktu_to' => '',
+					'alamat' => '-',
+					'nm_paket' => '-'
+				];
+			}
 
 			$tipe = 'Expense';
 
-			$get_expense_detail = $this->consultant->get_where('kons_tr_expense_report_project_detail', array('id_header_expense' => $id))->result();
+			$get_expense_detail = $this->db->get_where(DBCNL . '.kons_tr_expense_report_project_detail', array('id_header_expense' => $id))->result();
 
 			$list_detail_expense_detail = [];
 			foreach ($get_expense_detail as $item_expense_detail) :
 				if ($item_expense_detail->tipe == '1') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_aktifitas', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_subcont', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_aktifitas' => $get_spk_budgeting->id_aktifitas))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_aktifitas', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_subcont', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_aktifitas' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_aktifitas : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_aktifitas,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_aktifitas : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 				if ($item_expense_detail->tipe == '2') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_akomodasi', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_akomodasi', array('id_spk_budgeting' => $get_spk_budgeting->id_spk_budgeting, 'id_akomodasi' => $item_expense_detail->id_akomodasi))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_akomodasi', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_akomodasi', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_akomodasi' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_akomodasi : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_item,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_item : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 				if ($item_expense_detail->tipe == '3') {
-					$get_spk_budgeting = $this->consultant->get_where('kons_tr_spk_budgeting_others', array('id' => $item_expense_detail->id_detail_kasbon))->row();
-					$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_others', array('id_spk_budgeting' => $get_spk_budgeting->id_spk_budgeting, 'id_others' => $item_expense_detail->id_others))->row();
+					$get_spk_budgeting = $this->db->get_where(DBCNL . '.kons_tr_spk_budgeting_others', array('id' => $item_expense_detail->id_detail_kasbon))->row();
+					$get_kasbon = $this->db->get_where(DBCNL . '.kons_tr_kasbon_project_others', array('id_spk_budgeting' => $item_expense_detail->id_spk_budgeting, 'id_others' => (!empty($get_spk_budgeting) ? $get_spk_budgeting->id_others : '')))->row();
 
 					$list_detail_expense_detail[$item_expense_detail->id] = [
-						'nama_expense' => $get_spk_budgeting->nm_item,
-						'qty_kasbon' => $get_kasbon->qty_pengajuan,
-						'nominal_kasbon' => $get_kasbon->nominal_pengajuan,
+						'nama_expense' => !empty($get_spk_budgeting) ? $get_spk_budgeting->nm_item : '',
+						'qty_kasbon' => !empty($get_kasbon) ? $get_kasbon->qty_pengajuan : 0,
+						'nominal_kasbon' => !empty($get_kasbon) ? $get_kasbon->nominal_pengajuan : 0,
 						'qty_expense' => $item_expense_detail->qty_expense,
 						'nominal_expense' => $item_expense_detail->nominal_expense
 					];
 				}
 			endforeach;
 
-
 			$title_expense = '';
-			if ($get_expense->tipe == '1') {
-				$title_expense = 'Expense Subcont';
-			}
-			if ($get_expense->tipe == '2') {
-				$title_expense = 'Expense Akomodasi';
-			}
-			if ($get_expense->tipe == '3') {
-				$title_expense = 'Expense Others';
-			}
-			if ($get_expense->tipe == '4') {
-				$title_expense = 'Expense Lab';
+			if (!empty($get_expense)) {
+				if ($get_expense->tipe == '1') {
+					$title_expense = 'Expense Subcont';
+				}
+				if ($get_expense->tipe == '2') {
+					$title_expense = 'Expense Akomodasi';
+				}
+				if ($get_expense->tipe == '3') {
+					$title_expense = 'Expense Others';
+				}
+				if ($get_expense->tipe == '4') {
+					$title_expense = 'Expense Lab';
+				}
 			}
 
-			$this->consultant->select('a.*');
-			$this->consultant->from('kons_tr_kasbon_project_header a');
-			$this->consultant->join('kons_tr_expense_report_project_header b', 'b.id_header = a.id');
-			$this->consultant->where('b.id', $id);
-			$get_kasbon = $this->consultant->get()->row();
+			$this->db->select('a.*');
+			$this->db->from(DBCNL . '.kons_tr_kasbon_project_header a');
+			$this->db->join(DBCNL . '.kons_tr_expense_report_project_header b', 'b.id_header = a.id');
+			$this->db->where('b.id', $id);
+			$get_kasbon = $this->db->get()->row();
 
 			$data = [
 				'id' => $id,
@@ -4038,23 +4184,161 @@ class Request_payment extends Admin_Controller
 			];
 		}
 
-		$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+		$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+		if (empty($get_request_payment) && !empty($get_kasbon_local) && !empty($get_kasbon_local->no_doc)) {
+			$get_request_payment = $this->db->get_where('request_payment', array('no_doc' => $get_kasbon_local->no_doc))->row();
+		}
 
 		$today = date('l, d F Y [H:i:s]');
 
-		// $this->load->library(array('Mpdf'));
-		$mpdf = new Mpdf();
-		// $mpdf->SetImportUse();
+		$mpdf = new Mpdf([
+			'mode' => 'utf-8',
+			'format' => 'A4',
+			'margin_top' => 10,
+			'margin_bottom' => 10,
+			'margin_left' => 15,
+			'margin_right' => 15
+		]);
 		$mpdf->RestartDocTemplate();
 		$show = $this->template->load_view('print_kasbon', $data);
 
-		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id . '';
-		// $mpdf->SetWatermarkText('ORI Group');
+		$clean_id = str_replace(['/', '\\'], '_', $id);
+		$footer = 'Printed by : ' . ucfirst(strtolower($this->auth->user_name())) . ', ' . $today . ' / ' . $id;
 		$mpdf->showWatermarkText = true;
-		$mpdf->SetTitle($id . "/" . date('ymdhis'));
+		$mpdf->SetTitle($clean_id . "_" . date('ymdhis'));
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
 		$mpdf->WriteHTML($show);
-		$mpdf->Output(' ' . $id . '/' . date('ymdhis') . '.pdf', 'D');
+
+		if (!empty($get_kasbon_header) && !empty($id_spk_penawaran)) {
+			$spk_penawaran_data = $this->_get_spk_penawaran_data($id_spk_penawaran);
+			if (!empty($spk_penawaran_data)) {
+				$show_spk = $this->template->load_view('print_spk_penawaran', $spk_penawaran_data);
+				$mpdf->AddPage();
+				$mpdf->WriteHTML($show_spk);
+			}
+		}
+
+		$mpdf->Output($clean_id . '_' . date('ymdhis') . '.pdf', 'I');
+	}
+
+	private function _get_spk_penawaran_data($id_spk_penawaran)
+	{
+		if (empty($id_spk_penawaran)) {
+			return null;
+		}
+
+		if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
+
+		$get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+		if (empty($get_spk_penawaran)) {
+			return null;
+		}
+
+		$get_spk_penawaran_payment = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran_payment', ['id_spk_penawaran' => $id_spk_penawaran])->result();
+
+		$this->db->select('a.*');
+		$this->db->from(DBCNL . '.kons_tr_spk_penawaran_subcont a');
+		$this->db->where('a.id_spk_penawaran', $id_spk_penawaran);
+		$this->db->order_by('a.id', 'asc');
+		$get_spk_penawaran_subcont = $this->db->get()->result();
+
+		$get_penawaran = null;
+		if (!empty($get_spk_penawaran->id_penawaran)) {
+			$get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran->id_penawaran])->row();
+		}
+
+		$get_customer = null;
+		$get_marketing = null;
+		$detail_informasi_awal = '';
+		if (!empty($get_penawaran)) {
+			if (!empty($get_penawaran->id_customer)) {
+				$this->db->select('a.*, b.nm_pic, b.divisi as jabatan_pic, b.hp as no_hp_pic');
+				$this->db->from(DBCNL . '.customer a');
+				$this->db->join(DBCNL . '.customer_pic b', 'b.id_pic = a.id_pic', 'left');
+				$this->db->where('a.nm_customer <>', '');
+				$this->db->where('a.id_customer', $get_penawaran->id_customer);
+				$get_customer = $this->db->get()->row();
+			}
+
+			if (!empty($get_penawaran->id_marketing)) {
+				$this->db->select('a.id, a.name as nm_karyawan');
+				$this->db->from(DBCNL . '.employees a');
+				$this->db->where('a.id', $get_penawaran->id_marketing);
+				$get_marketing = $this->db->get()->row();
+			}
+
+			if (!empty($get_penawaran->detail_informasi_awal)) {
+				if ($get_penawaran->tipe_informasi_awal == 'Sales' || $get_penawaran->tipe_informasi_awal == 'Others') {
+					$this->db->select('a.name as nm_karyawan');
+					$this->db->from(DBCNL . '.employees a');
+					$this->db->where('a.id', $get_penawaran->detail_informasi_awal);
+					$get_marketing_informasi_awal = $this->db->get()->row();
+
+					if (!empty($get_marketing_informasi_awal)) {
+						$detail_informasi_awal = $get_marketing_informasi_awal->nm_karyawan;
+					}
+				} else {
+					$detail_informasi_awal = $get_penawaran->detail_informasi_awal;
+				}
+			}
+		}
+
+		$get_akomodasi = [];
+		$get_others = [];
+		$get_lab = [];
+		if (!empty($get_spk_penawaran->id_penawaran)) {
+			$this->db->select('a.*, b.nm_biaya');
+			$this->db->from(DBCNL . '.kons_tr_penawaran_akomodasi a');
+			$this->db->join(DBCNL . '.kons_master_biaya b', 'b.id = a.id_item', 'left');
+			$this->db->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+			$get_akomodasi = $this->db->get()->result();
+
+			$this->db->select('a.*, b.nm_biaya');
+			$this->db->from(DBCNL . '.kons_tr_penawaran_others a');
+			$this->db->join(DBCNL . '.kons_master_biaya b', 'b.id = a.id_item', 'left');
+			$this->db->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+			$get_others = $this->db->get()->result();
+
+			$this->db->select('a.*, b.isu_lingkungan as nm_biaya');
+			$this->db->from(DBCNL . '.kons_tr_penawaran_lab a');
+			$this->db->join(DBCNL . '.kons_master_lab b', 'b.id = a.id_item', 'left');
+			$this->db->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+			$get_lab = $this->db->get()->result();
+		}
+
+		$ttl_mandays_subcont = 0;
+		$ttl_tandem = 0;
+		if (!empty($get_spk_penawaran_subcont)) {
+			foreach ($get_spk_penawaran_subcont as $item) {
+				$ttl_mandays_subcont += $item->mandays_subcont;
+				$ttl_tandem += ($item->mandays_tandem * $item->mandays_rate_tandem);
+			}
+		}
+
+		$nm_paket = '';
+		if (!empty($get_spk_penawaran->id_project)) {
+			$this->db->select('a.nm_paket');
+			$this->db->from(DBCNL . '.kons_master_konsultasi_header a');
+			$this->db->where('a.id_konsultasi_h', $get_spk_penawaran->id_project);
+			$get_package = $this->db->get()->row();
+			$nm_paket = (!empty($get_package)) ? $get_package->nm_paket : '';
+		}
+
+		return [
+			'list_spk_penawaran' => $get_spk_penawaran,
+			'list_spk_penawaran_subcont' => $get_spk_penawaran_subcont,
+			'list_spk_penawaran_payment' => $get_spk_penawaran_payment,
+			'list_penawaran' => $get_penawaran,
+			'list_customer' => $get_customer,
+			'list_marketing' => $get_marketing,
+			'detail_informasi_awal' => $detail_informasi_awal,
+			'list_akomodasi' => $get_akomodasi,
+			'list_others' => $get_others,
+			'list_lab' => $get_lab,
+			'ttl_mandays_subcont' => $ttl_mandays_subcont,
+			'ttl_tandem' => $ttl_tandem,
+			'nm_paket' => $nm_paket
+		];
 	}
 }

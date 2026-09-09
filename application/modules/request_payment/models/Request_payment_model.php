@@ -708,7 +708,7 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Periodik') {
                 $btn_print = ' <a href="' . base_url('expense/periodik_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
-            if ($item->kategori == 'Kasbon') {
+            if (strtolower($item->kategori) == 'kasbon') {
                 $get_kasbon =  $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
                 if (!empty($get_kasbon->no_kasbon_consultant)) {
                     $btn_print = ' <a href="' . base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
@@ -744,8 +744,11 @@ class Request_payment_model extends BF_Model
             }
 
             // Print Button untuk DIRECT PAYMENT
-            if ($item->kategori == 'Direct Payment' || strpos($item->no_dokumen, 'DPM-') === 0) {
+            if (strtolower($item->kategori) == 'direct payment' || strtolower($item->kategori) == 'direct_payment' || strpos($item->no_dokumen, 'DPM-') === 0 || strpos($item->no_dokumen, 'DP-') === 0) {
                 $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
+                if (empty($get_dp_data)) {
+                    $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['ids' => $item->no_dokumen])->row();
+                }
                 if ($get_dp_data) {
                     $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . str_replace('/', '|', $get_dp_data->no_doc)) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
