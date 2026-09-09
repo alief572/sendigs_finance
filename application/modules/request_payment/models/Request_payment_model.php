@@ -747,7 +747,7 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Direct Payment' || strpos($item->no_dokumen, 'DPM-') === 0) {
                 $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
                 if ($get_dp_data) {
-                    $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . $get_dp_data->no_doc) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                    $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . str_replace('/', '|', $get_dp_data->no_doc)) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 

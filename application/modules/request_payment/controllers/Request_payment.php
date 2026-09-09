@@ -3366,7 +3366,36 @@ class Request_payment extends Admin_Controller
 
 		$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $id))->row();
 
+		// Fallback jika tidak ditemukan dengan ID langsung, cari melalui tr_direct_payment
+		$get_dp = null;
+		if (empty($get_kasbon_header)) {
+			$get_dp = $this->db->get_where('tr_direct_payment', array('no_doc' => $id))->row();
+			if (!empty($get_dp) && !empty($get_dp->ids)) {
+				$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $get_dp->ids))->row();
+				if (!empty($get_kasbon_header)) {
+					$id = $get_dp->ids;
+				}
+			}
+		} else {
+			$get_dp = $this->db->get_where('tr_direct_payment', array('no_doc' => $id))->row();
+			if (empty($get_dp)) {
+				$get_dp = $this->db->get_where('tr_direct_payment', array('ids' => $id))->row();
+			}
+		}
+
 		if (!empty($get_kasbon_header)) {
+			// Fallback data bank jika kosong di kons_tr_kasbon_project_header tapi ada di tr_direct_payment
+			if (!empty($get_dp)) {
+				if (empty($get_kasbon_header->bank) && !empty($get_dp->bank)) {
+					$get_kasbon_header->bank = $get_dp->bank;
+				}
+				if (empty($get_kasbon_header->bank_number) && !empty($get_dp->bank_number)) {
+					$get_kasbon_header->bank_number = $get_dp->bank_number;
+				}
+				if (empty($get_kasbon_header->bank_account) && !empty($get_dp->bank_account)) {
+					$get_kasbon_header->bank_account = $get_dp->bank_account;
+				}
+			}
 			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
 
 			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
@@ -3556,6 +3585,16 @@ class Request_payment extends Admin_Controller
 			// [END] KASBON SUBCONT PERUSAHAAN
 
 			$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+			$tgl_approve_direktur = !empty($get_request_payment) ? $get_request_payment->created_on : null;
+			if (empty($tgl_approve_direktur) && !empty($get_dp) && !empty($get_dp->created_date)) {
+				$tgl_approve_direktur = $get_dp->created_date;
+			}
+			if (empty($tgl_approve_direktur)) {
+				$get_rp_local = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+				if (!empty($get_rp_local)) {
+					$tgl_approve_direktur = $get_rp_local->created_on;
+				}
+			}
 
 			$data = [
 				'id' => $id,
@@ -3569,7 +3608,7 @@ class Request_payment extends Admin_Controller
 				'data_kasbon_subcont_tenaga_ahli' => $get_kasbon_subcont_tenaga_ahli,
 				'data_kasbon_subcont_perusahaan' => $get_kasbon_subcont_perusahaan,
 				'tipe' => $tipe,
-				'tgl_approve_direktur' => $get_request_payment->created_on
+				'tgl_approve_direktur' => $tgl_approve_direktur
 			];
 		} else {
 			$this->consultant->select('a.*, b.id_spk_penawaran');
@@ -3883,6 +3922,13 @@ class Request_payment extends Admin_Controller
 			// [END] KASBON SUBCONT PERUSAHAAN
 
 			$get_request_payment = $this->consultant->get_where('request_payment', array('no_doc' => $id))->row();
+			$tgl_approve_direktur = !empty($get_request_payment) ? $get_request_payment->created_on : null;
+			if (empty($tgl_approve_direktur)) {
+				$get_rp_local = $this->db->get_where('request_payment', array('no_doc' => $id))->row();
+				if (!empty($get_rp_local)) {
+					$tgl_approve_direktur = $get_rp_local->created_on;
+				}
+			}
 
 			$data = [
 				'id' => $id,
@@ -3896,7 +3942,7 @@ class Request_payment extends Admin_Controller
 				'data_kasbon_subcont_tenaga_ahli' => $get_kasbon_subcont_tenaga_ahli,
 				'data_kasbon_subcont_perusahaan' => $get_kasbon_subcont_perusahaan,
 				'tipe' => $tipe,
-				'tgl_approve_direktur' => $get_request_payment->created_on
+				'tgl_approve_direktur' => $tgl_approve_direktur
 			];
 		} else {
 			$this->consultant->select('a.*, b.id_spk_penawaran');

@@ -35,6 +35,21 @@ if ($tipe == 'Kasbon Subcont Perusahaan') {
 if ($tipe == 'Expense') {
     $box_expense = '';
 }
+
+if (!isset($nm_created_by) || empty($nm_created_by)) {
+    $nm_created_by = '-';
+    $user_id_cr = isset($data_kasbon_header->created_by) ? $data_kasbon_header->created_by : '';
+    if (!empty($user_id_cr)) {
+        $u_cr = $this->db->query("SELECT nm_lengkap FROM users WHERE id_user = '" . $this->db->escape_str($user_id_cr) . "' OR username = '" . $this->db->escape_str($user_id_cr) . "'")->row();
+        $nm_created_by = !empty($u_cr->nm_lengkap) ? $u_cr->nm_lengkap : $user_id_cr;
+    }
+}
+
+$nm_approved_by = 'Imanuel Iman';
+
+$tgl_app_direktur_formatted = (!empty($tgl_approve_direktur) && $tgl_approve_direktur != '0000-00-00 00:00:00') ? date('d F Y', strtotime($tgl_approve_direktur)) : '-';
+$tgl_created = $tgl_app_direktur_formatted;
+$tgl_approved = $tgl_app_direktur_formatted;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -625,10 +640,75 @@ if ($tipe == 'Expense') {
         </div>
     </div>
 
+    <br />
+    <table style="width: 100%; font-size: 12px; margin-top: 15px; page-break-inside: avoid;" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <!-- Kolom Kiri: Detail Bank -->
+            <td style="width: 45%; vertical-align: top;">
+                <table style="width: 100%; font-size: 12px;" border="0" cellpadding="2" cellspacing="0">
+                    <tr>
+                        <td style="width: 110px; font-weight: bold;">Bank</td>
+                        <td style="width: 10px;">:</td>
+                        <td><?= !empty($data_kasbon_header->bank) ? $data_kasbon_header->bank : '-' ?></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Bank Number</td>
+                        <td>:</td>
+                        <td><?= !empty($data_kasbon_header->bank_number) ? $data_kasbon_header->bank_number : '-' ?></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Account Name</td>
+                        <td>:</td>
+                        <td><?= !empty($data_kasbon_header->bank_account) ? $data_kasbon_header->bank_account : '-' ?></td>
+                    </tr>
+                </table>
+            </td>
+            <!-- Spasi Pemisah -->
+            <td style="width: 5%;"></td>
+            <!-- Kolom Kanan: 3 Kolom TTD -->
+            <td style="width: 50%; vertical-align: top;">
+                <table style="width: 100%; font-size: 12px;" border="0" cellpadding="2" cellspacing="0">
+                    <tr>
+                        <td style="width: 31%; text-align: center; font-weight: bold;">Mengajukan</td>
+                        <td style="width: 3%;"></td>
+                        <td style="width: 31%; text-align: center; font-weight: bold;">Mengetahui</td>
+                        <td style="width: 3%;"></td>
+                        <td style="width: 31%; text-align: center; font-weight: bold;">Mengetahui</td>
+                    </tr>
+                    <tr>
+                        <td style="height: 70px;"></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; vertical-align: bottom; white-space: nowrap;">
+                            <u>&nbsp; &nbsp; <?= !empty($nm_created_by) ? $nm_created_by : '-' ?> &nbsp; &nbsp;</u><br>
+                            <?= !empty($tgl_created) ? $tgl_created : '-' ?>
+                        </td>
+                        <td></td>
+                        <td style="text-align: center; vertical-align: bottom; white-space: nowrap;">
+                            <u>&nbsp; &nbsp; Fikri &nbsp; &nbsp;</u><br>
+                            <?= !empty($tgl_approved) ? $tgl_approved : '-' ?>
+                        </td>
+                        <td></td>
+                        <td style="text-align: center; vertical-align: bottom; white-space: nowrap;">
+                            <u>&nbsp; &nbsp; <?= !empty($nm_approved_by) ? $nm_approved_by : '-' ?> &nbsp; &nbsp;</u><br>
+                            <?= !empty($tgl_approved) ? $tgl_approved : '-' ?>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <?php if (!empty($tgl_approve_direktur)) : ?>
+    <br />
     <div class="box">
         <div class="box-body">
             <div style="width: 50% !important;">
-                <table style="width: 100%;">
+                <table style="width: 100%; font-size: 11px;">
                     <tr>
                         <th>Tgl Approve <?= $tipe2 ?> oleh Direktur</th>
                         <th>:</th>
@@ -640,6 +720,7 @@ if ($tipe == 'Expense') {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </body>
 
 </html>
