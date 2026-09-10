@@ -163,10 +163,113 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 		background: #f5f5f5 !important;
 		opacity: 0.6;
 	}
-</style>
+
+	/* filter panel */
+	.rp-filter-panel {
+		background: #f7f9fb;
+		border: 1px solid #e3e8ee;
+		border-radius: 6px;
+		padding: 14px 16px 16px;
+		margin-bottom: 16px;
+	}
+
+	.rp-filter-label {
+		display: block;
+		font-size: 11px;
+		font-weight: 700;
+		color: #8895a7;
+		letter-spacing: .3px;
+		margin-bottom: 4px;
+	}
+
+	.rp-filter-chip {
+		display: inline-block;
+		margin-top: 12px;
+		background: #e8f5e9;
+		border: 1px solid #c8e6c9;
+		color: #2e7d32;
+		font-size: 12px;
+		padding: 4px 12px;
+		border-radius: 4px;
+	}
+
+	/* cards */
+	.rp-cards {
+		display: flex;
+		flex-wrap: wrap;
+		margin-left: -7px;
+		margin-right: -7px;
+		margin-bottom: 10px;
+	}
+
+	.rp-cards .rp-card-col {
+		width: 25%;
+		padding: 7px;
+		box-sizing: border-box;
+	}
+
+	.rp-card {
+		background: #fff;
+		border: 1px solid #e3e8ee;
+		border-left-width: 4px;
+		border-left-color: #cfd8e3;
+		border-radius: 6px;
+		padding: 14px 16px;
+		height: 100%;
+		box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+	}
+
+	.rp-card-label {
+		font-size: 11px;
+		font-weight: 700;
+		color: #9aa7b5;
+		letter-spacing: .4px;
+		margin-bottom: 8px;
+		text-transform: uppercase;
+	}
+
+	.rp-card-count {
+		font-size: 26px;
+		font-weight: 700;
+		color: #2b3440;
+		line-height: 1;
+	}
+
+	.rp-card-sub {
+		font-size: 11px;
+		color: #9aa7b5;
+		margin-top: 4px;
+	}
+
+	.rp-card-val {
+		font-size: 19px;
+		font-weight: 700;
+		line-height: 1.15;
+		word-break: break-word;
+	}
+
+	/* responsif */
+	@media (max-width: 1199px) {
+		.rp-cards .rp-card-col { width: 33.3333%; }
+	}
+	@media (max-width: 767px) {
+		.rp-cards .rp-card-col { width: 50%; }
+	}
+	@media (max-width: 480px) {
+		.rp-cards .rp-card-col { width: 100%; }
+	}
+	</style>
 
 <div class="box">
 	<div class="box-header with-border">
+		<div class="pull-right" style="margin-top:2px;">
+			<button type="button" id="rp_btn_export" class="btn btn-success btn-sm">
+				<i class="fa fa-file-excel-o"></i> Export Excel
+			</button>
+			<button type="button" id="rp_btn_reset" class="btn btn-default btn-sm">
+				<i class="fa fa-refresh"></i> Reset Filter
+			</button>
+		</div>
 		<ol class="breadcrumb" style="background:none;padding:0;margin-bottom:5px;font-size:12px;">
 			<li><a href="javascript:void(0);">Finance</a></li>
 			<li class="active">Request Payment</li>
@@ -177,6 +280,111 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 		</h3>
 	</div>
 	<div class="box-body">
+
+		<!-- ===== FILTER BAR ===== -->
+		<div class="rp-filter-panel">
+			<div class="row">
+				<div class="col-md-3 col-sm-6">
+					<label class="rp-filter-label">COMPANY</label>
+					<select id="rp_f_company" class="form-control input-sm">
+						<option value="">Semua Entitas</option>
+						<?php if (!empty($companies)) : foreach ($companies as $c) : ?>
+							<option value="<?= $c->id; ?>"><?= $c->nama; ?></option>
+						<?php endforeach;
+						endif; ?>
+					</select>
+				</div>
+				<div class="col-md-4 col-sm-6">
+					<label class="rp-filter-label">PERIODE</label>
+					<div class="input-group">
+						<input type="date" id="rp_f_from" class="form-control input-sm">
+						<span class="input-group-addon">&mdash;</span>
+						<input type="date" id="rp_f_to" class="form-control input-sm">
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-8">
+					<label class="rp-filter-label">KATEGORI</label>
+					<select id="rp_f_kategori" class="form-control input-sm">
+						<option value="">Semua</option>
+						<option value="Cash">Cash</option>
+						<option value="Kasbon">Kasbon</option>
+						<option value="Expense">Expense</option>
+						<option value="Periodik">Periodik</option>
+						<option value="Transport">Transport</option>
+						<option value="Petty Cash">Petty Cash</option>
+						<option value="Direct Payment">Direct Payment</option>
+					</select>
+				</div>
+				<div class="col-md-2 col-sm-4">
+					<label class="rp-filter-label">&nbsp;</label>
+					<button type="button" id="rp_btn_filter" class="btn btn-primary btn-sm btn-block">
+						<i class="fa fa-filter"></i> Filter
+					</button>
+				</div>
+			</div>
+			<div class="rp-filter-chip" id="rp_filter_chip">
+				<i class="fa fa-info-circle"></i> <span id="rp_filter_chip_text">Semua Data</span>
+			</div>
+		</div>
+
+		<!-- ===== SUMMARY CARDS ===== -->
+		<div class="rp-cards" id="rp_cards">
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#607d8b;">
+					<div class="rp-card-label">Total Pengajuan</div>
+					<div class="rp-card-count" id="rp_card_count">0</div>
+					<div class="rp-card-sub">item</div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#3c8dbc;">
+					<div class="rp-card-label">Total Nilai</div>
+					<div class="rp-card-val" style="color:#3c8dbc;">Rp <span id="rp_card_total">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#3c8dbc;">
+					<div class="rp-card-label">Cash</div>
+					<div class="rp-card-val" style="color:#3c8dbc;">Rp <span id="rp_card_Cash">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#f39c12;">
+					<div class="rp-card-label">Kasbon</div>
+					<div class="rp-card-val" style="color:#f39c12;">Rp <span id="rp_card_Kasbon">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#dd4b39;">
+					<div class="rp-card-label">Expense</div>
+					<div class="rp-card-val" style="color:#dd4b39;">Rp <span id="rp_card_Expense">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#8e44ad;">
+					<div class="rp-card-label">Periodik</div>
+					<div class="rp-card-val" style="color:#8e44ad;">Rp <span id="rp_card_Periodik">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#00a65a;">
+					<div class="rp-card-label">Transport</div>
+					<div class="rp-card-val" style="color:#00a65a;">Rp <span id="rp_card_Transport">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#00c0ef;">
+					<div class="rp-card-label">Petty Cash</div>
+					<div class="rp-card-val" style="color:#00c0ef;">Rp <span id="rp_card_PettyCash">0</span></div>
+				</div>
+			</div>
+			<div class="rp-card-col">
+				<div class="rp-card" style="border-left-color:#605ca8;">
+					<div class="rp-card-label">Direct Payment</div>
+					<div class="rp-card-val" style="color:#605ca8;">Rp <span id="rp_card_DirectPayment">0</span></div>
+				</div>
+			</div>
+		</div>
 
 		<div class="rp-toolbar">
 			<div class="entries-control">
@@ -261,6 +469,53 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	function rpFmt(n) {
 		n = Math.round(Number(n) || 0);
 		return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+	}
+
+	// baca nilai filter aktif dari form
+	function rpGetFilters() {
+		return {
+			company_id: $('#rp_f_company').val() || '',
+			date_from: $('#rp_f_from').val() || '',
+			date_to: $('#rp_f_to').val() || '',
+			kategori: $('#rp_f_kategori').val() || ''
+		};
+	}
+
+	// update chip ringkasan filter aktif
+	function rpUpdateFilterChip() {
+		var f = rpGetFilters();
+		var parts = [];
+		var compTxt = $('#rp_f_company option:selected').text();
+		parts.push(compTxt || 'Semua Entitas');
+		if (f.date_from || f.date_to) {
+			parts.push('Periode: ' + (f.date_from || '...') + ' s/d ' + (f.date_to || '...'));
+		}
+		if (f.kategori) {
+			parts.push('Kategori: ' + f.kategori);
+		}
+		$('#rp_filter_chip_text').text(parts.join(' | '));
+	}
+
+	// muat kartu ringkasan (hormati filter yang sama dengan tabel)
+	function rpLoadSummary() {
+		$.ajax({
+			url: '<?= site_url("request_payment/get_summary_request"); ?>',
+			type: 'POST',
+			data: rpGetFilters(),
+			dataType: 'json',
+			success: function(res) {
+				$('#rp_card_count').text(res.total_pengajuan || 0);
+				$('#rp_card_total').text(rpFmt(res.total_nilai || 0));
+				var t = res.per_tipe || {};
+				$('#rp_card_Cash').text(rpFmt(t['Cash'] || 0));
+				$('#rp_card_Kasbon').text(rpFmt(t['Kasbon'] || 0));
+				$('#rp_card_Expense').text(rpFmt(t['Expense'] || 0));
+				$('#rp_card_Periodik').text(rpFmt(t['Periodik'] || 0));
+				$('#rp_card_Transport').text(rpFmt(t['Transport'] || 0));
+				$('#rp_card_PettyCash').text(rpFmt(t['Petty Cash'] || 0));
+				$('#rp_card_DirectPayment').text(rpFmt(t['Direct Payment'] || 0));
+			}
+		});
 	}
 
 	// ceiling calc (mirror server)
@@ -370,6 +625,11 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 					d.search = {
 						value: $('#rp_search').val()
 					};
+					var f = rpGetFilters();
+					d.company_id = f.company_id;
+					d.date_from = f.date_from;
+					d.date_to = f.date_to;
+					d.kategori = f.kategori;
 				},
 				error: function() {
 					alert('Gagal memuat data. Silakan coba lagi.');
@@ -544,6 +804,44 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			rpTable.draw();
 		});
 
+		// filter button: reload tabel + kartu + chip (reset seleksi agar tidak lintas-filter)
+		$('#rp_btn_filter').on('click', function() {
+			rpState = {};
+			rpUpdateFilterChip();
+			rpTable.draw();
+			rpLoadSummary();
+		});
+
+		// reset filter: kosongkan semua input lalu reload
+		$('#rp_btn_reset').on('click', function() {
+			$('#rp_f_company').val('');
+			$('#rp_f_from').val('');
+			$('#rp_f_to').val('');
+			$('#rp_f_kategori').val('');
+			$('#rp_search').val('');
+			rpState = {};
+			rpUpdateFilterChip();
+			rpTable.draw();
+			rpLoadSummary();
+		});
+
+		// export excel: buka tab baru dengan filter aktif sebagai query string
+		$('#rp_btn_export').on('click', function() {
+			var f = rpGetFilters();
+			var params = $.param({
+				company_id: f.company_id,
+				date_from: f.date_from,
+				date_to: f.date_to,
+				kategori: f.kategori,
+				search: $('#rp_search').val() || ''
+			});
+			window.open('<?= site_url("request_payment/export_excel_request"); ?>?' + params, '_blank');
+		});
+
+		// muat kartu pertama kali
+		rpUpdateFilterChip();
+		rpLoadSummary();
+
 		// select row
 		$('#table_rp tbody').on('change', '.rp-rowchk', function() {
 			var no = $(this).data('no');
@@ -694,6 +992,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 					alert(res.msg || 'Pengajuan berhasil dibuat.');
 					rpState = {};
 					rpTable.draw(false);
+					rpLoadSummary();
 				} else {
 					alert(res.msg || 'Gagal mengajukan.');
 				}
