@@ -46,6 +46,12 @@ class Record_request_payment extends Admin_Controller
 
 		$records = $this->Record_request_payment_model->get_records($id_pengajuan);
 
+		// Tambahkan URL print dokumen sumber per record (pakai helper dari modul request_payment)
+		$this->load->model('request_payment/Request_payment_model');
+		foreach ($records as $r) {
+			$r->print_url = $this->Request_payment_model->build_print_url($r);
+		}
+
 		$this->template->set('header', $header);
 		$this->template->set('records', $records);
 		$this->template->title('Detail Record - ' . $header->no_pengajuan);

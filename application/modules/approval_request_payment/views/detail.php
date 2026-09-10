@@ -18,6 +18,7 @@ foreach ($items as $it) {
 		'flag_pph21' => (int) $it->flag_pph21,
 		'admin'      => (int) $it->admin,
 		'dibayarkan' => (float) $it->dibayarkan,
+		'print_url'  => isset($it->print_url) ? $it->print_url : '',
 	];
 }
 ?>
@@ -251,6 +252,9 @@ foreach ($items as $it) {
 			'<td class="text-center">' + (it.admin ? apprFmt(it.admin) : '-') + '</td>' +
 			'<td class="text-right-imp">' + apprFmt(it.dibayarkan) + '</td>' +
 			'<td>';
+		if (it.print_url && it.print_url !== '') {
+			html += '<a href="' + it.print_url + '" target="_blank" class="mini-btn" title="Print Dokumen" style="text-decoration:none;margin-right:6px;"><i class="fa fa-print"></i></a>';
+		}
 		if (rejected) {
 			html += '<button type="button" class="mini-btn reject active" onclick="apprToggleReject(\'' + it.no_dokumen + '\')">Batal Reject</button>';
 		} else {
