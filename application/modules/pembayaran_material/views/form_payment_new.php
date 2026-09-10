@@ -300,6 +300,22 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 							$nilai_ppn = 0;
 						}
 
+						// AUTO-FILL dari Request Payment: prioritaskan nilai yang sudah tersimpan
+						// di payment_approve (total_ppn/total_pph) yang berasal dari pengajuan request_payment.
+						// Fallback ke perhitungan invoice (tr_invoice_po) bila kolom kosong/0.
+						$prefill_ppn = (isset($item->total_ppn) && (float) $item->total_ppn > 0) ? (float) $item->total_ppn : $nilai_ppn;
+						$prefill_pph = (isset($item->total_pph) && (float) $item->total_pph > 0) ? (float) $item->total_pph : 0;
+						// tipe_pph di payment_approve bisa berupa '21'/'23' atau 'PPH 21'/'PPH 23' -> normalisasi ke '21'/'23'
+						$prefill_tipe_pph = '';
+						if (isset($item->tipe_pph) && $item->tipe_pph !== '') {
+							if (strpos($item->tipe_pph, '21') !== false) {
+								$prefill_tipe_pph = '21';
+							} elseif (strpos($item->tipe_pph, '23') !== false) {
+								$prefill_tipe_pph = '23';
+							}
+						}
+						$nilai_ppn = $prefill_ppn;
+
 						// if($nilai_ppn <= 0) {
 						// 	$nilai_ppn = ($item->jumlah * 11 / 100);
 						// }
@@ -319,14 +335,14 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 						echo '<td>';
 						echo '<select name="dt[' . $no . '][tipe_pph]" class="form-control form-control-sm tipe_pph" data-id="' . $item->id . '">';
 						echo '<option value="">- Select PPh -</option>';
-						echo '<option value="21">PPH 21</option>';
-						echo '<option value="23">PPH 23</option>';
+						echo '<option value="21"' . ($prefill_tipe_pph === '21' ? ' selected' : '') . '>PPH 21</option>';
+						echo '<option value="23"' . ($prefill_tipe_pph === '23' ? ' selected' : '') . '>PPH 23</option>';
 						echo '</select>';
 						echo '</td>';
 						echo '<td>';
 						echo '<input type="hidden" class="nilai_utuh_' . $item->id . '" value="' . $nilai_utuh . '">';
 						echo '<input type="hidden" class="persen_progress_' . $item->id . '" value="' . $persen_progress . '">';
-						echo '<input type="text" class="form-control form-control-sm text-right auto_num nilai_pph nilai_pph_' . $item->id . ' change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '" readonly>';
+						echo '<input type="text" class="form-control form-control-sm text-right auto_num nilai_pph nilai_pph_' . $item->id . ' change_nilai_pph" name="dt[' . $no . '][nilai_pph]" data-id="' . $item->id . '" value="' . $prefill_pph . '" readonly>';
 						echo '</td>';
 						echo '<td class="text-right">';
 						echo '<input type="text" name="dt[' . $no . '][nilai_ppn]" class="form-control form-control-sm text-right auto_num change_nilai_ppn nilai_ppn nilai_ppn_' . $item->id . '" data-id="' . $item->id . '" value="' . $nilai_ppn . '">';
@@ -741,6 +757,15 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 		$('.coa_dropdown').chosen();
 
 		$('.auto_num').autoNumeric();
+
+		// AUTO-FILL Request Payment: setelah nilai PPH/PPN ter-prefill dari payment_approve,
+		// jalankan ulang perhitungan sekali saat load agar total_pph, total_payment, kontrol,
+		// dan jurnal langsung sinkron tanpa user harus menyentuh field.
+		setTimeout(function() {
+			$('.change_nilai_pph').each(function() {
+				$(this).trigger('change');
+			});
+		}, 300);
 
 		// $.ajax({
 		// 	type: "POST",
