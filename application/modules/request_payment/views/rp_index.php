@@ -209,6 +209,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 						<th style="width:60px;">PPH 21</th>
 						<th style="width:80px;">ADMIN</th>
 						<th style="width:110px;">DIBAYARKAN</th>
+						<th style="width:60px;">AKSI</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -483,6 +484,18 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 					className: 'rp-dibayar',
 					render: function(data, type, row) {
 						return '<span id="rp_dibayar_' + row.no_dokumen + '">' + rpFmt(row.dpp) + '</span>';
+					}
+				},
+				{
+					data: 'print_url',
+					orderable: false,
+					searchable: false,
+					className: 'text-center',
+					render: function(data, type, row) {
+						if (data && data !== '') {
+							return '<a href="' + data + '" target="_blank" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>';
+						}
+						return '<span class="text-muted" title="Tidak ada dokumen print untuk tipe ini">-</span>';
 					}
 				}
 			],

@@ -100,6 +100,7 @@ foreach ($records as $r) {
 						<th class="text-center">PPH21</th>
 						<th class="text-center">ADMIN</th>
 						<th class="text-right-imp">DIBAYARKAN</th>
+						<th class="text-center" style="width:60px;">AKSI</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -117,6 +118,13 @@ foreach ($records as $r) {
 							<td class="text-center"><?= ((int) $r->flag_pph21) ? number_format($r->nilai_pph, 0, ',', '.') : '-'; ?></td>
 							<td class="text-center"><?= ((int) $r->admin) ? number_format($r->admin, 0, ',', '.') : '-'; ?></td>
 							<td class="text-right-imp"><?= number_format($r->dibayarkan, 0, ',', '.'); ?></td>
+							<td class="text-center">
+								<?php if (!empty($r->print_url)): ?>
+									<a href="<?= $r->print_url; ?>" target="_blank" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>
+								<?php else: ?>
+									<span class="text-muted" title="Tidak ada dokumen print untuk tipe ini">-</span>
+								<?php endif; ?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>

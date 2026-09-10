@@ -53,6 +53,12 @@ class Approval_request_payment extends Admin_Controller
 
 		$items = $this->Approval_request_payment_model->get_batch_items($id_pengajuan);
 
+		// Tambahkan URL print dokumen sumber per item (pakai helper dari modul request_payment)
+		$this->load->model('request_payment/Request_payment_model');
+		foreach ($items as $it) {
+			$it->print_url = $this->Request_payment_model->build_print_url($it);
+		}
+
 		$this->template->set('header', $header);
 		$this->template->set('items', $items);
 		$this->template->title('Detail Approval - ' . $header->no_pengajuan);

@@ -2021,6 +2021,7 @@ class Request_payment_model extends BF_Model
                 'keperluan'     => $r->keperluan,
                 'dpp'           => $dpp,
                 'reject_reason' => isset($reject_last[$r->no_dokumen]) ? $reject_last[$r->no_dokumen] : '',
+                'print_url'     => $this->build_print_url($r),
             ];
         }
 
@@ -2030,6 +2031,48 @@ class Request_payment_model extends BF_Model
             'recordsFiltered' => $recordsFiltered,
             'data'            => $data,
         ]);
+    }
+
+    /**
+     * Tentukan URL print dokumen sumber per baris, sesuai tipe/kategori.
+     * Mengikuti pola tombol print pada list lama (get_data_periodik dsb).
+     * Return string URL absolut, atau '' bila tipe tidak punya print.
+     */
+    public function build_print_url($r)
+    {
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        $id       = isset($r->id) ? $r->id : '';
+
+        // Periodik
+        if ($kategori == 'Periodik') {
+            return base_url('expense/periodik_print/' . $id);
+        }
+        // Kasbon: konsultan pakai print_kasbon by no_kasbon_consultant, selain itu kasbon_print by id
+        if ($kategori == 'Kasbon') {
+            $get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
+            if (!empty($get_kasbon) && !empty($get_kasbon->no_kasbon_consultant)) {
+                return base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant));
+            }
+            return base_url('expense/kasbon_print/' . $id);
+        }
+        // Transport / Transportasi
+        if ($kategori == 'Transport' || $kategori == 'Transportasi') {
+            return base_url('expense/transport_req_print/' . $id);
+        }
+        // Expense
+        if ($kategori == 'Expense') {
+            return base_url('expense/expense_print/' . $id);
+        }
+        // Direct Payment
+        if ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0) {
+            return base_url('request_payment/print_direct_payment/' . $id);
+        }
+        // Cash (PR non-PO departemen/asset)
+        if ($kategori == 'Cash') {
+            return base_url('request_payment/print_cash/' . $no_dok);
+        }
+        return '';
     }
 
     /**
