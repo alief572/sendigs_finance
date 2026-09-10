@@ -51,6 +51,43 @@ class Request_payment extends Admin_Controller
 		$this->Request_payment_model->get_data_request_baru();
 	}
 
+	// Ringkasan kartu (total pengajuan, total nilai, per tipe) - hormati filter yang sama
+	public function get_summary_request()
+	{
+		$this->Request_payment_model->get_summary_request();
+	}
+
+	// Export Excel: tabel dokumen (NO s/d DPP) sesuai filter aktif
+	public function export_excel_request()
+	{
+		// filter bisa dikirim via GET (buka tab baru) atau POST
+		$filter = [
+			'company_id' => $this->input->get_post('company_id'),
+			'date_from'  => $this->input->get_post('date_from'),
+			'date_to'    => $this->input->get_post('date_to'),
+			'kategori'   => $this->input->get_post('kategori'),
+			'search'     => $this->input->get_post('search'),
+		];
+		$rows = $this->Request_payment_model->fetch_request_rows($filter);
+
+		// label periode & entitas untuk header file
+		$company_label = 'Semua Entitas';
+		if (!empty($filter['company_id'])) {
+			$names = $this->Request_payment_model->get_company_names_lookup();
+			if (isset($names[$filter['company_id']])) {
+				$company_label = $names[$filter['company_id']];
+			}
+		}
+
+		$this->load->view('rp_export_excel', [
+			'rows'          => $rows,
+			'company_label' => $company_label,
+			'date_from'     => $filter['date_from'],
+			'date_to'       => $filter['date_to'],
+			'kategori'      => $filter['kategori'],
+		]);
+	}
+
 	// Histori reject lengkap satu dokumen (audit trail)
 	public function reject_history()
 	{
