@@ -1,1291 +1,557 @@
-<form action="#" method="POST" id="form_proses_bro">
-	<div class="box box-primary">
-		<div class="box-header">
-			<h3 class="box-title"><?= $title; ?></h3>
-		</div>
-		<!-- /.box-header -->
-		<div class="box-body">
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Employee ID <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-user"></i></span>
-						<?php
-						echo form_input(array('readonly' => 'readonly', 'id' => 'id', 'name' => 'id', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Automatic'), $row[0]->id);
-						?>
-					</div>
+﻿<?php
+// Mapping data pendukung
+$emp = !empty($row[0]) ? $row[0] : null;
 
-				</div>
-				<label class='label-control col-sm-2'><b>Employee Name <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-user"></i></span>
-						<?php
-						echo form_input(array('id' => 'name', 'name' => 'name', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Employee Name'), $row[0]->name);
-						?>
-					</div>
+if (!$emp) {
+	echo "<div class='alert alert-danger'>Data karyawan tidak ditemukan.</div>";
+	return;
+}
 
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>NIK<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-user"></i></span>
-						<?php
-						echo form_input(array('id' => 'nik', 'name' => 'nik', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Automatic'), $row[0]->nik);
-						?>
-					</div>
+// Perusahaan, Divisi, Departemen, Title, Posisi
+$company_name     = isset($data_companies[$emp->company_id]) ? $data_companies[$emp->company_id] : '-';
+$division_name    = isset($data_divisions[$emp->division_id]) ? $data_divisions[$emp->division_id] : '-';
+$division_head    = isset($data_divisions_head[$emp->division_head]) ? $data_divisions_head[$emp->division_head] : '-';
+$department_name  = isset($data_department[$emp->department_id]) ? $data_department[$emp->department_id] : '-';
+$title_name       = isset($data_title[$emp->title_id]) ? $data_title[$emp->title_id] : '-';
+$position_name    = isset($data_position[$emp->position_id]) ? $data_position[$emp->position_id] : '-';
+$marital_name     = isset($data_marital[$emp->marital_status]) ? $data_marital[$emp->marital_status] : '-';
+$tax_marital_name = isset($data_marital[$emp->tax_marital_status]) ? $data_marital[$emp->tax_marital_status] : '-';
+$finger_name      = isset($data_idfinger[$emp->finger_id]) ? $data_idfinger[$emp->finger_id] : '-';
 
-				</div>
-				<label class='label-control col-sm-2'><b>Company Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_companies[0]	= 'Select An Option';
-						echo form_dropdown('company_id', $data_companies, $row[0]->company_id, array('id' => 'company_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Division Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_divisions[0]	= 'Select An Option';
-						echo form_dropdown('division_id', $data_divisions, $row[0]->division_id, array('id' => 'division_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Departement Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_department[0]	= 'Select An Option';
-						echo form_dropdown('department_id', $data_department, $row[0]->department_id, array('id' => 'department_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Title Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_title[0]	= 'Select An Option';
-						echo form_dropdown('title_id', $data_title, $row[0]->title_id, array('id' => 'title_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Position Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_position[0]	= 'Select An Option';
-						echo form_dropdown('position_id', $data_position, $row[0]->position_id, array('id' => 'position_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
+// Hitung Masa Kerja
+$tenure_str = '-';
+if (!empty($emp->hiredate) && $emp->hiredate != '0000-00-00') {
+	$tgl_masuk  = date_create($emp->hiredate);
+	$tgl_kini   = date_create();
+	$diff_masa  = date_diff($tgl_masuk, $tgl_kini);
+	$tenure_str = $diff_masa->y . ' Th ' . $diff_masa->m . ' Bln ' . $diff_masa->d . ' Hari';
+}
 
-			</div>
+// Hitung Usia
+$age_str = '-';
+$bday_fmt = '-';
+if (!empty($emp->birthday) && $emp->birthday != '0000-00-00') {
+	$tgl_lahir = date_create($emp->birthday);
+	$tgl_kini  = date_create();
+	$diff_usia = date_diff($tgl_lahir, $tgl_kini);
+	$age_str   = $diff_usia->y . ' Tahun';
+	$bday_fmt  = date('d-m-Y', strtotime($emp->birthday));
+}
 
-			<!-- add by Hikmat / 18-07-2021 -->
-			<div class="form-group row">
-				<label class='label-control col-sm-2'><b>Place Of Birth <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'hometown', 'name' => 'hometown', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Hometown'), $row[0]->hometown);
-						?>
-					</div>
+// Format Agama
+$religi_map = [
+	'1' => 'Islam',
+	'2' => 'Katolik',
+	'3' => 'Kristen',
+	'4' => 'Hindu',
+	'5' => 'Budha',
+	'6' => 'Kong Hu Chu'
+];
+$religi_name = isset($religi_map[$emp->relid]) ? $religi_map[$emp->relid] : ($emp->relid ? $emp->relid : '-');
 
-				</div>
-				<label class='label-control col-sm-2'><b>Division Head<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<select name="division_head" id="divisions_head_id" class="form-control input-sm">
-							<option value=""></option>
-							<?php foreach ($data_divisions_head as $div => $val) : ?>
-								<option value="<?= $div; ?>" <?= ($div == $row[0]->division_head) ? 'selected' : ''; ?>><?= $val; ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-				</div>
-			</div>
+// Format Status Kontrak
+$contract_name = 'Belum Kontrak';
+if ($emp->permanent_id == 'CTR004') {
+	$contract_name = 'Tetap (Permanent)';
+} elseif ($emp->thirdcontract_id == 'CTR003') {
+	$contract_name = 'Kontrak Ketiga';
+} elseif ($emp->secondcontract_id == 'CTR002') {
+	$contract_name = 'Kontrak Kedua';
+} elseif ($emp->firstcontract_id == 'CTR001') {
+	$contract_name = 'Kontrak Pertama';
+}
 
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Date Of Birth <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-						<?php
-						echo form_input(array('id' => 'birthday', 'name' => 'birthday', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Birthday'), $row[0]->birthday);
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Email <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-envelope"></i></span>
-						<?php
-						echo form_input(array('id' => 'email', 'name' => 'email', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Email'), $row[0]->email);
-						?>
-					</div>
-				</div>
-			</div>
-			<!-- end add -->
+// Format Gender
+$gender_label = '-';
+if ($emp->genderid === 'L') {
+	$gender_label = '<i class="fa fa-mars text-blue"></i> Laki-laki';
+} elseif ($emp->genderid === 'P') {
+	$gender_label = '<i class="fa fa-venus text-maroon"></i> Perempuan';
+}
+?>
 
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Religion <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class='input-group'>
-						<span class='input-group-addon'><i class='fa fa-user'></i></span>
-						<?php
-						$relid[0]	= 'Select An Option';
-						$relid[1]	= 'Islam';
-						$relid[2]	= 'Katolik';
-						$relid[3]	= 'Kristen';
-						$relid[4]	= 'Hindu';
-						$relid[5]	= 'Budha';
-						$relid[6]	= 'Kong Hu Chu';
-						echo form_dropdown('relid', $relid, $row[0]->relid, array('id' => 'relid', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Gender</b></label>
-				<div class='col-sm-4'>
-					<?php
-					$active		= ($row[0]->genderid == 'L') ? TRUE : FALSE;
-					$data = array(
-						'name'          => 'genderid',
-						'id'            => 'genderid',
-						'checked'       => $active,
-						'value'         => 'L',
-						'class'         => 'input-sm'
-					);
-
-					echo form_radio($data) . '&nbsp;&nbsp;Male';
-
-					?>
-					<?php
-					$active		= ($row[0]->genderid == 'P') ? TRUE : FALSE;
-					$data = array(
-						'name'          => 'genderid',
-						'id'            => 'genderid',
-						'checked'       => $active,
-						'value'         => 'P',
-						'class'         => 'input-sm'
-					);
-
-					echo form_radio($data) . '&nbsp;&nbsp;Female';
-
-					?>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Stay Address<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-book"></i></span>
-						<?php
-						echo form_textarea(array('cols' => '40', 'rows' => '3', 'id' => 'address', 'name' => 'address', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Address'), $row[0]->address);
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>City <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'city', 'name' => 'city', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'City'), $row[0]->city);
-						?>
-					</div>
-
-				</div>
-			</div>
-
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Province<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'province', 'name' => 'province', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Province'), $row[0]->province);
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>Post Code <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'postcode', 'name' => 'postcode', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Post code'), $row[0]->postcode);
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Nationality<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<?php
-						$active		= ($row[0]->nationality == 'WNI') ? TRUE : FALSE;
-						$data = array(
-							'name'          => 'nationality',
-							'id'            => 'nationality',
-							'checked'       => $active,
-							'value'         => 'WNI',
-							'class'         => 'input-sm'
-						);
-
-						echo form_radio($data) . '&nbsp;&nbsp;WNI';
-
-						?>
-						<?php
-						$active		= ($row[0]->genderid == 'WNA') ? TRUE : FALSE;
-						$data = array(
-							'name'          => 'nationality',
-							'id'            => 'nationality',
-							'checked'       => $active,
-							'value'         => 'WNA',
-							'class'         => 'input-sm'
-						);
-
-						echo form_radio($data) . '&nbsp;&nbsp;WNA';
-
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>KTP <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'licensid', 'name' => 'licensid', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'KTP'), $row[0]->licensid);
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>IdCard Address<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-book"></i></span>
-						<?php
-						echo form_textarea(array('cols' => '40', 'rows' => '3', 'id' => 'idcard_address', 'name' => 'idcard_address', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'IdCard Address'), $row[0]->idcard_address);
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>NPWP <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						echo form_input(array('id' => 'taxid', 'name' => 'taxid', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'NPWP'), $row[0]->taxid);
-						?>
-					</div>
-
-				</div>
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Handphone Number <span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-phone"></i></span>
-						<?php
-						echo form_input(array('id' => 'hp', 'name' => 'hp', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Handphone Number'), $row[0]->hp);
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Phone Number<span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-phone"></i></span>
-						<?php
-						echo form_input(array('id' => 'phone', 'name' => 'phone', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Phone Number'), $row[0]->phone);
-						?>
-					</div>
-				</div>
-
-			</div>
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Hire Date<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-						<?php
-						echo form_input(array('id' => 'hiredate', 'name' => 'hiredate', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Hire Date'), $row[0]->hiredate);
-						?>
-					</div>
-				</div>
-				<label class='label-control col-sm-2'><b>Marital Status<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_marital[0]	= 'Select An Option';
-						echo form_dropdown('marital_status', $data_marital, $row[0]->marital_status, array('id' => 'marital_status', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-
-				<label class='label-control col-sm-2'><b>Bank Id<span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<?php
-						$active		= ($row[0]->bank_id == 'BCA') ? TRUE : FALSE;
-						$data = array(
-							'name'          => 'bank_id',
-							'id'            => 'bank_id',
-							'checked'       => $active,
-							'value'         => 'BCA',
-							'class'         => 'input-sm'
-						);
-
-						echo form_radio($data) . '&nbsp;&nbsp;BCA';
-
-						?>
-						<?php
-						$active		= ($row[0]->bank_id == 'BJB') ? TRUE : FALSE;
-						$data = array(
-							'name'          => 'bank_id',
-							'id'            => 'bank_id',
-							'checked'       => $active,
-							'value'         => 'BJB',
-							'class'         => 'input-sm'
-						);
-
-						echo form_radio($data) . '&nbsp;&nbsp;BJB';
-
-						?>
-
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>Account Number<span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-credit-card"></i></span>
-						<?php
-						echo form_input(array('id' => 'accnumber', 'name' => 'accnumber', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Account Number'), $row[0]->accnumber);
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-
-				<label class='label-control col-sm-2'><b>Account Name<span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-credit-card"></i></span>
-						<?php
-						echo form_input(array('id' => 'accname', 'name' => 'accname', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Account name'), $row[0]->accname);						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>Health Number Of BPJS <span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-credit-card"></i></span>
-						<?php
-						echo form_input(array('id' => 'bpjs_kes', 'name' => 'bpjs_kes', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Health Number Of BPJS'), $row[0]->bpjs_kes);
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-
-				<label class='label-control col-sm-2'><b>Employee Number Of BPJS <span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-credit-card"></i></span>
-						<?php
-						echo form_input(array('id' => 'bpjs_ket', 'name' => 'bpjs_ket', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Employee Number Of BPJS'), $row[0]->bpjs_ket);
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>Tax Marital Status<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_marital[0]	= 'Select An Option';
-						echo form_dropdown('tax_marital_status', $data_marital, $row[0]->tax_marital_status, array('id' => 'tax_marital_status', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-			</div>
-
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Blood Group <span class='text-red'></span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-tint"></i></span>
-						<?php
-						$blood['']	= 'Select An Option';
-						$blood['O']	= 'O';
-						$blood['A']	= 'A';
-						$blood['B']	= 'B';
-						$blood['AB'] = 'AB';
-						echo form_dropdown('blood_group', $blood, $row[0]->blood_group, array('id' => 'blood_group', 'class' => 'form-control input-sm'));
-
-						?>
-					</div>
-
-				</div>
-				<label class='label-control col-sm-2'><b>Finger Name<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-file"></i></span>
-						<?php
-						$data_idfinger[0]	= 'Select An Option';
-						echo form_dropdown('finger_id', $data_idfinger, $row[0]->finger_id, array('id' => 'finger_id', 'class' => 'form-control input-sm'));
-						?>
-					</div>
-				</div>
-
-			</div>
-
-			<div class='form-group row'>
-				<label class='label-control col-sm-2'><b>Active<span class='text-red'></span>*</b></label>
-				<div class='col-sm-4'>
-					<?php
-					$active		= ($row[0]->flag_active == 'Y') ? TRUE : FALSE;
-					$data = array(
-						'name'          => 'flag_active',
-						'id'            => 'flag_active',
-						'checked'       => $active,
-						'value'         => 'Y',
-						'class'         => 'input-sm'
-					);
-
-					echo form_checkbox($data) . '&nbsp;&nbsp;Yes';
-
-					?>
-
-				</div>
-
-				<label class='label-control col-sm-2'><b>Salary<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-dollar"></i></span>
-						<?php
-						echo form_input(array('id' => 'salary', 'name' => 'salary', 'class' => 'form-control input-sm', 'autocomplete' => 'off', 'placeholder' => 'Salary'), Dekripsi($row[0]->salary));
-						?>
-					</div>
-				</div>
-			</div>
-			<div class='form-group row'>
-				<!-- <label class='label-control col-sm-2'><b>Jabatan Allowance<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-dollar"></i></span>              
-						<?php
-						//echo form_input(array('id'=>'jabatan','name'=>'jabatan','class'=>'form-control input-sm','autocomplete'=>'off','placeholder'=>'Jabatan Allowance'),Dekripsi($row[0]->jabatan));											
-						?>
-					</div>
-				</div>				
-				<label class='label-control col-sm-2'><b>Pulsa Allowance<span class='text-red'>*</span></b></label>
-				<div class='col-sm-4'>
-					<div class="input-group">
-						<span class="input-group-addon"><i class="fa fa-dollar"></i></span>              
-						<?php
-						//echo form_input(array('id'=>'pulsa','name'=>'pulsa','class'=>'form-control input-sm','autocomplete'=>'off','placeholder'=>'Pulsa Allowance'),Dekripsi($row[0]->pulsa));											
-						?>
-					</div>
-				</div>	
-			</div> -->
-
-				<div class='form-group row'>
-					<label class='label-control col-sm-2'><b>Tanda&nbsp (<span class='text-red'>*</span>)&nbsp Wajib Diisi</b></label>
-				</div>
-
-			</div>
-			<div class="box-body">
-				<div class="box box-danger">
-					<div class="box-header">
-						<h3 class="box-title">
-							<i class="fa fa-star"></i> <?php echo ('<span class="important">Family Data</span>'); ?>
-						</h3>
-						<div class='box-tool pull-right'>
-							<!-- <?php
-							echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-success', 'value' => 'back', 'content' => 'Add Family', 'id' => 'add-family'));
-							?> -->
-						</div>
-					</div>
-					<div class="clearfix box-body">
-						<table class='table table-bordered table-striped'>
-							<thead>
-								<tr class='bg-blue'>
-									<td align='center'><b>Name</b></td>
-									<td align='center'><b>Place Of Birth</b></td>
-									<td align='center'><b>Date Of Birth</b></td>
-									<td align='center'><b>Relationship</b></td>
-								</tr>
-
-							</thead>
-							<tbody id='list_family'>
-								<?php
-								if ($rows_family) {
-									$loop		= 0;
-									foreach ($rows_family as $keyF => $valF) {
-										$loop++;
-										echo "<tr id='tr_" . $loop . "'>";
-										echo "<td>";
-										echo form_input(array('name' => 'det_Family[' . $loop . '][name]', 'id' => 'det_Family_' . $loop . '_name', 'class' => 'form-control input-sm', 'autocomplete' => 'off'), $valF['name']);
-										echo "</td>";
-										echo "<td>";
-										echo form_input(array('name' => 'det_Family[' . $loop . '][birth_place]', 'id' => 'det_Family_' . $loop . '_place', 'class' => 'form-control input-sm', 'autocomplete' => 'off'), $valF['birth_place']);
-										echo "</td>";
-										echo "<td>";
-										echo form_input(array('name' => 'det_Family[' . $loop . '][birth_date]', 'id' => 'det_Family_' . $loop . '_birthday', 'class' => 'form-control input-sm', 'readOnly' => true, 'data-role' => 'tanggal'), $valF['birth_date']);
-										echo "</td>";
-										echo "<td class='text-center'>";
-										$family_type[0]	= 'Select An Option';
-										echo form_dropdown('det_Family[' . $loop . '][category]', $family_type, $valF['category'], array('id' => 'det_Family_' . $loop . '_category', 'class' => 'form-control input-sm'));
-										echo "</td>";
-										echo "</tr>";
-									}
-								}
-
-								?>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-
-			<div class="box-body">
-				<div class="box box-danger">
-					<div class="box-header">
-						<h3 class="box-title">
-							<i class="fa fa-star"></i> <?php echo ('<span class="important">Education History</span>'); ?>
-						</h3>
-						<div class='box-tool pull-right'>
-							<!-- <?php
-							echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-success', 'value' => 'back', 'content' => 'Add Education', 'id' => 'add-education'));
-							?> -->
-						</div>
-					</div>
-					<div class="clearfix box-body">
-						<table class='table table-bordered table-striped'>
-							<thead>
-								<tr class='bg-blue'>
-									<td align='center'><b>Level</b></td>
-									<td align='center'><b>Institution Name</b></td>
-									<td align='center'><b>Graduate Year</b></td>
-								</tr>
-
-							</thead>
-							<tbody id='list_education'>
-								<?php
-								if ($rows_education) {
-									$loop		= 0;
-									foreach ($rows_education as $keyE => $valE) {
-										$loop++;
-										echo "<tr id='tr_" . $loop . "'>";
-										echo "<td class='text-center'>";
-										$education_type[0]	= 'Select An Option';
-										echo form_dropdown('det_Education[' . $loop . '][level]', $education_type, $valE['level'], array('id' => 'det_Education' . $loop . '_category', 'class' => 'form-control input-sm'));
-										echo "</td>";
-										echo "<td>";
-										echo form_input(array('name' => 'det_Education[' . $loop . '][institution]', 'id' => 'det_Education' . $loop . '_institution', 'class' => 'form-control input-sm', 'autocomplete' => 'off'), $valE['institution']);
-										echo "</td>";
-										echo "<td>";
-										echo form_input(array('name' => 'det_Education[' . $loop . '][graduated]', 'id' => 'det_Education' . $loop . '_year', 'class' => 'form-control input-sm', 'autocomplete' => 'off'), $valE['graduated']);
-										echo "</td>";
-										echo "</tr>";
-									}
-								}
-
-								?>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-
-			<div class='box-footer'>
-				<?php
-				// echo form_button(array('type' => 'button', 'class' => 'btn btn-md btn-primary', 'value' => 'save', 'content' => 'Save', 'id' => 'simpan-com')) . ' ';
-				echo '<a href="'.base_url('employees').'" class="btn btn-md btn-danger">Back</a>';
-				?>
-			</div>
-			<!-- /.box-body -->
-		</div>
-		<!-- /.box -->
-</form>
 <style>
-	.chosen-container {
-		width: 100% !important;
+	.profile-card {
+		background: #fff;
+		border-radius: 4px;
+		border-top: 3px solid #3c8dbc;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+		margin-bottom: 20px;
+	}
+	.profile-user-img {
+		width: 100px;
+		height: 100px;
+		border-radius: 50%;
+		object-fit: cover;
+		border: 3px solid #d2d6de;
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #f4f6f9;
+		color: #3c8dbc;
+		font-size: 48px;
+	}
+	.profile-username {
+		font-size: 19px;
+		font-weight: 700;
+		margin-top: 12px;
+		color: #222;
+	}
+	.profile-info-table th {
+		width: 32%;
+		color: #555;
+		font-weight: 600;
+		border-top: 1px solid #f0f0f0 !important;
+		padding: 9px 12px !important;
+		background-color: #fafbfc;
+	}
+	.profile-info-table td {
+		color: #333;
+		border-top: 1px solid #f0f0f0 !important;
+		padding: 9px 12px !important;
+	}
+	.nav-tabs-custom > .nav-tabs > li.active {
+		border-top-color: #3c8dbc;
+	}
+	.nav-tabs-custom > .nav-tabs > li > a {
+		font-weight: 600;
+		color: #555;
+	}
+	.nav-tabs-custom > .nav-tabs > li.active > a {
+		color: #3c8dbc;
+	}
+	.badge-status-lg {
+		font-size: 12px;
+		padding: 4px 10px;
+		border-radius: 12px;
+	}
+	@media print {
+		.no-print {
+			display: none !important;
+		}
+		.box {
+			border: none !important;
+			box-shadow: none !important;
+		}
+		.tab-content > .tab-pane {
+			display: block !important;
+			opacity: 1 !important;
+			visibility: visible !important;
+			margin-bottom: 20px;
+		}
 	}
 </style>
-<script>
-	var data_delv = <?php echo json_encode($family_type); ?>;
-	var data_edu = <?php echo json_encode($education_type); ?>;
 
-	$(document).ready(function() {
-
-        $('input').attr('readonly', true);
-        $('select').attr('readonly', true);
-        $('textarea').attr('readonly', true);
-        $('input').attr('disabled', true);
-
-		$('#add-family').click(function() {
-			var total = $('#list_family').find('tr').length;
-			if (total == 0 || total == null) {
-				var ada = 0;
-				var loop = 1;
-			} else {
-				var nil = $('#list_family tr:last').attr('id');
-				var jum = nil.split('_');
-				var loop = parseInt(jum[1]) + 1;
-			}
-
-			Template = '<tr id="tr_' + loop + '">';
-			Template += '<td align="left">';
-			Template += '<input type="text" class="form-control input-sm" name="det_Family[' + loop + '][name]" id="det_Family_' + loop + '_name" label="FALSE" div="FALSE">';
-			Template += '</td>';
-			Template += '<td align="left">';
-			Template += '<input type="text" class="form-control input-sm" name="det_Family[' + loop + '][birth_place]" id="det_Family_' + loop + '_place" label="FALSE" div="FALSE">';
-			Template += '</td>';
-			Template += '<td align="left">';
-			Template += '<input type="text" class="form-control input-sm" name="det_Family[' + loop + '][birth_date]" id="det_Family_' + loop + '_birthday" label="FALSE" div="FALSE" readOnly="true" data-role="tanggal">';
-			Template += '</td>';
-			Template += '<td align="center">';
-			Template += '<select name="det_Family[' + loop + '][category]" id="det_Family_' + loop + '_category" class="form-control input-sm chosen-select">';
-			//Template	+='<option value="">Select An Option</option>';
-			if (!$.isEmptyObject(data_delv)) {
-				$.each(data_delv, function(key, value) {
-					Template += '<option value="' + key + '">' + value + '</option>';
-				});
-			}
-
-			Template += '</select>';
-			Template += '</td>';
-
-			Template += '<td align="center"><button type="button" class="btn btn-sm btn-danger" title="Hapus Data" data-role="qtip" onClick="return DelItem(' + loop + ');"><i class="fa fa-trash-o"></i></button></td>';
-			Template += '</tr>';
-			$('#list_family').append(Template);
-			$('input[data-role="tanggal"]').datepicker({
-				dateFormat: 'yy-mm-dd',
-				changeMonth: true,
-				changeYear: true,
-				yearRange: 'c-80:c+100'
-			});
-			$('#det_Family_' + loop + '_category').chosen();
-		});
-
-
-
-		$('#add-education').click(function() {
-			var jumlah = $('#list_education').find('tr').length;
-			if (jumlah == 0 || jumlah == null) {
-				var ada = 0;
-				var loop = 1;
-			} else {
-				var nilai = $('#list_education tr:last').attr('id');
-				var jum1 = nilai.split('_');
-				var loop = parseInt(jum1[1]) + 1;
-			}
-
-			Template = '<tr id="tr_' + loop + '">';
-			Template += '<td align="center">';
-			Template += '<select name="det_Education[' + loop + '][level]" id="det_Education_' + loop + '_category" class="form-control input-sm chosen-select">';
-			Template += '<option value="">Select An Option</option>';
-			if (!$.isEmptyObject(data_edu)) {
-				$.each(data_edu, function(key, value) {
-					Template += '<option value="' + key + '">' + value + '</option>';
-				});
-			}
-
-			Template += '</select>';
-			Template += '</td>';
-			Template += '<td align="left">';
-			Template += '<input type="text" class="form-control input-sm" name="det_Education[' + loop + '][institution]" id="det_Education_' + loop + '_institution" label="FALSE" div="FALSE">';
-			Template += '</td>';
-			Template += '<td align="left">';
-			Template += '<input type="text" class="form-control input-sm" name="det_Education[' + loop + '][graduated]" id="det_Education_' + loop + '_year" label="FALSE" div="FALSE" data-role="tgllulus">';
-			Template += '</td>';
-
-
-			Template += '<td align="center"><button type="button" class="btn btn-sm btn-danger" title="Hapus Data" data-role="qtip" onClick="return DelItem2(' + loop + ');"><i class="fa fa-trash-o"></i></button></td>';
-			Template += '</tr>';
-			$('#list_education').append(Template);
-			$('input[data-role="tgllulus"]').datepicker({
-				dateFormat: 'yy',
-				changeYear: true,
-				yearRange: 'c-80:c+100'
-			});
-			$('#det_Education_' + loop + '_category').chosen();
-		});
-
-
-		$("#taxid").mask("99.999.999.9-999-999");
-
-
-		$('#simpan-com').click(function(e) {
-			e.preventDefault();
-			var nama = $('#name').val();
-			var company = $('#company_id').val();
-			var divisi = $('#division_id').val();
-			var department = $('#department_id').val();
-			var title = $('#title_id').val();
-			var position = $('#position_id').val();
-			var birthday = $('#birthday').val();
-			var hometown = $('#hometown').val();
-			var relid = $('#relid').val();
-			var genderid = $('#genderid').val();
-			var address = $('#address').val();
-			var city = $('#city').val();
-			var province = $('#province').val();
-			var postcode = $('#postcode').val();
-			var nationality = $('#nationality').val();
-			var licensid = $('#licensid').val();
-			var idcardaddress = $('#idcard_address').val();
-			var taxid = $('#taxid').val();
-			var phone = $('#phone').val();
-			var handphone = $('#hp').val();
-			var citizenid = $('#citizenid').val();
-			var marital = $('#marital_status').val();
-			var familyno = $('#familyno').val();
-			var childs = $('#childs').val();
-			var wifehusband = $('#wifehusband_name').val();
-			var firstchild = $('#firstchild_name').val();
-			var secondchild = $('#secondchild_name').val();
-			var thirdchild = $('#thirdchild_name').val();
-			var hiredate = $('#hiredate').val();
-			var height = $('#height').val();
-			var bank = $('#bank_id').val();
-			var accnumber = $('#accnumber').val();
-			var accname = $('#accname').val();
-			var bpjskes = $('#bpjs_kes').val();
-			var bpjsket = $('#bpjs_ket').val();
-			var flag_active = $('#flag_active').val();
-
-
-
-
-			if (nama == '' || nama == null || nama == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty Employee Name, please input Employee Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (company == '' || company == null || company == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty Company Name, please input Company Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (divisi == '' || divisi == null || divisi == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty divisi Name, please input divisi Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (department == '' || department == null || department == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty department Name, please input department Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (title == '' || title == null || title == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty title Name, please input title Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (position == '' || position == null || position == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty position Name, please input position Name first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (birthday == '' || birthday == null || birthday == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty birthday, please input birthday first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (hometown == '' || hometown == null || hometown == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty hometown , please input hometown  first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (relid == '' || relid == null || relid == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty relid, please input relid first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (genderid == '' || genderid == null || genderid == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty genderid, please input genderid first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (address == '' || address == null || address == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty address, please input address first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (city == '' || city == null || city == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty city, please input city first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (province == '' || province == null || province == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty province, please input province first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (postcode == '' || postcode == null || postcode == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty postcode, please input postcode first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (nationality == '' || nationality == null || nationality == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty nationality, please input nationality first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (licensid == '' || licensid == null || licensid == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty licensid, please input licensid first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (idcardaddress == '' || idcardaddress == null || idcardaddress == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty idcard address, please input idcard address first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (taxid == '' || taxid == null || taxid == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty tax id, please input tax id first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (phone == '' || phone == null || phone == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty phone, please input phone first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			if (phone == '' || phone == null || phone == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty phone, please input phone first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-
-			if (handphone == '' || handphone == null || handphone == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty handphone, please input handphone first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-
-			if (marital == '' || marital == null || marital == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty marital Status, please input marital status first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-
-			if (hiredate == '' || hiredate == null || hiredate == '0') {
-				swal({
-					title: "Error Message!",
-					text: 'Empty hiredate, please input hiredate first.....',
-					type: "warning"
-				});
-
-				return false;
-			}
-			var total = $('#list_family').find('tr').length;
-			if (parseInt(total) > 0) {
-				var intL = 0;
-				var intN = 0;
-				var intD = 0;
-				var intC = 0;
-				$('#list_family').find('tr').each(function() {
-					var nil = $(this).attr('id');
-					var jum = nil.split('_');
-					var nama_family = $('#det_Family_' + jum[1] + '_name').val();
-					var lahir = $('#det_Family_' + jum[1] + '_place').val();
-					var tanggal = $('#det_Family_' + jum[1] + '_birthday').val();
-					var category = $('#det_Family_' + jum[1] + '_category').val();
-					if (nama_family == '' || nama_family == null || nama_family == '-' || nama_family == '0') {
-						intN++;
-					}
-
-					if (lahir == '' || lahir == null || lahir == '-' || lahir == '0') {
-						intL++;
-					}
-
-					if (tanggal == '' || tanggal == null) {
-						intD++;
-					}
-
-					if (category == '' || category == null || category == '0') {
-						intC++;
-					}
-				});
-				if (intN > 0) {
-					swal({
-						title: "Error Message!",
-						text: 'Empty Family Name. Please Input Family Name First.....',
-						type: "warning"
-					});
-
-					return false;
-				}
-
-				/*if(intL > 0){
-					swal({
-					  title	: "Error Message!",
-					  text	: 'Empty Birth Of Place. Please Input Birth Of Place First.....',
-					  type	: "warning"
-					});
-					
-					return false;
-				}
-				
-				if(intD > 0){
-					swal({
-					  title	: "Error Message!",
-					  text	: 'Empty Birth Of Date. Please Input Birth Of Date First.....',
-					  type	: "warning"
-					});
-					
-					return false;
-				}*/
-
-				if (intC > 0) {
-					swal({
-						title: "Error Message!",
-						text: 'Empty Family Relationship. Please Choose Family Relationship First.....',
-						type: "warning"
-					});
-
-					return false;
-				}
-			}
-			swal({
-					title: "Are you sure?",
-					text: "You will not be able to process again this data!",
-					type: "warning",
-					showCancelButton: true,
-					confirmButtonClass: "btn-danger",
-					confirmButtonText: "Yes, Process it!",
-					cancelButtonText: "No, cancel process!",
-					closeOnConfirm: true,
-					closeOnCancel: false
-				},
-				function(isConfirm) {
-					if (isConfirm) {
-						loading_spinner();
-						var formData = new FormData($('#form_proses_bro')[0]);
-						var baseurl = base_url + active_controller + '/edit';
-						$.ajax({
-							url: baseurl,
-							type: "POST",
-							data: formData,
-							cache: false,
-							dataType: 'json',
-							processData: false,
-							contentType: false,
-							success: function(data) {
-								if (data.status == 1) {
-									swal({
-										title: "Save Success!",
-										text: data.pesan,
-										type: "success",
-										timer: 7000,
-										showCancelButton: false,
-										showConfirmButton: false,
-										allowOutsideClick: false
-									});
-									window.location.href = base_url + active_controller;
-								} else {
-
-									if (data.status == 2) {
-										swal({
-											title: "Save Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 7000,
-											showCancelButton: false,
-											showConfirmButton: false,
-											allowOutsideClick: false
-										});
-									} else {
-										swal({
-											title: "Save Failed!",
-											text: data.pesan,
-											type: "warning",
-											timer: 7000,
-											showCancelButton: false,
-											showConfirmButton: false,
-											allowOutsideClick: false
-										});
-									}
-
-								}
-							},
-							error: function() {
-
-								swal({
-									title: "Error Message !",
-									text: 'An Error Occured During Process. Please try again..',
-									type: "warning",
-									timer: 7000,
-									showCancelButton: false,
-									showConfirmButton: false,
-									allowOutsideClick: false
-								});
-							}
-						});
-					} else {
-						swal("Cancelled", "Data can be process again :)", "error");
-						return false;
-					}
-				});
-		});
-		$('#company_id').change(function() {
-			var comp = $('#company_id').val();
-			if (comp == '' || comp == '0' || comp == null) {
-				var Template = '<option value="">Empty List</option>';
-				$('#division_id').html(Template).trigger('chosen:updated');
-			} else {
-				var baseurl = base_url + active_controller + '/getDetail/' + comp;
-				$.ajax({
-					url: baseurl,
-					type: "GET",
-					success: function(data) {
-						var datas = $.parseJSON(data);
-						if ($.isEmptyObject(datas) == true) {
-							var Template = '<option value="">Empty List</option>';
-						} else {
-							var Template = '<option value="">Select An Option</option>';
-							$.each(datas, function(kode, nilai) {
-								Template += '<option value="' + kode + '">' + nilai + '</option>';
-							});
-						}
-						$('#division_id').html(Template).trigger('chosen:updated');
-					},
-					error: function() {
-
-						swal({
-							title: "Error Message !",
-							text: 'An Error Occured During Process. Please try again..',
-							type: "warning",
-							timer: 7000,
-							showCancelButton: false,
-							showConfirmButton: false,
-							allowOutsideClick: false
-						});
-					}
-				});
-			}
-
-		});
-		$('#division_id').change(function() {
-			var comp = $('#division_id').val();
-			if (comp == '' || comp == '0' || comp == null) {
-				var Template = '<option value="">Empty List</option>';
-				$('#division_id').html(Template).trigger('chosen:updated');
-			} else {
-				var baseurl = base_url + active_controller + '/getDept/' + comp;
-				$.ajax({
-					url: baseurl,
-					type: "GET",
-					success: function(data) {
-						var datas = $.parseJSON(data);
-						if ($.isEmptyObject(datas) == true) {
-							var Template = '<option value="">Empty List</option>';
-						} else {
-							var Template = '<option value="">Select An Option</option>';
-							$.each(datas, function(kode, nilai) {
-								Template += '<option value="' + kode + '">' + nilai + '</option>';
-							});
-						}
-						$('#department_id').html(Template).trigger('chosen:updated');
-					},
-					error: function() {
-
-						swal({
-							title: "Error Message !",
-							text: 'An Error Occured During Process. Please try again..',
-							type: "warning",
-							timer: 7000,
-							showCancelButton: false,
-							showConfirmButton: false,
-							allowOutsideClick: false
-						});
-					}
-				});
-			}
-
-		});
-		$('#department_id').change(function() {
-			var comp = $('#department_id').val();
-			if (comp == '' || comp == '0' || comp == null) {
-				var Template = '<option value="">Empty List</option>';
-				$('#department_id').html(Template).trigger('chosen:updated');
-			} else {
-				var baseurl = base_url + active_controller + '/getTitle/' + comp;
-				$.ajax({
-					url: baseurl,
-					type: "GET",
-					success: function(data) {
-						var datas = $.parseJSON(data);
-						if ($.isEmptyObject(datas) == true) {
-							var Template = '<option value="">Empty List</option>';
-						} else {
-							var Template = '<option value="">Select An Option</option>';
-							$.each(datas, function(kode, nilai) {
-								Template += '<option value="' + kode + '">' + nilai + '</option>';
-							});
-						}
-						$('#title_id').html(Template).trigger('chosen:updated');
-					},
-					error: function() {
-
-						swal({
-							title: "Error Message !",
-							text: 'An Error Occured During Process. Please try again..',
-							type: "warning",
-							timer: 7000,
-							showCancelButton: false,
-							showConfirmButton: false,
-							allowOutsideClick: false
-						});
-					}
-				});
-			}
-
-		});
-		$(function() {
-			// Daterange Picker
-			$('#hiredate').datepicker({
-				dateFormat: 'yy-mm-dd',
-				changeMonth: true,
-				changeYear: true,
-				yearRange: 'c-80:c+100',
-			});
-		});
-
-	});
-
-	function DelItem(id) {
-		$('#list_family #tr_' + id).remove();
-
-	}
-
-	function DelItem2(id) {
-		$('#list_education #tr_' + id).remove();
-
-	}
-</script>
-<script>
-	$(function() {
-		// Daterange Picker
-		$('#birthday').datepicker({
-			dateFormat: 'yy-mm-dd',
-			changeMonth: true,
-			changeYear: true,
-			yearRange: 'c-80:c+100',
-
-		});
-	});
-</script>
+<!-- Action Header Toolbar -->
+<div class="row no-print" style="margin-bottom: 15px;">
+	<div class="col-xs-12">
+		<a href="<?= site_url('employees'); ?>" class="btn btn-default btn-flat" style="border-radius: 3px;">
+			<i class="fa fa-arrow-left"></i> Kembali ke Daftar Karyawan
+		</a>
+		<button type="button" class="btn btn-primary btn-flat pull-right" onclick="window.print();" style="border-radius: 3px;">
+			<i class="fa fa-print"></i> Cetak Profil
+		</button>
+	</div>
+</div>
+
+<div class="row">
+	<!-- Profil Kiri (Summary Widget) -->
+	<div class="col-md-4 col-sm-12">
+		<div class="box box-primary">
+			<div class="box-body box-profile text-center" style="padding-top: 25px;">
+				<div class="profile-user-img">
+					<i class="fa fa-user"></i>
+				</div>
+				<h3 class="profile-username"><?= !empty($emp->name) ? $emp->name : '-'; ?></h3>
+				<p class="text-muted" style="margin-bottom: 6px; font-size: 13px;">
+					<strong>NIK:</strong> <?= !empty($emp->nik) ? $emp->nik : '-'; ?> &nbsp;|&nbsp; 
+					<strong>ID:</strong> <?= !empty($emp->id) ? $emp->id : '-'; ?>
+				</p>
+				<p style="font-size: 14px; font-weight: 600; color: #3c8dbc; margin-bottom: 12px;">
+					<?= $title_name != '-' ? $title_name : ($position_name != '-' ? $position_name : 'Karyawan'); ?>
+				</p>
+
+				<div style="margin-bottom: 15px;">
+					<?php if ($emp->flag_active == 'Y') : ?>
+						<span class="label label-success badge-status-lg"><i class="fa fa-check-circle"></i> Karyawan Aktif</span>
+					<?php else : ?>
+						<span class="label label-danger badge-status-lg"><i class="fa fa-times-circle"></i> Non-Aktif</span>
+					<?php endif; ?>
+
+					<span class="label label-info badge-status-lg" style="margin-left: 5px;">
+						<i class="fa fa-briefcase"></i> <?= $contract_name; ?>
+					</span>
+				</div>
+
+				<ul class="list-group list-group-unbordered text-left" style="margin-top: 20px; font-size: 13px;">
+					<li class="list-group-item">
+						<b><i class="fa fa-building text-muted" style="width: 20px;"></i> Perusahaan</b>
+						<span class="pull-right text-bold"><?= $company_name; ?></span>
+					</li>
+					<li class="list-group-item">
+						<b><i class="fa fa-sitemap text-muted" style="width: 20px;"></i> Departemen</b>
+						<span class="pull-right text-bold"><?= $department_name; ?></span>
+					</li>
+					<li class="list-group-item">
+						<b><i class="fa fa-tags text-muted" style="width: 20px;"></i> Divisi</b>
+						<span class="pull-right text-bold"><?= $division_name; ?></span>
+					</li>
+					<li class="list-group-item">
+						<b><i class="fa fa-calendar-check-o text-muted" style="width: 20px;"></i> Tgl Masuk</b>
+						<span class="pull-right">
+							<?= (!empty($emp->hiredate) && $emp->hiredate != '0000-00-00') ? date('d-m-Y', strtotime($emp->hiredate)) : '-'; ?>
+						</span>
+					</li>
+					<li class="list-group-item">
+						<b><i class="fa fa-clock-o text-muted" style="width: 20px;"></i> Masa Kerja</b>
+						<span class="pull-right text-primary text-bold"><?= $tenure_str; ?></span>
+					</li>
+					<li class="list-group-item">
+						<b><i class="fa fa-hand-o-up text-muted" style="width: 20px;"></i> ID Fingerprint</b>
+						<span class="pull-right"><?= $finger_name; ?></span>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<!-- Card Kontak Cepat -->
+		<div class="box box-info">
+			<div class="box-header with-border">
+				<h3 class="box-title" style="font-size: 15px;"><i class="fa fa-phone" style="margin-right: 5px;"></i> Kontak Karyawan</h3>
+			</div>
+			<div class="box-body" style="font-size: 13px;">
+				<p style="margin-bottom: 8px;">
+					<strong><i class="fa fa-mobile text-muted" style="width: 20px; font-size: 16px;"></i> No. Handphone:</strong><br>
+					<span style="margin-left: 24px;"><?= !empty($emp->hp) ? $emp->hp : '-'; ?></span>
+				</p>
+				<p style="margin-bottom: 8px;">
+					<strong><i class="fa fa-phone text-muted" style="width: 20px;"></i> No. Telepon:</strong><br>
+					<span style="margin-left: 24px;"><?= !empty($emp->phone) ? $emp->phone : '-'; ?></span>
+				</p>
+				<p style="margin-bottom: 0;">
+					<strong><i class="fa fa-envelope text-muted" style="width: 20px;"></i> Alamat Email:</strong><br>
+					<span style="margin-left: 24px;"><?= !empty($emp->email) ? $emp->email : '-'; ?></span>
+				</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Kolom Kanan (Nav-Tabs Informasi Lengkap) -->
+	<div class="col-md-8 col-sm-12">
+		<div class="nav-tabs-custom" style="border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+			<ul class="nav nav-tabs">
+				<li class="active">
+					<a href="#tab_personal" data-toggle="tab"><i class="fa fa-user" style="margin-right: 5px;"></i> Data Pribadi</a>
+				</li>
+				<li>
+					<a href="#tab_employment" data-toggle="tab"><i class="fa fa-briefcase" style="margin-right: 5px;"></i> Kepegawaian</a>
+				</li>
+				<li>
+					<a href="#tab_address" data-toggle="tab"><i class="fa fa-map-marker" style="margin-right: 5px;"></i> Alamat & Domisili</a>
+				</li>
+				<li>
+					<a href="#tab_identity" data-toggle="tab"><i class="fa fa-credit-card" style="margin-right: 5px;"></i> Legal & BPJS</a>
+				</li>
+				<li>
+					<a href="#tab_family" data-toggle="tab"><i class="fa fa-heart" style="margin-right: 5px;"></i> Keluarga (<?= count($rows_family); ?>)</a>
+				</li>
+				<li>
+					<a href="#tab_education" data-toggle="tab"><i class="fa fa-graduation-cap" style="margin-right: 5px;"></i> Pendidikan (<?= count($rows_education); ?>)</a>
+				</li>
+			</ul>
+
+			<div class="tab-content" style="padding: 18px;">
+				<!-- TAB 1: DATA PRIBADI -->
+				<div class="tab-pane active" id="tab_personal">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-id-badge"></i> Informasi Data Pribadi
+					</h4>
+					<div class="table-responsive">
+						<table class="table table-striped table-bordered profile-info-table">
+							<tbody>
+								<tr>
+									<th>Nama Lengkap</th>
+									<td><?= !empty($emp->name) ? $emp->name : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Nomor Induk Kependudukan (KTP)</th>
+									<td><?= !empty($emp->licensid) ? $emp->licensid : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Nomor Induk Karyawan (NIK)</th>
+									<td><?= !empty($emp->nik) ? $emp->nik : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Tempat / Tanggal Lahir</th>
+									<td>
+										<?= !empty($emp->hometown) ? $emp->hometown : '-'; ?>, <?= $bday_fmt; ?>
+										<?php if ($age_str != '-') : ?>
+											<span class="badge bg-aqua" style="margin-left: 8px;"><?= $age_str; ?></span>
+										<?php endif; ?>
+									</td>
+								</tr>
+								<tr>
+									<th>Jenis Kelamin</th>
+									<td><?= $gender_label; ?></td>
+								</tr>
+								<tr>
+									<th>Agama</th>
+									<td><?= $religi_name; ?></td>
+								</tr>
+								<tr>
+									<th>Golongan Darah</th>
+									<td>
+										<?= !empty($emp->blood_group) ? '<span class="badge bg-red">' . $emp->blood_group . '</span>' : '-'; ?>
+									</td>
+								</tr>
+								<tr>
+									<th>Kewarganegaraan</th>
+									<td><?= !empty($emp->nationality) ? $emp->nationality : 'WNI'; ?></td>
+								</tr>
+								<tr>
+									<th>Status Pernikahan</th>
+									<td><?= $marital_name; ?></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- TAB 2: KEPEGAWAIAN -->
+				<div class="tab-pane" id="tab_employment">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-briefcase"></i> Informasi Posisi & Kepegawaian
+					</h4>
+					<div class="table-responsive">
+						<table class="table table-striped table-bordered profile-info-table">
+							<tbody>
+								<tr>
+									<th>Perusahaan (Company)</th>
+									<td class="text-bold"><?= $company_name; ?></td>
+								</tr>
+								<tr>
+									<th>Divisi</th>
+									<td><?= $division_name; ?></td>
+								</tr>
+								<tr>
+									<th>Kepala Divisi (Division Head)</th>
+									<td><?= $division_head; ?></td>
+								</tr>
+								<tr>
+									<th>Departemen</th>
+									<td><?= $department_name; ?></td>
+								</tr>
+								<tr>
+									<th>Jabatan (Title)</th>
+									<td><?= $title_name; ?></td>
+								</tr>
+								<tr>
+									<th>Posisi</th>
+									<td><?= $position_name; ?></td>
+								</tr>
+								<tr>
+									<th>ID Mesin Fingerprint</th>
+									<td><?= $finger_name; ?></td>
+								</tr>
+								<tr>
+									<th>Tanggal Mulai Bekerja (Hire Date)</th>
+									<td>
+										<?= (!empty($emp->hiredate) && $emp->hiredate != '0000-00-00') ? date('d-m-Y', strtotime($emp->hiredate)) : '-'; ?>
+									</td>
+								</tr>
+								<tr>
+									<th>Total Masa Kerja</th>
+									<td><strong class="text-primary"><?= $tenure_str; ?></strong></td>
+								</tr>
+								<tr>
+									<th>Status Ikatan Kerja</th>
+									<td>
+										<span class="label label-info" style="font-size: 12px;"><?= $contract_name; ?></span>
+									</td>
+								</tr>
+								<tr>
+									<th>Status Keaktifan</th>
+									<td>
+										<?php if ($emp->flag_active == 'Y') : ?>
+											<span class="label label-success"><i class="fa fa-check"></i> Aktif Bekerja</span>
+										<?php else : ?>
+											<span class="label label-danger"><i class="fa fa-times"></i> Non-Aktif</span>
+										<?php endif; ?>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- TAB 3: ALAMAT & DOMISILI -->
+				<div class="tab-pane" id="tab_address">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-map-marker"></i> Alamat Tempat Tinggal & KTP
+					</h4>
+					<div class="table-responsive">
+						<table class="table table-striped table-bordered profile-info-table">
+							<tbody>
+								<tr>
+									<th>Alamat Domisili (Tempat Tinggal)</th>
+									<td><?= !empty($emp->address) ? nl2br($emp->address) : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Kota Domisili</th>
+									<td><?= !empty($emp->city) ? $emp->city : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Provinsi Domisili</th>
+									<td><?= !empty($emp->province) ? $emp->province : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Kode Pos</th>
+									<td><?= !empty($emp->postcode) ? $emp->postcode : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Alamat Sesuai KTP</th>
+									<td><?= !empty($emp->idcard_address) ? nl2br($emp->idcard_address) : '-'; ?></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- TAB 4: LEGAL & FINANCIAL / BPJS -->
+				<div class="tab-pane" id="tab_identity">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-credit-card"></i> Identitas Legal, Bank & BPJS
+					</h4>
+					<div class="table-responsive">
+						<table class="table table-striped table-bordered profile-info-table">
+							<tbody>
+								<tr>
+									<th>No. KTP</th>
+									<td><?= !empty($emp->licensid) ? $emp->licensid : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Nomor NPWP</th>
+									<td><?= !empty($emp->taxid) ? $emp->taxid : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>Status Pajak Pernikahan</th>
+									<td><?= $tax_marital_name; ?></td>
+								</tr>
+								<tr>
+									<th>Nama Bank</th>
+									<td>
+										<?php if (!empty($emp->bank_id)) : ?>
+											<span class="label label-primary" style="font-size: 11px;"><?= $emp->bank_id; ?></span>
+										<?php else : ?>
+											-
+										<?php endif; ?>
+									</td>
+								</tr>
+								<tr>
+									<th>Nomor Rekening Bank</th>
+									<td><strong style="letter-spacing: 0.5px;"><?= !empty($emp->accnumber) ? $emp->accnumber : '-'; ?></strong></td>
+								</tr>
+								<tr>
+									<th>Nama Pemilik Rekening</th>
+									<td><?= !empty($emp->accname) ? $emp->accname : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>No. BPJS Kesehatan</th>
+									<td><?= !empty($emp->bpjs_kes) ? $emp->bpjs_kes : '-'; ?></td>
+								</tr>
+								<tr>
+									<th>No. BPJS Ketenagakerjaan</th>
+									<td><?= !empty($emp->bpjs_ket) ? $emp->bpjs_ket : '-'; ?></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- TAB 5: DATA KELUARGA -->
+				<div class="tab-pane" id="tab_family">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-heart"></i> Susunan Anggota Keluarga
+					</h4>
+					<?php if (!empty($rows_family)) : ?>
+						<div class="table-responsive">
+							<table class="table table-bordered table-striped table-hover">
+								<thead>
+									<tr style="background-color: #f4f6f9; color: #333;">
+										<th class="text-center" style="width: 45px;">No</th>
+										<th>Hubungan / Kategori</th>
+										<th>Nama Lengkap</th>
+										<th>Tempat Lahir</th>
+										<th class="text-center" style="width: 120px;">Tanggal Lahir</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php
+									$no_f = 0;
+									foreach ($rows_family as $fam) :
+										$no_f++;
+										$fam_cat = isset($family_type[$fam['category']]) ? $family_type[$fam['category']] : $fam['category'];
+										$fam_bday = (!empty($fam['birth_date']) && $fam['birth_date'] != '0000-00-00') ? date('d-m-Y', strtotime($fam['birth_date'])) : '-';
+									?>
+										<tr>
+											<td class="text-center"><?= $no_f; ?></td>
+											<td><span class="label label-default" style="font-size: 11px;"><?= $fam_cat; ?></span></td>
+											<td><strong><?= !empty($fam['name']) ? $fam['name'] : '-'; ?></strong></td>
+											<td><?= !empty($fam['birth_place']) ? $fam['birth_place'] : '-'; ?></td>
+											<td class="text-center"><?= $fam_bday; ?></td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
+					<?php else : ?>
+						<div class="alert alert-info" style="border-radius: 4px;">
+							<i class="fa fa-info-circle"></i> Belum ada data keluarga yang tercatat untuk karyawan ini.
+						</div>
+					<?php endif; ?>
+				</div>
+
+				<!-- TAB 6: RIWAYAT PENDIDIKAN -->
+				<div class="tab-pane" id="tab_education">
+					<h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 600; color: #3c8dbc; border-bottom: 2px solid #f4f4f4; padding-bottom: 8px;">
+						<i class="fa fa-graduation-cap"></i> Riwayat Pendidikan Formal
+					</h4>
+					<?php if (!empty($rows_education)) : ?>
+						<div class="table-responsive">
+							<table class="table table-bordered table-striped table-hover">
+								<thead>
+									<tr style="background-color: #f4f6f9; color: #333;">
+										<th class="text-center" style="width: 45px;">No</th>
+										<th style="width: 150px;">Jenjang Pendidikan</th>
+										<th>Nama Institusi / Lembaga / Sekolah</th>
+										<th class="text-center" style="width: 130px;">Tahun Lulus</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php
+									$no_e = 0;
+									foreach ($rows_education as $edu) :
+										$no_e++;
+										$edu_lvl = isset($education_type[$edu['level']]) ? $education_type[$edu['level']] : $edu['level'];
+									?>
+										<tr>
+											<td class="text-center"><?= $no_e; ?></td>
+											<td><span class="label label-primary" style="font-size: 11px;"><?= $edu_lvl; ?></span></td>
+											<td><strong><?= !empty($edu['institution']) ? $edu['institution'] : '-'; ?></strong></td>
+											<td class="text-center"><?= !empty($edu['graduated']) ? $edu['graduated'] : '-'; ?></td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
+					<?php else : ?>
+						<div class="alert alert-info" style="border-radius: 4px;">
+							<i class="fa fa-info-circle"></i> Belum ada data riwayat pendidikan yang tercatat untuk karyawan ini.
+						</div>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

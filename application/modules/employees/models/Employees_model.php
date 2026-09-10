@@ -2143,15 +2143,15 @@ class Employees_model extends BF_Model
 
 	public function get_data_employees()
 	{
-		$draw = $this->input->post('draw');
-		$start = $this->input->post('start');
+		$draw   = $this->input->post('draw');
+		$start  = $this->input->post('start');
 		$length = $this->input->post('length');
 		$search = $this->input->post('search');
 
-		$this->db->select('a.*,b.name as company_name,c.name as department_name,
-								d.name as division_name, e.name as title_name,
-								f.name as firstcontract,g.name as secondcontract,
-								h.name as thirdcontract,i.name as permanent, j.name as position_name');
+		$this->db->select('a.*, b.name as company_name, c.name as department_name,
+							d.name as division_name, e.name as title_name,
+							f.name as firstcontract, g.name as secondcontract,
+							h.name as thirdcontract, i.name as permanent, j.name as position_name');
 		$this->db->from('hr_sentral.employees a');
 		$this->db->join('hr_sentral.companies b', 'b.id=a.company_id', 'left');
 		$this->db->join('hr_sentral.departments c', 'c.id=a.department_id', 'left');
@@ -2163,138 +2163,105 @@ class Employees_model extends BF_Model
 		$this->db->join('hr_sentral.contracts i', 'i.id=a.permanent_id', 'left');
 		$this->db->join('hr_sentral.positions j', 'j.id=a.position_id', 'left');
 		$this->db->where(array('a.flag_active' => 'Y', 'a.company_id' => 'COM003'));
-		if(!empty($search)) {
+
+		if (!empty($search['value'])) {
 			$this->db->group_start();
 			$this->db->like('a.id', $search['value'], 'both');
 			$this->db->or_like('a.nik', $search['value'], 'both');
 			$this->db->or_like('a.name', $search['value'], 'both');
 			$this->db->or_like('a.hometown', $search['value'], 'both');
 			$this->db->or_like('a.birthday', $search['value'], 'both');
-			$this->db->or_like('a.birthday', $search['value'], 'both');
 			$this->db->or_like('a.nationality', $search['value'], 'both');
-			$this->db->or_like('a.flag_active', $search['value'], 'both');
+			$this->db->or_like('b.name', $search['value'], 'both');
+			$this->db->or_like('c.name', $search['value'], 'both');
 			$this->db->group_end();
 		}
-		$this->db->limit($length, $start);
+
+		// Hitung total data setelah filter
+		$query_filter_count = clone $this->db;
+		$recordsFiltered = $query_filter_count->count_all_results('', false);
+
+		if ($length != -1) {
+			$this->db->limit($length, $start);
+		}
+		$this->db->order_by('a.name', 'ASC');
 		$query = $this->db->get();
 
-		$this->db->select('a.*,b.name as company_name,c.name as department_name,
-								d.name as division_name, e.name as title_name,
-								f.name as firstcontract,g.name as secondcontract,
-								h.name as thirdcontract,i.name as permanent, j.name as position_name');
-		$this->db->from('hr_sentral.employees a');
-		$this->db->join('hr_sentral.companies b', 'b.id=a.company_id', 'left');
-		$this->db->join('hr_sentral.departments c', 'c.id=a.department_id', 'left');
-		$this->db->join('hr_sentral.divisions d', 'd.id=a.division_id', 'left');
-		$this->db->join('hr_sentral.titles e', 'e.id=a.title_id', 'left');
-		$this->db->join('hr_sentral.contracts f', 'f.id=a.firstcontract_id', 'left');
-		$this->db->join('hr_sentral.contracts g', 'g.id=a.secondcontract_id', 'left');
-		$this->db->join('hr_sentral.contracts h', 'h.id=a.thirdcontract_id', 'left');
-		$this->db->join('hr_sentral.contracts i', 'i.id=a.permanent_id', 'left');
-		$this->db->join('hr_sentral.positions j', 'j.id=a.position_id', 'left');
-		$this->db->where(array('a.flag_active' => 'Y', 'a.company_id' => 'COM003'));
-		if(!empty($search)) {
-			$this->db->group_start();
-			$this->db->like('a.id', $search['value'], 'both');
-			$this->db->or_like('a.nik', $search['value'], 'both');
-			$this->db->or_like('a.name', $search['value'], 'both');
-			$this->db->or_like('a.hometown', $search['value'], 'both');
-			$this->db->or_like('a.birthday', $search['value'], 'both');
-			$this->db->or_like('a.birthday', $search['value'], 'both');
-			$this->db->or_like('a.nationality', $search['value'], 'both');
-			$this->db->or_like('a.flag_active', $search['value'], 'both');
-			$this->db->group_end();
-		}
-		$query_all = $this->db->get();
+		// Hitung total records tanpa filter
+		$recordsTotal = $this->db->where(array('flag_active' => 'Y', 'company_id' => 'COM003'))->from('hr_sentral.employees')->count_all_results();
 
 		$hasil = [];
-
-		$int	= (0 + $start);
+		$int = (0 + $start);
 		foreach ($query->result() as $datas) {
 			$int++;
-
-			$awal  = date_create($datas->hiredate);
-			$akhir = date_create(); // waktu sekarang
-			// $akhir = ; // waktu sekarang
-			@$diff  = date_diff($awal, $akhir);
-
-			$th = 'Th';
-			$bl = 'Bln';
-
-			@$tahun = $diff->y;
-			@$bulan = $diff->m;
-			@$hari  = $diff->d;
 
 			$agama = $datas->relid;
 			$jk    = $datas->genderid;
 
-			$permanent    		= $datas->permanent_id;
-			$firstcontract   	= $datas->firstcontract_id;
-			$secondcontract	= $datas->secondcontract_id;
-			$thirdcontract		= $datas->thirdcontract_id;
+			$permanent      = $datas->permanent_id;
+			$firstcontract   = $datas->firstcontract_id;
+			$secondcontract = $datas->secondcontract_id;
+			$thirdcontract  = $datas->thirdcontract_id;
 
-
+			$status_badge = '<span class="label label-default">Belum Kontrak</span>';
 			if ($permanent == 'CTR004') {
-
-				$status = 'Tetap';
+				$status_badge = '<span class="label label-primary"><i class="fa fa-shield"></i> Tetap</span>';
 			} elseif ($thirdcontract == 'CTR003') {
-
-				$status = 'Kontrak Ketiga';
+				$status_badge = '<span class="label label-warning">Kontrak 3</span>';
 			} elseif ($secondcontract == 'CTR002') {
-				$status = 'Kontrak Kedua';
+				$status_badge = '<span class="label label-warning">Kontrak 2</span>';
 			} elseif ($firstcontract == 'CTR001') {
-
-				$status = 'Kontrak Pertama';
-			} elseif ($firstcontract == '0' && $secondcontract == '0' && $thirdcontract == '0' && $permanent == '0') {
-				$status = 'Belum Kontrak';
+				$status_badge = '<span class="label label-warning">Kontrak 1</span>';
 			}
 
-
-
-
+			$gender_label = '-';
 			if ($jk === 'L') {
-				$genderid = 'Laki-laki';
+				$gender_label = '<span class="text-blue"><i class="fa fa-mars"></i> Laki-laki</span>';
 			} elseif ($jk === 'P') {
-				$genderid = 'Perempuan';
-			}
-			
-			if ($agama == '1') {
-				$religi = 'Islam';
-			} elseif ($agama == '2') {
-				$religi = 'Katolik';
-			} elseif ($agama == '3') {
-				$religi = 'Kristen';
-			} elseif ($agama == '4') {
-				$religi = 'Hindu';
-			} elseif ($agama == '5') {
-				$religi = 'Budha';
-			} elseif ($agama == '6') {
-				$religi = 'Kong Hu Chu';
+				$gender_label = '<span class="text-maroon"><i class="fa fa-venus"></i> Perempuan</span>';
 			}
 
-			$button = "<a href='" . site_url('employees/view/' . $datas->id) . "' class='btn btn-sm btn-info' title='View Data' data-role='qtip'><i class='fa fa-eye'></i></a>";
+			$religi_map = [
+				'1' => 'Islam',
+				'2' => 'Katolik',
+				'3' => 'Kristen',
+				'4' => 'Hindu',
+				'5' => 'Budha',
+				'6' => 'Kong Hu Chu'
+			];
+			$religi = isset($religi_map[$agama]) ? $religi_map[$agama] : '-';
+
+			if ($datas->flag_active == 'Y') {
+				$status_aktif = '<span class="label label-success"><i class="fa fa-check"></i> Aktif</span>';
+			} else {
+				$status_aktif = '<span class="label label-danger"><i class="fa fa-times"></i> Non-Aktif</span>';
+			}
+
+			$birthday_fmt = (!empty($datas->birthday) && $datas->birthday != '0000-00-00') ? date('d-m-Y', strtotime($datas->birthday)) : '-';
+
+			$button = "<a href='" . site_url('employees/view/' . $datas->id) . "' class='btn btn-xs btn-info' title='Lihat Detail Profil' data-toggle='tooltip'><i class='fa fa-eye'></i> Detail</a>";
 
 			$hasil[] = [
-				'no' => $int,
-				'id' => $datas->id,
-				'nik' => $datas->nik,
-				'name' => $datas->name,
-				'hometown' => $datas->hometown,
-				'birthday' => $datas->birthday,
-				'gender' => $genderid,
-				'religion' => $religi,
-				'nationality' => $datas->nationality,
-				'employee_status' => $status,
-				'status_aktif' => $datas->flag_active,
-				'option' => $button
+				'no'              => '<div class="text-center">' . $int . '</div>',
+				'id'              => '<span class="text-bold">' . $datas->id . '</span>',
+				'nik'             => $datas->nik,
+				'name'            => '<span class="text-bold text-navy">' . $datas->name . '</span>',
+				'hometown'        => $datas->hometown,
+				'birthday'        => '<div class="text-center">' . $birthday_fmt . '</div>',
+				'gender'          => '<div class="text-center">' . $gender_label . '</div>',
+				'religion'        => '<div class="text-center">' . $religi . '</div>',
+				'nationality'     => '<div class="text-center">' . ($datas->nationality ? $datas->nationality : '-') . '</div>',
+				'employee_status' => '<div class="text-center">' . $status_badge . '</div>',
+				'status_aktif'    => '<div class="text-center">' . $status_aktif . '</div>',
+				'option'          => '<div class="text-center">' . $button . '</div>'
 			];
 		}
 
 		echo json_encode([
-            'draw' => intval($draw),
-            'recordsTotal' => $query_all->num_rows(),
-            'recordsFiltered' => $query_all->num_rows(),
-            'data' => $hasil
-        ]);
+			'draw'            => intval($draw),
+			'recordsTotal'    => $recordsTotal,
+			'recordsFiltered' => $recordsFiltered,
+			'data'            => $hasil
+		]);
 	}
 }
