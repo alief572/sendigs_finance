@@ -15,6 +15,7 @@ class Request_payment_model extends BF_Model
 {
 
     protected $consultant;
+    protected $hris;
 
     /**
      * @var string  User Table Name
@@ -70,6 +71,7 @@ class Request_payment_model extends BF_Model
         parent::__construct();
 
         $this->consultant = $this->load->database('consultant', true);
+        $this->hris       = $this->load->database('hris', true);
     }
 
     // list data request
@@ -1989,7 +1991,7 @@ class Request_payment_model extends BF_Model
         $recordsFiltered = $this->db->count_all_results('', false);
 
         // data - QB masih menyimpan from/join/where/search; cukup select + order + limit
-        $this->db->select('a.id, a.no_dokumen, a.request_by, a.tanggal, a.keperluan, a.kategori, a.nilai_pengajuan, d.id as hris_company_id');
+        $this->db->select('a.id, a.no_dokumen, a.request_by, a.tanggal, a.keperluan, a.kategori, a.nilai_pengajuan, d.id as hris_company_id, b.department_id');
         $this->db->order_by('a.tanggal', 'desc');
         $this->db->limit($length, $start);
         $rows = $this->db->get()->result();
@@ -2006,6 +2008,25 @@ class Request_payment_model extends BF_Model
                 $company_id_kons = $mapped;
                 if (isset($company_names[$mapped])) {
                     $company_nama = $company_names[$mapped];
+                }
+            }
+
+            // Fallback: dokumen consultant (company kosong dari HRIS) -> resolve via DBCNL
+            if (empty($company_nama)) {
+                $kons = $this->resolve_consultant_company($r);
+                if (!empty($kons['company_nama'])) {
+                    $company_id_kons = $kons['company_id'];
+                    $company_nama    = $kons['company_nama'];
+                }
+            }
+
+            // Fallback: department user belum tersalin ke db utama (departments main DB
+            // ketinggalan dari HRIS) -> resolve company langsung dari hr_sentral.departments.
+            if (empty($company_nama) && !empty($r->department_id)) {
+                $hd = $this->resolve_company_via_hris_dept($r->department_id);
+                if (!empty($hd['company_nama'])) {
+                    $company_id_kons = $hd['company_id'];
+                    $company_nama    = $hd['company_nama'];
                 }
             }
 
@@ -2073,6 +2094,120 @@ class Request_payment_model extends BF_Model
             return base_url('request_payment/print_cash/' . $no_dok);
         }
         return '';
+    }
+
+    /**
+     * Resolve company untuk dokumen consultant lewat DBCNL, dipakai sebagai fallback
+     * saat company dari rantai HRIS kosong.
+     *
+     * Rantai (terverifikasi di DB dev):
+     *   Kasbon        : tr_kasbon.no_kasbon_consultant
+     *                   -> kons_tr_kasbon_project_header.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   Expense       : tr_expense.no_expense_consultant
+     *                   -> kons_tr_expense_report_project_header.id_header
+     *                   -> kons_tr_kasbon_project_header.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   Direct Payment: tr_direct_payment.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   company (id 1..7) -> kons_tr_company.nm_company
+     *
+     * @param object $r baris v_request_payment (punya no_dokumen, kategori)
+     * @return array ['company_id' => string|null, 'company_nama' => string]
+     */
+    public function resolve_consultant_company($r)
+    {
+        $empty    = ['company_id' => null, 'company_nama' => ''];
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        if ($no_dok === '') {
+            return $empty;
+        }
+
+        $id_penawaran = null;
+
+        if ($kategori == 'Kasbon') {
+            $kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
+            if (empty($kasbon) || empty($kasbon->no_kasbon_consultant)) {
+                return $empty;
+            }
+            $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $kasbon->no_kasbon_consultant])->row();
+            if (!empty($head) && !empty($head->id_penawaran)) {
+                $id_penawaran = $head->id_penawaran;
+            }
+        } elseif ($kategori == 'Expense') {
+            $expense = $this->db->get_where('tr_expense', ['no_doc' => $no_dok])->row();
+            if (empty($expense) || empty($expense->no_expense_consultant)) {
+                return $empty;
+            }
+            $exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $expense->no_expense_consultant])->row();
+            if (!empty($exp_head) && !empty($exp_head->id_header)) {
+                $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row();
+                if (!empty($head) && !empty($head->id_penawaran)) {
+                    $id_penawaran = $head->id_penawaran;
+                }
+            }
+        } elseif ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0 || strpos($no_dok, 'DP-') === 0) {
+            $dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $no_dok])->row();
+            if (empty($dp) || empty($dp->id_penawaran)) {
+                return $empty;
+            }
+            $id_penawaran = $dp->id_penawaran;
+        } else {
+            return $empty;
+        }
+
+        if (empty($id_penawaran)) {
+            return $empty;
+        }
+
+        // penawaran -> company id
+        $pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
+        if (empty($pen) || $pen->company === null || $pen->company === '') {
+            return $empty;
+        }
+        $company_id = $pen->company;
+
+        // company id -> nm_company
+        $comp = $this->consultant->select('nm_company')->get_where('kons_tr_company', ['id' => $company_id])->row();
+        $nama = (!empty($comp) && !empty($comp->nm_company)) ? $comp->nm_company : '';
+
+        return ['company_id' => $company_id, 'company_nama' => $nama];
+    }
+
+    /**
+     * Resolve company dari department_id lewat HRIS, dipakai sebagai fallback saat
+     * departemen user belum tersalin ke db_sendigs_ss.departments (salinan lokal
+     * bisa ketinggalan dari master di hr_sentral). HRIS = source of truth.
+     *
+     * Rantai: hr_sentral.departments.company_id (COM003/COM006/COM012)
+     *         -> company_map() -> kons id -> kons_tr_company.nm_company
+     *
+     * @param string $department_id
+     * @return array ['company_id' => string|null, 'company_nama' => string]
+     */
+    public function resolve_company_via_hris_dept($department_id)
+    {
+        $empty = ['company_id' => null, 'company_nama' => ''];
+        if (empty($department_id) || empty($this->hris)) {
+            return $empty;
+        }
+
+        $dept = $this->hris->select('company_id')->get_where('departments', ['id' => $department_id])->row();
+        if (empty($dept) || empty($dept->company_id)) {
+            return $empty;
+        }
+
+        $company_map   = self::company_map();
+        if (!isset($company_map[$dept->company_id])) {
+            return $empty;
+        }
+        $kons_id = $company_map[$dept->company_id];
+
+        $company_names = $this->get_company_names_lookup();
+        $nama = isset($company_names[$kons_id]) ? $company_names[$kons_id] : '';
+
+        return ['company_id' => $kons_id, 'company_nama' => $nama];
     }
 
     /**
