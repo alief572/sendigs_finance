@@ -34,11 +34,207 @@ class Request_payment extends Admin_Controller
 
 	public function index()
 	{
+		$this->auth->restrict($this->viewPermission);
 		$this->template->title('Request Payment');
-		// Load companies for filter dropdown
 		$companies = $this->Request_payment_model->get_companies_list();
 		$this->template->set('companies', $companies);
-		$this->template->render('index');
+		$this->template->render('rp_index');
+	}
+
+	/* =====================================================================
+	 * ALUR BARU: Request Payment (FSD 2026-09)
+	 * ===================================================================== */
+
+	// Server-side DataTables: dokumen "belum" siap diajukan approval
+	public function get_data_request()
+	{
+		$this->Request_payment_model->get_data_request_baru();
+	}
+
+	// Histori reject lengkap satu dokumen (audit trail)
+	public function reject_history()
+	{
+		$no_dokumen = $this->input->post('no_dokumen');
+		$rows = $this->Request_payment_model->get_reject_history($no_dokumen);
+		$out = [];
+		foreach ($rows as $r) {
+			$out[] = [
+				'approver'     => $r->approver,
+				'rejected_at'  => !empty($r->rejected_at) ? date('d-M-Y H:i', strtotime($r->rejected_at)) : '',
+				'alasan'       => $r->alasan,
+				'no_pengajuan' => $r->no_pengajuan,
+			];
+		}
+		echo json_encode(['data' => $out]);
+	}
+
+	/**
+	 * Ajukan dokumen terpilih sebagai satu batch approval (PGJ-XXXX).
+	 * Validasi company-lock ULANG di server (tidak cukup di UI).
+	 * Perhitungan pajak/dibayarkan dilakukan server-side (ceiling).
+	 */
+	public function submit_for_approval()
+	{
+		$items = $this->input->post('items'); // array of {no_dokumen, ppn, pph23, pph21, admin}
+
+		if (empty($items) || !is_array($items)) {
+			echo json_encode(['status' => 0, 'msg' => 'Tidak ada dokumen yang dipilih.']);
+			return;
+		}
+
+		$no_dokumen_list = [];
+		foreach ($items as $it) {
+			if (!empty($it['no_dokumen'])) {
+				$no_dokumen_list[] = $it['no_dokumen'];
+			}
+		}
+		$no_dokumen_list = array_values(array_unique($no_dokumen_list));
+
+		if (empty($no_dokumen_list)) {
+			echo json_encode(['status' => 0, 'msg' => 'Tidak ada dokumen yang valid.']);
+			return;
+		}
+
+		// Guard: dokumen tidak boleh yang sudah terkunci di batch lain (pending/approved)
+		$locked = $this->Request_payment_model->get_locked_docs();
+		$conflict = array_intersect($no_dokumen_list, $locked);
+		if (!empty($conflict)) {
+			echo json_encode(['status' => 0, 'msg' => 'Sebagian dokumen sudah diajukan di pengajuan lain: ' . implode(', ', $conflict)]);
+			return;
+		}
+
+		// Ambil data valid dari sumber (v_request_payment status=1) + derive company
+		$this->db->select('a.no_dokumen, a.kategori, a.request_by, a.keperluan, a.nilai_pengajuan');
+		$this->db->from('v_request_payment a');
+		$this->db->where('a.status', '1');
+		$this->db->where_in('a.no_dokumen', $no_dokumen_list);
+		$src_rows = $this->db->get()->result();
+
+		$src_map = [];
+		foreach ($src_rows as $s) {
+			$src_map[$s->no_dokumen] = $s;
+		}
+
+		// Semua dokumen harus masih ada di sumber
+		foreach ($no_dokumen_list as $nd) {
+			if (!isset($src_map[$nd])) {
+				echo json_encode(['status' => 0, 'msg' => 'Dokumen ' . $nd . ' tidak lagi tersedia untuk diajukan.']);
+				return;
+			}
+		}
+
+		// COMPANY-LOCK: derive company semua dokumen, harus 1 company yang sama
+		$company_info = $this->Request_payment_model->derive_company_for_docs($no_dokumen_list);
+		$companies_found = [];
+		foreach ($no_dokumen_list as $nd) {
+			$cid = isset($company_info[$nd]) ? $company_info[$nd]['company_id'] : null;
+			if (!empty($cid)) {
+				$companies_found[$cid] = isset($company_info[$nd]['company_nama']) ? $company_info[$nd]['company_nama'] : $cid;
+			}
+		}
+		if (count($companies_found) > 1) {
+			echo json_encode(['status' => 0, 'msg' => 'Semua dokumen dalam 1 pengajuan harus dari company yang sama (rekening pembayaran berbeda per company).']);
+			return;
+		}
+
+		$batch_company_id   = null;
+		$batch_company_nama = null;
+		foreach ($companies_found as $cid => $cnama) {
+			$batch_company_id   = $cid;
+			$batch_company_nama = $cnama;
+			break;
+		}
+
+		$this->db->trans_begin();
+
+		// Generate No. Pengajuan (PGJ-XXXX)
+		$no_pengajuan = $this->All_model->GetAutoGenerate('format_pengajuan_rp');
+		if (!$no_pengajuan) {
+			$this->db->trans_rollback();
+			echo json_encode(['status' => 0, 'msg' => 'Gagal generate nomor pengajuan.']);
+			return;
+		}
+
+		$now  = date('Y-m-d H:i:s');
+		$user = $this->auth->user_name();
+
+		// Hitung item + total
+		$detail_rows = [];
+		$total_dibayarkan = 0.0;
+		foreach ($items as $it) {
+			$nd = isset($it['no_dokumen']) ? $it['no_dokumen'] : '';
+			if ($nd === '' || !isset($src_map[$nd])) {
+				continue;
+			}
+			$src = $src_map[$nd];
+			$flag_ppn   = !empty($it['ppn']) ? 1 : 0;
+			$flag_pph23 = !empty($it['pph23']) ? 1 : 0;
+			$flag_pph21 = !empty($it['pph21']) ? 1 : 0;
+			// eksklusif: kalau keduanya true, prioritaskan pph21
+			if ($flag_pph21 && $flag_pph23) {
+				$flag_pph23 = 0;
+			}
+			$admin = isset($it['admin']) ? (int) $it['admin'] : 0;
+
+			$dpp  = (float) $src->nilai_pengajuan;
+			$calc = $this->Request_payment_model->calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin);
+
+			$detail_rows[] = [
+				'no_dokumen' => $nd,
+				'id_dokumen' => $src->no_dokumen, // no_dokumen dipakai sbg referensi
+				'kategori'   => $src->kategori,
+				'request_by' => $src->request_by,
+				'keperluan'  => $src->keperluan,
+				'dpp'        => $dpp,
+				'flag_ppn'   => $flag_ppn,
+				'flag_pph23' => $flag_pph23,
+				'flag_pph21' => $flag_pph21,
+				'nilai_ppn'  => $calc['nilai_ppn'],
+				'nilai_pph'  => $calc['nilai_pph'],
+				'admin'      => $calc['admin'],
+				'dibayarkan' => $calc['dibayarkan'],
+				'decision'   => 'approved',
+				'created_on' => $now,
+			];
+			$total_dibayarkan += $calc['dibayarkan'];
+		}
+
+		// Insert header
+		$this->db->insert('tr_rp_pengajuan_h', [
+			'no_pengajuan'     => $no_pengajuan,
+			'company_id'       => $batch_company_id,
+			'company_nama'     => $batch_company_nama,
+			'status'           => 'pending',
+			'jumlah_dokumen'   => count($detail_rows),
+			'total_dibayarkan' => $total_dibayarkan,
+			'submitted_at'     => $now,
+			'created_by'       => $user,
+			'created_on'       => $now,
+			'deleted'          => 0,
+		]);
+		$id_pengajuan = $this->db->insert_id();
+
+		// Insert detail
+		foreach ($detail_rows as &$d) {
+			$d['id_pengajuan'] = $id_pengajuan;
+		}
+		unset($d);
+		if (!empty($detail_rows)) {
+			$this->db->insert_batch('tr_rp_pengajuan_d', $detail_rows);
+		}
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan pengajuan. Silakan coba lagi.']);
+			return;
+		}
+
+		$this->db->trans_commit();
+		echo json_encode([
+			'status'       => 1,
+			'msg'          => 'Pengajuan ' . $no_pengajuan . ' berhasil dibuat.',
+			'no_pengajuan' => $no_pengajuan,
+		]);
 	}
 
 	public function payment_list()

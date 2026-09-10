@@ -1802,5 +1802,267 @@ class Request_payment_model extends BF_Model
         }
         return $query->result();
     }
+
+    /* =====================================================================
+     * ALUR BARU: Request Payment - Approval - Record (FSD 2026-09)
+     * Tabel: tr_rp_pengajuan_h / tr_rp_pengajuan_d / tr_rp_record / tr_rp_reject_log
+     * ===================================================================== */
+
+    /**
+     * Map hris_companies.id -> kons_tr_company.id (sesuai logika index existing).
+     */
+    public static function company_map()
+    {
+        return ['COM003' => '7', 'COM006' => '3', 'COM012' => '4'];
+    }
+
+    /**
+     * Lookup nama company dari kons_tr_company (id 7/3/4) => nm_company.
+     */
+    public function get_company_names_lookup()
+    {
+        $names = [];
+        $q = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
+        if ($q) {
+            foreach ($q->result() as $c) {
+                $names[$c->id] = $c->nama;
+            }
+        }
+        return $names;
+    }
+
+    /**
+     * Derive company (kons_tr_company.nm_company) dari daftar no_dokumen v_request_payment.
+     * Rantai: v_request_payment.request_by = users.username -> departments -> hris_companies
+     *         -> map(COM003/COM006/COM012) -> kons_tr_company.nm_company.
+     *
+     * @param array $no_dokumen_list
+     * @return array assoc [no_dokumen => ['company_id' => kons id|null, 'company_nama' => string|null]]
+     */
+    public function derive_company_for_docs($no_dokumen_list)
+    {
+        $out = [];
+        if (empty($no_dokumen_list)) {
+            return $out;
+        }
+
+        $company_map   = self::company_map();
+        $company_names = $this->get_company_names_lookup();
+
+        $this->db->select('a.no_dokumen, d.id as hris_company_id');
+        $this->db->from('v_request_payment a');
+        $this->db->join('users b', 'b.username = a.request_by', 'left');
+        $this->db->join('departments c', 'c.id = b.department_id', 'left');
+        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+        $this->db->where_in('a.no_dokumen', $no_dokumen_list);
+        $rows = $this->db->get()->result();
+
+        foreach ($rows as $r) {
+            $company_id   = null;
+            $company_nama = null;
+            if (!empty($r->hris_company_id) && isset($company_map[$r->hris_company_id])) {
+                $mapped = $company_map[$r->hris_company_id];
+                $company_id = $mapped;
+                if (isset($company_names[$mapped])) {
+                    $company_nama = $company_names[$mapped];
+                }
+            }
+            $out[$r->no_dokumen] = [
+                'company_id'   => $company_id,
+                'company_nama' => $company_nama,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Hitung pajak & nilai dibayarkan (server-side, pembulatan ke atas / ceiling).
+     *  PPN   = ceil(DPP * 0.11)  ditambahkan (jika flag_ppn)
+     *  PPH23 = ceil(DPP * 0.02)  dipotong    (jika flag_pph23)
+     *  PPH21 = ceil(DPP * 0.025) dipotong    (jika flag_pph21)
+     *  PPH21 & PPH23 eksklusif (pph21 diprioritaskan bila somehow keduanya true).
+     *  Admin  = nominal {0,2500,6500} dipotong.
+     *  Dibayarkan = (DPP + PPN) - PPH - Admin.
+     *
+     * @return array ['nilai_ppn','nilai_pph','admin','dibayarkan']
+     */
+    public function calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin)
+    {
+        $dpp   = (float) $dpp;
+        $admin = (int) $admin;
+        // whitelist admin fee
+        if (!in_array($admin, [0, 2500, 6500], true)) {
+            $admin = 0;
+        }
+
+        $nilai_ppn = $flag_ppn ? (float) ceil($dpp * 0.11) : 0.0;
+
+        $nilai_pph = 0.0;
+        if ($flag_pph21) {
+            $nilai_pph = (float) ceil($dpp * 0.025);
+        } elseif ($flag_pph23) {
+            $nilai_pph = (float) ceil($dpp * 0.02);
+        }
+
+        $dibayarkan = ($dpp + $nilai_ppn) - $nilai_pph - $admin;
+
+        return [
+            'nilai_ppn'  => $nilai_ppn,
+            'nilai_pph'  => $nilai_pph,
+            'admin'      => $admin,
+            'dibayarkan' => $dibayarkan,
+        ];
+    }
+
+    /**
+     * Daftar no_dokumen yang sedang "terkunci" oleh batch:
+     * - batch pending (semua itemnya), ATAU
+     * - batch done tapi item-nya di-approve (sudah masuk Record).
+     * Dokumen yang di-reject (batch done, decision rejected) TIDAK terkunci -> muncul lagi.
+     *
+     * @return array daftar no_dokumen (string)
+     */
+    public function get_locked_docs()
+    {
+        $sql = "SELECT DISTINCT d.no_dokumen
+                FROM tr_rp_pengajuan_d d
+                JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan
+                WHERE h.deleted = 0
+                  AND (h.status = 'pending' OR (h.status = 'done' AND d.decision = 'approved'))";
+        $rows = $this->db->query($sql)->result();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = $r->no_dokumen;
+        }
+        return $out;
+    }
+
+    /**
+     * Server-side DataTables: dokumen status "belum" untuk modul Request Payment baru.
+     * Sumber: v_request_payment status=1, exclude yang sedang terkunci di batch.
+     * Menyertakan derivasi company + reject note terakhir.
+     */
+    public function get_data_request_baru()
+    {
+        $post   = $this->input->post();
+        $draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+        $length = isset($post['length']) ? intval($post['length']) : 25;
+        $start  = isset($post['start']) ? intval($post['start']) : 0;
+        $search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+
+        $company_map   = self::company_map();
+        $company_names = $this->get_company_names_lookup();
+
+        // reverse map untuk filter company (kons id -> hris id)
+        $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
+        $company_id  = isset($post['company_id']) ? trim($post['company_id']) : '';
+
+        $locked = $this->get_locked_docs();
+
+        // Susun query SEKALI (from/join/where). count_all_results('', false)
+        // TIDAK mereset query builder, sehingga from/join tidak boleh di-append ulang
+        // (kalau diulang -> "Not unique table/alias").
+        $this->db->from('v_request_payment a');
+        $this->db->join('users b', 'b.username = a.request_by', 'left');
+        $this->db->join('departments c', 'c.id = b.department_id', 'left');
+        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+        $this->db->where('a.status', '1');
+        if (!empty($locked)) {
+            $this->db->where_not_in('a.no_dokumen', $locked);
+        }
+        if (!empty($company_id) && isset($reverse_map[$company_id])) {
+            $this->db->where('d.id', $reverse_map[$company_id]);
+        }
+
+        // total (tanpa search) - jangan reset QB
+        $recordsTotal = $this->db->count_all_results('', false);
+
+        // filtered (dengan search) - tambahkan search ke QB yang sama
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('a.no_dokumen', $search, 'both');
+            $this->db->or_like('a.request_by', $search, 'both');
+            $this->db->or_like('a.keperluan', $search, 'both');
+            $this->db->or_like('a.kategori', $search, 'both');
+            $this->db->group_end();
+        }
+        $recordsFiltered = $this->db->count_all_results('', false);
+
+        // data - QB masih menyimpan from/join/where/search; cukup select + order + limit
+        $this->db->select('a.id, a.no_dokumen, a.request_by, a.tanggal, a.keperluan, a.kategori, a.nilai_pengajuan, d.id as hris_company_id');
+        $this->db->order_by('a.tanggal', 'desc');
+        $this->db->limit($length, $start);
+        $rows = $this->db->get()->result();
+
+        // reject note terakhir per dokumen (dari batch)
+        $reject_last = $this->get_last_reject_map();
+
+        $data = [];
+        foreach ($rows as $r) {
+            $company_id_kons = null;
+            $company_nama    = '';
+            if (!empty($r->hris_company_id) && isset($company_map[$r->hris_company_id])) {
+                $mapped = $company_map[$r->hris_company_id];
+                $company_id_kons = $mapped;
+                if (isset($company_names[$mapped])) {
+                    $company_nama = $company_names[$mapped];
+                }
+            }
+
+            $dpp = (float) $r->nilai_pengajuan;
+            $data[] = [
+                'id'            => $r->id,
+                'no_dokumen'    => $r->no_dokumen,
+                'kategori'      => $r->kategori,
+                'request_by'    => $r->request_by,
+                'company_id'    => $company_id_kons,
+                'company_nama'  => $company_nama,
+                'tanggal'       => !empty($r->tanggal) ? date('d-M-Y', strtotime($r->tanggal)) : '',
+                'keperluan'     => $r->keperluan,
+                'dpp'           => $dpp,
+                'reject_reason' => isset($reject_last[$r->no_dokumen]) ? $reject_last[$r->no_dokumen] : '',
+            ];
+        }
+
+        echo json_encode([
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $data,
+        ]);
+    }
+
+    /**
+     * Map no_dokumen => alasan reject TERAKHIR (untuk ditampilkan di bawah keperluan).
+     */
+    public function get_last_reject_map()
+    {
+        $out = [];
+        $rows = $this->db->query("
+            SELECT t.no_dokumen, t.alasan
+            FROM tr_rp_reject_log t
+            JOIN (
+                SELECT no_dokumen, MAX(id) AS max_id
+                FROM tr_rp_reject_log
+                GROUP BY no_dokumen
+            ) m ON m.no_dokumen = t.no_dokumen AND m.max_id = t.id
+        ")->result();
+        foreach ($rows as $r) {
+            $out[$r->no_dokumen] = $r->alasan;
+        }
+        return $out;
+    }
+
+    /**
+     * Histori lengkap reject satu dokumen (audit trail), terbaru dulu.
+     */
+    public function get_reject_history($no_dokumen)
+    {
+        $this->db->select('approver, rejected_at, alasan, no_pengajuan');
+        $this->db->from('tr_rp_reject_log');
+        $this->db->where('no_dokumen', $no_dokumen);
+        $this->db->order_by('id', 'desc');
+        return $this->db->get()->result();
+    }
 }
 
