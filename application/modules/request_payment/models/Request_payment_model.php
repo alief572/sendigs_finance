@@ -2034,6 +2034,100 @@ class Request_payment_model extends BF_Model
      * @param array $post payload (company_id, date_from, date_to, kategori, search)
      * @return array daftar assoc row siap pakai (sudah ada company_id/company_nama/dpp)
      */
+    /**
+     * Tentukan "Tanggal Disetujui" (approval terakhir/Management) untuk satu dokumen,
+     * sesuai aturan per tipe:
+     *  - Kasbon: consultant (no_kasbon_consultant terisi) -> created_on; selain itu approved_on (Management).
+     *  - Expense: consultant (no_expense_consultant terisi) -> created_on; selain itu approved_on (Management).
+     *  - Transport: tr_transport_req.management_on (approval Management).
+     *  - Periodik: tr_pengajuan_rutin.approved_date.
+     *  - Direct Payment: bila ada di tr_direct_payment -> created_date;
+     *                    bila TIDAK ada -> lewat tr_pr_non_po -> rutin_non_planning_header.app_3_date
+     *                    (fallback app_2_date/app_1_date).
+     *  - Cash: lewat tr_pr_non_po -> rutin_non_planning_header.app_3_date (fallback app_2/app_1).
+     *
+     * @param string $no_dokumen
+     * @param string $kategori
+     * @return string tanggal (Y-m-d H:i:s) atau '' bila belum ada
+     */
+    public function resolve_tgl_disetujui($no_dokumen, $kategori)
+    {
+        $kategori = trim((string) $kategori);
+        $no = (string) $no_dokumen;
+
+        switch ($kategori) {
+            case 'Kasbon':
+                $row = $this->db->select('created_on, approved_on, no_kasbon_consultant')
+                    ->get_where('tr_kasbon', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->no_kasbon_consultant)) {
+                    return (string) $row->created_on; // consultant: tanggal dibuat
+                }
+                return (string) $row->approved_on;     // Management
+
+            case 'Expense':
+                $row = $this->db->select('created_on, approved_on, no_expense_consultant')
+                    ->get_where('tr_expense', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->no_expense_consultant)) {
+                    return (string) $row->created_on; // consultant: tanggal dibuat
+                }
+                return (string) $row->approved_on;     // Management
+
+            case 'Transport':
+            case 'Transportasi':
+                // Approval terakhir Transport tersimpan di approved_on (management_on tidak dipakai/selalu kosong).
+                $row = $this->db->select('approved_on, management_on')
+                    ->get_where('tr_transport_req', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->management_on)) return (string) $row->management_on;
+                return (string) $row->approved_on;
+
+            case 'Periodik':
+                $row = $this->db->select('approved_date')
+                    ->get_where('tr_pengajuan_rutin', ['no_doc' => $no])->row();
+                return $row ? (string) $row->approved_date : '';
+
+            case 'Direct Payment':
+                $dp = $this->db->select('created_date')
+                    ->get_where('tr_direct_payment', ['no_doc' => $no])->row();
+                if ($dp && !empty($dp->created_date)) {
+                    return (string) $dp->created_date; // ada di tr_direct_payment: tanggal dibuat
+                }
+                // tidak ada -> lewat tr_pr_non_po -> PR approval terakhir
+                return $this->_tgl_pr_approval_from_non_po($no);
+
+            case 'Cash':
+                return $this->_tgl_pr_approval_from_non_po($no);
+        }
+
+        // Petty Cash / lainnya: tidak ada tanggal disetujui yang terdefinisi
+        return '';
+    }
+
+    /**
+     * Ambil tanggal approval PR terakhir untuk dokumen yang bersumber dari tr_pr_non_po.
+     * Rantai: tr_pr_non_po.no_pr -> rutin_non_planning_header.no_pr -> app_3_date
+     * (fallback app_2_date, lalu app_1_date bila level atas belum terisi).
+     */
+    private function _tgl_pr_approval_from_non_po($no_dokumen)
+    {
+        $npo = $this->db->select('no_pr')
+            ->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen])->row();
+        if (!$npo || empty($npo->no_pr)) {
+            return '';
+        }
+        $pr = $this->db->select('app_1_date, app_2_date, app_3_date')
+            ->get_where('rutin_non_planning_header', ['no_pr' => $npo->no_pr])->row();
+        if (!$pr) {
+            return '';
+        }
+        if (!empty($pr->app_3_date)) return (string) $pr->app_3_date;
+        if (!empty($pr->app_2_date)) return (string) $pr->app_2_date;
+        if (!empty($pr->app_1_date)) return (string) $pr->app_1_date;
+        return '';
+    }
+
     public function fetch_request_rows($post)
     {
         $search = '';
@@ -2089,6 +2183,7 @@ class Request_payment_model extends BF_Model
                 'company_id'   => $comp['company_id'],
                 'company_nama' => $comp['company_nama'],
                 'tanggal_raw'  => $r->tanggal,
+                'tgl_disetujui' => $this->resolve_tgl_disetujui($r->no_dokumen, $r->kategori),
                 'keperluan'    => $r->keperluan,
                 'dpp'          => (float) $r->nilai_pengajuan,
                 '_r'           => $r, // untuk build_print_url
@@ -2191,6 +2286,7 @@ class Request_payment_model extends BF_Model
                 'company_id'    => $row['company_id'],
                 'company_nama'  => $row['company_nama'],
                 'tanggal'       => !empty($row['tanggal_raw']) ? date('d-M-Y', strtotime($row['tanggal_raw'])) : '',
+                'tanggal_disetujui' => (!empty($row['tgl_disetujui']) && strtotime($row['tgl_disetujui'])) ? date('d-M-Y', strtotime($row['tgl_disetujui'])) : '',
                 'keperluan'     => $row['keperluan'],
                 'dpp'           => (float) $row['dpp'],
                 'reject_reason' => isset($reject_last[$row['no_dokumen']]) ? $reject_last[$row['no_dokumen']] : '',

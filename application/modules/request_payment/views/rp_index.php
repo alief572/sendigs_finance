@@ -258,6 +258,29 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	@media (max-width: 480px) {
 		.rp-cards .rp-card-col { width: 100%; }
 	}
+
+	/* dua tanggal (Diajukan / Disetujui) */
+	.rp-date-cell {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		white-space: nowrap;
+	}
+
+	.rp-date-row {
+		font-size: 12px;
+		color: #2b3440;
+	}
+
+	.rp-date-lbl {
+		display: inline-block;
+		min-width: 62px;
+		font-size: 9.5px;
+		font-weight: 700;
+		color: #9aa7b5;
+		text-transform: uppercase;
+		letter-spacing: .3px;
+	}
 	</style>
 
 <div class="box">
@@ -670,7 +693,15 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 					}
 				},
 				{
-					data: 'tanggal'
+					data: 'tanggal',
+					render: function(data, type, row) {
+						var diajukan = row.tanggal || '-';
+						var disetujui = row.tanggal_disetujui || '-';
+						return '<div class="rp-date-cell">' +
+							'<div class="rp-date-row"><span class="rp-date-lbl">Diajukan</span>' + diajukan + '</div>' +
+							'<div class="rp-date-row"><span class="rp-date-lbl">Disetujui</span>' + disetujui + '</div>' +
+							'</div>';
+					}
 				},
 				{
 					data: 'keperluan',
