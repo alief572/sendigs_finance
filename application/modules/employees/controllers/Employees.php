@@ -395,6 +395,10 @@ class Employees extends Admin_Controller
 
 	public function view($id = '')
 	{
+		if (empty($id)) {
+			redirect('employees');
+		}
+
 		$arr_Where			= '';
 		$get_Data1			= $this->employees_model->getCompanies($arr_Where);
 		$get_Data2			= $this->employees_model->getDivisions($arr_Where);
@@ -408,27 +412,37 @@ class Employees extends Admin_Controller
 		$Family_Type		= $this->master_model->getArray('hr_sentral.family_category', array(), 'kode', 'category');
 		$Education_Type		= $this->master_model->getArray('hr_sentral.education_level', array(), 'kode', 'category');
 		$detail				= $this->employees_model->getData('hr_sentral.employees', 'id', $id);
+
+		if (empty($detail)) {
+			$this->session->set_flashdata("alert_data", "<div class=\"alert alert-warning\" id=\"flash-message\">Data Karyawan tidak ditemukan.</div>");
+			redirect('employees');
+		}
+
 		$detail_family		= $this->master_model->getArray('hr_sentral.family', array('employee_id' => $id));
 		$detail_education	= $this->master_model->getArray('hr_sentral.educational', array('employee_id' => $id));
+		$detail_contracts	= $this->master_model->getArray('hr_sentral.contracts', array(), 'id', 'name');
+
 		$data = array(
-			'title'			=> 'Edit Employees',
-			'action'		=> 'edit',
-			'data_Employees' => $get_Data,
-			'data_companies' => $get_Data1,
-			'data_divisions' => $get_Data2,
-			'data_department'  => $get_Data3,
-			'data_title'  	=> $get_Data4,
-			'data_position'  	=> $get_Data5,
-			'data_marital'  	=> $get_Data6,
-			'data_idfinger'  	=> $get_Data7,
-			'data_divisions_head'  	=> $get_Data8,
+			'title'				=> 'Detail Profil Karyawan',
+			'action'			=> 'view',
+			'data_Employees'	=> $get_Data,
+			'data_companies'	=> $get_Data1,
+			'data_divisions'	=> $get_Data2,
+			'data_department'	=> $get_Data3,
+			'data_title'		=> $get_Data4,
+			'data_position'		=> $get_Data5,
+			'data_marital'		=> $get_Data6,
+			'data_idfinger'		=> $get_Data7,
+			'data_divisions_head' => $get_Data8,
+			'data_contracts'	=> $detail_contracts,
 			'row'				=> $detail,
 			'family_type'		=> $Family_Type,
 			'rows_family'		=> $detail_family,
 			'education_type'	=> $Education_Type,
-			'rows_education'		=> $detail_education
+			'rows_education'	=> $detail_education
 		);
 
+		history('View Data Employee ' . $detail[0]->name);
 		$this->template->render('view', $data);
 	}
 
