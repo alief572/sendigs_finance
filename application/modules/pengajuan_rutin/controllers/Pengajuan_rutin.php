@@ -541,6 +541,7 @@ class Pengajuan_rutin extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.nilai_total', $search, 'both');
 			$this->db->or_like('a.tanggal_doc', $search, 'both');
+			$this->db->or_like('b.keterangan', $search, 'both');
 			$this->db->group_end();
 		}
 
@@ -563,6 +564,7 @@ class Pengajuan_rutin extends Admin_Controller
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.nilai_total', $search, 'both');
 			$this->db->or_like('a.tanggal_doc', $search, 'both');
+			$this->db->or_like('b.keterangan', $search, 'both');
 			$this->db->group_end();
 		}
 
@@ -637,6 +639,30 @@ class Pengajuan_rutin extends Admin_Controller
 				$keterangan_reject = $item->reject_ket;
 			}
 
+			// Ambil semua keterangan detail dokumen ini
+			$this->db->select('keterangan');
+			$this->db->from('tr_pengajuan_rutin_detail');
+			$this->db->where('no_doc', $item->no_doc);
+			$this->db->where("TRIM(IFNULL(keterangan, '')) <>", '');
+			$this->db->order_by('id', 'asc');
+			$rows_ket = $this->db->get()->result();
+
+			$list_ket = [];
+			foreach ($rows_ket as $rk) {
+				$list_ket[] = trim($rk->keterangan);
+			}
+
+			$keterangan_html = '<span class="text-muted">-</span>';
+			if (count($list_ket) == 1) {
+				$keterangan_html = '<div class="ket-box ket-single">' . htmlspecialchars($list_ket[0], ENT_QUOTES) . '</div>';
+			} elseif (count($list_ket) > 1) {
+				$items = '';
+				foreach ($list_ket as $k) {
+					$items .= '<li>' . htmlspecialchars($k, ENT_QUOTES) . '</li>';
+				}
+				$keterangan_html = '<div class="ket-box"><ol class="ket-list">' . $items . '</ol></div>';
+			}
+
 			$action = $btn_view . ' ' . $btn_edit . ' ' . $btn_delete;
 
 			$hasil[] = [
@@ -645,6 +671,7 @@ class Pengajuan_rutin extends Admin_Controller
 				'nomor' => $item->no_doc,
 				'nominal' => number_format($item->nilai_total),
 				'tanggal' => date('d F Y', strtotime($item->tanggal_doc)),
+				'keterangan' => $keterangan_html,
 				'status' => $status,
 				'keterangan_reject' => $keterangan_reject,
 				'action' => $action

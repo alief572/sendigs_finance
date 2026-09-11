@@ -59,6 +59,7 @@ $user_dept      = isset($user_dept) ? $user_dept : '';
 						<th>Nomor</th>
 						<th>Nominal</th>
 						<th>Tanggal</th>
+						<th>Keterangan</th>
 						<th>Status</th>
 						<th>Keterangan Reject</th>
 						<th width="150">
@@ -137,6 +138,9 @@ $user_dept      = isset($user_dept) ? $user_dept : '';
 					data: 'tanggal'
 				},
 				{
+					data: 'keterangan'
+				},
+				{
 					data: 'status'
 				},
 				{
@@ -150,6 +154,30 @@ $user_dept      = isset($user_dept) ? $user_dept : '';
 	}
 </script>
 <style>
+	.ket-box {
+		max-height: 78px;
+		overflow-y: auto;
+		padding-right: 4px;
+		line-height: 1.35;
+		font-size: 12.5px;
+	}
+	.ket-box.ket-single {
+		white-space: normal;
+		word-break: break-word;
+	}
+	.ket-list {
+		margin: 0;
+		padding-left: 18px;
+	}
+	.ket-list li {
+		margin-bottom: 3px;
+		word-break: break-word;
+	}
+	.ket-list li:last-child { margin-bottom: 0; }
+	.ket-box::-webkit-scrollbar { width: 5px; }
+	.ket-box::-webkit-scrollbar-track { background: #f1f1f1; }
+	.ket-box::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+	#mytabledata td { vertical-align: top; }
 	.dept-dropdown-menu {
 		padding: 0;
 		min-width: 360px;

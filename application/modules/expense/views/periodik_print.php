@@ -204,24 +204,25 @@ function formatDate($date)
 	</table>
 
 	<!-- Signature Section -->
-	<div class="signature-section" style="text-align: center; margin-top: 15px;">
-		<table class="signature-table" style="margin: 0 auto;">
+	<?php $tgl_approval = (!empty($data->approved_date) && $data->approved_date != '0000-00-00') ? formatDate($data->approved_date) : '-'; ?>
+	<div style="width: 100%; margin-top: 25px; text-align: right;">
+		<table class="signature-box" style="border-collapse: collapse; display: inline-table;">
 			<tr>
-				<td style="width: 150px;"><strong>Finance</strong></td>
-				<td style="width: 150px;"><strong>Management</strong></td>
+				<td style="width: 170px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold; font-size: 11px;">Finance</td>
+				<td style="width: 170px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold; font-size: 11px;">Management</td>
 			</tr>
 			<tr>
-				<td style="height: 50px;"></td>
-				<td style="height: 50px;"></td>
+				<td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 45px;"></td>
+				<td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 45px;"></td>
 			</tr>
 			<tr>
-				<td>
-					<u>Fikri</u><br>
-					<small><?= (!empty($data->approved_date) && $data->approved_date != '0000-00-00') ? formatDate($data->approved_date) : '' ?></small>
+				<td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center; font-size: 11px;">
+					<u><strong>Fikri</strong></u><br>
+					<small style="font-size: 10px;"><?= $tgl_approval ?></small>
 				</td>
-				<td>
-					<u>Imanuel Iman</u><br>
-					<small><?= (!empty($data->approved_date) && $data->approved_date != '0000-00-00') ? formatDate($data->approved_date) : '' ?></small>
+				<td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center; font-size: 11px;">
+					<u><strong>Imanuel Iman</strong></u><br>
+					<small style="font-size: 10px;"><?= $tgl_approval ?></small>
 				</td>
 			</tr>
 		</table>
