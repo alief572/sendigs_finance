@@ -62,6 +62,172 @@ class Pembayaran_material_model extends BF_Model
 		return $kodecollect;
 	}
 
+	public static function company_map()
+	{
+		return ['COM003' => '7', 'COM006' => '3', 'COM012' => '4'];
+	}
+
+	/**
+	 * Resolve company (id_company & nm_company) untuk dokumen payment.
+	 *
+	 * Prioritas:
+	 * 1. Kasbon dengan no_kasbon_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+	 * 2. Expense dengan no_expense_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+	 * 3. Direct payment di tr_direct_payment -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+	 * 4. Petty Cash (PHP / RPC) -> tr_petty_cash_vuca_sustain / tr_pelaporan_petty_cash
+	 * 5. Non-consultant / Fallback -> payment_approve -> users -> departments -> hris_companies -> company_map()
+	 *
+	 * @param string $no_doc
+	 * @param string|null $tipe
+	 * @return array ['id_company' => string, 'nm_company' => string]
+	 */
+	public function resolve_document_company($no_doc, $tipe = null)
+	{
+		$empty = ['id_company' => '', 'nm_company' => ''];
+		if (empty($no_doc)) {
+			return $empty;
+		}
+
+		$id_penawaran     = null;
+		$id_spk_penawaran = null;
+		$is_consultant    = false;
+
+		// 1. Kasbon
+		if ($tipe == 'kasbon' || strpos($no_doc, 'KS-') === 0) {
+			$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_doc])->row();
+			if (!empty($get_kasbon) && !empty($get_kasbon->no_kasbon_consultant)) {
+				$is_consultant = true;
+				$head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_kasbon->no_kasbon_consultant])->row();
+				if (!empty($head)) {
+					$id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+					$id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
+				}
+			}
+		}
+		// 2. Expense
+		elseif ($tipe == 'expense' || strpos($no_doc, 'EXP-') === 0 || strpos($no_doc, 'ER-') === 0) {
+			$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $no_doc])->row();
+			if (!empty($get_expense) && !empty($get_expense->no_expense_consultant)) {
+				$is_consultant = true;
+				$exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant])->row();
+				if (!empty($exp_head) && !empty($exp_head->id_header)) {
+					$head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row();
+					if (!empty($head)) {
+						$id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+						$id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
+					}
+				}
+			}
+		}
+		// 3. Direct Payment
+		elseif ($tipe == 'direct_payment' || strpos($no_doc, 'DPM') === 0 || strpos($no_doc, 'DP-') === 0) {
+			$get_dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $no_doc])->row();
+			if (!empty($get_dp)) {
+				$is_consultant = true;
+				$id_penawaran     = !empty($get_dp->id_penawaran) ? $get_dp->id_penawaran : null;
+				$id_spk_penawaran = !empty($get_dp->id_spk_penawaran) ? $get_dp->id_spk_penawaran : null;
+			}
+		}
+
+		if ($is_consultant) {
+			$company_id = null;
+
+			// Langkah 1: Cek di kons_tr_penawaran.company
+			if (!empty($id_penawaran)) {
+				$pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
+				if (!empty($pen) && $pen->company !== null && $pen->company !== '') {
+					$company_id = $pen->company;
+				}
+			}
+
+			// Langkah 2 (Fallback): Cek di kons_tr_spk_penawaran.id_company
+			if (empty($company_id) && !empty($id_spk_penawaran)) {
+				$spk = $this->consultant->select('id_company')->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+				if (!empty($spk) && $spk->id_company !== null && $spk->id_company !== '') {
+					$company_id = $spk->id_company;
+				}
+			}
+
+			if (!empty($company_id)) {
+				$norm_map = [
+					'1' => ['id' => '4', 'nama' => 'Vuca'],
+					'4' => ['id' => '4', 'nama' => 'Vuca'],
+					'6' => ['id' => '3', 'nama' => 'Sustain'],
+					'3' => ['id' => '3', 'nama' => 'Sustain'],
+					'7' => ['id' => '7', 'nama' => 'STM'],
+				];
+				if (isset($norm_map[$company_id])) {
+					return [
+						'id_company' => $norm_map[$company_id]['id'],
+						'nm_company' => $norm_map[$company_id]['nama']
+					];
+				}
+				$comp = $this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $company_id])->row();
+				if (!empty($comp)) {
+					return ['id_company' => (string)$comp->id, 'nm_company' => $comp->nm_company];
+				}
+			}
+		}
+
+		// 4. Petty Cash (PHP / RPC)
+		if ($tipe == 'petty_cash_hutang' || $tipe == 'refill_pettycash' || strpos($no_doc, 'RPC') === 0 || strpos($no_doc, 'PHP') === 0) {
+			$get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_doc])->row();
+			if (!empty($get_petty_cash) && !empty($get_petty_cash->company)) {
+				return ['id_company' => '', 'nm_company' => $get_petty_cash->company];
+			}
+			$get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_doc])->row();
+			if (!empty($get_rpc) && !empty($get_rpc->company)) {
+				return ['id_company' => '', 'nm_company' => $get_rpc->company];
+			}
+		}
+
+		// 5. Fallback Non-Consultant (via payment_approve -> users -> departments -> hris_companies)
+		$pa = $this->db->select('nama, created_by')->get_where('payment_approve', ['no_doc' => $no_doc])->row();
+		$req_user = null;
+		if (!empty($pa)) {
+			$req_user = !empty($pa->nama) ? $pa->nama : $pa->created_by;
+		}
+
+		if (empty($req_user)) {
+			if ($tipe == 'kasbon' || strpos($no_doc, 'KS-') === 0) {
+				$kb = $this->db->select('nama, created_by')->get_where('tr_kasbon', ['no_doc' => $no_doc])->row();
+				if (!empty($kb)) $req_user = !empty($kb->nama) ? $kb->nama : $kb->created_by;
+			} elseif ($tipe == 'expense' || strpos($no_doc, 'EXP-') === 0 || strpos($no_doc, 'ER-') === 0) {
+				$exp = $this->db->select('nama, created_by')->get_where('tr_expense', ['no_doc' => $no_doc])->row();
+				if (!empty($exp)) $req_user = !empty($exp->nama) ? $exp->nama : $exp->created_by;
+			} elseif ($tipe == 'direct_payment' || strpos($no_doc, 'DPM') === 0 || strpos($no_doc, 'DP-') === 0) {
+				$dp = $this->db->select('b.username, b.nm_lengkap')->from('tr_direct_payment a')->join('users b', 'b.id_user = a.created_by', 'left')->where('a.no_doc', $no_doc)->get()->row();
+				if (!empty($dp)) $req_user = !empty($dp->username) ? $dp->username : $dp->nm_lengkap;
+			}
+		}
+
+		if (!empty($req_user)) {
+			$user = $this->db->select('department_id')
+				->from('users')
+				->group_start()
+					->where('username', $req_user)
+					->or_where('nm_lengkap', $req_user)
+				->group_end()
+				->get()->row();
+
+			if (!empty($user) && !empty($user->department_id)) {
+				$dept = $this->hris->select('company_id')->get_where('departments', ['id' => $user->department_id])->row();
+				if (!empty($dept) && !empty($dept->company_id)) {
+					$cmap = self::company_map();
+					if (isset($cmap[$dept->company_id])) {
+						$cid = $cmap[$dept->company_id];
+						$comp = $this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $cid])->row();
+						if (!empty($comp)) {
+							return ['id_company' => (string)$comp->id, 'nm_company' => $comp->nm_company];
+						}
+					}
+				}
+			}
+		}
+
+		return $empty;
+	}
+
 	public function get_list_req_payment()
 	{
 		$post = $this->input->post();
@@ -136,10 +302,14 @@ class Pembayaran_material_model extends BF_Model
 				}
 			}
 
+			$comp_data = $this->resolve_document_company($item->no_doc, $item->tipe);
+			$company_name = !empty($comp_data['nm_company']) ? $comp_data['nm_company'] : '-';
+
 			$hasil[] = [
 				'no' => $no,
 				'no_dokumen' => $item->no_doc,
 				'tgl' => date('d F Y', strtotime($item->created_on)),
+				'company' => $company_name,
 				'keperluan' => $item->keperluan,
 				'total_invoice' => number_format($item->jumlah),
 				'requestor' => $requestor,
@@ -477,22 +647,10 @@ class Pembayaran_material_model extends BF_Model
 					}
 				}
 
-				$id_company = '';
-				$nm_company = '';
+				$comp_resolved = $this->resolve_document_company($item_payment->no_doc, 'kasbon');
+				$id_company = $comp_resolved['id_company'];
+				$nm_company = $comp_resolved['nm_company'];
 				$id_kasbon_consultant = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : '';
-				if (!empty($id_kasbon_consultant)) {
-					if (!isset($company_cache[$id_kasbon_consultant])) {
-						$this->consultant->select('a.id as id_company, a.nm_company');
-						$this->consultant->from('kons_tr_company a');
-						$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-						$this->consultant->join('kons_tr_kasbon_project_header c', 'c.id_penawaran = b.id_quotation', 'left');
-						$this->consultant->where('c.id', $id_kasbon_consultant);
-						$company_cache[$id_kasbon_consultant] = $this->consultant->get()->row();
-					}
-					$get_company = $company_cache[$id_kasbon_consultant];
-					$id_company = (!empty($get_company)) ? $get_company->id_company : '';
-					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
-				}
 
 				$pph_data = $this->input->post('pph_data');
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
@@ -600,7 +758,16 @@ class Pembayaran_material_model extends BF_Model
 								endforeach;
 							}
 
-							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $item_kasbon->company_id, $item_kasbon->company_name, $id_divisi, $nm_divisi, '1103-01-14', 'Piutang Lain-lain Konsultan', $keterangan, $debit, $kredit);
+							$comp_kas_id = !empty($item_kasbon->company_id) ? $item_kasbon->company_id : $id_company;
+							$comp_kas_nm = !empty($item_kasbon->company_name) ? $item_kasbon->company_name : $nm_company;
+							if ($comp_kas_id == '1' || $comp_kas_nm == 'STM-Vuca') {
+								$comp_kas_id = '4';
+								$comp_kas_nm = 'Vuca';
+							} elseif ($comp_kas_id == '6' || $comp_kas_nm == 'STM-Sustain') {
+								$comp_kas_id = '3';
+								$comp_kas_nm = 'Sustain';
+							}
+							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $comp_kas_id, $comp_kas_nm, $id_divisi, $nm_divisi, '1103-01-14', 'Piutang Lain-lain Konsultan', $keterangan, $debit, $kredit);
 						} else {
 							$debit = $item_payment->jumlah;
 							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
@@ -810,24 +977,25 @@ class Pembayaran_material_model extends BF_Model
 					}
 				} else {
 					if (!empty($get_expense->no_expense_consultant)) {
-						$get_kasbon = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_expense->id_kasbon])->row();
-						$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_kasbon->id_penawaran])->row();
-						$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran])->row();
+						$comp_resolved = $this->resolve_document_company($item_payment->no_doc, 'expense');
+						$id_company = $comp_resolved['id_company'];
+						$nm_company = $comp_resolved['nm_company'];
 
-						$get_company = (!empty($get_penawaran->company)) ?
-							$this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row() :
-							$this->consultant->get_where('kons_tr_company', ['id' => $get_spk_penawaran->id_company])->row();
+						$exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant])->row();
+						$get_kasbon = (!empty($exp_head) && !empty($exp_head->id_header)) ? $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row() : null;
+						$get_spk_penawaran = (!empty($get_kasbon) && !empty($get_kasbon->id_spk_penawaran)) ? $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran])->row() : null;
 
-						$id_company = $get_company->id ?? '';
-						$nm_company = $get_company->nm_company ?? '';
+						$id_department = '';
+						$nm_department = '';
+						if (!empty($get_spk_penawaran) && !empty($get_spk_penawaran->id_divisi)) {
+							$get_department = $this->hris->select('a.id as id_depart, a.name as nm_depart')
+								->from('divisions a')
+								->where('a.id', $get_spk_penawaran->id_divisi)
+								->get()->row();
 
-						$get_department = $this->hris->select('a.id as id_depart, a.name as nm_depart')
-							->from('divisions a')
-							->where('a.id', $get_spk_penawaran->id_divisi)
-							->get()->row();
-
-						$id_department = $get_department->id_depart ?? '';
-						$nm_department = $get_department->nm_depart ?? '';
+							$id_department = $get_department->id_depart ?? '';
+							$nm_department = $get_department->nm_depart ?? '';
+						}
 
 						$pph_data = $this->input->post('pph_data');
 						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
@@ -878,33 +1046,11 @@ class Pembayaran_material_model extends BF_Model
 						}
 					} else {
 						// Sendigs Expense Report / General Expense (e.g. ER-2026-00031)
-						$id_company = '';
-						$nm_company = '';
+						$comp_resolved = $this->resolve_document_company($item_payment->no_doc, 'expense');
+						$id_company = $comp_resolved['id_company'];
+						$nm_company = $comp_resolved['nm_company'];
 						$id_department = '';
 						$nm_department = '';
-
-						if (!empty($get_expense->id_kasbon)) {
-							$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $get_expense->id_kasbon])->row();
-							if (!empty($get_kb) && !empty($get_kb->project)) {
-								$this->consultant->select('a.id, a.nm_company');
-								$this->consultant->from('kons_tr_company a');
-								$this->consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-								$this->consultant->where('b.id_quotation', $get_kb->project);
-								$get_comp = $this->consultant->get()->row();
-								if (!empty($get_comp)) {
-									$id_company = $get_comp->id;
-									$nm_company = $get_comp->nm_company;
-								}
-							}
-						}
-
-						if (empty($nm_company)) {
-							$get_first_comp = $this->consultant->get('kons_tr_company')->row();
-							if (!empty($get_first_comp)) {
-								$id_company = $get_first_comp->id;
-								$nm_company = $get_first_comp->nm_company;
-							}
-						}
 
 						if (!empty($get_expense->departement)) {
 							$id_department = $get_expense->departement;
@@ -1020,25 +1166,20 @@ class Pembayaran_material_model extends BF_Model
 				}
 			} else if ($item_payment->tipe == 'direct_payment') {
 				$get_direct_payment = $this->db->get_where('tr_direct_payment', ['no_doc' => $item_payment->no_doc])->row();
-				$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_direct_payment->id_penawaran])->row();
-				$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_direct_payment->id_spk_penawaran])->row();
+				$get_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_penawaran)) ? $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_direct_payment->id_penawaran])->row() : null;
+				$get_spk_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_spk_penawaran)) ? $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_direct_payment->id_spk_penawaran])->row() : null;
 
-				$id_company = '';
-				$nm_company = '';
+				$comp_resolved = $this->resolve_document_company($item_payment->no_doc, 'direct_payment');
+				$id_company = $comp_resolved['id_company'];
+				$nm_company = $comp_resolved['nm_company'];
 
-				if (!empty($get_penawaran->company)) {
-					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
-					$id_company = $get_company->id ?? '';
-					$nm_company = $get_company->nm_company ?? '';
-				} else {
-					$get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_spk_penawaran->id_company])->row();
-					$id_company = $get_company->id ?? '';
-					$nm_company = $get_company->nm_company ?? '';
+				$id_divisi = '';
+				$nm_divisi = '';
+				if (!empty($get_penawaran) && !empty($get_penawaran->id_divisi)) {
+					$get_divisi = $this->hris->get_where('divisions', ['id' => $get_penawaran->id_divisi])->row();
+					$id_divisi = $get_divisi->id ?? '';
+					$nm_divisi = $get_divisi->name ?? '';
 				}
-
-				$get_divisi = $this->hris->get_where('divisions', ['id' => $get_penawaran->id_divisi])->row();
-				$id_divisi = $get_divisi->id ?? '';
-				$nm_divisi = $get_divisi->name ?? '';
 
 				$get_kasbon_cons = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_direct_payment->ids])->row();
 

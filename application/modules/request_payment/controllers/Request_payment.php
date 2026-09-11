@@ -3547,31 +3547,9 @@ class Request_payment extends Admin_Controller
 					}
 				}
 
-				// Company display - derive from hris_companies.id via mapping
-				$company_display = '';
-				if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
-					$mapped_id = $company_map[$item->id_company];
-					if (isset($company_names[$mapped_id])) {
-						$company_display = $company_names[$mapped_id];
-					}
-				}
-
-				// Fallback untuk Petty Cash Hutang dan Petty Cash biasa
-				if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
-					$get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
-					if (!empty($get_petty_cash)) {
-						$company_display = $get_petty_cash->company;
-					}
-
-					if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
-						$get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
-						if (!empty($get_rpc) && !empty($get_rpc->company)) {
-							$company_display = $get_rpc->company;
-						} else {
-							$company_display = 'STM';
-						}
-					}
-				}
+				// Company display - resolved via central resolve_row_company
+				$res_comp = $this->Request_payment_model->resolve_row_company($item);
+				$company_display = $res_comp['company_nama'];
 
 				// Tanggal Pengajuan
 				$tanggal_pengajuan = (!empty($item->tanggal) && strtotime($item->tanggal) !== false) ? date('d-M-Y', strtotime($item->tanggal)) : '';

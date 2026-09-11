@@ -556,6 +556,86 @@ class Request_payment_model extends BF_Model
     }
 
     /**
+     * Terapkan filter company ke query builder aktif.
+     * Mengikuti prioritas:
+     * 1. Kasbon dengan no_kasbon_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 2. Expense dengan no_expense_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 3. Direct payment di tr_direct_payment -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 4. Dokumen non-consultant -> HRIS (COM003->7, COM006->3, COM012->4) atau Petty Cash tables
+     */
+    public function _apply_company_filter($company_id)
+    {
+        if (empty($company_id)) {
+            return;
+        }
+
+        $safe_comp_id = $this->db->escape_str($company_id);
+
+        // Mapped IDs for the 3 consultant project types:
+        // Sustain (3) matches both 3 and 6 (STM-Sustain)
+        // Vuca (4) matches both 4 and 1 (STM-Vuca)
+        // STM (7) matches 7
+        $consultant_comp_ids = [$safe_comp_id];
+        if ($company_id == '3') {
+            $consultant_comp_ids = ['3', '6'];
+        } elseif ($company_id == '4') {
+            $consultant_comp_ids = ['4', '1'];
+        } elseif ($company_id == '7') {
+            $consultant_comp_ids = ['7'];
+        }
+        $in_consultant_ids = "'" . implode("','", $consultant_comp_ids) . "'";
+
+        $sql_kasbon = "SELECT kb.no_doc FROM tr_kasbon kb 
+            JOIN " . DBCNL . ".kons_tr_kasbon_project_header kh ON kh.id = kb.no_kasbon_consultant 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = kh.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = kh.id_spk_penawaran 
+            WHERE kb.no_kasbon_consultant IS NOT NULL AND kb.no_kasbon_consultant <> '' 
+              AND COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $sql_exp = "SELECT exp.no_doc FROM tr_expense exp 
+            JOIN " . DBCNL . ".kons_tr_expense_report_project_header eh ON eh.id = exp.no_expense_consultant 
+            JOIN " . DBCNL . ".kons_tr_kasbon_project_header kh ON kh.id = eh.id_header 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = kh.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = kh.id_spk_penawaran 
+            WHERE exp.no_expense_consultant IS NOT NULL AND exp.no_expense_consultant <> '' 
+              AND COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $sql_dp = "SELECT dp.no_doc FROM tr_direct_payment dp 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = dp.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = dp.id_spk_penawaran 
+            WHERE COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
+        $hris_cond = isset($reverse_map[$company_id]) ? "d.id = '" . $reverse_map[$company_id] . "'" : "1=0";
+
+        // Check if company name matches petty cash records
+        $company_names = $this->get_company_names_lookup();
+        $comp_name = isset($company_names[$company_id]) ? $this->db->escape_str($company_names[$company_id]) : '';
+        $petty_cond = "";
+        if (!empty($comp_name)) {
+            $petty_cond = " OR a.no_dokumen IN (SELECT no_payment_hutang FROM tr_petty_cash_vuca_sustain WHERE company = '{$comp_name}')
+                           OR a.no_dokumen IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company = '{$comp_name}')";
+            if ($comp_name === 'STM') {
+                $petty_cond .= " OR (a.no_dokumen LIKE 'RPC-%' AND a.no_dokumen NOT IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company IS NOT NULL AND company <> ''))";
+            }
+        }
+
+        $cond = "(
+            a.no_dokumen IN ({$sql_kasbon})
+            OR a.no_dokumen IN ({$sql_exp})
+            OR a.no_dokumen IN ({$sql_dp})
+            OR (
+                a.no_dokumen NOT IN (SELECT kb2.no_doc FROM tr_kasbon kb2 WHERE kb2.no_kasbon_consultant IS NOT NULL AND kb2.no_kasbon_consultant <> '')
+                AND a.no_dokumen NOT IN (SELECT exp2.no_doc FROM tr_expense exp2 WHERE exp2.no_expense_consultant IS NOT NULL AND exp2.no_expense_consultant <> '')
+                AND a.no_dokumen NOT IN (SELECT dp2.no_doc FROM tr_direct_payment dp2)
+                AND ({$hris_cond}{$petty_cond})
+            )
+        )";
+
+        $this->db->where($cond, null, false);
+    }
+
+    /**
      * Get data for DataTables server-side processing with filters, tab logic, and company derivation.
      *
      * @param string|null $company_id   Company ID from kons_tr_company (7, 3, or 4)
@@ -578,21 +658,11 @@ class Request_payment_model extends BF_Model
         // Hardcode map: hris_companies.id => kons_tr_company.id
         $company_map = ['COM003' => 7, 'COM006' => 3, 'COM012' => 4];
 
-        // Build company names lookup from db_consultant_new.kons_tr_company using raw query
-        $company_names = [];
-        $company_query = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
-        if ($company_query) {
-            foreach ($company_query->result() as $comp) {
-                $company_names[$comp->id] = $comp->nama;
-            }
-        }
-
-
-        // print_r($company_names);
-        // exit;
+        // Build company names lookup from db_consultant_new.kons_tr_company
+        $company_names = $this->get_company_names_lookup();
 
         // --- Build the main query ---
-        $this->db->select('a.*, d.id as id_company, pa.tgl_bayar');
+        $this->db->select('a.*, d.id as id_company, c.id as department_id, pa.tgl_bayar');
         $this->db->from('v_request_payment a');
         $this->db->join('users b', 'b.username = a.request_by', 'left');
         $this->db->join('departments c', 'c.id = b.department_id', 'left');
@@ -629,12 +699,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company_id filter if non-null
         if (!empty($company_id)) {
-            // company_id from dropdown = kons_tr_company.id (7, 3, 4)
-            // Reverse map to hris_companies.id
-            $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         // Count total records (before search filter)
@@ -740,33 +805,9 @@ class Request_payment_model extends BF_Model
                 }
             }
 
-            // Company display - derive from hris_companies.id via mapping to kons_tr_company.nama
-            $company_display = '';
-            if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
-                $mapped_id = $company_map[$item->id_company];
-                if (isset($company_names[$mapped_id])) {
-                    $company_display = $company_names[$mapped_id];
-                }
-            }
-
-            // Fallback untuk Petty Cash Hutang dan Petty Cash biasa: ambil company dari pencatatan petty cash
-            if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
-                // Cek dulu di tr_petty_cash_vuca_sustain (untuk PHP-xxxx)
-                $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
-                if (!empty($get_petty_cash)) {
-                    $company_display = $get_petty_cash->company;
-                }
-
-                // Fallback ke tr_pelaporan_petty_cash (untuk RPC-xxxx)
-                if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
-                    $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
-                    if (!empty($get_rpc) && !empty($get_rpc->company)) {
-                        $company_display = $get_rpc->company;
-                    } else {
-                        $company_display = 'STM';
-                    }
-                }
-            }
+            // Company display - derive via resolve_row_company
+            $res_comp = $this->resolve_row_company($item);
+            $company_display = $res_comp['company_nama'];
 
             // Determine "diminta_oleh" (request_by with Kasbon special logic)
             $nmuser = $item->request_by;
@@ -1341,7 +1382,7 @@ class Request_payment_model extends BF_Model
         $date_to    = isset($filters['date_to']) ? $filters['date_to'] : null;
         $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
 
-        $this->db->select('a.*, d.id as id_company');
+        $this->db->select('a.*, d.id as id_company, c.id as department_id');
         $this->db->from('v_request_payment a');
 
         // JOIN for company filter
@@ -1368,10 +1409,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company filter if non-null
         if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         $this->db->order_by('a.tanggal', 'desc');
@@ -1426,10 +1464,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company filter if non-null
         if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         $query = $this->db->get();
@@ -1796,7 +1831,7 @@ class Request_payment_model extends BF_Model
     {
         $this->db->select('id, nm_company as nama');
         $this->db->from(DBCNL . '.kons_tr_company');
-        $this->db->where_in('id', ['7', '3', '4']);
+        $this->db->where_in('id', ['3', '4', '7']);
         $this->db->order_by('nama', 'asc');
         $query = $this->db->get();
         if (!$query) {
@@ -1819,12 +1854,12 @@ class Request_payment_model extends BF_Model
     }
 
     /**
-     * Lookup nama company dari kons_tr_company (id 7/3/4) => nm_company.
+     * Lookup nama company dari kons_tr_company (id 1/3/4/6/7) => nm_company.
      */
     public function get_company_names_lookup()
     {
         $names = [];
-        $q = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
+        $q = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('1','3','4','6','7') ORDER BY nm_company ASC");
         if ($q) {
             foreach ($q->result() as $c) {
                 $names[$c->id] = $c->nama;
@@ -1835,8 +1870,7 @@ class Request_payment_model extends BF_Model
 
     /**
      * Derive company (kons_tr_company.nm_company) dari daftar no_dokumen v_request_payment.
-     * Rantai: v_request_payment.request_by = users.username -> departments -> hris_companies
-     *         -> map(COM003/COM006/COM012) -> kons_tr_company.nm_company.
+     * Menggunakan resolve_row_company() sehingga konsisten dengan tampilan index & aturan consultant.
      *
      * @param array $no_dokumen_list
      * @return array assoc [no_dokumen => ['company_id' => kons id|null, 'company_nama' => string|null]]
@@ -1848,10 +1882,7 @@ class Request_payment_model extends BF_Model
             return $out;
         }
 
-        $company_map   = self::company_map();
-        $company_names = $this->get_company_names_lookup();
-
-        $this->db->select('a.no_dokumen, d.id as hris_company_id');
+        $this->db->select('a.no_dokumen, a.kategori, a.request_by, b.department_id, d.id as hris_company_id');
         $this->db->from('v_request_payment a');
         $this->db->join('users b', 'b.username = a.request_by', 'left');
         $this->db->join('departments c', 'c.id = b.department_id', 'left');
@@ -1860,18 +1891,10 @@ class Request_payment_model extends BF_Model
         $rows = $this->db->get()->result();
 
         foreach ($rows as $r) {
-            $company_id   = null;
-            $company_nama = null;
-            if (!empty($r->hris_company_id) && isset($company_map[$r->hris_company_id])) {
-                $mapped = $company_map[$r->hris_company_id];
-                $company_id = $mapped;
-                if (isset($company_names[$mapped])) {
-                    $company_nama = $company_names[$mapped];
-                }
-            }
+            $comp = $this->resolve_row_company($r);
             $out[$r->no_dokumen] = [
-                'company_id'   => $company_id,
-                'company_nama' => $company_nama,
+                'company_id'   => $comp['company_id'],
+                'company_nama' => $comp['company_nama'],
             ];
         }
         return $out;
@@ -1992,30 +2015,58 @@ class Request_payment_model extends BF_Model
         $company_id_kons = null;
         $company_nama    = '';
 
-        // Jalur 1: HRIS langsung (v_request_payment -> users -> departments -> hris_companies)
-        if (!empty($r->hris_company_id) && isset($company_map[$r->hris_company_id])) {
-            $mapped = $company_map[$r->hris_company_id];
+        // Jalur 1: dokumen consultant (Kasbon, Expense, Direct Payment) -> resolve via DBCNL
+        // Prioritas: kons_tr_penawaran.company -> fallback kons_tr_spk_penawaran.id_company
+        $kons = $this->resolve_consultant_company($r);
+        if (!empty($kons['company_nama'])) {
+            return $kons;
+        }
+
+        // Jalur 2: dokumen Petty Cash (PHP / RPC)
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        if ($kategori == 'Petty Cash Hutang' || $kategori == 'Petty Cash' || strpos($no_dok, 'RPC-') === 0 || strpos($no_dok, 'PHP-') === 0) {
+            $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_dok])->row();
+            if (!empty($get_petty_cash) && !empty($get_petty_cash->company)) {
+                $company_nama = $get_petty_cash->company;
+            } elseif (strpos($no_dok, 'RPC-') === 0 || $kategori == 'Petty Cash') {
+                $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_dok])->row();
+                if (!empty($get_rpc) && !empty($get_rpc->company)) {
+                    $company_nama = $get_rpc->company;
+                } else {
+                    $company_nama = 'STM';
+                }
+            }
+            if (!empty($company_nama)) {
+                $comp_id = array_search($company_nama, $company_names);
+                $company_id_kons = ($comp_id !== false) ? (string) $comp_id : null;
+                return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
+            }
+        }
+
+        // Jalur 3: HRIS langsung (v_request_payment -> users -> departments -> hris_companies)
+        $hris_company_id = !empty($r->hris_company_id) ? $r->hris_company_id : (!empty($r->id_company) ? $r->id_company : null);
+        if (!empty($hris_company_id) && isset($company_map[$hris_company_id])) {
+            $mapped = $company_map[$hris_company_id];
             $company_id_kons = $mapped;
             if (isset($company_names[$mapped])) {
                 $company_nama = $company_names[$mapped];
             }
+            return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
         }
 
-        // Jalur 2: dokumen consultant (company kosong dari HRIS) -> resolve via DBCNL
-        if (empty($company_nama)) {
-            $kons = $this->resolve_consultant_company($r);
-            if (!empty($kons['company_nama'])) {
-                $company_id_kons = $kons['company_id'];
-                $company_nama    = $kons['company_nama'];
+        // Jalur 4: department belum tersalin ke db utama -> resolve langsung dari hr_sentral.departments
+        $dept_id = !empty($r->department_id) ? $r->department_id : null;
+        if (empty($dept_id) && !empty($r->request_by)) {
+            $u = $this->db->select('department_id')->get_where('users', ['username' => $r->request_by])->row();
+            if (!empty($u)) {
+                $dept_id = $u->department_id;
             }
         }
-
-        // Jalur 3: department belum tersalin ke db utama -> resolve langsung dari hr_sentral.departments
-        if (empty($company_nama) && !empty($r->department_id)) {
-            $hd = $this->resolve_company_via_hris_dept($r->department_id);
+        if (!empty($dept_id)) {
+            $hd = $this->resolve_company_via_hris_dept($dept_id);
             if (!empty($hd['company_nama'])) {
-                $company_id_kons = $hd['company_id'];
-                $company_nama    = $hd['company_nama'];
+                return $hd;
             }
         }
 
@@ -2372,18 +2423,20 @@ class Request_payment_model extends BF_Model
             return $empty;
         }
 
-        $id_penawaran = null;
+        $id_penawaran     = null;
+        $id_spk_penawaran = null;
 
-        if ($kategori == 'Kasbon') {
+        if ($kategori == 'Kasbon' || strpos($no_dok, 'KS-') === 0) {
             $kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
             if (empty($kasbon) || empty($kasbon->no_kasbon_consultant)) {
                 return $empty;
             }
             $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $kasbon->no_kasbon_consultant])->row();
-            if (!empty($head) && !empty($head->id_penawaran)) {
-                $id_penawaran = $head->id_penawaran;
+            if (!empty($head)) {
+                $id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+                $id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
             }
-        } elseif ($kategori == 'Expense') {
+        } elseif ($kategori == 'Expense' || strpos($no_dok, 'EXP-') === 0 || strpos($no_dok, 'ER-') === 0) {
             $expense = $this->db->get_where('tr_expense', ['no_doc' => $no_dok])->row();
             if (empty($expense) || empty($expense->no_expense_consultant)) {
                 return $empty;
@@ -2391,36 +2444,67 @@ class Request_payment_model extends BF_Model
             $exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $expense->no_expense_consultant])->row();
             if (!empty($exp_head) && !empty($exp_head->id_header)) {
                 $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row();
-                if (!empty($head) && !empty($head->id_penawaran)) {
-                    $id_penawaran = $head->id_penawaran;
+                if (!empty($head)) {
+                    $id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+                    $id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
                 }
             }
         } elseif ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0 || strpos($no_dok, 'DP-') === 0) {
             $dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $no_dok])->row();
-            if (empty($dp) || empty($dp->id_penawaran)) {
+            if (empty($dp)) {
                 return $empty;
             }
-            $id_penawaran = $dp->id_penawaran;
+            $id_penawaran     = !empty($dp->id_penawaran) ? $dp->id_penawaran : null;
+            $id_spk_penawaran = !empty($dp->id_spk_penawaran) ? $dp->id_spk_penawaran : null;
         } else {
             return $empty;
         }
 
-        if (empty($id_penawaran)) {
+        $company_id = null;
+
+        // Langkah 1: Cek di kons_tr_penawaran.company
+        if (!empty($id_penawaran)) {
+            $pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
+            if (!empty($pen) && $pen->company !== null && $pen->company !== '') {
+                $company_id = $pen->company;
+            }
+        }
+
+        // Langkah 2 (Fallback): Cek di kons_tr_spk_penawaran.id_company
+        if (empty($company_id) && !empty($id_spk_penawaran)) {
+            $spk = $this->consultant->select('id_company')->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+            if (!empty($spk) && $spk->id_company !== null && $spk->id_company !== '') {
+                $company_id = $spk->id_company;
+            }
+        }
+
+        if (empty($company_id)) {
             return $empty;
         }
 
-        // penawaran -> company id
-        $pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
-        if (empty($pen) || $pen->company === null || $pen->company === '') {
-            return $empty;
-        }
-        $company_id = $pen->company;
+        // Normalisasi entitas khusus 3 jenis data project consultant:
+        // 1 (STM-Vuca) -> 4 (Vuca)
+        // 6 (STM-Sustain) -> 3 (Sustain)
+        $norm_map = [
+            '1' => ['id' => '4', 'nama' => 'Vuca'],
+            '4' => ['id' => '4', 'nama' => 'Vuca'],
+            '6' => ['id' => '3', 'nama' => 'Sustain'],
+            '3' => ['id' => '3', 'nama' => 'Sustain'],
+            '7' => ['id' => '7', 'nama' => 'STM'],
+        ];
 
-        // company id -> nm_company
+        if (isset($norm_map[$company_id])) {
+            return [
+                'company_id'   => $norm_map[$company_id]['id'],
+                'company_nama' => $norm_map[$company_id]['nama']
+            ];
+        }
+
+        // company id -> nm_company fallback
         $comp = $this->consultant->select('nm_company')->get_where('kons_tr_company', ['id' => $company_id])->row();
         $nama = (!empty($comp) && !empty($comp->nm_company)) ? $comp->nm_company : '';
 
-        return ['company_id' => $company_id, 'company_nama' => $nama];
+        return ['company_id' => (string) $company_id, 'company_nama' => $nama];
     }
 
     /**
