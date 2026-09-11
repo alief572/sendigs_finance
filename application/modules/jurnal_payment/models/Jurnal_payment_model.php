@@ -17,6 +17,7 @@ class Jurnal_payment_model extends BF_Model
     protected $accounting;
     protected $accounting_vuca;
     protected $accounting_sustain;
+    protected $accounting_stm;
     protected $consultant;
 
     public function __construct()
@@ -24,6 +25,7 @@ class Jurnal_payment_model extends BF_Model
         $this->accounting = $this->load->database('accounting', true);
         $this->accounting_vuca = $this->load->database('accounting_vuca', true);
         $this->accounting_sustain = $this->load->database('accounting_sustain', true);
+        $this->accounting_stm = $this->load->database('accounting_stm', true);
         $this->consultant = $this->load->database('consultant', true);
     }
 
