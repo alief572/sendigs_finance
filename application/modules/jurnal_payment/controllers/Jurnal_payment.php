@@ -153,7 +153,8 @@ class Jurnal_payment extends Admin_Controller
             }
 
             $id_company = $get_jurnal->id_company;
-            $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi);
+            $nm_company = $get_jurnal->nm_company ?? '';
+            $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi, $nm_company);
 
             if ($get_jurnal->jenis_transaksi == 'Invoicing') {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
@@ -161,7 +162,7 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Data Invoicing tidak ditemukan');
                 }
 
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_payment_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
+                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_payment_Sales('101', $get_jurnal->tgl_jurnal, $id_company, $nm_company);
 
                 $Bln = substr($get_jurnal->tgl_jurnal, 5, 2);
                 $Thn = substr($get_jurnal->tgl_jurnal, 0, 4);
@@ -356,7 +357,7 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Data Expense Report tidak ditemukan');
                 }
 
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
+                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company, $nm_company);
 
                 $Bln = substr($get_jurnal->tgl_jurnal, 5, 2);
                 $Thn = substr($get_jurnal->tgl_jurnal, 0, 4);
@@ -445,7 +446,7 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Data Payment Approve tidak ditemukan');
                 }
 
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_no_buk('101', $id_company);
+                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_no_buk('101', $id_company, $nm_company);
                 $get_jurnal_all = $this->db->get_where('tr_jurnal', [
                     'no_transaksi'    => $get_jurnal->no_transaksi,
                     'jenis_transaksi' => $get_jurnal->jenis_transaksi
@@ -594,41 +595,57 @@ class Jurnal_payment extends Admin_Controller
     /**
      * Helper to get accounting database connection and name
      */
-    private function _get_acc_db($id_company, $jenis_transaksi)
+    private function _get_acc_db($id_company, $jenis_transaksi = '', $nm_company = '')
     {
-        $db_key = '';
-        $db_name = '';
-
-
-        if ($jenis_transaksi == 'Invoicing') {
-            if ($id_company == '4') {
-                $db_key = 'accounting_vuca';
-                $db_name = DBACC_VUCA;
-            } else if (in_array($id_company, ['1', '6', '7'])) {
-                $db_key = 'accounting_stm';
-                $db_name = DBACC_STM;
-            } else {
-                $db_key = 'accounting_sustain';
-                $db_name = DBACC_SUST;
-            }
-        } else {
-            // Mapping for other transactions (PPH 23, Payment, etc.)
-            if ($id_company == '4') {
-                $db_key = 'accounting_vuca';
-                $db_name = DBACC_VUCA;
-            } else if (in_array($id_company, ['1', '6', '7'])) {
-                $db_key = 'accounting_stm';
-                $db_name = DBACC_STM;
-            } else {
-                $db_key = 'accounting_sustain';
-                $db_name = DBACC_SUST;
-            }
-        }
+        $target = $this->_resolve_company_target($id_company, $nm_company);
 
         return (object)[
-            'db'   => $this->load->database($db_key, TRUE),
-            'name' => $db_name
+            'db'   => $this->load->database($target['db_key'], TRUE),
+            'name' => $target['db_name']
         ];
+    }
+
+    /**
+     * Resolve target accounting database based on company ID or Company Name:
+     * 1. STM = Tras STM (accounting_stm / DBACC_STM)
+     * 2. STM-Vuca = Tras Vuca (accounting_vuca / DBACC_VUCA)
+     * 3. Vuca = Tras Vuca (accounting_vuca / DBACC_VUCA)
+     * 4. STM-Sustain = Tras Sustain (accounting_sustain / DBACC_SUST)
+     * 5. Sustain = Tras Sustain (accounting_sustain / DBACC_SUST)
+     */
+    private function _resolve_company_target($id_company, $nm_company = '')
+    {
+        $id = trim((string)$id_company);
+        $nm = strtoupper(trim((string)$nm_company));
+
+        // 1. STM = Tras STM
+        if ($id === '7' || $nm === 'STM') {
+            return [
+                'db_key'  => 'accounting_stm',
+                'db_name' => DBACC_STM
+            ];
+        }
+
+        // 2. STM-Vuca = Tras Vuca
+        // 3. Vuca = Tras Vuca
+        if ($id === '1' || $id === '4' || $nm === 'STM-VUCA' || $nm === 'VUCA') {
+            return [
+                'db_key'  => 'accounting_vuca',
+                'db_name' => DBACC_VUCA
+            ];
+        }
+
+        // 4. STM-Sustain = Tras Sustain
+        // 5. Sustain = Tras Sustain
+        if ($id === '6' || $id === '3' || $nm === 'STM-SUSTAIN' || $nm === 'SUSTAIN' || $nm === 'SENTRAL SUSTAINABILITY CONSULTING') {
+            return [
+                'db_key'  => 'accounting_sustain',
+                'db_name' => DBACC_SUST
+            ];
+        }
+
+        $label = !empty($nm_company) ? $nm_company : (!empty($id_company) ? "ID: $id_company" : 'Kosong');
+        throw new Exception("Company tidak valid atau tidak dikenali untuk posting jurnal ($label). Pastikan company adalah STM, STM-Vuca, Vuca, STM-Sustain, atau Sustain.");
     }
 
     public function export_jurnal()
