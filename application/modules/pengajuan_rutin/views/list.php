@@ -57,9 +57,9 @@ $user_dept      = isset($user_dept) ? $user_dept : '';
 						<th width="5">#</th>
 						<th>Departement</th>
 						<th>Nomor</th>
+						<th>Keterangan</th>
 						<th>Nominal</th>
 						<th>Tanggal</th>
-						<th>Keterangan</th>
 						<th>Status</th>
 						<th>Keterangan Reject</th>
 						<th width="150">
@@ -132,13 +132,13 @@ $user_dept      = isset($user_dept) ? $user_dept : '';
 					data: 'nomor'
 				},
 				{
+					data: 'keterangan'
+				},
+				{
 					data: 'nominal'
 				},
 				{
 					data: 'tanggal'
-				},
-				{
-					data: 'keterangan'
 				},
 				{
 					data: 'status'
