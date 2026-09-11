@@ -85,7 +85,24 @@ class Jurnal_payment_model extends BF_Model
         }
 
         if (!empty($company)) {
-            $this->db->where('a.id_company', $filter['company']);
+            if ($company == '3') {
+                $this->db->group_start()
+                    ->where_in('a.id_company', ['3', '6'])
+                    ->or_where_in('a.nm_company', ['Sustain', 'STM-Sustain', 'SENTRAL SUSTAINABILITY CONSULTING'])
+                    ->group_end();
+            } elseif ($company == '4') {
+                $this->db->group_start()
+                    ->where_in('a.id_company', ['4', '1'])
+                    ->or_where_in('a.nm_company', ['Vuca', 'STM-Vuca'])
+                    ->group_end();
+            } elseif ($company == '7') {
+                $this->db->group_start()
+                    ->where('a.id_company', '7')
+                    ->or_where('a.nm_company', 'STM')
+                    ->group_end();
+            } else {
+                $this->db->where('a.id_company', $company);
+            }
         }
 
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
@@ -275,6 +292,16 @@ class Jurnal_payment_model extends BF_Model
             $item['no_pengajuan'] = $no_pengajuan;
             $item['kategori_payment'] = $clean_kategori;
 
+            // Normalisasi tampilan company untuk entitas konsultan
+            $raw_comp = strtoupper(trim((string)$item['nm_company']));
+            if ($raw_comp === 'STM-VUCA' || $raw_comp === 'VUCA' || $item['id_company'] == '1' || $item['id_company'] == '4') {
+                $item['nm_company'] = 'Vuca';
+            } elseif ($raw_comp === 'STM-SUSTAIN' || $raw_comp === 'SUSTAIN' || $raw_comp === 'SENTRAL SUSTAINABILITY CONSULTING' || $item['id_company'] == '6' || $item['id_company'] == '3') {
+                $item['nm_company'] = 'Sustain';
+            } elseif ($raw_comp === 'STM' || $item['id_company'] == '7') {
+                $item['nm_company'] = 'STM';
+            }
+
             $hasil[] = $item;
         }
 
@@ -300,11 +327,10 @@ class Jurnal_payment_model extends BF_Model
 
     public function get_company()
     {
-        $get_company = $this->consultant->select('a.id as id_company, a.nm_company')
-            ->from('kons_tr_company a')
-            ->get()
-            ->result_array();
-
-        return $get_company;
+        return [
+            ['id_company' => '7', 'nm_company' => 'STM'],
+            ['id_company' => '3', 'nm_company' => 'Sustain'],
+            ['id_company' => '4', 'nm_company' => 'Vuca'],
+        ];
     }
 }
