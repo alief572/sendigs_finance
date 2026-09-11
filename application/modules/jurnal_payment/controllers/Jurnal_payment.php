@@ -153,8 +153,7 @@ class Jurnal_payment extends Admin_Controller
             }
 
             $id_company = $get_jurnal->id_company;
-            $nm_company = $get_jurnal->nm_company ?? '';
-            $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi, $nm_company);
+            $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi);
 
             if ($get_jurnal->jenis_transaksi == 'Invoicing') {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_jurnal->no_transaksi])->row();
@@ -162,7 +161,7 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Data Invoicing tidak ditemukan');
                 }
 
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_payment_Sales('101', $get_jurnal->tgl_jurnal, $id_company, $nm_company);
+                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_payment_Sales('101', $get_jurnal->tgl_jurnal, $id_company);
 
                 $Bln = substr($get_jurnal->tgl_jurnal, 5, 2);
                 $Thn = substr($get_jurnal->tgl_jurnal, 0, 4);
@@ -351,93 +350,6 @@ class Jurnal_payment extends Admin_Controller
                     $db_error = $acc->db->error();
                     throw new Exception('Gagal update nobum cabang. ' . ($db_error['message'] ?? ''));
                 }
-            } else if ($get_jurnal->jenis_transaksi == 'Expense Report') {
-                $get_expense = $this->db->get_where('tr_expense', ['no_doc' => $get_jurnal->no_transaksi])->row();
-                if (!$get_expense) {
-                    throw new Exception('Data Expense Report tidak ditemukan');
-                }
-
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_Nomor_Jurnal_Sales('101', $get_jurnal->tgl_jurnal, $id_company, $nm_company);
-
-                $Bln = substr($get_jurnal->tgl_jurnal, 5, 2);
-                $Thn = substr($get_jurnal->tgl_jurnal, 0, 4);
-
-                $get_jurnal_all = $this->db->get_where('tr_jurnal', [
-                    'no_transaksi'    => $get_jurnal->no_transaksi,
-                    'jenis_transaksi' => $get_jurnal->jenis_transaksi
-                ])->result();
-
-                $details = [];
-                $ids = [];
-                $total_debit = 0;
-                foreach ($get_jurnal_all as $item) {
-                    // Hanya insert ke tras jika debit atau kredit > 0
-                    if ($item->debit > 0 || $item->kredit > 0) {
-                        $no_reff = $item->no_transaksi;
-                        $keterangan = $item->keterangan;
-                        if (strpos($keterangan, '{REF:') !== false) {
-                            preg_match('/\{REF:(.*?)\}/', $keterangan, $matches);
-                            if (isset($matches[1])) {
-                                $no_reff = $matches[1];
-                                $keterangan = trim(str_replace($matches[0], '', $keterangan));
-                            }
-                        }
-
-                        $details[] = [
-                            'tipe'         => 'JV',
-                            'nomor'        => $Nomor_JV,
-                            'tanggal'      => $item->tgl_jurnal,
-                            'no_perkiraan' => $item->coa,
-                            'keterangan'   => $keterangan,
-                            'no_reff'      => $no_reff,
-                            'debet'        => $item->debit,
-                            'kredit'       => $item->kredit,
-                            'stspos'       => 1
-                        ];
-
-                        $total_debit += $item->debit;
-                    }
-                    $ids[] = $item->id;
-                }
-
-                $dataJVhead = [
-                    'nomor'         => $Nomor_JV,
-                    'tgl'           => $get_jurnal->tgl_jurnal,
-                    'jml'           => $total_debit,
-                    'koreksi_no'    => '-',
-                    'kdcab'         => '101',
-                    'jenis'         => 'JV',
-                    'keterangan'    => $get_jurnal->keterangan,
-                    'bulan'         => $Bln,
-                    'tahun'         => $Thn,
-                    'user_id'       => $this->auth->user_id(),
-                    'memo'          => '',
-                    'tgl_jvkoreksi' => $get_jurnal->tgl_jurnal,
-                    'ho_valid'      => ''
-                ];
-
-                if (!$acc->db->insert('javh', $dataJVhead)) {
-                    $db_error = $acc->db->error();
-                    throw new Exception('Gagal insert jurnal header JV. ' . ($db_error['message'] ?? ''));
-                }
-
-                if (!empty($details)) {
-                    if (!$acc->db->insert_batch('jurnal', $details)) {
-                        $db_error = $acc->db->error();
-                        throw new Exception('Gagal insert jurnal detail JV. ' . ($db_error['message'] ?? ''));
-                    }
-                }
-                if (!empty($ids)) {
-                    if (!$this->db->where_in('id', $ids)->update('tr_jurnal', ['sts' => '1'])) {
-                        $db_error = $this->db->error();
-                        throw new Exception('Gagal update status tr_jurnal. ' . ($db_error['message'] ?? ''));
-                    }
-                }
-
-                if (!$acc->db->set('nomorJC', 'nomorJC + 1', FALSE)->where('nocab', '101')->update('pastibisa_tb_cabang')) {
-                    $db_error = $acc->db->error();
-                    throw new Exception('Gagal update nomorJC cabang. ' . ($db_error['message'] ?? ''));
-                }
             } else {
                 $arr_no_transaksi = array_map('trim', explode(',', $get_jurnal->no_transaksi));
                 $this->db->where_in('id', $arr_no_transaksi);
@@ -446,7 +358,7 @@ class Jurnal_payment extends Admin_Controller
                     throw new Exception('Data Payment Approve tidak ditemukan');
                 }
 
-                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_no_buk('101', $id_company, $nm_company);
+                $Nomor_JV = $this->Jurnal_payment_nomor_model->get_no_buk('101', $id_company);
                 $get_jurnal_all = $this->db->get_where('tr_jurnal', [
                     'no_transaksi'    => $get_jurnal->no_transaksi,
                     'jenis_transaksi' => $get_jurnal->jenis_transaksi
@@ -595,57 +507,41 @@ class Jurnal_payment extends Admin_Controller
     /**
      * Helper to get accounting database connection and name
      */
-    private function _get_acc_db($id_company, $jenis_transaksi = '', $nm_company = '')
+    private function _get_acc_db($id_company, $jenis_transaksi)
     {
-        $target = $this->_resolve_company_target($id_company, $nm_company);
+        $db_key = '';
+        $db_name = '';
+
+
+        if ($jenis_transaksi == 'Invoicing') {
+            if ($id_company == '4') {
+                $db_key = 'accounting_vuca';
+                $db_name = DBACC_VUCA;
+            } else if (in_array($id_company, ['1', '6', '7'])) {
+                $db_key = 'accounting_stm';
+                $db_name = DBACC_STM;
+            } else {
+                $db_key = 'accounting_sustain';
+                $db_name = DBACC_SUST;
+            }
+        } else {
+            // Mapping for other transactions (PPH 23, Payment, etc.)
+            if ($id_company == '4') {
+                $db_key = 'accounting_vuca';
+                $db_name = DBACC_VUCA;
+            } else if (in_array($id_company, ['1', '6', '7'])) {
+                $db_key = 'accounting_stm';
+                $db_name = DBACC_STM;
+            } else {
+                $db_key = 'accounting_sustain';
+                $db_name = DBACC_SUST;
+            }
+        }
 
         return (object)[
-            'db'   => $this->load->database($target['db_key'], TRUE),
-            'name' => $target['db_name']
+            'db'   => $this->load->database($db_key, TRUE),
+            'name' => $db_name
         ];
-    }
-
-    /**
-     * Resolve target accounting database based on company ID or Company Name:
-     * 1. STM = Tras STM (accounting_stm / DBACC_STM)
-     * 2. STM-Vuca = Tras Vuca (accounting_vuca / DBACC_VUCA)
-     * 3. Vuca = Tras Vuca (accounting_vuca / DBACC_VUCA)
-     * 4. STM-Sustain = Tras Sustain (accounting_sustain / DBACC_SUST)
-     * 5. Sustain = Tras Sustain (accounting_sustain / DBACC_SUST)
-     */
-    private function _resolve_company_target($id_company, $nm_company = '')
-    {
-        $id = trim((string)$id_company);
-        $nm = strtoupper(trim((string)$nm_company));
-
-        // 1. STM = Tras STM
-        if ($id === '7' || $nm === 'STM') {
-            return [
-                'db_key'  => 'accounting_stm',
-                'db_name' => DBACC_STM
-            ];
-        }
-
-        // 2. STM-Vuca = Tras Vuca
-        // 3. Vuca = Tras Vuca
-        if ($id === '1' || $id === '4' || $nm === 'STM-VUCA' || $nm === 'VUCA') {
-            return [
-                'db_key'  => 'accounting_vuca',
-                'db_name' => DBACC_VUCA
-            ];
-        }
-
-        // 4. STM-Sustain = Tras Sustain
-        // 5. Sustain = Tras Sustain
-        if ($id === '6' || $id === '3' || $nm === 'STM-SUSTAIN' || $nm === 'SUSTAIN' || $nm === 'SENTRAL SUSTAINABILITY CONSULTING') {
-            return [
-                'db_key'  => 'accounting_sustain',
-                'db_name' => DBACC_SUST
-            ];
-        }
-
-        $label = !empty($nm_company) ? $nm_company : (!empty($id_company) ? "ID: $id_company" : 'Kosong');
-        throw new Exception("Company tidak valid atau tidak dikenali untuk posting jurnal ($label). Pastikan company adalah STM, STM-Vuca, Vuca, STM-Sustain, atau Sustain.");
     }
 
     public function export_jurnal()
