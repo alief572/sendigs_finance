@@ -64,30 +64,37 @@
 			<td height=60 colspan=6></td>
 		</tr>
 		<tr>
-			<td colspan=2 align=center>Mengajukan</td>
-			<td colspan=2 rowspan=3></td>
-			<td colspan=2 align=center>Mengetahui</td>
-		</tr>
-		<tr>
-			<td></td>
-			<td></td>
-			<td></td>
-			<td></td>
-		</tr>
-		<?php
-		$mengajukan = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE a.username='" . $data->created_by . "'")->row();
-		$mengetahui = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE a.username='" . $data->approved_by . "'")->row();
+			<td colspan=6>
+				<?php
+				$mengajukan = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE a.username='" . $data->created_by . "'")->row();
+				$mengetahui = $this->db->query("SELECT a.nm_lengkap as name FROM users a WHERE a.username='" . $data->approved_by . "'")->row();
 				if (empty($mengetahui)) {
-			$mengetahui = new stdClass();
-			$mengetahui->name = "FINANCE";
-		}
-		?>
-		<tr height=120>
-			<td colspan=2 align=center nowrap valign="bottom">
-				<u>&nbsp; &nbsp; <?= (($nmuser) ? $nmuser : ' &nbsp; &nbsp;  &nbsp; &nbsp;  &nbsp; &nbsp; ') ?> &nbsp; &nbsp; </u><br><?= date('d F Y', strtotime($data->created_on)); ?>
-			</td>
-			<td colspan=2 align=center nowrap valign="bottom">
-				<u>&nbsp; &nbsp; <?= (($mengetahui) ? $mengetahui->name : ' &nbsp; &nbsp;  &nbsp; &nbsp;  &nbsp; &nbsp; ') ?> &nbsp; &nbsp; </u><br><?= date('d F Y', strtotime($data->approved_on)); ?>
+					$mengetahui = new stdClass();
+					$mengetahui->name = "FINANCE";
+				}
+				$nama_mengajukan = ($nmuser) ? $nmuser : '-';
+				$nama_mengetahui = ($mengetahui) ? $mengetahui->name : '-';
+				$tgl_mengajukan = !empty($data->created_on) ? date('d F Y', strtotime($data->created_on)) : '-';
+				$tgl_mengetahui = !empty($data->approved_on) ? date('d F Y', strtotime($data->approved_on)) : '-';
+				?>
+				<table style="border-collapse: collapse; margin: 0 auto;">
+					<tr>
+						<td style="width: 170px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold;">Mengajukan</td>
+						<td style="width: 170px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold;">Mengetahui</td>
+					</tr>
+					<tr>
+						<td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 60px;"></td>
+						<td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 60px;"></td>
+					</tr>
+					<tr>
+						<td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center;">
+							<u><strong><?= $nama_mengajukan ?></strong></u><br><?= $tgl_mengajukan ?>
+						</td>
+						<td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center;">
+							<u><strong><?= $nama_mengetahui ?></strong></u><br><?= $tgl_mengetahui ?>
+						</td>
+					</tr>
+				</table>
 			</td>
 		</tr>
 	</table><br /><br />

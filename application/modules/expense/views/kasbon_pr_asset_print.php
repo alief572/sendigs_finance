@@ -221,20 +221,27 @@ function formatDate($date)
             </table>
         </div>
         <div class="signature-section">
-            <table class="signature-table" style="margin: 0 auto;">
-                <tr>
-                    <td style="width: 150px;"><strong>Finance</strong></td>
-                    <td style="width: 150px;"><strong>Management</strong></td>
-                </tr>
-                <tr>
-                    <td style="height: 50px;"></td>
-                    <td style="height: 50px;"></td>
-                </tr>
-                <tr>
-                    <td><u>Fikri</u><br><small><?= formatDate($kasbon->approved_on ?? '') ?></small></td>
-                    <td><u>Imanuel Iman</u><br><small><?= formatDate($kasbon->approved_on ?? '') ?></small></td>
-                </tr>
-            </table>
+            <?php $tgl_approval = formatDate($kasbon->approved_on ?? ''); ?>
+            <div style="width: 100%; text-align: right;">
+                <table class="signature-box" style="border-collapse: collapse; display: inline-table;">
+                    <tr>
+                        <td style="width: 150px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold; font-size: 11px;">Finance</td>
+                        <td style="width: 150px; border: 1px solid #333; padding: 6px 10px; text-align: center; font-weight: bold; font-size: 11px;">Management</td>
+                    </tr>
+                    <tr>
+                        <td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 45px;"></td>
+                        <td style="border-left: 1px solid #333; border-right: 1px solid #333; height: 45px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center; font-size: 11px;">
+                            <u><strong>Fikri</strong></u><br><small style="font-size: 10px;"><?= $tgl_approval ?></small>
+                        </td>
+                        <td style="border-left: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; padding: 4px 10px 8px; text-align: center; font-size: 11px;">
+                            <u><strong>Imanuel Iman</strong></u><br><small style="font-size: 10px;"><?= $tgl_approval ?></small>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
 
