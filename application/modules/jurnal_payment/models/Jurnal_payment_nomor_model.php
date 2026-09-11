@@ -178,34 +178,55 @@ class Jurnal_payment_nomor_model extends CI_Model
         return $Nomor_JP;
     }
 
-    function get_Nomor_Jurnal_Sales($Cabang = '', $Tgl_Inv = '', $comp = '')
+    private function _get_dbacc_by_company($comp, $nm_comp = '')
     {
-        // $db2 = $this->load->database('accounting', TRUE);
-        $nocab            = 'A';
-        $bulan_Proses    = date('Y', strtotime($Tgl_Inv));
-        $Urut            = 1;
-        if ($id_company == '4') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        }
-        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        } 
-        else {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        }
-        $Pros_Cab        = $this->db->query($Query_Cab);
-        $det_Cab        = $Pros_Cab->result_array();
-        if ($det_Cab) {
-            $nocab        = $det_Cab[0]['subcab'];
-            $Urut        = intval($det_Cab[0]['nomorJC']) + 1;
-        }
-        $Format            = $Cabang . '-' . $nocab . 'JV' . date('y', strtotime($Tgl_Inv));
+        $id = trim((string)$comp);
+        $nm = strtoupper(trim((string)$nm_comp));
 
-        $Nomor_JS        = $Format . str_pad($Urut, 5, "0", STR_PAD_LEFT);
+        // 1. STM = Tras STM
+        if ($id === '7' || $nm === 'STM') {
+            return DBACC_STM;
+        }
+
+        // 2. STM-Vuca = Tras Vuca
+        // 3. Vuca = Tras Vuca
+        if ($id === '1' || $id === '4' || $nm === 'STM-VUCA' || $nm === 'VUCA') {
+            return DBACC_VUCA;
+        }
+
+        // 4. STM-Sustain = Tras Sustain
+        // 5. Sustain = Tras Sustain
+        if ($id === '6' || $id === '3' || $nm === 'STM-SUSTAIN' || $nm === 'SUSTAIN' || $nm === 'SENTRAL SUSTAINABILITY CONSULTING') {
+            return DBACC_SUST;
+        }
+
+        return DBACC_SUST;
+    }
+
+    function get_Nomor_Jurnal_Sales($Cabang = '', $Tgl_Inv = '', $comp = '', $nm_comp = '')
+    {
+        $nocab         = 'A';
+        $bulan_Proses  = date('Y', strtotime($Tgl_Inv));
+        $Urut          = 1;
+        $db_acc        = $this->_get_dbacc_by_company($comp, $nm_comp);
+        $Query_Cab     = "SELECT subcab,nomorJC FROM " . $db_acc . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        $Pros_Cab      = $this->db->query($Query_Cab);
+        $det_Cab       = $Pros_Cab->result_array();
+        if ($det_Cab) {
+            $nocab     = $det_Cab[0]['subcab'];
+            $Urut      = intval($det_Cab[0]['nomorJC']) + 1;
+        }
+        $Format        = $Cabang . '-' . $nocab . 'JV' . date('y', strtotime($Tgl_Inv));
+
+        $Nomor_JS      = $Format . str_pad($Urut, 5, "0", STR_PAD_LEFT);
 
         return $Nomor_JS;
     }
 
+    function get_Nomor_Jurnal_payment_Sales($Cabang = '', $Tgl_Inv = '', $comp = '', $nm_comp = '')
+    {
+        return $this->get_Nomor_Jurnal_Sales($Cabang, $Tgl_Inv, $comp, $nm_comp);
+    }
 
     function get_Nomor_Jurnal_Sales_close($Cabang = '', $Tgl_Inv = '')
     {
@@ -536,19 +557,12 @@ class Jurnal_payment_nomor_model extends CI_Model
         }
     }
 
-    public function get_no_buk($cabang, $id_company = '') //modelnya
+    public function get_no_buk($cabang, $id_company = '', $nm_company = '') //modelnya
     {
         //$db2=$this->load->database('accounting', TRUE);
         //$no_cab		= '101';
-        if ($id_company == '4') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        }
-        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        } 
-        else {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        }
+        $db_acc    = $this->_get_dbacc_by_company($id_company, $nm_company);
+        $ambil     = "SELECT nocab,subcab,nobuk from " . $db_acc . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         $q         = $this->db->query($ambil);
 
         if ($q->num_rows() > 0) {
