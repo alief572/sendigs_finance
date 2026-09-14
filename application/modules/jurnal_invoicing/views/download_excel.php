@@ -41,7 +41,7 @@ header("Content-Disposition: attachment; filename=Jurnal Invoicing.xls");
                 <td style="text-align: center"><?= date('d F Y', strtotime($item_jurnal->tgl_jurnal)) ?></td>
                 <td><?= $item_jurnal->nm_customer ?></td>
                 <td><?= $item_jurnal->no_invoice ?></td>
-                <td><?= $item_jurnal->nm_project ?></td>
+                <td><?= !empty($item_jurnal->nm_project) ? $item_jurnal->nm_project : $item_jurnal->keterangan_penawaran ?></td>
                 <td><?= $item_jurnal->nm_company ?></td>
                 <td><?= $item_jurnal->nm_divisi ?></td>
                 <td><?= $item_jurnal->no_invoice ?></td>

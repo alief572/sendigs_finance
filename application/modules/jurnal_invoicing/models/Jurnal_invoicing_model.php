@@ -259,7 +259,7 @@ class Jurnal_invoicing_model extends BF_Model
         $filter = [
             'b.id_customer' => $klien,
             'b.no_invoice' => $no_invoice,
-            'd.id' => $company
+            'company' => $company
         ];
 
         // 1. Hitung Total Record (Tanpa Filter Search)
@@ -347,7 +347,7 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function base_query_jurnal($filter)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
 
         $this->db->select($select_fields, FALSE)
             ->from('tr_jurnal a')
@@ -362,7 +362,10 @@ class Jurnal_invoicing_model extends BF_Model
             ->join(DBHRIS . '.departments h', 'h.id = e.id_divisi', 'left')
             ->where('a.jenis_transaksi', 'Invoicing')
             ->where('b.no_invoice <>', '')
+            ->group_start()
             ->where_in('a.sts', ['', '0'])
+            ->or_where('a.sts IS NULL')
+            ->group_end()
             ->where('(a.debit > 0 OR a.kredit > 0)') // Pindahan dari HAVING
             ->group_start()
             ->where('d.nm_company IS NOT NULL')
@@ -370,12 +373,18 @@ class Jurnal_invoicing_model extends BF_Model
             ->or_where('j.nm_company IS NOT NULL')
             ->group_end();
 
-        if (!empty($filter)) {
-            foreach ($filter as $key => $value) {
-                if (!empty($value)) {
-                    $this->db->where($key, $value);
-                }
-            }
+        if (!empty($filter['b.id_customer'])) {
+            $this->db->where('b.id_customer', $filter['b.id_customer']);
+        }
+        if (!empty($filter['b.no_invoice'])) {
+            $this->db->where('b.no_invoice', $filter['b.no_invoice']);
+        }
+        if (!empty($filter['company'])) {
+            $this->db->group_start();
+            $this->db->where('d.id', $filter['company']);
+            $this->db->or_where('f.id', $filter['company']);
+            $this->db->or_where('j.id', $filter['company']);
+            $this->db->group_end();
         }
     }
 
@@ -427,7 +436,10 @@ class Jurnal_invoicing_model extends BF_Model
         $get_no_invoice_jurnal = $this->db->select('a.no_invoice, a.created_date')
             ->from('tr_invoicing a')
             ->join('tr_jurnal b', 'b.no_transaksi = a.id AND b.jenis_transaksi = "Invoicing"')
+            ->group_start()
             ->where('b.sts <>', '1')
+            ->or_where('b.sts IS NULL')
+            ->group_end()
             ->where('b.jenis_transaksi', 'Invoicing')
             ->group_by('a.no_invoice')
             ->order_by('a.created_date', 'desc')
@@ -445,5 +457,20 @@ class Jurnal_invoicing_model extends BF_Model
             ->result_array();
 
         return $get_company_jurnal;
+    }
+
+    public function get_jurnal_invoicing_excel($klien = null, $no_invoice = null, $company = null)
+    {
+        $filter = [
+            'b.id_customer' => $klien,
+            'b.no_invoice'  => $no_invoice,
+            'company'       => $company
+        ];
+
+        $this->base_query_jurnal($filter);
+        $this->db->group_by('a.no_transaksi');
+        $this->db->order_by('a.tgl_jurnal', 'DESC');
+
+        return $this->db->get()->result();
     }
 }
