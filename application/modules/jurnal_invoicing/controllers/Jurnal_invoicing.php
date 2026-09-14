@@ -55,7 +55,10 @@ class Jurnal_Invoicing extends Admin_Controller
         $this->db->from('tr_jurnal a');
         $this->db->where('a.no_transaksi', $get_jurnal->no_transaksi);
         $this->db->where('a.jenis_transaksi', $get_jurnal->jenis_transaksi);
+        $this->db->group_start();
         $this->db->where('a.sts <>', '1');
+        $this->db->or_where('a.sts IS NULL');
+        $this->db->group_end();
         $get_all_jurnal = $this->db->get()->result();
 
         $hasil = '<input type="hidden" name="id" value="' . $id . '">';
@@ -196,36 +199,7 @@ class Jurnal_Invoicing extends Admin_Controller
         $no_invoice = $this->input->get('no_invoice');
         $company = $this->input->get('company');
 
-        $this->db->select('a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.no_transaksi, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, d.id as id_company, a.nm_company, e.name as nm_divisi');
-        $this->db->from('tr_jurnal a');
-        $this->db->join('tr_invoicing b', 'b.id = a.no_transaksi', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran c', 'c.id_quotation = b.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = c.company', 'left');
-        $this->db->join(DBHRIS . '.divisions e', 'e.id = c.id_divisi', 'left');
-        $this->db->where('a.jenis_transaksi', 'Invoicing');
-        $this->db->where('b.no_invoice <>', '');
-        $this->db->where('d.nm_company <>', '');
-        $this->db->where_in('a.sts', ['', '0']);
-        $this->db->group_start();
-        $this->db->where('a.debit >', 0);
-        $this->db->or_where('a.kredit >', 0);
-        $this->db->group_end();
-
-        if (!empty($klien)) {
-            $this->db->where('b.id_customer', $klien);
-        }
-
-        if (!empty($no_invoice)) {
-            $this->db->where('b.no_invoice', $no_invoice);
-        }
-
-        if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
-        }
-
-        $this->db->group_by('a.no_transaksi, a.jenis_transaksi');
-
-        $get_data_jurnal = $this->db->get()->result();
+        $get_data_jurnal = $this->Jurnal_invoicing_model->get_jurnal_invoicing_excel($klien, $no_invoice, $company);
 
         $this->load->view('download_excel', ['list_jurnal' => $get_data_jurnal]);
     }
