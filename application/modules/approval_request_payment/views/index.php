@@ -1,5 +1,5 @@
 <?php
-$ENABLE_VIEW = has_permission('Request_Payment.View');
+$ENABLE_VIEW = has_permission('Approval_Request_Payment.View');
 ?>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap.min.css">

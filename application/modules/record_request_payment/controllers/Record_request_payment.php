@@ -8,7 +8,7 @@
 class Record_request_payment extends Admin_Controller
 {
 	// Permission (reuse Request_Payment.*)
-	protected $viewPermission   = "Request_Payment.View";
+	protected $viewPermission   = "Record_Request_Payment.View";
 
 	public function __construct()
 	{

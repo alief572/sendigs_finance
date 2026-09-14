@@ -9,10 +9,10 @@
 class Approval_request_payment extends Admin_Controller
 {
 	// Permission (reuse Request_Payment.*)
-	protected $viewPermission   = "Request_Payment.View";
-	protected $addPermission    = "Request_Payment.Add";
-	protected $managePermission = "Request_Payment.Manage";
-	protected $deletePermission = "Request_Payment.Delete";
+	protected $viewPermission   = "Approval_Request_Payment.View";
+	protected $addPermission    = "Approval_Request_Payment.Add";
+	protected $managePermission = "Approval_Request_Payment.Manage";
+	protected $deletePermission = "Approval_Request_Payment.Delete";
 
 	public function __construct()
 	{
