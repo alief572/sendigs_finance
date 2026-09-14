@@ -798,11 +798,10 @@ class Request_payment_model extends BF_Model
             }
 
             // Print Button untuk DIRECT PAYMENT
-            if ($item->kategori == 'Direct Payment' || strpos($item->no_dokumen, 'DPM-') === 0) {
+            if (($item->kategori == 'Direct Payment' || $item->kategori == 'direct_payment') || ($item->kategori != 'Cash' && strpos($item->no_dokumen, 'DPM-') === 0)) {
                 $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
-                if ($get_dp_data) {
-                    $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . $get_dp_data->no_doc) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
-                }
+                $dp_no_doc = $get_dp_data ? $get_dp_data->no_doc : $item->no_dokumen;
+                $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . $dp_no_doc) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
 
             // Company display - derive via resolve_row_company
@@ -2226,11 +2225,26 @@ class Request_payment_model extends BF_Model
             if ($company_f !== '' && (string) $comp['company_id'] !== (string) $company_f) {
                 continue;
             }
+
+            // Request By untuk Direct Payment diambil dari pembuat kasbon consultant
+            // (kons_tr_kasbon_project_header.created_by di DBCNL), konsisten dengan
+            // kolom "Mengajukan" pada print Direct Payment.
+            $request_by = $r->request_by;
+            if ($r->kategori == 'Direct Payment') {
+                $get_dp_consultant = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $r->no_dokumen))->row();
+                if (!empty($get_dp_consultant) && !empty($get_dp_consultant->created_by)) {
+                    $get_user = $this->consultant->get_where('users', array('id_user' => $get_dp_consultant->created_by))->row();
+                    if (!empty($get_user) && !empty($get_user->nm_lengkap)) {
+                        $request_by = $get_user->nm_lengkap;
+                    }
+                }
+            }
+
             $out[] = [
                 'id'           => $r->id,
                 'no_dokumen'   => $r->no_dokumen,
                 'kategori'     => $r->kategori,
-                'request_by'   => $r->request_by,
+                'request_by'   => $request_by,
                 'company_id'   => $comp['company_id'],
                 'company_nama' => $comp['company_nama'],
                 'tanggal_raw'  => $r->tanggal,
@@ -2384,13 +2398,21 @@ class Request_payment_model extends BF_Model
         if ($kategori == 'Expense') {
             return base_url('expense/expense_print/' . $id);
         }
-        // Direct Payment
-        if ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0) {
-            return base_url('request_payment/print_direct_payment/' . $id);
-        }
-        // Cash (PR non-PO departemen/asset)
+        // Cash (PR non-PO departemen/asset) - harus dievaluasi sebelum Direct Payment agar DPM milik Cash tidak tertukar
         if ($kategori == 'Cash') {
             return base_url('request_payment/print_cash/' . $no_dok);
+        }
+        // Direct Payment (tr_direct_payment) - cetak berdasarkan nomor dokumen (bukan id integer)
+        if ($kategori == 'Direct Payment' || $kategori == 'direct_payment') {
+            return base_url('request_payment/print_direct_payment/' . $no_dok);
+        }
+        // Fallback jika kategori tidak spesifik tetapi memiliki kode dokumen DPM-
+        if (strpos($no_dok, 'DPM') === 0) {
+            $is_cash = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $no_dok])->num_rows() > 0;
+            if ($is_cash) {
+                return base_url('request_payment/print_cash/' . $no_dok);
+            }
+            return base_url('request_payment/print_direct_payment/' . $no_dok);
         }
         return '';
     }
