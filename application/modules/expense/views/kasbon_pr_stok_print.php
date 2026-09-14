@@ -108,14 +108,6 @@ function formatDate($date)
             margin: 10px 0;
         }
 
-        .pdf-page-canvas {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 10px auto;
-            border: 1px solid #ddd;
-        }
-
         @media print {
             .pagebreak {
                 page-break-before: always;
@@ -124,17 +116,8 @@ function formatDate($date)
             body {
                 padding: 10px;
             }
-
-            .pdf-page-canvas {
-                max-width: 100% !important;
-                height: auto !important;
-                page-break-inside: avoid;
-                border: none;
-                margin: 10px auto;
-            }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 
 <body>
@@ -201,8 +184,8 @@ function formatDate($date)
             $no = 1;
             foreach ($pr_details as $detail) :
                 $konversi = (!empty($detail->konversi) && $detail->konversi > 0) ? $detail->konversi : 1;
-                $qty = $detail->propose_purchase;
-                $qty_pack = $qty / $konversi;
+                $qty_pack = $detail->propose_purchase;
+                $qty = $detail->propose_purchase * $konversi;
                 $price_ref = !empty($detail->price_ref) ? $detail->price_ref : 0;
                 $total_price = $qty * $price_ref;
                 $grand_total += $total_price;
@@ -280,97 +263,28 @@ function formatDate($date)
     <!-- Attachments -->
     <?php if (!empty($kasbon->doc_file)) : ?>
         <?php $ext = strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)); ?>
-        <div class="attachment-separator"></div>
         <?php if ($ext == 'pdf') : ?>
-            <?php $pdf_url = base_url('assets/expense/' . $kasbon->doc_file); ?>
-            <div class="pdf-render-container" data-pdf-url="<?= $pdf_url ?>">
-                <iframe src="<?= $pdf_url ?>#toolbar=0&navpanes=0" title="PDF" style="width:100%; height:600px;" frameborder="0">
-                    <a href="<?= $pdf_url ?>">Download PDF</a>
-                </iframe>
-            </div>
+            <div class="attachment-separator"></div>
+            <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
         <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+            <div class="attachment-separator"></div>
             <img src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" class="attachment-img">
         <?php endif; ?>
     <?php endif; ?>
 
     <?php if (!empty($kasbon->doc_file_2)) : ?>
         <?php $ext2 = strtolower(pathinfo($kasbon->doc_file_2, PATHINFO_EXTENSION)); ?>
-        <div class="attachment-separator"></div>
         <?php if ($ext2 == 'pdf') : ?>
-            <?php $pdf_url2 = base_url('assets/expense/' . $kasbon->doc_file_2); ?>
-            <div class="pdf-render-container" data-pdf-url="<?= $pdf_url2 ?>">
-                <iframe src="<?= $pdf_url2 ?>#toolbar=0&navpanes=0" title="PDF" style="width:100%; height:600px;" frameborder="0">
-                    <a href="<?= $pdf_url2 ?>">Download PDF</a>
-                </iframe>
-            </div>
+            <div class="attachment-separator"></div>
+            <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" width="100%" height="600px" style="border: none;"></iframe>
         <?php elseif (in_array($ext2, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+            <div class="attachment-separator"></div>
             <img src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" class="attachment-img">
         <?php endif; ?>
     <?php endif; ?>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            var containers = document.querySelectorAll('.pdf-render-container');
-            if (typeof pdfjsLib !== 'undefined' && containers.length > 0) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-                var totalContainers = containers.length;
-                var renderedContainers = 0;
-
-                containers.forEach(function(container) {
-                    var url = container.getAttribute('data-pdf-url');
-                    if (!url) {
-                        renderedContainers++;
-                        if (renderedContainers === totalContainers) window.print();
-                        return;
-                    }
-
-                    pdfjsLib.getDocument(url).promise.then(function(pdf) {
-                        container.innerHTML = ''; // Hapus fallback iframe
-                        
-                        var renderPage = function(num) {
-                            pdf.getPage(num).then(function(page) {
-                                var scale = 1.5;
-                                var viewport = page.getViewport({ scale: scale });
-                                var canvas = document.createElement('canvas');
-                                canvas.className = 'pdf-page-canvas';
-                                var context = canvas.getContext('2d');
-                                canvas.height = viewport.height;
-                                canvas.width = viewport.width;
-
-                                container.appendChild(canvas);
-
-                                var renderContext = {
-                                    canvasContext: context,
-                                    viewport: viewport
-                                };
-                                page.render(renderContext).promise.then(function() {
-                                    if (num < pdf.numPages) {
-                                        renderPage(num + 1);
-                                    } else {
-                                        renderedContainers++;
-                                        if (renderedContainers === totalContainers) {
-                                            setTimeout(function() {
-                                                window.print();
-                                            }, 500);
-                                        }
-                                    }
-                                });
-                            });
-                        };
-                        renderPage(1);
-                    }).catch(function(err) {
-                        console.error("PDF.js render error:", err);
-                        renderedContainers++;
-                        if (renderedContainers === totalContainers) {
-                            window.print();
-                        }
-                    });
-                });
-            } else {
-                window.print();
-            }
-        });
+        window.print();
     </script>
 </body>
 

@@ -1,904 +1,706 @@
-<link rel="stylesheet" href="<?= base_url() ?>assets/plugins/select2/select2.css">
-<script src="<?= base_url() ?>assets/plugins/select2/select2.full.min.js"></script>
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datepicker/datepicker3.css') ?>">
+
+<style>
+	.btn-flat-custom { border-radius: 4px; }
+	.box-custom {
+		background: #fff;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+		margin-bottom: 20px;
+	}
+	.box-custom-header {
+		padding: 15px 20px;
+		border-bottom: 1px solid #edf2f7;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.box-custom-title {
+		font-size: 16px;
+		font-weight: 700;
+		color: #2d3748;
+		margin: 0;
+	}
+	.table-expense thead th {
+		background-color: #3c8dbc;
+		color: #fff;
+		text-align: center;
+		vertical-align: middle !important;
+		font-size: 13px;
+		border: 1px solid #367fa9 !important;
+	}
+	.table-expense tbody td {
+		vertical-align: middle !important;
+	}
+	.badge-expense {
+		background-color: #00a65a;
+		color: #fff;
+		font-size: 11px;
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-weight: 600;
+		display: inline-block;
+	}
+	.summary-field {
+		font-weight: bold;
+		font-size: 14px;
+		text-align: right;
+	}
+</style>
+
 <?php
-$gambar = '';
-$dept = '';
-$app = '';
+$datauser = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
+$dept = !empty($datauser) ? $datauser->department_id : '';
 $bank_id = '';
 $accnumber = '';
 $accname = '';
-if (!isset($data->departement)) {
-	$data_user = $this->db->get_where('users', ['id_user' => $this->auth->user_id()])->row();
-	$data_employee = $this->db->get_where('employee', ['id' => $data_user->employee_id])->row();
-	$dept = $data_user->department_id;
-	if (!empty($data_employee)) {
-		$bank_id = $data_employee->bank_id;
-		$accnumber = $data_employee->accnumber;
-		$accname = $data_employee->accname;
-		$data_head = $this->db->get_where('divisions_head', ['id' => $data_employee->division_head])->row();
-		$app = $data_head->employee_id;
+if (!empty($datauser) && !empty($datauser->employee_id)) {
+	$datadept = $this->db->get_where('employee', ['id' => $datauser->employee_id])->row();
+	if (!empty($datadept)) {
+		$bank_id = $datadept->bank_id;
+		$accnumber = $datadept->accnumber;
+		$accname = $datadept->accname;
 	}
 }
+
+$id = (isset($data->id)) ? $data->id : '';
+$pre_id = (isset($pre_id)) ? $pre_id : '';
+$no_doc_val = (isset($data->no_doc) && !empty($data->no_doc)) ? $data->no_doc : $pre_id;
+$tgl_doc = (isset($data->tgl_doc)) ? $data->tgl_doc : date('Y-m-d');
+$keterangan = (isset($data->informasi)) ? $data->informasi : '';
+$bank_id = (isset($data->bank_id) && $data->bank_id !== '') ? $data->bank_id : $bank_id;
+$accnumber = (isset($data->accnumber) && $data->accnumber !== '') ? $data->accnumber : $accnumber;
+$accname = (isset($data->accname) && $data->accname !== '') ? $data->accname : $accname;
+$pettycash = (isset($data->pettycash)) ? $data->pettycash : '';
+$stsview = (isset($stsview)) ? $stsview : '';
+$option_coa = (isset($option_coa) && is_array($option_coa)) ? $option_coa : [];
+$datacoa = '';
+foreach ($option_coa as $keys => $val) {
+	$datacoa .= '<option value="' . $keys . '">' . $val . '</option>';
+}
 ?>
-<?= form_open($this->uri->uri_string(), array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal', 'enctype' => 'multipart/form-data')); ?>
-<input type="hidden" id="id" name="id" value="<?php echo set_value('id', isset($data->id) ? $data->id : ''); ?>">
-<input type="hidden" id="departement" name="departement" value="<?php echo $dept; ?>">
+
+<?= form_open_multipart($this->uri->segment(1) . '/save', array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal')) ?>
+<input type="hidden" id="id" name="id" value="<?php echo $id; ?>">
+<input type="hidden" id="pettycash" name="pettycash" value="<?php echo $pettycash; ?>">
+<input type="hidden" id="is_direct_expense" name="is_direct_expense" value="1">
 <input type="hidden" id="nama" name="nama" value="<?php echo (isset($data->nama) ? $data->nama : $this->auth->user_name()); ?>">
-<input type="hidden" id="approval" name="approval" value="<?php echo (isset($data->approval) ? $data->approval : $app); ?>">
-<input type="hidden" name="" class="stsview" value="<?= (isset($stsview)) ? $stsview : null ?>">
-<style>
-	/* Tabel selalu bisa scroll horizontal */
-	.table-responsive {
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-	}
+<input type="hidden" id="departement" name="departement" value="<?php echo (isset($data->departement) ? $data->departement : $dept); ?>">
 
-	/* Lebar minimum tabel agar semua kolom cukup */
-	#detail_body table,
-	.table-responsive > table.table {
-		min-width: 1400px;
-	}
+<?php include __DIR__ . '/reject_card.php'; ?>
 
-	/* Semua sel vertikal dari atas */
-	#detail_body td,
-	#detail_body th {
-		vertical-align: top;
-	}
+<div class="box box-custom">
+	<div class="box-custom-header">
+		<h4 class="box-custom-title">
+			<i class="fa fa-pencil-square-o text-success"></i> 
+			<?= ($stsview == 'approval') ? 'Approval Expense Langsung (Direct Expense)' : (($stsview == 'view') ? 'Detail Expense Langsung (Direct Expense)' : 'Form Pengajuan Expense Langsung (Direct Expense)') ?>
+		</h4>
+		<div>
+			<a class="btn btn-default btn-sm btn-flat-custom" onclick="window.location.reload();return false;">
+				<i class="fa fa-reply"></i> Kembali
+			</a>
+		</div>
+	</div>
 
-	/* Font semua kolom cukup besar untuk dibaca */
-	table.table th,
-	table.table td {
-		font-size: 14px;
-		white-space: normal;
-	}
-
-	/* Textarea Barang/Jasa & Spesifikasi */
-	textarea.form-control {
-		min-height: 80px;
-		font-size: 14px;
-		resize: vertical;
-		line-height: 1.5;
-		width: 100%;
-	}
-
-	/* Mobile stacked layout */
-	@media screen and (max-width: 520px) {
-		.table-responsive > table.table {
-			min-width: unset;
-		}
-
-		thead th.column-primary { width: 100%; }
-		thead th:not(.column-primary) { display: none; }
-		th[scope="row"] { vertical-align: top; }
-
-		td {
-			display: block;
-			width: auto;
-			text-align: right;
-		}
-
-		thead th::before {
-			text-transform: uppercase;
-			font-weight: bold;
-			content: attr(data-header);
-		}
-
-		thead th:first-child span { display: none; }
-
-		td::before {
-			float: left;
-			text-transform: uppercase;
-			font-weight: bold;
-			content: attr(data-header);
-		}
-
-		textarea.form-control {
-			font-size: 14px;
-			text-align: left;
-		}
-	}
-</style>
-<div class="tab-content">
-	<div class="tab-pane active">
-		<div class="box box-primary">
-			<div class="box-body">
-				<div class="form-group ">
-					<label class="col-sm-2 col-md-2 control-label">No Dokumen</label>
-					<div class="col-sm-4 col-md-4">
-						<input type="text" class="form-control" id="no_doc" name="no_doc" value="<?php echo (isset($data->no_doc) ? $data->no_doc : ""); ?>" placeholder="Automatic" readonly>
-					</div>
-					<label class="col-sm-2 col-md-2 control-label">Tanggal <b class="text-red">*</b></label>
-					<div class="col-sm-4 col-md-4">
-						<input type="text" class="form-control tanggal" id="tgl_doc" name="tgl_doc" value="<?php echo (isset($data->tgl_doc) ? $data->tgl_doc : date("Y-m-d")); ?>" placeholder="Tanggal Dokumen" required>
-					</div>
-				</div>
-				<div class="form-group ">
-					<label class="col-sm-2 col-md-2 control-label">Keterangan <b class="text-red">*</b></label>
-					<div class="col-sm-4">
-						<textarea class="form-control" id="informasi" name="informasi" placeholder="Keterangan" required><?php echo (isset($data->informasi) ? $data->informasi : ""); ?></textarea>
-						<?php
-						if (isset($data->st_reject)) {
-							if ($data->st_reject != '') {
-								echo '
-							  <div class="alert alert-danger alert-dismissible">
-								<h4><i class="icon fa fa-ban"></i> Alasan Penolakan!</h4>
-								' . $data->st_reject . '
-							  </div>';
-							}
-						}
-						?>
-					</div>
-					<label class="col-sm-2 col-md-2 control-label">Bon Bukti <b class="text-red">*</b></label>
-					<div class="col-sm-4 col-md-4">
-						<input class="form-control" type="file" name="doc_file[]" id="id_doc_file" multiple <?= (isset($data->bon_bukti) ? "" : "required") ?> />
-						<span class="pull-right">
-							<?php
-							if (isset($data->bon_bukti)) {
-								echo ($data->bon_bukti != '' ? '<a href="' . base_url($data->bon_bukti) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '');
-							}
-							?>
-						</span>
-					</div>
-				</div>
-				<div>
-					<h4>Transfer ke</h4>
-					<div class="form-group" id="formRekening">
-						<label class="col-md-1 control-label">Bank</label>
-						<div class="col-md-2">
-							<input type="text" class="form-control" id="bank_id" name="bank_id" value="<?php echo (isset($data->bank_id) ? $data->bank_id : $bank_id); ?>" placeholder="Bank">
+	<div class="box-body" style="padding: 20px;">
+		<div class="form-horizontal">
+			<!-- INFORMASI EXPENSE -->
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group">
+						<label class="col-sm-3 control-label">No. Dokumen</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control input-sm" id="no_doc" name="no_doc" value="<?php echo $no_doc_val; ?>" placeholder="Otomatis (System)" readonly>
 						</div>
-						<label class="col-md-2 control-label">Nomor Rekening</label>
-						<div class="col-md-2">
-							<input type="text" class="form-control" id="accnumber" name="accnumber" value="<?php echo (isset($data->accnumber) ? $data->accnumber : $accnumber); ?>" placeholder="Nomor Rekening">
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Tanggal <b class="text-red">*</b></label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control tanggal input-sm" id="tgl_doc" name="tgl_doc" value="<?php echo $tgl_doc; ?>" required placeholder="YYYY-MM-DD">
 						</div>
-						<label class="col-md-2 control-label">Nama Rekening</label>
-						<div class="col-md-3">
-							<input type="text" class="form-control" id="accname" name="accname" value="<?php echo (isset($data->accname) ? $data->accname : $accname); ?>" placeholder="Nama Pemilik Rekening">
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Keterangan <b class="text-red">*</b></label>
+						<div class="col-sm-9">
+							<textarea class="form-control input-sm" id="informasi" name="informasi" rows="3" required placeholder="Tuliskan keterangan pengeluaran..."><?php echo $keterangan; ?></textarea>
 						</div>
-						<input type="hidden" id="no_doc_kasbon" name="no_doc_kasbon">
-						<input type="hidden" id="idKasbon" name="idKasbon">
 					</div>
 				</div>
 
-				<div class="text-start" style="margin-bottom: 5px;">
-					<a class="btn btn-info btn-sm stsview" href="javascript:void(0)" title="Kasbon" onclick="add_kasbon()" id="add-kasbon"><i class="fa fa-user"></i> Expense Kasbon</a>
+				<div class="col-md-6">
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Bank Penerima</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control input-sm" id="bank_id" name="bank_id" value="<?php echo $bank_id; ?>" placeholder="Nama Bank">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-3 control-label">No. Rekening</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control input-sm" id="accnumber" name="accnumber" value="<?php echo $accnumber; ?>" placeholder="Nomor Rekening">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Atas Nama</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control input-sm" id="accname" name="accname" value="<?php echo $accname; ?>" placeholder="Nama Pemilik Rekening">
+						</div>
+					</div>
 				</div>
+			</div>
+
+			<!-- TABEL RINCIAN ITEM -->
+			<div style="margin-top: 25px;">
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+					<span style="font-size: 15px; font-weight: 700; color: #333;">
+						<i class="fa fa-list-alt text-success"></i> Rincian Pengeluaran Barang & Jasa
+					</span>
+					<div class="stsview">
+						<button type="button" class="btn btn-success btn-sm btn-flat-custom" onclick="add_detail()" id="add-material" title="Tambah Baris Pengeluaran Baru">
+							<i class="fa fa-plus"></i> Tambah Baris Pengeluaran
+						</button>
+					</div>
+				</div>
+
 				<div class="table-responsive">
-					<table class="table table-bordered table-striped" width="100%">
+					<table class="table table-bordered table-expense" width="100%">
 						<thead>
 							<tr>
-								<th width="30" scope="col" class="column-primary">#</th>
-								<th scope="col" width="220">Jenis</th>
-								<th scope="col" width="110">Tanggal</th>
-								<th scope="col" width="200">Barang/Jasa</th>
-								<th scope="col" width="200">Spesifikasi</th>
-								<th scope="col" width="70">Jumlah</th>
-								<th scope="col" width="120">Harga Satuan</th>
-								<th scope="col" width="120">Expense</th>
-								<th scope="col" width="100" class="column-primary">
-									<div class="pull-right">
-										<a class="btn btn-success btn-xs stsview" href="javascript:void(0)" title="Tambah" onclick="add_detail()" id="add-material"><i class="fa fa-plus"></i> Tambah</a>
-									</div>
-								</th>
+								<th width="35">#</th>
+								<th width="80">Tipe</th>
+								<th width="200">Akun COA / Jenis</th>
+								<th width="110">Tanggal</th>
+								<th width="220">Barang / Jasa</th>
+								<th width="180">Spesifikasi</th>
+								<th width="70">Qty</th>
+								<th width="120">Harga Satuan</th>
+								<th width="140">Total Nominal</th>
+								<th width="170">Bon / Bukti</th>
+								<th width="50">Aksi</th>
 							</tr>
 						</thead>
 						<tbody id="detail_body">
-							<?php $total = 0;
+							<?php
 							$idd = 1;
-							$grand_total = 0;
 							$total_expense = 0;
-							$total_kasbon = 0;
 							if (!empty($data_detail)) {
 								foreach ($data_detail as $record) {
-									$tekskasbon = "";
-									if ($record->id_kasbon != '') $tekskasbon = 'readonly'; ?>
-									<tr id='tr1_<?= $idd ?>' class='delAll <?= ($record->id_kasbon != '' ? 'kasbonrow' : '') ?>'>
-										<td data-header="#">
-											<input type='hidden' name='id_kasbon[]' id='id_kasbon_<?= $idd ?>' value='<?= $record->id_kasbon; ?>'>
+									$row_expense_val = floatval($record->expense > 0 ? $record->expense : $record->total_harga);
+									$total_expense += $row_expense_val;
+									$row_files = isset($detail_files[$record->id]) ? $detail_files[$record->id] : [];
+							?>
+									<tr id='tr1_<?= $idd ?>' class='delAll'>
+										<td class="text-center">
+											<input type='hidden' name='id_kasbon[]' id='id_kasbon_<?= $idd ?>' value=''>
 											<input type="hidden" name="filename[]" id="filename_<?= $idd ?>" value="<?= $record->doc_file; ?>">
 											<input type="hidden" name="detail_id[]" id="raw_id_<?= $idd ?>" value="<?= $idd; ?>" class="dtlloop">
 											<input type="hidden" name="id_detail[]" id="id_detail_<?= $idd ?>" value="<?= $record->id; ?>" class="dtlloop">
 											<?= $idd ?>
 										</td>
-										<td data-header="Jenis">
-											<?php
-											if ($tekskasbon == '') {
-												echo form_dropdown('coa[]', $option_coa, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2'));
-											} else {
-												echo '<input type="hidden" name="coa[]" id="coa' . $idd . '" value="' . $record->coa . '">';
-											}
-											?>
+										<td class="text-center">
+											<span class="badge-expense"><i class="fa fa-money"></i> Realisasi</span>
 										</td>
-										<td data-header="Tanggal">
-											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>" <?= $tekskasbon ?>>
+										<td>
+											<?= form_dropdown('coa[]', $option_coa, (isset($record->coa) ? $record->coa : ''), array('id' => 'coa' . $idd, 'required' => 'required', 'class' => 'form-control select2 input-sm')); ?>
 										</td>
-										<td data-header="Barang / Jasa">
-											<textarea class="form-control" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" style="min-height:70px;font-size:13px;" <?= $tekskasbon; ?>><?= $record->deskripsi; ?></textarea>
+										<td>
+											<input type="text" class="form-control tanggal input-sm" name="tanggal[]" id="tanggal<?= $idd; ?>" value="<?= $record->tanggal; ?>">
 										</td>
-										<td data-header="Spesifikasi">
-											<textarea class="form-control" name="keterangan[]" id="keterangan_<?= $idd; ?>" style="min-height:70px;font-size:13px;" <?= $tekskasbon ?>><?= $record->keterangan; ?></textarea>
+										<td>
+											<textarea class="form-control input-sm" name="deskripsi[]" id="deskripsi_<?= $idd; ?>" rows="2" style="font-size:13px;"><?= $record->deskripsi; ?></textarea>
 										</td>
-										<td data-header="Qty"><input type="text" class="form-control divide input-sm" name="qty[]" id="qty_<?= $idd; ?>" value="<?= $record->qty; ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?> size="15"></td>
-										<td data-header="Harga Satuan"><input type="text" class="form-control divide input-sm" name="harga[]" id="harga_<?= $idd; ?>" value="<?= (($tekskasbon != "") ? $record->kasbon : $record->expense) ?>" onblur="cektotal(<?= $idd; ?>)" <?= $tekskasbon ?>></td>
-										<td data-header="Expense"><input type="text" class="form-control divide subtotal input-sm" name="expense[]" id="expense_<?= $idd; ?>" value="<?= (($tekskasbon != "") ? $record->kasbon : $record->expense) ?>" tabindex="-1" readonly></td>
-										<th scope="row" align='center'><button type='button' class='btn btn-danger btn-xs stsview' data-toggle='tooltip' onClick='delDetail(<?= $idd ?>)' title='Hapus data'><i class='fa fa-close'></i> Hapus</button></th>
+										<td>
+											<textarea class="form-control input-sm" name="keterangan[]" id="keterangan_<?= $idd; ?>" rows="2" style="font-size:13px;"><?= $record->keterangan; ?></textarea>
+										</td>
+										<td><input type="text" class="form-control divide input-sm text-right" name="qty[]" id="qty_<?= $idd; ?>" value="<?= $record->qty; ?>" onblur="cektotal(<?= $idd; ?>)"></td>
+										<td><input type="text" class="form-control divide input-sm text-right" name="harga[]" id="harga_<?= $idd; ?>" value="<?= $record->harga; ?>" onblur="cektotal(<?= $idd; ?>)"></td>
+										<td>
+											<input type="text" class="form-control divide subtotal input-sm text-right" name="expense[]" id="expense_<?= $idd; ?>" value="<?= $row_expense_val ?>" tabindex="-1" readonly style="font-weight:bold; color:#00a65a; background:#e8fadf;">
+											<input type="hidden" class="subkasbon" name="kasbon[]" id="kasbon_<?= $idd; ?>" value="0">
+										</td>
+										<td class="text-center">
+											<div class="file-upload-cell-<?= $idd ?>">
+												<label class="btn btn-xs btn-primary btn-flat-custom stsview" style="cursor:pointer; margin-bottom:2px;" title="Pilih File Bon/Bukti">
+													<i class="fa fa-folder-open"></i> Pilih File
+													<input type="file" id="temp_file_<?= $idd ?>" class="temp-detail-file-picker" data-row="<?= $idd ?>" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
+												</label>
+												<input type="file" name="doc_files_<?= $idd ?>[]" id="doc_files_<?= $idd ?>" multiple style="display:none;">
+												<div id="new_files_list_<?= $idd ?>" style="display:flex; flex-direction:column; gap:3px; margin-top:3px;"></div>
+
+												<?php if (!empty($row_files)): ?>
+													<div class="existing-files-row-<?= $idd ?>" style="margin-top:4px; display:flex; flex-direction:column; gap:3px;">
+														<input type="hidden" name="has_existing_files_<?= $idd ?>" value="1">
+														<?php foreach ($row_files as $rf): 
+															$furl = base_url('assets/expense/' . $rf->doc_file);
+															$is_fpdf = (stripos($rf->doc_file, '.pdf') !== false);
+														?>
+															<span class="badge file-badge-item" style="background:#3c8dbc; font-size:10px; font-weight:normal; text-align:left; padding:3px 5px; display:inline-flex; align-items:center; justify-content:space-between;">
+																<a href="<?= $furl ?>" target="_blank" style="color:#fff; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;" title="<?= htmlspecialchars($rf->doc_file) ?>">
+																	<i class="fa <?= $is_fpdf ? 'fa-file-pdf-o' : 'fa-file-image-o' ?>"></i> <?= htmlspecialchars($rf->doc_file) ?>
+																</a>
+																<input type="hidden" name="existing_files_<?= $idd ?>[]" value="<?= htmlspecialchars($rf->id) ?>">
+																<?php if ($stsview != 'view' && $stsview != 'approval'): ?>
+																	<button type="button" class="btn btn-xs btn-danger remove-existing-detail-file" style="padding:0 3px; font-size:9px; line-height:1; margin-left:4px;" title="Hapus file ini">
+																		<i class="fa fa-times"></i>
+																	</button>
+																<?php endif; ?>
+															</span>
+														<?php endforeach; ?>
+													</div>
+												<?php endif; ?>
+											</div>
+										</td>
+										<td class="text-center">
+											<button type='button' class='btn btn-danger btn-xs stsview' data-toggle='tooltip' onClick='delDetail(<?= $idd ?>)' title='Hapus'><i class='fa fa-trash'></i></button>
+										</td>
 									</tr>
 							<?php
-									if ($record->doc_file != '') {
-										if (strpos($record->doc_file, 'pdf', 0) > 1) {
-											$gambar .= '<div class="col-md-12">
-								<iframe src="' . base_url('assets/expense/' . $record->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-										 <a href="' . base_url('assets/expense/' . $record->doc_file) . '">Download PDF</a>
-								</iframe>
-								<br />' . $record->no_doc . '</div>';
-										} else {
-											$gambar .= '<div class="col-md-4"><a href="' . base_url('assets/expense/' . $record->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $record->doc_file) . '" class="img-responsive"></a><br />' . $record->no_doc . '</div>';
-										}
-									}
-									$total_expense = ($total_expense + ($record->expense));
-									$total_kasbon = ($total_kasbon + ($record->kasbon));
 									$idd++;
 								}
-								if ($data->lebih_bayar != null) {
-									$grand_total = 0;
-								} else {
-									$grand_total = ($grand_total + ($total_expense - $total_kasbon));
-								}
-							} ?>
+							}
+							?>
 						</tbody>
 						<tfoot>
-							<tr>
-								<td colspan="7" align=right>TOTAL EXPENSE</td>
-								<td colspan="2">
-									<input type="text" class="form-control divide input-sm" id="total_expense" name="total_expense" value="<?= (isset($data_detail)) ? $total_expense : "" ?>" placeholder="0" tabindex="-1" readonly>
-								</td>
-							</tr>
-							<tr id="total_kasbon_row" hidden>
-								<td colspan="7" align="right">KASBON</td>
-								<td colspan="2">
-									<input type="text" class="form-control divide input-sm" id="total_kasbon" name="total_kasbon" value="<?= (isset($data_detail)) ? $total_kasbon : "" ?>" placeholder="0" tabindex="-1" readonly disabled>
-								</td>
-							</tr>
-							<tr id="kontrol_row" <?= (isset($data->lebih_bayar)) ? "" : "hidden" ?>>
-								<td colspan="7" align="right">KONTROL</td>
-								<td colspan="2">
-									<input type="text" class="form-control divide input-sm" onblur="updateGrandTotal()" id="kontrol" placeholder="0" tabindex="-1" value="<?= (isset($data->lebih_bayar)) ? $data->lebih_bayar : "" ?>">
-								</td>
-							</tr>
-							<tr id="selisih_row" hidden>
-								<td colspan="7" align="right">SELISIH</td>
-								<td colspan="2">
-									<input type="text" class="form-control divide input-sm" id="grand_total" name="grand_total" value="<?= (isset($data_detail)) ? $grand_total : "" ?>" placeholder="0" tabindex="-1" readonly disabled>
-									<input type="hidden" id="initial_grand_total">
+							<tr style="background:#f8fafc; font-weight:bold;">
+								<td colspan="8" align="right">TOTAL PENGELUARAN EXPENSE</td>
+								<td colspan="3">
+									<input type="text" class="form-control divide input-sm summary-field" id="total_expense" name="total_expense" value="<?= $total_expense ?>" placeholder="0" tabindex="-1" readonly style="background:#ffffff; color:#333;">
+									<input type="hidden" id="total_kasbon" name="total_kasbon" value="0">
+									<input type="hidden" id="grand_total" name="grand_total" value="<?= -$total_expense ?>">
 								</td>
 							</tr>
 						</tfoot>
 					</table>
+				</div>
+			</div>
 
-					<div class="col-md-6" id="pengembalian" <?= (isset($data->lebih_bayar)) ? "" : "hidden" ?>>
-						<table class="table">
-							<thead>
-								<tr>
-									<th>Pengembalian Kasbon</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td>
-										<input type="radio" name="pengembalian" id="" value="1" <?= (isset($data->tipe_pengembalian) && $data->tipe_pengembalian == 1) ? 'checked' : null ?>> Cash
-									</td>
-								</tr>
-								<tr>
-									<td>
-										<input type="radio" name="pengembalian" id="" value="2" <?= (isset($data->tipe_pengembalian) && $data->tipe_pengembalian == 2) ? 'checked' : null ?>> Transfer
-										<br>
-										<div class="row col-md-6">
-											<label class="control-label">Upload Bukti Transfer</label>
-											<input type="file" name="bukti_pengembalian[]" class="form-control" multiple>
-											<?php
-											$file = '';
-											if (isset($data->bukti_pengembalian)) {
-												if (strpos($data->bukti_pengembalian, 'pdf', 0) > 1) {
-													$file .= '<div class="row col-md-12">
-										<iframe src="' . base_url($data->bukti_pengembalian) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-												 <a href="' . base_url($data->bukti_pengembalian) . '">Download PDF</a>
-										</iframe>
-										<br />' . $data->no_doc . '</div>';
-												} else {
-													$file .= '<div class="row col-md-6"><a href="' . base_url($data->bukti_pengembalian) . '" target="_blank"><img src="' . base_url($data->bukti_pengembalian) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
-												}
-											}
-											?>
-											<?= $file ?>
-										</div>
-									</td>
-								</tr>
-							</tbody>
-						</table>
+			<!-- SECTION TABLE ALOKASI AKUN PEMBEBANAN (COA) -->
+			<div id="section_jurnal" style="margin-top: 25px;">
+				<div class="panel panel-default" style="border-radius: 6px; border: 1px solid #d2d6de; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+					<div class="panel-heading" style="background:#f8fafc; font-weight: 700; color: #2d3748; font-size: 14px;">
+						<i class="fa fa-list-alt text-primary"></i> <b>Daftar Alokasi Akun Pembebanan (COA)</b>
 					</div>
+					<div class="panel-body" style="padding: 10px;">
+						<div class="table-responsive">
+							<table class="table table-bordered table-striped" width="100%" style="font-size:12px; margin-bottom:0;">
+								<thead>
+									<tr style="background:#e2e8f0; color:#333;">
+										<th width="120" class="text-center">Tanggal</th>
+										<th width="110" class="text-center">COA</th>
+										<th width="160" class="text-center">Nama Company</th>
+										<th width="180">Nama Account</th>
+										<th>Deskripsi / Keterangan</th>
+										<th width="140" class="text-right">Nominal Alokasi (Rp)</th>
+									</tr>
+								</thead>
+								<tbody class="tbody_jurnal">
+								</tbody>
+								<tfoot>
+									<tr style="background:#edf2f7; font-weight:bold;">
+										<td colspan="5" class="text-center"><b>TOTAL ALOKASI BIAYA</b></td>
+										<td class="text-right ttl_debit" style="color:#00a65a; font-size:13px;">0</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
 
+			<!-- FOOTER CONTROLS -->
+			<div style="border-top: 2px solid #f4f4f4; padding-top: 15px; margin-top: 20px;">
+				<div class="text-right">
 					<?php
-					if (isset($data_exp_kasbon)) {
-						if (!empty($data_exp_kasbon)) {
-							foreach ($data_exp_kasbon as $exp_kasbon) :
-								$no_kasbon_detail = 1;
-								$this->db->select('a.*, IF(b.code IS NULL, "Pcs", b.code) AS satuan');
-								$this->db->from('tr_pr_detail_kasbon a');
-								$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
-								$this->db->where('a.id_kasbon', $exp_kasbon['id_kasbon']);
-								$get_pr_kasbon_detail = $this->db->get()->result_array();
-
-								if (!empty($get_pr_kasbon_detail)) {
-									echo '<h4>No PR: ' . $get_pr_kasbon_detail[0]['no_pr'] . '</h4>';
-									echo '<table class="table table-bordered">';
-									echo '<thead>';
-									echo '<tr>';
-									echo '<th class="text-center">No.</th>';
-									echo '<th class="text-center">Material Name</th>';
-									echo '<th class="text-center">Qty</th>';
-									echo '<th class="text-center">Unit</th>';
-									echo '<th class="text-center">Price</th>';
-									echo '<th class="text-center">Total Price</th>';
-									echo '</tr>';
-									echo '</thead>';
-									echo '<tbody>';
-
-									foreach ($get_pr_kasbon_detail as $kasbon_detail) :
-										echo '<tr>';
-										echo '<td class="text-center">' . $no_kasbon_detail . '</td>';
-										echo '<td class="text-center">' . $kasbon_detail['nm_material'] . '</td>';
-										echo '<td class="text-center">' . number_format($kasbon_detail['qty']) . '</td>';
-										echo '<td class="text-center">' . $kasbon_detail['satuan'] . '</td>';
-										echo '<td class="text-right">' . number_format($kasbon_detail['harga']) . '</td>';
-										echo '<td class="text-right">' . number_format($kasbon_detail['total_harga']) . '</td>';
-										echo '</tr>';
-
-										$no_kasbon_detail++;
-									endforeach;
-
-									echo '</tbody>';
-									echo '</table>';
-								}
-							endforeach;
+					if (isset($data)) {
+						if ($data->status == 0) {
+							if ($stsview == 'approval') {
+								echo '<a class="btn btn-warning btn-sm btn-flat-custom" onclick="data_approve()" style="margin-right:5px;"><i class="fa fa-check-square-o">&nbsp;</i>Setujui (Approve)</a>';
+								echo '<a class="btn btn-danger btn-sm btn-flat-custom" onclick="data_reject()" style="margin-right:5px;"><i class="fa fa-ban">&nbsp;</i>Tolak (Reject)</a>';
+							}
 						}
 					}
 					?>
-				</div>
-				<div class="box-footer">
-					<div class="form-group">
-						<div class="text-center">
-							<?php
-							$urlback = '';
-							if (isset($data)) {
-								if ($data->status == 0) {
-									if ($stsview == 'approval') {
-										$urlback = 'list_expense_approval';
-										echo '<a class="btn btn-warning btn-sm" onclick="data_approve()"><i class="fa fa-check-square-o">&nbsp;</i>Approve</a>';
-										echo ' <a class="btn btn-danger btn-sm" onclick="data_reject()"><i class="fa fa-ban">&nbsp;</i> Reject</a>';
-									}
-								}
-							}
-
-							?>
-							<button type="submit" name="save" class="btn btn-success btn-sm stsview" id="submit"><i class="fa fa-save">&nbsp;</i>Simpan</button>
-							<a class="btn btn-default btn-sm" onclick="window.location.reload();return false;"><i class="fa fa-reply">&nbsp;</i>Batal</a>
-						</div>
-					</div>
-					<div class="row">
-						<?= $gambar ?>
-					</div>
+					<button type="submit" name="save" class="btn btn-success btn-sm btn-flat-custom stsview" id="submit" style="margin-right:5px;">
+						<i class="fa fa-save">&nbsp;</i> Simpan Expense
+					</button>
+					<a class="btn btn-default btn-sm btn-flat-custom" onclick="window.location.reload();return false;">
+						<i class="fa fa-reply">&nbsp;</i> Kembali / Batal
+					</a>
 				</div>
 			</div>
 		</div>
 	</div>
-	<?= form_close() ?>
-	<?php
-	$datacombocoa = "";
-	foreach ($data_budget as $keys => $val) {
-		$datacombocoa .= "<option value='" . $keys . "'>" . $val . "</option>";
-	}
-
-	$datacoa = "";
-	foreach ($option_coa as $keys => $val) {
-		$datacoa .= "<option value='" . $keys . "'>" . $val . "</option>";
-	}
-	?>
-	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-	<script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
-	<script type="text/javascript">
-		var url_save = siteurl + 'expense/save/';
-		var url_approve = siteurl + 'expense/approve/';
-		var nomor = parseInt("<?= $idd ?>");
-		$('.divide').divide();
-		$('.select2').select2();
-
-		var stsview = $('.stsview').val();
-		if (stsview == 'view' || stsview == 'approval') {
-			$(".stsview").addClass("hidden");
-			$("#frm_data :input").prop("disabled", true);
-		}
-
-		$(function() {
-			$(".tanggal").datepicker({
-				todayHighlight: true,
-				format: "yyyy-mm-dd",
-				showInputs: true,
-				autoclose: true
-			});
-		});
-
-		// Cek apakah ada kasbon yang perlu ditampilkan
-		var totalKasbon = parseFloat($("#total_kasbon").val()) || 0;
-		var grandTotal = parseFloat($("#grand_total").val()) || 0;
-
-		// Jika ada kasbon, tampilkan baris yang tersembunyi
-		if (totalKasbon > 0 || grandTotal !== 0) {
-			$("#total_kasbon_row").show();
-			$("#selisih_row").show();
-		}
-
-		// Save Expense
-		$('#frm_data').on('submit', function(e) {
-			e.preventDefault();
-			var errors = "";
-
-			// Ambil nilai dari input yang akan divalidasi
-			var grandTotal = parseFloat($("#grand_total").val()) || 0;
-			var totalExpense = parseFloat($("#total_expense").val()) || 0;
-			var totalKasbon = parseFloat($("#total_kasbon").val()) || 0;
-
-			// Validasi form input yang sudah ada
-			if ($("#informasi").val() == "") errors = "Keterangan tidak boleh kosong";
-			if ($("#coa").val() == "0") errors = "Jenis Expense tidak boleh kosong";
-			if ($("#tgl_doc").val() == "") errors = "Tanggal Transaksi tidak boleh kosong";
-
-			// Validasi selisih
-			// if (grandTotal > 0) {
-			// 	errors = "Selisih harus 0!";
-			// } else if (grandTotal < 0 && totalExpense <= totalKasbon) {
-			// 	errors = "Selisih minus hanya diperbolehkan jika Total Expense lebih besar dari Total Kasbon!";
-			// }
-
-			// Jika ada error, tampilkan SweetAlert dan hentikan submit
-			if (errors !== "") {
-				Swal.fire(errors);
-				return false;
-			}
-
-			// Konfirmasi sebelum menyimpan data
-			Swal.fire({
-				title: "Anda Yakin?",
-				text: "Data Akan Disimpan!",
-				icon: "info",
-				showCancelButton: true,
-				confirmButtonText: "Ya, simpan!",
-				cancelButtonText: "Tidak!"
-			}).then((next) => {
-				if (next.isConfirmed) {
-					var formdata = new FormData($('#frm_data')[0]);
-					$.ajax({
-						url: url_save,
-						dataType: "json",
-						type: 'POST',
-						data: formdata,
-						processData: false,
-						contentType: false,
-						success: function(msg) {
-							if (msg['save'] == '1') {
-								Swal.fire({
-									title: "Sukses!",
-									text: "Data Berhasil Disimpan",
-									icon: "success",
-									timer: 1500,
-									showConfirmButton: false
-								});
-								window.location.reload();
-							} else {
-								Swal.fire({
-									title: "Gagal!",
-									text: "Data Gagal Disimpan",
-									icon: "error",
-									timer: 1500,
-									showConfirmButton: false
-								});
-							}
-							console.log(msg);
-						},
-						error: function(msg) {
-							Swal.fire({
-								title: "Gagal!",
-								text: "Ajax Data Gagal Diproses",
-								icon: "error",
-								timer: 1500,
-								showConfirmButton: false
-							});
-							console.log(msg);
-						}
-					});
-				}
-			});
-		});
-
-
-		function cektotal(id) {
-			var sqty = $("#qty_" + id).val();
-			var pref = $("#harga_" + id).val();
-			var subtotal = (parseFloat(sqty) * parseFloat(pref));
-			$("#expense_" + id).val(subtotal);
-			var sum = 0;
-			$('.subtotal').each(function() {
-				sum += Number($(this).val());
-			});
-			$("#total_expense").val(sum);
-			var sumkasbon = 0;
-			$('.subkasbon').each(function() {
-				sumkasbon += Number($(this).val());
-			});
-			$("#total_kasbon").val(sumkasbon);
-			$("#grand_total").val(Number(sumkasbon) - Number(sum));
-			var grandTotal = $("#grand_total").val(grandTotal);
-
-			var totalExpense = $("#total_expense").val()
-			if (totalExpense > 0) {
-				if (grandTotal > 0) {
-					$("#initial_grand_total").val(grandTotal);
-
-					$("#pengembalian").show();
-					$("#kontrol_row").show();
-					$("input[name='pengembalian']").prop("required", true).prop("disabled", false);
-					$("input[name='kontrol']").prop("required", true).prop("disabled", false);
-
-					$("input[name='pengembalian']").off("change").on("change", function() {
-						if ($(this).val() == "2") {
-							$("input[name='bukti_pengembalian']").prop("required", true).prop("disabled", false);
-						} else {
-							$("input[name='bukti_pengembalian']").prop("required", false).prop("disabled", true).val('');
-						}
-					});
-				} else {
-					$("#pengembalian").hide();
-					$("#kontrol_row").hide();
-					$("input[name='pengembalian']").prop("required", false).prop("disabled", true);
-					$("input[name='bukti_pengembalian']").prop("required", false).prop("disabled", true).val('');
-					$("input[name='kontrol']").prop("required", false).prop("disabled", true);
-				}
-			} else {
-				$("#pengembalian").hide();
-				$("#kontrol_row").hide();
-				$("input[name='pengembalian']").prop("required", false).prop("disabled", true);
-				$("input[name='bukti_pengembalian']").prop("required", false).prop("disabled", true).val('');
-				$("input[name='kontrol']").prop("required", false).prop("disabled", true);
-			}
-		}
-
-		function updateGrandTotal() {
-			var initialGrandTotal = parseFloat($("#initial_grand_total").val()) || 0;
-			var kontrolVal = parseFloat($("#kontrol").val()) || 0;
-			var newGrandTotal = initialGrandTotal - kontrolVal;
-			$("#grand_total").val(newGrandTotal);
-		}
-
-		function add_kasbon() {
-			var nama = $("#nama").val();
-			var departement = $("#departement").val();
-
-			$.ajax({
-				url: siteurl + 'expense/get_kasbon/' + nama + '/' + departement + '/<?= (isset($data->no_doc) ? $data->no_doc : ""); ?>',
-				type: "POST",
-				dataType: "json",
-				success: function(data) {
-					var tbody = '';
-					for (var i = 0; i < data.length; i++) {
-						tbody += '<tr>';
-						tbody += '<td>' + (i + 1) + '</td>';
-						tbody += '<td>' + data[i].no_doc + '</td>';
-						tbody += '<td>' + data[i].tgl_doc + '</td>';
-						tbody += '<td>' + data[i].keperluan + '</td>';
-						tbody += '<td>' + data[i].keterangan + '</td>';
-						tbody += '<td>' + data[i].jumlah_kasbon + '</td>';
-						tbody += '<td style="display:none">' + data[i].bank_id + '</td>';
-						tbody += '<td style="display:none">' + data[i].accnumber + '</td>';
-						tbody += '<td style="display:none">' + data[i].accname + '</td>';
-						tbody += '<td style="display:none">' + data[i].id + '</td>';
-						tbody += '<td><button class="btn btn-primary btn-sm" onclick="selectKasbon(' + i + ')">Pilih</button></td>';
-						tbody += '</tr>';
-					}
-					$('#tableKasbon tbody').html(tbody);
-					$('#modalKasbon').modal('show');
-				},
-				error: function() {
-					Swal.fire({
-						title: "Error Message !",
-						text: 'Connection Time Out. Please try again..',
-						icon: "warning",
-						timer: 3000,
-						showCancelButton: false,
-						showConfirmButton: false,
-						allowOutsideClick: false
-					});
-				}
-			});
-		}
-
-		function selectKasbon(index) {
-			var row = $('#tableKasbon tbody tr').eq(index);
-			var no_doc = row.find('td').eq(1).text();
-			var tgl_doc = row.find('td').eq(2).text();
-			var keperluan = row.find('td').eq(3).text();
-			var keterangan = row.find('td').eq(4).text();
-			var jumlah = row.find('td').eq(5).text();
-			var bank_id = row.find('td').eq(6).text();
-			var accnumber = row.find('td').eq(7).text();
-			var accname = row.find('td').eq(8).text();
-			var id = row.find('td').eq(9).text();
-
-			var nomor = $('.kasbonrow').length + 1;
-			var datacoa = "<?= $datacoa ?>";
-
-			var Rows = "<tr id='tr1_" + nomor + "' class='delAll kasbonrow'>";
-			Rows += "<td data-header='#'><input type='hidden' name='id_kasbon[]' id='id_kasbon_" + nomor + "' value='" + no_doc + "'>";
-			Rows += "<input type='hidden' name='detail_id[]' id='raw_id_" + nomor + "' value='" + nomor + "'>";
-			Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='" + nomor + "'>";
-			Rows += nomor + " </td>";
-			Rows += "<td data-header='COA'>";
-			Rows += "<select name='coa[]' id='coa_" + nomor + "' class='form-control select' readonly><?= $datacoa ?></select>";
-			Rows += "</td>";
-			Rows += "<td data-header='Tanggal'>";
-			Rows += "<input type='text' class='form-control tanggal input-sm' name='tanggal[]' id='tanggal_" + nomor + "' tabindex='-1' readonly value='" + tgl_doc + "' />";
-			Rows += "</td>";
-			Rows += "<td data-header='Barang / Jasa'>";
-			Rows += "<textarea class='form-control' name='deskripsi[]' id='deskripsi_" + nomor + "' readonly style='min-height:70px;font-size:13px;'>" + keperluan + "</textarea>";
-			Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
-			Rows += "</td>";
-			Rows += "<td data-header='Spesifikasi'>";
-			Rows += "<textarea class='form-control' name='keterangan[]' id='keterangan_" + nomor + "' readonly style='min-height:70px;font-size:13px;'>" + keterangan + "</textarea>";
-			Rows += "</td>";
-			Rows += "<td data-header='Qty'>";
-			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' value='1' id='qty_" + nomor + "' tabindex='-1' readonly />";
-			Rows += "</td>";
-			Rows += "<td data-header='Harga Satuan'>";
-			Rows += "<input type='text' class='form-control divide input-sm' name='harga[]' value='" + jumlah + "' id='harga_" + nomor + "' tabindex='-1' readonly />";
-			Rows += "</td>";
-			Rows += "<td data-header='Expense'>";
-			Rows += "<input type='hidden' class='form-control divide input-sm subtotal' name='expense[]' id='expense_" + nomor + "' tabindex='-1' readonly />";
-			Rows += "<input type='text' class='form-control divide input-sm subkasbon' name='kasbon[]' value='" + jumlah + "' id='kasbon_" + nomor + "' readonly />";
-			Rows += "</td>";
-			Rows += "<td align='center'>";
-			Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus data'><i class='fa fa-close'></i> Hapus</button>";
-			Rows += "</td>";
-			Rows += "</tr>";
-
-			//isi data rekening
-			$('#bank_id').val(bank_id);
-			$('#accnumber').val(accnumber);
-			$('#accname').val(accname);
-			$('#no_doc_kasbon').val(no_doc);
-			$('#idKasbon').val(id);
-
-			//showhide & disabled total kasbon dan selisih
-			if (id != null) {
-				$("#total_kasbon_row").show()
-				$("#selisih_row").show()
-				$("#total_kasbon").prop("disabled", false);
-				$("#grand_total").prop("disabled", false);
-			}
-
-			$('#detail_body').append(Rows);
-			$('#modalKasbon').modal('hide');
-			$(".divide").divide();
-			cektotal(); // Perbarui total setelah menambahkan kasbon
-		}
-
-		function add_detail() {
-			var nomor = $("#detail_body tr").length + 1; // Hitung jumlah baris
-			var datacombocoa = "<?= $datacombocoa ?>";
-			var datacoa = "<?= $datacoa ?>";
-			var Rows = "<tr id='tr1_" + nomor + "' class='delAll'>";
-			Rows += "<td data-header='#'><input type='hidden' name='id_kasbon[]' id='id_kasbon_" + nomor + "' value=''>";
-			Rows += "<input type='hidden' name='detail_id[]' id='raw_id_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
-			Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
-			Rows += nomor + "</td>";
-			Rows += "<td data-header='Jenis'>";
-			Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2'><?= $datacoa ?></select>";
-			Rows += "</td>";
-			Rows += "<td data-header='Tanggal'>";
-			Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='Tanggal' name='tanggal[]' id='tanggal_" + nomor + "' />";
-			Rows += "</td>";
-			Rows += "<td data-header='Barang / Jasa'>";
-			Rows += "<textarea class='form-control' placeholder='Barang/Jasa' name='deskripsi[]' id='deskripsi_" + nomor + "' style='min-height:70px;font-size:13px;'></textarea>";
-			Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
-			Rows += "</td>";
-			Rows += "<td data-header='Spesifikasi'>";
-			Rows += "<textarea class='form-control' placeholder='Spesifikasi' name='keterangan[]' id='keterangan_" + nomor + "' style='min-height:70px;font-size:13px;'></textarea>";
-			Rows += "</td>";
-			Rows += "<td data-header='Qty'>";
-			Rows += "<input type='text' class='form-control divide input-sm' name='qty[]' id='qty_" + nomor + "' onblur='cektotal(" + nomor + ")'/>";
-			Rows += "</td>";
-			Rows += "<td data-header='Harga Satuan'>";
-			Rows += "<input type='text' class='form-control divide input-sm' name='harga[]' id='harga_" + nomor + "' onblur='cektotal(" + nomor + ")' />";
-			Rows += "</td>";
-			Rows += "<td data-header='Expense'>";
-			Rows += "<input type='text' class='form-control divide input-sm subtotal' name='expense[]' id='expense_" + nomor + "' tabindex='-1' readonly />";
-			Rows += "<input type='hidden' class='form-control divide input-sm subkasbon' name='kasbon[]' id='kasbon_" + nomor + "' readonly />";
-			Rows += "</td>";
-			Rows += "<th align='center' th scope='row'>";
-			Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus data'><i class='fa fa-close'></i> Hapus</button>";
-			Rows += "</th>";
-			Rows += "</tr>";
-			$('#detail_body').append(Rows);
-			$("#tanggal_" + nomor).focus();
-			$(".tanggal").datepicker({
-				todayHighlight: true,
-				format: "yyyy-mm-dd",
-				showInputs: true,
-				autoclendif: true,
-			});
-			$('.select2').select2();
-			$(".divide").divide();
-			cektotal();
-		}
-
-		function delDetail(row) {
-			var idKasbon = $('#idKasbon').val()
-
-			$('#tr1_' + row).remove();
-
-			$('#detail_body tr').each(function(index) {
-				var newRowNum = index + 1;
-				$(this).attr('id', 'tr1_' + newRowNum);
-
-				$(this).find('[id]').each(function() {
-					var id = $(this).attr('id');
-					if (id) {
-						var newId = id.replace(/\d+$/, newRowNum);
-						$(this).attr('id', newId);
-					}
-				});
-
-				$(this).find('[name]').each(function() {
-					var name = $(this).attr('name');
-					if (name) {
-						var newName = name.replace(/\[\d+\]$/, '[' + newRowNum + ']');
-						$(this).attr('name', newName);
-					}
-				});
-			});
-
-			var rowKasbon = $(".kasbonrow").length;
-
-			if (rowKasbon < 1) {
-				$("#total_kasbon_row").hide()
-				$("#selisih_row").hide()
-				$("#bank_id").val("")
-				$("#accnumber").val("")
-				$("#accname").val("")
-				$("#total_kasbon").prop("disabled", true);
-				$("#grand_total").prop("disabled", true);
-			}
-
-			cektotal();
-		}
-
-		function data_approve() {
-			Swal.fire({
-				title: "Anda Yakin?",
-				text: "Data Akan Disetujui!",
-				icon: "info",
-				showCancelButton: true,
-				confirmButtonText: "Ya, setuju!",
-				cancelButtonText: "Tidak!"
-			}).then((next) => {
-				if (next.isConfirmed) {
-					id = $("#id").val();
-					$.ajax({
-						url: url_approve + id,
-						dataType: "json",
-						type: 'POST',
-						success: function(msg) {
-							if (msg['save'] == '1') {
-								Swal.fire({
-									title: "Sukses!",
-									text: "Data Berhasil Di Setujui",
-									icon: "success",
-									timer: 1500,
-									showConfirmButton: false
-								}).then(() => {
-									window.location.reload();
-								});
-							} else {
-								Swal.fire({
-									title: "Gagal!",
-									text: "Data Gagal Di Setujui",
-									icon: "error",
-									timer: 1500,
-									showConfirmButton: false
-								});
-							};
-							console.log(msg);
-						},
-						error: function(msg) {
-							Swal.fire({
-								title: "Gagal!",
-								text: "Ajax Data Gagal Di Proses",
-								icon: "error",
-								timer: 1500,
-								showConfirmButton: false
-							});
-							console.log(msg);
-						}
-					});
-				}
-			});
-		}
-
-		function data_reject() {
-			Swal.fire({
-				title: "Perhatian",
-				text: "Berikan alasan penolakan",
-				icon: "input",
-				showCancelButton: true
-			}).then((inputValue) => {
-				if (inputValue === false) return false;
-				if (inputValue === "") {
-					Swal.fire.showInputError("Tuliskan alasan anda");
-					return false
-				}
-
-				Swal.fire({
-						title: "Anda Yakin?",
-						text: "Data Akan Tolak!",
-						icon: "warning",
-						showCancelButton: true,
-						confirmButtonText: "Ya, tolak!",
-						cancelButtonText: "Tidak!"
-					},
-					function(isConfirm) {
-						if (isConfirm) {
-							id = $("#id").val();
-							$.ajax({
-								url: base_url + 'expense/reject/',
-								data: {
-									'id': id,
-									'reason': inputValue,
-									'table': 'tr_expense'
-								},
-								dataType: "json",
-								type: 'POST',
-								success: function(msg) {
-									if (msg['save'] == '1') {
-										Swal.fire({
-											title: "Sukses!",
-											text: "Data Berhasil Di Tolak",
-											icon: "success",
-											timer: 1500,
-											showConfirmButton: false
-										});
-										window.location.reload();
-									} else {
-										Swal.fire({
-											title: "Gagal!",
-											text: "Data Gagal Di Tolak",
-											icon: "error",
-											timer: 1500,
-											showConfirmButton: false
-										});
-									};
-									console.log(msg);
-								},
-								error: function(msg) {
-									Swal.fire({
-										title: "Gagal!",
-										text: "Ajax Data Gagal Di Proses",
-										icon: "error",
-										timer: 1500,
-										showConfirmButton: false
-									});
-									console.log(msg);
-								}
-							});
-						}
-					});
-			});
-		}
-	</script>
 </div>
+<?= form_close() ?>
+
+<!-- Plugins JS -->
+<script src="<?= base_url('assets/plugins/datepicker/bootstrap-datepicker.js') ?>"></script>
+<script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/select2/select2.full.min.js') ?>"></script>
+
+<script type="text/javascript">
+	var stsview = "<?= $stsview ?>";
+	var url_set_jurnal = siteurl + 'expense/set_jurnal_expense';
+
+	$(document).ready(function() {
+		var companyName = (document.title.indexOf('|') !== -1) ? document.title.split('|')[0].trim() : 'SENDIGS SS';
+		document.title = companyName + ' | Expense';
+		$('.content-header h1').html('<i class="fa fa-cubes"></i> Expense');
+
+		$('.select2').select2({ width: '100%' });
+		$(".divide").divide();
+		$(".tanggal").datepicker({
+			todayHighlight: true,
+			format: "yyyy-mm-dd",
+			showInputs: true,
+			autoclose: true
+		}).on('changeDate change', function() {
+			set_jurnal();
+		});
+
+		$(document).on('change changeDate', '#tgl_doc, input[name="tanggal[]"]', function() {
+			set_jurnal();
+		});
+
+		$(document).on('change', 'select[name="coa[]"]', function() {
+			set_jurnal();
+		});
+
+		$(document).on('blur change', 'textarea[name="deskripsi[]"]', function() {
+			set_jurnal();
+		});
+
+		if (stsview == 'view' || stsview == 'approval') {
+			$(".stsview").hide();
+			$("#frm_data input:not([type=hidden]), #frm_data textarea, #frm_data select").prop("disabled", true);
+		}
+
+		if ($("#detail_body tr").length === 0) {
+			add_detail();
+		} else {
+			set_jurnal();
+		}
+	});
+
+	function add_detail() {
+		var nomor = $("#detail_body tr").length + 1;
+		var datacoa = <?= json_encode($datacoa) ?>;
+		var Rows = "<tr id='tr1_" + nomor + "' class='delAll'>";
+		Rows += "<td class='text-center'><input type='hidden' name='id_kasbon[]' id='id_kasbon_" + nomor + "' value=''>";
+		Rows += "<input type='hidden' name='detail_id[]' id='raw_id_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
+		Rows += "<input type='hidden' name='id_detail[]' id='id_detail_" + nomor + "' value='" + nomor + "' class='dtlloop'>";
+		Rows += nomor + "</td>";
+		Rows += "<td class='text-center'><span class='badge-expense'><i class='fa fa-money'></i> Realisasi</span></td>";
+		Rows += "<td>";
+		Rows += "<select name='coa[]' id='coa_" + nomor + "' required='required' class='form-control select2 input-sm'>" + datacoa + "</select>";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<input type='text' class='form-control tanggal input-sm' placeholder='YYYY-MM-DD' name='tanggal[]' id='tanggal_" + nomor + "' value='<?= date("Y-m-d") ?>' />";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<textarea class='form-control input-sm' placeholder='Nama barang/jasa...' name='deskripsi[]' id='deskripsi_" + nomor + "' rows='2' style='font-size:13px;'></textarea>";
+		Rows += "<input type='hidden' class='form-control input-sm' name='id_expense_detail[]' id='id_expense_detail_" + nomor + "' value='' />";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<textarea class='form-control input-sm' placeholder='Rincian / spesifikasi...' name='keterangan[]' id='keterangan_" + nomor + "' rows='2' style='font-size:13px;'></textarea>";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<input type='text' class='form-control divide input-sm text-right' name='qty[]' id='qty_" + nomor + "' value='1' onblur='cektotal(" + nomor + ")'/>";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<input type='text' class='form-control divide input-sm text-right' name='harga[]' id='harga_" + nomor + "' value='0' onblur='cektotal(" + nomor + ")' />";
+		Rows += "</td>";
+		Rows += "<td>";
+		Rows += "<input type='text' class='form-control divide subtotal input-sm text-right' name='expense[]' id='expense_" + nomor + "' value='0' tabindex='-1' readonly style='font-weight:bold; color:#00a65a; background:#e8fadf;' />";
+		Rows += "<input type='hidden' class='subkasbon' name='kasbon[]' id='kasbon_" + nomor + "' value='0' />";
+		Rows += "</td>";
+		Rows += "<td class='text-center'>";
+		Rows += "<div class='file-upload-cell-" + nomor + "'>";
+		Rows += "<label class='btn btn-xs btn-primary btn-flat-custom' style='cursor:pointer; margin-bottom:2px;' title='Pilih File Bon/Bukti'>";
+		Rows += "<i class='fa fa-folder-open'></i> Pilih File";
+		Rows += "<input type='file' id='temp_file_" + nomor + "' class='temp-detail-file-picker' data-row='" + nomor + "' style='display:none;' accept='.jpg,.jpeg,.png,.pdf' multiple>";
+		Rows += "</label>";
+		Rows += "<input type='file' name='doc_files_" + nomor + "[]' id='doc_files_" + nomor + "' multiple style='display:none;'>";
+		Rows += "<div id='new_files_list_" + nomor + "' style='display:flex; flex-direction:column; gap:3px; margin-top:3px;'></div>";
+		Rows += "</div>";
+		Rows += "</td>";
+		Rows += "<td class='text-center'>";
+		Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus'><i class='fa fa-trash'></i></button>";
+		Rows += "</td>";
+		Rows += "</tr>";
+
+		$('#detail_body').append(Rows);
+		$("#tanggal_" + nomor).focus();
+		$(".tanggal").datepicker({
+			todayHighlight: true,
+			format: "yyyy-mm-dd",
+			showInputs: true,
+			autoclose: true
+		}).on('changeDate change', function() {
+			set_jurnal();
+		});
+		$('.select2').select2({ width: '100%' });
+		$(".divide").divide();
+		cektotal();
+	}
+
+	function delDetail(row) {
+		$('#tr1_' + row).remove();
+		$('#detail_body tr').each(function(index) {
+			$(this).find('td:first').contents().filter(function() {
+				return this.nodeType === 3;
+			}).remove();
+			$(this).find('td:first').append((index + 1));
+		});
+		cektotal();
+	}
+
+	function cektotal(id) {
+		if (id !== undefined) {
+			var qty = parseFloat($("#qty_" + id).val().replace(/,/g, '')) || 0;
+			var harga = parseFloat($("#harga_" + id).val().replace(/,/g, '')) || 0;
+			var total = qty * harga;
+			$("#expense_" + id).val(total);
+		}
+
+		var total_expense = 0;
+		$(".subtotal").each(function() {
+			total_expense += parseFloat($(this).val().replace(/,/g, '')) || 0;
+		});
+		$("#total_expense").val(total_expense);
+		$("#grand_total").val(-total_expense);
+		$(".divide").divide();
+		set_jurnal();
+	}
+
+	function set_jurnal() {
+		var $form = $('#frm_data');
+		if ($form.length === 0) return;
+
+		// Pada mode view/approval semua field di-disable, sehingga tidak ikut terkirim di FormData.
+		// Buka disable sejenak agar FormData membaca seluruh field, lalu kembalikan statusnya.
+		var $disabled = $form.find(':disabled');
+		$disabled.prop('disabled', false);
+		var formdata = new FormData($form[0]);
+		$disabled.prop('disabled', true);
+
+		$.ajax({
+			url: url_set_jurnal,
+			dataType: "json",
+			type: 'POST',
+			data: formdata,
+			processData: false,
+			contentType: false,
+			success: function(res) {
+				if (res && res.status === 1) {
+					$('.tbody_jurnal').html(res.hasil);
+					$('.ttl_debit').text(res.ttl_debit);
+					$('.ttl_kredit').text(res.ttl_kredit);
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Gagal generate preview jurnal: " + error);
+			}
+		});
+	}
+
+	// ==========================================
+	// DETAIL MULTI-FILE ACCUMULATOR (DataTransfer)
+	// ==========================================
+	var dtDetailMap = {};
+
+	$(document).on('change', '.temp-detail-file-picker', function() {
+		var row = $(this).data('row');
+		if (!dtDetailMap[row]) {
+			dtDetailMap[row] = new DataTransfer();
+		}
+		var dt = dtDetailMap[row];
+		var newFiles = this.files;
+		if (newFiles.length > 0) {
+			for (var i = 0; i < newFiles.length; i++) {
+				var file = newFiles[i];
+				var exists = false;
+				for (var j = 0; j < dt.items.length; j++) {
+					var existing = dt.items[j].getAsFile();
+					if (existing && existing.name === file.name && existing.size === file.size) {
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					dt.items.add(file);
+				}
+			}
+			var hiddenInput = document.getElementById('doc_files_' + row);
+			if (hiddenInput) {
+				hiddenInput.files = dt.files;
+			}
+			$(this).val('');
+			render_detail_files(row);
+		}
+	});
+
+	function render_detail_files(row) {
+		var container = $('#new_files_list_' + row);
+		container.empty();
+		if (!dtDetailMap[row]) return;
+		var dt = dtDetailMap[row];
+		for (var i = 0; i < dt.files.length; i++) {
+			var file = dt.files[i];
+			var isPdf = file.name.toLowerCase().endsWith('.pdf');
+			var sizeKb = Math.round(file.size / 1024);
+			var badge = '<span class="badge" style="background:#00a65a; font-size:10px; font-weight:normal; text-align:left; padding:3px 5px; display:inline-flex; align-items:center; justify-content:space-between;">' +
+				'<span style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.name + ' (' + sizeKb + ' KB)">' +
+				'<i class="fa ' + (isPdf ? 'fa-file-pdf-o' : 'fa-file-image-o') + '"></i> ' + file.name +
+				'</span>' +
+				'<button type="button" class="btn btn-xs btn-danger remove-new-detail-file" data-row="' + row + '" data-index="' + i + '" style="padding:0 3px; font-size:9px; line-height:1; margin-left:4px;" title="Hapus file ini">' +
+				'<i class="fa fa-times"></i>' +
+				'</button>' +
+				'</span>';
+			container.append(badge);
+		}
+	}
+
+	$(document).on('click', '.remove-new-detail-file', function(e) {
+		e.preventDefault();
+		var row = $(this).data('row');
+		var idx = parseInt($(this).data('index'));
+		if (dtDetailMap[row]) {
+			var dt = dtDetailMap[row];
+			var newDt = new DataTransfer();
+			for (var i = 0; i < dt.files.length; i++) {
+				if (i !== idx) {
+					newDt.items.add(dt.files[i]);
+				}
+			}
+			dtDetailMap[row] = newDt;
+			var hiddenInput = document.getElementById('doc_files_' + row);
+			if (hiddenInput) {
+				hiddenInput.files = newDt.files;
+			}
+			render_detail_files(row);
+		}
+	});
+
+	$(document).on('click', '.remove-existing-detail-file', function(e) {
+		e.preventDefault();
+		$(this).closest('.file-badge-item').remove();
+	});
+
+	// SUBMIT FORM
+	$('#frm_data').on('submit', function(e) {
+		e.preventDefault();
+		var errors = "";
+		if ($("#informasi").val() == "") errors = "Keterangan tidak boleh kosong";
+		if ($("#tgl_doc").val() == "") errors = "Tanggal Dokumen tidak boleh kosong";
+		if ($("#detail_body tr").length == 0) errors = "Rincian barang/jasa pengeluaran belum diisi";
+
+		if (errors != "") {
+			Swal.fire({ title: "Perhatian!", text: errors, icon: "warning" });
+			return false;
+		}
+
+		Swal.fire({
+			title: "Simpan Expense?",
+			text: "Pastikan seluruh data dan bukti pengeluaran sudah benar!",
+			icon: "question",
+			showCancelButton: true,
+			confirmButtonText: "Ya, Simpan!",
+			cancelButtonText: "Batal"
+		}).then((result) => {
+			if (result.isConfirmed) {
+				var formdata = new FormData($('#frm_data')[0]);
+				$.ajax({
+					url: siteurl + 'expense/save',
+					dataType: "json",
+					type: 'POST',
+					data: formdata,
+					processData: false,
+					contentType: false,
+					success: function(msg) {
+						if (msg.save == '1') {
+							Swal.fire({
+								title: "Berhasil!",
+								text: "Dokumen Expense berhasil disimpan.",
+								icon: "success"
+							}).then(() => {
+								window.location.reload();
+							});
+						} else {
+							Swal.fire({
+								title: "Gagal!",
+								text: msg.message || "Gagal menyimpan dokumen.",
+								icon: "error"
+							});
+						}
+					},
+					error: function() {
+						Swal.fire({
+							title: "Gagal!",
+							text: "Terjadi kesalahan pada server saat menyimpan.",
+							icon: "error"
+						});
+					}
+				});
+			}
+		});
+	});
+
+	function data_approve() {
+		Swal.fire({
+			title: "Setujui Expense?",
+			text: "Dokumen akan diproses ke tahap persetujuan!",
+			icon: "question",
+			showCancelButton: true,
+			confirmButtonText: "Ya, Setujui!",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#28a745"
+		}).then((res) => {
+			if (res.isConfirmed) {
+				var id = $("#id").val();
+				$.post(siteurl + 'expense/approve/' + id, function(result) {
+					if (result.save) {
+						Swal.fire("Sukses!", "Expense berhasil disetujui.", "success").then(() => {
+							window.location.reload();
+						});
+					} else {
+						Swal.fire("Gagal!", "Gagal memproses approval.", "error");
+					}
+				}, "json");
+			}
+		});
+	}
+
+	function data_reject() {
+		Swal.fire({
+			title: "Tolak Dokumen Expense",
+			input: "textarea",
+			inputLabel: "Alasan Penolakan (Reject Reason)",
+			inputPlaceholder: "Tuliskan alasan penolakan di sini...",
+			showCancelButton: true,
+			confirmButtonText: "Tolak Dokumen",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#d33",
+			inputValidator: (value) => {
+				if (!value) {
+					return "Alasan penolakan wajib diisi!";
+				}
+			}
+		}).then((res) => {
+			if (res.isConfirmed) {
+				var id = $("#id").val();
+				$.post(siteurl + 'expense/reject', { id: id, reason: res.value, table: 'tr_expense' }, function(result) {
+					Swal.fire("Ditolak!", "Dokumen telah ditolak.", "info").then(() => {
+						window.location.reload();
+					});
+				}, "json");
+			}
+		});
+	}
+</script>
