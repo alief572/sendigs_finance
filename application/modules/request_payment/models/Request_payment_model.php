@@ -15,6 +15,7 @@ class Request_payment_model extends BF_Model
 {
 
     protected $consultant;
+    protected $hris;
 
     /**
      * @var string  User Table Name
@@ -70,6 +71,7 @@ class Request_payment_model extends BF_Model
         parent::__construct();
 
         $this->consultant = $this->load->database('consultant', true);
+        $this->hris       = $this->load->database('hris', true);
     }
 
     // list data request
@@ -92,7 +94,7 @@ class Request_payment_model extends BF_Model
                 $data = $this->db->query("SELECT id as ids,no_doc,nama,tgl_doc,keperluan, 'kasbon' as tipe,jumlah_kasbon as jumlah,null as tanggal,no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, status, kurang_bayar FROM tr_kasbon WHERE (status=1 AND (metode_pembayaran = 1 OR metode_pembayaran IS NULL))  " . $where_date2 . " GROUP BY no_doc")->result();
             }
             if ($tab == 'expense' || $tab == 'pembayaran_po') {
-                $data = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE a.status=1 AND a.jumlah > 0 " . $where_date1 . " OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1) GROUP BY a.no_doc")->result();
+                $data = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe, IF(a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0, a.kurang_bayar, a.jumlah) as jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE ((a.status=1 AND a.jumlah > 0) OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1)) " . $where_date1 . " GROUP BY a.no_doc")->result();
             }
             if ($tab == 'periodik') {
                 $data = $this->db->query(" SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname, b.sts_reject, b.sts_reject_manage, b.reject_reason FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc left join users c on a.created_by = c.id_user WHERE a.status='1' and (b.id_payment='0' OR b.id_payment IS NULL)" . $where_date3)->result();
@@ -108,9 +110,6 @@ class Request_payment_model extends BF_Model
                 $this->db->or_where('a.metode_pembayaran IS NULL');
                 $this->db->group_end();
                 $data = $this->db->get()->result();
-
-                // print_r($this->db->last_query());
-                // exit;
             }
         } else {
             $data    = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,'Transportasi' as keperluan, 'transportasi' as tipe,(SELECT IF(SUM(aa.jumlah_kasbon) IS NULL, 0, SUM(aa.jumlah_kasbon)) FROM tr_transport aa WHERE aa.no_req = a.no_doc AND aa.req_payment = 0) as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname, a.sts_reject, a.sts_reject_manage, a.reject_reason FROM tr_transport_req a WHERE a.status = 1 " . $where_date1 . "
@@ -119,7 +118,7 @@ class Request_payment_model extends BF_Model
             SELECT id as ids,no_doc,nama,tgl_doc,keperluan, 'kasbon' as tipe,jumlah_kasbon as jumlah,null as tanggal,no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason FROM tr_kasbon WHERE status=1 AND (metode_pembayaran = 1 OR metode_pembayaran IS NULL) " . $where_date1 . "
             GROUP BY no_doc
             union all
-            SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe,a.jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE a.status=1 AND a.jumlah > 0  " . $where_date1 . "
+            SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,a.informasi as keperluan, 'expense' as tipe, IF(a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0, a.kurang_bayar, a.jumlah) as jumlah,null as tanggal,a.no_doc as id, bank_id, accnumber, accname, sts_reject, sts_reject_manage, reject_reason, id_kasbon, kurang_bayar FROM tr_expense a left join " . DBACC . ".coa_master as b on a.coa=b.no_perkiraan WHERE ((a.status=1 AND a.jumlah > 0) OR (a.id_kasbon IS NOT NULL AND a.kurang_bayar IS NOT NULL AND a.kurang_bayar > 0 AND a.status=1)) " . $where_date1 . "
             GROUP BY a.no_doc
             union all
             SELECT b.id as ids,a.no_doc,c.nm_lengkap nama,a.tanggal_doc as tgl_doc,b.nama as keperluan, 'periodik' as tipe,b.nilai jumlah,null as tanggal,a.no_doc as id, b.bank_id, b.accnumber, b.accname, b.sts_reject, b.sts_reject_manage, b.reject_reason FROM tr_pengajuan_rutin a join tr_pengajuan_rutin_detail b on a.no_doc=b.no_doc left join users c on a.created_by = c.id_user WHERE a.status='1' and (b.id_payment='0' OR b.id_payment IS NULL) " . $where_date3 . "
@@ -201,7 +200,6 @@ class Request_payment_model extends BF_Model
 
         return $data;
     }
-
     // list data payment
     // public function GetListDataPayment($where = '')
     // {
@@ -445,31 +443,22 @@ class Request_payment_model extends BF_Model
         $where_clauses = ["1=1"];
 
         if (!empty($tgl_from) && !empty($tgl_to)) {
-            $where_clauses[] = "(
-                (doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
-                (DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.tgl_bayar >= " . $this->db->escape($tgl_from) . " AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
-            )";
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
         } elseif (!empty($tgl_from)) {
-            $where_clauses[] = "(
-                doc.tgl_doc >= " . $this->db->escape($tgl_from) . " OR
-                DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " OR
-                pa.tgl_bayar >= " . $this->db->escape($tgl_from) . "
-            )";
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
         } elseif (!empty($tgl_to)) {
-            $where_clauses[] = "(
-                (doc.tgl_doc IS NOT NULL AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.created_on IS NOT NULL AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
-            )";
+            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
         }
 
         if (!empty($tipe)) {
             $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
         }
 
-        // Filter only Paid records
-        $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
+        if ($status === 'paid') {
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
+        } elseif ($status === 'open') {
+            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
+        }
 
         $final_where = implode(" AND ", $where_clauses);
 
@@ -496,8 +485,8 @@ class Request_payment_model extends BF_Model
         $list_tgl_pengajuan_pembayaran = [];
         foreach ($query_data as $row) {
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
-            $tgl_bayar_fmt = !empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : (!empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : '-');
-            $no_payment = !empty($row->pa_id) ? $row->pa_id : (!empty($row->pa_id_payment) ? $row->pa_id_payment : '-');
+            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
 
             $list_tgl_pengajuan_pembayaran[$row->no_doc] = [
                 'no_payment'     => $no_payment,
@@ -567,6 +556,86 @@ class Request_payment_model extends BF_Model
     }
 
     /**
+     * Terapkan filter company ke query builder aktif.
+     * Mengikuti prioritas:
+     * 1. Kasbon dengan no_kasbon_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 2. Expense dengan no_expense_consultant terisi -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 3. Direct payment di tr_direct_payment -> DBCNL kons_tr_penawaran -> fallback kons_tr_spk_penawaran
+     * 4. Dokumen non-consultant -> HRIS (COM003->7, COM006->3, COM012->4) atau Petty Cash tables
+     */
+    public function _apply_company_filter($company_id)
+    {
+        if (empty($company_id)) {
+            return;
+        }
+
+        $safe_comp_id = $this->db->escape_str($company_id);
+
+        // Mapped IDs for the 3 consultant project types:
+        // Sustain (3) matches both 3 and 6 (STM-Sustain)
+        // Vuca (4) matches both 4 and 1 (STM-Vuca)
+        // STM (7) matches 7
+        $consultant_comp_ids = [$safe_comp_id];
+        if ($company_id == '3') {
+            $consultant_comp_ids = ['3', '6'];
+        } elseif ($company_id == '4') {
+            $consultant_comp_ids = ['4', '1'];
+        } elseif ($company_id == '7') {
+            $consultant_comp_ids = ['7'];
+        }
+        $in_consultant_ids = "'" . implode("','", $consultant_comp_ids) . "'";
+
+        $sql_kasbon = "SELECT kb.no_doc FROM tr_kasbon kb 
+            JOIN " . DBCNL . ".kons_tr_kasbon_project_header kh ON kh.id = kb.no_kasbon_consultant 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = kh.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = kh.id_spk_penawaran 
+            WHERE kb.no_kasbon_consultant IS NOT NULL AND kb.no_kasbon_consultant <> '' 
+              AND COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $sql_exp = "SELECT exp.no_doc FROM tr_expense exp 
+            JOIN " . DBCNL . ".kons_tr_expense_report_project_header eh ON eh.id = exp.no_expense_consultant 
+            JOIN " . DBCNL . ".kons_tr_kasbon_project_header kh ON kh.id = eh.id_header 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = kh.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = kh.id_spk_penawaran 
+            WHERE exp.no_expense_consultant IS NOT NULL AND exp.no_expense_consultant <> '' 
+              AND COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $sql_dp = "SELECT dp.no_doc FROM tr_direct_payment dp 
+            LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = dp.id_penawaran 
+            LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran spk ON spk.id_spk_penawaran = dp.id_spk_penawaran 
+            WHERE COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
+
+        $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
+        $hris_cond = isset($reverse_map[$company_id]) ? "d.id = '" . $reverse_map[$company_id] . "'" : "1=0";
+
+        // Check if company name matches petty cash records
+        $company_names = $this->get_company_names_lookup();
+        $comp_name = isset($company_names[$company_id]) ? $this->db->escape_str($company_names[$company_id]) : '';
+        $petty_cond = "";
+        if (!empty($comp_name)) {
+            $petty_cond = " OR a.no_dokumen IN (SELECT no_payment_hutang FROM tr_petty_cash_vuca_sustain WHERE company = '{$comp_name}')
+                           OR a.no_dokumen IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company = '{$comp_name}')";
+            if ($comp_name === 'STM') {
+                $petty_cond .= " OR (a.no_dokumen LIKE 'RPC-%' AND a.no_dokumen NOT IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company IS NOT NULL AND company <> ''))";
+            }
+        }
+
+        $cond = "(
+            a.no_dokumen IN ({$sql_kasbon})
+            OR a.no_dokumen IN ({$sql_exp})
+            OR a.no_dokumen IN ({$sql_dp})
+            OR (
+                a.no_dokumen NOT IN (SELECT kb2.no_doc FROM tr_kasbon kb2 WHERE kb2.no_kasbon_consultant IS NOT NULL AND kb2.no_kasbon_consultant <> '')
+                AND a.no_dokumen NOT IN (SELECT exp2.no_doc FROM tr_expense exp2 WHERE exp2.no_expense_consultant IS NOT NULL AND exp2.no_expense_consultant <> '')
+                AND a.no_dokumen NOT IN (SELECT dp2.no_doc FROM tr_direct_payment dp2)
+                AND ({$hris_cond}{$petty_cond})
+            )
+        )";
+
+        $this->db->where($cond, null, false);
+    }
+
+    /**
      * Get data for DataTables server-side processing with filters, tab logic, and company derivation.
      *
      * @param string|null $company_id   Company ID from kons_tr_company (7, 3, or 4)
@@ -589,21 +658,11 @@ class Request_payment_model extends BF_Model
         // Hardcode map: hris_companies.id => kons_tr_company.id
         $company_map = ['COM003' => 7, 'COM006' => 3, 'COM012' => 4];
 
-        // Build company names lookup from db_consultant_new.kons_tr_company using raw query
-        $company_names = [];
-        $company_query = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('3','4','7')");
-        if ($company_query) {
-            foreach ($company_query->result() as $comp) {
-                $company_names[$comp->id] = $comp->nama;
-            }
-        }
-
-
-        // print_r($company_names);
-        // exit;
+        // Build company names lookup from db_consultant_new.kons_tr_company
+        $company_names = $this->get_company_names_lookup();
 
         // --- Build the main query ---
-        $this->db->select('a.*, d.id as id_company, pa.tgl_bayar');
+        $this->db->select('a.*, d.id as id_company, c.id as department_id, pa.tgl_bayar');
         $this->db->from('v_request_payment a');
         $this->db->join('users b', 'b.username = a.request_by', 'left');
         $this->db->join('departments c', 'c.id = b.department_id', 'left');
@@ -640,12 +699,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company_id filter if non-null
         if (!empty($company_id)) {
-            // company_id from dropdown = kons_tr_company.id (7, 3, 4)
-            // Reverse map to hris_companies.id
-            $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         // Count total records (before search filter)
@@ -708,7 +762,7 @@ class Request_payment_model extends BF_Model
             if ($item->kategori == 'Periodik') {
                 $btn_print = ' <a href="' . base_url('expense/periodik_print/' . $item->id) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
             }
-            if (strtolower($item->kategori) == 'kasbon') {
+            if ($item->kategori == 'Kasbon') {
                 $get_kasbon =  $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_dokumen])->row();
                 if (!empty($get_kasbon->no_kasbon_consultant)) {
                     $btn_print = ' <a href="' . base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant)) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
@@ -744,43 +798,16 @@ class Request_payment_model extends BF_Model
             }
 
             // Print Button untuk DIRECT PAYMENT
-            if (strtolower($item->kategori) == 'direct payment' || strtolower($item->kategori) == 'direct_payment' || strpos($item->no_dokumen, 'DPM-') === 0 || strpos($item->no_dokumen, 'DP-') === 0) {
+            if ($item->kategori == 'Direct Payment' || strpos($item->no_dokumen, 'DPM-') === 0) {
                 $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['no_doc' => $item->no_dokumen])->row();
-                if (empty($get_dp_data)) {
-                    $get_dp_data = $this->db->select('id, no_doc')->get_where('tr_direct_payment', ['ids' => $item->no_dokumen])->row();
-                }
                 if ($get_dp_data) {
-                    $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . str_replace('/', '|', $get_dp_data->no_doc)) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
+                    $btn_print = ' <a href="' . base_url('request_payment/print_direct_payment/' . $get_dp_data->no_doc) . '" target="_blank" class="btn btn-sm btn-info" title="Print"><i class="fa fa-print"></i></a>';
                 }
             }
 
-            // Company display - derive from hris_companies.id via mapping to kons_tr_company.nama
-            $company_display = '';
-            if (!empty($item->id_company) && isset($company_map[$item->id_company])) {
-                $mapped_id = $company_map[$item->id_company];
-                if (isset($company_names[$mapped_id])) {
-                    $company_display = $company_names[$mapped_id];
-                }
-            }
-
-            // Fallback untuk Petty Cash Hutang dan Petty Cash biasa: ambil company dari pencatatan petty cash
-            if (empty($company_display) && ($item->kategori == 'Petty Cash Hutang' || $item->kategori == 'Petty Cash' || strpos($item->no_dokumen, 'RPC-') === 0)) {
-                // Cek dulu di tr_petty_cash_vuca_sustain (untuk PHP-xxxx)
-                $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_dokumen])->row();
-                if (!empty($get_petty_cash)) {
-                    $company_display = $get_petty_cash->company;
-                }
-
-                // Fallback ke tr_pelaporan_petty_cash (untuk RPC-xxxx)
-                if (empty($company_display) && strpos($item->no_dokumen, 'RPC-') === 0) {
-                    $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item->no_dokumen])->row();
-                    if (!empty($get_rpc) && !empty($get_rpc->company)) {
-                        $company_display = $get_rpc->company;
-                    } else {
-                        $company_display = 'STM';
-                    }
-                }
-            }
+            // Company display - derive via resolve_row_company
+            $res_comp = $this->resolve_row_company($item);
+            $company_display = $res_comp['company_nama'];
 
             // Determine "diminta_oleh" (request_by with Kasbon special logic)
             $nmuser = $item->request_by;
@@ -1052,21 +1079,26 @@ class Request_payment_model extends BF_Model
 
             if ($item['tipe'] == 'expense') {
                 $get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $item['no_doc']])->result_array();
+                $get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item['no_doc']])->row_array();
+                if (!empty($get_expense)) {
+                    $updateExpense[] = [
+                        'id'             => $get_expense['id'],
+                        'status'         => '3',
+                        'modified_by'    => $this->auth->user_name(),
+                        'modified_on'    => date("Y-m-d H:i:s"),
+                    ];
+                }
 
                 foreach ($get_expense_detail as $item_expense) {
 
                     $id_detail = $this->Request_payment_model->generate_id_detail($no2);
 
-                    if ($item_expense['id_kasbon'] != null) {
-                        $harga = $item_expense['kurang_bayar'];
-                        $total = $item_expense['kurang_bayar'];
+                    if (!empty($item_expense['kasbon']) && $item_expense['kasbon'] > 0) {
+                        $harga = ($item_expense['kasbon'] * -1);
+                        $total = ($item_expense['kasbon'] * -1);
                     } else {
                         $harga = $item_expense['harga'];
                         $total = $item_expense['total_harga'];
-                        if ($item_expense['kasbon'] > 0) {
-                            $harga = ($item_expense['kasbon'] * -1);
-                            $total = ($item_expense['kasbon'] * -1);
-                        }
                     }
 
                     $arr_detail[]         = [
@@ -1091,23 +1123,6 @@ class Request_payment_model extends BF_Model
                         'modified_by'     => $this->auth->user_name(),
                         'modified_on'     => date("Y-m-d h:i:s"),
                     ];
-
-                    $updateExpense[] = [
-                        'id'             => $item_expense['id'],
-                        'status'         => '3',
-                        'modified_by'     => $this->auth->user_name(),
-                        'modified_on'     => date("Y-m-d h:i:s"),
-                    ];
-
-                    // if ($item_expense['id_kasbon'] != null) {
-                    //     $Harga[]            = $item_expense['kurang_bayar'];
-                    // } else {
-                    //     if ($item_expense['id_kasbon'] == '') {
-                    //         $Harga[]         = ($item_expense['harga'] * $item_expense['qty']);
-                    //     } else {
-                    //         $Harga[]         = ($item_expense['kasbon'] * -1);
-                    //     }
-                    // }
 
                     $no2++;
                 }
@@ -1310,7 +1325,7 @@ class Request_payment_model extends BF_Model
             $this->db->insert_batch('payment_approve_details', $arr_detail);
         }
 
-        if (!empty($updateDetail)) {
+        if (!empty($updateExpense)) {
             $this->db->update_batch('tr_expense', $updateExpense, 'id');
         }
 
@@ -1367,7 +1382,7 @@ class Request_payment_model extends BF_Model
         $date_to    = isset($filters['date_to']) ? $filters['date_to'] : null;
         $kategori   = isset($filters['kategori']) ? $filters['kategori'] : null;
 
-        $this->db->select('a.*, d.id as id_company');
+        $this->db->select('a.*, d.id as id_company, c.id as department_id');
         $this->db->from('v_request_payment a');
 
         // JOIN for company filter
@@ -1394,10 +1409,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company filter if non-null
         if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         $this->db->order_by('a.tanggal', 'desc');
@@ -1452,10 +1464,7 @@ class Request_payment_model extends BF_Model
 
         // Apply company filter if non-null
         if (!empty($company_id)) {
-            $reverse_map = [7 => 'COM003', 3 => 'COM006', 4 => 'COM012'];
-            if (isset($reverse_map[$company_id])) {
-                $this->db->where('d.id', $reverse_map[$company_id]);
-            }
+            $this->_apply_company_filter($company_id);
         }
 
         $query = $this->db->get();
@@ -1635,31 +1644,22 @@ class Request_payment_model extends BF_Model
         $where_clauses = ["1=1"];
 
         if (!empty($tgl_from) && !empty($tgl_to)) {
-            $where_clauses[] = "(
-                (doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
-                (DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.tgl_bayar >= " . $this->db->escape($tgl_from) . " AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
-            )";
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from) . " AND doc.tgl_doc <= " . $this->db->escape($tgl_to);
         } elseif (!empty($tgl_from)) {
-            $where_clauses[] = "(
-                doc.tgl_doc >= " . $this->db->escape($tgl_from) . " OR
-                DATE(pa.created_on) >= " . $this->db->escape($tgl_from) . " OR
-                pa.tgl_bayar >= " . $this->db->escape($tgl_from) . "
-            )";
+            $where_clauses[] = "doc.tgl_doc >= " . $this->db->escape($tgl_from);
         } elseif (!empty($tgl_to)) {
-            $where_clauses[] = "(
-                (doc.tgl_doc IS NOT NULL AND doc.tgl_doc <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.created_on IS NOT NULL AND DATE(pa.created_on) <= " . $this->db->escape($tgl_to) . ") OR
-                (pa.tgl_bayar IS NOT NULL AND pa.tgl_bayar <= " . $this->db->escape($tgl_to) . ")
-            )";
+            $where_clauses[] = "doc.tgl_doc <= " . $this->db->escape($tgl_to);
         }
 
         if (!empty($tipe)) {
             $where_clauses[] = "doc.tipe = " . $this->db->escape($tipe);
         }
 
-        // Filter only Paid records
-        $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
+        if ($status === 'paid') {
+            $where_clauses[] = "(pa.tgl_bayar IS NOT NULL OR pa.status = 2 OR (pa.id_payment IS NOT NULL AND pa.id_payment <> ''))";
+        } elseif ($status === 'open') {
+            $where_clauses[] = "(pa.id IS NULL OR (pa.tgl_bayar IS NULL AND (pa.status IS NULL OR pa.status <> 2) AND (pa.id_payment IS NULL OR pa.id_payment = '')))";
+        }
 
         $base_where = implode(" AND ", $where_clauses);
 
@@ -1693,7 +1693,7 @@ class Request_payment_model extends BF_Model
         // Sorting mapping
         $sort_cols = [
             1 => 'doc.no_doc',
-            2 => 'pa.id',
+            2 => 'pa.id_payment',
             3 => 'doc.nama',
             4 => 'doc.tgl_doc',
             5 => 'doc.keperluan',
@@ -1785,13 +1785,16 @@ class Request_payment_model extends BF_Model
             }
 
             // Payment voucher number
-            $no_payment = !empty($row->pa_id) ? $row->pa_id : (!empty($row->pa_id_payment) ? $row->pa_id_payment : '-');
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
 
             // Status Badge
-            $status_badge = '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>';
+            $is_paid = (!empty($row->pa_tgl_bayar));
+            $status_badge = $is_paid 
+                ? '<span class="badge bg-green text-light" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Paid</span>' 
+                : '<span class="badge bg-blue" style="font-size: 11px; padding: 5px 8px; border-radius: 6px;">Open</span>';
 
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
-            $tgl_bayar_fmt = !empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : (!empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : '-');
+            $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
 
             $hasil[] = [
                 'no'               => $no,
@@ -1828,13 +1831,748 @@ class Request_payment_model extends BF_Model
     {
         $this->db->select('id, nm_company as nama');
         $this->db->from(DBCNL . '.kons_tr_company');
-        $this->db->where_in('id', ['7', '3', '4']);
+        $this->db->where_in('id', ['3', '4', '7']);
         $this->db->order_by('nama', 'asc');
         $query = $this->db->get();
         if (!$query) {
             return [];
         }
         return $query->result();
+    }
+
+    /* =====================================================================
+     * ALUR BARU: Request Payment - Approval - Record (FSD 2026-09)
+     * Tabel: tr_rp_pengajuan_h / tr_rp_pengajuan_d / tr_rp_record / tr_rp_reject_log
+     * ===================================================================== */
+
+    /**
+     * Map hris_companies.id -> kons_tr_company.id (sesuai logika index existing).
+     */
+    public static function company_map()
+    {
+        return ['COM003' => '7', 'COM006' => '3', 'COM012' => '4'];
+    }
+
+    /**
+     * Lookup nama company dari kons_tr_company (id 1/3/4/6/7) => nm_company.
+     */
+    public function get_company_names_lookup()
+    {
+        $names = [];
+        $q = $this->db->query("SELECT id, nm_company as nama FROM " . DBCNL . ".kons_tr_company WHERE id IN ('1','3','4','6','7') ORDER BY nm_company ASC");
+        if ($q) {
+            foreach ($q->result() as $c) {
+                $names[$c->id] = $c->nama;
+            }
+        }
+        return $names;
+    }
+
+    /**
+     * Derive company (kons_tr_company.nm_company) dari daftar no_dokumen v_request_payment.
+     * Menggunakan resolve_row_company() sehingga konsisten dengan tampilan index & aturan consultant.
+     *
+     * @param array $no_dokumen_list
+     * @return array assoc [no_dokumen => ['company_id' => kons id|null, 'company_nama' => string|null]]
+     */
+    public function derive_company_for_docs($no_dokumen_list)
+    {
+        $out = [];
+        if (empty($no_dokumen_list)) {
+            return $out;
+        }
+
+        $this->db->select('a.no_dokumen, a.kategori, a.request_by, b.department_id, d.id as hris_company_id');
+        $this->db->from('v_request_payment a');
+        $this->db->join('users b', 'b.username = a.request_by', 'left');
+        $this->db->join('departments c', 'c.id = b.department_id', 'left');
+        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+        $this->db->where_in('a.no_dokumen', $no_dokumen_list);
+        $rows = $this->db->get()->result();
+
+        foreach ($rows as $r) {
+            $comp = $this->resolve_row_company($r);
+            $out[$r->no_dokumen] = [
+                'company_id'   => $comp['company_id'],
+                'company_nama' => $comp['company_nama'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Hitung pajak & nilai dibayarkan (server-side, pembulatan ke atas / ceiling).
+     *  PPN   = ceil(DPP * 0.11)  ditambahkan (jika flag_ppn)
+     *  PPH23 = ceil(DPP * 0.02)  dipotong    (jika flag_pph23)
+     *  PPH21 = ceil(DPP * 0.025) dipotong    (jika flag_pph21)
+     *  PPH21 & PPH23 eksklusif (pph21 diprioritaskan bila somehow keduanya true).
+     *  Admin  = nominal {0,2500,6500} dipotong.
+     *  Dibayarkan = (DPP + PPN) - PPH - Admin.
+     *
+     * @return array ['nilai_ppn','nilai_pph','admin','dibayarkan']
+     */
+    public function calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin)
+    {
+        $dpp   = (float) $dpp;
+        $admin = (int) $admin;
+        // whitelist admin fee
+        if (!in_array($admin, [0, 2500, 6500], true)) {
+            $admin = 0;
+        }
+
+        $nilai_ppn = $flag_ppn ? (float) ceil($dpp * 0.11) : 0.0;
+
+        $nilai_pph = 0.0;
+        if ($flag_pph21) {
+            $nilai_pph = (float) ceil($dpp * 0.025);
+        } elseif ($flag_pph23) {
+            $nilai_pph = (float) ceil($dpp * 0.02);
+        }
+
+        $dibayarkan = ($dpp + $nilai_ppn) - $nilai_pph - $admin;
+
+        return [
+            'nilai_ppn'  => $nilai_ppn,
+            'nilai_pph'  => $nilai_pph,
+            'admin'      => $admin,
+            'dibayarkan' => $dibayarkan,
+        ];
+    }
+
+    /**
+     * Daftar no_dokumen yang sedang "terkunci" oleh batch:
+     * - batch pending (semua itemnya), ATAU
+     * - batch done tapi item-nya di-approve (sudah masuk Record).
+     * Dokumen yang di-reject (batch done, decision rejected) TIDAK terkunci -> muncul lagi.
+     *
+     * @return array daftar no_dokumen (string)
+     */
+    public function get_locked_docs()
+    {
+        $sql = "SELECT DISTINCT d.no_dokumen
+                FROM tr_rp_pengajuan_d d
+                JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan
+                WHERE h.deleted = 0
+                  AND (h.status = 'pending' OR (h.status = 'done' AND d.decision = 'approved'))";
+        $rows = $this->db->query($sql)->result();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = $r->no_dokumen;
+        }
+        return $out;
+    }
+
+    /**
+     * Peta grup kategori: label yang dipakai di filter/card -> daftar nilai
+     * mentah a.kategori pada v_request_payment yang termasuk grup itu.
+     * (Transport menampung Transport & Transportasi; Petty Cash menampung
+     *  semua varian petty cash.)
+     */
+    public static function kategori_group_map()
+    {
+        return [
+            'Cash'           => ['Cash'],
+            'Kasbon'         => ['Kasbon'],
+            'Expense'        => ['Expense'],
+            'Periodik'       => ['Periodik'],
+            'Transport'      => ['Transport', 'Transportasi'],
+            'Petty Cash'     => ['Petty Cash', 'Petty Cash Hutang', 'refill_pettycash', 'Refill Pettycash'],
+            'Direct Payment' => ['Direct Payment'],
+        ];
+    }
+
+    /**
+     * Terapkan filter kategori (berdasarkan label grup) ke query builder aktif.
+     * Nilai kosong / 'Semua' => tidak memfilter.
+     */
+    private function _apply_kategori_filter($label)
+    {
+        $label = trim((string) $label);
+        if ($label === '' || strtolower($label) === 'semua') {
+            return;
+        }
+        $map = self::kategori_group_map();
+        if (isset($map[$label])) {
+            $this->db->where_in('a.kategori', $map[$label]);
+        } else {
+            // label tak dikenal: filter apa adanya agar tidak bocor semua data
+            $this->db->where('a.kategori', $label);
+        }
+    }
+
+    /**
+     * Resolve company (id kons + nama) untuk satu baris v_request_payment,
+     * mengikuti 3 jalur: HRIS langsung -> consultant (DBCNL) -> HRIS dept.
+     * Baris HARUS punya properti: hris_company_id, department_id, no_dokumen, kategori.
+     *
+     * @return array ['company_id' => string|null, 'company_nama' => string]
+     */
+    public function resolve_row_company($r)
+    {
+        $company_map   = self::company_map();
+        $company_names = $this->get_company_names_lookup();
+
+        $company_id_kons = null;
+        $company_nama    = '';
+
+        // Jalur 1: dokumen consultant (Kasbon, Expense, Direct Payment) -> resolve via DBCNL
+        // Prioritas: kons_tr_penawaran.company -> fallback kons_tr_spk_penawaran.id_company
+        $kons = $this->resolve_consultant_company($r);
+        if (!empty($kons['company_nama'])) {
+            return $kons;
+        }
+
+        // Jalur 2: dokumen Petty Cash (PHP / RPC)
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        if ($kategori == 'Petty Cash Hutang' || $kategori == 'Petty Cash' || strpos($no_dok, 'RPC-') === 0 || strpos($no_dok, 'PHP-') === 0) {
+            $get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_dok])->row();
+            if (!empty($get_petty_cash) && !empty($get_petty_cash->company)) {
+                $company_nama = $get_petty_cash->company;
+            } elseif (strpos($no_dok, 'RPC-') === 0 || $kategori == 'Petty Cash') {
+                $get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_dok])->row();
+                if (!empty($get_rpc) && !empty($get_rpc->company)) {
+                    $company_nama = $get_rpc->company;
+                } else {
+                    $company_nama = 'STM';
+                }
+            }
+            if (!empty($company_nama)) {
+                $comp_id = array_search($company_nama, $company_names);
+                $company_id_kons = ($comp_id !== false) ? (string) $comp_id : null;
+                return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
+            }
+        }
+
+        // Jalur 3: HRIS langsung (v_request_payment -> users -> departments -> hris_companies)
+        $hris_company_id = !empty($r->hris_company_id) ? $r->hris_company_id : (!empty($r->id_company) ? $r->id_company : null);
+        if (!empty($hris_company_id) && isset($company_map[$hris_company_id])) {
+            $mapped = $company_map[$hris_company_id];
+            $company_id_kons = $mapped;
+            if (isset($company_names[$mapped])) {
+                $company_nama = $company_names[$mapped];
+            }
+            return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
+        }
+
+        // Jalur 4: department belum tersalin ke db utama -> resolve langsung dari hr_sentral.departments
+        $dept_id = !empty($r->department_id) ? $r->department_id : null;
+        if (empty($dept_id) && !empty($r->request_by)) {
+            $u = $this->db->select('department_id')->get_where('users', ['username' => $r->request_by])->row();
+            if (!empty($u)) {
+                $dept_id = $u->department_id;
+            }
+        }
+        if (!empty($dept_id)) {
+            $hd = $this->resolve_company_via_hris_dept($dept_id);
+            if (!empty($hd['company_nama'])) {
+                return $hd;
+            }
+        }
+
+        return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
+    }
+
+    /**
+     * Ambil SEMUA baris dokumen "belum diajukan" (status=1, tidak terkunci)
+     * setelah filter periode + kategori + search di SQL, LALU resolve company
+     * per baris (3 jalur) dan filter company di PHP.
+     *
+     * Company TIDAK difilter di SQL karena company bisa berasal dari fallback
+     * (consultant / HRIS dept) yang tidak terlihat di join hris_companies.d.id --
+     * inilah penyebab user (mis. Sustain) tidak muncul saat filter company.
+     *
+     * @param array $post payload (company_id, date_from, date_to, kategori, search)
+     * @return array daftar assoc row siap pakai (sudah ada company_id/company_nama/dpp)
+     */
+    /**
+     * Tentukan "Tanggal Disetujui" (approval terakhir/Management) untuk satu dokumen,
+     * sesuai aturan per tipe:
+     *  - Kasbon: consultant (no_kasbon_consultant terisi) -> created_on; selain itu approved_on (Management).
+     *  - Expense: consultant (no_expense_consultant terisi) -> created_on; selain itu approved_on (Management).
+     *  - Transport: tr_transport_req.management_on (approval Management).
+     *  - Periodik: tr_pengajuan_rutin.approved_date.
+     *  - Direct Payment: bila ada di tr_direct_payment -> created_date;
+     *                    bila TIDAK ada -> lewat tr_pr_non_po -> rutin_non_planning_header.app_3_date
+     *                    (fallback app_2_date/app_1_date).
+     *  - Cash: lewat tr_pr_non_po -> rutin_non_planning_header.app_3_date (fallback app_2/app_1).
+     *
+     * @param string $no_dokumen
+     * @param string $kategori
+     * @return string tanggal (Y-m-d H:i:s) atau '' bila belum ada
+     */
+    public function resolve_tgl_disetujui($no_dokumen, $kategori)
+    {
+        $kategori = trim((string) $kategori);
+        $no = (string) $no_dokumen;
+
+        switch ($kategori) {
+            case 'Kasbon':
+                $row = $this->db->select('created_on, approved_on, no_kasbon_consultant')
+                    ->get_where('tr_kasbon', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->no_kasbon_consultant)) {
+                    return (string) $row->created_on; // consultant: tanggal dibuat
+                }
+                return (string) $row->approved_on;     // Management
+
+            case 'Expense':
+                $row = $this->db->select('created_on, approved_on, no_expense_consultant')
+                    ->get_where('tr_expense', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->no_expense_consultant)) {
+                    return (string) $row->created_on; // consultant: tanggal dibuat
+                }
+                return (string) $row->approved_on;     // Management
+
+            case 'Transport':
+            case 'Transportasi':
+                // Approval terakhir Transport tersimpan di approved_on (management_on tidak dipakai/selalu kosong).
+                $row = $this->db->select('approved_on, management_on')
+                    ->get_where('tr_transport_req', ['no_doc' => $no])->row();
+                if (!$row) return '';
+                if (!empty($row->management_on)) return (string) $row->management_on;
+                return (string) $row->approved_on;
+
+            case 'Periodik':
+                $row = $this->db->select('approved_date')
+                    ->get_where('tr_pengajuan_rutin', ['no_doc' => $no])->row();
+                return $row ? (string) $row->approved_date : '';
+
+            case 'Direct Payment':
+                $dp = $this->db->select('created_date')
+                    ->get_where('tr_direct_payment', ['no_doc' => $no])->row();
+                if ($dp && !empty($dp->created_date)) {
+                    return (string) $dp->created_date; // ada di tr_direct_payment: tanggal dibuat
+                }
+                // tidak ada -> lewat tr_pr_non_po -> PR approval terakhir
+                return $this->_tgl_pr_approval_from_non_po($no);
+
+            case 'Cash':
+                return $this->_tgl_pr_approval_from_non_po($no);
+        }
+
+        // Petty Cash / lainnya: tidak ada tanggal disetujui yang terdefinisi
+        return '';
+    }
+
+    /**
+     * Ambil tanggal approval PR terakhir untuk dokumen yang bersumber dari tr_pr_non_po.
+     * Rantai: tr_pr_non_po.no_pr -> rutin_non_planning_header.no_pr -> app_3_date
+     * (fallback app_2_date, lalu app_1_date bila level atas belum terisi).
+     */
+    private function _tgl_pr_approval_from_non_po($no_dokumen)
+    {
+        $npo = $this->db->select('no_pr')
+            ->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen])->row();
+        if (!$npo || empty($npo->no_pr)) {
+            return '';
+        }
+        $pr = $this->db->select('app_1_date, app_2_date, app_3_date')
+            ->get_where('rutin_non_planning_header', ['no_pr' => $npo->no_pr])->row();
+        if (!$pr) {
+            return '';
+        }
+        if (!empty($pr->app_3_date)) return (string) $pr->app_3_date;
+        if (!empty($pr->app_2_date)) return (string) $pr->app_2_date;
+        if (!empty($pr->app_1_date)) return (string) $pr->app_1_date;
+        return '';
+    }
+
+    public function fetch_request_rows($post)
+    {
+        $search = '';
+        if (isset($post['search'])) {
+            $search = is_array($post['search']) ? (isset($post['search']['value']) ? trim($post['search']['value']) : '') : trim($post['search']);
+        }
+        $company_f  = isset($post['company_id']) ? trim($post['company_id']) : '';
+        $date_from  = isset($post['date_from']) ? trim($post['date_from']) : '';
+        $date_to    = isset($post['date_to']) ? trim($post['date_to']) : '';
+        $kategori_f = isset($post['kategori']) ? trim($post['kategori']) : '';
+
+        $locked = $this->get_locked_docs();
+
+        $this->db->select('a.id, a.no_dokumen, a.request_by, a.tanggal, a.keperluan, a.kategori, a.nilai_pengajuan, d.id as hris_company_id, b.department_id');
+        $this->db->from('v_request_payment a');
+        $this->db->join('users b', 'b.username = a.request_by', 'left');
+        $this->db->join('departments c', 'c.id = b.department_id', 'left');
+        $this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
+        $this->db->where('a.status', '1');
+        if (!empty($locked)) {
+            $this->db->where_not_in('a.no_dokumen', $locked);
+        }
+        if ($date_from !== '') {
+            $this->db->where('DATE(a.tanggal) >=', $date_from);
+        }
+        if ($date_to !== '') {
+            $this->db->where('DATE(a.tanggal) <=', $date_to);
+        }
+        $this->_apply_kategori_filter($kategori_f);
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('a.no_dokumen', $search, 'both');
+            $this->db->or_like('a.request_by', $search, 'both');
+            $this->db->or_like('a.keperluan', $search, 'both');
+            $this->db->or_like('a.kategori', $search, 'both');
+            $this->db->group_end();
+        }
+        $this->db->order_by('a.tanggal', 'desc');
+        $rows = $this->db->get()->result();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $comp = $this->resolve_row_company($r);
+            // Filter company di PHP (menangkap semua jalur resolusi)
+            if ($company_f !== '' && (string) $comp['company_id'] !== (string) $company_f) {
+                continue;
+            }
+            $out[] = [
+                'id'           => $r->id,
+                'no_dokumen'   => $r->no_dokumen,
+                'kategori'     => $r->kategori,
+                'request_by'   => $r->request_by,
+                'company_id'   => $comp['company_id'],
+                'company_nama' => $comp['company_nama'],
+                'tanggal_raw'  => $r->tanggal,
+                'tgl_disetujui' => $this->resolve_tgl_disetujui($r->no_dokumen, $r->kategori),
+                'keperluan'    => $r->keperluan,
+                'dpp'          => (float) $r->nilai_pengajuan,
+                '_r'           => $r, // untuk build_print_url
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Ringkasan kartu untuk modul Request Payment (alur baru).
+     * Menghormati filter yang sama dengan get_data_request_baru
+     * (company_id, date_from, date_to, kategori) DAN exclude dokumen terkunci.
+     * Semua nilai memakai DPP murni (a.nilai_pengajuan), pajak dihitung terpisah.
+     *
+     * Output (echo JSON):
+     *  total_pengajuan  : jumlah dokumen (count)
+     *  total_nilai      : SUM DPP semua dokumen (setelah filter)
+     *  per_tipe         : { Cash, Kasbon, Expense, Periodik, Transport, 'Petty Cash', 'Direct Payment' } => SUM DPP
+     */
+    public function get_summary_request()
+    {
+        $post = $this->input->post();
+        $rows = $this->fetch_request_rows($post);
+
+        // reverse lookup: nilai mentah kategori -> label grup card
+        $group_map = self::kategori_group_map();
+        $raw_to_label = [];
+        foreach ($group_map as $label => $raws) {
+            foreach ($raws as $raw) {
+                $raw_to_label[strtolower($raw)] = $label;
+            }
+        }
+
+        $per_tipe = [
+            'Cash'           => 0.0,
+            'Kasbon'         => 0.0,
+            'Expense'        => 0.0,
+            'Periodik'       => 0.0,
+            'Transport'      => 0.0,
+            'Petty Cash'     => 0.0,
+            'Direct Payment' => 0.0,
+        ];
+
+        $total_pengajuan = 0;
+        $total_nilai     = 0.0;
+
+        foreach ($rows as $r) {
+            $dpp = (float) $r['dpp'];
+            $total_pengajuan++;
+            $total_nilai += $dpp;
+
+            $key = strtolower(trim((string) $r['kategori']));
+            if (isset($raw_to_label[$key])) {
+                $per_tipe[$raw_to_label[$key]] += $dpp;
+            }
+            // kategori di luar grup tetap masuk total_nilai, tapi tidak dipetakan ke card manapun.
+        }
+
+        echo json_encode([
+            'total_pengajuan' => $total_pengajuan,
+            'total_nilai'     => $total_nilai,
+            'per_tipe'        => $per_tipe,
+        ]);
+    }
+
+    /**
+     * Server-side DataTables: dokumen status "belum" untuk modul Request Payment baru.
+     * Sumber: v_request_payment status=1, exclude yang sedang terkunci di batch.
+     * Menyertakan derivasi company + reject note terakhir.
+     */
+    public function get_data_request_baru()
+    {
+        $post   = $this->input->post();
+        $draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+        $length = isset($post['length']) ? intval($post['length']) : 25;
+        $start  = isset($post['start']) ? intval($post['start']) : 0;
+
+        // Ambil seluruh baris tersaring (company difilter di PHP -> menangkap semua jalur).
+        // recordsTotal & recordsFiltered dari hasil ini agar paging konsisten.
+        $all = $this->fetch_request_rows($post);
+        $total = count($all);
+
+        // Paginasi di PHP
+        if ($length < 0) {
+            $page = $all; // DataTables kirim -1 untuk "semua"
+        } else {
+            $page = array_slice($all, $start, $length);
+        }
+
+        // reject note terakhir per dokumen (dari batch)
+        $reject_last = $this->get_last_reject_map();
+
+        $data = [];
+        foreach ($page as $row) {
+            $data[] = [
+                'id'            => $row['id'],
+                'no_dokumen'    => $row['no_dokumen'],
+                'kategori'      => $row['kategori'],
+                'request_by'    => $row['request_by'],
+                'company_id'    => $row['company_id'],
+                'company_nama'  => $row['company_nama'],
+                'tanggal'       => !empty($row['tanggal_raw']) ? date('d-M-Y', strtotime($row['tanggal_raw'])) : '',
+                'tanggal_disetujui' => (!empty($row['tgl_disetujui']) && strtotime($row['tgl_disetujui'])) ? date('d-M-Y', strtotime($row['tgl_disetujui'])) : '',
+                'keperluan'     => $row['keperluan'],
+                'dpp'           => (float) $row['dpp'],
+                'reject_reason' => isset($reject_last[$row['no_dokumen']]) ? $reject_last[$row['no_dokumen']] : '',
+                'print_url'     => $this->build_print_url($row['_r']),
+            ];
+        }
+
+        echo json_encode([
+            'draw'            => $draw,
+            'recordsTotal'    => $total,
+            'recordsFiltered' => $total,
+            'data'            => $data,
+        ]);
+    }
+
+    /**
+     * Tentukan URL print dokumen sumber per baris, sesuai tipe/kategori.
+     * Mengikuti pola tombol print pada list lama (get_data_periodik dsb).
+     * Return string URL absolut, atau '' bila tipe tidak punya print.
+     */
+    public function build_print_url($r)
+    {
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        $id       = isset($r->id) ? $r->id : '';
+
+        // Periodik
+        if ($kategori == 'Periodik') {
+            return base_url('expense/periodik_print/' . $id);
+        }
+        // Kasbon: konsultan pakai print_kasbon by no_kasbon_consultant, selain itu kasbon_print by id
+        if ($kategori == 'Kasbon') {
+            $get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
+            if (!empty($get_kasbon) && !empty($get_kasbon->no_kasbon_consultant)) {
+                return base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant));
+            }
+            return base_url('expense/kasbon_print/' . $id);
+        }
+        // Transport / Transportasi
+        if ($kategori == 'Transport' || $kategori == 'Transportasi') {
+            return base_url('expense/transport_req_print/' . $id);
+        }
+        // Expense
+        if ($kategori == 'Expense') {
+            return base_url('expense/expense_print/' . $id);
+        }
+        // Direct Payment
+        if ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0) {
+            return base_url('request_payment/print_direct_payment/' . $id);
+        }
+        // Cash (PR non-PO departemen/asset)
+        if ($kategori == 'Cash') {
+            return base_url('request_payment/print_cash/' . $no_dok);
+        }
+        return '';
+    }
+
+    /**
+     * Resolve company untuk dokumen consultant lewat DBCNL, dipakai sebagai fallback
+     * saat company dari rantai HRIS kosong.
+     *
+     * Rantai (terverifikasi di DB dev):
+     *   Kasbon        : tr_kasbon.no_kasbon_consultant
+     *                   -> kons_tr_kasbon_project_header.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   Expense       : tr_expense.no_expense_consultant
+     *                   -> kons_tr_expense_report_project_header.id_header
+     *                   -> kons_tr_kasbon_project_header.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   Direct Payment: tr_direct_payment.id_penawaran
+     *                   -> kons_tr_penawaran.company
+     *   company (id 1..7) -> kons_tr_company.nm_company
+     *
+     * @param object $r baris v_request_payment (punya no_dokumen, kategori)
+     * @return array ['company_id' => string|null, 'company_nama' => string]
+     */
+    public function resolve_consultant_company($r)
+    {
+        $empty    = ['company_id' => null, 'company_nama' => ''];
+        $kategori = isset($r->kategori) ? $r->kategori : '';
+        $no_dok   = isset($r->no_dokumen) ? $r->no_dokumen : '';
+        if ($no_dok === '') {
+            return $empty;
+        }
+
+        $id_penawaran     = null;
+        $id_spk_penawaran = null;
+
+        if ($kategori == 'Kasbon' || strpos($no_dok, 'KS-') === 0) {
+            $kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
+            if (empty($kasbon) || empty($kasbon->no_kasbon_consultant)) {
+                return $empty;
+            }
+            $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $kasbon->no_kasbon_consultant])->row();
+            if (!empty($head)) {
+                $id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+                $id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
+            }
+        } elseif ($kategori == 'Expense' || strpos($no_dok, 'EXP-') === 0 || strpos($no_dok, 'ER-') === 0) {
+            $expense = $this->db->get_where('tr_expense', ['no_doc' => $no_dok])->row();
+            if (empty($expense) || empty($expense->no_expense_consultant)) {
+                return $empty;
+            }
+            $exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $expense->no_expense_consultant])->row();
+            if (!empty($exp_head) && !empty($exp_head->id_header)) {
+                $head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row();
+                if (!empty($head)) {
+                    $id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
+                    $id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
+                }
+            }
+        } elseif ($kategori == 'Direct Payment' || strpos($no_dok, 'DPM') === 0 || strpos($no_dok, 'DP-') === 0) {
+            $dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $no_dok])->row();
+            if (empty($dp)) {
+                return $empty;
+            }
+            $id_penawaran     = !empty($dp->id_penawaran) ? $dp->id_penawaran : null;
+            $id_spk_penawaran = !empty($dp->id_spk_penawaran) ? $dp->id_spk_penawaran : null;
+        } else {
+            return $empty;
+        }
+
+        $company_id = null;
+
+        // Langkah 1: Cek di kons_tr_penawaran.company
+        if (!empty($id_penawaran)) {
+            $pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
+            if (!empty($pen) && $pen->company !== null && $pen->company !== '') {
+                $company_id = $pen->company;
+            }
+        }
+
+        // Langkah 2 (Fallback): Cek di kons_tr_spk_penawaran.id_company
+        if (empty($company_id) && !empty($id_spk_penawaran)) {
+            $spk = $this->consultant->select('id_company')->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+            if (!empty($spk) && $spk->id_company !== null && $spk->id_company !== '') {
+                $company_id = $spk->id_company;
+            }
+        }
+
+        if (empty($company_id)) {
+            return $empty;
+        }
+
+        // Normalisasi entitas khusus 3 jenis data project consultant:
+        // 1 (STM-Vuca) -> 4 (Vuca)
+        // 6 (STM-Sustain) -> 3 (Sustain)
+        $norm_map = [
+            '1' => ['id' => '4', 'nama' => 'Vuca'],
+            '4' => ['id' => '4', 'nama' => 'Vuca'],
+            '6' => ['id' => '3', 'nama' => 'Sustain'],
+            '3' => ['id' => '3', 'nama' => 'Sustain'],
+            '7' => ['id' => '7', 'nama' => 'STM'],
+        ];
+
+        if (isset($norm_map[$company_id])) {
+            return [
+                'company_id'   => $norm_map[$company_id]['id'],
+                'company_nama' => $norm_map[$company_id]['nama']
+            ];
+        }
+
+        // company id -> nm_company fallback
+        $comp = $this->consultant->select('nm_company')->get_where('kons_tr_company', ['id' => $company_id])->row();
+        $nama = (!empty($comp) && !empty($comp->nm_company)) ? $comp->nm_company : '';
+
+        return ['company_id' => (string) $company_id, 'company_nama' => $nama];
+    }
+
+    /**
+     * Resolve company dari department_id lewat HRIS, dipakai sebagai fallback saat
+     * departemen user belum tersalin ke db_sendigs_ss.departments (salinan lokal
+     * bisa ketinggalan dari master di hr_sentral). HRIS = source of truth.
+     *
+     * Rantai: hr_sentral.departments.company_id (COM003/COM006/COM012)
+     *         -> company_map() -> kons id -> kons_tr_company.nm_company
+     *
+     * @param string $department_id
+     * @return array ['company_id' => string|null, 'company_nama' => string]
+     */
+    public function resolve_company_via_hris_dept($department_id)
+    {
+        $empty = ['company_id' => null, 'company_nama' => ''];
+        if (empty($department_id) || empty($this->hris)) {
+            return $empty;
+        }
+
+        $dept = $this->hris->select('company_id')->get_where('departments', ['id' => $department_id])->row();
+        if (empty($dept) || empty($dept->company_id)) {
+            return $empty;
+        }
+
+        $company_map   = self::company_map();
+        if (!isset($company_map[$dept->company_id])) {
+            return $empty;
+        }
+        $kons_id = $company_map[$dept->company_id];
+
+        $company_names = $this->get_company_names_lookup();
+        $nama = isset($company_names[$kons_id]) ? $company_names[$kons_id] : '';
+
+        return ['company_id' => $kons_id, 'company_nama' => $nama];
+    }
+
+    /**
+     * Map no_dokumen => alasan reject TERAKHIR (untuk ditampilkan di bawah keperluan).
+     */
+    public function get_last_reject_map()
+    {
+        $out = [];
+        $rows = $this->db->query("
+            SELECT t.no_dokumen, t.alasan
+            FROM tr_rp_reject_log t
+            JOIN (
+                SELECT no_dokumen, MAX(id) AS max_id
+                FROM tr_rp_reject_log
+                GROUP BY no_dokumen
+            ) m ON m.no_dokumen = t.no_dokumen AND m.max_id = t.id
+        ")->result();
+        foreach ($rows as $r) {
+            $out[$r->no_dokumen] = $r->alasan;
+        }
+        return $out;
+    }
+
+    /**
+     * Histori lengkap reject satu dokumen (audit trail), terbaru dulu.
+     */
+    public function get_reject_history($no_dokumen)
+    {
+        $this->db->select('approver, rejected_at, alasan, no_pengajuan');
+        $this->db->from('tr_rp_reject_log');
+        $this->db->where('no_dokumen', $no_dokumen);
+        $this->db->order_by('id', 'desc');
+        return $this->db->get()->result();
     }
 }
 
