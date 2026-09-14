@@ -13,6 +13,7 @@
                     <th class="text-center">No</th>
                     <th class="text-center">No. Dokumen</th>
                     <th class="text-center">Tgl</th>
+                    <th class="text-center">Company</th>
                     <th class="text-center">Keperluan</th>
                     <th class="text-center">Currency</th>
                     <th class="text-center">Total Invoice</th>
@@ -277,6 +278,9 @@
                 },
                 {
                     data: 'tgl'
+                },
+                {
+                    data: 'company'
                 },
                 {
                     data: 'keperluan'

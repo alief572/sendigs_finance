@@ -100,12 +100,44 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 							</td>
 						</tr>
 						<tr>
-							<th style="border: none; padding: 6px 4px; color: #495057;">Dokumen Bukti Bayar</th>
-							<td style="border: none; padding: 6px 0;">:</td>
+							<th style="border: none; padding: 6px 4px; color: #495057; vertical-align: top;">Dokumen Bukti Bayar</th>
+							<td style="border: none; padding: 6px 0; vertical-align: top;">:</td>
 							<td style="border: none; padding: 6px 4px;">
-								<?php if (!empty($header->link_doc) && file_exists('assets/expense/' . $header->link_doc)): ?>
-									<a href="<?= base_url('assets/expense/' . $header->link_doc) ?>" target="_blank" class="btn btn-xs btn-primary"><i class="fa fa-download"></i> Unduh Dokumen (<?= $header->link_doc ?>)</a>
-								<?php else: ?>
+								<?php
+								$bukti_files = [];
+								if (!empty($header->link_doc)) {
+									$decoded = json_decode($header->link_doc, true);
+									if (is_array($decoded)) {
+										$bukti_files = $decoded;
+									} else if (strpos($header->link_doc, ',') !== false) {
+										$bukti_files = explode(',', $header->link_doc);
+									} else {
+										$bukti_files = [$header->link_doc];
+									}
+								}
+								$found_files = 0;
+								?>
+								<?php if (!empty($bukti_files)): ?>
+									<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+										<?php foreach ($bukti_files as $f):
+											$f = trim($f);
+											if (empty($f)) continue;
+											$file_path = 'assets/expense/' . $f;
+											if (file_exists($file_path)):
+												$found_files++;
+												$ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
+												$is_img = in_array($ext, ['jpg', 'jpeg', 'png', 'gif']);
+												$icon = $is_img ? 'fa-file-image-o text-success' : ($ext === 'pdf' ? 'fa-file-pdf-o text-danger' : 'fa-file text-primary');
+										?>
+											<a href="<?= base_url($file_path) ?>" target="_blank" class="btn btn-default btn-xs" style="border-radius: 4px; border: 1px solid #d2d6de; padding: 5px 10px; font-size: 12px; background: #fafafa; display: inline-flex; align-items: center; gap: 6px;" title="Lihat / Unduh <?= htmlspecialchars($f) ?>">
+												<i class="fa <?= $icon ?>" style="font-size: 14px;"></i>
+												<span><?= htmlspecialchars($f) ?></span>
+												<i class="fa fa-external-link text-muted" style="font-size: 10px; margin-left: 4px;"></i>
+											</a>
+										<?php endif; endforeach; ?>
+									</div>
+								<?php endif; ?>
+								<?php if ($found_files === 0): ?>
 									<span class="text-muted"><i class="fa fa-minus"></i> Tidak ada file lampiran</span>
 								<?php endif; ?>
 							</td>
