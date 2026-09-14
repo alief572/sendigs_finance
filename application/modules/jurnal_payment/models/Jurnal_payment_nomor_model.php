@@ -180,30 +180,32 @@ class Jurnal_payment_nomor_model extends CI_Model
 
     function get_Nomor_Jurnal_Sales($Cabang = '', $Tgl_Inv = '', $comp = '')
     {
-        // $db2 = $this->load->database('accounting', TRUE);
-        $nocab            = 'A';
-        $bulan_Proses    = date('Y', strtotime($Tgl_Inv));
-        $Urut            = 1;
-        if ($id_company == '4') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
+        $nocab         = 'A';
+        $bulan_Proses  = date('Y', strtotime($Tgl_Inv));
+        $Urut          = 1;
+        if ($comp == '4') {
+            $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_VUCA . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        } else if ($comp == '1' || $comp == '6' || $comp == '7') {
+            $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_STM . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
+        } else {
+            $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_SUST . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
         }
-        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        } 
-        else {
-            $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
-        }
-        $Pros_Cab        = $this->db->query($Query_Cab);
-        $det_Cab        = $Pros_Cab->result_array();
+        $Pros_Cab      = $this->db->query($Query_Cab);
+        $det_Cab       = $Pros_Cab->result_array();
         if ($det_Cab) {
-            $nocab        = $det_Cab[0]['subcab'];
-            $Urut        = intval($det_Cab[0]['nomorJC']) + 1;
+            $nocab     = $det_Cab[0]['subcab'];
+            $Urut      = intval($det_Cab[0]['nomorJC']) + 1;
         }
-        $Format            = $Cabang . '-' . $nocab . 'JV' . date('y', strtotime($Tgl_Inv));
+        $Format        = $Cabang . '-' . $nocab . 'JV' . date('y', strtotime($Tgl_Inv));
 
-        $Nomor_JS        = $Format . str_pad($Urut, 5, "0", STR_PAD_LEFT);
+        $Nomor_JS      = $Format . str_pad($Urut, 5, "0", STR_PAD_LEFT);
 
         return $Nomor_JS;
+    }
+
+    function get_Nomor_Jurnal_payment_Sales($Cabang = '', $Tgl_Inv = '', $comp = '')
+    {
+        return $this->get_Nomor_Jurnal_Sales($Cabang, $Tgl_Inv, $comp);
     }
 
 
