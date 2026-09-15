@@ -215,7 +215,11 @@ class Jurnal_payment_petty_cash_model extends BF_Model
      */
     public function get_detail_by_transaksi($no_transaksi, $jenis_transaksi = null)
     {
-        $this->db->select('a.id, a.tgl_jurnal, a.coa, COALESCE(c.nama, a.nm_coa) as nm_coa, a.keterangan, COALESCE(p.no_doc_gabung, a.no_transaksi) as no_transaksi, a.jenis_transaksi, a.id_company, a.nm_company, a.debit, a.kredit', FALSE);
+        // Use the nm_coa stored on the staging row — it was resolved against the
+        // correct company DB at creation time (e.g. SUSTAIN's "Hutang ke STM" for
+        // COA 2103-01-02). Only fall back to STM's coa_master when nm_coa is empty,
+        // so we never override a per-company name with the STM GL name.
+        $this->db->select('a.id, a.tgl_jurnal, a.coa, COALESCE(NULLIF(a.nm_coa, ""), c.nama, a.coa) as nm_coa, a.keterangan, COALESCE(p.no_doc_gabung, a.no_transaksi) as no_transaksi, a.jenis_transaksi, a.id_company, a.nm_company, a.debit, a.kredit', FALSE);
         $this->db->from('tr_jurnal a');
         $this->db->join('(SELECT no_perkiraan, MAX(nama) as nama FROM ' . DBACC . '.coa_master GROUP BY no_perkiraan) c', 'c.no_perkiraan = a.coa', 'left');
         $this->db->join('(
