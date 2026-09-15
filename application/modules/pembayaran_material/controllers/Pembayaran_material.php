@@ -1314,9 +1314,51 @@ class Pembayaran_material extends Admin_Controller
 			$arr_choosed_payment[] = $item->id_payment;
 		}
 
+		$has_admin_fee = false;
+		if (!empty($arr_choosed_payment)) {
+			// Cek apakah ada biaya admin > 0 di payment_approve
+			$check_admin = $this->db->select('id')
+				->from('payment_approve')
+				->where_in('id', $arr_choosed_payment)
+				->where('admin_bank >', 0)
+				->get()
+				->num_rows();
+
+			if ($check_admin > 0) {
+				$has_admin_fee = true;
+			} else {
+				// Fallback cek ke tr_rp_pengajuan_d via no_doc jika di payment_approve admin_bank belum tersinkron
+				$docs = $this->db->select('no_doc')
+					->from('payment_approve')
+					->where_in('id', $arr_choosed_payment)
+					->get()
+					->result();
+				if (!empty($docs)) {
+					$doc_numbers = [];
+					foreach ($docs as $d) {
+						if (!empty($d->no_doc)) {
+							$doc_numbers[] = $d->no_doc;
+						}
+					}
+					if (!empty($doc_numbers)) {
+						$check_rp_admin = $this->db->select('id')
+							->from('tr_rp_pengajuan_d')
+							->where_in('no_dokumen', $doc_numbers)
+							->where('admin >', 0)
+							->get()
+							->num_rows();
+						if ($check_rp_admin > 0) {
+							$has_admin_fee = true;
+						}
+					}
+				}
+			}
+		}
+
 		echo json_encode([
 			'count_choosed_payment' => count($get_choosed_payment),
-			'arr_choosed_payment' => implode(';', $arr_choosed_payment)
+			'arr_choosed_payment' => implode(';', $arr_choosed_payment),
+			'has_admin_fee' => $has_admin_fee
 		]);
 	}
 
