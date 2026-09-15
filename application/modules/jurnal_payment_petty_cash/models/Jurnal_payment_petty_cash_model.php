@@ -17,6 +17,12 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     protected $accounting_vuca;
     protected $accounting_sustain;
 
+    /**
+     * COA hutang ke STM yang statusnya belum final dikonfirmasi Finance.
+     * Selama masih di daftar ini, jurnal yang memuatnya tidak boleh diposting.
+     */
+    protected $unclear_coa = ['2103-01-01', '2103-01-02'];
+
     public function __construct()
     {
         parent::__construct();
@@ -24,6 +30,37 @@ class Jurnal_payment_petty_cash_model extends BF_Model
         $this->accounting_stm     = $this->load->database('accounting_stm', true);
         $this->accounting_vuca    = $this->load->database('accounting_vuca', true);
         $this->accounting_sustain = $this->load->database('accounting_sustain', true);
+    }
+
+    /**
+     * Return the list of unclear COA numbers.
+     *
+     * @return array
+     */
+    public function get_unclear_coa_list()
+    {
+        return $this->unclear_coa;
+    }
+
+    /**
+     * Check whether any row uses an unclear COA (blocks posting).
+     *
+     * @param array $rows Journal detail rows
+     * @return array List of distinct unclear COA found in rows (empty if none)
+     */
+    public function find_unclear_coa($rows)
+    {
+        $found = [];
+        if (empty($rows) || !is_array($rows)) {
+            return $found;
+        }
+        foreach ($rows as $row) {
+            $coa = is_object($row) ? (isset($row->coa) ? $row->coa : '') : (isset($row['coa']) ? $row['coa'] : '');
+            if (in_array($coa, $this->unclear_coa, true) && !in_array($coa, $found, true)) {
+                $found[] = $coa;
+            }
+        }
+        return $found;
     }
 
     /**

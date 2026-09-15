@@ -251,14 +251,23 @@ $ENABLE_ADD = $addPermission;
                 }
                 $('#dialog-popup').modal('show');
 
-                // Server-side balance check
-                if (result && result.is_balance === false) {
+                // Block posting jika ada COA yang belum clear dari Finance.
+                // Prioritas: unclear COA > balance. Jika unclear, tombol tetap disabled.
+                if (result && result.has_unclear_coa) {
+                    $('.save_btn_modal').prop('disabled', true);
+                } else if (result && result.is_balance === false) {
                     $('.save_btn_modal').prop('disabled', true);
                 } else {
                     $('.save_btn_modal').prop('disabled', false);
                 }
 
                 applyBalanceIndicator(result && result.is_balance !== false);
+
+                // applyBalanceIndicator may re-enable the button on balance=true;
+                // re-assert the unclear-COA block so it always wins.
+                if (result && result.has_unclear_coa) {
+                    $('.save_btn_modal').prop('disabled', true);
+                }
             },
             error: function() {
                 Swal.fire({

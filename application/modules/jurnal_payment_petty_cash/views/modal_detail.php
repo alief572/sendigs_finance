@@ -17,6 +17,15 @@
 <?php if (empty($rows)): ?>
     <p class="text-center text-muted">Tidak ada data jurnal</p>
 <?php else: ?>
+    <?php $unclear_coa = isset($unclear_coa) ? $unclear_coa : []; ?>
+    <?php if (!empty($unclear_coa)): ?>
+        <div class="alert alert-warning" style="margin-bottom: 12px;">
+            <i class="fa fa-exclamation-triangle"></i>
+            <strong>Perhatian:</strong> Jurnal ini mengandung COA <strong><?= htmlspecialchars(implode(' / ', $unclear_coa)) ?></strong> (Hutang ke STM)
+            yang statusnya masih belum final dikonfirmasi oleh Finance.
+            Posting dinonaktifkan sementara hingga COA tersebut clear.
+        </div>
+    <?php endif; ?>
     <input type="hidden" name="no_transaksi" value="<?= $no_transaksi ?>">
     <input type="hidden" name="jenis_transaksi" value="<?= isset($jenis_transaksi) ? $jenis_transaksi : 'Petty Cash' ?>">
 
