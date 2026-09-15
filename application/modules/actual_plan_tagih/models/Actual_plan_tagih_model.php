@@ -171,7 +171,12 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->where('YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $tahun);
             $this->db->where('MONTH(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) =', $bulan);
 
-            if (!empty($status)) {
+            if ($status === 'waiting') {
+                $this->db->group_start();
+                $this->db->where_not_in('a.status_terakhir', ['1', '2', '3']);
+                $this->db->or_where('a.status_terakhir IS NULL');
+                $this->db->group_end();
+            } elseif (!empty($status)) {
                 $this->db->where('a.status_terakhir', $status);
             } else {
                 $this->db->where('a.status_terakhir <>', '3');
@@ -200,6 +205,8 @@ class Actual_plan_tagih_model extends BF_Model
         switch ($status_terakhir) {
             case '1':
                 return '<button type="button" class="btn btn-sm btn-success">Tagih</button>';
+            case '2':
+                return '<button type="button" class="btn btn-sm btn-warning">Mundur</button>';
             case '3':
                 return '<button type="button" class="btn btn-sm btn-danger">Tagihan Macet</button>';
             default:
@@ -283,7 +290,12 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->group_end();
         }
 
-        if (!empty($status)) {
+        if ($status === 'waiting') {
+            $this->db->group_start();
+            $this->db->where_not_in('a.status_terakhir', ['1', '2', '3']);
+            $this->db->or_where('a.status_terakhir IS NULL');
+            $this->db->group_end();
+        } elseif (!empty($status)) {
             $this->db->where('a.status_terakhir', $status);
         }
 
