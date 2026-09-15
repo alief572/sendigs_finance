@@ -38,7 +38,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                     <option value="">Pilih Status</option>
                     <option value="1">Tagih</option>
                     <option value="2">Mundur</option>
-                    <option value="3">Waiting Actual Plan Tagih</option>
+                    <option value="waiting">Waiting Actual Plan Tagih</option>
                 </select>
             </div>
         </div>
