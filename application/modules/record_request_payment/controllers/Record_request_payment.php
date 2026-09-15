@@ -31,6 +31,11 @@ class Record_request_payment extends Admin_Controller
 		$this->Record_request_payment_model->get_data_record();
 	}
 
+	public function get_data_record_legacy()
+	{
+		$this->Record_request_payment_model->get_data_record_legacy();
+	}
+
 	public function detail($id_pengajuan = null)
 	{
 		$this->auth->restrict($this->viewPermission);
