@@ -5,7 +5,8 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap.min.css">
 
 <style>
-	#table_record thead th {
+	#table_record thead th,
+	#table_record_legacy thead th {
 		background-color: #3c8dbc;
 		color: #fff;
 		font-size: 12px;
@@ -14,7 +15,8 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		white-space: nowrap;
 	}
 
-	#table_record tbody td {
+	#table_record tbody td,
+	#table_record_legacy tbody td {
 		font-size: 12.5px;
 		vertical-align: middle;
 	}
@@ -26,6 +28,7 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		font-weight: 700;
 		padding: 4px 10px;
 		border-radius: 10px;
+		display: inline-block;
 	}
 
 	.rec-toolbar {
@@ -42,7 +45,7 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		font-size: 13px;
 		border: 1px solid #ccc;
 		border-radius: 3px;
-		width: 280px;
+		width: 320px;
 	}
 
 	.mini-btn {
@@ -54,6 +57,8 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		font-weight: 600;
 		cursor: pointer;
 		text-decoration: none;
+		display: inline-block;
+		margin: 2px;
 	}
 
 	.mini-btn.view {
@@ -64,6 +69,16 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 	.mini-btn.print {
 		color: #3A4656;
 		border-color: #C9D3DC;
+	}
+
+	.nav-tabs-custom {
+		box-shadow: none;
+		margin-bottom: 0;
+	}
+
+	.nav-tabs-custom > .nav-tabs > li.active > a {
+		border-top-color: #3c8dbc;
+		font-weight: 600;
 	}
 </style>
 
@@ -77,26 +92,73 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 	</div>
 	<div class="box-body">
 
-		<div class="rec-toolbar">
-			<div class="text-muted">Riwayat seluruh pengajuan yang sudah diputuskan (final).</div>
-			<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
-		</div>
+		<div class="nav-tabs-custom">
+			<ul class="nav nav-tabs" id="record_tabs">
+				<li class="active">
+					<a href="#tab_baru" data-toggle="tab">
+						<i class="fa fa-folder-open-o"></i> Pengajuan Baru (Batch)
+					</a>
+				</li>
+				<li>
+					<a href="#tab_lama" data-toggle="tab">
+						<i class="fa fa-history"></i> Histori Lama (Pre-Cutoff)
+					</a>
+				</li>
+			</ul>
 
-		<div style="overflow-x:auto;border:1px solid #ddd;">
-			<table id="table_record" class="table table-bordered table-striped" style="width:100%;">
-				<thead>
-					<tr>
-						<th>NO. PENGAJUAN</th>
-						<th>COMPANY</th>
-						<th>TANGGAL PENGAJUAN</th>
-						<th>TANGGAL DIPUTUSKAN</th>
-						<th style="width:150px;">TOTAL DIBAYARKAN</th>
-						<th style="width:140px;">STATUS</th>
-						<th style="width:120px;">ACTION</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
+			<div class="tab-content" style="padding: 15px 0 0 0;">
+				<!-- TAB 1: PENGAJUAN BARU -->
+				<div class="tab-pane active" id="tab_baru">
+					<div class="rec-toolbar">
+						<div class="text-muted">Riwayat seluruh batch pengajuan yang sudah diputuskan (final).</div>
+						<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
+					</div>
+
+					<div style="overflow-x:auto;border:1px solid #ddd;">
+						<table id="table_record" class="table table-bordered table-striped" style="width:100%;">
+							<thead>
+								<tr>
+									<th>NO. PENGAJUAN</th>
+									<th>COMPANY</th>
+									<th>TANGGAL PENGAJUAN</th>
+									<th>TANGGAL DIPUTUSKAN</th>
+									<th style="width:150px;">TOTAL DIBAYARKAN</th>
+									<th style="width:140px;">STATUS</th>
+									<th style="width:120px;">ACTION</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- TAB 2: HISTORI LAMA -->
+				<div class="tab-pane" id="tab_lama">
+					<div class="rec-toolbar">
+						<div class="text-muted">Data historis request payment yang telah diproses sebelum sistem batch baru aktif.</div>
+						<input type="text" id="rec_legacy_search" placeholder="Cari no. dokumen, pemohon, keperluan...">
+					</div>
+
+					<div style="overflow-x:auto;border:1px solid #ddd;">
+						<table id="table_record_legacy" class="table table-bordered table-striped" style="width:100%;">
+							<thead>
+								<tr>
+									<th>NO. DOKUMEN</th>
+									<th>KATEGORI</th>
+									<th>PEMOHON</th>
+									<th>KEPERLUAN</th>
+									<th style="width:110px;">TGL. DOKUMEN</th>
+									<th style="width:110px;">TGL. BAYAR</th>
+									<th style="width:130px;">JUMLAH (RP)</th>
+									<th style="width:150px;">STATUS</th>
+									<th style="width:110px;">ACTION</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
 		</div>
 
 	</div>
@@ -181,6 +243,81 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 
 		$('#rec_search').on('keyup', function() {
 			recTable.draw();
+		});
+
+		// Lazy initialize Tab Histori Lama
+		var legacyInitialized = false;
+		var legacyTable = null;
+
+		function initLegacyTable() {
+			if (legacyInitialized) return;
+			legacyInitialized = true;
+
+			legacyTable = $('#table_record_legacy').DataTable({
+				processing: true,
+				serverSide: true,
+				ajax: {
+					url: '<?= site_url("record_request_payment/get_data_record_legacy"); ?>',
+					type: 'POST',
+					data: function(d) {
+						d.search = {
+							value: $('#rec_legacy_search').val()
+						};
+					},
+					error: function() {
+						alert('Gagal memuat data histori lama.');
+					}
+				},
+				columns: [
+					{ data: 'no_doc' },
+					{ data: 'kategori' },
+					{ data: 'nama' },
+					{ data: 'keperluan' },
+					{ data: 'tgl_doc', className: 'text-center' },
+					{ data: 'tgl_bayar', className: 'text-center' },
+					{ data: 'jumlah', className: 'text-right' },
+					{ data: 'status', className: 'text-center', orderable: false },
+					{ data: 'aksi', className: 'text-center', orderable: false }
+				],
+				pageLength: 25,
+				lengthChange: false,
+				searching: false,
+				dom: 'rtip',
+				order: [],
+				language: {
+					processing: '<i class="fa fa-spinner fa-spin"></i> Memproses...',
+					emptyTable: 'Tidak ada data histori lama.',
+					zeroRecords: 'Tidak ada record yang cocok.',
+					info: 'Menampilkan _START_ - _END_ dari _TOTAL_ entri',
+					infoEmpty: 'Menampilkan 0 - 0 dari 0 entri',
+					paginate: {
+						first: 'Pertama',
+						last: 'Terakhir',
+						next: 'Selanjutnya',
+						previous: 'Sebelumnya'
+					}
+				}
+			});
+
+			$('#rec_legacy_search').on('keyup', function() {
+				legacyTable.draw();
+			});
+		}
+
+		// Adjust columns on tab switch
+		$('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+			var target = $(e.target).attr('href');
+			if (target === '#tab_lama') {
+				if (!legacyInitialized) {
+					initLegacyTable();
+				} else if (legacyTable) {
+					legacyTable.columns.adjust().draw(false);
+				}
+			} else if (target === '#tab_baru') {
+				if (recTable) {
+					recTable.columns.adjust().draw(false);
+				}
+			}
 		});
 	});
 </script>

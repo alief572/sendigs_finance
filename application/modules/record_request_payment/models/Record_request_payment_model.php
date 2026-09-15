@@ -94,4 +94,98 @@ class Record_request_payment_model extends BF_Model
 		$this->db->order_by('id', 'asc');
 		return $this->db->get()->result();
 	}
+
+	// Server-side DataTables: histori dokumen lama (pre-cutoff) dari payment_approve
+	public function get_data_record_legacy()
+	{
+		$post   = $this->input->post();
+		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
+		$length = isset($post['length']) ? intval($post['length']) : 25;
+		$start  = isset($post['start']) ? intval($post['start']) : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+
+		$build = function () {
+			$this->db->from('payment_approve pa');
+			$this->db->where('(pa.deleted IS NULL OR pa.deleted = 0)', null, false);
+			// Eksklusif legacy: dokumen yang TIDAK ADA di snapshot batch baru (tr_rp_record)
+			$this->db->where('NOT EXISTS (SELECT 1 FROM tr_rp_record r WHERE r.no_dokumen = pa.no_doc)', null, false);
+		};
+
+		$build();
+		$recordsTotal = $this->db->count_all_results('', false);
+
+		if ($search !== '') {
+			$this->db->group_start();
+			$this->db->like('pa.no_doc', $search, 'both');
+			$this->db->or_like('pa.nama', $search, 'both');
+			$this->db->or_like('pa.keperluan', $search, 'both');
+			$this->db->or_like('pa.tipe', $search, 'both');
+			$this->db->group_end();
+		}
+		$recordsFiltered = $this->db->count_all_results('', false);
+
+		$this->db->select('pa.id, pa.no_doc, pa.nama, pa.tgl_doc, pa.keperluan, pa.tipe, pa.jumlah, pa.status, pa.tanggal, pa.tgl_bayar, pa.ids, pa.doc_file, pa.doc_file_2, pa.link_doc');
+		$this->db->order_by('pa.tgl_doc', 'desc');
+		$this->db->order_by('pa.id', 'desc');
+		$this->db->limit($length, $start);
+		$rows = $this->db->get()->result();
+
+		$this->load->model('request_payment/Request_payment_model');
+
+		$data = [];
+		foreach ($rows as $r) {
+			$is_paid = (!empty($r->tgl_bayar) && $r->tgl_bayar != '0000-00-00') || $r->status == 2;
+			$status_badge = $is_paid
+				? '<span class="rec-status-done">Sudah Dibayar</span>'
+				: '<span class="label label-warning" style="padding: 4px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;">Menunggu Pembayaran</span>';
+
+			// Format kategori
+			$tipe_clean = ucwords(str_replace('_', ' ', strtolower($r->tipe)));
+			if (strtolower($r->tipe) == 'cash') {
+				$tipe_clean = 'Cash';
+			} elseif (strtolower($r->tipe) == 'direct_payment' || strtolower($r->tipe) == 'direct payment') {
+				$tipe_clean = 'Direct Payment';
+			} elseif (strtolower($r->tipe) == 'refill_pettycash') {
+				$tipe_clean = 'Refill Petty Cash';
+			}
+
+			// Buat print url
+			$dummy_record = (object)[
+				'kategori'   => $tipe_clean,
+				'no_dokumen' => $r->no_doc,
+				'id_dokumen' => $r->ids ? $r->ids : $r->no_doc,
+				'id'         => $r->ids ? $r->ids : $r->no_doc,
+				'ids'        => $r->ids,
+				'no_doc'     => $r->no_doc
+			];
+			$print_url = $this->Request_payment_model->build_print_url($dummy_record);
+
+			$btn_aksi = '';
+			if (!empty($print_url)) {
+				$btn_aksi .= '<a href="' . $print_url . '" target="_blank" class="mini-btn print" title="Print Dokumen"><i class="fa fa-print"></i> Print</a>';
+			}
+			if (!empty($r->doc_file)) {
+				$btn_aksi .= ' <a href="' . base_url('assets/expense/' . $r->doc_file) . '" target="_blank" class="mini-btn view" title="Lihat Lampiran"><i class="fa fa-file"></i> File</a>';
+			}
+
+			$data[] = [
+				'no_doc'        => $r->no_doc,
+				'kategori'      => $tipe_clean,
+				'nama'          => $r->nama ? $r->nama : '-',
+				'keperluan'     => $r->keperluan ? $r->keperluan : '-',
+				'tgl_doc'       => !empty($r->tgl_doc) && $r->tgl_doc != '0000-00-00' ? date('d-M-Y', strtotime($r->tgl_doc)) : '-',
+				'tgl_bayar'     => !empty($r->tgl_bayar) && $r->tgl_bayar != '0000-00-00' ? date('d-M-Y', strtotime($r->tgl_bayar)) : '-',
+				'jumlah'        => number_format((float)$r->jumlah, 0, ',', '.'),
+				'status'        => $status_badge,
+				'aksi'          => !empty($btn_aksi) ? $btn_aksi : '-',
+			];
+		}
+
+		echo json_encode([
+			'draw'            => $draw,
+			'recordsTotal'    => $recordsTotal,
+			'recordsFiltered' => $recordsFiltered,
+			'data'            => $data,
+		]);
+	}
 }
