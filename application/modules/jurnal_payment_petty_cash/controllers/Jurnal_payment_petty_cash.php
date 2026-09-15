@@ -193,9 +193,29 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
-        // === Petty Cash: selalu posting ke 1 DB sesuai company ===
+        // === Petty Cash ===
+        // Petty Cash bisa single-company (mis. STM saja) ATAU inter-company
+        // (mis. SUSTAIN/VUCA mengeluarkan kas kecil STM → ada sisi SUSTAIN + sisi STM).
+        // Tentukan dari jumlah company distinct pada baris, jangan berasumsi 1 DB.
         if ($jenis_transaksi === 'Petty Cash') {
-            $this->_post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            $companies = [];
+            foreach ($rows as $row) {
+                $c = !empty($row->nm_company) ? strtoupper($row->nm_company) : '';
+                if ($c !== '') {
+                    $companies[$c] = true;
+                }
+            }
+
+            $is_intercompany = (count($companies) > 1) && (isset($companies['VUCA']) || isset($companies['SUSTAIN']));
+
+            if ($is_intercompany) {
+                // Sisi "company" = non-STM (VUCA/SUSTAIN); sisi STM di-handle di dalam _post_intercompany
+                $company_side = isset($companies['SUSTAIN']) ? 'SUSTAIN' : 'VUCA';
+                $this->_post_intercompany($company_side, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            } else {
+                // Single company → posting ke 1 DB sesuai company
+                $this->_post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            }
             return;
         }
 
