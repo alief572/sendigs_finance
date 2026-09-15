@@ -68,6 +68,39 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 		color: #2B3440;
 	}
 
+	.rp-docnum-wrap {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 2px;
+	}
+
+	.rp-btn-print {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		background: #36a2b0;
+		color: #ffffff !important;
+		border-radius: 4px;
+		font-size: 11px;
+		text-decoration: none !important;
+		transition: background 0.15s ease-in-out;
+		flex-shrink: 0;
+	}
+
+	.rp-btn-print:hover {
+		background: #2a838f;
+		color: #ffffff !important;
+	}
+
+	.rp-btn-print.disabled {
+		background: #b0bec5;
+		cursor: default;
+		opacity: 0.5;
+	}
+
 	.rp-reject-note {
 		margin-top: 5px;
 		font-size: 11px;
@@ -440,7 +473,6 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 						<th style="width:60px;">PPH 21</th>
 						<th style="width:80px;">ADMIN</th>
 						<th style="width:110px;">DIBAYARKAN</th>
-						<th style="width:60px;">AKSI</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -681,8 +713,17 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 				{
 					data: 'no_dokumen',
 					render: function(data, type, row) {
-						return '<span class="rp-kategori-badge">' + (row.kategori || '-') + '</span><br>' +
-							'<span class="rp-docnum">' + row.no_dokumen + '</span>';
+						var printBtn = '';
+						if (row.print_url && row.print_url !== '') {
+							printBtn = '<a href="' + row.print_url + '" target="_blank" class="rp-btn-print" title="Cetak"><i class="fa fa-print"></i></a>';
+						} else {
+							printBtn = '<span class="rp-btn-print disabled" title="Tidak ada dokumen cetak"><i class="fa fa-print"></i></span>';
+						}
+						return '<span class="rp-kategori-badge">' + (row.kategori || '-') + '</span>' +
+							'<div class="rp-docnum-wrap">' +
+							printBtn +
+							'<span class="rp-docnum">' + row.no_dokumen + '</span>' +
+							'</div>';
 					}
 				},
 				{
@@ -775,18 +816,6 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 					className: 'rp-dibayar',
 					render: function(data, type, row) {
 						return '<span id="rp_dibayar_' + row.no_dokumen + '">' + rpFmt(row.dpp) + '</span>';
-					}
-				},
-				{
-					data: 'print_url',
-					orderable: false,
-					searchable: false,
-					className: 'text-center',
-					render: function(data, type, row) {
-						if (data && data !== '') {
-							return '<a href="' + data + '" target="_blank" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>';
-						}
-						return '<span class="text-muted" title="Tidak ada dokumen print untuk tipe ini">-</span>';
 					}
 				}
 			],

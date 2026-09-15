@@ -218,8 +218,14 @@
             var choosed_payment = data.count_choosed_payment;
 
             if (choosed_payment >= 1) {
-                // Store payment IDs and show modal instead of direct redirect
+                // Store payment IDs
                 arr_choosed_payment = data.arr_choosed_payment;
+
+                // Jika biaya admin sudah dipilih di request_payment, otomatis default ditanggung perusahaan
+                if (data.has_admin_fee) {
+                    window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=company';
+                    return;
+                }
 
                 // Reset modal state: clear select and hide validation message
                 $('#admin_charge_bearer').val('');
