@@ -28,106 +28,6 @@
     </div>
 </div>
 
-<style>
-    .modal-admin-charge .modal-content {
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-    .modal-admin-charge .modal-header {
-        border-bottom: 1px solid #eee;
-        background-color: #f8f9fa;
-        border-radius: 10px 10px 0 0;
-        padding: 15px 20px;
-    }
-    .modal-admin-charge .modal-header .close {
-        color: #333;
-        opacity: 0.7;
-    }
-    .modal-admin-charge .modal-title {
-        font-weight: 600;
-        color: #333;
-        margin: 0;
-    }
-    .modal-admin-charge .modal-title i {
-        margin-right: 8px;
-    }
-    .modal-admin-charge .modal-body {
-        padding: 20px;
-    }
-    .modal-admin-charge .validation-msg {
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 15px;
-        font-size: 13px;
-    }
-    .modal-admin-charge .form-group {
-        margin-bottom: 0;
-    }
-    .modal-admin-charge label {
-        font-weight: 500;
-        color: #555;
-        margin-bottom: 8px;
-    }
-    .modal-admin-charge select.form-control {
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        padding: 8px 12px;
-        height: auto;
-        font-size: 14px;
-        box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
-    }
-    .modal-admin-charge .modal-footer {
-        border-top: 1px solid #eee;
-        padding: 15px 20px;
-        background-color: #fcfcfc;
-        border-radius: 0 0 10px 10px;
-    }
-    .modal-admin-charge .btn {
-        border-radius: 6px;
-        padding: 6px 16px;
-        font-weight: 500;
-    }
-    .modal-admin-charge .btn-primary {
-        background-color: #007bff;
-        border-color: #007bff;
-    }
-</style>
-
-<!-- Modal Admin Charge -->
-<div class="modal fade modal-admin-charge" id="modalAdminCharge" tabindex="-1" role="dialog" aria-labelledby="modalAdminChargeLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-md" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <h4 class="modal-title" id="modalAdminChargeLabel">
-                    <i class="fa fa-info-circle text-primary"></i> Pilih Penanggung Admin Charge
-                </h4>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-danger validation-msg" style="display:none;">
-                    <i class="fa fa-exclamation-triangle"></i> Silakan pilih salah satu opsi penanggung admin charge.
-                </div>
-                <div class="form-group">
-                    <label for="admin_charge_bearer">Penanggung Admin Charge</label>
-                    <select name="admin_charge_bearer" id="admin_charge_bearer" class="form-control">
-                        <option value="">- Pilih Penanggung -</option>
-                        <option value="company">Admin charge ditanggung perusahaan</option>
-                        <option value="recipient">Admin charge ditanggung penerima</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary btn-confirm-bearer">
-                    <i class="fa fa-check"></i> Konfirmasi
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 
 <!-- page script -->
@@ -221,17 +121,10 @@
                 // Store payment IDs
                 arr_choosed_payment = data.arr_choosed_payment;
 
-                // Jika biaya admin sudah dipilih di request_payment, otomatis default ditanggung perusahaan
-                if (data.has_admin_fee) {
-                    window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=company';
-                    return;
-                }
-
-                // Reset modal state: clear select and hide validation message
-                $('#admin_charge_bearer').val('');
-                $('.validation-msg').hide();
-
-                $('#modalAdminCharge').modal('show');
+                // Jika admin dipilih di request_payment (ada biaya admin) -> ditanggung penerima (recipient),
+                // jika tidak dipilih -> ditanggung perusahaan (company).
+                var bearer = data.has_admin_fee ? 'recipient' : 'company';
+                window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=' + bearer;
             } else {
                 swal({
                     title: 'Warning !',
@@ -246,19 +139,6 @@
                 type: 'error'
             });
         });
-    });
-
-    // Confirm bearer selection and redirect
-    $(document).on('click', '.btn-confirm-bearer', function() {
-        var selected = $('#admin_charge_bearer').val();
-
-        if (!selected) {
-            $('.validation-msg').show();
-            return;
-        }
-
-        $('.validation-msg').hide();
-        window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=' + selected;
     });
 
     function DataTables() {
