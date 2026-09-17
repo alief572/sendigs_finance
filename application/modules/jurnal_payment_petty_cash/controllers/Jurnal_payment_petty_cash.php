@@ -103,6 +103,10 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             $total_kredit += (float) $row->kredit;
         }
 
+        // Detect unclear COA (2103-01-01 / 2103-01-02) — belum clear dari Finance.
+        // Jika ada, posting harus diblok & tampilkan warning di modal.
+        $unclear_coa = $this->Jurnal_payment_petty_cash_model->find_unclear_coa($rows);
+
         // Prepare data for the view
         $data = [
             'rows'             => $rows,
@@ -110,6 +114,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             'total_debit'      => $total_debit,
             'total_kredit'     => $total_kredit,
             'no_transaksi'     => $no_transaksi,
+            'unclear_coa'      => $unclear_coa,
             'jenis_transaksi'  => $jenis_transaksi ?: (!empty($rows) ? $rows[0]->jenis_transaksi : 'Petty Cash')
         ];
 
@@ -117,8 +122,10 @@ class Jurnal_payment_petty_cash extends Admin_Controller
         $html = $this->load->view('modal_detail', $data, TRUE);
 
         echo json_encode([
-            'html'       => $html,
-            'is_balance' => $is_balance
+            'html'          => $html,
+            'is_balance'    => $is_balance,
+            'has_unclear_coa' => !empty($unclear_coa),
+            'unclear_coa'   => $unclear_coa
         ]);
     }
 
@@ -154,6 +161,16 @@ class Jurnal_payment_petty_cash extends Admin_Controller
         // Validate balance
         if (!$this->Jurnal_payment_petty_cash_model->validate_balance($rows)) {
             echo json_encode(['status' => 0, 'msg' => 'Jurnal tidak balance. Total Debit harus sama dengan Total Kredit']);
+            return;
+        }
+
+        // Block posting jika ada COA yang belum clear dari Finance (2103-01-01 / 2103-01-02)
+        $unclear_coa = $this->Jurnal_payment_petty_cash_model->find_unclear_coa($rows);
+        if (!empty($unclear_coa)) {
+            echo json_encode([
+                'status' => 0,
+                'msg'    => 'Posting diblokir: jurnal mengandung COA ' . implode(', ', $unclear_coa) . ' (Hutang ke STM) yang statusnya masih belum final dikonfirmasi oleh Finance.'
+            ]);
             return;
         }
 
@@ -193,9 +210,29 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
-        // === Petty Cash: selalu posting ke 1 DB sesuai company ===
+        // === Petty Cash ===
+        // Petty Cash bisa single-company (mis. STM saja) ATAU inter-company
+        // (mis. SUSTAIN/VUCA mengeluarkan kas kecil STM → ada sisi SUSTAIN + sisi STM).
+        // Tentukan dari jumlah company distinct pada baris, jangan berasumsi 1 DB.
         if ($jenis_transaksi === 'Petty Cash') {
-            $this->_post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            $companies = [];
+            foreach ($rows as $row) {
+                $c = !empty($row->nm_company) ? strtoupper($row->nm_company) : '';
+                if ($c !== '') {
+                    $companies[$c] = true;
+                }
+            }
+
+            $is_intercompany = (count($companies) > 1) && (isset($companies['VUCA']) || isset($companies['SUSTAIN']));
+
+            if ($is_intercompany) {
+                // Sisi "company" = non-STM (VUCA/SUSTAIN); sisi STM di-handle di dalam _post_intercompany
+                $company_side = isset($companies['SUSTAIN']) ? 'SUSTAIN' : 'VUCA';
+                $this->_post_intercompany($company_side, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            } else {
+                // Single company → posting ke 1 DB sesuai company
+                $this->_post_petty_cash($nm_company, $jurnal_header, $rows, $no_transaksi, $jenis_transaksi);
+            }
             return;
         }
 

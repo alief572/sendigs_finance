@@ -83,12 +83,14 @@ class Actual_plan_tagih_model extends BF_Model
         $this->db->select('c.id_customer, c.nm_customer, c.address');
         $this->db->select('c.id_project, c.id_project_leader, c.nm_project_leader, c.id_sales, c.nm_sales');
         $this->db->select('e.nm_paket as nm_project');
-        $this->db->select('COALESCE(d.nm_company, c.nm_company) as nm_company', false);
+        $this->db->select('COALESCE(NULLIF(comp_d.nm_company, ""), NULLIF(comp_c.nm_company, ""), NULLIF(d.nm_company, ""), NULLIF(c.nm_company, "")) as nm_company', false);
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = COALESCE(b.id_spk_penawaran, a.id_spk_penawaran)', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = COALESCE(c.id_penawaran, a.id_penawaran)', 'left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_d', 'comp_d.id = d.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_c', 'comp_c.id = c.id_company', 'left');
         $this->db->where_not_in('a.status_terakhir', ['1', '3']);
         $this->db->where("YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) >=", $start_year, false);
         $this->db->where("YEAR(COALESCE(a.tgl_aktual_plan_tagih, a.tgl_plan_tagih)) <=", $end_year, false);
@@ -158,12 +160,14 @@ class Actual_plan_tagih_model extends BF_Model
          * Mengambil tanggal terbaru dari tabel actual (alias d). 
          * Jika tidak ada, baru ambil dari tgl_plan_tagih (tabel a).
          */
-        $this->db->select('a.*, b.id_customer, b.nm_customer, c.nm_project_leader, c.nm_sales, COALESCE(d.nm_company, c.nm_company) as nm_company, e.nm_paket as nm_project');
+        $this->db->select('a.*, b.id_customer, b.nm_customer, c.nm_project_leader, c.nm_sales, COALESCE(NULLIF(comp_d.nm_company, ""), NULLIF(comp_c.nm_company, ""), NULLIF(d.nm_company, ""), NULLIF(c.nm_company, "")) as nm_company, e.nm_paket as nm_project');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = c.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = COALESCE(b.id_spk_penawaran, a.id_spk_penawaran)', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran d', 'd.id_quotation = COALESCE(c.id_penawaran, a.id_penawaran)', 'left');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header e', 'e.id_konsultasi_h = c.id_project', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_d', 'comp_d.id = d.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_c', 'comp_c.id = c.id_company', 'left');
 
         if ($bulan == 'macet') {
             $this->db->where('a.status_terakhir', '3');
@@ -193,6 +197,10 @@ class Actual_plan_tagih_model extends BF_Model
             $this->db->or_like('b.nm_project', $val, 'both');
             $this->db->or_like('c.nm_project_leader', $val, 'both');
             $this->db->or_like('c.nm_sales', $val, 'both');
+            $this->db->or_like('comp_d.nm_company', $val, 'both');
+            $this->db->or_like('comp_c.nm_company', $val, 'both');
+            $this->db->or_like('d.nm_company', $val, 'both');
+            $this->db->or_like('c.nm_company', $val, 'both');
             $this->db->or_like('a.nominal_payment', $val, 'both');
             $this->db->group_end();
         }
@@ -276,11 +284,13 @@ class Actual_plan_tagih_model extends BF_Model
     public function dataDownloadExcel($tahun = null, $status = null)
     {
         // --- QUERY UTAMA ---
-        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, a.tgl_aktual_plan_tagih as tanggal_aktual, a.created_date as crated_actual, a.status_terakhir as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(c.nm_company, e.nm_company) as nm_company');
+        $this->db->select('a.*, b.nm_customer, b.nm_project, b.nm_project_leader, a.tgl_aktual_plan_tagih as tanggal_aktual, a.created_date as crated_actual, a.status_terakhir as status_tagih_mundur, c.nm_sales, c.nm_customer, c.nm_project_leader, COALESCE(NULLIF(comp_e.nm_company, ""), NULLIF(comp_c.nm_company, ""), NULLIF(e.nm_company, ""), NULLIF(c.nm_company, "")) as nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join('kons_tr_plan_tagih_header b', 'b.id = a.id_header', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = c.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = COALESCE(b.id_spk_penawaran, a.id_spk_penawaran)', 'left');
+        $this->db->join(DBCNL . '.kons_tr_penawaran e', 'e.id_quotation = COALESCE(c.id_penawaran, a.id_penawaran)', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_e', 'comp_e.id = e.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company comp_c', 'comp_c.id = c.id_company', 'left');
 
         // Filter tahun hanya berlaku jika status_terakhir bukan 3 (Tagihan Macet).
         if (!empty($tahun)) {

@@ -82,10 +82,12 @@ class Plan_tagih_model extends BF_Model
         $start = $this->input->post('start');
         $search = $this->input->post('search');
 
-        $this->db->select('a.*, b.nm_company');
+        $this->db->select('a.*, COALESCE(NULLIF(d.nm_company, ""), NULLIF(e.nm_company, ""), NULLIF(b.nm_company, ""), NULLIF(a.nm_company, "")) as nm_company');
         $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join('kons_tr_plan_tagih_header c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = a.id_company', 'left');
         $this->db->where('a.sts_spk', 1);
         $this->db->where('a.deleted_by IS NULL');
         $this->db->where('a.sendigs_hold', '0');
@@ -96,7 +98,10 @@ class Plan_tagih_model extends BF_Model
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
+            $this->db->or_like('d.nm_company', $search['value'], 'both');
+            $this->db->or_like('e.nm_company', $search['value'], 'both');
             $this->db->or_like('b.nm_company', $search['value'], 'both');
+            $this->db->or_like('a.nm_company', $search['value'], 'both');
             $this->db->or_like('a.nm_customer', $search['value'], 'both');
             $this->db->or_like('a.nm_project', $search['value'], 'both');
             $this->db->or_like('a.nm_project_leader', $search['value'], 'both');
