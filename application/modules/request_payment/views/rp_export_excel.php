@@ -26,21 +26,21 @@ foreach ($rows as $r) {
 <body>
     <table border="0" width="100%">
         <tr>
-            <td colspan="6" style="font-weight:bold;font-size:16px;">DAFTAR REQUEST PAYMENT (Menunggu Diajukan Approval)</td>
+            <td colspan="7" style="font-weight:bold;font-size:16px;">DAFTAR REQUEST PAYMENT (Menunggu Diajukan Approval)</td>
         </tr>
         <tr>
-            <td colspan="6">Entitas: <?= htmlspecialchars($company_label); ?></td>
+            <td colspan="7">Entitas: <?= htmlspecialchars($company_label); ?></td>
         </tr>
         <?php if ($periode !== '') : ?>
             <tr>
-                <td colspan="6"><?= htmlspecialchars($periode); ?></td>
+                <td colspan="7"><?= htmlspecialchars($periode); ?></td>
             </tr>
         <?php endif; ?>
         <tr>
-            <td colspan="6">Kategori: <?= htmlspecialchars($kat); ?></td>
+            <td colspan="7">Kategori: <?= htmlspecialchars($kat); ?></td>
         </tr>
         <tr>
-            <td colspan="6">Dicetak: <?= date('d-M-Y H:i'); ?></td>
+            <td colspan="7">Dicetak: <?= date('d-M-Y H:i'); ?></td>
         </tr>
     </table>
 
@@ -50,7 +50,8 @@ foreach ($rows as $r) {
         <thead>
             <tr style="background-color:#3c8dbc;color:#ffffff;font-weight:bold;text-align:center;">
                 <th style="width:40px;">NO</th>
-                <th>NO. DOKUMEN / KATEGORI</th>
+                <th>NO. DOKUMEN</th>
+                <th>KATEGORI</th>
                 <th>REQUEST BY</th>
                 <th>TANGGAL</th>
                 <th>KEPERLUAN</th>
@@ -60,7 +61,7 @@ foreach ($rows as $r) {
         <tbody>
             <?php if (empty($rows)) : ?>
                 <tr>
-                    <td colspan="6" style="text-align:center;">Tidak ada data.</td>
+                    <td colspan="7" style="text-align:center;">Tidak ada data.</td>
                 </tr>
             <?php else : ?>
                 <?php $no = 1;
@@ -74,17 +75,18 @@ foreach ($rows as $r) {
                 ?>
                     <tr>
                         <td style="text-align:center;"><?= $no; ?></td>
-                        <td>[<?= htmlspecialchars($kategori_row); ?>] <?= htmlspecialchars($r['no_dokumen']); ?></td>
+                        <td><?= htmlspecialchars($r['no_dokumen']); ?></td>
+                        <td><?= htmlspecialchars($kategori_row); ?></td>
                         <td><?= htmlspecialchars($req_by); ?></td>
                         <td style="text-align:center;"><?= $tgl; ?></td>
                         <td><?= htmlspecialchars($r['keperluan']); ?></td>
-                        <td style="text-align:right;"><?= number_format((float) $r['dpp'], 0, ',', '.'); ?></td>
+                        <td style="text-align:right;"><?= (float) $r['dpp']; ?></td>
                     </tr>
                 <?php $no++;
                 endforeach; ?>
                 <tr style="font-weight:bold;background-color:#f2f2f2;">
-                    <td colspan="5" style="text-align:right;">TOTAL DPP</td>
-                    <td style="text-align:right;"><?= number_format($total_dpp, 0, ',', '.'); ?></td>
+                    <td colspan="6" style="text-align:right;">TOTAL DPP</td>
+                    <td style="text-align:right;"><?= (float) $total_dpp; ?></td>
                 </tr>
             <?php endif; ?>
         </tbody>
