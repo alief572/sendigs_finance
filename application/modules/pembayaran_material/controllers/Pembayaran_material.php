@@ -207,6 +207,8 @@ class Pembayaran_material extends Admin_Controller
 		$this->db->where('a.deleted', '0');
 		$get_bank = $this->db->get()->result();
 
+		$jenis_payment = isset($_GET['jenis_payment']) ? $_GET['jenis_payment'] : '';
+
 		$data = [
 			'id_payment' => implode(',', $id_payment),
 			'result_payment' => $get_payment,
@@ -214,7 +216,8 @@ class Pembayaran_material extends Admin_Controller
 			'list_bank' => $get_bank,
 			'list_mata_uang' => $get_mata_uang,
 			'jurnal_refill_petty_cash' => $jurnal_refill_petty_cash,
-			'admin_charge_bearer' => $admin_charge_bearer
+			'admin_charge_bearer' => $admin_charge_bearer,
+			'jenis_payment' => $jenis_payment
 		];
 		$this->template->set('results', $data);
 		$this->template->render('form_payment_new');
