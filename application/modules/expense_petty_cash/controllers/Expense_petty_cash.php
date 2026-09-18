@@ -1326,6 +1326,11 @@ class Expense_petty_cash extends Admin_Controller
                 if ($nominal <= 0) {
                     $errors['details_' . $idx . '_nominal'] = "Baris {$row_num}: Nominal harus lebih besar dari 0";
                 }
+
+                // Validasi evidence wajib diupload
+                if (empty($evidences_post[$idx]) || !is_array($evidences_post[$idx]) || count($evidences_post[$idx]) === 0) {
+                    $errors['details_' . $idx . '_evidence'] = "Baris {$row_num}: Evidence wajib diupload";
+                }
             }
         }
 
@@ -1492,13 +1497,14 @@ class Expense_petty_cash extends Admin_Controller
     /**
      * Hapus file evidence via AJAX
      *
-     * Menghapus record dari tr_expense_petty_cash_evidence
+     * Menghapus record dari tr_expense_petty_cash_evidence (jika sudah tersimpan di DB)
      * dan menghapus file fisik dari folder server.
+     * Mendukung penghapusan berdasarkan record ID atau encrypted_name untuk file baru.
      *
-     * @param int $id ID record evidence
+     * @param int|string|null $id ID record evidence atau encrypted_name
      * @return void Output JSON response
      */
-    public function delete_evidence($id)
+    public function delete_evidence($id = null)
     {
         // Check permission
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
@@ -1509,27 +1515,47 @@ class Expense_petty_cash extends Admin_Controller
             return;
         }
 
-        // Get the evidence record by ID
-        $evidence = $this->db->get_where('tr_expense_petty_cash_evidence', ['id' => $id])->row();
+        // Ambil ID dari POST jika URL segment kosong / 'undefined'
+        if (empty($id) || $id === 'undefined') {
+            $id = $this->input->post('id');
+        }
 
-        if (!$evidence) {
+        $encrypted_name = $this->input->post('encrypted_name');
+
+        // Jika $id bukan numerik tetapi string nama file, anggap sebagai encrypted_name
+        if (!empty($id) && !is_numeric($id) && empty($encrypted_name) && $id !== 'undefined') {
+            $encrypted_name = $id;
+            $id = null;
+        }
+
+        $evidence = null;
+        if (!empty($id) && is_numeric($id)) {
+            $evidence = $this->db->get_where('tr_expense_petty_cash_evidence', ['id' => (int) $id])->row();
+            if ($evidence) {
+                $encrypted_name = $evidence->encrypted_name;
+                $this->db->delete('tr_expense_petty_cash_evidence', ['id' => $evidence->id]);
+            }
+        }
+
+        // Hapus file fisik dari folder server jika encrypted_name diketahui
+        if (!empty($encrypted_name)) {
+            $safe_name = basename($encrypted_name);
+            $file_path = FCPATH . 'assets/expense_petty_cash/' . $safe_name;
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
+
+            // Bersihkan juga dari DB jika ada record dengan encrypted_name ini
+            $this->db->delete('tr_expense_petty_cash_evidence', ['encrypted_name' => $safe_name]);
+        }
+
+        // Jika tidak ada evidence ID valid dan juga tidak ada encrypted_name
+        if (!$evidence && empty($encrypted_name)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'File tidak ditemukan'
             ]);
             return;
-        }
-
-        // Get encrypted_name for file deletion
-        $encrypted_name = $evidence->encrypted_name;
-
-        // Delete record from database
-        $this->db->delete('tr_expense_petty_cash_evidence', ['id' => $id]);
-
-        // Delete physical file from server
-        $file_path = FCPATH . 'assets/expense_petty_cash/' . $encrypted_name;
-        if (file_exists($file_path)) {
-            unlink($file_path);
         }
 
         echo json_encode([
