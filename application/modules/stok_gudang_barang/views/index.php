@@ -173,7 +173,7 @@
     if (date_filter != '') {
       var tanggal = date_filter
     }
-    var Links = base_url + active_controller + 'download_excel/' + id_warehouse + '/' + id_category + '/' + date_filter;
+    var Links = base_url + active_controller + 'download_excel/' + id_warehouse + '/' + id_category + '/' + tanggal;
     window.open(Links, '_blank');
   });
 
