@@ -120,7 +120,7 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
                         <th width="80" class="text-center">Jumlah</th>
                         <th width="130" class="text-center">Nominal</th>
                         <th width="130" class="text-center">Total</th>
-                        <th width="180">Evidence</th>
+                        <th width="180">Evidence <span class="text-red">*</span></th>
                         <th width="60" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -133,17 +133,17 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
                                     <select name="details[<?= $idx ?>][coa_code]" class="form-control select2 coa-select" style="width: 100%;">
                                         <option value="">-- Pilih COA --</option>
                                         <?php foreach ($coa_list as $coa) : ?>
-                                            <option value="<?= $coa->coa_code ?>" data-pengeluaran="<?= htmlspecialchars($coa->jenis_pengeluaran) ?>" <?= ($detail->coa_code == $coa->coa_code) ? 'selected' : '' ?>>
-                                                <?= $coa->coa_code ?> - <?= $coa->coa_nama ?>
+                                            <option value="<?= htmlspecialchars($coa->coa_code) ?>" data-pengeluaran="<?= htmlspecialchars($coa->pengeluaran) ?>" <?= $coa->coa_code == $detail->coa_code ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($coa->coa_code . ' - ' . $coa->nama_account) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="text" name="details[<?= $idx ?>][pengeluaran]" class="form-control pengeluaran-input" value="<?= htmlspecialchars($detail->pengeluaran) ?>" placeholder="Pengeluaran" maxlength="255">
+                                    <input type="text" name="details[<?= $idx ?>][pengeluaran]" class="form-control pengeluaran-input" value="<?= htmlspecialchars($detail->pengeluaran) ?>" maxlength="255">
                                 </td>
                                 <td>
-                                    <input type="text" name="details[<?= $idx ?>][spesifikasi]" class="form-control" value="<?= htmlspecialchars($detail->spesifikasi) ?>" placeholder="Spesifikasi" maxlength="255">
+                                    <input type="text" name="details[<?= $idx ?>][spesifikasi]" class="form-control" value="<?= htmlspecialchars($detail->spesifikasi) ?>" maxlength="255">
                                 </td>
                                 <td>
                                     <input type="number" name="details[<?= $idx ?>][jumlah]" class="form-control text-center jumlah-input" value="<?= $detail->jumlah ?>" min="1" max="9999">
@@ -159,12 +159,16 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
                                     <div class="evidence-container" data-row="<?= $idx ?>">
                                         <?php if (isset($pencatatan->evidences[$detail->id]) && !empty($pencatatan->evidences[$detail->id])) : ?>
                                             <ul class="list-unstyled evidence-list">
-                                                <?php foreach ($pencatatan->evidences[$detail->id] as $evidence) : ?>
-                                                    <li class="evidence-item" data-id="<?= $evidence->id ?>">
+                                                <?php foreach ($pencatatan->evidences[$detail->id] as $evKey => $evidence) : ?>
+                                                    <li class="evidence-item" data-id="<?= $evidence->id ?>" data-encrypted="<?= htmlspecialchars($evidence->encrypted_name) ?>">
                                                         <small>
                                                             <i class="fa fa-file"></i>
                                                             <span class="evidence-name" title="<?= htmlspecialchars($evidence->original_name) ?>"><?= htmlspecialchars(strlen($evidence->original_name) > 15 ? substr($evidence->original_name, 0, 15) . '...' : $evidence->original_name) ?></span>
-                                                            <a href="javascript:void(0)" class="text-red btn-remove-evidence" data-id="<?= $evidence->id ?>" title="Hapus"><i class="fa fa-times"></i></a>
+                                                            <a href="javascript:void(0)" class="text-red btn-remove-evidence" data-id="<?= $evidence->id ?>" data-encrypted="<?= htmlspecialchars($evidence->encrypted_name) ?>" title="Hapus"><i class="fa fa-times"></i></a>
+                                                            <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][original_name]" value="<?= htmlspecialchars($evidence->original_name) ?>">
+                                                            <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][encrypted_name]" value="<?= htmlspecialchars($evidence->encrypted_name) ?>">
+                                                            <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][file_type]" value="<?= htmlspecialchars($evidence->file_type) ?>">
+                                                            <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][file_size]" value="<?= htmlspecialchars($evidence->file_size) ?>">
                                                         </small>
                                                     </li>
                                                 <?php endforeach; ?>
