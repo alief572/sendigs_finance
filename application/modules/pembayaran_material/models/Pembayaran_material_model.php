@@ -1237,7 +1237,7 @@ class Pembayaran_material_model extends BF_Model
 						$debit = $bank_charge;
 						$keterangan = 'Admin Charge';
 					} elseif ($item_coa->no_coa == '1106-01-06') {
-						$kredit = $nilai_ppn_item;
+						$debit = $nilai_ppn_item;
 						$keterangan = 'PPN';
 					} elseif ($item_coa->no_coa == $coa_bank) {
 						$kredit = $total_payment;
