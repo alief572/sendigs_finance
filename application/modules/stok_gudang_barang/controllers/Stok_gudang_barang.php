@@ -61,7 +61,7 @@ class Stok_gudang_barang extends Admin_Controller
     $this->load->view('modal_history', $dataArr);
   }
 
-  public function download_excel($id_warehouse, $id_category, $date_filter)
+  public function download_excel($id_warehouse = '0', $id_category = '0', $date_filter = '0')
   {
     set_time_limit(0);
     ini_set('memory_limit', '1024M');
