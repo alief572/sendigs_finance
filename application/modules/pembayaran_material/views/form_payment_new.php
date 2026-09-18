@@ -1274,7 +1274,12 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 									showConfirmButton: false,
 									allowOutsideClick: false
 								});
-								window.location.href = base_url + active_controller + 'payment_list';
+								var jenis_payment = '<?= isset($results['jenis_payment']) ? $results['jenis_payment'] : '' ?>';
+								if(jenis_payment !== '') {
+									window.location.href = base_url + active_controller + 'list_request_payment/' + jenis_payment;
+								} else {
+									window.location.href = base_url + active_controller + 'payment_list';
+								}
 							} else {
 
 								if (data.status == 2) {
