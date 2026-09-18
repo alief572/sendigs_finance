@@ -1088,10 +1088,20 @@ class Expense_petty_cash_model extends BF_Model
      */
     public function get_budget_terpakai($petty_cash_id)
     {
+        // Pengecualian untuk expense yang RPC-nya sudah di-payment (PAID)
+        // RPC (Pelaporan) dianggap PAID jika ada record di payment_approve dengan tgl_bayar terisi
+        $subquery_paid = "SELECT pd.pencatatan_id 
+                          FROM tr_pelaporan_petty_cash_detail pd
+                          JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id
+                          JOIN payment_approve pa ON pa.no_doc = p.no_pelaporan
+                          WHERE pa.tgl_bayar IS NOT NULL";
+
         $this->db->select_sum('grand_total');
         $this->db->from('tr_expense_petty_cash');
         $this->db->where('petty_cash_id', $petty_cash_id);
         $this->db->where('status !=', 'reject');
+        $this->db->where("id NOT IN ($subquery_paid)", NULL, FALSE);
+        
         $result = $this->db->get()->row();
 
         return ($result && $result->grand_total) ? (float) $result->grand_total : 0;
