@@ -124,7 +124,7 @@
                 // Jika admin dipilih di request_payment (ada biaya admin) -> ditanggung penerima (recipient),
                 // jika tidak dipilih -> ditanggung perusahaan (company).
                 var bearer = data.has_admin_fee ? 'recipient' : 'company';
-                window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=' + bearer;
+                window.location.href = siteurl + active_controller + 'form_payment_new/?id_payment=' + arr_choosed_payment + '&admin_charge_bearer=' + bearer + '&jenis_payment=<?= $jenis_payment ?>';
             } else {
                 swal({
                     title: 'Warning !',
