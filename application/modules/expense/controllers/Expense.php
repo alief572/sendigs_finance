@@ -9,6 +9,7 @@ if (!defined('BASEPATH')) {
  * @copyright Copyright (c) 2020
  *
  * This is controller for Trasaction Purchase Request
+ * Sync: Re-push modul expense to main
  */
 
 $status = array();
@@ -4616,5 +4617,3 @@ class Expense extends Admin_Controller
 		));
 	}
 }
-
-// Sync: 2026-09-22 Full re-push modul expense

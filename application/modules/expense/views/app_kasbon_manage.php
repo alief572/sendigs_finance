@@ -761,4 +761,3 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
             });
     }
 </script>
-<!-- Sync: 2026-09-22 Full re-push modul expense -->

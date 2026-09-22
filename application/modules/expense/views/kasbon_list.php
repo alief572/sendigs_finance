@@ -106,4 +106,3 @@ $ENABLE_DELETE  = has_permission('Kasbon.Delete');
 	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
-<!-- Sync: 2026-09-22 Full re-push modul expense -->

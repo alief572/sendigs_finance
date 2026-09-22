@@ -679,4 +679,3 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
             });
     }
 </script>
-<!-- Sync: 2026-09-22 Full re-push modul expense -->

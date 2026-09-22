@@ -84,4 +84,3 @@ $ENABLE_DELETE  = has_permission('Approval Kasbon Management.Delete');
         });
     }
 </script>
-<!-- Sync: 2026-09-22 Full re-push modul expense -->
