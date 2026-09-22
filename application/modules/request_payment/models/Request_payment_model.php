@@ -2379,24 +2379,65 @@ class Request_payment_model extends BF_Model
         $id       = isset($r->id) ? $r->id : '';
 
         // Periodik
-        if ($kategori == 'Periodik') {
+        if ($kategori == 'Periodik' || strpos($no_dok, 'PERIODIK-') === 0) {
+            if ($no_dok !== '') {
+                $get_periodik = $this->db->select('id')->get_where('tr_pengajuan_rutin', ['no_doc' => $no_dok])->row();
+                if (!empty($get_periodik)) {
+                    return base_url('expense/periodik_print/' . $get_periodik->id);
+                }
+            }
             return base_url('expense/periodik_print/' . $id);
         }
         // Kasbon: konsultan pakai print_kasbon by no_kasbon_consultant, selain itu kasbon_print by id
-        if ($kategori == 'Kasbon') {
-            $get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
-            if (!empty($get_kasbon) && !empty($get_kasbon->no_kasbon_consultant)) {
-                return base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant));
+        if ($kategori == 'Kasbon' || strpos($no_dok, 'KS-') === 0) {
+            if ($no_dok !== '') {
+                $get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_dok])->row();
+                if (!empty($get_kasbon)) {
+                    if (!empty($get_kasbon->no_kasbon_consultant)) {
+                        return base_url('request_payment/print_kasbon/' . str_replace('/', '|', $get_kasbon->no_kasbon_consultant));
+                    }
+                    return base_url('expense/kasbon_print/' . $get_kasbon->id);
+                }
             }
             return base_url('expense/kasbon_print/' . $id);
         }
         // Transport / Transportasi
-        if ($kategori == 'Transport' || $kategori == 'Transportasi') {
+        if ($kategori == 'Transport' || $kategori == 'Transportasi' || strpos($no_dok, 'RQ-') === 0) {
+            if ($no_dok !== '') {
+                $get_trans = $this->db->select('id')->get_where('tr_transport_req', ['no_doc' => $no_dok])->row();
+                if (!empty($get_trans)) {
+                    return base_url('expense/transport_req_print/' . $get_trans->id);
+                }
+            }
             return base_url('expense/transport_req_print/' . $id);
         }
         // Expense
-        if ($kategori == 'Expense') {
+        if ($kategori == 'Expense' || strpos($no_dok, 'EXP-') === 0) {
+            if ($no_dok !== '') {
+                $get_exp = $this->db->select('id')->get_where('tr_expense', ['no_doc' => $no_dok])->row();
+                if (!empty($get_exp)) {
+                    return base_url('expense/expense_print/' . $get_exp->id);
+                }
+            }
             return base_url('expense/expense_print/' . $id);
+        }
+        // Refill Petty Cash (RPC)
+        if (strpos($no_dok, 'RPC-') === 0 || strtolower($kategori) == 'refill petty cash' || strtolower($kategori) == 'refill_pettycash') {
+            if ($no_dok !== '') {
+                $get_rpc = $this->db->select('id')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_dok])->row();
+                if (!empty($get_rpc)) {
+                    return base_url('expense_petty_cash/print_pelaporan/' . $get_rpc->id);
+                }
+            }
+        }
+        // Petty Cash Hutang (PHP)
+        if (strpos($no_dok, 'PHP-') === 0 || $kategori == 'Petty Cash Hutang') {
+            if ($no_dok !== '') {
+                $get_php = $this->db->select('id')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_dok])->row();
+                if (!empty($get_php)) {
+                    return base_url('petty_cash_vuca_sustain/print_pdf/' . $get_php->id);
+                }
+            }
         }
         // Cash (PR non-PO departemen/asset) - harus dievaluasi sebelum Direct Payment agar DPM milik Cash tidak tertukar
         if ($kategori == 'Cash') {
