@@ -151,22 +151,22 @@
 
                 echo '
                     <tr>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;"></td>
-                        <td style="text-align: right; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
+                        <td style="text-align: right; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
                         
                     </tr>
                 ';
             }
         ?>
             <tr>
-                <td style="min-height: 165px; border-right: 1px solid black;"></td>
-                <td style="min-height: 165px; border-right: 1px solid black;"></td>
-                <td style="min-height: 165px; border-right: 1px solid black;"></td>
-                <td style="min-height: 165px; border-right: 1px solid black;"></td>
-                <td style="min-height: 165px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
             </tr>
             <!-- <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
