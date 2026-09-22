@@ -9,6 +9,7 @@ if (!defined('BASEPATH')) {
  * @copyright Copyright (c) 2020
  *
  * This is controller for Trasaction Purchase Request
+ * Sync: Re-push modul expense to main
  */
 
 $status = array();

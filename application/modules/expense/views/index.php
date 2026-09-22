@@ -1,4 +1,5 @@
 <?php
+// Sync: Re-push modul expense to main
 $ENABLE_ADD     = has_permission('Expense.Add');
 $ENABLE_MANAGE  = has_permission('Expense.Manage');
 $ENABLE_VIEW    = has_permission('Expense.View');
