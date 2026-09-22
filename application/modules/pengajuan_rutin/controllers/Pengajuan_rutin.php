@@ -192,8 +192,9 @@ class Pengajuan_rutin extends Admin_Controller
 	{
 		$allbudget		= $this->input->post("allbudget");
 		$dept       	= $this->input->post("dept");
-		$tanggal           = $this->input->post("tanggal");
-		$data = $this->Pengajuan_rutin_model->GetDataBudgetRutin($dept, $tanggal, $allbudget);
+		$tanggal        = $this->input->post("tanggal");
+		$no_doc         = $this->input->post("no_doc");
+		$data = $this->Pengajuan_rutin_model->GetDataBudgetRutin($dept, $tanggal, $allbudget, $no_doc);
 		$param = array(
 			'save' => 1,
 			'data' => $data,
@@ -221,7 +222,7 @@ class Pengajuan_rutin extends Admin_Controller
 		$nama           = $this->input->post("nama");
 		$tanggal		= $this->input->post("tanggal");
 		$tipe  			= 'rutin';
-		$details			= $this->input->post("details");
+		$details		= $this->input->post("details");
 		$budget			= $this->input->post("budget");
 		$nilai			= $this->input->post("nilai");
 		$keterangan		= $this->input->post("keterangan");
@@ -229,6 +230,30 @@ class Pengajuan_rutin extends Admin_Controller
 		$accnumber		= $this->input->post("accnumber");
 		$accname		= $this->input->post("accname");
 		$metode_pembelian		= $this->input->post("metode_pembelian");
+
+		// Validasi apakah terdapat item yang sudah pernah diajukan pada periode ini
+		$already_submitted_errors = [];
+		if (is_array($id_budget)) {
+			for ($i = 0; $i < count($id_budget); $i++) {
+				$val_nilai = isset($nilai[$i]) ? floatval(str_replace(',', '', $nilai[$i])) : 0;
+				if ($val_nilai > 0 && !empty($id_budget[$i])) {
+					$check = $this->Pengajuan_rutin_model->CheckSubmittedBudget($id_budget[$i], $tanggal_doc, $no_doc);
+					if ($check) {
+						$periode_label = ($check->tipe == 'tahun') ? "tahun " . date('Y', strtotime($tanggal_doc)) : "bulan " . date('m/Y', strtotime($tanggal_doc));
+						$item_nama = !empty($nama[$i]) ? $nama[$i] : $check->nama;
+						$already_submitted_errors[] = "Item '" . $item_nama . "' sudah pernah diajukan untuk " . $periode_label . " pada dokumen " . $check->no_doc . ".";
+					}
+				}
+			}
+		}
+
+		if (!empty($already_submitted_errors)) {
+			echo json_encode([
+				'save' => 0,
+				'msg'  => implode("\n", $already_submitted_errors)
+			]);
+			return;
+		}
 
 		$this->db->trans_begin();
 
@@ -239,7 +264,8 @@ class Pengajuan_rutin extends Admin_Controller
 					'tipe' => $tipe,
 					'no_doc' => $no_doc,
 					'tanggal_doc' => $tanggal_doc,
-					'departement' => $departement
+					'departement' => $departement,
+					'status' => 0
 					// 'nilai'=>0,
 				);
 				$this->Pengajuan_rutin_model->insert($dataheader);
@@ -249,7 +275,7 @@ class Pengajuan_rutin extends Admin_Controller
 						'id' => $id,
 						'tanggal_doc' => $tanggal_doc,
 						'sts_reject' => null,
-						'sts' => 0,
+						'status' => 0,
 						'reject_ket' => null
 					)
 				);

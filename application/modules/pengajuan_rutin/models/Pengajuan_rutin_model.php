@@ -98,17 +98,96 @@ class Pengajuan_rutin_model extends BF_Model
 	}
 
 	// get data
-	public function GetDataBudgetRutin($dept, $tanggal = null, $idbudget = null)
+	public function GetDataBudgetRutin($dept, $tanggal = null, $idbudget = null, $exclude_nodoc = null)
 	{
-		$sql = "select * from ms_budget_rutin where departement='" . $dept . "' ";
-		if ($idbudget !== null) $sql .= " and id not in (" . implode(",", $idbudget) . ")";
-		if ($tanggal !== null) $sql .= " and (tipe ='bulan' or (tipe='tahun' and left(tanggal,2)='" . date("m", strtotime($tanggal)) . "'))";
+		$tanggal_doc = ($tanggal !== null && !empty($tanggal)) ? $tanggal : date('Y-m-d');
+		$ym = date("Y-m", strtotime($tanggal_doc));
+		$y  = date("Y", strtotime($tanggal_doc));
+		$m  = date("m", strtotime($tanggal_doc));
+
+		$exclude_sql = "";
+		if (!empty($exclude_nodoc)) {
+			$exclude_sql = " AND h.no_doc != " . $this->db->escape($exclude_nodoc);
+		}
+
+		$sql = "
+			SELECT 
+				b.*,
+				sub.no_doc AS submitted_no_doc,
+				sub.tanggal_doc AS submitted_tanggal_doc,
+				IF(sub.no_doc IS NOT NULL, 1, 0) AS is_submitted
+			FROM ms_budget_rutin b
+			LEFT JOIN (
+				SELECT 
+					d.id_budget, 
+					GROUP_CONCAT(DISTINCT h.no_doc ORDER BY h.no_doc SEPARATOR ', ') AS no_doc, 
+					MAX(h.tanggal_doc) AS tanggal_doc,
+					DATE_FORMAT(h.tanggal_doc, '%Y-%m') AS ym,
+					DATE_FORMAT(h.tanggal_doc, '%Y') AS y
+				FROM tr_pengajuan_rutin_detail d
+				JOIN tr_pengajuan_rutin h ON h.no_doc = d.no_doc
+				WHERE d.nilai > 0
+				{$exclude_sql}
+				GROUP BY d.id_budget, ym, y
+			) sub ON sub.id_budget = b.id 
+				 AND (
+					 (b.tipe = 'bulan' AND sub.ym = " . $this->db->escape($ym) . ")
+					 OR
+					 (b.tipe = 'tahun' AND sub.y = " . $this->db->escape($y) . ")
+				 )
+			WHERE b.departement = " . $this->db->escape($dept);
+
+		if ($idbudget !== null && is_array($idbudget) && count($idbudget) > 0) {
+			$clean_ids = array_filter(array_map('intval', $idbudget));
+			if (!empty($clean_ids)) {
+				$sql .= " AND b.id NOT IN (" . implode(",", $clean_ids) . ")";
+			}
+		}
+		if ($tanggal !== null && !empty($tanggal)) {
+			$sql .= " AND (b.tipe = 'bulan' OR (b.tipe = 'tahun' AND LEFT(b.tanggal, 2) = " . $this->db->escape($m) . "))";
+		}
+		$sql .= " ORDER BY b.nama ASC";
+
 		$query = $this->db->query($sql);
 		if ($query->num_rows() != 0) {
 			return $query->result();
 		} else {
 			return false;
 		}
+	}
+
+	public function CheckSubmittedBudget($id_budget, $tanggal_doc, $exclude_nodoc = null)
+	{
+		$budget = $this->db->get_where('ms_budget_rutin', array('id' => $id_budget))->row();
+		if (!$budget) {
+			return false;
+		}
+
+		$ym = date('Y-m', strtotime($tanggal_doc));
+		$y  = date('Y', strtotime($tanggal_doc));
+
+		$this->db->select('d.id_budget, d.nama, h.no_doc, h.tanggal_doc');
+		$this->db->from('tr_pengajuan_rutin_detail d');
+		$this->db->join('tr_pengajuan_rutin h', 'h.no_doc = d.no_doc');
+		$this->db->where('d.id_budget', $id_budget);
+		$this->db->where('d.nilai >', 0);
+		if (!empty($exclude_nodoc)) {
+			$this->db->where('h.no_doc !=', $exclude_nodoc);
+		}
+
+		if ($budget->tipe == 'tahun') {
+			$this->db->where("DATE_FORMAT(h.tanggal_doc, '%Y') =", $y);
+		} else {
+			$this->db->where("DATE_FORMAT(h.tanggal_doc, '%Y-%m') =", $ym);
+		}
+
+		$query = $this->db->get();
+		if ($query->num_rows() > 0) {
+			$row = $query->row();
+			$row->tipe = $budget->tipe;
+			return $row;
+		}
+		return false;
 	}
 
 	public function GetDataPengajuanRutinAll($where = '')
