@@ -443,4 +443,10 @@ $readonly = 'readonly';
 
 				});
 		}
+<<<<<<< HEAD
 	</script>
+=======
+	</script>
+
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
+>>>>>>> 4eb6ce3ae486730589f838927c4c002302362fd0

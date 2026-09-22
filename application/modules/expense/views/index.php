@@ -1,5 +1,4 @@
 <?php
-// Sync: Re-push modul expense to main
 $ENABLE_ADD     = has_permission('Expense.Add');
 $ENABLE_MANAGE  = has_permission('Expense.Manage');
 $ENABLE_VIEW    = has_permission('Expense.View');
@@ -149,4 +148,10 @@ $ENABLE_DELETE  = has_permission('Expense.Delete');
 			]
 		});
 	}
+<<<<<<< HEAD
 </script>
+=======
+</script>
+
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
+>>>>>>> 4eb6ce3ae486730589f838927c4c002302362fd0

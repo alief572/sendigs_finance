@@ -103,3 +103,4 @@ $ENABLE_DELETE  = has_permission('Kasbon_List.Delete');
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
