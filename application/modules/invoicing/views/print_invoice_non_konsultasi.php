@@ -175,48 +175,87 @@
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
                 <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_invoice->total_nominal) ?></td>
             </tr> -->
-            <tr>
-                <td style="border-top: 1px solid black;" colspan="3"></td>
-                <td style="border-top: 1px solid black;">DPP</td>
-                <td style="text-align: right; border-top: 1px solid black;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->total_nominal) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">DPP Lain-lain</td>
-                <td style="text-align: right; ">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td style="" colspan="3"></td>
-                <td style="">Pajak <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</td>
-                <td style="text-align: right;">
-                    <table border="0" style="width: 100%">
-                        <tr>
-                            <td style="text-align: center;" width="100">:</td>
-                            <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->pajak) ?>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+            <?php if ($id_company == '4' || $id_company == '5') { ?>
+                <tr>
+                    <td style="border-top: 1px solid black;" colspan="3"></td>
+                    <td style="border-top: 1px solid black;">Discount Final</td>
+                    <td style="text-align: right; border-top: 1px solid black;">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">-</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="" colspan="3"></td>
+                    <td style="">Pajak</td>
+                    <td style="text-align: right; ">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">-</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="" colspan="3"></td>
+                    <td style="">Biaya Pengiriman</td>
+                    <td style="text-align: right;">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">-</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            <?php } else { ?>
+                <tr>
+                    <td style="border-top: 1px solid black;" colspan="3"></td>
+                    <td style="border-top: 1px solid black;">DPP</td>
+                    <td style="text-align: right; border-top: 1px solid black;">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">
+                                    <?= number_format($data_invoice->total_nominal) ?>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="" colspan="3"></td>
+                    <td style="">DPP Lain-lain</td>
+                    <td style="text-align: right; ">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">
+                                    <?= number_format($data_invoice->dpp_nilai_lain) ?>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="" colspan="3"></td>
+                    <td style="">Pajak <?= isset($data_invoicing->ppn_persen) ? $data_invoicing->ppn_persen : 12 ?>%</td>
+                    <td style="text-align: right;">
+                        <table border="0" style="width: 100%">
+                            <tr>
+                                <td style="text-align: center;" width="100">:</td>
+                                <td style="text-align: right;" width="100">
+                                    <?= number_format($data_invoice->pajak) ?>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            <?php } ?>
             <tr>
                 <td style="" colspan="3"></td>
                 <td style=""><b>TOTAL</b></td>
@@ -225,7 +264,8 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->total_nominal + $data_invoice->pajak) ?>
+                                <?php $total_invoice = ($id_company == '4' || $id_company == '5') ? $data_invoice->total_nominal : ($data_invoice->total_nominal + $data_invoice->pajak); ?>
+                                <?= number_format($total_invoice) ?>
                             </td>
                         </tr>
                     </table>
@@ -233,7 +273,7 @@
             </tr>
             <tr>
                 <td colspan="5" style="height: 50px; vertical-align: middle">
-                    <?= terbilang(($data_invoice->total_nominal + $data_invoice->pajak)) . ' Rupiah' ?>
+                    <?= terbilang($total_invoice) . ' Rupiah' ?>
                 </td>
             </tr>
             <tr>
