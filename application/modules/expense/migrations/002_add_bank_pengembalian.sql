@@ -3,3 +3,5 @@
 -- sebagai tujuan pengembalian saat kondisi "Lebih Kasbon" pada Expense Report.
 ALTER TABLE `tr_expense`
 ADD COLUMN `id_bank_pengembalian` INT NULL AFTER `bukti_pengembalian`;
+
+-- Sync: 2026-09-22 Full re-push modul expense

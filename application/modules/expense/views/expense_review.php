@@ -677,3 +677,5 @@ $bukti_files = (isset($bukti_transfer) && $bukti_transfer !== '') ? array_values
 				});
 		}
 	</script>
+
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
