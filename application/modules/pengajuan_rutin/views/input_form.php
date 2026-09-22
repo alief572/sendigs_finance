@@ -29,6 +29,10 @@
 					</div>
 
 				</div>
+				<div id="alert_all_submitted" class="alert alert-warning alert-dismissible" style="display:none; margin: 10px 15px 15px 15px;">
+					<h4><i class="icon fa fa-info-circle"></i> Pemberitahuan</h4>
+					Semua item anggaran rutin untuk departemen ini pada periode tanggal yang dipilih sudah pernah diajukan.
+				</div>
 				<div class="table-responsive">
 					<table class="table table-bordered table-striped">
 						<thead>
@@ -92,7 +96,7 @@
 							} ?>
 							<tr>
 								<td colspan=4>TOTAL</td>
-								<td><?= number_format($total) ?></td>
+								<td id="total_nilai_biaya"><?= number_format($total) ?></td>
 							</tr>
 						</tbody>
 					</table>
@@ -182,7 +186,21 @@
 		$('#bankModal').modal('hide');
 	}
 
-	$(document).on("keyup", ".nilai", function() {
+	function recalculate_total() {
+		var inputed_nilai = 0;
+		$(".nilai").each(function() {
+			var nilai_val = $(this).val();
+			if (nilai_val != "" && nilai_val != null && nilai_val != undefined) {
+				var parsed = parseFloat(nilai_val.split(",").join(""));
+				if (!isNaN(parsed) && parsed > 0) {
+					inputed_nilai += parsed;
+				}
+			}
+		});
+		$("#total_nilai_biaya").text(inputed_nilai.toLocaleString('id-ID'));
+	}
+
+	$(document).on("keyup change", ".nilai", function() {
 		var no = $(this).data('no');
 		var nilai_val = $(this).val();
 		if (nilai_val == "" || nilai_val == null || nilai_val == undefined) {
@@ -197,6 +215,8 @@
 		} else {
 			$("#metode_pembelian_" + no).prop("required", false);
 		}
+
+		recalculate_total();
 	});
 
 	$('#frm_data').on('submit', function(e) {
@@ -213,15 +233,15 @@
 			}
 
 			if (nilai_val > 0) {
-				inputed_nilai += nilai_val
+				inputed_nilai += nilai_val;
 			}
-		})
+		});
 		if (inputed_nilai < 1) {
 			swal({
 				title: "Error !",
 				text: "Maaf, setidaknya isi 1 nilai Perkiraan Biaya !",
 				type: "error"
-			})
+			});
 		} else {
 			swal({
 					title: "Anda Yakin?",
@@ -252,28 +272,27 @@
 										timer: 1500,
 										showConfirmButton: false
 									});
-									cancel();
 									window.location.reload();
 								} else {
 									swal({
 										title: "Gagal!",
-										text: "Data Gagal Di Simpan",
-										type: "error",
-										timer: 1500,
-										showConfirmButton: false
+										text: msg['msg'] ? msg['msg'] : "Data Gagal Di Simpan",
+										type: "error"
 									});
-								};
+								}
 								console.log(msg);
 							},
-							error: function(msg) {
+							error: function(xhr) {
+								var errorMsg = "Ajax Data Gagal Di Proses";
+								if (xhr.responseJSON && xhr.responseJSON.msg) {
+									errorMsg = xhr.responseJSON.msg;
+								}
 								swal({
 									title: "Gagal!",
-									text: "Ajax Data Gagal Di Proses",
-									type: "error",
-									timer: 1500,
-									showConfirmButton: false
+									text: errorMsg,
+									type: "error"
 								});
-								console.log(msg);
+								console.log(xhr);
 							}
 						});
 					}
@@ -343,6 +362,16 @@
 		// }
 	});
 
+	var form_type = '<?= isset($type) ? $type : 'add' ?>';
+
+	function reload_detail() {
+		$('#detail_body .delAll').remove();
+		$('#alert_all_submitted').hide();
+		nomor = 1;
+		recalculate_total();
+		add_detail();
+	}
+
 	$(function() {
 		$(".select2").select2();
 		$(".tanggal").datepicker({
@@ -351,12 +380,25 @@
 			showInputs: true,
 			autoclose: true
 		});
+
+		$("#tanggal_doc").on("change changeDate", function() {
+			if (form_type === 'add') {
+				reload_detail();
+			}
+		});
+
+		$("#departement").on("change", function() {
+			if (form_type === 'add') {
+				reload_detail();
+			}
+		});
 	});
 
 	function add_detail() {
 		var idbudget = [];
 		var departement = $("#departement").val();
 		var tanggal_doc = $("#tanggal_doc").val();
+		var no_doc = $("#no_doc").val();
 		$('.budget').each(function() {
 			idbudget.push($(this).val());
 		});
@@ -367,55 +409,68 @@
 			data: {
 				allbudget: idbudget,
 				dept: departement,
-				tanggal: tanggal_doc
+				tanggal: tanggal_doc,
+				no_doc: no_doc
 			},
 			success: function(msg) {
 				if (msg['save'] == '1') {
+					var total_items = 0;
+					var submitted_items = 0;
+
 					$.each(msg['data'], function(index, element) {
-
-						var selected1 = '';
-						var selected2 = '';
-						if (element.metode_pembelian == '1') {
-							selected1 = 'selected';
-						}
-						if (element.metode_pembelian == '2') {
-							selected2 = 'selected';
+						total_items++;
+						var isSubmitted = (element.is_submitted == 1 || element.is_submitted == '1');
+						if (isSubmitted) {
+							submitted_items++;
 						}
 
-						var Rows = "<tr id='tr1_" + nomor + "' class='delAll'>";
+						var Rows = "<tr id='tr1_" + nomor + "' class='delAll" + (isSubmitted ? " bg-gray-light" : "") + "'>";
 						Rows += "<td>";
 						Rows += "<input type='hidden' name='detail_id[]' id='details_id_" + nomor + "' value=''>";
 						Rows += "<input type='hidden' name='details[]' id='raw_id_" + nomor + "' value='" + nomor + "'>";
 						Rows += "<input type='hidden' name='id_budget[]' id='id_budget_" + nomor + "' value='" + element.id + "' class='budget'>";
-						Rows += "<input type='hidden' name='coa[]' id='coa_" + nomor + "' value='" + element.coa + "'></td>";
+						Rows += "<input type='hidden' name='coa[]' id='coa_" + nomor + "' value='" + element.coa + "'>";
+						Rows += nomor;
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' value='" + element.nama + "' />";
+						Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' value='" + element.nama + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
+						if (isSubmitted) {
+							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='Item ini sudah diajukan untuk periode ini' style='font-size: 11px; padding: 3px 7px;'><i class='fa fa-lock'></i> Sudah Diajukan" + (element.submitted_no_doc ? " (" + element.submitted_no_doc + ")" : "") + "</span></div>";
+						}
 						Rows += "</td>";
+
 						var jadwal = '';
 						if (element.tipe == 'tahun') jadwal = msg['tahun'] + '-' + element.tanggal;
 						if (element.tipe == 'bulan') jadwal = msg['tahun'] + '-' + msg['bulan'] + '-' + element.tanggal;
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control' name='tanggal[]' id='tanggal_" + nomor + "' value='" + jadwal + "' />";
+						Rows += "<input type='text' class='form-control' name='tanggal[]' id='tanggal_" + nomor + "' value='" + jadwal + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
 						Rows += "</td>";
 						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide' name='budget[]' value='" + element.nilai + "' id='budget_" + nomor + "' readonly tabindex='-1'/>";
+						Rows += "<input type='text' class='form-control divide' name='budget[]' value='" + element.nilai + "' id='budget_" + nomor + "' readonly tabindex='-1' " + (isSubmitted ? "style='background:#eee;'" : "") + " />";
 						Rows += "</td>";
-						Rows += "<td>";
-						Rows += "<input type='text' class='form-control nilai divide' name='nilai[]' value='0' data-no='" + nomor + "' id='nilai_" + nomor + "' />";
-						Rows += "</td>";
-						Rows += "<td>";
-						Rows += "<textarea class='form-control' rows='3' name='keterangan[]' id='keterangan_" + nomor + "' style='min-width:200px;resize:vertical;'></textarea>";
-						Rows += "</td>";
-						Rows += "<td>";
-						Rows += "<input type='file' name='doc_file_" + nomor + "' id='doc_file" + nomor + "'>";
-						Rows += "</td>";
-						Rows += "<td>";
 
-						Rows += "<input type='text' class='form-control' name='bank_id[]' id='bank_id_" + nomor + "' value='' placeholder='- Nama Bank -' />";
-						Rows += "<input type='text' class='form-control' name='accnumber[]' id='accnumber_" + nomor + "' value='' placeholder='- No Rekening -' />";
-						Rows += "<input type='text' class='form-control' name='accname[]' id='accname_" + nomor + "' value='' placeholder='- Nama -' />";
+						Rows += "<td>";
+						if (isSubmitted) {
+							Rows += "<input type='text' class='form-control divide' name='nilai[]' value='0' id='nilai_" + nomor + "' readonly tabindex='-1' style='background:#eee; cursor:not-allowed; color:#888;' title='Item sudah diajukan untuk periode ini' />";
+						} else {
+							Rows += "<input type='text' class='form-control nilai divide' name='nilai[]' value='0' data-no='" + nomor + "' id='nilai_" + nomor + "' />";
+						}
 						Rows += "</td>";
+
+						Rows += "<td>";
+						Rows += "<textarea class='form-control' rows='3' name='keterangan[]' id='keterangan_" + nomor + "' style='min-width:200px;resize:vertical;" + (isSubmitted ? "background:#eee;' readonly placeholder='Terkunci (Sudah diajukan)'" : "'") + "></textarea>";
+						Rows += "</td>";
+
+						Rows += "<td>";
+						Rows += "<input type='file' name='doc_file_" + nomor + "' id='doc_file" + nomor + "' " + (isSubmitted ? "disabled style='cursor:not-allowed;'" : "") + ">";
+						Rows += "</td>";
+
+						Rows += "<td>";
+						Rows += "<input type='text' class='form-control' name='bank_id[]' id='bank_id_" + nomor + "' value='' placeholder='- Nama Bank -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
+						Rows += "<input type='text' class='form-control' name='accnumber[]' id='accnumber_" + nomor + "' value='' placeholder='- No Rekening -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
+						Rows += "<input type='text' class='form-control' name='accname[]' id='accname_" + nomor + "' value='' placeholder='- Nama -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
+						Rows += "</td>";
+
 						Rows += "<td align='center' class='hidden'>";
 						Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus data'><i class='fa fa-close'></i> Hapus</button>";
 						Rows += "</td>";
@@ -423,9 +478,15 @@
 						nomor++;
 						$('#detail_body').append(Rows);
 					});
+
+					if (total_items > 0 && total_items === submitted_items) {
+						$("#alert_all_submitted").slideDown();
+					} else {
+						$("#alert_all_submitted").slideUp();
+					}
+
 					$(".divide").divide();
-
-
+					recalculate_total();
 				} else {
 					swal({
 						title: "Gagal!",
@@ -453,6 +514,7 @@
 
 	function delDetail(row) {
 		$('#tr1_' + row).remove();
+		recalculate_total();
 	}
 
 	function data_approve() {
