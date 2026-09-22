@@ -325,7 +325,7 @@
                             Digitally Signned By : <br>
                             Imanuel Iman <br>
                             <?php
-                            if ($id_company == '4') {
+                            if ($id_company == '4' || $id_company == '5') {
                                 echo 'PT. Vuca Strategi Bisnis <br>';
                             } else {
                                 echo 'PT. Sentral Tehnologi Managemen <br>';
@@ -485,7 +485,7 @@
                         Digitally Signned By : <br>
                         Imanuel Iman <br>
                         <?php
-                        if ($id_company == '4') {
+                        if ($id_company == '4' || $id_company == '5') {
                             echo 'PT. Vuca Strategi Bisnis <br>';
                         } else {
                             echo 'PT. Sentral Tehnologi Managemen <br>';
