@@ -264,7 +264,8 @@ class Pengajuan_rutin extends Admin_Controller
 					'tipe' => $tipe,
 					'no_doc' => $no_doc,
 					'tanggal_doc' => $tanggal_doc,
-					'departement' => $departement
+					'departement' => $departement,
+					'status' => 0
 					// 'nilai'=>0,
 				);
 				$this->Pengajuan_rutin_model->insert($dataheader);
@@ -274,7 +275,7 @@ class Pengajuan_rutin extends Admin_Controller
 						'id' => $id,
 						'tanggal_doc' => $tanggal_doc,
 						'sts_reject' => null,
-						'sts' => 0,
+						'status' => 0,
 						'reject_ket' => null
 					)
 				);
