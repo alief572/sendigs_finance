@@ -2,6 +2,12 @@
 	<div class="box-body">
 		<form id="data-form" method="post" autocomplete="off"><br>
 			<input type="hidden" name='so_number' id='so_number' value='<?= $header[0]['so_number']; ?>'>
+			<?php if (($header[0]['sts_reject1'] == '1' || $header[0]['sts_reject2'] == '1' || $header[0]['sts_reject3'] == '1') && $header[0]['rejected'] == 1) : ?>
+				<div class="alert alert-danger" style="margin-bottom: 20px;">
+					<h4><i class="icon fa fa-ban"></i> PR Ditolak!</h4>
+					<?= !empty($header[0]['reject_reason3']) ? htmlspecialchars($header[0]['reject_reason3']) : 'Pengajuan PR ditolak oleh Direktur / Management.'; ?>
+				</div>
+			<?php endif; ?>
 			<div class="form-group row">
 				<div class="col-md-12">
 					<table class='table' width='70%'>
