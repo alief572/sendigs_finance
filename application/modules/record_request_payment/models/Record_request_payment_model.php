@@ -92,7 +92,143 @@ class Record_request_payment_model extends BF_Model
 		$this->db->from('tr_rp_record');
 		$this->db->where('id_pengajuan', (int) $id_pengajuan);
 		$this->db->order_by('id', 'asc');
-		return $this->db->get()->result();
+		$records = $this->db->get()->result();
+
+		foreach ($records as $r) {
+			$b = $this->resolve_bank_info($r->no_dokumen, $r->kategori);
+			$r->bank_nama   = $b['nama'];
+			$r->bank_name   = $b['bank'];
+			$r->bank_no_rek = $b['no_rek'];
+		}
+
+		return $records;
+	}
+
+	/**
+	 * Resolusi informasi rekening tujuan pembayaran (Nama, Bank, No. Rek)
+	 * langsung dari dokumen sumber tanpa migrasi skema tabel.
+	 */
+	public function resolve_bank_info($no_dokumen, $kategori = '')
+	{
+		$res = [
+			'nama'   => '',
+			'bank'   => '',
+			'no_rek' => '',
+		];
+
+		if (empty($no_dokumen)) {
+			return $res;
+		}
+
+		$kat = strtolower(trim((string)$kategori));
+
+		// 1. Kasbon (tr_kasbon)
+		if ($kat === 'kasbon' || strpos($no_dokumen, 'KS-') === 0) {
+			$row = $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_kasbon', ['no_doc' => $no_dokumen])
+							->row();
+			if ($row) {
+				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
+				$res['bank']   = trim((string)$row->bank_id);
+				$res['no_rek'] = trim((string)$row->accnumber);
+				return $res;
+			}
+		}
+
+		// 2. Transport / Transportasi (tr_transport_req)
+		if ($kat === 'transport' || $kat === 'transportasi' || strpos($no_dokumen, 'RQ-') === 0) {
+			$row = $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_transport_req', ['no_doc' => $no_dokumen])
+							->row();
+			if ($row) {
+				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
+				$res['bank']   = trim((string)$row->bank_id);
+				$res['no_rek'] = trim((string)$row->accnumber);
+				return $res;
+			}
+		}
+
+		// 3. Expense (tr_expense)
+		if ($kat === 'expense' || strpos($no_dokumen, 'EXP-') === 0 || strpos($no_dokumen, 'ER-') === 0 || strpos($no_dokumen, 'PI-') === 0) {
+			$row = $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_expense', ['no_doc' => $no_dokumen])
+							->row();
+			if ($row) {
+				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
+				$res['bank']   = trim((string)$row->bank_id);
+				$res['no_rek'] = trim((string)$row->accnumber);
+				return $res;
+			}
+		}
+
+		// 4. Periodik (tr_pengajuan_rutin_detail)
+		if ($kat === 'periodik' || strpos($no_dokumen, 'PERIODIK-') === 0) {
+			$row = $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $no_dokumen])
+							->row();
+			if ($row) {
+				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
+				$res['bank']   = trim((string)$row->bank_id);
+				$res['no_rek'] = trim((string)$row->accnumber);
+				return $res;
+			}
+		}
+
+		// 5. Cash (tr_pr_non_po -> rutin_non_planning_header)
+		if ($kat === 'cash' || strpos($no_dokumen, 'PRN') === 0) {
+			$pr = $this->db->select('no_pr')->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen])->row();
+			if ($pr && !empty($pr->no_pr)) {
+				$head = $this->db->select('bank_name, bank_account_no, bank_account_name')
+								 ->get_where('rutin_non_planning_header', ['no_pr' => $pr->no_pr])
+								 ->row();
+				if ($head) {
+					$res['nama']   = trim((string)$head->bank_account_name);
+					$res['bank']   = trim((string)$head->bank_name);
+					$res['no_rek'] = trim((string)$head->bank_account_no);
+					return $res;
+				}
+			}
+		}
+
+		// 6. Direct Payment (tr_direct_payment)
+		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
+			$row = $this->db->select('bank, bank_number, bank_account')
+							->get_where('tr_direct_payment', ['no_doc' => $no_dokumen])
+							->row();
+			if ($row) {
+				$res['nama']   = trim((string)$row->bank_account);
+				$res['bank']   = trim((string)$row->bank);
+				$res['no_rek'] = trim((string)$row->bank_number);
+				if (!empty($res['bank']) || !empty($res['no_rek']) || !empty($res['nama'])) {
+					return $res;
+				}
+			}
+		}
+
+		// 7. request_payment fallback (Petty Cash / RPC / PHP)
+		$rp = $this->db->select('nama, bank_id, accnumber, accname, bank_name')
+					   ->get_where('request_payment', ['no_doc' => $no_dokumen])
+					   ->row();
+		if ($rp) {
+			$res['nama']   = !empty($rp->accname) ? trim($rp->accname) : trim((string)$rp->nama);
+			$res['bank']   = !empty($rp->bank_id) ? trim($rp->bank_id) : trim((string)$rp->bank_name);
+			$res['no_rek'] = trim((string)$rp->accnumber);
+			if (!empty($res['bank']) || !empty($res['no_rek']) || !empty($res['nama'])) {
+				return $res;
+			}
+		}
+
+		// 8. payment_approve fallback
+		$pa = $this->db->select('nama, bank_id, accnumber, accname, bank_name')
+					   ->get_where('payment_approve', ['no_doc' => $no_dokumen])
+					   ->row();
+		if ($pa) {
+			$res['nama']   = !empty($pa->accname) ? trim($pa->accname) : trim((string)$pa->nama);
+			$res['bank']   = !empty($pa->bank_id) ? trim($pa->bank_id) : trim((string)$pa->bank_name);
+			$res['no_rek'] = trim((string)$pa->accnumber);
+		}
+
+		return $res;
 	}
 
 	// Server-side DataTables: histori dokumen lama (pre-cutoff) dari payment_approve
