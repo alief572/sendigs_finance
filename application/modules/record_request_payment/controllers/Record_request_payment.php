@@ -96,15 +96,15 @@ class Record_request_payment extends Admin_Controller
 		$sheet->setCellValue('A2', 'Company: ' . $company);
 		$sheet->setCellValue('A3', 'No. Pengajuan: ' . $header->no_pengajuan);
 		$sheet->setCellValue('A4', 'Dicetak pada: ' . date('d-m-Y H:i:s'));
-		$sheet->mergeCells('A1:K1');
-		$sheet->mergeCells('A2:K2');
-		$sheet->mergeCells('A3:K3');
-		$sheet->mergeCells('A4:K4');
+		$sheet->mergeCells('A1:N1');
+		$sheet->mergeCells('A2:N2');
+		$sheet->mergeCells('A3:N3');
+		$sheet->mergeCells('A4:N4');
 		$sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
 		// Kolom header tabel (baris 6)
-		$headers = ['NO', 'NO. DOKUMEN', 'KATEGORI', 'REQUEST BY', 'KEPERLUAN', 'DPP', 'PPN', 'PPH23', 'PPH21', 'ADMIN', 'DIBAYARKAN'];
-		$cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+		$headers = ['NO', 'NO. DOKUMEN', 'KATEGORI', 'REQUEST BY', 'KEPERLUAN', 'DPP', 'PPN', 'PPH23', 'PPH21', 'ADMIN', 'DIBAYARKAN', 'Nama', 'Bank', 'No. Rek'];
+		$cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'];
 		$headRow = 6;
 		foreach ($headers as $i => $h) {
 			$sheet->setCellValue($cols[$i] . $headRow, $h);
@@ -115,10 +115,14 @@ class Record_request_payment extends Admin_Controller
 			'alignment' => ['horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER],
 			'borders' => ['allborders' => ['style' => PHPExcel_Style_Border::BORDER_THIN]],
 		];
-		$sheet->getStyle('A6:K6')->applyFromArray($headerStyle);
+		$sheet->getStyle('A6:N6')->applyFromArray($headerStyle);
 
 		// Lebar kolom
-		$widths = ['A' => 5, 'B' => 20, 'C' => 14, 'D' => 22, 'E' => 34, 'F' => 15, 'G' => 12, 'H' => 12, 'I' => 12, 'J' => 10, 'K' => 16];
+		$widths = [
+			'A' => 5, 'B' => 20, 'C' => 14, 'D' => 22, 'E' => 34,
+			'F' => 15, 'G' => 12, 'H' => 12, 'I' => 12, 'J' => 10, 'K' => 16,
+			'L' => 25, 'M' => 15, 'N' => 22
+		];
 		foreach ($widths as $c => $w) {
 			$sheet->getColumnDimension($c)->setWidth($w);
 		}
@@ -151,8 +155,11 @@ class Record_request_payment extends Admin_Controller
 			$sheet->setCellValue('I' . $row, $pph21);
 			$sheet->setCellValue('J' . $row, $admin);
 			$sheet->setCellValue('K' . $row, $dibayarkan);
+			$sheet->setCellValue('L' . $row, !empty($r->bank_nama) ? $r->bank_nama : '-');
+			$sheet->setCellValue('M' . $row, !empty($r->bank_name) ? $r->bank_name : '-');
+			$sheet->setCellValueExplicit('N' . $row, !empty($r->bank_no_rek) ? (string) $r->bank_no_rek : '-', PHPExcel_Cell_DataType::TYPE_STRING);
 
-			$sheet->getStyle('A' . $row . ':K' . $row)->applyFromArray($bodyStyle);
+			$sheet->getStyle('A' . $row . ':N' . $row)->applyFromArray($bodyStyle);
 			foreach (['F', 'G', 'H', 'I', 'J', 'K'] as $c) {
 				$sheet->getStyle($c . $row)->getNumberFormat()->setFormatCode('#,##0');
 				$sheet->getStyle($c . $row)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
@@ -164,10 +171,10 @@ class Record_request_payment extends Admin_Controller
 		$sheet->setCellValue('E' . $row, 'TOTAL');
 		$sheet->setCellValue('F' . $row, $totalNilai);
 		$sheet->setCellValue('K' . $row, $totalDibayarkan);
-		$sheet->getStyle('E' . $row . ':K' . $row)->getFont()->setBold(true);
+		$sheet->getStyle('E' . $row . ':N' . $row)->getFont()->setBold(true);
 		$sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0');
 		$sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('#,##0');
-		$sheet->getStyle('E' . $row . ':K' . $row)->applyFromArray($bodyStyle);
+		$sheet->getStyle('E' . $row . ':N' . $row)->applyFromArray($bodyStyle);
 
 		// Filename
 		$safeCompany = preg_replace('/[^a-zA-Z0-9]+/', '_', $company);
