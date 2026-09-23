@@ -8,6 +8,294 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 	thead input {
 		width: 100%;
 	}
+
+	.no-pr {
+		color: #b3261e;
+		font-weight: 600;
+	}
+
+	.kat {
+		color: #555;
+		font-size: 12px;
+	}
+
+	.pic {
+		color: #555;
+		font-size: 12px;
+	}
+
+	.item-line {
+		line-height: 1.6;
+	}
+
+	.qty-line {
+		line-height: 1.6;
+		text-align: right;
+	}
+
+	.progress-cell {
+		min-width: 280px;
+	}
+
+	.steps {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		margin-bottom: 6px;
+	}
+
+	.step-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		transition: transform 0.15s ease;
+	}
+
+	.step-dot.done {
+		background: #1f7a45;
+	}
+
+	.step-dot.active {
+		background: #a1670d;
+		box-shadow: 0 0 0 3px rgba(161, 103, 13, 0.2);
+	}
+
+	.step-dot.pending {
+		background: #cbd2d9;
+	}
+
+	.step-dot.reject {
+		background: #b32b2b;
+		box-shadow: 0 0 0 3px rgba(179, 43, 43, 0.2);
+	}
+
+	.step-line {
+		flex: 1;
+		height: 2px;
+		background: #e2e6ea;
+	}
+
+	.step-line.done {
+		background: #1f7a45;
+	}
+
+	.step-labels {
+		display: flex;
+		justify-content: space-between;
+		font-size: 9.5px;
+		color: #8c96a3;
+		margin-bottom: 6px;
+		line-height: 1.2;
+		gap: 2px;
+	}
+
+	.step-lbl {
+		flex: 1;
+		text-align: center;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.step-lbl:first-child {
+		text-align: left;
+	}
+
+	.step-lbl:last-child {
+		text-align: right;
+	}
+
+	.step-lbl.cur {
+		color: #1f2937;
+		font-weight: 700;
+	}
+
+	.step-lbl.rej {
+		color: #b32b2b;
+		font-weight: 700;
+	}
+
+	.status-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	.st-wait {
+		background: #fdf1d9;
+		color: #a1670d;
+	}
+
+	.st-final {
+		background: #e2f6ea;
+		color: #1f7a45;
+	}
+
+	.st-reject {
+		background: #fbe4e4;
+		color: #b32b2b;
+	}
+
+	.doc-meta {
+		font-size: 11px;
+		color: #6b7280;
+		margin-top: 3px;
+	}
+
+	.reject-reason {
+		font-size: 11px;
+		color: #b32b2b;
+		background: #fff5f5;
+		border-left: 3px solid #b32b2b;
+		padding: 3px 6px;
+		margin-top: 4px;
+		border-radius: 2px;
+		line-height: 1.35;
+	}
+
+	.opts {
+		display: flex;
+		gap: 6px;
+	}
+
+	.opt-btn {
+		width: 26px;
+		height: 26px;
+		border-radius: 5px;
+		border: none;
+		color: #fff !important;
+		font-size: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		text-decoration: none !important;
+	}
+
+	.b-view {
+		background: #e0a530;
+	}
+
+	.b-edit {
+		background: #3f7ac9;
+	}
+
+	.b-print {
+		background: #3fa85a;
+	}
+
+	.b-del {
+		background: #d9534f;
+	}
+
+	.stage-label {
+		font-size: 12px;
+		font-weight: 700;
+		color: #1f2937;
+		margin-bottom: 3px;
+	}
+
+	.flowmap {
+		background: #fff;
+		border: 1px solid #d2d6de;
+		border-left: 4px solid #3c8dbc;
+		border-radius: 4px;
+		padding: 12px 16px;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #555;
+	}
+
+	.flowmap b {
+		color: #1f2937;
+	}
+
+	.flowmap code {
+		background: #eef1f5;
+		padding: 2px 6px;
+		border-radius: 4px;
+		color: #1f2937;
+		font-size: 11.5px;
+	}
+
+	.flow-trunk {
+		font-size: 12.5px;
+		color: #1f2937;
+		margin-top: 4px;
+		padding-bottom: 2px;
+	}
+
+	.flow-branches {
+		margin-top: 8px;
+		padding-left: 14px;
+		border-left: 2px dashed #d2d6de;
+	}
+
+	.branch-row {
+		margin: 5px 0;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	.branch-tag {
+		display: inline-block;
+		padding: 1px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 700;
+		background: #fdf1d9;
+		color: #a1670d;
+	}
+
+	.branch-note {
+		color: #777;
+		font-size: 11.5px;
+		margin-left: 4px;
+	}
+
+	.legend {
+		display: flex;
+		gap: 16px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #666;
+	}
+
+	.legend span {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		display: inline-block;
+	}
+
+	.dot-pending {
+		background: #cbd2d9;
+	}
+
+	.dot-active {
+		background: #a1670d;
+	}
+
+	.dot-done {
+		background: #1f7a45;
+	}
+
+	.dot-reject {
+		background: #b32b2b;
+	}
 </style>
 <div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
@@ -52,19 +340,37 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 	</div>
 	<!-- /.box-header -->
 	<div class="box-body">
+		<!-- FLOWMAP CARD -->
+		<div class="flowmap">
+			<b>Alur PR Stock:</b>
+			<div class="flow-trunk"><code>PR — Direktur</code> <span class="branch-note">(1 level saja, tanpa Finance)</span> &rarr; <code>Metode Pembelian</code></div>
+			<div class="flow-branches">
+				<div class="branch-row"><span class="branch-tag">jika Direct Payment</span> &rarr; <code>Request Payment</code><span class="branch-note">(langsung, tanpa approval tambahan — tahap final)</span></div>
+				<div class="branch-row"><span class="branch-tag">jika Kasbon</span> &rarr; <code>Kasbon — Finance</code> &rarr; <code>Kasbon — Direktur</code> &rarr; <code>Request Payment</code><span class="branch-note">(setelah 2 level kasbon approve — tahap final)</span></div>
+			</div>
+		</div>
+
+		<!-- LEGEND -->
+		<div class="legend">
+			<span><span class="dot dot-pending"></span> Belum sampai tahap ini</span>
+			<span><span class="dot dot-active"></span> Sedang berjalan / menunggu</span>
+			<span><span class="dot dot-done"></span> Selesai tahap ini</span>
+			<span><span class="dot dot-reject"></span> Ditolak</span>
+		</div>
+
 		<table id="example1" class="table table-bordered table-striped" width='100%'>
 			<thead>
-				<tr>
-					<th class="text-center">#</th>
-					<th class="text-center">No. PR</th>
-					<th class="text-center">Kategori PR</th>
+				<tr class="bg-blue">
+					<th class="text-center" style="width: 35px;">#</th>
+					<th class="text-center" style="width: 110px;">No. PR</th>
+					<th class="text-center" style="width: 140px;">Kategori PR</th>
 					<th class="text-center">Nama Barang</th>
-					<th class="text-center" style="min-width: 8% !important;">Qty (Pack)</th>
-					<th class="text-center">Dibutuhkan</th>
-					<th class="text-center">Status</th>
-					<th class="text-center">Request By</th>
-					<th class="text-center">Request Date</th>
-					<th class="text-center">Option</th>
+					<th class="text-center" style="min-width: 90px;">Qty (Pack)</th>
+					<th class="text-center" style="width: 110px;">Dibutuhkan</th>
+					<th class="text-center" style="width: 110px;">Request By</th>
+					<th class="text-center" style="width: 110px;">Request Date</th>
+					<th class="text-center no-sort" style="min-width: 300px;">Progress PR</th>
+					<th class="text-center no-sort" style="width: 110px;">Option</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -76,7 +382,6 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 					$nm_detail = '';
 					$qty_detail = '';
 					foreach ($get_detail_pr as $item) {
-						// $get_stok_data = $this->db->get_where('accessories', ['id' => $row->id_material])->row();
 						$this->db->select('a.stock_name, b.code');
 						$this->db->from('accessories a');
 						$this->db->join('ms_satuan b', 'b.id = a.id_unit_gudang', 'left');
@@ -84,8 +389,8 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 						$get_stok_data = $this->db->get()->row();
 
 						if (!empty($get_stok_data)) {
-							$nm_detail = $nm_detail . $get_stok_data->stock_name . '<br>';
-							$qty_detail = $qty_detail . number_format($item->propose_purchase, 2) . ' ' . ucfirst($get_stok_data->code) . '<br>';
+							$nm_detail = $nm_detail . '<div class="item-line">' . $get_stok_data->stock_name . '</div>';
+							$qty_detail = $qty_detail . '<div class="qty-line">' . number_format($item->propose_purchase, 2) . ' ' . ucfirst($get_stok_data->code) . '</div>';
 						}
 					}
 
@@ -109,71 +414,24 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 
 					echo '<tr>';
 					echo '<td class="text-center">' . $no . '</td>';
-					echo '<td>' . strtoupper($row->no_pr) . '</td>';
-					echo '<td>' . strtoupper($kategori_pr) . '</td>';
+					echo '<td><span class="no-pr">' . strtoupper($row->no_pr) . '</span></td>';
+					echo '<td><span class="kat">' . strtoupper($kategori_pr) . '</span></td>';
 					echo '<td>' . $nm_detail . '</td>';
-					echo '<td class="text-right">' . $qty_detail . '</td>';
+					echo '<td>' . $qty_detail . '</td>';
 					echo '<td>' . date('d F Y', strtotime($row->tgl_dibutuhkan)) . '</td>';
-
-					$getCheck = $this->db->get_where('material_planning_base_on_produksi_detail', array('so_number' => $row->so_number, 'status_app' => 'N'))->result();
-
-					$valid_edit = 1;
-					if (($row->sts_reject1 !== null || $row->sts_reject2 !== null || $row->sts_reject3 !== null) && $row->rejected == 1) {
-						if ($row->sts_reject1 == "1") :
-							$warna = "red";
-							$sts = "Rejected By Head";
-						elseif ($row->sts_reject2 == "1") :
-							$warna = "red";
-							$sts = "Rejected By Cost Control";
-						elseif ($row->sts_reject3 == "1") :
-							$warna = "red";
-							$sts = "Rejected By Management";
-						endif;
-
-						$warna = 'red';
-						$sts = 'Rejected';
-					} else {
-						if ($row->app_1 == null && $row->app_2 == null && $row->app_3 == null) :
-							$warna = "blue";
-							$sts = "Waiting Approval";
-						else :
-							if ($row->sts_app == "Y") :
-								$warna = "green";
-								$sts = "Approved";
-							else :
-								$warna = "blue";
-								$sts = "Waiting Approval";
-							endif;
-						endif;
-					}
-
-					if (COUNT($getCheck) <= 0) {
-						$sts = 'Approved';
-						$warna = 'green';
-
-						$valid_edit = 0;
-					}
-
-					echo '<td><span class="badge" style="background-color: ' . $warna . '">' . $sts . '</span></td>';
-					echo '<td class="text-center">' . $row->request_by . '</td>';
+					echo '<td class="text-center pic">' . ($row->request_by ?? '-') . '</td>';
 					echo '<td class="text-center">' . $row->request_date . '</td>';
+					echo '<td class="progress-cell">' . render_pr_progress_cell('stock', $row) . '</td>';
 
-					$approve  = "";
-					$view  = "<a href='" . site_url($this->uri->segment(1)) . '/detail_planning/' . $row->so_number . "' class='btn btn-sm btn-warning' title='Detail PR' data-role='qtip'><i class='fa fa-eye'></i></a>";
-					$edit   = "";
-					// if ($ENABLE_MANAGE && $valid_edit > 0) {
-					// 	$edit   = "<a href='" . site_url($this->uri->segment(1)) . '/edit_planning/' . $row->so_number . "' class='btn btn-sm btn-info' title='Edit PR' data-role='qtip'><i class='fa fa-edit'></i></a>";
-					// }
-
-					$print = '<a href="' . site_url($this->uri->segment(1)) . '/PrintH2/' . $row->so_number . '" class="btn btn-sm btn-info" title="Print PR" target="_blank"><i class="fa fa-download"></i></a>';
+					$view  = "<a href='" . site_url($this->uri->segment(1)) . '/detail_planning/' . $row->so_number . "' class='opt-btn b-view' title='Detail PR' data-role='qtip' style='display:inline-flex;'><i class='fa fa-eye'></i></a>";
+					$print = '<a href="' . site_url($this->uri->segment(1)) . '/PrintH2/' . $row->so_number . '" class="opt-btn b-print" title="Print PR" target="_blank" style="display:inline-flex;"><i class="fa fa-download"></i></a>';
 
 					$close = '';
 					if ($ENABLE_DELETE) {
-						$close = '<button type="button" class="btn btn-sm btn-danger close_pr_modal" data-so_number="' . $row->so_number . '" title="Close PR"><i class="fa fa-close"></i></button>';
+						$close = '<button type="button" class="opt-btn b-del close_pr_modal" data-so_number="' . $row->so_number . '" title="Close PR" style="display:inline-flex;"><i class="fa fa-close"></i></button>';
 					}
 
-					echo '<td>' . $view . ' ' . $edit . ' ' . $approve . ' ' . $print . ' ' . $close . '</td>';
-
+					echo '<td><div class="opts" style="justify-content:center;">' . $view . ' ' . $print . ' ' . $close . '</div></td>';
 					echo '</tr>';
 
 					$no++;
@@ -416,6 +674,16 @@ $ENABLE_DELETE  = has_permission('PR_Stok.Delete');
 
 
 	function DataTables(costcenter = null, product = null) {
-		var dataTable = $('#example1').DataTable();
+		var dataTable = $('#example1').DataTable({
+			"bAutoWidth": false,
+			"destroy": true,
+			"order": [
+				[7, "desc"]
+			],
+			"columnDefs": [{
+				"targets": 'no-sort',
+				"orderable": false,
+			}]
+		});
 	}
 </script>

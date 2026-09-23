@@ -32,17 +32,43 @@ class Request_pr_stok extends Admin_Controller
   {
     $this->auth->restrict($this->viewPermission);
     $session  = $this->session->userdata('app_session');
+    $is_admin = $this->auth->is_admin();
+    $user_id  = $this->auth->user_id();
 
-    $get_data = $this->db->select('a.*, b.nm_customer, e.nm_lengkap as request_by, DATE_FORMAT(a.created_date, "%d %M %Y") as request_date')
+    $this->db->select('
+        a.*,
+        b.nm_customer,
+        e.nm_lengkap as request_by,
+        DATE_FORMAT(a.created_date, "%d %M %Y") as request_date,
+        GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ", ") as no_doc_kasbon,
+        MAX(kb.status) as kasbon_status,
+        MAX(kb.sts_finance) as kasbon_sts_finance,
+        MAX(kb.sts_reject) as kasbon_sts_reject,
+        MAX(kb.st_reject) as kasbon_reject_reason,
+        GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ", ") as no_doc_non_po,
+        MAX(pa_np.tgl_bayar) as tgl_bayar_dp,
+        MAX(CASE WHEN pa_np.status = 2 OR np.sts = "2" THEN 1 ELSE 0 END) as dp_paid,
+        GROUP_CONCAT(DISTINCT po.no_po SEPARATOR ", ") as no_doc_po,
+        MAX(po.status) as po_status,
+        MAX(CASE WHEN po.reject_reason IS NOT NULL AND po.reject_reason != "" THEN 1 ELSE 0 END) as po_rejected
+    ')
       ->from('material_planning_base_on_produksi a')
       ->join('customer b', 'b.id_customer = a.id_customer', 'left')
-      ->join('material_planning_base_on_produksi_detail c', 'c.so_number = a.so_number', 'left')
-      ->join('accessories d', 'd.id = c.id_material', 'left')
       ->join('users e', 'e.id_user = a.created_by', 'left')
+      ->join('tr_pr_detail_kasbon pdk', 'pdk.no_pr = a.no_pr', 'left')
+      ->join('tr_kasbon kb', 'kb.no_doc = pdk.id_kasbon OR kb.id_pr = a.no_pr', 'left')
+      ->join('tr_pr_non_po np', "np.no_pr = a.no_pr AND np.jenis_pr = 'pr stock'", 'left', FALSE)
+      ->join('payment_approve pa_np', 'pa_np.no_doc = np.no_non_po AND pa_np.status = 2', 'left')
+      ->join('tr_purchase_order po', 'po.no_pr = a.no_pr', 'left')
       ->where('a.category', 'pr stok')
       ->where('a.booking_date <>', null)
-      ->where('a.close_pr', null)
-      ->group_by('a.so_number')
+      ->where('a.close_pr', null);
+
+    if (!$is_admin) {
+      $this->db->where('a.created_by', $user_id);
+    }
+
+    $get_data = $this->db->group_by('a.so_number')
       ->order_by('a.created_date', 'desc')
       ->get()
       ->result();

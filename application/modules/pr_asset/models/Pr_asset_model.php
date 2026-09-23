@@ -563,74 +563,80 @@ class Pr_asset_model extends BF_model
 
 			$tanda = $requestData['tanda'];
 
-			$nestedData 	= array();
-			$nestedData[]	= "<div class='prt_" . $nomor . "' align='center'>" . $nomor . "</div><script type='text/javascript'>$('.prt_" . $nomor . "').parent().parent().attr('id','" . $nomor . "');</script>";
-			$nestedData[]	= "<div align='center'>" . strtoupper($row['no_pr']) . "</div>";
-			$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['tgl_pr'])) . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_barang']) . "</div>";
-			$nestedData[]	= "<div align='center'>" . $row['dibuat_oleh'] . "</div>";
-			$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['created_date'])) . "</div>";
+			if (empty($tanda)) {
+				$nestedData 	= array();
+				$nestedData[]	= "<div align='center'>" . $nomor . "</div>";
+				$nestedData[]	= "<div align='center'><span class='no-pr'>" . strtoupper($row['no_pr']) . "</span></div>";
+				$nestedData[]	= "<div align='left' class='proj'>" . strtoupper($row['nm_barang']) . "</div>";
+				$nestedData[]	= "<div align='left' class='dept'>" . strtoupper($row['nm_dept']) . "</div>";
+				$nestedData[]	= "<div align='center' class='pic'>" . ($row['dibuat_oleh'] ?? '-') . "</div>";
+				$nestedData[]	= "<div align='center'>" . date('d M Y H:i', strtotime($row['created_date'])) . "</div>";
+				$nestedData[]	= "<div class='progress-cell'>" . render_pr_progress_cell('asset', (object)$row) . "</div>";
 
-			$approve_stat = 0;
+				$btn_view = "<a href='" . base_url('pr_asset/view/' . $row['id']) . "' class='opt-btn b-view' title='Detail' style='display:inline-flex;'><i class='fa fa-eye'></i></a>";
+				$btn_print = "<a href='" . base_url('pr_asset/print_pr_asset/' . $row['no_pr']) . "' target='_blank' class='opt-btn b-print' title='Print' style='display:inline-flex;'><i class='fa fa-print'></i></a>";
 
-			if (
-				($row['app_status_1'] == '' || $row['app_status_1'] == null) &&
-				($row['app_status_2'] == '' || $row['app_status_2'] == null) &&
-				($row['app_status_3'] == '' || $row['app_status_3'] == null)
-			) {
-				$status = 'Waiting Approval';
-				$color = 'blue';
-			}
-			if (
-				$row['app_status_1'] == 'D' ||
-				$row['app_status_2'] == 'D' ||
-				$row['app_status_3'] == 'D'
-			) {
-				$status = 'Rejected';
-				$color = 'red';
-			}
+				$nestedData[]	= "<div align='center'><div class='opts' style='justify-content:center;'>" . $btn_view . " " . $btn_print . "</div></div>";
+				$data[] = $nestedData;
+			} else {
+				$nestedData 	= array();
+				$nestedData[]	= "<div class='prt_" . $nomor . "' align='center'>" . $nomor . "</div><script type='text/javascript'>$('.prt_" . $nomor . "').parent().parent().attr('id','" . $nomor . "');</script>";
+				$nestedData[]	= "<div align='center'>" . strtoupper($row['no_pr']) . "</div>";
+				$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['tgl_pr'])) . "</div>";
+				$nestedData[]	= "<div align='left'>" . strtoupper($row['nm_barang']) . "</div>";
+				$nestedData[]	= "<div align='center'>" . $row['dibuat_oleh'] . "</div>";
+				$nestedData[]	= "<div align='center'>" . date('d M Y', strtotime($row['created_date'])) . "</div>";
 
-			if (
-				$row['app_status_3'] == 'Y'
-			) {
-				$status = 'Approved';
-				$color = 'green';
+				$approve_stat = 0;
 
-				$approve_stat = 1;
-			}
-			$nestedData[]	= "<div align='left'><span class='badge bg-" . $color . "'>" . strtoupper($status) . "</span></div>";
-			// $view = '';
-			// if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
-			// 	$view = "<button type='button' class='btn btn-sm btn-primary look_hide' title='Look and Hide' data-id='" . $nomor . "' data-role='qtip'><i class='fa fa-check'></i></button>";
-			// }
-			// $print			= "&nbsp;<button type='button'class='btn btn-sm btn-primary print_pr' title='Print PR' data-no_pr='" . $row['no_pr'] . "'><i class='fa fa-print'></i></button>";
-			$print = '';
+				if (
+					($row['app_status_1'] == '' || $row['app_status_1'] == null) &&
+					($row['app_status_2'] == '' || $row['app_status_2'] == null) &&
+					($row['app_status_3'] == '' || $row['app_status_3'] == null)
+				) {
+					$status = 'Waiting Approval';
+					$color = 'blue';
+				}
+				if (
+					$row['app_status_1'] == 'D' ||
+					$row['app_status_2'] == 'D' ||
+					$row['app_status_3'] == 'D'
+				) {
+					$status = 'Rejected';
+					$color = 'red';
+				}
 
-			$edit = "&nbsp;<a href='" . base_url('pr_asset/edit/' . $row['id']) . "' class='btn btn-sm btn-warning'><i class='fa fa-pencil'></i></a>";
-			// if ($approve_stat == '1') {
-			$edit = '';
-			// }
+				if (
+					$row['app_status_3'] == 'Y'
+				) {
+					$status = 'Approved';
+					$color = 'green';
 
-			$view = "<a href='" . base_url('pr_asset/view/' . $row['id']) . "' class='btn btn-sm btn-info'><i class='fa fa-eye'></i></a>";
+					$approve_stat = 1;
+				}
+				$nestedData[]	= "<div align='left'><span class='badge bg-" . $color . "'>" . strtoupper($status) . "</span></div>";
 
-			$nestedData[]	= "<div align='center'>" . $view . "" . $print . "" . $edit . "</div>";
-			$data[] = $nestedData;
+				$print = '';
+				$edit = '';
+				$view = "<a href='" . base_url('pr_asset/view/' . $row['id']) . "' class='btn btn-sm btn-info'><i class='fa fa-eye'></i></a>";
 
-			$tipe_approve = '';
-			if ($requestData['tanda'] == 'approval_head') {
-				$tipe_approve = 1;
-			}
-			if ($requestData['tanda'] == 'approval_cost_control') {
-				$tipe_approve = 2;
-			}
-			if ($requestData['tanda'] == 'approval_management') {
-				$tipe_approve = 3;
-			}
+				$nestedData[]	= "<div align='center'>" . $view . "" . $print . "" . $edit . "</div>";
+				$data[] = $nestedData;
 
-			//detail
-			if ($requestData['tanda'] !== '' && $requestData['tanda'] !== null) {
+				$tipe_approve = '';
+				if ($requestData['tanda'] == 'approval_head') {
+					$tipe_approve = 1;
+				}
+				if ($requestData['tanda'] == 'approval_cost_control') {
+					$tipe_approve = 2;
+				}
+				if ($requestData['tanda'] == 'approval_management') {
+					$tipe_approve = 3;
+				}
+
+				//detail
 				$nestedData2 	= array();
-				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div><script type='text/javascript'>"; //$('.prtCh_".$nomor."').parent().parent().attr('height','200px');
+				$nestedData2[]	= "<div class='prtCh_" . $nomor . "' align='center'></div>";
 				$nestedData2[]	= "<div align='right'><b>COA</b><br>" . strtoupper($row['no_coa'] . ' - ' . $row['nm_coa']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>QTY BARANG</b><br>" . number_format($row['qty']) . "</div>";
 				$nestedData2[]	= "<div align='right'><b>NILAI PR</b></br>" . number_format($row['nilai_pr']) . "</div>";
@@ -639,7 +645,7 @@ class Pr_asset_model extends BF_model
 
 				$app_by = '';
 				$app_date = '';
-				if ($row['app_reason_1'] !== '' || $row['app_reason_1'] !== null) {
+				if (!empty($row['app_reason_1'])) {
 					$app_reason = $row['app_reason_1'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_1']));
 
@@ -647,7 +653,7 @@ class Pr_asset_model extends BF_model
 					if (!empty($get_create_by)) {
 						$app_by = $get_create_by->nm_lengkap;
 					}
-				} else if ($row['app_reason_2'] !== '' || $row['app_reason_2'] !== null) {
+				} else if (!empty($row['app_reason_2'])) {
 					$app_reason = $row['app_reason_2'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_2']));
 
@@ -655,7 +661,7 @@ class Pr_asset_model extends BF_model
 					if (!empty($get_create_by)) {
 						$app_by = $get_create_by->nm_lengkap;
 					}
-				} else if ($row['app_reason_3'] !== '' || $row['app_reason_3'] !== null) {
+				} else if (!empty($row['app_reason_3'])) {
 					$app_reason = $row['app_reason_3'];
 					$app_date = date('d-M-Y H:i:s', strtotime($row['app_date_3']));
 
@@ -672,26 +678,20 @@ class Pr_asset_model extends BF_model
 					$sts_app = "<b>" . $status . " REASON</b><br>" . ucfirst($app_reason);
 					$sts_by = "<b>" . $status . " BY</b><br>" . ucfirst($app_by . " (" . $app_date . ")");
 				}
-				if (!empty($tanda)) {
-					$nestedData2[]	= "<div align='right'><b>ACTION</b></br>
-										<select id='action_" . $nomor . "' class='form-control input-sm chosen-select' style='width:100%;'>
-											<option value='Y'>APPROVE</option>
-											<option value='D'>REJECT</option>
-										</select>
-										</div>";
-					$nestedData2[]	= "<div align='right'><b>REASON REJECT</b></br>
-										<input type='input' id='reason_" . $nomor . "' class='form-control input-sm text-left' style='width:100%;' placeholder='Reason'>
-										<input type='hidden' id='no_pr_" . $nomor . "' class='form-control input-sm' value='" . $row['no_pr'] . "'>
-										</div>";
-					$nestedData2[]	= "<div align='center'><br>" . $approve . "</div>";
-				} else {
-					$nestedData2[]	= "<div align='right'>" . $sts_by . "</div>";
-					$nestedData2[]	= "<div align='right'>" . $sts_app . "</div>";
-					$nestedData2[]	= "<div align='right'></div>";
-				}
+
+				$nestedData2[]	= "<div align='right'><b>ACTION</b></br>
+									<select id='action_" . $nomor . "' class='form-control input-sm chosen-select' style='width:100%;'>
+										<option value='Y'>APPROVE</option>
+										<option value='D'>REJECT</option>
+									</select>
+									</div>";
+				$nestedData2[]	= "<div align='right'><b>REASON REJECT</b></br>
+									<input type='input' id='reason_" . $nomor . "' class='form-control input-sm text-left' style='width:100%;' placeholder='Reason'>
+									<input type='hidden' id='no_pr_" . $nomor . "' class='form-control input-sm' value='" . $row['no_pr'] . "'>
+									</div>";
+				$nestedData2[]	= "<div align='center'><br>" . $approve . "</div>";
 				$data[] = $nestedData2;
 			}
-
 
 			$urut1++;
 			$urut2++;
@@ -709,6 +709,100 @@ class Pr_asset_model extends BF_model
 
 	public function query_data_json_pr_asset($tanda, $like_value = NULL, $column_order = NULL, $column_dir = NULL, $limit_start = NULL, $limit_length = NULL)
 	{
+		if (empty($tanda)) {
+			$is_admin = $this->auth->is_admin();
+			$user_id  = $this->auth->user_id();
+			$where_user = "";
+			if (!$is_admin) {
+				$where_user = " AND b.created_by = " . $this->db->escape($user_id);
+			}
+
+			$where_search = "";
+			if (!empty($like_value)) {
+				$esc = $this->db->escape_like_str($like_value);
+				$where_search = " AND (
+					b.no_pr LIKE '%" . $esc . "%'
+					OR a.nm_barang LIKE '%" . $esc . "%'
+					OR c.nm_lengkap LIKE '%" . $esc . "%'
+					OR dept.name LIKE '%" . $esc . "%'
+					OR msdept.nama LIKE '%" . $esc . "%'
+				)";
+			}
+
+			$sql = "
+				SELECT
+					b.id,
+					b.no_pr,
+					b.tgl_pr,
+					b.category,
+					b.created_by,
+					b.created_date,
+					b.app_status_1,
+					b.app_reason_1,
+					b.app_by_1,
+					b.app_date_1,
+					b.app_status_2,
+					b.app_reason_2,
+					b.app_by_2,
+					b.app_date_2,
+					b.app_status_3,
+					b.app_reason_3,
+					b.app_by_3,
+					b.app_date_3,
+					b.metode_pembelian,
+					b.dokumen_pendukung,
+					b.close_pr,
+					GROUP_CONCAT(DISTINCT a.nm_barang SEPARATOR ', ') as nm_barang,
+					c.nm_lengkap as dibuat_oleh,
+					COALESCE(dept.name, msdept.nama, '-') as nm_dept,
+					GROUP_CONCAT(DISTINCT kb.no_doc SEPARATOR ', ') as no_doc_kasbon,
+					MAX(kb.status) as kasbon_status,
+					MAX(kb.sts_finance) as kasbon_sts_finance,
+					MAX(kb.sts_reject) as kasbon_sts_reject,
+					MAX(kb.st_reject) as kasbon_reject_reason,
+					GROUP_CONCAT(DISTINCT np.no_non_po SEPARATOR ', ') as no_doc_non_po,
+					MAX(pa_np.tgl_bayar) as tgl_bayar_dp,
+					MAX(CASE WHEN pa_np.status = 2 OR np.sts = '2' THEN 1 ELSE 0 END) as dp_paid,
+					GROUP_CONCAT(DISTINCT po.no_po SEPARATOR ', ') as no_doc_po,
+					MAX(po.status) as po_status,
+					MAX(CASE WHEN po.reject_reason IS NOT NULL AND po.reject_reason != '' THEN 1 ELSE 0 END) as po_rejected
+				FROM
+					tran_pr_header b
+					LEFT JOIN tran_pr_detail a ON a.no_pr = b.no_pr AND a.category = 'asset'
+					LEFT JOIN users c ON c.id_user = b.created_by
+					LEFT JOIN departments dept ON dept.id = c.department_id
+					LEFT JOIN ms_department msdept ON msdept.id = c.department_id
+					LEFT JOIN tr_pr_detail_kasbon pdk ON pdk.no_pr = b.no_pr
+					LEFT JOIN tr_kasbon kb ON kb.no_doc = pdk.id_kasbon OR kb.id_pr = b.no_pr
+					LEFT JOIN tr_pr_non_po np ON np.no_pr = b.no_pr AND np.jenis_pr = 'pr asset'
+					LEFT JOIN payment_approve pa_np ON pa_np.no_doc = np.no_non_po AND pa_np.status = 2
+					LEFT JOIN tr_purchase_order po ON po.no_pr = b.no_pr
+				WHERE b.category = 'asset' " . $where_user . $where_search . "
+				GROUP BY b.no_pr
+			";
+
+			$data['totalData'] = $this->db->query($sql)->num_rows();
+			$data['totalFiltered'] = $this->db->query($sql)->num_rows();
+
+			$columns_order_by = array(
+				0 => 'b.id',
+				1 => 'b.no_pr',
+				2 => 'a.nm_barang',
+				3 => 'dept.name',
+				4 => 'c.nm_lengkap',
+				5 => 'b.created_date',
+			);
+
+			$order_col = $columns_order_by[$column_order] ?? 'b.created_date';
+			$order_dir = (strtolower($column_dir) === 'asc') ? 'ASC' : 'DESC';
+			$sql .= " ORDER BY " . $order_col . " " . $order_dir . " ";
+			if ($limit_length != -1 && $limit_length !== null) {
+				$sql .= " LIMIT " . intval($limit_start) . " ," . intval($limit_length) . " ";
+			}
+
+			$data['query'] = $this->db->query($sql);
+			return $data;
+		}
 
 		$where = '';
 		if (!empty($tanda)) {
@@ -745,7 +839,6 @@ class Pr_asset_model extends BF_model
 				OR c.nm_lengkap LIKE '%" . $this->db->escape_like_str($like_value) . "%'
 	        )
 		";
-		// echo $sql; exit;
 
 		$data['totalData'] = $this->db->query($sql)->num_rows();
 		$data['totalFiltered'] = $this->db->query($sql)->num_rows();
