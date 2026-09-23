@@ -37,13 +37,21 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 		width: 260px;
 	}
 
+	#table_rp {
+		margin-bottom: 0 !important;
+	}
+
 	#table_rp thead th {
-		background-color: #3c8dbc;
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		background-color: #3c8dbc !important;
 		color: #fff;
 		font-size: 12px;
 		text-align: center;
 		vertical-align: middle;
 		white-space: nowrap;
+		box-shadow: inset 0 -2px 0 #2a6b92, inset 0 1px 0 #3c8dbc;
 	}
 
 	#table_rp tbody td {
@@ -188,8 +196,30 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	}
 
 	.rp-table-wrapper {
-		overflow-x: auto;
+		max-height: calc(100vh - 220px);
+		overflow: auto;
 		border: 1px solid #ddd;
+		background: #fff;
+		position: relative;
+		margin-bottom: 10px;
+	}
+
+	.rp-table-wrapper::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	.rp-table-wrapper::-webkit-scrollbar-thumb {
+		background: #c1c1c1;
+		border-radius: 4px;
+	}
+
+	.rp-table-wrapper::-webkit-scrollbar-thumb:hover {
+		background: #a8a8a8;
+	}
+
+	.rp-table-wrapper::-webkit-scrollbar-track {
+		background: #f1f1f1;
 	}
 
 	tr.rp-locked td {
@@ -457,27 +487,25 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			</div>
 		</div>
 
-		<div class="rp-table-wrapper">
-			<table id="table_rp" class="table table-bordered table-striped" style="width:100%;">
-				<thead>
-					<tr>
-						<th style="width:30px;"><input type="checkbox" id="rp_check_all"></th>
-						<th style="width:36px;">NO</th>
-						<th>NO. DOKUMEN / KATEGORI</th>
-						<th>REQUEST BY</th>
-						<th style="width:90px;">TANGGAL</th>
-						<th>KEPERLUAN</th>
-						<th style="width:100px;">DPP (RP)</th>
-						<th style="width:60px;">PPN</th>
-						<th style="width:60px;">PPH 23</th>
-						<th style="width:60px;">PPH 21</th>
-						<th style="width:80px;">ADMIN</th>
-						<th style="width:110px;">DIBAYARKAN</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
+		<table id="table_rp" class="table table-bordered table-striped" style="width:100%;">
+			<thead>
+				<tr>
+					<th style="width:30px;"><input type="checkbox" id="rp_check_all"></th>
+					<th style="width:36px;">NO</th>
+					<th>NO. DOKUMEN / KATEGORI</th>
+					<th>REQUEST BY</th>
+					<th style="width:90px;">TANGGAL</th>
+					<th>KEPERLUAN</th>
+					<th style="width:100px;">DPP (RP)</th>
+					<th style="width:60px;">PPN</th>
+					<th style="width:60px;">PPH 23</th>
+					<th style="width:60px;">PPH 21</th>
+					<th style="width:80px;">ADMIN</th>
+					<th style="width:110px;">DIBAYARKAN</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
 
 		<div class="rp-bulk-bar" id="rp_bulk_bar">
 			<div class="info">
@@ -822,7 +850,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			pageLength: 25,
 			lengthChange: false,
 			searching: false,
-			dom: 'rtip',
+			dom: 'r<"rp-table-wrapper"t><"row"<"col-sm-5"i><"col-sm-7"p>>',
 			language: {
 				processing: '<i class="fa fa-spinner fa-spin"></i> Memproses...',
 				emptyTable: 'Tidak ada dokumen pada status ini.',
@@ -852,6 +880,11 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 				rpApplyLockUI();
 				rpUpdateBulkBar();
 			}
+		});
+
+		// reset scroll ke atas saat ganti halaman
+		$('#table_rp').on('page.dt', function() {
+			$('.rp-table-wrapper').scrollTop(0);
 		});
 
 		// entries per page
