@@ -12,10 +12,16 @@ class Record_request_payment_model extends BF_Model
 	protected $soft_deletes = false;
 	protected $set_created  = false;
 	protected $set_modified = false;
+	protected $consultant   = null;
 
 	public function __construct()
 	{
 		parent::__construct();
+		try {
+			$this->consultant = $this->load->database('consultant', true);
+		} catch (Exception $e) {
+			$this->consultant = null;
+		}
 	}
 
 	// Server-side DataTables: batch done yang punya >=1 record snapshot
@@ -124,14 +130,38 @@ class Record_request_payment_model extends BF_Model
 
 		// 1. Kasbon (tr_kasbon)
 		if ($kat === 'kasbon' || strpos($no_dokumen, 'KS-') === 0) {
-			$row = $this->db->select('nama, bank_id, accnumber, accname')
+			$row = $this->db->select('nama, bank_id, accnumber, accname, no_kasbon_consultant')
 							->get_where('tr_kasbon', ['no_doc' => $no_dokumen])
 							->row();
 			if ($row) {
+				// Cek jika kasbon berasal dari consultant (no_kasbon_consultant terisi)
+				if (!empty($row->no_kasbon_consultant) && $this->consultant) {
+					$kons = $this->consultant->select('bank, bank_number, bank_account')
+											 ->get_where('kons_tr_kasbon_project_header', ['id' => $row->no_kasbon_consultant])
+											 ->row();
+					if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
+						$res['nama']   = !empty($kons->bank_account) ? trim($kons->bank_account) : (!empty($row->accname) ? trim($row->accname) : trim((string)$row->nama));
+						$res['bank']   = !empty($kons->bank) ? trim($kons->bank) : trim((string)$row->bank_id);
+						$res['no_rek'] = !empty($kons->bank_number) ? trim($kons->bank_number) : trim((string)$row->accnumber);
+						return $res;
+					}
+				}
+
 				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
 				$res['bank']   = trim((string)$row->bank_id);
 				$res['no_rek'] = trim((string)$row->accnumber);
 				return $res;
+			} elseif ($this->consultant) {
+				// Fallback jika tidak ada di tr_kasbon tapi ada di kons_tr_kasbon_project_header
+				$kons = $this->consultant->select('bank, bank_number, bank_account')
+										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen])
+										 ->row();
+				if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
+					$res['nama']   = trim((string)$kons->bank_account);
+					$res['bank']   = trim((string)$kons->bank);
+					$res['no_rek'] = trim((string)$kons->bank_number);
+					return $res;
+				}
 			}
 		}
 
@@ -190,15 +220,40 @@ class Record_request_payment_model extends BF_Model
 			}
 		}
 
-		// 6. Direct Payment (tr_direct_payment)
+		// 6. Direct Payment (tr_direct_payment / kons_tr_kasbon_project_header)
 		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
-			$row = $this->db->select('bank, bank_number, bank_account')
-							->get_where('tr_direct_payment', ['no_doc' => $no_dokumen])
-							->row();
-			if ($row) {
-				$res['nama']   = trim((string)$row->bank_account);
-				$res['bank']   = trim((string)$row->bank);
-				$res['no_rek'] = trim((string)$row->bank_number);
+			$rows = $this->db->select('bank, bank_number, bank_account')
+							 ->where('no_doc', $no_dokumen)
+							 ->order_by('id', 'desc')
+							 ->get('tr_direct_payment')
+							 ->result();
+			foreach ($rows as $r) {
+				if (!empty($r->bank) || !empty($r->bank_number) || !empty($r->bank_account)) {
+					$res['nama']   = trim((string)$r->bank_account);
+					$res['bank']   = trim((string)$r->bank);
+					$res['no_rek'] = trim((string)$r->bank_number);
+					return $res;
+				}
+			}
+
+			// Jika data bank di tr_direct_payment lokal belum ada / kosong,
+			// lookup ke kons_tr_kasbon_project_header di database consultant (DBCNL)
+			if ($this->consultant) {
+				$kons = $this->consultant->select('bank, bank_number, bank_account')
+										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen])
+										 ->row();
+				if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
+					$res['nama']   = trim((string)$kons->bank_account);
+					$res['bank']   = trim((string)$kons->bank);
+					$res['no_rek'] = trim((string)$kons->bank_number);
+					return $res;
+				}
+			}
+
+			if (!empty($rows)) {
+				$res['nama']   = trim((string)$rows[0]->bank_account);
+				$res['bank']   = trim((string)$rows[0]->bank);
+				$res['no_rek'] = trim((string)$rows[0]->bank_number);
 				if (!empty($res['bank']) || !empty($res['no_rek']) || !empty($res['nama'])) {
 					return $res;
 				}
