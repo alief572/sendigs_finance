@@ -228,11 +228,13 @@ $(document).ready(function () {
     var activeCompany = null;
 
     if (checkedItems.length > 0) {
-      activeCompany = checkedItems.first().data("company");
+      var activeRaw = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
+      activeCompany = $.trim(activeRaw);
     }
 
     $(".check-item").each(function () {
-      var itemCompany = $(this).data("company");
+      var rawComp = $(this).attr("data-company") || $(this).data("company") || "";
+      var itemCompany = $.trim(rawComp);
       if (activeCompany) {
         if (itemCompany !== activeCompany) {
           // Beda company: disable dan pastikan tidak tercentang
@@ -272,16 +274,23 @@ $(document).ready(function () {
       var checkedItems = $(".check-item:checked");
       var targetCompany = null;
       if (checkedItems.length > 0) {
-        targetCompany = checkedItems.first().data("company");
+        var rawActive = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
+        targetCompany = $.trim(rawActive);
       } else {
         var firstItem = $(".check-item:first");
         if (firstItem.length > 0) {
-          targetCompany = firstItem.data("company");
+          var rawFirst = firstItem.attr("data-company") || firstItem.data("company") || "";
+          targetCompany = $.trim(rawFirst);
         }
       }
 
       if (targetCompany) {
-        $('.check-item[data-company="' + targetCompany + '"]').prop("checked", true);
+        $(".check-item").each(function () {
+          var c = $.trim($(this).attr("data-company") || $(this).data("company") || "");
+          if (c === targetCompany) {
+            $(this).prop("checked", true);
+          }
+        });
       }
     } else {
       $(".check-item").prop("checked", false);
