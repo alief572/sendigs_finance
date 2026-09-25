@@ -5,6 +5,10 @@
  * delete confirmation, and retry journal handler.
  */
 $(document).ready(function () {
+  // Persistent selection across pagination
+  var selectedPencatatan = {};
+  var activeLockedCompany = null;
+
   // =========================================================================
   // DataTables Initialization
   // =========================================================================
@@ -50,6 +54,15 @@ $(document).ready(function () {
         data: null,
         render: function (data, type, row) {
           if (row.status === "draft" && !row.in_pelaporan) {
+            var isChecked = !!selectedPencatatan[row.id];
+            var isDisabled = false;
+            var titleAttr = "";
+
+            if (activeLockedCompany && $.trim(row.company) !== activeLockedCompany) {
+              isDisabled = true;
+              titleAttr = ' title="Hanya dapat memilih pencatatan dari company ' + activeLockedCompany + '"';
+            }
+
             return (
               '<input type="checkbox" class="check-item" ' +
               'data-id="' +
@@ -60,7 +73,11 @@ $(document).ready(function () {
               '" ' +
               'data-tanggal="' +
               row.tanggal +
-              '">'
+              '" ' +
+              (isChecked ? 'checked ' : '') +
+              (isDisabled ? 'disabled ' : '') +
+              titleAttr +
+              '>'
             );
           }
           return '<input type="checkbox" disabled>';
@@ -213,35 +230,38 @@ $(document).ready(function () {
       },
     ],
     drawCallback: function () {
-      // Reset check-all state after table redraw
-      $("#check-all").prop("checked", false);
       updateCompanyLockAndUI();
     },
   });
 
   // =========================================================================
-  // Checkbox Logic & Single Company Lock
+  // Checkbox Logic & Single Company Lock (Cross-Pagination Persistent)
   // =========================================================================
 
   function updateCompanyLockAndUI() {
-    var checkedItems = $(".check-item:checked");
-    var activeCompany = null;
-
-    if (checkedItems.length > 0) {
-      var activeRaw = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
-      activeCompany = $.trim(activeRaw);
+    // Tentukan activeLockedCompany dari selectedPencatatan
+    activeLockedCompany = null;
+    var selectedKeys = Object.keys(selectedPencatatan);
+    if (selectedKeys.length > 0) {
+      activeLockedCompany = selectedPencatatan[selectedKeys[0]].company;
     }
 
     $(".check-item").each(function () {
+      var id = $(this).data("id");
       var rawComp = $(this).attr("data-company") || $(this).data("company") || "";
       var itemCompany = $.trim(rawComp);
-      if (activeCompany) {
-        if (itemCompany !== activeCompany) {
+
+      // Restore checked state dari map selectedPencatatan
+      var isChecked = !!selectedPencatatan[id];
+      $(this).prop("checked", isChecked);
+
+      if (activeLockedCompany) {
+        if (itemCompany !== activeLockedCompany) {
           // Beda company: disable dan pastikan tidak tercentang
           $(this)
             .prop("disabled", true)
             .prop("checked", false)
-            .attr("title", "Hanya dapat memilih pencatatan dari company " + activeCompany);
+            .attr("title", "Hanya dapat memilih pencatatan dari company " + activeLockedCompany);
           $(this).closest("tr").addClass("row-company-locked");
         } else {
           // Company sama: pastikan enabled
@@ -255,28 +275,24 @@ $(document).ready(function () {
       }
     });
 
-    // Update check-all state berdasarkan checkbox yang aktif/sama company
+    // Update check-all state berdasarkan checkbox yang aktif di halaman ini
     var availableCheckboxes = $(".check-item:not(:disabled)");
-    var checkedCheckboxes = $(".check-item:checked");
+    var checkedOnThisPage = $(".check-item:checked");
     $("#check-all").prop(
       "checked",
       availableCheckboxes.length > 0 &&
-        availableCheckboxes.length === checkedCheckboxes.length,
+        availableCheckboxes.length === checkedOnThisPage.length,
     );
 
     updateBuatPelaporanButton();
   }
 
-  // Check-all header checkbox: toggle all valid checkboxes for active/first company
+  // Check-all header checkbox: toggle all valid checkboxes for active/first company on current page
   $("#check-all").on("change", function () {
     var isChecked = $(this).is(":checked");
     if (isChecked) {
-      var checkedItems = $(".check-item:checked");
-      var targetCompany = null;
-      if (checkedItems.length > 0) {
-        var rawActive = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
-        targetCompany = $.trim(rawActive);
-      } else {
+      var targetCompany = activeLockedCompany;
+      if (!targetCompany) {
         var firstItem = $(".check-item:first");
         if (firstItem.length > 0) {
           var rawFirst = firstItem.attr("data-company") || firstItem.data("company") || "";
@@ -285,21 +301,48 @@ $(document).ready(function () {
       }
 
       if (targetCompany) {
+        activeLockedCompany = targetCompany;
         $(".check-item").each(function () {
           var c = $.trim($(this).attr("data-company") || $(this).data("company") || "");
           if (c === targetCompany) {
-            $(this).prop("checked", true);
+            var id = $(this).data("id");
+            var tanggal = $(this).data("tanggal");
+            selectedPencatatan[id] = { id: id, company: c, tanggal: tanggal };
           }
         });
       }
     } else {
-      $(".check-item").prop("checked", false);
+      // Uncheck all item di halaman saat ini dari selectedPencatatan
+      $(".check-item").each(function () {
+        var id = $(this).data("id");
+        delete selectedPencatatan[id];
+      });
+      if (Object.keys(selectedPencatatan).length === 0) {
+        activeLockedCompany = null;
+      }
     }
     updateCompanyLockAndUI();
   });
 
   // Individual checkbox change
   $(document).on("change", ".check-item", function () {
+    var id = $(this).data("id");
+    var rawComp = $(this).attr("data-company") || $(this).data("company") || "";
+    var company = $.trim(rawComp);
+    var tanggal = $(this).data("tanggal");
+    var isChecked = $(this).is(":checked");
+
+    if (isChecked) {
+      if (!activeLockedCompany) {
+        activeLockedCompany = company;
+      }
+      selectedPencatatan[id] = { id: id, company: company, tanggal: tanggal };
+    } else {
+      delete selectedPencatatan[id];
+      if (Object.keys(selectedPencatatan).length === 0) {
+        activeLockedCompany = null;
+      }
+    }
     updateCompanyLockAndUI();
   });
 
@@ -307,8 +350,19 @@ $(document).ready(function () {
    * Enable/disable "Buat Pelaporan" button based on checkbox state
    */
   function updateBuatPelaporanButton() {
-    var checkedCount = $(".check-item:checked").length;
-    $("#btn-buat-pelaporan").prop("disabled", checkedCount === 0);
+    var totalSelected = Object.keys(selectedPencatatan).length;
+    $("#btn-buat-pelaporan").prop("disabled", totalSelected === 0);
+    if (totalSelected > 0) {
+      $("#btn-buat-pelaporan").html(
+        '<i class="fa fa-file-text-o"></i> Buat Pelaporan <span class="badge" style="background:#fff; color:#3c8dbc; margin-left:4px;">' +
+          totalSelected +
+          "</span>",
+      );
+    } else {
+      $("#btn-buat-pelaporan").html(
+        '<i class="fa fa-file-text-o"></i> Buat Pelaporan',
+      );
+    }
   }
 
   // =========================================================================
@@ -317,14 +371,11 @@ $(document).ready(function () {
 
   $("#btn-buat-pelaporan").on("click", function () {
     var selectedItems = [];
-
-    $(".check-item:checked").each(function () {
-      selectedItems.push({
-        id: $(this).data("id"),
-        company: $(this).data("company"),
-        tanggal: $(this).data("tanggal"),
-      });
-    });
+    for (var key in selectedPencatatan) {
+      if (selectedPencatatan.hasOwnProperty(key)) {
+        selectedItems.push(selectedPencatatan[key]);
+      }
+    }
 
     // Validasi: minimal 1 pencatatan dipilih
     if (selectedItems.length === 0) {
@@ -383,6 +434,10 @@ $(document).ready(function () {
           cache: false,
           success: function (response) {
             if (response.status == "1") {
+              selectedPencatatan = {};
+              activeLockedCompany = null;
+              updateBuatPelaporanButton();
+
               Swal.fire({
                 icon: "success",
                 title: "Berhasil",
@@ -445,6 +500,9 @@ $(document).ready(function () {
           cache: false,
           success: function (response) {
             if (response.status == "1") {
+              delete selectedPencatatan[id];
+              updateCompanyLockAndUI();
+
               Swal.fire({
                 icon: "success",
                 title: "Berhasil",
