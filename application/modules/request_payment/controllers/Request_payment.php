@@ -3787,7 +3787,19 @@ class Request_payment extends Admin_Controller
 			return $this->print_cash($id);
 		}
 
+		// Cek apakah dokumen ini ada di tr_direct_payment
+		$check_tr_dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $id])->row();
+		if (empty($check_tr_dp) && is_numeric($id)) {
+			$check_tr_dp = $this->db->get_where('tr_direct_payment', ['id' => $id])->row();
+		}
+		if (empty($check_tr_dp)) {
+			$check_tr_dp = $this->db->get_where('tr_direct_payment', ['ids' => $id])->row();
+		}
+
 		$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $id))->row();
+		if (empty($get_kasbon_header) && !empty($check_tr_dp) && !empty($check_tr_dp->ids)) {
+			$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $check_tr_dp->ids))->row();
+		}
 		if (empty($get_kasbon_header)) {
 			$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('no_kasbon' => $id))->row();
 			if (!empty($get_kasbon_header)) {
@@ -3797,6 +3809,9 @@ class Request_payment extends Admin_Controller
 
 		if (!empty($get_kasbon_header)) {
 			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
+			if (empty($id_spk_penawaran) && !empty($check_tr_dp) && !empty($check_tr_dp->id_spk_penawaran)) {
+				$id_spk_penawaran = $check_tr_dp->id_spk_penawaran;
+			}
 
 			$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', array('id_spk_penawaran' => $id_spk_penawaran))->row();
 
@@ -4172,6 +4187,19 @@ class Request_payment extends Admin_Controller
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
 		$mpdf->WriteHTML($show);
+
+		if (!empty($check_tr_dp) && !empty($id_spk_penawaran)) {
+			$spk_penawaran_data = $this->_get_spk_penawaran_data($id_spk_penawaran);
+			if (!empty($spk_penawaran_data)) {
+				$show_spk = $this->template->load_view('print_spk_penawaran', $spk_penawaran_data);
+				if (empty($show_spk)) {
+					$show_spk = $this->load->view('print_spk_penawaran', $spk_penawaran_data, true);
+				}
+				$mpdf->AddPage();
+				$mpdf->WriteHTML($show_spk);
+			}
+		}
+
 		$clean_filename = trim(str_replace(['/', '\\'], '-', $id)) . '_' . date('ymdhis') . '.pdf';
 		$mpdf->Output($clean_filename, 'I');
 	}
@@ -4181,8 +4209,20 @@ class Request_payment extends Admin_Controller
 		$id = urldecode($id);
 		$id = str_replace('|', '/', $id);
 
+		// Cek apakah data ini adalah kasbon konsultan yang memiliki no_kasbon_consultant di tr_kasbon
+		$check_tr_kasbon = $this->db->get_where('tr_kasbon', ['no_kasbon_consultant' => $id])->row();
+		if (empty($check_tr_kasbon)) {
+			$check_tr_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $id])->row();
+		}
+		$is_consultant_kasbon = (!empty($check_tr_kasbon) && !empty($check_tr_kasbon->no_kasbon_consultant));
 
 		$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $id))->row();
+		if (empty($get_kasbon_header) && !empty($check_tr_kasbon) && !empty($check_tr_kasbon->no_kasbon_consultant)) {
+			$get_kasbon_header = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $check_tr_kasbon->no_kasbon_consultant))->row();
+			if (!empty($get_kasbon_header)) {
+				$id = $check_tr_kasbon->no_kasbon_consultant;
+			}
+		}
 
 		if (!empty($get_kasbon_header)) {
 			$id_spk_penawaran = $get_kasbon_header->id_spk_penawaran;
@@ -4553,7 +4593,125 @@ class Request_payment extends Admin_Controller
 		$mpdf->AddPage();
 		$mpdf->SetFooter($footer);
 		$mpdf->WriteHTML($show);
+
+		if ($is_consultant_kasbon && !empty($id_spk_penawaran)) {
+			$spk_penawaran_data = $this->_get_spk_penawaran_data($id_spk_penawaran);
+			if (!empty($spk_penawaran_data)) {
+				$show_spk = $this->template->load_view('print_spk_penawaran', $spk_penawaran_data);
+				if (empty($show_spk)) {
+					$show_spk = $this->load->view('print_spk_penawaran', $spk_penawaran_data, true);
+				}
+				$mpdf->AddPage();
+				$mpdf->WriteHTML($show_spk);
+			}
+		}
+
 		$clean_filename = trim(str_replace(['/', '\\'], '-', $id)) . '_' . date('ymdhis') . '.pdf';
 		$mpdf->Output($clean_filename, 'I');
+	}
+
+	private function _get_spk_penawaran_data($id_spk_penawaran)
+	{
+		if (empty($id_spk_penawaran)) {
+			return null;
+		}
+
+		$get_spk_penawaran = $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+		if (empty($get_spk_penawaran)) {
+			return null;
+		}
+
+		$get_spk_penawaran_payment = $this->consultant->get_where('kons_tr_spk_penawaran_payment', ['id_spk_penawaran' => $id_spk_penawaran])->result();
+
+		$this->consultant->select('a.*');
+		$this->consultant->from('kons_tr_spk_penawaran_subcont a');
+		$this->consultant->where('a.id_spk_penawaran', $id_spk_penawaran);
+		$this->consultant->order_by('a.id', 'asc');
+		$get_spk_penawaran_subcont = $this->consultant->get()->result();
+
+		$get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran->id_penawaran])->row();
+
+		$get_customer = null;
+		$get_marketing = null;
+		$detail_informasi_awal = '';
+		if (!empty($get_penawaran)) {
+			$this->consultant->select('a.*, b.nm_pic, b.divisi as jabatan_pic, b.hp as no_hp_pic');
+			$this->consultant->from('customer a');
+			$this->consultant->join('customer_pic b', 'b.id_pic = a.id_pic', 'left');
+			$this->consultant->where('a.nm_customer <>', '');
+			$this->consultant->where('a.id_customer', $get_penawaran->id_customer);
+			$get_customer = $this->consultant->get()->row();
+
+			$hris = $this->load->database('hris', TRUE);
+			if ($hris && !empty($get_penawaran->id_marketing)) {
+				$hris->select('a.id, a.name as nm_karyawan');
+				$hris->from('employees a');
+				$hris->where('a.id', $get_penawaran->id_marketing);
+				$get_marketing = $hris->get()->row();
+
+				if ($get_penawaran->tipe_informasi_awal == 'Sales' || $get_penawaran->tipe_informasi_awal == 'Others') {
+					$hris->select('a.name as nm_karyawan');
+					$hris->from('employees a');
+					$hris->where('a.id', $get_penawaran->detail_informasi_awal);
+					$get_marketing_informasi_awal = $hris->get()->row();
+
+					if (!empty($get_marketing_informasi_awal)) {
+						$detail_informasi_awal = $get_marketing_informasi_awal->nm_karyawan;
+					}
+				} else {
+					$detail_informasi_awal = $get_penawaran->detail_informasi_awal;
+				}
+			}
+		}
+
+		$this->consultant->select('a.*, b.nm_biaya');
+		$this->consultant->from('kons_tr_penawaran_akomodasi a');
+		$this->consultant->join('kons_master_biaya b', 'b.id = a.id_item', 'left');
+		$this->consultant->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+		$get_akomodasi = $this->consultant->get()->result();
+
+		$this->consultant->select('a.*, b.nm_biaya');
+		$this->consultant->from('kons_tr_penawaran_others a');
+		$this->consultant->join('kons_master_biaya b', 'b.id = a.id_item', 'left');
+		$this->consultant->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+		$get_others = $this->consultant->get()->result();
+
+		$this->consultant->select('a.*, b.isu_lingkungan as nm_biaya');
+		$this->consultant->from('kons_tr_penawaran_lab a');
+		$this->consultant->join('kons_master_lab b', 'b.id = a.id_item', 'left');
+		$this->consultant->where('a.id_penawaran', $get_spk_penawaran->id_penawaran);
+		$get_lab = $this->consultant->get()->result();
+
+		$ttl_mandays_subcont = 0;
+		$ttl_tandem = 0;
+		if (!empty($get_spk_penawaran_subcont)) {
+			foreach ($get_spk_penawaran_subcont as $item) {
+				$ttl_mandays_subcont += $item->mandays_subcont;
+				$ttl_tandem += ($item->mandays_tandem * $item->mandays_rate_tandem);
+			}
+		}
+
+		$this->consultant->select('a.nm_paket');
+		$this->consultant->from('kons_master_konsultasi_header a');
+		$this->consultant->where('a.id_konsultasi_h', $get_spk_penawaran->id_project);
+		$get_package = $this->consultant->get()->row();
+
+		$nm_paket = (!empty($get_package)) ? $get_package->nm_paket : '';
+
+		return [
+			'list_spk_penawaran' => $get_spk_penawaran,
+			'list_spk_penawaran_subcont' => $get_spk_penawaran_subcont,
+			'list_spk_penawaran_payment' => $get_spk_penawaran_payment,
+			'list_penawaran' => $get_penawaran,
+			'list_customer' => $get_customer,
+			'list_marketing' => $get_marketing,
+			'detail_informasi_awal' => $detail_informasi_awal,
+			'list_akomodasi' => $get_akomodasi,
+			'list_others' => $get_others,
+			'list_lab' => $get_lab,
+			'ttl_mandays_subcont' => $ttl_mandays_subcont,
+			'ttl_tandem' => $ttl_tandem,
+			'nm_paket' => $nm_paket
+		];
 	}
 }
