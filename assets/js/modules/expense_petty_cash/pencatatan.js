@@ -215,31 +215,83 @@ $(document).ready(function () {
     drawCallback: function () {
       // Reset check-all state after table redraw
       $("#check-all").prop("checked", false);
-      updateBuatPelaporanButton();
+      updateCompanyLockAndUI();
     },
   });
 
   // =========================================================================
-  // Checkbox Logic
+  // Checkbox Logic & Single Company Lock
   // =========================================================================
 
-  // Check-all header checkbox: toggle all visible checkboxes
+  function updateCompanyLockAndUI() {
+    var checkedItems = $(".check-item:checked");
+    var activeCompany = null;
+
+    if (checkedItems.length > 0) {
+      activeCompany = checkedItems.first().data("company");
+    }
+
+    $(".check-item").each(function () {
+      var itemCompany = $(this).data("company");
+      if (activeCompany) {
+        if (itemCompany !== activeCompany) {
+          // Beda company: disable dan pastikan tidak tercentang
+          $(this)
+            .prop("disabled", true)
+            .prop("checked", false)
+            .attr("title", "Hanya dapat memilih pencatatan dari company " + activeCompany);
+          $(this).closest("tr").addClass("row-company-locked");
+        } else {
+          // Company sama: pastikan enabled
+          $(this).prop("disabled", false).removeAttr("title");
+          $(this).closest("tr").removeClass("row-company-locked");
+        }
+      } else {
+        // Tidak ada yang dipilih: unlock semua checkbox yang draft
+        $(this).prop("disabled", false).removeAttr("title");
+        $(this).closest("tr").removeClass("row-company-locked");
+      }
+    });
+
+    // Update check-all state berdasarkan checkbox yang aktif/sama company
+    var availableCheckboxes = $(".check-item:not(:disabled)");
+    var checkedCheckboxes = $(".check-item:checked");
+    $("#check-all").prop(
+      "checked",
+      availableCheckboxes.length > 0 &&
+        availableCheckboxes.length === checkedCheckboxes.length,
+    );
+
+    updateBuatPelaporanButton();
+  }
+
+  // Check-all header checkbox: toggle all valid checkboxes for active/first company
   $("#check-all").on("change", function () {
     var isChecked = $(this).is(":checked");
-    $(".check-item:not(:disabled)").prop("checked", isChecked);
-    updateBuatPelaporanButton();
+    if (isChecked) {
+      var checkedItems = $(".check-item:checked");
+      var targetCompany = null;
+      if (checkedItems.length > 0) {
+        targetCompany = checkedItems.first().data("company");
+      } else {
+        var firstItem = $(".check-item:first");
+        if (firstItem.length > 0) {
+          targetCompany = firstItem.data("company");
+        }
+      }
+
+      if (targetCompany) {
+        $('.check-item[data-company="' + targetCompany + '"]').prop("checked", true);
+      }
+    } else {
+      $(".check-item").prop("checked", false);
+    }
+    updateCompanyLockAndUI();
   });
 
   // Individual checkbox change
   $(document).on("change", ".check-item", function () {
-    // Update check-all state
-    var totalCheckboxes = $(".check-item:not(:disabled)").length;
-    var checkedCheckboxes = $(".check-item:checked").length;
-    $("#check-all").prop(
-      "checked",
-      totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes,
-    );
-    updateBuatPelaporanButton();
+    updateCompanyLockAndUI();
   });
 
   /**
