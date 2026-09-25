@@ -146,6 +146,15 @@
         color: #00c0ef;
         right: 12px;
     }
+
+    .row-company-locked {
+        background-color: #fcfcfc !important;
+        opacity: 0.5;
+    }
+
+    .row-company-locked input[type="checkbox"] {
+        cursor: not-allowed;
+    }
 </style>
 
 <script>
