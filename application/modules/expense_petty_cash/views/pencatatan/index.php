@@ -210,4 +210,4 @@
     }
 </script>
 
-<script src="<?= base_url('assets/js/modules/expense_petty_cash/pencatatan.js') ?>"></script>
+<script src="<?= base_url('assets/js/modules/expense_petty_cash/pencatatan.js?v=' . filemtime(FCPATH . 'assets/js/modules/expense_petty_cash/pencatatan.js')) ?>"></script>
