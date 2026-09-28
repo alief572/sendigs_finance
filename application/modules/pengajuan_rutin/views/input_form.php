@@ -435,7 +435,13 @@
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' value='" + element.nama + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
 						if (isSubmitted) {
-							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='Item ini sudah diajukan untuk periode ini' style='font-size: 11px; padding: 3px 7px;'><i class='fa fa-lock'></i> Sudah Diajukan" + (element.submitted_no_doc ? " (" + element.submitted_no_doc + ")" : "") + "</span></div>";
+							var noDocRaw = element.submitted_no_doc ? String(element.submitted_no_doc) : '';
+							var noDocList = noDocRaw ? noDocRaw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; }) : [];
+							var badgeText = noDocList.length > 1
+								? " (" + noDocList.length + " dokumen)"
+								: (noDocList.length === 1 ? " (" + noDocList[0] + ")" : "");
+							var badgeTitle = noDocList.length ? "Sudah diajukan: " + noDocList.join(', ') : "Item ini sudah diajukan untuk periode ini";
+							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='" + badgeTitle + "' style='font-size: 11px; padding: 3px 7px; white-space: nowrap; cursor: help;'><i class='fa fa-lock'></i> Sudah Diajukan" + badgeText + "</span></div>";
 						}
 						Rows += "</td>";
 
