@@ -361,7 +361,7 @@ function formatDate($date)
                 <div class="pagebreak">
                     <img src="<?= base_url('assets/pr/' . $doc_item) ?>" class="attachment-img">
                 </div>
-            <?php endif;
+        <?php endif;
         endforeach;
         ?>
     <?php endif; ?>
@@ -393,7 +393,9 @@ function formatDate($date)
                 for (var pageNum = 1; pageNum <= totalPages; pageNum++) {
                     var page = await pdf.getPage(pageNum);
                     var scale = 2.0; // High resolution rendering for clear, sharp printout
-                    var viewport = page.getViewport({ scale: scale });
+                    var viewport = page.getViewport({
+                        scale: scale
+                    });
 
                     var canvas = document.createElement('canvas');
                     canvas.width = viewport.width;

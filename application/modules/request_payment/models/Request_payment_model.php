@@ -858,6 +858,41 @@ class Request_payment_model extends BF_Model
                     }
                 }
             }
+            // Cash: Request By & Company harus mengikuti PEMBUAT PR (bukan pembuat transaksi cash / Finance).
+            // Baris Cash selalu terkait tr_pr_non_po via id; ambil pembuat PR sesuai jenis_pr,
+            // lalu resolve company dari department pembuat PR (HRIS = source of truth).
+            // Fallback: jika PR / pembuat tak ketemu, biarkan nilai lama (request_by & resolve_row_company).
+            if ($item->kategori == 'Cash') {
+                $get_pr_cash = $this->db->get_where('tr_pr_non_po', ['id' => $item->id])->row();
+                if (!empty($get_pr_cash) && !empty($get_pr_cash->no_pr)) {
+                    $pr_header_table = null;
+                    if ($get_pr_cash->jenis_pr == 'pr departemen') {
+                        $pr_header_table = 'rutin_non_planning_header';
+                    } elseif ($get_pr_cash->jenis_pr == 'pr stok') {
+                        $pr_header_table = 'material_planning_base_on_produksi';
+                    } elseif ($get_pr_cash->jenis_pr == 'pr asset') {
+                        $pr_header_table = 'tran_pr_header';
+                    }
+                    if ($pr_header_table) {
+                        // created_by di ketiga tabel PR = users.id_user
+                        $pr_maker = $this->db->select('u.nm_lengkap, u.department_id')
+                            ->from($pr_header_table . ' h')
+                            ->join('users u', 'u.id_user = h.created_by', 'left')
+                            ->where('h.no_pr', $get_pr_cash->no_pr)
+                            ->get()->row();
+                        if (!empty($pr_maker) && !empty($pr_maker->nm_lengkap)) {
+                            $nmuser = $pr_maker->nm_lengkap;
+                            // Company mengikuti department pembuat PR (via HRIS dept -> company_map)
+                            if (!empty($pr_maker->department_id)) {
+                                $pr_comp = $this->resolve_company_via_hris_dept($pr_maker->department_id);
+                                if (!empty($pr_comp['company_nama'])) {
+                                    $company_display = $pr_comp['company_nama'];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Keperluan handling
             $keperluan = (!empty($item->keperluan)) ? nl2br($item->keperluan) : '';

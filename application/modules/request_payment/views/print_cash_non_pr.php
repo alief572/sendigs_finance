@@ -208,7 +208,9 @@ $nmuser = (!empty($data_pr->nm_pic)) ? $data_pr->nm_pic : '';
                 for (var pageNum = 1; pageNum <= totalPages; pageNum++) {
                     var page = await pdf.getPage(pageNum);
                     var scale = 2.0; // High resolution rendering for clear, sharp printout
-                    var viewport = page.getViewport({ scale: scale });
+                    var viewport = page.getViewport({
+                        scale: scale
+                    });
 
                     var canvas = document.createElement('canvas');
                     canvas.width = viewport.width;
