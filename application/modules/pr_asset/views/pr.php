@@ -23,17 +23,38 @@ $ENABLE_DELETE = has_permission('PR_Asset.Delete');
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
 			<input type='hidden' id='tanda' value='<?= $tanda; ?>'>
+
+			<?php if (empty($tanda)) : ?>
+				<!-- FLOWMAP CARD -->
+				<div class="flowmap">
+					<b>Alur PR Asset:</b>
+					<div class="flow-trunk"><code>PR — Direktur</code> <span class="branch-note">(1 level saja, tanpa Finance)</span> &rarr; <code>Metode Pembelian</code></div>
+					<div class="flow-branches">
+						<div class="branch-row"><span class="branch-tag">jika Direct Payment</span> &rarr; <code>Request Payment</code><span class="branch-note">(langsung, tanpa approval tambahan — tahap final)</span></div>
+						<div class="branch-row"><span class="branch-tag">jika Kasbon</span> &rarr; <code>Kasbon — Finance</code> &rarr; <code>Kasbon — Direktur</code> &rarr; <code>Request Payment</code><span class="branch-note">(setelah 2 level kasbon approve — tahap final)</span></div>
+					</div>
+				</div>
+
+				<!-- LEGEND -->
+				<div class="legend">
+					<span><span class="dot dot-pending"></span> Belum sampai tahap ini</span>
+					<span><span class="dot dot-active"></span> Sedang berjalan / menunggu</span>
+					<span><span class="dot dot-done"></span> Selesai tahap ini</span>
+					<span><span class="dot dot-reject"></span> Ditolak</span>
+				</div>
+			<?php endif; ?>
+
 			<table class="table table-bordered table-striped" id="my-grid" width='100%'>
 				<thead>
 					<tr class='bg-blue'>
-						<th class="text-center" width='5%'>#</th>
-						<th class="text-center" width='10%'>No PR</th>
-						<th class="text-center" width='15%'>Tanggal PR</th>
+						<th class="text-center" style="width: 40px;">#</th>
+						<th class="text-center" style="width: 120px;">No PR</th>
 						<th class="text-center">Nama Barang</th>
-						<th class="text-center" width='15%'>PR By</th>
-						<th class="text-center" width='15%'>PR Date</th>
-						<th class="text-center no-sort" width='15%'>Status</th>
-						<th class="text-center no-sort" width='7%'>Option</th>
+						<th class="text-center" style="width: 200px;">Departemen</th>
+						<th class="text-center" style="width: 130px;">Request By</th>
+						<th class="text-center" style="width: 140px;">Tanggal PR Dibuat</th>
+						<th class="text-center no-sort" style="min-width: 320px;">Progress PR</th>
+						<th class="text-center no-sort" style="width: 100px;">Option Action</th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -82,6 +103,290 @@ $ENABLE_DELETE = has_permission('PR_Asset.Delete');
 
 	.chosen-container-single .chosen-single div {
 		top: 5px;
+	}
+
+	.no-pr {
+		color: #b3261e;
+		font-weight: 600;
+	}
+
+	.proj {
+		max-width: 250px;
+		word-break: break-word;
+	}
+
+	.dept {
+		color: #555;
+		font-size: 12px;
+	}
+
+	.pic {
+		color: #555;
+		font-size: 12px;
+	}
+
+	.progress-cell {
+		min-width: 280px;
+	}
+
+	.steps {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		margin-bottom: 6px;
+	}
+
+	.step-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		transition: transform 0.15s ease;
+	}
+
+	.step-dot.done {
+		background: #1f7a45;
+	}
+
+	.step-dot.active {
+		background: #a1670d;
+		box-shadow: 0 0 0 3px rgba(161, 103, 13, 0.2);
+	}
+
+	.step-dot.pending {
+		background: #cbd2d9;
+	}
+
+	.step-dot.reject {
+		background: #b32b2b;
+		box-shadow: 0 0 0 3px rgba(179, 43, 43, 0.2);
+	}
+
+	.step-line {
+		flex: 1;
+		height: 2px;
+		background: #e2e6ea;
+	}
+
+	.step-line.done {
+		background: #1f7a45;
+	}
+
+	.step-labels {
+		display: flex;
+		justify-content: space-between;
+		font-size: 9.5px;
+		color: #8c96a3;
+		margin-bottom: 6px;
+		line-height: 1.2;
+		gap: 2px;
+	}
+
+	.step-lbl {
+		flex: 1;
+		text-align: center;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.step-lbl:first-child {
+		text-align: left;
+	}
+
+	.step-lbl:last-child {
+		text-align: right;
+	}
+
+	.step-lbl.cur {
+		color: #1f2937;
+		font-weight: 700;
+	}
+
+	.step-lbl.rej {
+		color: #b32b2b;
+		font-weight: 700;
+	}
+
+	.status-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	.st-wait {
+		background: #fdf1d9;
+		color: #a1670d;
+	}
+
+	.st-final {
+		background: #e2f6ea;
+		color: #1f7a45;
+	}
+
+	.st-reject {
+		background: #fbe4e4;
+		color: #b32b2b;
+	}
+
+	.doc-meta {
+		font-size: 11px;
+		color: #6b7280;
+		margin-top: 3px;
+	}
+
+	.reject-reason {
+		font-size: 11px;
+		color: #b32b2b;
+		background: #fff5f5;
+		border-left: 3px solid #b32b2b;
+		padding: 3px 6px;
+		margin-top: 4px;
+		border-radius: 2px;
+		line-height: 1.35;
+	}
+
+	.opts {
+		display: flex;
+		gap: 6px;
+	}
+
+	.opt-btn {
+		width: 26px;
+		height: 26px;
+		border-radius: 5px;
+		border: none;
+		color: #fff !important;
+		font-size: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		text-decoration: none !important;
+	}
+
+	.b-view {
+		background: #e0a530;
+	}
+
+	.b-edit {
+		background: #3f7ac9;
+	}
+
+	.b-print {
+		background: #3fa85a;
+	}
+
+	.b-del {
+		background: #d9534f;
+	}
+
+	.stage-label {
+		font-size: 12px;
+		font-weight: 700;
+		color: #1f2937;
+		margin-bottom: 3px;
+	}
+
+	.flowmap {
+		background: #fff;
+		border: 1px solid #d2d6de;
+		border-left: 4px solid #3c8dbc;
+		border-radius: 4px;
+		padding: 12px 16px;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #555;
+	}
+
+	.flowmap b {
+		color: #1f2937;
+	}
+
+	.flowmap code {
+		background: #eef1f5;
+		padding: 2px 6px;
+		border-radius: 4px;
+		color: #1f2937;
+		font-size: 11.5px;
+	}
+
+	.flow-trunk {
+		font-size: 12.5px;
+		color: #1f2937;
+		margin-top: 4px;
+		padding-bottom: 2px;
+	}
+
+	.flow-branches {
+		margin-top: 8px;
+		padding-left: 14px;
+		border-left: 2px dashed #d2d6de;
+	}
+
+	.branch-row {
+		margin: 5px 0;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	.branch-tag {
+		display: inline-block;
+		padding: 1px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 700;
+		background: #fdf1d9;
+		color: #a1670d;
+	}
+
+	.branch-note {
+		color: #777;
+		font-size: 11.5px;
+		margin-left: 4px;
+	}
+
+	.legend {
+		display: flex;
+		gap: 16px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #666;
+	}
+
+	.legend span {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		display: inline-block;
+	}
+
+	.dot-pending {
+		background: #cbd2d9;
+	}
+
+	.dot-active {
+		background: #a1670d;
+	}
+
+	.dot-done {
+		background: #1f7a45;
+	}
+
+	.dot-reject {
+		background: #b32b2b;
 	}
 </style>
 <script>
@@ -240,7 +545,7 @@ $ENABLE_DELETE = has_permission('PR_Asset.Delete');
 				"footer": true
 			},
 			"aaSorting": [
-				[1, "asc"]
+				[5, "desc"]
 			],
 			"columnDefs": [{
 				"targets": 'no-sort',
