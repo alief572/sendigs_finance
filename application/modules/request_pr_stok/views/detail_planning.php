@@ -2,6 +2,12 @@
 	<div class="box-body">
 		<form id="data-form" method="post" autocomplete="off"><br>
 			<input type="hidden" name='so_number' id='so_number' value='<?= $header[0]['so_number']; ?>'>
+			<?php if (($header[0]['sts_reject1'] == '1' || $header[0]['sts_reject2'] == '1' || $header[0]['sts_reject3'] == '1') && $header[0]['rejected'] == 1) : ?>
+				<div class="alert alert-danger" style="margin-bottom: 20px;">
+					<h4><i class="icon fa fa-ban"></i> PR Ditolak!</h4>
+					<?= !empty($header[0]['reject_reason3']) ? htmlspecialchars($header[0]['reject_reason3']) : 'Pengajuan PR ditolak oleh Direktur / Management.'; ?>
+				</div>
+			<?php endif; ?>
 			<div class="form-group row">
 				<div class="col-md-12">
 					<table class='table' width='70%'>
@@ -50,19 +56,13 @@
 						</tr>
 					</table>
 				</div>
-				<?php
-				$total_pengajuan = 0;
-				foreach ($detail as $d_item) {
-					$total_pengajuan += ($d_item['price_ref'] * $d_item['propose_purchase']);
-				}
-				?>
 				<div class="col-md-6">
 					<label for="">Nilai Budget</label>
 					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_budget']) ?>" readonly>
 				</div>
 				<div class="col-md-6">
 					<label for="">Nilai Pengajuan</label>
-					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($total_pengajuan > 0 ? $total_pengajuan : $header[0]['nilai_pengajuan'], 2) ?>" readonly>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($header[0]['nilai_pengajuan']) ?>" readonly>
 				</div>
 				<br><br>
 				<div class="col-md-12">
@@ -86,7 +86,6 @@
 						</thead>
 						<tbody>
 							<?php
-							$grand_total_detail = 0;
 							foreach ($detail as $key => $value) {
 								$key++;
 								$nm_material 	= (!empty($GET_LEVEL4[$value['id_material']]['nama'])) ? $GET_LEVEL4[$value['id_material']]['nama'] : '';
@@ -103,8 +102,6 @@
 								$get_stock = $this->db->get()->row();
 
 								$konversi = ($get_stock->konversi > 0) ? $get_stock->konversi : 1;
-								$subtotal = ($value['price_ref'] * $propose);
-								$grand_total_detail += $subtotal;
 
 
 								echo "<tr>";
@@ -120,7 +117,7 @@
 								echo "<td class='text-center'>" . number_format($propose, 2) . "</td>";
 								echo "<td class='text-center'>" . strtoupper($get_stock->satuan) . "</td>";
 								echo '<td class="text-right">' . number_format($value['price_ref'], 2) . '</td>';
-								echo '<td class="text-right">' . number_format($subtotal, 2) . '</td>';
+								echo '<td class="text-right">' . number_format(($value['price_ref'] * $propose), 2) . '</td>';
 								if ($value['status_app'] == 'N') {
 									echo "<td class='text-center'><span class='badge bg-blue text-bold'>Waiting Process</span></td>";
 								}
@@ -134,13 +131,6 @@
 							}
 							?>
 						</tbody>
-						<tfoot>
-							<tr>
-								<th class="text-center" colspan="10">Grand Total</th>
-								<th class="text-right"><?= number_format($grand_total_detail, 2) ?></th>
-								<th></th>
-							</tr>
-						</tfoot>
 					</table>
 				</div>
 			</div>

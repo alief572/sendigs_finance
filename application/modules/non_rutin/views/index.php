@@ -168,6 +168,17 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		line-height: 1.35;
 	}
 
+	.reject-reason {
+		font-size: 11px;
+		color: var(--state-reject-fg);
+		margin-top: 2px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 260px;
+		font-weight: 500;
+	}
+
 	.opts {
 		display: flex;
 		gap: 4px;
@@ -219,6 +230,104 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 	.b-del:hover {
 		background: #d73925;
 	}
+
+	.flowmap {
+		background: #fff;
+		border: 1px solid #d2d6de;
+		border-left: 4px solid #3c8dbc;
+		border-radius: 4px;
+		padding: 12px 16px;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #555;
+	}
+
+	.flowmap b {
+		color: #1f2937;
+	}
+
+	.flowmap code {
+		background: #eef1f5;
+		padding: 2px 6px;
+		border-radius: 4px;
+		color: #1f2937;
+		font-size: 11.5px;
+	}
+
+	.flow-trunk {
+		font-size: 12.5px;
+		color: #1f2937;
+		margin-top: 4px;
+		padding-bottom: 2px;
+	}
+
+	.flow-branches {
+		margin-top: 8px;
+		padding-left: 14px;
+		border-left: 2px dashed #d2d6de;
+	}
+
+	.branch-row {
+		margin: 5px 0;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	.branch-tag {
+		display: inline-block;
+		padding: 1px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 700;
+		background: var(--state-wait-bg);
+		color: var(--state-wait-fg);
+	}
+
+	.branch-note {
+		color: #777;
+		font-size: 11.5px;
+		margin-left: 4px;
+	}
+
+	.legend {
+		display: flex;
+		gap: 16px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+		font-size: 12px;
+		color: #666;
+	}
+
+	.legend span {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		display: inline-block;
+	}
+
+	.dot-pending {
+		background: #cbd2d9;
+	}
+
+	.dot-active {
+		background: #a1670d;
+	}
+
+	.dot-done {
+		background: #1f7a45;
+	}
+
+	.dot-reject {
+		background: #b32b2b;
+	}
 </style>
 
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
@@ -244,19 +353,25 @@ $ENABLE_DELETE  = has_permission('PR_Departemen.Delete');
 		<!-- /.box-header -->
 		<div class="box-body table-responsive">
 			<input type="hidden" id="tanda" value="<?= $tanda; ?>">
-			<!-- <div class="col-md-4">
-                <select name="" id="" class="form-control form-control-sm search_depart" style="margin-top: 5px;">
-                    <?php
-					if ($this->auth->user_id() == '7') {
-						echo '<option value="">- Department -</option>';
-					}
-					foreach ($list_department as $item) {
-						echo '<option value="' . $item->id . '">' . strtoupper($item->name) . ' - ' . strtoupper($item->nm_company) . '</option>';
-					}
-					?>
-                </select>
-                <button type="button" class="btn btn-sm btn-primary search_btn" style=""><i class="fa fa-search"></i> Cari</button>
-            </div> -->
+
+			<!-- FLOWMAP CARD -->
+			<div class="flowmap">
+				<b>Alur PR Department:</b>
+				<div class="flow-trunk"><code>PR — Finance</code> &rarr; <code>PR — Direktur</code> &rarr; <code>Metode Pembelian</code></div>
+				<div class="flow-branches">
+					<div class="branch-row"><span class="branch-tag">jika Direct Payment</span> &rarr; <code>Request Payment</code><span class="branch-note">(langsung, tanpa approval tambahan — tahap final)</span></div>
+					<div class="branch-row"><span class="branch-tag">jika Kasbon</span> &rarr; <code>Kasbon — Finance</code> &rarr; <code>Kasbon — Direktur</code> &rarr; <code>Request Payment</code><span class="branch-note">(setelah 2 level kasbon approve — tahap final)</span></div>
+				</div>
+			</div>
+
+			<!-- LEGEND -->
+			<div class="legend">
+				<span><span class="dot dot-pending"></span> Belum sampai tahap ini</span>
+				<span><span class="dot dot-active"></span> Sedang berjalan / menunggu</span>
+				<span><span class="dot dot-done"></span> Selesai tahap ini</span>
+				<span><span class="dot dot-reject"></span> Ditolak</span>
+			</div>
+
 			<div class="col-12 col_table">
 				<table class="table table-bordered table-striped" id="my-grid" width="100%">
 					<thead>
