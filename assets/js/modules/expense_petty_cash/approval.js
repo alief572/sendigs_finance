@@ -124,8 +124,8 @@ $(document).ready(function () {
               BASE_URL +
               "view_approval/" +
               row.id +
-              '" class="btn btn-info btn-xs" title="Review">' +
-              '<i class="fa fa-eye"></i> Review</a>'
+              '" class="btn btn-success btn-xs" title="Approval">' +
+              '<i class="fa fa-check"></i> Approval</a>'
             );
           },
         },
