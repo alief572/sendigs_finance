@@ -20,6 +20,7 @@
                         <th width="30"><input type="checkbox" id="check-all"></th>
                         <th width="30">No</th>
                         <th>No Pencatatan</th>
+                        <th>No Pelaporan</th>
                         <th>Tanggal</th>
                         <th>Company</th>
                         <th>Request By</th>

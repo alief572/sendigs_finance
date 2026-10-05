@@ -272,8 +272,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 <thead>
                     <tr>
                         <th rowspan="2" class="text-center" valign="middle">No.</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="150">Item</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="170">Keterangan</th>
+                        <th rowspan="2" class="text-center" valign="middle" width="170">Item</th>
                         <th colspan="2" class="text-center">Estimasi</th>
                         <th rowspan="2" class="text-center" valign="middle">Total Budget</th>
                         <th colspan="3" class="text-center">Pengajuan</th>
@@ -306,7 +305,6 @@ $tgl_approved = $tgl_app_direktur_formatted;
                         echo '<tr>';
                         echo '<td class="text-center">' . $no_subcont . '</td>';
                         echo '<td class="text-left">' . $item->nm_item . '</td>';
-                        echo '<td class="text-left">' . $item->keterangan . '</td>';
                         echo '<td class="text-center">' . number_format($item->qty_estimasi) . '</td>';
                         echo '<td class="text-right">' . number_format($item->price_unit_estimasi, 2) . '</td>';
                         echo '<td class="text-right">' . number_format($item->total_budget_estimasi, 2) . '</td>';
@@ -326,7 +324,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-right">Total</td>
+                        <td colspan="2" class="text-right">Total</td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
@@ -353,8 +351,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 <thead>
                     <tr>
                         <th rowspan="2" class="text-center" valign="middle">No.</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="150">Item</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="170">Keterangan</th>
+                        <th rowspan="2" class="text-center" valign="middle" width="170">Item</th>
                         <th colspan="2" class="text-center">Estimasi</th>
                         <th rowspan="2" class="text-center" valign="middle">Total Budget</th>
                         <th colspan="3" class="text-center">Pengajuan</th>
@@ -385,7 +382,6 @@ $tgl_approved = $tgl_app_direktur_formatted;
                         echo '<tr>';
                         echo '<td class="text-center">' . $no_subcont . '</td>';
                         echo '<td class="text-left">' . $item->nm_item . '</td>';
-                        echo '<td class="text-left">' . $item->keterangan . '</td>';
                         echo '<td class="text-center">' . number_format($item->qty_estimasi) . '</td>';
                         echo '<td class="text-right">' . number_format($item->price_unit_estimasi, 2) . '</td>';
                         echo '<td class="text-right">' . number_format($item->total_budget_estimasi, 2) . '</td>';
@@ -403,7 +399,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-right">Total</td>
+                        <td colspan="2" class="text-right">Total</td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
@@ -428,8 +424,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 <thead>
                     <tr>
                         <th rowspan="2" class="text-center" valign="middle">No.</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="150">Item</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="170">Keterangan</th>
+                        <th rowspan="2" class="text-center" valign="middle" width="170">Item</th>
                         <th colspan="2" class="text-center">Estimasi</th>
                         <th rowspan="2" class="text-center" valign="middle">Total Budget</th>
                         <th colspan="3" class="text-center">Pengajuan</th>
@@ -460,7 +455,6 @@ $tgl_approved = $tgl_app_direktur_formatted;
                         echo '<tr>';
                         echo '<td class="text-center">' . $no_subcont . '</td>';
                         echo '<td class="text-left">' . $item->nm_item . '</td>';
-                        echo '<td class="text-left">' . $item->keterangan . '</td>';
                         echo '<td class="text-center">' . number_format($item->qty_estimasi) . '</td>';
                         echo '<td class="text-right">' . number_format($item->price_unit_estimasi, 2) . '</td>';
                         echo '<td class="text-right">' . number_format($item->total_budget_estimasi, 2) . '</td>';
@@ -478,7 +472,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-right">Total</td>
+                        <td colspan="2" class="text-right">Total</td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
@@ -503,8 +497,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 <thead>
                     <tr>
                         <th rowspan="2" class="text-center" valign="middle">No.</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="150">Item</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="170">Keterangan</th>
+                        <th rowspan="2" class="text-center" valign="middle" width="170">Item</th>
                         <th colspan="2" class="text-center">Estimasi</th>
                         <th rowspan="2" class="text-center" valign="middle">Total Budget</th>
                         <th colspan="3" class="text-center">Pengajuan</th>
@@ -535,7 +528,6 @@ $tgl_approved = $tgl_app_direktur_formatted;
                         echo '<tr>';
                         echo '<td class="text-center">' . $no_subcont . '</td>';
                         echo '<td class="text-left">' . $item->nm_item . '</td>';
-                        echo '<td class="text-left">' . $item->keterangan . '</td>';
                         echo '<td class="text-center">' . number_format($item->qty_estimasi) . '</td>';
                         echo '<td class="text-right">' . number_format($item->price_unit_estimasi, 2) . '</td>';
                         echo '<td class="text-right">' . number_format($item->total_budget_estimasi, 2) . '</td>';
@@ -553,7 +545,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-right">Total</td>
+                        <td colspan="2" class="text-right">Total</td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
@@ -579,8 +571,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 <thead>
                     <tr>
                         <th rowspan="2" class="text-center" valign="middle">No.</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="150">Item</th>
-                        <th rowspan="2" class="text-center" valign="middle" width="170">Keterangan</th>
+                        <th rowspan="2" class="text-center" valign="middle" width="170">Item</th>
                         <th colspan="2" class="text-center">Estimasi</th>
                         <th rowspan="2" class="text-center" valign="middle">Total Budget</th>
                         <th colspan="3" class="text-center">Pengajuan</th>
@@ -611,7 +602,6 @@ $tgl_approved = $tgl_app_direktur_formatted;
                         echo '<tr>';
                         echo '<td class="text-center">' . $no_subcont . '</td>';
                         echo '<td class="text-left">' . $item->nm_item . '</td>';
-                        echo '<td class="text-left">' . $item->keterangan . '</td>';
                         echo '<td class="text-center">' . number_format($item->qty_estimasi) . '</td>';
                         echo '<td class="text-right">' . number_format($item->price_unit_estimasi, 2) . '</td>';
                         echo '<td class="text-right">' . number_format($item->total_budget_estimasi, 2) . '</td>';
@@ -629,7 +619,7 @@ $tgl_approved = $tgl_app_direktur_formatted;
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-right">Total</td>
+                        <td colspan="2" class="text-right">Total</td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
                         <td class="text-center"></td>
