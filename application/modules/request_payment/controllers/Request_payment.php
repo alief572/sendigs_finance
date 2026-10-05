@@ -216,11 +216,29 @@ class Request_payment extends Admin_Controller
 			$dpp  = (float) $src->nilai_pengajuan;
 			$calc = $this->Request_payment_model->calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin);
 
+			// Resolusi nama pembuat (request_by) dari database konsultan khusus Direct Payment (bukan Cash)
+			$req_by = $src->request_by;
+			$kat_check = strtolower(trim((string)$src->kategori));
+			if ($kat_check === 'direct payment' || $kat_check === 'direct_payment' || strpos($nd, 'DPM') === 0 || strpos($nd, 'DP-') === 0) {
+				$is_cash = ($kat_check === 'cash') || ($this->db->get_where('tr_pr_non_po', ['no_non_po' => $nd])->num_rows() > 0);
+				if (!$is_cash && $this->consultant) {
+					$kons = $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $nd])->row();
+					if (!empty($kons) && !empty($kons->created_by)) {
+						$u = $this->consultant->query("SELECT nm_lengkap, username FROM users WHERE id_user = ? OR username = ?", [$kons->created_by, $kons->created_by])->row();
+						if (!empty($u) && !empty($u->nm_lengkap)) {
+							$req_by = $u->nm_lengkap;
+						} elseif (!empty($u) && !empty($u->username)) {
+							$req_by = $u->username;
+						}
+					}
+				}
+			}
+
 			$detail_rows[] = [
 				'no_dokumen' => $nd,
 				'id_dokumen' => $src->no_dokumen, // no_dokumen dipakai sbg referensi
 				'kategori'   => $src->kategori,
-				'request_by' => $src->request_by,
+				'request_by' => $req_by,
 				'keperluan'  => $src->keperluan,
 				'dpp'        => $dpp,
 				'flag_ppn'   => $flag_ppn,
