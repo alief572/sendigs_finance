@@ -31,8 +31,8 @@ $(document).ready(function () {
         sNext: "Next",
       },
     },
-    aaSorting: [[3, "desc"]],
-    columnDefs: [{ targets: [0, 9], orderable: false, searchable: false }],
+    aaSorting: [[4, "desc"]],
+    columnDefs: [{ targets: [0, 10], orderable: false, searchable: false }],
     iDisplayLength: 10,
     aLengthMenu: [
       [10, 20, 50, 100],
@@ -44,7 +44,7 @@ $(document).ready(function () {
       cache: false,
       error: function () {
         $("#table-pencatatan tbody").html(
-          '<tr><th colspan="10" class="text-center">No data found in the server</th></tr>',
+          '<tr><th colspan="11" class="text-center">No data found in the server</th></tr>',
         );
       },
     },
@@ -100,7 +100,25 @@ $(document).ready(function () {
         },
       },
       {
-        // Column 3: Tanggal (formatted DD/MM/YYYY)
+        // Column 3: No Pelaporan (clickable if exists)
+        data: "no_pelaporan",
+        render: function (data, type, row) {
+          if (row.no_pelaporan && row.pelaporan_id) {
+            return (
+              '<a href="' +
+              BASE_URL +
+              "view_pelaporan/" +
+              row.pelaporan_id +
+              '" target="_blank" class="text-bold text-primary" title="Lihat Detail Pelaporan">' +
+              row.no_pelaporan +
+              "</a>"
+            );
+          }
+          return "-";
+        },
+      },
+      {
+        // Column 4: Tanggal (formatted DD/MM/YYYY)
         data: "tanggal",
         render: function (data) {
           if (!data) return "-";
@@ -113,15 +131,15 @@ $(document).ready(function () {
         },
       },
       {
-        // Column 4: Company
+        // Column 5: Company
         data: "company",
       },
       {
-        // Column 5: Request By
+        // Column 6: Request By
         data: "request_by",
       },
       {
-        // Column 6: Keterangan (truncate 50 chars)
+        // Column 7: Keterangan (truncate 50 chars)
         data: "keterangan",
         render: function (data) {
           if (!data) return "-";
@@ -139,11 +157,11 @@ $(document).ready(function () {
         },
       },
       {
-        // Column 7: Grand Total (already formatted from server)
+        // Column 8: Grand Total (already formatted from server)
         data: "grand_total",
       },
       {
-        // Column 8: Status (colored label)
+        // Column 9: Status (colored label)
         data: "status",
         render: function (data) {
           var labelClass = "label-default";
@@ -174,7 +192,7 @@ $(document).ready(function () {
         },
       },
       {
-        // Column 9: Action buttons
+        // Column 10: Action buttons
         data: null,
         render: function (data, type, row) {
           var html = "";
