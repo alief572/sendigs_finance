@@ -3690,77 +3690,223 @@ class Request_payment extends Admin_Controller
 			show_404();
 		}
 
-		if ($get_data_cash->jenis_pr == 'pr departemen') {
-			// Fetch PR_Header from rutin_non_planning_header
-			$pr_header = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_data_cash->no_pr])->row();
+		// Resolusi data PR berdasarkan jenis_pr
+		$pr_header = null;
+		$pr_details = [];
+		$dept_name = '';
+		$coa_display = '';
+		$request_by = '';
+		$bank_name = '';
+		$bank_account_no = '';
+		$bank_account_name = '';
+		$doc_files = [];
+		$created_by_user_id = '';
 
-			// Fetch PR_Detail rows from rutin_non_planning_detail
+		if ($get_data_cash->jenis_pr == 'pr departemen') {
+			// PR Departemen: rutin_non_planning_header & rutin_non_planning_detail
+			$raw_header = $this->db->get_where('rutin_non_planning_header', ['no_pr' => $get_data_cash->no_pr])->row();
+			if (!empty($raw_header)) {
+				$pr_header = (object)[
+					'no_pr' => $get_data_cash->no_pr,
+					'project_name' => !empty($raw_header->project_name) ? $raw_header->project_name : 'PR Departemen',
+					'created_date' => !empty($raw_header->created_date) ? $raw_header->created_date : $get_data_cash->created_date,
+					'app_2_date' => !empty($raw_header->app_2_date) ? $raw_header->app_2_date : '',
+					'app_3_date' => !empty($raw_header->app_3_date) ? $raw_header->app_3_date : '',
+					'created_by' => !empty($raw_header->created_by) ? $raw_header->created_by : $get_data_cash->created_by,
+					'document' => !empty($raw_header->document) ? $raw_header->document : ''
+				];
+
+				$created_by_user_id = $pr_header->created_by;
+
+				if (!empty($raw_header->bank_name)) $bank_name = $raw_header->bank_name;
+				if (!empty($raw_header->bank_account_no)) $bank_account_no = $raw_header->bank_account_no;
+				if (!empty($raw_header->bank_account_name)) $bank_account_name = $raw_header->bank_account_name;
+
+				// COA
+				if (!empty($raw_header->coa)) {
+					$coa_row = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $raw_header->coa])->row();
+					if (!empty($coa_row)) {
+						$coa_display = $coa_row->no_perkiraan . ' ' . $coa_row->nama;
+					} else {
+						$coa_display = $raw_header->coa;
+					}
+				}
+
+				// Department dari id_dept
+				if (!empty($raw_header->id_dept)) {
+					$hris = $this->load->database('hris', true);
+					$dept_row = $hris->get_where('departments', ['id' => $raw_header->id_dept])->row();
+					if (!empty($dept_row)) {
+						$dept_name = $dept_row->name;
+					}
+				}
+			}
+
 			$pr_details = $this->db->get_where('rutin_non_planning_detail', ['no_pr' => $get_data_cash->no_pr])->result_array();
 			if (empty($pr_details)) {
 				$pr_details = [];
 			}
-
-			// Resolve dept_name from HRIS departments
-			$dept_name = '';
-			if (!empty($pr_header->id_dept)) {
-				$hris = $this->load->database('hris', true);
-				$dept_row = $hris->get_where('departments', ['id' => $pr_header->id_dept])->row();
-				if (!empty($dept_row)) {
-					$dept_name = $dept_row->name;
-				}
+		} elseif ($get_data_cash->jenis_pr == 'pr stok') {
+			// PR Stok: material_planning_base_on_produksi & material_planning_base_on_produksi_detail
+			$raw_header = $this->db->get_where('material_planning_base_on_produksi', ['no_pr' => $get_data_cash->no_pr])->row();
+			if (empty($raw_header)) {
+				$raw_header = $this->db->get_where('material_planning_base_on_produksi', ['so_number' => $get_data_cash->no_pr])->row();
 			}
 
-			// Resolve coa_display from DBACC.coa_master
-			$coa_display = '';
-			if (!empty($pr_header->coa)) {
-				$coa_row = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $pr_header->coa])->row();
-				if (!empty($coa_row)) {
-					$coa_display = $coa_row->no_perkiraan . ' ' . $coa_row->nama;
-				} else {
-					$coa_display = $pr_header->coa;
+			if (!empty($raw_header)) {
+				$pr_header = (object)[
+					'no_pr' => $get_data_cash->no_pr,
+					'project_name' => !empty($raw_header->project) ? $raw_header->project : 'Pengisian Stok Internal',
+					'created_date' => !empty($raw_header->created_date) ? $raw_header->created_date : $get_data_cash->created_date,
+					'app_2_date' => !empty($raw_header->app_2_date) ? $raw_header->app_2_date : '',
+					'app_3_date' => !empty($raw_header->app_3_date) ? $raw_header->app_3_date : '',
+					'created_by' => !empty($raw_header->created_by) ? $raw_header->created_by : $get_data_cash->created_by,
+					'document' => ''
+				];
+
+				$created_by_user_id = $pr_header->created_by;
+				$so_num = !empty($raw_header->so_number) ? $raw_header->so_number : $get_data_cash->no_pr;
+
+				$this->db->select('a.*, 
+					IF(b.stock_name IS NOT NULL AND b.stock_name != "", b.stock_name, IF(m.nama IS NOT NULL, m.nama, a.id_material)) as nm_barang,
+					IF(b.spec IS NOT NULL AND b.spec != "", b.spec, "") as spec,
+					IF(a.propose_purchase > 0, a.propose_purchase, a.qty_order) as qty,
+					a.price_ref as harga,
+					a.note as keterangan,
+					b.no_coa,
+					b.nm_coa
+				');
+				$this->db->from('material_planning_base_on_produksi_detail a');
+				$this->db->join('accessories b', 'b.id = a.id_material', 'left');
+				$this->db->join('new_inventory_4 m', 'm.code_lv4 = a.id_material', 'left');
+				$this->db->where('a.so_number', $so_num);
+				$stok_details = $this->db->get()->result_array();
+
+				foreach ($stok_details as $sd) {
+					$pr_details[] = [
+						'nm_barang' => $sd['nm_barang'],
+						'spec' => $sd['spec'],
+						'qty' => $sd['qty'],
+						'harga' => $sd['harga'],
+						'tanggal' => !empty($raw_header->tgl_dibutuhkan) ? $raw_header->tgl_dibutuhkan : (!empty($sd['app_date']) ? $sd['app_date'] : $get_data_cash->created_date),
+						'keterangan' => $sd['keterangan'] ?? ''
+					];
+
+					if (empty($coa_display) && !empty($sd['no_coa'])) {
+						$coa_display = $sd['no_coa'] . ' ' . ($sd['nm_coa'] ?? '');
+					}
 				}
 			}
+		} elseif ($get_data_cash->jenis_pr == 'pr asset') {
+			// PR Asset: tran_pr_header & tran_pr_detail
+			$raw_header = $this->db->get_where('tran_pr_header', ['no_pr' => $get_data_cash->no_pr])->row();
+			if (!empty($raw_header)) {
+				$pr_header = (object)[
+					'no_pr' => $get_data_cash->no_pr,
+					'project_name' => !empty($raw_header->category) ? $raw_header->category : 'Pengadaan Asset',
+					'created_date' => !empty($raw_header->created_date) ? $raw_header->created_date : $get_data_cash->created_date,
+					'app_2_date' => !empty($raw_header->app_date_2) ? $raw_header->app_date_2 : '',
+					'app_3_date' => !empty($raw_header->app_date_3) ? $raw_header->app_date_3 : '',
+					'created_by' => !empty($raw_header->created_by) ? $raw_header->created_by : $get_data_cash->created_by,
+					'document' => !empty($raw_header->dokumen_pendukung) ? $raw_header->dokumen_pendukung : ''
+				];
 
-			// Resolve request_by from users table
-			$request_by = '';
-			if (!empty($pr_header->created_by)) {
-				$user_row = $this->db->get_where('users', ['id_user' => $pr_header->created_by])->row();
-				if (!empty($user_row)) {
+				$created_by_user_id = $pr_header->created_by;
+
+				if (!empty($raw_header->dokumen_pendukung)) {
+					$doc_files[] = 'assets/pr/' . $raw_header->dokumen_pendukung;
+				}
+
+				if (!empty($raw_header->no_coa)) {
+					$coa_display = $raw_header->no_coa . ' ' . (!empty($raw_header->nm_coa) ? $raw_header->nm_coa : '');
+				}
+
+				$asset_details = $this->db->get_where('tran_pr_detail', ['no_pr' => $get_data_cash->no_pr])->result_array();
+				foreach ($asset_details as $ad) {
+					$pr_details[] = [
+						'nm_barang' => $ad['nm_barang'],
+						'spec' => $ad['spec'],
+						'qty' => $ad['qty'],
+						'harga' => $ad['nilai_pr'],
+						'tanggal' => !empty($ad['tgl_dibutuhkan']) ? $ad['tgl_dibutuhkan'] : $ad['tgl_pr'],
+						'keterangan' => $ad['info'] ?? ''
+					];
+				}
+			}
+		}
+
+		// Fallback header jika belum terbentuk
+		if (empty($pr_header)) {
+			$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
+			$pr_header = (object)[
+				'no_pr' => !empty($get_data_cash->no_pr) ? $get_data_cash->no_pr : $id,
+				'project_name' => !empty($get_v_req_payment->keperluan) ? $get_v_req_payment->keperluan : 'Pembelian Cash',
+				'created_date' => !empty($get_data_cash->created_date) ? $get_data_cash->created_date : date('Y-m-d'),
+				'app_2_date' => '',
+				'app_3_date' => !empty($get_data_cash->approved_date) ? $get_data_cash->approved_date : '',
+				'created_by' => !empty($get_data_cash->created_by) ? $get_data_cash->created_by : '',
+				'document' => ''
+			];
+			$created_by_user_id = $pr_header->created_by;
+		}
+
+		// Fallback rincian jika pr_details kosong
+		if (empty($pr_details)) {
+			$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
+			$keperluan_text = !empty($get_v_req_payment->keperluan) ? $get_v_req_payment->keperluan : ('Pembelian Cash ' . $get_data_cash->no_pr);
+			$pr_details[] = [
+				'nm_barang' => $keperluan_text,
+				'spec' => '-',
+				'qty' => 1,
+				'harga' => $get_data_cash->total_pr,
+				'tanggal' => !empty($get_data_cash->created_date) ? $get_data_cash->created_date : date('Y-m-d'),
+				'keterangan' => $get_data_cash->no_non_po
+			];
+		}
+
+		// Resolusi request_by & dept_name jika belum terisi
+		if (empty($created_by_user_id)) {
+			$created_by_user_id = $get_data_cash->created_by;
+		}
+
+		if (!empty($created_by_user_id)) {
+			$user_row = $this->db->get_where('users', ['id_user' => $created_by_user_id])->row();
+			if (empty($user_row)) {
+				$user_row = $this->db->get_where('users', ['username' => $created_by_user_id])->row();
+			}
+			if (!empty($user_row)) {
+				if (empty($request_by) && !empty($user_row->nm_lengkap)) {
 					$request_by = $user_row->nm_lengkap;
 				}
+				if (empty($dept_name) && !empty($user_row->department_id)) {
+					$hris = $this->load->database('hris', true);
+					$dept_row = $hris->get_where('departments', ['id' => $user_row->department_id])->row();
+					if (!empty($dept_row) && !empty($dept_row->name)) {
+						$dept_name = $dept_row->name;
+					}
+				}
 			}
-
-			$data = [
-				'title' => 'Pengajuan Direct Payment',
-				'data_pr' => $get_data_cash,
-				'pr_header' => $pr_header,
-				'pr_details' => $pr_details,
-				'dept_name' => $dept_name,
-				'coa_display' => $coa_display,
-				'request_by' => $request_by,
-				'bank_name' => !empty($pr_header->bank_name) ? $pr_header->bank_name : '',
-				'bank_account_no' => !empty($pr_header->bank_account_no) ? $pr_header->bank_account_no : '',
-				'bank_account_name' => !empty($pr_header->bank_account_name) ? $pr_header->bank_account_name : ''
-			];
-
-			$this->load->view('print_cash', $data);
-		} else {
-			// Preserve existing non-PR-departemen rendering path
-			$get_v_req_payment = $this->db->get_where('v_request_payment', ['no_dokumen' => $id])->row();
-
-			$this->db->select('CONCAT("assets/pr/", a.dokument_pendukung) as doc_file, a.no_pr as no_doc');
-			$this->db->from('tran_pr_header a');
-			$this->db->where('a.no_pr', $get_data_cash->no_pr);
-			$get_doc_pr = $this->db->get()->row();
-
-			$data = [
-				'data_pr' => $get_data_cash,
-				'v_req_payment' => $get_v_req_payment,
-				'doc_pr' => $get_doc_pr
-			];
-
-			$this->load->view('print_cash_non_pr', $data);
 		}
+
+		if (empty($request_by) && !empty($get_data_cash->nm_pic)) {
+			$request_by = $get_data_cash->nm_pic;
+		}
+
+		$data = [
+			'title' => 'Pengajuan Direct Payment',
+			'data_pr' => $get_data_cash,
+			'pr_header' => $pr_header,
+			'pr_details' => $pr_details,
+			'dept_name' => $dept_name,
+			'coa_display' => $coa_display,
+			'request_by' => $request_by,
+			'bank_name' => $bank_name,
+			'bank_account_no' => $bank_account_no,
+			'bank_account_name' => $bank_account_name,
+			'doc_files' => $doc_files
+		];
+
+		$this->load->view('print_cash', $data);
 	}
 
 	public function print_direct_payment($id)
