@@ -148,8 +148,8 @@
             <th class="text-center">DPP Lain</th>
             <th class="text-center">PPN</th>
             <th class="text-center">PPH 23</th>
-            <th class="text-center"><?= ($ppn_dipotong == 'Y') ? 'DPP - PPh' : 'Tagihan + Ppn' ?></th>
-            <th class="text-center"><?= ($ppn_dipotong == 'Y') ? 'Piutang' : 'Tagihan + Ppn - Pph' ?></th>
+            <th class="text-center">Tagihan + Ppn</th>
+            <th class="text-center">Tagihan + Ppn - Pph</th>
             <th class="text-center">Piutang Dagang</th>
             <th class="text-center">Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
@@ -290,22 +290,6 @@
         return s.join(dec);
     }
 
-    /**
-     * hitungAll() - Kalkulasi dinamis penerimaan piutang
-     * 
-     * Kompatibel dengan BUMN flow (ppn_dipotong=Y) tanpa branching tambahan karena:
-     * 1. Membaca piutang_dagang dari input field yang sudah di-set controller
-     *    (BUMN: saldo_piutang_tanpa_ppn, Non-BUMN: saldo_piutang/tagihan_ppn_jurnal)
-     * 2. Untuk BUMN, controller tidak me-render row jurnal PPN sehingga
-     *    hitungAll() otomatis skip PPN (get_num2 pada input non-existent = 0)
-     * 3. Bank Debit = ttl_penerimaan (sum of all penerimaan values)
-     * 4. Kontrol = grand_total - uang_masuk (berlaku untuk kedua mekanisme)
-     * 5. kredit_piutang_dagang per invoice:
-     *    - pph23=Y: penerimaan + biaya_admin
-     *    - pph23=N: penerimaan + biaya_admin - pph23_inv
-     * 
-     * @validates Requirement 4.1, 4.2, 4.3, 4.4, 4.5
-     */
     function hitungAll() {
         var no = '<?= $no_inv ?>';
 

@@ -69,6 +69,7 @@ class Accessories extends Admin_Controller
       $spec         = trim(strtolower($data['spec']));
       $id_unit_gudang = $data['id_unit_gudang'];
       $konversi         = str_replace(',', '', $data['konversi']);
+      $konversi         = (empty($konversi) || (float)$konversi <= 0) ? 1 : (float)$konversi;
       $id_unit          = $data['id_unit'];
       $status           = (!empty($id)) ? $data['status'] : 1;
       $min_order = $data['min_order'];

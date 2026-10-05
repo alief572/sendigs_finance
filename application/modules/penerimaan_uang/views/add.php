@@ -125,128 +125,6 @@
             margin-bottom: 10px;
         }
     }
-
-    /* Custom PPN Dropdown */
-    .ppn-dropdown {
-        position: relative;
-        width: 100%;
-    }
-
-    .ppn-dropdown__selected {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background: #fff;
-        cursor: pointer;
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        min-height: 34px;
-    }
-
-    .ppn-dropdown__selected:hover {
-        border-color: #aaa;
-    }
-
-    .ppn-dropdown__selected.open {
-        border-color: #66afe9;
-        box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(102, 175, 233, .6);
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-
-    .ppn-dropdown__selected::after {
-        content: '';
-        margin-left: auto;
-        border: 5px solid transparent;
-        border-top-color: #666;
-        transition: transform 0.2s;
-    }
-
-    .ppn-dropdown__selected.open::after {
-        transform: rotate(180deg);
-        border-top-color: #66afe9;
-    }
-
-    .ppn-dropdown__title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .ppn-dropdown__menu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        z-index: 1050;
-        background: #fff;
-        border: 1px solid #66afe9;
-        border-top: none;
-        border-bottom-left-radius: 4px;
-        border-bottom-right-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
-    }
-
-    .ppn-dropdown__menu.show {
-        display: block;
-    }
-
-    .ppn-dropdown__item {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        padding: 12px 14px;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .ppn-dropdown__item:hover {
-        background: #f5f8ff;
-    }
-
-    .ppn-dropdown__item+.ppn-dropdown__item {
-        border-top: 1px solid #f0f0f0;
-    }
-
-    .ppn-dropdown__item-text {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .ppn-dropdown__item-text strong {
-        font-size: 14px;
-        color: #333;
-    }
-
-    .ppn-dropdown__item-text small {
-        font-size: 12px;
-        color: #888;
-    }
-
-    .ppn-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        white-space: nowrap;
-        margin-top: 2px;
-    }
-
-    .ppn-badge--pkp {
-        background: #e8f0fe;
-        color: #1a73e8;
-    }
-
-    .ppn-badge--wapu {
-        background: #fef3e0;
-        color: #e67e22;
-    }
 </style>
 
 <div class="box">
@@ -278,29 +156,12 @@
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Mekanisme PPN <span class="text-red">*</span></label>
-                        <input type="hidden" name="ppn_dipotong" id="ppn_dipotong" value="N">
-                        <div class="ppn-dropdown" id="ppn_dropdown">
-                            <div class="ppn-dropdown__selected" id="ppn_selected">
-                                <span class="ppn-badge ppn-badge--pkp">PKP</span>
-                                <span class="ppn-dropdown__title">Pemungut PPN 11%</span>
-                            </div>
-                            <div class="ppn-dropdown__menu" id="ppn_menu">
-                                <div class="ppn-dropdown__item" data-value="N">
-                                    <span class="ppn-badge ppn-badge--pkp">PKP</span>
-                                    <div class="ppn-dropdown__item-text">
-                                        <strong>Pemungut PPN 11%</strong>
-                                        <small>PPN disetor sendiri oleh PKP penjual</small>
-                                    </div>
-                                </div>
-                                <div class="ppn-dropdown__item" data-value="Y">
-                                    <span class="ppn-badge ppn-badge--wapu">WAPU</span>
-                                    <div class="ppn-dropdown__item-text">
-                                        <strong>Pemungut PPN (BUMN/Pemerintah)</strong>
-                                        <small>PPN dipungut &amp; disetor oleh pembeli (BUMN/Instansi Pemerintah)</small>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="ppn_dipotong">PPN Dipotong <span class="text-red">*</span></label>
+                            <select class="form-control form-control-sm" name="ppn_dipotong" id="ppn_dipotong">
+                                <option value="Y">Dipotong PPN</option>
+                                <option value="N">Tidak Dipotong PPN</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
@@ -407,6 +268,9 @@
         $('#customer').chosen({
             width: '100%'
         });
+        $('#ppn_dipotong').chosen({
+            width: '100%'
+        });
         $('#pph23_dipotong').chosen({
             width: '100%'
         });
@@ -416,35 +280,6 @@
             vMax: '9999999999999.99',
             aSep: '.',
             aDec: ','
-        });
-
-        // Custom PPN Dropdown
-        var $selected = $('#ppn_selected');
-        var $menu = $('#ppn_menu');
-        var $hidden = $('#ppn_dipotong');
-
-        $selected.on('click', function(e) {
-            e.stopPropagation();
-            $selected.toggleClass('open');
-            $menu.toggleClass('show');
-        });
-
-        $('#ppn_menu .ppn-dropdown__item').on('click', function() {
-            var val = $(this).data('value');
-            var badge = $(this).find('.ppn-badge').clone();
-            var title = $(this).find('strong').text();
-
-            $hidden.val(val);
-            $selected.html('').append(badge).append('<span class="ppn-dropdown__title">' + title + '</span>');
-            $selected.removeClass('open');
-            $menu.removeClass('show');
-        });
-
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('#ppn_dropdown').length) {
-                $selected.removeClass('open');
-                $menu.removeClass('show');
-            }
         });
     });
 
@@ -532,7 +367,7 @@
             swal({
                 type: 'warning',
                 title: 'Warning !',
-                text: 'Pilihan Mekanisme PPN masih kosong !',
+                text: 'Pilihan PPN Dipotong masih kosong !',
                 showConfirmButton: false,
                 allowOutsideClick: false,
                 timer: 3000
