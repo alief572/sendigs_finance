@@ -105,9 +105,48 @@ class Record_request_payment_model extends BF_Model
 			$r->bank_nama   = $b['nama'];
 			$r->bank_name   = $b['bank'];
 			$r->bank_no_rek = $b['no_rek'];
+
+			$req_by = $this->resolve_request_by($r->no_dokumen, $r->kategori, $r->request_by);
+			if (!empty($req_by)) {
+				$r->request_by = $req_by;
+			}
 		}
 
 		return $records;
+	}
+
+	/**
+	 * Resolusi nama pembuat (Request By) khusus transaksi Direct Payment
+	 * dari database konsultan (kons_tr_kasbon_project_header.created_by -> users.nm_lengkap).
+	 * Transaksi Cash TIDAK termasuk aturan ini.
+	 */
+	public function resolve_request_by($no_dokumen, $kategori = '', $current_request_by = '')
+	{
+		if (empty($no_dokumen)) {
+			return $current_request_by;
+		}
+
+		$kat = strtolower(trim((string)$kategori));
+		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
+			// Cash tidak termasuk aturan ini
+			if ($kat === 'cash' || $this->db->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen])->num_rows() > 0) {
+				return $current_request_by;
+			}
+
+			if ($this->consultant) {
+				$kons = $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen])->row();
+				if (!empty($kons) && !empty($kons->created_by)) {
+					$u = $this->consultant->query("SELECT nm_lengkap, username FROM users WHERE id_user = ? OR username = ?", [$kons->created_by, $kons->created_by])->row();
+					if (!empty($u) && !empty($u->nm_lengkap)) {
+						return $u->nm_lengkap;
+					} elseif (!empty($u) && !empty($u->username)) {
+						return $u->username;
+					}
+				}
+			}
+		}
+
+		return $current_request_by;
 	}
 
 	/**

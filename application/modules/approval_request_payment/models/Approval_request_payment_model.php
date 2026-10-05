@@ -13,10 +13,16 @@ class Approval_request_payment_model extends BF_Model
 	protected $soft_deletes = false;
 	protected $set_created  = false;
 	protected $set_modified = false;
+	protected $consultant   = null;
 
 	public function __construct()
 	{
 		parent::__construct();
+		try {
+			$this->consultant = $this->load->database('consultant', true);
+		} catch (Exception $e) {
+			$this->consultant = null;
+		}
 	}
 
 	// Server-side DataTables: batch pending
@@ -84,7 +90,27 @@ class Approval_request_payment_model extends BF_Model
 		$this->db->from('tr_rp_pengajuan_d');
 		$this->db->where('id_pengajuan', (int) $id_pengajuan);
 		$this->db->order_by('id', 'asc');
-		return $this->db->get()->result();
+		$items = $this->db->get()->result();
+
+		foreach ($items as $it) {
+			$kat = strtolower(trim((string)$it->kategori));
+			if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($it->no_dokumen, 'DPM') === 0 || strpos($it->no_dokumen, 'DP-') === 0) {
+				$is_cash = ($kat === 'cash') || ($this->db->get_where('tr_pr_non_po', ['no_non_po' => $it->no_dokumen])->num_rows() > 0);
+				if (!$is_cash && $this->consultant) {
+					$kons = $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $it->no_dokumen])->row();
+					if (!empty($kons) && !empty($kons->created_by)) {
+						$u = $this->consultant->query("SELECT nm_lengkap, username FROM users WHERE id_user = ? OR username = ?", [$kons->created_by, $kons->created_by])->row();
+						if (!empty($u) && !empty($u->nm_lengkap)) {
+							$it->request_by = $u->nm_lengkap;
+						} elseif (!empty($u) && !empty($u->username)) {
+							$it->request_by = $u->username;
+						}
+					}
+				}
+			}
+		}
+
+		return $items;
 	}
 
 	/* =====================================================================

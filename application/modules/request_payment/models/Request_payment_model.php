@@ -848,13 +848,15 @@ class Request_payment_model extends BF_Model
                 }
             }
             if ($item->kategori == 'Direct Payment') {
-                $get_direct_payment = $this->db->get_where('tr_direct_payment', array('no_doc' => $item->no_dokumen))->row();
-                $id_create = $get_direct_payment->created_by ?? '';
-
-                if (!empty($id_create)) {
-                    $get_user = $this->consultant->get_where('users', array('id_user' => $id_create))->row();
-                    if (!empty($get_user)) {
-                        $nmuser = $get_user->nm_lengkap;
+                if ($this->consultant) {
+                    $get_dp_consultant = $this->consultant->get_where('kons_tr_kasbon_project_header', array('id' => $item->no_dokumen))->row();
+                    if (!empty($get_dp_consultant) && !empty($get_dp_consultant->created_by)) {
+                        $get_user = $this->consultant->get_where('users', array('id_user' => $get_dp_consultant->created_by))->row();
+                        if (!empty($get_user) && !empty($get_user->nm_lengkap)) {
+                            $nmuser = $get_user->nm_lengkap;
+                        } elseif (!empty($get_user) && !empty($get_user->username)) {
+                            $nmuser = $get_user->username;
+                        }
                     }
                 }
             }
