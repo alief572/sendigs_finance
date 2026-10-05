@@ -128,14 +128,14 @@ $nmuser = (!empty($data_pr->nm_pic)) ? $data_pr->nm_pic : '';
         <tr>
             <td nowrap colspan=2>No Dokumen : <?= $data_pr->no_non_po ?></td>
             <td nowrap colspan=2>Total : <?= number_format($data_pr->total_pr) ?></td>
-            <td nowrap colspan=2>Tanggal : <?= date('d F Y', strtotime($v_req_payment->tanggal)) ?></td>
+            <td nowrap colspan=2>Tanggal : <?= !empty($v_req_payment->tanggal) ? date('d F Y', strtotime($v_req_payment->tanggal)) : (!empty($data_pr->created_date) ? date('d F Y', strtotime($data_pr->created_date)) : '-') ?></td>
         </tr>
         <tr>
             <th colspan=6><br /></th>
         </tr>
         <tr>
             <td valign=top width=100>Keperluan</td>
-            <td valign=top colspan=5>: <?= $v_req_payment->keperluan ?></td>
+            <td valign=top colspan=5>: <?= !empty($v_req_payment->keperluan) ? $v_req_payment->keperluan : '-' ?></td>
         </tr>
         <tr>
             <td height=60 colspan=6></td>
@@ -166,7 +166,7 @@ $nmuser = (!empty($data_pr->nm_pic)) ? $data_pr->nm_pic : '';
         </tr>
     </table><br /><br />
     <?php
-    if (isset($doc_pr) && !empty($doc_pr->doc_file)) {
+    if (isset($doc_pr) && !empty($doc_pr->doc_file) && $doc_pr->doc_file !== 'assets/pr/') {
         $ext = strtolower(pathinfo($doc_pr->doc_file, PATHINFO_EXTENSION));
         if ($ext == 'pdf' || strpos($doc_pr->doc_file, '.pdf') !== false) {
             echo '<div class="pdf-attachment-wrapper" data-pdf-url="' . base_url($doc_pr->doc_file) . '">

@@ -2885,7 +2885,7 @@ class Request_payment extends Admin_Controller
 			$this->db->where('a.no_pr', $get_data_cash->no_pr);
 			$get_doc_pr = $this->db->get()->row();
 		} else {
-			$this->db->select('CONCAT("assets/pr/", a.dokument_pendukung) as doc_file, a.no_pr as no_doc');
+			$this->db->select('CONCAT("assets/pr/", a.dokumen_pendukung) as doc_file, a.no_pr as no_doc');
 			$this->db->from('tran_pr_header a');
 			$this->db->where('a.no_pr', $get_data_cash->no_pr);
 			$get_doc_pr = $this->db->get()->row();
