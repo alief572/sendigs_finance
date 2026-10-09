@@ -77,8 +77,8 @@ class Accessories_model extends BF_Model
 
 			$nestedData 	= array();
 			$nestedData[]	= "<div align='center'>" . $nomor . "</div>";
-			$nestedData[]	= "<div align='left'>" . $row['id_stock'] . "</div>";
-			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['stock_name'])) . "</div>";
+			$nestedData[]	= "<div align='left'><span class='item-code-badge'>" . html_escape($row['id_stock']) . "</span></div>";
+			$nestedData[]	= "<div align='left' style='font-weight: 500; color: #1e3d36;'>" . html_escape(strtoupper(strtolower($row['stock_name']))) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['nm_category'])) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['trade_name'])) . "</div>";
 			$nestedData[]	= "<div align='left'>" . strtoupper(strtolower($row['brand'])) . "</div>";

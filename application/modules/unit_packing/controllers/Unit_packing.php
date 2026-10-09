@@ -26,7 +26,7 @@ class Unit_packing extends Admin_Controller
 	public function index(){
 		$this->auth->restrict($this->viewPermission);
 		$session = $this->session->userdata('app_session');
-		$this->template->page_icon('fa fa-users');
+		$this->template->page_icon('fa fa-archive');
 		
 		$data = $this->db->get_where('ms_satuan',array('deleted'=>'N','category'=>'packing'))->result();
 
@@ -136,6 +136,24 @@ class Unit_packing extends Admin_Controller
 			history("Delete data unit ".$code_material);
 		}
 		echo json_encode($Arr_Data);
+	}
+
+	public function get_detail(){
+		$id = $this->input->post('id');
+		$row = $this->db->get_where('ms_satuan', array('id' => $id))->row();
+		if($row){
+			echo json_encode([
+				'status' => 1,
+				'id'     => $row->id,
+				'code'   => $row->code,
+				'nama'   => $row->nama
+			]);
+		} else {
+			echo json_encode([
+				'status' => 0,
+				'pesan'  => 'Data tidak ditemukan.'
+			]);
+		}
 	}
 }
 

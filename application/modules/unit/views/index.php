@@ -4,209 +4,148 @@
     $ENABLE_VIEW    = has_permission('Master_Unit.View');
     $ENABLE_DELETE  = has_permission('Master_Unit.Delete');
 ?>
-<style type="text/css">
-thead input {
-	width: 100%;
-}
-</style>
-<div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
-<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css')?>">
-<div class="box">
-	<div class="box-header">
-			<?php if($ENABLE_ADD) : ?>
-				<a class="btn btn-success btn-sm add" href="javascript:void(0)" title="Add"><i class="fa fa-plus">&nbsp;</i>Add</a>
-			<?php endif; ?>
+<link rel="stylesheet" href="<?= base_url('assets/css/master-unit.css?v=' . (defined('FCPATH') && file_exists(FCPATH . 'assets/css/master-unit.css') ? filemtime(FCPATH . 'assets/css/master-unit.css') : '1.0.2')); ?>">
 
-		<span class="pull-right">
-		</span>
-	</div>
-	<!-- /.box-header -->
-	<!-- /.box-header -->
-	<div class="box-body">
-		<table id="example1" class="table table-bordered table-striped">
-		<thead>
-		<tr>
-			<th>#</th>
-			<th>ID</th>
-			<th>Unit Code</th>
-			<th>Unit Name</th>
-			<th>Action</th>
-		</tr>
-		</thead>
-		<tbody>
-		<?php if(empty($results)){
-		}else{
-			$numb=0; 
-			foreach($results AS $record){ $numb++; ?>
-				<tr>
-					<td><?= $numb; ?></td>
-					<td><?= $record->id ?></td>
-					<td><?= $record->code ?></td>
-					<td><?= $record->nama ?></td>
-					<td>
-						<?php if($ENABLE_MANAGE) : ?>
-							<a class="btn btn-success btn-sm add" href="javascript:void(0)" title="Edit" data-id="<?=$record->id?>"><i class="fa fa-edit"></i>
-							</a>
-						<?php endif; ?>
+<main class="master-unit-page" id="master-unit-page"
+    data-save-url="<?= site_url('unit/add'); ?>"
+    data-delete-url="<?= site_url('unit/hapus'); ?>"
+    data-detail-url="<?= site_url('unit/get_detail'); ?>">
 
-						<?php if($ENABLE_DELETE) : ?>
-							<a class="btn btn-danger btn-sm delete" href="javascript:void(0)" title="Delete" data-id="<?=$record->id?>"><i class="fa fa-trash"></i>
-							</a>
-						<?php endif; ?>
-					</td>
-				</tr>
-		<?php } }  ?>
-		</tbody>
-		</table>
-	</div>
-	<!-- /.box-body -->
-</div>
+    <header class="unit-page-header">
+        <div>
+            <h1>Satuan Pengukuran</h1>
+            <p>Kelola standar satuan unit (Unit of Measurement) untuk pencatatan barang, material, dan inventaris.</p>
+        </div>
+        <?php if ($ENABLE_ADD) : ?>
+            <button type="button" class="unit-button unit-button-primary" id="unit-add">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+                <span>Tambah satuan</span>
+            </button>
+        <?php endif; ?>
+    </header>
 
-<div class="modal modal-default fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title" id="head_title"></h4>
-      </div>
-      <div class="modal-body" id="ModalView">
-		...
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-dismiss="modal">
-        <span class="glyphicon glyphicon-remove"></span>  Close</button>
+    <div class="unit-notice" id="unit-feedback" role="status" aria-live="polite" hidden></div>
+
+    <section class="unit-panel" aria-labelledby="unit-list-title">
+        <div class="unit-panel-header">
+            <div class="unit-panel-heading">
+                <span class="unit-panel-icon" aria-hidden="true"><i class="fa fa-cubes"></i></span>
+                <div>
+                    <h2 id="unit-list-title">Daftar Satuan</h2>
+                    <p>Kode unit singkatan dan nama lengkap satuan pengukuran terdaftar.</p>
+                </div>
+            </div>
+            <div class="unit-toolbar">
+                <label class="unit-search" for="unit-search">
+                    <i class="fa fa-search" aria-hidden="true"></i>
+                    <span class="sr-only">Cari kode atau nama satuan</span>
+                    <input type="search" id="unit-search" placeholder="Cari kode atau nama satuan…" autocomplete="off">
+                </label>
+                <button type="button" class="unit-button unit-button-secondary unit-refresh" id="unit-refresh" aria-label="Muat ulang data" title="Muat ulang">
+                    <i class="fa fa-refresh" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="unit-table-wrap">
+            <table id="example1" class="table unit-table" aria-labelledby="unit-list-title">
+                <thead>
+                    <tr>
+                        <th class="unit-th-num">No.</th>
+                        <th class="unit-th-code">Kode Satuan</th>
+                        <th class="unit-th-name">Nama Satuan</th>
+                        <th class="unit-th-action">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($results)) : $numb = 0; foreach ($results as $record) : $numb++; ?>
+                        <tr id="row-unit-<?= $record->id; ?>" data-id="<?= $record->id; ?>">
+                            <td class="unit-row-number"><?= $numb; ?></td>
+                            <td class="unit-row-code">
+                                <span class="unit-code-badge"><?= html_escape(strtoupper($record->code)); ?></span>
+                            </td>
+                            <td class="unit-row-name">
+                                <?= html_escape(ucwords($record->nama)); ?>
+                            </td>
+                            <td class="unit-actions">
+                                <?php if ($ENABLE_MANAGE) : ?>
+                                    <button type="button" class="btn btn-warning unit-btn-action unit-btn-edit" title="Edit satuan"
+                                        data-id="<?= $record->id; ?>"
+                                        data-code="<?= html_escape($record->code); ?>"
+                                        data-name="<?= html_escape($record->nama); ?>">
+                                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                                        <span class="sr-only">Edit</span>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($ENABLE_DELETE) : ?>
+                                    <button type="button" class="btn btn-danger unit-btn-action unit-btn-delete" title="Hapus satuan"
+                                        data-id="<?= $record->id; ?>"
+                                        data-code="<?= html_escape(strtoupper($record->code)); ?>"
+                                        data-name="<?= html_escape(ucwords($record->nama)); ?>">
+                                        <i class="fa fa-trash" aria-hidden="true"></i>
+                                        <span class="sr-only">Hapus</span>
+                                    </button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="unit-footnote">
+        <i class="fa fa-info-circle" aria-hidden="true"></i>
+        Kode satuan digunakan sebagai pengenal unik pada sistem gudang, purchasing, dan billing.
+    </p>
+</main>
+
+<div class="modal fade unit-modal" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="head_title" aria-describedby="unit-form-description">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup form">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <span class="unit-modal-icon" aria-hidden="true"><i class="fa fa-cubes"></i></span>
+                <h2 class="modal-title" id="head_title">Tambah Satuan</h2>
+                <p id="unit-form-description">Lengkapi kode singkatan dan nama satuan pengukuran.</p>
+            </div>
+            <form id="data_form" autocomplete="off" novalidate>
+                <input type="hidden" id="id" name="id" value="">
+                <div class="modal-body">
+                    <div id="unit-form-feedback" class="unit-notice unit-notice-error" role="alert" hidden></div>
+                    
+                    <div class="unit-form-grid">
+                        <div class="form-group">
+                            <label for="code">Kode Satuan <span class="unit-required">*</span></label>
+                            <input type="text" class="form-control" id="code" name="code" required 
+                                   placeholder="Contoh: PCS, KG, LTR, MTR" maxlength="20" style="text-transform: uppercase;">
+                            <p class="unit-field-help">Singkatan ringkas untuk label, PO, dan invoice.</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nama">Nama Lengkap Satuan <span class="unit-required">*</span></label>
+                            <input type="text" class="form-control" id="nama" name="nama" required 
+                                   placeholder="Contoh: Pieces, Kilogram, Liter, Meter">
+                            <p class="unit-field-help">Nama lengkap atau deskriptif satuan.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span class="unit-form-note"><span class="unit-required">*</span> Wajib diisi</span>
+                    <button type="button" class="unit-button unit-button-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="unit-button unit-button-primary" id="unit-save">
+                        <i class="fa fa-check" aria-hidden="true"></i>
+                        <span>Simpan satuan</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-  </div>
 </div>
 
-<!-- DataTables -->
-<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js')?>"></script>
-<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js')?>"></script>
-
-<!-- page script -->
-<script type="text/javascript">
-	$(document).on('click', '.add', function(){
-		var id 		= ($(this).data('id') == undefined)?'':$(this).data('id')
-		let title 	= (id == '')?'Add':'Edit'
-		$("#head_title").html(`<b>${title} Unit<b>`);
-		$.ajax({
-			type:'POST',
-			url: base_url + active_controller + 'add/'+id,
-			success:function(data){
-				$("#dialog-popup").modal();
-				$("#ModalView").html(data);
-			}
-		})
-	});
-
-
-	// DELETE DATA
-	$(document).on('click', '.delete', function(e){
-		e.preventDefault()
-		var id = $(this).data('id');
-		// alert(id);
-		swal({
-		  title: "Are you sure ?",
-		  text: "Delete this data",
-		  type: "warning",
-		  showCancelButton: true,
-		  confirmButtonClass: "btn-info",
-		  confirmButtonText: "Ya, Hapus!",
-		  cancelButtonText: "Batal",
-		  closeOnConfirm: false
-		},
-		function(){
-		  $.ajax({
-			  type:'POST',
-			  url: base_url + active_controller + 'hapus',
-			  dataType : "json",
-			  data:{'id':id},
-			  success:function(data){
-				  if(data.status == '1'){
-					 swal({
-						  title: "Success",
-						  text : data.pesan,
-						  type : "success"
-						},
-						function (){
-							window.location.reload(true);
-						})
-				  } else {
-					swal({
-					  title : "Error",
-					  text  : data.pesan,
-					  type  : "error"
-					})
-				  }
-			  },
-			  error : function(){
-				swal({
-					  title : "Error",
-					  text  : "Error Process !",
-					  type  : "error"
-					})
-			  }
-		  })
-		});
-	})
-	
-	$(document).on('submit', '#data_form', function(e){
-		e.preventDefault()
-		var data = $('#data_form').serialize();
-
-		swal({
-		  title: "Are you sure ?",
-		  text: "Process this data",
-		  type: "warning",
-		  showCancelButton: true,
-		  confirmButtonClass: "btn-info",
-		  confirmButtonText: "Ya, Simpan!",
-		  cancelButtonText: "Batal",
-		  closeOnConfirm: false
-		},
-		function(){
-		  $.ajax({
-			  type:'POST',
-			  url: base_url + active_controller + 'add',
-			  dataType : "json",
-			  data:data,
-			  success:function(data){
-				  if(data.status == '1'){
-					 swal({
-						  title: "Success",
-						  text : data.pesan,
-						  type : "success"
-						},
-						function (){
-							window.location.reload(true);
-						})
-				  } else {
-					swal({
-					  title : "Error",
-					  text  : data.pesan,
-					  type  : "error"
-					})
-
-				  }
-			  },
-			  error : function(){
-				swal({
-					  title : "Error",
-					  text  : "Error Process !",
-					  type  : "error"
-					})
-			  }
-		  })
-		});
-
-	})
-
-  	$(function() {
-	    var table = $('#example1').DataTable( {
-	        orderCellsTop: true,
-	        fixedHeader: true
-	    } );
-    	$("#form-area").hide();
-  	});
-</script>
+<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="<?= base_url('assets/js/unit/index.js?v=' . (defined('FCPATH') && file_exists(FCPATH . 'assets/js/unit/index.js') ? filemtime(FCPATH . 'assets/js/unit/index.js') : '1.0.2')) ?>"></script>

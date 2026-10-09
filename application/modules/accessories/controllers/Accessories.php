@@ -154,9 +154,21 @@ class Accessories extends Admin_Controller
         'list_coa' => $coa
       ];
 
+      $title = 'Tambah Barang Stok';
+      $icon = 'fa fa-plus-circle';
+      if (!empty($id)) {
+        if ($tanda == 'view') {
+          $title = 'Detail Barang Stok';
+          $icon = 'fa fa-cubes';
+        } else {
+          $title = 'Edit Barang Stok';
+          $icon = 'fa fa-pencil-square-o';
+        }
+      }
+
       $this->template->set('results', $data);
-      $this->template->title('Add Barang Stok');
-      $this->template->page_icon('fa fa-edit');
+      $this->template->title($title);
+      $this->template->page_icon($icon);
       $this->template->render('add', $data);
     }
   }
