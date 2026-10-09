@@ -93,13 +93,21 @@ $config['theme'] = '';
 // placeholder will be replaced. The message will replace the {message}
 // placeholder.
 $config['template.message_template'] =<<<EOD
- <div class="alert alert-{type} alert-dismissable">
-    <i class="{icon}"></i>
-    <button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button>
-    <b>
-        {title}
-    </b>
-    <br>{message}
+<div class="alert alert-{type} alert-dismissable app-system-alert app-alert-{type}" role="alert">
+    <button type="button" class="close app-alert-close" data-dismiss="alert" aria-label="Tutup pemberitahuan">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <div class="app-alert-icon-box" aria-hidden="true">
+        <i class="{icon}"></i>
+    </div>
+    <div class="app-alert-content">
+        <div class="app-alert-header">
+            <span class="app-alert-title">{title}</span>
+        </div>
+        <div class="app-alert-body">
+            {message}
+        </div>
+    </div>
 </div>
 EOD;
 

@@ -25,11 +25,31 @@ class Admin_Controller extends Base_Controller
             $this->session->set_flashdata('2FA belum diverifikasi. Silakan verifikasi terlebih dahulu.', 'danger');
             redirect('users/verify_2fa');
         } else if (!$this->session->userdata('2fa_verified')) {
-            $message = '<h3><strong>Penting!</strong></h3>
-            <p>Untuk meningkatkan keamanan akun, mulai per tanggal 1 Juli 2025 di berlakukan pengamanan <storng>Two Factor Authentication (2FA)</storng>. Untuk itu harap meng-aktifkan 2FA pada masing-masing akun. 
-             <a href="' . base_url('users/confirm_setup_2fa') . '"><i class="fa fa-key" aria-hidden="true"></i> Akftikan 2FA</a> lihat  <a target="_blank" href="' . base_url('user_guide') . '"><i class="fa fa-book" aria-hidden="true"></i> Panduan</a>. </p>';
+            $message = '<div class="alert-2fa-container">
+                <div class="alert-2fa-main">
+                    <p class="alert-2fa-text">
+                        Untuk meningkatkan standar keamanan akun, mulai per tanggal <strong>1 Juli 2025</strong> diberlakukan pengamanan <strong>Two-Factor Authentication (2FA)</strong>. Harap segera mengaktifkan 2FA pada akun Anda untuk melindungi akses data perusahaan.
+                    </p>
+                </div>
+                <div class="alert-2fa-actions">
+                    <a href="' . base_url('users/confirm_setup_2fa') . '" class="btn-2fa btn-2fa-primary">
+                        <i class="fa fa-key" aria-hidden="true"></i>
+                        <span>Aktifkan 2FA Sekarang</span>
+                        <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                    <a href="' . base_url('user_guide') . '" target="_blank" rel="noopener noreferrer" class="btn-2fa btn-2fa-secondary">
+                        <i class="fa fa-book" aria-hidden="true"></i>
+                        <span>Buku Panduan</span>
+                    </a>
+                </div>
+            </div>';
 
-            $this->template->set_message($message, 'warning');
+            $this->template->set_message(
+                $message,
+                'warning',
+                '<span class="app-alert-badge">PENTING</span> Wajib Aktivasi Two-Factor Authentication (2FA)',
+                'fa fa-shield'
+            );
         }
 
         $idt         = $this->identitas_model->find(1);

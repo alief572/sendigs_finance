@@ -761,17 +761,29 @@ class Template
 		return pathinfo($file, PATHINFO_EXTENSION) ? '' : '.php';
 	}
 
-	public static function set_message($tmessage = '', $type = 'info')
+	public static function set_message($tmessage = '', $type = 'info', $title = null, $icon = null)
 	{
 		if (empty($tmessage)) {
 			return;
 		}
 
 		if (isset(self::$ci->session)) {
+			$flash_data = array(
+				'type'    => $type,
+				'message' => $tmessage,
+				'title'   => $title,
+				'icon'    => $icon
+			);
+			self::$ci->session->set_flashdata('tmessage_data', $flash_data);
 			self::$ci->session->set_flashdata('tmessage', "{$type}::{$tmessage}");
 		}
 
-		self::$tMessage = array('type' => $type, 'tmessage' => $tmessage);
+		self::$tMessage = array(
+			'type'     => $type,
+			'tmessage' => $tmessage,
+			'title'    => $title,
+			'icon'     => $icon
+		);
 	}
 
 	public static function get_message_raw()
@@ -801,18 +813,29 @@ class Template
 
 	public static function message($tmessage = '', $type = 'information')
 	{
+		$custom_title = null;
+		$custom_icon = null;
+
 		// Does session data exist?
 		if (
 			empty($tmessage) && class_exists('CI_Session', false)
 		) {
-			$tmessage = self::$ci->session->flashdata('tmessage');
-			if (! empty($tmessage)) {
-				// Split out the message parts
-				$temp_message = explode('::', $tmessage);
-				$type = $temp_message[0];
-				$tmessage = $temp_message[1];
+			$flash_data = self::$ci->session->flashdata('tmessage_data');
+			if (!empty($flash_data) && is_array($flash_data)) {
+				$type = isset($flash_data['type']) ? $flash_data['type'] : 'info';
+				$tmessage = isset($flash_data['message']) ? $flash_data['message'] : '';
+				$custom_title = isset($flash_data['title']) ? $flash_data['title'] : null;
+				$custom_icon = isset($flash_data['icon']) ? $flash_data['icon'] : null;
+			} else {
+				$tmessage = self::$ci->session->flashdata('tmessage');
+				if (! empty($tmessage)) {
+					// Split out the message parts
+					$temp_message = explode('::', $tmessage);
+					$type = $temp_message[0];
+					$tmessage = $temp_message[1];
 
-				unset($temp_message);
+					unset($temp_message);
+				}
 			}
 		}
 
@@ -824,15 +847,32 @@ class Template
 
 			$tmessage = self::$tMessage['tmessage'];
 			$type = self::$tMessage['type'];
+			$custom_title = isset(self::$tMessage['title']) ? self::$tMessage['title'] : null;
+			$custom_icon = isset(self::$tMessage['icon']) ? self::$tMessage['icon'] : null;
 		}
 
-		$arr_icon = array('info' => 'fa fa-info', 'success' => 'fa fa-check', 'error' => 'fa fa-times', 'warning' => 'fa fa-warning', 'danger' => 'fa fa-times');
-		$arr_title = array('info' => 'Information', 'success' => 'Success', 'error' => 'Error', 'warning' => 'Warning', 'danger' => 'Error');
+		$arr_icon = array(
+			'info'    => 'fa fa-info-circle',
+			'success' => 'fa fa-check-circle',
+			'error'   => 'fa fa-times-circle',
+			'warning' => 'fa fa-exclamation-triangle',
+			'danger'  => 'fa fa-exclamation-circle'
+		);
+		$arr_title = array(
+			'info'    => 'Informasi',
+			'success' => 'Berhasil',
+			'error'   => 'Terjadi Kesalahan',
+			'warning' => 'Peringatan',
+			'danger'  => 'Perhatian'
+		);
+
+		$resolved_icon = !empty($custom_icon) ? $custom_icon : (isset($arr_icon[$type]) ? $arr_icon[$type] : 'fa fa-bell');
+		$resolved_title = ($custom_title !== null) ? $custom_title : (isset($arr_title[$type]) ? $arr_title[$type] : ucfirst($type));
 
 		// Get the message template and replace the placeholders.
 		$template = str_replace(
 			array('{type}', '{icon}', '{title}', '{message}'),
-			array($type, $arr_icon[$type], $arr_title[$type], $tmessage),
+			array($type, $resolved_icon, $resolved_title, $tmessage),
 			self::$ci->config->item('template.message_template')
 		);
 
@@ -840,6 +880,7 @@ class Template
 		// occurence, but clearing should resolve the problem.)
 		if (class_exists('CI_Session', false)) {
 			self::$ci->session->set_flashdata('tmessage', '');
+			self::$ci->session->set_flashdata('tmessage_data', null);
 		}
 
 		return $template;
