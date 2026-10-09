@@ -31,7 +31,7 @@
                         <option value="">Semua</option>
                         <option value="draft">Draft</option>
                         <option value="waiting payment">Waiting Payment</option>
-                        <option value="done payment">Done Payment</option>
+                        <option value="done payment">Paid</option>
                     </select>
                 </div>
             </div>
@@ -191,7 +191,7 @@
                                 break;
                             case 'done payment':
                                 labelClass = 'label-success';
-                                labelText = 'Done Payment';
+                                labelText = 'Paid';
                                 break;
                         }
 

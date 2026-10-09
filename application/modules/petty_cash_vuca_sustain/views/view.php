@@ -44,7 +44,7 @@ function pcvs_status_label($status)
     $map = [
         'draft'           => '<span class="label label-warning">Draft</span>',
         'waiting payment' => '<span class="label label-info">Waiting Payment</span>',
-        'done payment'    => '<span class="label label-success">Done Payment</span>',
+        'done payment'    => '<span class="label label-success">Paid</span>',
     ];
     return isset($map[$status]) ? $map[$status] : '<span class="label label-default">' . htmlspecialchars($status) . '</span>';
 }

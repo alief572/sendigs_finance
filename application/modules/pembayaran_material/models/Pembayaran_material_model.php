@@ -1448,6 +1448,10 @@ class Pembayaran_material_model extends BF_Model
 				$get_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc])->row();
 
 				if (!empty($get_non_po)) {
+					$arr_coa_jurnal = ['1103-01-04', '7201-01-04'];
+					if (!empty($coa_bank)) {
+						array_push($arr_coa_jurnal, $coa_bank);
+					}
 					$id_company = '';
 					$nm_company = '';
 					$id_divisi = '';
@@ -1464,6 +1468,7 @@ class Pembayaran_material_model extends BF_Model
 						$id_divisi = $get_department->id ?? '';
 						$nm_divisi = $get_department->name ?? '';
 					}
+					// Note: the original script does not loop and generate HTML for this case. We leave it empty as original.
 
 					$get_pr_details = $this->db->get_where('rutin_non_planning_detail', ['no_pr' => $get_non_po->no_pr])->result();
 					$total_pr_amount = 0;
