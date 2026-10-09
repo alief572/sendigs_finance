@@ -11,9 +11,9 @@
 				<td class="text-left" style='vertical-align:middle;' width='33%'></td>
 			</tr>
 			<tr>
-				<td class="text-left" style='vertical-align:middle;'>Nomor PO / Kasbon</td>
+				<td class="text-left" style='vertical-align:middle;'>Nomor Dokumen / PR</td>
 				<td class="text-left" style='vertical-align:middle;'>:</td>
-				<td class="text-left" style='vertical-align:middle;'><?= strtoupper($no_po); ?></td>
+				<td class="text-left" style='vertical-align:middle;'><?= htmlspecialchars(strtoupper($no_po), ENT_QUOTES, 'UTF-8'); ?></td>
 				<td class="text-left" style='vertical-align:middle;'>Tanggal Incoming</td>
 				<td class="text-left" style='vertical-align:middle;'>:</td>
 				<td class="text-left" style='vertical-align:middle;'><?= tgl_indo($getData[0]['tanggal']); ?></td>

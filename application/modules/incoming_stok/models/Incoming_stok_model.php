@@ -43,6 +43,7 @@ class Incoming_stok_model extends BF_Model
   //request material
   public function data_side_request_material()
   {
+    $this->load->model('Incoming_stok/incoming_cash_model');
     $controller      = ucfirst(strtolower($this->uri->segment(1)));
     // $Arr_Akses			= getAcccesmenu($controller);
     $requestData    = $_REQUEST;
@@ -112,6 +113,11 @@ class Incoming_stok_model extends BF_Model
 
       foreach ($get_no_kasbon as $item_no_pr) {
         $no_pr[] = $item_no_pr->id_pr;
+      }
+
+      foreach ($this->incoming_cash_model->references($row['no_ipp']) as $cash) {
+        $no_po .= ($no_po ? ', ' : '') . htmlspecialchars($cash['no_non_po'], ENT_QUOTES, 'UTF-8');
+        $no_pr[] = htmlspecialchars($cash['no_pr'], ENT_QUOTES, 'UTF-8');
       }
 
       if (!empty($no_pr)) {

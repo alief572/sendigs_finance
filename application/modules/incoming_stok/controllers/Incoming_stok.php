@@ -22,7 +22,8 @@ class Incoming_stok extends Admin_Controller
 
     $this->load->library(array('upload', 'Image_lib'));
     $this->load->model(array(
-      'Incoming_stok/incoming_stok_model'
+      'Incoming_stok/incoming_stok_model',
+      'Incoming_stok/incoming_cash_model'
     ));
     // $this->template->title('Manage Data Supplier');
 
@@ -47,10 +48,24 @@ class Incoming_stok extends Admin_Controller
     $this->incoming_stok_model->data_side_request_material();
   }
 
+  private function containsCashDocuments($documents)
+  {
+    if (!is_array($documents) || !$documents) return false;
+    foreach ($documents as $document) {
+      if (!is_string($document)) return false;
+    }
+    return (bool)$this->incoming_cash_model->references(implode(',', $documents));
+  }
+
   public function request_stok($id = null)
   {
     if ($this->input->post()) {
       $data           = $this->input->post();
+      $hasCashDocument = $this->containsCashDocuments($data['no_po'] ?? []);
+      if (($data['supplier'] ?? '') === 'cash' || $hasCashDocument) {
+        echo json_encode($this->incoming_cash_model->receive($data, $this->id_user));
+        return;
+      }
       $session        = $this->session->userdata('app_session');
       $no_po          = $data['no_po'];
       $no_po = implode(',', $no_po);
@@ -453,6 +468,9 @@ class Incoming_stok extends Admin_Controller
         $no_po[] = $item->no_doc;
       }
 
+      foreach ($this->incoming_cash_model->references($getData[0]['no_ipp']) as $cash) {
+        $no_po[] = $cash['no_non_po'] . ' (PR: ' . $cash['no_pr'] . ')';
+      }
       $no_po = implode(', ', $no_po);
     } else {
       $no_po = '-';
@@ -530,6 +548,9 @@ class Incoming_stok extends Admin_Controller
     foreach ($get_no_kasbon as $item) {
       $no_po[] = $item->no_doc;
     }
+    foreach ($this->incoming_cash_model->references($getData[0]['no_ipp']) as $cash) {
+      $no_po[] = $cash['no_non_po'] . ' (PR: ' . $cash['no_pr'] . ')';
+    }
     $no_po = implode(', ', $no_po);
 
     $data = array(
@@ -546,6 +567,12 @@ class Incoming_stok extends Admin_Controller
 
   public function detail_purchasing_order()
   {
+    if ($this->input->post('supplier') === 'cash' || $this->containsCashDocuments($this->input->post('no_po'))) {
+      $documents = $this->input->post('no_po');
+      $items = is_array($documents) && $documents ? $this->incoming_cash_model->items($documents) : [];
+      echo json_encode(['header' => $this->load->view('cash_items', ['items'=>$items], true)]);
+      return;
+    }
     $no_po       = $this->input->post('no_po');
     $no_po = implode(',', $no_po);
     $id_gudang   = $this->input->post('id_gudang');
@@ -706,6 +733,14 @@ class Incoming_stok extends Admin_Controller
   public function pilih_supplier()
   {
     $kode_supplier = $this->input->post('kode_supplier');
+    if ($kode_supplier === 'cash') {
+      foreach ($this->incoming_cash_model->documents() as $document) {
+        $doc = htmlspecialchars($document['no_non_po'], ENT_QUOTES, 'UTF-8');
+        $pr = htmlspecialchars($document['no_pr'], ENT_QUOTES, 'UTF-8');
+        echo '<tr><td>' . $doc . '</td><td>' . $pr . '</td><td class="text-center"><input type="checkbox" name="no_po[]" class="check_po" value="' . $doc . '"></td></tr>';
+      }
+      return;
+    }
 
     if ($kode_supplier == 'kasbon') {
       $this->db->select('a.no_doc, a.id_pr');
@@ -816,6 +851,10 @@ class Incoming_stok extends Admin_Controller
 
   public function set_jurnal()
   {
+    if ($this->input->post('supplier') === 'cash' || $this->containsCashDocuments($this->input->post('no_po'))) {
+      echo json_encode(['hasil_jurnal'=>'','ttl_debit'=>0,'ttl_kredit'=>0]);
+      return;
+    }
     $this->incoming_stok_model->set_jurnal();
   }
 }
