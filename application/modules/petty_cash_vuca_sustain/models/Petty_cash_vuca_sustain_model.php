@@ -410,8 +410,7 @@ class Petty_cash_vuca_sustain_model extends BF_Model
     /**
      * Update status record menjadi "done payment"
      *
-     * Dipanggil oleh modul pembayaran_material ketika pembayaran dengan
-     * tipe "petty_cash_hutang" selesai diproses.
+     * Dipanggil dalam transaksi pembayaran_material untuk dokumen terkait.
      *
      * @param  string      $no_doc  No Payment Hutang (no_doc dari request_payment) atau ID record
      * @param  int|null    $user_id User ID yang melakukan update (modified_by)
@@ -420,18 +419,24 @@ class Petty_cash_vuca_sustain_model extends BF_Model
     public function update_status_done($no_doc, $user_id = null)
     {
         // Find record by no_payment_hutang first, fallback to id
-        $record = $this->db
+        $query = $this->db
             ->where('no_payment_hutang', $no_doc)
-            ->get($this->table_name)
-            ->row();
+            ->get($this->table_name);
+        if ($query === false) {
+            return false;
+        }
+        $record = $query->row();
 
         if (!$record) {
             // Fallback: try finding by id (if $no_doc is numeric)
             if (is_numeric($no_doc)) {
-                $record = $this->db
+                $query = $this->db
                     ->where('id', $no_doc)
-                    ->get($this->table_name)
-                    ->row();
+                    ->get($this->table_name);
+                if ($query === false) {
+                    return false;
+                }
+                $record = $query->row();
             }
         }
 
@@ -439,6 +444,11 @@ class Petty_cash_vuca_sustain_model extends BF_Model
         if (!$record) {
             log_message('error', 'update_status_done: Record not found for no_doc: ' . $no_doc);
             return false;
+        }
+
+        // Retry is successful without changing the existing payment audit.
+        if ($record->status === self::STATUS_DONE_PAYMENT) {
+            return true;
         }
 
         // Validate current status must be "waiting payment"
@@ -455,8 +465,18 @@ class Petty_cash_vuca_sustain_model extends BF_Model
         ];
 
         $this->db->where('id', $record->id);
-        $this->db->update($this->table_name, $update_data);
+        $this->db->where('status', self::STATUS_WAITING_PAYMENT);
+        if (!$this->db->update($this->table_name, $update_data)) {
+            log_message('error', 'update_status_done: Database update failed for no_doc: ' . $no_doc);
+            return false;
+        }
+        if ($this->db->affected_rows() === 1) {
+            return true;
+        }
 
-        return true;
+        // Another transaction may have completed the same report first.
+        $query = $this->db->get_where($this->table_name, ['id' => $record->id]);
+        return $query !== false && $query->num_rows() === 1
+            && $query->row()->status === self::STATUS_DONE_PAYMENT;
     }
 }

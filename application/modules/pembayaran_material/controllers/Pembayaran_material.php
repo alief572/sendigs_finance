@@ -1873,31 +1873,37 @@ class Pembayaran_material extends Admin_Controller
 
 			$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
 			// }
-			$this->db->trans_complete();
-
-			if ($this->db->trans_status() === FALSE) {
-				throw new Exception('Transaksi gagal, data telah di-rollback.');
-			}
-
-			// Update status done payment for petty_cash_hutang records
+			// Keep the report status and payment in the same transaction.
+			// Return a JSON failure instead of a database error page in development.
+			$status_db_debug = $this->db->db_debug;
+			$this->db->db_debug = false;
 			try {
-				$processed_ids = explode(',', $post['id_payment']);
-				$this->db->where_in('id', $processed_ids);
-				$this->db->group_start();
-				$this->db->where('tipe', 'petty_cash_hutang');
-				$this->db->or_like('no_doc', 'RPC', 'after');
-				$this->db->group_end();
-				$petty_cash_payments = $this->db->get('payment_approve')->result();
-
+				$this->db->select('DISTINCT pc.no_payment_hutang', false);
+				$this->db->from('payment_approve pa');
+				// Legacy payment tables may use a different charset/collation.
+				$this->db->join('tr_petty_cash_vuca_sustain pc', 'pc.no_payment_hutang = CONVERT(pa.no_doc USING utf8mb4) COLLATE utf8mb4_general_ci', 'inner', false);
+				$this->db->where_in('pa.id', explode(',', $post['id_payment']));
+				$this->db->where('pa.status', 2);
+				$petty_cash_query = $this->db->get();
+				if ($petty_cash_query === false) {
+					throw new Exception('Gagal memeriksa status payment petty cash.');
+				}
+				$petty_cash_payments = $petty_cash_query->result();
 				if (!empty($petty_cash_payments)) {
-					$CI = &get_instance();
-					$CI->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
+					$this->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
 					foreach ($petty_cash_payments as $pc_payment) {
-						$CI->pcvs_model->update_status_done($pc_payment->no_doc, $this->auth->user_id());
+						if (!$this->pcvs_model->update_status_done($pc_payment->no_payment_hutang, $this->auth->user_id())) {
+							throw new Exception('Gagal memperbarui status Paid untuk ' . $pc_payment->no_payment_hutang . '. Payment dibatalkan.');
+						}
 					}
 				}
-			} catch (Exception $e) {
-				log_message('error', 'Failed to update petty_cash_vuca_sustain status: ' . $e->getMessage());
+			} finally {
+				$this->db->db_debug = $status_db_debug;
+			}
+
+			$payment_committed = $this->db->trans_complete();
+			if ($payment_committed === FALSE || $this->db->trans_status() === FALSE) {
+				throw new Exception('Transaksi gagal, data telah di-rollback.');
 			}
 
 			echo json_encode([
