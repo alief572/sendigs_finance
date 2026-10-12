@@ -3,13 +3,13 @@
 	<div class="box-body">
 		<form id="data-form" method="post" autocomplete="off"><br>
 			<div class="form-group row">
-				<div class="col-md-2 text-bold">Supplier<span class='text-danger'>*</span></div>
+				<div class="col-md-2 text-bold">Supplier / Sumber<span class='text-danger'>*</span></div>
 				<div class="col-md-4">
 					<select name='supplier' id='supplier' class='form-control input-sm pilih_supplier chosen-select'>
 						<?php
+						echo "<option value=''>- Select Supplier / Sumber -</option>";
+						echo '<option value="kasbon">Kasbon</option><option value="cash">Pembelian Cash</option>';
 						if (!empty($listSupplier)) {
-							echo "<option value=''>- Select Supplier -</option>";
-							echo '<option value="kasbon">Kasbon</option>';
 							foreach ($listSupplier as $item) {
 								echo "<option value='" . $item->kode_supplier . "'>" . $item->nama . "</option>";
 							}
@@ -21,12 +21,12 @@
 				</div>
 			</div>
 			<div class="form-group row">
-				<div class="col-md-2 text-bold">Nomor PO <span class='text-danger'>*</span></div>
+				<div class="col-md-2 text-bold">Nomor Dokumen <span class='text-danger'>*</span></div>
 				<div class="col-md-4">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th class="text-center">No. PO / Kasbon</th>
+								<th class="text-center">Nomor Dokumen</th>
 								<th class="text-center">No. PR</th>
 								<th class="text-center">Action</th>
 							</tr>
@@ -75,7 +75,7 @@
 								<th class="text-center" width='5%'>ID</th>
 								<th class="text-center" width='10%'>Kode Barang</th>
 								<th class="text-center">Nama Barang</th>
-								<th class="text-center" width='8%'>Qty PO</th>
+								<th class="text-center" width='8%'>Qty Dokumen</th>
 								<th class="text-center" width='8%'>Unit</th>
 								<th class="text-center" width='8%'>Qty IN</th>
 								<th class="text-center" width='8%'>Qty Outsanding</th>
@@ -191,7 +191,7 @@
 			if (no_po.length < 1) {
 				swal({
 					title: "Error Message!",
-					text: 'Nomor PO belum dipilih ...',
+					text: 'Nomor Dokumen belum dipilih ...',
 					type: "warning"
 				});
 				return false;
@@ -282,7 +282,14 @@
 				});
 		});
 
+		var receiptVersion = 0;
+		var supplierVersion = 0;
 		$(document).on('change', '.check_po, #id_gudang', function() {
+			var version = ++receiptVersion;
+			window.incomingReceiptVersion = version;
+			var source = $('#supplier').val();
+			$('#body_req').html('<tr><td colspan="10">Pilih dokumen dan gudang.</td></tr>');
+			clear_jurnal();
 			var no_po = [];
 			$('.check_po').each(function() {
 				var val = $(this).val();
@@ -292,31 +299,39 @@
 			});
 			let id_gudang = $('#id_gudang').val()
 
-			if (no_po != '0' && id_gudang != '0') {
+			if (no_po.length > 0 && id_gudang != '0') {
 				$.ajax({
 					type: 'POST',
 					url: base_url + active_controller + '/detail_purchasing_order',
 					data: {
 						'no_po': no_po,
+						'supplier': source,
 						'id_gudang': id_gudang,
 					},
 					dataType: 'json',
 					success: function(data) {
+						if (version !== receiptVersion) return;
 						// console.log(data)
 						$('#body_req').html(data.header)
 						$('.autoNumeric4').autoNumeric('init', {
-							mDec: '4',
+							mDec: source === 'cash' ? '5' : '4',
 							aPad: false
 						})
 					}
 				})
 
-				set_jurnal(no_po, id_gudang);
+				if (source !== 'cash') set_jurnal(no_po, id_gudang, version);
 			}
 		});
 
 		$(document).on('change', '.pilih_supplier', function() {
 			var supplier = $(this).val();
+			++receiptVersion;
+			var sourceVersion = ++supplierVersion;
+			window.incomingReceiptVersion = receiptVersion;
+			$('.list_no_po').empty();
+			$('#body_req').html('<tr><td colspan="10">Pilih dokumen dan gudang.</td></tr>');
+			clear_jurnal();
 
 			$.ajax({
 				type: 'POST',
@@ -326,6 +341,7 @@
 				},
 				cache: false,
 				success: function(result) {
+					if ($('#supplier').val() !== supplier || sourceVersion !== supplierVersion) return;
 					$('.list_no_po').html(result);
 				},
 				error: function(result) {
@@ -374,17 +390,25 @@
 		return s.join(dec);
 	}
 
-	function set_jurnal(no_po, id_gudang) {
+	function clear_jurnal() {
+		$('.tbody_list_jurnal').empty();
+		$('.ttl_debit_jurnal, .ttl_kredit_jurnal').text('0');
+	}
+
+	function set_jurnal(no_po, id_gudang, version) {
+		var source = $('#supplier').val();
 		$.ajax({
 			type: 'post',
 			url: siteurl + active_controller + '/set_jurnal',
 			data: {
 				'no_po': no_po,
+				'supplier': source,
 				'id_gudang': id_gudang
 			},
 			cache: false,
 			dataType: 'json',
 			success: function(result) {
+				if ($('#supplier').val() !== source || window.incomingReceiptVersion !== version) return;
 				$('.tbody_list_jurnal').html(result.hasil_jurnal);
 				$('.ttl_debit_jurnal').text(number_format(result.ttl_debit));
 				$('.ttl_kredit_jurnal').text(number_format(result.ttl_kredit));

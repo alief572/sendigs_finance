@@ -21,9 +21,9 @@
             <td class="mid"></td>
         </tr>
         <tr>
-            <td class="mid" width='18%'>Nomor PO / Kasbon</td>
+            <td class="mid" width='18%'>Nomor Dokumen / PR</td>
             <td class="mid" width='2%'>:</td>
-            <td class="mid" width='30%'><?= strtoupper($no_po); ?></td>
+            <td class="mid" width='30%'><?= htmlspecialchars(strtoupper($no_po), ENT_QUOTES, 'UTF-8'); ?></td>
             <td class="mid" width='18%'>Gudang Incoming</td>
             <td class="mid" width='2%'>:</td>
             <td class="mid" width='30%'><?= strtoupper(get_name('warehouse', 'nm_gudang', 'id', $getData[0]['id_gudang_ke'])); ?></td>

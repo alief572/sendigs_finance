@@ -1,0 +1,16 @@
+CREATE TABLE kons_tr_actual_plan_tagih (id VARCHAR(100) PRIMARY KEY, id_spk_penawaran VARCHAR(100), id_penawaran VARCHAR(100), id_detail_plan_tagih INT, nominal_payment DECIMAL(20,2), sts_invoice INT) ENGINE=InnoDB;
+CREATE TABLE kons_tr_plan_tagih_detail (id INT PRIMARY KEY, sts_invoice INT, tgl_invoice DATE) ENGINE=InnoDB;
+CREATE TABLE kons_tr_spk_penawaran (id_spk_penawaran VARCHAR(100) PRIMARY KEY,id_project VARCHAR(100), id_customer VARCHAR(100), nm_customer VARCHAR(100), address TEXT, id_company INT) ENGINE=InnoDB;
+CREATE TABLE kons_tr_penawaran (id_quotation VARCHAR(100) PRIMARY KEY, company INT) ENGINE=InnoDB;
+CREATE TABLE kons_tr_company (id INT PRIMARY KEY,nm_company VARCHAR(100)) ENGINE=InnoDB;
+CREATE TABLE kons_master_konsultasi_header (id_konsultasi_h VARCHAR(100) PRIMARY KEY,nm_paket VARCHAR(100)) ENGINE=InnoDB;
+CREATE TABLE kons_tr_penawaran_non_konsultasi (id_penawaran VARCHAR(100) PRIMARY KEY, grand_total DECIMAL(20,2), id_company INT, keterangan_penawaran TEXT, nm_pic_penawaran VARCHAR(100)) ENGINE=InnoDB;
+CREATE TABLE tr_invoice_detail_non_kons (id INT AUTO_INCREMENT PRIMARY KEY,id_header VARCHAR(100),nm_item VARCHAR(100),qty DECIMAL(20,2),harga DECIMAL(20,2),total DECIMAL(20,2),input_by VARCHAR(100),input_at DATETIME) ENGINE=InnoDB;
+CREATE TABLE ms_invoice_sequence (id INT AUTO_INCREMENT PRIMARY KEY,kode_entitas VARCHAR(20),tahun INT,last_sequence INT,updated_at DATETIME,updated_by VARCHAR(100),UNIQUE KEY entity_year(kode_entitas,tahun)) ENGINE=InnoDB;
+INSERT INTO kons_tr_company VALUES (1,'Sustain'),(4,'Vuca');
+INSERT INTO kons_master_konsultasi_header VALUES ('PR1','Project');
+INSERT INTO kons_tr_spk_penawaran VALUES ('SP1','PR1','C1','Customer','Address',4);
+INSERT INTO kons_tr_penawaran VALUES ('Q1',4),('Q2',1);
+INSERT INTO kons_tr_plan_tagih_detail VALUES (1,0,NULL),(2,0,NULL);
+INSERT INTO kons_tr_actual_plan_tagih VALUES ('A1','SP1','Q1',1,15000000.00,0),('A2','SP1','Q2',2,1000.55,0);
+INSERT INTO kons_tr_penawaran_non_konsultasi VALUES ('N1',10000.00,1,'Non consultation','Sales'),('N2',100.00,1,'Concurrency','Sales');

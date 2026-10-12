@@ -63,3 +63,365 @@
     font-size: 1.1em !important;
     padding: 10px 25px !important;
 }
+
+/* ==========================================================================
+   Modern App Alert System (Premium SaaS & Overriding AdminLTE Defaults)
+   ========================================================================== */
+
+.app-system-alert {
+    position: relative !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    padding: 18px 22px !important;
+    padding-right: 50px !important;
+    margin-bottom: 24px !important;
+    border-radius: 12px !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-left-width: 5px !important;
+    box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+    font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    box-sizing: border-box !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Icon Box */
+.app-system-alert .app-alert-icon-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    border-radius: 11px !important;
+    font-size: 19px !important;
+    flex-shrink: 0 !important;
+    margin-top: 1px !important;
+}
+
+/* Content Area */
+.app-system-alert .app-alert-content {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+.app-system-alert .app-alert-header {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 6px !important;
+}
+
+.app-system-alert .app-alert-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.6px !important;
+    text-transform: uppercase !important;
+    line-height: 1.4 !important;
+}
+
+.app-system-alert .app-alert-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+    letter-spacing: -0.2px !important;
+    margin: 0 !important;
+}
+
+.app-system-alert .app-alert-body {
+    font-size: 13.5px !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    font-weight: 400 !important;
+}
+
+/* Close Button */
+.app-system-alert .app-alert-close {
+    position: absolute !important;
+    top: 14px !important;
+    right: 14px !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 6px !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    opacity: 0.55 !important;
+    text-shadow: none !important;
+    transition: all 0.18s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.app-system-alert .app-alert-close:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ---------------------------------------------------------
+   Theme Variations (Warning, Danger, Success, Info)
+   --------------------------------------------------------- */
+
+/* Warning */
+.app-system-alert.alert-warning,
+.alert.alert-warning.app-system-alert {
+    background-color: #fffdf7 !important;
+    background: linear-gradient(135deg, #fffdfa 0%, #fffbf2 50%, #fff7ed 100%) !important;
+    border-color: #fed7aa !important;
+    border-left-color: #f59e0b !important;
+    color: #92400e !important;
+}
+
+.app-system-alert.alert-warning .app-alert-icon-box {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    border: 1px solid #fcd34d !important;
+    color: #d97706 !important;
+    box-shadow: 0 4px 10px rgba(217, 119, 6, 0.14) !important;
+}
+
+.app-system-alert.alert-warning .app-alert-badge {
+    background: #fef3c7 !important;
+    border: 1px solid #fde68a !important;
+    color: #b45309 !important;
+}
+
+.app-system-alert.alert-warning .app-alert-title {
+    color: #78350f !important;
+}
+
+.app-system-alert.alert-warning .app-alert-body {
+    color: #92400e !important;
+}
+
+.app-system-alert.alert-warning .app-alert-close {
+    color: #92400e !important;
+}
+
+/* Success */
+.app-system-alert.alert-success,
+.alert.alert-success.app-system-alert {
+    background-color: #f7fef9 !important;
+    background: linear-gradient(135deg, #f7fef9 0%, #f0fdf4 100%) !important;
+    border-color: #bbf7d0 !important;
+    border-left-color: #16a34a !important;
+    color: #166534 !important;
+}
+
+.app-system-alert.alert-success .app-alert-icon-box {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border: 1px solid #86efac !important;
+    color: #15803d !important;
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.14) !important;
+}
+
+.app-system-alert.alert-success .app-alert-badge {
+    background: #dcfce7 !important;
+    border: 1px solid #bbf7d0 !important;
+    color: #166534 !important;
+}
+
+.app-system-alert.alert-success .app-alert-title {
+    color: #14532d !important;
+}
+
+.app-system-alert.alert-success .app-alert-body {
+    color: #166534 !important;
+}
+
+.app-system-alert.alert-success .app-alert-close {
+    color: #166534 !important;
+}
+
+/* Danger / Error */
+.app-system-alert.alert-danger,
+.app-system-alert.alert-error,
+.alert.alert-danger.app-system-alert,
+.alert.alert-error.app-system-alert {
+    background-color: #fef9f9 !important;
+    background: linear-gradient(135deg, #fef9f9 0%, #fef2f2 100%) !important;
+    border-color: #fecaca !important;
+    border-left-color: #dc2626 !important;
+    color: #991b1b !important;
+}
+
+.app-system-alert.alert-danger .app-alert-icon-box,
+.app-system-alert.alert-error .app-alert-icon-box {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+    border: 1px solid #fca5a5 !important;
+    color: #dc2626 !important;
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.14) !important;
+}
+
+.app-system-alert.alert-danger .app-alert-badge,
+.app-system-alert.alert-error .app-alert-badge {
+    background: #fee2e2 !important;
+    border: 1px solid #fecaca !important;
+    color: #991b1b !important;
+}
+
+.app-system-alert.alert-danger .app-alert-title,
+.app-system-alert.alert-error .app-alert-title {
+    color: #7f1d1d !important;
+}
+
+.app-system-alert.alert-danger .app-alert-body,
+.app-system-alert.alert-error .app-alert-body {
+    color: #991b1b !important;
+}
+
+.app-system-alert.alert-danger .app-alert-close,
+.app-system-alert.alert-error .app-alert-close {
+    color: #991b1b !important;
+}
+
+/* Info */
+.app-system-alert.alert-info,
+.alert.alert-info.app-system-alert {
+    background-color: #f8fbff !important;
+    background: linear-gradient(135deg, #f8fbff 0%, #f0f9ff 100%) !important;
+    border-color: #bae6fd !important;
+    border-left-color: #0284c7 !important;
+    color: #075985 !important;
+}
+
+.app-system-alert.alert-info .app-alert-icon-box {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+    border: 1px solid #7dd3fc !important;
+    color: #0284c7 !important;
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.14) !important;
+}
+
+.app-system-alert.alert-info .app-alert-badge {
+    background: #e0f2fe !important;
+    border: 1px solid #bae6fd !important;
+    color: #0369a1 !important;
+}
+
+.app-system-alert.alert-info .app-alert-title {
+    color: #0c4a6e !important;
+}
+
+.app-system-alert.alert-info .app-alert-body {
+    color: #075985 !important;
+}
+
+.app-system-alert.alert-info .app-alert-close {
+    color: #075985 !important;
+}
+
+/* ---------------------------------------------------------
+   2FA Security Alert Layout & Interactive Buttons
+   --------------------------------------------------------- */
+
+.alert-2fa-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    margin-top: 4px !important;
+}
+
+.alert-2fa-main {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+.alert-2fa-text {
+    margin: 0 !important;
+    line-height: 1.55 !important;
+    font-size: 13.5px !important;
+    color: #92400e !important;
+}
+
+.alert-2fa-text strong {
+    color: #78350f !important;
+    font-weight: 600 !important;
+}
+
+.alert-2fa-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex-shrink: 0 !important;
+}
+
+.btn-2fa {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    cursor: pointer !important;
+}
+
+.btn-2fa-primary {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #b45309 !important;
+    box-shadow: 0 2px 6px rgba(180, 83, 9, 0.28) !important;
+}
+
+.btn-2fa-primary:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(180, 83, 9, 0.35) !important;
+}
+
+.btn-2fa-primary:active {
+    transform: translateY(0) !important;
+}
+
+.btn-2fa-secondary {
+    background: #ffffff !important;
+    color: #92400e !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.btn-2fa-secondary:hover {
+    background: #fef3c7 !important;
+    border-color: #fcd34d !important;
+    color: #78350f !important;
+    transform: translateY(-1px) !important;
+}
+
+.btn-2fa-secondary:active {
+    transform: translateY(0) !important;
+}
+
+/* Responsive adjustment for alert */
+@media (max-width: 900px) {
+    .app-system-alert {
+        flex-direction: column !important;
+        padding: 16px !important;
+    }
+
+    .alert-2fa-container {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 14px !important;
+    }
+
+    .alert-2fa-actions {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+    }
+}

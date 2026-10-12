@@ -26,7 +26,7 @@ class Unit extends Admin_Controller
 	public function index(){
 		$this->auth->restrict($this->viewPermission);
 		$session = $this->session->userdata('app_session');
-		$this->template->page_icon('fa fa-users');
+		$this->template->page_icon('fa fa-cubes');
 		
 		$data = $this->db->get_where('ms_satuan',array('deleted'=>'N','category'=>'unit'))->result();
 
@@ -55,6 +55,7 @@ class Unit extends Admin_Controller
 			$ArrHeader = array(
 				'code'		=> $code,
 				'nama'		=> $nama,
+				'category'	=> 'unit',
 				$field_by	=> $username,
 				$field_date	=> $datetime
 			);
@@ -136,6 +137,24 @@ class Unit extends Admin_Controller
 		}
 
 		echo json_encode($Arr_Data);
+	}
+
+	public function get_detail(){
+		$id = $this->input->post('id');
+		$row = $this->db->get_where('ms_satuan', array('id' => $id))->row();
+		if($row){
+			echo json_encode([
+				'status' => 1,
+				'id'     => $row->id,
+				'code'   => $row->code,
+				'nama'   => $row->nama
+			]);
+		} else {
+			echo json_encode([
+				'status' => 0,
+				'pesan'  => 'Data tidak ditemukan.'
+			]);
+		}
 	}
 }
 
