@@ -1,0 +1,13 @@
+application/modules/invoicing/controllers/Invoicing.php
+application/modules/invoicing/models/Invoicing_model.php
+application/modules/invoicing/libraries/Invoice_calculation.php
+application/modules/invoicing/libraries/Invoice_writer.php
+application/modules/invoicing/views/add_invoice.php
+application/modules/invoicing/views/edit_invoice.php
+application/modules/invoicing/views/add_invoice_vuca.php
+application/modules/invoicing/views/edit_invoice_vuca.php
+application/modules/invoicing/views/add_invoice_non_konsultasi.php
+application/modules/invoicing/views/edit_invoice_non_konsultasi.php
+assets/js/invoicing/calculation.js
+application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php
+application/modules/penerimaan_uang/models/Penerimaan_uang_model.php
