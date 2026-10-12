@@ -16,6 +16,10 @@ $ENABLE_DELETE = has_permission('Assets.Delete');
 			<div class="box-tool pull-right">
 
 				<?php if ($ENABLE_ADD) : ?>
+					<?php if ($import_ready) : ?>
+						<a class="btn btn-primary" href="<?= site_url('asset/download_import_template'); ?>"><i class="fa fa-download" aria-hidden="true"></i> Download Format Excel</a>
+						<button type="button" class="btn btn-info" data-toggle="modal" data-target="#AssetImportModal"><i class="fa fa-upload" aria-hidden="true"></i> Import Excel</button>
+					<?php endif; ?>
 					<button type='button' id='add' class="btn btn-success" title="Tambah Asset"><i class="fa fa-plus">&nbsp;</i>Tambah Asset</button>
 				<?php endif; ?>
 				<!--<button type='button' id='jurnal' class="btn btn-primary" title="Buat Jurnal"><i class="fa fa-plus">&nbsp;</i>Buat Jurnal</button>-->
@@ -283,3 +287,5 @@ $ENABLE_DELETE = has_permission('Assets.Delete');
 		return s.join(dec);
 	}
 </script>
+
+<?php $this->load->view('import', ['ENABLE_ADD' => $ENABLE_ADD, 'import_ready' => $import_ready, 'import_nonce' => $import_nonce]); ?>

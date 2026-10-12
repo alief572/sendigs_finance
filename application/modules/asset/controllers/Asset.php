@@ -36,10 +36,114 @@ class Asset extends Admin_Controller
 		$cabang		= $this->db->query("SELECT * FROM cabang WHERE sts_aktif = 'aktif'")->result_array();
 		$dataArr = array(
 			'cabang' => $cabang,
-			'kategori' => $this->Asset_model->getList('asset_category')
+			'kategori' => $this->Asset_model->getList('asset_category'),
+			'import_ready' => has_permission($this->addPermission) && $this->assetImportReady(),
+			'import_nonce' => has_permission($this->addPermission) ? $this->assetImportNonce() : ''
 		);
 		history("View index asset");
 		$this->template->render('index', $dataArr);
+	}
+
+	private function assetImportStore()
+	{
+		require_once APPPATH . 'libraries/Asset_import_store.php';
+		$this->db->initialize();
+		return new Asset_import_store($this->db->conn_id);
+	}
+
+	private function assetImportReady()
+	{
+		try { return $this->assetImportStore()->ready(); }
+		catch (Throwable $e) { log_message('error', 'Asset import schema check: ' . $e->getMessage()); return false; }
+	}
+
+	private function assetImportNonce()
+	{
+		$nonce = $this->session->userdata('asset_import_nonce');
+		if (!$nonce) { $nonce = bin2hex(random_bytes(32)); $this->session->set_userdata('asset_import_nonce', $nonce); }
+		return $nonce;
+	}
+
+	private function assetImportMasters()
+	{
+		require_once APPPATH . 'libraries/Asset_import.php';
+		$categories = $this->db->select('id, nm_category AS name')->where('status', 'Y')->where('deleted', 'N')->order_by('nm_category')->get('asset_category')->result_array();
+		$companies = $this->consultant->select('id, nm_company AS name')->order_by('nm_company')->get('kons_tr_company')->result_array();
+		$departments = $this->hris->select('a.id, a.name AS department, b.name AS company')->from('departments a')->join('companies b', 'b.id=a.company_id', 'left')->order_by('a.name')->get()->result_array();
+		$departmentLabels = [];
+		foreach ($departments as $department) { $departmentLabels[] = ['id' => $department['id'], 'name' => $department['department'] . ' - ' . ($department['company'] ?: 'Tanpa company')]; }
+		return (new Asset_import())->masters(['category' => $categories, 'company' => $companies, 'department' => $departmentLabels]);
+	}
+
+	private function assetImportResponse(array $data)
+	{
+		return $this->output->set_content_type('application/json')->set_output(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE));
+	}
+
+	private function assetImportRequest($method)
+	{
+		$this->auth->restrict($this->addPermission);
+		if ($this->input->method(true) !== $method) { throw new Asset_import_failure('Metode request tidak sesuai.'); }
+		$session = $this->session->userdata('app_session');
+		if (empty($session['username']) || empty($session['kdcab']) || !preg_match('/^[A-Za-z0-9]{3}$/D', (string)$session['kdcab'])) { throw new Asset_import_failure('Session user/cabang tidak valid. Login ulang.'); }
+		if ($method === 'POST') {
+			$nonce = $this->session->userdata('asset_import_nonce');
+			if (!$nonce || !hash_equals($nonce, (string)$this->input->post('nonce'))) { throw new Asset_import_failure('Session form tidak valid. Muat ulang halaman.'); }
+		}
+		if (!$this->assetImportReady()) { throw new Asset_import_failure('Import Excel belum tersedia. Hubungi administrator untuk mengaktifkan fitur.'); }
+		return $session;
+	}
+
+	public function download_import_template()
+	{
+		require_once APPPATH . 'libraries/Asset_import_store.php';
+		$path = null;
+		try {
+			$this->assetImportRequest('GET');
+			require_once APPPATH . 'libraries/Asset_import_excel.php';
+			$path = tempnam(sys_get_temp_dir(), 'asset_template_');
+			if (!$path) { throw new RuntimeException('Tidak dapat membuat file sementara.'); }
+			(new Asset_import_excel())->template($this->assetImportMasters(), $path);
+			$this->output->set_content_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')->set_header('Content-Disposition: attachment; filename="Format_Import_Asset.xlsx"')->set_header('Cache-Control: no-store')->set_output(file_get_contents($path));
+		} catch (Throwable $e) {
+			log_message('error', 'Asset template: ' . $e->getMessage());
+			$this->assetImportResponse(['status' => 0, 'pesan' => $e instanceof Asset_import_failure ? $e->getMessage() : 'Format Excel gagal dibuat. Hubungi administrator.']);
+		} finally { if ($path && is_file($path)) { unlink($path); } }
+	}
+
+	public function preview_import()
+	{
+		require_once APPPATH . 'libraries/Asset_import_store.php';
+		try {
+			$session = $this->assetImportRequest('POST');
+			$file = isset($_FILES['file']) ? $_FILES['file'] : null;
+			if (!$file || is_array($file['error']) || $file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name']) || strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'xlsx' || $file['size'] > 5 * 1024 * 1024) { throw new Asset_import_failure('Upload file .xlsx maksimal 5 MB. Periksa batas upload server bila file gagal dikirim.'); }
+			require_once APPPATH . 'libraries/Asset_import_excel.php';
+			try { $raw = (new Asset_import_excel())->read($file['tmp_name']); }
+			catch (Throwable $e) {
+				$message = $e instanceof RuntimeException ? $e->getMessage() : 'Format XLSX tidak valid atau rusak. Download format resmi dan isi ulang.';
+				throw new Asset_import_failure($message, [['baris' => 0, 'kolom' => 'File', 'pesan' => $message]]);
+			}
+			$validated = (new Asset_import())->validate($raw, $this->assetImportMasters());
+			$token = $validated['errors'] ? null : $this->assetImportStore()->preview($validated, $session['username'], $session['kdcab']);
+			return $this->assetImportResponse(['status' => $token ? 1 : 0, 'pesan' => $token ? 'Semua baris valid. Periksa preview sebelum menyimpan.' : 'Perbaiki kesalahan di Excel, lalu upload ulang.', 'token' => $token, 'ringkasan' => $validated['summary'], 'preview' => $validated['rows'], 'kesalahan' => $validated['errors']]);
+		} catch (Throwable $e) {
+			log_message('error', 'Asset import preview: ' . $e->getMessage());
+			return $this->assetImportResponse(['status' => 0, 'pesan' => $e instanceof Asset_import_failure ? $e->getMessage() : 'File tidak dapat dibaca. Gunakan format resmi atau hubungi administrator.', 'token' => null, 'kesalahan' => $e instanceof Asset_import_failure ? $e->errors : []]);
+		}
+	}
+
+	public function save_import()
+	{
+		require_once APPPATH . 'libraries/Asset_import_store.php';
+		try {
+			$session = $this->assetImportRequest('POST');
+			$result = $this->assetImportStore()->save((string)$this->input->post('token'), $session['username'], $session['kdcab'], function () { return $this->assetImportMasters(); });
+			return $this->assetImportResponse($result);
+		} catch (Throwable $e) {
+			log_message('error', 'Asset import save: ' . $e->getMessage());
+			return $this->assetImportResponse(['status' => 0, 'pesan' => $e instanceof Asset_import_failure ? $e->getMessage() : 'Batch gagal disimpan dan dibatalkan seluruhnya. Coba lagi atau hubungi administrator bila ada konflik nomor.', 'kesalahan' => $e instanceof Asset_import_failure ? $e->errors : []]);
+		}
 	}
 
 	public function type()
@@ -113,7 +217,6 @@ class Asset extends Admin_Controller
 		$dataArr = array(
 			'list_dept' => $get_dept,
 			'list_catg' => $this->Asset_model->getList('asset_category'),
-			'list_costcenter' => $this->db->get_where('warehouse', ['desc' => 'costcenter'])->result_array(),
 			'list_comp' => $get_company
 		);
 
@@ -381,7 +484,7 @@ class Asset extends Admin_Controller
 			$detailData[$lopp]['value'] 		= str_replace(',', '', $data['value']);
 			$detailData[$lopp]['kdcab'] 		= $session['kdcab'];
 			$detailData[$lopp]['lokasi_asset'] 	= $data['lokasi_asset'];
-			$detailData[$lopp]['cost_center'] 	= $data['cost_center'];
+			$detailData[$lopp]['cost_center'] 	= '';
 			$detailData[$lopp]['id_company'] 	= $data['company_asset'];
 			$detailData[$lopp]['created_by'] 	= $this->session->userdata['app_session']['username'];
 			$detailData[$lopp]['created_date'] 	= date('Y-m-d h:i:s');
@@ -439,20 +542,6 @@ class Asset extends Admin_Controller
 		echo json_encode($Arr_Data);
 	}
 
-	public function list_center()
-	{
-		$id = $this->uri->segment(3);
-		$query	 	= "SELECT * FROM ms_costcenter WHERE id_dept='" . $id . "' AND deleted = '0' ORDER BY nama_costcenter ASC";
-		$Q_result	= $this->db->query($query)->result();
-		$option 	= "<option value='0'>Select an Option</option>";
-		foreach ($Q_result as $row) {
-			$option .= "<option value='" . $row->id_costcenter . "'>" . strtoupper($row->nama_costcenter) . "</option>";
-		}
-		echo json_encode(array(
-			'option' => $option
-		));
-	}
-
 	public function edit()
 	{
 		$Arr_Kembali	= array();
@@ -501,7 +590,7 @@ class Asset extends Admin_Controller
 				$detailData[$lopp]['value'] 		= str_replace(',', '', $data['value']);
 				$detailData[$lopp]['kdcab'] 		= $session['kdcab'];
 				$detailData[$lopp]['lokasi_asset'] 	= $data['lokasi_asset'];
-				$detailData[$lopp]['cost_center'] 	= $data['cost_center'];
+				$detailData[$lopp]['cost_center'] 	= '';
 				$detailData[$lopp]['id_company'] 	= $data['company_asset'];
 				$detailData[$lopp]['created_by'] 	= $this->session->userdata['app_session']['username'];
 				$detailData[$lopp]['created_date'] 	= date('Y-m-d h:i:s');
@@ -517,12 +606,10 @@ class Asset extends Admin_Controller
 		} elseif ($helpx == 'N') {
 			$idx			= $data['id'];
 			$lokasi_asset	= $data['lokasi_asset'];
-			$cost_center	= $data['cost_center'];
 			$company_asset	= $data['company_asset'];
 
 			$Data_Update	= array(
 				'lokasi_asset' 	=> $lokasi_asset,
-				'cost_center' 	=> $cost_center,
 				'id_company' 	=> $company_asset,
 				'modified_by' 	=> $this->session->userdata['app_session']['username'],
 				'modified_date' => date('Y-m-d h:i:s')
