@@ -1,5 +1,66 @@
 # Penerimaan piutang versi 2
 
+## Catatan kode aktif — 2026-10-12
+
+Bagian v2 di bawah adalah dokumentasi historis: controller aktual belum memiliki
+preview token, locking, dan penghitungan server v2 yang dijelaskan di sana.
+`tests/integration_test.php` menargetkan implementasi v2 tersebut dan belum sesuai
+dengan controller aktual; kelulusan tes kalkulasi helper bukan bukti integrasi v2.
+
+Perbaikan kasus 038/VSB/2026: preview memakai `saldo_piutang` tersimpan tanpa
+menggantinya dengan `tagihan_ppn_jurnal - pph_jurnal`. Ini menjaga saldo cicilan
+dan menghindari minus PPh saat gross invoice Vuca lama bernilai nol. Daftar invoice,
+preview, dan snapshot penerimaan memakai helper gross existing (DPP + PPN hanya
+untuk Vuca gross nol). Pembuatan invoice Vuca baru menyimpan gross sebesar DPP
+karena PPN alur Vuca nol. Tidak ada koreksi database atau jurnal historis.
+
+Regresi controller aktif tanpa DB/browser:
+`C:/xampp74/php/php.exe application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php`.
+Tes mencakup kedua pilihan PPh, cicilan, selisih saldo kecil, invoice reguler,
+gross nonzero, daftar invoice, snapshot penerimaan dan pembuatan Vuca.
+Data invoice 038 live belum diverifikasi.
+
+### Perbaikan lanjutan pelunasan cicilan — 2026-10-12
+
+Preview dan save menghitung sisa penyesuaian PPh dari jurnal penerimaan sebelumnya
+(nomor penerimaan, COA PPh dan keterangan invoice persis). Kredit yang sudah
+dipakai tidak diterapkan kembali. Pilihan PPh harus konsisten dengan riwayat;
+riwayat yang hilang/ambigu atau kredit melebihi PPh invoice ditolak untuk
+rekonsiliasi, bukan dianggap nol. Cicilan kecil hanya memakai penyesuaian hingga
+nominal penerimaan, sehingga sisanya tetap dapat dipakai pada cicilan berikutnya.
+
+Save menghitung saldo, kredit piutang/PPh, debit admin dan debit bank dari saldo
+aktual serta penerimaan/admin dalam satuan sen; hidden saldo/jurnal POST diabaikan.
+View memakai sisa PPh tetap dari preview, bukan nilai kredit yang berubah ketika
+diketik ulang. Ini menyelesaikan fixture 189/STM/2026: saldo dan penerimaan terakhir
+2.574.990, PPh sebelumnya 468.180 sudah dipakai, sisa piutang 0 dan kredit PPh 0.
+
+Tes tambahan: `node application/modules/penerimaan_uang/tests/installment_view_test.js`
+menjalankan fungsi inline aktual melalui adapter jQuery tanpa browser.
+Audit Windows awal gagal karena hostname mysql berada di jaringan Docker. Audit
+read-only lewat container kemudian berhasil (lihat catatan berikut). Tidak ada
+koreksi historis. Locking/revalidasi transaksi bersamaan dan rollback v2 di bawah
+belum diimplementasikan oleh perubahan ini; suite integrasi v2 tetap historis.
+
+### Kompatibilitas rincian penerimaan tanpa jurnal — 2026-10-12
+
+DB lokal mengonfirmasi detail 745 / 00025/RKN-KRG/X/26 untuk invoice 189, dengan
+penerimaan 23.409.000, admin 0 dan sisa 2.574.990; seluruh jurnal transaksi itu
+tidak ditemukan. Model sekarang mendukung keadaan ini dengan rekonstruksi:
+penyesuaian PPh = penerimaan + admin - (saldo sebelumnya - saldo sesudahnya).
+Untuk kasus ini: 23.409.000 - (25.515.810 - 2.574.990) = 468.180 sudah dipakai.
+
+Fallback hanya berlaku saat seluruh jurnal transaksi kosong. Semua rincian harus
+lengkap, terurut dengan ID detail unik, nominal nonnegatif, saldo tidak meningkat,
+penyesuaian tidak melebihi penerimaan/PPh invoice, dan saldo rincian terakhir sama
+dengan saldo invoice aktual. Bila ada transaksi berjurnal dalam rantai yang sama,
+nilai jurnal harus cocok dengan rekonstruksi. Jurnal sebagian atau ambigu tetap
+ditolak. Penyebab hilangnya jurnal lama belum diketahui; tidak ada backfill.
+
+Tool CLI read-only: `tools/diagnose_receipt.php 189/STM/2026`. Model aktual pada
+snapshot DB menghasilkan sisa penyesuaian PPh 0, kredit piutang pelunasan 2.574.990
+dan saldo akhir 0. Tool tidak menyimpan penerimaan atau mengubah saldo/jurnal.
+
 Pembayaran bertahap memakai pilihan PPh penerimaan pertama. Untuk pilihan N,
 penyesuaian PPh transaksi adalah nilai terkecil antara penerimaan dan PPh yang
 belum dikreditkan. Kredit piutang = penerimaan + admin - penyesuaian tersebut.

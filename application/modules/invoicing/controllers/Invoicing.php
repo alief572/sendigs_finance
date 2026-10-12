@@ -1074,7 +1074,8 @@ class Invoicing extends Admin_Controller
             'pph_jurnal' => $post['pph_jurnal'],
             'total_akhir_jurnal' => $post['total_akhir_jurnal'],
             'saldo_piutang' => $post['total_akhir_jurnal'],
-            'tagihan_ppn_jurnal' => 0,
+            // Vuca PPN is zero, so the gross receivable equals DPP.
+            'tagihan_ppn_jurnal' => $post['total_nominal_jurnal'],
             'ppn_jurnal' => 0,
             'ppn_persen' => 0,
             'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
