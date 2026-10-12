@@ -1,5 +1,21 @@
 # Penerimaan piutang versi 2
 
+## Perbaikan daftar jurnal pada view — 2026-10-12
+
+Detail penerimaan sekarang mencari `tr_jurnal.no_transaksi` menggunakan
+`tr_penerimaan_piutang.no_surat`, sesuai writer penerimaan. Pencarian lama memakai
+ID invoice sehingga jurnal tidak muncul; pencarian berdasarkan invoice juga
+berisiko mencampur beberapa cicilan. Filter jenis transaksi tetap
+`Penerimaan Piutang`, tanpa mengecualikan jurnal posted. Kolom COA diperbaiki
+agar kode akun tampil di dalam sel, bukan menjadi atribut HTML.
+
+DB lokal mengonfirmasi invoice 110/STM/2026 memiliki empat jurnal posted untuk
+00046/RKN-KRG/VIII/26, dengan total debit/kredit masing-masing 44.100.000.
+Tidak ada perubahan atau pembuatan ulang jurnal. Regresi controller/render:
+`C:/xampp74/php/php.exe application/modules/penerimaan_uang/tests/detail_journal_test.php`.
+Tool diagnosis menerima pilihan PPh opsional Y/N; default mengikuti riwayat
+penerimaan agar invoice dengan pilihan Y dapat diaudit tanpa penolakan palsu.
+
 ## Catatan kode aktif — 2026-10-12
 
 Bagian v2 di bawah adalah dokumentasi historis: controller aktual belum memiliki

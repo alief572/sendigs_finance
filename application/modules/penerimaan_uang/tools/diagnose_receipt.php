@@ -1,5 +1,5 @@
 <?php
-/** Read-only receipt diagnosis. Usage: php diagnose_receipt.php invoice-number */
+/** Read-only receipt diagnosis. Usage: php diagnose_receipt.php invoice-number [Y|N] */
 if (PHP_SAPI !== 'cli') exit('CLI only');
 define('BASEPATH', __DIR__); define('ENVIRONMENT','development');
 require dirname(__DIR__, 3).'/config/development/database.php';
@@ -39,9 +39,10 @@ try {
  foreach($details as $d) $output['journals'][$d['id_header']]=diagnosticRows($conn,'SELECT no_transaksi,jenis_transaksi,coa,nm_coa,keterangan,debit,kredit,sts FROM tr_jurnal WHERE no_transaksi=?',array($d['id_header']));
  $model=(new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
  $model->db=new DiagnosticDb($conn);
- $remaining=$model->remaining_receipt_pph($i,'N');
+ $choice=$argv[2]??($details[0]['pph23_dipotong']??'N');
+ $remaining=$model->remaining_receipt_pph($i,$choice);
  $output['active_model_check']=array('remaining_pph'=>Penerimaan_calculation::decimal($remaining));
- $calculation=Penerimaan_calculation::calculate(Penerimaan_calculation::cents($i['saldo_piutang']),$remaining,'N',Penerimaan_calculation::cents($i['saldo_piutang']),0);
+ $calculation=Penerimaan_calculation::calculate(Penerimaan_calculation::cents($i['saldo_piutang']),$remaining,$choice,Penerimaan_calculation::cents($i['saldo_piutang']),0);
  foreach($calculation as $key=>$value) $output['active_model_check'][$key]=Penerimaan_calculation::decimal($value);
  }
  echo json_encode($output,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;
