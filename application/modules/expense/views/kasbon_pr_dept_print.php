@@ -262,26 +262,8 @@ function formatDate($date)
         </div>
     </div>
 
-    <!-- Attachments -->
-    <?php if (!empty($kasbon->doc_file) || !empty($kasbon->doc_file_2)) : ?>
-        <div class="attachment-separator"></div>
-
-        <?php if (!empty($kasbon->doc_file)) : ?>
-            <?php if (strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
-                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
-            <?php else : ?>
-                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" class="attachment-img">
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <?php if (!empty($kasbon->doc_file_2)) : ?>
-            <?php if (strtolower(pathinfo($kasbon->doc_file_2, PATHINFO_EXTENSION)) == 'pdf') : ?>
-                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" width="100%" height="600px" style="border: none;"></iframe>
-            <?php else : ?>
-                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" class="attachment-img">
-            <?php endif; ?>
-        <?php endif; ?>
-    <?php endif; ?>
+    <div class="attachment-separator"></div>
+    <?php echo kasbon_attachment_html($kasbon, $this->db, true); ?>
 
     <script>
         window.print();

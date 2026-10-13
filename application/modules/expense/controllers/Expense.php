@@ -45,6 +45,7 @@ class Expense extends Admin_Controller
 	public function __construct()
 	{
 		parent::__construct();
+		$this->load->helper('kasbon_attachment');
 		$this->load->model(array('all/All_model', 'Expense/Expense_model', 'All/All_model', 'Jurnal_nomor/Jurnal_model', 'Coa_expense/Coa_expense_model'));
 		$this->template->title('Expense');
 		$this->template->page_icon('fa fa-cubes');
@@ -208,21 +209,28 @@ class Expense extends Admin_Controller
 			}
 		}
 
-		if (!empty($file_name)) {
-			$filenames = $file_name;
-
-			if (file_exists($doc_pr)) {
-				copy('' . $doc_pr . '', '' . $to_doc_pr . '');
-			} else {
-				$decoded_files = json_decode($file_name, true);
-				if (is_array($decoded_files)) {
-					foreach ($decoded_files as $df) {
-						if (file_exists('assets/pr/' . $df)) {
-							copy('assets/pr/' . $df, 'assets/expense/' . $df);
-						}
-					}
+		try {
+			if ($tipe_pr === 'pr departemen') {
+				$existing = $id !== '' ? $this->db->get_where('tr_kasbon', array('id' => $id))->row() : null;
+				$unchanged = $existing && $existing->id_pr === $no_pr && $existing->tipe_pr === $tipe_pr;
+				if ($unchanged && empty($_FILES['doc_file']['name'])) {
+					$filenames = $existing->doc_file;
+				} elseif (!$unchanged) {
+					$prFiles = kasbon_attachment_names(kasbon_pr_document($this->db, $no_pr));
+					if ($prFiles) { $filenames = json_encode($prFiles); }
+					kasbon_check_attachment_capacity($this->db, $filenames);
+					kasbon_copy_attachments($prFiles, FCPATH . 'assets/pr', FCPATH . 'assets/expense');
 				}
+			} elseif (!empty($file_name)) {
+				$prFiles = kasbon_attachment_names($file_name);
+				$source = $tipe_pr === 'pr asset' ? 'uploads/pr_asset' : 'assets/pr';
+				kasbon_copy_attachments($prFiles, FCPATH . $source, FCPATH . 'assets/expense');
+				$filenames = $file_name;
 			}
+		} catch (RuntimeException $e) {
+			$this->db->trans_rollback();
+			echo json_encode(array('save' => false, 'id' => $id, 'message' => $e->getMessage()));
+			return;
 		}
 
 		if ($id !== "") {
@@ -3875,33 +3883,32 @@ class Expense extends Admin_Controller
 		$file_name = '';
 		$doc_file = '';
 		$to_doc_file = '';
+		$directory = !empty($get_pr_dept) ? 'assets/pr/' : 'uploads/pr_asset/';
 		if (!empty($get_pr_dept)) {
-			if (!empty($get_pr_dept->document)) {
-				$decoded = json_decode($get_pr_dept->document, true);
-				if (is_array($decoded)) {
-					$first_file = $decoded[0] ?? '';
-					$doc_file = !empty($first_file) ? 'assets/pr/' . $first_file : '';
-					$to_doc_file = !empty($first_file) ? 'assets/expense/' . $first_file : '';
-					$file_name = $get_pr_dept->document;
-				} else {
-					$doc_file = 'assets/pr/' . $get_pr_dept->document;
-					$to_doc_file = 'assets/expense/' . $get_pr_dept->document;
-					$file_name = $get_pr_dept->document;
-				}
-			}
-		}
-		if (!empty($get_pr_asset)) {
-			if (!empty($get_pr_asset->dokumen_pendukung)) {
-				$doc_file = 'uploads/pr_asset/' . $get_pr_asset->dokumen_pendukung;
-				$to_doc_file = 'assets/expense/' . $get_pr_asset->dokumen_pendukung;
-				$file_name = $get_pr_asset->dokumen_pendukung;
-			}
+			$file_name = $get_pr_dept->document;
+		} elseif (!empty($get_pr_asset)) {
+			$file_name = $get_pr_asset->dokumen_pendukung;
 		}
 
+		$attachments = array();
+		try {
+			foreach (kasbon_attachment_names($file_name) as $name) {
+				if ($doc_file === '') {
+					$doc_file = $directory . $name;
+					$to_doc_file = 'assets/expense/' . $name;
+				}
+				$available = kasbon_attachment_path(FCPATH . $directory, $name) !== false;
+				$attachments[] = array('name' => $name, 'url' => $available ? base_url($directory . rawurlencode($name)) : null);
+			}
+		} catch (RuntimeException $e) {
+			$attachment_error = $e->getMessage();
+		}
 		echo json_encode([
 			'file_name' => $file_name,
 			'doc_file' => $doc_file,
-			'to_doc_file' => $to_doc_file
+			'to_doc_file' => $to_doc_file,
+			'attachments' => $attachments,
+			'message' => isset($attachment_error) ? $attachment_error : ''
 		]);
 	}
 

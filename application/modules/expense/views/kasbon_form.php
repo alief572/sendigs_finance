@@ -55,25 +55,21 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 					<div class="form-group ">
 						<label class="col-sm-2 control-label">Dokumen 1</label>
 						<div class="col-sm-4">
-							<input type="hidden" name="filename" id="filename" value="<?= (isset($data->doc_file) ? $data->doc_file : ''); ?>">
+							<input type="hidden" name="filename" id="filename" value="<?= htmlspecialchars((isset($data->doc_file) ? $data->doc_file : ''), ENT_QUOTES, 'UTF-8'); ?>">
 							<input type="file" name="doc_file" id="doc_file">
 							<span class="pull-right">
 								<?php
-								if (isset($data->doc_file)) {
-									echo ($data->doc_file != '' ? '<a href="' . base_url('assets/expense/' . $data->doc_file) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '');
-								}
+								if (isset($data)) { echo kasbon_attachment_html($data, $this->db, false, 'doc_file'); }
 								?>
 							</span>
 						</div>
 						<label class="col-sm-2 control-label">Dokumen 2</label>
 						<div class="col-sm-4">
-							<input type="hidden" name="filename2" id="filename2" value="<?= (isset($data->doc_file_2) ? $data->doc_file_2 : ''); ?>">
+							<input type="hidden" name="filename2" id="filename2" value="<?= htmlspecialchars((isset($data->doc_file_2) ? $data->doc_file_2 : ''), ENT_QUOTES, 'UTF-8'); ?>">
 							<input type="file" name="doc_file_2" id="doc_file_2">
 							<span class="pull-right">
 								<?php
-								if (isset($data->doc_file_2)) {
-									echo ($data->doc_file_2 != '' ? '<a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '');
-								}
+								if (isset($data)) { echo kasbon_attachment_html($data, $this->db, false, 'doc_file_2'); }
 								?>
 							</span>
 						</div>
@@ -175,7 +171,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 									?>
 								</select>
 
-								<input type="hidden" name="file_name" class="file_name">
+								<input type="hidden" name="file_name" class="file_name"><div class="pr-attachment-list" aria-live="polite"></div>
 								<input type="hidden" name="doc_pr" class="doc_pr">
 								<input type="hidden" name="to_doc_pr" class="to_doc_pr">
 
@@ -266,36 +262,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 							<a class="btn btn-default btn-sm" onclick="window.location=siteurl+'expense/kasbon<?= $mod ?>';return false;"><i class="fa fa-reply"></i> Batal</a>
 						</div>
 					</div>
-					<?php
-					if (isset($data)) {
-						if ($data->doc_file != '') {
-							if (strpos($data->doc_file, 'pdf', 0) > 1) {
-								echo '<div class="col-md-12">
-						<iframe src="' . base_url('assets/expense/' . $data->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-						</iframe>
-						<a href="' . base_url('assets/expense/' . $data->doc_file) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-						<br />' . $data->no_doc . '</div>';
-							} else {
-								if (file_exists('assets/expense' . $data->doc_file)) {
-									echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
-								}
-							}
-						}
-						if ($data->doc_file_2 != '') {
-							if (strpos($data->doc_file_2, 'pdf', 0) > 1) {
-								echo '<div class="col-md-12">
-						<iframe src="' . base_url('./assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-						</iframe>
-						<a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-						<br />' . $data->no_doc . '</div>';
-							} else {
-								if (file_exists('./assets/expense' . $data->doc_file_2)) {
-									echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
-								}
-							}
-						}
-					}
-					?>
+					<?php if (isset($data)) { echo kasbon_attachment_html($data, $this->db, true); } ?>
 				</div>
 			</div>
 		</div>
@@ -305,6 +272,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 <script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?= base_url('assets/js/kasbon-attachments.js') ?>"></script>
 <script type="text/javascript">
 	var url_save = siteurl + 'expense/kasbon_save/';
 	var url_approve = siteurl + 'expense/kasbon_approve/';
@@ -355,6 +323,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 		var doc_pr = $('.doc_pr').val();
 		var to_doc_pr = $('.to_doc_pr').val();
 		var search_pr_non_po = $('#search_pr_non_po').val();
+        if (search_pr_non_po && !$('#tipe_pr').val()) { errors = 'Data PR belum siap. Tunggu hingga PR selesai dimuat atau pilih ulang PR.'; }
 
 		// Validasi: PR wajib dipilih
 		if (search_pr_non_po == '' || search_pr_non_po == null) {
@@ -428,10 +397,9 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 								} else {
 									swal({
 										title: "Gagal!",
-										text: "Data Gagal Di Simpan",
+										text: msg.message || "Data Gagal Di Simpan",
 										type: "error",
-										timer: 1500,
-										showConfirmButton: false
+                                        showConfirmButton: true
 									});
 								};
 
@@ -487,6 +455,10 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 	$(document).on('change', '#search_pr_non_po', function(e) {
 		// e.preventDefault();
 		const no_pr = $(this).val();
+        $('.file_name, .doc_pr, .to_doc_pr').val('');
+        $('#tipe_pr').val('');
+        $('.pr-attachment-list').empty();
+        if (!no_pr) { $('.list_barang_pr').empty(); return; }
 
 		// if (e.keyCode == '13') {
 
@@ -503,6 +475,7 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 			cache: false,
 			dataType: 'json',
 			success: function(result) {
+                if ($('#search_pr_non_po').val() !== no_pr) { return; }
 				if (result.sts == '1') {
 					$('.list_barang_pr').html(result.hasil);
 					$('#tipe_pr').val(result.tipe_pr);
@@ -534,7 +507,9 @@ $metode_pembayaran = (isset($data)) ? $data->metode_pembayaran : 1;
 			cache: false,
 			dataType: 'json',
 			success: function(result) {
+                if ($('#search_pr_non_po').val() !== no_pr) { return; }
 				$('.file_name').val(result.file_name);
+                kasbonPrAttachments(result);
 				$('.doc_pr').val(result.doc_file);
 				$('.to_doc_pr').val(result.to_doc_file);
 			},
