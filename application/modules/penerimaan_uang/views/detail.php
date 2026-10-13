@@ -127,7 +127,7 @@ $total_kredit = (!empty($total_kredit)) ? $total_kredit : 0;
             echo '<tr>';
 
             echo '<td class="text-center">' . date('d F Y', strtotime($item['tgl_jurnal'])) . '</td>';
-            echo '<td class="text-center"' . $item['coa'] . '></td>';
+            echo '<td class="text-center">' . htmlspecialchars($item['coa'], ENT_QUOTES, 'UTF-8') . '</td>';
             echo '<td class="text-center">' . $item['nm_company'] . '</td>';
             echo '<td class="text-center">' . $item['nm_coa'] . '</td>';
             echo '<td class="text-right"><b>' . number_format($item['debit']) . '</b></td>';

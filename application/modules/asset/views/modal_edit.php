@@ -5,8 +5,6 @@ $dataD	= $this->db->query($qData)->result_array();
 // $list_dept = $this->Asset_model->getList('department');
 $list_catg = $this->Asset_model->getList('asset_category');
 
-$QUERY	 	= "SELECT * FROM ms_costcenter WHERE id_dept='" . $dataD[0]['lokasi_asset'] . "' AND deleted = '0' ORDER BY nama_costcenter ASC";
-$costcenter	= $this->db->query($QUERY)->result_array();
 
 ?>
 
@@ -73,18 +71,6 @@ $costcenter	= $this->db->query($QUERY)->result_array();
 				<?php
 				echo form_input(array('id' => 'nilai_asset', 'name' => 'nilai_asset', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Nilai Asset', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false, 'readonly' => 'readonly'), $dataD[0]['nilai_asset']);
 				?>
-			</div>
-			<label class='label-control col-sm-2'><b>Cost Center <span class='text-red'>*</span></b></label>
-			<div class='col-sm-4'>
-				<select name='cost_center' id='cost_center' class='form-control input-md chosen-select'>
-					<option value="0">Select Costcenter</option>
-					<?php
-					foreach ($costcenter as $val => $valx) {
-						$selx = ($dataD[0]['cost_center'] == $valx['id_costcenter']) ? 'selected' : '';
-						echo "<option value='" . $valx['id_costcenter'] . "' " . $selx . ">" . strtoupper($valx['nama_costcenter']) . "</option>";
-					}
-					?>
-				</select>
 			</div>
 		</div>
 		<div class='form-group row'>

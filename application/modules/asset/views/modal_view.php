@@ -5,10 +5,6 @@ $dataD	= $this->db->query($qData)->result_array();
 $list_dept = $this->Asset_model->getList('department');
 $list_catg = $this->Asset_model->getList('asset_category');
 
-$QUERY	 	= "SELECT * FROM ms_costcenter WHERE id_costcenter = '" . $dataD[0]['cost_center'] . "' ORDER BY nama_costcenter ASC";
-$costcenter	= $this->db->query($QUERY)->row();
-
-$nama_costcenter = (!empty($costcenter)) ? $costcenter->nama_costcenter : '';
 ?>
 
 <div class="box box-primary">
@@ -69,13 +65,6 @@ $nama_costcenter = (!empty($costcenter)) ? $costcenter->nama_costcenter : '';
 				echo form_input(array('id' => 'nilai_asset', 'name' => 'nilai_asset', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Nilai Asset', 'data-decimal' => '.', 'data-thousand' => '', 'data-precision' => '0', 'data-allow-zero' => false, 'readonly' => 'readonly'), number_format($dataD[0]['nilai_asset']));
 				?>
 			</div>
-			<label class='label-control col-sm-2'><b>Cost Center <span class='text-red'>*</span></b></label>
-			<div class='col-sm-4'>
-				<?php
-				echo form_input(array('id' => 'cost_center', 'name' => 'cost_center', 'class' => 'form-control input-md', 'autocomplete' => 'off', 'placeholder' => 'Nilai Asset', 'readonly' => 'readonly'), strtoupper($nama_costcenter));
-				?>
-			</div>
-
 		</div>
 		<div class='form-group row'>
 			<label class='label-control col-sm-2'><b>Jangka Waktu <span class='text-red'>*</span></b></label>

@@ -708,21 +708,14 @@ class Penerimaan_uang extends Admin_Controller
         $this->db->where('a.id_header', $get_penerimaan['no_surat']);
         $get_penerimaan_detail = $this->db->get()->result_array();
 
-        $arr_id_inv = [];
-        foreach ($get_penerimaan_detail as $item_detail) {
-            $arr_id_inv[] = $item_detail['id_inv'];
-        }
-
         $resolved = $this->Penerimaan_uang_model->resolve_alokasi($get_penerimaan['id_alokasi']);
         $get_alokasi = (!empty($resolved)) ? $resolved['detail'] : [];
 
-        // $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['id_inv'], 'jenis_transaksi' => 'Penerimaan Piutang'])->result_array();
-
-        $this->db->select('a.*');
-        $this->db->from('tr_jurnal a');
-        $this->db->where_in('a.no_transaksi', $arr_id_inv);
-        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-        $get_jurnal = $this->db->get()->result_array();
+        // Receipt journals are keyed by no_surat, including posted journals.
+        $get_jurnal = $this->db->get_where('tr_jurnal', [
+            'no_transaksi' => $get_penerimaan['no_surat'],
+            'jenis_transaksi' => 'Penerimaan Piutang'
+        ])->result_array();
 
         $data = [
             'header' => $get_penerimaan,

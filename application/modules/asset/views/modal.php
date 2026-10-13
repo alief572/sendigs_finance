@@ -54,18 +54,6 @@
 			</div>
 		</div>
 		<div class="form-group row">
-			<label class='label-control col-sm-2'><b>Cost Center <span class='text-red'>*</span></b></label>
-			<div class='col-sm-4'>
-				<select name='cost_center' id='cost_center' class='form-control input-md chosen-select'>
-					<option value="">- Cost Center -</option>
-					<?php
-					foreach ($list_costcenter as $item_costcenter) {
-						echo '<option value="' . $item_costcenter['id'] . '">' . strtoupper($item_costcenter['nm_gudang']) . '</option>';
-					}
-					?>
-				</select>
-			</div>
-
 			<label class='label-control col-sm-2'><b>Jangka Waktu <span class='text-red'>*</span></b></label>
 			<div class='col-sm-4'>
 				<select name='depresiasi' id='depresiasi' class='form-control input-md chosen-select'>
@@ -171,41 +159,12 @@
 		$('#value').val(per_bulan.toFixed(0));
 	});
 
-	$(document).on('change', '#lokasi_asset', function() {
-		var nilai_asset = $(this).val();
-		// var cost_center = $("#cost_center"); 
-
-		$.ajax({
-			url: base_url + 'index.php/' + active_controller + '/list_center/' + nilai_asset,
-			cache: false,
-			type: "POST",
-			dataType: "json",
-			success: function(data) {
-				// $(cost_center).html(data.option).trigger("chosen:updated");
-				swal.close();
-			},
-			error: function() {
-				swal({
-					title: "Error Message !",
-					text: 'Connection Time Out. Please try again..',
-					type: "warning",
-					timer: 3000,
-					showCancelButton: false,
-					showConfirmButton: false,
-					allowOutsideClick: false
-				});
-			}
-		});
-	});
-
-
 	$('#simpan-bro').click(function(e) {
 		e.preventDefault();
 		$(this).prop('disabled', true);
 		var nm_asset = $('#nm_asset').val();
 		var category = $('#category').val();
 		var lokasi_asset = $('#lokasi_asset').val();
-		var cost_center = $('#cost_center').val();
 		var depresiasi = $('#depresiasi').val();
 		var nilai_asset = $('#nilai_asset').val();
 		var qty = $('#qty').val();
@@ -251,17 +210,6 @@
 		// 	swal({
 		// 		title: "Error Message!",
 		// 		text: 'Department belum dipilih ...',
-		// 		type: "warning"
-		// 	});
-
-		// 	$('#simpan-bro').prop('disabled', false);
-		// 	return false;
-		// }
-
-		// if (cost_center == '' || cost_center == null || cost_center == 0) {
-		// 	swal({
-		// 		title: "Error Message!",
-		// 		text: 'Cost Center belum dipilih ...',
 		// 		type: "warning"
 		// 	});
 
