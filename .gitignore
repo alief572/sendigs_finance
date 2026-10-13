@@ -20,8 +20,11 @@ application/config/constants.php
 !application/logs/.htaccess
 
 #/vendor/
+assets/expense/
+assets/bayar_rutin/
 /assets/files/*
 /assets/pr/*
+uploads/*
 /docker/*
 docker-compose.yml
 application/config/constants.php
