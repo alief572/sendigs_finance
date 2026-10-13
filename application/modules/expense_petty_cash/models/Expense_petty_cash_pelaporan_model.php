@@ -129,7 +129,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         $records_filtered = $this->db->count_all_results();
 
         // Get paginated data with jumlah_pencatatan subquery
-        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status');
+        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status, a.alasan_reject');
         $this->db->select('(SELECT COUNT(*) FROM tr_pelaporan_petty_cash_detail pd WHERE pd.pelaporan_id = a.id) as jumlah_pencatatan', false);
         $this->db->from($this->table_name . ' a');
         $apply_filters();
@@ -152,6 +152,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'jumlah_pencatatan' => intval($row->jumlah_pencatatan),
                 'grand_total'       => number_format($row->grand_total, 0, ',', '.'),
                 'status'            => $row->status,
+                'alasan_reject'     => $row->alasan_reject,
             ];
         }
 
