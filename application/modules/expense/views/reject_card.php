@@ -276,3 +276,5 @@ if ($is_rejected):
 </div>
 <?php endif; ?>
 
+
+<!-- Sync: 2026-09-22 Full re-push modul expense -->

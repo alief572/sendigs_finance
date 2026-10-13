@@ -29,7 +29,7 @@ $ENABLE_DELETE  = has_permission('Expense_Petty_Cash.Delete');
 						<th>Approval</th>
 						<th>Keterangan</th>
 						<th>Nominal</th>
-						<th>Status</th>
+						<th width="160" class="text-center">Status</th>
 						<th width="120">Action</th>
 					</tr>
 				</thead>
@@ -106,3 +106,4 @@ $ENABLE_DELETE  = has_permission('Expense_Petty_Cash.Delete');
 	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
