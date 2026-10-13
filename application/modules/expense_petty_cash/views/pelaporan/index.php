@@ -1,19 +1,19 @@
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
-<style>
-    .filter-actions {
-        margin-top: 25px;
-    }
-</style>
+<link rel="stylesheet" href="<?= base_url('assets/css/petty-cash-pelaporan.css') ?>">
 
-<div class="box">
+<div class="box petty-cash-pelaporan">
+    <div class="pelaporan-intro">
+        <h2>Daftar pelaporan</h2>
+        <p>Tinjau pengeluaran per periode, status pelaporan, dan catatan penolakan.</p>
+    </div>
     <div class="box-header">
-        <div class="row">
+        <div class="row pelaporan-filters">
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="filter-company">Company</label>
                     <select id="filter-company" class="form-control input-sm">
-                        <option value="">Semua</option>
+                        <option value="">Semua company</option>
                         <option value="STM">STM</option>
                         <option value="VUCA">VUCA</option>
                         <option value="SUSTAIN">SUSTAIN</option>
@@ -24,7 +24,7 @@
                 <div class="form-group">
                     <label for="filter-status">Status</label>
                     <select id="filter-status" class="form-control input-sm">
-                        <option value="">Semua</option>
+                        <option value="">Semua status</option>
                         <option value="draft">Draft</option>
                         <option value="waiting">Waiting</option>
                         <option value="approved">Approved</option>
@@ -35,10 +35,10 @@
             <div class="col-md-3">
                 <div class="form-group filter-actions">
                     <button type="button" class="btn btn-sm btn-primary" id="btn-filter">
-                        <i class="fa fa-search"></i> Filter
+                        <i class="fa fa-filter" aria-hidden="true"></i> Terapkan filter
                     </button>
                     <button type="button" class="btn btn-sm btn-default" id="btn-reset-filter">
-                        <i class="fa fa-refresh"></i> Reset
+                        <i class="fa fa-refresh" aria-hidden="true"></i> Reset
                     </button>
                 </div>
             </div>
@@ -46,18 +46,18 @@
     </div>
     <!-- /.box-header -->
     <div class="box-body">
-        <div class="table-responsive">
-            <table id="table-pelaporan" class="table table-bordered table-striped">
+        <div class="table-responsive" tabindex="0" role="region" aria-label="Daftar pelaporan petty cash">
+            <table id="table-pelaporan" class="table">
                 <thead>
                     <tr>
                         <th width="30">No</th>
                         <th>No Pelaporan</th>
                         <th>Periode</th>
                         <th>Company</th>
-                        <th>Jumlah Pencatatan</th>
-                        <th>Grand Total Periode</th>
+                        <th>Pencatatan</th>
+                        <th>Total periode (Rp)</th>
                         <th>Status</th>
-                        <th width="150">Action</th>
+                        <th width="150">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>

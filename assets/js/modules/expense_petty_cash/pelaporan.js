@@ -49,16 +49,18 @@ $(document).ready(function () {
     destroy: true,
     responsive: true,
     oLanguage: {
-      sSearch: "<b>Search : </b>",
-      sLengthMenu: "_MENU_ &nbsp;&nbsp;<b>Records Per Page</b>&nbsp;&nbsp;",
-      sInfo: "Showing _START_ to _END_ of _TOTAL_ entries",
-      sInfoFiltered: "(filtered from _MAX_ total entries)",
-      sZeroRecords: "No matching records found",
-      sEmptyTable: "No data available in table",
-      sLoadingRecords: "Please wait - loading...",
+      sSearch: "Cari pelaporan:",
+      sLengthMenu: "Tampilkan _MENU_ per halaman",
+      sInfo: "Menampilkan _START_–_END_ dari _TOTAL_ pelaporan",
+      sInfoEmpty: "Menampilkan 0 pelaporan",
+      sInfoFiltered: "(dari _MAX_ pelaporan keseluruhan)",
+      sZeroRecords: "Tidak ada pelaporan yang cocok. Ubah pencarian atau reset filter.",
+      sEmptyTable: "Belum ada pelaporan untuk ditampilkan.",
+      sLoadingRecords: "Memuat daftar pelaporan...",
+      sProcessing: "Memuat daftar pelaporan...",
       oPaginate: {
-        sPrevious: "Prev",
-        sNext: "Next",
+        sPrevious: "Sebelumnya",
+        sNext: "Berikutnya",
       },
     },
     aaSorting: [[1, "desc"]],
@@ -78,7 +80,7 @@ $(document).ready(function () {
       },
       error: function () {
         $("#table-pelaporan tbody").html(
-          '<tr><th colspan="8" class="text-center">No data found in the server</th></tr>',
+          '<tr><td colspan="8" class="text-center">Daftar pelaporan gagal dimuat. Klik Terapkan filter untuk mencoba kembali.</td></tr>',
         );
       },
     },
@@ -117,7 +119,8 @@ $(document).ready(function () {
       {
         // Column 6: Status (colored label)
         data: "status",
-        render: function (data) {
+        render: function (data, type, row) {
+          if (type !== "display") return data;
           var labelClass = "label-default";
           var labelText = data;
 
@@ -140,16 +143,22 @@ $(document).ready(function () {
               break;
           }
 
-          return (
-            '<span class="label ' + labelClass + '">' + labelText + "</span>"
+          var html = (
+            '<span class="label ' + labelClass + '">' + $("<div>").text(labelText).html() + "</span>"
           );
+          if (type === "display" && data === "reject" && row.alasan_reject) {
+            html += '<div class="pelaporan-reject-reason"><strong>Alasan penolakan</strong>' +
+              $("<div>").text(row.alasan_reject).html() + "</div>";
+          }
+          return html;
         },
       },
       {
         // Column 7: Action buttons
         data: null,
         render: function (data, type, row) {
-          var html = "";
+          if (type !== "display") return "";
+          var html = '<div class="pelaporan-actions">';
 
           // Ajukan button — only if draft + has manage permission
           if (PERMISSIONS.has_manage && row.status === "draft") {
@@ -166,8 +175,8 @@ $(document).ready(function () {
             BASE_URL +
             "view_pelaporan/" +
             row.id +
-            '" class="btn btn-info btn-xs" title="View">' +
-            '<i class="fa fa-eye"></i></a> ';
+            '" class="btn btn-info btn-xs" title="Lihat detail pelaporan">' +
+            '<i class="fa fa-eye" aria-hidden="true"></i> Detail</a> ';
 
           // Print button — always shown, opens in new tab
           html +=
@@ -175,10 +184,10 @@ $(document).ready(function () {
             BASE_URL +
             "print_pelaporan/" +
             row.id +
-            '" target="_blank" class="btn btn-default btn-xs" title="Print">' +
-            '<i class="fa fa-print"></i></a> ';
+            '" target="_blank" rel="noopener" class="btn btn-default btn-xs" title="Cetak pelaporan (tab baru)">' +
+            '<i class="fa fa-print" aria-hidden="true"></i> Cetak</a> ';
 
-          return html;
+          return html + "</div>";
         },
       },
     ],
@@ -190,19 +199,19 @@ $(document).ready(function () {
 
   // Filter button click — reload table with filter values
   $("#btn-filter").on("click", function () {
-    table.ajax.reload(null, false);
+    table.ajax.reload(null, true);
   });
 
   // Reset filter button — clear dropdowns and reload
   $("#btn-reset-filter").on("click", function () {
     $("#filter-company").val("");
     $("#filter-status").val("");
-    table.ajax.reload(null, false);
+    table.ajax.reload(null, true);
   });
 
   // Filter on dropdown change — immediate reload without page refresh
   $("#filter-company, #filter-status").on("change", function () {
-    table.ajax.reload(null, false);
+    table.ajax.reload(null, true);
   });
 
   // =========================================================================
