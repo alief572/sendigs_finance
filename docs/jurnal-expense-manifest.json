@@ -1,7 +1,7 @@
 {
   "task": "jurnal_expense",
   "date": "2026-10-14",
-  "status": "implemented_and_locally_registered",
+  "status": "published_to_development",
   "module": "application/modules/jurnal_expense",
   "source": "tr_jurnal",
   "types": [
@@ -65,10 +65,12 @@
   ],
   "publication": {
     "branch": "development",
-    "status": "prepared",
+    "status": "pushed_and_verified",
     "scope": [
       "application/modules/jurnal_expense",
       "task documentation"
-    ]
+    ],
+    "code_commit": "1f4338959efe405b068e7a788c1d397be7d72466",
+    "main_unchanged": "ee7f1e276c3c57a9390563f457b5394d955a834b"
   }
 }
