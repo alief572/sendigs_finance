@@ -427,6 +427,20 @@
 								available_items.push(element);
 							}
 						});
+						available_items = available_items.map(function(element, index) {
+							var parts = element.tipe === 'tahun'
+								? String(element.tanggal || '').split('-')
+								: [msg['bulan'], element.tanggal];
+							var month = Number(parts[0]);
+							var day = Number(parts[1]);
+							var schedule = month >= 1 && month <= 12 && day >= 1 && day <= 31
+								? month * 100 + day : Infinity;
+							return {item: element, index: index, schedule: schedule};
+						}).sort(function(a, b) {
+							return a.schedule === b.schedule ? a.index - b.index : a.schedule - b.schedule;
+						}).map(function(entry) {
+							return entry.item;
+						});
 						detail_items = available_items.concat(already_submitted_items);
 					}
 
