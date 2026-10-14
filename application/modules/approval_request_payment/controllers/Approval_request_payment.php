@@ -9,10 +9,10 @@
 class Approval_request_payment extends Admin_Controller
 {
 	// Permission (reuse Request_Payment.*)
-	protected $viewPermission   = "Request_Payment.View";
-	protected $addPermission    = "Request_Payment.Add";
-	protected $managePermission = "Request_Payment.Manage";
-	protected $deletePermission = "Request_Payment.Delete";
+	protected $viewPermission   = "Approval_Request_Payment.View";
+	protected $addPermission    = "Approval_Request_Payment.Add";
+	protected $managePermission = "Approval_Request_Payment.Manage";
+	protected $deletePermission = "Approval_Request_Payment.Delete";
 
 	public function __construct()
 	{
@@ -26,43 +26,152 @@ class Approval_request_payment extends Admin_Controller
 	// Index: daftar batch pending
 	public function index()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array());
 		$this->auth->restrict($this->viewPermission);
 		$this->template->title('Approval Request Payment');
-		$this->template->render('index');
+		try {
+			$this->template->render('index');
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal merender halaman Approval Request Payment', 0, array('reason' => 'render_exception'));
+			throw $e;
+		}
+		$ok = $this->auditReadStatus() === 1;
+		$this->completeAudit(
+			$ok ? 'Membuka daftar Approval Request Payment' : 'Gagal membuka daftar Approval Request Payment',
+			$ok ? 1 : 0,
+			$ok ? array('outcome' => 'rendered') : array('reason' => 'query_failure')
+		);
+	}
+
+	// Daftar dokumen pending untuk tab di halaman Request Payment.
+
+	public function get_data_pending_items()
+	{
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), ['row_count', 'records_total', 'records_filtered']);
+		$draw = $this->input->get_post('draw');
+		$response = ['draw' => is_scalar($draw) ? (int) $draw : 0, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => []];
+		$ok = false;
+		$reason = 'permission_denied';
+		if (has_permission($this->viewPermission)) {
+			$reason = 'query_failure';
+			try {
+				$summary = [];
+				$response = $this->Approval_request_payment_model->get_data_pending_items($summary);
+				$ok = !empty($summary['query_ok']) && $this->auditReadStatus() === 1;
+				if ($ok) {
+					$this->load->model('request_payment/Request_payment_model');
+					foreach ($response['data'] as &$row) {
+						$this->Request_payment_model->resetAuditQueriesOk();
+						$source = (object) $row;
+						$source->id = $row['id_dokumen'] ?? $row['no_dokumen'];
+						$row['print_url'] = $this->Request_payment_model->build_print_url($source);
+						$ok = $this->Request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1 && $ok;
+					}
+					unset($row);
+				}
+			} catch (Throwable $e) {
+				$ok = false;
+			}
+		}
+		if (!$ok) {
+			$response = ['draw' => $response['draw'], 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => [],
+				'error' => $reason === 'permission_denied' ? 'Anda tidak memiliki hak untuk melihat data ini.' : 'Gagal memuat data. Silakan coba lagi.'];
+		}
+		$this->completeAudit($ok ? 'Membaca daftar dokumen Approval_request_payment' : 'Gagal membaca daftar dokumen Approval_request_payment', $ok ? 1 : 0, [
+			'row_count' => count($response['data']),
+			'records_total' => $response['recordsTotal'],
+			'records_filtered' => $response['recordsFiltered'],
+			$ok ? 'outcome' : 'reason' => $ok ? 'listed' : $reason,
+		]);
+		echo json_encode($response);
 	}
 
 	// Server-side DataTables: batch pending
 	public function get_data_pending()
 	{
-		$this->Approval_request_payment_model->get_data_pending();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count', 'records_total', 'records_filtered'));
+		$auditSummary = array();
+		$this->Approval_request_payment_model->get_data_pending($auditSummary);
+		$ok = !empty($auditSummary['queries_ok']) && $this->auditReadStatus() === 1;
+		$this->completeAudit(
+			$ok ? 'Membaca daftar batch pending Approval Request Payment' : 'Gagal membaca daftar batch pending Approval Request Payment',
+			$ok ? 1 : 0,
+			array_merge(
+				array(
+					'row_count'        => (int) ($auditSummary['row_count'] ?? 0),
+					'records_total'    => (int) ($auditSummary['records_total'] ?? 0),
+					'records_filtered' => (int) ($auditSummary['records_filtered'] ?? 0),
+				),
+				$ok ? array('outcome' => 'listed') : array('reason' => 'query_failure')
+			)
+		);
 	}
 
 	// Halaman detail 1 batch (approve/reject per dokumen)
 	public function detail($id_pengajuan = null)
 	{
+		$id_pengajuan = (int) $id_pengajuan;
+		$returnRoute = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
+			? 'request_payment/index?tab=approval' : 'approval_request_payment';
+		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan), array('id_pengajuan', 'no_pengajuan', 'item_count'));
 		$this->auth->restrict($this->viewPermission);
 
-		$id_pengajuan = (int) $id_pengajuan;
+		$this->Approval_request_payment_model->resetAuditQueriesOk();
 		$header = $this->Approval_request_payment_model->get_batch_header($id_pengajuan);
+		$queriesOk = $this->Approval_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
 
 		if (empty($header) || $header->status !== 'pending') {
+			$this->completeAudit('Gagal membuka detail Approval Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'reason'       => !$queriesOk ? 'query_failure' : (empty($header) ? 'not_found' : 'already_decided'),
+			));
 			$this->session->set_flashdata('message', '<div class="alert alert-warning">Pengajuan tidak ditemukan atau sudah diputuskan.</div>');
-			redirect(site_url('approval_request_payment'));
+			redirect(site_url($returnRoute));
 			return;
 		}
 
 		$items = $this->Approval_request_payment_model->get_batch_items($id_pengajuan);
+		$queriesOk = $this->Approval_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1 && $queriesOk;
 
 		// Tambahkan URL print dokumen sumber per item (pakai helper dari modul request_payment)
 		$this->load->model('request_payment/Request_payment_model');
 		foreach ($items as $it) {
+			if (is_object($this->Request_payment_model) && method_exists($this->Request_payment_model, 'resetAuditQueriesOk')) {
+				$this->Request_payment_model->resetAuditQueriesOk();
+			}
 			$it->print_url = $this->Request_payment_model->build_print_url($it);
+			$queriesOk = $this->auditReadStatus() === 1 && $queriesOk;
+			if (is_object($this->Request_payment_model) && method_exists($this->Request_payment_model, 'auditQueriesOk')) {
+				$queriesOk = $this->Request_payment_model->auditQueriesOk() && $queriesOk;
+			}
 		}
 
 		$this->template->set('header', $header);
 		$this->template->set('items', $items);
 		$this->template->title('Detail Approval - ' . $header->no_pengajuan);
-		$this->template->render('detail');
+		try {
+			$this->template->render('detail');
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal merender detail Approval Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => (string) $header->no_pengajuan,
+				'item_count'   => count($items),
+				'reason'       => 'render_exception',
+			));
+			throw $e;
+		}
+		$this->completeAudit(
+			$queriesOk ? 'Membuka detail Approval Request Payment' : 'Gagal membuka detail Approval Request Payment',
+			$queriesOk ? 1 : 0,
+			array_merge(
+				array(
+					'id_pengajuan' => $id_pengajuan,
+					'no_pengajuan' => (string) $header->no_pengajuan,
+					'item_count'   => count($items),
+				),
+				$queriesOk ? array('outcome' => 'rendered') : array('reason' => 'query_failure')
+			)
+		);
 	}
 
 	/**
@@ -74,21 +183,48 @@ class Approval_request_payment extends Admin_Controller
 	 */
 	public function save_decision()
 	{
+		$id_pengajuan = (int) $this->input->post('id_pengajuan');
+		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan), array(
+			'id_pengajuan', 'no_pengajuan', 'document_ids', 'document_count',
+			'approved_count', 'rejected_count', 'payment_ids',
+		));
+
 		if (!has_permission($this->managePermission)) {
+			$this->completeAudit('Keputusan approval ditolak karena tidak memiliki izin', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'reason'       => 'permission_denied',
+			));
 			echo json_encode(['status' => 0, 'msg' => 'Anda tidak memiliki hak untuk memutuskan.']);
 			return;
 		}
 
-		$id_pengajuan = (int) $this->input->post('id_pengajuan');
-		$decisions    = $this->input->post('decisions'); // [{no_dokumen, decision(approved|rejected), alasan}]
+		$decisions = $this->input->post('decisions'); // [{no_dokumen, decision(approved|rejected), alasan}]
 
+		$this->Approval_request_payment_model->resetAuditQueriesOk();
 		$header = $this->Approval_request_payment_model->get_batch_header($id_pengajuan);
+		if (!$this->Approval_request_payment_model->auditQueriesOk() || $this->auditReadStatus() === 0) {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'reason'       => 'query_failure',
+			));
+			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan keputusan. Silakan coba lagi.']);
+			return;
+		}
 		if (empty($header) || $header->status !== 'pending') {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'reason'       => empty($header) ? 'not_found' : 'already_decided',
+			));
 			echo json_encode(['status' => 0, 'msg' => 'Pengajuan tidak ditemukan atau sudah diputuskan.']);
 			return;
 		}
 
 		if (empty($decisions) || !is_array($decisions)) {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => (string) $header->no_pengajuan,
+				'reason'       => 'invalid_decisions',
+			));
 			echo json_encode(['status' => 0, 'msg' => 'Data keputusan tidak valid.']);
 			return;
 		}
@@ -104,8 +240,23 @@ class Approval_request_payment extends Admin_Controller
 			}
 		}
 
+		$this->Approval_request_payment_model->resetAuditQueriesOk();
 		$items = $this->Approval_request_payment_model->get_batch_items($id_pengajuan);
+		if (!$this->Approval_request_payment_model->auditQueriesOk() || $this->auditReadStatus() === 0) {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => (string) $header->no_pengajuan,
+				'reason'       => 'query_failure',
+			));
+			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan keputusan. Silakan coba lagi.']);
+			return;
+		}
 		if (empty($items)) {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => (string) $header->no_pengajuan,
+				'reason'       => 'empty_batch',
+			));
 			echo json_encode(['status' => 0, 'msg' => 'Batch tidak memiliki dokumen.']);
 			return;
 		}
@@ -114,6 +265,11 @@ class Approval_request_payment extends Admin_Controller
 		foreach ($items as $it) {
 			$dec = isset($dec_map[$it->no_dokumen]) ? $dec_map[$it->no_dokumen] : ['decision' => 'approved', 'alasan' => ''];
 			if ($dec['decision'] === 'rejected' && $dec['alasan'] === '') {
+				$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+					'id_pengajuan' => $id_pengajuan,
+					'no_pengajuan' => (string) $header->no_pengajuan,
+					'reason'       => 'missing_reject_reason',
+				));
 				echo json_encode(['status' => 0, 'msg' => 'Alasan reject wajib diisi untuk dokumen ' . $it->no_dokumen . '.']);
 				return;
 			}
@@ -122,14 +278,31 @@ class Approval_request_payment extends Admin_Controller
 		$now  = date('Y-m-d H:i:s');
 		$user = $this->auth->user_name();
 
-		$this->db->trans_begin();
+		if ($this->db->trans_begin() === false) {
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => (string) $header->no_pengajuan,
+				'reason'       => 'trans_begin_failure',
+			));
+			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan keputusan. Silakan coba lagi.']);
+			return;
+		}
 
-		$record_rows = [];
+		$this->Approval_request_payment_model->resetAuditQueriesOk();
+		$writeOk       = true;
+		$documentIds   = [];
+		$paymentIds    = [];
+		$approvedCount = 0;
+		$rejectedCount = 0;
+		$record_rows   = [];
+
 		foreach ($items as $it) {
+			$documentIds[] = (string) $it->no_dokumen;
 			$dec = isset($dec_map[$it->no_dokumen]) ? $dec_map[$it->no_dokumen] : ['decision' => 'approved', 'alasan' => ''];
 
 			if ($dec['decision'] === 'approved') {
-				$this->db->update('tr_rp_pengajuan_d', ['decision' => 'approved'], ['id' => $it->id]);
+				$approvedCount++;
+				$writeOk = (bool) $this->db->update('tr_rp_pengajuan_d', ['decision' => 'approved'], ['id' => $it->id]) && $writeOk;
 
 				$record_rows[] = [
 					'id_pengajuan' => $id_pengajuan,
@@ -157,8 +330,9 @@ class Approval_request_payment extends Admin_Controller
 					$id_pay   = $this->Approval_request_payment_model->generate_id_payment(null);
 					$tgl_doc  = $this->Approval_request_payment_model->get_tgl_doc($it->no_dokumen);
 					$tipe_pph = $it->flag_pph21 ? '21' : ($it->flag_pph23 ? '23' : null);
+					$paymentIds[] = (string) $id_pay;
 
-					$this->db->insert('payment_approve', [
+					$writeOk = (bool) $this->db->insert('payment_approve', [
 						'id'            => $id_pay,
 						'no_doc'        => $it->no_dokumen,
 						'nama'          => $it->request_by,
@@ -183,43 +357,131 @@ class Approval_request_payment extends Admin_Controller
 						'total_payment' => 0,
 						'selisih'       => 0,
 						'kurs_payment'  => 0,
-					]);
+					]) && $writeOk;
 				}
 			} else {
-				$this->db->update('tr_rp_pengajuan_d', ['decision' => 'rejected'], ['id' => $it->id]);
+				$rejectedCount++;
+				$writeOk = (bool) $this->db->update('tr_rp_pengajuan_d', ['decision' => 'rejected'], ['id' => $it->id]) && $writeOk;
 
 				// append-only reject log (tidak menimpa)
-				$this->db->insert('tr_rp_reject_log', [
+				$writeOk = (bool) $this->db->insert('tr_rp_reject_log', [
 					'no_dokumen'   => $it->no_dokumen,
 					'id_pengajuan' => $id_pengajuan,
 					'no_pengajuan' => $header->no_pengajuan,
 					'approver'     => $user,
 					'rejected_at'  => $now,
 					'alasan'       => $dec['alasan'],
-				]);
+				]) && $writeOk;
 			}
 		}
 
 		if (!empty($record_rows)) {
-			$this->db->insert_batch('tr_rp_record', $record_rows);
+			$writeOk = (bool) $this->db->insert_batch('tr_rp_record', $record_rows) && $writeOk;
 		}
 
 		// finalize batch
-		$this->db->update('tr_rp_pengajuan_h', [
+		$writeOk = (bool) $this->db->update('tr_rp_pengajuan_h', [
 			'status'      => 'done',
 			'decided_at'  => $now,
 			'approver'    => $user,
 			'modified_by' => $user,
 			'modified_on' => $now,
-		], ['id' => $id_pengajuan]);
+		], ['id' => $id_pengajuan]) && $writeOk;
 
-		if ($this->db->trans_status() === false) {
+		$queriesOk = $this->Approval_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
+		if (!$writeOk || !$queriesOk || $this->db->trans_status() === false) {
 			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan'   => $id_pengajuan,
+				'no_pengajuan'   => (string) $header->no_pengajuan,
+				'document_ids'   => array_slice($documentIds, 0, 100),
+				'document_count' => count($documentIds),
+				'reason'         => !$writeOk ? 'write_failure' : (!$queriesOk ? 'query_failure' : 'transaction_failure'),
+			));
 			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan keputusan. Silakan coba lagi.']);
 			return;
 		}
 
-		$this->db->trans_commit();
+		if ($this->db->trans_commit() === false) {
+			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan keputusan approval', 0, array(
+				'id_pengajuan'   => $id_pengajuan,
+				'no_pengajuan'   => (string) $header->no_pengajuan,
+				'document_ids'   => array_slice($documentIds, 0, 100),
+				'document_count' => count($documentIds),
+				'reason'         => 'trans_commit_failure',
+			));
+			echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan keputusan. Silakan coba lagi.']);
+			return;
+		}
+
+		$this->completeAudit('Menyimpan keputusan Approval Request Payment', 1, array(
+			'outcome'        => 'saved',
+			'id_pengajuan'   => $id_pengajuan,
+			'no_pengajuan'   => (string) $header->no_pengajuan,
+			'document_ids'   => array_slice($documentIds, 0, 100),
+			'document_count' => count($documentIds),
+			'approved_count' => $approvedCount,
+			'rejected_count' => $rejectedCount,
+			'payment_ids'    => array_slice($paymentIds, 0, 100),
+		));
 		echo json_encode(['status' => 1, 'msg' => 'Keputusan berhasil disimpan.']);
+	}
+
+	private function beginAudit($method, $data = array(), $keys = array())
+	{
+		$this->load->library('Module_audit_recorder');
+		return $this->module_audit_recorder->begin(
+			'approval_request_payment',
+			$method,
+			array('data' => $this->auditSafeData($data)),
+			array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome')))
+		);
+	}
+
+	private function completeAudit($message, $status, $data = array())
+	{
+		return $this->module_audit_recorder->complete($message, $status, array(
+			'data' => $this->auditSafeData($data),
+			'sql'  => null,
+		));
+	}
+
+	private function auditReadStatus()
+	{
+		$error = $this->db->error();
+		return empty($error['code']) ? 1 : 0;
+	}
+
+	private function auditSafeData($data)
+	{
+		$out = array();
+		foreach ($data as $key => $value) {
+			if (is_array($value)) {
+				$out[$key] = array();
+				foreach (array_slice($value, 0, 100) as $item) {
+					if (is_scalar($item) || $item === null) {
+						$out[$key][] = is_string($item) ? mb_strcut($item, 0, 120, 'UTF-8') : $item;
+					}
+				}
+			} elseif (is_scalar($value) || $value === null) {
+				$out[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+			}
+		}
+		return $out;
+	}
+
+	private function auditFilters()
+	{
+		$data = array();
+		foreach (array('draw', 'start', 'length') as $key) {
+			$value = $this->input->get_post($key);
+			if (is_scalar($value) && mb_strlen((string) $value, 'UTF-8') <= 50) {
+				$data[$key] = $value;
+			}
+		}
+		$search = $this->input->get_post('search');
+		$data['search_present'] = !empty(is_array($search) ? ($search['value'] ?? '') : $search);
+		return $data;
 	}
 }

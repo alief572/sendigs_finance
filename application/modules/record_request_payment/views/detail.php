@@ -1,4 +1,6 @@
 <?php
+$return_url = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
+	? site_url('request_payment/index?tab=record') : site_url('record_request_payment');
 $total_dibayarkan = 0;
 foreach ($records as $r) {
 	$total_dibayarkan += (float) $r->dibayarkan;
@@ -62,7 +64,7 @@ foreach ($records as $r) {
 <div class="box">
 	<div class="box-body">
 
-		<a href="<?= site_url('record_request_payment'); ?>" class="btn btn-link" style="padding-left:0;">
+		<a href="<?= html_escape($return_url); ?>" class="btn btn-link" style="padding-left:0;">
 			&larr; Kembali ke daftar record
 		</a>
 

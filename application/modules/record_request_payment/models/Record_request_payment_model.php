@@ -13,6 +13,7 @@ class Record_request_payment_model extends BF_Model
 	protected $set_created  = false;
 	protected $set_modified = false;
 	protected $consultant   = null;
+	private $auditQueriesOk = true;
 
 	public function __construct()
 	{
@@ -24,9 +25,75 @@ class Record_request_payment_model extends BF_Model
 		}
 	}
 
-	// Server-side DataTables: batch done yang punya >=1 record snapshot
-	public function get_data_record()
+	// Daftar per dokumen memakai nominal snapshot, bukan dokumen sumber.
+
+	public function get_data_record_items(&$auditSummary = null)
 	{
+		$this->resetAuditQueriesOk();
+		$post = $this->input->post();
+		$post = is_array($post) ? $post : [];
+		$draw = isset($post['draw']) && is_scalar($post['draw']) ? (int) $post['draw'] : 0;
+		$start = isset($post['start']) && is_scalar($post['start']) ? max(0, (int) $post['start']) : 0;
+		$length = isset($post['length']) && is_scalar($post['length']) ? (int) $post['length'] : 25;
+		$length = $length === -1 ? -1 : min(100, max(1, $length));
+		$search = $post['search']['value'] ?? '';
+		$search = is_scalar($search) ? trim((string) $search) : '';
+
+		$this->db->from('tr_rp_record r');
+		$this->db->join('tr_rp_pengajuan_h h', 'h.id = r.id_pengajuan');
+		$this->db->where('h.deleted', 0);
+		$this->db->where('h.status', 'done');
+		$total = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError();
+		if ($search !== '') {
+			$this->db->group_start();
+			$this->db->like('r.no_dokumen', $search);
+			foreach (['h.no_pengajuan', 'r.request_by', 'r.keperluan', 'r.kategori', 'r.company_nama'] as $field) {
+				$this->db->or_like($field, $search);
+			}
+			$this->db->group_end();
+		}
+		$filtered = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError();
+		$this->db->select('r.*, h.submitted_at, h.decided_at, h.approver, (SELECT d.id_dokumen FROM tr_rp_pengajuan_d d WHERE d.id_pengajuan = r.id_pengajuan AND d.no_dokumen = r.no_dokumen ORDER BY d.id ASC LIMIT 1) AS id_dokumen', false);
+		$this->db->order_by('h.decided_at', 'desc');
+		$this->db->order_by('r.id', 'desc');
+		if ($length !== -1) {
+			$this->db->limit($length, $start);
+		}
+		$query = $this->db->get();
+		$this->trackAuditDbError();
+		if (!is_object($query)) {
+			$this->auditQueriesOk = false;
+		}
+		$rows = is_object($query) ? $query->result() : [];
+		$data = [];
+		foreach ($rows as $row) {
+			$item = (array) $row;
+			foreach (['id', 'id_pengajuan', 'flag_ppn', 'flag_pph23', 'flag_pph21', 'admin'] as $key) {
+				$item[$key] = (int) $item[$key];
+			}
+			foreach (['dpp', 'nilai_ppn', 'nilai_pph', 'dibayarkan'] as $key) {
+				$item[$key] = (float) $item[$key];
+			}
+			foreach (['submitted_at','decided_at'] as $key) {
+				$item[$key] = !empty($item[$key]) ? date('d-M-Y H:i', strtotime($item[$key])) : '';
+			}
+			$data[] = $item;
+		}
+		$auditSummary = [
+			'query_ok' => $this->auditQueriesOk(),
+			'row_count' => count($data),
+			'records_total' => $total,
+			'records_filtered' => $filtered,
+		];
+		return ['draw' => $draw, 'recordsTotal' => $total, 'recordsFiltered' => $filtered, 'data' => $data];
+	}
+
+	// Server-side DataTables: batch done yang punya >=1 record snapshot
+	public function get_data_record(&$auditSummary = null)
+	{
+		$this->resetAuditQueriesOk();
 		$post   = $this->input->post();
 		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
 		$length = isset($post['length']) ? intval($post['length']) : 25;
@@ -43,7 +110,8 @@ class Record_request_payment_model extends BF_Model
 
 		// susun from/where SEKALI (count_all_results tanpa reset -> jangan append ulang)
 		$build();
-		$recordsTotal = $this->db->count_all_results('', false);
+		$recordsTotal = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError($this->db);
 
 		if ($search !== '') {
 			$this->db->group_start();
@@ -51,17 +119,18 @@ class Record_request_payment_model extends BF_Model
 			$this->db->or_like('h.company_nama', $search, 'both');
 			$this->db->group_end();
 		}
-		$recordsFiltered = $this->db->count_all_results('', false);
+		$recordsFiltered = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError($this->db);
 
 		$this->db->select('h.*, (SELECT COUNT(*) FROM tr_rp_record r WHERE r.id_pengajuan = h.id) as jumlah_approved');
 		$this->db->order_by('h.decided_at', 'desc');
 		$this->db->limit($length, $start);
-		$rows = $this->db->get()->result();
+		$rows = $this->queryResult($this->db, $this->db->get());
 
 		$data = [];
 		foreach ($rows as $r) {
 			// total dibayarkan dari snapshot (bukan header, konsisten dgn snapshot)
-			$tot = $this->db->query("SELECT IFNULL(SUM(dibayarkan),0) as t FROM tr_rp_record WHERE id_pengajuan = ?", [$r->id])->row();
+			$tot = $this->queryRow($this->db, $this->db->query("SELECT IFNULL(SUM(dibayarkan),0) as t FROM tr_rp_record WHERE id_pengajuan = ?", [$r->id]));
 			$total = $tot ? $tot->t : 0;
 
 			$data[] = [
@@ -75,6 +144,13 @@ class Record_request_payment_model extends BF_Model
 			];
 		}
 
+		$auditSummary = [
+			'row_count'        => count($data),
+			'records_total'    => $recordsTotal,
+			'records_filtered' => $recordsFiltered,
+			'query_ok'         => $this->auditQueriesOk(),
+		];
+
 		echo json_encode([
 			'draw'            => $draw,
 			'recordsTotal'    => $recordsTotal,
@@ -85,29 +161,77 @@ class Record_request_payment_model extends BF_Model
 
 	public function get_header($id_pengajuan)
 	{
+		$this->resetAuditQueriesOk();
 		$this->db->from('tr_rp_pengajuan_h');
 		$this->db->where('id', (int) $id_pengajuan);
 		$this->db->where('deleted', 0);
 		$this->db->where('status', 'done');
-		return $this->db->get()->row();
+		return $this->queryRow($this->db, $this->db->get());
 	}
 
 	// Snapshot records (read-only) untuk 1 batch
 	public function get_records($id_pengajuan)
 	{
+		$this->resetAuditQueriesOk();
 		$this->db->from('tr_rp_record');
 		$this->db->where('id_pengajuan', (int) $id_pengajuan);
 		$this->db->order_by('id', 'asc');
-		$records = $this->db->get()->result();
+		$records = $this->queryResult($this->db, $this->db->get());
 
 		foreach ($records as $r) {
 			$b = $this->resolve_bank_info($r->no_dokumen, $r->kategori);
 			$r->bank_nama   = $b['nama'];
 			$r->bank_name   = $b['bank'];
 			$r->bank_no_rek = $b['no_rek'];
+
+			$req_by = $this->resolve_request_by($r->no_dokumen, $r->kategori, $r->request_by);
+			if (!empty($req_by)) {
+				$r->request_by = $req_by;
+			}
 		}
 
 		return $records;
+	}
+
+	/**
+	 * Resolusi nama pembuat (Request By) khusus transaksi Direct Payment
+	 * dari database konsultan (kons_tr_kasbon_project_header.created_by -> users.nm_lengkap).
+	 * Transaksi Cash TIDAK termasuk aturan ini.
+	 */
+	public function resolve_request_by($no_dokumen, $kategori = '', $current_request_by = '')
+	{
+		if (empty($no_dokumen)) {
+			return $current_request_by;
+		}
+
+		$kat = strtolower(trim((string)$kategori));
+		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
+			// Cash tidak termasuk aturan ini
+			if ($kat === 'cash') {
+				return $current_request_by;
+			}
+			$cashQuery = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen]);
+			$this->trackAuditDbError($this->db);
+			if (!is_object($cashQuery)) {
+				$this->auditQueriesOk = false;
+			} elseif ($cashQuery->num_rows() > 0) {
+				return $current_request_by;
+			}
+
+			if ($this->consultant) {
+				$kons = $this->queryRow($this->consultant, $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen]));
+				if (!empty($kons) && !empty($kons->created_by)) {
+					$u = $this->queryRow($this->consultant, $this->consultant->query("SELECT nm_lengkap, username FROM users WHERE id_user = ? OR username = ?", [$kons->created_by, $kons->created_by]));
+					if (!empty($u) && !empty($u->nm_lengkap)) {
+						return $u->nm_lengkap;
+					} elseif (!empty($u) && !empty($u->username)) {
+						return $u->username;
+					}
+				}
+			}
+		}
+
+		return $current_request_by;
 	}
 
 	/**
@@ -130,15 +254,13 @@ class Record_request_payment_model extends BF_Model
 
 		// 1. Kasbon (tr_kasbon)
 		if ($kat === 'kasbon' || strpos($no_dokumen, 'KS-') === 0) {
-			$row = $this->db->select('nama, bank_id, accnumber, accname, no_kasbon_consultant')
-							->get_where('tr_kasbon', ['no_doc' => $no_dokumen])
-							->row();
+			$row = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname, no_kasbon_consultant')
+							->get_where('tr_kasbon', ['no_doc' => $no_dokumen]));
 			if ($row) {
 				// Cek jika kasbon berasal dari consultant (no_kasbon_consultant terisi)
 				if (!empty($row->no_kasbon_consultant) && $this->consultant) {
-					$kons = $this->consultant->select('bank, bank_number, bank_account')
-											 ->get_where('kons_tr_kasbon_project_header', ['id' => $row->no_kasbon_consultant])
-											 ->row();
+					$kons = $this->queryRow($this->consultant, $this->consultant->select('bank, bank_number, bank_account')
+											 ->get_where('kons_tr_kasbon_project_header', ['id' => $row->no_kasbon_consultant]));
 					if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
 						$res['nama']   = !empty($kons->bank_account) ? trim($kons->bank_account) : (!empty($row->accname) ? trim($row->accname) : trim((string)$row->nama));
 						$res['bank']   = !empty($kons->bank) ? trim($kons->bank) : trim((string)$row->bank_id);
@@ -153,9 +275,8 @@ class Record_request_payment_model extends BF_Model
 				return $res;
 			} elseif ($this->consultant) {
 				// Fallback jika tidak ada di tr_kasbon tapi ada di kons_tr_kasbon_project_header
-				$kons = $this->consultant->select('bank, bank_number, bank_account')
-										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen])
-										 ->row();
+				$kons = $this->queryRow($this->consultant, $this->consultant->select('bank, bank_number, bank_account')
+										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen]));
 				if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
 					$res['nama']   = trim((string)$kons->bank_account);
 					$res['bank']   = trim((string)$kons->bank);
@@ -167,9 +288,8 @@ class Record_request_payment_model extends BF_Model
 
 		// 2. Transport / Transportasi (tr_transport_req)
 		if ($kat === 'transport' || $kat === 'transportasi' || strpos($no_dokumen, 'RQ-') === 0) {
-			$row = $this->db->select('nama, bank_id, accnumber, accname')
-							->get_where('tr_transport_req', ['no_doc' => $no_dokumen])
-							->row();
+			$row = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_transport_req', ['no_doc' => $no_dokumen]));
 			if ($row) {
 				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
 				$res['bank']   = trim((string)$row->bank_id);
@@ -180,9 +300,8 @@ class Record_request_payment_model extends BF_Model
 
 		// 3. Expense (tr_expense)
 		if ($kat === 'expense' || strpos($no_dokumen, 'EXP-') === 0 || strpos($no_dokumen, 'ER-') === 0 || strpos($no_dokumen, 'PI-') === 0) {
-			$row = $this->db->select('nama, bank_id, accnumber, accname')
-							->get_where('tr_expense', ['no_doc' => $no_dokumen])
-							->row();
+			$row = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_expense', ['no_doc' => $no_dokumen]));
 			if ($row) {
 				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
 				$res['bank']   = trim((string)$row->bank_id);
@@ -193,9 +312,8 @@ class Record_request_payment_model extends BF_Model
 
 		// 4. Periodik (tr_pengajuan_rutin_detail)
 		if ($kat === 'periodik' || strpos($no_dokumen, 'PERIODIK-') === 0) {
-			$row = $this->db->select('nama, bank_id, accnumber, accname')
-							->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $no_dokumen])
-							->row();
+			$row = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname')
+							->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $no_dokumen]));
 			if ($row) {
 				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
 				$res['bank']   = trim((string)$row->bank_id);
@@ -206,11 +324,10 @@ class Record_request_payment_model extends BF_Model
 
 		// 5. Cash (tr_pr_non_po -> rutin_non_planning_header)
 		if ($kat === 'cash' || strpos($no_dokumen, 'PRN') === 0) {
-			$pr = $this->db->select('no_pr')->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen])->row();
+			$pr = $this->queryRow($this->db, $this->db->select('no_pr')->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen]));
 			if ($pr && !empty($pr->no_pr)) {
-				$head = $this->db->select('bank_name, bank_account_no, bank_account_name')
-								 ->get_where('rutin_non_planning_header', ['no_pr' => $pr->no_pr])
-								 ->row();
+				$head = $this->queryRow($this->db, $this->db->select('bank_name, bank_account_no, bank_account_name')
+								 ->get_where('rutin_non_planning_header', ['no_pr' => $pr->no_pr]));
 				if ($head) {
 					$res['nama']   = trim((string)$head->bank_account_name);
 					$res['bank']   = trim((string)$head->bank_name);
@@ -222,11 +339,10 @@ class Record_request_payment_model extends BF_Model
 
 		// 6. Direct Payment (tr_direct_payment / kons_tr_kasbon_project_header)
 		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
-			$rows = $this->db->select('bank, bank_number, bank_account')
+			$rows = $this->queryResult($this->db, $this->db->select('bank, bank_number, bank_account')
 							 ->where('no_doc', $no_dokumen)
 							 ->order_by('id', 'desc')
-							 ->get('tr_direct_payment')
-							 ->result();
+							 ->get('tr_direct_payment'));
 			foreach ($rows as $r) {
 				if (!empty($r->bank) || !empty($r->bank_number) || !empty($r->bank_account)) {
 					$res['nama']   = trim((string)$r->bank_account);
@@ -239,9 +355,8 @@ class Record_request_payment_model extends BF_Model
 			// Jika data bank di tr_direct_payment lokal belum ada / kosong,
 			// lookup ke kons_tr_kasbon_project_header di database consultant (DBCNL)
 			if ($this->consultant) {
-				$kons = $this->consultant->select('bank, bank_number, bank_account')
-										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen])
-										 ->row();
+				$kons = $this->queryRow($this->consultant, $this->consultant->select('bank, bank_number, bank_account')
+										 ->get_where('kons_tr_kasbon_project_header', ['id' => $no_dokumen]));
 				if ($kons && (!empty($kons->bank) || !empty($kons->bank_number) || !empty($kons->bank_account))) {
 					$res['nama']   = trim((string)$kons->bank_account);
 					$res['bank']   = trim((string)$kons->bank);
@@ -261,9 +376,8 @@ class Record_request_payment_model extends BF_Model
 		}
 
 		// 7. request_payment fallback (Petty Cash / RPC / PHP)
-		$rp = $this->db->select('nama, bank_id, accnumber, accname, bank_name')
-					   ->get_where('request_payment', ['no_doc' => $no_dokumen])
-					   ->row();
+		$rp = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname, bank_name')
+					   ->get_where('request_payment', ['no_doc' => $no_dokumen]));
 		if ($rp) {
 			$res['nama']   = !empty($rp->accname) ? trim($rp->accname) : trim((string)$rp->nama);
 			$res['bank']   = !empty($rp->bank_id) ? trim($rp->bank_id) : trim((string)$rp->bank_name);
@@ -274,9 +388,8 @@ class Record_request_payment_model extends BF_Model
 		}
 
 		// 8. payment_approve fallback
-		$pa = $this->db->select('nama, bank_id, accnumber, accname, bank_name')
-					   ->get_where('payment_approve', ['no_doc' => $no_dokumen])
-					   ->row();
+		$pa = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname, bank_name')
+					   ->get_where('payment_approve', ['no_doc' => $no_dokumen]));
 		if ($pa) {
 			$res['nama']   = !empty($pa->accname) ? trim($pa->accname) : trim((string)$pa->nama);
 			$res['bank']   = !empty($pa->bank_id) ? trim($pa->bank_id) : trim((string)$pa->bank_name);
@@ -287,8 +400,9 @@ class Record_request_payment_model extends BF_Model
 	}
 
 	// Server-side DataTables: histori dokumen lama (pre-cutoff) dari payment_approve
-	public function get_data_record_legacy()
+	public function get_data_record_legacy(&$auditSummary = null)
 	{
+		$this->resetAuditQueriesOk();
 		$post   = $this->input->post();
 		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
 		$length = isset($post['length']) ? intval($post['length']) : 25;
@@ -303,7 +417,8 @@ class Record_request_payment_model extends BF_Model
 		};
 
 		$build();
-		$recordsTotal = $this->db->count_all_results('', false);
+		$recordsTotal = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError($this->db);
 
 		if ($search !== '') {
 			$this->db->group_start();
@@ -313,13 +428,14 @@ class Record_request_payment_model extends BF_Model
 			$this->db->or_like('pa.tipe', $search, 'both');
 			$this->db->group_end();
 		}
-		$recordsFiltered = $this->db->count_all_results('', false);
+		$recordsFiltered = (int) $this->db->count_all_results('', false);
+		$this->trackAuditDbError($this->db);
 
 		$this->db->select('pa.id, pa.no_doc, pa.nama, pa.tgl_doc, pa.keperluan, pa.tipe, pa.jumlah, pa.status, pa.tanggal, pa.tgl_bayar, pa.ids, pa.doc_file, pa.doc_file_2, pa.link_doc');
 		$this->db->order_by('pa.tgl_doc', 'desc');
 		$this->db->order_by('pa.id', 'desc');
 		$this->db->limit($length, $start);
-		$rows = $this->db->get()->result();
+		$rows = $this->queryResult($this->db, $this->db->get());
 
 		$this->load->model('request_payment/Request_payment_model');
 
@@ -350,6 +466,7 @@ class Record_request_payment_model extends BF_Model
 				'no_doc'     => $r->no_doc
 			];
 			$print_url = $this->Request_payment_model->build_print_url($dummy_record);
+			$this->trackAuditDbError($this->db);
 
 			$btn_aksi = '';
 			if (!empty($print_url)) {
@@ -372,11 +489,62 @@ class Record_request_payment_model extends BF_Model
 			];
 		}
 
+		$auditSummary = [
+			'row_count'        => count($data),
+			'records_total'    => $recordsTotal,
+			'records_filtered' => $recordsFiltered,
+			'query_ok'         => $this->auditQueriesOk(),
+		];
+
 		echo json_encode([
 			'draw'            => $draw,
 			'recordsTotal'    => $recordsTotal,
 			'recordsFiltered' => $recordsFiltered,
 			'data'            => $data,
 		]);
+	}
+
+	public function auditQueriesOk()
+	{
+		$this->trackAuditDbError($this->db);
+		$this->trackAuditDbError($this->consultant);
+		return $this->auditQueriesOk;
+	}
+
+	public function resetAuditQueriesOk()
+	{
+		$this->auditQueriesOk = true;
+	}
+
+	private function queryRow($conn, $query)
+	{
+		$this->trackAuditDbError($conn);
+		if (!is_object($query)) {
+			$this->auditQueriesOk = false;
+			return null;
+		}
+		return $query->row();
+	}
+
+	private function queryResult($conn, $query)
+	{
+		$this->trackAuditDbError($conn);
+		if (!is_object($query)) {
+			$this->auditQueriesOk = false;
+			return [];
+		}
+		return $query->result();
+	}
+
+	private function trackAuditDbError($conn = null)
+	{
+		$conn = $conn ?: $this->db;
+		if (!is_object($conn)) {
+			return;
+		}
+		$err = $conn->error();
+		if (!empty($err['code']) || !empty($err['message'])) {
+			$this->auditQueriesOk = false;
+		}
 	}
 }

@@ -642,7 +642,7 @@ function akses_server()
   return $Arr_Balik;
 }
 
-function history($desc = NULL)
+function history($desc = NULL, $context = array())
 {
   $CI             = &get_instance();
   $path            = $CI->uri->segment(1);
@@ -659,6 +659,13 @@ function history($desc = NULL)
   $DataHistory['created']      = $Date;
 
   $CI->db->insert('histories', $DataHistory);
+
+  // Authentication owns its explicit outcomes; retain these legacy rows only.
+  if (in_array(strtolower(trim((string) $desc)), array('login', 'logout'), true)) { return; }
+  $context = is_array($context) ? $context : array();
+  $status = array_key_exists('status', $context) ? $context['status'] : null;
+  unset($context['status']);
+  audit_trail_legacy_log($desc, $status, $context);
 }
 
 function get_sum_qty_so($no_so)
