@@ -6,6 +6,8 @@ Plan user: kembalikan UI request_payment sebelum tab; pertahankan audit/backend 
 
 Fase 1 restore UI Request + cleanup rute/pindah tests; Fase 2 tab Record/items/navigation; Fase 3 validasi/refreshed manifests; Fase 4 scoped commit/push main dan sync tiga modul development via alternate index. Kriteria: Request source view identik baseline 406a0c5f; batch3approved=1row batch/3rows item, rejected/pending/legacy excluded; audit/permission/error/escaping/paging/print/export/navigation benar; regresi/lint/diff PASS; remote tree tiga modul identik. Tanpa migration/browser/DB live writes. Pekerjaan audit lain dan staging paralel dipertahankan.
 
+**Status akhir:** Fase 1–4 selesai; code main d84a73f3, development 8960ab39 terkirim. Tiga tree modul identik/diff remote kosong. Request view sama persis baseline 406a0c5f; Record default Batch + Per Transaksi (Approved) + Legacy. 1.916 regresi, 131 assertions PHP fitur dan 72 checks JS PASS; lint/whitespace PASS. Tanpa browser/DB live/migration; pekerjaan lain dipertahankan.
+
 
 ## Task terpisah: tab Request Payment — 2026-10-14
 

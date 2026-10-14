@@ -2,11 +2,12 @@
 
 ## Koreksi lokasi tab per transaksi — 2026-10-14
 
-- Selesai: grounding source, rencana disetujui user; endpoint Record snapshot siap reuse. Baseline HEAD d39d3a8a; pekerjaan audit lain masih lokal, tidak disentuh.
-- Berjalan: Fase 4 publikasi; Fase 1–3 selesai.
+- Selesai: seluruh Fase 1–4 koreksi, validasi dan publikasi. Main code d84a73f3 serta development 8960ab39 dipush. Tiga modul remote identik, diff kosong; audit dan pekerjaan lain dipertahankan.
+- Berjalan: tidak ada fase koreksi tersisa.
 - Keputusan: default Batch; tab baru Per Transaksi (Approved); Histori Lama tetap; View/Cetak Dokumen/Excel Pengajuan existing, export per PGJ. Request tanpa tab; audit tidak dibatalkan. Rute pending-items dan origin Request dihapus.
 - File: Request view restored/partial deleted; Approval controller/model pending-items dan origin Request dihapus; Record index/detail/controller route diubah + items partial baru. Empat tes Tabs dipindah ke Record; manifest/rencana/laporan koreksi disinkronkan. Source audit/write tidak diubah.
-- Validasi: RED view sebelum Record tab ada; GREEN 71 backend assertions, 46 view, 14 real SQL, 72 client checks. Regresi tiga modul 1.916 skenario PASS; 11 PHP lint, Node syntax, whitespace PASS. Request view identik baseline 406a0c5f. Tanpa browser/DB live writes. Berikutnya alternate-index scoped commit/push lalu verifikasi remote tree tiga modul. Bukti: docs/record-request-payment-items-2026-10-14.md.
+- Validasi: RED view sebelum Record tab ada; GREEN 71 backend assertions, 46 view, 14 real SQL, 72 client checks. Regresi tiga modul 1.916 skenario PASS; 11 PHP lint, Node syntax, whitespace PASS. Request view identik baseline 406a0c5f. Tanpa browser/DB live writes. Verifikasi remote Request d43ab781, Approval a89067f6, Record db78979c identik. Bukti: docs/record-request-payment-items-2026-10-14.md.
+- Risiko/batas: tidak ada migrasi/browser/DB live writes; validasi MySQL live dan browser belum dilakukan. Catatan penutupan dipublikasi via alternate index; progres audit paralel tetap lokal.
 
 
 ## Task terpisah: tab Request Payment — 2026-10-14

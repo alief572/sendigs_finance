@@ -32,3 +32,5 @@ SQLite memakai adapter numeric success PDO->mysqli seperti tes sebelumnya. Tidak
 ## Publikasi
 
 Commit/push main dan sinkronisasi seluruh tree Request/Approval/Record ke development memakai alternate index. Cakupan commit aplikasi hanya tiga direktori tersebut, plus laporan/manifest task. Rencana/checkpoint lokal tetap memuat pekerjaan paralel; publikasi checkpoint dibuat dari base committed ditambah catatan task ini agar pekerjaan lain tidak ikut terkirim. Verifikasi remote branch/tree wajib sebelum penutupan.
+
+Penutupan publikasi: main code d84a73f305e1b88c211b5cc414094ae132b902d8; development 8960ab39c0ccf036dd753a9be43f2ead249ae5c8. Seluruh tree tiga modul identik: Request d43ab781d2183da74a7724312cec96adce354138; Approval a89067f6b2cb56c7c2603bfb10c933d4e30add9f; Record db78979c47cfeb342b38fb12a452b317713bed2f. Fetch dan diff remote kosong. Publikasi tanpa force, source di luar tiga modul tidak berubah. Commit penutupan selanjutnya hanya dokumentasi, tidak mengubah tree modul.

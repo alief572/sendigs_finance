@@ -1,7 +1,7 @@
 {
   "task": "record_request_payment_items",
   "date_wib": "2026-10-14",
-  "status": "validated_publication_pending",
+  "status": "selesai",
   "endpoints": [
     {
       "module": "record_request_payment",
@@ -42,5 +42,16 @@
     "change": "Move approved per-item tab from Request to Record, restore Request UI, remove pending-items and Request origin",
     "report": "docs/record-request-payment-items-2026-10-14.md"
   },
-  "supersedes": "request_payment_tabs"
+  "supersedes": "request_payment_tabs",
+  "publication": {
+    "main_code": "d84a73f305e1b88c211b5cc414094ae132b902d8",
+    "development": "8960ab39c0ccf036dd753a9be43f2ead249ae5c8",
+    "module_trees": {
+      "request_payment": "d43ab781d2183da74a7724312cec96adce354138",
+      "approval_request_payment": "a89067f6b2cb56c7c2603bfb10c933d4e30add9f",
+      "record_request_payment": "db78979c47cfeb342b38fb12a452b317713bed2f"
+    },
+    "remote_modules_identical": true,
+    "force_push": false
+  }
 }
