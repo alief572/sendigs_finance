@@ -2,6 +2,8 @@
 
 ## Task terpisah: tab Request Payment — 2026-10-14
 
+**Publikasi selesai:** main code 27a11cf5 / development db0e9507 terkirim; seluruh tree tiga modul identik dan diff remote kosong. Commit penutupan hanya dokumentasi. Dependensi minimum ikut tersinkron; perubahan development di luar scope dan pekerjaan lokal lain dipertahankan.
+
 **Publikasi Git (diminta user):** commit/push ke main hanya tiga modul beserta dependensi audit minimum (helper/library/autoload/bridge legacy), tes dan dokumentasi task; perubahan modul lain tetap lokal. Setelah main terkirim, samakan seluruh tree tiga modul pada development dengan main melalui commit terbatas path, termasuk dependensi minimum yang belum tersedia. Pertahankan file development di luar cakupan; tanpa force push. Verifikasi remote SHA dan kesamaan tree tiga modul sebelum selesai.
 
 **Revisi UI tombol terbaru (selesai):** sesuai referensi user, ACTION tab Approval/Record memakai gaya `mini-btn` dari `record_request_payment/views/index.php` (putih, outline, ukuran kecil; View biru muted, Print/Excel slate). Scoped ke tabel baru; grup aksi inline-flex nowrap agar tidak bertumpuk. Fungsi/label/URL tetap; Approval hanya Print. PHP lint, 46 view assertions, 93 client checks, whitespace PASS. Tidak ada perubahan backend atau tes browser.

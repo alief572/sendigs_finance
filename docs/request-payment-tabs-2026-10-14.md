@@ -60,3 +60,14 @@ Manifest task memuat endpoint/permission/source/SHA dan hasil verifikasi: `docs/
 User meminta aksi hanya Print setelah melihat implementasi awal. Perubahan terbatas pada partial `rp_items.php`, tes client, dan dokumentasi/manifest. Print memakai `print_url` existing, membuka dokumen sumber di tab baru dengan `noopener`; href di-escape dan dibatasi HTTP(S). Warna/kelas tombol existing dipertahankan. Jika URL cetak tidak tersedia, tampil `-` tanpa tombol lain. Aksi Record dan modul approval terpisah tidak diubah.
 
 Tes Print-only RED sebelum perubahan, kemudian 93 checks client + 46 assertions view PASS. PHP lint partial, Node syntax, dan whitespace PASS. Hasil suite backend di atas tetap berlaku karena kode, konfigurasi, dan dependensinya tidak berubah; tidak mengulang tes backend atau browser.
+
+## Publikasi main dan sinkronisasi development
+
+User meminta push main serta menyamakan tiga modul dengan development. Fondasi audit minimum yang belum tersedia di remote ikut dikirim (autoload/helper/logger/recorder/bridge legacy dan tiga tes). Perubahan modul lain, file eksperimen, dump, dan manifest audit global tetap lokal.
+
+- main code: 27a11cf57045e283c33f013cff3699f2ad650c4c (735ed206 dependensi; 63d0357d modul/tes/docs; 93714dcb whitespace; 27a11cf5 koreksi staging paralel).
+- development: db0e9507b39ec35aad58a366c6c29fc10fba7db1, parent remote development sebelumnya; sync hanya tiga direktori dan dependensi minimum. Tidak merge seluruh main atau force push.
+- Fetch/verifikasi remote: tree Request bbb8a9bdcdec6f749471134581388c969ee2efc1; Approval e7042d91d21e5bab3725403f31fb748dffe4ee3d; Record 0811a8d44740be8a00469932b8b83eca2f4fa201 sama persis pada kedua branch. Diff tiga direktori kosong.
+- Validasi pra-push: 1.916 skenario regresi modul, 203 assertions Tabs PHP, client 93 checks, Logger/Recorder/Legacy PASS. Satu whitespace query print legacy dirapikan setelah terdeteksi diff development; PHP lint dan 371 skenario Batch5 PASS.
+- Saat commit whitespace, staging paralel memasukkan input_form pengajuan_rutin/checkpoint. Main dikoreksi lewat commit 27a11cf5, tanpa menghapus perubahan lokalnya. Sinkronisasi berikutnya dan commit docs memakai index terpisah.
+- Catatan penutupan dipublikasikan sebagai commit dokumentasi tambahan di main; tree modul tetap sama. Progres audit Fase 2 lokal tidak dilanjutkan task ini.
