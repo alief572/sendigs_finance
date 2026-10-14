@@ -416,8 +416,21 @@
 				if (msg['save'] == '1') {
 					var total_items = 0;
 					var submitted_items = 0;
+					var detail_items = msg['data'];
+					if (form_type === 'add') {
+						var available_items = [];
+						var already_submitted_items = [];
+						$.each(detail_items, function(index, element) {
+							if (element.is_submitted == 1) {
+								already_submitted_items.push(element);
+							} else {
+								available_items.push(element);
+							}
+						});
+						detail_items = available_items.concat(already_submitted_items);
+					}
 
-					$.each(msg['data'], function(index, element) {
+					$.each(detail_items, function(index, element) {
 						total_items++;
 						var isSubmitted = (element.is_submitted == 1 || element.is_submitted == '1');
 						if (isSubmitted) {

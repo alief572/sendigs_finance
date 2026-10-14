@@ -4662,7 +4662,7 @@ class Request_payment extends Admin_Controller
 				$created_by_user_id = $pr_header->created_by;
 				$so_num = !empty($raw_header->so_number) ? $raw_header->so_number : $get_data_cash->no_pr;
 
-				$this->db->select('a.*, 
+				$this->db->select('a.*,
 					IF(b.stock_name IS NOT NULL AND b.stock_name != "", b.stock_name, IF(m.nama IS NOT NULL, m.nama, a.id_material)) as nm_barang,
 					IF(b.spec IS NOT NULL AND b.spec != "", b.spec, "") as spec,
 					IF(a.propose_purchase > 0, a.propose_purchase, a.qty_order) as qty,
