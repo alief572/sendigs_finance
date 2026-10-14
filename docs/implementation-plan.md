@@ -195,3 +195,11 @@ User mengotorisasi implementasi Fase 2 Request Mutasi batch 2 (10 endpoint: `rej
 ### Penutupan Request Mutasi batch 2 — 2026-10-13
 
 Sepuluh endpoint selesai dan terverifikasi penuh: Fase 2 **38/51 selesai**, `pembayaran_material` **18/18**, `request_mutasi` **20/21**; sisa 13 endpoint pending (1 `Request_mutasi` [`getMataUangByKode`], 12 `Pengajuan_rutin`). Suite baru `Batch2_audit_test.php` lulus 276 skenario + 2 shutdown subprocess; suite `Batch1_audit_test.php` lulus 392 skenario + 2 shutdown subprocess; seluruh 24 test suite audit dan legacy mutasi lulus (PASS). PHP lint 0 kesalahan dan `git diff --check` lulus tanpa whitespace issues. Checkpoint utama: `docs/task-progress.md`; laporan detail: `docs/audits/phase-2-request-mutasi-batch-2.md`.
+
+## Record Request Payment: tombol Excel per transaksi — 2026-10-14
+
+1. Grounding referensi dan query daftar approved (selesai): snapshot done/non-deleted, pencarian tabel, ekspor existing hanya satu PGJ.
+2. Implementasi (selesai): tombol Cetak ke Excel pada toolbar, hapus Excel Pengajuan per baris, endpoint XLSX dengan query/filter yang sama tanpa pagination; permission dan audit setelah file terbentuk.
+3. Validasi dan checkpoint (selesai): client RED/GREEN, workbook nyata, failure paths, regresi Record/fondasi audit, lint dan whitespace. Rincian/batas: docs/record-request-payment-excel-2026-10-14.md; endpoint: docs/request-payment-tabs-manifest.json.
+
+Kriteria: semua hasil pencarian approved diekspor, nominal snapshot konsisten, View/Cetak Dokumen tetap berfungsi, teks aman dari formula injection, audit tidak duplikat/berisi data sensitif, kegagalan writer tidak mencatat sukses. Tidak ada perubahan modul lain atau kebutuhan migration. Tidak browser/DB live.

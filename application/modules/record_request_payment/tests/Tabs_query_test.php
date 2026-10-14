@@ -84,6 +84,11 @@ $page = $record->get_data_record_items($summary);
 check(count($page['data']) === 3 && !in_array('DOC-4', array_column($page['data'], 'no_dokumen'), true), 'three approved items; mixed reject excluded');
 ob_start(); $record->get_data_record($summary); $batch = json_decode(ob_get_clean(), true);
 check(count($batch['data']) === 1 && $batch['data'][0]['jumlah_approved'] === 3, 'same PGJ appears once in Batch and three times in per-item');
+$input->values = ['start' => 1, 'length' => 1];
+$all = $record->get_data_record_items($summary, ['length' => -1, 'search' => ['value' => '']]);
+check(count($all['data']) === 3 && $summary['query_ok'], 'export override returns all approved snapshots, ignoring page input');
+$matched = $record->get_data_record_items($summary, ['length' => -1, 'search' => ['value' => 'DOC-9']]);
+check(count($matched['data']) === 1 && $matched['data'][0]['no_dokumen'] === 'DOC-9', 'export override uses same real query search');
 $db->query('DROP TABLE tr_rp_record');
 try {
     $record->get_data_record_items($summary);

@@ -8,17 +8,30 @@
       "controller": "application/modules/record_request_payment/controllers/Record_request_payment.php",
       "method": "get_data_record_items",
       "line": 42,
-      "controller_sha256": "295356eb94d7eb99998eb71ca3e5ab710096f4ce430cdfa703efce167c300b20",
+      "controller_sha256": "214f9dba160b42d3508357efcf7d4569aa1ad7cc16a54b5eaac2cc1669189328",
       "status": "verified",
       "permission": "Record_Request_Payment.View",
       "source": "tr_rp_record snapshot + tr_rp_pengajuan_h done/non-deleted"
+    },
+    {
+      "module": "record_request_payment",
+      "controller": "application/modules/record_request_payment/controllers/Record_request_payment.php",
+      "method": "export_items_excel",
+      "line": 361,
+      "controller_sha256": "214f9dba160b42d3508357efcf7d4569aa1ad7cc16a54b5eaac2cc1669189328",
+      "status": "verified",
+      "permission": "Record_Request_Payment.View",
+      "source": "same approved item query, current search, all matching rows without pagination",
+      "format": "xlsx"
     }
   ],
   "validation": {
     "backend_assertions": 71,
     "view_assertions": 46,
-    "sqlite_assertions": 14,
-    "javascript_checks": 72,
+    "sqlite_assertions": 16,
+    "javascript_checks": 75,
+    "export_cumulative_assertions": 412,
+    "export_save_failure": "passed",
     "existing_phase_1_scenarios": 1916,
     "browser": false,
     "live_database": false
@@ -32,15 +45,15 @@
     ],
     "items": [
       "view_pengajuan",
-      "print_document",
-      "export_pengajuan"
+      "print_document"
     ],
+    "items_toolbar": "export_items_excel",
     "approval_decisions": "separate module"
   },
   "latest_revision": {
     "date_wib": "2026-10-14",
-    "change": "Move approved per-item tab from Request to Record, restore Request UI, remove pending-items and Request origin",
-    "report": "docs/record-request-payment-items-2026-10-14.md"
+    "change": "Add Cetak ke Excel to item toolbar; export all searched snapshots; remove Excel Pengajuan from row actions",
+    "report": "docs/record-request-payment-excel-2026-10-14.md"
   },
   "supersedes": "request_payment_tabs",
   "publication": {
