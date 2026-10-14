@@ -1,14 +1,6 @@
 <?php
 $ENABLE_VIEW   = has_permission('Request_Payment.View');
 $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
-$RP_APPROVAL_VIEW = has_permission('Approval_Request_Payment.View');
-$RP_RECORD_VIEW = has_permission('Record_Request_Payment.View');
-$RP_ACTIVE_TAB = $this->input->get_post('tab');
-if (!is_string($RP_ACTIVE_TAB) || !in_array($RP_ACTIVE_TAB, ['request', 'approval', 'record'], true)
-	|| ($RP_ACTIVE_TAB === 'approval' && !$RP_APPROVAL_VIEW)
-	|| ($RP_ACTIVE_TAB === 'record' && !$RP_RECORD_VIEW)) {
-	$RP_ACTIVE_TAB = 'request';
-}
 ?>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap.min.css">
@@ -354,24 +346,6 @@ if (!is_string($RP_ACTIVE_TAB) || !in_array($RP_ACTIVE_TAB, ['request', 'approva
 	}
 	</style>
 
-<ul class="nav nav-tabs" id="rp_module_tabs" role="tablist">
-	<li role="presentation"<?= $RP_ACTIVE_TAB === 'request' ? ' class="active"' : ''; ?>>
-		<a href="#rp_tab_request" data-toggle="tab" data-rp-tab="request" role="tab" aria-controls="rp_tab_request" aria-selected="<?= $RP_ACTIVE_TAB === 'request' ? 'true' : 'false'; ?>">Request Payment</a>
-	</li>
-	<?php if ($RP_APPROVAL_VIEW): ?>
-	<li role="presentation"<?= $RP_ACTIVE_TAB === 'approval' ? ' class="active"' : ''; ?>>
-		<a href="#rp_tab_approval" data-toggle="tab" data-rp-tab="approval" role="tab" aria-controls="rp_tab_approval" aria-selected="<?= $RP_ACTIVE_TAB === 'approval' ? 'true' : 'false'; ?>">Approval Request Payment</a>
-	</li>
-	<?php endif; ?>
-	<?php if ($RP_RECORD_VIEW): ?>
-	<li role="presentation"<?= $RP_ACTIVE_TAB === 'record' ? ' class="active"' : ''; ?>>
-		<a href="#rp_tab_record" data-toggle="tab" data-rp-tab="record" role="tab" aria-controls="rp_tab_record" aria-selected="<?= $RP_ACTIVE_TAB === 'record' ? 'true' : 'false'; ?>">Record Request Payment</a>
-	</li>
-	<?php endif; ?>
-</ul>
-<div class="tab-content">
-<div class="tab-pane<?= $RP_ACTIVE_TAB === 'request' ? ' active' : ''; ?>" id="rp_tab_request" role="tabpanel">
-<!-- Request Payment -->
 <div class="box">
 	<div class="box-header with-border">
 		<div class="pull-right" style="margin-top:2px;">
@@ -548,20 +522,6 @@ if (!is_string($RP_ACTIVE_TAB) || !in_array($RP_ACTIVE_TAB, ['request', 'approva
 		</div>
 
 	</div>
-</div>
-
-<!-- /Request Payment -->
-</div>
-<?php if ($RP_APPROVAL_VIEW): ?>
-<div class="tab-pane<?= $RP_ACTIVE_TAB === 'approval' ? ' active' : ''; ?>" id="rp_tab_approval" role="tabpanel">
-	<?php $this->load->view('rp_items', ['rp_items_kind' => 'approval']); ?>
-</div>
-<?php endif; ?>
-<?php if ($RP_RECORD_VIEW): ?>
-<div class="tab-pane<?= $RP_ACTIVE_TAB === 'record' ? ' active' : ''; ?>" id="rp_tab_record" role="tabpanel">
-	<?php $this->load->view('rp_items', ['rp_items_kind' => 'record']); ?>
-</div>
-<?php endif; ?>
 </div>
 
 <!-- Modal Histori Reject -->
@@ -1135,22 +1095,4 @@ if (!is_string($RP_ACTIVE_TAB) || !in_array($RP_ACTIVE_TAB, ['request', 'approva
 			}
 		});
 	};
-</script>
-
-<script>
-	$(function() {
-		$('#rp_module_tabs a[data-toggle="tab"]').on('shown.bs.tab', function() {
-			var tab = $(this).data('rp-tab');
-			$('#rp_module_tabs a').attr('aria-selected', 'false');
-			$(this).attr('aria-selected', 'true');
-			var url = new URL(window.location.href);
-			url.searchParams.set('tab', tab);
-			history.replaceState(null, '', url.toString());
-			if (tab === 'request' && rpTable) {
-				rpTable.columns.adjust();
-				rpTable.ajax.reload(null, false);
-				rpLoadSummary();
-			}
-		});
-	});
 </script>

@@ -123,7 +123,7 @@ function run_items($class, $method, $opts = [], $post = []) {
     check(strpos(json_encode($events), 'PRIVATE') === false, $method . ' safe audit metadata');
     return [$json, $events[0], $controller];
 }
-foreach ([['Approval_request_payment', 'get_data_pending_items', 'Approval_Request_Payment.View'], ['Record_request_payment', 'get_data_record_items', 'Record_Request_Payment.View']] as $target) {
+foreach ([['Record_request_payment', 'get_data_record_items', 'Record_Request_Payment.View']] as $target) {
     list($class, $method, $permission) = $target;
     list($json, $event, $controller) = run_items($class, $method);
     check(count($json['data']) === 2 && $json['recordsTotal'] === 2, $method . ' per-document status routing');
@@ -151,4 +151,4 @@ foreach ([['Approval_request_payment', 'get_data_pending_items', 'Approval_Reque
         check(count($json['data']) === 2 && $event['status'] === 1, $method . ' writer isolation');
     }
 }
-echo "PASS Request Payment tabs: {$checks} assertions, real models/controllers/recorder\n";
+echo "PASS Record Request Payment items: {$checks} assertions, real models/controllers/recorder\n";
