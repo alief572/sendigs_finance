@@ -1,7 +1,5 @@
 <?php
 $ENABLE_MANAGE = has_permission('Approval_Request_Payment.Manage');
-$return_url = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
-	? site_url('request_payment/index?tab=approval') : site_url('approval_request_payment');
 
 // build items JSON for JS
 $items_js = [];
@@ -137,7 +135,7 @@ foreach ($items as $it) {
 <div class="box">
 	<div class="box-body">
 
-		<a href="<?= html_escape($return_url); ?>" class="btn btn-link" style="padding-left:0;">
+		<a href="<?= site_url('approval_request_payment'); ?>" class="btn btn-link" style="padding-left:0;">
 			&larr; Kembali ke daftar pengajuan
 		</a>
 
@@ -343,7 +341,7 @@ foreach ($items as $it) {
 			success: function(res) {
 				if (res.status == 1) {
 					alert(res.msg || 'Keputusan tersimpan.');
-					window.location = <?= json_encode($return_url); ?>;
+					window.location = <?= json_encode(site_url('approval_request_payment')); ?>;
 				} else {
 					alert(res.msg || 'Gagal menyimpan.');
 				}

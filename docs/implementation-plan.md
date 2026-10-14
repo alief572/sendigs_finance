@@ -1,5 +1,12 @@
 # Rencana Implementasi Audit Trail
 
+## Koreksi lokasi tab per transaksi — 2026-10-14
+
+Plan user: kembalikan UI request_payment sebelum tab; pertahankan audit/backend existing. Tambah Per Transaksi (Approved) dalam record_request_payment di antara Batch (default) dan Histori Lama. Pakai endpoint snapshot record_items existing, pencarian/entries, View PGJ/Cetak Dokumen/Excel Pengajuan dengan mini-btn existing. Hapus pending-items endpoint dan return context Request yang khusus fitur keliru. Detail dari per-item kembali ke tab Record items; permission hanya Record View.
+
+Fase 1 restore UI Request + cleanup rute/pindah tests; Fase 2 tab Record/items/navigation; Fase 3 validasi/refreshed manifests; Fase 4 scoped commit/push main dan sync tiga modul development via alternate index. Kriteria: Request source view identik baseline 406a0c5f; batch3approved=1row batch/3rows item, rejected/pending/legacy excluded; audit/permission/error/escaping/paging/print/export/navigation benar; regresi/lint/diff PASS; remote tree tiga modul identik. Tanpa migration/browser/DB live writes. Pekerjaan audit lain dan staging paralel dipertahankan.
+
+
 ## Task terpisah: tab Request Payment — 2026-10-14
 
 **Publikasi selesai:** main code 27a11cf5 / development db0e9507 terkirim; seluruh tree tiga modul identik dan diff remote kosong. Commit penutupan hanya dokumentasi. Dependensi minimum ikut tersinkron; perubahan development di luar scope dan pekerjaan lokal lain dipertahankan.

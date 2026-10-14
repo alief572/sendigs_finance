@@ -1,6 +1,6 @@
 <?php
-$return_url = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
-	? site_url('request_payment/index?tab=record') : site_url('record_request_payment');
+$return_url = $this->input->get_post('from') === 'items'
+	? site_url('record_request_payment/index?tab=items') : site_url('record_request_payment');
 $total_dibayarkan = 0;
 foreach ($records as $r) {
 	$total_dibayarkan += (float) $r->dibayarkan;

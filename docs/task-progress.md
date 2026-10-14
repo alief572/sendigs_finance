@@ -1,5 +1,14 @@
 # Checkpoint Utama Audit Trail
 
+## Koreksi lokasi tab per transaksi — 2026-10-14
+
+- Selesai: grounding source, rencana disetujui user; endpoint Record snapshot siap reuse. Baseline HEAD d39d3a8a; pekerjaan audit lain masih lokal, tidak disentuh.
+- Berjalan: Fase 4 publikasi; Fase 1–3 selesai.
+- Keputusan: default Batch; tab baru Per Transaksi (Approved); Histori Lama tetap; View/Cetak Dokumen/Excel Pengajuan existing, export per PGJ. Request tanpa tab; audit tidak dibatalkan. Rute pending-items dan origin Request dihapus.
+- File: Request view restored/partial deleted; Approval controller/model pending-items dan origin Request dihapus; Record index/detail/controller route diubah + items partial baru. Empat tes Tabs dipindah ke Record; manifest/rencana/laporan koreksi disinkronkan. Source audit/write tidak diubah.
+- Validasi: RED view sebelum Record tab ada; GREEN 71 backend assertions, 46 view, 14 real SQL, 72 client checks. Regresi tiga modul 1.916 skenario PASS; 11 PHP lint, Node syntax, whitespace PASS. Request view identik baseline 406a0c5f. Tanpa browser/DB live writes. Berikutnya alternate-index scoped commit/push lalu verifikasi remote tree tiga modul. Bukti: docs/record-request-payment-items-2026-10-14.md.
+
+
 ## Task terpisah: tab Request Payment — 2026-10-14
 
 - **Publikasi Git selesai:** main code commit 27a11cf5 dan development db0e9507 sudah dipush dan diverifikasi remote. Tree Request bbb8a9bd, Approval e7042d91, Record 0811a8d4 identik; diff ketiga direktori kosong. Dependensi audit minimum dan tiga tes fondasi ikut dikirim; file development di luar scope dipertahankan. Tanpa force push.

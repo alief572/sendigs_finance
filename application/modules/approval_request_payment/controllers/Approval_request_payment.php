@@ -43,49 +43,6 @@ class Approval_request_payment extends Admin_Controller
 		);
 	}
 
-	// Daftar dokumen pending untuk tab di halaman Request Payment.
-
-	public function get_data_pending_items()
-	{
-		$this->beginAudit(__FUNCTION__, $this->auditFilters(), ['row_count', 'records_total', 'records_filtered']);
-		$draw = $this->input->get_post('draw');
-		$response = ['draw' => is_scalar($draw) ? (int) $draw : 0, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => []];
-		$ok = false;
-		$reason = 'permission_denied';
-		if (has_permission($this->viewPermission)) {
-			$reason = 'query_failure';
-			try {
-				$summary = [];
-				$response = $this->Approval_request_payment_model->get_data_pending_items($summary);
-				$ok = !empty($summary['query_ok']) && $this->auditReadStatus() === 1;
-				if ($ok) {
-					$this->load->model('request_payment/Request_payment_model');
-					foreach ($response['data'] as &$row) {
-						$this->Request_payment_model->resetAuditQueriesOk();
-						$source = (object) $row;
-						$source->id = $row['id_dokumen'] ?? $row['no_dokumen'];
-						$row['print_url'] = $this->Request_payment_model->build_print_url($source);
-						$ok = $this->Request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1 && $ok;
-					}
-					unset($row);
-				}
-			} catch (Throwable $e) {
-				$ok = false;
-			}
-		}
-		if (!$ok) {
-			$response = ['draw' => $response['draw'], 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => [],
-				'error' => $reason === 'permission_denied' ? 'Anda tidak memiliki hak untuk melihat data ini.' : 'Gagal memuat data. Silakan coba lagi.'];
-		}
-		$this->completeAudit($ok ? 'Membaca daftar dokumen Approval_request_payment' : 'Gagal membaca daftar dokumen Approval_request_payment', $ok ? 1 : 0, [
-			'row_count' => count($response['data']),
-			'records_total' => $response['recordsTotal'],
-			'records_filtered' => $response['recordsFiltered'],
-			$ok ? 'outcome' : 'reason' => $ok ? 'listed' : $reason,
-		]);
-		echo json_encode($response);
-	}
-
 	// Server-side DataTables: batch pending
 	public function get_data_pending()
 	{
@@ -111,8 +68,6 @@ class Approval_request_payment extends Admin_Controller
 	public function detail($id_pengajuan = null)
 	{
 		$id_pengajuan = (int) $id_pengajuan;
-		$returnRoute = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
-			? 'request_payment/index?tab=approval' : 'approval_request_payment';
 		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan), array('id_pengajuan', 'no_pengajuan', 'item_count'));
 		$this->auth->restrict($this->viewPermission);
 
@@ -126,7 +81,7 @@ class Approval_request_payment extends Admin_Controller
 				'reason'       => !$queriesOk ? 'query_failure' : (empty($header) ? 'not_found' : 'already_decided'),
 			));
 			$this->session->set_flashdata('message', '<div class="alert alert-warning">Pengajuan tidak ditemukan atau sudah diputuskan.</div>');
-			redirect(site_url($returnRoute));
+			redirect(site_url('approval_request_payment'));
 			return;
 		}
 

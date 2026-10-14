@@ -1,55 +1,46 @@
 {
-  "task": "request_payment_tabs",
+  "task": "record_request_payment_items",
   "date_wib": "2026-10-14",
-  "status": "selesai",
+  "status": "validated_publication_pending",
   "endpoints": [
-    {
-      "module": "approval_request_payment",
-      "controller": "application/modules/approval_request_payment/controllers/Approval_request_payment.php",
-      "method": "get_data_pending_items",
-      "line": 48,
-      "controller_sha256": "fe60d79b8d3b689d1ed4cfe145685d74c954298562aef08b2fe54a21beacb8e5",
-      "status": "verified",
-      "permission": "Approval_Request_Payment.View",
-      "source": "tr_rp_pengajuan_d + tr_rp_pengajuan_h pending/non-deleted"
-    },
     {
       "module": "record_request_payment",
       "controller": "application/modules/record_request_payment/controllers/Record_request_payment.php",
       "method": "get_data_record_items",
       "line": 42,
-      "controller_sha256": "08bbc58b09b92f658342a1148da28477884e90d13bf0eb005f24b99167f79d89",
+      "controller_sha256": "295356eb94d7eb99998eb71ca3e5ab710096f4ce430cdfa703efce167c300b20",
       "status": "verified",
       "permission": "Record_Request_Payment.View",
       "source": "tr_rp_record snapshot + tr_rp_pengajuan_h done/non-deleted"
     }
   ],
   "validation": {
-    "backend_assertions": 142,
+    "backend_assertions": 71,
     "view_assertions": 46,
-    "sqlite_assertions": 15,
-    "javascript_checks": 93,
+    "sqlite_assertions": 14,
+    "javascript_checks": 72,
     "existing_phase_1_scenarios": 1916,
-    "audit_foundation_suites": 7,
     "browser": false,
     "live_database": false
   },
   "ui_actions": {
-    "approval_tab": [
-      "print_document"
+    "request_payment": "original without tabs",
+    "record_tabs": [
+      "batch",
+      "items",
+      "legacy"
     ],
-    "approval_decisions": "separate approval_request_payment module",
-    "record_tab": [
+    "items": [
       "view_pengajuan",
       "print_document",
       "export_pengajuan"
-    ]
+    ],
+    "approval_decisions": "separate module"
   },
   "latest_revision": {
     "date_wib": "2026-10-14",
-    "change": "Approval/Record action buttons use scoped mini-btn styling from record_request_payment; Record actions align horizontally; actions and URLs unchanged",
-    "reference": "application/modules/record_request_payment/views/index.php",
-    "changed_source": "application/modules/request_payment/views/rp_items.php",
-    "checks": "PHP lint, 46 view assertions, 93 client checks, whitespace PASS; backend unchanged; no browser test"
-  }
+    "change": "Move approved per-item tab from Request to Record, restore Request UI, remove pending-items and Request origin",
+    "report": "docs/record-request-payment-items-2026-10-14.md"
+  },
+  "supersedes": "request_payment_tabs"
 }

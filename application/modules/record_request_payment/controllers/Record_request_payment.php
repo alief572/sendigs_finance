@@ -123,8 +123,8 @@ class Record_request_payment extends Admin_Controller
 	public function detail($id_pengajuan = null)
 	{
 		$id_pengajuan = (int) $id_pengajuan;
-		$returnRoute = $this->input->get_post('from') === 'request_payment' && has_permission('Request_Payment.View')
-			? 'request_payment/index?tab=record' : 'record_request_payment';
+		$returnRoute = $this->input->get_post('from') === 'items'
+			? 'record_request_payment/index?tab=items' : 'record_request_payment';
 		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan), array('id_pengajuan', 'no_pengajuan', 'row_count'));
 		$this->auth->restrict($this->viewPermission);
 

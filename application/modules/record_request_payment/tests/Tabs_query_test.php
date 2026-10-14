@@ -45,17 +45,7 @@ $record = (new ReflectionClass('Record_request_payment_model'))->newInstanceWith
 $request = (new ReflectionClass('Request_payment_model'))->newInstanceWithoutConstructor(); $request->db = $db;
 $input->values = ['draw' => 1, 'start' => 0, 'length' => 1, 'search' => ['value' => '']];
 $summary = [];
-$page = $approval->get_data_pending_items($summary);
-check($summary['query_ok'] && $page['recordsTotal'] === 2 && array_column($page['data'], 'no_dokumen') === ['DOC-2'], 'pending/default approved and descending paging');
-$input->values['start'] = 1;
-check(array_column($approval->get_data_pending_items($summary)['data'], 'no_dokumen') === ['DOC-1'], 'second page');
-$input->values['start'] = 0; $input->values['length'] = 25;
-$input->values['search']['value'] = 'DOC-1';
-$page = $approval->get_data_pending_items($summary);
-check($page['recordsTotal'] === 2 && $page['recordsFiltered'] === 1 && count($page['data']) === 1, 'real search/counts');
-$input->values['search']['value'] = "' OR 1=1 --";
-check($approval->get_data_pending_items($summary)['data'] === [], 'bound search injection');
-$input->values['search']['value'] = '';
+$input->values['length'] = 25;
 $page = $record->get_data_record_items($summary);
 check($summary['query_ok'] && array_column($page['data'], 'no_dokumen') === ['DOC-3'], 'approved snapshots with done, non-deleted header');
 check($page['data'][0]['id_dokumen'] === 'SOURCE-3', 'source print identifier, not snapshot id');
@@ -74,12 +64,26 @@ $db->insert('tr_rp_pengajuan_h', ['id' => 4, 'no_pengajuan' => 'PGJ-4', 'company
 $item = $db->get_where('tr_rp_pengajuan_d', ['id' => 4])->row_array();
 $item['id'] = 6; $item['id_pengajuan'] = 4; $item['decision'] = 'approved';
 $db->insert('tr_rp_pengajuan_d', $item);
-$page = $approval->get_data_pending_items($summary);
-check(array_column($page['data'], 'no_dokumen') === ['DOC-4', 'DOC-2', 'DOC-1'], 'rejected document resubmitted once under new PGJ');
 check(in_array('DOC-4', $request->get_locked_docs(), true), 'resubmitted document locked');
 check(array_column($record->get_data_record_items($summary)['data'], 'no_dokumen') === ['DOC-3'], 'resubmitted reject absent from Record');
 $input->values = ['draw' => [], 'start' => [], 'length' => [], 'search' => ['value' => []]];
-check($approval->get_data_pending_items($summary)['recordsFiltered'] === 3, 'malformed input safe defaults');
+check($record->get_data_record_items($summary)['recordsFiltered'] === 1, 'malformed input safe defaults');
+$input->values = ['draw' => 1, 'start' => 0, 'length' => 1, 'search' => ['value' => 'DOC-3']];
+check(count($record->get_data_record_items($summary)['data']) === 1, 'Record pagination and document search');
+$input->values['start'] = 1;
+check($record->get_data_record_items($summary)['data'] === [], 'Record offset beyond last item');
+$input->values['start'] = 0; $input->values['length'] = -1; $input->values['search']['value'] = '';
+$item = $db->get_where('tr_rp_pengajuan_d', ['id' => 3])->row_array();
+foreach ([8, 9] as $id) {
+    $item['id'] = $id; $item['no_dokumen'] = 'DOC-' . $id; $item['id_dokumen'] = 'SOURCE-' . $id;
+    $db->insert('tr_rp_pengajuan_d', $item);
+    $snap = $item; unset($snap['id_dokumen'], $snap['decision']);
+    $db->insert('tr_rp_record', $snap + ['no_pengajuan' => 'PGJ-2', 'company_nama' => 'STM']);
+}
+$page = $record->get_data_record_items($summary);
+check(count($page['data']) === 3 && !in_array('DOC-4', array_column($page['data'], 'no_dokumen'), true), 'three approved items; mixed reject excluded');
+ob_start(); $record->get_data_record($summary); $batch = json_decode(ob_get_clean(), true);
+check(count($batch['data']) === 1 && $batch['data'][0]['jumlah_approved'] === 3, 'same PGJ appears once in Batch and three times in per-item');
 $db->query('DROP TABLE tr_rp_record');
 try {
     $record->get_data_record_items($summary);
@@ -88,4 +92,4 @@ try {
     // This legacy count builder throws on a failed query; the endpoint catches Throwable.
     check(strpos($db->error()['message'], 'no such table') !== false, 'real count-query failure reaches endpoint exception handler');
 }
-echo "PASS Request Payment tab queries: {$checks} assertions, real SQLite/CodeIgniter query builder\n";
+echo "PASS Record Request Payment tab queries: {$checks} assertions, real SQLite/CodeIgniter query builder\n";
