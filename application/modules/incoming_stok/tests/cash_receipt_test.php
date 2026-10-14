@@ -102,7 +102,14 @@ try {
     check(!$model->documents() && $model->receive(payload(1),42)['status']===0,'Reject unapproved item');
     $db->where('id',11)->update('material_planning_base_on_produksi_detail',['status_app'=>'Y','id_material'=>'999']);
     check($model->receive(payload(1),42)['status']===0,'Reject missing stock master');
+    check($db->count_all('warehouse_adjustment')===0 && $db->count_all('tr_cost_book')===0 && $db->count_all('warehouse_stock')===0,'Missing master creates no receipt, valuation or stock');
     $db->where('id',11)->update('material_planning_base_on_produksi_detail',['id_material'=>'71']);
+    foreach (['',null] as $name) {
+        $db->where('id',71)->update('accessories',['stock_name'=>$name]);
+        check($model->receive(payload(1),42)['status']===0,'Reject empty or NULL master name');
+        check($db->count_all('warehouse_adjustment')===0 && $db->count_all('warehouse_adjustment_detail')===0 && $db->count_all('tr_cost_book')===0 && $db->count_all('warehouse_stock')===0,'Invalid master name creates no inventory writes');
+    }
+    $db->where('id',71)->update('accessories',['stock_name'=>'Item One']);
     $result = $model->receive(payload(4),42);
     check($result['status']===1,'Partial receipt succeeds: '.json_encode($result));
     check((float)$model->items(['CASH1'])[0]['qty_in']===4.0,'Partial outstanding counts saved Cash');
@@ -227,6 +234,66 @@ try {
     check(json_decode(capture($controller,'request_stok'),true)['status']===1 && $db->count_all('tr_jurnal')===2,'Forged source cannot route Cash through legacy journals');
     $controller->input->values=['supplier'=>'SUP1','no_po'=>['CASH3'],'id_gudang'=>17];
     check(json_decode(capture($controller,'set_jurnal'),true)['hasil_jurnal']==='','Cash documents never request a legacy journal');
+
+    $db->query("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'");
+    $optionalItems = [
+        ['material'=>73,'pr'=>3,'detail'=>33,'doc'=>'CASH-EMPTY','code'=>''],
+        ['material'=>74,'pr'=>4,'detail'=>44,'doc'=>'CASH-NULL','code'=>null],
+        ['material'=>75,'pr'=>5,'detail'=>55,'doc'=>'CASH-CODE','code'=>'ST-5'],
+    ];
+    foreach ($optionalItems as $optional) {
+        check($db->insert('accessories',['id'=>$optional['material'],'id_stock'=>$optional['code'],'stock_name'=>'Optional '.$optional['material'],'konversi'=>1]),'Seed optional-code master '.$optional['doc']);
+        $optionalPr=$pr;
+        $optionalPr['id']=$optional['pr'];$optionalPr['so_number']='PR'.$optional['pr'];$optionalPr['no_pr']='PR-ST-'.$optional['pr'];
+        check($db->insert('material_planning_base_on_produksi',$optionalPr),'Seed optional-code PR '.$optional['doc']);
+        check($db->insert('material_planning_base_on_produksi_detail',['id'=>$optional['detail'],'so_number'=>$optionalPr['so_number'],'id_material'=>(string)$optional['material'],'propose_purchase'=>10,'price_ref'=>100,'status_app'=>'Y']),'Seed optional-code detail '.$optional['doc']);
+        $optionalCash=$cash;
+        $optionalCash['no_non_po']=$optional['doc'];$optionalCash['id_pr']=$optional['pr'];$optionalCash['no_pr']=$optionalPr['no_pr'];
+        check($db->insert('tr_pr_non_po',$optionalCash),'Seed optional-code document '.$optional['doc']);
+        $result=$model->receive(payload(2,$optional['doc'],$optional['detail']),42);
+        check($result['status']===1,'Receive master with source code '.var_export($optional['code'],true).': '.json_encode($result));
+        $receipt=$db->get_where('warehouse_adjustment_detail',['kode_trans'=>$result['kode_trans']])->row_array();
+        check($receipt['id_material']===(string)$optional['material'] && $receipt['nm_material']==='Optional '.$optional['material'] && (float)$receipt['qty_oke']===2.0 && (int)$receipt['id_po_detail']===$optional['detail'],'Optional-code receipt retains master identity and quantity');
+        $cost=$db->get_where('tr_cost_book',['no_transaksi'=>$result['kode_trans']])->row_array();
+        check($cost['kode_produk']===$optional['code'] && $cost['id_material']===(string)$optional['material'],'Cost book preserves exact empty, NULL or populated source code');
+        check((float)$cost['qty']===2.0 && (float)$cost['value_neraca']===200.0 && (float)$cost['costbook']===100.0,'Optional-code valuation matches received quantity and PR price');
+        check((float)$db->get_where('warehouse_stock',['id_material'=>$optional['material']])->row()->qty_stock===2.0,'Optional-code stock updated');
+        check($db->get_where('warehouse_history',['id_material'=>$optional['material'],'no_ipp'=>$result['kode_trans']])->num_rows()===1 && $db->get_where('warehouse_stock_per_day',['id_material'=>$optional['material']])->num_rows()===1,'Optional-code stock history and daily balance recorded');
+        check($db->get_where('price_book',['id_material'=>$optional['material'],'kode_trans'=>$result['kode_trans']])->num_rows()===1 && (float)$model->items([$optional['doc']])[0]['qty_in']===2.0,'Optional-code price book and outstanding updated');
+    }
+    $mixed=payload(1,'CASH-EMPTY',33);
+    $mixed['no_po']=['CASH-EMPTY','CASH-NULL','CASH-CODE'];
+    $mixed['Detail'][]=payload(1,'CASH-NULL',44)['Detail'][0];
+    $mixed['Detail'][]=payload(1,'CASH-CODE',55)['Detail'][0];
+    $result=$model->receive($mixed,42);
+    check($result['status']===1,'Mixed empty, NULL and populated codes succeed in one receipt');
+    check($db->get_where('warehouse_adjustment',['kode_trans'=>$result['kode_trans']])->num_rows()===1 && $db->get_where('warehouse_adjustment_detail',['kode_trans'=>$result['kode_trans']])->num_rows()===3,'Mixed optional-code receipt has one header and three details');
+    $readCfg=$cfg;$readCfg['database']=$schema;
+    $readDb=DB($readCfg,true);
+    foreach ($optionalItems as $optional) {
+        $cost=$readDb->get_where('tr_cost_book',['no_transaksi'=>$result['kode_trans'],'id_material'=>$optional['material']])->row_array();
+        check($cost['kode_produk']===$optional['code'] && (float)$cost['qty']===3.0 && (float)$cost['value_neraca']===300.0,'Committed mixed receipt preserves source code and valuation '.$optional['doc']);
+        check((float)$readDb->get_where('warehouse_stock',['id_material'=>$optional['material']])->row()->qty_stock===3.0,'Committed mixed receipt updates each material stock '.$optional['doc']);
+    }
+    $readDb->close();
+    $snapshot=function() use ($db) {
+        $rows=[];
+        foreach (['warehouse_adjustment','warehouse_adjustment_detail','warehouse_stock','warehouse_history','warehouse_stock_per_day','tr_cost_book','price_book'] as $table) {
+            $rows[$table]=$db->get($table)->result_array();
+            usort($rows[$table],function($a,$b) { return strcmp(serialize($a),serialize($b)); });
+        }
+        return $rows;
+    };
+    $before=$snapshot();
+    $db->query("CREATE TRIGGER fail_optional_price BEFORE INSERT ON price_book FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='optional code rollback test'");
+    foreach (array_slice($optionalItems,0,2) as $optional) {
+        $failed=$model->receive(payload(1,$optional['doc'],$optional['detail']),42);
+        check($failed['status']===0 && $failed['pesan']==='Penerimaan Cash gagal; seluruh perubahan dibatalkan.','Post-stock writer failure rejects optional-code receipt '.$optional['doc']);
+        check($snapshot()===$before,'Optional-code rollback preserves all seven inventory tables '.$optional['doc']);
+        check((float)$model->items([$optional['doc']])[0]['qty_in']===3.0,'Failed optional-code receipt leaves outstanding unchanged '.$optional['doc']);
+    }
+    $db->query('DROP TRIGGER fail_optional_price');
+    check($db->count_all('tr_jurnal')===2,'Optional-code Cash receipts do not create journals');
 } finally {
     $db->query("DROP DATABASE `$schema`");
 }

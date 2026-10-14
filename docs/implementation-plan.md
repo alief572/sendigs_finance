@@ -1,5 +1,17 @@
 # Rencana Implementasi Audit Trail
 
+## Incoming Stok Cash: kode barang opsional — 2026-10-14
+
+Tujuan: master stok valid dapat diterima ketika accessories.id_stock string kosong atau NULL, sesuai aturan bisnis user. Identitas tetap id_material; kode_produk cost book mempertahankan nilai sumber. Hanya model Incoming Cash, tes regresi dan dokumentasi yang berubah; tanpa perubahan Master Barang Stok, schema, helper bersama, data bisnis atau browser. Publikasi Git diotorisasi terpisah pada langkah4.
+
+1. **Fase 1 — regresi RED:** grounding endpoint/query/model/helper dan fixture existing; tambahkan tes kosong/NULL, receipt campuran, master hilang/nama kosong dan rollback barang tanpa kode. Jalankan suite pada schema codex_incoming_test_* terpisah; buktikan kegagalan karena guard kode wajib.
+2. **Fase 2 — perbaikan:** hapus hanya syarat empty(id_stock) dari guard model; pertahankan guard nama, nilai kode sumber, approval/outstanding/transaksi/commit/rollback. Selesai setelah seluruh suite Incoming lulus, termasuk konkurensi serta PO/kasbon existing.
+3. **Fase 3 — penutupan:** review diff terbatas, PHP lint/whitespace dan perbarui laporan diagnosis/checkpoint. Catat batas verifikasi; tidak save dokumen bisnis aktual.
+
+Dependensi 1 → 2 → 3. Status akhir: seluruh fase selesai; RED sebelum fix, GREEN 138 assertions, form state Node, lint dua file PHP, review diff dan whitespace lulus. Snapshot rollback tes memakai sorting data karena tabel histori harian tidak mempunyai kolom id. Tidak ada TODO implementasi; dokumen bisnis tidak disimpan ulang. Bukti: docs/incoming-stok-diagnosis-2026-10-14.md.
+
+4. **Publikasi Git (diotorisasi user 2026-10-14):** commit/push origin/main hanya model/tes Incoming dan tiga dokumen task. Index terpisah memuat HEAD ditambah perubahan task; plan/checkpoint hanya menyisipkan bagian Incoming agar perubahan task lain tetap lokal. Verifikasi remote SHA sebelum/sesudah push, review staged diff dan pertahankan index/working tree pekerjaan lain. Tidak mengulang tes yang kode/dependensinya identik hasil lulus.
+
 ## Koreksi lokasi tab per transaksi — 2026-10-14
 
 Plan user: kembalikan UI request_payment sebelum tab; pertahankan audit/backend existing. Tambah Per Transaksi (Approved) dalam record_request_payment di antara Batch (default) dan Histori Lama. Pakai endpoint snapshot record_items existing, pencarian/entries, View PGJ/Cetak Dokumen/Excel Pengajuan dengan mini-btn existing. Hapus pending-items endpoint dan return context Request yang khusus fitur keliru. Detail dari per-item kembali ke tab Record items; permission hanya Record View.

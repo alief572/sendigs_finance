@@ -131,7 +131,7 @@ class Incoming_cash_model extends BF_Model
                 $seen[$key] = true;
                 $item = $items[$key];
                 if (!$qty) continue;
-                if (empty($item['stock_name']) || empty($item['id_stock'])) throw new InvalidArgumentException('Barang tidak memiliki master stok.');
+                if (empty($item['stock_name'])) throw new InvalidArgumentException('Barang tidak memiliki master stok.');
                 if ($item['price_ref'] < 0) throw new InvalidArgumentException('Harga barang tidak valid.');
                 $id = $item['detail_id'];
                 $totals[$id] = ($totals[$id] ?? 0) + $qty;

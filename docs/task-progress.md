@@ -1,5 +1,23 @@
 # Checkpoint Utama Audit Trail
 
+## Implementasi Incoming Stok Cash: kode barang opsional — 2026-10-14
+
+- Fase 1–3 selesai: RED mereproduksi guard kode kosong; fix dan GREEN 138 assertions lulus; review/dokumentasi ditutup. Tidak ada fase implementasi aktif atau TODO kode tersisa.
+- Keputusan: id_stock opsional; hapus hanya syarat kode pada guard Incoming, pertahankan validasi nama dan nilai kode produk sumber (kosong/NULL). Helper stok menggunakan id_material; schema cost book nullable, 1.376 row berkode kosong/NULL pada pemeriksaan read-only sebelumnya.
+- File diubah: application/modules/incoming_stok/models/Incoming_cash_model.php (satu guard), tests/cash_receipt_test.php (regresi), docs/implementation-plan.md, docs/task-progress.md dan docs/incoming-stok-diagnosis-2026-10-14.md. Tidak mengubah Master Barang Stok, schema/helper/UI/data bisnis atau browser. Publikasi Git diotorisasi terpisah di bawah.
+- Validasi: RED kemudian GREEN138 assertions melalui PHP7.4/MySQL localhost3307 pada schema codex_incoming_test_* disposable, dibersihkan finally. Kosong/NULL/campuran, fresh-connection read-after-commit dan rollback tujuh tabel lulus; approval/outstanding/konkurensi/PO/kasbon existing lulus. Form state Node PASS; lint dua file PHP dan scoped whitespace PASS. Snapshot tes disesuaikan dengan warehouse_stock_per_day yang tidak mempunyai kolom id; kode aplikasi tidak terdampak.
+- Review final: diff produksi hanya menghapus empty(id_stock); mapping kode produk, query, transaksi dan helper tetap. Tes memakai schema disposable dan tidak melemahkan regresi existing. Dokumentasi konsisten dan whitespace lulus; suite tidak diulang setelah perubahan dokumentasi saja.
+- Risiko/batas: belum save ulang DPM-2026-00080 atau verifikasi browser sesuai scope; proses lengkap dibuktikan pada fixture MySQL. Berikutnya user dapat refresh Incoming dan proses kembali tanpa mengisi kode master66; tidak ada migration yang diperlukan. Publikasi Git mengikuti otorisasi user berikutnya.
+- Publikasi diotorisasi user pada 2026-10-14: commit/push ke origin/main hanya dua file Incoming dan tiga dokumen task. HEAD awal dan remote sama 7c35e4db; index utama kosong. Gunakan index terpisah dan bagian Incoming saja dari plan/checkpoint gabungan agar pekerjaan modul lain tetap lokal. Kode/tes identik hasil GREEN; tidak mengulang suite setelah perubahan dokumentasi saja. Verifikasi remote SHA dan cakupan commit sebelum menutup publikasi.
+
+## Diagnosis Incoming Stok Cash — 2026-10-14
+
+- Selesai: penelusuran endpoint/model/form/log dan verifikasi database aktual read-only; diagnosis ditutup. Tidak ada fase implementasi aktif; perbaikan data/kode belum dikerjakan karena user meminta cek penyebab dahulu.
+- Temuan: DPM-2026-00080 / PR260900002, detail224 mengacu master accessories66 Materai Fisik 10000 yang ada/aktif tetapi id_stock string kosong. Detail225/master71 Materai Digital mempunyai kode. Guard Incoming_cash_model.php:134 menolak nama/kode kosong pada qty positif sebelum insert receipt. Form/controller Master Barang Stok membolehkan kode kosong; pesan error master tidak ada kurang tepat.
+- File: docs/incoming-stok-diagnosis-2026-10-14.md baru dan tambahan checkpoint ini; kode aplikasi/data bisnis tidak diubah, pekerjaan existing dipertahankan.
+- Validasi: log16:17:10 cocok screenshot; SELECT melalui container sendigs_ss dalam transaksi READ ONLY memverifikasi master/PR dan nol receipt Cash untuk dokumen. Evaluasi predicate PHP7.4: master66 REJECT, master71 PASS guard master. Pemeriksaan isi/whitespace dokumentasi; tanpa browser/save ulang/suite aplikasi karena diagnosis dan dokumentasi saja.
+- Keputusan saat diagnosis: mempertahankan guard sampai aturan bisnis dikonfirmasi; tidak membuat master/kode otomatis. User kemudian menegaskan id_stock opsional; implementasi selesai pada bagian checkpoint di atas. Master66 tidak perlu diisi kode agar lolos Incoming. Rincian/bukti di laporan diagnosis.
+
 ## Koreksi lokasi tab per transaksi — 2026-10-14
 
 - Selesai: seluruh Fase 1–4 koreksi, validasi dan publikasi. Main code d84a73f3 serta development 8960ab39 dipush. Tiga modul remote identik, diff kosong; audit dan pekerjaan lain dipertahankan.
