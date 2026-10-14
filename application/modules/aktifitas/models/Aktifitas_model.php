@@ -105,6 +105,8 @@ class Aktifitas_model extends BF_Model
             $result = FALSE;
         }
 
+        audit_trail_legacy_log($keterangan, $status, array('sql' => $sql,
+            'data' => array('kode_universal' => $kode_universal, 'jumlah' => $jumlah)));
         return $result;
     }
 }
