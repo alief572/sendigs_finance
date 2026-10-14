@@ -519,3 +519,11 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - File diubah: docs/task-progress.md saja (checkpoint pemeriksaan); kode aplikasi tidak diubah.
 - Validasi: pembacaan kode model/controller/view/JS; graphify-out/graph.json tidak tersedia. Tidak menguji browser, menjalankan suite aplikasi, atau membaca DB live karena scope berupa penjelasan perilaku kode.
 - Batas/TODO: rumus mengecek keberadaan tanggal bayar, bukan nominal pelunasan; refill penuh bergantung semua pencatatan terkait memiliki payment pada nomor pelaporan yang sesuai. Kondisi data petty_cash_id9 belum diverifikasi langsung. Berikutnya: tidak ada implementasi yang diminta.
+
+## Pengajuan Rutin: urutan form tambah — 2026-10-14
+
+- Selesai: item yang masih dapat diajukan tampil lebih dahulu; item is_submitted=1 (badge merah/terkunci) di paling bawah, khusus form_type add. Tidak ada fase aktif/pending.
+- File diubah: application/modules/pengajuan_rutin/views/input_form.php; checkpoint ini ditambahkan sebagai task terpisah, tidak mengubah status task lain.
+- Keputusan: stable partition sebelum rendering memakai status existing, menjaga urutan tiap kelompok dan pasangan nomor baris/input/upload. Berlaku juga setelah tanggal/departemen diganti karena memakai add_detail existing. Form edit, styling, badge, readonly, validasi, controller/model, dan penyimpanan tidak diubah.
+- Validasi: Node VM menjalankan add_detail asli dengan callback AJAX fixture: data campuran/status numeric-string, urutan stabil, input/file numbering, badge/disabled, form edit tidak berubah, seluruh available/submitted/kosong dan alert existing PASS. PHP lint dan diff whitespace PASS. Tanpa browser/DB live; tidak membuat tes permanen baru untuk perubahan tampilan terbatas.
+- Risiko/TODO: hasil visual belum diverifikasi melalui browser sesuai instruksi project; tidak ada implementasi tersisa. User kemudian mengotorisasi publikasi perbaikan ini ke GitHub; commit ditujukan ke origin/main dengan hanya file form dan checkpoint task ini. Tidak melakukan sinkronisasi branch lain dalam task ini.
