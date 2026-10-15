@@ -34,3 +34,7 @@ Status: implementasi dan registrasi lokal selesai. Paket berhasil dipush ke bran
 Tabel accounting tujuan lokal adalah MyISAM. Cleanup menangani kegagalan biasa, tetapi bukan transaksi atomik lintas engine: crash proses/server, putus koneksi saat commit, dan paralel posting dari modul legacy yang tidak mengikuti advisory lock tetap berisiko. Perubahan engine atau koordinasi posting semua modul merupakan pekerjaan terpisah. Tidak memigrasikan engine dalam task ini.
 
 Publikasi task ini hanya ke development. Paket mencakup modul Jurnal Expense, tes, migrasi menu, manifest, dan dokumentasi task; main dan perubahan lokal lain tidak masuk cakupan. Migrasi menu perlu diterapkan pada database development ketika modul dipasang; push Git tidak menjalankan SQL otomatis.
+
+## Publikasi lanjutan 15 Oktober 2026
+
+Pengguna mengotorisasi kedua modul Expense ke main dan development. Paket hanya dua modul dan dokumen terkait; perbedaan lain antar-branch dan pekerjaan lokal dipertahankan. Status publikasi/verifikasi terbaru: docs/expense-modules-publication-2026-10-15.md. Migrasi menu diperlukan pada database deployment; push tidak menjalankan SQL.

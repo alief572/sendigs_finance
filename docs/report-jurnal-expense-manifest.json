@@ -1,0 +1,74 @@
+{
+  "task": "report_jurnal_expense",
+  "date": "2026-10-14",
+  "status": "implemented_and_locally_registered",
+  "source": "tr_jurnal",
+  "types": [
+    "Expense Report",
+    "Expense Report Consultant"
+  ],
+  "status_filter": "1",
+  "group_by": [
+    "no_transaksi",
+    "jenis_transaksi",
+    "id_company"
+  ],
+  "detail_input": "representative journal id; transaction/type/company resolved server-side",
+  "endpoints": [
+    {
+      "method": "index",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "get_data_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "view_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "export_excel",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "export_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    }
+  ],
+  "menu": {
+    "id": 482,
+    "parent_id": 447,
+    "order": 16,
+    "after": "report_jurnal_payment",
+    "permission_id": 1850,
+    "migration_idempotent": true
+  },
+  "checks": {
+    "query": 27,
+    "controller": 42,
+    "view": 12,
+    "client": 12,
+    "jurnal_expense_regression": 167,
+    "php_lint": 8,
+    "live_mysql": "read-only empty posted report; 88 status0 and 8 NULL Consultant rows"
+  },
+  "limitations": [
+    "sts=1 is posted indicator, no ledger reconciliation",
+    "reads current source, not immutable snapshot",
+    "no browser or live accounting writes"
+  ],
+  "publication": {
+    "branches": [
+      "main",
+      "development"
+    ],
+    "status": "preparing",
+    "date": "2026-10-15"
+  }
+}
