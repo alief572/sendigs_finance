@@ -4,8 +4,9 @@
 
 - Otorisasi: push jurnal_expense dan report_jurnal_expense ke main serta development; isi dua modul wajib identik. Tidak menyertakan ringkas kolom Record atau perubahan lokal modul lain.
 - Fase 1 selesai: fetch main09857821/development39167ea6; dependency Jurnal Payment/Report Payment/recorder/logger/helper/constants identik. Regresi260 assertions/checks (Jurnal167 + Report93), audit recorder/logger/legacy PASS; 17 PHP lint dan JS PASS.
-- Fase 2 aktif: index terpisah per branch dengan parent remote masing-masing, stage dua modul dan dokumen task saja, preserve HEAD/index/checksum pekerjaan existing. Tidak merge seluruh branch dan tidak force push.
-- Fase 3 belum selesai: push, verifikasi ls-remote, tree dua modul identik/local hash cocok, dependency/di luar scope tidak berubah, checkpoint penutupan. Migrasi menu hanya disertakan sebagai SQL; tidak menjalankan database remote atau posting accounting.
+- Fase 2 selesai: index terpisah per branch dengan parent remote masing-masing, stage dua modul dan dokumen task saja, preserve HEAD/index/checksum pekerjaan existing. Tidak merge seluruh branch dan tidak force push.
+- Fase 3 selesai: push atomik main c89b84fbd965903b9ab56220dd3809dd527cd50e dan development 402be62bb69beb5022c52fe8e4e89f98c0842f1a, ls-remote sesuai. Tree dua modul identik (3fc211d5f1a248da8b2fd12d03320bcd77af9ea8, b54d9cfad0eab1c81082edf2fac106012ee3e0b7), seluruh blob lokal cocok, dependencies/di luar scope tidak berubah. Tidak ada TODO push tersisa. Bukti docs/expense-modules-publication-2026-10-15.md. Migrasi menu hanya disertakan sebagai SQL; tidak menjalankan database remote atau posting accounting.
+
 
 ## Report Jurnal Expense — 2026-10-14
 

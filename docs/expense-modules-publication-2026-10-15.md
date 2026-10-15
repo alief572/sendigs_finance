@@ -6,7 +6,7 @@ Validasi sebelum publikasi: Jurnal Expense167 + Report93 =260 assertions/checks 
 
 Index Git terpisah menjaga checkout, staging utama dan pekerjaan lokal lain. Cakupan tidak mencakup revisi kolom Record Request Payment, Incoming, Expense controller, pembayaran_material, atau rollout audit lokal.
 
-Status: commit dan verifikasi remote sedang disiapkan. Kriteria penutupan: SHA remote sesuai commit, tree dua modul identik di main/development dan sama dengan source lokal teruji, diff di luar allowlist kosong, HEAD/index utama utuh.
+Status: kedua modul berhasil dipush atomik ke main/development. SHA remote terverifikasi: main c89b84fbd965903b9ab56220dd3809dd527cd50e; development 402be62bb69beb5022c52fe8e4e89f98c0842f1a. Tree Jurnal Expense 3fc211d5f1a248da8b2fd12d03320bcd77af9ea8; Report b54d9cfad0eab1c81082edf2fac106012ee3e0b7 identik antar-branch. Seluruh blob modul sesuai source lokal teruji; main29/development18 file dalam allowlist, diff di luar scope kosong. HEAD/index utama dipertahankan. Commit dokumentasi penutupan berikutnya tidak mengubah source modul.
 
 Migrations menu/permission disertakan dan sudah diuji idempotent lokal pada task implementasi. Push Git tidak menjalankan SQL pada database deployment; jalankan 001_register_menu.sql masing-masing modul saat pemasangan. Tidak melakukan posting accounting atau browser test.
 
