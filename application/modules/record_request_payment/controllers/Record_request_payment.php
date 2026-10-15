@@ -8,7 +8,7 @@
 class Record_request_payment extends Admin_Controller
 {
 	// Permission (reuse Request_Payment.*)
-	protected $viewPermission   = "Request_Payment.View";
+	protected $viewPermission   = "Record_Request_Payment.View";
 
 	public function __construct()
 	{
@@ -21,46 +21,174 @@ class Record_request_payment extends Admin_Controller
 
 	public function index()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array());
 		$this->auth->restrict($this->viewPermission);
 		$this->template->title('Record Request Payment');
-		$this->template->render('index');
+		try {
+			$this->template->render('index');
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal merender halaman Record Request Payment', 0, array('reason' => 'render_exception'));
+			throw $e;
+		}
+		$ok = $this->auditReadStatus() === 1;
+		$this->completeAudit(
+			$ok ? 'Membuka daftar Record Request Payment' : 'Gagal membuka daftar Record Request Payment',
+			$ok ? 1 : 0,
+			$ok ? array('outcome' => 'rendered') : array('reason' => 'query_failure')
+		);
+	}
+
+
+	public function get_data_record_items()
+	{
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), ['row_count', 'records_total', 'records_filtered']);
+		$draw = $this->input->get_post('draw');
+		$response = ['draw' => is_scalar($draw) ? (int) $draw : 0, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => []];
+		$ok = false;
+		$reason = 'permission_denied';
+		if (has_permission($this->viewPermission)) {
+			$reason = 'query_failure';
+			try {
+				$summary = [];
+				$response = $this->Record_request_payment_model->get_data_record_items($summary);
+				$ok = !empty($summary['query_ok']) && $this->auditReadStatus() === 1;
+				if ($ok) {
+					$this->load->model('request_payment/Request_payment_model');
+					foreach ($response['data'] as &$row) {
+						$this->Request_payment_model->resetAuditQueriesOk();
+						$source = (object) $row;
+						$source->id = $row['id_dokumen'] ?? $row['no_dokumen'];
+						$row['print_url'] = $this->Request_payment_model->build_print_url($source);
+						$ok = $this->Request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1 && $ok;
+					}
+					unset($row);
+				}
+			} catch (Throwable $e) {
+				$ok = false;
+			}
+		}
+		if (!$ok) {
+			$response = ['draw' => $response['draw'], 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => [],
+				'error' => $reason === 'permission_denied' ? 'Anda tidak memiliki hak untuk melihat data ini.' : 'Gagal memuat data. Silakan coba lagi.'];
+		}
+		$this->completeAudit($ok ? 'Membaca daftar dokumen Record_request_payment' : 'Gagal membaca daftar dokumen Record_request_payment', $ok ? 1 : 0, [
+			'row_count' => count($response['data']),
+			'records_total' => $response['recordsTotal'],
+			'records_filtered' => $response['recordsFiltered'],
+			$ok ? 'outcome' : 'reason' => $ok ? 'listed' : $reason,
+		]);
+		echo json_encode($response);
 	}
 
 	public function get_data_record()
 	{
-		$this->Record_request_payment_model->get_data_record();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count', 'records_total', 'records_filtered'));
+		$summary = array();
+		$this->Record_request_payment_model->get_data_record($summary);
+		$ok = !empty($summary['query_ok']) && $this->auditReadStatus() === 1;
+		$this->completeAudit(
+			$ok ? 'Membaca daftar Record Request Payment' : 'Gagal membaca daftar Record Request Payment',
+			$ok ? 1 : 0,
+			array_merge(
+				array(
+					'row_count'        => (int) ($summary['row_count'] ?? 0),
+					'records_total'    => (int) ($summary['records_total'] ?? 0),
+					'records_filtered' => (int) ($summary['records_filtered'] ?? 0),
+				),
+				$ok ? array('outcome' => 'listed') : array('reason' => 'query_failure')
+			)
+		);
 	}
 
 	public function get_data_record_legacy()
 	{
-		$this->Record_request_payment_model->get_data_record_legacy();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count', 'records_total', 'records_filtered'));
+		$summary = array();
+		$this->Record_request_payment_model->get_data_record_legacy($summary);
+		$ok = !empty($summary['query_ok']) && $this->auditReadStatus() === 1;
+		$this->completeAudit(
+			$ok ? 'Membaca daftar Record Request Payment legacy' : 'Gagal membaca daftar Record Request Payment legacy',
+			$ok ? 1 : 0,
+			array_merge(
+				array(
+					'row_count'        => (int) ($summary['row_count'] ?? 0),
+					'records_total'    => (int) ($summary['records_total'] ?? 0),
+					'records_filtered' => (int) ($summary['records_filtered'] ?? 0),
+				),
+				$ok ? array('outcome' => 'listed') : array('reason' => 'query_failure')
+			)
+		);
 	}
 
 	public function detail($id_pengajuan = null)
 	{
+		$id_pengajuan = (int) $id_pengajuan;
+		$returnRoute = $this->input->get_post('from') === 'items'
+			? 'record_request_payment/index?tab=items' : 'record_request_payment';
+		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan), array('id_pengajuan', 'no_pengajuan', 'row_count'));
 		$this->auth->restrict($this->viewPermission);
 
-		$id_pengajuan = (int) $id_pengajuan;
 		$header = $this->Record_request_payment_model->get_header($id_pengajuan);
+		$headerQueryOk = $this->Record_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
 
-		if (empty($header)) {
+		if (!$headerQueryOk || empty($header)) {
+			$this->completeAudit('Gagal membuka detail Record Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'reason'       => !$headerQueryOk ? 'query_failure' : 'not_found',
+			));
 			$this->session->set_flashdata('message', '<div class="alert alert-warning">Record tidak ditemukan.</div>');
-			redirect(site_url('record_request_payment'));
+			redirect(site_url($returnRoute));
 			return;
 		}
 
 		$records = $this->Record_request_payment_model->get_records($id_pengajuan);
+		$recordsQueryOk = $this->Record_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
 
 		// Tambahkan URL print dokumen sumber per record (pakai helper dari modul request_payment)
 		$this->load->model('request_payment/Request_payment_model');
+		$printQueriesOk = true;
 		foreach ($records as $r) {
+			if (is_object($this->Request_payment_model) && method_exists($this->Request_payment_model, 'resetAuditQueriesOk')) {
+				$this->Request_payment_model->resetAuditQueriesOk();
+			}
 			$r->print_url = $this->Request_payment_model->build_print_url($r);
+			if ($this->auditReadStatus() !== 1) {
+				$printQueriesOk = false;
+			}
+			if (is_object($this->Request_payment_model) && method_exists($this->Request_payment_model, 'auditQueriesOk') && !$this->Request_payment_model->auditQueriesOk()) {
+				$printQueriesOk = false;
+			}
 		}
+
+		$queriesOk = $recordsQueryOk && $printQueriesOk;
 
 		$this->template->set('header', $header);
 		$this->template->set('records', $records);
 		$this->template->title('Detail Record - ' . $header->no_pengajuan);
-		$this->template->render('detail');
+		try {
+			$this->template->render('detail');
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal merender detail Record Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => isset($header->no_pengajuan) ? (string) $header->no_pengajuan : '',
+				'row_count'    => is_array($records) ? count($records) : 0,
+				'reason'       => 'render_exception',
+			));
+			throw $e;
+		}
+
+		$this->completeAudit(
+			$queriesOk ? 'Membuka detail Record Request Payment' : 'Gagal membuka detail Record Request Payment',
+			$queriesOk ? 1 : 0,
+			array_merge(
+				array(
+					'id_pengajuan' => $id_pengajuan,
+					'no_pengajuan' => isset($header->no_pengajuan) ? (string) $header->no_pengajuan : '',
+					'row_count'    => is_array($records) ? count($records) : 0,
+				),
+				$queriesOk ? array('outcome' => 'rendered') : array('reason' => 'query_failure')
+			)
+		);
 	}
 
 	/**
@@ -69,16 +197,26 @@ class Record_request_payment extends Admin_Controller
 	 */
 	public function export_excel($id_pengajuan = null)
 	{
+		$id_pengajuan = (int) $id_pengajuan;
+		$this->beginAudit(__FUNCTION__, array('id_pengajuan' => $id_pengajuan, 'format' => 'xlsx'), array('id_pengajuan', 'no_pengajuan', 'format', 'row_count'));
 		$this->auth->restrict($this->viewPermission);
 
 		set_time_limit(0);
 		ini_set('memory_limit', '512M');
 
-		$id_pengajuan = (int) $id_pengajuan;
 		$header  = $this->Record_request_payment_model->get_header($id_pengajuan);
+		$headerQueryOk = $this->Record_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
 		$records = $this->Record_request_payment_model->get_records($id_pengajuan);
+		$recordsQueryOk = $this->Record_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
 
 		if (empty($header) || empty($records)) {
+			$queryOk = $headerQueryOk && $recordsQueryOk;
+			$this->completeAudit('Gagal mengekspor Excel Record Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'format'       => 'xlsx',
+				'row_count'    => is_array($records) ? count($records) : 0,
+				'reason'       => !$queryOk ? 'query_failure' : 'not_found',
+			));
 			show_error('Data record tidak ditemukan.', 404);
 			return;
 		}
@@ -189,8 +327,91 @@ class Record_request_payment extends Admin_Controller
 		header('Content-Disposition: attachment;filename="' . $filename . '"');
 		header('Cache-Control: max-age=0');
 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+		try {
+			$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal mengekspor Excel Record Request Payment', 0, array(
+				'id_pengajuan' => $id_pengajuan,
+				'no_pengajuan' => isset($header->no_pengajuan) ? (string) $header->no_pengajuan : '',
+				'format'       => 'xlsx',
+				'row_count'    => is_array($records) ? count($records) : 0,
+				'reason'       => 'export_exception',
+			));
+			throw $e;
+		}
+
+		$queriesOk = $headerQueryOk && $recordsQueryOk;
+		$this->completeAudit(
+			$queriesOk ? 'Mengekspor Excel Record Request Payment' : 'Gagal mengekspor Excel Record Request Payment',
+			$queriesOk ? 1 : 0,
+			array_merge(
+				array(
+					'id_pengajuan' => $id_pengajuan,
+					'no_pengajuan' => isset($header->no_pengajuan) ? (string) $header->no_pengajuan : '',
+					'format'       => 'xlsx',
+					'row_count'    => is_array($records) ? count($records) : 0,
+				),
+				$queriesOk ? array('outcome' => 'exported') : array('reason' => 'query_failure')
+			)
+		);
 		$objWriter->save('php://output');
 		exit;
+	}
+
+	private function beginAudit($method, $data = array(), $keys = array())
+	{
+		$this->load->library('Module_audit_recorder');
+		return $this->module_audit_recorder->begin(
+			'record_request_payment',
+			$method,
+			array('data' => $this->auditSafeData($data)),
+			array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome')))
+		);
+	}
+
+	private function completeAudit($message, $status, $data = array())
+	{
+		return $this->module_audit_recorder->complete($message, $status, array(
+			'data' => $this->auditSafeData($data),
+			'sql'  => null,
+		));
+	}
+
+	private function auditReadStatus()
+	{
+		$error = $this->db->error();
+		return empty($error['code']) ? 1 : 0;
+	}
+
+	private function auditSafeData($data)
+	{
+		$out = array();
+		foreach ($data as $key => $value) {
+			if (is_array($value)) {
+				$out[$key] = array();
+				foreach (array_slice($value, 0, 100) as $item) {
+					if (is_scalar($item) || $item === null) {
+						$out[$key][] = is_string($item) ? mb_strcut($item, 0, 120, 'UTF-8') : $item;
+					}
+				}
+			} elseif (is_scalar($value) || $value === null) {
+				$out[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+			}
+		}
+		return $out;
+	}
+
+	private function auditFilters()
+	{
+		$data = array();
+		foreach (array('draw', 'start', 'length') as $key) {
+			$value = $this->input->get_post($key);
+			if (is_scalar($value) && mb_strlen((string) $value, 'UTF-8') <= 50) {
+				$data[$key] = $value;
+			}
+		}
+		$search = $this->input->get_post('search');
+		$data['search_present'] = !empty(is_array($search) ? ($search['value'] ?? '') : $search);
+		return $data;
 	}
 }

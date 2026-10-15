@@ -1,8 +1,10 @@
 <?php
-function formatDate($date)
-{
-    if (empty($date) || $date == '0000-00-00') return '-';
-    return date('d-M-y', strtotime($date));
+if (!function_exists('formatDate')) {
+    function formatDate($date)
+    {
+        if (empty($date) || $date == '0000-00-00' || $date == '0000-00-00 00:00:00' || strtotime($date) === false || strtotime($date) <= 0) return '-';
+        return date('d-M-y', strtotime($date));
+    }
 }
 ?>
 <html>
@@ -340,26 +342,32 @@ function formatDate($date)
         </div>
     </div>
 
-    <?php if (!empty($pr_header->document)) : ?>
-        <?php
-        $doc_files = [];
+    <?php
+    $files_to_render = [];
+    if (!empty($doc_files)) {
+        $files_to_render = is_array($doc_files) ? $doc_files : [$doc_files];
+    } elseif (!empty($pr_header->document)) {
         $decoded = json_decode($pr_header->document, true);
-        if (is_array($decoded)) {
-            $doc_files = $decoded;
-        } else {
-            $doc_files = [$pr_header->document];
-        }
-        foreach ($doc_files as $doc_item) :
+        $files_to_render = is_array($decoded) ? $decoded : [$pr_header->document];
+    } elseif (!empty($pr_header->dokumen_pendukung)) {
+        $files_to_render = [$pr_header->dokumen_pendukung];
+    }
+    ?>
+    <?php if (!empty($files_to_render)) : ?>
+        <?php
+        foreach ($files_to_render as $doc_item) :
+            if (empty($doc_item) || $doc_item === 'assets/pr/') continue;
+            $file_url = (strpos($doc_item, '/') !== false) ? base_url($doc_item) : base_url('assets/pr/' . $doc_item);
             $ext = strtolower(pathinfo($doc_item, PATHINFO_EXTENSION));
-            if ($ext == 'pdf') : ?>
-                <div class="pdf-attachment-wrapper" data-pdf-url="<?= base_url('assets/pr/' . $doc_item) ?>">
+            if ($ext == 'pdf' || strpos($doc_item, '.pdf') !== false) : ?>
+                <div class="pdf-attachment-wrapper" data-pdf-url="<?= $file_url ?>">
                     <div class="pdf-loading-notice no-print" style="text-align: center; padding: 15px; background: #f8f9fa; border: 1px dashed #bbb; margin: 20px 0; font-size: 12px; color: #555;">
-                        <i class="glyphicon glyphicon-refresh"></i> Memproses lampiran PDF (<?= htmlspecialchars($doc_item) ?>)... Mohon tunggu sebentar.
+                        <i class="glyphicon glyphicon-refresh"></i> Memproses lampiran PDF (<?= htmlspecialchars(basename($doc_item)) ?>)... Mohon tunggu sebentar.
                     </div>
                 </div>
             <?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) : ?>
                 <div class="pagebreak">
-                    <img src="<?= base_url('assets/pr/' . $doc_item) ?>" class="attachment-img">
+                    <img src="<?= $file_url ?>" class="attachment-img">
                 </div>
         <?php endif;
         endforeach;

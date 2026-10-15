@@ -1,5 +1,5 @@
 <?php
-$ENABLE_MANAGE = has_permission('Request_Payment.Manage');
+$ENABLE_MANAGE = has_permission('Approval_Request_Payment.Manage');
 
 // build items JSON for JS
 $items_js = [];
@@ -341,7 +341,7 @@ foreach ($items as $it) {
 			success: function(res) {
 				if (res.status == 1) {
 					alert(res.msg || 'Keputusan tersimpan.');
-					window.location = '<?= site_url("approval_request_payment"); ?>';
+					window.location = <?= json_encode(site_url('approval_request_payment')); ?>;
 				} else {
 					alert(res.msg || 'Gagal menyimpan.');
 				}

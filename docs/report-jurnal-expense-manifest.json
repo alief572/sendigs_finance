@@ -1,0 +1,82 @@
+{
+  "task": "report_jurnal_expense",
+  "date": "2026-10-14",
+  "status": "published_main_and_development",
+  "source": "tr_jurnal",
+  "types": [
+    "Expense Report",
+    "Expense Report Consultant"
+  ],
+  "status_filter": "1",
+  "group_by": [
+    "no_transaksi",
+    "jenis_transaksi",
+    "id_company"
+  ],
+  "detail_input": "representative journal id; transaction/type/company resolved server-side",
+  "endpoints": [
+    {
+      "method": "index",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "get_data_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "view_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "export_excel",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "export_jurnal",
+      "permission": "Report_Jurnal_Expense.View",
+      "audit": true
+    }
+  ],
+  "menu": {
+    "id": 482,
+    "parent_id": 447,
+    "order": 16,
+    "after": "report_jurnal_payment",
+    "permission_id": 1850,
+    "migration_idempotent": true
+  },
+  "checks": {
+    "query": 27,
+    "controller": 42,
+    "view": 12,
+    "client": 12,
+    "jurnal_expense_regression": 167,
+    "php_lint": 8,
+    "live_mysql": "read-only empty posted report; 88 status0 and 8 NULL Consultant rows"
+  },
+  "limitations": [
+    "sts=1 is posted indicator, no ledger reconciliation",
+    "reads current source, not immutable snapshot",
+    "no browser or live accounting writes"
+  ],
+  "publication": {
+    "branches": [
+      "main",
+      "development"
+    ],
+    "status": "pushed_and_verified",
+    "date": "2026-10-15",
+    "code_commits": {
+      "main": "c89b84fbd965903b9ab56220dd3809dd527cd50e",
+      "development": "402be62bb69beb5022c52fe8e4e89f98c0842f1a"
+    },
+    "module_trees": {
+      "jurnal_expense": "3fc211d5f1a248da8b2fd12d03320bcd77af9ea8",
+      "report_jurnal_expense": "b54d9cfad0eab1c81082edf2fac106012ee3e0b7"
+    }
+  }
+}

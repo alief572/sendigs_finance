@@ -1,11 +1,16 @@
 <?php
-$ENABLE_VIEW = has_permission('Request_Payment.View');
+$ENABLE_VIEW = has_permission('Record_Request_Payment.View');
+$record_tab = $this->input->get_post('tab');
+if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy'], true)) {
+	$record_tab = 'batch';
+}
 ?>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap.min.css">
 
 <style>
 	#table_record thead th,
+	#table_record_items thead th,
 	#table_record_legacy thead th {
 		background-color: #3c8dbc;
 		color: #fff;
@@ -16,6 +21,7 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 	}
 
 	#table_record tbody td,
+	#table_record_items tbody td,
 	#table_record_legacy tbody td {
 		font-size: 12.5px;
 		vertical-align: middle;
@@ -71,6 +77,26 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		border-color: #C9D3DC;
 	}
 
+	#table_record_items .rec-item-actions {
+		display: inline-flex;
+		align-items: center;
+		white-space: nowrap;
+	}
+
+	#table_record_items .rec-docnum { font-weight: 700; color: #2B3440; }
+
+	#table_record_items .rec-kategori-badge {
+		display: inline-block;
+		background: #3A4656;
+		color: #fff;
+		font-size: 10.5px;
+		font-weight: 600;
+		padding: 3px 9px;
+		border-radius: 10px;
+		white-space: nowrap;
+		margin-bottom: 4px;
+	}
+
 	.nav-tabs-custom {
 		box-shadow: none;
 		margin-bottom: 0;
@@ -94,12 +120,15 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 
 		<div class="nav-tabs-custom">
 			<ul class="nav nav-tabs" id="record_tabs">
-				<li class="active">
+				<li<?= $record_tab === 'batch' ? ' class="active"' : ''; ?>>
 					<a href="#tab_baru" data-toggle="tab">
 						<i class="fa fa-folder-open-o"></i> Pengajuan Baru (Batch)
 					</a>
 				</li>
-				<li>
+				<li<?= $record_tab === 'items' ? ' class="active"' : ''; ?>>
+					<a href="#tab_items" data-toggle="tab">Per Transaksi (Approved)</a>
+				</li>
+				<li<?= $record_tab === 'legacy' ? ' class="active"' : ''; ?>>
 					<a href="#tab_lama" data-toggle="tab">
 						<i class="fa fa-history"></i> Histori Lama (Pre-Cutoff)
 					</a>
@@ -108,7 +137,7 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 
 			<div class="tab-content" style="padding: 15px 0 0 0;">
 				<!-- TAB 1: PENGAJUAN BARU -->
-				<div class="tab-pane active" id="tab_baru">
+				<div class="tab-pane<?= $record_tab === 'batch' ? ' active' : ''; ?>" id="tab_baru">
 					<div class="rec-toolbar">
 						<div class="text-muted">Riwayat seluruh batch pengajuan yang sudah diputuskan (final).</div>
 						<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
@@ -132,8 +161,12 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 					</div>
 				</div>
 
+				<div class="tab-pane<?= $record_tab === 'items' ? ' active' : ''; ?>" id="tab_items">
+					<?php $this->load->view('items'); ?>
+				</div>
+
 				<!-- TAB 2: HISTORI LAMA -->
-				<div class="tab-pane" id="tab_lama">
+				<div class="tab-pane<?= $record_tab === 'legacy' ? ' active' : ''; ?>" id="tab_lama">
 					<div class="rec-toolbar">
 						<div class="text-muted">Data historis request payment yang telah diproses sebelum sistem batch baru aktif.</div>
 						<input type="text" id="rec_legacy_search" placeholder="Cari no. dokumen, pemohon, keperluan...">
@@ -305,8 +338,12 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 		}
 
 		// Adjust columns on tab switch
-		$('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+		$('#record_tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
 			var target = $(e.target).attr('href');
+			var tabNames = {'#tab_baru': 'batch', '#tab_items': 'items', '#tab_lama': 'legacy'};
+			var url = new URL(window.location.href);
+			url.searchParams.set('tab', tabNames[target] || 'batch');
+			history.replaceState(null, '', url.toString());
 			if (target === '#tab_lama') {
 				if (!legacyInitialized) {
 					initLegacyTable();
@@ -319,5 +356,6 @@ $ENABLE_VIEW = has_permission('Request_Payment.View');
 				}
 			}
 		});
+		if (<?= json_encode($record_tab); ?> === 'legacy') initLegacyTable();
 	});
 </script>
