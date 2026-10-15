@@ -1,0 +1,74 @@
+{
+  "task": "jurnal_expense",
+  "date": "2026-10-14",
+  "status": "published_to_development",
+  "module": "application/modules/jurnal_expense",
+  "source": "tr_jurnal",
+  "types": [
+    "Expense Report",
+    "Expense Report Consultant"
+  ],
+  "unposted_statuses": [
+    "0",
+    "",
+    null
+  ],
+  "endpoints": [
+    {
+      "method": "index",
+      "permission": "Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "get_data_jurnal",
+      "permission": "Jurnal_Expense.View",
+      "audit": true
+    },
+    {
+      "method": "add_jurnal",
+      "permission": "Jurnal_Expense.Manage",
+      "http": "POST",
+      "audit": true
+    },
+    {
+      "method": "save_posting_jurnal",
+      "permission": "Jurnal_Expense.Manage",
+      "http": "POST",
+      "audit": true
+    },
+    {
+      "method": "export_jurnal",
+      "permission": "Jurnal_Expense.View",
+      "audit": true
+    }
+  ],
+  "menu": {
+    "local_id": 481,
+    "parent_id": 447,
+    "order": 8,
+    "after": "jurnal_payment",
+    "migration_idempotent": true
+  },
+  "posting": {
+    "type": "JV",
+    "tables": [
+      "javh",
+      "jurnal",
+      "pastibisa_tb_cabang"
+    ],
+    "number_model": "Jurnal_payment_nomor_model",
+    "local_live_posting_performed": false
+  },
+  "limitations": [
+    "MyISAM crash/cross-module concurrency is not fully atomic",
+    "No browser tests"
+  ],
+  "publication": {
+    "branches": [
+      "main",
+      "development"
+    ],
+    "status": "preparing",
+    "date": "2026-10-15"
+  }
+}
