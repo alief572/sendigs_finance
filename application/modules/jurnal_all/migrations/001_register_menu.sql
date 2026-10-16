@@ -40,6 +40,33 @@ UPDATE menus SET title='Report Jurnal All', permission_id=(SELECT MIN(id_permiss
 -- Deactivate legacy single-table 'jurnal'
 UPDATE menus SET status=0 WHERE link IN ('jurnal', 'jurnal/index');
 
+-- Backup and deactivate individual legacy journal menus
+INSERT IGNORE INTO jurnal_all_menu_backup (menu_id, previous_status)
+SELECT id, status FROM menus
+WHERE link IN (
+    'jurnal_invoicing', 'jurnal_invoicing/index',
+    'jurnal_penerimaan', 'jurnal_penerimaan/index',
+    'jurnal_payment', 'jurnal_payment/index',
+    'jurnal_payment_petty_cash', 'jurnal_payment_petty_cash/index',
+    'jurnal_expense', 'jurnal_expense/index',
+    'report_jurnal_invoicing', 'report_jurnal_invoicing/index',
+    'report_jurnal_penerimaan', 'report_jurnal_penerimaan/index',
+    'report_jurnal_payment', 'report_jurnal_payment/index',
+    'report_jurnal_expense', 'report_jurnal_expense/index'
+);
+
+UPDATE menus SET status=0 WHERE link IN (
+    'jurnal_invoicing', 'jurnal_invoicing/index',
+    'jurnal_penerimaan', 'jurnal_penerimaan/index',
+    'jurnal_payment', 'jurnal_payment/index',
+    'jurnal_payment_petty_cash', 'jurnal_payment_petty_cash/index',
+    'jurnal_expense', 'jurnal_expense/index',
+    'report_jurnal_invoicing', 'report_jurnal_invoicing/index',
+    'report_jurnal_penerimaan', 'report_jurnal_penerimaan/index',
+    'report_jurnal_payment', 'report_jurnal_payment/index',
+    'report_jurnal_expense', 'report_jurnal_expense/index'
+);
+
 -- Grant permissions to users who already have Jurnal_Invoicing permissions
 INSERT IGNORE INTO user_permissions (id_user, id_permission)
 SELECT up.id_user, p_new.id_permission
