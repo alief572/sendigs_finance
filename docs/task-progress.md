@@ -1,3 +1,57 @@
+# Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — Selesai 2026-10-16
+
+- Fase selesai:
+  1. Fase 1: Pemuatan asset `sweetalert2.min.css` dan `sweetalert2.min.js` dari `assets/dist/` pada `application/modules/jurnal_all/views/workspace.php`, serta penambahan override `.swal2-container { z-index: 100000 !important; }` pada `assets/css/jurnal-all.css`.
+  2. Fase 2: Integrasi pop-up konfirmasi dan notifikasi hasil posting/revisi pada `assets/js/jurnal-all.js` (dialog konfirmasi `Swal.fire({ icon: 'question' })`, notifikasi sukses `Swal.fire({ icon: 'success' })`, dan notifikasi gagal `Swal.fire({ icon: 'error' })` dengan fallback anggun ke `root.confirm` dan inline alerts).
+  3. Fase 3: Pengujian unit test client `Client_test.js` (48 assertions PASS) dan seluruh test suite PHP (622 assertions PASS).
+  4. Fase 4: Publikasi commit `61e6a383` ke branch `development` di remote GitHub.
+- File yang dibuat/dimodifikasi:
+  1. `application/modules/jurnal_all/views/workspace.php`
+  2. `assets/css/jurnal-all.css`
+  3. `assets/js/jurnal-all.js`
+  4. `application/modules/jurnal_all/tests/Client_test.js`
+  5. `docs/implementation-plan.md`
+  6. `docs/task-progress.md`
+
+---
+
+# Penonaktifan 9 Menu Jurnal & Report Jurnal Legacy — Selesai 2026-10-16
+
+- Fase selesai:
+  1. Penonaktifan (`status = 0`) 9 menu individual jurnal dan report legacy pada database `db_sendigs_ss_dev` dan `db_sendigs_ss`:
+     - Jurnal Invoicing (`jurnal_invoicing`, ID 459)
+     - Jurnal Penerimaan (`jurnal_penerimaan`, ID 460)
+     - Jurnal Payment (`jurnal_payment`, ID 468)
+     - Jurnal Payment Petty Cash (`jurnal_payment_petty_cash`, ID 476)
+     - Jurnal Expense (`jurnal_expense`, ID 480)
+     - Report Jurnal Invoicing (`report_jurnal_invoicing`, ID 461)
+     - Report Jurnal Penerimaan (`report_jurnal_penerimaan`, ID 462)
+     - Report Jurnal Payment (`report_jurnal_payment`, ID 477)
+     - Report Jurnal Expense (`report_jurnal_expense`, ID 481)
+  2. Pencadangan status awal ke tabel `jurnal_all_menu_backup` sebelum perubahan dilakukan.
+  3. Verifikasi sidebar navigasi Finance: kini hanya menyisakan `Jurnal All` (urutan ke-4) dan `Report Jurnal All` (urutan ke-17).
+  4. Pembaruan skrip migrasi `application/modules/jurnal_all/migrations/001_register_menu.sql` untuk menyertakan devaluasi 9 menu ini secara otomatis.
+  5. Publikasi commit `57dcb47c` ke branch `development` di remote GitHub.
+- File yang dimodifikasi:
+  1. `application/modules/jurnal_all/migrations/001_register_menu.sql`
+  2. `docs/task-progress.md`
+
+---
+
+# Pendaftaran & Penampilan Menu Jurnal All dan Report Jurnal All — Selesai 2026-10-16
+
+- Fase selesai:
+  1. Registrasi menu `Jurnal All` (`link = 'jurnal_all'`, order 4, tepat setelah Invoicing) dan `Report Jurnal All` (`link = 'report_jurnal_all'`, order 17) pada database `db_sendigs_ss_dev` dan `db_sendigs_ss` (`status = 1`).
+  2. Registrasi permissions `Jurnal_All.View`, `Jurnal_All.Manage`, dan `Report_Jurnal_All.View` pada tabel `permissions`.
+  3. Pemetaan hak akses ke seluruh user Finance (termasuk Admin, finance, Alief, Imanuel, dkk.) melalui tabel `user_permissions`.
+  4. Pembaruan skrip migrasi `application/modules/jurnal_all/migrations/001_register_menu.sql`.
+  5. Publikasi commit `3e1eb46a` ke branch `development` di remote GitHub.
+- File yang dimodifikasi:
+  1. `application/modules/jurnal_all/migrations/001_register_menu.sql`
+  2. `docs/task-progress.md`
+
+---
+
 # Penonaktifan Modul Jurnal Lama (Tersisa Hanya Jurnal All) — Selesai 2026-10-16
 
 - Fase selesai:
