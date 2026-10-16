@@ -1,0 +1,350 @@
+{
+  "module": "jurnal_all",
+  "report": "report_jurnal_all",
+  "permissions": [
+    "Jurnal_All.View",
+    "Jurnal_All.Manage",
+    "Report_Jurnal_All.View"
+  ],
+  "initial_grants": "admin_only",
+  "sources": {
+    "INV": {
+      "module": "jurnal_invoicing",
+      "types": [
+        "Invoicing"
+      ],
+      "pending": [
+        "0",
+        "",
+        null
+      ],
+      "group": [
+        "no_transaksi",
+        "jenis_transaksi"
+      ],
+      "post": "save_posting_jurnal",
+      "revise": "update_sts_revisi_jurnal",
+      "native_preview_reference": "modal_posting_jurnal"
+    },
+    "RCV": {
+      "module": "jurnal_penerimaan",
+      "types": [
+        "Penerimaan Piutang"
+      ],
+      "pending": "non_null_not_1",
+      "group": [
+        "no_transaksi",
+        "jenis_transaksi"
+      ],
+      "post": "save_posting_jurnal",
+      "revise": "update_sts_revisi_jurnal",
+      "native_preview_reference": "modal_posting_jurnal"
+    },
+    "PAY": {
+      "module": "jurnal_payment",
+      "types": [
+        "Payment",
+        "Transport",
+        "Transportasi",
+        "Kasbon",
+        "Expense"
+      ],
+      "pending": "non_null_not_1",
+      "group": [
+        "no_transaksi",
+        "jenis_transaksi"
+      ],
+      "post": "save_posting_jurnal",
+      "native_preview_reference": "add_jurnal"
+    },
+    "EXP": {
+      "module": "jurnal_expense",
+      "types": [
+        "Expense Report",
+        "Expense Report Consultant"
+      ],
+      "pending": [
+        "0",
+        "",
+        null
+      ],
+      "group": [
+        "no_transaksi",
+        "jenis_transaksi",
+        "id_company"
+      ],
+      "post": "save_posting_jurnal",
+      "native_preview_reference": "add_jurnal"
+    },
+    "PCS": {
+      "module": "jurnal_payment_petty_cash",
+      "types": [
+        "Petty Cash",
+        "Refill Pettycash",
+        "Payment Hutang Petty Cash"
+      ],
+      "pending": [
+        "0",
+        ""
+      ],
+      "group": [
+        "no_transaksi",
+        "jenis_transaksi"
+      ],
+      "payment_tab": [
+        "Refill Pettycash",
+        "Payment Hutang Petty Cash"
+      ],
+      "post": "save_posting_jurnal",
+      "unsupported_legacy_revision": true,
+      "native_preview_reference": "get_detail_jurnal"
+    }
+  },
+  "posted_status": "1",
+  "metadata": "confirmed final accounting numbers per company, posting timestamp Asia/Jakarta and authenticated actor snapshot in tr_jurnal_postings; unavailable history literal -; never staging/created_date fallback",
+  "status": "implemented_verified_local_metadata_schema_applied_no_other_deployment",
+  "preview_mode": "normalized escaped renderer preserving source capabilities; native PCS detail resolver",
+  "endpoints": {
+    "jurnal_all": [
+      "index",
+      "get_data_jurnal",
+      "get_filters",
+      "get_summary",
+      "preview",
+      "view_jurnal",
+      "save_posting_jurnal",
+      "revisi_jurnal",
+      "export_excel",
+      "legacy"
+    ],
+    "report_jurnal_all": [
+      "index",
+      "get_data_jurnal",
+      "get_filters",
+      "preview",
+      "view_jurnal",
+      "export_excel",
+      "legacy"
+    ]
+  },
+  "report_mutation_policy": "inherited post/revise endpoints denied server-side",
+  "validation": {
+    "new_assertions": 474,
+    "expense_regressions": 260,
+    "petty_property_iterations": 600,
+    "audit_regression_suites": 3,
+    "php_lint_files": 24,
+    "native_database": "MariaDB10.4 isolated datadir/schema, migration twice + rollback PASS; cleaned",
+    "browser_test": false,
+    "application_db_migration_applied": false,
+    "live_posting": false,
+    "commit_push": false
+  },
+  "file_sha256": {
+    "application/modules/jurnal_all/models/Jurnal_all_model.php": "f8b44a4fdaeeeae0d28e3b5f687cfce8e12a608b5e98dfdfc2526c1c07c7f70c",
+    "application/modules/jurnal_all/controllers/Jurnal_all.php": "3a741f71e8184b7c9f90ed33fdc9ad97b7b2fd70b3f8c88d4e3d6a9e12e48b15",
+    "application/modules/jurnal_all/libraries/Jurnal_all_dispatcher.php": "035895e8204c909bd88b266ee79131f747cb856423dfe3cb3bad63e397089c16",
+    "application/modules/report_jurnal_all/controllers/Report_jurnal_all.php": "5b6d1a45644ce3997bea8618ec284d55f3e33292189d8167b598c751a32d653d",
+    "assets/js/jurnal-all.js": "16eaee9a2c8ccee357ab729ab78135281c44862d060441cb38780aa83cd78ae9",
+    "assets/css/jurnal-all.css": "d71696493b0d9bf44dd016e780c6da76ef989e8a734a9434e7520a40c7465211",
+    "application/config/routes.php": "008a93bd57372610de8a3d5679ca001983718f712b8ff4f3aa8ed0fb37c40e28",
+    "application/libraries/Module_audit_recorder.php": "370c38930c6837e261503c8311f0a6d72879fd9949e5ff9eea873acf5417c3b0",
+    "application/modules/jurnal_invoicing/controllers/Jurnal_invoicing.php": "48fe27ee8d6724601d475e7b40f8f2c3cacbf0f5c9760ce4b7ac537ff6c506b2",
+    "application/modules/jurnal_invoicing/models/Jurnal_invoicing_model.php": "7e137dda3f6a3d06a7fa86073b6784190c99774239d17dd34f7df09d983cdfef",
+    "application/modules/jurnal_penerimaan/controllers/Jurnal_penerimaan.php": "aa5f830aae0175dd3b565d124a1f21bee7ef10d916e3591fe31fcc564aa88364",
+    "application/modules/jurnal_penerimaan/models/Jurnal_penerimaan_model.php": "e869856c72a8dd8c3f7f344557f7a29a8bad3a9f2c32b51d860f954bde980073",
+    "application/modules/jurnal_payment/controllers/Jurnal_payment.php": "f1b861355e07501099c4d11c74e41579f1ab8793c0c19642de216a47269f355f",
+    "application/modules/jurnal_expense/controllers/Jurnal_expense.php": "f550b1029f29c24d95f7ff784edba2cbb4c0c17afaef81896be8556857f5d4e2",
+    "application/modules/jurnal_payment_petty_cash/controllers/Jurnal_payment_petty_cash.php": "3163765dd0e16d903f7e86ce98be1480e028958334b5801995f2da4b1b91f944",
+    "application/modules/jurnal_payment_petty_cash/models/Jurnal_payment_petty_cash_model.php": "b782d40b5cbf332ac66b379430ab8cb650467724bc2cb7f947aa00e1eef3c431",
+    "application/modules/jurnal_all/views/workspace.php": "e36d9ce0b7d988fa4b4039b6f7604479b96db00a27e4d81957643e2d71a20e7d",
+    "application/modules/jurnal_all/views/export_excel.php": "88035a5fbee258ae1b34804bfcae288fab10ca943f0fcd8890c302c9d3322ac6",
+    "application/modules/jurnal_all/views/preview.php": "ba520fef4179fed73603694c51423ec32fc0d0edf7dbc7301391f6862300151e",
+    "application/modules/jurnal_expense/models/Jurnal_expense_posting_model.php": "7475cd43c8bffb3495251a02a35c1e136c63ee8fc5ccae3c9fdf676c61642c6c",
+    "application/modules/jurnal_all/migrations/003_posting_metadata.sql": "6c1d7ee29eda08406816a599e1b45c523abeb3846bef6791edad1940771d6d90"
+  },
+  "follow_up_loading": {
+    "status": "complete",
+    "client_assertions": 28,
+    "controller_assertions": 74,
+    "php_view_lint": "PASS",
+    "js_syntax": "PASS",
+    "browser_test": false,
+    "database_test": "previous results reused; backend unchanged",
+    "workspace_render": "PASS Jurnal and Report"
+  },
+  "follow_up_invoice_description": {
+    "status": "complete",
+    "scope": "INV list and posted report only",
+    "format": "customer - project; missing invoice project falls back to linked SPK",
+    "query_assertions": 48,
+    "mysql_assertions": 14,
+    "all_feature_assertions": 494,
+    "source_coa_description": "unchanged",
+    "browser_test": false
+  },
+  "follow_up_invoice_numbers": {
+    "status": "complete",
+    "scope": "INV list/report/preview metadata/Excel display",
+    "display_no_transaksi": "tr_invoicing.no_invoice",
+    "no_referensi": "tr_invoicing.id_spk_penawaran",
+    "no_transaksi": "native source key retained for grouping and dispatch",
+    "invoice_number": "separate native invoice reference for COA preview",
+    "query_assertions": 55,
+    "mysql_assertions": 15,
+    "controller_assertions": 76,
+    "client_assertions": 29,
+    "all_feature_assertions": 505,
+    "php_lint_files": 6,
+    "js_syntax": "PASS",
+    "browser_test": false
+  },
+  "follow_up_ui": {
+    "status": "complete",
+    "scope": "shared Jurnal/Report workspace presentation only",
+    "client_assertions": 36,
+    "controller_assertions": 76,
+    "workspace_render_checks": 110,
+    "contrast_pairs": 6,
+    "php_lint": "PASS",
+    "js_syntax": "PASS",
+    "browser_test": false,
+    "backend_hashes": "unchanged",
+    "report": "docs/jurnal-all-ui-2026-10-15.md"
+  },
+  "follow_up_reference_colors": {
+    "status": "complete",
+    "reference": "C:/Users/Febry/Downloads/Jurnal ALL.html",
+    "code_changed": [
+      "assets/css/jurnal-all.css"
+    ],
+    "client_assertions": 36,
+    "contrast_pairs": 13,
+    "active_tab_contrast": "PASS",
+    "browser_test": false,
+    "backend_js_php_hashes": "unchanged",
+    "report": "docs/jurnal-all-ui-2026-10-15.md"
+  },
+  "follow_up_oldest_and_post_label": {
+    "status": "complete",
+    "oldest_format": "dd/mm/YYYY",
+    "oldest_color": "#b91c1c",
+    "pending_manage_label": "+ Post",
+    "readonly_label": "Detail",
+    "client_assertions": 37,
+    "js_syntax": "PASS",
+    "oldest_contrast_pairs": 6,
+    "browser_test": false,
+    "backend_hashes": "unchanged"
+  },
+  "follow_up_invoice_period": {
+    "status": "complete",
+    "grouping": "one row/action per native invoice group",
+    "period": "any actual matching line, preserve full group",
+    "all_years": "INV only; month may span years",
+    "default_year": "current year retained",
+    "query_assertions": 70,
+    "client_assertions": 41,
+    "mysql_assertions": 20,
+    "all_feature_assertions": 537,
+    "local_readonly_snapshot": {
+      "year_2026": 6,
+      "all_years": 10,
+      "legacy": 10,
+      "id_set_differences": 0
+    },
+    "browser_test": false,
+    "report": "docs/jurnal-all-invoicing-period-fix-2026-10-15.md"
+  },
+  "follow_up_all_years_all_tabs": {
+    "status": "complete",
+    "tabs": [
+      "INV",
+      "RCV",
+      "PAY",
+      "EXP",
+      "PCS"
+    ],
+    "default_year": "current",
+    "empty_year": "all years",
+    "month_without_year": "INV any matching row; other tabs earliest group date",
+    "query_assertions": 95,
+    "client_assertions": 41,
+    "mysql_assertions": 24,
+    "all_feature_assertions": 566,
+    "remote_database_access": false,
+    "browser_test": false,
+    "report": "docs/jurnal-all-all-years-2026-10-15.md"
+  },
+  "follow_up_petty_recording_reference": {
+    "status": "complete",
+    "scope": "PCS / Petty Cash only",
+    "reference": "active report no_pelaporan via pencatatan relation",
+    "native_key": "PCP preserved",
+    "query_assertions": 103,
+    "mysql_assertions": 27,
+    "all_feature_assertions": 577,
+    "remote_database_access": false,
+    "browser_test": false,
+    "report": "docs/jurnal-all-petty-reference-2026-10-15.md"
+  },
+  "follow_up_petty_company_preview": {
+    "status": "complete",
+    "scope": "PCS / Petty Cash preview only",
+    "company_sections": "group by id_company after native resolver; cents subtotals and individual balance",
+    "posting_boundary": "one PCP, all sides unchanged",
+    "query_assertions": 108,
+    "controller_assertions": 84,
+    "fresh_feature_assertions": 563,
+    "previous_mysql_assertions_reused": 27,
+    "browser_test": false,
+    "remote_database_access": false,
+    "report": "docs/jurnal-all-petty-company-preview-2026-10-15.md"
+  },
+  "follow_up_table_date_format": {
+    "status": "complete",
+    "scope": "tgl_jurnal in shared main table",
+    "format": "dd full Indonesian month YYYY",
+    "example": "13 Oktober 2026",
+    "source_sort_filter": "ISO unchanged",
+    "summary_oldest": "dd/mm/YYYY retained",
+    "client_assertions": 44,
+    "js_syntax": "PASS",
+    "remote_database_access": false,
+    "browser_test": false
+  },
+  "follow_up_receipt_description": {
+    "status": "complete",
+    "format": "Pelunasan [no_invoice] - [nm_customer]",
+    "scope": "RCV display header/list/report/search; source COA text unchanged",
+    "query_assertions": 113,
+    "fresh_feature_assertions": 571,
+    "php_lint": "PASS",
+    "sql": "unchanged",
+    "remote_database_access": false,
+    "browser_test": false
+  },
+  "follow_up_expense_metadata": {
+    "status": "complete",
+    "consultant_description": "Expense Report Consultant - [no_transaksi]",
+    "standard_description": "Realisasi Kasbon [Pengembalian/Reimburse] - [PR requester]",
+    "reference": "actual related kasbon, otherwise literal dash",
+    "query_assertions": 126,
+    "mysql_assertions": 30,
+    "all_feature_assertions": 614,
+    "remote_database_access": false,
+    "browser_test": false,
+    "report": "docs/jurnal-all-expense-metadata-2026-10-15.md"
+  },
+  "follow_up_posting_metadata": {
+    "status": "complete",
+    "migration": "003_posting_metadata.sql",
+    "local_schema_applied": true,
+    "other_environments_applied": false,
+    "real_accounting_posting": false,
+    "native_commit_then_metadata_commit": true,
+    "metadata_failure": "business success with warning posted_metadata_missing; no accounting retry",
+    "report": "docs/jurnal-all-posting-metadata-2026-10-15.md",
+    "assertions": 963
+  }
+}

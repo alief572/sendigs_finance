@@ -1,0 +1,893 @@
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Jurnal_all_model extends BF_Model
+{
+    const SOURCES = [
+        'INV'=>['Invoicing'], 'RCV'=>['Penerimaan Piutang'],
+        'PAY'=>['Payment','Transport','Transportasi','Kasbon','Expense'],
+        'EXP'=>['Expense Report','Expense Report Consultant'],
+        'PCS'=>['Petty Cash','Refill Pettycash','Payment Hutang Petty Cash']
+    ];
+    const TITLES = ['INV'=>'Jurnal Invoicing','RCV'=>'Jurnal Penerimaan','PAY'=>'Jurnal Pembayaran','EXP'=>'Jurnal Expense Report','PCS'=>'Jurnal Pencatatan Petty Cash'];
+    private $metadataReady=null;
+    private $payments=[];
+    private $paymentKeys=[];
+    private $glDbs=[];
+    private $userMap=null;
+    private $postingColumnsReady=null;
+
+    public function hasPostingColumns()
+    {
+        if ($this->postingColumnsReady !== null) return $this->postingColumnsReady;
+        if ($this->db && method_exists($this->db, 'field_exists')) {
+            return $this->postingColumnsReady = ($this->db->field_exists('tgl_posting', 'tr_jurnal') && $this->db->field_exists('posted_by', 'tr_jurnal'));
+        }
+        return $this->postingColumnsReady = false;
+    }
+
+    public function source($type)
+    {
+        foreach (self::SOURCES as $key=>$types) if (in_array($type, $types, true)) return $key;
+        return null;
+    }
+
+    public function tab($type)
+    {
+        return in_array($type, ['Refill Pettycash','Payment Hutang Petty Cash'], true) ? 'PAY' : $this->source($type);
+    }
+
+    public function filters($values)
+    {
+        $tab = $this->scalar($values['tab'] ?? 'INV');
+        if (!isset(self::TITLES[$tab])) throw new InvalidArgumentException('Tab jurnal tidak valid.');
+        $year = $values['year'] ?? date('Y');
+        if (!is_scalar($year)) throw new InvalidArgumentException('Periode jurnal tidak valid.');
+        $year = $this->scalar($year);
+        $month = $this->scalar($values['month'] ?? '');
+        if (($year !== '' && (!preg_match('/^\d{4}$/D', $year) || (int)$year < 1900 || (int)$year > 9998))
+            || ($month !== '' && (!ctype_digit($month) || (int)$month < 1 || (int)$month > 12))) {
+            throw new InvalidArgumentException('Periode jurnal tidak valid.');
+        }
+        $search = is_array($values['search'] ?? null) ? ($values['search']['value'] ?? '') : ($values['q'] ?? '');
+        return ['tab'=>$tab,'year'=>$year === '' ? '' : (int)$year,'month'=>$month,'company'=>$this->scalar($values['company'] ?? ''),
+            'category'=>$tab === 'PAY' ? $this->scalar($values['category'] ?? '') : '', 'q'=>$this->scalar($search)];
+    }
+
+    public function groups($values, $posted = false, $withSearch = true)
+    {
+        $f = $this->filters($values);
+        $types = $f['tab'] === 'PAY' ? array_merge(self::SOURCES['PAY'], ['Refill Pettycash','Payment Hutang Petty Cash'])
+            : ($f['tab'] === 'PCS' ? ['Petty Cash'] : self::SOURCES[$f['tab']]);
+        $select = "MIN(a.id) AS id, a.no_transaksi, a.jenis_transaksi, MIN(a.tgl_jurnal) AS tgl_jurnal,
+            MAX(a.nm_company) AS nm_company, MAX(a.id_company) AS id_company, MAX(a.nm_divisi) AS nm_divisi,
+            MAX(a.keterangan) AS keterangan, SUM(a.debit) AS debit, SUM(a.kredit) AS kredit,
+            MIN(NULLIF(a.no_jurnal,'')) AS source_numbers,
+            SUM(CASE WHEN a.debit > 0 OR a.kredit > 0 THEN 1 ELSE 0 END) AS active_lines,
+            SUM(CASE WHEN a.coa NOT IN ('1102-01-01','1106-01-02','7201-01-04','1106-01-05') AND (a.debit > 0 OR a.kredit > 0) THEN 1 ELSE 0 END) AS receipt_lines";
+        if ($this->hasPostingColumns()) {
+            $select .= ", MAX(a.tgl_posting) AS db_tgl_posting, MAX(a.posted_by) AS db_posted_by";
+        }
+        $this->db->select($select, false);
+        $this->db->from('tr_jurnal a')->where_in('a.jenis_transaksi', $types);
+        if ($posted) $this->db->where('a.sts', '1');
+        else $this->db->group_start()
+            ->group_start()->where_in('a.jenis_transaksi', array_merge(self::SOURCES['INV'],self::SOURCES['EXP']))
+                ->group_start()->where_in('a.sts',['','0'])->or_where('a.sts IS NULL',null,false)->group_end()->group_end()
+            ->or_group_start()->where_in('a.jenis_transaksi',array_merge(self::SOURCES['RCV'],self::SOURCES['PAY']))->where('a.sts <>','1')->group_end()
+            ->or_group_start()->where_in('a.jenis_transaksi',self::SOURCES['PCS'])->where_in('a.sts',['','0'])->group_end()
+            ->group_end();
+        // Group before filtering the period so a transaction spanning dates is never split.
+        $this->db->group_by(['a.no_transaksi','a.jenis_transaksi']);
+        if ($f['tab'] === 'EXP') $this->db->group_by('a.id_company');
+        if ($f['year'] !== '') {
+            $start = sprintf('%04d-%02d-01',$f['year'],$f['month'] === '' ? 1 : (int)$f['month']);
+            $end = $f['month'] === '' ? sprintf('%04d-01-01',$f['year']+1) : date('Y-m-d',strtotime($start.' +1 month'));
+            if ($f['tab'] === 'INV') {
+                $match = 'a.tgl_jurnal >= '.$this->db->escape($start).' AND a.tgl_jurnal < '.$this->db->escape($end);
+                $this->db->having('SUM(CASE WHEN '.$match.' THEN 1 ELSE 0 END) >',0,false);
+            } else {
+                $this->db->having('MIN(a.tgl_jurnal) >=',$start)->having('MIN(a.tgl_jurnal) <',$end);
+            }
+        } elseif ($f['month'] !== '') {
+            $pattern = $this->db->escape(sprintf('____-%02d-%%',(int)$f['month']));
+            if ($f['tab'] === 'INV') {
+                $this->db->having('SUM(CASE WHEN a.tgl_jurnal LIKE '.$pattern.' THEN 1 ELSE 0 END) >',0,false);
+            } else {
+                $this->db->having('MIN(a.tgl_jurnal) LIKE '.$pattern,null,false);
+            }
+        }
+        $rows = $this->read($this->db->get())->result_array();
+        $this->enrich($rows);
+        $result = [];
+        foreach ($rows as $row) {
+            if (!$posted && !$this->eligible($row)) continue;
+            if ($f['company'] !== '' && !$this->companyMatches($row, $f['company'])) continue;
+            if ($f['category'] !== '' && !in_array($f['category'],$row['categories'],true)) continue;
+            $row['debit'] = $this->decimal($row['debit']); $row['kredit'] = $this->decimal($row['kredit']);
+            $result[] = $row;
+        }
+        if ($withSearch && trim($f['q']) !== '') $result = $this->search($result,$f['q'],$posted);
+        usort($result,function($a,$b){return strcmp($b['tgl_jurnal'],$a['tgl_jurnal']) ?: ($b['id'] <=> $a['id']);});
+        return array_values($result);
+    }
+
+    public function listing($values, $posted = false)
+    {
+        $all = $this->groups($values,$posted,false);
+        $f = $this->filters($values);
+        $rows = trim($f['q']) === '' ? $all : $this->search($all,$f['q'],$posted);
+        $totalD=0; $totalK=0;
+        foreach ($rows as $row) { $totalD += $this->cents($row['debit']); $totalK += $this->cents($row['kredit']); }
+        $start=max(0,(int)$this->scalar($values['start'] ?? 0));
+        $length=max(1,min(100,(int)$this->scalar($values['length'] ?? 10)));
+        $order=is_array($values['order'] ?? null) ? ($values['order'][0] ?? []) : [];
+        $columns=['tgl_jurnal','display_no_transaksi','no_referensi','category','keterangan','nm_company','debit','kredit'];
+        $column=$columns[(int)$this->scalar($order['column'] ?? -1)] ?? null;
+        if ($column) {
+            $direction=strtolower($this->scalar($order['dir'] ?? 'desc'))==='asc' ? 1 : -1;
+            usort($rows,function($a,$b)use($column,$direction){
+                $cmp=in_array($column,['debit','kredit'],true) ? $this->cents($a[$column]) <=> $this->cents($b[$column]) : strnatcasecmp($a[$column],$b[$column]);
+                return $cmp ? $direction*$cmp : ($b['id'] <=> $a['id']);
+            });
+        }
+        return ['draw'=>(int)$this->scalar($values['draw'] ?? 0),'recordsTotal'=>count($all),'recordsFiltered'=>count($rows),
+            'data'=>array_slice($rows,$start,$length),'totals'=>['debit'=>$this->fromCents($totalD),'kredit'=>$this->fromCents($totalK)]];
+    }
+
+    public function summary($filters)
+    {
+        $result=[];
+        foreach (self::TITLES as $tab=>$title) {
+            $values=is_array($filters[$tab] ?? null) ? $filters[$tab] : [];
+            $values['tab']=$tab;
+            $rows=$this->groups($values,false,false); $amount=0; $oldest=null;
+            foreach ($rows as $row) { $amount += $this->cents($row['debit']); if ($oldest===null || $row['tgl_jurnal']<$oldest) $oldest=$row['tgl_jurnal']; }
+            $result[$tab]=['count'=>count($rows),'debit'=>$this->fromCents($amount),'oldest'=>$oldest,
+                'age'=>$oldest ? max(0,(int)floor((strtotime(date('Y-m-d'))-strtotime($oldest))/86400)) : null];
+        }
+        return $result;
+    }
+
+    public function options($values, $posted = false)
+    {
+        $f=$this->filters($values); $f['company']=''; $f['category']=''; $f['q']='';
+        $rows=$this->groups($f,$posted,false); $companies=[]; $categories=[];
+        foreach ($rows as $row) {
+            foreach ($row['companies'] as $company) $companies[$company['id']]=$company['name'];
+            foreach ($row['categories'] as $category) $categories[$category]=$category;
+        }
+        asort($companies); asort($categories);
+        $years=$this->read($this->db->select('MIN(tgl_jurnal) AS first_date, MAX(tgl_jurnal) AS last_date')->get('tr_jurnal'))->row_array();
+        $first=max(1900,(int)substr($years['first_date'] ?? date('Y'),0,4));
+        $last=min(9998,max((int)date('Y'),(int)substr($years['last_date'] ?? date('Y'),0,4)));
+        return ['companies'=>$companies,'categories'=>array_values($categories),'years'=>range($last,min($first,(int)date('Y')),-1)];
+    }
+
+    public function detail($id, $posted)
+    {
+        if (!is_scalar($id) || !preg_match('/^[1-9]\d*$/D',(string)$id)) throw new InvalidArgumentException('ID jurnal tidak valid.');
+        $anchor=$this->read($this->db->get_where('tr_jurnal',['id'=>(int)$id]))->row_array();
+        if (!$anchor || !$this->source($anchor['jenis_transaksi'])) throw new InvalidArgumentException('Jurnal tidak tersedia.');
+        $this->db->where(['no_transaksi'=>$anchor['no_transaksi'],'jenis_transaksi'=>$anchor['jenis_transaksi']]);
+        if ($this->source($anchor['jenis_transaksi'])==='EXP') $this->db->where('id_company',$anchor['id_company']);
+        $rows=$this->read($this->db->order_by('id','asc')->get('tr_jurnal'))->result_array();
+        $debit=0; $credit=0; $validAmounts=true;
+        foreach ($rows as $row) {
+            if ($posted ? (string)$row['sts']!=='1' : !$this->pending($row)) throw new InvalidArgumentException('Status kelompok jurnal berubah atau sudah diposting.');
+            $d=$this->cents($row['debit']); $c=$this->cents($row['kredit']);
+            if ($d<0||$c<0) $validAmounts=false;
+            $debit+=$d; $credit+=$c;
+        }
+        if (!$rows) throw new InvalidArgumentException('Detail jurnal tidak tersedia.');
+        $anchor['debit']=$this->fromCents($debit); $anchor['kredit']=$this->fromCents($credit);
+        $anchor['source_numbers']=implode(', ',array_unique(array_filter(array_column($rows,'no_jurnal'))));
+        $anchor['receipt_lines']=count(array_filter($rows,function($r){return !in_array($r['coa'],['1102-01-01','1106-01-02','7201-01-04','1106-01-05'],true)&&($this->cents($r['debit'])>0||$this->cents($r['kredit'])>0);}));
+        $anchor['active_lines']=count(array_filter($rows,function($r){return $this->cents($r['debit'])>0||$this->cents($r['kredit'])>0;}));
+        $headers=[$anchor]; $this->enrich($headers); $anchor=$headers[0];
+        if (!$posted && !$this->eligible($anchor)) throw new InvalidArgumentException('Dokumen sumber jurnal tidak tersedia.');
+        return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit];
+    }
+
+    public function posting_metadata_ready()
+    {
+        if ($this->metadataReady!==null) return $this->metadataReady;
+        if (!$this->db->table_exists('tr_jurnal_postings')) return $this->metadataReady=false;
+        foreach (['group_key','source','no_transaksi','jenis_transaksi','id_company','posted_at','posted_by','posted_by_name','accounting_numbers'] as $field) {
+            if (!$this->db->field_exists($field,'tr_jurnal_postings')) return $this->metadataReady=false;
+        }
+        return $this->metadataReady=true;
+    }
+
+    public function save_posting_metadata($header,$actor,$numbers)
+    {
+        if (!$this->posting_metadata_ready()) throw new RuntimeException('Schema metadata posting belum tersedia.');
+        if (!is_array($numbers) || !$numbers || count($numbers)>20) throw new RuntimeException('Nomor final accounting tidak tersedia.');
+        $verified=[];
+        foreach ($numbers as $entry) {
+            if (!is_array($entry) || !is_scalar($entry['number'] ?? null) || !is_scalar($entry['company'] ?? null)) throw new RuntimeException('Nomor final accounting tidak valid.');
+            $number=trim((string)$entry['number']); $company=trim((string)$entry['company']);
+            if ($number==='' || strlen($number)>255 || strlen($company)>100) throw new RuntimeException('Nomor final accounting tidak valid.');
+            $verified[json_encode([$company,$number])]=['company'=>$company,'number'=>$number];
+        }
+        if (!is_scalar($actor['id'] ?? null) || !is_scalar($actor['name'] ?? null) || trim((string)$actor['id'])==='' || trim((string)$actor['name'])==='') throw new RuntimeException('User posting tidak tersedia.');
+        $record=['group_key'=>hash('sha256',$this->key($header)),'source'=>$header['source'],'no_transaksi'=>$header['no_transaksi'],
+            'jenis_transaksi'=>$header['jenis_transaksi'],'id_company'=>$header['source']==='EXP'?(string)$header['id_company']:null,
+            'posted_at'=>(new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->format('Y-m-d H:i:s'),
+            'posted_by'=>(string)$actor['id'],'posted_by_name'=>mb_substr((string)$actor['name'],0,191,'UTF-8'),
+            'accounting_numbers'=>json_encode(array_values($verified))];
+        $debug=$this->db->db_debug; $this->db->db_debug=false; $begun=false;
+        try {
+            if ($this->db->trans_begin()===false) throw new RuntimeException('Gagal memulai metadata posting.');
+            $begun=true;
+            if ($this->db->insert('tr_jurnal_postings',$record)===false || $this->db->trans_status()===false) throw new RuntimeException('Gagal menyimpan metadata posting.');
+            if ($this->db->trans_commit()===false) throw new RuntimeException('Commit metadata posting gagal.');
+        } catch (Throwable $error) { if ($begun) $this->db->trans_rollback(); throw $error; }
+        finally { $this->db->db_debug=$debug; }
+    }
+
+    private function getGlDb($companyId)
+    {
+        $id = (string)$companyId;
+        $group = in_array($id, ['1', '6', '7'], true) ? 'accounting_stm' : ($id === '4' ? 'accounting_vuca' : 'accounting_sustain');
+        if (isset($this->glDbs[$group])) return $this->glDbs[$group];
+        if (!function_exists('get_instance')) return null;
+        $ci = &get_instance();
+        if (!isset($ci->load)) return null;
+        try {
+            $db = $ci->load->database($group, true);
+            if ($db && !empty($db->conn_id)) {
+                return $this->glDbs[$group] = $db;
+            }
+        } catch (Throwable $e) {
+            return null;
+        }
+        return null;
+    }
+
+    private function resolveUserNames($ids)
+    {
+        if (!$ids) return [];
+        $missing = array_diff(array_unique(array_filter(array_map('trim', $ids))), array_keys($this->userMap ?? []));
+        if ($missing && $this->db && method_exists($this->db, 'table_exists') && $this->db->table_exists('users')) {
+            $numerics = array_values(array_filter($missing, 'is_numeric'));
+            $strings = array_values(array_filter($missing, function($v) { return !is_numeric($v); }));
+            $this->db->select('id_user, username, nm_lengkap');
+            if ($numerics && $strings) {
+                $this->db->group_start()->where_in('id_user', $numerics)->or_where_in('username', $strings)->group_end();
+            } elseif ($numerics) {
+                $this->db->where_in('id_user', $numerics);
+            } elseif ($strings) {
+                $this->db->where_in('username', $strings);
+            }
+            $res = $this->db->get('users');
+            if ($res) {
+                foreach ($res->result_array() as $u) {
+                    $name = trim((string)($u['nm_lengkap'] ?: $u['username']));
+                    if (!empty($u['id_user'])) $this->userMap[(string)$u['id_user']] = $name;
+                    if (!empty($u['username'])) $this->userMap[$u['username']] = $name;
+                }
+            }
+        }
+        return $this->userMap ?? [];
+    }
+
+    private function resolveGlMetadata(&$rows)
+    {
+        $pending = [];
+        foreach ($rows as $idx => &$row) {
+            if (empty($row['source_numbers'])) {
+                $pending[$idx] = &$row;
+            }
+        }
+        unset($row);
+        if (!$pending) return;
+
+        $buckets = [];
+        foreach ($pending as $idx => &$row) {
+            $companyId = (string)($row['id_company'] ?? '');
+            $dbKey = in_array($companyId, ['1', '6', '7'], true) ? 'accounting_stm' : ($companyId === '4' ? 'accounting_vuca' : 'accounting_sustain');
+            $buckets[$dbKey][$idx] = &$row;
+        }
+        unset($row);
+
+        $allUserIds = [];
+
+        foreach ($buckets as $dbKey => &$groupRows) {
+            $gl = $this->getGlDb($dbKey === 'accounting_stm' ? '1' : ($dbKey === 'accounting_vuca' ? '4' : '3'));
+            if (!$gl || !method_exists($gl, 'table_exists')) continue;
+
+            $invRows = []; $rcvRows = []; $payRows = []; $expRows = []; $pcsRows = [];
+            foreach ($groupRows as $idx => &$r) {
+                $src = $r['source'] ?? '';
+                if ($src === 'INV') $invRows[$idx] = &$r;
+                elseif ($src === 'RCV') $rcvRows[$idx] = &$r;
+                elseif ($src === 'PAY') $payRows[$idx] = &$r;
+                elseif ($src === 'EXP') $expRows[$idx] = &$r;
+                elseif ($src === 'PCS') $pcsRows[$idx] = &$r;
+            }
+            unset($r);
+
+            // 1. Invoicing
+            if ($invRows && $gl->table_exists('jurnal')) {
+                $invMap = [];
+                foreach ($invRows as $idx => $r) {
+                    $invNo = trim((string)($r['invoice_number'] ?? $r['display_no_transaksi'] ?? ''));
+                    if ($invNo !== '') $invMap[$invNo][] = $idx;
+                }
+                if ($invMap) {
+                    $keys = array_keys($invMap);
+                    $jurnalNomors = [];
+                    $glData = [];
+                    foreach (array_chunk($keys, 200) as $chunk) {
+                        $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                        if ($q) foreach ($q->result_array() as $j) {
+                            $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                            if (!empty($j['nomor'])) $jurnalNomors[] = $j['nomor'];
+                        }
+                    }
+                    if ($jurnalNomors && $gl->table_exists('javh')) {
+                        foreach (array_chunk(array_unique($jurnalNomors), 200) as $chunk) {
+                            $q = $gl->select('nomor, tgl, user_id')->where_in('nomor', $chunk)->get('javh');
+                            if ($q) foreach ($q->result_array() as $h) {
+                                foreach ($glData as &$gd) {
+                                    if ($gd['nomor'] === $h['nomor']) {
+                                        if (!empty($h['tgl'])) $gd['tgl'] = $h['tgl'];
+                                        if (!empty($h['user_id'])) $gd['user'] = $h['user_id'];
+                                    }
+                                }
+                                unset($gd);
+                            }
+                        }
+                    }
+                    $unmatched = array_diff($keys, array_keys($glData));
+                    if ($unmatched && $gl->table_exists('javh')) {
+                        foreach ($unmatched as $uInv) {
+                            $q = $gl->select('nomor, tgl, user_id')->like('keterangan', $uInv)->limit(1)->get('javh');
+                            if ($q && ($h = $q->row_array())) {
+                                $glData[$uInv] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                            }
+                        }
+                    }
+                    foreach ($glData as $invNo => $meta) {
+                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+                        foreach ($invMap[$invNo] ?? [] as $targetIdx) {
+                            $invRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                            if (empty($invRows[$targetIdx]['posted_at'])) {
+                                $invRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                            }
+                            if (empty($invRows[$targetIdx]['posted_by_id'])) {
+                                $invRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Penerimaan Piutang
+            if ($rcvRows && $gl->table_exists('jarh')) {
+                $rcvMap = [];
+                foreach ($rcvRows as $idx => $r) {
+                    $no = trim((string)($r['no_transaksi'] ?? ''));
+                    if ($no !== '') $rcvMap[$no][] = $idx;
+                }
+                if ($rcvMap) {
+                    $keys = array_keys($rcvMap);
+                    $glData = [];
+                    foreach (array_chunk($keys, 200) as $chunk) {
+                        $q = $gl->select('nomor, tgl, user_id, no_reff')->where_in('no_reff', $chunk)->get('jarh');
+                        if ($q) foreach ($q->result_array() as $h) {
+                            $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                        }
+                    }
+                    $unmatched = array_diff($keys, array_keys($glData));
+                    if ($unmatched && $gl->table_exists('jurnal')) {
+                        foreach (array_chunk($unmatched, 200) as $chunk) {
+                            $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                            if ($q) foreach ($q->result_array() as $j) {
+                                $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                            }
+                        }
+                    }
+                    foreach ($glData as $no => $meta) {
+                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+                        foreach ($rcvMap[$no] ?? [] as $targetIdx) {
+                            $rcvRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                            if (empty($rcvRows[$targetIdx]['posted_at'])) {
+                                $rcvRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                            }
+                            if (empty($rcvRows[$targetIdx]['posted_by_id'])) {
+                                $rcvRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Payment
+            if ($payRows && $gl->table_exists('japh')) {
+                $payMap = [];
+                foreach ($payRows as $idx => $r) {
+                    $raw = trim((string)($r['no_transaksi'] ?? ''));
+                    if ($raw !== '') {
+                        $split = array_unique(array_filter(array_map('trim', explode(',', $raw))));
+                        foreach ($split as $part) $payMap[$part][] = $idx;
+                    }
+                }
+                if ($payMap) {
+                    $keys = array_keys($payMap);
+                    $glData = [];
+                    foreach (array_chunk($keys, 200) as $chunk) {
+                        $q = $gl->select('nomor, tgl, user_id, no_reff')->where_in('no_reff', $chunk)->get('japh');
+                        if ($q) foreach ($q->result_array() as $h) {
+                            $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                        }
+                    }
+                    $unmatched = array_diff($keys, array_keys($glData));
+                    if ($unmatched && $gl->table_exists('jurnal')) {
+                        foreach (array_chunk($unmatched, 200) as $chunk) {
+                            $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                            if ($q) foreach ($q->result_array() as $j) {
+                                $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                            }
+                        }
+                    }
+                    foreach ($glData as $no => $meta) {
+                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+                        foreach ($payMap[$no] ?? [] as $targetIdx) {
+                            $payRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                            if (empty($payRows[$targetIdx]['posted_at'])) {
+                                $payRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                            }
+                            if (empty($payRows[$targetIdx]['posted_by_id'])) {
+                                $payRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Expense Report
+            if ($expRows && ($gl->table_exists('javh') || $gl->table_exists('jurnal'))) {
+                $expMap = [];
+                foreach ($expRows as $idx => $r) {
+                    $no = trim((string)($r['no_transaksi'] ?? ''));
+                    if ($no !== '') $expMap[$no][] = $idx;
+                }
+                if ($expMap) {
+                    $keys = array_keys($expMap);
+                    $glData = [];
+                    if ($gl->table_exists('jurnal')) {
+                        foreach (array_chunk($keys, 200) as $chunk) {
+                            $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                            if ($q) foreach ($q->result_array() as $j) {
+                                $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                            }
+                        }
+                    }
+                    $unmatched = array_diff($keys, array_keys($glData));
+                    if ($unmatched && $gl->table_exists('javh')) {
+                        foreach ($unmatched as $uExp) {
+                            $q = $gl->select('nomor, tgl, user_id')->like('keterangan', $uExp)->limit(1)->get('javh');
+                            if ($q && ($h = $q->row_array())) {
+                                $glData[$uExp] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                            }
+                        }
+                    }
+                    foreach ($glData as $no => $meta) {
+                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+                        foreach ($expMap[$no] ?? [] as $targetIdx) {
+                            $expRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                            if (empty($expRows[$targetIdx]['posted_at'])) {
+                                $expRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                            }
+                            if (empty($expRows[$targetIdx]['posted_by_id'])) {
+                                $expRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Petty Cash
+            if ($pcsRows && ($gl->table_exists('japh') || $gl->table_exists('jurnal'))) {
+                $pcsMap = [];
+                foreach ($pcsRows as $idx => $r) {
+                    $no = trim((string)($r['no_transaksi'] ?? ''));
+                    if ($no !== '') $pcsMap[$no][] = $idx;
+                }
+                if ($pcsMap) {
+                    $keys = array_keys($pcsMap);
+                    $glData = [];
+                    if ($gl->table_exists('japh')) {
+                        foreach (array_chunk($keys, 200) as $chunk) {
+                            $q = $gl->select('nomor, tgl, user_id, no_reff')->where_in('no_reff', $chunk)->get('japh');
+                            if ($q) foreach ($q->result_array() as $h) {
+                                $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                            }
+                        }
+                    }
+                    $unmatched = array_diff($keys, array_keys($glData));
+                    if ($unmatched && $gl->table_exists('jurnal')) {
+                        foreach (array_chunk($unmatched, 200) as $chunk) {
+                            $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                            if ($q) foreach ($q->result_array() as $j) {
+                                $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                            }
+                        }
+                    }
+                    foreach ($glData as $no => $meta) {
+                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+                        foreach ($pcsMap[$no] ?? [] as $targetIdx) {
+                            $pcsRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                            if (empty($pcsRows[$targetIdx]['posted_at'])) {
+                                $pcsRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                            }
+                            if (empty($pcsRows[$targetIdx]['posted_by_id'])) {
+                                $pcsRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        unset($groupRows);
+
+        $neededUserIds = $allUserIds;
+        foreach ($pending as $r) {
+            $uid = (string)($r['posted_by_id'] ?? '');
+            if ($uid !== '' && empty($r['posted_by'])) {
+                $neededUserIds[] = $uid;
+            }
+        }
+        if ($neededUserIds) {
+            $userMap = $this->resolveUserNames(array_unique($neededUserIds));
+            foreach ($pending as &$r) {
+                $uid = (string)($r['posted_by_id'] ?? '');
+                if ($uid !== '' && empty($r['posted_by'])) {
+                    $r['posted_by'] = $userMap[$uid] ?? $uid;
+                }
+            }
+            unset($r);
+        }
+    }
+
+    private function postingMetadata(&$rows)
+    {
+        if (!$rows) return;
+        if ($this->posting_metadata_ready()) {
+            $keys=[]; foreach ($rows as $row) $keys[]=hash('sha256',$this->key($row));
+            $map=[];
+            foreach (array_chunk(array_unique($keys),200) as $chunk) {
+                foreach ($this->read($this->db->where_in('group_key',$chunk)->get('tr_jurnal_postings'))->result_array() as $record) $map[$record['group_key']]=$record;
+            }
+            foreach ($rows as &$row) {
+                $record=$map[hash('sha256',$this->key($row))] ?? null;
+                if (!$record) continue;
+                $row['posted_at']=$record['posted_at']; $row['posted_by']=$record['posted_by_name']; $row['posted_by_id']=$record['posted_by'];
+                $entries=json_decode($record['accounting_numbers'],true); $numbers=[];
+                if (is_array($entries)) foreach ($entries as $entry) {
+                    if (!is_array($entry) || !is_string($entry['number'] ?? null) || !is_string($entry['company'] ?? null)) continue;
+                    $company=$entry['company'];
+                    foreach ($row['companies'] as $side) if ($side['id']===$company) $company=$side['name'];
+                    $numbers[]=count($entries)>1 ? ($company!==''?$company.': ':'').$entry['number'] : $entry['number'];
+                }
+                $row['source_numbers']=$numbers?implode('; ',array_unique($numbers)):null;
+            }
+            unset($row);
+        }
+        $this->resolveGlMetadata($rows);
+    }
+
+    public function company_sections($rows)
+    {
+        $sections=[];
+        foreach ($rows as $row) {
+            $debit=$this->cents($row['debit']); $credit=$this->cents($row['kredit']);
+            if ($debit===0 && $credit===0) continue;
+            $id=trim((string)($row['id_company'] ?? ''));
+            $name=trim((string)($row['nm_company'] ?? ''));
+            $key=$id!=='' ? 'id:'.$id : 'name:'.$name;
+            if (!isset($sections[$key])) $sections[$key]=['id_company'=>$id,'nm_company'=>$name!==''?$name:($id!==''?'Company '.$id:'Company tidak tersedia'),
+                'rows'=>[],'debit'=>0,'kredit'=>0,'valid_amounts'=>true];
+            $sections[$key]['rows'][]=$row;
+            $sections[$key]['debit']+=$debit; $sections[$key]['kredit']+=$credit;
+            if ($debit<0 || $credit<0) $sections[$key]['valid_amounts']=false;
+        }
+        foreach ($sections as &$section) {
+            $section['is_balance']=$section['valid_amounts'] && $section['debit']>0 && $section['debit']===$section['kredit'];
+            $section['debit']=$this->fromCents($section['debit']); $section['kredit']=$this->fromCents($section['kredit']);
+            unset($section['valid_amounts']);
+        }
+        unset($section);
+        return array_values($sections);
+    }
+
+    public function export_rows($values, $posted = false)
+    {
+        $headers=$this->groups($values,$posted); $result=[];
+        // Fetch bounded batches, preserving the original group identity and all COA lines.
+        foreach (array_chunk($headers,200) as $chunk) {
+            $numbers=array_unique(array_column($chunk,'no_transaksi'));
+            $rows=$this->read($this->db->where_in('no_transaksi',$numbers)->order_by('id','asc')->get('tr_jurnal'))->result_array();
+            $map=[]; foreach ($chunk as $header) $map[$this->key($header)]=$header;
+            foreach ($rows as $row) {
+                $header=$map[$this->key($row)] ?? null;
+                if (!$header || ($posted ? (string)$row['sts']!=='1' : !$this->pending($row))) continue;
+                $result[]=['header'=>$header,'line'=>$row];
+            }
+        }
+        return $result;
+    }
+
+    public function pending($row)
+    {
+        $source=$this->source($row['jenis_transaksi']); $status=$row['sts'];
+        if (in_array($source,['INV','EXP'],true)) return in_array($status,[null,'','0',0],true);
+        if ($source==='PCS') return in_array($status,['','0',0],true);
+        return $source!==null && $status!==null && (string)$status!=='1';
+    }
+
+    public function key($row)
+    {
+        return json_encode([$row['no_transaksi'],$row['jenis_transaksi'],$this->source($row['jenis_transaksi'])==='EXP' ? $row['id_company'] : null]);
+    }
+
+    public function cents($value)
+    {
+        $value=trim((string)$value);
+        if (!preg_match('/^(-?)(\d+)(?:\.(\d{1,2}))?$/D',$value,$m)) throw new InvalidArgumentException('Nominal jurnal tidak valid.');
+        $digits=ltrim($m[2].str_pad($m[3] ?? '',2,'0'),'0') ?: '0';
+        $limit=(string)PHP_INT_MAX;
+        if (strlen($digits)>strlen($limit)||(strlen($digits)===strlen($limit)&&strcmp($digits,$limit)>0)) throw new InvalidArgumentException('Nominal jurnal melampaui batas perhitungan aman.');
+        return ($m[1]==='-'?-1:1)*(int)$digits;
+    }
+    public function fromCents($value) {
+        if (!is_int($value)||$value===PHP_INT_MIN) throw new InvalidArgumentException('Total jurnal melampaui batas perhitungan aman.');
+        return ($value<0?'-':'').intdiv(abs($value),100).'.'.str_pad((string)(abs($value)%100),2,'0',STR_PAD_LEFT);
+    }
+    private function decimal($value) { return $this->fromCents($this->cents($value)); }
+    private function scalar($value) { return is_scalar($value) ? mb_substr((string)$value,0,255,'UTF-8') : ''; }
+    private function read($query) { if ($query===false) throw new RuntimeException('Gagal membaca data jurnal.'); return $query; }
+
+    private function enrich(&$rows)
+    {
+        $invoices=[]; $receipts=[]; $paymentKeys=[]; $pettyNumbers=[]; $expenseNumbers=[];
+        foreach ($rows as $row) {
+            $source=$this->source($row['jenis_transaksi']);
+            if ($source==='INV') $invoices[]=$row['no_transaksi'];
+            if ($source==='EXP') $expenseNumbers[$row['jenis_transaksi']][]=$row['no_transaksi'];
+            if ($source==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $pettyNumbers[]=$row['no_transaksi'];
+            if ($source==='RCV') $receipts[]=$row['no_transaksi'];
+            if ($source==='PAY'||($source==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) $paymentKeys[]=$row['no_transaksi'];
+        }
+        $receiptMap=[];
+        if ($receipts) foreach ($this->read($this->db->select('id_header, MIN(id_inv) AS id_inv')->where_in('id_header',array_unique($receipts))->group_by('id_header')->get('tr_penerimaan_piutang_detail'))->result_array() as $r) {
+            $receiptMap[$r['id_header']]=$r['id_inv']; $invoices[]=$r['id_inv'];
+        }
+        $invoiceMap=$this->invoiceMap(array_unique($invoices));
+        $pettyReports=$this->pettyReportMap(array_unique($pettyNumbers));
+        $expenseMap=$this->expenseMap($expenseNumbers);
+        $paymentMap=$paymentKeys ? $this->paymentMap($paymentKeys) : [];
+        foreach ($rows as &$row) {
+            $row['source']=$this->source($row['jenis_transaksi']); $row['tab']=$this->tab($row['jenis_transaksi']);
+            $row['display_no_transaksi']=$row['source']==='INV'?'':$row['no_transaksi'];
+            $row['no_referensi']=$row['source']==='INV'?'':$row['no_transaksi']; $row['categories']=[$row['jenis_transaksi']];
+            $row['staging_numbers']=$row['source_numbers'] ?? null; $row['source_numbers']=null;
+            $row['posted_at']=!empty($row['db_tgl_posting']) ? $row['db_tgl_posting'] : (!empty($row['tgl_posting']) ? $row['tgl_posting'] : null);
+            $row['posted_by']=null;
+            $row['posted_by_id']=!empty($row['db_posted_by']) ? (string)$row['db_posted_by'] : (!empty($row['posted_by']) ? (string)$row['posted_by'] : null);
+            $row['invoice_available']=false; $row['payment_available']=false;
+            $row['companies']=[['id'=>(string)$row['id_company'],'name'=>(string)$row['nm_company']]];
+            if (in_array($row['source'],['INV','RCV'],true)) {
+                $invoice=$invoiceMap[$row['source']==='INV'?$row['no_transaksi']:($receiptMap[$row['no_transaksi']] ?? '')] ?? null;
+                if ($invoice) {
+                    $row['invoice_available']=$invoice['no_invoice']!==null && ($row['source']==='RCV'||$invoice['no_invoice']!=='');
+                    $row['no_referensi']=$invoice['no_invoice']; $row['id_company']=$invoice['company_id']; $row['nm_company']=$invoice['company_name'] ?? '';
+                    $row['companies']=[['id'=>(string)$row['id_company'],'name'=>$row['nm_company']]];
+                    $row['extra_search']=implode(' ',[$invoice['nm_customer'],$invoice['nm_project'],$invoice['id_spk_penawaran']]);
+                    if ($row['source']==='INV') {
+                        $row['invoice_number']=trim((string)$invoice['no_invoice']);
+                        $row['display_no_transaksi']=$row['invoice_number'];
+                        $row['no_referensi']=trim((string)$invoice['id_spk_penawaran']);
+                        $names=[trim((string)$invoice['nm_customer']),trim((string)$invoice['nm_project'])];
+                        $row['keterangan']=implode(' - ',array_filter($names,function($name){return $name!=='';}));
+                    } else {
+                        $number=trim((string)$invoice['no_invoice']);
+                        $customer=trim((string)$invoice['nm_customer']);
+                        $row['keterangan']='Pelunasan '.($number!==''?$number:'—').' - '.($customer!==''?$customer:'—');
+                    }
+                }
+            }
+            if ($row['source']==='PAY'||($row['source']==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) {
+                $matches=[];
+                foreach (array_unique(array_merge([$row['no_transaksi']],array_map('trim',explode(',',$row['no_transaksi'])))) as $key) foreach ($paymentMap[$key] ?? [] as $p) $matches[$p['id']]=$p;
+                $docs=[]; $categories=[];
+                foreach ($matches as $p) {
+                    $docs[]=$p['no_doc'];
+                    $category=['kasbon'=>'Kasbon','transport'=>'Transport','transportasi'=>'Transport','periodik'=>'Periodik','expense'=>'Expense','refill_pettycash'=>'Refill Petty Cash','petty_cash_hutang'=>'Payment Hutang Petty Cash'][$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
+                    if ($category!=='') $categories[]=$category;
+                }
+                if ($docs) $row['no_referensi']=implode(', ',array_unique($docs));
+                if ($categories) $row['categories']=array_values(array_unique($categories));
+                $row['payment_available']=(bool)$matches;
+                $row['petty_payment_eligible']=false;
+                foreach ($matches as $p) if (in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)||stripos($p['no_doc'],'RPC')!==false) $row['petty_payment_eligible']=true;
+            }
+            if ($row['source']==='EXP') {
+                $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']];
+                $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
+            }
+            if ($row['source']==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $row['no_referensi']=implode(', ',$pettyReports[$row['no_transaksi']] ?? []);
+            $row['category']=implode(', ',$row['categories']);
+        }
+        unset($row);
+        // Keep all company sides in filters while preserving one posting boundary.
+        $numbers=[]; foreach ($rows as $row) if ($row['source']==='PCS') $numbers[]=$row['no_transaksi'];
+        if ($numbers) {
+            $sides=$this->read($this->db->select('no_transaksi,jenis_transaksi,id_company,nm_company')->where_in('no_transaksi',array_unique($numbers))->group_by(['no_transaksi','jenis_transaksi','id_company','nm_company'])->get('tr_jurnal'))->result_array();
+            foreach ($rows as &$row) if ($row['source']==='PCS') {
+                $row['companies']=[];
+                foreach ($sides as $side) if ($side['no_transaksi']===$row['no_transaksi']&&$side['jenis_transaksi']===$row['jenis_transaksi']) $row['companies'][]=['id'=>(string)$side['id_company'],'name'=>$side['nm_company']];
+                $row['nm_company']=implode(' / ',array_unique(array_column($row['companies'],'name')));
+            }
+            unset($row);
+        }
+        $this->postingMetadata($rows);
+    }
+
+    private function expenseMap($numbers)
+    {
+        $map=[]; $headers=[]; $links=[]; $totals=[];
+        $regular=array_unique($numbers['Expense Report'] ?? []);
+        foreach (array_chunk($regular,200) as $chunk) {
+            foreach ($this->read($this->db->where_in('no_doc',$chunk)->get('tr_expense'))->result_array() as $expense) {
+                $headers[$expense['no_doc']]=$expense;
+                if (!empty($expense['id_kasbon'])) $links[$expense['no_doc']][]=$expense['id_kasbon'];
+            }
+            foreach ($this->read($this->db->where_in('no_doc',$chunk)->get('tr_expense_detail'))->result_array() as $line) {
+                foreach (['id_kasbon','kasbon_pr_non_po_pett'] as $field) if (!empty($line[$field])) $links[$line['no_doc']][]=$line[$field];
+                if (!isset($totals[$line['no_doc']])) $totals[$line['no_doc']]=['kasbon'=>0,'expense'=>0];
+                foreach (['kasbon','expense'] as $field) $totals[$line['no_doc']][$field]+=$this->cents($line[$field] ?? '0');
+            }
+            foreach ($this->read($this->db->select('no_doc,id_expense_pett_pr_non_po')->where_in('id_expense_pett_pr_non_po',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) {
+                $links[$kasbon['id_expense_pett_pr_non_po']][]=$kasbon['no_doc'];
+            }
+        }
+        $keys=[]; foreach ($links as $values) $keys=array_merge($keys,$values);
+        $kasbons=[];
+        foreach (array_chunk(array_unique($keys),200) as $chunk) {
+            foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
+        }
+        $requesters=$this->expenseRequesters($kasbons);
+        foreach ($regular as $number) {
+            $refs=[]; $names=[];
+            foreach (array_unique($links[$number] ?? []) as $key) if (isset($kasbons[$key])) {
+                $refs[]=$key;
+                foreach ($requesters[$key] ?? [] as $name) $names[$name]=$name;
+            }
+            sort($refs,SORT_NATURAL); $names=array_values($names); sort($names,SORT_NATURAL);
+            $expense=$headers[$number] ?? []; $kind='';
+            if (is_numeric($expense['lebih_bayar'] ?? null) && (float)$expense['lebih_bayar']>0) $kind='Pengembalian';
+            elseif (is_numeric($expense['kurang_bayar'] ?? null) && (float)$expense['kurang_bayar']>0) $kind='Reimburse';
+            elseif (isset($totals[$number])) {
+                $comparison=$totals[$number]['kasbon'] <=> $totals[$number]['expense'];
+                $kind=$comparison>0?'Pengembalian':($comparison<0?'Reimburse':'');
+            }
+            $map['Expense Report'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
+                'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').' - '.($names?implode(', ',$names):'-')];
+        }
+        foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
+            $refs=[];
+            foreach ($this->read($this->db->select('e.id,k.id AS kasbon')->from(DBCNL.'.kons_tr_expense_report_project_header e')
+                ->join(DBCNL.'.kons_tr_kasbon_project_header k','k.id=e.id_header')->where_in('e.id',$chunk)->get())->result_array() as $row) {
+                $reference=trim((string)$row['kasbon']); if ($reference!=='') $refs[$row['id']][$reference]=$reference;
+            }
+            foreach ($chunk as $number) {
+                $values=array_values($refs[$number] ?? []); sort($values,SORT_NATURAL);
+                $map['Expense Report Consultant'][$number]=['reference'=>$values?implode(', ',$values):'-','description'=>'Expense Report Consultant - '.$number];
+            }
+        }
+        return $map;
+    }
+
+    private function expenseRequesters($kasbons)
+    {
+        $tables=['pr departemen'=>'rutin_non_planning_header','pr stok'=>'material_planning_base_on_produksi','pr asset'=>'tran_pr_header'];
+        $numbers=[];
+        foreach ($kasbons as $kasbon) {
+            $type=strtolower(trim((string)$kasbon['tipe_pr']));
+            if (isset($tables[$type]) && !empty($kasbon['id_pr'])) $numbers[$type][]=$kasbon['id_pr'];
+        }
+        $users=[];
+        foreach ($numbers as $type=>$keys) foreach (array_chunk(array_unique($keys),200) as $chunk) {
+            foreach ($this->read($this->db->select('p.no_pr,u.nm_lengkap')->from($tables[$type].' p')
+                ->join('users u','u.id_user=p.created_by')->where_in('p.no_pr',$chunk)->get())->result_array() as $row) {
+                $name=trim((string)$row['nm_lengkap']); if ($name!=='') $users[$type][$row['no_pr']][$name]=$name;
+            }
+        }
+        $map=[];
+        foreach ($kasbons as $number=>$kasbon) $map[$number]=array_values($users[strtolower(trim((string)$kasbon['tipe_pr']))][$kasbon['id_pr']] ?? []);
+        return $map;
+    }
+
+    private function pettyReportMap($numbers)
+    {
+        $map=[];
+        foreach (array_chunk($numbers,200) as $chunk) {
+            $reports=$this->read($this->db->select('e.no_pencatatan,p.no_pelaporan')
+                ->from('tr_expense_petty_cash e')
+                ->join('tr_pelaporan_petty_cash_detail d','d.pencatatan_id=e.id')
+                ->join('tr_pelaporan_petty_cash p','p.id=d.pelaporan_id')
+                ->where_in('e.no_pencatatan',$chunk)->where_in('p.status',['draft','waiting','approved'])->get())->result_array();
+            foreach ($reports as $report) {
+                $number=trim((string)$report['no_pelaporan']);
+                if ($number!=='') $map[$report['no_pencatatan']][$number]=$number;
+            }
+        }
+        foreach ($map as &$reports) { $reports=array_values($reports); sort($reports,SORT_NATURAL); }
+        unset($reports);
+        return $map;
+    }
+
+    private function invoiceMap($ids)
+    {
+        if (!$ids) return [];
+        $company="COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company)";
+        $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran, ".$company.' AS company_id,co.nm_company AS company_name',false)
+            ->from('tr_invoicing b')->join(DBCNL.'.kons_tr_penawaran c','c.id_quotation=b.id_penawaran','left')
+            ->join(DBCNL.'.kons_tr_spk_penawaran s','s.id_spk_penawaran=b.id_spk_penawaran','left')
+            ->join(DBCNL.'.kons_tr_penawaran_non_konsultasi n','n.id_penawaran=b.id_penawaran','left')
+            ->join(DBCNL.'.kons_tr_company co','co.id='.$company,'left',false)
+            ->where_in('b.id',$ids)->get())->result_array();
+        $map=[]; foreach ($rows as $row) $map[$row['id']]=$row;
+        return $map;
+    }
+
+    private function paymentMap($numbers)
+    {
+        $keys=[];
+        foreach ($numbers as $number) $keys=array_merge($keys,[$number],array_map('trim',explode(',',$number)));
+        $missing=array_values(array_diff(array_unique($keys),$this->paymentKeys));
+        foreach (array_chunk($missing,200) as $chunk) {
+            $rows=$this->read($this->db->select('id,id_payment,no_doc,tipe')->group_start()->where_in('id',$chunk)
+                ->or_where_in('id_payment',$chunk)->or_where_in('no_doc',$chunk)->group_end()->get('payment_approve'))->result_array();
+            foreach ($rows as $row) foreach (array_unique([(string)$row['id'],(string)$row['id_payment'],(string)$row['no_doc']]) as $key) if ($key!=='') $this->payments[$key][$row['id']]=$row;
+        }
+        $this->paymentKeys=array_merge($this->paymentKeys,$missing);
+        return $this->payments;
+    }
+
+    private function eligible($row)
+    {
+        if ($row['source']==='INV') return $row['invoice_available']&&$row['nm_company']!==''&&(int)$row['active_lines']>0;
+        if ($row['source']==='RCV') return $row['invoice_available']&&(int)$row['receipt_lines']>0;
+        if ($row['source']==='PAY') return trim((string)$row['nm_company'])!=='';
+        if ($row['source']==='PCS'&&$row['jenis_transaksi']!=='Petty Cash') return $row['petty_payment_eligible'];
+        return true;
+    }
+
+    private function companyMatches($row,$value)
+    {
+        foreach ($row['companies'] as $company) if ($company['id']===$value) return true;
+        return false;
+    }
+
+    private function search($headers,$query,$posted)
+    {
+        $words=preg_split('/\s+/u',mb_strtolower(trim($query),'UTF-8'),-1,PREG_SPLIT_NO_EMPTY);
+        if (!$words||!$headers) return $headers;
+        $numbers=array_unique(array_column($headers,'no_transaksi')); $matches=[];
+        foreach (array_chunk($numbers,200) as $chunk) {
+            $this->db->select('no_transaksi,jenis_transaksi,id_company,coa,nm_coa,keterangan')->where_in('no_transaksi',$chunk)->group_start();
+            foreach ($words as $word) foreach (['coa','nm_coa','keterangan'] as $field) $this->db->or_like($field,$word);
+            $rows=$this->read($this->db->group_end()->get('tr_jurnal'))->result_array();
+            foreach ($rows as $row) $matches[$this->key($row)][]=mb_strtolower(implode(' ',[$row['coa'],$row['nm_coa'],$row['keterangan']]),'UTF-8');
+        }
+        return array_values(array_filter($headers,function($row)use($words,$matches){
+            $hay=mb_strtolower(implode(' ',[$row['no_transaksi'],$row['display_no_transaksi'],$row['no_referensi'],$row['category'],$row['keterangan'],$row['nm_company'],$row['nm_divisi'],$row['tgl_jurnal'],$row['source_numbers'] ?? '',$row['posted_at'] ?? '',$row['posted_by'] ?? '',$row['extra_search'] ?? '',$row['debit'],$row['kredit'],implode(' ',$matches[$this->key($row)] ?? [])]),'UTF-8');
+            foreach ($words as $word) if (mb_strpos($hay,$word,0,'UTF-8')===false) return false;
+            return true;
+        }));
+    }
+}

@@ -63,8 +63,9 @@ class Jurnal_model extends CI_Model
 		return $Arr_coa;
 	}
 
-	public function get_Coa_Bank_Aja($Cabang)
+	public function get_Coa_Bank_Aja($Cabang, &$auditQueriesOk = null)
 	{
+		$auditQueriesOk = true;
 		//$db2=$this->load->database('accounting', TRUE);
 		//TEST CABANG
 		//$Cabang		= '102';
@@ -79,6 +80,8 @@ class Jurnal_model extends CI_Model
 		}
 		$Kode_Cab		= 'A';
 		$Query_Cabang	= $this->db->get_where(DBACC . '.pastibisa_tb_cabang', array('nocab' => $Cabang))->result();
+		$error = $this->db->error();
+		$auditQueriesOk = $auditQueriesOk && empty($error['code']);
 		if ($Query_Cabang) {
 			$Kode_Cab	= $Query_Cabang[0]->subcab;
 		}
@@ -87,12 +90,16 @@ class Jurnal_model extends CI_Model
 		$sqladd = " AND `level`='5' AND SUBSTRING(no_perkiraan,1,7) IN ('1102-01') AND kdcab='$Cab_Kode'";
 		$Query_Coa	= "SELECT * FROM " . DBACC . ".coa WHERE bln='$Bulan_Now' AND thn='$Tahun_Now' " . $sqladd;
 		$Pros_Coa		= $this->db->query($Query_Coa);
+		$error = $this->db->error();
+		$auditQueriesOk = $auditQueriesOk && empty($error['code']);
 		$Num_Coa		= $Pros_Coa->num_rows();
 		if ($Num_Coa > 0) {
 			$det_coa	= $Pros_Coa->result();
 		} else {
 			$Query_Coa	= "SELECT * FROM " . DBACC . ".coa WHERE bln='$Bulan_Lalu' AND thn='$Tahun_Lalu' " . $sqladd;
 			$Pros_Coa		= $this->db->query($Query_Coa);
+		$error = $this->db->error();
+		$auditQueriesOk = $auditQueriesOk && empty($error['code']);
 			$Num_Coa		= $Pros_Coa->num_rows();
 			if ($Num_Coa > 0) {
 				$det_coa	= $Pros_Coa->result();
