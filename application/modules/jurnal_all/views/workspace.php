@@ -2,6 +2,7 @@
 $e=function($v){return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');};
 $shortTitles=['INV'=>'Invoicing','RCV'=>'Penerimaan','PAY'=>'Pembayaran','EXP'=>'Expense Report','PCS'=>'Pencatatan Petty Cash'];
 ?>
+<link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css') ?>">
 <link rel="stylesheet" href="<?= base_url('assets/css/jurnal-all.css') ?>?v=<?= filemtime(FCPATH.'assets/css/jurnal-all.css') ?>">
 <section id="journal-workspace" data-base="<?= $e(site_url($posted?'report_jurnal_all':'jurnal_all')) ?>" data-posted="<?= $posted?'1':'0' ?>" data-tab="<?= $e($initialTab) ?>" data-manage="<?= $canManage?'1':'0' ?>">
     <p class="ja-intro"><?= $posted?'Telusuri jurnal yang sudah diposting dan periksa detail pencatatannya.':'Periksa transaksi yang menunggu posting ke accounting.' ?></p>
@@ -46,4 +47,5 @@ $shortTitles=['INV'=>'Invoicing','RCV'=>'Penerimaan','PAY'=>'Pembayaran','EXP'=>
         </form></div>
     </div>
 </section>
+<script src="<?= base_url('assets/dist/sweetalert2.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/jurnal-all.js') ?>?v=<?= filemtime(FCPATH.'assets/js/jurnal-all.js') ?>"></script>

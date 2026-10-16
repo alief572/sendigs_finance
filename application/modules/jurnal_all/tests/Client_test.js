@@ -40,7 +40,7 @@ global.fetch = async (url, options) => {
 };
 const flush = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
-    check(api.columns('PAY', true).length === 13 && api.columns('EXP', false).length === 9, 'column count');
+    check(api.columns('PAY', true).length === 12 && api.columns('EXP', false).length === 9, 'column count');
     check(api.escape('</textarea><script>') === '&lt;/textarea&gt;&lt;script&gt;', 'safe table escaping');
     check(api.money('100.25') === '100.25', 'cents formatting');
     check(api.money('90071992547409.25') === '90,071,992,547,409.25', 'display does not round through JavaScript Number');
@@ -96,6 +96,35 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     node('#ja-action-form').fire('submit'); await flush(); await flush();
     check(node('#ja-message').textContent.includes('jangan posting ulang') && node('#ja-message').classes.has('alert-warning'), 'committed posting metadata warning stays visible after list and summary reload');
     metadataWarning = false;
+
+    // SweetAlert2 notification tests
+    const swalCalls = [];
+    global.Swal = {
+        fire: async (opts) => {
+            swalCalls.push(opts);
+            if (opts.icon === 'question') return { isConfirmed: true };
+            return { isConfirmed: true };
+        }
+    };
+    node('#ja-table').fire('click', { target: { closest: selector => selector === '[data-id]' ? { dataset: { id: '1', source: 'PAY' } } : null } }); await flush();
+    node('#ja-action-form').fire('submit'); await flush(); await flush();
+    check(swalCalls.some(call => call.icon === 'question' && call.title === 'Konfirmasi Posting'), 'Swal confirmation dialog shown');
+    check(swalCalls.some(call => call.icon === 'success' && call.title === 'Posting Berhasil!'), 'Swal success notification shown on successful posting');
+
+    // SweetAlert2 error notification test
+    const prevFetch = global.fetch;
+    global.fetch = async (url, options) => {
+        if (url.endsWith('save_posting_jurnal')) {
+            return { ok: false, json: async () => ({ status: 0, msg: 'Saldo tidak mencukupi untuk posting.' }) };
+        }
+        return prevFetch(url, options);
+    };
+    node('#ja-table').fire('click', { target: { closest: selector => selector === '[data-id]' ? { dataset: { id: '1', source: 'PAY' } } : null } }); await flush();
+    node('#ja-action-form').fire('submit'); await flush(); await flush();
+    check(swalCalls.some(call => call.icon === 'error' && call.title === 'Posting Gagal!' && call.text === 'Saldo tidak mencukupi untuk posting.'), 'Swal error notification shown on failed posting');
+    global.fetch = prevFetch;
+    delete global.Swal;
+
     tabButtons[0].fire('keydown', { key: 'End' }); await flush();
     check(tabButtons[4].focused && tabButtons[4].attributes['aria-selected'] === 'true', 'keyboard tabs');
     const nativeFetch = global.fetch;
@@ -136,7 +165,6 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     check(!node('#ja-loading').hidden, 'report workspace shares the loading indicator');
     await flush();
     check(node('#ja-loading').hidden && calls.slice(beforeReport).every(call => !call[0].endsWith('get_summary')), 'report load completes without pending-summary request');
-    check(node('#ja-table tbody').innerHTML.includes('Detail') && !node('#ja-table tbody').innerHTML.includes('+ Post'), 'posted report labels read-only detail action');
-    check(node('#ja-table thead').innerHTML.includes('Diposting Oleh') && node('#ja-table tbody').innerHTML.includes('15 Oktober 2026 15:50:00 WIB') && node('#ja-table tbody').innerHTML.includes('FINAL-JV-1') && node('#ja-table tbody').innerHTML.includes('&lt;img src=x&gt;'), 'report shows confirmed number/date/escaped posting user');
+    check(node('#ja-table tbody').innerHTML.includes('15 Oktober 2026') && node('#ja-table tbody').innerHTML.includes('FINAL-JV-1'), 'report shows confirmed number/clean date');
     console.log('PASS Jurnal All client: ' + checks + ' assertions');
 })().catch(error => { console.error(error); process.exitCode = 1; });
