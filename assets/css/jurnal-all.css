@@ -141,3 +141,4 @@
 #journal-workspace .ja-company-section { margin: 24px 0; }
 #journal-workspace .ja-company-section h3 { margin: 0 0 12px; color: #334155; font-size: 16px; font-weight: 600; }
 #journal-workspace .ja-company-section > p { margin: 10px 0 0; font-size: 13px; }
+.swal2-container { z-index: 100000 !important; }

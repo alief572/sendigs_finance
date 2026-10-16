@@ -154,14 +154,71 @@
         async function write(action) {
             if (busy || !selected) return;
             const reason = find('#ja-reason').value.trim();
-            if (action === 'revisi_jurnal' && !reason) { message('Alasan revisi wajib diisi.', true); find('#ja-reason').focus(); return; }
-            if (!root.confirm(action === 'revisi_jurnal' ? 'Kembalikan jurnal ini untuk revisi?' : 'Posting jurnal ini ke accounting?')) return;
+            const isRevise = action === 'revisi_jurnal';
+            if (isRevise && !reason) {
+                message('Alasan revisi wajib diisi.', true);
+                find('#ja-reason').focus();
+                if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
+                    root.Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Alasan revisi wajib diisi.' });
+                }
+                return;
+            }
+            let confirmed = false;
+            const confirmText = isRevise ? 'Kembalikan jurnal ini untuk revisi?' : 'Posting jurnal ini ke accounting?';
+            if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
+                const res = await root.Swal.fire({
+                    title: isRevise ? 'Konfirmasi Revisi' : 'Konfirmasi Posting',
+                    text: confirmText,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: isRevise ? '#f39c12' : '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: isRevise ? 'Ya, Kembalikan' : 'Ya, Posting!',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                });
+                confirmed = !!res.isConfirmed;
+            } else {
+                confirmed = root.confirm(confirmText);
+            }
+            if (!confirmed) return;
             busy = true; find('#ja-post').disabled = true; find('#ja-revise').disabled = true; message('', true);
             try {
                 const result = await request(action, { ...selected, alasan_revisi: reason });
                 busy = false; root.jQuery(find('#ja-modal')).modal('hide'); state[active].start = 0; await load(); await summary();
+                const successTitle = isRevise ? 'Revisi Berhasil!' : 'Posting Berhasil!';
+                const successMsg = result.msg || (isRevise ? 'Jurnal berhasil dikembalikan untuk revisi.' : 'Jurnal berhasil diposting ke accounting.');
+                if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
+                    root.Swal.fire({
+                        icon: 'success',
+                        title: successTitle,
+                        text: successMsg,
+                        showConfirmButton: true,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#3085d6',
+                        timer: 3500
+                    });
+                } else if (typeof root.swal === 'function') {
+                    root.swal(successTitle, successMsg, 'success');
+                }
                 if (result.warning) message(result.warning, false, true);
-            } catch (error) { message(error.message, true); await load(); await summary(); }
+            } catch (error) {
+                const errorTitle = isRevise ? 'Revisi Gagal!' : 'Posting Gagal!';
+                const errorMsg = error.message || (isRevise ? 'Gagal memproses revisi jurnal.' : 'Posting jurnal ke accounting gagal.');
+                message(errorMsg, true); await load(); await summary();
+                if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
+                    root.Swal.fire({
+                        icon: 'error',
+                        title: errorTitle,
+                        text: errorMsg,
+                        showConfirmButton: true,
+                        confirmButtonText: 'Tutup',
+                        confirmButtonColor: '#d33'
+                    });
+                } else if (typeof root.swal === 'function') {
+                    root.swal(errorTitle, errorMsg, 'error');
+                }
+            }
             finally { busy = false; find('#ja-post').disabled = false; find('#ja-revise').disabled = false; }
         }
         all('.ja-tab, .ja-card').forEach(button => button.addEventListener('click', () => activate(button.dataset.tab)));
