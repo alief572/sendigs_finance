@@ -81,7 +81,7 @@ class Jurnal_invoicing_model extends BF_Model
         // Pilih koneksi DB accounting berdasarkan id_company
         $acc_db = $this->_get_accounting_db($id_company);
 
-        $this->db->trans_begin();
+        if ($this->db->trans_begin() === false) { echo json_encode(['save'=>0,'msg'=>'Gagal memulai transaksi jurnal.']); return; }
 
         try {
             // Insert jurnal header — sekali saja
@@ -169,9 +169,9 @@ class Jurnal_invoicing_model extends BF_Model
                 throw new Exception('Gagal insert kartu piutang: ' . $this->db->error()['message']);
             }
 
-            $this->db->trans_commit();
+            if ($this->db->trans_commit() === false) { throw new RuntimeException('Commit jurnal gagal. Periksa status sebelum mencoba kembali.'); }
 
-            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!']);
+            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!', 'accounting_numbers'=>[['company'=>(string)$id_company,'number'=>$Nomor_JV]]]);
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -230,10 +230,14 @@ class Jurnal_invoicing_model extends BF_Model
                 $msg = 'Please try again later !';
             }
         } else {
-            $this->db->trans_commit();
-
-            $valid = 1;
-            $msg = 'Status data berhasil di update !';
+            if ($this->db->trans_commit() === false) {
+                $this->db->trans_rollback();
+                $valid = 0;
+                $msg = 'Commit revisi gagal. Periksa status jurnal.';
+            } else {
+                $valid = 1;
+                $msg = 'Status data berhasil di update !';
+            }
         }
 
         $response = [

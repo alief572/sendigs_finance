@@ -656,16 +656,18 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         $db = $this->_get_db_by_name($db_name);
         if ($db) {
-            $db->trans_begin();
+            return $db->trans_begin();
         }
+        return false;
     }
 
     public function commit_transaction($db_name)
     {
         $db = $this->_get_db_by_name($db_name);
         if ($db) {
-            $db->trans_commit();
+            return $db->trans_commit();
         }
+        return false;
     }
 
     public function rollback_transaction($db_name)

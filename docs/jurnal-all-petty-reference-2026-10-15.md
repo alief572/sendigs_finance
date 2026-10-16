@@ -1,0 +1,10 @@
+# Nomor referensi RPC Pencatatan Petty Cash — 15 Oktober 2026
+
+- Permintaan: kolom No. Referensi di tab Pencatatan Petty Cash berisi nomor pelaporan RPC. No. Transaksi tetap PCP.
+- Grounding: Expense_petty_cash_model::get server-side list memakai relasi tr_expense_petty_cash.id → tr_pelaporan_petty_cash_detail.pencatatan_id → tr_pelaporan_petty_cash.id, dengan status aktif draft/waiting/approved. No. transaksi jurnal Petty Cash ditulis dari no_pencatatan PCP oleh model tersebut.
+- Implementasi: enrichment shared mengumpulkan PCP hanya untuk source PCS/jenis Petty Cash, bulk lookup per200 nomor, dedup/sort nomor pelaporan, lalu mengisi no_referensi. Lookup terpisah dari SUM jurnal agar relasi berulang tidak menggandakan saldo/count. Laporan rejected diabaikan sesuai relasi aktif asal; tidak tersedia berarti kosong/dash. Beberapa nomor aktif ditampilkan unik dipisah koma.
+- No. transaksi/ID/action/COA/native detail/nominal/company/grouping/handler posting tetap. Tab PAY untuk Refill/Payment Hutang tetap memakai reference payment asal. Header detail, posted report dan ekspor memakai mapping shared; search/sort referensi mengikuti RPC.
+- File kode: model jurnal_all, Query_test.php, Mysql_test.php. README, plan/checkpoint/manifest/laporan diperbarui; tidak ada perubahan JS/CSS/handler/schema aplikasi.
+- Validasi RED sebelum fix; query103/client41/controller76/dispatcher41/audit8/native168/PCS89/revisi24/MariaDB27 PASS (577 assertions). Cakupan mapping aktif/missing/rejected/multiple/duplicate, full amount, inter-company, header detail, search/export dan histori posted. PHP lint3, whitespace dan hash dependency PASS.
+- Fixture MariaDB terisolasi pada localhost dengan schema acak; runner membersihkan schema/process/datadir. Tidak memakai konfigurasi database development remote, tidak melakukan query/posting/migrasi pada aplikasi atau accounting. Tanpa browser sesuai instruksi pengguna.
+- Tidak ada TODO kode yang diketahui. Data tanpa hubungan laporan aktif akan tampil tanpa RPC. Hasil tampilan aktual di server remote belum diverifikasi; risiko transaksi lintas database/MyISAM existing tetap.

@@ -1,0 +1,122 @@
+<?php
+define('BASEPATH',dirname(__DIR__,4).'/system/');define('APPPATH',dirname(__DIR__,3).'/');
+function log_message($level,$message){}function show_error($message){throw new RuntimeException($message);}function load_class($name,$directory){return null;}class BF_Model{}
+function is_php($version){return version_compare(PHP_VERSION,$version,'>=');}
+mysqli_report(MYSQLI_REPORT_OFF);
+$port=(int)(getenv('JOURNAL_TEST_PORT') ?: 3307);
+$db=@new mysqli('127.0.0.1','root',getenv('JOURNAL_TEST_PASSWORD') ?: 'sendigs_root_local','',$port);
+if($db->connect_errno){fwrite(STDERR,"Local disposable MySQL test unavailable; no application database touched.\n");exit(2);}
+$schema='codex_journal_test_'.bin2hex(random_bytes(5));define('DBCNL',$schema);
+$checks=0;function check($ok,$msg){global $checks;$checks++;if(!$ok)throw new RuntimeException($msg);}
+function sql($query){global $db;$result=$db->query($query);if($result===false)throw new RuntimeException('Fixture SQL failed: '.$db->error);return $result;}
+function migrate($file){global $db;if(!$db->multi_query(file_get_contents($file)))throw new RuntimeException('Migration failed: '.$db->error);do{if($r=$db->store_result())$r->free();if(!$db->more_results())break;}while($db->next_result());if($db->errno)throw new RuntimeException('Migration failed: '.$db->error);}
+try {
+    sql("CREATE DATABASE `$schema` CHARACTER SET utf8mb4");$db->select_db($schema);
+    sql('CREATE TABLE menus (id INT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(100),link VARCHAR(255),icon VARCHAR(45),target VARCHAR(10),group_menu INT,parent_id INT,permission_id INT,status TINYINT,`order` INT,created_on DATETIME,pusat INT)');
+    sql('CREATE TABLE permissions (id_permission INT AUTO_INCREMENT PRIMARY KEY,nm_permission VARCHAR(45),ket VARCHAR(255),id_menu INT,nm_menu VARCHAR(255),created_on DATETIME)');
+    sql('CREATE TABLE group_permissions (id_group INT,id_permission INT)');sql('CREATE TABLE user_permissions (id_user INT,id_permission INT)');
+    foreach(['jurnal_invoicing','jurnal_penerimaan','jurnal_payment','jurnal_expense','jurnal_payment_petty_cash','report_jurnal_invoicing','report_jurnal_penerimaan','report_jurnal_payment','report_jurnal_expense','jurnal','jurnal_payment_petty_cash/buku_besar'] as $i=>$route) {
+        $status=$i===3?0:1;$order=$i+1;
+        sql("INSERT INTO menus(title,link,icon,target,group_menu,parent_id,permission_id,status,`order`,created_on,pusat) VALUES('$route','$route','fa fa-book','sametab',1,447,1,$status,$order,NOW(),0)");
+    }
+    $before=sql('SELECT id,status,`order` FROM menus ORDER BY id')->fetch_all(MYSQLI_ASSOC);
+    $migration=dirname(__DIR__).'/migrations/001_register_menu.sql';
+    migrate($migration);$once=sql('SELECT * FROM menus ORDER BY id')->fetch_all(MYSQLI_ASSOC);migrate($migration);
+    check($once===sql('SELECT * FROM menus ORDER BY id')->fetch_all(MYSQLI_ASSOC),'migration twice identical menus');
+    check((int)sql('SELECT COUNT(*) FROM permissions')->fetch_row()[0]===3,'three aggregate permissions');
+    check((int)sql('SELECT COUNT(*) FROM jurnal_all_menu_backup')->fetch_row()[0]===9,'only nine legacy entries backed up');
+    check((int)sql('SELECT COUNT(*) FROM group_permissions')->fetch_row()[0]===0&&(int)sql('SELECT COUNT(*) FROM user_permissions')->fetch_row()[0]===0,'admin only no copied grants');
+    check((int)sql('SELECT COUNT(*) FROM menus WHERE id<=9 AND status=0')->fetch_row()[0]===9,'legacy hidden');
+    check((int)sql('SELECT COUNT(*) FROM menus WHERE id IN (10,11) AND status=1')->fetch_row()[0]===2,'generic and Buku Besar unaffected');
+    check((int)sql("SELECT `order` FROM menus WHERE link='jurnal_all'")->fetch_row()[0]===1,'Jurnal occupies first old slot');
+    migrate(dirname(__DIR__).'/migrations/002_rollback_menu.sql');
+    check($before===sql('SELECT id,status,`order` FROM menus WHERE id<=11 ORDER BY id')->fetch_all(MYSQLI_ASSOC),'rollback restores exact old visibility/order');
+    migrate($migration);
+    check((int)sql('SELECT COUNT(*) FROM menus')->fetch_row()[0]===13,'reapply no duplicate menu');
+    sql('CREATE TABLE tr_jurnal (id INT AUTO_INCREMENT PRIMARY KEY,no_jurnal VARCHAR(255),no_transaksi VARCHAR(255),jenis_transaksi VARCHAR(255),sts VARCHAR(10),id_company VARCHAR(10),nm_company VARCHAR(255),tgl_jurnal DATE,coa VARCHAR(30),nm_coa VARCHAR(255),debit DECIMAL(20,2),kredit DECIMAL(20,2),keterangan TEXT,nm_divisi VARCHAR(255))');
+    sql('CREATE TABLE tr_expense (no_doc VARCHAR(100),id_kasbon VARCHAR(100),lebih_bayar DECIMAL(20,2),kurang_bayar DECIMAL(20,2),total_kasbon DECIMAL(20,2),jumlah DECIMAL(20,2))');
+    sql('CREATE TABLE tr_expense_detail (no_doc VARCHAR(100),id_kasbon VARCHAR(100),kasbon_pr_non_po_pett VARCHAR(100),kasbon DECIMAL(20,2),expense DECIMAL(20,2))');
+    sql('CREATE TABLE tr_kasbon (no_doc VARCHAR(100),id_pr VARCHAR(100),tipe_pr VARCHAR(50),id_expense_pett_pr_non_po VARCHAR(100))');
+    sql('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255))');
+    sql('CREATE TABLE rutin_non_planning_header (no_pr VARCHAR(100),created_by INTEGER)');
+    sql('CREATE TABLE material_planning_base_on_produksi (no_pr VARCHAR(100),created_by INTEGER)');
+    sql('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
+    sql('CREATE TABLE kons_tr_expense_report_project_header (id VARCHAR(100),id_header VARCHAR(100))');
+    sql('CREATE TABLE kons_tr_kasbon_project_header (id VARCHAR(100))');
+    sql('CREATE TABLE tr_invoicing (id VARCHAR(255) PRIMARY KEY,no_invoice VARCHAR(255),nm_customer VARCHAR(255),nm_project VARCHAR(255),id_penawaran VARCHAR(255),id_spk_penawaran VARCHAR(255))');
+    sql('CREATE TABLE tr_penerimaan_piutang_detail (id_header VARCHAR(255),id_inv VARCHAR(255))');
+    sql('CREATE TABLE tr_expense_petty_cash (id INT PRIMARY KEY,no_pencatatan VARCHAR(255))');
+    sql('CREATE TABLE tr_pelaporan_petty_cash_detail (pencatatan_id INT,pelaporan_id INT)');
+    sql('CREATE TABLE tr_pelaporan_petty_cash (id INT PRIMARY KEY,no_pelaporan VARCHAR(255),status VARCHAR(30))');
+    sql('CREATE TABLE payment_approve (id VARCHAR(255),id_payment VARCHAR(255),no_doc VARCHAR(255),tipe VARCHAR(255))');
+    sql('CREATE TABLE kons_tr_penawaran (id_quotation VARCHAR(255),company VARCHAR(10))');
+    sql('CREATE TABLE kons_tr_spk_penawaran (id_spk_penawaran VARCHAR(255),id_company VARCHAR(10),nm_project VARCHAR(255))');
+    sql('CREATE TABLE kons_tr_penawaran_non_konsultasi (id_penawaran VARCHAR(255),id_company VARCHAR(10))');
+    sql('CREATE TABLE kons_tr_company (id VARCHAR(10),nm_company VARCHAR(255))');
+    sql("INSERT INTO tr_jurnal(no_transaksi,jenis_transaksi,sts,id_company,nm_company,tgl_jurnal,coa,nm_coa,debit,kredit,keterangan,nm_divisi) VALUES('ER-1','Expense Report',NULL,'7','STM','2026-10-14','5101','Biaya',100.25,0,'Detail','Finance'),('ER-1','Expense Report','0','7','STM','2026-10-14','1101','Kas',0,100.25,'Detail','Finance')");
+    require BASEPATH.'database/DB.php';require dirname(__DIR__).'/models/Jurnal_all_model.php';
+    $ciDb=DB(['dbdriver'=>'mysqli','hostname'=>'127.0.0.1','port'=>$port,'username'=>'root','password'=>getenv('JOURNAL_TEST_PASSWORD') ?: 'sendigs_root_local','database'=>$schema,'db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci'],true);
+    $model=new Jurnal_all_model();$model->db=$ciDb;
+    $rows=$model->groups(['tab'=>'EXP','year'=>2026]);check(count($rows)===1&&$rows[0]['debit']==='100.25','real MySQL grouping/HAVING and cents');
+    check(count($model->export_rows(['tab'=>'EXP','year'=>2026]))===2,'real MySQL detail export');
+    check($model->listing(['tab'=>'EXP','year'=>2026,'search'=>['value'=>'Biaya']])['recordsFiltered']===1,'real MySQL detail search');
+    sql("INSERT INTO kons_tr_company(id,nm_company) VALUES('4','VUCA')");
+    sql("INSERT INTO kons_tr_spk_penawaran(id_spk_penawaran,id_company,nm_project) VALUES('SPK-1','4','Project SPK')");
+    sql("INSERT INTO tr_invoicing(id,no_invoice,nm_customer,nm_project,id_spk_penawaran) VALUES('INV-1','INV/1','PT Customer','','SPK-1')");
+    sql("INSERT INTO tr_jurnal(no_transaksi,jenis_transaksi,sts,id_company,nm_company,tgl_jurnal,coa,nm_coa,debit,kredit,keterangan,nm_divisi) VALUES('INV-1','Invoicing','0','4','VUCA','2026-10-14','5101','Piutang',100.25,0,'PPh source','Finance'),('INV-1','Invoicing','0','4','VUCA','2026-10-14','1101','Kas',0,100.25,'PPh source','Finance')");
+    check($model->groups(['tab'=>'INV','year'=>2026])[0]['keterangan']==='PT Customer - Project SPK','real MySQL invoice customer/project description and SPK fallback');
+    check($model->detail(3,false)['rows'][0]['keterangan']==='PPh source','real MySQL source COA text unchanged');
+    $invoice=$model->groups(['tab'=>'INV','year'=>2026])[0];
+    check($invoice['display_no_transaksi']==='INV/1'&&$invoice['no_referensi']==='SPK-1'&&$invoice['no_transaksi']==='INV-1','real MySQL invoice/SPK display and native identity');
+    sql("UPDATE tr_jurnal SET tgl_jurnal='2025-12-31' WHERE id=4");
+    $invoice=$model->groups(['tab'=>'INV','year'=>2026])[0];
+    check($invoice['tgl_jurnal']==='2025-12-31'&&$invoice['debit']==='100.25','MySQL period matches actual line and preserves earliest date/full amount');
+    check(count($model->export_rows(['tab'=>'INV','year'=>2026]))===2,'MySQL period export retains both years of the invoice');
+    check(count($model->groups(['tab'=>'INV','year'=>'','month'=>'12']))===1&&count($model->groups(['tab'=>'INV','year'=>2026,'month'=>'12']))===0,'MySQL all-years month selection uses actual matching row');
+    check(count($model->groups(['tab'=>'INV','year'=>'']))===1,'MySQL all-years deduplicates full invoice');
+    sql("UPDATE tr_jurnal SET sts='1' WHERE no_transaksi='INV-1'");
+    check(count($model->groups(['tab'=>'INV','year'=>2026],true))===1&&count($model->export_rows(['tab'=>'INV','year'=>2026],true))===2,'MySQL posted history follows inclusive period with whole detail');
+    sql("UPDATE tr_jurnal SET tgl_jurnal='2024-02-15' WHERE id=1");
+    check(count($model->groups(['tab'=>'EXP','year'=>'']))===1,'MySQL non invoice all years returns historical group');
+    check(count($model->groups(['tab'=>'EXP','year'=>'','month'=>'2']))===1&&count($model->groups(['tab'=>'EXP','year'=>'','month'=>'10']))===0,'MySQL non invoice all years month follows earliest group date');
+    check($model->groups(['tab'=>'EXP','year'=>''])[0]['debit']==='100.25'&&count($model->export_rows(['tab'=>'EXP','year'=>'']))===2,'MySQL all years retains full group amount/export');
+    sql("UPDATE tr_jurnal SET sts='1' WHERE no_transaksi='ER-1'");
+    check(count($model->groups(['tab'=>'EXP','year'=>''],true))===1,'MySQL posted non invoice all years');
+    sql("INSERT INTO tr_expense_petty_cash(id,no_pencatatan) VALUES(1,'PCP-2026-1')");
+    sql("INSERT INTO tr_pelaporan_petty_cash(id,no_pelaporan,status) VALUES(1,'RPC-2026-1','approved'),(2,'RPC-OLD','rejected')");
+    sql("INSERT INTO tr_pelaporan_petty_cash_detail(pencatatan_id,pelaporan_id) VALUES(1,1),(1,1),(1,2)");
+    sql("INSERT INTO tr_jurnal(no_transaksi,jenis_transaksi,sts,id_company,nm_company,tgl_jurnal,debit,kredit) VALUES('PCP-2026-1','Petty Cash','0','4','VUCA','2026-10-14',100.25,0),('PCP-2026-1','Petty Cash','0','7','STM','2026-10-14',0,100.25)");
+    $recording=$model->groups(['tab'=>'PCS','year'=>'','q'=>'RPC-2026-1']);
+    check(count($recording)===1&&$recording[0]['no_referensi']==='RPC-2026-1'&&$recording[0]['no_transaksi']==='PCP-2026-1','MySQL recording displays RPC but retains PCP identity');
+    check($recording[0]['debit']==='100.25'&&count($recording[0]['companies'])===2,'MySQL duplicate reporting relation cannot multiply company totals');
+    check(count($model->export_rows(['tab'=>'PCS','year'=>'','q'=>'RPC-2026-1']))===2,'MySQL RPC search/export retains both company lines');
+    sql("INSERT INTO tr_expense(no_doc,id_kasbon,lebih_bayar) VALUES('ER-1','KB-1',10.25)");
+    sql("INSERT INTO tr_kasbon(no_doc,id_pr,tipe_pr) VALUES('KB-1','PR-1','pr departemen')");
+    sql("INSERT INTO users(id_user,nm_lengkap) VALUES(1,'Pengaju PR')");
+    sql("INSERT INTO rutin_non_planning_header(no_pr,created_by) VALUES('PR-1',1)");
+    $expense=$model->groups(['tab'=>'EXP','year'=>''],true)[0];
+    check($expense['no_referensi']==='KB-1'&&$expense['keterangan']==='Realisasi Kasbon Pengembalian - Pengaju PR','MySQL expense references actual kasbon and PR creator');
+    check($expense['debit']==='100.25'&&count($model->export_rows(['tab'=>'EXP','year'=>'','q'=>'KB-1'],true))===2,'MySQL kasbon metadata lookup preserves totals and exported source rows');
+    sql("INSERT INTO kons_tr_expense_report_project_header(id,id_header) VALUES('CONS-EXP','CONS-KB')");
+    sql("INSERT INTO kons_tr_kasbon_project_header(id) VALUES('CONS-KB')");
+    sql("INSERT INTO tr_jurnal(no_transaksi,jenis_transaksi,sts,id_company,nm_company,tgl_jurnal,debit,kredit) VALUES('CONS-EXP','Expense Report Consultant','0','7','STM','2026-10-14',100.25,0),('CONS-EXP','Expense Report Consultant','0','7','STM','2026-10-14',0,100.25)");
+    $expense=$model->groups(['tab'=>'EXP','year'=>''])[0];
+    check($expense['no_referensi']==='CONS-KB'&&$expense['keterangan']==='Expense Report Consultant - CONS-EXP','MySQL consultant cross-schema relationship and description');
+    migrate(dirname(__DIR__).'/migrations/003_posting_metadata.sql');
+    migrate(dirname(__DIR__).'/migrations/003_posting_metadata.sql');
+    $ciDb->data_cache=[];$model=new Jurnal_all_model();$model->db=$ciDb;
+    check($model->posting_metadata_ready(),'MySQL metadata migration idempotent and preflight ready');
+    $header=$model->groups(['tab'=>'EXP','year'=>''],true)[0];
+    check($header['posted_at']===null&&$header['source_numbers']===null,'MySQL historic staging number is not presented as final accounting');
+    $model->save_posting_metadata($header,['id'=>7,'name'=>'Finance'],[['company'=>'7','number'=>'FINAL-JV-TEST']]);
+    $postedRows=$model->groups(['tab'=>'EXP','year'=>'','q'=>'FINAL-JV-TEST'],true);
+    check(count($postedRows)===1&&$postedRows[0]['source_numbers']==='FINAL-JV-TEST'&&$postedRows[0]['posted_by']==='Finance'&&$postedRows[0]['posted_at']!==null,'MySQL final number/time/user persist and are searchable in report');
+    check(count($model->groups(['tab'=>'EXP','year'=>'','q'=>'Finance'],true))===1,'MySQL actor searchable after metadata enrichment');
+    $engine=sql("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='tr_jurnal_postings'")->fetch_row()[0];
+    check(strtoupper($engine)==='INNODB','MySQL metadata uses transactional storage');
+    migrate(dirname(__DIR__).'/migrations/004_rollback_posting_metadata.sql');
+    $ciDb->data_cache=[];$model=new Jurnal_all_model();$model->db=$ciDb;
+    check(!$model->posting_metadata_ready(),'MySQL explicit metadata rollback removes only metadata table');
+    check(count($model->groups(['tab'=>'EXP','year'=>''],true))===1&&$model->groups(['tab'=>'EXP','year'=>''],true)[0]['posted_at']===null,'MySQL report retains source history with unavailable metadata after rollback');
+    $ciDb->close();echo "PASS disposable MySQL query/menu migrations: {$checks} assertions\n";
+} finally { $db->select_db('information_schema');$db->query("DROP DATABASE IF EXISTS `$schema`");$db->close(); }

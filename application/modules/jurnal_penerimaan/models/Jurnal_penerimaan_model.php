@@ -178,10 +178,14 @@ class Jurnal_penerimaan_model extends BF_Model
                 $msg = 'Please try again later !';
             }
         } else {
-            $this->db->trans_commit();
-
-            $valid = 1;
-            $msg = 'Status data berhasil di update !';
+            if ($this->db->trans_commit() === false) {
+                $this->db->trans_rollback();
+                $valid = 0;
+                $msg = 'Commit revisi gagal. Periksa status jurnal.';
+            } else {
+                $valid = 1;
+                $msg = 'Status data berhasil di update !';
+            }
         }
 
         $response = [

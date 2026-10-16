@@ -142,10 +142,11 @@ class Jurnal_payment extends Admin_Controller
 
     public function save_posting_jurnal()
     {
+        if (!$this->allowJournalAction()) { return; }
         $post = $this->input->post();
 
         try {
-            $this->db->trans_begin();
+            if ($this->db->trans_begin() === false) { throw new RuntimeException('Gagal memulai transaksi jurnal.'); }
 
             $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
             if (!$get_jurnal) {
@@ -527,8 +528,8 @@ class Jurnal_payment extends Admin_Controller
                 throw new Exception('Transaksi database gagal');
             }
 
-            $this->db->trans_commit();
-            $param = ['save' => 1, 'msg' => "SUKSES, simpan data..!!!"];
+            if ($this->db->trans_commit() === false) { throw new RuntimeException('Commit jurnal gagal. Periksa status sebelum mencoba kembali.'); }
+            $param = ['save' => 1, 'msg' => "SUKSES, simpan data..!!!", 'accounting_numbers'=>[['company'=>(string)($id_company ?? $get_inv->id_company ?? ''),'number'=>$Nomor_JV ?? $Nomor_BUM]]];
         } catch (Exception $e) {
             $this->db->trans_rollback();
             $param = ['save' => 0, 'msg' => "GAGAL, simpan data..!!! (" . $e->getMessage() . ")"];
@@ -667,5 +668,12 @@ class Jurnal_payment extends Admin_Controller
         ];
 
         $this->load->view('export_excel', $data);
+    }
+    private function allowJournalAction()
+    {
+        if ($this->input->method(true) === 'POST' && (has_permission($this->managePermission) || has_permission('Jurnal_All.Manage'))) return true;
+        $this->output->set_status_header(403);
+        echo json_encode(['status'=>0,'save'=>0,'msg'=>'Anda tidak memiliki akses untuk aksi jurnal ini.']);
+        return false;
     }
 }

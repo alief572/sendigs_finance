@@ -1,0 +1,10 @@
+# Semua Tahun seluruh tab — 15 Oktober 2026
+
+- Permintaan: pilihan Semua Tahun di jurnal_all. Opsi yang sebelumnya hanya INV kini tersedia pada kelima tab melalui shared workspace; Report ikut konsisten. Default/reset tetap tahun berjalan.
+- Kontrak: year kosong berarti tanpa batas tahun, company/category/q tetap berlaku. Bulan tanpa tahun didukung: INV memilih bila ada baris nyata yang cocok; RCV/PAY/EXP/PCS memakai bulan tanggal pertama kelompok sesuai perilaku periode sebelumnya. Seluruh kelompok/totals/detail/ekspor tetap lengkap, satu aksi per native group.
+- File kode: model shared (validasi tahun kosong semua tab dan month HAVING nonINV), assets/js/jurnal-all.js (dropdown), Query/Client/Mysql tests; README diperbarui. Tahun array dan tahun tidak valid ditolak.
+- Fase: fixture RED query/client sebelum fix; implementasi dan validasi selesai. Tidak ada perubahan handler, permission, audit, penomoran, target accounting atau UI layout/palet.
+- Validasi: query95, client41, controller76, dispatcher41, audit8, native168, PCS89, revision24, MariaDB24 PASS (566 assertions fitur). PHP lint3 dan JS syntax aplikasi/test PASS. SQLite mencakup seluruh sumber histori/status/list/search/summary/export/month; MariaDB mencakup SQL MIN LIKE dan full-group totals/export/pending/posted.
+- Fixture MariaDB menggunakan schema/proses/datadir lokal terisolasi dan dibersihkan otomatis; tidak memakai database.php development atau server remote. Konfigurasi development sekarang mengarah server yang diberikan pengguna; tidak ada koneksi/query/posting ke sana untuk task ini.
+- Antislop delta gate PASS (source/harness): opsi existing diperluas dan seluruh kontrol tetap terhubung ke request nyata; tab state/export/default/reset lulus regresi, tanpa asset/warna/layout baru. Tidak mengklaim browser click-through; tidak ada tes browser sesuai instruksi pengguna.
+- Pemeriksaan penutupan: whitespace/JSON/hash dependensi; perubahan kode terbatas model+JS+tests. Tidak ada TODO kode diketahui, commit/push/deploy. Risiko posting lintas database/MyISAM tetap existing. All-years dapat memuat lebih banyak transaksi sesuai dataset; pagination tetap.

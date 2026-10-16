@@ -55,3 +55,23 @@ $route['translate_uri_dashes'] = FALSE;
 
 $route['login'] = 'users/users/login';
 $route['logout'] = 'users/users/logout';
+
+// Redirect entry pages only; legacy action URLs remain the posting implementation.
+$route['jurnal_invoicing'] = 'jurnal_all/legacy/INV';
+$route['jurnal_invoicing/index'] = 'jurnal_all/legacy/INV';
+$route['jurnal_penerimaan'] = 'jurnal_all/legacy/RCV';
+$route['jurnal_penerimaan/index'] = 'jurnal_all/legacy/RCV';
+$route['jurnal_payment'] = 'jurnal_all/legacy/PAY';
+$route['jurnal_payment/index'] = 'jurnal_all/legacy/PAY';
+$route['jurnal_expense'] = 'jurnal_all/legacy/EXP';
+$route['jurnal_expense/index'] = 'jurnal_all/legacy/EXP';
+$route['jurnal_payment_petty_cash'] = 'jurnal_all/legacy/PCS';
+$route['jurnal_payment_petty_cash/index'] = 'jurnal_all/legacy/PCS';
+$route['report_jurnal_invoicing'] = 'report_jurnal_all/legacy/INV';
+$route['report_jurnal_invoicing/index'] = 'report_jurnal_all/legacy/INV';
+$route['report_jurnal_penerimaan'] = 'report_jurnal_all/legacy/RCV';
+$route['report_jurnal_penerimaan/index'] = 'report_jurnal_all/legacy/RCV';
+$route['report_jurnal_payment'] = 'report_jurnal_all/legacy/PAY';
+$route['report_jurnal_payment/index'] = 'report_jurnal_all/legacy/PAY';
+$route['report_jurnal_expense'] = 'report_jurnal_all/legacy/EXP';
+$route['report_jurnal_expense/index'] = 'report_jurnal_all/legacy/EXP';
