@@ -33,7 +33,7 @@ UPDATE menus SET permission_id=(SELECT MIN(id_permission) FROM permissions WHERE
 
 INSERT IGNORE INTO jurnal_all_menu_backup (menu_id,previous_status)
 SELECT id,status FROM menus WHERE
-(@ja_id IS NOT NULL AND link IN ('jurnal_invoicing','jurnal_invoicing/index','jurnal_penerimaan','jurnal_penerimaan/index','jurnal_payment','jurnal_payment/index','jurnal_expense','jurnal_expense/index','jurnal_payment_petty_cash','jurnal_payment_petty_cash/index'))
+(@ja_id IS NOT NULL AND link IN ('jurnal','jurnal/index','jurnal_invoicing','jurnal_invoicing/index','jurnal_penerimaan','jurnal_penerimaan/index','jurnal_payment','jurnal_payment/index','jurnal_expense','jurnal_expense/index','jurnal_payment_petty_cash','jurnal_payment_petty_cash/index'))
 OR (@ra_id IS NOT NULL AND link IN ('report_jurnal_invoicing','report_jurnal_invoicing/index','report_jurnal_penerimaan','report_jurnal_penerimaan/index','report_jurnal_payment','report_jurnal_payment/index','report_jurnal_expense','report_jurnal_expense/index'));
 
 UPDATE menus m JOIN jurnal_all_menu_backup b ON b.menu_id=m.id SET m.status=0;

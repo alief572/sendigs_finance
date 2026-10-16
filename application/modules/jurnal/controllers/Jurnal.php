@@ -29,8 +29,7 @@ class Jurnal extends Admin_Controller
 
     public function index()
     {
-        $this->template->title('Jurnal');
-        $this->template->render('index');
+        redirect('jurnal_all');
     }
 
     public function add_jurnal()

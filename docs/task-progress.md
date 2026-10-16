@@ -1,3 +1,27 @@
+# Penonaktifan Modul Jurnal Lama (Tersisa Hanya Jurnal All) — Selesai 2026-10-16
+
+- Fase selesai:
+  1. Penonaktifan menu lama `Jurnal` (`link = 'jurnal'`, ID 457) pada database `db_sendigs_ss_dev` dan `db_sendigs_ss` (`status = 0`), sehingga menu Jurnal pada sidebar Finance hanya menyisakan `jurnal_all`.
+  2. Penyesuaian `Jurnal::index()` pada `application/modules/jurnal/controllers/Jurnal.php` untuk me-redirect otomatis setiap akses URL `.../jurnal` ke `jurnal_all`.
+  3. Pembaruan skrip migrasi `001_register_menu.sql` untuk menyertakan `'jurnal'` dan `'jurnal/index'` dalam daftar penonaktifan menu legacy.
+  4. Publikasi perubahan ke branch `development` di remote GitHub.
+- File yang dimodifikasi:
+  1. `application/modules/jurnal/controllers/Jurnal.php`
+  2. `application/modules/jurnal_all/migrations/001_register_menu.sql`
+  3. `docs/task-progress.md`
+
+---
+
+# Konfigurasi Database Environment Development (`database.php`) — Selesai 2026-10-16
+
+- Fase selesai:
+  1. Pengalihan seluruh connection group pada `application/config/development/database.php` ke database development (`db_sendigs_ss_dev`, `db_sendigs_gl_ss_dev`, `db_sendigs_ss_vuca_dev`, `db_sendigs_ss_stm_dev`, `db_sendigs_ss_sustain_dev`, `db_consultant_new_dev`).
+  2. Migrasi skema & menu jurnal_all di `db_sendigs_ss_dev` (`001_register_menu.sql` dan `003_posting_metadata.sql` terverifikasi aktif).
+  3. Verifikasi konektivitas dan test suite lengkap (622 assertions PASS).
+- File yang dimodifikasi: `application/config/development/database.php`.
+
+---
+
 # Penambahan Kolom tgl_posting dan posted_by pada tr_jurnal & Integrasi Posting — Selesai 2026-10-16
 
 - Fase selesai:
