@@ -38,6 +38,7 @@
   <!-- bootstrap datetimepicker -->
   <link rel="stylesheet" href="<?= base_url('assets/plugins/datetimepicker/bootstrap-datetimepicker.css'); ?>">
   <link rel="stylesheet" href="<?= base_url('assets/css/custom_ddr.css'); ?>">
+  <link rel="stylesheet" href="<?= base_url('assets/css/sidebar-search.css?v='.filemtime(FCPATH.'assets/css/sidebar-search.css')); ?>">
 
   <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.1.7/css/fixedHeader.dataTables.min.css">
 
@@ -156,11 +157,24 @@
 
       <!-- sidebar: style can be found in sidebar.less -->
       <section class="sidebar">
+        <div class="sidebar-menu-search" id="sidebar-search" role="search" aria-label="Pencarian menu" hidden>
+          <div class="sidebar-menu-search-field">
+            <label class="sr-only" for="sidebar-menu-search">Cari menu</label>
+            <i class="fa fa-search" aria-hidden="true"></i>
+            <input type="search" id="sidebar-menu-search" placeholder="Cari menu…" autocomplete="off" spellcheck="false" aria-controls="sidebar-navigation-menus" aria-describedby="sidebar-search-help">
+            <button type="button" id="sidebar-search-clear" aria-label="Hapus pencarian menu" title="Hapus pencarian" hidden><i class="fa fa-times" aria-hidden="true"></i></button>
+          </div>
+          <span id="sidebar-search-help" class="sr-only">Ketik nama menu. Tekan Escape untuk menghapus pencarian.</span>
+          <button type="button" id="sidebar-search-mini-btn" aria-label="Buka pencarian menu" title="Cari menu"><i class="fa fa-search" aria-hidden="true"></i></button>
+          <p id="sidebar-search-empty" role="status" aria-live="polite" hidden>Menu tidak ditemukan. Coba kata lain.</p>
+        </div>
         <!-- Sidebar Menu -->
+        <div id="sidebar-navigation-menus">
         <?=
         $this->menu_generator->build_menus();
         // $this->menu_generator->build_menus_new(); 
         ?>
+        </div>
         <!-- /.sidebar-menu -->
       </section>
       <!-- /.sidebar -->

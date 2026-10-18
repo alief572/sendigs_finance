@@ -32,6 +32,7 @@
 <script src="<?= base_url('assets/plugins/multiselect/multiselect.min.js'); ?>"></script>
 <!-- AdminLTE App -->
 <script src="<?= base_url('assets/adminlte/dist/js/app.min.js'); ?>"></script>
+<script src="<?= base_url('assets/js/sidebar-search.js?v='.filemtime(FCPATH.'assets/js/sidebar-search.js')); ?>"></script>
 <script src="<?php echo base_url('assets/js/custome_ddr.js'); ?>" type="text/javascript"></script>
 <!-- Optionally, you can add Slimscroll and FastClick plugins.
 Both of these plugins are recommended to enhance the

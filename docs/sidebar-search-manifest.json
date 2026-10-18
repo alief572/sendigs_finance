@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-18",
+  "status": "implemented_non_browser_verified",
+  "runtime_files": [
+    "themes/admin/views/header.php",
+    "themes/admin/views/footer.php",
+    "assets/css/sidebar-search.css",
+    "assets/js/sidebar-search.js"
+  ],
+  "tests": [
+    "themes/admin/tests/Sidebar_search_client_test.js",
+    "themes/admin/tests/Sidebar_search_render_test.php"
+  ],
+  "sha256": {
+    "themes/admin/views/header.php": "8e5ce05ca0854ae05517dff4b2b6274b765a43834a37ea4d3ca1f983ec3744b1",
+    "themes/admin/views/footer.php": "25fca7de647ac17fef1eb17f9ef12ae32052ffc33225a3743097c65953f4b3da",
+    "assets/css/sidebar-search.css": "9757c2f27b3e304ecbe413ee44acefb5163bbb78d1f68bad1a42bc6a1c30f880",
+    "assets/js/sidebar-search.js": "4c400907bd7c30775da0d221e94bf45ddc5d37df9edb45d46fc4c8cde114ce97",
+    "themes/admin/tests/Sidebar_search_client_test.js": "15924b3a5e7c5168f09c042511bee992a453379248910dd4b8622a5fea244581",
+    "themes/admin/tests/Sidebar_search_render_test.php": "4709555a57d2bc56dcd2fc7b33fd6145b50e9b7e93fe559481c6c83cd6bca1ac"
+  },
+  "validation": {
+    "client_checks": 55,
+    "render_checks": 60,
+    "php_lint_files": 3,
+    "css_rule_blocks": 16,
+    "contrast_pairs": 6,
+    "browser": "not performed per user instruction",
+    "database": "not accessed",
+    "commit_push": "included in requested development follow-up publication"
+  },
+  "report": "docs/sidebar-search-2026-10-18.md"
+}

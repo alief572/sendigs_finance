@@ -89,9 +89,18 @@ class Invoicing extends Admin_Controller
             $source=$this->input->get('source_company_id');
             $mapping=is_scalar($source) && (string)$source!=='' ? $service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=?',array($source)) : null;
             $owner=$this->input->get('owner_company_id');
-            $owner=is_scalar($owner) && (string)$owner!=='' ? $owner : ($mapping['owner_company_id']??null);
-            if ($owner) $service->company($owner);
+            $ownerWarning=null;
+            if ($owner!==null && $owner!=='') $service->journal_owner($owner);
+            else {
+                $owner=$mapping['owner_company_id']??null;
+                if ($owner && !Invoice_consulting_service::is_journal_owner($owner)) {
+                    $owner=null;
+                    $ownerWarning='Mapping tersimpan memakai company gabungan atau pemilik jurnal yang tidak didukung. Pilih STM, Sustain, atau Vuca lalu simpan ulang mapping.';
+                }
+            }
+            $journalOwners=array_values(array_filter($companies,function($company){return Invoice_consulting_service::is_journal_owner($company['id']);}));
             $data=array('companies'=>$companies,'mapping'=>$mapping,'source_id'=>$source,'owner_id'=>$owner,
+                'journal_owners'=>$journalOwners,'owner_warning'=>$ownerWarning,
                 'master'=>$owner?$service->master($owner):array(),'roles'=>Invoice_consulting::roles(),
                 'mapping_fingerprint'=>Invoice_calculation::fingerprint($mapping?:array()),'error'=>null);
         } catch (Throwable $error) { $data=array('error'=>$error instanceof RuntimeException?$error->getMessage():'Pengaturan tidak dapat dimuat.'); }

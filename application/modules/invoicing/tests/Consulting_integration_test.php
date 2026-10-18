@@ -97,14 +97,24 @@ $service=new Invoice_consulting_service($ci);
 try {
     foreach(array(dirname(__DIR__,2).'/penerimaan_uang/tests/fixture_schema.sql',__DIR__.'/source_fixture.sql') as $file) foreach(explode(';',preg_replace('/^--.*$/m','',file_get_contents($file)))as $sql)if(trim($sql))verify($db->query($sql)!==false,'Fixture '.$db->error()['message']);
     foreach(array("ALTER TABLE kons_tr_plan_tagih_detail ADD status_terakhir VARCHAR(2), ADD id_spk_penawaran VARCHAR(100), ADD id_penawaran VARCHAR(100), ADD term_payment VARCHAR(100), ADD nominal_payment DECIMAL(20,2), ADD persen_payment DECIMAL(10,2), ADD desc_payment TEXT", "ALTER TABLE kons_tr_actual_plan_tagih ADD tagih_mundur VARCHAR(2)","CREATE TABLE menus(id INT PRIMARY KEY,link VARCHAR(100))", "INSERT INTO menus VALUES (1,'invoicing')", "CREATE TABLE permissions(id_permission INT AUTO_INCREMENT PRIMARY KEY,nm_permission VARCHAR(100),ket VARCHAR(100),id_menu INT,nm_menu VARCHAR(100),created_on DATETIME,created_by VARCHAR(100))", "CREATE TABLE user_permissions(id_user INT,id_permission INT, UNIQUE KEY grant_once(id_user,id_permission))","CREATE TABLE coa_master(no_perkiraan VARCHAR(30) PRIMARY KEY,nama VARCHAR(100))") as $sql)verify($db->query($sql)!==false,'Fixture additions');
+    verify($db->query("INSERT INTO kons_tr_company VALUES (3,'Sustain'),(6,'STM-Sustain'),(7,'STM')")!==false,'Canonical owner fixtures');
     $migration=dirname(__DIR__).'/migrations/003_consulting_v3.sql';migrateSql($db,$migration);migrateSql($db,$migration);
     verify($service->one("SELECT COUNT(*) n FROM permissions WHERE nm_permission='Invoicing.Configure'")['n']==1,'Idempotent permission');
     verify($service->one('SELECT id_user FROM user_permissions')['id_user']==7,'Admin only grant');
     $codes=array();$i=1;foreach(Invoice_consulting::roles()as $role=>$label){$code=sprintf('4101-01-%02d',$i++);$codes[$role]=$code;$db->insert('coa_master',array('no_perkiraan'=>$code,'nama'=>$label));}
-    $settings=array('source_company_id'=>'1','owner_company_id'=>'1','accounts'=>$codes,'mapping_fingerprint'=>Invoice_calculation::fingerprint(array()));
+    $settings=array('source_company_id'=>'1','owner_company_id'=>'7','accounts'=>$codes,'mapping_fingerprint'=>Invoice_calculation::fingerprint(array()));
     $GLOBALS['denied']=array('Invoicing.Configure');verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Configuration permission');$GLOBALS['denied']=array();
     verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===1,'Mapping endpoint');
     verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Mapping stale fingerprint');
+    $validMapping=$service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=1');
+    foreach(array('1','2','5','6','99') as $invalidOwner){$invalid=$settings;$invalid['owner_company_id']=$invalidOwner;$invalid['mapping_fingerprint']=Invoice_calculation::fingerprint($validMapping);$r=controllerCall($ci,'save_coa_mapping',$invalid);verify($r['status']===0 && strpos($r['msg'],'STM, Sustain, atau Vuca')!==false,'Reject unsupported owner '.$invalidOwner);verify($service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=1')===$validMapping,'Rejected owner preserves mapping');}
+    foreach(array('7','3','4') as $validOwner){$old=$service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=6');$valid=$settings;$valid['source_company_id']='6';$valid['owner_company_id']=$validOwner;$valid['mapping_fingerprint']=Invoice_calculation::fingerprint($old?:array());verify(controllerCall($ci,'save_coa_mapping',$valid)['status']===1,'Combined SPK accepts canonical owner '.$validOwner);verify($service->mapping('6')['owner']['id']==$validOwner,'Canonical owner read '.$validOwner);}
+    $ci->template=new class {public $data;function set($data){$this->data=$data;}function title($title){}function render($view){}};
+    $ci->input->values=array('source_company_id'=>'1','owner_company_id'=>'6');$ci->coa_settings();verify(strpos($ci->template->data['error'],'STM, Sustain, atau Vuca')!==false,'GET combined owner rejected');
+    $db->query('UPDATE ms_invoice_coa_mapping SET owner_company_id=6 WHERE source_company_id=1');
+    try{$service->mapping('1');verify(false,'Invalid legacy mapping must reject issuance');}catch(RuntimeException $error){verify(strpos($error->getMessage(),'Pilih ulang')!==false,'Invalid legacy mapping actionable');}
+    $ci->input->values=array('source_company_id'=>'1');$ci->coa_settings();verify($ci->template->data['owner_id']===null && !empty($ci->template->data['owner_warning']),'Legacy mapping can be repaired in UI');verify(count($ci->template->data['journal_owners'])===3,'Controller exposes three owners');verify($service->one('SELECT owner_company_id FROM ms_invoice_coa_mapping WHERE source_company_id=1')['owner_company_id']==6,'GET does not silently convert legacy mapping');
+    $db->query('UPDATE ms_invoice_coa_mapping SET owner_company_id=7 WHERE source_company_id=1');
     foreach(array('WAPU','PKP','KB')as $n=>$type){
         $id=10+$n;newSource($db,$id,array('291000000','19581600','60000000')[$n]);$post=invoiceRequest($service,$id,$type);
         $r=controllerCall($ci,'save_invoice',$post);verify($r['status']===1,'Create endpoint '.$type.': '.$r['msg']);
@@ -221,7 +231,7 @@ try {
     $preview=$receiptService->preview(array('choose_inv'=>array($receiptId,'LEGACY'),'id_alokasi'=>'200','pph23_dipotong'=>'N','ppn_dipotong'=>'Y'));
     $html=$renderer->render(dirname(__DIR__,2).'/penerimaan_uang/views/consulting_process.php',$preview);
     verify(preg_match_all('/<input[^>]+name="pph_actual_[0-9]+"/',$html)===1,'Actual PPh input only for new invoice');
-    $html=$renderer->render(dirname(__DIR__).'/views/consulting_settings.php',array('companies'=>array(array('id'=>1,'nm_company'=>'STM')),'source_id'=>1,'owner_id'=>1,'mapping'=>null,'master'=>$service->master(1),'roles'=>Invoice_consulting::roles(),'mapping_fingerprint'=>'x','error'=>null));
+    $html=$renderer->render(dirname(__DIR__).'/views/consulting_settings.php',array('companies'=>array(array('id'=>1,'nm_company'=>'STM')),'source_id'=>1,'owner_id'=>7,'journal_owners'=>array(array('id'=>7,'nm_company'=>'STM'),array('id'=>3,'nm_company'=>'Sustain'),array('id'=>4,'nm_company'=>'Vuca')),'mapping'=>null,'master'=>$service->master(1),'roles'=>Invoice_consulting::roles(),'mapping_fingerprint'=>'x','error'=>null));
     verify(substr_count($html,'name="accounts[')===9,'Nine mapping dropdowns');
 
     // True concurrent connections exercise the production named locks and atomic allocator.

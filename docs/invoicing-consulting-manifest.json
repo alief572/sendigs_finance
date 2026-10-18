@@ -75,13 +75,13 @@
     "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php"
   ],
   "sha256": {
-    "application/modules/invoicing/controllers/Invoicing.php": "f85ff7a99c93396e2aa60225ec2cce541926efaf899a60d27cca5798de3d6815",
+    "application/modules/invoicing/controllers/Invoicing.php": "5f2fe3c1395aa67003b695721bab5c11fc4585eca6276f4e1bd858a244f48179",
     "application/modules/invoicing/models/Invoicing_model.php": "2dfea04810cdf8d568124768153d9b53fd8cf4acf1d1cfb0fe8cbe98833f2ec5",
     "application/modules/invoicing/libraries/Invoice_consulting.php": "25fd15c58fb053d9121f257775c9afb137e0ede3672db69e38411e9a4dce1df5",
-    "application/modules/invoicing/libraries/Invoice_consulting_service.php": "c01e042f00310492c91ac97d10f62f025d0375d2ab306e7cb13c3369334699f3",
+    "application/modules/invoicing/libraries/Invoice_consulting_service.php": "5ff8ccfbc9406ff9606ddc725a5119481d3e288442f21e42cec3be73469326e8",
     "application/modules/invoicing/libraries/Consulting_posting.php": "d7981e1a96b7de6026f5553497b95b323bacdea993c77f06a4db643508ba86ba",
     "application/modules/invoicing/views/consulting_invoice.php": "2d8b4796a31ce77b6d2fb29ec2b1571c3b2607f056a3ab848dce1cae7e9d269b",
-    "application/modules/invoicing/views/consulting_settings.php": "505a96702fa1a8464ededfa6a4d1022f334aa0da4e640142af5a28c55c6401d4",
+    "application/modules/invoicing/views/consulting_settings.php": "ae5f15bd2f4f17bf850745de08090394f078fe59e964d6fb0ac5d03d17b03562",
     "application/modules/invoicing/views/consulting_print.php": "fabe99af4cc4e6af44161ecfaf3a85bb787f139b6a308bcfa6eee66bc7216972",
     "application/modules/invoicing/views/index.php": "6ad297fc12bbdb0c3c2b63298c279123d0afefa5cc33039096c6976560636d34",
     "application/modules/invoicing/views/download_excel.php": "5c8ec6c1fbbd8b2f301562965c3629b13b4e1c05d306187629acf23729724e97",
@@ -99,7 +99,7 @@
     "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php": "65b202726ea255ab2e601e89fae42ce7de92699ff6cb523e9942e8483978a7d7",
     "application/modules/invoicing/tests/Consulting_calculation_test.php": "9a111087a9c319d5d615483090e8afd0d5880d26db90cca734c5a0b39415a093",
     "application/modules/invoicing/tests/Consulting_calculation_test.js": "4930c874142d5ca2b360af649e0a6badd4ff0643dc56740db6b256488ed3b3d7",
-    "application/modules/invoicing/tests/Consulting_integration_test.php": "55aef8ba90b008d3f76e1843ce9549cb4f8c6933f3b474ccf0db9b487e41870d",
+    "application/modules/invoicing/tests/Consulting_integration_test.php": "b5014eff7532e9bcbe92d2c3513abcbdd0765cb9fd962131c1e5cae987a37d77",
     "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php": "19d124ff480230db40d584eae6b2d4dbeadd3e673877a70c86b246f0284ac2f1",
     "application/modules/invoicing/migrations/003_consulting_v3.sql": "ef15a0e8b8c9598f1277bc8adc2d7008b1b2438d4f17dbc9526f4473d3c9f236",
     "application/modules/invoicing/migrations/003_consulting_v3_rollback.sql": "490e6bf8ecdf3cd8d1b1e17f4d25a40837a912c6d60a7bcd00eb5c67bc511323",
@@ -109,14 +109,14 @@
     "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php": "e8b0ce89d312c790f34e76047fe2772caa7e86f2160ed49c728bd8585a6cf1e6",
     "assets/css/invoicing.css": "b1f0f246fba73b334356a8a4567b5bb41c09e6335f7603c037d239f5ed72ddab",
     "assets/js/invoicing/consulting-form.js": "b1d923bfd3a5325b80fd00d32912e8067787c595cf1aafe20597fc9baafb2a0e",
-    "application/modules/invoicing/tests/Ui_render_test.php": "c0febe7fc4fb3309e6c795a0edd417cb1960c2656489ea1b29fc9468dbf2b073",
+    "application/modules/invoicing/tests/Ui_render_test.php": "80cbc81e8bfdf28a7e18309db5f0e55dd5b149d5005d653a1d5a7f381fa151ae",
     "application/modules/invoicing/tests/Ui_client_test.js": "c60bd18e17eff32120afce94e32e484ddece078da80031f3cb522dedfcf62bb9",
     "application/modules/invoicing/tests/Ui_list_client_test.js": "aa179ffd63cd56aec1016d8c2e8049876c256452e35003dec803f996efc515a5"
   },
   "validation": {
     "calculation_checks": 72,
     "php_js_parity_checks": 35,
-    "native_ci_mariadb_checks": 303,
+    "native_ci_mariadb_checks": 341,
     "migration_runs": 2,
     "fault_paths": [
       "sequence",
@@ -153,7 +153,7 @@
     "mode": "antislop during, session choice",
     "scope": "list, regular consulting version3 form/detail, COA settings",
     "report": "docs/invoicing-ui-2026-10-18.md",
-    "render_checks": 203,
+    "render_checks": 208,
     "form_client_checks": 38,
     "list_client_checks": 28,
     "browser_verification": "not performed per user instruction"
@@ -170,5 +170,23 @@
     "scope": "invoicing consulting v3 and related receipt/posting/UI changes",
     "excluded": "other tasks, scratch/runtime, database backups, local credentials, shared multi-task progress documents",
     "report": "docs/invoicing-development-publication-2026-10-18.md"
+  },
+  "journal_owner_policy": {
+    "allowed_owner_ids": [
+      "7",
+      "3",
+      "4"
+    ],
+    "allowed_names": [
+      "STM",
+      "Sustain",
+      "Vuca"
+    ],
+    "source_label": "Company SPK",
+    "report": "docs/invoicing-journal-owner-policy-2026-10-18.md",
+    "legacy_mapping": "admin must reselect canonical owner; no automatic conversion",
+    "native_checks": 341,
+    "render_checks": 208,
+    "publication": "included in development follow-up publication after 913c336d"
   }
 }

@@ -14,13 +14,14 @@ $companyNames=array_column($companies,'nm_company','id');
     <div class="box-body">
         <form method="get" action="<?= base_url('invoicing/coa_settings') ?>">
             <div class="invoice-toolbar">
-                <?php foreach(array('source_company_id'=>'Company sumber','owner_company_id'=>'Company pemilik jurnal') as $field=>$label): ?>
-                <div class="invoice-filter" style="flex-grow:1"><label for="<?= $field ?>"><?= $label ?></label><select class="form-control" id="<?= $field ?>" name="<?= $field ?>" required><option value="">Pilih company</option><?php foreach($companies as $company): ?><option value="<?= $escape($company['id']) ?>" <?= (string)$company['id']===(string)($field==='source_company_id'?$source_id:$owner_id)?'selected':'' ?>><?= $escape($company['nm_company']) ?></option><?php endforeach; ?></select></div>
+                <?php foreach(array('source_company_id'=>'Company SPK','owner_company_id'=>'Company pemilik jurnal') as $field=>$label): ?>
+                <div class="invoice-filter" style="flex-grow:1"><label for="<?= $field ?>"><?= $label ?></label><select class="form-control" id="<?= $field ?>" name="<?= $field ?>" required><option value="">Pilih company</option><?php foreach(($field==='source_company_id'?$companies:$journal_owners) as $company): ?><option value="<?= $escape($company['id']) ?>" <?= (string)$company['id']===(string)($field==='source_company_id'?$source_id:$owner_id)?'selected':'' ?>><?= $escape($company['nm_company']) ?></option><?php endforeach; ?></select></div>
                 <?php endforeach; ?>
                 <div class="invoice-toolbar-actions"><button class="btn btn-primary" type="submit">Muat COA</button></div>
             </div>
         </form>
-        <p class="invoice-help">Company pemilik jurnal mengikuti company depan pada SPK. Pilih akun dari master accounting tujuan; akun tidak dibuat otomatis.</p>
+        <p class="invoice-help">Company SPK adalah company pada SPK/invoice. Pemilik jurnal hanya STM, Sustain, atau Vuca dan menentukan sumber COA serta tujuan posting. Untuk company gabungan, gunakan company depan pada SPK.</p>
+        <?php if (!empty($owner_warning)): ?><div class="invoice-feedback" data-state="error" role="alert"><?= $escape($owner_warning) ?></div><?php endif; ?>
         <?php if ($source_id && $owner_id): ?>
         <div class="invoice-section-heading" style="margin-top:28px"><h3>Mapping <?= $escape($companyNames[$source_id]??$source_id) ?></h3><p>Tujuan jurnal: <?= $escape($companyNames[$owner_id]??$owner_id) ?>. Perubahan ini berlaku untuk invoice baru; invoice tersimpan menggunakan akun saat diterbitkan.</p></div>
         <?php if (!$master): ?><div class="invoice-feedback" data-state="error" role="alert">Master COA company tujuan belum tersedia. Periksa company pemilik jurnal lalu tekan Muat COA kembali.</div><?php endif; ?>
@@ -39,7 +40,7 @@ $companyNames=array_column($companies,'nm_company','id');
             <div class="invoice-actions"><button class="btn btn-primary" type="submit" <?= !$master?'disabled':'' ?>>Simpan mapping</button><a class="btn btn-default" href="<?= base_url('invoicing') ?>">Kembali ke daftar</a></div>
         </form>
         <?php else: ?>
-        <div class="invoice-feedback" role="status">Pilih company sumber dan company pemilik jurnal, lalu tekan Muat COA untuk mengatur akun invoicing.</div>
+        <div class="invoice-feedback" role="status">Pilih Company SPK dan company pemilik jurnal, lalu tekan Muat COA untuk mengatur akun invoicing.</div>
         <?php endif; ?>
     </div>
 </div>

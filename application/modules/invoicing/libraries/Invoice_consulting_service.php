@@ -105,6 +105,17 @@ class Invoice_consulting_service
         return 'accounting_sustain';
     }
 
+    public static function is_journal_owner($id)
+    {
+        return is_scalar($id) && in_array((string)$id,array('7','3','4'),true);
+    }
+
+    public function journal_owner($id)
+    {
+        if (!self::is_journal_owner($id)) throw new RuntimeException('Company pemilik jurnal hanya boleh STM, Sustain, atau Vuca. Pilih ulang pemilik jurnal dan simpan mapping.');
+        return $this->company($id);
+    }
+
     public function accounting($owner)
     {
         $group=self::accounting_group($owner);
@@ -154,7 +165,7 @@ class Invoice_consulting_service
         $row=$this->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=?'.($lock?' FOR UPDATE':''),array($source));
         if (!$row) throw new RuntimeException('Lengkapi Pengaturan COA Invoicing untuk company sumber terlebih dahulu.');
         $codes=json_decode($row['accounts'],true);
-        return array('source_company_id'=>(string)$source,'owner'=>$this->company($row['owner_company_id']),
+        return array('source_company_id'=>(string)$source,'owner'=>$this->journal_owner($row['owner_company_id']),
             'accounts'=>$this->validate_accounts($row['owner_company_id'],$codes));
     }
 
@@ -164,7 +175,7 @@ class Invoice_consulting_service
             if (!has_permission('Invoicing.Configure')) throw new RuntimeException('Tidak memiliki izin konfigurasi invoice.');
             $this->transactional(array('ms_invoice_coa_mapping'));
             $source=$this->required($post,'source_company_id',20); $this->company($source);
-            $owner=$this->required($post,'owner_company_id',20); $this->company($owner);
+            $owner=$this->required($post,'owner_company_id',20); $this->journal_owner($owner);
             $accounts=$this->validate_accounts($owner,$post['accounts']??null);
             $old=$this->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=? FOR UPDATE',array($source));
             if (!hash_equals(Invoice_calculation::fingerprint($old?:array()),$this->required($post,'mapping_fingerprint',64))) throw new RuntimeException('Mapping berubah sejak form dibuka; muat ulang.');
