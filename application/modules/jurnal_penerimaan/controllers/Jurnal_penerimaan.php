@@ -145,8 +145,27 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->load->view('posting_jurnal', $data);
 	}
 
-	public function save_posting_jurnal()
+    public function save_posting_jurnal()
+    {
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
+    }
+
+	private function serialized_save_posting_jurnal()
 	{
+        if (!$this->allowJournalAction()) { return; }
+        require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
+        $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
+        if ($consultingAnchor) {
+            $consultingHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$consultingAnchor['no_transaksi']))->row_array();
+            if ((int)($consultingHeader['consulting_batch']??0)===3) {
+                $posting=new Consulting_posting($this);
+                echo json_encode($posting->receipt($consultingAnchor['id']));
+                return;
+            }
+        }
+
 		$post = $this->input->post();
 
 		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
@@ -160,7 +179,7 @@ class Jurnal_penerimaan extends Admin_Controller
 			return;
 		}
 
-		$this->db->trans_begin();
+		if ($this->db->trans_begin() === false) { echo json_encode(['status'=>0,'msg'=>'Gagal memulai transaksi jurnal.']); return; }
 
 		try {
 			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
@@ -182,7 +201,7 @@ class Jurnal_penerimaan extends Admin_Controller
 			$nilai     = ($get_jurnal->debit > 0) ? $get_jurnal->debit : $get_jurnal->kredit;
 
 			// Insert header penerimaan
-			$acc_db->insert('jarh', [
+			if ($acc_db->insert('jarh', [
 				'nomor'       => $Nomor_BUM,
 				'tgl'         => $get_jurnal->tgl_jurnal,
 				'jml'         => $nilai,
@@ -195,7 +214,7 @@ class Jurnal_penerimaan extends Admin_Controller
 				'note'        => $get_jurnal->keterangan,
 				'user_id'     => $this->auth->user_id(),
 				'tgl_invoice' => $get_invoicing->tanggal_invoice,
-			]);
+			]) === false) { throw new RuntimeException('Gagal menulis jurnal penerimaan.'); }
 
 			// Build dan insert jurnal detail sekaligus (batch)
 			$arr_jurnal = [];
@@ -213,18 +232,18 @@ class Jurnal_penerimaan extends Admin_Controller
 					'nm_perusahaan' => $item->nm_company,
 				];
 			}
-			$acc_db->insert_batch('jurnal', $arr_jurnal);
+			if ($acc_db->insert_batch('jurnal', $arr_jurnal) === false) { throw new RuntimeException('Gagal menulis jurnal penerimaan.'); }
 
 			// Update status jurnal & counter cabang
-			$this->db->update('tr_jurnal', ['sts' => '1'], [
+			if ($this->db->update('tr_jurnal', ['sts' => '1'], [
 				'no_transaksi'    => $get_jurnal->no_transaksi,
 				'jenis_transaksi' => $get_jurnal->jenis_transaksi,
-			]);
-			$acc_db->query('UPDATE pastibisa_tb_cabang SET nobum = nobum + 1 WHERE nocab = "101"');
+			]) === false) { throw new RuntimeException('Gagal menulis jurnal penerimaan.'); }
+			if ($acc_db->query('UPDATE pastibisa_tb_cabang SET nobum = nobum + 1 WHERE nocab = "101"') === false) { throw new RuntimeException('Gagal menulis jurnal penerimaan.'); }
 
-			$this->db->trans_commit();
+			if ($this->db->trans_commit() === false) { throw new RuntimeException('Commit jurnal gagal. Periksa status sebelum mencoba kembali.'); }
 
-			echo json_encode(['status' => 1, 'msg' => 'Posting jurnal ke Tras Sukses!']);
+			echo json_encode(['status' => 1, 'msg' => 'Posting jurnal ke Tras Sukses!', 'accounting_numbers'=>[['company'=>(string)$id_company,'number'=>$Nomor_BUM]]]);
 		} catch (Exception $e) {
 			$this->db->trans_rollback();
 
@@ -245,10 +264,14 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function fix_company()
 	{
+
 		$get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
 
 		$arr_update_jurnal = [];
 		foreach ($get_jurnal as $item_jurnal) {
+            $snapshotHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$item_jurnal->no_transaksi))->row_array();
+            if((int)($snapshotHeader['consulting_batch']??0)===3)continue;
+
 			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
 			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $item_jurnal->no_transaksi])->row();
 			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
@@ -267,7 +290,8 @@ class Jurnal_penerimaan extends Admin_Controller
 			];
 		}
 
-		$this->db->trans_begin();
+		if (!$arr_update_jurnal) { echo json_encode(array('status'=>1,'msg'=>'Tidak ada jurnal legacy untuk diperbarui.')); return; }
+        $this->db->trans_begin();
 
 		$update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
 		if (!$update_jurnal) {
@@ -339,6 +363,7 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function update_sts_revisi_jurnal()
 	{
+        if (!$this->allowJournalAction()) { return; }
 		$this->Jurnal_penerimaan_model->update_sts_revisi_jurnal();
 	}
 
@@ -346,4 +371,11 @@ class Jurnal_penerimaan extends Admin_Controller
 	{
 		$this->Jurnal_penerimaan_model->get_data_jurnal_invoicing();
 	}
+    private function allowJournalAction()
+    {
+        if ($this->input->method(true) === 'POST' && (has_permission($this->managePermission) || has_permission('Jurnal_All.Manage'))) return true;
+        $this->output->set_status_header(403);
+        echo json_encode(['status'=>0,'save'=>0,'msg'=>'Anda tidak memiliki akses untuk aksi jurnal ini.']);
+        return false;
+    }
 }

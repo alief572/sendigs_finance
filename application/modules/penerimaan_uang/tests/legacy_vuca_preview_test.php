@@ -19,6 +19,13 @@ class LegacyResult {
 class LegacyDb {
     public $invoice, $inserted, $batches = array(), $history = array(), $journals = array(), $historyChoice = 'N';
     private $table;
+    public $receiptLock = false;
+    function query($sql, $params=array()) {
+        if (strpos($sql,'SELECT GET_LOCK(')===0 && count($params)===1 && in_array($params[0],array('sendigs_receipt_v2','sendigs_invoice_write'),true)) { $this->receiptLock=true; return new LegacyResult(array(array('acquired'=>1))); }
+        if (strpos($sql,'SELECT RELEASE_LOCK(')===0 && count($params)===1 && in_array($params[0],array('sendigs_receipt_v2','sendigs_invoice_write'),true)) { $this->receiptLock=false; return new LegacyResult(array(array('released'=>1))); }
+        throw new RuntimeException('Unexpected fixture SQL: '.$sql);
+    }
+    function field_exists($field,$table){return false;}
     function select($s) { return $this; }
     function from($s) { $this->table = $s; return $this; }
     function where($a, $b) { return $this; }

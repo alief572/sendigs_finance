@@ -130,10 +130,14 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function fix_company()
     {
+
         $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
 
         $arr_update_jurnal = [];
         foreach ($get_jurnal as $item_jurnal) {
+            $snapshotHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$item_jurnal->no_transaksi))->row_array();
+            if((int)($snapshotHeader['consulting_batch']??0)===3)continue;
+
             $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
 
             $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
@@ -150,6 +154,7 @@ class Jurnal_Invoicing extends Admin_Controller
             ];
         }
 
+        if (!$arr_update_jurnal) { echo json_encode(array('status'=>1,'msg'=>'Tidak ada jurnal legacy untuk diperbarui.')); return; }
         $this->db->trans_begin();
 
         $update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
@@ -206,16 +211,25 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function save_posting_jurnal()
     {
+        if (!$this->allowJournalAction()) { return; }
         $this->Jurnal_invoicing_model->save_posting_jurnal();
     }
 
     public function update_sts_revisi_jurnal()
     {
+        if (!$this->allowJournalAction()) { return; }
         $this->Jurnal_invoicing_model->update_sts_revisi_jurnal();
     }
 
     public function get_data_jurnal_invoicing()
     {
         $this->Jurnal_invoicing_model->get_data_jurnal_invoicing();
+    }
+    private function allowJournalAction()
+    {
+        if ($this->input->method(true) === 'POST' && (has_permission($this->managePermission) || has_permission('Jurnal_All.Manage'))) return true;
+        $this->output->set_status_header(403);
+        echo json_encode(['status'=>0,'save'=>0,'msg'=>'Anda tidak memiliki akses untuk aksi jurnal ini.']);
+        return false;
     }
 }

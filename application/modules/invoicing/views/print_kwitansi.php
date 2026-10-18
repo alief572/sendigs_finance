@@ -191,28 +191,28 @@
                 <tr>
                     <td style="font-weight: bold; text-align: right; width: 120px;">Harga</td>
                     <td style="width: 10px; text-align: center;">:</td>
-                    <td style="text-align: right;"><?= number_format($data_invoice->total_nominal) ?></td>
+                    <td style="text-align: right;"><?= number_format($data_invoice->total_nominal, (int)($data_invoice->consulting_version??0)===3?2:0) ?></td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold; text-align: right;">DPP Nilai Lain</td>
                     <td style="text-align: center;">:</td>
-                    <td style="text-align: right;"><?= number_format($data_invoice->dpp_nilai_lain) ?></td>
+                    <td style="text-align: right;"><?= number_format($data_invoice->dpp_nilai_lain, (int)($data_invoice->consulting_version??0)===3?2:0) ?></td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold; text-align: right;">PPN 12%</td>
                     <td style="text-align: center;">:</td>
-                    <td style="text-align: right;"><?= number_format($data_invoice->pajak) ?></td>
+                    <td style="text-align: right;"><?= number_format($data_invoice->pajak, (int)($data_invoice->consulting_version??0)===3?2:0) ?></td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold; text-align: right; border-top: 1px solid #000; padding-top: 5px;">Total Harga</td>
                     <td style="text-align: center; border-top: 1px solid #000; padding-top: 5px;">:</td>
-                    <td style="text-align: right; border-top: 1px solid #000; padding-top: 5px;"><?= number_format($data_invoice->total_nominal + $data_invoice->pajak) ?></td>
+                    <td style="text-align: right; border-top: 1px solid #000; padding-top: 5px;"><?= number_format($data_invoice->total_nominal + $data_invoice->pajak, (int)($data_invoice->consulting_version??0)===3?2:0) ?></td>
                 </tr>
             </table>
         </td>
         <td width="50%" style="vertical-align: middle; text-align: right;">
             <div class="rp-box" style="display: inline-block;">
-                Rp &nbsp;&nbsp;&nbsp;&nbsp; <?= number_format($data_invoice->total_nominal + $data_invoice->pajak) ?>
+                Rp &nbsp;&nbsp;&nbsp;&nbsp; <?= number_format($data_invoice->total_nominal + $data_invoice->pajak, (int)($data_invoice->consulting_version??0)===3?2:0) ?>
             </div>
         </td>
     </tr>

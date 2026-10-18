@@ -24,6 +24,87 @@ class Invoicing extends Admin_Controller
         ));
     }
 
+    private function legacy_consulting_boundary($method,$idField=null)
+    {
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function()use($method,$idField){
+            if($idField){
+                $id=$this->input->post($idField);
+                if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.'));return;}
+                $invoice=$this->db->get_where('tr_invoicing',array('id'=>$id))->row_array();
+                if(Invoice_consulting::is_new($invoice)){echo json_encode(array('status'=>0,'msg'=>'Gunakan form invoice konsultasi baru.'));return;}
+                $details=$this->db->get_where('tr_penerimaan_piutang_detail',array('id_inv'=>$id))->result_array();
+                foreach($details as $detail)if(isset($detail['consulting_reduction'])){echo json_encode(array('status'=>0,'msg'=>'Invoice sudah memiliki penerimaan batch konsultasi.'));return;}
+            }
+            return $this->$method();
+        });
+    }
+
+    private function consulting_form($invoice, $planId, $mode)
+    {
+        $this->auth->restrict($mode==='add' ? $this->addPermission : ($mode==='edit' ? $this->managePermission : $this->viewPermission));
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $service = new Invoice_consulting_service($this);
+        try {
+            $service->schema();
+            if ($invoice) {
+                $snapshot=Invoice_consulting::snapshot($invoice);
+                $source=null;
+                $journals=$service->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id",array($invoice['id']));
+                if ($mode==='edit') {
+                    foreach ($journals as $journal) if ((string)$journal['sts']==='1') throw new RuntimeException('Jurnal sudah diposting; invoice tidak dapat diedit.');
+                    if ($service->one('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=?',array($invoice['id']))) throw new RuntimeException('Invoice sudah memiliki penerimaan.');
+                }
+            } else {
+                $source=$service->source($planId);
+                $snapshot=$service->mapping($source['source_company_id']);
+                $invoice=$source['spk'] + array('tanggal_invoice'=>date('Y-m-d'),'no_invoice'=>$this->Invoicing_model->preview_no_invoice($snapshot['owner']['id'],'0'),
+                    'no_po'=>'','no_faktur'=>'','total_nominal'=>$source['actual']['nominal_payment'],'tax_treatment'=>'','id_detail_plan_tagih'=>$planId);
+                $snapshot['top']=array('term_payment'=>$source['actual']['term_payment']??$source['plan']['term_payment']??'',
+                    'persen_payment'=>$source['actual']['persen_payment']??$source['plan']['persen_payment']??0,
+                    'desc_payment'=>$source['actual']['desc_payment']??$source['plan']['desc_payment']??'');
+                $journals=array();
+            }
+            $data=array('invoice'=>$invoice,'snapshot'=>$snapshot,'mode'=>$mode,'journals'=>$journals,
+                'source_fingerprint'=>$source ? Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>array_diff_key($snapshot,array('top'=>true)))) : '',
+                'invoice_fingerprint'=>Invoice_calculation::fingerprint($invoice),'error'=>null);
+        } catch (Throwable $error) {
+            $data=array('error'=>$error instanceof RuntimeException ? $error->getMessage() : 'Form invoice tidak dapat dimuat.','mode'=>$mode);
+        }
+        if ($mode==='print') { $this->load->view('consulting_print', $data); return; }
+        $this->template->set($data);
+        $this->template->title($mode==='add'?'Add Invoicing':'Invoice Konsultasi');
+        $this->template->render('consulting_invoice');
+    }
+
+    public function coa_settings()
+    {
+        $this->auth->restrict('Invoicing.Configure');
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        try {
+            $service->schema();
+            $companies=$service->rows('SELECT id,nm_company FROM '.DBCNL.'.kons_tr_company ORDER BY nm_company');
+            $source=$this->input->get('source_company_id');
+            $mapping=is_scalar($source) && (string)$source!=='' ? $service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=?',array($source)) : null;
+            $owner=$this->input->get('owner_company_id');
+            $owner=is_scalar($owner) && (string)$owner!=='' ? $owner : ($mapping['owner_company_id']??null);
+            if ($owner) $service->company($owner);
+            $data=array('companies'=>$companies,'mapping'=>$mapping,'source_id'=>$source,'owner_id'=>$owner,
+                'master'=>$owner?$service->master($owner):array(),'roles'=>Invoice_consulting::roles(),
+                'mapping_fingerprint'=>Invoice_calculation::fingerprint($mapping?:array()),'error'=>null);
+        } catch (Throwable $error) { $data=array('error'=>$error instanceof RuntimeException?$error->getMessage():'Pengaturan tidak dapat dimuat.'); }
+        $this->template->set($data); $this->template->title('Pengaturan COA Invoicing'); $this->template->render('consulting_settings');
+    }
+
+    public function save_coa_mapping()
+    {
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        echo json_encode($service->save_mapping($this->input->post()));
+    }
+
     public function index()
     {
         $this->auth->restrict($this->viewPermission);
@@ -39,135 +120,7 @@ class Invoicing extends Admin_Controller
 
     public function add_invoice($id_plan_tagih_detail)
     {
-        $this->auth->restrict($this->viewPermission);
-
-        // Get plan tagih detail data
-        $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
-        $this->db->from('kons_tr_plan_tagih_detail a');
-        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company d', 'd.id = b.company', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = c.id_company', 'left');
-        $this->db->where('a.id', $id_plan_tagih_detail);
-        $get_actual_plan_tagih = $this->db->get()->row();
-
-        // Find related actual_plan_tagih for backward compatibility with save process
-        $get_actual = $this->db->get_where('kons_tr_actual_plan_tagih', [
-            'id_detail_plan_tagih' => $id_plan_tagih_detail,
-            'tagih_mundur' => '1'
-        ])->row();
-
-        // Use actual_plan_tagih id if exists, otherwise use plan_tagih_detail id
-        if (!empty($get_actual)) {
-            $get_actual_plan_tagih->id = $get_actual->id;
-        }
-
-        $id_company = (!empty($get_actual_plan_tagih->id_company)) ? $get_actual_plan_tagih->id_company : '1';
-        $nm_company = (!empty($get_actual_plan_tagih->nm_company)) ? $get_actual_plan_tagih->nm_company : 'STM-Vuca';
-
-        // Preview nomor invoice berikutnya
-        $preview_no_invoice = $this->Invoicing_model->preview_no_invoice($id_company, '0');
-
-        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
-
-        $hasil_jurnal = '';
-
-        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
-        $this->accounting->from('coa_master a');
-        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
-        $get_coa_jurnal = $this->accounting->get()->result_array();
-
-        $no_coa_jurnal = 0;
-
-        $total_debit = 0;
-        $total_kredit = 0;
-        foreach ($get_coa_jurnal as $item_coa_jurnal) {
-            $no_coa_jurnal++;
-
-            $debit = 0;
-            $kredit = 0;
-
-            if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
-                $debit = ($total_nominal + $ppn - $pph);
-            }
-
-            if ($item_coa_jurnal['no_perkiraan'] == '2104-01-07') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-
-                $kredit = $ppn;
-            }
-
-            if ($item_coa_jurnal['no_perkiraan'] == '1106-01-02') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $pph = ($total_nominal * 2 / 100);
-                $debit = $pph;
-            }
-
-            if ($item_coa_jurnal['no_perkiraan'] == '4101-01-01') {
-                $total_nominal = (!empty($get_actual_plan_tagih)) ? $get_actual_plan_tagih->nominal_payment : 0;
-                $dpp_lain_lain = ($total_nominal * 11 / 12);
-                $ppn = ($dpp_lain_lain * 12 / 100);
-                $pph = ($total_nominal * 2 / 100);
-
-                $kredit = $total_nominal;
-            }
-
-            $hasil_jurnal .= '<tr>';
-
-            $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= date('d-F-Y');
-            $hasil_jurnal .= '<input type="hidden" name="tgl_jurnal_' . $no_coa_jurnal . '" value="' . date('Y-m-d') . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $item_coa_jurnal['no_perkiraan'];
-            $hasil_jurnal .= '<input type="hidden" name="coa_jurnal_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['no_perkiraan'] . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $nm_company;
-            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $id_company . '">';
-            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $nm_company . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
-            $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $no_coa_jurnal . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '<td class="text-right">';
-            $hasil_jurnal .= number_format($debit);
-            $hasil_jurnal .= '<input type="hidden" name="debit_' . $no_coa_jurnal . '" value="' . $debit . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '<td class="text-right">';
-            $hasil_jurnal .= number_format($kredit);
-            $hasil_jurnal .= '<input type="hidden" name="kredit_' . $no_coa_jurnal . '" value="' . $kredit . '">';
-            $hasil_jurnal .= '</td>';
-
-            $hasil_jurnal .= '</tr>';
-
-            $total_debit += $debit;
-            $total_kredit += $kredit;
-        }
-
-        $data = [
-            'data_actual' => $get_actual_plan_tagih,
-            'hasil_jurnal' => $hasil_jurnal,
-            'total_debit' => $total_debit,
-            'total_kredit' => $total_kredit,
-            'preview_no_invoice' => $preview_no_invoice
-        ];
-
-        $this->template->set($data);
-        $this->template->title('Add Invoicing');
-        $this->template->render('add_invoice');
+        return $this->consulting_form(null, $id_plan_tagih_detail, 'add');
     }
 
     public function add_invoice_non_konsultasi($id_penawaran)
@@ -304,6 +257,10 @@ class Invoicing extends Admin_Controller
 
     public function view_invoicing($id_invoicing)
     {
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'view'); }
+
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -536,6 +493,10 @@ class Invoicing extends Admin_Controller
 
     public function edit_invoicing($id_invoicing)
     {
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'edit'); }
+
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -771,6 +732,10 @@ class Invoicing extends Admin_Controller
 
     public function print_invoicing($id_invoicing, $id_company = 1)
     {
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'print'); }
+
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -893,142 +858,17 @@ class Invoicing extends Admin_Controller
 
     public function save_invoice()
     {
-        $post = $this->input->post();
-
-        // Validasi duplikat manual dihapus karena auto-generate
-
-        $get_actual_plan_tagih = $this->db->get_where('kons_tr_actual_plan_tagih', ['id' => $post['id']])->row();
-
-        $get_spk_penawaran = $this->db->get_where(DBCNL . '.kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_actual_plan_tagih->id_spk_penawaran])->row();
-        $get_penawaran = $this->db->get_where(DBCNL . '.kons_tr_penawaran', ['id_quotation' => $get_actual_plan_tagih->id_penawaran])->row();
-        $get_konsultasi = $this->db->get_where(DBCNL . '.kons_master_konsultasi_header', ['id_konsultasi_h' => $get_spk_penawaran->id_project])->row();
-
-        $id_company_gen = (!empty($get_penawaran->company)) ? $get_penawaran->company : '1';
-        $no_invoice_baru = $this->Invoicing_model->generate_no_invoice($id_company_gen, '0');
-        $id = $this->Invoicing_model->generate_id();
-
-        $arr_insert = [
-            'id' => $id,
-            'id_actual_plan_tagih' => $get_actual_plan_tagih->id,
-            'id_detail_plan_tagih' => $get_actual_plan_tagih->id_detail_plan_tagih,
-            'id_penawaran' => $get_actual_plan_tagih->id_penawaran,
-            'id_spk_penawaran' => $get_actual_plan_tagih->id_spk_penawaran,
-            'id_customer' => $get_spk_penawaran->id_customer,
-            'nm_customer' => $get_spk_penawaran->nm_customer,
-            'address' => $get_spk_penawaran->address,
-            'id_project' => $get_spk_penawaran->id_project,
-            'nm_project' => $get_konsultasi->nm_paket,
-            'id_project_leader' => $get_spk_penawaran->id_project_leader,
-            'nm_project_leader' => $get_spk_penawaran->nm_project_leader,
-            'id_sales' => $get_spk_penawaran->id_sales,
-            'nm_sales' => $get_spk_penawaran->nm_sales,
-            'tanggal_invoice' => $post['tanggal_invoice'],
-            'no_invoice' => $no_invoice_baru,
-            'no_po' => $post['nomor_po'],
-            'no_faktur' => $post['nomor_faktur'],
-            'total_nominal' => $post['total_nominal'],
-            'dpp_nilai_lain' => $post['dpp_nilai_lain'],
-            'pajak' => $post['pajak'],
-            'total_akhir' => $post['total_akhir'],
-            'total_nominal_jurnal' => $post['total_nominal_jurnal'],
-            'dpp_lain_lain_jurnal' => $post['dpp_lain_lain'],
-            'ppn_jurnal' => $post['ppn_jurnal'],
-            'tagihan_ppn_jurnal' => $post['total_tagihan_ppn'],
-            'pph_jurnal' => $post['pph_jurnal'],
-            'total_akhir_jurnal' => $post['total_akhir_jurnal'],
-            'saldo_piutang' => $post['total_akhir_jurnal'],
-            'saldo_piutang_tanpa_pph' => $post['total_tagihan_ppn'],
-            'saldo_piutang_tanpa_ppn' => max(0, ($post['total_nominal_jurnal'] ?? 0) - ($post['pph_jurnal'] ?? 0)),
-            'ppn_persen' => $post['ppn_persen'],
-            'created_by' => $this->auth->user_id(),
-            'created_date' => date('Y-m-d H:i:s')
-        ];
-
-        $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
-
-        $this->accounting->select('a.no_perkiraan, a.nama as nm_coa');
-        $this->accounting->from('coa_master a');
-        $this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal);
-        $get_coa_jurnal = $this->accounting->get()->result_array();
-
-        $arr_insert_jurnal = [];
-
-        $no_coa_jurnal = 0;
-        foreach ($get_coa_jurnal as $item) {
-            $no_coa_jurnal++;
-
-            $no_jurnal = $this->Invoicing_model->generate_id_invoice_jurnal($no_coa_jurnal);
-            $keterangan = $item['nm_coa'] . ' - ' . $id;
-            $tgl_jurnal = $post['tgl_jurnal_' . $no_coa_jurnal];
-            $coa_jurnal = $post['coa_jurnal_' . $no_coa_jurnal];
-            $id_company = $post['id_company_' . $no_coa_jurnal];
-            $nm_company = $post['nm_company_' . $no_coa_jurnal];
-            $nm_coa = $post['nm_coa_' . $no_coa_jurnal];
-            $debit = $post['debit_' . $no_coa_jurnal];
-            $kredit = $post['kredit_' . $no_coa_jurnal];
-
-
-            $arr_insert_jurnal[] = [
-                'no_jurnal' => $no_jurnal,
-                'tgl_jurnal' => $tgl_jurnal,
-                'coa' => $coa_jurnal,
-                'id_company' => $id_company,
-                'nm_company' => $nm_company,
-                'nm_coa' => $nm_coa,
-                'debit' => $debit,
-                'kredit' => $kredit,
-                'keterangan' => $keterangan,
-                'sts' => 0,
-                'no_transaksi' => $id,
-                'jenis_transaksi' => 'Invoicing',
-                'created_by' => $this->auth->user_id(),
-                'created_date' => date('Y-m-d H:i:s')
-            ];
-        }
-
-        $this->db->trans_begin();
-        try {
-            $insert_invoicing = $this->db->insert('tr_invoicing', $arr_insert);
-            if (!$insert_invoicing) {
-                throw new Exception($this->db->error($insert_invoicing)['message']);
-            }
-
-            $insert_invoicing_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
-            if (!$insert_invoicing_jurnal) {
-                throw new Exception($this->db->error($insert_invoicing_jurnal)['message']);
-            }
-
-            $update_actual_plan_tagih = $this->db->update('kons_tr_actual_plan_tagih', ['sts_invoice' => 1], ['id' => $post['id']]);
-            if (!$update_actual_plan_tagih) {
-                throw new Exception($this->db->error($update_actual_plan_tagih)['message']);
-            }
-
-            // Update sts_invoice di kons_tr_plan_tagih_detail
-            $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', ['sts_invoice' => '1', 'tgl_invoice' => date('Y-m-d')], ['id' => $get_actual_plan_tagih->id_detail_plan_tagih]);
-            if (!$update_plan_tagih_detail) {
-                throw new Exception($this->db->error($update_plan_tagih_detail)['message']);
-            }
-
-            if ($this->db->trans_status() === false) {
-                throw new Exception('Please try again later !');
-            }
-
-            $this->db->trans_commit();
-            $valid = 1;
-            $msg = 'Data has been saved !';
-        } catch (Exception $e) {
-            $this->db->trans_rollback();
-            $valid = 0;
-            $msg = $e->getMessage();
-        }
-
-        echo json_encode([
-            'status' => $valid,
-            'msg' => $msg
-        ]);
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $service = new Invoice_consulting_service($this);
+        echo json_encode($service->save_invoice($this->input->post()));
     }
 
     public function save_invoice_vuca()
+    {
+        return $this->legacy_consulting_boundary('legacy_save_invoice_vuca', null);
+    }
+
+    private function legacy_save_invoice_vuca()
     {
         $post = $this->input->post();
 
@@ -1155,6 +995,21 @@ class Invoicing extends Admin_Controller
 
     public function update_invoice()
     {
+        require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        $consultingId = $this->input->post('id_invoicing');
+        if (!is_scalar($consultingId)) { echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.')); return; }
+        $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$consultingId))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) {
+            $service = new Invoice_consulting_service($this);
+            echo json_encode($service->save_invoice($this->input->post(), true));
+            return;
+        }
+
+        return $this->legacy_consulting_boundary('legacy_update_invoice','id_invoicing');
+    }
+
+    private function legacy_update_invoice()
+    {
         $post = $this->input->post();
 
         $id = $post['id_invoicing'];
@@ -1272,6 +1127,11 @@ class Invoicing extends Admin_Controller
     }
 
     public function update_invoice_vuca()
+    {
+        return $this->legacy_consulting_boundary('legacy_update_invoice_vuca', 'id_invoicing');
+    }
+
+    private function legacy_update_invoice_vuca()
     {
         $post = $this->input->post();
 
@@ -1620,6 +1480,9 @@ class Invoicing extends Admin_Controller
     {
         $filter_status = $this->input->get('filter_status');
 
+        if ($this->db->field_exists('consulting_version','tr_invoicing')) {
+            $this->db->select('f.consulting_version,f.tax_treatment,f.total_nominal,f.dpp_nilai_lain,f.ppn_jurnal,f.tagihan_ppn_jurnal,f.total_akhir_jurnal,f.saldo_piutang');
+        }
         $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
@@ -1889,6 +1752,11 @@ class Invoicing extends Admin_Controller
 
     public function save_invoice_non_konsultasi()
     {
+        return $this->legacy_consulting_boundary('legacy_save_invoice_non_konsultasi', null);
+    }
+
+    private function legacy_save_invoice_non_konsultasi()
+    {
         $this->auth->restrict($this->addPermission);
 
         $id_penawaran = $this->input->post('id_penawaran', true);
@@ -2104,6 +1972,11 @@ class Invoicing extends Admin_Controller
 
 
     public function update_invoice_non_konsultasi()
+    {
+        return $this->legacy_consulting_boundary('legacy_update_invoice_non_konsultasi', 'id');
+    }
+
+    private function legacy_update_invoice_non_konsultasi()
     {
         $this->auth->restrict($this->managePermission);
 

@@ -31,6 +31,23 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function save_posting_jurnal()
     {
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
+    }
+
+    private function serialized_save_posting_jurnal()
+    {
+        require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
+        $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
+        if (!$consultingAnchor) { echo json_encode(array('save'=>0,'msg'=>'Jurnal berubah; muat ulang daftar.')); return; }
+        $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$consultingAnchor['no_transaksi']))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) {
+            $posting=new Consulting_posting($this);
+            echo json_encode($posting->invoice($consultingAnchor['id']));
+            return;
+        }
+
         $post = $this->input->post();
 
         $get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
@@ -81,7 +98,7 @@ class Jurnal_invoicing_model extends BF_Model
         // Pilih koneksi DB accounting berdasarkan id_company
         $acc_db = $this->_get_accounting_db($id_company);
 
-        $this->db->trans_begin();
+        if ($this->db->trans_begin() === false) { echo json_encode(['save'=>0,'msg'=>'Gagal memulai transaksi jurnal.']); return; }
 
         try {
             // Insert jurnal header — sekali saja
@@ -169,9 +186,9 @@ class Jurnal_invoicing_model extends BF_Model
                 throw new Exception('Gagal insert kartu piutang: ' . $this->db->error()['message']);
             }
 
-            $this->db->trans_commit();
+            if ($this->db->trans_commit() === false) { throw new RuntimeException('Commit jurnal gagal. Periksa status sebelum mencoba kembali.'); }
 
-            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!']);
+            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!', 'accounting_numbers'=>[['company'=>(string)$id_company,'number'=>$Nomor_JV]]]);
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -230,10 +247,14 @@ class Jurnal_invoicing_model extends BF_Model
                 $msg = 'Please try again later !';
             }
         } else {
-            $this->db->trans_commit();
-
-            $valid = 1;
-            $msg = 'Status data berhasil di update !';
+            if ($this->db->trans_commit() === false) {
+                $this->db->trans_rollback();
+                $valid = 0;
+                $msg = 'Commit revisi gagal. Periksa status jurnal.';
+            } else {
+                $valid = 1;
+                $msg = 'Status data berhasil di update !';
+            }
         }
 
         $response = [

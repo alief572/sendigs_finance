@@ -33,16 +33,16 @@ $total_kredit = (!empty($total_kredit)) ? $total_kredit : 0;
 
             echo '<td class="text-center">' . date('d-F-Y', strtotime($item['tgl_inv'])) . '</td>';
             echo '<td class="text-center">' . $item['no_invoice'] . '</td>';
-            echo '<td class="text-right">' . number_format($item['dpp']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['dpp_lain']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['ppn']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['pph23']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['tagihan_ppn']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['total_akhir_jurnal']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['total']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['penerimaan']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['biaya_admin']) . '</td>';
-            echo '<td class="text-right">' . number_format($item['sisa_piutang']) . '</td>';
+            echo '<td class="text-right">' . number_format($item['dpp'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['dpp_lain'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['ppn'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['pph23'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['tagihan_ppn'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['total_akhir_jurnal'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['total'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['penerimaan'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['biaya_admin'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
+            echo '<td class="text-right">' . number_format($item['sisa_piutang'], (int)($item['consulting_version']??0)===3?2:0) . '</td>';
             echo '</tr>';
 
             $total_piutang += $item['total_akhir_jurnal'];
@@ -130,8 +130,8 @@ $total_kredit = (!empty($total_kredit)) ? $total_kredit : 0;
             echo '<td class="text-center">' . htmlspecialchars($item['coa'], ENT_QUOTES, 'UTF-8') . '</td>';
             echo '<td class="text-center">' . $item['nm_company'] . '</td>';
             echo '<td class="text-center">' . $item['nm_coa'] . '</td>';
-            echo '<td class="text-right"><b>' . number_format($item['debit']) . '</b></td>';
-            echo '<td class="text-right"><b>' . number_format($item['kredit']) . '</b></td>';
+            echo '<td class="text-right"><b>' . number_format($item['debit'], (int)($item['consulting_version']??0)===3?2:0) . '</b></td>';
+            echo '<td class="text-right"><b>' . number_format($item['kredit'], (int)($item['consulting_version']??0)===3?2:0) . '</b></td>';
 
             echo '</tr>';
 

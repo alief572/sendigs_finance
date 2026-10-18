@@ -468,35 +468,19 @@ class Invoicing_model extends BF_Model
         $table_exists = $this->db->query("SHOW TABLES LIKE 'ms_invoice_sequence'")->num_rows() > 0;
 
         if ($table_exists) {
-            // Cek tabel sequence
-            $seq_row = $this->db->get_where('ms_invoice_sequence', [
-                'kode_entitas' => $kode_entitas,
-                'tahun' => $tahun
-            ])->row();
-
-            if ($seq_row) {
-                // Ada di tabel sequence → increment
-                $sequence = (int)$seq_row->last_sequence + 1;
-                $this->db->where('id', $seq_row->id);
-                $this->db->update('ms_invoice_sequence', [
-                    'last_sequence' => $sequence,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'updated_by' => $this->auth->user_id()
-                ]);
-            } else {
-                // Belum ada row untuk entitas+tahun ini → fallback ke MAX lalu insert
-                $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
-
-                $this->db->insert('ms_invoice_sequence', [
-                    'kode_entitas' => $kode_entitas,
-                    'tahun' => $tahun,
-                    'last_sequence' => $sequence,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'updated_by' => $this->auth->user_id()
-                ]);
+            // Atomic allocation also covers legacy Vuca/nonconsulting callers.
+            $minimum = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+            if ($this->db->query('INSERT IGNORE INTO ms_invoice_sequence (kode_entitas,tahun,last_sequence,updated_at,updated_by) VALUES (?,?,?,?,?)',
+                [$kode_entitas,$tahun,$minimum-1,date('Y-m-d H:i:s'),$this->auth->user_id()]) === false) {
+                throw new RuntimeException('Gagal menyiapkan nomor invoice.');
             }
+            if ($this->db->query('UPDATE ms_invoice_sequence SET last_sequence=LAST_INSERT_ID(GREATEST(last_sequence+1,?)),updated_at=?,updated_by=? WHERE kode_entitas=? AND tahun=?',
+                [$minimum,date('Y-m-d H:i:s'),$this->auth->user_id(),$kode_entitas,$tahun]) === false) {
+                throw new RuntimeException('Gagal mengalokasikan nomor invoice.');
+            }
+            $allocated = $this->db->query('SELECT LAST_INSERT_ID() AS sequence')->row();
+            $sequence = (int)$allocated->sequence;
         } else {
-            // Tabel belum ada → fallback ke logic lama (MAX dari tr_invoicing)
             $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
         }
 

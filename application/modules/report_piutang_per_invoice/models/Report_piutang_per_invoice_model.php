@@ -43,6 +43,12 @@ class Report_piutang_per_invoice_model extends BF_Model
         // Build placeholders for IN clause
         $placeholders = implode(',', array_fill(0, count($company_codes), '?'));
 
+        $invoiceValue = 'inv.total_nominal';
+        $newPayment = '';
+        if ($this->db->field_exists('consulting_version','tr_invoicing') && $this->db->field_exists('consulting_reduction','tr_penerimaan_piutang_detail')) {
+            $invoiceValue = 'CASE WHEN inv.consulting_version=3 THEN inv.total_akhir_jurnal ELSE inv.total_nominal END';
+            $newPayment = 'WHEN inv.consulting_version=3 THEN CASE WHEN pph.no_surat IS NOT NULL THEN ppd.consulting_reduction ELSE NULL END';
+        }
         $sql = "SELECT
                     pth.nm_customer,
                     pth.id_spk_penawaran,
@@ -53,10 +59,11 @@ class Report_piutang_per_invoice_model extends BF_Model
                     inv.id AS id_invoice,
                     inv.tanggal_invoice,
                     inv.no_invoice,
-                    inv.total_nominal AS nilai_invoice,
+                    {$invoiceValue} AS nilai_invoice,
                     ppd.id AS id_payment,
                     DATE(pph.created_date) AS tanggal_bayar,
                     CASE 
+                        {$newPayment}
                         WHEN (SELECT COUNT(*) FROM tr_penerimaan_piutang_detail sub WHERE sub.id_inv = inv.id) > 1 
                         THEN ppd.penerimaan 
                         ELSE ppd.dpp 

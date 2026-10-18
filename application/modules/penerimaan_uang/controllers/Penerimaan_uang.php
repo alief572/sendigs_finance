@@ -122,6 +122,16 @@ class Penerimaan_uang extends Admin_Controller
 
     public function process_alokasi()
     {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consulting=new Consulting_receipt($this);
+        if ($consulting->contains_new($this->input->post('choose_inv'))) {
+            try {
+                $data=$consulting->preview($this->input->post());
+                $this->template->set($data);$this->template->render('consulting_process');
+            } catch (Throwable $error) { echo '<div class="alert alert-danger" role="alert">'.htmlspecialchars($error instanceof RuntimeException || $error instanceof InvalidArgumentException?$error->getMessage():'Preview tidak dapat dimuat.',ENT_QUOTES,'UTF-8').'</div>'; }
+            return;
+        }
+
         $post = $this->input->post();
 
         $pph23_dipotong = $post['pph23_dipotong'];
@@ -405,6 +415,22 @@ class Penerimaan_uang extends Admin_Controller
     }
 
     public function save_penerimaan_piutang()
+    {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consulting=new Consulting_receipt($this);$post=$this->input->post();$ids=array();
+        $count=is_scalar($post['no_inv']??null)?(int)$post['no_inv']:0;
+        if($count<1 || $count>100){echo json_encode(array('status'=>0,'msg'=>'Jumlah invoice tidak valid.','message'=>'Jumlah invoice tidak valid.'));return;}
+        for($n=1;$n<=$count;$n++)$ids[]=$post['id_inv_'.$n]??'';
+        if($consulting->contains_new($ids)){echo json_encode($consulting->save($post));return;}
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function()use($consulting,$post){
+            try { $consulting->guard_legacy_allocation($post['id_alokasi']??''); }
+            catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage(),'message'=>$error->getMessage()));return;}
+            $this->save_legacy_penerimaan_piutang();
+        });
+    }
+
+    private function save_legacy_penerimaan_piutang()
     {
         $post = $this->input->post();
 
@@ -735,9 +761,40 @@ class Penerimaan_uang extends Admin_Controller
 
     public function rollback_penerimaan()
     {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){
+            $id=$this->input->post('id_penerimaan');
+            if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));return;}
+            $header=$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id))->row_array();
+            $consulting=new Consulting_receipt($this);
+            if((int)($header['consulting_batch']??0)!==3 && $header){
+                try {
+                    $consulting->guard_legacy_allocation($header['id_alokasi']);
+                    if($this->db->field_exists('consulting_reduction','tr_penerimaan_piutang_detail')){
+                        $details=$this->db->get_where('tr_penerimaan_piutang_detail',array('id_header'=>$header['no_surat']))->result_array();
+                        foreach($details as $detail){
+                            $later=$this->db->query('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=? AND id>? AND consulting_reduction IS NOT NULL LIMIT 1',array($detail['id_inv'],$detail['id']))->row_array();
+                            if($later)throw new RuntimeException('Rollback penerimaan terbaru terlebih dahulu.');
+                        }
+                    }
+                }catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage()));return;}
+            }
+            return $this->rollback_legacy_penerimaan();
+        });
+    }
+
+    private function rollback_legacy_penerimaan()
+    {
         $this->auth->restrict($this->deletePermission);
 
         $id_penerimaan = $this->input->post('id_penerimaan');
+
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consultingHeader=is_scalar($id_penerimaan)?$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id_penerimaan))->row_array():null;
+        if ((int)($consultingHeader['consulting_batch']??0)===3) {
+            $consulting=new Consulting_receipt($this);echo json_encode($consulting->rollback($id_penerimaan));return;
+        }
 
         if (empty($id_penerimaan)) {
             echo json_encode(['status' => 0, 'msg' => 'ID Penerimaan tidak valid.']);

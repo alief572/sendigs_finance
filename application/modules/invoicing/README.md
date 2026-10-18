@@ -1,3 +1,9 @@
+# Invoice konsultasi reguler versi 3 — 18 Oktober 2026
+
+Endpoint reguler baru sekarang memakai Invoice_consulting_service untuk PKP/WAPU/Kawasan Berikat, snapshot mapping/owner, transaksi dan jurnal tanpa PPh saat invoice. Invoice lama, Vuca dan Non Konsultasi mempertahankan formula lama; mutex dan allocator nomor bersama melindungi interaksi antarjalur. Invoice_writer yang disebut dalam bagian historis di bawah bukan entrypoint aktif untuk semua enam endpoint.
+
+Rilis memerlukan migration003 dan mapping admin sembilan COA. Laporan implementasi, manifest, pengujian dan batas: docs/invoicing-consulting-v3-2026-10-18.md dan docs/invoicing-consulting-manifest.json. Jangan menjalankan integration_test.php v2 historis sebagai bukti integrasi controller aktif; gunakan tests/Consulting_integration_test.php --isolated-local-db.
+
 # Pencegahan piutang minus — 6 Oktober 2026
 
 Enam endpoint save/update regular, Vuca, dan nonkonsultasi sekarang memakai

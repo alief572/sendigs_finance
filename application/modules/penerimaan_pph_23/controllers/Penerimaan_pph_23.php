@@ -36,6 +36,9 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
+        $consultingDetail=$this->db->get_where('tr_penerimaan_piutang_detail',array('id'=>$id_penerimaan_piutang))->row_array();
+        if((int)($consultingDetail['consulting_version']??0)===3){echo '<div class="alert alert-info">PPh aktual invoice ini sudah dicatat pada jurnal penerimaan; tidak memerlukan jurnal pengakuan PPh kedua.</div>';return;}
+
         $this->db->select('a.*, b.print_keterangan, b.nm_project, b.id_penawaran, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.pph_jurnal');
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
@@ -118,6 +121,15 @@ class Penerimaan_pph_23 extends Admin_Controller
     public function save_penerimaan_pph_23()
     {
         $post = $this->input->post();
+
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting.php';
+        $consultingId=$post['id_detail_penerimaan']??null;$invoiceId=$post['no_invoice']??null;
+        if(!is_scalar($consultingId)||!is_scalar($invoiceId)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));return;}
+        $consultingDetail=$this->db->get_where('tr_penerimaan_piutang_detail',array('id'=>$consultingId))->row_array();
+        $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$invoiceId))->row_array();
+        if((int)($consultingDetail['consulting_version']??0)===3 || Invoice_consulting::is_new($consultingInvoice)){
+            echo json_encode(array('status'=>0,'msg'=>'PPh aktual sudah dicatat pada jurnal penerimaan; jurnal pengakuan kedua tidak diperbolehkan.'));return;
+        }
 
         $id = $this->Penerimaan_pph_23_model->generate_id();
 

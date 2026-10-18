@@ -1,3 +1,9 @@
+# Integrasi invoice konsultasi reguler versi 3 — 18 Oktober 2026
+
+Batch yang memuat invoice reguler baru memakai Consulting_receipt: PPh aktual didebit saat penerimaan, pengurangan piutang kas+admin+PPh, snapshot per detail, rollback tepat, dan posting GL per owner snapshot. Batch campuran mempertahankan formula legacy pada tiap baris lama. Old-only tetap jalur existing dengan mutex; alokasi induk yang dipakai v3 dilindungi dari overwrite/penghapusan split legacy.
+
+Schema003, pengaturan COA dan bukti pengujian: docs/invoicing-consulting-v3-2026-10-18.md. Test aktif: invoicing/tests/Consulting_integration_test.php --isolated-local-db. Dokumentasi v2 historis berikut tetap konteks historis, bukan klaim bahwa seluruh endpoint lama telah dikonversi.
+
 # Penerimaan piutang versi 2
 
 ## Perbaikan daftar jurnal pada view — 2026-10-12

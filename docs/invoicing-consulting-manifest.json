@@ -1,0 +1,174 @@
+{
+  "version": 3,
+  "date": "2026-10-18",
+  "status": "complete_local_verification",
+  "local_posting_prerequisites": {
+    "date": "2026-10-18",
+    "status": "verified_local_actual_schema",
+    "report": "docs/invoicing-local-posting-2026-10-18.md",
+    "tables_converted_to_innodb": 13,
+    "ledgers": [
+      "db_sendigs_ss_stm",
+      "db_sendigs_ss_sustain",
+      "db_sendigs_ss_vuca"
+    ],
+    "precision": "jurnal.debet/kredit DECIMAL(22,2), historical numeric values preserved",
+    "actual_schema_disposable_checks": 159,
+    "application_test_transactions": "none",
+    "pending": "User must complete source-company COA mappings; Vuca source4 mapping absent at verification"
+  },
+  "local_migration": {
+    "file": "application/modules/invoicing/migrations/003_consulting_v3.sql",
+    "applied_at": "2026-10-18T11:19:07+07:00",
+    "database": "db_sendigs_ss",
+    "server": "local Docker mysql, loopback port 3307",
+    "verified": "9 nullable columns, unique TOP index, 2 supporting tables, Configure grant for user 7; original transaction data and sequence unchanged",
+    "mapping_rows": 0,
+    "backup_directory": "C:/Users/Febry/AppData/Local/Temp/sendigs-local-migration-003-20261018-111906",
+    "pending": "Admin must complete actual company and COA mappings before issuing new invoices; GL prerequisites subsequently verified in local_posting_prerequisites"
+  },
+  "branch": "development",
+  "scope": "new regular consulting invoices only; legacy/vuca/non formulas unchanged",
+  "runtime_files": [
+    "application/modules/invoicing/controllers/Invoicing.php",
+    "application/modules/invoicing/models/Invoicing_model.php",
+    "application/modules/invoicing/libraries/Invoice_consulting.php",
+    "application/modules/invoicing/libraries/Invoice_consulting_service.php",
+    "application/modules/invoicing/libraries/Consulting_posting.php",
+    "application/modules/invoicing/views/consulting_invoice.php",
+    "application/modules/invoicing/views/consulting_settings.php",
+    "application/modules/invoicing/views/consulting_print.php",
+    "application/modules/invoicing/views/index.php",
+    "application/modules/invoicing/views/download_excel.php",
+    "application/modules/invoicing/views/print_kwitansi.php",
+    "assets/js/invoicing/consulting.js",
+    "application/modules/penerimaan_uang/controllers/Penerimaan_uang.php",
+    "application/modules/penerimaan_uang/libraries/Consulting_receipt.php",
+    "application/modules/penerimaan_uang/views/consulting_process.php",
+    "application/modules/penerimaan_uang/views/detail.php",
+    "application/modules/jurnal_invoicing/controllers/Jurnal_invoicing.php",
+    "application/modules/jurnal_invoicing/models/Jurnal_invoicing_model.php",
+    "application/modules/jurnal_penerimaan/controllers/Jurnal_penerimaan.php",
+    "application/modules/report_piutang_per_invoice/models/Report_piutang_per_invoice_model.php",
+    "application/modules/penerimaan_pph_23/controllers/Penerimaan_pph_23.php",
+    "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php",
+    "assets/css/invoicing.css",
+    "assets/js/invoicing/consulting-form.js"
+  ],
+  "migration_files": [
+    "application/modules/invoicing/migrations/003_consulting_v3.sql",
+    "application/modules/invoicing/migrations/003_consulting_v3_rollback.sql"
+  ],
+  "tests": [
+    "application/modules/invoicing/tests/Consulting_calculation_test.php",
+    "application/modules/invoicing/tests/Consulting_calculation_test.js",
+    "application/modules/invoicing/tests/Consulting_integration_test.php",
+    "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php",
+    "application/modules/invoicing/tests/Ui_render_test.php",
+    "application/modules/invoicing/tests/Ui_client_test.js",
+    "application/modules/invoicing/tests/Ui_list_client_test.js"
+  ],
+  "dependencies": [
+    "application/modules/invoicing/libraries/Invoice_calculation.php",
+    "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php",
+    "application/libraries/Module_audit_recorder.php",
+    "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php"
+  ],
+  "sha256": {
+    "application/modules/invoicing/controllers/Invoicing.php": "f85ff7a99c93396e2aa60225ec2cce541926efaf899a60d27cca5798de3d6815",
+    "application/modules/invoicing/models/Invoicing_model.php": "2dfea04810cdf8d568124768153d9b53fd8cf4acf1d1cfb0fe8cbe98833f2ec5",
+    "application/modules/invoicing/libraries/Invoice_consulting.php": "25fd15c58fb053d9121f257775c9afb137e0ede3672db69e38411e9a4dce1df5",
+    "application/modules/invoicing/libraries/Invoice_consulting_service.php": "c01e042f00310492c91ac97d10f62f025d0375d2ab306e7cb13c3369334699f3",
+    "application/modules/invoicing/libraries/Consulting_posting.php": "d7981e1a96b7de6026f5553497b95b323bacdea993c77f06a4db643508ba86ba",
+    "application/modules/invoicing/views/consulting_invoice.php": "2d8b4796a31ce77b6d2fb29ec2b1571c3b2607f056a3ab848dce1cae7e9d269b",
+    "application/modules/invoicing/views/consulting_settings.php": "505a96702fa1a8464ededfa6a4d1022f334aa0da4e640142af5a28c55c6401d4",
+    "application/modules/invoicing/views/consulting_print.php": "fabe99af4cc4e6af44161ecfaf3a85bb787f139b6a308bcfa6eee66bc7216972",
+    "application/modules/invoicing/views/index.php": "6ad297fc12bbdb0c3c2b63298c279123d0afefa5cc33039096c6976560636d34",
+    "application/modules/invoicing/views/download_excel.php": "5c8ec6c1fbbd8b2f301562965c3629b13b4e1c05d306187629acf23729724e97",
+    "application/modules/invoicing/views/print_kwitansi.php": "1a5aed69d2e33b1e04bfd9422fa3738a8b05988135eaa8d7d36d00922b6dd1b6",
+    "assets/js/invoicing/consulting.js": "30d63a6cb2d44391a30127a3b96047a3bb971cfa11f2cc4ebd32597fe496d6e6",
+    "application/modules/penerimaan_uang/controllers/Penerimaan_uang.php": "31e2e8a0cd8ee884880099fbb49872e4c17e8e0df6d7b6d62629dfafdb0a11cd",
+    "application/modules/penerimaan_uang/libraries/Consulting_receipt.php": "9acdea8f17862135ee3ee8ff14e93a1075f04267749966fa0b52dc287c5065a2",
+    "application/modules/penerimaan_uang/views/consulting_process.php": "c30ae2ca8f3199888ad2d82188b77e9a9ee781f71e029a7290db839f67155d83",
+    "application/modules/penerimaan_uang/views/detail.php": "6685de322f94fe74174e742510f27f27621e52908fd2a0804511865ba6c485aa",
+    "application/modules/jurnal_invoicing/controllers/Jurnal_invoicing.php": "6696d42e5dfe748970e8debd19b55143f82d8094bca3f22559b8a6f76daf84fd",
+    "application/modules/jurnal_invoicing/models/Jurnal_invoicing_model.php": "b860043fea49a0ff2e7bde80dd15035083e71e9e0c2bc80ae2be7e0f6ab720c3",
+    "application/modules/jurnal_penerimaan/controllers/Jurnal_penerimaan.php": "66595c1e1a655eff8fa1f718abb577befa699b9983e896b8e9e2826f1512abbd",
+    "application/modules/report_piutang_per_invoice/models/Report_piutang_per_invoice_model.php": "97b27b0122f72806e5190b47ed321c6caf202daea257b3a54bc51038095b14e6",
+    "application/modules/penerimaan_pph_23/controllers/Penerimaan_pph_23.php": "0133ab1cb10447cf73fdfbd25d6c619c40af13639c06bf9eb5cb719b2274ec69",
+    "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php": "65b202726ea255ab2e601e89fae42ce7de92699ff6cb523e9942e8483978a7d7",
+    "application/modules/invoicing/tests/Consulting_calculation_test.php": "9a111087a9c319d5d615483090e8afd0d5880d26db90cca734c5a0b39415a093",
+    "application/modules/invoicing/tests/Consulting_calculation_test.js": "4930c874142d5ca2b360af649e0a6badd4ff0643dc56740db6b256488ed3b3d7",
+    "application/modules/invoicing/tests/Consulting_integration_test.php": "55aef8ba90b008d3f76e1843ce9549cb4f8c6933f3b474ccf0db9b487e41870d",
+    "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php": "19d124ff480230db40d584eae6b2d4dbeadd3e673877a70c86b246f0284ac2f1",
+    "application/modules/invoicing/migrations/003_consulting_v3.sql": "ef15a0e8b8c9598f1277bc8adc2d7008b1b2438d4f17dbc9526f4473d3c9f236",
+    "application/modules/invoicing/migrations/003_consulting_v3_rollback.sql": "490e6bf8ecdf3cd8d1b1e17f4d25a40837a912c6d60a7bcd00eb5c67bc511323",
+    "application/modules/invoicing/libraries/Invoice_calculation.php": "576029c0f69701f454c01a73f745f8203bbebc5f1ec930ce4f3f9de7290b3181",
+    "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php": "421f6fbaddcd0a3d88875d75755e6b83d2a8cf40908e0bd8cfbe38bf6475bb9b",
+    "application/libraries/Module_audit_recorder.php": "370c38930c6837e261503c8311f0a6d72879fd9949e5ff9eea873acf5417c3b0",
+    "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php": "e8b0ce89d312c790f34e76047fe2772caa7e86f2160ed49c728bd8585a6cf1e6",
+    "assets/css/invoicing.css": "b1f0f246fba73b334356a8a4567b5bb41c09e6335f7603c037d239f5ed72ddab",
+    "assets/js/invoicing/consulting-form.js": "b1d923bfd3a5325b80fd00d32912e8067787c595cf1aafe20597fc9baafb2a0e",
+    "application/modules/invoicing/tests/Ui_render_test.php": "c0febe7fc4fb3309e6c795a0edd417cb1960c2656489ea1b29fc9468dbf2b073",
+    "application/modules/invoicing/tests/Ui_client_test.js": "c60bd18e17eff32120afce94e32e484ddece078da80031f3cb522dedfcf62bb9",
+    "application/modules/invoicing/tests/Ui_list_client_test.js": "aa179ffd63cd56aec1016d8c2e8049876c256452e35003dec803f996efc515a5"
+  },
+  "validation": {
+    "calculation_checks": 72,
+    "php_js_parity_checks": 35,
+    "native_ci_mariadb_checks": 303,
+    "migration_runs": 2,
+    "fault_paths": [
+      "sequence",
+      "header",
+      "journal",
+      "top",
+      "invoice_commit",
+      "receipt_commit",
+      "gl_commit"
+    ],
+    "concurrency": [
+      "shared_sequence",
+      "same_top",
+      "edit_vs_post"
+    ],
+    "legacy_regressions": "pass",
+    "jurnal_all_regressions": "pass",
+    "audit_nonlive_suites": 7,
+    "report_property_suites": 7,
+    "php_lint_files": 25,
+    "browser": "not run per user instruction",
+    "application_database": "not connected or changed",
+    "deployment": "not performed"
+  },
+  "rollout_prerequisites": [
+    "apply schema003 first",
+    "configure source/owner and all nine COA roles",
+    "InnoDB finance and GL mutation tables",
+    "finance and accounting same MySQL server with cross-schema privileges"
+  ],
+  "report": "docs/invoicing-consulting-v3-2026-10-18.md",
+  "ui": {
+    "date": "2026-10-18",
+    "mode": "antislop during, session choice",
+    "scope": "list, regular consulting version3 form/detail, COA settings",
+    "report": "docs/invoicing-ui-2026-10-18.md",
+    "render_checks": 203,
+    "form_client_checks": 38,
+    "list_client_checks": 28,
+    "browser_verification": "not performed per user instruction"
+  },
+  "local_validation_references": [
+    {
+      "path": "application/modules/jurnal_all/tests/Legacy_posting_test.php",
+      "sha256": "ab10e37cb36bc5bd543f29c33177e2b0cf162624058bc2a097dc76d1f3a1dff9",
+      "publication": "not included; belongs to separate Jurnal All task"
+    }
+  ],
+  "publication": {
+    "branch": "development",
+    "scope": "invoicing consulting v3 and related receipt/posting/UI changes",
+    "excluded": "other tasks, scratch/runtime, database backups, local credentials, shared multi-task progress documents",
+    "report": "docs/invoicing-development-publication-2026-10-18.md"
+  }
+}
