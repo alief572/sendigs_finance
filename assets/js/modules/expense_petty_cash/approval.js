@@ -124,13 +124,8 @@ $(document).ready(function () {
               BASE_URL +
               "view_approval/" +
               row.id +
-<<<<<<< HEAD
-              '" class="btn btn-info btn-xs" title="Review">' +
-              '<i class="fa fa-eye"></i> Review</a>'
-=======
               '" class="btn btn-success btn-xs" title="Approval">' +
               '<i class="fa fa-check"></i> Approval</a>'
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             );
           },
         },

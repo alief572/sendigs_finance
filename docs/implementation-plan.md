@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
 
 ## Konteks dan Kebutuhan
@@ -289,8 +288,6 @@ Selesai: No. Transaksi menampilkan no_invoice dan No. Referensi menampilkan id_s
 
 Selesai satu batch: keterangan header INV pada Jurnal/Report hanya nama customer - nama project; project kosong memakai SPK terhubung, komponen kosong tidak meninggalkan separator. Query enrichment tidak mengubah detail COA, Excel per COA, tab lain atau posting. RED sebelum fix; query48, MySQL14, seluruh suite fitur494 dan PHP lint3 PASS. Bukti dan hash di manifest/laporan.
 
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 # Rencana Implementasi Audit Trail
 
 ## Publikasi dua modul Expense — 2026-10-15
@@ -301,15 +298,12 @@ Selesai satu batch: keterangan header INV pada Jurnal/Report hanya nama customer
 - Fase 3 selesai: push atomik main c89b84fbd965903b9ab56220dd3809dd527cd50e dan development 402be62bb69beb5022c52fe8e4e89f98c0842f1a, ls-remote sesuai. Tree dua modul identik (3fc211d5f1a248da8b2fd12d03320bcd77af9ea8, b54d9cfad0eab1c81082edf2fac106012ee3e0b7), seluruh blob lokal cocok, dependencies/di luar scope tidak berubah. Tidak ada TODO push tersisa. Bukti docs/expense-modules-publication-2026-10-15.md. Migrasi menu hanya disertakan sebagai SQL; tidak menjalankan database remote atau posting accounting.
 
 
-<<<<<<< HEAD
 ## Ringkas kolom Record Per Transaksi — 2026-10-14
 
 - Acuan: recItemView HTML user, 11 kolom + Action existing =12. Urutan PGJ, dokumen/kategori, Request By/company, keperluan, DPP, PPN, PPH23, PPH21, admin, dibayarkan, disetujui, Action. Submitted di bawah nomor PGJ; approver tanpa kolom tersendiri.
 - Scope: items view dan tes client saja; endpoint/snapshot/export/aksi/style serta Batch/Legacy tetap. Fase ringkas kolom selesai: items.php dan Tabs_client_test.js diubah, 15 menjadi12 kolom mengikuti recItemView HTML + Action. Submitted di bawah PGJ, company di Request By, approver tidak jadi kolom tersendiri. Endpoint/snapshot/style/aksi/Batch/Legacy tidak berubah. Validasi: client90, view46, query16 PASS; PHP lint dan whitespace PASS. Tidak browser/push. Next: tidak ada TODO implementasi kolom; perubahan masih lokal.
 
 
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 ## Report Jurnal Expense — 2026-10-14
 
 - Fase 1: model posted Expense Report/Expense Report Consultant, grouping transaksi/jenis/company; daftar, pencarian, filter/dropdown dan detail berdasarkan ID representative.
@@ -318,8 +312,6 @@ Selesai satu batch: keterangan header INV pada Jurnal/Report hanya nama customer
 - Default disepakati: seluruh histori sts=1 termasuk jalur lama; tidak rekonsiliasi ledger, ubah posting/mapping, perubahan schema jurnal, browser test, atau Git push. Task ringkas kolom Record diselesaikan terpisah; lihat checkpoint ringkas kolom di atas.
 - Status: Fase 1–3 selesai; 27 query, 42 controller, 12 view, 12 client checks PASS. Regresi Jurnal Expense167 + recorder/logger/legacy PASS; 8 PHP lint. Menu482/order16 setelah report payment477/order15, View1850, grant ekuivalen lengkap; dua run migration idempotent. MySQL read-only report kosong (source88 sts0 +8 NULL), tanpa posting live. File: modul report_jurnal_expense baru + manifest/laporan/README; plan/checkpoint diperbarui, source existing tidak diubah. Tidak ada fase implementasi aktif; tidak push. Batas: status source, bukan rekonsiliasi ledger/snapshot. Next: tidak ada TODO report; migration environment lain saat pemasangan. Bukti: docs/report-jurnal-expense-2026-10-14.md.
 
-<<<<<<< HEAD
-=======
 ## Modul Jurnal Expense — 2026-10-14
 
 - Fase 1: model daftar/filter/ekspor hanya Expense Report (generator modul Expense) dan Expense Report Consultant dengan sts 0, kosong, atau NULL; grouping per no_transaksi + jenis + company.
@@ -328,7 +320,6 @@ Selesai satu batch: keterangan header INV pada Jurnal/Report hanya nama customer
 - Kriteria: posted/jenis lain tidak bisa dilihat atau diposting via ID; NULL ikut; source nominal tidak dari payload; satu dokumen satu aksi; gagal tulis/commit bukan sukses. Tidak melakukan posting accounting live, redesign, mengubah jurnal_payment, migrasi engine, atau publish Git tanpa permintaan task baru.
 - Temuan: tujuan javh/jurnal/pastibisa_tb_cabang lokal MyISAM. Gunakan cleanup khusus nomor yang dibuat request saat gagal; advisory lock + source row lock; catat keterbatasan crash/cross-module concurrency.
 - Penutupan: Fase 1–3 selesai; 167 assertions baru, regresi audit/Expense, lint/sintaks/whitespace, registrasi menu idempotent, dan query MySQL read-only PASS. Rincian: docs/jurnal-expense-2026-10-14.md. Tidak ada posting accounting live. Fase 4 selesai sesuai otorisasi user: commit 1f4338959efe405b068e7a788c1d397be7d72466 dipush hanya development memakai index terpisah; SHA remote/dependency diverifikasi, main dan pekerjaan lokal lain dipertahankan.
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
 ## Incoming Stok Cash: kode barang opsional — 2026-10-14
 
@@ -342,7 +333,6 @@ Dependensi 1 → 2 → 3. Status akhir: seluruh fase selesai; RED sebelum fix, G
 
 4. **Publikasi Git (diotorisasi user 2026-10-14):** commit/push origin/main hanya model/tes Incoming dan tiga dokumen task. Index terpisah memuat HEAD ditambah perubahan task; plan/checkpoint hanya menyisipkan bagian Incoming agar perubahan task lain tetap lokal. Verifikasi remote SHA sebelum/sesudah push, review staged diff dan pertahankan index/working tree pekerjaan lain. Tidak mengulang tes yang kode/dependensinya identik hasil lulus.
 
-<<<<<<< HEAD
 ## Modul Jurnal Expense — 2026-10-14
 
 - Fase 1: model daftar/filter/ekspor hanya Expense Report (generator modul Expense) dan Expense Report Consultant dengan sts 0, kosong, atau NULL; grouping per no_transaksi + jenis + company.
@@ -353,8 +343,6 @@ Dependensi 1 → 2 → 3. Status akhir: seluruh fase selesai; RED sebelum fix, G
 - Penutupan: Fase 1–3 selesai; 167 assertions baru, regresi audit/Expense, lint/sintaks/whitespace, registrasi menu idempotent, dan query MySQL read-only PASS. Rincian: docs/jurnal-expense-2026-10-14.md. Tidak ada posting accounting live. Fase 4 selesai sesuai otorisasi user: commit 1f4338959efe405b068e7a788c1d397be7d72466 dipush hanya development memakai index terpisah; SHA remote/dependency diverifikasi, main dan pekerjaan lokal lain dipertahankan.
 
 
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 ## Koreksi lokasi tab per transaksi — 2026-10-14
 
 Plan user: kembalikan UI request_payment sebelum tab; pertahankan audit/backend existing. Tambah Per Transaksi (Approved) dalam record_request_payment di antara Batch (default) dan Histori Lama. Pakai endpoint snapshot record_items existing, pencarian/entries, View PGJ/Cetak Dokumen/Excel Pengajuan dengan mini-btn existing. Hapus pending-items endpoint dan return context Request yang khusus fitur keliru. Detail dari per-item kembali ke tab Record items; permission hanya Record View.
@@ -416,13 +404,11 @@ Untuk fase 1–19, kriteria **K**: inventaris endpoint telah diverifikasi; semua
 | --- | --- | ---: | --- | --- |
 | 0 | Fondasi recorder, logger/helper, bridge legacy; viewer, auth, menu sebagai fondasi pendukung | — | Selesai pada cakupan lokal yang teruji | Scope/dedup/fallback/masking/writer serta permission viewer dan auth teruji; validasi live terpisah |
 | 1 | `request_payment`, `approval_request_payment`, `record_request_payment` | 55 | **Selesai: 55/55 endpoint teruji** | Fase 0 + K; seluruh 5 batch `Request_payment` (46), `Approval_request_payment` (4), dan `Record_request_payment` (5) selesai |
-<<<<<<< HEAD
 | 2 | Pembayaran/mutasi: `pembayaran_material`, `request_mutasi`, `pengajuan_rutin` | 51 | **Selesai: 51/51 endpoint teruji (100% tuntas)** | Fase 1 + K; pembayaran_material 18/18, request_mutasi 21/21, pengajuan_rutin 12/12 selesai |
 | 3 | Expense/petty: `expense`, `expense_petty_cash`, `petty_cash_vuca_sustain`, `petty_cash_master` | 121 | **Sedang berjalan: 70/121 endpoint (Expense Batch 1, 2, 3, 4, 5, 6, & 7 selesai)** | Fase 2 + K; Expense batch 1 (10 endpoint), batch 2 (10 endpoint), batch 3 (10 endpoint), batch 4 (10 endpoint), batch 5 (10 endpoint), batch 6 (10 endpoint), & batch 7 (10 endpoint) selesai |
-=======
+
 | 2 | Pembayaran/mutasi: `pembayaran_material`, `request_mutasi`, `pengajuan_rutin` | 51 | **38/51 selesai: pembayaran_material 18/18, request_mutasi 20/21; 13 pending** | Fase 1 + K; batas sesi terbaru Request Mutasi batch 2; batch 3 (1) & Pengajuan Rutin (12) pending |
 | 3 | Expense/petty: `expense`, `expense_petty_cash`, `petty_cash_vuca_sustain`, `petty_cash_master` | 121 | Belum rollout | Fase 2 + K |
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 | 4 | Invoice: `plan_tagih`, `actual_plan_tagih`, `invoicing`, `approval_invoice_so` | 58 | Belum rollout | Fase 3 + K |
 | 5 | Penerimaan: `penerimaan_uang`, `penerimaan_pph_23`, `unlocated_penerimaan`, `historical_alokasi` | 18 | Belum rollout | Fase 4 + K |
 | 6 | `alokasi`, `alokasi_kalibrasi` | 22 | Belum rollout; 5 metode baseline tidak ditemukan | Fase 5 + inventaris ulang + K |
@@ -556,7 +542,6 @@ User mengotorisasi implementasi Fase 2 Request Mutasi batch 2 (10 endpoint: `rej
 
 Sepuluh endpoint selesai dan terverifikasi penuh: Fase 2 **38/51 selesai**, `pembayaran_material` **18/18**, `request_mutasi` **20/21**; sisa 13 endpoint pending (1 `Request_mutasi` [`getMataUangByKode`], 12 `Pengajuan_rutin`). Suite baru `Batch2_audit_test.php` lulus 276 skenario + 2 shutdown subprocess; suite `Batch1_audit_test.php` lulus 392 skenario + 2 shutdown subprocess; seluruh 24 test suite audit dan legacy mutasi lulus (PASS). PHP lint 0 kesalahan dan `git diff --check` lulus tanpa whitespace issues. Checkpoint utama: `docs/task-progress.md`; laporan detail: `docs/audits/phase-2-request-mutasi-batch-2.md`.
 
-<<<<<<< HEAD
 ## Fase 2 Request Mutasi batch 3 — 2026-10-14
 
 User mengotorisasi implementasi Fase 2 Request Mutasi batch 3 (1 endpoint: `getMataUangByKode`). Grounding endpoint baca tabel `mata_uang`, penanganan conditional audit scope guard `$startedAudit = $this->beginAudit(...)` untuk mencegah duplikasi log saat dipanggil internal oleh `terbilang()`, allowlist metadata mata uang, laporan `docs/audits/phase-2-request-mutasi-batch-3.md`, dan pembuatan test suite `Batch3_audit_test.php`.
@@ -565,8 +550,6 @@ User mengotorisasi implementasi Fase 2 Request Mutasi batch 3 (1 endpoint: `getM
 
 Satu endpoint penutup selesai dan terverifikasi penuh: Modul `Request_mutasi` **21/21 endpoint (100% tuntas)**. Fase 2 **39/51 selesai**, `pembayaran_material` **18/18**, `request_mutasi` **21/21**; sisa 12 endpoint pending (seluruhnya di modul `pengajuan_rutin`). Suite baru `Batch3_audit_test.php` lulus 10 skenario + 1 shutdown subprocess; `Batch1_audit_test.php` lulus 391 skenario + 2 shutdown subprocesses; `Batch2_audit_test.php` lulus 275 skenario + 2 shutdown subprocesses; seluruh 5 suite legacy mutasi lulus (PASS). PHP lint 0 kesalahan dan `git diff --check` lulus tanpa whitespace issues. Checkpoint utama: `docs/task-progress.md`; laporan detail: `docs/audits/phase-2-request-mutasi-batch-3.md`.
 
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 ## Record Request Payment: tombol Excel per transaksi — 2026-10-14
 
 1. Grounding referensi dan query daftar approved (selesai): snapshot done/non-deleted, pencarian tabel, ekspor existing hanya satu PGJ.
@@ -574,7 +557,6 @@ Satu endpoint penutup selesai dan terverifikasi penuh: Modul `Request_mutasi` **
 3. Validasi dan checkpoint (selesai): client RED/GREEN, workbook nyata, failure paths, regresi Record/fondasi audit, lint dan whitespace. Rincian/batas: docs/record-request-payment-excel-2026-10-14.md; endpoint: docs/request-payment-tabs-manifest.json.
 
 Kriteria: semua hasil pencarian approved diekspor, nominal snapshot konsisten, View/Cetak Dokumen tetap berfungsi, teks aman dari formula injection, audit tidak duplikat/berisi data sensitif, kegagalan writer tidak mencatat sukses. Tidak ada perubahan modul lain atau kebutuhan migration. Tidak browser/DB live.
-<<<<<<< HEAD
 # Jurnal dan Report Jurnal gabungan — 2026-10-15
 
 **Status:** fase1–4 selesai implementasi dan validasi lokal;474 assertions fitur, regresi sumber/audit, lint dan migration MariaDB terisolasi PASS. SQL database aplikasi belum diterapkan; lihat docs/jurnal-all-2026-10-15.md dan checkpoint.
@@ -590,5 +572,10 @@ Checkpoint `docs/task-progress.md`; bukti/kontrak `docs/jurnal-all-manifest.json
 # Indikator loading tab Jurnal — 2026-10-15
 
 Selesai satu batch: shared workspace Jurnal/Report menampilkan overlay spinner+status langsung sebelum fetch, menutup aksi data lama dan menonaktifkan filter/paging/export sementara. Hanya request tab terkini dapat membersihkan loading; error mengembalikan kontrol retry. CSS scoped, reduced-motion dan asset version sesuai filemtime. Validasi client28 (termasuk RED sebelum fix), controller74, PHP lint view/JS syntax dan whitespace. Tidak mengubah backend/posting atau memerlukan database/browser.
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
+
+
+## Publikasi resolusi konflik development - 2026-10-19
+
+Cakupan: 46 file resolusi konflik di luar application/config/config.php dan seluruh modul invoicing; constants.php juga dikecualikan. Pertahankan guard POST/permission serta pemeriksaan commit jurnal petty cash. Pekerjaan lokal lain tidak disertakan. Fase1 pemilahan selesai; fase2 pemeriksaan snapshot commit; fase3 commit/push development dan verifikasi SHA remote. Laporan: docs/conflict-publication-2026-10-19.md.
+
+Validasi kandidat publikasi: 44 syntax PASS,18/19 suite PASS. Satu failure dependency invoicing yang dikecualikan tetap ada pada remote dan dicatat di laporan publikasi; tidak mengubah/menonaktifkan tes. Kandidat50file terpisah dari kerja lokal. Fase pemeriksaan selesai; SHA commit/push akan dicatat pada checkpoint lokal setelah publikasi.

@@ -54,8 +54,6 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 		width: 320px;
 	}
 
-<<<<<<< HEAD
-=======
 	.rec-items-export {
 		display: flex;
 		align-items: center;
@@ -67,7 +65,6 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 
 	.rec-items-export input { max-width: 100%; }
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 	.mini-btn {
 		border: 1px solid #ccc;
 		background: #fff;

@@ -109,11 +109,7 @@
                 class="btn btn-secondary">Helpdesk</a>
             </li>
             <li>
-<<<<<<< HEAD
-              <a href="<?= base_url('assets/pdf/manual book non operation.pdf') ?>"
-=======
               <a href="<?= base_url('assets/pdf/manual%20book%20REV%2007-09-2026.pdf') ?>"
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                 target="_blank"
                 rel="noopener noreferrer"
                 class="btn btn-secondary">

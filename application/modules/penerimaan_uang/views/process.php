@@ -373,13 +373,8 @@
 
         }
 
-<<<<<<< HEAD
-        var grand_total = Math.round(ttl_penerimaan);
-        var kontrol = Math.round(grand_total - uang_masuk);
-=======
         var grand_total = Math.round(ttl_penerimaan * 100) / 100;
         var kontrol = Math.round((grand_total - uang_masuk) * 100) / 100;
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas

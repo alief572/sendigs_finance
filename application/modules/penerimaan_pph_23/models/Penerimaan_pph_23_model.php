@@ -151,11 +151,7 @@ class Penerimaan_pph_23_model extends BF_Model
             $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, $penawaran_non_kons_ids);
         }
 
-<<<<<<< HEAD
-        $apply_filters = function($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
-=======
         $apply_filters = function ($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
             $db->where('YEAR(b.tanggal_invoice) >=', 2025);
 
@@ -188,10 +184,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
-<<<<<<< HEAD
-=======
         if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $apply_filters($this->db);
         $records_total = $this->db->get()->row()->total;
 
@@ -201,10 +194,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
-<<<<<<< HEAD
-=======
         if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $apply_filters($this->db);
 
         if ($search_value !== '') {
@@ -219,19 +209,12 @@ class Penerimaan_pph_23_model extends BF_Model
         $records_filtered = $this->db->get()->row()->total;
 
         // Main query with limit
-<<<<<<< HEAD
-        $this->db->select('a.id, a.id_alokasi, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.id_penawaran');
-=======
         $this->db->select('a.id, a.id_alokasi, a.id_inv, a.nm_customer, a.pph23, a.id_header, b.print_keterangan, b.nm_project, b.no_invoice, b.tipe_invoice, b.total_nominal, b.id_detail_plan_tagih, b.id_spk_penawaran, b.id_penawaran, b.pph_jurnal');
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $this->db->from('tr_penerimaan_piutang_detail a');
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
-<<<<<<< HEAD
-=======
         if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $apply_filters($this->db);
 
         if ($search_value !== '') {
@@ -350,14 +333,6 @@ class Penerimaan_pph_23_model extends BF_Model
                 $action = '<a href="' . base_url('penerimaan_pph_23/add/' . $item['id']) . '" class="btn btn-sm btn-primary" title="Setor PPH 23"><i class="fa fa-money"></i></a>';
             }
 
-<<<<<<< HEAD
-            $nilai_pph = $item['pph23'];
-            if ($nilai_pph == 0) {
-                if ($item['tipe_invoice'] == '1') {
-                    $nilai_pph = $item['total_nominal'] * 0.5 / 100;
-                } else {
-                    $nilai_pph = $item['total_nominal'] * 2 / 100;
-=======
             $nilai_pph = $item['pph_jurnal'];
             if (empty($nilai_pph) || $nilai_pph == 0) {
                 // Fallback jika pph_jurnal kosong (data lama)
@@ -368,7 +343,6 @@ class Penerimaan_pph_23_model extends BF_Model
                     } else {
                         $nilai_pph = $item['total_nominal'] * 2 / 100;
                     }
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                 }
             }
 
@@ -386,23 +360,14 @@ class Penerimaan_pph_23_model extends BF_Model
             if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_spk_penawaran']) && isset($spk_penawaran_map[$item['id_spk_penawaran']])) {
                 $nm_company = $spk_penawaran_map[$item['id_spk_penawaran']]['nm_company'] ?? '-';
             }
-<<<<<<< HEAD
-            
-=======
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             // Jika tidak ada juga, fallback ke kons_tr_penawaran_non_konsultasi
             if (($nm_company === '-' || empty($nm_company)) && !empty($item['id_penawaran']) && isset($penawaran_map[$item['id_penawaran']])) {
                 $nm_company = $penawaran_map[$item['id_penawaran']]['nm_company'] ?? '-';
             }
 
-<<<<<<< HEAD
-            if(empty($item['id_alokasi'])) {
-                if(!empty($item['id_spk_penawaran'])) {
-=======
             if (empty($item['id_alokasi'])) {
                 if (!empty($item['id_spk_penawaran'])) {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     $id_plan = $item['id_detail_plan_tagih'];
                     $desc_payment = '-';
                     $spk_id = null;

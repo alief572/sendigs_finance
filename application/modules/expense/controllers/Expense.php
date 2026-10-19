@@ -209,22 +209,6 @@ class Expense extends Admin_Controller
 			}
 		}
 
-<<<<<<< HEAD
-		if (!empty($file_name)) {
-			$filenames = $file_name;
-
-			if (file_exists($doc_pr)) {
-				copy('' . $doc_pr . '', '' . $to_doc_pr . '');
-			} else {
-				$decoded_files = json_decode($file_name, true);
-				if (is_array($decoded_files)) {
-					foreach ($decoded_files as $df) {
-						if (file_exists('assets/pr/' . $df)) {
-							copy('assets/pr/' . $df, 'assets/expense/' . $df);
-						}
-					}
-				}
-=======
 		try {
 			if ($tipe_pr === 'pr departemen') {
 				$existing = $id !== '' ? $this->db->get_where('tr_kasbon', array('id' => $id))->row() : null;
@@ -242,7 +226,6 @@ class Expense extends Admin_Controller
 				$source = $tipe_pr === 'pr asset' ? 'uploads/pr_asset' : 'assets/pr';
 				kasbon_copy_attachments($prFiles, FCPATH . $source, FCPATH . 'assets/expense');
 				$filenames = $file_name;
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 			}
 		} catch (RuntimeException $e) {
 			$this->db->trans_rollback();
@@ -3902,32 +3885,9 @@ class Expense extends Admin_Controller
 		$to_doc_file = '';
 		$directory = !empty($get_pr_dept) ? 'assets/pr/' : 'uploads/pr_asset/';
 		if (!empty($get_pr_dept)) {
-<<<<<<< HEAD
-			if (!empty($get_pr_dept->document)) {
-				$decoded = json_decode($get_pr_dept->document, true);
-				if (is_array($decoded)) {
-					$first_file = $decoded[0] ?? '';
-					$doc_file = !empty($first_file) ? 'assets/pr/' . $first_file : '';
-					$to_doc_file = !empty($first_file) ? 'assets/expense/' . $first_file : '';
-					$file_name = $get_pr_dept->document;
-				} else {
-					$doc_file = 'assets/pr/' . $get_pr_dept->document;
-					$to_doc_file = 'assets/expense/' . $get_pr_dept->document;
-					$file_name = $get_pr_dept->document;
-				}
-			}
-		}
-		if (!empty($get_pr_asset)) {
-			if (!empty($get_pr_asset->dokumen_pendukung)) {
-				$doc_file = 'uploads/pr_asset/' . $get_pr_asset->dokumen_pendukung;
-				$to_doc_file = 'assets/expense/' . $get_pr_asset->dokumen_pendukung;
-				$file_name = $get_pr_asset->dokumen_pendukung;
-			}
-=======
 			$file_name = $get_pr_dept->document;
 		} elseif (!empty($get_pr_asset)) {
 			$file_name = $get_pr_asset->dokumen_pendukung;
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 		}
 
 		$attachments = array();

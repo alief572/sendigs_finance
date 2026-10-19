@@ -2,14 +2,10 @@
     <div>Tampilkan <select id="rec_items_entries" class="form-control input-sm" style="display:inline-block;width:auto;">
         <option value="10">10</option><option value="25" selected>25</option><option value="50">50</option>
     </select> entri per halaman</div>
-<<<<<<< HEAD
-    <input type="text" id="rec_items_search" placeholder="Cari dokumen, pemohon, pengajuan...">
-=======
     <form action="<?= site_url('record_request_payment/export_items_excel'); ?>" method="get" class="rec-items-export">
         <input type="text" id="rec_items_search" name="search" placeholder="Cari dokumen, pemohon, pengajuan..." aria-label="Cari transaksi approved">
         <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Cetak ke Excel</button>
     </form>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 </div>
 <div style="overflow-x:auto;border:1px solid #ddd;">
     <table id="table_record_items" class="table table-bordered table-striped" style="width:100%;">
@@ -57,10 +53,6 @@
 					if (row.print_url && /^https?:\/\//i.test(row.print_url)) {
 						html += ' <a class="mini-btn print" target="_blank" rel="noopener" href="' + escapeText(row.print_url).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '"><i class="fa fa-print"></i> Cetak Dokumen</a>';
 					}
-<<<<<<< HEAD
-					html += ' <a class="mini-btn print" href="<?= site_url('record_request_payment/export_excel'); ?>/' + Number(id) + '"><i class="fa fa-file-excel-o"></i> Excel Pengajuan</a>';
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 					return '<span class="rec-item-actions">' + html + '</span>';
 
 				}}

@@ -358,8 +358,6 @@ class Record_request_payment extends Admin_Controller
 		exit;
 	}
 
-<<<<<<< HEAD
-=======
 	public function export_items_excel()
 	{
 		$search = $this->input->get_post('search');
@@ -447,7 +445,6 @@ class Record_request_payment extends Admin_Controller
 		echo $content;
 	}
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 	private function beginAudit($method, $data = array(), $keys = array())
 	{
 		$this->load->library('Module_audit_recorder');

@@ -194,19 +194,10 @@ class Penerimaan_uang extends Admin_Controller
             $coa_bank = (!empty($get_bank)) ? $get_bank['coa_bank'] : '';
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
-<<<<<<< HEAD
-            $saldo_piutang = $get_inv['saldo_piutang'];
-            if (abs($saldo_piutang - $get_inv['total_akhir_jurnal']) < 10) {
-                $saldo_piutang = round($get_inv['tagihan_ppn_jurnal']) - round($get_inv['pph_jurnal']);
-            } else {
-                $saldo_piutang = round($saldo_piutang);
-            }
-=======
             // Keep the actual outstanding balance, including previous installments.
             $saldo_piutang = Penerimaan_calculation::cents($get_inv['saldo_piutang']) / 100;
             // Old Vuca invoices stored zero gross despite having a valid DPP.
             $tagihan_ppn = Penerimaan_calculation::invoice_gross($get_inv) / 100;
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
@@ -235,11 +226,7 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
-<<<<<<< HEAD
-            $total_piutang += ($pph23_dipotong == 'N') ? round($get_inv['tagihan_ppn_jurnal']) : round($get_inv['total_akhir_jurnal']);
-=======
             $total_piutang += ($pph23_dipotong == 'N') ? round($tagihan_ppn) : round($get_inv['total_akhir_jurnal']);
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             // $total_piutang += $get_inv['total_akhir_jurnal'];
             $total_piutang_dagang += round($saldo_piutang);
 
@@ -296,16 +283,7 @@ class Penerimaan_uang extends Admin_Controller
                     $value_kredit = 0;
 
                     if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
-<<<<<<< HEAD
-                        $this->db->select('a.pph_jurnal as ttl_kredit');
-                        $this->db->from('tr_invoicing a');
-                        $this->db->where('a.id', $item);
-                        $get_kredit = $this->db->get()->row_array();
-
-                        $value_kredit = round($get_kredit['ttl_kredit']);
-=======
                         $value_kredit = $remaining_pph / 100;
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     }
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
@@ -620,13 +598,8 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $nm_coa_bank,
-<<<<<<< HEAD
-                        'debit' => str_replace(',', '.', str_replace('.', '', $post['debit_bank_debit'])),
-                        'kredit' => str_replace(',', '.', str_replace('.', '', $post['kredit_bank_debit'])),
-=======
                         'debit' => '0.00', // Set to the sum of receipts after the loop.
                         'kredit' => '0.00',
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $nm_coa_bank . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -643,13 +616,8 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $item_jurnal['nm_coa'],
-<<<<<<< HEAD
-                        'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-                        'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-=======
                         'debit' => $value_debit,
                         'kredit' => $value_kredit,
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -665,13 +633,8 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $item_jurnal['nm_coa'],
-<<<<<<< HEAD
-                        'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-                        'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
-=======
                         'debit' => $value_debit,
                         'kredit' => $value_kredit,
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -806,8 +769,6 @@ class Penerimaan_uang extends Admin_Controller
 
     public function rollback_penerimaan()
     {
-<<<<<<< HEAD
-=======
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
         $service=new Invoice_consulting_service($this);
         return $service->serialized(function(){
@@ -833,20 +794,16 @@ class Penerimaan_uang extends Admin_Controller
 
     private function rollback_legacy_penerimaan()
     {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $this->auth->restrict($this->deletePermission);
 
         $id_penerimaan = $this->input->post('id_penerimaan');
 
-<<<<<<< HEAD
-=======
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
         $consultingHeader=is_scalar($id_penerimaan)?$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id_penerimaan))->row_array():null;
         if ((int)($consultingHeader['consulting_batch']??0)===3) {
             $consulting=new Consulting_receipt($this);echo json_encode($consulting->rollback($id_penerimaan));return;
         }
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         if (empty($id_penerimaan)) {
             echo json_encode(['status' => 0, 'msg' => 'ID Penerimaan tidak valid.']);
             return;

@@ -1873,35 +1873,6 @@ class Pembayaran_material extends Admin_Controller
 
 			$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
 			// }
-<<<<<<< HEAD
-			$this->db->trans_complete();
-
-			if ($this->db->trans_status() === FALSE) {
-				throw new Exception('Transaksi gagal, data telah di-rollback.');
-			}
-
-			// Update status done payment for petty_cash_hutang records
-			try {
-				$processed_ids = explode(',', $post['id_payment']);
-				$this->db->where_in('id', $processed_ids);
-				$this->db->group_start();
-				$this->db->where('tipe', 'petty_cash_hutang');
-				$this->db->or_like('no_doc', 'RPC', 'after');
-				$this->db->group_end();
-				$petty_cash_payments = $this->db->get('payment_approve')->result();
-
-				if (!empty($petty_cash_payments)) {
-					$CI = &get_instance();
-					$CI->load->model('petty_cash_vuca_sustain/Petty_cash_vuca_sustain_model', 'pcvs_model');
-					foreach ($petty_cash_payments as $pc_payment) {
-						$CI->pcvs_model->update_status_done($pc_payment->no_doc, $this->auth->user_id());
-					}
-				}
-			} catch (Exception $e) {
-				log_message('error', 'Failed to update petty_cash_vuca_sustain status: ' . $e->getMessage());
-			}
-
-=======
 			// Keep the report status and payment in the same transaction.
 			// Return a JSON failure instead of a database error page in development.
 			$status_db_debug = $this->db->db_debug;
@@ -1935,7 +1906,6 @@ class Pembayaran_material extends Admin_Controller
 				throw new Exception('Transaksi gagal, data telah di-rollback.');
 			}
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 			echo json_encode([
 				'status' => $valid,
 				'pesan' => $pesan

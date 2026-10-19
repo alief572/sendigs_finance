@@ -1451,8 +1451,6 @@ class Pembayaran_material_model extends BF_Model
 					$arr_coa_jurnal = ['1103-01-04', '7201-01-04'];
 					if (!empty($coa_bank)) {
 						array_push($arr_coa_jurnal, $coa_bank);
-<<<<<<< HEAD
-=======
 					}
 					$id_company = '';
 					$nm_company = '';
@@ -1544,7 +1542,6 @@ class Pembayaran_material_model extends BF_Model
 						if ($debit > 0 || $kredit > 0) {
 							$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
 						}
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 					}
 					// Note: the original script does not loop and generate HTML for this case. We leave it empty as original.
 				}

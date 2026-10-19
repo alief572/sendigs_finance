@@ -5,13 +5,10 @@
  * delete confirmation, and retry journal handler.
  */
 $(document).ready(function () {
-<<<<<<< HEAD
-=======
   // Persistent selection across pagination
   var selectedPencatatan = {};
   var activeLockedCompany = null;
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
   // =========================================================================
   // DataTables Initialization
   // =========================================================================
@@ -34,13 +31,8 @@ $(document).ready(function () {
         sNext: "Next",
       },
     },
-<<<<<<< HEAD
-    aaSorting: [[3, "desc"]],
-    columnDefs: [{ targets: [0, 9], orderable: false, searchable: false }],
-=======
     aaSorting: [[4, "desc"]],
     columnDefs: [{ targets: [0, 10], orderable: false, searchable: false }],
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     iDisplayLength: 10,
     aLengthMenu: [
       [10, 20, 50, 100],
@@ -52,11 +44,7 @@ $(document).ready(function () {
       cache: false,
       error: function () {
         $("#table-pencatatan tbody").html(
-<<<<<<< HEAD
-          '<tr><th colspan="10" class="text-center">No data found in the server</th></tr>',
-=======
           '<tr><th colspan="11" class="text-center">No data found in the server</th></tr>',
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         );
       },
     },
@@ -66,8 +54,6 @@ $(document).ready(function () {
         data: null,
         render: function (data, type, row) {
           if (row.status === "draft" && !row.in_pelaporan) {
-<<<<<<< HEAD
-=======
             var isChecked = !!selectedPencatatan[row.id];
             var isDisabled = false;
             var titleAttr = "";
@@ -77,7 +63,6 @@ $(document).ready(function () {
               titleAttr = ' title="Hanya dapat memilih pencatatan dari company ' + activeLockedCompany + '"';
             }
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             return (
               '<input type="checkbox" class="check-item" ' +
               'data-id="' +
@@ -88,15 +73,11 @@ $(document).ready(function () {
               '" ' +
               'data-tanggal="' +
               row.tanggal +
-<<<<<<< HEAD
-              '">'
-=======
               '" ' +
               (isChecked ? 'checked ' : '') +
               (isDisabled ? 'disabled ' : '') +
               titleAttr +
               '>'
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             );
           }
           return '<input type="checkbox" disabled>';
@@ -119,9 +100,6 @@ $(document).ready(function () {
         },
       },
       {
-<<<<<<< HEAD
-        // Column 3: Tanggal (formatted DD/MM/YYYY)
-=======
         // Column 3: No Pelaporan (clickable if exists)
         data: "no_pelaporan",
         render: function (data, type, row) {
@@ -141,7 +119,6 @@ $(document).ready(function () {
       },
       {
         // Column 4: Tanggal (formatted DD/MM/YYYY)
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         data: "tanggal",
         render: function (data) {
           if (!data) return "-";
@@ -154,17 +131,6 @@ $(document).ready(function () {
         },
       },
       {
-<<<<<<< HEAD
-        // Column 4: Company
-        data: "company",
-      },
-      {
-        // Column 5: Request By
-        data: "request_by",
-      },
-      {
-        // Column 6: Keterangan (truncate 50 chars)
-=======
         // Column 5: Company
         data: "company",
       },
@@ -174,7 +140,6 @@ $(document).ready(function () {
       },
       {
         // Column 7: Keterangan (truncate 50 chars)
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         data: "keterangan",
         render: function (data) {
           if (!data) return "-";
@@ -192,19 +157,11 @@ $(document).ready(function () {
         },
       },
       {
-<<<<<<< HEAD
-        // Column 7: Grand Total (already formatted from server)
-        data: "grand_total",
-      },
-      {
-        // Column 8: Status (colored label)
-=======
         // Column 8: Grand Total (already formatted from server)
         data: "grand_total",
       },
       {
         // Column 9: Status (colored label)
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         data: "status",
         render: function (data) {
           var labelClass = "label-default";
@@ -235,11 +192,7 @@ $(document).ready(function () {
         },
       },
       {
-<<<<<<< HEAD
-        // Column 9: Action buttons
-=======
         // Column 10: Action buttons
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         data: null,
         render: function (data, type, row) {
           var html = "";
@@ -295,35 +248,11 @@ $(document).ready(function () {
       },
     ],
     drawCallback: function () {
-<<<<<<< HEAD
-      // Reset check-all state after table redraw
-      $("#check-all").prop("checked", false);
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
       updateCompanyLockAndUI();
     },
   });
 
   // =========================================================================
-<<<<<<< HEAD
-  // Checkbox Logic & Single Company Lock
-  // =========================================================================
-
-  function updateCompanyLockAndUI() {
-    var checkedItems = $(".check-item:checked");
-    var activeCompany = null;
-
-    if (checkedItems.length > 0) {
-      var activeRaw = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
-      activeCompany = $.trim(activeRaw);
-    }
-
-    $(".check-item").each(function () {
-      var rawComp = $(this).attr("data-company") || $(this).data("company") || "";
-      var itemCompany = $.trim(rawComp);
-      if (activeCompany) {
-        if (itemCompany !== activeCompany) {
-=======
   // Checkbox Logic & Single Company Lock (Cross-Pagination Persistent)
   // =========================================================================
 
@@ -346,16 +275,11 @@ $(document).ready(function () {
 
       if (activeLockedCompany) {
         if (itemCompany !== activeLockedCompany) {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
           // Beda company: disable dan pastikan tidak tercentang
           $(this)
             .prop("disabled", true)
             .prop("checked", false)
-<<<<<<< HEAD
-            .attr("title", "Hanya dapat memilih pencatatan dari company " + activeCompany);
-=======
             .attr("title", "Hanya dapat memilih pencatatan dari company " + activeLockedCompany);
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
           $(this).closest("tr").addClass("row-company-locked");
         } else {
           // Company sama: pastikan enabled
@@ -369,15 +293,6 @@ $(document).ready(function () {
       }
     });
 
-<<<<<<< HEAD
-    // Update check-all state berdasarkan checkbox yang aktif/sama company
-    var availableCheckboxes = $(".check-item:not(:disabled)");
-    var checkedCheckboxes = $(".check-item:checked");
-    $("#check-all").prop(
-      "checked",
-      availableCheckboxes.length > 0 &&
-        availableCheckboxes.length === checkedCheckboxes.length,
-=======
     // Update check-all state berdasarkan checkbox yang aktif di halaman ini
     var availableCheckboxes = $(".check-item:not(:disabled)");
     var checkedOnThisPage = $(".check-item:checked");
@@ -385,31 +300,17 @@ $(document).ready(function () {
       "checked",
       availableCheckboxes.length > 0 &&
         availableCheckboxes.length === checkedOnThisPage.length,
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     );
 
     updateBuatPelaporanButton();
   }
 
-<<<<<<< HEAD
-  // Check-all header checkbox: toggle all valid checkboxes for active/first company
-  $("#check-all").on("change", function () {
-    var isChecked = $(this).is(":checked");
-    if (isChecked) {
-      var checkedItems = $(".check-item:checked");
-      var targetCompany = null;
-      if (checkedItems.length > 0) {
-        var rawActive = checkedItems.first().attr("data-company") || checkedItems.first().data("company") || "";
-        targetCompany = $.trim(rawActive);
-      } else {
-=======
   // Check-all header checkbox: toggle all valid checkboxes for active/first company on current page
   $("#check-all").on("change", function () {
     var isChecked = $(this).is(":checked");
     if (isChecked) {
       var targetCompany = activeLockedCompany;
       if (!targetCompany) {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         var firstItem = $(".check-item:first");
         if (firstItem.length > 0) {
           var rawFirst = firstItem.attr("data-company") || firstItem.data("company") || "";
@@ -418,12 +319,6 @@ $(document).ready(function () {
       }
 
       if (targetCompany) {
-<<<<<<< HEAD
-        $(".check-item").each(function () {
-          var c = $.trim($(this).attr("data-company") || $(this).data("company") || "");
-          if (c === targetCompany) {
-            $(this).prop("checked", true);
-=======
         activeLockedCompany = targetCompany;
         $(".check-item").each(function () {
           var c = $.trim($(this).attr("data-company") || $(this).data("company") || "");
@@ -431,14 +326,10 @@ $(document).ready(function () {
             var id = $(this).data("id");
             var tanggal = $(this).data("tanggal");
             selectedPencatatan[id] = { id: id, company: c, tanggal: tanggal };
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
           }
         });
       }
     } else {
-<<<<<<< HEAD
-      $(".check-item").prop("checked", false);
-=======
       // Uncheck all item di halaman saat ini dari selectedPencatatan
       $(".check-item").each(function () {
         var id = $(this).data("id");
@@ -447,15 +338,12 @@ $(document).ready(function () {
       if (Object.keys(selectedPencatatan).length === 0) {
         activeLockedCompany = null;
       }
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
     updateCompanyLockAndUI();
   });
 
   // Individual checkbox change
   $(document).on("change", ".check-item", function () {
-<<<<<<< HEAD
-=======
     var id = $(this).data("id");
     var rawComp = $(this).attr("data-company") || $(this).data("company") || "";
     var company = $.trim(rawComp);
@@ -473,7 +361,6 @@ $(document).ready(function () {
         activeLockedCompany = null;
       }
     }
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     updateCompanyLockAndUI();
   });
 
@@ -481,10 +368,6 @@ $(document).ready(function () {
    * Enable/disable "Buat Pelaporan" button based on checkbox state
    */
   function updateBuatPelaporanButton() {
-<<<<<<< HEAD
-    var checkedCount = $(".check-item:checked").length;
-    $("#btn-buat-pelaporan").prop("disabled", checkedCount === 0);
-=======
     var totalSelected = Object.keys(selectedPencatatan).length;
     $("#btn-buat-pelaporan").prop("disabled", totalSelected === 0);
     if (totalSelected > 0) {
@@ -498,7 +381,6 @@ $(document).ready(function () {
         '<i class="fa fa-file-text-o"></i> Buat Pelaporan',
       );
     }
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
   }
 
   // =========================================================================
@@ -507,22 +389,11 @@ $(document).ready(function () {
 
   $("#btn-buat-pelaporan").on("click", function () {
     var selectedItems = [];
-<<<<<<< HEAD
-
-    $(".check-item:checked").each(function () {
-      selectedItems.push({
-        id: $(this).data("id"),
-        company: $(this).data("company"),
-        tanggal: $(this).data("tanggal"),
-      });
-    });
-=======
     for (var key in selectedPencatatan) {
       if (selectedPencatatan.hasOwnProperty(key)) {
         selectedItems.push(selectedPencatatan[key]);
       }
     }
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
     // Validasi: minimal 1 pencatatan dipilih
     if (selectedItems.length === 0) {
@@ -581,13 +452,10 @@ $(document).ready(function () {
           cache: false,
           success: function (response) {
             if (response.status == "1") {
-<<<<<<< HEAD
-=======
               selectedPencatatan = {};
               activeLockedCompany = null;
               updateBuatPelaporanButton();
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
               Swal.fire({
                 icon: "success",
                 title: "Berhasil",
@@ -650,12 +518,9 @@ $(document).ready(function () {
           cache: false,
           success: function (response) {
             if (response.status == "1") {
-<<<<<<< HEAD
-=======
               delete selectedPencatatan[id];
               updateCompanyLockAndUI();
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
               Swal.fire({
                 icon: "success",
                 title: "Berhasil",

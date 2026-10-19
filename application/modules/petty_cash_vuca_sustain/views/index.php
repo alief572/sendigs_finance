@@ -31,11 +31,7 @@
                         <option value="">Semua</option>
                         <option value="draft">Draft</option>
                         <option value="waiting payment">Waiting Payment</option>
-<<<<<<< HEAD
-                        <option value="done payment">Done Payment</option>
-=======
                         <option value="done payment">Paid</option>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     </select>
                 </div>
             </div>
@@ -195,11 +191,7 @@
                                 break;
                             case 'done payment':
                                 labelClass = 'label-success';
-<<<<<<< HEAD
-                                labelText = 'Done Payment';
-=======
                                 labelText = 'Paid';
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                                 break;
                         }
 
@@ -270,8 +262,4 @@
         });
 
     });
-<<<<<<< HEAD
 </script>
-=======
-</script>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47

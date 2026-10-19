@@ -416,10 +416,6 @@
 				if (msg['save'] == '1') {
 					var total_items = 0;
 					var submitted_items = 0;
-<<<<<<< HEAD
-
-					$.each(msg['data'], function(index, element) {
-=======
 					var detail_items = msg['data'];
 					if (form_type === 'add') {
 						var available_items = [];
@@ -449,7 +445,6 @@
 					}
 
 					$.each(detail_items, function(index, element) {
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 						total_items++;
 						var isSubmitted = (element.is_submitted == 1 || element.is_submitted == '1');
 						if (isSubmitted) {
@@ -467,9 +462,6 @@
 						Rows += "<td>";
 						Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' value='" + element.nama + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
 						if (isSubmitted) {
-<<<<<<< HEAD
-							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='Item ini sudah diajukan untuk periode ini' style='font-size: 11px; padding: 3px 7px;'><i class='fa fa-lock'></i> Sudah Diajukan" + (element.submitted_no_doc ? " (" + element.submitted_no_doc + ")" : "") + "</span></div>";
-=======
 							var noDocRaw = element.submitted_no_doc ? String(element.submitted_no_doc) : '';
 							var noDocList = noDocRaw ? noDocRaw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; }) : [];
 							var badgeText = noDocList.length > 1
@@ -477,7 +469,6 @@
 								: (noDocList.length === 1 ? " (" + noDocList[0] + ")" : "");
 							var badgeTitle = noDocList.length ? "Sudah diajukan: " + noDocList.join(', ') : "Item ini sudah diajukan untuk periode ini";
 							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='" + badgeTitle + "' style='font-size: 11px; padding: 3px 7px; white-space: nowrap; cursor: help;'><i class='fa fa-lock'></i> Sudah Diajukan" + badgeText + "</span></div>";
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 						}
 						Rows += "</td>";
 

@@ -11,6 +11,8 @@ require dirname(__DIR__,2).'/jurnal_payment/controllers/Jurnal_payment.php';
 $checks=0;function check($ok,$message){global $checks;$checks++;if(!$ok)throw new RuntimeException($message);}
 class NativeResult {
     private $rows;public function __construct($rows){$this->rows=$rows;}
+    public function row_array(){return $this->rows[0]??[];}
+    public function result_array(){return $this->rows;}
     public function row(){return $this->rows?(object)$this->rows[0]:null;}
     public function result(){return array_map(function($r){return (object)$r;},$this->rows);}
     public function num_rows(){return count($this->rows);}
@@ -34,7 +36,7 @@ class NativeDb {
     public function insert($table,$data){return $this->write($table,$data);}
     public function insert_batch($table,$data){return $this->write($table,$data);}
     public function update($table,$data=[],$where=[]){return $this->write($table,$data);}
-    public function query($sql){return $this->write('counter',$sql);}
+    public function query($sql,$params=[]){if(strpos($sql,'SELECT GET_LOCK(')===0)return new NativeResult([['acquired'=>1]]);if(strpos($sql,'SELECT RELEASE_LOCK(')===0)return new NativeResult([['released'=>1]]);return $this->write('counter',$sql);}
     public function trans_begin(){$this->events[]='begin';return $this->fail!=='begin';}
     public function trans_status(){return $this->fail!=='transaction';}
     public function trans_commit(){$this->events[]='commit';return $this->fail!=='commit';}

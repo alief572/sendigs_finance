@@ -155,8 +155,6 @@ class Jurnal_penerimaan extends Admin_Controller
 	private function serialized_save_posting_jurnal()
 	{
         if (!$this->allowJournalAction()) { return; }
-<<<<<<< HEAD
-=======
         require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
         $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
         if ($consultingAnchor) {
@@ -168,7 +166,6 @@ class Jurnal_penerimaan extends Admin_Controller
             }
         }
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 		$post = $this->input->post();
 
 		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();

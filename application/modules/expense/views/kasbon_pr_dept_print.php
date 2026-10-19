@@ -262,40 +262,13 @@ function formatDate($date)
         </div>
     </div>
 
-<<<<<<< HEAD
-    <!-- Attachments -->
-    <?php if (!empty($kasbon->doc_file) || !empty($kasbon->doc_file_2)) : ?>
-        <div class="attachment-separator"></div>
-
-        <?php if (!empty($kasbon->doc_file)) : ?>
-            <?php if (strtolower(pathinfo($kasbon->doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
-                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
-            <?php else : ?>
-                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file) ?>" class="attachment-img">
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <?php if (!empty($kasbon->doc_file_2)) : ?>
-            <?php if (strtolower(pathinfo($kasbon->doc_file_2, PATHINFO_EXTENSION)) == 'pdf') : ?>
-                <iframe src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" width="100%" height="600px" style="border: none;"></iframe>
-            <?php else : ?>
-                <img src="<?= base_url('assets/expense/' . $kasbon->doc_file_2) ?>" class="attachment-img">
-            <?php endif; ?>
-        <?php endif; ?>
-    <?php endif; ?>
-=======
     <div class="attachment-separator"></div>
     <?php echo kasbon_attachment_html($kasbon, $this->db, true); ?>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
     <script>
         window.print();
     </script>
 </body>
 
-<<<<<<< HEAD
-</html>
-=======
 </html>
 <!-- Sync: 2026-09-22 Full re-push modul expense -->
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
