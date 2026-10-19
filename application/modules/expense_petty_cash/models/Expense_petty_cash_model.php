@@ -80,13 +80,18 @@ class Expense_petty_cash_model extends BF_Model
         $start  = isset($params['start']) ? intval($params['start']) : 0;
         $length = isset($params['length']) ? intval($params['length']) : 10;
         $search = isset($params['search']['value']) ? $params['search']['value'] : '';
+<<<<<<< HEAD
         $order_col = isset($params['order'][0]['column']) ? intval($params['order'][0]['column']) : 3;
+=======
+        $order_col = isset($params['order'][0]['column']) ? intval($params['order'][0]['column']) : 4;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $order_dir = isset($params['order'][0]['dir']) ? $params['order'][0]['dir'] : 'desc';
 
         // Column index mapping (matching DataTables columns)
         // 0: checkbox (not sortable)
         // 1: row number (not sortable)
         // 2: no_pencatatan
+<<<<<<< HEAD
         // 3: tanggal
         // 4: company
         // 5: request_by
@@ -105,6 +110,28 @@ class Expense_petty_cash_model extends BF_Model
             7 => 'a.grand_total',
             8 => 'a.status',
             9 => null,
+=======
+        // 3: no_pelaporan
+        // 4: tanggal
+        // 5: company
+        // 6: request_by
+        // 7: keterangan
+        // 8: grand_total
+        // 9: status
+        // 10: action (not sortable)
+        $columns = [
+            0  => null,
+            1  => null,
+            2  => 'a.no_pencatatan',
+            3  => 'pel.no_pelaporan',
+            4  => 'a.tanggal',
+            5  => 'a.company',
+            6  => 'a.request_by',
+            7  => 'a.keterangan',
+            8  => 'a.grand_total',
+            9  => 'a.status',
+            10 => null,
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         ];
 
         $order_by = isset($columns[$order_col]) && $columns[$order_col] !== null
@@ -112,16 +139,34 @@ class Expense_petty_cash_model extends BF_Model
             : 'a.tanggal';
         $order_dir = ($order_dir === 'asc') ? 'asc' : 'desc';
 
+<<<<<<< HEAD
+=======
+        $join_pel = '(SELECT pd.pencatatan_id, p.id AS pelaporan_id, p.no_pelaporan 
+                      FROM tr_pelaporan_petty_cash_detail pd 
+                      JOIN tr_pelaporan_petty_cash p ON p.id = pd.pelaporan_id 
+                      WHERE p.status IN ("draft", "waiting", "approved")) pel';
+
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         // Count total records
         $this->db->from($this->table_name . ' a');
         $records_total = $this->db->count_all_results();
 
+<<<<<<< HEAD
         // Build search condition
         // Count filtered records
         $this->db->from($this->table_name . ' a');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.no_pencatatan', $search);
+=======
+        // Build search condition & count filtered records
+        $this->db->from($this->table_name . ' a');
+        if (!empty($search)) {
+            $this->db->join($join_pel, 'pel.pencatatan_id = a.id', 'left');
+            $this->db->group_start();
+            $this->db->like('a.no_pencatatan', $search);
+            $this->db->or_like('pel.no_pelaporan', $search);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             $this->db->or_like('a.company', $search);
             $this->db->or_like('a.request_by', $search);
             $this->db->or_like('a.keterangan', $search);
@@ -129,6 +174,7 @@ class Expense_petty_cash_model extends BF_Model
         }
         $records_filtered = $this->db->count_all_results();
 
+<<<<<<< HEAD
         // Get paginated data with LEFT JOIN to check if pencatatan is linked in a pelaporan
         $this->db->select('a.id, a.no_pencatatan, a.tanggal, a.company, a.request_by, a.keterangan, a.grand_total, a.status, a.journal_status');
         $this->db->select('(SELECT COUNT(*) FROM tr_pelaporan_petty_cash_detail pd 
@@ -140,6 +186,16 @@ class Expense_petty_cash_model extends BF_Model
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.no_pencatatan', $search);
+=======
+        // Get paginated data with LEFT JOIN to active pelaporan
+        $this->db->select('a.id, a.no_pencatatan, a.tanggal, a.company, a.request_by, a.keterangan, a.grand_total, a.status, a.journal_status, pel.no_pelaporan, pel.pelaporan_id');
+        $this->db->from($this->table_name . ' a');
+        $this->db->join($join_pel, 'pel.pencatatan_id = a.id', 'left');
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('a.no_pencatatan', $search);
+            $this->db->or_like('pel.no_pelaporan', $search);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             $this->db->or_like('a.company', $search);
             $this->db->or_like('a.request_by', $search);
             $this->db->or_like('a.keterangan', $search);
@@ -158,6 +214,11 @@ class Expense_petty_cash_model extends BF_Model
                 'no'             => $no++,
                 'id'             => $row->id,
                 'no_pencatatan'  => $row->no_pencatatan,
+<<<<<<< HEAD
+=======
+                'no_pelaporan'   => $row->no_pelaporan,
+                'pelaporan_id'   => $row->pelaporan_id,
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                 'tanggal'        => $row->tanggal,
                 'company'        => $row->company,
                 'request_by'     => $row->request_by,
@@ -165,7 +226,11 @@ class Expense_petty_cash_model extends BF_Model
                 'grand_total'    => number_format($row->grand_total, 0, ',', '.'),
                 'status'         => $row->status,
                 'journal_status' => $row->journal_status,
+<<<<<<< HEAD
                 'in_pelaporan'   => intval($row->in_pelaporan) > 0,
+=======
+                'in_pelaporan'   => !empty($row->pelaporan_id),
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             ];
         }
 

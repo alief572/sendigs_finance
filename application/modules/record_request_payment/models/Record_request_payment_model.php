@@ -27,10 +27,17 @@ class Record_request_payment_model extends BF_Model
 
 	// Daftar per dokumen memakai nominal snapshot, bukan dokumen sumber.
 
+<<<<<<< HEAD
 	public function get_data_record_items(&$auditSummary = null)
 	{
 		$this->resetAuditQueriesOk();
 		$post = $this->input->post();
+=======
+	public function get_data_record_items(&$auditSummary = null, $filters = null)
+	{
+		$this->resetAuditQueriesOk();
+		$post = $filters === null ? $this->input->post() : $filters;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 		$post = is_array($post) ? $post : [];
 		$draw = isset($post['draw']) && is_scalar($post['draw']) ? (int) $post['draw'] : 0;
 		$start = isset($post['start']) && is_scalar($post['start']) ? max(0, (int) $post['start']) : 0;

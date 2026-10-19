@@ -130,3 +130,4 @@ $ENABLE_DELETE  = has_permission('Pengajuan_Transportasi_Approval.Delete');
 	}
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->

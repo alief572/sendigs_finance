@@ -55,25 +55,21 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
                     <div class="form-group ">
                         <label class="col-sm-2 control-label">Dokumen 1</label>
                         <div class="col-sm-4">
-                            <input type="hidden" name="filename" id="filename" value="<?= (isset($data->doc_file) ? $data->doc_file : ''); ?>">
+                            <input type="hidden" name="filename" id="filename" value="<?= htmlspecialchars((isset($data->doc_file) ? $data->doc_file : ''), ENT_QUOTES, 'UTF-8'); ?>">
                             <input type="file" name="doc_file" id="doc_file">
                             <span class="pull-right">
                                 <?php
-                                if (isset($data->doc_file)) {
-                                    echo ($data->doc_file != '' ? '<a href="' . base_url('assets/expense/' . $data->doc_file) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '');
-                                }
+                                if (isset($data)) { echo kasbon_attachment_html($data, $this->db, false, 'doc_file'); }
                                 ?>
                             </span>
                         </div>
                         <label class="col-sm-2 control-label">Dokumen 2</label>
                         <div class="col-sm-4">
-                            <input type="hidden" name="filename2" id="filename2" value="<?= (isset($data->doc_file_2) ? $data->doc_file_2 : ''); ?>">
+                            <input type="hidden" name="filename2" id="filename2" value="<?= htmlspecialchars((isset($data->doc_file_2) ? $data->doc_file_2 : ''), ENT_QUOTES, 'UTF-8'); ?>">
                             <input type="file" name="doc_file_2" id="doc_file_2">
                             <span class="pull-right">
                                 <?php
-                                if (isset($data->doc_file_2)) {
-                                    echo ($data->doc_file_2 != '' ? '<a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '');
-                                }
+                                if (isset($data)) { echo kasbon_attachment_html($data, $this->db, false, 'doc_file_2'); }
                                 ?>
                             </span>
                         </div>
@@ -239,36 +235,7 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
                             <a class="btn btn-default btn-sm" onclick="window.location=siteurl+'expense/kasbon_list_all<?= $mod ?>';return false;"><i class="fa fa-reply"></i> Batal</a>
                         </div>
                     </div>
-                    <?php
-                    if (isset($data)) {
-                        if ($data->doc_file != '') {
-                            if (strpos($data->doc_file, 'pdf', 0) > 1) {
-                                echo '<div class="col-md-12">
-						<iframe src="' . base_url('assets/expense/' . $data->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-						</iframe>
-                        <a href="' . base_url('assets/expense/' . $data->doc_file) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-						<br />' . $data->no_doc . '</div>';
-                            } else {
-                                if (file_exists('assets/expense' . $data->doc_file)) {
-                                    echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
-                                }
-                            }
-                        }
-                        if ($data->doc_file_2 != '') {
-                            if (strpos($data->doc_file_2, 'pdf', 0) > 1) {
-                                echo '<div class="col-md-12">
-						<iframe src="' . base_url('./assets/expense/' . $data->doc_file_2) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-						</iframe>
-                        <a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="btn btn-sm btn-primary" target="_blank">Check PDF</a>
-						<br />' . $data->no_doc . '</div>';
-                            } else {
-                                if (file_exists('./assets/expense' . $data->doc_file2)) {
-                                    echo '<div class="col-md-12"><a href="' . base_url('assets/expense/' . $data->doc_file_2) . '" target="_blank"><img src="' . base_url('assets/expense/' . $data->doc_file_2) . '" class="img-responsive"></a><br />' . $data->no_doc . '</div>';
-                                }
-                            }
-                        }
-                    }
-                    ?>
+                    <?php if (isset($data)) { echo kasbon_attachment_html($data, $this->db, true); } ?>
                 </div>
             </div>
         </div>
@@ -391,10 +358,9 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
                                 } else {
                                     swal({
                                         title: "Gagal!",
-                                        text: "Data Gagal Di Simpan",
+                                        text: msg.message || "Data Gagal Di Simpan",
                                         type: "error",
-                                        timer: 1500,
-                                        showConfirmButton: false
+                                        showConfirmButton: true
                                     });
                                 };
 
@@ -679,3 +645,4 @@ $val_coa = (isset($data->no_coa) && isset($data->nm_coa)) ? $data->no_coa.' - '.
             });
     }
 </script>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->

@@ -1,0 +1,67 @@
+{
+    "mode": "targeted_correction",
+    "invoice": "036/VSB/2026",
+    "gross_before": "0.00",
+    "gross_after": "15000000.00",
+    "balance_unchanged": "14925000.00",
+    "receipt_count": 0,
+    "posted_journals_unchanged": 4,
+    "saldo_piutang_tanpa_pph_unchanged": "14925000.00",
+    "other_legacy_vuca": [
+        {
+            "id": "00296-INV-IX-26",
+            "no_invoice": "035/VSB/2026",
+            "total_nominal_jurnal": "3000000.00",
+            "ppn_jurnal": "0.00",
+            "pph_jurnal": "15000.00",
+            "tagihan_ppn_jurnal": "0.00",
+            "total_akhir_jurnal": "2985000.00",
+            "saldo_piutang": "2985000.00",
+            "receipt_count": 0
+        },
+        {
+            "id": "00298-INV-IX-26",
+            "no_invoice": "037/VSB/2026",
+            "total_nominal_jurnal": "10000000.00",
+            "ppn_jurnal": "0.00",
+            "pph_jurnal": "50000.00",
+            "tagihan_ppn_jurnal": "0.00",
+            "total_akhir_jurnal": "9950000.00",
+            "saldo_piutang": "9950000.00",
+            "receipt_count": 0
+        },
+        {
+            "id": "00313-INV-IX-26",
+            "no_invoice": "038/VSB/2026",
+            "total_nominal_jurnal": "15000000.00",
+            "ppn_jurnal": "0.00",
+            "pph_jurnal": "75000.00",
+            "tagihan_ppn_jurnal": "0.00",
+            "total_akhir_jurnal": "14925000.00",
+            "saldo_piutang": "14925000.00",
+            "receipt_count": 0
+        },
+        {
+            "id": "00314-INV-IX-26",
+            "no_invoice": "039/VSB/2026",
+            "total_nominal_jurnal": "10000000.00",
+            "ppn_jurnal": "0.00",
+            "pph_jurnal": "50000.00",
+            "tagihan_ppn_jurnal": "0.00",
+            "total_akhir_jurnal": "9950000.00",
+            "saldo_piutang": "9950000.00",
+            "receipt_count": 0
+        },
+        {
+            "id": "00315-INV-IX-26",
+            "no_invoice": "040/VSB/2026",
+            "total_nominal_jurnal": "3000000.00",
+            "ppn_jurnal": "0.00",
+            "pph_jurnal": "15000.00",
+            "tagihan_ppn_jurnal": "0.00",
+            "total_akhir_jurnal": "2985000.00",
+            "saldo_piutang": "2985000.00",
+            "receipt_count": 0
+        }
+    ]
+}

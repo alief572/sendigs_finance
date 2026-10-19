@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__) . '/libraries/Penerimaan_calculation.php';
 
 class Penerimaan_uang extends Admin_Controller
 {
@@ -79,7 +80,7 @@ class Penerimaan_uang extends Admin_Controller
     {
         $nm_customer = $this->input->post('nm_customer');
 
-        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons');
+        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons, a.tipe_invoice');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.nm_customer', $nm_customer);
         $this->db->where('a.saldo_piutang >', 0);
@@ -101,7 +102,7 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil .= '<td class="text-right">' . number_format($item['dpp_lain_lain_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['ppn_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['pph_jurnal']) . '</td>';
-                $hasil .= '<td class="text-right">' . number_format($item['tagihan_ppn_jurnal']) . '</td>';
+                $hasil .= '<td class="text-right">' . number_format(Penerimaan_calculation::invoice_gross($item) / 100) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['total_akhir_jurnal']) . '</td>';
                 $hasil .= '<td class="text-right">' . number_format($item['saldo_piutang']) . '</td>';
                 $hasil .= '<td class="text-center">';
@@ -121,6 +122,16 @@ class Penerimaan_uang extends Admin_Controller
 
     public function process_alokasi()
     {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consulting=new Consulting_receipt($this);
+        if ($consulting->contains_new($this->input->post('choose_inv'))) {
+            try {
+                $data=$consulting->preview($this->input->post());
+                $this->template->set($data);$this->template->render('consulting_process');
+            } catch (Throwable $error) { echo '<div class="alert alert-danger" role="alert">'.htmlspecialchars($error instanceof RuntimeException || $error instanceof InvalidArgumentException?$error->getMessage():'Preview tidak dapat dimuat.',ENT_QUOTES,'UTF-8').'</div>'; }
+            return;
+        }
+
         $post = $this->input->post();
 
         $pph23_dipotong = $post['pph23_dipotong'];
@@ -148,6 +159,12 @@ class Penerimaan_uang extends Admin_Controller
             $no++;
 
             $get_inv = $this->db->get_where('tr_invoicing', ['id' => $item])->row_array();
+            try {
+                $remaining_pph = $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $pph23_dipotong);
+            } catch (InvalidArgumentException $e) {
+                echo '<div class="alert alert-danger">' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
+                return;
+            }
 
             if ($get_inv['non_kons'] == '1') {
                 $get_penawaran = $this->consultant->get_where('kons_tr_penawaran_non_konsultasi', ['id_penawaran' => $get_inv['id_penawaran']])->row_array();
@@ -177,24 +194,32 @@ class Penerimaan_uang extends Admin_Controller
             $coa_bank = (!empty($get_bank)) ? $get_bank['coa_bank'] : '';
             $nm_coa_bank = (!empty($get_coa_bank)) ? $get_coa_bank['nm_coa'] : '';
 
+<<<<<<< HEAD
             $saldo_piutang = $get_inv['saldo_piutang'];
             if (abs($saldo_piutang - $get_inv['total_akhir_jurnal']) < 10) {
                 $saldo_piutang = round($get_inv['tagihan_ppn_jurnal']) - round($get_inv['pph_jurnal']);
             } else {
                 $saldo_piutang = round($saldo_piutang);
             }
+=======
+            // Keep the actual outstanding balance, including previous installments.
+            $saldo_piutang = Penerimaan_calculation::cents($get_inv['saldo_piutang']) / 100;
+            // Old Vuca invoices stored zero gross despite having a valid DPP.
+            $tagihan_ppn = Penerimaan_calculation::invoice_gross($get_inv) / 100;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
             $hasil .= '<tr>';
             $hasil .= '<td class="text-center">';
             $hasil .= date('d-F-Y', strtotime($get_inv['tanggal_invoice']));
             $hasil .= '<input type="hidden" name="id_inv_' . $no . '" value="' . $item . '">';
+            $hasil .= '<input type="hidden" name="remaining_pph_' . $no . '" value="' . Penerimaan_calculation::decimal($remaining_pph) . '">';
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">' . $get_inv['no_invoice'] . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_nominal_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['dpp_lain_lain_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
-            $hasil .= '<td class="text-right">' . number_format($get_inv['tagihan_ppn_jurnal']) . '</td>';
+            $hasil .= '<td class="text-right">' . number_format($tagihan_ppn) . '</td>';
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
             $hasil .= '<td>';
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="piutang_dagang_' . $no . '" value="' . $saldo_piutang . '" onkeyup="hitungAll()" readonly>';
@@ -210,7 +235,11 @@ class Penerimaan_uang extends Admin_Controller
             $hasil .= '</td>';
             $hasil .= '</tr>';
 
+<<<<<<< HEAD
             $total_piutang += ($pph23_dipotong == 'N') ? round($get_inv['tagihan_ppn_jurnal']) : round($get_inv['total_akhir_jurnal']);
+=======
+            $total_piutang += ($pph23_dipotong == 'N') ? round($tagihan_ppn) : round($get_inv['total_akhir_jurnal']);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             // $total_piutang += $get_inv['total_akhir_jurnal'];
             $total_piutang_dagang += round($saldo_piutang);
 
@@ -267,12 +296,16 @@ class Penerimaan_uang extends Admin_Controller
                     $value_kredit = 0;
 
                     if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
+<<<<<<< HEAD
                         $this->db->select('a.pph_jurnal as ttl_kredit');
                         $this->db->from('tr_invoicing a');
                         $this->db->where('a.id', $item);
                         $get_kredit = $this->db->get()->row_array();
 
                         $value_kredit = round($get_kredit['ttl_kredit']);
+=======
+                        $value_kredit = $remaining_pph / 100;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     }
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
@@ -335,12 +368,7 @@ class Penerimaan_uang extends Admin_Controller
                     $value_kredit = 0;
 
                     if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
-                        $this->db->select('a.pph_jurnal as ttl_kredit');
-                        $this->db->from('tr_invoicing a');
-                        $this->db->where('a.id', $item);
-                        $get_kredit = $this->db->get()->row_array();
-
-                        $value_kredit = $get_kredit['ttl_kredit'];
+                        $value_kredit = $remaining_pph / 100;
                     }
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
                         $value_kredit = $saldo_piutang;
@@ -410,6 +438,22 @@ class Penerimaan_uang extends Admin_Controller
 
     public function save_penerimaan_piutang()
     {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consulting=new Consulting_receipt($this);$post=$this->input->post();$ids=array();
+        $count=is_scalar($post['no_inv']??null)?(int)$post['no_inv']:0;
+        if($count<1 || $count>100){echo json_encode(array('status'=>0,'msg'=>'Jumlah invoice tidak valid.','message'=>'Jumlah invoice tidak valid.'));return;}
+        for($n=1;$n<=$count;$n++)$ids[]=$post['id_inv_'.$n]??'';
+        if($consulting->contains_new($ids)){echo json_encode($consulting->save($post));return;}
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function()use($consulting,$post){
+            try { $consulting->guard_legacy_allocation($post['id_alokasi']??''); }
+            catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage(),'message'=>$error->getMessage()));return;}
+            $this->save_legacy_penerimaan_piutang();
+        });
+    }
+
+    private function save_legacy_penerimaan_piutang()
+    {
         $post = $this->input->post();
 
         $id = $this->Penerimaan_uang_model->generate_id();
@@ -450,6 +494,7 @@ class Penerimaan_uang extends Admin_Controller
         $arr_insert_jurnal = [];
 
         $total_penerimaan = 0;
+        $total_penerimaan_cents = 0;
 
         $no_jurnal = 0;
         for ($i = 1; $i <= $post['no_inv']; $i++) {
@@ -480,7 +525,7 @@ class Penerimaan_uang extends Admin_Controller
             $dpp = (!empty($get_inv)) ? $get_inv['total_nominal_jurnal'] : 0;
             $dpp_lain = (!empty($get_inv)) ? $get_inv['dpp_lain_lain_jurnal'] : 0;
             $ppn = (!empty($get_inv)) ? $get_inv['ppn_jurnal'] : 0;
-            $tagihan_ppn = (!empty($get_inv)) ? $get_inv['tagihan_ppn_jurnal'] : 0;
+            $tagihan_ppn = (!empty($get_inv)) ? Penerimaan_calculation::decimal(Penerimaan_calculation::invoice_gross($get_inv)) : 0;
             $pph = (!empty($get_inv)) ? $get_inv['pph_jurnal'] : 0;
             if ($post['pph23_dipotong'] == 'N') {
                 $pph = 0; // Force PPh to 0 if not deducted
@@ -490,16 +535,18 @@ class Penerimaan_uang extends Admin_Controller
             $saldo_piutang = (!empty($get_inv)) ? $get_inv['saldo_piutang'] : 0;
             $tgl_inv = (!empty($get_inv)) ? date('Y-m-d', strtotime($get_inv['created_date'])) : '';
 
-            $penerimaan = str_replace(',', '.', str_replace('.', '', $post['penerimaan_' . $i]));
-            $biaya_admin = str_replace(',', '.', str_replace('.', '', $post['biaya_admin_' . $i]));
-            if ($biaya_admin == '') {
-                $biaya_admin = 0;
+            try {
+                $remaining_pph = $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $post['pph23_dipotong']);
+                $receipt_cents = Penerimaan_calculation::cents($post['penerimaan_' . $i], true);
+                $admin_cents = Penerimaan_calculation::cents($post['biaya_admin_' . $i], true);
+                $calculation = Penerimaan_calculation::calculate(Penerimaan_calculation::cents($saldo_piutang), $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents);
+            } catch (InvalidArgumentException $e) {
+                echo json_encode(array('status'=>0, 'msg'=>$e->getMessage(), 'message'=>$e->getMessage()));
+                return;
             }
-
-            $sisa_piutang = str_replace(',', '.', str_replace('.', '', $post['sisa_piutang_' . $i]));
-            if ($sisa_piutang == '') {
-                $sisa_piutang = 0;
-            }
+            $penerimaan = Penerimaan_calculation::decimal($receipt_cents);
+            $biaya_admin = Penerimaan_calculation::decimal($admin_cents);
+            $sisa_piutang = Penerimaan_calculation::decimal($calculation['remaining']);
 
             $arr_insert_detail[] = [
                 'id_header' => $id,
@@ -526,7 +573,7 @@ class Penerimaan_uang extends Admin_Controller
                 'saldo_piutang' => $sisa_piutang
             ];
 
-            $total_penerimaan += $penerimaan;
+            $total_penerimaan_cents += $receipt_cents;
 
             // Tentukan COA PPh berdasarkan tipe_invoice (VUCA = 1106-01-05, lainnya = 1106-01-02)
             $coa_pph = (!empty($get_inv['tipe_invoice']) && $get_inv['tipe_invoice'] == '1') ? '1106-01-05' : '1106-01-02';
@@ -544,6 +591,18 @@ class Penerimaan_uang extends Admin_Controller
 
             foreach ($get_coa_jurnal as $item_jurnal) {
                 $no_jurnal++;
+                $value_debit = $item_jurnal['no_perkiraan'] === '7201-01-04' ? $biaya_admin : '0.00';
+                $value_kredit = $item_jurnal['no_perkiraan'] === '1102-01-01'
+                    ? Penerimaan_calculation::decimal($calculation['reduction'])
+                    : ($item_jurnal['no_perkiraan'] === $coa_pph ? Penerimaan_calculation::decimal($calculation['adjustment']) : '0.00');
+
+                $get_no_invoice = $this->db->select('a.no_invoice')
+                    ->from('tr_invoicing a')
+                    ->where('a.id', $post['id_inv_' . $i])
+                    ->get()
+                    ->row();
+
+                $no_invoice = $get_no_invoice->no_invoice ?? '';
 
                 $get_no_invoice = $this->db->select('a.no_invoice')
                     ->from('tr_invoicing a')
@@ -561,8 +620,13 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $nm_coa_bank,
+<<<<<<< HEAD
                         'debit' => str_replace(',', '.', str_replace('.', '', $post['debit_bank_debit'])),
                         'kredit' => str_replace(',', '.', str_replace('.', '', $post['kredit_bank_debit'])),
+=======
+                        'debit' => '0.00', // Set to the sum of receipts after the loop.
+                        'kredit' => '0.00',
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $nm_coa_bank . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -579,8 +643,13 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $item_jurnal['nm_coa'],
+<<<<<<< HEAD
                         'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
+=======
+                        'debit' => $value_debit,
+                        'kredit' => $value_kredit,
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -596,8 +665,13 @@ class Penerimaan_uang extends Admin_Controller
                         'id_company' => $id_company,
                         'nm_company' => $nm_company,
                         'nm_coa' => $item_jurnal['nm_coa'],
+<<<<<<< HEAD
                         'debit' => $post['debit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
                         'kredit' => $post['kredit_' . $item_jurnal['no_perkiraan'] . '_' . $i],
+=======
+                        'debit' => $value_debit,
+                        'kredit' => $value_kredit,
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                         'keterangan' => $item_jurnal['nm_coa'] . ' - ' . $no_invoice,
                         'sts' => '0',
                         'no_transaksi' => $id,
@@ -608,6 +682,12 @@ class Penerimaan_uang extends Admin_Controller
                 }
             }
         }
+
+        if (!empty($arr_insert_jurnal)) {
+            $arr_insert_jurnal[0]['debit'] = Penerimaan_calculation::decimal($total_penerimaan_cents);
+        }
+        $total_penerimaan = Penerimaan_calculation::decimal($total_penerimaan_cents);
+        $arr_insert_header['nominal_penerimaan_bank'] = $total_penerimaan;
 
         $this->db->trans_begin();
 
@@ -677,7 +757,8 @@ class Penerimaan_uang extends Admin_Controller
 
         $response = [
             'status' => $valid,
-            'msg' => $msg
+            'msg' => $msg,
+            'message' => $msg
         ];
 
         echo json_encode($response);
@@ -698,21 +779,14 @@ class Penerimaan_uang extends Admin_Controller
         $this->db->where('a.id_header', $get_penerimaan['no_surat']);
         $get_penerimaan_detail = $this->db->get()->result_array();
 
-        $arr_id_inv = [];
-        foreach ($get_penerimaan_detail as $item_detail) {
-            $arr_id_inv[] = $item_detail['id_inv'];
-        }
-
         $resolved = $this->Penerimaan_uang_model->resolve_alokasi($get_penerimaan['id_alokasi']);
         $get_alokasi = (!empty($resolved)) ? $resolved['detail'] : [];
 
-        // $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_penerimaan['id_inv'], 'jenis_transaksi' => 'Penerimaan Piutang'])->result_array();
-
-        $this->db->select('a.*');
-        $this->db->from('tr_jurnal a');
-        $this->db->where_in('a.no_transaksi', $arr_id_inv);
-        $this->db->where('a.jenis_transaksi', 'Penerimaan Piutang');
-        $get_jurnal = $this->db->get()->result_array();
+        // Receipt journals are keyed by no_surat, including posted journals.
+        $get_jurnal = $this->db->get_where('tr_jurnal', [
+            'no_transaksi' => $get_penerimaan['no_surat'],
+            'jenis_transaksi' => 'Penerimaan Piutang'
+        ])->result_array();
 
         $data = [
             'header' => $get_penerimaan,
@@ -732,10 +806,47 @@ class Penerimaan_uang extends Admin_Controller
 
     public function rollback_penerimaan()
     {
+<<<<<<< HEAD
+=======
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){
+            $id=$this->input->post('id_penerimaan');
+            if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));return;}
+            $header=$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id))->row_array();
+            $consulting=new Consulting_receipt($this);
+            if((int)($header['consulting_batch']??0)!==3 && $header){
+                try {
+                    $consulting->guard_legacy_allocation($header['id_alokasi']);
+                    if($this->db->field_exists('consulting_reduction','tr_penerimaan_piutang_detail')){
+                        $details=$this->db->get_where('tr_penerimaan_piutang_detail',array('id_header'=>$header['no_surat']))->result_array();
+                        foreach($details as $detail){
+                            $later=$this->db->query('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=? AND id>? AND consulting_reduction IS NOT NULL LIMIT 1',array($detail['id_inv'],$detail['id']))->row_array();
+                            if($later)throw new RuntimeException('Rollback penerimaan terbaru terlebih dahulu.');
+                        }
+                    }
+                }catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage()));return;}
+            }
+            return $this->rollback_legacy_penerimaan();
+        });
+    }
+
+    private function rollback_legacy_penerimaan()
+    {
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $this->auth->restrict($this->deletePermission);
 
         $id_penerimaan = $this->input->post('id_penerimaan');
 
+<<<<<<< HEAD
+=======
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $consultingHeader=is_scalar($id_penerimaan)?$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id_penerimaan))->row_array():null;
+        if ((int)($consultingHeader['consulting_batch']??0)===3) {
+            $consulting=new Consulting_receipt($this);echo json_encode($consulting->rollback($id_penerimaan));return;
+        }
+
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         if (empty($id_penerimaan)) {
             echo json_encode(['status' => 0, 'msg' => 'ID Penerimaan tidak valid.']);
             return;

@@ -1,0 +1,70 @@
+{
+  "task": "record_request_payment_items",
+  "date_wib": "2026-10-14",
+  "status": "selesai",
+  "endpoints": [
+    {
+      "module": "record_request_payment",
+      "controller": "application/modules/record_request_payment/controllers/Record_request_payment.php",
+      "method": "get_data_record_items",
+      "line": 42,
+      "controller_sha256": "214f9dba160b42d3508357efcf7d4569aa1ad7cc16a54b5eaac2cc1669189328",
+      "status": "verified",
+      "permission": "Record_Request_Payment.View",
+      "source": "tr_rp_record snapshot + tr_rp_pengajuan_h done/non-deleted"
+    },
+    {
+      "module": "record_request_payment",
+      "controller": "application/modules/record_request_payment/controllers/Record_request_payment.php",
+      "method": "export_items_excel",
+      "line": 361,
+      "controller_sha256": "214f9dba160b42d3508357efcf7d4569aa1ad7cc16a54b5eaac2cc1669189328",
+      "status": "verified",
+      "permission": "Record_Request_Payment.View",
+      "source": "same approved item query, current search, all matching rows without pagination",
+      "format": "xlsx"
+    }
+  ],
+  "validation": {
+    "backend_assertions": 71,
+    "view_assertions": 46,
+    "sqlite_assertions": 16,
+    "javascript_checks": 75,
+    "export_cumulative_assertions": 412,
+    "export_save_failure": "passed",
+    "existing_phase_1_scenarios": 1916,
+    "browser": false,
+    "live_database": false
+  },
+  "ui_actions": {
+    "request_payment": "original without tabs",
+    "record_tabs": [
+      "batch",
+      "items",
+      "legacy"
+    ],
+    "items": [
+      "view_pengajuan",
+      "print_document"
+    ],
+    "items_toolbar": "export_items_excel",
+    "approval_decisions": "separate module"
+  },
+  "latest_revision": {
+    "date_wib": "2026-10-14",
+    "change": "Add Cetak ke Excel to item toolbar; export all searched snapshots; remove Excel Pengajuan from row actions",
+    "report": "docs/record-request-payment-excel-2026-10-14.md"
+  },
+  "supersedes": "request_payment_tabs",
+  "publication": {
+    "main_code": "d84a73f305e1b88c211b5cc414094ae132b902d8",
+    "development": "8960ab39c0ccf036dd753a9be43f2ead249ae5c8",
+    "module_trees": {
+      "request_payment": "d43ab781d2183da74a7724312cec96adce354138",
+      "approval_request_payment": "a89067f6b2cb56c7c2603bfb10c933d4e30add9f",
+      "record_request_payment": "db78979c47cfeb342b38fb12a452b317713bed2f"
+    },
+    "remote_modules_identical": true,
+    "force_push": false
+  }
+}

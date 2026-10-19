@@ -468,6 +468,7 @@ class Invoicing_model extends BF_Model
         $table_exists = $this->db->query("SHOW TABLES LIKE 'ms_invoice_sequence'")->num_rows() > 0;
 
         if ($table_exists) {
+<<<<<<< HEAD
             // Cek tabel sequence
             $seq_row = $this->db->get_where('ms_invoice_sequence', [
                 'kode_entitas' => $kode_entitas,
@@ -497,6 +498,21 @@ class Invoicing_model extends BF_Model
             }
         } else {
             // Tabel belum ada → fallback ke logic lama (MAX dari tr_invoicing)
+=======
+            // Atomic allocation also covers legacy Vuca/nonconsulting callers.
+            $minimum = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+            if ($this->db->query('INSERT IGNORE INTO ms_invoice_sequence (kode_entitas,tahun,last_sequence,updated_at,updated_by) VALUES (?,?,?,?,?)',
+                [$kode_entitas,$tahun,$minimum-1,date('Y-m-d H:i:s'),$this->auth->user_id()]) === false) {
+                throw new RuntimeException('Gagal menyiapkan nomor invoice.');
+            }
+            if ($this->db->query('UPDATE ms_invoice_sequence SET last_sequence=LAST_INSERT_ID(GREATEST(last_sequence+1,?)),updated_at=?,updated_by=? WHERE kode_entitas=? AND tahun=?',
+                [$minimum,date('Y-m-d H:i:s'),$this->auth->user_id(),$kode_entitas,$tahun]) === false) {
+                throw new RuntimeException('Gagal mengalokasikan nomor invoice.');
+            }
+            $allocated = $this->db->query('SELECT LAST_INSERT_ID() AS sequence')->row();
+            $sequence = (int)$allocated->sequence;
+        } else {
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
         }
 

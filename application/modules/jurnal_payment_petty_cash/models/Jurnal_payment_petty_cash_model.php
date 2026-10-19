@@ -656,18 +656,28 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         $db = $this->_get_db_by_name($db_name);
         if ($db) {
+<<<<<<< HEAD
             return $db->trans_begin();
         }
         return false;
+=======
+            $db->trans_begin();
+        }
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     public function commit_transaction($db_name)
     {
         $db = $this->_get_db_by_name($db_name);
         if ($db) {
+<<<<<<< HEAD
             return $db->trans_commit();
         }
         return false;
+=======
+            $db->trans_commit();
+        }
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     public function rollback_transaction($db_name)

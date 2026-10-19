@@ -70,6 +70,10 @@ class TabsDb {
             'decided_at' => '2026-10-14 10:00:00', 'approver' => 'approver', 'id_dokumen' => 'SOURCE-1', 'kategori' => 'Kasbon',
             'request_by' => 'PRIVATE_PERSON', 'keperluan' => 'PRIVATE_DESCRIPTION', 'dpp' => 100000, 'nilai_ppn' => 11000,
             'nilai_pph' => 2000, 'flag_ppn' => 1, 'flag_pph23' => 1, 'flag_pph21' => 0, 'admin' => 2500, 'dibayarkan' => 106500];
+<<<<<<< HEAD
+=======
+        $base = array_replace($base, $options['record_values'] ?? []);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         $states = strpos($this->table, 'tr_rp_record') !== false
             ? [['done', 0, 'approved'], ['done', 0, 'approved'], ['pending', 0, 'approved'], ['done', 1, 'approved']]
             : [['pending', 0, 'approved'], ['pending', 0, 'approved'], ['done', 0, 'approved'], ['done', 0, 'rejected'], ['pending', 1, 'approved']];

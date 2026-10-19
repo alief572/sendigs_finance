@@ -145,9 +145,30 @@ class Jurnal_penerimaan extends Admin_Controller
 		$this->load->view('posting_jurnal', $data);
 	}
 
-	public function save_posting_jurnal()
+    public function save_posting_jurnal()
+    {
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
+    }
+
+	private function serialized_save_posting_jurnal()
 	{
         if (!$this->allowJournalAction()) { return; }
+<<<<<<< HEAD
+=======
+        require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
+        $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
+        if ($consultingAnchor) {
+            $consultingHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$consultingAnchor['no_transaksi']))->row_array();
+            if ((int)($consultingHeader['consulting_batch']??0)===3) {
+                $posting=new Consulting_posting($this);
+                echo json_encode($posting->receipt($consultingAnchor['id']));
+                return;
+            }
+        }
+
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 		$post = $this->input->post();
 
 		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
@@ -246,10 +267,14 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function fix_company()
 	{
+
 		$get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
 
 		$arr_update_jurnal = [];
 		foreach ($get_jurnal as $item_jurnal) {
+            $snapshotHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$item_jurnal->no_transaksi))->row_array();
+            if((int)($snapshotHeader['consulting_batch']??0)===3)continue;
+
 			// Lookup invoice melalui tr_penerimaan_piutang_detail berdasarkan no_surat (no_transaksi)
 			$get_penerimaan_detail = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_header' => $item_jurnal->no_transaksi])->row();
 			$get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $get_penerimaan_detail->id_inv])->row();
@@ -268,7 +293,8 @@ class Jurnal_penerimaan extends Admin_Controller
 			];
 		}
 
-		$this->db->trans_begin();
+		if (!$arr_update_jurnal) { echo json_encode(array('status'=>1,'msg'=>'Tidak ada jurnal legacy untuk diperbarui.')); return; }
+        $this->db->trans_begin();
 
 		$update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
 		if (!$update_jurnal) {

@@ -71,11 +71,20 @@ for (const active of ['batch', 'items', 'legacy']) {
         assert(!columns[0].render(malicious, 'display', {kategori: malicious}).includes('<img'), 'document output escaped'); checks++;
         const action = columns[columns.length - 1].render(10, 'display', {print_url: 'http://localhost/print/" onclick="evil'});
         assert(action.includes('?from=items'), 'detail origin stays in Record items'); checks++;
+<<<<<<< HEAD
         assert.strictEqual((action.match(/<a /g) || []).length, 3, 'View, document Print and Excel actions'); checks++;
         const noPrint = columns[columns.length - 1].render(10, 'display', {print_url:'javascript:alert(1)'});
         assert(!noPrint.includes('javascript:') && (noPrint.match(/<a /g) || []).length === 2, 'unsafe print URL omitted, other actions preserved'); checks++;
         assert(!action.includes('href="http://localhost/print/" onclick='), 'URL attribute escaped'); checks++;
         assert(action.includes('Excel Pengajuan'), 'export explicitly per PGJ'); checks++;
+=======
+        assert.strictEqual((action.match(/<a /g) || []).length, 2, 'View and document Print actions'); checks++;
+        const noPrint = columns[columns.length - 1].render(10, 'display', {print_url:'javascript:alert(1)'});
+        assert(!noPrint.includes('javascript:') && (noPrint.match(/<a /g) || []).length === 1, 'unsafe print URL omitted, View preserved'); checks++;
+        assert(!action.includes('href="http://localhost/print/" onclick='), 'URL attribute escaped'); checks++;
+        assert(!action.includes('Excel Pengajuan'), 'no batch export inside item actions'); checks++;
+        assert(html.includes('Cetak ke Excel') && html.includes('record_request_payment/export_items_excel'), 'toolbar exports per-item list'); checks++;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
         element('#rec_' + kind + '_search').value = 'DOC-2';
         const payload = {};
         options.ajax.data(payload);

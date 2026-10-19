@@ -358,6 +358,96 @@ class Record_request_payment extends Admin_Controller
 		exit;
 	}
 
+<<<<<<< HEAD
+=======
+	public function export_items_excel()
+	{
+		$search = $this->input->get_post('search');
+		$search = is_scalar($search) ? trim((string) $search) : '';
+		$this->beginAudit(__FUNCTION__, ['format' => 'xlsx', 'search_present' => $search !== ''], ['row_count']);
+		$this->auth->restrict($this->viewPermission);
+		$records = [];
+		$bufferLevel = ob_get_level();
+		$reason = 'query_failure';
+		try {
+			$summary = [];
+			$response = $this->Record_request_payment_model->get_data_record_items($summary, [
+				'start' => 0, 'length' => -1, 'search' => ['value' => $search],
+			]);
+			if (empty($summary['query_ok']) || $this->auditReadStatus() !== 1) {
+				throw new RuntimeException('Record item query failed');
+			}
+			$records = $response['data'];
+			if (!$records) {
+				$this->completeAudit('Tidak ada data untuk ekspor Excel per transaksi', 0, ['row_count' => 0, 'reason' => 'not_found']);
+				show_error('Tidak ada transaksi approved yang cocok untuk dicetak.', 404);
+				return;
+			}
+			$reason = 'export_exception';
+			$this->load->library('PHPExcel');
+			$excel = new PHPExcel();
+			$sheet = $excel->getActiveSheet();
+			$sheet->setTitle('Record per Item');
+			$sheet->setCellValue('A1', 'RECORD REQUEST PAYMENT PER TRANSAKSI');
+			$sheet->setCellValue('A2', 'Dicetak pada: ' . date('d-m-Y H:i:s'));
+			$sheet->mergeCells('A1:P1');
+			$sheet->mergeCells('A2:P2');
+			$sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+			$headers = ['NO', 'NO. PENGAJUAN', 'TGL DIAJUKAN', 'TGL DISETUJUI', 'APPROVER', 'NO. DOKUMEN', 'KATEGORI', 'REQUEST BY', 'COMPANY', 'KEPERLUAN', 'DPP', 'PPN', 'PPH23', 'PPH21', 'ADMIN', 'DIBAYARKAN'];
+			$widths = [6, 18, 22, 22, 20, 24, 18, 24, 18, 40, 18, 18, 18, 18, 18, 18];
+			foreach ($headers as $i => $label) {
+				$col = PHPExcel_Cell::stringFromColumnIndex($i);
+				$sheet->setCellValue($col . '4', $label);
+				$sheet->getColumnDimension($col)->setWidth($widths[$i]);
+			}
+			$sheet->getStyle('A4:P4')->applyFromArray([
+				'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+				'fill' => ['type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => '3C8DBC']],
+			]);
+			$row = 5;
+			$totals = array_fill(0, 6, 0.0);
+			foreach ($records as $index => $record) {
+				$sheet->setCellValue('A' . $row, $index + 1);
+				$keys = ['no_pengajuan', 'submitted_at', 'decided_at', 'approver', 'no_dokumen', 'kategori', 'request_by', 'company_nama', 'keperluan'];
+				foreach ($keys as $i => $key) {
+					$sheet->setCellValueExplicit(PHPExcel_Cell::stringFromColumnIndex($i + 1) . $row, (string) ($record[$key] ?? ''), PHPExcel_Cell_DataType::TYPE_STRING);
+				}
+				$amounts = [(float) $record['dpp'], (float) $record['nilai_ppn'],
+					$record['flag_pph23'] ? (float) $record['nilai_pph'] : 0,
+					$record['flag_pph21'] ? (float) $record['nilai_pph'] : 0,
+					(float) $record['admin'], (float) $record['dibayarkan']];
+				foreach ($amounts as $i => $amount) {
+					$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($i + 10) . $row, $amount);
+					$totals[$i] += $amount;
+				}
+				$row++;
+			}
+			$sheet->setCellValue('J' . $row, 'TOTAL');
+			foreach ($totals as $i => $amount) {
+				$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($i + 10) . $row, $amount);
+			}
+			$sheet->getStyle('J' . $row . ':P' . $row)->getFont()->setBold(true);
+			$sheet->getStyle('K5:P' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+			$sheet->getStyle('A5:P' . $row)->getAlignment()->setWrapText(true);
+			$sheet->freezePane('A5');
+			// Generate fully before sending headers or recording export success.
+			ob_start();
+			PHPExcel_IOFactory::createWriter($excel, 'Excel2007')->save('php://output');
+			$content = ob_get_clean();
+		} catch (Throwable $e) {
+			while (ob_get_level() > $bufferLevel) { ob_end_clean(); }
+			$this->completeAudit('Gagal mengekspor Excel per transaksi', 0, ['row_count' => count($records), 'reason' => $reason]);
+			show_error('Gagal mengekspor data. Silakan coba lagi.', 500);
+			return;
+		}
+		$this->completeAudit('Mengekspor Excel per transaksi Record Request Payment', 1, ['row_count' => count($records), 'outcome' => 'exported']);
+		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		header('Content-Disposition: attachment;filename="Record_Request_Payment_per_Item.xlsx"');
+		header('Cache-Control: max-age=0');
+		echo $content;
+	}
+
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 	private function beginAudit($method, $data = array(), $keys = array())
 	{
 		$this->load->library('Module_audit_recorder');

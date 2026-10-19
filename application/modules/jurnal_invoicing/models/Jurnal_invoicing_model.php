@@ -31,6 +31,23 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function save_posting_jurnal()
     {
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
+    }
+
+    private function serialized_save_posting_jurnal()
+    {
+        require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
+        $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
+        if (!$consultingAnchor) { echo json_encode(array('save'=>0,'msg'=>'Jurnal berubah; muat ulang daftar.')); return; }
+        $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$consultingAnchor['no_transaksi']))->row_array();
+        if (Invoice_consulting::is_new($consultingInvoice)) {
+            $posting=new Consulting_posting($this);
+            echo json_encode($posting->invoice($consultingAnchor['id']));
+            return;
+        }
+
         $post = $this->input->post();
 
         $get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();

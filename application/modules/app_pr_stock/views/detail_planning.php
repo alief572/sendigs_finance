@@ -42,7 +42,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 				</div>
 				<div class="col-md-6">
 					<label for="">Nilai Pengajuan</label>
-					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr) ?>" readonly>
+					<input type="text" name="" id="" class="form-control form-control-sm text-right" value="<?= number_format($ttl_pengajuan_pr, 2) ?>" readonly>
 				</div>
 				<div class="col-md-12">
 					<br><br>
@@ -85,9 +85,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								$konversi = (!empty($get_material) && $get_material->konversi > 0) ? $get_material->konversi : 1;
 
 								echo "<tr>";
-								if ($value['status_app'] == 'N') {
-									echo "<td class='text-center'>" . $key . "</td>";
-								}
+								echo "<td class='text-center'>" . $key . "</td>";
 								echo "<td class='text-left'>" . $nm_material . "
 										<input type='hidden' name='detail[" . $key . "][id]' value='" . $value['id'] . "'>
 										</td>";
@@ -95,8 +93,8 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 								echo "<td class='text-right max_stok'>" . number_format($kebutuhan * 1.5) . "</td>";
 								echo "<td class='text-right min_order'>" . number_format($stock) . "</td>";
 								echo "<td class='text-right'>" . number_format($propose) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format($price_ref) . "</td>";
-								echo "<td class='text-right'>Rp. " . number_format(($propose) * $price_ref) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format($price_ref, 2) . "</td>";
+								echo "<td class='text-right'>Rp. " . number_format(($propose) * $price_ref, 2) . "</td>";
 
 								echo "</tr>";
 
@@ -107,7 +105,7 @@ $tgl_dibutuhkan = (!empty($header[0]['tgl_dibutuhkan'])) ? date('d F Y', strtoti
 						<tfoot>
 							<tr class="bg-blue">
 								<th colspan="7" class="text-center">Total Price Pengajuan</th>
-								<th class="text-right">Rp. <?= number_format($grand_total_price) ?></th>
+								<th class="text-right">Rp. <?= number_format($grand_total_price, 2) ?></th>
 							</tr>
 						</tfoot>
 					</table>

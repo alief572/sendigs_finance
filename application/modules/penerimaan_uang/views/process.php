@@ -246,7 +246,7 @@
     function get_num(nilai = null) {
         if (nilai !== '' && nilai !== null) {
             nilai = nilai.split('.').join('');
-            nilai = nilai.split('.').join(',');
+            nilai = nilai.replace(',', '.');
             nilai = parseFloat(nilai);
         } else {
             nilai = 0;
@@ -311,15 +311,23 @@
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
-            var pph23_inv = get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
+            // Use the remaining PPh from history, never the previous rendered credit.
+            var remaining_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
+            var pph23_inv = pph23_dipotong == 'N' ? Math.min(remaining_pph, penerimaan) : 0;
+            $.each(['1106-01-02', '1106-01-05'], function(index, coa) {
+                var cell = $('.td_kredit_' + coa + '_' + i);
+                if (cell.length) {
+                    cell.html(number_format(pph23_inv) + '<input type="hidden" name="kredit_' + coa + '_' + i + '" value="' + pph23_inv + '">');
+                }
+            });
 
             var sisa_piutang;
             if (pph23_dipotong == 'Y') {
                 // Potong PPh (client bayar net): Piutang Dagang - Penerimaan - Biaya Admin
-                sisa_piutang = Math.round(piutang_dagang - penerimaan - biaya_admin);
+                sisa_piutang = Math.round((piutang_dagang - penerimaan - biaya_admin) * 100) / 100;
             } else {
                 // Tidak Potong PPh (client bayar full): Piutang Dagang - (Penerimaan - PPh 23) - Biaya Admin
-                sisa_piutang = Math.round(piutang_dagang - (penerimaan - pph23_inv) - biaya_admin);
+                sisa_piutang = Math.round((piutang_dagang - (penerimaan - pph23_inv) - biaya_admin) * 100) / 100;
             }
 
             $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
@@ -336,6 +344,7 @@
                         // Tidak dipotong PPh: kredit piutang dagang = penerimaan + biaya admin - pph23
                         kredit_piutang_dagang = penerimaan + biaya_admin - pph23_inv;
                     }
+                    kredit_piutang_dagang = Math.round(kredit_piutang_dagang * 100) / 100;
                     var resp_piutang = number_format(kredit_piutang_dagang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
 
@@ -364,8 +373,13 @@
 
         }
 
+<<<<<<< HEAD
         var grand_total = Math.round(ttl_penerimaan);
         var kontrol = Math.round(grand_total - uang_masuk);
+=======
+        var grand_total = Math.round(ttl_penerimaan * 100) / 100;
+        var kontrol = Math.round((grand_total - uang_masuk) * 100) / 100;
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas

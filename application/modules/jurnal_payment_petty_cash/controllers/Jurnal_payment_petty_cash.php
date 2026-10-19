@@ -141,7 +141,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
      */
     public function save_posting_jurnal()
     {
+<<<<<<< HEAD
         if ($this->input->method(true) !== 'POST' || (!has_permission($this->addPermission) && !has_permission('Jurnal_All.Manage'))) {
+=======
+        if (!has_permission($this->addPermission)) {
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
             echo json_encode(['status' => 0, 'msg' => 'Anda tidak memiliki akses untuk posting jurnal']);
             return;
         }
@@ -301,12 +305,17 @@ class Jurnal_payment_petty_cash extends Admin_Controller
                 return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_begin() === false || $this->Jurnal_payment_petty_cash_model->begin_transaction($target_db) === false) {
             $this->db->trans_rollback();
             $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
             echo json_encode(['status'=>0,'msg'=>'Gagal memulai transaksi jurnal.']);
             return;
         }
+=======
+        $this->db->trans_begin();
+        $this->Jurnal_payment_petty_cash_model->begin_transaction($target_db);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         // Generate BUK number for target DB
         $nomor_buk = $this->Jurnal_payment_petty_cash_nomor_model->get_nomor_buk('101', $target_db);
@@ -351,6 +360,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_commit() === false) {
             $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
             echo json_encode(['status'=>0,'msg'=>'Commit source gagal. Periksa status jurnal sebelum mencoba kembali.']);
@@ -361,6 +371,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
         echo json_encode(['status' => 1, 'msg' => 'Jurnal Petty Cash berhasil diposting ke DBACC_' . $company_label, 'accounting_numbers'=>[['company'=>$company_label,'number'=>$nomor_buk]]]);
+=======
+        $this->db->trans_commit();
+        $this->Jurnal_payment_petty_cash_model->commit_transaction($target_db);
+        echo json_encode(['status' => 1, 'msg' => 'Jurnal Petty Cash berhasil diposting ke DBACC_' . $company_label]);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     /**
@@ -398,12 +413,17 @@ class Jurnal_payment_petty_cash extends Admin_Controller
                 return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_begin() === false || $this->Jurnal_payment_petty_cash_model->begin_transaction($target_db) === false) {
             $this->db->trans_rollback();
             $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
             echo json_encode(['status'=>0,'msg'=>'Gagal memulai transaksi jurnal.']);
             return;
         }
+=======
+        $this->db->trans_begin();
+        $this->Jurnal_payment_petty_cash_model->begin_transaction($target_db);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         // Generate BUK number for target DB
         $nomor_buk = $this->Jurnal_payment_petty_cash_nomor_model->get_nomor_buk('101', $target_db);
@@ -448,6 +468,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_commit() === false) {
             $this->Jurnal_payment_petty_cash_model->rollback_transaction($target_db);
             echo json_encode(['status'=>0,'msg'=>'Commit source gagal. Periksa status jurnal sebelum mencoba kembali.']);
@@ -458,6 +479,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
         echo json_encode(['status' => 1, 'msg' => 'Jurnal refill berhasil diposting ke DBACC_' . $company_label, 'accounting_numbers'=>[['company'=>$company_label,'number'=>$nomor_buk]]]);
+=======
+        $this->db->trans_commit();
+        $this->Jurnal_payment_petty_cash_model->commit_transaction($target_db);
+        echo json_encode(['status' => 1, 'msg' => 'Jurnal refill berhasil diposting ke DBACC_' . $company_label]);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     /**
@@ -470,12 +496,17 @@ class Jurnal_payment_petty_cash extends Admin_Controller
      */
     private function _post_stm($jurnal_header, $rows, $no_transaksi, $jenis_transaksi)
     {
+<<<<<<< HEAD
         if ($this->db->trans_begin() === false || $this->Jurnal_payment_petty_cash_model->begin_transaction('accounting_stm') === false) {
             $this->db->trans_rollback();
             $this->Jurnal_payment_petty_cash_model->rollback_transaction('accounting_stm');
             echo json_encode(['status'=>0,'msg'=>'Gagal memulai transaksi jurnal.']);
             return;
         }
+=======
+        $this->db->trans_begin();
+        $this->Jurnal_payment_petty_cash_model->begin_transaction('accounting_stm');
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         // Generate BUK number for STM
         $nomor_buk = $this->Jurnal_payment_petty_cash_nomor_model->get_nomor_buk('101', 'accounting_stm');
@@ -520,6 +551,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_commit() === false) {
             $this->Jurnal_payment_petty_cash_model->rollback_transaction('accounting_stm');
             echo json_encode(['status'=>0,'msg'=>'Commit source gagal. Periksa status jurnal sebelum mencoba kembali.']);
@@ -530,6 +562,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
         echo json_encode(['status' => 1, 'msg' => 'Jurnal berhasil diposting ke DBACC_STM', 'accounting_numbers'=>[['company'=>'STM','number'=>$nomor_buk]]]);
+=======
+        $this->db->trans_commit();
+        $this->Jurnal_payment_petty_cash_model->commit_transaction('accounting_stm');
+        echo json_encode(['status' => 1, 'msg' => 'Jurnal berhasil diposting ke DBACC_STM']);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     /**
@@ -548,6 +585,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
         $db_company = ($nm_company == 'VUCA') ? 'accounting_vuca' : 'accounting_sustain';
         $company_label = ($nm_company == 'VUCA') ? 'VUCA' : 'SUSTAIN';
 
+<<<<<<< HEAD
         if ($this->db->trans_begin() === false || $this->Jurnal_payment_petty_cash_model->begin_transaction('accounting_stm') === false || $this->Jurnal_payment_petty_cash_model->begin_transaction($db_company) === false) {
             $this->db->trans_rollback();
             $this->Jurnal_payment_petty_cash_model->rollback_transaction('accounting_stm');
@@ -555,6 +593,11 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             echo json_encode(['status'=>0,'msg'=>'Gagal memulai transaksi jurnal.']);
             return;
         }
+=======
+        $this->db->trans_begin();
+        $this->Jurnal_payment_petty_cash_model->begin_transaction('accounting_stm');
+        $this->Jurnal_payment_petty_cash_model->begin_transaction($db_company);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
         // Generate BUK number for company side (VUCA or SUSTAIN)
         $nomor_buk_company = $this->Jurnal_payment_petty_cash_nomor_model->get_nomor_buk('101', $db_company);
@@ -630,6 +673,7 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
 
+<<<<<<< HEAD
         if ($this->db->trans_commit() === false) {
             $this->Jurnal_payment_petty_cash_model->rollback_transaction('accounting_stm');
             $this->Jurnal_payment_petty_cash_model->rollback_transaction($db_company);
@@ -645,6 +689,12 @@ class Jurnal_payment_petty_cash extends Admin_Controller
             return;
         }
         echo json_encode(['status' => 1, 'msg' => 'Jurnal inter-company berhasil diposting ke DBACC_' . $company_label . ' dan DBACC_STM', 'accounting_numbers'=>[['company'=>$company_label,'number'=>$nomor_buk_company],['company'=>'STM','number'=>$nomor_buk_stm]]]);
+=======
+        $this->db->trans_commit();
+        $this->Jurnal_payment_petty_cash_model->commit_transaction('accounting_stm');
+        $this->Jurnal_payment_petty_cash_model->commit_transaction($db_company);
+        echo json_encode(['status' => 1, 'msg' => 'Jurnal inter-company berhasil diposting ke DBACC_' . $company_label . ' dan DBACC_STM']);
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
     }
 
     /**

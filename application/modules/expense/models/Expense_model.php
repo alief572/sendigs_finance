@@ -827,3 +827,5 @@ class Expense_model extends BF_Model
 		return ($query->num_rows() > 0) ? $query->row() : null;
 	}
 }
+
+// Sync: 2026-09-22 Full re-push modul expense

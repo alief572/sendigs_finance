@@ -98,6 +98,7 @@
 			</td>
 		</tr>
 	</table><br /><br />
+<<<<<<< HEAD
 	<?php
 	if (isset($data)) {
 		//	echo '<div class="pagebreak"> </div>';
@@ -176,8 +177,55 @@
 					});
 				});
 			}
+=======
+	<?php if (isset($data)) { echo kasbon_attachment_html($data, $this->db, true); } ?>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			if (typeof pdfjsLib !== 'undefined') {
+				pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+				var containers = document.querySelectorAll('.pdf-render-container');
+				containers.forEach(function(container) {
+					var url = container.getAttribute('data-pdf-url');
+					if (!url) return;
+
+					pdfjsLib.getDocument(url).promise.then(function(pdf) {
+						container.innerHTML = ''; // Hapus iframe fallback
+						
+						var renderPage = function(num) {
+							pdf.getPage(num).then(function(page) {
+								var scale = 1.5;
+								var viewport = page.getViewport({ scale: scale });
+								var canvas = document.createElement('canvas');
+								canvas.className = 'pdf-page-canvas';
+								var context = canvas.getContext('2d');
+								canvas.height = viewport.height;
+								canvas.width = viewport.width;
+
+								container.appendChild(canvas);
+
+								var renderContext = {
+									canvasContext: context,
+									viewport: viewport
+								};
+								page.render(renderContext);
+
+								if (num < pdf.numPages) {
+									renderPage(num + 1);
+								}
+							});
+						};
+						renderPage(1);
+					}).catch(function(err) {
+						console.error("PDF.js render error:", err);
+					});
+				});
+			}
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 		});
 	</script>
 </body>
 
 </html>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->

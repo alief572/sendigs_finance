@@ -183,6 +183,10 @@ function formatDate($date)
 				<th width="30">No</th>
 				<th width="70">Tanggal</th>
 				<th>Keperluan</th>
+<<<<<<< HEAD
+=======
+				<th width="85">No. Polisi</th>
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 				<th width="65">KM Awal</th>
 				<th width="65">KM Akhir</th>
 				<th width="90">Bensin</th>
@@ -209,6 +213,10 @@ function formatDate($date)
 						<td style="text-align: center;"><?= $no++ ?></td>
 						<td style="text-align: center;"><?= formatDate($record->tgl_doc) ?></td>
 						<td><?= $record->keperluan ?></td>
+<<<<<<< HEAD
+=======
+						<td style="text-align: center;"><?= !empty($record->nopol) ? $record->nopol : '-' ?></td>
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 						<td style="text-align: right;"><?= number_format((float)$record->km_awal, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= number_format((float)$record->km_akhir, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= 'Rp ' . number_format($record->bensin, 0, ',', '.') ?></td>
@@ -223,14 +231,22 @@ function formatDate($date)
 		</tbody>
 		<tfoot>
 			<tr>
+<<<<<<< HEAD
 				<td colspan="5" style="text-align: right; font-weight: bold;">Subtotal</td>
+=======
+				<td colspan="6" style="text-align: right; font-weight: bold;">Subtotal</td>
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_bensin, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_tol, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_parkir, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_lainnya, 0, ',', '.') ?></td>
 			</tr>
 			<tr>
+<<<<<<< HEAD
 				<td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
+=======
+				<td colspan="6" style="text-align: right; font-weight: bold;">Total</td>
+>>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 				<td colspan="4" style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_bensin + $total_tol + $total_parkir + $total_lainnya, 0, ',', '.') ?></td>
 			</tr>
 		</tfoot>
@@ -311,3 +327,4 @@ function formatDate($date)
 </body>
 
 </html>
+<!-- Sync: 2026-09-22 Full re-push modul expense -->
