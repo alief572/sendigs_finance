@@ -79,7 +79,7 @@
     "assets/dist/sweetalert2.min.css"
   ],
   "sha256": {
-    "application/modules/invoicing/controllers/Invoicing.php": "5f2fe3c1395aa67003b695721bab5c11fc4585eca6276f4e1bd858a244f48179",
+    "application/modules/invoicing/controllers/Invoicing.php": "cb05065f88d9a8368e9046c520770ad746360e1926357a1264b1e18b94d0588f",
     "application/modules/invoicing/models/Invoicing_model.php": "2dfea04810cdf8d568124768153d9b53fd8cf4acf1d1cfb0fe8cbe98833f2ec5",
     "application/modules/invoicing/libraries/Invoice_consulting.php": "f5555ec0d14adc67b2849b16c6eb58beb28a4a7a2043d79fe610fb5a2fff7de5",
     "application/modules/invoicing/libraries/Invoice_consulting_service.php": "5ff8ccfbc9406ff9606ddc725a5119481d3e288442f21e42cec3be73469326e8",

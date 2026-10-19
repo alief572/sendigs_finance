@@ -1,4 +1,4 @@
-﻿# Publikasi Modul Invoicing ke Branch Development — Selesai 2026-10-19
+# Publikasi Modul Invoicing ke Branch Development — Selesai 2026-10-19
 
 - Status: Selesai (Commit dan push modul invoicing ke branch development berhasil).
 - Fase selesai:
@@ -17,6 +17,7 @@
      - Syntax lint PHP (34 files) dan JS (10 files): 100% PASS
   4. Pembaruan Manifest: Memperbarui hash SHA256 dan status publikasi pada `docs/invoicing-consulting-manifest.json`.
   5. Publikasi Git: Melakukan commit dan push ke remote `origin/development`.
+  6. Peningkatan Pelaporan Error Invoicing: Membuka pesan error asli (`$error->getMessage()`) untuk `InvalidArgumentException` dan lingkungan development serta menambahkan `log_message` agar kegagalan inisialisasi form (seperti mapping akun belum lengkap atau schema belum dimigrasi) tampil transparan.
 - File yang dimodifikasi / dibuat untuk modul invoicing:
   1. `application/modules/invoicing/controllers/Invoicing.php`
   2. `application/modules/invoicing/libraries/Invoice_consulting.php`

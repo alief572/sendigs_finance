@@ -70,7 +70,11 @@ class Invoicing extends Admin_Controller
                 'source_fingerprint'=>$source ? Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>array_diff_key($snapshot,array('top'=>true)))) : '',
                 'invoice_fingerprint'=>Invoice_calculation::fingerprint($invoice),'error'=>null);
         } catch (Throwable $error) {
-            $data=array('error'=>$error instanceof RuntimeException ? $error->getMessage() : 'Form invoice tidak dapat dimuat.','mode'=>$mode);
+            log_message('error', 'Invoicing consulting_form error: ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
+            $message = ($error instanceof InvalidArgumentException || $error instanceof RuntimeException || (defined('ENVIRONMENT') && ENVIRONMENT === 'development'))
+                ? $error->getMessage()
+                : 'Form invoice tidak dapat dimuat.';
+            $data = array('error' => $message, 'mode' => $mode);
         }
         if ($mode==='print') { $this->load->view('consulting_print', $data); return; }
         $this->template->set($data);
@@ -103,7 +107,13 @@ class Invoicing extends Admin_Controller
                 'journal_owners'=>$journalOwners,'owner_warning'=>$ownerWarning,
                 'master'=>$owner?$service->master($owner):array(),'roles'=>Invoice_consulting::roles(),
                 'mapping_fingerprint'=>Invoice_calculation::fingerprint($mapping?:array()),'error'=>null);
-        } catch (Throwable $error) { $data=array('error'=>$error instanceof RuntimeException?$error->getMessage():'Pengaturan tidak dapat dimuat.'); }
+        } catch (Throwable $error) {
+            log_message('error', 'Invoicing coa_settings error: ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
+            $message = ($error instanceof InvalidArgumentException || $error instanceof RuntimeException || (defined('ENVIRONMENT') && ENVIRONMENT === 'development'))
+                ? $error->getMessage()
+                : 'Pengaturan tidak dapat dimuat.';
+            $data = array('error' => $message);
+        }
         $this->template->set($data); $this->template->title('Pengaturan COA Invoicing'); $this->template->render('consulting_settings');
     }
 
