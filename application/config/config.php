@@ -27,12 +27,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
 $root = "https://" . $_SERVER['HTTP_HOST'];
 $root .= str_replace(basename($_SERVER['SCRIPT_NAME']), "", $_SERVER['SCRIPT_NAME']);
 $config['base_url'] = $root;
-<<<<<<< HEAD
 // $config['base_url'] = 'http://localhost:8080/';
-=======
-//$config['base_url'] = 'http://localhost:8080/';
 
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
 
 //$config['base_url'] = 'http://localhost/importa/importa_release/';
 
