@@ -123,8 +123,15 @@ $refill=journal('Refill Pettycash','0','BATCH-1','4','50.15','50.15');
 // A model instance is request-local, so start a fresh instance after changing fixture master data.
 $model=new Jurnal_all_model();$model->db=$db;
 $pay=$model->groups(['tab'=>'PAY','year'=>2026,'category'=>'Refill Petty Cash']);
-check(count($pay)===1&&$pay[0]['source']==='PCS'&&$pay[0]['no_transaksi']==='BATCH-1','refill display category keeps native key');
+check(count($pay)===1&&$pay[0]['source']==='PCS'&&$pay[0]['no_transaksi']==='BATCH-1'&&$pay[0]['display_no_transaksi']==='BATCH-1','refill display category keeps native key and resolves display voucher');
 check($pay[0]['debit']==='50.15'&&strpos($pay[0]['no_referensi'],'RPC-2026-2')!==false,'payment master join cannot multiply money');
+$refillApprove=journal('Refill Pettycash','0','201','4','25.00','25.00');
+$model=new Jurnal_all_model();$model->db=$db;
+$payApprove=$model->groups(['tab'=>'PAY','year'=>2026,'q'=>'201']);
+check(count($payApprove)===1&&$payApprove[0]['no_transaksi']==='201'&&$payApprove[0]['display_no_transaksi']==='BATCH-1','payment journal with approval id displays voucher number');
+check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BATCH-1']))===2,'search by payment voucher number matches both native and approval journals');
+check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'RPC-2026-1']))===2,'search by document number matches');
+$db->where('no_transaksi','201')->delete('tr_jurnal');
 check(count($model->detail($refill,false)['rows'])===2,'refill detail includes full group');
 $db->where('id',$refill)->update('tr_jurnal',['sts'=>'1']);
 try{$model->detail($refill-1,false);check(false,'part posted');}catch(InvalidArgumentException $e){check(true,'part posted group rejected');}

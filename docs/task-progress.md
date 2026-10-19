@@ -1,3 +1,55 @@
+# Verifikasi Komprehensif Test Suite Modul Invoicing (Round 3 Review) — Selesai 2026-10-19
+
+- Status: Selesai (100% assertions satisfied, 0 regressions, isolation verified).
+- Fase selesai:
+  1. Unit Calculation & Parity Verification: `Consulting_calculation_test.php` (99 checks) dan `Consulting_calculation_test.js` (89 checks) berjalan sukses dengan 100% assertions terpenuhi (diperluas dengan validasi non-numerik, boundary receipt, parity amounts matrix 15 nominal, dan journal description assertions).
+  2. UI Rendering & Client-Side Verification: `Ui_render_test.php` (254 checks), `Ui_client_test.js` (43 checks), `Ui_list_client_test.js` (53 checks), dan `Save_feedback_client_test.js` (48 checks) lulus dengan exit code 0 (termasuk verifikasi XSS escaping pada `print_kwitansi_vuca.php` dan filter text fallback kolom company).
+  3. Integration & Isolation Safety: `Consulting_integration_test.php` (341 checks) berjalan sukses di port 33319 menggunakan database disposable MariaDB tanpa memutasi `db_sendigs_ss` operasional, dengan proteksi terminasi daemon saat bootstrap connection timeout.
+  4. Perbaikan Celah Keamanan & Robustness:
+     - Mengatasi kerentanan XSS pada `print_kwitansi_vuca.php` dengan menambahkan `$escape` (`htmlspecialchars`) pada `no_invoice`, `no_po`, `nm_customer`, dan `nl2br` pada `print_keterangan`.
+     - Memperbaiki malformed HTML typo `<table class="body-table"">` pada `print_kwitansi.php`.
+     - Mengatasi bypass validasi `NaN`/non-numeric pada `assets/js/invoicing/consulting.js` (`receipt`) dengan validasi `typeof === 'number' && Number.isFinite()`.
+     - Menambahkan validasi `is_numeric()` pada `Invoice_consulting::receipt()` di PHP serta pemeriksaan kelengkapan schema (`nm_company`, `code`, `name`) pada `Invoice_consulting::receipt_journal()`.
+     - Menambahkan pembersihan proses child daemon (`proc_terminate`) pada `Consulting_integration_test.php` jika koneksi bootstrap database gagal/timeout.
+- File yang dimodifikasi:
+  1. `application/modules/invoicing/views/print_kwitansi_vuca.php`
+  2. `application/modules/invoicing/views/print_kwitansi.php`
+  3. `assets/js/invoicing/consulting.js`
+  4. `application/modules/invoicing/libraries/Invoice_consulting.php`
+  5. `application/modules/invoicing/tests/Consulting_calculation_test.php`
+  6. `application/modules/invoicing/tests/Consulting_calculation_test.js`
+  7. `application/modules/invoicing/tests/Ui_render_test.php`
+  8. `application/modules/invoicing/tests/Ui_list_client_test.js`
+  9. `application/modules/invoicing/tests/Consulting_integration_test.php`
+  10. `docs/task-progress.md`
+- Total Assertion Hasil Verifikasi: 927 checks (7 primary suites: 877 checks, 2 auxiliary suites: 50 checks), seluruhnya PASS exit code 0.
+
+---
+
+# Verifikasi Komprehensif Test Suite Modul Invoicing (Round 2 Review) — Selesai 2026-10-19
+
+- Status: Selesai (100% assertions satisfied, 0 regressions, isolation verified).
+- Fase selesai:
+  1. Unit Calculation & Parity Verification: `Consulting_calculation_test.php` (93 checks) dan `Consulting_calculation_test.js` (59 checks) berjalan sukses dengan 100% assertions terpenuhi.
+  2. UI Rendering & Client-Side Verification: `Ui_render_test.php` (246 checks), `Ui_client_test.js` (43 checks), `Ui_list_client_test.js` (52 checks), dan `Save_feedback_client_test.js` (48 checks) lulus dengan exit code 0.
+  3. Integration & Isolation Safety: `Consulting_integration_test.php` (341 checks) berjalan mulus di port 33319 menggunakan database disposable MariaDB tanpa memutasi `db_sendigs_ss` operasional.
+  4. Perbaikan Celah Keamanan & Robustness:
+     - Memperbaiki potensi XSS pada `print_kwitansi.php` dengan menambahkan `$escape` (`htmlspecialchars`) pada `nm_customer`, `no_invoice`, `no_po`, dan `print_keterangan`.
+     - Mengizinkan `Consulting_integration_test.php` dijalankan langsung tanpa flag CLI wajib dengan default ke `--isolated-local-db`.
+     - Menambahkan fallback PATH `php` pada `calculation_test.js`.
+     - Menambah pengujian unit komprehensif pada `Consulting_calculation_test.php` (boundary receipt, snapshot parsing, journal validation) dan `Ui_list_client_test.js` (error/recovery cycle pada tabel non-konsultasi).
+- File yang dimodifikasi:
+  1. `application/modules/invoicing/views/print_kwitansi.php`
+  2. `application/modules/invoicing/tests/Consulting_calculation_test.php`
+  3. `application/modules/invoicing/tests/Consulting_integration_test.php`
+  4. `application/modules/invoicing/tests/Ui_render_test.php`
+  5. `application/modules/invoicing/tests/Ui_list_client_test.js`
+  6. `application/modules/invoicing/tests/calculation_test.js`
+  7. `docs/task-progress.md`
+- Total Assertion Hasil Verifikasi: 882 checks (7 primary suites: 832 checks, 2 auxiliary suites: 50 checks), seluruhnya PASS exit code 0.
+
+---
+
 # Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — Selesai 2026-10-16
 
 - Fase selesai:
@@ -448,6 +500,7 @@ Status: Fase 1–3 selesai dan terverifikasi. Tidak ada fase implementasi aktif/
 - Review final: diff produksi hanya menghapus empty(id_stock); mapping kode produk, query, transaksi dan helper tetap. Tes memakai schema disposable dan tidak melemahkan regresi existing. Dokumentasi konsisten dan whitespace lulus; suite tidak diulang setelah perubahan dokumentasi saja.
 - Risiko/batas: belum save ulang DPM-2026-00080 atau verifikasi browser sesuai scope; proses lengkap dibuktikan pada fixture MySQL. Berikutnya user dapat refresh Incoming dan proses kembali tanpa mengisi kode master66; tidak ada migration yang diperlukan. Publikasi Git mengikuti otorisasi user berikutnya.
 - Publikasi diotorisasi user pada 2026-10-14: commit/push ke origin/main hanya dua file Incoming dan tiga dokumen task. HEAD awal dan remote sama 7c35e4db; index utama kosong. Gunakan index terpisah dan bagian Incoming saja dari plan/checkpoint gabungan agar pekerjaan modul lain tetap lokal. Kode/tes identik hasil GREEN; tidak mengulang suite setelah perubahan dokumentasi saja. Verifikasi remote SHA dan cakupan commit sebelum menutup publikasi.
+- Publikasi selesai: commit09857821a9e6b23f0bfab232ad8079630086dc04 berhasil push origin/main dan ls-remote memverifikasi SHA identik. Commit tepat5 file task; model/tes/laporan diagnosis bersih terhadap HEAD, index utama kosong, perubahan modul/dokumentasi task lain tetap lokal. Tidak ada TODO publikasi; deployment/save ulang tidak dilakukan. Catatan SHA penutupan ini lokal agar tidak membuat commit dokumentasi tambahan.
 
 ## Diagnosis Incoming Stok Cash — 2026-10-14
 
@@ -456,6 +509,30 @@ Status: Fase 1–3 selesai dan terverifikasi. Tidak ada fase implementasi aktif/
 - File: docs/incoming-stok-diagnosis-2026-10-14.md baru dan tambahan checkpoint ini; kode aplikasi/data bisnis tidak diubah, pekerjaan existing dipertahankan.
 - Validasi: log16:17:10 cocok screenshot; SELECT melalui container sendigs_ss dalam transaksi READ ONLY memverifikasi master/PR dan nol receipt Cash untuk dokumen. Evaluasi predicate PHP7.4: master66 REJECT, master71 PASS guard master. Pemeriksaan isi/whitespace dokumentasi; tanpa browser/save ulang/suite aplikasi karena diagnosis dan dokumentasi saja.
 - Keputusan saat diagnosis: mempertahankan guard sampai aturan bisnis dikonfirmasi; tidak membuat master/kode otomatis. User kemudian menegaskan id_stock opsional; implementasi selesai pada bagian checkpoint di atas. Master66 tidak perlu diisi kode agar lolos Incoming. Rincian/bukti di laporan diagnosis.
+
+## Modul Jurnal Expense — 2026-10-14
+
+- Fase 1: model daftar/filter/ekspor hanya Expense Report (generator modul Expense) dan Expense Report Consultant dengan sts 0, kosong, atau NULL; grouping per no_transaksi + jenis + company.
+- Fase 2: tampilan identik Jurnal Payment, preview dan posting JV ke javh/jurnal/nomorJC dengan mapping company existing (4 Vuca; 1/6/7 STM; lainnya Sustain), validasi server, deduplikasi, audit.
+- Fase 3: registrasi menu tepat setelah Jurnal Payment; permission Jurnal_Expense.*, akses awal mengikuti grant ekuivalen Jurnal_Payment.*. Uji/lint/dokumentasi dan verifikasi registrasi lokal.
+- Kriteria: posted/jenis lain tidak bisa dilihat atau diposting via ID; NULL ikut; source nominal tidak dari payload; satu dokumen satu aksi; gagal tulis/commit bukan sukses. Tidak melakukan posting accounting live, redesign, mengubah jurnal_payment, migrasi engine, atau publish Git tanpa permintaan task baru.
+- Temuan: tujuan javh/jurnal/pastibisa_tb_cabang lokal MyISAM. Gunakan cleanup khusus nomor yang dibuat request saat gagal; advisory lock + source row lock; catat keterbatasan crash/cross-module concurrency.
+
+Status: Fase 1–3 selesai dan terverifikasi. Tidak ada fase implementasi aktif/TODO fitur tersisa; audit lain dipertahankan.
+
+- File: modul jurnal_expense baru (controller, 2 model, 3 view, migration, README, 3 tes), docs/jurnal-expense-manifest.json dan docs/jurnal-expense-2026-10-14.md baru; plan/checkpoint diperbarui dengan mempertahankan isi sebelumnya. jurnal_payment dan sumber Expense tidak diubah.
+- Validasi: 24 query + 108 posting + 35 controller/view assertions PASS; recorder/logger/legacy dan Expense Batch1 (37 scenarios + shutdown) PASS; 14 PHP lint, JavaScript syntax, JSON, whitespace PASS. MySQL read-only: 25 transaksi pending; ER-2026-00031 satu group/enam row, balance Rp8.800.000.
+- Menu lokal481/order8 tepat setelah Jurnal Payment/order7; permission1843–1846, grant ekuivalen existing lengkap. Migration dua kali idempotent.
+- Keputusan: read/export View, preview/post Manage; nominal dari source, bukan browser; cents dipertahankan; posting JV dan mapping accounting canonical. Detail Consultant tidak bergantung tr_expense lokal. Audit per endpoint sesudah hasil/commit, metadata aman dan writer resilient.
+- Risiko: MyISAM crash/commit ambigu atau legacy parallel posting belum atomik; cleanup kegagalan biasa sudah diuji. Tidak browser/live accounting posting/engine migration. Fase 4 publikasi selesai: commit 1f4338959efe405b068e7a788c1d397be7d72466 dipush development dan SHA remote diverifikasi. Index terpisah hanya 15 file modul/dokumen task; checkout main dan index existing dipertahankan. Dependency Jurnal Payment/recorder/logger identik dan main remote tetap ee7f1e276c3c57a9390563f457b5394d955a834b. Next: tidak ada TODO push; migration perlu diterapkan pada database deployment (push tidak menjalankan SQL). Bukti lengkap di docs/jurnal-expense-2026-10-14.md.
+
+
+## Insert manual jurnal ER-2026-00031 — 2026-10-14
+
+- Selesai: user meminta enam row baru; live schema `db_sendigs_ss.tr_jurnal` diverifikasi (17 kolom, InnoDB) melalui mysqli localhost port3307. ID10853–10858 dan jurnal00001–00006-AJV-X-26 tidak ada konflik ID/nomor/dokumen sebelum insert; pengecekan diulang dalam transaksi dengan FOR UPDATE.
+- Hasil: enam INSERT prepared berhasil, count6/debit8800000.00/kredit8800000.00 diverifikasi sebelum COMMIT sukses. Fresh-connection read-after-commit juga memverifikasi keenam ID, nomor, COA, nominal, created_by7, timestamp2026-10-14 14:43:22, dan field kosong.
+- Keputusan: isi sesuai data user; sts kosong disimpan NULL karena enum0/1 nullable; id_divisi/nm_divisi tetap string kosong. Tidak mengubah jurnal existing atau tabel lain, generator, schema, maupun source aplikasi.
+- File: hanya checkpoint lokal ini diperbarui; tidak commit/push untuk operasi data. Tidak ada fase aktif/TODO insert tersisa. Tidak menjalankan tes aplikasi/browser karena perubahan hanya enam row database yang sudah diverifikasi live.
 
 ## Koreksi lokasi tab per transaksi — 2026-10-14
 
@@ -1399,8 +1476,280 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - Risiko/TODO: tidak ada TODO kode; refresh halaman sekali untuk memuat versi baru. Pemeriksaan UI statis PASS; tidak mengklaim validasi visual browser.
 
 
-## Publikasi resolusi konflik development - 2026-10-19
+## Pemulihan conflict development - 2026-10-19
 
-Cakupan: 46 file resolusi konflik di luar application/config/config.php dan seluruh modul invoicing; constants.php juga dikecualikan. Pertahankan guard POST/permission serta pemeriksaan commit jurnal petty cash. Pekerjaan lokal lain tidak disertakan. Fase1 pemilahan selesai; fase2 pemeriksaan snapshot commit; fase3 commit/push development dan verifikasi SHA remote. Laporan: docs/conflict-publication-2026-10-19.md.
+Fase 1 selesai: fetch/pull fast-forward b127c8e1 ke 2110bbb4; konflik sudah ter-commit di remote. Semua pekerjaan lokal diamankan pada stash sebelum pull.
+Fase 2 aktif: resolusi blok berdasarkan fitur beserta pemeriksaan sintaks dan regresi. Pertahankan guard permission/POST dan pemeriksaan commit jurnal petty cash. Fitur consulting v3, lampiran kasbon, export toolbar dan petty cash baru dipertahankan. Gabungkan riwayat dokumentasi.
+Fase 3 pending: verifikasi perubahan, checkpoint, dan pemulihan pekerjaan lokal dari stash tanpa menghapus cadangan; tanpa browser/DB/push.
 
-Validasi kandidat publikasi: 44 syntax PASS,18/19 suite PASS. Satu failure dependency invoicing yang dikecualikan tetap ada pada remote dan dicatat di laporan publikasi; tidak mengubah/menonaktifkan tes. Kandidat50file terpisah dari kerja lokal. Fase pemeriksaan selesai; SHA commit/push akan dicatat pada checkpoint lokal setelah publikasi.
+## Sinkronisasi development mengikuti main — 2026-10-18
+
+- Selesai: development lokal dan origin/development diarahkan ke origin/main terbaru, 28fefd9f4ed7f8a920089ab241fa337d0e4aeb91. Tidak ada fase aktif/pending.
+- Otorisasi: user meminta development disamakan dengan main dan menegaskan arah sinkronisasi; main tidak diperbarui dari development.
+- Perubahan: referensi branch development; file aplikasi tidak diedit. File dokumentasi yang ditambahkan hanya checkpoint ini, tanpa commit/push perubahan lokal.
+- Keputusan: mengganti tip development karena riwayat divergen (467 commit hanya main, 308 hanya development), memakai force-with-lease dengan SHA remote lama yang sudah diverifikasi. Tidak checkout/reset/stash working tree yang kotor.
+- Cadangan remote: codex/backup-development-20261018 pada 1b78298f804dec5357d6b15b506adac6d636b6a6. Cadangan lokal: codex/backup-development-remote-20261018 dan codex/backup-development-local-20261018 (46bd4d6f32ac054e550947c17f8b57b91061a547).
+- Validasi: fetch sukses; push cadangan dan development sukses; ls-remote memastikan main dan development di GitHub memiliki SHA identik; git diff --quiet development origin/main PASS. HEAD tetap main lokal pada 09857821a9e6b23f0bfab232ad8079630086dc04; daftar perubahan tracked lokal tetap sama sebelum penambahan checkpoint.
+- Batas/risiko: tes aplikasi/browser tidak diperlukan untuk perubahan referensi Git. Main lokal tetap tertinggal dua commit dari origin/main agar working tree existing tidak terganggu. Riwayat development lama tersedia di branch cadangan; checkout development lain perlu menyesuaikan riwayat setelah update ini.
+- Berikutnya: tidak ada TODO sinkronisasi remote; tidak mengubah konfigurasi/database/deployment.
+
+## Checkout development — 2026-10-18
+
+- Selesai: checkout aktif development, HEAD sama dengan origin/development pada 28fefd9f4ed7f8a920089ab241fa337d0e4aeb91. Main tidak diubah. Tidak ada fase aktif/pending.
+- Keputusan: 29 path yang berubah antara main lokal dan development dicadangkan, di-stash secara selektif, lalu seluruh isi lokalnya dikembalikan setelah git switch. Perubahan lokal lain tidak disentuh.
+- Validasi: switch berhasil; hash SHA256 seluruh file yang dipulihkan identik dengan cadangan; HEAD dan origin/development identik. Tes aplikasi/browser tidak diperlukan karena tidak mengedit implementasi.
+- File: hanya checkpoint ini ditambahkan; isi file kerja lainnya dipertahankan. Cadangan tersedia di scratch/branch-switch-development-965bba6c4eab4d5d94ca42993361943d dan stash 66b5078fdc7479020205f6f7e0bd431bf51df977.
+- Risiko/TODO: working tree tetap memiliki perubahan lokal belum di-commit; beberapa file yang sebelumnya untracked sekarang tampil modified karena sudah tracked pada development. Stash sengaja disimpan untuk pemulihan, tidak perlu apply ulang. Tidak commit/push; tidak ada TODO perpindahan branch.
+
+## Database development memakai nama tanpa suffix dan koneksi lokal — 2026-10-18
+
+- Selesai: suffix _dev dihapus dari enam nama database aktif (default, accounting, accounting_vuca, accounting_stm, accounting_sustain, consultant); enam grup diarahkan ke hostname mysql, user root, dan password lokal existing dari hris. Grup hris tetap sama. Tidak ada fase aktif/pending.
+- File diubah: application/config/development/database.php (diabaikan Git) dan checkpoint ini. Branch aktif development; tidak commit/push.
+- Keputusan: mengikuti koneksi Docker lokal existing hris dan .env.docker.example; tidak menggunakan kredensial server remote. Password tidak dicatat di checkpoint. Driver, opsi, komentar, dan konfigurasi lain dipertahankan.
+- Validasi: tepat 24 baris berubah (18 kredensial + 6 nama database); jumlah baris tetap; file hasil simpan identik dengan hasil yang dihitung; tidak ada suffix database _dev aktif; ketujuh grup memiliki kredensial lokal yang sama. PHP CLI tidak tersedia di PATH sehingga lint tidak dijalankan.
+- Batas/risiko: tidak menguji browser/koneksi database; database lokal dengan nama tanpa suffix harus tersedia. Tidak ada TODO implementasi.
+
+## Invoice konsultasi reguler versi 3 — 2026-10-18
+
+- Aktif fase 1 baseline/schema. Pending fase 2 mapping admin; 3 invoice/jurnal; 4 penerimaan/integrasi; 5 regresi/dokumentasi.
+- Keputusan user: hanya konsultasi reguler baru; per TOP; jenis PPN dipilih invoice; total tampilan selalu penjualan+PPN tetapi piutang WAPU/KB hanya penjualan; PPh aktual saat penerimaan; mapping master via admin; presisi dua desimal. Histori/Vuca/nonkonsultasi dipertahankan.
+- Grounding: controller Invoicing save/update aktif belum memakai Invoice_writer yang dijelaskan README. Penerimaan README menandai suite integrasi v2 sebagai historis. Jangan memakai kelulusan helper sebagai bukti endpoint aktif.
+- File awal: docs/implementation-plan.md dan checkpoint ini ditambah. Perubahan lokal existing termasuk jurnal_invoicing/jurnal_penerimaan dipertahankan; tidak commit/push. Baseline validasi belum dijalankan.
+- Berikutnya: runtime PHP nonweb, kontrak migration/snapshot/mapping, fixture kalkulasi dan endpoint aktif. Tidak mengulang akses Docker/DB yang tercatat terhambat tanpa pendekatan baru.
+
+### Invoice konsultasi v3 — checkpoint fondasi dan mapping
+
+- Fase 1 baseline/schema dan fase 2 mapping backend selesai terverifikasi: kalkulasi72, baseline legacy invoice/penerimaan/Vuca/detail PASS; migration dua run serta endpoint mapping/create/edit101 checks MariaDB disposable PASS. UI settings tersedia; pemeriksaan rendering terprogram ikut fase penutupan.
+- Runtime khusus pengujian: scratch/runtime/php74/php.exe (PHP7.4 resmi), MariaDB10.11 portable pada loopback33319; data seluruhnya scratch/runtime/consulting-db. Pendekatan baru tidak menggunakan Docker atau DB aplikasi. Tes socket perlu eskalasi sandbox.
+- Aktif fase 3 invoice/posting dan fase 4 penerimaan/integrasi berurutan. Review fresh-context menemukan race nomor legacy dan edit/posting; allocator model dibenahi atomik untuk seluruh caller, posting v3 menggunakan mutex sama dan membaca ulang jurnal di dalam transaksi.
+- File baru: Invoice_consulting, Invoice_consulting_service, Consulting_posting; migration003 + rollback guard; views consulting_invoice/settings; assets/js/invoicing/consulting.js; tes Consulting_calculation/Consulting_integration. Controller/model Invoicing dan index/Excel dihubungkan secara scoped. Helper/writer lama tidak diubah.
+- Penerimaan sedang dikerjakan: Consulting_receipt, view consulting_process, branch controller per versi, rincian consulting_reduction untuk rollback tepat; legacy-only diberi mutex tanpa mengganti formula. Adapter tes legacy ditambah dukungan mutex; semua assertion lama dipertahankan dan suite lulus.
+- Integrasi GL v3 akan menolak bila finance/accounting beda server atau tabel accounting bukan InnoDB; tidak menurunkan jaminan commit atomik dan tidak mengubah engine otomatis. Snapshot company/akun menjadi sumber posting baru.
+- Belum: tes penerimaan campuran/rollback/GL/fault/concurrency/render/export/report, review dan regresi penutupan; tidak ada klaim fase 3–5 selesai. Tidak commit/push/migration aplikasi.
+
+### Penutupan Invoice konsultasi reguler v3 — 2026-10-18
+
+- Seluruh fase 1–5 selesai implementasi dan validasi lokal. Tidak ada fase aktif/pending kode. Rilis/migration aplikasi belum dilaksanakan; tidak commit/push/deploy/backfill.
+- Endpoint aktif kini memakai versi3 hanya untuk invoice reguler baru, mapping admin sembilan role, snapshot owner/COA/TOP, UI/cetak/Excel, tiga jurnal tanpa PPh invoice, penerimaan PPh aktual dan batch campuran, rollback tepat, posting atomik snapshot serta laporan piutang. Vuca/non/histori tetap formula legacy.
+- Perubahan integrasi tambahan yang diperlukan: native posting dan writer legacy memakai mutex bersama; allocator nomor atomik; perbaikan company massal melewati v3; rollback/save legacy ditolak bila parent alokasi masih mendukung v3; endpoint legacy PPh23 menolak pengakuan kedua atas PPh yang sudah dibukukan pada penerimaan baru. Tidak menambah workflow bukti WAPU atau mendesain ulang bukti PPh.
+- Bukti: kalkulasi72 + PHP/JS parity35; native CI/MariaDB disposable303 checks (migration2run/admin grant/rollback guard, endpoint/forms/XSS/Excel/report, semua cabang PPN/penerimaan/mixed/rollback/posted, fault sequence/header/jurnal/TOP/commit, audit failures dan allowlist). Dua proses nyata membuktikan alokasi nomor berbeda, TOP hanya1commit, edit-vs-post konsisten. GL failure membatalkan jurnal/counter dalam transaksi yang sama.
+- Regresi PASS: invoice/receipt calculation; active legacy Vuca/MINARTA dan detail; native Invoice/Receipt/Payment198; Jurnal All query126/dispatcher45/controller86/audit10/metadata20/revision24/client48; 7 suite audit non-live termasuk shutdown subprocess; 7 suite report; JS invoice6form/receipt/inline/installment. PHP lint25 file, syntax JS baru dan whitespace scoped PASS. Runtime ini terpisah dari aplikasi; hambatan subprocess awal diselesaikan dengan php.ini scratch yang memuat mbstring.
+- Review fresh-context tiga siklus: race nomor, edit/posting, mutasi company dan interoperabilitas alokasi ditangani serta diuji. Review terakhir tidak menemukan P1/P2 tambahan; bukti eksekusi concurrency berasal dari harness native, bukan review statis.
+- Inventaris file+hash dan endpoint/dependency: docs/invoicing-consulting-manifest.json. Laporan kontrak/keputusan/test/prasyarat: docs/invoicing-consulting-v3-2026-10-18.md. README invoice/penerimaan diberi penjelasan jalur aktif; tes historis v2 tidak diklaim sebagai bukti endpoint kini.
+- Prasyarat/risk tersisa: terapkan migration003 pada ERP sebelum rilis; lengkapi mapping master actual; semua tabel mutasi finance/GL harus InnoDB dan finance/accounting satu server dengan privilege cross-schema. Engine/config/master aplikasi belum diverifikasi dan tidak diubah. Posting menolak prasyarat yang tidak aman. Tidak browser sesuai instruksi user.
+- Berikutnya: rilis hanya runtime files manifest + migration sesuai prosedur user; jangan mengunggah scratch/runtime/tests. Tidak ada TODO implementasi. Runtime portable dan server disposable hanya dukungan pengujian; server dihentikan saat penutupan.
+- Checkpoint 2026-10-18 11:19 WIB — migration lokal atas permintaan user: `003_consulting_v3.sql` selesai diterapkan ke `db_sendigs_ss` pada service Docker mysql lokal (127.0.0.1:3307), bukan database disposable pengujian. Sebelum eksekusi dibuat backup skema+data tabel terdampak, dibaca ulang dan diverifikasi; salinan Windows di `C:/Users/Febry/AppData/Local/Temp/sendigs-local-migration-003-20261018-111906/affected-tables.backup.json`, hasil verifikasi di folder yang sama. Seluruh 11 statement berhasil; 9 kolom nullable, indeks unik TOP, 2 tabel pendukung, dan permission Configure khusus user7 terverifikasi. Fingerprint seluruh kolom lama dan jumlah baris invoice747/penerimaan679/detail715/sequence3 identik sebelum/sesudah. Mapping masih0: admin perlu mengisi mapping aktual sebelum penerbitan. Prasyarat GL posting lintas-schema belum diperiksa pada eksekusi migration ini. Tidak browser/commit/push/deployment remote. Manifest dan laporan diperbarui; kode runtime dan SQL tidak berubah.
+
+### Dropdown pencarian Pengaturan COA Invoicing — 2026-10-18
+
+- Selesai: seluruh select company sumber/pemilik jurnal dan sembilan role COA memakai Select2 lokal dengan pencarian selalu tersedia, pencocokan teks opsi (kode/nama akun), pesan hasil kosong bahasa Indonesia, dan lebar mengikuti form. Styling terbatas ke container halaman agar sesuai input existing.
+- File: application/modules/invoicing/views/consulting_settings.php; hash view di docs/invoicing-consulting-manifest.json diperbarui; checkpoint ini. Tidak mengubah data, endpoint, permission, atau alur submit mapping.
+- Validasi: PHP lint view dan Node syntax seluruh inline JavaScript PASS. Aset CSS/JS Select2 lokal tersedia; tidak memakai CDN. Tidak pengujian browser sesuai instruksi user; perilaku visual/interaksi browser belum diverifikasi. Tidak menambah suite untuk perubahan UI kecil ini.
+- Sisa: admin tetap perlu melengkapi mapping aktual sebelum penerbitan invoice baru. Tidak ada TODO implementasi dropdown; tidak commit/push.
+
+### Master COA WAPU lokal — 2026-10-18 11:44 WIB
+
+- Selesai atas permintaan user: tambah `1106-01-08 / Uang Muka PPN WAPU` (id577, tipeA, faktor1) dan `2104-01-09 / Hutang PPN WAPU` (id578, tipeP, faktor-1) pada `db_sendigs_ss_stm.coa_master`, service Docker mysql lokal. Nomor mengikuti urutan detail aktual kelompok1106-01 dan2104-01, tanpa placeholder XX. Scope accounting STM sesuai halaman company7 dan contoh STM-Sustain (company6); routing company1/6/7 menggunakan master yang sama.
+- Metadata level5, cabang101-A, periode master10/2025, tmpO, dan atribut lain mengikuti akun referensi sejenis1106-01-06/2104-01-07; saldoawal/debet/kredit/prev_month seluruhnya0. Tidak mengubah periode master existing atau membentuk saldo periode baru pada tabel coa.
+- Validasi: cek kode/nama belum ada di bawah WRITE lock; backup skema+299 baris master sebelum insert; dua akun terbaca kembali, seluruh saldo0, fingerprint299 baris existing identik; salinan backup Windows SHA256 cocok. Tabel master MyISAM, sehingga digunakan LOCK TABLES, bukan klaim rollback transaksi. Backup+verification: C:/Users/Febry/AppData/Local/Temp/sendigs-wapu-coa-20261018-114442/.
+- File berubah hanya docs/task-progress.md untuk pencatatan; tidak perubahan kode/schema, mapping invoicing, jurnal, atau master company lain. Tidak browser/commit/push. Akun tersedia melalui query master dropdown existing setelah Muat COA/refresh dengan owner STM.
+- Sisa: pilih kedua akun dan lengkapi seluruh mapping melalui Pengaturan COA Invoicing. Ditemukan tabel GL jurnal STM juga MyISAM; posting versi3 memerlukan InnoDB sesuai guard existing. Engine tidak diubah pada task pembuatan akun ini; penyesuaian prasyarat posting merupakan pekerjaan berikutnya bila diperlukan.
+
+### Master COA WAPU Sustain dan Vuca lokal — 2026-10-18 12:04 WIB
+
+- Selesai atas permintaan user: pada masing-masing `db_sendigs_ss_sustain.coa_master` dan `db_sendigs_ss_vuca.coa_master` ditambahkan `1106-01-08 / Uang Muka PPN WAPU` (id577, tipeA, faktor1) dan `2104-01-09 / Hutang PPN WAPU` (id578, tipeP, faktor-1). Nomor berikutnya tersedia pada kedua master, sesuai struktur akun pajak existing.
+- Metadata mengikuti akun referensi1106-01-06/2104-01-07 masing-masing database: cabang101-A, level5, tmpO, periode master10/2025; saldoawal/debet/kredit/prev_month0. Tidak membentuk saldo periodik pada tabel coa, mengubah mapping invoicing, jurnal, STM, atau engine.
+- Validasi langsung database lokal: pemeriksaan duplikasi kode/nama dan metadata referensi sebelum insert di bawah MyISAM WRITE lock; backup skema+data dibaca ulang; dua akun per database terbaca kembali dengan saldo0; fingerprint299 baris existing per database tetap identik. Backup Windows dan hasil verifikasi di C:/Users/Febry/AppData/Local/Temp/sendigs-wapu-sustain-vuca-20261018-120407/; checksum kedua backup cocok. Tidak klaim rollback transaksi untuk MyISAM. Tidak browser/commit/push.
+- File berubah hanya docs/task-progress.md sebagai checkpoint; kode aplikasi tidak berubah. Langkah berikutnya: Muat COA/refresh owner Sustain atau Vuca, pilih kedua akun dan lengkapi mapping. Prasyarat engine/privilege posting GL tidak diubah atau diverifikasi dalam task penambahan akun ini.
+
+### Prasyarat posting lokal — baseline 2026-10-18
+
+- Fase1 selesai: endpoint aktif Consulting_posting memakai finance transactional guard dan ledger same-server/InnoDB; invoice menulis finance kartu piutang + GL javh/jurnal/counter, receipt GL jarh/jurnal/counter. Server identity default/STM/Sustain/Vuca sama, root@% dan branch101 tersedia. Finance kartu piutang serta keempat tabel GL per schema masih MyISAM; jurnal.debet/kredit BIGINT berisiko kehilangan sen. Dependencies invoice/penerimaan lain diperiksa InnoDB. User mengotorisasi perbaikan lokal.
+- Fase2 aktif: persiapkan backup dan ALTER engine/precision, tanpa transaksi percobaan pada aplikasi. Fase3 disposable posting actual-schema dan fase4 dokumentasi belum selesai. Rencana appended pada implementation-plan.md. Mapping finance kini berisi satu baris milik user; tidak dimodifikasi.
+
+### Prasyarat posting lokal — penutupan 2026-10-18
+
+- Seluruh fase1–4 selesai. Finance tr_kartu_piutang dan GL javh/jarh/jurnal/pastibisa_tb_cabang pada STM/Sustain/Vuca (13tabel) kini InnoDB. Jurnal GL debit/kredit DECIMAL(22,2), nama company255, customer receipt255, keterangan kartu piutang350. Tidak mengubah data/counter, mapping pilihan user, master COA, credential/grant, SQL mode global, atau kode runtime aplikasi.
+- Backup skema+seluruh data dibuat sebelum ALTER, salinan dan checksum Windows cocok: C:/Users/Febry/AppData/Local/Temp/sendigs-posting-prerequisites-20261018-121439/. Semua nilai baris lama dan counter identik setelah perbaikan (normalisasi representasi BIGINT→DECIMAL saja). Ketiga accounting dan finance same-server; semua dependencies mutasi InnoDB; privilege global eksplisit mencakup SELECT/INSERT/UPDATE lintas-schema; branch101 tepat1/schema; tidak ditemukan trigger tambahan pada tabel mutasi posting.
+- Temuan penanganan: pemeriksa grant awal terlalu sempit (hanya ALL PRIVILEGES), sehingga berhenti setelah13ALTER sukses. Diperbaiki untuk daftar grant eksplisit MySQL; verifikasi terhadap backup awal tanpa ALTER ulang berhasil. Fixture test enum diperbaiki integer0→string'0' sesuai writer existing, bukan perubahan runtime.
+- Validasi native actual-schema disposable159 checks PASS: invoice3PPN×3ledger dan receipt PPh/admin×3ledger; sen akurat/balance/duplicate guard; kegagalan SQL nyata+commit untuk invoice/receipt tiapledger mengembalikan GLheader/jurnal/counter/kartu/status draft tepat. Recorder audit satu event sukses menggunakan sink uji. Seluruh schema codex_posting dihapus. Tidak ada invoice/jurnal percobaan dibuat pada aplikasi; PHP lint2 script PASS; tidak browser. Suite historis tidak diulang karena kode tidak berubah.
+- File dibuat: docs/invoicing-local-posting-2026-10-18.md, scratch/local_posting_prerequisites.php, scratch/check_local_posting_clones.php (CLI-only, dukungan lokal bukan runtime rilis). File diperbarui: docs/implementation-plan.md, docs/task-progress.md, docs/invoicing-consulting-manifest.json. Laporan berisi rincian data/backup/batas pengujian dan status mapping.
+- Prasyarat teknis posting lokal selesai untuk3ledger. Mapping user pada saat pemeriksaan source/owner1/3/6/7 tersedia; source4Vuca belum ada dan perlu diisi user bila dipakai jalur reguler. Admin7 mempunyai Jurnal_All.Manage yang diterima guard posting. Jalur Vuca khusus tetap existing. Tidak commit/push/deployment remote; backup Temp perlu diarsip bila ingin disimpan lama.
+
+### UI invoicing — fase1 aktif 2026-10-18
+
+- User memilih antislop during; core+UI skill dibaca, DESIGN.md menjadi sumber identitas. Scope/rationale/dials dan fase dicatat pada implementation-plan.md. Tampilan aktif grounded pada index/consulting_invoice/consulting_settings dan event/endpoint DataTables existing.
+- Fase1 aktif: stylesheet scoped dan daftar. Fase2 form/settings dan fase3 validasi belum selesai. Pertahankan seluruh perubahan task lain; tidak mengubah shell, query, permission, formula, data, atau DB. Tidak browser sesuai instruksi user.
+
+- UI fase1: stylesheet assets/css/invoicing.css dibuat scoped invoice-workspace; index memakai header/toolbar/tab button aria+keyboard, tabel scroll, bahasa/status DataTables. PHP lint index PASS. Endpoint/kolom request existing dipertahankan; create nonkons mengikuti permission Add yang sudah tersedia. Fase2 aktif form/detail dan COA settings; validasi render/client menutup fase3.
+
+### UI invoicing: penutupan 2026-10-18
+
+- Fase1–3 selesai implementasi dan validasi non-browser. Antislop mode during pilihan sesi; Design Read/dials ENERGY2/RHYTHM2/MOTION1 dan alasan visual tercatat sebelum implementasi. Daftar kini header/toolbar/tab keyboard/table scroll/label aksi/state request; form konsultasi v3 kini customer-dokumen/TOP/akun/ringkasan gross-vs-receivable/jurnal/aksi; settings dua kelompok mapping dengan search Select2 dan konteks company.
+- Bug preview ditangani dalam scope UI: hapus pilihan PPN/akun mengosongkan jurnal dan angka balancing lama; status simpan mempertahankan pesan backend, menolak submit pending berulang, menangani malformed response. Formula tetap calculator existing; field, fingerprint, CSRF, action endpoint dan escaping dipertahankan.
+- Runtime files: application/modules/invoicing/views/index.php, consulting_invoice.php, consulting_settings.php; assets/css/invoicing.css dan assets/js/invoicing/consulting-form.js baru. Tes baru Ui_render_test.php, Ui_client_test.js, Ui_list_client_test.js. Dokumentasi: implementation-plan.md, task-progress.md, invoicing-consulting-manifest.json, laporan baru docs/invoicing-ui-2026-10-18.md. Scratch hanya utilitas ekspor script/check CSS/update manifest, bukan runtime rilis.
+- Validasi PASS: render203 checks; form client38; list client28; kalkulasi72; parity PHP/JS35; PHP lint tiga view+render test, syntax seluruh script inline hasil render/external; stylesheet116 scoped blocks dan9 pasangan warna minimum4,99:1; whitespace scoped/new files. Hash dependencies lain pada manifest tetap sama. Sink client test berupa doubles; bukan browser/DB endpoint test.
+- Delivery Gate antislop dilaporkan per item dalam laporan UI, dengan pembatasan source/client untuk responsive/keyboard dan pengecualian browser sesuai instruksi user. Tidak mengklaim screenshot/click-through/console browser. Tidak menjalankan DB303 lagi karena writer/schema/controller tidak berubah.
+- Tidak mengubah database, controller/model/backend, shell, cetak resmi, atau form khusus Vuca/nonkons/histori. Tidak commit/push. Risiko tersisa: visual viewport dan interaksi plugin di browser belum diverifikasi; DataTables/SweetAlert CDN existing dipertahankan. Tidak ada TODO implementasi untuk scope UI utama; refresh aplikasi untuk memakai aset filemtime terbaru.
+
+### Koreksi tombol aksi invoicing: 2026-10-18
+
+- Sesuai screenshot dan permintaan user, tombol pada kolom Aksi kembali ikon kecil tanpa label visual tambahan; warna asli kelas AdminLTE (warning/primary/success/info/default) dipakai kembali. Ukuran desktop btn-sm dan radius10 seperti style sebelumnya; tooltip title dan aria-label tetap. Teks tombol toolbar/form dan desain daftar lainnya tidak diubah.
+- File: application/modules/invoicing/views/index.php, assets/css/invoicing.css, docs/invoicing-consulting-manifest.json (hash), docs/invoicing-ui-2026-10-18.md dan checkpoint ini. Tidak backend/DB/endpoint berubah.
+- Validasi: PHP lint index PASS; list client28 checks PASS; stylesheet114 blocks scoped/balanced dan9 pasangan warna workspace PASS; hash dependencies lain tetap. Warna tombol aksi original mengikuti pilihan user dan tidak termasuk pemeriksaan9 pasangan workspace. Tidak browser sesuai instruksi user; tidak commit/push. Tidak ada TODO implementasi.
+
+### Publikasi invoicing ke GitHub development: 2026-10-18
+
+- Selesai atas instruksi push user: commit913c336d51d0ce38b2c917a7f3dcce72fb560539, feat(invoicing): add consulting invoices with COA mapping and refreshed UI; push normal origin HEAD:refs/heads/development berhasil. ls-remote mengonfirmasi hash remote identik, ahead/behind0/0; main tidak ditargetkan.
+- Scope40file sesuai allowlist manifest: fitur reguler v3/migration/mapping/penerimaan/posting/report/UI/tombol + tests/README/laporan. Tidak mengikutsertakan task lain, konfigurasi lokal, database/backup, uploaded files, scratch/runtime, shared multi-task docs, atau Jurnal All feature. Sharedfile integrasi invoice/penerimaan memang termasuk scope. File Legacy_posting Jurnal All dipindahkan dari daftar tes publikasi menjadi referensi validasi lokal di manifest.
+- Pemeriksaan versi staging independen: snapshot80file, render203/client38+28/calculation72/parity35=376checks PASS, lint25PHP PASS, staging whitespace dan allowlist tepat. Publikasi allowlist kini bersih, index tidak menyisakan staging. Perubahan task lain tetap ada di working tree. Sisa index.lock kosong sejak09:43 dibersihkan setelah memverifikasi hanya daemon fsmonitor, bukan writer aktif.
+- Laporan commit: docs/invoicing-development-publication-2026-10-18.md. Tidak browser/deployment/DB mutation. Database/master WAPU/mapping/engine lokal tidak ikut Git dan prasyarat lingkungan lain tetap harus dipenuhi.
+- GitHub push menampilkan pemberitahuan6 vulnerabilities pada default branch (4high/2moderate), belum ditangani karena di luar scope publikasi ini. Tidak ada blocker push atau TODO publikasi tersisa.
+
+### Company SPK/owner: 2026-10-18
+- Aktif: label/dropdown/policy owner canonical diterapkan pada controller/settings/save_mapping/mapping. Owner legacy tetap didukung routing snapshot historis, tetapi mapping invalid tidak dipakai menerbitkan invoice baru. Validasi dan dokumentasi belum selesai; tidak mengubah data aplikasi.
+
+### Company SPK/pemilik jurnal: selesai 2026-10-18
+
+- Label Company sumber menjadi Company SPK. Owner dropdown memakai daftar eksplisit ID7STM/3Sustain/4Vuca; SPK tetap seluruh company termasuk gabungan. Policy backend bersama menolak gabungan/Calibration/unknown pada GET, POST save_mapping dan pembacaan mapping untuk penerbitan baru. Nama field API, status/msg, fingerprint, permission, pencarian tetap.
+- Mapping lama invalid tidak diubah otomatis: default settings owner dikosongkan dengan warning agar admin dapat memuat owner valid dan simpan ulang. Invoice baru ditolak memakai mapping invalid. Snapshot invoice terbit dan routing historical accounting_group dipertahankan. Tidak aturan pasangan otomatis atau konversi histori/data aplikasi.
+- File runtime3: controllers/Invoicing.php, libraries/Invoice_consulting_service.php, views/consulting_settings.php dalam modul invoicing. Tes2: Ui_render_test.php, Consulting_integration_test.php. Manifest/hash dan docs/invoicing-journal-owner-policy-2026-10-18.md, implementation-plan.md serta checkpoint diperbarui.
+- PASS: native disposable341 checks (GET/POST invalid, ketiga owner valid, mapping lama repair/no silent conversion, invoice/receipt/posting/snapshot/fault/concurrency); render208 checks; client38+28; PHP lint5; scoped whitespace. Fixture owner7 sesuai canonical; tidak menurunkan assertion lama. Server33319 hanya pengujian terpisah, sudah dihentikan. Akses socket sandbox awal ditolak lalu akses loopback yang sesuai berhasil; tidak DB aplikasi/browser.
+- Tidak commit/push setelah913c336d; tidak perubahan schema/data. Sisa untuk admin: pilih ulang owner mapping lama noncanonical sebelum menerbitkan invoice baru. Tidak TODO implementasi.
+
+### Sidebar search: fase1 aktif 2026-10-18
+- Grounding: header/footer admin aktif belum memuat search; assets/js/sidebar-search.js dan CSS executive-navigation ada tetapi belum terhubung. Implementasi hanya komponen search scoped, tidak mengaktifkan redesign shell. Rencana appended; runtime dan validasi belum selesai.
+
+### Sidebar search: penutupan 2026-10-18
+
+- Fase1–3 selesai. Pencarian global sebelum Dashboard pada header admin aktif; CSS/JS lokal filemtime, script sesudah AdminLTE. Tidak mengaktifkan executive-navigation/navigation-shell lain. Input hidden sampai init, mini button memakai toggle existing. Label/help/focus/role status tersedia.
+- Native DOM filter50ms case-insensitive/space normalization, submenu+ancestor/grup descendant, hidden entries tidak diungkap. Tidak network/API/DB, highlight atau penggantian markup. Snapshot display/menu-open saat mulai search dipulihkan pada clear/Escape; active/href/icon/event asli tetap; query tidak dipersist. Init guard mencegah listener ganda.
+- Runtime4: themes/admin/views/header.php, footer.php, assets/css/sidebar-search.css, assets/js/sidebar-search.js. Tes2: themes/admin/tests/Sidebar_search_client_test.js dan Sidebar_search_render_test.php. Dokumentasi: implementation-plan.md, checkpoint ini, docs/sidebar-search-2026-10-18.md dan sidebar-search-manifest.json. Scratch hanya pendukung pemeriksaan CSS/manifest.
+- PASS: client55, render60 (module/permission fixtures), PHP lint3, syntax runtime/testJS; CSS16 scoped/balanced dan6 contrastpairs threshold4,5teks/3kontrol. Scoped whitespace PASS; semua hash invoicing tetap identik sehingga policy owner/pekerjaan lain dipertahankan. Assertion fixture jumlahnode memakai baseline aktual setelah hitungan manual awal keliru, tanpa perubahan runtime untuk menyesuaikan tes.
+- Antislop during/dials ENERGY1/RHYTHM1/MOTION1 dan gate dilaporkan pada laporan search. Tidak browser sesuai instruksi user; tidak klaim click-through/visual viewport/screenreader aktual. Tidak DB/commit/push/deploy. Tidak TODO implementasi; menu dinamis setelah init di luar scope karena menu existing dibentuk server per halaman.
+
+### Publikasi sidebar+owner dan compact table: 2026-10-18
+- Push dua fitur sebelumnya selesai: b127c8e19d1f7bed84ac03533b27c503f3837a47 ke origin/development,16file; hash remote sama, tanpa main/tasklain/DB. Native341 terdokumentasi, hash sourceverify dan rerender owner208/sidebar60+client55 PASS sebelumcommit.
+- Aktif: tabel konsultasi10→7kolom sesuai rencana appended. Compact belum dipush; seluruh backend/dokumen lainnya dipertahankan.
+
+### Tabel konsultasi compact: selesai 2026-10-18
+
+- 10→7kolom: No/Dokumen(invoice+SPK)/Customer&Project/Company/Tim(PL+Sales)/Status/Aksi. Semua nilai lengkap, tidak clamp; ikon+warna aksi existing tetap. CSS scoped min980px/fixed layout/padding10px/teks bertingkat; tabel nonkons tetap10kolom. Tidak backend/query/Excel/DB berubah.
+- Renderer escape teks grouped/company dan non-displaytext mempertahankan field. Backend urutan sts/id tetap, orderingclient dimatikan karena backend tidak menangani order request. State10kolom lama ditolak, state7diterima; filter/pagination/search kontrak tetap.
+- Files: invoicing/views/index.php, assets/css/invoicing.css, tests/Ui_render_test.php dan Ui_list_client_test.js, docs/invoicing-consulting-manifest.json; laporan docs/invoicing-compact-table-2026-10-18.md, plan/checkpoint diperbarui.
+- PASS: render208/listclient45/formclient38; lint2PHP+syntaxJS; CSS124blocks scoped/seimbang dan9contrastpairs min4,99; whitespace. Hash backend/owner/sidebar identik. Tidak browser, tidak rerun suite DB341 atau sidebar55/60 karena dependency tidak berubah.
+- Push permintaan sebelumnya sudah selesai b127c8e19d1f7bed84ac03533b27c503f3837a47,16file search+owner, remote development identik dan main tidak ditarget. Compact sesudahnya masih lokal, belumcommit/push. Tidak TODO implementasi; batas visual viewport belum diuji dan stateDataTables10kolom akan reset pada kunjungan pertama.
+
+### Notifikasi simpan invoicing: aktif 2026-10-18
+
+- Grounding selesai: konsultasi v3 add/edit memakai consulting-form.js; COA settings handler inline. Form legacy/Vuca/nonkons telah memakai Swal2. Tidak mengubah backend/audit/transaksi; sukses UI tetap berdasarkan respons setelah commit server existing.
+- Implementasi helper bersama dan asset Swal2 lokal dimulai. Mode antislop during dari pilihan sesi tetap berlaku; tidak redesign/konfirmasi tambahan. Validasi dan manifest belum selesai.
+
+### Notifikasi simpan invoicing: selesai 2026-10-18
+
+- Fase1–3 selesai: helper bersama save-feedback.js, consulting-form.js dan dua view consulting_invoice/settings memakai Swal2 lokal11.23.0. Loading terkunci; sukses status1 lalu OK→navigasi/reload; server error teks aman; network unconfirmed; inline fallback; duplicate lock. Native validasi dan backend/audit/commit response existing tetap. Legacy/Vuca/nonkons sudah Swal2, tidak disentuh.
+- PASS: feedback48/form43/render228/list45; PHP lint3, syntaxJS helper/form/test/inline render, scoped whitespace. Manifest hash file invoicing lain dan sidebar tetap. Laporan docs/invoicing-save-feedback-2026-10-18.md; manifest/plan/checkpoint diperbarui.
+- Tidak browser sesuai user, tidak DB/backend/schema/commit/push/deploy. DB341/sidebar55+60 terdahulu tidak diulang karena dependensi identik. Compact table dan perubahan task lain tetap lokal. Tidak TODO implementasi; fokus/animasi pada browser belum diverifikasi.
+
+
+### Pemulihan conflict development: selesai lokal 2026-10-19
+
+- Fase 1 (fetch, preservasi, pull), fase 2 (resolusi 160 blok/53 file), fase 3 (pemulihan kerja lokal, review, validasi) selesai. Tidak ada fase implementasi aktif/pending.
+- HEAD development dan origin/development 2110bbb4; marker berasal commit remote `conflict`. Resolusi belum commit/push. Stash f316547ec40cae116f82b35c8364c9fad3ab8aac tetap disimpan; tracked digabung tiga arah, untracked dipulihkan, fixture Legacy_posting lokal dipertahankan.
+- File task: 53 file pada conflict-recovery-manifest-2026-10-19.json; laporan conflict-recovery-2026-10-19.md; implementation-plan.md dan checkpoint ini. Pekerjaan lokal lama tetap ada dan tidak dipublikasikan.
+- Keputusan: pertahankan fitur consulting v3/lampiran/export/petty cash, guard POST/permission dan commit jurnal; gabungkan riwayat dokumen. Tidak refactor/ubah schema/DB aplikasi.
+- PASS 31 suite (termasuk audit, native commit/routing/failure, XLSX roundtrip, kasbon, invoice, penerimaan, sidebar), lint57 PHP/syntax7 JS. Marker tracked application/assets/docs/themes bersih; index tidak unmerged; whitespace diperiksa. Tes temp diarahkan sesuai kebutuhan runtime; kegagalan awal sudah ditelusuri dan semua final lulus.
+- Batas: tanpa browser, suite database, atau akses server. Berikutnya: pisahkan patch resolusi dari pekerjaan lokal lama untuk publikasi bila diminta; cek kondisi merge di server sebelum deployment. Detail hasil dan hash ada pada laporan/manifest task.
+
+
+### Runtime jurnal_all setelah pull: terverifikasi 2026-10-19
+
+- Fase diagnosis/validasi/dokumentasi selesai; tidak fase kode aktif/pending. Root cause log: DBCNL db_consultant_new_dev dan DBACC db_sendigs_gl_ss_dev dari constants remote tidak cocok dengan database lokal tanpa _dev.
+- Saat pemeriksaan lanjutan constants.php sudah diubah menjadi nama lokal (mtime09:11:51); perubahan dipertahankan tanpa overwrite. Tujuh nilai alias berbeda dari remote; sembilan alias cocok dengan tujuh grup koneksi. Tidak mengubah kredensial/model/controller/schema/data bisnis.
+- File: kondisi akhir application/config/constants.php; scratch/jurnal-all-config-readonly-check.php; laporan docs/jurnal-all-runtime-config-fix-2026-10-19.md; plan/checkpoint ini.
+- PASS runtime Docker PHP7.4: sembilan alias cocok, tujuh database tersedia, options/listing kelima tab (INV39/RCV41/PAY374/EXP26/PCS80 kelompok) dan summary5tab melalui transaksi READ ONLY + ROLLBACK. Query/controller/dispatcher/audit/client315 assertions PASS; lint2 dan scoped whitespace PASS.
+- Penyebab lolos verifikasi sebelumnya: suite fixture tidak memakai constants runtime lokal. Script pemeriksaan sekarang memakai konfigurasi dan query nyata. Native Windows tidak resolve hostname Docker mysql; docker exec berhasil setelah akses pipe disetujui.
+- Tidak browser/posting/migrasi/commit/push/deploy. Tidak TODO kode error ini; refresh halaman untuk memakai konfigurasi terkini. Deployment harus menyelaraskan nama database dengan konfigurasi server masing-masing.
+
+
+### Publikasi konflik dengan pengecualian - 2026-10-19
+
+User mengotorisasi commit/push development, mengecualikan config.php, constants.php dan seluruh modul invoicing. Kandidat diambil dari snapshot resolusi sebelum pemulihan kerja lokal; tidak menyertakan pekerjaan lokal lama atau aset invoicing. Fase1 pemilahan selesai; fase2 validasi snapshot commit aktif; fase3 commit/push dan verifikasi SHA pending. Kandidat46filekode+2dokumen+1fixturependukung; laporan publikasi akan ditambahkan. Snapshot/hashes lokal tetap untuk memastikan tidak ada file pengguna tertimpa. Tidak browser/DB/deploy.
+
+
+### Publikasi konflik development: selesai 2026-10-19
+
+- Commit/push sukses: 2d4ff08b8f14e6ef66bcd6d952bcfa5ebf78c3fd (`fix: resolve committed merge conflicts outside invoicing`); ls-remote origin refs/heads/development dan tracking origin/development sama dengan HEAD. Branch main tidak ditarget; tanpa force.
+- Tepat50file:46resolusi kode/aset,2dokumen gabungan,1fixture native posting,1laporan publikasi. Snapshot sebelum pemulihan kerja lokal dipakai supaya pekerjaan lokal lama tidak terbawa; seluruh hash file lokal lama tetap identik selain append dokumentasi task.
+- EXCLUDED terverifikasi dari diff commit: semua config.php/constants.php, seluruh application/modules/invoicing, aset/manifest/dokumentasi khusus invoicing. Isi lokal tetap ada; index kosong setelah commit.
+- Validasi kandidat commit terpisah:44syntax PASS,18/19suite PASS; legacy_vuca_preview_test FAIL karena controller invoicing di HEADremote masih marker dan user mengecualikannya. Tidak mengubah/skip assertion. Kelima file marker remote yang dikecualikan tetap ada (config.php dan4invoicing); bukan klaim resolusi seluruh repository.
+- Fase pemilahan/validasi/commit/push/verifikasi selesai; tidak ada publikasi aktif. Bukti docs/conflict-publication-2026-10-19.md dan scratch/conflict-publication-20261019. Tidak browser/DB/deploy. Sisa: perbaikan invoicing/config menunggu otorisasi terpisah; kondisi merge conflict yang masih menggantung di server harus diperiksa sebelum pull ulang.
+
+---
+
+### Penyelarasan No Payment pada View Payment New — Selesai 2026-10-19
+
+- Masalah: Pada halaman `pembayaran_material/view_payment_new/{id_payment}`, badge **No Payment** menampilkan `$header->id` (contoh: `BK--1026-0074`, ID baris tabel `payment_approve`), berbeda dengan judul header **Detail Payment** yang menampilkan `$no_payment_paid` (nomor payment voucher / `id_payment`, contoh: `BK--1026-0003`).
+- Perbaikan: Mengembalikan tampilan badge "No Payment" pada `application/modules/pembayaran_material/views/view_payment_new.php` (baris 78) menjadi `<?= $no_payment_paid ?>`.
+- File yang dimodifikasi:
+  1. `application/modules/pembayaran_material/views/view_payment_new.php`
+  2. `docs/task-progress.md`
+- Pengujian:
+  - Docker PHP 7.4 CLI: `Batch1_test.php` (246 scenarios PASS)
+  - Docker PHP 7.4 CLI: `Batch2_test.php` (551 scenarios PASS)
+- Sisa risiko / TODO: Tidak ada risiko fungsional/backend karena murni perubahan presentasi tampilan di view blade/PHP.
+
+---
+
+### Penyelarasan Nomor Transaksi Jurnal Pembayaran dengan Nomor Voucher (BK) — Selesai 2026-10-19
+
+- Masalah: Pada modul `jurnal_all` tab Pembayaran (`PAY`) dan Refill/Hutang Petty Cash (`PCS`), kolom **No. Transaksi** menampilkan `tr_jurnal.no_transaksi` yang berisi ID Approval (`payment_approve.id`, contoh: `BK--1026-0074` atau deretan ID koma jika multi-dokumen), berbeda dengan halaman **Payment List** dan **Detail Payment** yang menampilkan Nomor Voucher Pembayaran (`BK--1026-0003`).
+- Analisis Arsitektur:
+  1. ID Approval (`BK--1026-0074`) digenerate saat pengajuan disetujui di `approval_request_payment/models/Approval_request_payment_model.php` (`generate_id_payment()`).
+  2. Nomor Voucher Pembayaran (`BK--1026-0003`) digenerate saat kasir memproses bayar di `pembayaran_material/models/Pembayaran_material_model.php` (`generate_id_payment_paid()`).
+  3. Keduanya menggunakan prefix `"BK-"` sehingga membingungkan user jika nomor yang tampil berbeda.
+- Keputusan Teknis (Disepakati via interview grill-me):
+  1. Tetap pertahankan `tr_jurnal.no_transaksi` sebagai kunci relasi dan posting native (mencegah breaking change pada data lama).
+  2. Memetakan Nomor Voucher Pembayaran (`id_payment`) ke `display_no_transaksi` pada `Jurnal_all_model::enrich()` untuk tab `PAY` dan `PCS` (Refill/Hutang). Jika belum terbit voucher, otomatis fallback ke `no_transaksi`.
+  3. Mendukung pencarian menyeluruh pada search bar: Nomor Voucher (`BK--1026-0003`), No Dokumen (`RPC-2026-0033`), maupun ID Approval (`BK--1026-0074`).
+- File yang dimodifikasi:
+  1. `application/modules/jurnal_all/models/Jurnal_all_model.php`
+  2. `application/modules/jurnal_all/tests/Query_test.php`
+  3. `application/modules/jurnal_all/README.md`
+  4. `docs/task-progress.md`
+- Pengujian:
+  - Docker PHP 7.4 CLI: `Query_test.php` (129 assertions PASS, termasuk verifikasi `display_no_transaksi` voucher dan multi-identifier search)
+  - Docker PHP 7.4 CLI: `Controller_test.php` (86 assertions PASS)
+  - Docker PHP 7.4 CLI: `Dispatcher_test.php` (45 assertions PASS)
+  - Docker PHP 7.4 CLI: `Petty_posting_test.php` (113 assertions PASS)
+  - Docker PHP 7.4 CLI: `Revision_test.php` (24 assertions PASS)
+  - Docker PHP 7.4 CLI: `Audit_test.php` (10 assertions PASS)
+  - Docker PHP 7.4 CLI: `Metadata_test.php` (20 assertions PASS)
+  - Docker PHP 7.4 CLI: `Legacy_posting_test.php` (198 assertions PASS)
+- Sisa risiko / TODO: Tidak ada risiko regression; nomor tampil kini konsisten `BK--1026-0003` di seluruh menu (Payment List, Detail Payment, dan Jurnal Pembayaran).
+
+
+
+
+---
+
+### Pengujian Komprehensif Modul Invoicing — Selesai 2026-10-19
+
+- **Tujuan**: Menjalankan, memverifikasi, dan mengaudit suite pengujian komprehensif untuk modul invoicing (kalkulasi consulting v3, parity JS/PHP, UI render & interaction, dan isolasi integrasi database).
+- **Hasil Audit**: **VICTORY CONFIRMED** oleh auditor independen `teamwork_preview_victory_auditor`.
+- **Rincian Pengujian**:
+  1. `Consulting_calculation_test.php`: 99 checks PASS (exit code 0) — DPP ratio 11/12, PPN 12%, tax treatment PKP/WAPU/KB, pembulatan sen, dan balancing debit/kredit jurnal.
+  2. `Consulting_calculation_test.js`: 89 checks PASS (exit code 0) — Paritas kalkulasi integer-cents dan penerimaan cicilan antara PHP dan JS.
+  3. `Ui_render_test.php`: 254 checks PASS (exit code 0) — Validasi render mode add/edit/view, sanitasi XSS kwitansi, dan pemetaan owner company SPK.
+  4. `Ui_client_test.js`: 43 checks PASS (exit code 0) — Dynamic form bindings, event listener perpajakan, dan kalkulasi dinamis client.
+  5. `Ui_list_client_test.js`: 53 checks PASS (exit code 0) — Interaksi DataTables, filter status, dan penanganan error.
+  6. `Save_feedback_client_test.js`: 48 checks PASS (exit code 0) — State transisi simpan, feedback banner, dan alert toast.
+  7. `Consulting_integration_test.php`: 341 checks PASS (exit code 0) — Siklus transaksi penuh, konkurensi, rollback guard, dan penomoran sekuensial pada database MariaDB disposable (port 33319).
+- **Total Checks**: **977 checks PASS bersih (exit code 0)** across core & auxiliary suites.
+- **Keamanan Data Operasional**: Basis data operasional `db_sendigs_ss` terbukti bersih dan tidak mengalami polusi data uji (baseline `tr_invoicing` tetap tepat 748 baris).
+- **Perbaikan / Penguatan yang Dilakukan**:
+  - Pencegahan XSS pada `print_kwitansi.php` dan `print_kwitansi_vuca.php` menggunakan escaping `htmlspecialchars` UTF-8 dan pembersihan konflik git lama.
+  - Penambahan guard validasi ketat `Number.isFinite()` pada `assets/js/invoicing/consulting.js` untuk memblokir input non-numerik dan `NaN`.
+  - Penambahan pendeteksi otomatis binary PHP lokal (`scratch/runtime/php74/php.exe`) pada runner Node.js (`Consulting_calculation_test.js`).
+  - Penanganan lifecycle shutdown/bootstrap aman pada MariaDB disposable daemon (port 33319).
+- **Sisa risiko / TODO**: Tidak ada risiko regresi. Pengujian dijalankan secara headless CLI/Node.js sesuai instruksi (tanpa otomasi browser fisik).

@@ -702,13 +702,19 @@ class Jurnal_all_model extends BF_Model
             if ($row['source']==='PAY'||($row['source']==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) {
                 $matches=[];
                 foreach (array_unique(array_merge([$row['no_transaksi']],array_map('trim',explode(',',$row['no_transaksi'])))) as $key) foreach ($paymentMap[$key] ?? [] as $p) $matches[$p['id']]=$p;
-                $docs=[]; $categories=[];
+                $docs=[]; $categories=[]; $vouchers=[];
                 foreach ($matches as $p) {
                     $docs[]=$p['no_doc'];
+                    $voucher=trim((string)($p['id_payment'] ?? ''));
+                    if ($voucher!=='') $vouchers[]=$voucher;
                     $category=['kasbon'=>'Kasbon','transport'=>'Transport','transportasi'=>'Transport','periodik'=>'Periodik','expense'=>'Expense','refill_pettycash'=>'Refill Petty Cash','petty_cash_hutang'=>'Payment Hutang Petty Cash'][$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
                     if ($category!=='') $categories[]=$category;
                 }
                 if ($docs) $row['no_referensi']=implode(', ',array_unique($docs));
+                if ($vouchers) {
+                    $uniqueVouchers=array_values(array_unique($vouchers));
+                    $row['display_no_transaksi']=implode(', ',$uniqueVouchers);
+                }
                 if ($categories) $row['categories']=array_values(array_unique($categories));
                 $row['payment_available']=(bool)$matches;
                 $row['petty_payment_eligible']=false;

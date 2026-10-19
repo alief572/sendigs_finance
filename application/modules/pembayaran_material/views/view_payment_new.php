@@ -75,7 +75,7 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 							<th width="35%" style="border: none; padding: 6px 4px; color: #495057;">No Payment</th>
 							<td width="5%" style="border: none; padding: 6px 0;">:</td>
 							<td style="border: none; padding: 6px 4px;">
-								<span class="badge bg-navy" style="font-size: 13px; padding: 6px 12px;"><?= $header->id ?></span>
+								<span class="badge bg-navy" style="font-size: 13px; padding: 6px 12px;"><?= $no_payment_paid ?></span>
 							</td>
 						</tr>
 						<tr>
