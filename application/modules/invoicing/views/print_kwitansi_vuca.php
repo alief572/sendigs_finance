@@ -118,6 +118,9 @@
     </tr>
 </table>
 
+<?php
+$escape = function($val) { return htmlspecialchars((string)$val, ENT_QUOTES, 'UTF-8'); };
+?>
 <!-- Title + Invoice Info Section -->
 <table class="title-section">
     <tr>
@@ -129,12 +132,12 @@
                 <tr>
                     <td>Nomor Invoice</td>
                     <td style="width: 10px; text-align: center;">:</td>
-                    <td><?= $data_invoice->no_invoice ?></td>
+                    <td><?= $escape($data_invoice->no_invoice) ?></td>
                 </tr>
                 <tr>
                     <td>Nomor PO</td>
                     <td style="width: 10px; text-align: center;">:</td>
-                    <td><?= (!empty($data_invoice->no_po)) ? $data_invoice->no_po : '' ?></td>
+                    <td><?= (!empty($data_invoice->no_po)) ? $escape($data_invoice->no_po) : '' ?></td>
                 </tr>
             </table>
         </td>
@@ -145,7 +148,7 @@
 <table class="body-table">
     <tr>
         <td class="label">Sudah Terima Dari</td>
-        <td><?= $data_invoice->nm_customer ?></td>
+        <td><?= $escape($data_invoice->nm_customer) ?></td>
     </tr>
     <tr>
         <td class="label">Banyak Uang</td>
@@ -153,7 +156,7 @@
     </tr>
     <tr>
         <td class="label">Untuk Pembayaran</td>
-        <td><?= $data_invoice->print_keterangan ?></td>
+        <td><?= nl2br($escape($data_invoice->print_keterangan)) ?></td>
     </tr>
 </table>
 

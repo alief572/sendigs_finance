@@ -67,7 +67,8 @@ class Invoice_consulting
 
     public static function receipt($balance, $cash, $admin, $pph)
     {
-        if (min($balance, $cash, $admin, $pph) < 0 || $cash+$admin+$pph <= 0 || $cash+$admin+$pph > $balance)
+        if (!is_numeric($balance) || !is_numeric($cash) || !is_numeric($admin) || !is_numeric($pph)
+            || min($balance, $cash, $admin, $pph) < 0 || $cash+$admin+$pph <= 0 || $cash+$admin+$pph > $balance)
             throw new InvalidArgumentException('Penerimaan, admin, dan PPh harus nonnegatif dan tidak melebihi saldo piutang.');
         return array('reduction'=>$cash+$admin+$pph, 'remaining'=>$balance-$cash-$admin-$pph, 'adjustment'=>0);
     }
@@ -83,13 +84,13 @@ class Invoice_consulting
 
     public static function receipt_journal($snapshot)
     {
-        if(!is_array($snapshot) || empty($snapshot['owner']['id']) || !isset($snapshot['cash'],$snapshot['admin'],$snapshot['pph'],$snapshot['adjustment'],$snapshot['reduction'],$snapshot['date'],$snapshot['invoice_no']))
+        if(!is_array($snapshot) || empty($snapshot['owner']['id']) || empty($snapshot['owner']['nm_company']) || !isset($snapshot['cash'],$snapshot['admin'],$snapshot['pph'],$snapshot['adjustment'],$snapshot['reduction'],$snapshot['date'],$snapshot['invoice_no']))
             throw new RuntimeException('Snapshot jurnal penerimaan tidak lengkap.');
         $lines=array();
         foreach(array(array('bank',$snapshot['cash'],0),array('admin',$snapshot['admin'],0),array('pph',$snapshot['pph'],$snapshot['adjustment']),array('receivable',0,$snapshot['reduction']))as $line){
             if(!$line[1]&&!$line[2])continue;
             $account=$snapshot['accounts'][$line[0]]??null;
-            if(!$account || min($line[1],$line[2])<0)throw new RuntimeException('Snapshot akun penerimaan tidak lengkap.');
+            if(!$account || empty($account['code']) || empty($account['name']) || min($line[1],$line[2])<0)throw new RuntimeException('Snapshot akun penerimaan tidak lengkap.');
             $lines[]=array('date'=>$snapshot['date'],'owner'=>(string)$snapshot['owner']['id'],'company'=>$snapshot['owner']['nm_company'],
                 'coa'=>$account['code'],'name'=>$account['name'],'debit'=>$line[1],'credit'=>$line[2],'description'=>$account['name'].' - '.$snapshot['invoice_no']);
         }

@@ -28,6 +28,8 @@ foreach(['add','edit','view'] as $mode)foreach(['PKP','WAPU','KB'] as $tax) {
     foreach(['sales','other','ppn','gross','receivable'] as $key)verifyUi($xpath->query('//*[@data-total="'.$key.'"]')->item(0)->textContent===number_format($totals[$key]/100,2),'Saved summary '.$mode.' '.$tax.' '.$key);
     verifyUi($xpath->query('//*[@id="consulting-save"]')->length===($mode==='view'?0:1),'Read-only save unavailable');
     verifyUi($xpath->query('//script[contains(@src,"consulting-form.js")]')->length===($mode==='view'?0:1),'Client only on editable forms');
+    verifyUi($xpath->query('//script[contains(@src,"assets/dist/sweetalert2.min.js")]')->length===($mode==='view'?0:1),'Local SweetAlert2 only on editable forms');
+    verifyUi($xpath->query('//script[contains(@src,"save-feedback.js")]')->length===($mode==='view'?0:1),'Save feedback wired on add/edit');
     verifyUi($xpath->query('//*[@id="consulting-tax"]/@disabled')->length===($mode==='view'?1:0),'Tax disabled on view');
     verifyUi($xpath->query('//*[@id="consulting-po"]/@readonly')->length===($mode==='view'?1:0),'PO read-only on view');
     verifyUi($xpath->query('//*[@id="consulting-journals"]//td[@colspan="7"]')->length===1,'Preview empty state spans columns');
@@ -47,6 +49,8 @@ verifyUi($xpath->query('//*[@id="consulting-settings"]//select/option[@selected]
 verifyUi($xpath->query('//*[@id="consulting-settings"]//fieldset')->length===2,'Revenue and tax groups');
 verifyUi($xpath->query('//*[@name="mapping_fingerprint"]')->item(0)->getAttribute('value')==='mapping-ui','Fingerprint preserved');
 verifyUi(strpos($html,'minimumResultsForSearch: 0')!==false,'Search always enabled');
+verifyUi(strpos($html,'InvoiceSaveFeedback.submit')!==false,'Mapping save uses shared feedback');
+verifyUi($xpath->query('//script[contains(@src,"assets/dist/sweetalert2.min.js")]')->length===1,'Mapping uses local SweetAlert2');
 verifyUi($xpath->query('//label[@for="source_company_id"]')->item(0)->textContent==='Company SPK','Company SPK label');
 verifyUi($xpath->query('//select[@id="source_company_id"]/option[@value="6"]')->length===1,'Combined SPK remains selectable');
 verifyUi($xpath->query('//select[@id="owner_company_id"]/option[@value!=""]')->length===3,'Only three journal owners');
@@ -64,11 +68,65 @@ $GLOBALS['denied']=[];$html=$renderer->render('index',['data_company'=>[]]);$xpa
 verifyUi($xpath->query('//*[@role="tab"]')->length===2,'Two accessible tabs');
 verifyUi($xpath->query('//*[@role="tabpanel"]')->length===2,'Two tab panels');
 verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"]')->length===1,'One selected tab');
-verifyUi($xpath->query('//*[@id="table_penawaran"]//th')->length===10,'Consulting columns preserved');
+verifyUi($xpath->query('//*[@id="table_penawaran"]//th')->length===7,'Consulting grouped into seven columns');
 verifyUi($xpath->query('//*[@id="table_penawaran_non_konsultasi"]//th')->length===10,'Other columns preserved');
 verifyUi(strpos($html,'invoicing/coa_settings')!==false,'Configure navigation visible with permission');
 verifyUi(strpos($html,'invoicing/list_penawaran_non_kons')!==false,'Create visible with permission');
 $GLOBALS['denied']=['Invoicing.Configure','Invoicing.Add'];$html=$renderer->render('index',['data_company'=>[]]);
 verifyUi(strpos($html,'invoicing/coa_settings')===false,'Configure permission respected');
 verifyUi(strpos($html,'invoicing/list_penawaran_non_kons')===false,'Create permission respected');
+if(!function_exists('terbilang')){function terbilang($n){return 'seribu seratus sepuluh';}}
+$kwitansiInvoice=(object)[
+    'no_invoice'=>'001/STM/2026', 'no_po'=>'PO-KW-01', 'nm_customer'=>'Customer Kwitansi <script>alert(1)</script>',
+    'total_nominal'=>'1000.55', 'dpp_nilai_lain'=>'917.17', 'pajak'=>'110.06',
+    'print_keterangan'=>'Pembayaran TOP 1', 'consulting_version'=>3
+];
+$kwitansiHtml=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'7']);
+verifyUi(strpos($kwitansiHtml,'1,000.55')!==false,'Kwitansi v3 2-decimal nominal');
+verifyUi(strpos($kwitansiHtml,'917.17')!==false,'Kwitansi v3 2-decimal DPP');
+verifyUi(strpos($kwitansiHtml,'110.06')!==false,'Kwitansi v3 2-decimal PPN');
+verifyUi(strpos($kwitansiHtml,'1,110.61')!==false,'Kwitansi v3 2-decimal total');
+verifyUi(strpos($kwitansiHtml,'PT. Sentral Tehnologi Managemen')!==false,'Kwitansi STM company footer');
+$kwitansiSustain=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'3']);
+verifyUi(strpos($kwitansiSustain,'PT. Sentral Sustainability Consulting')!==false,'Kwitansi Sustain company footer');
+$kwitansiLegacy=(object)[
+    'no_invoice'=>'002/STM/2025', 'no_po'=>'PO-LEGACY', 'nm_customer'=>'Customer Legacy',
+    'total_nominal'=>'1000', 'dpp_nilai_lain'=>'917', 'pajak'=>'110',
+    'print_keterangan'=>'Pembayaran Legacy', 'consulting_version'=>0
+];
+$kwitansiLegacyHtml=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiLegacy,'id_company'=>'7']);
+verifyUi(strpos($kwitansiLegacyHtml,'>1,000<')!==false,'Kwitansi legacy 0-decimal nominal');
+verifyUi(strpos($kwitansiLegacyHtml,'>1,110<')!==false,'Kwitansi legacy 0-decimal total');
+verifyUi(strpos($kwitansiHtml,'<script>alert(1)</script>')===false,'Kwitansi customer escaping');
+verifyUi(strpos($kwitansiHtml,'class="body-table""')===false,'Kwitansi valid table attribute syntax');
+$kwitansiVucaInvoice=(object)[
+    'no_invoice'=>'001/VUC/2026', 'no_po'=>'PO-VUCA-01', 'nm_customer'=>'Customer Vuca <script>alert(1)</script>',
+    'total_nominal'=>'1000', 'dpp_nilai_lain'=>'917', 'pajak'=>'110',
+    'print_keterangan'=>"Pembayaran VUCA TOP 1\n<script>alert('ket')</script>"
+];
+$kwitansiVucaHtml=$renderer->render('print_kwitansi_vuca',['data_invoice'=>$kwitansiVucaInvoice,'id_company'=>'4']);
+verifyUi(strpos($kwitansiVucaHtml,'<script>alert(1)</script>')===false,'Kwitansi Vuca customer escaping');
+verifyUi(strpos($kwitansiVucaHtml,'<script>alert(\'ket\')</script>')===false,'Kwitansi Vuca keterangan escaping');
+verifyUi(strpos($kwitansiVucaHtml,'PT. Vuca Strategi Bisnis')!==false,'Kwitansi Vuca company header');
+verifyUi(strpos($kwitansiVucaHtml,'001/VUC/2026')!==false,'Kwitansi Vuca invoice number');
+verifyUi(strpos($kwitansiVucaHtml,'PO-VUCA-01')!==false,'Kwitansi Vuca PO number');
+verifyUi(strpos($kwitansiVucaHtml,'Pembayaran VUCA TOP 1<br')!==false,'Kwitansi Vuca multiline keterangan converted');
+$printInvoice = [
+    'no_invoice'=>'001/STM/2026', 'id_spk_penawaran'=>'SPK-UI', 'tanggal_invoice'=>'2026-10-18',
+    'no_po'=>'PO-UI', 'no_faktur'=>'FP-UI', 'tax_treatment'=>'KB',
+    'nm_customer'=>'Hostile Customer <script>alert(1)</script>', 'address'=>"Jl. Uji <script>alert('addr')</script>\nBaris 2",
+    'total_nominal'=>'1000.55', 'dpp_nilai_lain'=>'917.17', 'ppn_jurnal'=>'110.06', 'tagihan_ppn_jurnal'=>'1110.61'
+];
+$printHtml = $renderer->render('consulting_print', ['invoice'=>$printInvoice, 'snapshot'=>$snapshot, 'error'=>null]);
+verifyUi(strpos($printHtml, '<script>alert(1)</script>')===false, 'Consulting print customer escaping');
+verifyUi(strpos($printHtml, "<script>alert('addr')</script>")===false, 'Consulting print address escaping');
+verifyUi(strpos($printHtml, '&lt;script&gt;')!==false, 'Consulting print customer HTML entities');
+verifyUi(strpos($printHtml, 'STM')!==false, 'Consulting print owner header');
+verifyUi(strpos($printHtml, 'Kawasan Berikat')!==false, 'Consulting print tax treatment label');
+verifyUi(strpos($printHtml, '1,000.55')!==false, 'Consulting print 2-decimal nominal');
+verifyUi(strpos($printHtml, '917.17')!==false, 'Consulting print 2-decimal DPP');
+verifyUi(strpos($printHtml, '110.06')!==false, 'Consulting print 2-decimal PPN');
+verifyUi(strpos($printHtml, '1,110.61')!==false, 'Consulting print 2-decimal gross total');
+$printErrorHtml = $renderer->render('consulting_print', ['invoice'=>$printInvoice, 'snapshot'=>$snapshot, 'error'=>'Gagal memuat <script>alert(1)</script>']);
+verifyUi(strpos($printErrorHtml, '<script>alert(1)</script>')===false && strpos($printErrorHtml, 'Gagal memuat')!==false, 'Consulting print error escaping');
 echo 'UI render PASS: '.$GLOBALS['checks']." checks\n";

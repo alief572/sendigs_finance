@@ -33,6 +33,17 @@
 .invoice-workspace .invoice-toolbar .invoice-toolbar-end { margin-left: auto; }
 .invoice-workspace .invoice-table-scroll { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
 .invoice-workspace .invoice-list-table { min-width: 1200px; width: 100% !important; }
+.invoice-workspace .invoice-list-table.invoice-consulting-table { min-width: 980px; table-layout: fixed; }
+.invoice-workspace .invoice-consulting-table td { padding: 10px; vertical-align: top; overflow-wrap: break-word; }
+.invoice-workspace .invoice-consulting-table td:first-child,
+.invoice-workspace .invoice-consulting-table td:last-child { text-align: center; }
+.invoice-workspace .invoice-cell-primary { font-weight: 600; line-height: 1.5; }
+.invoice-workspace .invoice-cell-secondary { margin-top: 5px; color: #526477; line-height: 1.5; }
+.invoice-workspace .invoice-cell-label { font-size: 12px; color: #526477; }
+.invoice-workspace .invoice-cell-team { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 8px; margin: 0; }
+.invoice-workspace .invoice-cell-team dt { color: #526477; font-weight: 400; font-size: 11px; }
+.invoice-workspace .invoice-cell-team dd { margin: 0; line-height: 1.4; }
+.invoice-workspace .invoice-cell-team dd:last-child { margin-bottom: 0; }
 .invoice-workspace table { font-size: 13px; }
 .invoice-workspace table th { font-weight: 600; }
 .invoice-workspace table thead th { background: #edf3f8; color: #344d64; border-bottom: 1px solid #bdcbd9; vertical-align: middle; padding: 13px 12px; }

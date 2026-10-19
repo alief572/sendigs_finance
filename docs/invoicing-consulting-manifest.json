@@ -53,7 +53,8 @@
     "application/modules/penerimaan_pph_23/controllers/Penerimaan_pph_23.php",
     "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php",
     "assets/css/invoicing.css",
-    "assets/js/invoicing/consulting-form.js"
+    "assets/js/invoicing/consulting-form.js",
+    "assets/js/invoicing/save-feedback.js"
   ],
   "migration_files": [
     "application/modules/invoicing/migrations/003_consulting_v3.sql",
@@ -66,27 +67,30 @@
     "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php",
     "application/modules/invoicing/tests/Ui_render_test.php",
     "application/modules/invoicing/tests/Ui_client_test.js",
-    "application/modules/invoicing/tests/Ui_list_client_test.js"
+    "application/modules/invoicing/tests/Ui_list_client_test.js",
+    "application/modules/invoicing/tests/Save_feedback_client_test.js"
   ],
   "dependencies": [
     "application/modules/invoicing/libraries/Invoice_calculation.php",
     "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php",
     "application/libraries/Module_audit_recorder.php",
-    "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php"
+    "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php",
+    "assets/dist/sweetalert2.min.js",
+    "assets/dist/sweetalert2.min.css"
   ],
   "sha256": {
     "application/modules/invoicing/controllers/Invoicing.php": "5f2fe3c1395aa67003b695721bab5c11fc4585eca6276f4e1bd858a244f48179",
     "application/modules/invoicing/models/Invoicing_model.php": "2dfea04810cdf8d568124768153d9b53fd8cf4acf1d1cfb0fe8cbe98833f2ec5",
-    "application/modules/invoicing/libraries/Invoice_consulting.php": "25fd15c58fb053d9121f257775c9afb137e0ede3672db69e38411e9a4dce1df5",
+    "application/modules/invoicing/libraries/Invoice_consulting.php": "f5555ec0d14adc67b2849b16c6eb58beb28a4a7a2043d79fe610fb5a2fff7de5",
     "application/modules/invoicing/libraries/Invoice_consulting_service.php": "5ff8ccfbc9406ff9606ddc725a5119481d3e288442f21e42cec3be73469326e8",
     "application/modules/invoicing/libraries/Consulting_posting.php": "d7981e1a96b7de6026f5553497b95b323bacdea993c77f06a4db643508ba86ba",
-    "application/modules/invoicing/views/consulting_invoice.php": "2d8b4796a31ce77b6d2fb29ec2b1571c3b2607f056a3ab848dce1cae7e9d269b",
-    "application/modules/invoicing/views/consulting_settings.php": "ae5f15bd2f4f17bf850745de08090394f078fe59e964d6fb0ac5d03d17b03562",
+    "application/modules/invoicing/views/consulting_invoice.php": "eae1f425a0210dfc52b3d303b1b58a2983da05df3f567cf23b70edda7d22f677",
+    "application/modules/invoicing/views/consulting_settings.php": "0b71be1d08cae6dee8c5237658bd8577066b88d2d2e5c3aff0486299dc9992da",
     "application/modules/invoicing/views/consulting_print.php": "fabe99af4cc4e6af44161ecfaf3a85bb787f139b6a308bcfa6eee66bc7216972",
-    "application/modules/invoicing/views/index.php": "6ad297fc12bbdb0c3c2b63298c279123d0afefa5cc33039096c6976560636d34",
+    "application/modules/invoicing/views/index.php": "c3d9ebea1b65dd3a5b1daee047ae6c0016dea3fd8af27efd7286089bf02e795d",
     "application/modules/invoicing/views/download_excel.php": "5c8ec6c1fbbd8b2f301562965c3629b13b4e1c05d306187629acf23729724e97",
-    "application/modules/invoicing/views/print_kwitansi.php": "1a5aed69d2e33b1e04bfd9422fa3738a8b05988135eaa8d7d36d00922b6dd1b6",
-    "assets/js/invoicing/consulting.js": "30d63a6cb2d44391a30127a3b96047a3bb971cfa11f2cc4ebd32597fe496d6e6",
+    "application/modules/invoicing/views/print_kwitansi.php": "f1a21e90abea46e2f7fd81f22ceef11a1f8c153ac8ab34c22bb15bef31b53886",
+    "assets/js/invoicing/consulting.js": "40af1af50e55a208b021fb189915a03c32090f4fcb1de272845c2f32a7539e95",
     "application/modules/penerimaan_uang/controllers/Penerimaan_uang.php": "31e2e8a0cd8ee884880099fbb49872e4c17e8e0df6d7b6d62629dfafdb0a11cd",
     "application/modules/penerimaan_uang/libraries/Consulting_receipt.php": "9acdea8f17862135ee3ee8ff14e93a1075f04267749966fa0b52dc287c5065a2",
     "application/modules/penerimaan_uang/views/consulting_process.php": "c30ae2ca8f3199888ad2d82188b77e9a9ee781f71e029a7290db839f67155d83",
@@ -107,11 +111,15 @@
     "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php": "421f6fbaddcd0a3d88875d75755e6b83d2a8cf40908e0bd8cfbe38bf6475bb9b",
     "application/libraries/Module_audit_recorder.php": "370c38930c6837e261503c8311f0a6d72879fd9949e5ff9eea873acf5417c3b0",
     "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php": "e8b0ce89d312c790f34e76047fe2772caa7e86f2160ed49c728bd8585a6cf1e6",
-    "assets/css/invoicing.css": "b1f0f246fba73b334356a8a4567b5bb41c09e6335f7603c037d239f5ed72ddab",
-    "assets/js/invoicing/consulting-form.js": "b1d923bfd3a5325b80fd00d32912e8067787c595cf1aafe20597fc9baafb2a0e",
-    "application/modules/invoicing/tests/Ui_render_test.php": "80cbc81e8bfdf28a7e18309db5f0e55dd5b149d5005d653a1d5a7f381fa151ae",
-    "application/modules/invoicing/tests/Ui_client_test.js": "c60bd18e17eff32120afce94e32e484ddece078da80031f3cb522dedfcf62bb9",
-    "application/modules/invoicing/tests/Ui_list_client_test.js": "aa179ffd63cd56aec1016d8c2e8049876c256452e35003dec803f996efc515a5"
+    "assets/css/invoicing.css": "2634f9b61d888fbeb094097a3df97b5a2741de637df49eb9e26b3cfc1473025e",
+    "assets/js/invoicing/consulting-form.js": "e6dd3dbb02bec691c7c857d3bf5f15fc41ec2d8f47a10f2fd0764b973fab800a",
+    "application/modules/invoicing/tests/Ui_render_test.php": "ade610bd4100eb3db05e604ddc6be90f5d094b1b4bd68c1f12ac64eb6c91a058",
+    "application/modules/invoicing/tests/Ui_client_test.js": "624f7add44c2880ad7c60dc4476a668d52f7fb4643161c2397aef55c57e4ed2a",
+    "application/modules/invoicing/tests/Ui_list_client_test.js": "4e349c0bb6f93afc8e6a32eb5b406847b410e980aa8b7b3b020218eedd8a1a62",
+    "assets/js/invoicing/save-feedback.js": "08e2bb4453289aca36f0683147d490c9da3a0324d94359048e3aca587e6cbf1a",
+    "application/modules/invoicing/tests/Save_feedback_client_test.js": "7e917a8b3daf0a4a095dbec641988b55121427bb6920f7f327659d7a5ca89ca2",
+    "assets/dist/sweetalert2.min.js": "633e045bd47a72c3f21649a59c5fc17a013d75c4e96ca7fabe5e18b03658f424",
+    "assets/dist/sweetalert2.min.css": "708be0f0bbf65ef93f4f259d66bc09a2c6d4791e5d5b913834c3346b02dd01b6"
   },
   "validation": {
     "calculation_checks": 72,
@@ -153,10 +161,11 @@
     "mode": "antislop during, session choice",
     "scope": "list, regular consulting version3 form/detail, COA settings",
     "report": "docs/invoicing-ui-2026-10-18.md",
-    "render_checks": 208,
-    "form_client_checks": 38,
-    "list_client_checks": 28,
-    "browser_verification": "not performed per user instruction"
+    "render_checks": 228,
+    "form_client_checks": 43,
+    "list_client_checks": 45,
+    "browser_verification": "not performed per user instruction",
+    "save_feedback_checks": 48
   },
   "local_validation_references": [
     {
@@ -188,5 +197,33 @@
     "native_checks": 341,
     "render_checks": 208,
     "publication": "included in development follow-up publication after 913c336d"
+  },
+  "compact_consulting_table": {
+    "columns": 7,
+    "groups": [
+      "No.",
+      "Dokumen (invoice + SPK)",
+      "Customer & Project",
+      "Company",
+      "Tim (Project Leader + Sales)",
+      "Status",
+      "Aksi"
+    ],
+    "response_contract": "unchanged",
+    "sorting": "existing fixed backend order; client sorting disabled",
+    "non_consulting_table": "unchanged, 10 columns",
+    "status": "published to development branch",
+    "report": "docs/invoicing-compact-table-2026-10-18.md"
+  },
+  "save_feedback": {
+    "status": "published to development branch",
+    "report": "docs/invoicing-save-feedback-2026-10-18.md",
+    "scope": [
+      "consulting v3 add/edit",
+      "COA settings save"
+    ],
+    "library": "existing local SweetAlert2 11.23.0",
+    "backend": "unchanged",
+    "success": "numeric status1; redirect/reload after OK"
   }
 }

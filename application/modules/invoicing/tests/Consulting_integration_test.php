@@ -1,6 +1,10 @@
 <?php
 // Never loads application credentials; all schema writes use a random disposable database.
-if (!in_array($argv[1]??'',array('--isolated-local-db','--worker'),true)) throw new RuntimeException('Use --isolated-local-db.');
+$mode = $argv[1] ?? '--isolated-local-db';
+if (!in_array($mode, array('--isolated-local-db', '--worker'), true)) {
+    fwrite(STDERR, "Usage: php Consulting_integration_test.php [--isolated-local-db]\n");
+    exit(1);
+}
 define('BASEPATH',dirname(__DIR__,4).'/system/'); define('APPPATH',dirname(__DIR__,3).'/'); define('FCPATH',dirname(__DIR__,4).'/');
 function base_url($p=''){return '/'.$p;}
 function is_php($v){return version_compare(PHP_VERSION,$v,'>=');}
@@ -55,7 +59,7 @@ function invoiceRequest($service,$n,$type='PKP',$role='sales_consulting'){
         'source_fingerprint'=>Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$mapping)),'total_akhir_jurnal'=>'999999','debit_1'=>'0','id_company_1'=>'tampered');
 }
 
-if(($argv[1]??'')==='--worker'){
+if($mode==='--worker'){
     $payload=json_decode(stream_get_contents(STDIN),true);
     if(!preg_match('/^codex_consulting_[a-f0-9]+$/D',$payload['database']??''))throw new RuntimeException('Unsafe worker database.');
     define('DBCNL',$payload['database']);
@@ -68,13 +72,32 @@ if(($argv[1]??'')==='--worker'){
     exit;
 }
 function workerStart($payload){
-    $command=array(PHP_BINARY,'-n','-d','extension_dir='.realpath(ini_get('extension_dir')),'-d','extension=mysqli',__FILE__,'--worker');
+    $extDir = realpath(ini_get('extension_dir')) ?: realpath(dirname(PHP_BINARY) . '/ext') ?: ini_get('extension_dir');
+    $command=array(PHP_BINARY,'-n','-d','extension_dir='.$extDir,'-d','extension=mysqli',__FILE__,'--worker');
     $process=proc_open($command,array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','w')),$pipes);
     if(!is_resource($process))throw new RuntimeException('Worker launch failed.');fwrite($pipes[0],json_encode($payload));fclose($pipes[0]);return array($process,$pipes);
 }
 function workerFinish($worker){list($process,$pipes)=$worker;$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($process);verify($exit===0,'Worker exit '.$err);$r=json_decode($out,true);verify(is_array($r),'Worker JSON '.$out);return $r;}
-$admin=new mysqli('127.0.0.1','root','consulting_test_local','',33319);
-if($admin->connect_errno)throw new RuntimeException('Disposable server unavailable.');
+$admin=@new mysqli('127.0.0.1','root','consulting_test_local','',33319);
+$started_server_proc=null;
+if($admin->connect_errno){
+    $mysqld=dirname(__DIR__,4).'/scratch/runtime/mariadb-10.11.10-winx64/bin/mariadbd.exe';
+    $defaults=dirname(__DIR__,4).'/scratch/runtime/consulting-db/my.ini';
+    if(file_exists($mysqld)&&file_exists($defaults)){
+        $serverPipes=array();
+        $started_server_proc=proc_open(array($mysqld,'--defaults-file='.$defaults,'--port=33319','--bind-address=127.0.0.1'),array(0=>array('pipe','r'),1=>array('file','NUL','w'),2=>array('file','NUL','w')),$serverPipes);
+        for($retry=0;$retry<40;$retry++){
+            usleep(250000);
+            $admin=@new mysqli('127.0.0.1','root','consulting_test_local','',33319);
+            if(!$admin->connect_errno)break;
+        }
+    }
+}
+if($admin->connect_errno){
+    if($started_server_proc){ @proc_terminate($started_server_proc); @proc_close($started_server_proc); }
+    fwrite(STDERR, "DISPOSABLE_DB_UNAVAILABLE: MariaDB on 127.0.0.1:33319 is offline and local daemon could not be started.\nTo guarantee database integrity, production database 'db_sendigs_ss' was NOT touched.\n");
+    exit(1);
+}
 $database='codex_consulting_'.bin2hex(random_bytes(5));$admin->query('CREATE DATABASE '.$database);define('DBCNL',$database);
 $native=DB(array('hostname'=>'127.0.0.1','port'=>33319,'username'=>'root','password'=>'consulting_test_local','database'=>$database,'dbdriver'=>'mysqli','pconnect'=>false,'db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci'),true);
 class ConsultingFaultDb extends CI_DB_mysqli_driver {
@@ -290,4 +313,12 @@ try {
     $db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=MyISAM');verify(controllerCall($ci,'save_invoice',invoiceRequest($service,60))['status']===0,'Nontransactional prerequisite rejected');$db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=InnoDB');
     $db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN consulting_snapshot TO missing_snapshot');verify(controllerCall($ci,'save_invoice',array())['status']===0,'Incomplete migration rejected');$db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN missing_snapshot TO consulting_snapshot');
     echo 'PASS: '.$GLOBALS['checks']." consulting integration checks against disposable MariaDB\n";
-} finally { $db->close();$admin->query('DROP DATABASE `'.$database.'`');$admin->close(); }
+} finally {
+    if(isset($db))$db->close();
+    if(isset($admin)&&!$admin->connect_errno){
+        if(isset($database))$admin->query('DROP DATABASE IF EXISTS `'.$database.'`');
+        if($started_server_proc){$admin->query('SHUTDOWN');}
+        $admin->close();
+    }
+    if($started_server_proc){proc_close($started_server_proc);}
+}

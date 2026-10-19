@@ -45,6 +45,9 @@ $companyNames=array_column($companies,'nm_company','id');
     </div>
 </div>
 <script src="<?= base_url('assets/plugins/select2/select2.min.js') ?>"></script>
+<link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css') ?>">
+<script src="<?= base_url('assets/dist/sweetalert2.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/invoicing/save-feedback.js?v='.filemtime(FCPATH.'assets/js/invoicing/save-feedback.js')) ?>"></script>
 <script>
 $(function () {
     $('#consulting-coa-settings select').select2({
@@ -54,17 +57,13 @@ $(function () {
     });
     $('#consulting-settings').on('submit', function (event) {
         event.preventDefault();
-        var form = this, button = $(form).find('button[type=submit]'), status = $('#mapping-status');
-        if (button.prop('disabled') || !form.reportValidity()) return;
-        button.prop('disabled', true).text('Menyimpan…');
-        $(form).attr('aria-busy', 'true'); status.attr('data-state', 'loading').text('Menyimpan mapping COA…');
-        $.ajax({url: form.action, type: 'POST', data: $(form).serialize(), dataType: 'json'}).done(function (result) {
-            status.attr('data-state', result && result.status === 1 ? 'success' : 'error').text(result && result.msg ? result.msg : 'Mapping belum tersimpan. Periksa pilihan akun dan coba kembali.');
-            if (result && result.status === 1) window.location.reload();
-        }).fail(function () {
-            status.attr('data-state', 'error').text('Penyimpanan tidak dapat dikonfirmasi. Muat ulang pengaturan sebelum mencoba kembali.');
-        }).always(function () {
-            button.prop('disabled', false).text('Simpan mapping'); $(form).attr('aria-busy', 'false');
+        var form = this;
+        InvoiceSaveFeedback.submit({form: form, button: form.querySelector('button[type=submit]'),
+            message: document.getElementById('mapping-status'),
+            request: function () { return $.ajax({url: form.action, type: 'POST', data: $(form).serialize(), dataType: 'json'}); },
+            successText: 'Mapping COA berhasil disimpan.',
+            unconfirmedText: 'Penyimpanan tidak dapat dikonfirmasi. Muat ulang pengaturan sebelum mencoba kembali.',
+            onSuccess: function () { window.location.reload(); }
         });
     });
 });

@@ -80,6 +80,9 @@ $number = $invoice['no_invoice'];
     </div>
 </div>
 <?php if ($editable): ?>
+<link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css') ?>">
+<script src="<?= base_url('assets/dist/sweetalert2.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/invoicing/save-feedback.js?v='.filemtime(FCPATH.'assets/js/invoicing/save-feedback.js')) ?>"></script>
 <script src="<?= base_url('assets/js/invoicing/consulting.js?v='.filemtime(FCPATH.'assets/js/invoicing/consulting.js')) ?>"></script>
 <script src="<?= base_url('assets/js/invoicing/consulting-form.js?v='.filemtime(FCPATH.'assets/js/invoicing/consulting-form.js')) ?>"></script>
 <script>

@@ -20,17 +20,10 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             <li role="presentation" class="tab_pin tab_1 active" data-no="1"><button type="button" id="invoice-tab-consulting" role="tab" aria-selected="true" aria-controls="invoice-panel-consulting">Konsultasi</button></li>
             <li role="presentation" class="tab_pin tab_2" data-no="2"><button type="button" id="invoice-tab-other" role="tab" aria-selected="false" aria-controls="invoice-panel-other" tabindex="-1">Non Konsultasi</button></li>
         </ul>
-<<<<<<< HEAD
-        <div class="col_1">
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="col-md-2">
-                    <label for="filter_tahun">Filter Tahun:</label>
-=======
         <div class="col_1" id="invoice-panel-consulting" role="tabpanel" aria-labelledby="invoice-tab-consulting">
             <div class="invoice-toolbar">
                 <div class="invoice-filter">
                     <label for="filter_tahun">Tahun</label>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     <select name="filter_tahun" id="filter_tahun" class="form-control form-control-sm">
                         <?php
                         $tahun_sekarang = date('Y');
@@ -38,17 +31,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         ?>
                             <option value="<?= $y ?>" <?= ($y == $tahun_sekarang) ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
-<<<<<<< HEAD
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="filter_status">Filter Status:</label>
-                    <select name="filter_status" id="filter_status" class="form-control form-control-sm">
-                        <option value="">-- Semua --</option>
-                        <option value="uninvoiced">Uninvoiced</option>
-                        <option value="invoiced">Invoiced</option>
-=======
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     </select>
                 </div>
                 <div class="invoice-filter">
@@ -66,35 +48,25 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             </div>
             <p class="invoice-table-status" id="invoice-list-status" role="status" aria-live="polite"></p>
             <div class="invoice-table-scroll" role="region" aria-label="Daftar tagihan konsultasi, geser untuk melihat seluruh kolom" tabindex="0">
-            <table id="table_penawaran" class="table table-striped invoice-list-table">
+            <table id="table_penawaran" class="table table-striped invoice-list-table invoice-consulting-table">
                 <thead>
                     <tr>
-                        <th class="text-center" width="5%">No.</th>
-                        <th class="text-center" width="15%">No. Invoice</th>
-                        <th class="text-center" width="15%">Company</th>
-                        <th class="text-center" width="15%">No. SPK</th>
-                        <th class="text-center" width="20%">Customer</th>
-                        <th class="text-center" width="15%">Project</th>
-                        <th class="text-center" width="15%">Project Leader</th>
-                        <th class="text-center" width="15%">Sales</th>
-                        <th class="text-center" width="10%">Status</th>
-                        <th class="text-center" width="15%">Aksi</th>
+                        <th scope="col" width="4%">No.</th>
+                        <th scope="col" width="21%">Dokumen</th>
+                        <th scope="col" width="32%">Customer &amp; Project</th>
+                        <th scope="col" width="10%">Company</th>
+                        <th scope="col" width="17%">Tim</th>
+                        <th scope="col" width="9%">Status</th>
+                        <th scope="col" width="7%" class="text-center">Aksi</th>
                     </tr>
                 </thead>
             </table>
             </div>
         </div>
-<<<<<<< HEAD
-        <div class="col_2" style="display: none;">
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="col-md-2">
-                    <label for="filter_tahun_non_kons">Filter Tahun:</label>
-=======
         <div class="col_2" id="invoice-panel-other" role="tabpanel" aria-labelledby="invoice-tab-other" style="display: none;">
             <div class="invoice-toolbar">
                 <div class="invoice-filter">
                     <label for="filter_tahun_non_kons">Tahun</label>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     <select name="filter_tahun_non_kons" id="filter_tahun_non_kons" class="form-control form-control-sm">
                         <?php
                         for ($y = $tahun_sekarang; $y >= 2020; $y--) :
@@ -103,16 +75,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <?php endfor; ?>
                     </select>
                 </div>
-<<<<<<< HEAD
-                <div class="col-md-2" style="padding-top: 25px;">
-                    <button type="button" class="btn btn-sm btn-primary btn_filter_non_kons"><i class="fa fa-search"></i> Filter</button>
-                </div>
-            </div>
-            <a href="<?= base_url('invoicing/list_penawaran_non_kons') ?>" class="btn btn-sm btn-success" title="Add Invoice"><i class="fa fa-plus"></i> Add Invoice</a>
-            <br><br>
-            <table id="table_penawaran_non_konsultasi" class="table table-bordered table-striped">
-                <thead class="bg-primary">
-=======
                 <div class="invoice-toolbar-actions">
                     <button type="button" class="btn btn-primary btn_filter_non_kons">Terapkan filter</button>
                 </div>
@@ -122,7 +84,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             <div class="invoice-table-scroll" role="region" aria-label="Daftar invoice non konsultasi, geser untuk melihat seluruh kolom" tabindex="0">
             <table id="table_penawaran_non_konsultasi" class="table table-striped invoice-list-table">
                 <thead>
->>>>>>> b127c8e19d1f7bed84ac03533b27c503f3837a47
                     <tr>
                         <th class="text-center">No.</th>
                         <th class="text-center">No. Invoice</th>
@@ -705,6 +666,29 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         });
     }
 
+    function invoiceCellText(value) {
+        if (value === null || value === undefined || String(value).trim() === '') return '-';
+        return String(value).replace(/[&<>"']/g, function(character) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+        });
+    }
+
+    function invoiceDocumentCell(data, type, row) {
+        if (type !== 'display') return [row.no_invoice || '', row.no_spk || ''].join(' ');
+        var number = row.no_invoice ? invoiceCellText(row.no_invoice) : 'Belum ada invoice';
+        return '<div class="invoice-cell-primary">' + number + '</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ' + invoiceCellText(row.no_spk) + '</div>';
+    }
+
+    function invoiceCustomerCell(data, type, row) {
+        if (type !== 'display') return [row.customer || '', row.project || ''].join(' ');
+        return '<div class="invoice-cell-primary">' + invoiceCellText(row.customer) + '</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ' + invoiceCellText(row.project) + '</div>';
+    }
+
+    function invoiceTeamCell(data, type, row) {
+        if (type !== 'display') return [row.project_leader || '', row.sales || ''].join(' ');
+        return '<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>' + invoiceCellText(row.project_leader) + '</dd><dt>Sales</dt><dd>' + invoiceCellText(row.sales) + '</dd></dl>';
+    }
+
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
@@ -723,25 +707,16 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'no',
                 },
                 {
-                    data: 'no_invoice'
+                    data: null, render: invoiceDocumentCell
                 },
                 {
-                    data: 'company'
+                    data: null, render: invoiceCustomerCell
                 },
                 {
-                    data: 'no_spk'
+                    data: 'company', render: function(value, type) { return type === 'display' ? invoiceCellText(value) : value; }
                 },
                 {
-                    data: 'customer'
-                },
-                {
-                    data: 'project'
-                },
-                {
-                    data: 'project_leader'
-                },
-                {
-                    data: 'sales'
+                    data: null, render: invoiceTeamCell
                 },
                 {
                     data: 'status'
@@ -751,6 +726,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 }
             ],
             language: invoiceTableLanguage(),
+            ordering: false,
+            autoWidth: false,
+            stateLoadParams: function(settings, state) { if (!state.columns || state.columns.length !== 7) return false; },
             responsive: false,
             processing: true,
             serverSide: true,

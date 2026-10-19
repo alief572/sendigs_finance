@@ -30,6 +30,7 @@ const accounts = {};
 ['receivable', 'vat_domestic', 'vat_wapu_prepaid', 'vat_wapu_payable', 'sales_consulting'].forEach((key, i) => { accounts[key] = {code: '4101-01-0' + i, name: key + '<script>'}; });
 const data = {amount: '1000.55', accounts, company: 'STM<script>', number: '001/STM/2026', spk: 'SPK-UI', redirect: '/invoicing'};
 const requests = [], redirects = [];
+nodes['#consulting-save'].textContent = 'Simpan invoice';
 nodes['#consulting-date'].value = '2026-10-18';
 client.mount(form, data, {request() { const request = deferred(); requests.push(request); return request; }, redirect(url) { redirects.push(url); }});
 let checks = 0;
@@ -89,4 +90,17 @@ form.fire('submit'); requests[3].resolve({status: 1});
 check(redirects, ['/invoicing'], 'Success redirects to invoice list');
 check(nodes['#consulting-message'].attributes['data-state'], 'success', 'Success announced');
 check(nodes['#consulting-save'].textContent, 'Simpan invoice', 'Label restored');
+const modals = []; let confirm;
+client.mount(form, data, {
+    request() { const request = deferred(); requests.push(request); return request; },
+    redirect(url) { redirects.push(url); },
+    swal: {fire(config) { modals.push(config); return {then(callback) { confirm = callback; }}; }}
+});
+form.fire('submit');
+check(modals[0].title, 'Menyimpan…', 'Active invoice form opens loading modal');
+requests[4].resolve({status: 1, msg: 'Invoice berhasil diperbarui'});
+check(modals[1].text, 'Invoice berhasil diperbarui', 'Edit success server message shown');
+check(redirects.length, 1, 'Invoice waits for confirmation');
+check(nodes['#consulting-save'].disabled, true, 'Invoice saved form stays locked');
+confirm(); check(redirects.length, 2, 'Invoice redirects after modal OK');
 console.log('UI client PASS: ' + checks + ' checks');

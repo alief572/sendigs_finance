@@ -34,6 +34,9 @@
         });
     }
     function receipt(balance, cash, admin, pph) {
+        if (typeof balance !== 'number' || typeof cash !== 'number' || typeof admin !== 'number' || typeof pph !== 'number' || !Number.isFinite(balance) || !Number.isFinite(cash) || !Number.isFinite(admin) || !Number.isFinite(pph)) {
+            throw new Error('Penerimaan, admin, dan PPh harus angka valid.');
+        }
         var reduction = cash + admin + pph;
         if (Math.min(balance, cash, admin, pph) < 0 || reduction <= 0 || reduction > balance) throw new Error('Penerimaan melebihi saldo piutang atau tidak valid.');
         return {reduction: reduction, remaining: balance - reduction, adjustment: 0};
