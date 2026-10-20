@@ -682,3 +682,22 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Metadata batch berdasarkan payment_approve.tipe dan no_doc ke tr_kasbon/tr_expense. Lock users.id_user menserialisasi perubahan pilihan/reset; validasi simpan dilakukan dalam transaksi sebelum upload dan penulisan bisnis.
 - Publikasi dipisahkan dari pekerjaan audit lokal lain: kandidat dibangun dari dasar development/main masing-masing, hanya endpoint fitur dan helper audit yang diperlukan. Tidak merge antarbranch, migrasi atau perubahan konfigurasi.
 - Pengujian kandidat: Selection_test.php (98 skenario) dan Selection_client_test.js (27 pemeriksaan), lint PHP/JS dan whitespace; tanpa browser/database operasional. Detail ada pada checkpoint task ini.
+
+# Detail barang index Outgoing ATK Household - 2026-10-20
+
+- Fase 1: tes RED lalu query header/count/search barang dengan EXISTS, whitelist sorting/pagination dan satu query batch detail halaman aktif. Sumber warehouse_adjustment_detail.qty_order, accessories.stock_name/id_stock dan ms_satuan.code via id_unit; transaksi tetap satu baris.
+- Fase 2 (bergantung fase 1): kolom Detail Barang setelah Department, daftar nama - qty dua desimal - satuan dengan escaping dan fallback. Pertahankan Qty Unit total dan tombol detail; perbarui indeks DataTables, detail non-sortable, teks membungkus.
+- Fase 3 (bergantung fase 2): tes PHP/Node.js untuk multi-item, pencarian nama/kode tanpa duplikasi, seluruh detail saat satu item cocok, pagination/count/sort, master hilang, XSS, render dan jumlah query batch. Lint/whitespace; tanpa browser atau perubahan database operasional.
+- Batas: model/view outgoing_stok_atk dan tes/dokumentasi terkait; tidak mengubah stok, penyimpanan transaksi atau modul lain. Tidak migrasi/commit/push. Checkpoint utama docs/task-progress.md.
+- Status akhir 2026-10-20: fase 1-3 selesai, 100 pemeriksaan PHP/Node PASS; daftar file, keputusan dan batas pengujian tercatat pada checkpoint task ini di docs/task-progress.md.
+# Keterangan transaksi pada modal detail Outgoing - 2026-10-20
+
+- Tambahkan keterangan utama dari warehouse_adjustment.note di bawah PIC pada modal_request_edit.php; pertahankan keterangan per barang sebagai kolom terpisah. Escape HTML, pertahankan baris baru, tampilkan '-' jika kosong/NULL/field historis belum tersedia.
+- Tes render PHP untuk note utama, baris baru, HTML, nol literal, data historis dan keterangan per barang; lint dan whitespace. Tidak mengubah controller, query, penyimpanan, stok atau index. Tanpa browser/commit/push.
+- Status keterangan modal: selesai; 11 tes detail dan 15 pemeriksaan regresi render/client PASS. Rincian ada di checkpoint task terkait.
+
+# Publikasi perubahan Outgoing - validasi kandidat 2026-10-20
+
+- Commit ini mencakup detail barang pada index dan keterangan transaksi pada modal Detail Request, beserta empat file tes dan dokumentasi. Tepat sembilan path; tidak mengikutkan perubahan lokal modul lain, konfigurasi atau database.
+- Kandidat dibuat dari dasar masing-masing branch development/main, tanpa merge antarbranch. Masing-masing lulus 111 pemeriksaan (85 query, 7 render index, 11 render detail, 8 client), lint PHP/JS dan whitespace sebelum commit.
+- Tanpa browser atau database operasional; SQL diuji SQLite in-memory dan client melalui Node VM. Publikasi memakai push atomik tanpa force dan verifikasi SHA remote; hasil akhirnya dicatat pada checkpoint workspace.

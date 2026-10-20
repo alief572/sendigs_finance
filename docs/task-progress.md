@@ -1813,3 +1813,32 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Pemilahan: hanya helper audit yang diperlukan endpoint fitur disertakan. Instrumentasi lama pada endpoint lain serta Batch1/Batch2 lokal tidak disertakan. Guard simpan disesuaikan terhadap implementasi asli branch; perilaku bisnis lainnya dipertahankan.
 - Validasi kandidat development/main: masing-masing PHP Selection 98 skenario PASS, Node Selection_client 27 pemeriksaan PASS; lint dan whitespace diperiksa sebelum commit. Meliputi endpoint langsung, sumber hilang, NULL/kosong, batch query, pagination, pemulihan pilihan, error query/transaksi/commit, save sukses, dan audit writer gagal.
 - Batas: tanpa browser/DB operasional; konkurensi database nyata belum diuji. Tidak ada migrasi/konfigurasi/data operasional. Tidak ada TODO kode fitur ini. Verifikasi remote SHA dicatat pada checkpoint publikasi workspace setelah push.
+
+# Detail barang index Outgoing ATK Household - selesai 2026-10-20
+
+- Fase selesai: (1) tes/query model, (2) kolom index dan render/client, (3) review, validasi akhir dan dokumentasi. Tidak ada fase aktif/pending atau blocker implementasi.
+- File diubah: application/modules/outgoing_stok_atk/models/Outgoing_stok_atk_model.php, application/modules/outgoing_stok_atk/views/index.php, docs/implementation-plan.md, docs/task-progress.md.
+- File baru: application/modules/outgoing_stok_atk/tests/Index_test.php, Index_view_test.php dan Index_client_test.js dalam direktori tests yang sama.
+- Perilaku: satu transaksi per baris, kolom Detail Barang sesudah Department; seluruh baris detail nama barang - qty_order dua desimal Indonesia - satuan unit tampil tanpa pemotongan. Qty Unit header dan tombol modal detail dipertahankan. CSS pembungkus terbatas pada #example2, overflow horizontal disediakan.
+- Sumber detail: warehouse_adjustment_detail dengan accessories.stock_name/id_stock dan ms_satuan.code via id_unit. Satu query batch untuk seluruh transaksi halaman aktif, tidak ada query detail per transaksi. Baris berulang tidak digabung. Referensi barang hilang memakai ID; satuan hilang/deleted memakai '-'; detail kosong memiliki pesan sendiri. HTML di-escape.
+- Pencarian nama/kode barang menggunakan EXISTS dan parameter binding; seluruh detail transaksi tetap terlihat walau hanya satu barang cocok. Count total/filtered dihitung terpisah dan memakai transaksi distinct. Wildcard %, _ dan ! dicari literal. Pagination pada header, maksimum 150 sesuai pilihan menu.
+- Sorting whitelist sesuai sepuluh indeks tabel baru; Detail/Option tidak sortable dan permintaan indeks tidak valid memakai fallback No Trans. Department/By memakai id_dept/created_by karena label berasal dari HRIS/helper; tidak menambah join lintas database. Penomoran baris mengikuti offset halaman.
+- Endpoint read-only gagal dengan JSON error aman ketika query gagal; tidak menampilkan detail kosong palsu. Error transport menarget tbody dan processing #example2 dengan colspan 10. Tidak ada penulis audit baru, mutasi stok, perubahan penyimpanan, atau commit transaksi pada task ini.
+- RED terbukti: tes model awal gagal karena fungsi batch belum ada; tes render gagal pada sembilan header lama dan tes client gagal pada handler error grid lama. GREEN akhir: Index_test.php 85 pemeriksaan menggunakan SQLite in-memory, Index_view_test.php 7 pemeriksaan, Index_client_test.js 8 pemeriksaan melalui Node VM/PHP render. Total 100 pemeriksaan PASS.
+- Verifikasi tambahan: lint empat file PHP dan satu file JS PASS; syntax semua script inline diperiksa Node; scoped git diff --check dan whitespace file tes baru PASS. Controller dan prefix model (alur/form pemilihan barang) identik dengan sebelum task.
+- Cakupan tes: satu/banyak/duplikasi barang, qty pecahan/nol, sumber/satuan hilang atau deleted, XSS, pencarian nama/kode dan karakter khusus, count/pagination, sort/injeksi input, error setiap query, halaman kosong, header duplikat dan batch halaman 150 transaksi.
+- Batas verifikasi: tanpa browser atau database operasional/MySQL; query bisnis diuji nyata pada SQLite in-memory, koneksi HRIS/helper user memakai fixture. Tidak ada migrasi/commit/push/deploy atau perubahan modul lain. Tidak ada TODO kode; berikutnya refresh index untuk memakai tampilan baru.
+# Keterangan modal detail Outgoing - selesai 2026-10-20
+
+- Selesai: grounding sumber, tes RED, perubahan view, tes GREEN dan validasi. Tidak ada fase aktif/pending atau blocker.
+- File diubah: application/modules/outgoing_stok_atk/views/modal_request_edit.php; docs/implementation-plan.md; docs/task-progress.md. File baru: application/modules/outgoing_stok_atk/tests/Detail_view_test.php.
+- Keterangan utama berasal dari warehouse_adjustment.note, yang sudah disimpan dari textarea request dan sudah tersedia pada getData modal. Ditampilkan di bawah PIC dengan label Keterangan; catatan per barang tetap berasal dari detail.keterangan.
+- HTML di-escape dan newline dipertahankan untuk note utama maupun per barang. Note utama kosong, whitespace, NULL atau field historis tidak tersedia ditampilkan '-'; literal '0' tetap ditampilkan. Teks panjang dapat membungkus.
+- Verifikasi: tes RED awal gagal karena note utama tidak muncul; Detail_view_test.php 11 pemeriksaan PASS. Regresi Index_view_test.php 7 dan Index_client_test.js 8 PASS. Lint kedua file PHP dan scoped whitespace PASS. Hasil 85 pemeriksaan query index sebelumnya dipakai kembali karena model/query/dependensinya tidak berubah.
+- Tidak mengubah controller, penyimpanan, database, stok atau index. Tidak browser/database operasional/commit/push. Perubahan detail barang index dari task sebelumnya dipertahankan. Tidak ada TODO; refresh halaman lalu buka ulang modal untuk melihat keterangan.
+
+# Publikasi perubahan Outgoing - validasi kandidat 2026-10-20
+
+- Commit ini mencakup detail barang pada index dan keterangan transaksi pada modal Detail Request, beserta empat file tes dan dokumentasi. Tepat sembilan path; tidak mengikutkan perubahan lokal modul lain, konfigurasi atau database.
+- Kandidat dibuat dari dasar masing-masing branch development/main, tanpa merge antarbranch. Masing-masing lulus 111 pemeriksaan (85 query, 7 render index, 11 render detail, 8 client), lint PHP/JS dan whitespace sebelum commit.
+- Tanpa browser atau database operasional; SQL diuji SQLite in-memory dan client melalui Node VM. Publikasi memakai push atomik tanpa force dan verifikasi SHA remote; hasil akhirnya dicatat pada checkpoint workspace.

@@ -26,6 +26,12 @@
 				<td class="text-left" style='vertical-align:middle;'></td>
 				<td class="text-left" style='vertical-align:middle;'></td>
 			</tr>
+			<tr>
+				<td class="text-left" style="vertical-align:top;">Keterangan</td>
+				<td class="text-left" style="vertical-align:top;">:</td>
+				<?php $transactionNote = (string) ($getData[0]['note'] ?? ''); ?>
+				<td class="outgoing-transaction-note" colspan="4" style="overflow-wrap:anywhere;"><?= trim($transactionNote) !== '' ? nl2br(htmlspecialchars($transactionNote, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) : '-' ?></td>
+			</tr>
 		</thead>
 	</table><br>
 	<table class="table table-striped table-bordered table-hover table-condensed" width="100%">
@@ -95,7 +101,7 @@
 					// echo "<td align='center'>".number_format($konversi,2)."</td>";
 					// echo "<td align='center'>".number_format($konversi * $berat_req,2)."</td>";
 					echo "<td align='center'>" . strtoupper($unit) . "</td>";
-					echo "<td align='left'>" . $value['keterangan'] . "</td>";
+					echo "<td align='left' style='overflow-wrap:anywhere;'>" . nl2br(htmlspecialchars((string) ($value['keterangan'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . "</td>";
 					// echo "<td align='center'>".number_format($berat_con,2)."</td>";
 					// echo "<td align='left'>".$value['check_keterangan']."</td>";
 					// }

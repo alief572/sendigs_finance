@@ -8,6 +8,18 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 	thead input {
 		width: 100%;
 	}
+	#example2 .outgoing-items {
+		min-width: 210px;
+		max-width: 380px;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	#example2 .outgoing-item + .outgoing-item {
+		margin-top: 4px;
+	}
+	#example2 .outgoing-item-quantity {
+		white-space: nowrap;
+	}
 </style>
 <div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
@@ -60,6 +72,7 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 				</table>
 			</div>
 			<div class="tab-pane" id="request" role="tabpanel" aria-labelledby="request-tab"><br> -->
+			<div class="table-responsive">
 			<table id="example2" class="table table-bordered table-striped" width='100%'>
 				<thead>
 					<tr>
@@ -67,6 +80,7 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 						<th class='text-center'>No Trans</th>
 						<th class='text-center'>Tanggal</th>
 						<th class='text-left'>Department</th>
+						<th class='text-left no-sort'>Detail Barang</th>
 						<th class='text-center'>Qty Unit</th>
 						<th class='text-left'>PIC</th>
 						<th class='text-center'>By</th>
@@ -77,6 +91,7 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 				</thead>
 				<tbody></tbody>
 			</table>
+			</div>
 			<!-- </div> -->
 			<!-- </div> -->
 		</div>
@@ -372,9 +387,8 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 				// },
 				cache: false,
 				error: function() {
-					$(".my-grid-error").html("");
-					$("#my-grid").append('<tbody class="my-grid-error"><tr><th colspan="3">No data found in the server</th></tr></tbody>');
-					$("#my-grid_processing").css("display", "none");
+					$("#example2 tbody").html('<tr><td colspan="10" class="text-center">Daftar outgoing gagal dimuat. Silakan coba lagi.</td></tr>');
+					$("#example2_processing").css("display", "none");
 				}
 			}
 		});
