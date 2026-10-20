@@ -5,6 +5,7 @@ class Pembayaran_material_model extends BF_Model
 	protected $consultant;
 	protected $accounting;
 	protected $hris;
+	private $auditReadState = null;
 
 	public function __construct()
 	{
@@ -228,8 +229,104 @@ class Pembayaran_material_model extends BF_Model
 		return $empty;
 	}
 
-	public function get_list_req_payment()
+	private function selectionQuery($query)
 	{
+		$this->auditTrackQuery($query, $this->db);
+		$error = $this->db->error();
+		if ($query === false || !empty($error['code'])) {
+			throw new RuntimeException('Payment selection query failed');
+		}
+		return $query;
+	}
+
+	public function lock_payment_selection($userId)
+	{
+		$user = $this->selectionQuery($this->db->query('SELECT id_user FROM users WHERE id_user = ? FOR UPDATE', array($userId)))->row();
+		if (!$user) { throw new RuntimeException('Payment selection user unavailable'); }
+	}
+
+	public function chosen_payment_ids($userId)
+	{
+		$rows = $this->selectionQuery($this->db->get_where('tr_choosed_payment', array('id_user' => $userId)))->result();
+		return array_values(array_unique(array_map(function ($row) { return (string) $row->id_payment; }, $rows)));
+	}
+
+	public function payment_groups($ids, $allowMissing = false)
+	{
+		if (!is_array($ids)) { throw new DomainException('Pilihan pembayaran tidak valid.'); }
+		foreach ($ids as $id) {
+			if (!is_scalar($id) || trim((string) $id) === '') { throw new DomainException('Pilihan pembayaran tidak valid.'); }
+		}
+		$ids = array_values(array_unique(array_map('strval', $ids)));
+		if (!$ids) { return array(); }
+		$payments = $this->selectionQuery($this->db->select('id, tipe, no_doc')->from('payment_approve')->where_in('id', $ids)->get())->result();
+		$groups = array(); $sources = array('kasbon' => array(), 'expense' => array());
+		foreach ($payments as $payment) {
+			if (!isset($payment->tipe) || !is_string($payment->tipe) || $payment->tipe === '') {
+				if ($allowMissing) { continue; }
+				throw new DomainException('Tipe transaksi tidak ditemukan. Kosongkan pilihan dan pilih ulang.');
+			}
+			$groups[(string) $payment->id] = json_encode(array($payment->tipe));
+			if (array_key_exists($payment->tipe, $sources)) { $sources[$payment->tipe][(string) $payment->id] = $payment->no_doc; }
+		}
+		if (!$allowMissing && (count($groups) !== count($ids) || array_diff($ids, array_keys($groups)))) {
+			throw new DomainException('Dokumen pembayaran tidak ditemukan. Kosongkan pilihan dan pilih ulang.');
+		}
+		foreach ($sources as $type => $documents) {
+			if (!$documents) { continue; }
+			$column = 'no_' . $type . '_consultant';
+			$rows = $this->selectionQuery($this->db->select('no_doc, ' . $column)->from('tr_' . $type)
+				->where_in('no_doc', array_values(array_unique($documents)))->get())->result();
+			$byDocument = array();
+			foreach ($rows as $row) {
+				if (!property_exists($row, $column)) { throw new RuntimeException('Consultant selection metadata unavailable'); }
+				$byDocument[$row->no_doc] = $row->$column !== null;
+			}
+			foreach ($documents as $id => $document) {
+				if (!array_key_exists($document, $byDocument)) {
+					if ($allowMissing) { unset($groups[$id]); continue; }
+					throw new DomainException('Dokumen sumber pembayaran tidak ditemukan. Kosongkan pilihan dan pilih ulang.');
+				}
+				$groups[$id] = json_encode(array($type, $byDocument[$document]));
+			}
+		}
+		return $groups;
+	}
+
+	public function validate_payment_selection($ids)
+	{
+		$groups = $this->payment_groups($ids);
+		if (!$groups) { throw new DomainException('Pilih minimal satu transaksi pembayaran.'); }
+		if (count(array_unique(array_values($groups))) !== 1) {
+			throw new DomainException('Transaksi harus memiliki tipe dan kelompok consultant yang sama. Kosongkan pilihan dan pilih ulang.');
+		}
+		return reset($groups);
+	}
+
+	public function change_payment_selection($userId, $id, $checked)
+	{
+		try {
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment selection transaction unavailable'); }
+			$this->lock_payment_selection($userId);
+			$ids = $this->chosen_payment_ids($userId);
+			if ($checked) {
+				$this->validate_payment_selection(array_merge($ids, array($id)));
+				$written = in_array((string) $id, $ids, true) || $this->db->insert('tr_choosed_payment', array('id_user' => $userId, 'id_payment' => $id));
+			} else {
+				$written = $this->db->delete('tr_choosed_payment', array('id_user' => $userId, 'id_payment' => $id));
+			}
+			$this->selectionQuery($written);
+			if (!$this->db->trans_status() || !$this->db->trans_commit()) { throw new RuntimeException('Payment selection commit failed'); }
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			throw $e;
+		}
+	}
+
+	public function get_list_req_payment(&$auditSummary = null)
+	{
+		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
+		$this->auditReadState =& $auditSummary;
 		$post = $this->input->post();
 		$jenis_payment = $post['jenis_payment'];
 		$search = $post['search']['value'];
@@ -257,45 +354,56 @@ class Pembayaran_material_model extends BF_Model
 		}
 
 		// Clone untuk count total
-		$count_all = $this->db->count_all_results('', FALSE);
+		$count_all = $this->auditTrackQuery($this->db->count_all_results('', FALSE), $this->db);
 
 		// Order & Limit
 		$this->db->order_by('created_on', 'DESC');
 		$this->db->limit($post['length'], $post['start']);
-		$get_data = $this->db->get()->result();
+		$get_data = $this->auditTrackQuery($this->db->get(), $this->db)->result();
+		$selectionError = '';
+		$selectedIds = array(); $groups = array(); $selectedGroup = null;
+		try {
+			$selectedIds = $this->chosen_payment_ids($this->auth->user_id());
+			$pageIds = array_map(function ($row) { return (string) $row->id; }, $get_data);
+			$groups = $this->payment_groups(array_merge($selectedIds, $pageIds), true);
+			if (array_diff($selectedIds, array_keys($groups))) { throw new DomainException('Dokumen pilihan tidak tersedia. Kosongkan pilihan dan pilih ulang.'); }
+			$selectedGroups = array_unique(array_intersect_key($groups, array_flip($selectedIds)));
+			if (count($selectedGroups) > 1) { throw new DomainException('Pilihan berisi transaksi berbeda kelompok. Kosongkan pilihan dan pilih ulang.'); }
+			$selectedGroup = $selectedGroups ? reset($selectedGroups) : null;
+		} catch (Throwable $e) {
+			$auditSummary['queries_ok'] = false;
+			$selectionError = $e instanceof DomainException ? $e->getMessage() : 'Kelompok transaksi gagal dimuat. Silakan coba lagi.';
+		}
 
 		$hasil = [];
 		$no = (0 + $post['start']);
 		foreach ($get_data as $item) {
 			$no++;
-			// Logika checkbox tetep di sini karena butuh session user_id
-			$is_checked = $this->db->get_where('tr_choosed_payment', [
-				'id_user' => $this->auth->user_id(),
-				'id_payment' => $item->id
-			])->num_rows() > 0;
+			$is_checked = in_array((string) $item->id, $selectedIds, true);
+			$compatible = !$selectionError && isset($groups[$item->id]) && ($selectedGroup === null || $groups[$item->id] === $selectedGroup);
 
 			$requestor = $item->requestor;
 
 			if (strpos($item->no_doc, 'PHP') !== false) {
-				$get_vuca = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc])->row();
+				$get_vuca = $this->auditTrackQuery($this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item->no_doc]), $this->db)->row();
 				if (!empty($get_vuca)) {
-					$get_pencatatan = $this->db->select('a.request_by')
+					$get_pencatatan = $this->auditTrackQuery($this->db->select('a.request_by')
 						->from('tr_expense_petty_cash a')
 						->join('tr_pelaporan_petty_cash_detail b', 'b.pencatatan_id = a.id')
 						->where('b.pelaporan_id', $get_vuca->pelaporan_id)
-						->get()
+						->get(), $this->db)
 						->row();
 					if (!empty($get_pencatatan) && !empty($get_pencatatan->request_by)) {
 						$requestor = $get_pencatatan->request_by;
 					}
 				}
 			} elseif (strpos($item->no_doc, 'RPC') !== false) {
-				$get_pencatatan = $this->db->select('a.request_by')
+				$get_pencatatan = $this->auditTrackQuery($this->db->select('a.request_by')
 					->from('tr_expense_petty_cash a')
 					->join('tr_pelaporan_petty_cash_detail b', 'b.pencatatan_id = a.id')
 					->join('tr_pelaporan_petty_cash c', 'c.id = b.pelaporan_id')
 					->where('c.no_pelaporan', $item->no_doc)
-					->get()
+					->get(), $this->db)
 					->row();
 				if (!empty($get_pencatatan) && !empty($get_pencatatan->request_by)) {
 					$requestor = $get_pencatatan->request_by;
@@ -314,14 +422,18 @@ class Pembayaran_material_model extends BF_Model
 				'total_invoice' => number_format($item->jumlah),
 				'requestor' => $requestor,
 				'currency' => !empty($item->currency) ? $item->currency : 'IDR',
-				'option' => '<input type="checkbox" class="check_payment" value="' . $item->id . '" ' . ($is_checked ? 'checked' : '') . '>'
+				'selection_compatible' => $compatible,
+				'option' => '<input type="checkbox" class="check_payment" data-selection-disabled="' . (!$is_checked && !$compatible ? '1' : '0') . '" value="' . htmlspecialchars((string) $item->id, ENT_QUOTES, 'UTF-8') . '" '
+					. ($is_checked ? 'checked ' : '') . (!$is_checked && !$compatible ? 'disabled title="Transaksi berbeda kelompok atau data sumber tidak tersedia"' : '') . '>'
 			];
 		}
 
+		$auditSummary['row_count'] = count($hasil);
 		echo json_encode([
 			'draw' => intval($post['draw']),
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_all,
+			'selection_error' => $selectionError,
 			'data' => $hasil
 		]);
 	}
@@ -1783,15 +1895,15 @@ class Pembayaran_material_model extends BF_Model
 
 	public function refresh_list()
 	{
-		$this->db->trans_begin();
-
-		$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
-
-		$this->db->trans_complete();
-		if ($this->db->trans_status()) {
-			$this->db->trans_commit();
-		} else {
+		try {
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment reset transaction unavailable'); }
+			$this->lock_payment_selection($this->auth->user_id());
+			$this->selectionQuery($this->db->delete('tr_choosed_payment', array('id_user' => $this->auth->user_id())));
+			if (!$this->db->trans_status() || !$this->db->trans_commit()) { throw new RuntimeException('Payment reset commit failed'); }
+			return true;
+		} catch (Throwable $e) {
 			$this->db->trans_rollback();
+			return false;
 		}
 	}
 
@@ -2005,4 +2117,16 @@ class Pembayaran_material_model extends BF_Model
 			'data'            => $hasil
 		]);
 	}
+
+	private function auditTrackQuery($query, $connection)
+	{
+		if (is_array($this->auditReadState)) {
+			$error = $connection->error();
+			$this->auditReadState['queries_ok'] = $this->auditReadState['queries_ok'] && $query !== false && empty($error['code']);
+			if ($query === false) { throw new RuntimeException('Payment preview query failed'); }
+		}
+		return $query;
+	}
+
+
 }

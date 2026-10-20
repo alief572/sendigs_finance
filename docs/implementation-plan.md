@@ -240,3 +240,10 @@ Sepuluh endpoint selesai dan terverifikasi penuh: Fase 2 **38/51 selesai**, `pem
 3. Validasi dan checkpoint (selesai): client RED/GREEN, workbook nyata, failure paths, regresi Record/fondasi audit, lint dan whitespace. Rincian/batas: docs/record-request-payment-excel-2026-10-14.md; endpoint: docs/request-payment-tabs-manifest.json.
 
 Kriteria: semua hasil pencarian approved diekspor, nominal snapshot konsisten, View/Cetak Dokumen tetap berfungsi, teks aman dari formula injection, audit tidak duplikat/berisi data sensitif, kegagalan writer tidak mencatat sukses. Tidak ada perubahan modul lain atau kebutuhan migration. Tidak browser/DB live.
+
+# Publikasi pembatasan kelompok List Request Payment - 2026-10-20
+
+- Validasi kelompok pada pilih, Proses, form dan simpan; kasbon/expense membedakan SQL NULL persis, string kosong bukan NULL. Checkbox kelompok berbeda disabled; clear/uncheck terakhir melepas kelompok.
+- Metadata batch berdasarkan payment_approve.tipe dan no_doc ke tr_kasbon/tr_expense. Lock users.id_user menserialisasi perubahan pilihan/reset; validasi simpan dilakukan dalam transaksi sebelum upload dan penulisan bisnis.
+- Publikasi dipisahkan dari pekerjaan audit lokal lain: kandidat dibangun dari dasar development/main masing-masing, hanya endpoint fitur dan helper audit yang diperlukan. Tidak merge antarbranch, migrasi atau perubahan konfigurasi.
+- Pengujian kandidat: Selection_test.php (98 skenario) dan Selection_client_test.js (27 pemeriksaan), lint PHP/JS dan whitespace; tanpa browser/database operasional. Detail ada pada checkpoint task ini.

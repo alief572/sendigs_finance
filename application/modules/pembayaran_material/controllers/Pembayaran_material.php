@@ -9,6 +9,67 @@ class Pembayaran_material extends Admin_Controller
 	protected $deletePermission = 'Incoming_Stok.Delete';
 
 	protected $data_status;
+	private $auditQueriesOk = true;
+
+	private function beginAudit($method, $data = array(), $keys = array())
+	{
+		$this->auditQueriesOk = true;
+		$this->load->library('Module_audit_recorder');
+		return $this->module_audit_recorder->begin('pembayaran_material', $method,
+			array('data' => $this->auditSafeData($data)), array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+	}
+
+
+	private function completeAudit($message, $status, $data = array())
+	{
+		return $this->module_audit_recorder->complete($message, $status,
+			array('data' => $this->auditSafeData($data), 'sql' => null));
+	}
+
+
+	private function auditFilters()
+	{
+		$search = $this->input->post('search');
+		$data = array('start' => (int) $this->input->post('start'), 'length' => (int) $this->input->post('length'),
+			'search_present' => !empty(is_array($search) ? ($search['value'] ?? '') : $search));
+		$jenis = $this->input->post('jenis_payment');
+		if (is_scalar($jenis) && in_array((string) $jenis, array('1', '2'), true)) { $data['jenis_payment'] = (int) $jenis; }
+		$order = $this->input->post('order');
+		if (is_array($order) && isset($order[0]) && is_array($order[0])) {
+			$column = $order[0]['column'] ?? null;
+			$direction = $order[0]['dir'] ?? null;
+			if (is_scalar($column) && ctype_digit((string) $column) && (int) $column <= 5) { $data['sort_column'] = (int) $column; }
+			if (is_string($direction) && in_array(strtolower($direction), array('asc', 'desc'), true)) { $data['sort_direction'] = strtolower($direction); }
+		}
+		return $data;
+	}
+
+
+	private function auditSafeData($data)
+	{
+		$out = array();
+		foreach ($data as $key => $value) {
+			if (is_array($value)) {
+				$out[$key] = array();
+				foreach (array_slice($value, 0, 100) as $item) {
+					if (is_scalar($item)) { $out[$key][] = is_string($item) ? mb_strcut($item, 0, 120, 'UTF-8') : $item; }
+				}
+			} elseif (is_scalar($value) || $value === null) {
+				$out[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+			}
+		}
+		return $out;
+	}
+
+
+	private function auditQuery($query)
+	{
+		$error = $this->db->error();
+		$this->auditQueriesOk = $this->auditQueriesOk && $query !== false && empty($error['code']);
+		if ($query === false) { throw new RuntimeException('Payment query failed'); }
+		return $query;
+	}
+
 
 	public function __construct()
 	{
@@ -158,8 +219,20 @@ class Pembayaran_material extends Admin_Controller
 
 	public function form_payment_new()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('payment_id', 'payment_ids', 'document_count', 'row_count', 'journal_count', 'jenis_payment', 'admin_charge_bearer'));
 
-		$id_payment = explode(';', $_GET['id_payment']);
+		$selection = $_GET['id_payment'] ?? '';
+		if (!is_string($selection) || trim($selection) === '') {
+			$this->completeAudit('Form pembayaran tidak tersedia', 0, array('reason' => 'invalid_input')); show_error('Dokumen pembayaran tidak ditemukan', 404); return;
+		}
+		$id_payment = explode(';', $selection);
+		try {
+			$this->Pembayaran_material_model->validate_payment_selection($id_payment);
+		} catch (Throwable $e) {
+			$this->completeAudit('Form pembayaran ditolak', 0, array('reason' => $e instanceof DomainException ? 'not_found' : 'operation_failure'));
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Pilihan pembayaran gagal diperiksa.', 400);
+			return;
+		}
 
 		$admin_charge_bearer = isset($_GET['admin_charge_bearer']) ? $_GET['admin_charge_bearer'] : '';
 		if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
@@ -184,28 +257,29 @@ class Pembayaran_material extends Admin_Controller
 
 
 		$check_transpoty_driver = $this->Pembayaran_material_model->check_transport_payment($id_payment);
+		$this->auditQuery($check_transpoty_driver);
 
 		$jurnal_refill_petty_cash = '';
 		// if ($check_transpoty_driver > 0) {
 		// 	$jurnal_refill_petty_cash = $this->Pembayaran_material_model->jurnal_refill_petty_cash($id_payment);
 		// }
 
-		$get_payment = $this->db
+		$get_payment = $this->auditQuery($this->db
 			->select('a.*')
 			->from('payment_approve a')
 			->where_in('a.id', $id_payment)
 			->get()
-			->result();
-		$get_supplier = $this->db->get('new_supplier')->result();
+			)->result();
+		$get_supplier = $this->auditQuery($this->db->get('new_supplier'))->result();
 		// $get_bank = $this->db->get_where(DBACC . '.coa_master', ['kode_bank <>' => '', 'kode_bank <>' => null])->result();
-		$get_mata_uang = $this->db->get_where('mata_uang', ['deleted_by' => 0, 'activation' => 'active'])->result();
+		$get_mata_uang = $this->auditQuery($this->db->get_where('mata_uang', ['deleted_by' => 0, 'activation' => 'active']))->result();
 
 		$this->db->select('a.id, a.rekening, a.nama, a.coa_bank, b.nama_bank, c.nama as nm_coa');
 		$this->db->from('ms_bank a');
 		$this->db->join('list_bank b', 'b.id = a.bank', 'left');
 		$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = a.coa_bank', 'left');
 		$this->db->where('a.deleted', '0');
-		$get_bank = $this->db->get()->result();
+		$get_bank = $this->auditQuery($this->db->get())->result();
 
 		$jenis_payment = isset($_GET['jenis_payment']) ? $_GET['jenis_payment'] : '';
 
@@ -219,8 +293,12 @@ class Pembayaran_material extends Admin_Controller
 			'admin_charge_bearer' => $admin_charge_bearer,
 			'jenis_payment' => $jenis_payment
 		];
+		if (empty($get_payment)) {
+			$this->completeAudit('Dokumen pembayaran tidak ditemukan', 0, array('reason' => 'not_found')); show_error('Dokumen pembayaran tidak ditemukan', 404); return;
+		}
 		$this->template->set('results', $data);
 		$this->template->render('form_payment_new');
+		$this->completeAudit('Membuka form_payment_new', $this->auditQueriesOk ? 1 : 0, array('payment_ids' => $id_payment, 'document_count' => count($id_payment), 'row_count' => count($get_payment)));
 	}
 
 	public function save_payment_new()
@@ -1257,116 +1335,111 @@ class Pembayaran_material extends Admin_Controller
 
 	public function list_request_payment($jenis_payment)
 	{
-		$this->Pembayaran_material_model->refresh_list();
+		$this->beginAudit(__FUNCTION__, array('jenis_payment' => $jenis_payment));
+		$reset = $this->Pembayaran_material_model->refresh_list();
 		$this->template->set('jenis_payment', $jenis_payment);
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');
+		$this->completeAudit('Reset pilihan dan membuka daftar request pembayaran', $reset ? 1 : 0);
 	}
 
 	public function check_payment()
 	{
+		$this->beginAudit(__FUNCTION__, array('payment_id' => $this->input->post('id'), 'checked' => $this->input->post('checked')));
 		$id = $this->input->post('id');
 		$checked = $this->input->post('checked');
-
-		$this->db->trans_start();
-
-		if ($checked == 1) {
-			$this->db->insert('tr_choosed_payment', [
-				'id_user' => $this->auth->user_id(),
-				'id_payment' => $id
-			]);
-		} else {
-			$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id(), 'id_payment' => $id]);
+		$valid = 0; $reason = 'invalid_input'; $message = 'Pilihan pembayaran tidak valid.';
+		if (is_scalar($id) && trim((string) $id) !== '' && is_scalar($checked) && in_array((string) $checked, array('0', '1'), true)) {
+			try {
+				$this->Pembayaran_material_model->change_payment_selection($this->auth->user_id(), (string) $id, (string) $checked === '1');
+				$valid = 1; $reason = 'saved'; $message = 'Pilihan pembayaran diperbarui.';
+			} catch (Throwable $e) {
+				$reason = $e instanceof DomainException ? 'incompatible_selection' : 'operation_failure';
+				$message = $e instanceof DomainException ? $e->getMessage() : 'Pilihan pembayaran gagal disimpan. Silakan coba lagi.';
+			}
 		}
-
-		if ($this->db->trans_status() === false) {
-			$this->db->trans_rollback();
-		} else {
-			$this->db->trans_commit();
-		}
+		$this->completeAudit('Mengubah pilihan pembayaran', $valid, array('reason' => $reason));
+		echo json_encode(array('status' => $valid, 'pesan' => $message));
 	}
 
 	public function clear_choosed_payment()
 	{
-		$id_user = $this->auth->user_id();
-
-		$this->db->trans_start();
-
-		$this->db->delete('tr_choosed_payment', ['id_user' => $id_user]);
-
-		if ($this->db->trans_status() === false) {
-			$this->db->trans_rollback();
-			$valid = 0;
-		} else {
-			$this->db->trans_commit();
-			$valid = 1;
-		}
-
-		echo json_encode([
-			'status' => $valid
-		]);
+		$this->beginAudit(__FUNCTION__);
+		$valid = $this->Pembayaran_material_model->refresh_list() ? 1 : 0;
+		$this->completeAudit('Mengubah pilihan pembayaran', $valid);
+		echo json_encode(array('status' => $valid, 'pesan' => $valid ? 'Pilihan pembayaran dikosongkan.' : 'Pilihan pembayaran gagal dikosongkan.'));
 	}
 
 	public function proses_payment()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('document_count', 'has_admin_fee'));
 		$id_user = $this->auth->user_id();
+		$arr_choosed_payment = array();
+		try {
+			$arr_choosed_payment = $this->Pembayaran_material_model->chosen_payment_ids($id_user);
+			if ($arr_choosed_payment) { $this->Pembayaran_material_model->validate_payment_selection($arr_choosed_payment); }
 
-		$arr_choosed_payment = [];
-		$get_choosed_payment = $this->db->query("SELECT * FROM tr_choosed_payment WHERE id_user = '" . $id_user . "'")->result();
-		foreach ($get_choosed_payment as $item) {
-			$arr_choosed_payment[] = $item->id_payment;
-		}
-
-		$has_admin_fee = false;
-		if (!empty($arr_choosed_payment)) {
-			// Cek apakah ada biaya admin > 0 di payment_approve
-			$check_admin = $this->db->select('id')
-				->from('payment_approve')
-				->where_in('id', $arr_choosed_payment)
-				->where('admin_bank >', 0)
-				->get()
-				->num_rows();
-
-			if ($check_admin > 0) {
-				$has_admin_fee = true;
-			} else {
-				// Fallback cek ke tr_rp_pengajuan_d via no_doc jika di payment_approve admin_bank belum tersinkron
-				$docs = $this->db->select('no_doc')
+			$has_admin_fee = false;
+			if (!empty($arr_choosed_payment)) {
+				// Cek apakah ada biaya admin > 0 di payment_approve
+				$check_admin = $this->auditQuery($this->db->select('id')
 					->from('payment_approve')
 					->where_in('id', $arr_choosed_payment)
+					->where('admin_bank >', 0)
 					->get()
-					->result();
-				if (!empty($docs)) {
-					$doc_numbers = [];
-					foreach ($docs as $d) {
-						if (!empty($d->no_doc)) {
-							$doc_numbers[] = $d->no_doc;
+					)->num_rows();
+
+				if ($check_admin > 0) {
+					$has_admin_fee = true;
+				} else {
+					// Fallback cek ke tr_rp_pengajuan_d via no_doc jika di payment_approve admin_bank belum tersinkron
+					$docs = $this->auditQuery($this->db->select('no_doc')
+						->from('payment_approve')
+						->where_in('id', $arr_choosed_payment)
+						->get()
+						)->result();
+					if (!empty($docs)) {
+						$doc_numbers = [];
+						foreach ($docs as $d) {
+							if (!empty($d->no_doc)) {
+								$doc_numbers[] = $d->no_doc;
+							}
 						}
-					}
-					if (!empty($doc_numbers)) {
-						$check_rp_admin = $this->db->select('id')
-							->from('tr_rp_pengajuan_d')
-							->where_in('no_dokumen', $doc_numbers)
-							->where('admin >', 0)
-							->get()
-							->num_rows();
-						if ($check_rp_admin > 0) {
-							$has_admin_fee = true;
+						if (!empty($doc_numbers)) {
+							$check_rp_admin = $this->auditQuery($this->db->select('id')
+								->from('tr_rp_pengajuan_d')
+								->where_in('no_dokumen', $doc_numbers)
+								->where('admin >', 0)
+								->get()
+								)->num_rows();
+							if ($check_rp_admin > 0) {
+								$has_admin_fee = true;
+							}
 						}
 					}
 				}
 			}
+
+			$this->completeAudit('Memproses pilihan pembayaran', $this->auditQueriesOk ? 1 : 0, array('document_count' => count($arr_choosed_payment), 'has_admin_fee' => $has_admin_fee));
+			echo json_encode([
+				'status' => $this->auditQueriesOk ? 1 : 0,
+				'pesan' => $this->auditQueriesOk ? '' : 'Pilihan pembayaran gagal diperiksa.',
+				'count_choosed_payment' => count($arr_choosed_payment),
+				'arr_choosed_payment' => implode(';', $arr_choosed_payment),
+				'has_admin_fee' => $has_admin_fee
+			]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Pilihan pembayaran ditolak', 0, array('reason' => $e instanceof DomainException ? 'incompatible_selection' : 'operation_failure'));
+			echo json_encode(array('status' => 0, 'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Pilihan pembayaran gagal diperiksa.',
+				'count_choosed_payment' => 0, 'arr_choosed_payment' => '', 'has_admin_fee' => false));
+			return;
 		}
 
-		echo json_encode([
-			'count_choosed_payment' => count($get_choosed_payment),
-			'arr_choosed_payment' => implode(';', $arr_choosed_payment),
-			'has_admin_fee' => $has_admin_fee
-		]);
 	}
 
 	public function save_payment()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('payment_ids', 'document_count'));
 		$post = $this->input->post();
 
 		$post['mata_uang'] = 'IDR';
@@ -1376,6 +1449,7 @@ class Pembayaran_material extends Admin_Controller
 		$required_fields = ['bank', 'tgl_bayar', 'keterangan_pembayaran', 'mata_uang', 'payment_bank', 'total_payment', 'id_payment', 'kurs_payment'];
 		foreach ($required_fields as $field) {
 			if (!isset($post[$field]) || $post[$field] === '') {
+				$this->completeAudit('Pembayaran ditolak', 0, array('reason' => 'invalid_input'));
 				echo json_encode(['status' => 0, 'pesan' => "Field {$field} wajib diisi!"]);
 				return;
 			}
@@ -1384,13 +1458,17 @@ class Pembayaran_material extends Admin_Controller
 		// Validate admin_charge_bearer
 		$admin_charge_bearer = isset($post['admin_charge_bearer']) ? $post['admin_charge_bearer'] : '';
 		if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+			$this->completeAudit('Pembayaran ditolak', 0, array('reason' => 'invalid_admin_charge_bearer'));
 			echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
 			return;
 		}
 
-		$this->db->trans_start();
-
 		try {
+			if (!is_string($post['id_payment'])) { throw new DomainException('Pilihan pembayaran tidak valid.'); }
+			$selectedIds = explode(',', $post['id_payment']);
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
+			$this->Pembayaran_material_model->lock_payment_selection($this->auth->user_id());
+			$this->Pembayaran_material_model->validate_payment_selection($selectedIds);
 			$get_coa_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $post['bank']])->row();
 			$nm_coa_bank = '';
 			$kode_bank = '';
@@ -1901,16 +1979,17 @@ class Pembayaran_material extends Admin_Controller
 				$this->db->db_debug = $status_db_debug;
 			}
 
-			$payment_committed = $this->db->trans_complete();
+			$payment_committed = $this->db->trans_status() && $this->db->trans_commit();
 			if ($payment_committed === FALSE || $this->db->trans_status() === FALSE) {
 				throw new Exception('Transaksi gagal, data telah di-rollback.');
 			}
 
+			$this->completeAudit('Menyimpan pembayaran', 1, array('payment_ids' => $selectedIds, 'document_count' => count($selectedIds)));
 			echo json_encode([
 				'status' => $valid,
 				'pesan' => $pesan
 			]);
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			$this->db->trans_rollback();
 
 			$response = [
@@ -1918,26 +1997,24 @@ class Pembayaran_material extends Admin_Controller
 				'pesan' => $e->getMessage()
 			];
 
+			$this->completeAudit('Pembayaran ditolak', 0, array('reason' => $e instanceof DomainException ? 'incompatible_selection' : 'operation_failure'));
 			echo json_encode($response);
 		}
 	}
 
 	public function used_choosed_payment()
 	{
-		$this->db->trans_start();
-
-		$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
-
-		if ($this->db->trans_status() === false) {
-			$this->db->trans_rollback();
-		} else {
-			$this->db->trans_commit();
-		}
+		$this->beginAudit(__FUNCTION__);
+		$valid = $this->Pembayaran_material_model->refresh_list() ? 1 : 0;
+		$this->completeAudit('Mengubah pilihan pembayaran', $valid ? 1 : 0);
 	}
 
 	public function get_list_req_payment()
 	{
-		$this->Pembayaran_material_model->get_list_req_payment();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count', 'document_count', 'payment_ids'));
+		$summary = array();
+		$this->Pembayaran_material_model->get_list_req_payment($summary);
+		$this->completeAudit('Menyiapkan get_list_req_payment', !empty($summary['queries_ok']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0, 'outcome' => 'read'));
 	}
 
 	public function set_jurnal()
