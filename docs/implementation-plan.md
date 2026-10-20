@@ -676,3 +676,9 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
    - Hanya file modul invoicing, aset terkait, dan dokumentasi yang di-stage dan di-commit.
    - Push ke `origin/development` dan verifikasi SHA remote.
 
+# Publikasi pembatasan kelompok List Request Payment - 2026-10-20
+
+- Validasi kelompok pada pilih, Proses, form dan simpan; kasbon/expense membedakan SQL NULL persis, string kosong bukan NULL. Checkbox kelompok berbeda disabled; clear/uncheck terakhir melepas kelompok.
+- Metadata batch berdasarkan payment_approve.tipe dan no_doc ke tr_kasbon/tr_expense. Lock users.id_user menserialisasi perubahan pilihan/reset; validasi simpan dilakukan dalam transaksi sebelum upload dan penulisan bisnis.
+- Publikasi dipisahkan dari pekerjaan audit lokal lain: kandidat dibangun dari dasar development/main masing-masing, hanya endpoint fitur dan helper audit yang diperlukan. Tidak merge antarbranch, migrasi atau perubahan konfigurasi.
+- Pengujian kandidat: Selection_test.php (98 skenario) dan Selection_client_test.js (27 pemeriksaan), lint PHP/JS dan whitespace; tanpa browser/database operasional. Detail ada pada checkpoint task ini.

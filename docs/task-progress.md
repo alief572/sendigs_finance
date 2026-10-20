@@ -1804,3 +1804,12 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
   - Penambahan pendeteksi otomatis binary PHP lokal (`scratch/runtime/php74/php.exe`) pada runner Node.js (`Consulting_calculation_test.js`).
   - Penanganan lifecycle shutdown/bootstrap aman pada MariaDB disposable daemon (port 33319).
 - **Sisa risiko / TODO**: Tidak ada risiko regresi. Pengujian dijalankan secara headless CLI/Node.js sesuai instruksi (tanpa otomasi browser fisik).
+
+# Pembatasan kelompok List Request Payment - kandidat publikasi 2026-10-20
+
+- Selesai: validasi server, checkbox/client, pengujian kandidat dan pemilahan task dari pekerjaan lokal lain. Tahap publikasi dilaksanakan melalui commit terpisah pada dasar masing-masing branch development dan main, tanpa merge branch atau force push.
+- Kode: controller/model pembayaran_material, view list_request_payment.php, assets/js/pembayaran_material/payment_selection.js. Tes mandiri: Selection_fixture.php, Selection_test.php dan Selection_client_test.js pada modul pembayaran_material; dokumentasi plan/checkpoint ini.
+- Keputusan: tipe sama dan status NULL consultant sama; string kosong termasuk bukan NULL, nomor consultant tidak perlu sama. Data diambil dari database, tidak mempercayai browser. Lock pengguna sebelum perubahan pilihan/reset; audit satu hasil setelah commit berhasil. Validasi simpan sebelum upload/penulisan bisnis. Kegagalan penulis audit tidak mengubah hasil bisnis.
+- Pemilahan: hanya helper audit yang diperlukan endpoint fitur disertakan. Instrumentasi lama pada endpoint lain serta Batch1/Batch2 lokal tidak disertakan. Guard simpan disesuaikan terhadap implementasi asli branch; perilaku bisnis lainnya dipertahankan.
+- Validasi kandidat development/main: masing-masing PHP Selection 98 skenario PASS, Node Selection_client 27 pemeriksaan PASS; lint dan whitespace diperiksa sebelum commit. Meliputi endpoint langsung, sumber hilang, NULL/kosong, batch query, pagination, pemulihan pilihan, error query/transaksi/commit, save sukses, dan audit writer gagal.
+- Batas: tanpa browser/DB operasional; konkurensi database nyata belum diuji. Tidak ada migrasi/konfigurasi/data operasional. Tidak ada TODO kode fitur ini. Verifikasi remote SHA dicatat pada checkpoint publikasi workspace setelah push.
