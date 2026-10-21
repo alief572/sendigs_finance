@@ -2000,3 +2000,7 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - README kandidat membedakan validator sebagai dependency CLI dari integrasi save_payment lokal yang tidak dipublikasi. Tidak menjalankan ulang apply aplikasi pada proses publikasi.
 - Kandidat lulus validator43/reconciliation24/repair-plan19/repair-MySQL17/completion17/completion-MySQL9 (129 assertions unik); lint13 PHP dan whitespace PASS. Uji write hanya schema disposable; tidak browser atau deployment.
 - Aktif: staged review/scan kredensial, commit, push, verifikasi remote dan penyelarasan branch lokal dengan isi kerja tetap. Koreksi database lokal yang sudah selesai tidak berubah.
+### Publikasi update koreksi BK--1026-0002 — selesai 2026-10-21
+- Commit6c27c9f9a1fbc46c23806ed55bd4a77cb886cb72 dipush origin/development dan SHA remote dikonfirmasi. Isi19 file script/library/dependency/test/doc kasus; config, backup, scratch dan perubahan lokal lain tidak ikut.
+- Validasi kandidat129 assertions/lint13/whitespace/credential-pattern scan PASS. Tidak ada apply ulang database aplikasi, browser atau deployment selama publikasi. Dokumentasi ini menjadi follow-up commit.
+- Publikasi selesai. Branch lokal diselaraskan ke tip publikasi dengan index-only reset setelah memastikan tidak ada staging pengguna; hash isi kerja diperiksa agar tetap identik. Semua pekerjaan koreksi dan publikasi selesai.
