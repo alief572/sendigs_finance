@@ -16,7 +16,11 @@
         'Print Invoice': ['Cetak invoice', 'fa-print', 'blue'],
         'Print Invoice Non Konsultasi': ['Cetak invoice', 'fa-print', 'blue'],
         'Print Kwitansi': ['Cetak kwitansi', 'fa-file-pdf-o', 'green'],
-        'Close Invoice': ['Tutup invoice', 'fa-times-circle', 'red']
+        'Close Invoice': ['Tutup invoice', 'fa-times-circle', 'red'],
+        'Select Quotation': ['Buat invoice', 'fa-plus', 'blue'],
+        'Buat Invoice': ['Buat invoice', 'fa-plus', 'blue'],
+        'Close Penawaran': ['Tutup penawaran', 'fa-times-circle', 'red'],
+        'Tutup Penawaran': ['Tutup penawaran', 'fa-times-circle', 'red']
     };
     function available(state) {
         return state.actions.filter(function (action) {

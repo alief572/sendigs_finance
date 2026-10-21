@@ -64,7 +64,7 @@ api.close();
 const single=new Element('td'), singleAction=new Element('a');singleAction.setAttribute('title','Buat Invoice');single.appendChild(singleAction);api.enhance(single);
 check(!single.querySelector('.invoice-action-toggle'),'Single action remains standalone button without dropdown toggle');
 check(single.children.length===1&&single.children[0]===singleAction,'Single action node is preserved in cell');
-for(const [title,icon,tone] of [['View Invoice','fa-eye','blue'],['Revisi Invoice','fa-pencil','amber'],['Print Kwitansi','fa-file-pdf-o','green'],['Close Invoice','fa-times-circle','red'],['__proto__','fa-ellipsis-h','blue']]){
+for(const [title,icon,tone] of [['View Invoice','fa-eye','blue'],['Revisi Invoice','fa-pencil','amber'],['Print Kwitansi','fa-file-pdf-o','green'],['Close Invoice','fa-times-circle','red'],['Select Quotation','fa-plus','blue'],['Buat Invoice','fa-plus','blue'],['Close Penawaran','fa-times-circle','red'],['Tutup Penawaran','fa-times-circle','red'],['__proto__','fa-ellipsis-h','blue']]){
     const extra=new Element('td'), action=new Element('a'), sibling=new Element('a');action.setAttribute('title',title);action.setAttribute('href','/original');extra.appendChild(action);extra.appendChild(sibling);api.enhance(extra);
     check(action.children[0].classList.contains(icon) && action.getAttribute('data-action-tone')===tone && action.getAttribute('href')==='/original','Semantic icon/tone with safe fallback: '+title);
 }

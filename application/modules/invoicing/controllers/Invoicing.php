@@ -1768,7 +1768,41 @@ class Invoicing extends Admin_Controller
 
     public function list_penawaran_non_kons()
     {
+        $this->auth->restrict($this->viewPermission);
+
         $list_penawaran_non_kons = $this->Invoicing_model->get_list_penawaran_non_kons();
+
+        // Batch aggregate invoice counts to eliminate N+1 queries in the view
+        $penawaran_ids = [];
+        if (!empty($list_penawaran_non_kons)) {
+            foreach ($list_penawaran_non_kons as $item) {
+                if (!empty($item->id_penawaran)) {
+                    $penawaran_ids[] = $item->id_penawaran;
+                }
+            }
+        }
+
+        $invoice_counts = [];
+        if (!empty($penawaran_ids)) {
+            $counts = $this->db->select('id_penawaran, COUNT(id) as total_invoice')
+                ->from('tr_invoicing')
+                ->where_in('id_penawaran', $penawaran_ids)
+                ->group_by('id_penawaran')
+                ->get()->result();
+
+            if (!empty($counts)) {
+                foreach ($counts as $row) {
+                    $invoice_counts[$row->id_penawaran] = (int) $row->total_invoice;
+                }
+            }
+        }
+
+        if (!empty($list_penawaran_non_kons)) {
+            foreach ($list_penawaran_non_kons as $item) {
+                $item->total_invoice = $invoice_counts[$item->id_penawaran] ?? 0;
+            }
+        }
+
         $data = [
             'list_penawaran_non_kons' => $list_penawaran_non_kons
         ];

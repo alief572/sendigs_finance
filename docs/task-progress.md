@@ -1,4 +1,4 @@
-# Registrasi COA WAPU pada Database Akuntansi Remote — Selesai 2026-10-19
+﻿# Registrasi COA WAPU pada Database Akuntansi Remote — Selesai 2026-10-19
 
 - Status: Selesai (Akun WAPU `1106-01-08` dan `2104-01-09` berhasil didaftarkan ke seluruh database akuntansi tujuan pada host remote `206.84.97.107`, form invoice `add_invoice/1256` dan seluruh mapping COA tervalidasi 100% PASS).
 - Fase selesai:
@@ -2172,12 +2172,12 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Accounting TEST101BKA260000273 (3detail/1header globalGLdev) tetap exact fingerprint sesuai keputusan pengguna. Hash/count seluruh jurnal/japh/counter/coa bulanan pada empat targetdev, approval6/paid/jurnaltras identik sebelum/sesudah. Tidak ada posting accounting, perubahan TEST, pembayaran ulang atau status pembayaran berubah. Rerun apply already_applied IDs11192–11194 database_writes0.
 - Fase1–4 selesai; tidak ada blocker aktif. Laporan docs/bk-1026-0002-remote-dev-repair-2026-10-21.md, review remote JSON, README/rencana/checkpoint selesai. File kode/tes sesuai checkpoint pre-apply; konfigurasi/kredensial tidak diubah. Bukti source/master/invariant backup remote dan reviewed-inspect/master-apply/source-apply/after-verify/model-after/idempotent berada di scratch, tetap lokal.
 - Validasi: remote profile11/plan13/model10+Query130/disposableMySQL22; regresi localplan19/localMySQL17/reconciliation24/validator43/completion17 PASS. Lint8 batch utama dan lint helper verifikasi/whitespace diperiksa. Tidak browser/commit/push/deploy. Langkah berikutnya pengguna refresh/periksa modal dan posting melalui alur normal sebagai tindakan terpisah; tidak menjalankan koreksi lagi sesudah posting.
-### Print invoice konsultasi � fase 1 selesai 2026-10-21
+### Print invoice konsultasi - fase 1 selesai 2026-10-21
 - Akar masalah: jalur print_invoicing invoice v3 menuju consulting_form(print) lalu consulting_print, bukan template print_invoice lama.
 - Tes baru application/modules/invoicing/tests/Print_invoice_test.php mereproduksi kegagalan kop STM; UI existing 255 checks PASS sebelum assertion reproduksi gagal.
 - Fase aktif: adapter snapshot ke template lama, dengan nominal tersimpan agar KB tidak dihitung PPN ulang. Belum selesai: implementasi dan validasi akhir. Tidak mengubah database/konfigurasi atau pekerjaan modul lain.
 
-### Print invoice konsultasi � fase 2�3 selesai 2026-10-21
+### Print invoice konsultasi - fase 2-3 selesai 2026-10-21
 - Perubahan: consulting_print menjadi adapter snapshot ke print_invoice lama; print_invoice menerima override PPN/total/presisi v3 dengan fallback legacy tetap. Kop, CSS/tabel, rekening, tanda tangan dan dialog print existing dipakai kembali. Tidak ada perubahan controller/database.
 - File: application/modules/invoicing/views/consulting_print.php, views/print_invoice.php, tests/Print_invoice_test.php, README.md; docs/implementation-plan.md, task-progress.md, invoicing-print-restoration-2026-10-21.md.
 - Keputusan: gunakan nominal invoice tersimpan dan TOP snapshot, tidak reread TOP mutable; override mencegah PPN dihitung ulang untuk KB. Escaping customer/keterangan dan presisi dua desimal v3 dipertahankan. print_keterangan tersimpan diprioritaskan; fallback deskripsi TOP.
@@ -2229,3 +2229,32 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
   - Print_invoice_test.php: 255 checks + 70 assertions PASS (100%).
 - Masalah yang belum terselesaikan: Tidak ada.
 - Langkah berikutnya: Pengguna dapat me-refresh halaman /jurnal_all pada browser untuk melihat nomor referensi tab Invoicing yang telah terisi.
+### Modernisasi UI List Penawaran Non Konsultasi — Selesai 2026-10-21
+- Status: Seluruh fase modernisasi tampilan modul List Penawaran Non Konsultasi selesai 100%.
+- Fase selesai:
+  1. Fase 1: Optimasi Data di Controller — Batch aggregate invoice count di Invoicing::list_penawaran_non_kons() untuk eliminasi query N+1 di view.
+  2. Fase 2: Registrasi Label Aksi pada assets/js/invoicing/action-menu.js — Menambahkan Select Quotation, Buat Invoice, Close Penawaran, dan Tutup Penawaran dengan semantic icon dan tone.
+  3. Fase 3: Redesain View list_penawaran_non_kons.php — Mengadopsi .invoice-workspace, DataTables 2.1.7, semantic badge, alignment tabular nums, dan container scroll responsif.
+  4. Fase 4: Validasi & Pengujian — Pengujian unit test Action_menu_test.js (56 assertions PASS), Ui_render_test.php (269 checks PASS), lint PHP (0 error).
+- File dimodifikasi:
+  - application/modules/invoicing/controllers/Invoicing.php
+  - application/modules/invoicing/views/list_penawaran_non_kons.php
+  - assets/js/invoicing/action-menu.js
+  - assets/css/invoicing.css
+  - application/modules/invoicing/tests/Action_menu_test.js
+  - application/modules/invoicing/tests/Ui_render_test.php
+  - docs/implementation-plan.md
+  - docs/task-progress.md
+- Keputusan teknis:
+  - Mengeliminasi query N+1: sebelumnya view mengeksekusi \->db->get() di dalam foreach loop. Sekarang di-batch di controller dengan agregasi COUNT(id) GROUP BY id_penawaran.
+  - Mengikuti styling index.php dan standar /antislop-ui: mengganti thead bg-primary usang dengan header clean slate (#edf3f8), mengganti badge AdminLTE default menjadi semantic badge soft (#fff3d8/#785512 untuk Draft dan #e6f4ed/#186145 untuk Invoice Created).
+  - Aksi standalone vs dropdown: baris single action (Draft) tetap menjadi tombol mandiri (Buat Invoice), sedangkan baris multiple action (Invoice Created) otomatis ditingkatkan menjadi accessible dropdown toggle Aksi via InvoiceActionMenu.
+  - Numerik finansial: Kolom penjualan menggunakan font-variant-numeric: tabular-nums dan perataan kanan.
+- Hasil pengujian:
+  - Action_menu_test.js: 56 checks PASS.
+  - Ui_render_test.php: 269 checks PASS.
+  - Ui_list_client_test.js: 55 checks PASS.
+  - Print_invoice_test.php: 70 assertions PASS.
+  - PHP syntax lint: No errors.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat merefresh halaman browser di http://localhost:8080/invoicing/list_penawaran_non_kons untuk melihat antarmuka baru.

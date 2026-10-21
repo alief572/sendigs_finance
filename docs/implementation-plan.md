@@ -1,4 +1,4 @@
-# Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
+﻿# Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
 
 ## Konteks dan Kebutuhan
 Pengguna meminta agar saat melakukan posting jurnal pada modul `jurnal_all`, sistem menampilkan notifikasi menggunakan **SweetAlert2**, baik untuk skenario sukses maupun skenario gagal.
@@ -845,13 +845,13 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 
 - Status akhir remote: fase1–4 selesai. Master4 lengkap, staging14row balance per native target (STM Payment8713202/SUSTAIN1637000/refill207000) dan pending; TEST serta accounting/counter/approval/paid/jurnaltras tetap. Rerun nol write. Rincian laporan remote-dev-repair dan checkpoint penutupan.
 
-### Pemulihan format print invoice konsultasi � 2026-10-21
+### Pemulihan format print invoice konsultasi - 2026-10-21
 - Cakupan: invoice v3 pada print_invoicing memakai kembali template print_invoice existing; tidak mengubah penyimpanan, jurnal, atau kalkulasi invoice.
 - Fase 1: telusuri routing dan reproduksi render tanpa kop lama. Selesai: consulting_form(print) memilih consulting_print sederhana; tes Print_invoice_test gagal pada kop STM.
 - Fase 2: adaptasikan data snapshot ke kontrak template lama, pertahankan keterangan tersimpan dan nominal/PPN/total invoice. Layout dan perilaku legacy tetap.
 - Fase 3: uji render STM/Sustain/Vuca, PKP/WAPU/KB, escaping, error, fallback legacy; regresi UI/kalkulasi, lint dan whitespace. Tanpa browser, perubahan database, commit atau push.
 - Kriteria selesai: kop/tabel/rekening/tanda tangan/dialog print lama kembali; angka invoice v3 dan perilaku legacy tetap.
-- Hasil akhir: fase 2�3 selesai; adapter/template dan regresi terverifikasi. Bukti dan batasan: docs/invoicing-print-restoration-2026-10-21.md serta checkpoint print invoice pada docs/task-progress.md.
+- Hasil akhir: fase 2-3 selesai; adapter/template dan regresi terverifikasi. Bukti dan batasan: docs/invoicing-print-restoration-2026-10-21.md serta checkpoint print invoice pada docs/task-progress.md.
 
 - Publikasi diotorisasi pengguna pada 2026-10-21: commit kandidat terbatas tujuh file ke development setelah verifikasi checkout terisolasi. Tidak ada deployment.
 
@@ -862,3 +862,31 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Fase 3: Pengayaan indeks extra_search agar pencarian invoice dapat menemukan nomor penawaran dan PO.
 - Fase 4: Pembaruan fixture mock skema tr_invoicing pada Query_test.php dan Mysql_test.php serta penambahan 5 assertions pengujian hierarki referensi dan pencarian.
 - Fase 5: Verifikasi regresi 135 assertions Query_test.php, 86 assertions Controller_test.php, dan verifikasi data aktual database dev remote.
+---
+
+# Modernisasi UI Modul List Penawaran Non Konsultasi — 2026-10-21
+
+## 1. Konteks dan Kebutuhan
+Pengguna meminta perbaikan dan peningkatan UI pada modul **List Penawaran Non Konsultasi** (localhost:8080/invoicing/list_penawaran_non_kons) dengan referensi dari tampilan halaman index modul invoicing (pplication/modules/invoicing/views/index.php) serta menerapkan prinsip skill /antislop-ui.
+
+## 2. Temuan Audit UI & Kode Saat Ini
+- **Box & Layout**: Tampilan awal menggunakan wrapper standar AdminLTE box tanpa styling modern, tidak seragam dengan .invoice-workspace pada modul invoicing utama.
+- **Tabel & Header**: Header tabel menggunakan class 	head.bg-primary yang usang dan kontras kasar, belum menggunakan header executive soft-slate (#edf3f8 dengan teks #344d64 dan border #bdcbd9).
+- **DataTables**: Belum diinisialisasi DataTables sehingga tidak tersedia fitur pencarian instan, pengaturan jumlah baris, maupun pagination.
+- **Scroll Responsif**: Belum ada container horizontal scroll (.invoice-table-scroll), berisiko terpotong pada layar laptop kecil/tablet.
+- **Badge Status**: Masih menggunakan badge AdminLTE pill kuning/hijau polos tanpa tipografi modern dan palet terkalibrasi (#785512/#fff3d8 untuk Draft, #186145/#e6f4ed untuk Invoice Created).
+- **Format Angka**: Kolom Penjualan belum menggunakan ont-variant-numeric: tabular-nums dan alignment kanan standar akuntansi.
+- **Tombol Aksi**: Tombol + dan x berupa kotak kecil polos tanpa teks penjelas. Jika penawaran memiliki dua aksi (Buat Invoice & Tutup Penawaran), belum terintegrasi dengan komponen InvoiceActionMenu dropdown yang rapi dan aksesibel.
+- **Performa (N+1 Query)**: Pada file view list_penawaran_non_kons.php, terdapat query database langsung di dalam loop foreach ($this->db->get()), yang mengeksekusi puluhan hingga ratusan query berulang saat merender halaman.
+
+## 3. Rencana Fase Pengerjaan
+- **Fase 1: Optimasi Data di Controller**:
+  - Pada pplication/modules/invoicing/controllers/Invoicing.php method list_penawaran_non_kons(), hitung jumlah invoice secara batch (agregasi COUNT) untuk seluruh ID penawaran sekaligus, menghilangkan N+1 query dari view.
+- **Fase 2: Registrasi Label Aksi pada ction-menu.js**:
+  - Menambahkan kamus label 'Select Quotation', 'Buat Invoice', 'Close Penawaran', dan 'Tutup Penawaran' pada ssets/js/invoicing/action-menu.js agar kompatibel dengan menu portal accessible.
+- **Fase 3: Redesain View list_penawaran_non_kons.php**:
+  - Mengimplementasikan layout .invoice-workspace dengan header elegan, tombol kembali, tabel DataTables 2.1.7, status badge modern, kolom aksi cerdas (standalone untuk single action, dropdown accessible untuk multiple action), dan modal SweetAlert2 konfirmasi tutup penawaran.
+- **Fase 4: Validasi & Pengujian**:
+  - Menjalankan unit test JS (Action_menu_test.js), unit test PHP (Ui_render_test.php), dan verifikasi render view terisolasi.
+- **Fase 5: Checkpoint & Dokumentasi**:
+  - Menyusun rangkuman perubahan pada docs/task-progress.md dan docs/implementation-plan.md.

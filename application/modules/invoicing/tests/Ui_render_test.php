@@ -2,6 +2,16 @@
 define('BASEPATH', dirname(__DIR__,4).'/system/');
 define('FCPATH', dirname(__DIR__,4).'/');
 require dirname(__DIR__).'/libraries/Invoice_consulting.php';
+if (!function_exists('html_escape')) {
+    function html_escape($var, $double_encode = TRUE) {
+        if (empty($var)) return $var;
+        if (is_array($var)) {
+            foreach (array_keys($var) as $key) $var[$key] = html_escape($var[$key], $double_encode);
+            return $var;
+        }
+        return htmlspecialchars($var, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', $double_encode);
+    }
+}
 function base_url($path='') { return '/'.$path; }
 function has_permission($permission) { return !in_array($permission,$GLOBALS['denied']??[],true); }
 function verifyUi($condition,$message) { $GLOBALS['checks']++; if(!$condition)throw new RuntimeException($message); }
@@ -135,4 +145,49 @@ verifyUi(strpos($printHtml, '110.06')!==false, 'Consulting print 2-decimal PPN')
 verifyUi(strpos($printHtml, '1,110.61')!==false, 'Consulting print 2-decimal gross total');
 $printErrorHtml = $renderer->render('consulting_print', ['invoice'=>$printInvoice, 'snapshot'=>$snapshot, 'error'=>'Gagal memuat <script>alert(1)</script>']);
 verifyUi(strpos($printErrorHtml, '<script>alert(1)</script>')===false && strpos($printErrorHtml, 'Gagal memuat')!==false, 'Consulting print error escaping');
+
+$GLOBALS['denied'] = [];
+$nonKonsItems = [
+    (object)[
+        'id_penawaran' => 'P-NON-KONS-001 <script>alert(1)</script>',
+        'nm_company' => 'STM <script>alert(2)</script>',
+        'grand_total' => 19975200,
+        'pic' => 'Ali Sadiman <script>alert(3)</script>',
+        'total_invoice' => 1
+    ],
+    (object)[
+        'id_penawaran' => 'P-NON-KONS-002',
+        'nm_company' => 'Vuca',
+        'grand_total' => 3500000,
+        'pic' => 'Risa',
+        'total_invoice' => 0
+    ]
+];
+$listHtml = $renderer->render('list_penawaran_non_kons', ['list_penawaran_non_kons' => $nonKonsItems]);
+$listXpath = htmlQuery($listHtml);
+
+verifyUi(strpos($listHtml, '<script>alert(1)</script>') === false, 'List non-kons penawaran escaping');
+verifyUi(strpos($listHtml, '<script>alert(2)</script>') === false, 'List non-kons company escaping');
+verifyUi(strpos($listHtml, '<script>alert(3)</script>') === false, 'List non-kons PIC escaping');
+verifyUi($listXpath->query('//*[@id="invoicing-workspace"]')->length === 1, 'List non-kons workspace container');
+verifyUi($listXpath->query('//*[@id="table_list_penawaran_non_kons"]')->length === 1, 'List non-kons data table');
+verifyUi($listXpath->query('//*[@id="table_list_penawaran_non_kons"]//th')->length === 8, 'List non-kons eight table columns');
+verifyUi(strpos($listHtml, '19,975,200') !== false, 'List non-kons grand total formatted');
+verifyUi(strpos($listHtml, '3,500,000') !== false, 'List non-kons second row total formatted');
+verifyUi($listXpath->query('//span[contains(@class, "bg-green") and contains(text(), "Invoice Created")]')->length === 1, 'List non-kons green status badge');
+verifyUi($listXpath->query('//span[contains(@class, "bg-yellow") and contains(text(), "Draft")]')->length === 1, 'List non-kons yellow status badge');
+verifyUi($listXpath->query('//button[contains(@class, "close_penawaran")]')->length === 1, 'List non-kons close penawaran action for invoiced row');
+verifyUi($listXpath->query('//a[contains(@href, "create_invoice_non_konsultasi")]')->length === 2, 'List non-kons create action on both rows');
+
+$GLOBALS['denied'] = ['Invoicing.Add'];
+$noAddHtml = $renderer->render('list_penawaran_non_kons', ['list_penawaran_non_kons' => $nonKonsItems]);
+$noAddXpath = htmlQuery($noAddHtml);
+verifyUi($noAddXpath->query('//a[contains(@href, "create_invoice_non_konsultasi")]')->length === 0, 'Create invoice hidden without Add permission');
+
+$GLOBALS['denied'] = ['Invoicing.Manage'];
+$noManageHtml = $renderer->render('list_penawaran_non_kons', ['list_penawaran_non_kons' => $nonKonsItems]);
+$noManageXpath = htmlQuery($noManageHtml);
+verifyUi($noManageXpath->query('//button[contains(@class, "close_penawaran")]')->length === 0, 'Close penawaran hidden without Manage permission');
+$GLOBALS['denied'] = [];
+
 echo 'UI render PASS: '.$GLOBALS['checks']." checks\n";
