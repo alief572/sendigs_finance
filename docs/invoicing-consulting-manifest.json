@@ -84,7 +84,7 @@
     "application/modules/invoicing/libraries/Invoice_consulting.php": "f5555ec0d14adc67b2849b16c6eb58beb28a4a7a2043d79fe610fb5a2fff7de5",
     "application/modules/invoicing/libraries/Invoice_consulting_service.php": "5ff8ccfbc9406ff9606ddc725a5119481d3e288442f21e42cec3be73469326e8",
     "application/modules/invoicing/libraries/Consulting_posting.php": "d7981e1a96b7de6026f5553497b95b323bacdea993c77f06a4db643508ba86ba",
-    "application/modules/invoicing/views/consulting_invoice.php": "eae1f425a0210dfc52b3d303b1b58a2983da05df3f567cf23b70edda7d22f677",
+    "application/modules/invoicing/views/consulting_invoice.php": "e4ed69a26d334804a8a05472f1bf0411aea010c1cdba2606a41c35386ab0190e",
     "application/modules/invoicing/views/consulting_settings.php": "0b71be1d08cae6dee8c5237658bd8577066b88d2d2e5c3aff0486299dc9992da",
     "application/modules/invoicing/views/consulting_print.php": "fabe99af4cc4e6af44161ecfaf3a85bb787f139b6a308bcfa6eee66bc7216972",
     "application/modules/invoicing/views/index.php": "c3d9ebea1b65dd3a5b1daee047ae6c0016dea3fd8af27efd7286089bf02e795d",
@@ -111,7 +111,7 @@
     "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php": "421f6fbaddcd0a3d88875d75755e6b83d2a8cf40908e0bd8cfbe38bf6475bb9b",
     "application/libraries/Module_audit_recorder.php": "370c38930c6837e261503c8311f0a6d72879fd9949e5ff9eea873acf5417c3b0",
     "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php": "e8b0ce89d312c790f34e76047fe2772caa7e86f2160ed49c728bd8585a6cf1e6",
-    "assets/css/invoicing.css": "2634f9b61d888fbeb094097a3df97b5a2741de637df49eb9e26b3cfc1473025e",
+    "assets/css/invoicing.css": "520be30d1d53360dcbbbed8b7b58f3c2b81fd62594e78d8830198d4aa6cc3533",
     "assets/js/invoicing/consulting-form.js": "e6dd3dbb02bec691c7c857d3bf5f15fc41ec2d8f47a10f2fd0764b973fab800a",
     "application/modules/invoicing/tests/Ui_render_test.php": "ade610bd4100eb3db05e604ddc6be90f5d094b1b4bd68c1f12ac64eb6c91a058",
     "application/modules/invoicing/tests/Ui_client_test.js": "624f7add44c2880ad7c60dc4476a668d52f7fb4643161c2397aef55c57e4ed2a",
@@ -225,5 +225,11 @@
     "library": "existing local SweetAlert2 11.23.0",
     "backend": "unchanged",
     "success": "numeric status1; redirect/reload after OK"
+  },
+  "compact_add_ui": {
+    "date": "2026-10-21",
+    "scope": "add_invoice only; same density rules as Vuca; VAT/calculation/edit/detail unchanged",
+    "report": "docs/invoicing-compact-ui-2026-10-21.md",
+    "verification": "400 render/client checks, 9 DOM mode/tax cases, CSS declaration equivalence, PHP lint and whitespace; previous transaction checks reused"
   }
 }

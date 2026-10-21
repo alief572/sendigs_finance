@@ -37,7 +37,7 @@ class Invoice_writer
     }
     private function journals($id, $company, $t, $vuca, $revenue, $date)
     {
-        if (!preg_match('/^4101-01-\d{2}$/', $revenue)) { throw new InvalidArgumentException('COA pendapatan tidak valid.'); }
+        if (!preg_match($vuca?'/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D':'/^4101-01-\d{2}$/', $revenue)) { throw new InvalidArgumentException('COA pendapatan tidak valid.'); }
         $taxCoa=$vuca?'1106-01-05':'1106-01-02';
         $codes=array('1102-01-01',$taxCoa,'2104-01-07',$revenue);
         $this->accounting->select('no_perkiraan, nama AS nm_coa');
@@ -107,7 +107,7 @@ class Invoice_writer
                 $actualId=$edit?$existing['id_actual_plan_tagih']:$this->required($post,'id');
                 $actual=$this->one('SELECT * FROM kons_tr_actual_plan_tagih WHERE id = ? FOR UPDATE',array($actualId));
                 if (!$actual) { throw new RuntimeException('Actual plan tagih tidak ditemukan.'); }
-                $plan=$this->one('SELECT id FROM kons_tr_plan_tagih_detail WHERE id = ? FOR UPDATE',array($actual['id_detail_plan_tagih']));
+                $plan=$this->one('SELECT '.($vuca?'id, nominal_payment':'id').' FROM kons_tr_plan_tagih_detail WHERE id = ? FOR UPDATE',array($actual['id_detail_plan_tagih']));
                 if (!$plan) { throw new RuntimeException('Detail plan tagih tidak ditemukan.'); }
                 if (!$edit) {
                     $issued=$this->db->query('SELECT id FROM tr_invoicing WHERE id_actual_plan_tagih = ? FOR UPDATE',array($actualId))->result_array();
@@ -117,7 +117,7 @@ class Invoice_writer
                 $quote=$this->one('SELECT * FROM '.$this->schema.'kons_tr_penawaran WHERE id_quotation = ?',array($actual['id_penawaran']));
                 if (!$spk || !$quote) { throw new RuntimeException('SPK atau penawaran tidak ditemukan.'); }
                 $companyId=!empty($quote['company'])?$quote['company']:($spk['id_company']??null);
-                $dpp=Invoice_calculation::cents($edit?$existing['total_nominal_jurnal']:$actual['nominal_payment']);
+                $dpp=Invoice_calculation::cents($edit?$existing['total_nominal_jurnal']:($vuca?$plan['nominal_payment']:$actual['nominal_payment']));
                 $t=Invoice_calculation::totals($dpp,$vuca?'0':$this->required($post,'ppn_persen'),$vuca);
                 $fields=array();
                 if (!$edit) {
@@ -137,6 +137,21 @@ class Invoice_writer
                 if ($duplicate) { throw new RuntimeException('Nomor invoice sudah digunakan.'); }
             }
             $revenue='4101-01-01';
+            if ($vuca) {
+                require_once __DIR__.'/Invoice_vuca.php';
+                if ($edit) {
+                    $revenue=Invoice_vuca::saved_revenue($oldJournals)['coa'];
+                } else {
+                    $accounts=Invoice_vuca::sales_accounts($this->db,$this->accounting,$companyId,true);
+                    $role=$this->required($post,'sales_role');
+                    if (!isset($accounts[$role])) throw new InvalidArgumentException('Pilih COA penjualan Vuca yang valid.');
+                    $revenue=$accounts[$role]['code'];
+                }
+                if (!$edit) {
+                    $this->required($post,'nomor_po');
+                    $this->required($post,'nomor_faktur');
+                }
+            }
             if ($non) {
                 $revenue=!empty($post['jurnal_invoice_no_coa'])?$post['jurnal_invoice_no_coa']:'4101-01-01';
                 if ($edit && empty($post['jurnal_invoice_no_coa'])) {
@@ -148,6 +163,17 @@ class Invoice_writer
             $journals=$this->journals($id,$company,$t,$vuca,$revenue,$date);
             $fields=array_merge($fields,Invoice_calculation::fields($t),array('tanggal_invoice'=>$date,'no_invoice'=>$number,
                 'no_po'=>$post[$edit && !$non?'no_po':'nomor_po']??'','no_faktur'=>$post['nomor_faktur']??''));
+            if ($vuca) $fields['pph_jurnal']=Invoice_calculation::decimal($t['pph']);
+            if ($vuca && $edit) {
+                foreach (array('dpp_nilai_lain','pajak','total_akhir') as $key) $fields[$key]=$existing[$key];
+            }
+            if ($vuca && !$edit) {
+                // These legacy document fields differ from the zero-VAT journal fields.
+                $legacyAmount=(float)Invoice_calculation::decimal($t['dpp']);
+                $fields['dpp_nilai_lain']=$legacyAmount*11/12;
+                $fields['pajak']=$fields['dpp_nilai_lain']*12/100;
+                $fields['total_akhir']=$legacyAmount+$fields['pajak'];
+            }
             if ($edit) {
                 $this->checked($this->db->delete('tr_jurnal',array('no_transaksi'=>$id,'jenis_transaksi'=>'Invoicing')));
                 $this->checked($this->db->update('tr_invoicing',$fields,array('id'=>$id)));

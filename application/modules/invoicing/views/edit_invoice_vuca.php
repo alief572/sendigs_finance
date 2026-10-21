@@ -13,6 +13,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
 <div class="box">
     <form action="" method="post" id="frm-data">
         <input type="hidden" name="id_invoicing" value="<?= $id_invoicing ?>">
+        <input type="hidden" name="invoice_fingerprint" value="<?= htmlspecialchars(Invoice_calculation::fingerprint((array)$data_invoice), ENT_QUOTES, 'UTF-8') ?>">
         <div class=" box-body">
             <div class="col-6">
                 <table width="100%" border="0">
@@ -37,7 +38,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <td width="12%">Finance Dept.</td>
                         <th width="13%">Nomor PO</th>
                         <td width="12%">
-                            <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= $data_invoice->no_po ?>">
+                            <input type="text" name="no_po" id="" class="form-control form-control-sm" value="<?= htmlspecialchars($data_invoice->no_po, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                     <tr>
@@ -46,7 +47,7 @@ $total_akhir_jurnal = $data_invoice->total_akhir_jurnal;
                         <th width="13%">Nomor Faktur</th>
                         <td width="12%">
                             <br>
-                            <input type="text" name="nomor_faktur" class="form-control form-control-sm" value="<?= $data_invoice->no_faktur ?>">
+                            <input type="text" name="nomor_faktur" class="form-control form-control-sm" value="<?= htmlspecialchars($data_invoice->no_faktur, ENT_QUOTES, 'UTF-8') ?>">
                         </td>
                     </tr>
                 </table>

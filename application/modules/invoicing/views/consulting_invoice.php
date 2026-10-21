@@ -9,7 +9,7 @@ $totals = $type ? Invoice_consulting::totals($invoice['total_nominal'],$type) : 
 $number = $invoice['no_invoice'];
 ?>
 <link rel="stylesheet" href="<?= base_url('assets/css/invoicing.css?v='.filemtime(FCPATH.'assets/css/invoicing.css')) ?>">
-<div class="box invoice-workspace consulting-invoice">
+<div class="box invoice-workspace consulting-invoice<?= $mode==='add'?' invoice-compact':'' ?>">
     <div class="invoice-heading">
         <div><h2><?= $mode==='add'?'Buat invoice konsultasi':($mode==='edit'?'Edit invoice konsultasi':'Detail invoice konsultasi') ?></h2><p><?= $escape($number) ?> · SPK <?= $escape($invoice['id_spk_penawaran']) ?></p></div>
         <div class="invoice-heading-actions"><a class="btn btn-default" href="<?= base_url('invoicing') ?>">Kembali ke daftar</a></div>
@@ -45,13 +45,14 @@ $number = $invoice['no_invoice'];
                     </div>
                 </div>
             </section>
+            <?php if ($mode==='add'): ?><div class="invoice-financial-grid"><div class="invoice-billing-main"><?php endif; ?>
             <section class="invoice-section" aria-labelledby="invoice-top-title">
                 <div class="invoice-section-heading"><h3 id="invoice-top-title">Rincian TOP</h3><p>Satu TOP untuk satu invoice. Nominal mengikuti plan tagih dan tidak dapat diubah di sini.</p></div>
                 <div class="invoice-table-scroll" role="region" aria-label="Rincian term of payment" tabindex="0"><table class="table table-bordered invoice-top-table"><thead><tr><th scope="col">No.</th><th scope="col">Term of Payment</th><th scope="col">Persentase</th><th scope="col" class="text-right">Nominal (Rp)</th><th scope="col">Deskripsi</th></tr></thead><tbody><tr>
                     <td>1</td><td><?= $escape($top['term_payment']) ?></td><td><?= $escape(number_format((float)$top['persen_payment'],2)) ?>%</td><td class="text-right"><?= number_format((float)$invoice['total_nominal'],2) ?></td><td><?= $escape($top['desc_payment']) ?></td>
                 </tr></tbody></table></div>
             </section>
-            <div class="invoice-financial-grid">
+            <?php if ($mode!=='add'): ?><div class="invoice-financial-grid"><?php endif; ?>
                 <section aria-labelledby="invoice-revenue-title">
                     <div class="invoice-section-heading"><h3 id="invoice-revenue-title">Akun penjualan</h3><p>Kategori penjualan menentukan akun pendapatan pada jurnal invoice.</p></div>
                     <?php if ($editable): ?><div class="form-group"><label for="consulting-sales">COA penjualan <span class="invoice-required" aria-hidden="true">*</span></label><select class="form-control" id="consulting-sales" name="sales_role" required><option value="">Pilih COA Penjualan</option>
@@ -59,6 +60,7 @@ $number = $invoice['no_invoice'];
                     </select></div><?php else: ?><div class="invoice-customer"><?= $escape(($snapshot['accounts'][$role]['code']??'').' - '.($snapshot['accounts'][$role]['name']??'')) ?></div><?php endif; ?>
                     <p class="invoice-help">PPh dicatat saat penerimaan sesuai bukti yang diinput. Nilainya tidak mengurangi piutang awal invoice ini.</p>
                 </section>
+                <?php if ($mode==='add'): ?></div><?php endif; ?>
                 <section class="invoice-summary" aria-labelledby="invoice-summary-title">
                     <h3 id="invoice-summary-title">Ringkasan tagihan <span class="invoice-help">(Rp)</span></h3>
                     <table><tbody>

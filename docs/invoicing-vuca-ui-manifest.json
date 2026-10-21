@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-21",
+  "scope": "Vuca add form and persisted revenue compatibility; no migrations",
+  "status": "complete_local_verification",
+  "endpoints": {
+    "invoicing/add_invoice_vuca": "shared invoice layout, four mapped sales roles, no VAT selection",
+    "invoicing/save_invoice_vuca": "server COA validation, accounting_vuca, checked commit, safe audit",
+    "invoicing/edit_invoicing_vuca": "saved journals and invoice fingerprint; existing layout retained",
+    "invoicing/update_invoice_vuca": "preserves saved revenue with transactional writer and safe audit",
+    "invoicing/view_invoicing_vuca": "displays saved journal instead of rebuilding the default account"
+  },
+  "report": "docs/invoicing-vuca-ui-validation-2026-10-21.md",
+  "checkpoint": "docs/task-progress.md",
+  "production_database_changes": "none",
+  "browser_testing": "not performed, per user instruction",
+  "integration_checks": 532,
+  "runtime_sha256": {
+    "application/modules/invoicing/controllers/Invoicing.php": "82a8b179d02f57d2378db520f5cdab3799bc7d77624adca00f2c22ef277dc68f",
+    "application/modules/invoicing/libraries/Invoice_writer.php": "cebb35145e4f5063ca6116575904dde7b14bc15403182d4a54d8b4fb0dce63fc",
+    "application/modules/invoicing/libraries/Invoice_vuca.php": "ad1bcdb537cbc3ded96f9c018f43d2725247576943c61d1377603ecf2d168256",
+    "application/modules/invoicing/views/add_invoice_vuca.php": "2e86eafb2363ed06e487a34d5e2049fce4358eb081f57c3b9fa88b8a3d73cf49",
+    "application/modules/invoicing/views/edit_invoice_vuca.php": "17742c4fa7563ca940f9f9cd360886e3c15bd5b22b1d91d55dd1fc9b4da0a2ae",
+    "application/modules/invoicing/views/vuca_journal_rows.php": "c7e8b7e3db2c6e541998e7d58731ac6990f565ae031ecc47d38fff97d8cbf799",
+    "assets/js/invoicing/vuca-form.js": "7d2cbd746d4dc515ddaa27b6a0a55edea7e4148a76cea163b58f4b62d5914e7a",
+    "assets/css/invoicing.css": "520be30d1d53360dcbbbed8b7b58f3c2b81fd62594e78d8830198d4aa6cc3533"
+  },
+  "layout_revision": {
+    "date": "2026-10-21",
+    "description": "Compact Vuca layout; grouped TOP and sales account beside summary; Vuca-only CSS overrides",
+    "verification": "25 Vuca render, 254 regular render, 30 Vuca client, PHP lint, DOM grouping, CSS scope and whitespace; existing 532 transaction checks reused"
+  },
+  "shared_compact_css": {
+    "date": "2026-10-21",
+    "report": "docs/invoicing-compact-ui-2026-10-21.md",
+    "scope": "Added consulting add opt-in; Vuca CSS declarations unchanged"
+  }
+}

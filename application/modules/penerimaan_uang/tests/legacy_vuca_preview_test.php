@@ -64,7 +64,7 @@ class LegacyModel {
     function generate_id() { return 'NEW'; }
     function generate_id_invoice_jurnal($number) { return 'JOURNAL-'.$number; }
 }
-class LegacyAuth { function user_id() { return 'fixture'; } }
+class LegacyAuth { function user_id() { return 'fixture'; } function restrict($permission) {} }
 class LegacySession { function userdata($key) { return 'fixture'; } }
 function legacyController($class, $db) {
     $c = (new ReflectionClass($class))->newInstanceWithoutConstructor();
@@ -183,11 +183,37 @@ foreach (array('0','1') as $type) {
 }
 // Creation must stop producing zero gross for new Vuca invoices.
 $writer = legacyController('Invoicing', $db); $writer->Invoicing_model = new LegacyModel; $writer->auth = new LegacyAuth;
-// An empty COA fixture keeps this focused on invoice fields, without journal writes.
-class LegacyWriterDb extends LegacyDb { function get() { return new LegacyResult(array()); } }
+// The active Vuca endpoint now validates master/mapping and writes its journal server-side.
+class LegacyWriterDb extends LegacyDb {
+    public $db_debug=false;
+    private $selectedCodes=array();
+    function masterRows() {
+        $rows=array();foreach(array('1102-01-01','2104-01-07','1106-01-05','4101-01-01','4101-01-02','4101-01-03','4101-01-04') as $code)$rows[]=array('no_perkiraan'=>$code,'nama'=>$code,'nm_coa'=>$code);return $rows;
+    }
+    function query($sql,$params=array()) {
+        if(strpos($sql,'information_schema.TABLES')!==false)return new LegacyResult(array(array('ENGINE'=>'InnoDB')));
+        if(strpos($sql,'SELECT no_perkiraan,nama FROM coa_master')===0)return new LegacyResult($this->masterRows());
+        if(strpos($sql,'FROM ms_invoice_coa_mapping')!==false)return new LegacyResult(array(array('owner_company_id'=>'4','accounts'=>json_encode(array('sales_consulting'=>'4101-01-01','sales_inhouse'=>'4101-01-02','sales_public'=>'4101-01-03','sales_hse'=>'4101-01-04')))));
+        if(strpos($sql,'SELECT id FROM tr_invoicing')===0)return new LegacyResult(array());
+        if(strpos($sql,'FROM kons_tr_plan_tagih_detail')!==false)return new LegacyResult(array(array('id'=>1,'nominal_payment'=>'15000000.00')));
+        if(strpos($sql,'FROM kons_tr_actual_plan_tagih')!==false)return new LegacyResult(array(array('id'=>'PLAN','id_detail_plan_tagih'=>1,'id_spk_penawaran'=>'SPK','id_penawaran'=>'Q','nominal_payment'=>'15000000.00','sts_invoice'=>0)));
+        if(strpos($sql,'kons_tr_spk_penawaran')!==false)return parent::get_where('kons_tr_spk_penawaran',array());
+        if(strpos($sql,'kons_tr_penawaran')!==false)return new LegacyResult(array(array('company'=>4)));
+        if(strpos($sql,'kons_tr_company')!==false)return new LegacyResult(array(array('id'=>4,'nm_company'=>'Vuca')));
+        if(strpos($sql,'kons_master_konsultasi_header')!==false)return new LegacyResult(array(array('nm_paket'=>'Project')));
+        return parent::query($sql,$params);
+    }
+    function where_in($field,$codes) { $this->selectedCodes=$codes; return $this; }
+    function get() { return new LegacyResult(array_values(array_filter($this->masterRows(),function($row){return in_array($row['no_perkiraan'],$this->selectedCodes,true);}))); }
+    function trans_begin(){return true;}
+    function trans_commit(){return true;}
+    function trans_rollback(){return true;}
+}
+function log_message($level,$message) { $GLOBALS['legacy_logs'][]=$message; }
 $writer->db = new LegacyWriterDb;
-$p = new ReflectionProperty('Invoicing', 'accounting'); $p->setAccessible(true); $p->setValue($writer, $writer->db);
-$writer->input->values = array('id'=>'PLAN','tanggal_invoice'=>'2026-09-15','nomor_po'=>'','nomor_faktur'=>'','total_nominal'=>'15000000.00','dpp_nilai_lain'=>'13750000.00','pajak'=>'0','total_akhir'=>'15000000.00','total_nominal_jurnal'=>'15000000.00','dpp_lain_lain'=>'13750000.00','pph_jurnal'=>'75000.00','total_akhir_jurnal'=>'14925000.00');
+$writer->load=new class {function library($name){throw new RuntimeException('Fixture audit service unavailable');}};
+$p = new ReflectionProperty('Invoicing', 'accounting_vuca'); $p->setAccessible(true); $p->setValue($writer, $writer->db);
+$writer->input->values = array('id'=>'PLAN','tanggal_invoice'=>'2026-09-15','nomor_po'=>'PO','nomor_faktur'=>'FAKTUR','sales_role'=>'sales_consulting','total_nominal'=>'15000000.00','dpp_nilai_lain'=>'13750000.00','pajak'=>'0','total_akhir'=>'15000000.00','total_nominal_jurnal'=>'15000000.00','dpp_lain_lain'=>'13750000.00','pph_jurnal'=>'75000.00','total_akhir_jurnal'=>'14925000.00');
 ob_start(); $writer->save_invoice_vuca(); $response = json_decode(ob_get_clean(), true);
 expectLegacy($response['status'] === 1, 'Writer succeeds');
 expectLegacy($writer->db->inserted['tagihan_ppn_jurnal'] == 15000000, 'New Vuca gross must equal DPP with zero PPN');

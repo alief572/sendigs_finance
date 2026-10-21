@@ -108,7 +108,8 @@ class ConsultingFaultDb extends CI_DB_mysqli_driver {
     }
     public function insert($table='', $set=null, $escape=null){if($this->fault==='header' && $table==='tr_invoicing'){$this->fault='';return false;}return parent::insert($table,$set,$escape);}
     public function insert_batch($table,$set=null,$escape=null,$batch_size=100){if($this->fault==='journal' && $table==='tr_jurnal'){$this->fault='';return false;}return parent::insert_batch($table,$set,$escape,$batch_size);}
-    public function update($table='', $set=null, $where=null, $limit=null){if($this->fault==='top' && $table==='kons_tr_plan_tagih_detail'){$this->fault='';return false;}return parent::update($table,$set,$where,$limit);}
+    public function update($table='', $set=null, $where=null, $limit=null){if(($this->fault==='top' && $table==='kons_tr_plan_tagih_detail') || ($this->fault==='invoice_update' && $table==='tr_invoicing')){$this->fault='';return false;}return parent::update($table,$set,$where,$limit);}
+    public function delete($table='', $where='', $limit=null, $reset_data=true){if($this->fault==='delete_journal' && $table==='tr_jurnal'){$this->fault='';return false;}return parent::delete($table,$where,$limit,$reset_data);}
     public function trans_commit(){if($this->fault==='commit'){$this->fault='';return false;}return parent::trans_commit();}
 }
 $db=new ConsultingFaultDb(array('hostname'=>'127.0.0.1','port'=>33319,'username'=>'root','password'=>'consulting_test_local','database'=>$database,'dbdriver'=>'mysqli','pconnect'=>false,'db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci'));
@@ -312,7 +313,8 @@ try {
     $invalid['accounts']['vat_wapu_prepaid']='9999-99-99';verify(controllerCall($ci,'save_coa_mapping',$invalid)['status']===0,'Missing COA rejected');
     $db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=MyISAM');verify(controllerCall($ci,'save_invoice',invoiceRequest($service,60))['status']===0,'Nontransactional prerequisite rejected');$db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=InnoDB');
     $db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN consulting_snapshot TO missing_snapshot');verify(controllerCall($ci,'save_invoice',array())['status']===0,'Incomplete migration rejected');$db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN missing_snapshot TO consulting_snapshot');
-    echo 'PASS: '.$GLOBALS['checks']." consulting integration checks against disposable MariaDB\n";
+    require __DIR__.'/Vuca_integration_cases.php';
+    echo 'PASS: '.$GLOBALS['checks']." consulting and Vuca integration checks against disposable MariaDB\n";
 } finally {
     if(isset($db))$db->close();
     if(isset($admin)&&!$admin->connect_errno){

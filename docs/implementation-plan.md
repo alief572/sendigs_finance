@@ -701,3 +701,29 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Commit ini mencakup detail barang pada index dan keterangan transaksi pada modal Detail Request, beserta empat file tes dan dokumentasi. Tepat sembilan path; tidak mengikutkan perubahan lokal modul lain, konfigurasi atau database.
 - Kandidat dibuat dari dasar masing-masing branch development/main, tanpa merge antarbranch. Masing-masing lulus 111 pemeriksaan (85 query, 7 render index, 11 render detail, 8 client), lint PHP/JS dan whitespace sebelum commit.
 - Tanpa browser atau database operasional; SQL diuji SQLite in-memory dan client melalui Node VM. Publikasi memakai push atomik tanpa force dan verifikasi SHA remote; hasil akhirnya dicatat pada checkpoint workspace.
+
+# Perbaikan UI Add Invoice Vuca - 2026-10-21
+
+- Tujuan: samakan form tambah Vuca dengan add_invoice; tanpa pilihan PPN dan tanpa perubahan rumus Vuca.
+- Fase 1: grounding route tambah/simpan/edit, mapping company sumber, master accounting Vuca, dan dokumentasi. Selesai bila dependensi dan batas perubahan tercatat.
+- Fase 2: layout memakai invoicing.css, empat sales_role dari mapping Vuca, preview jurnal, aset SweetAlert2 lokal, dan feedback submit. Bergantung fase 1; selesai setelah tes render/client lulus.
+- Fase 3: validasi COA server, pertahankan COA pada edit, transaksi sukses hanya setelah commit. Gunakan Invoice_writer yang sudah memiliki locking, pemeriksaan transaksi, dan rollback; perubahan dibatasi cabang Vuca.
+- Fase 4: lint, tes mapping/render/client, regresi perhitungan dan writer, fault injection tulis/commit, audit aman dan deduplikasi. Tanpa browser atau perubahan database produksi.
+- Kontrak: DPP=TOP; DPP lain-lain=DPP*11/12; PPh=DPP*0,5%; piutang=DPP-PPh; PPN jurnal=0. Hidden field kompatibilitas lama dipertahankan.
+- Cakupan edit: pertahankan akun pendapatan tersimpan, tanpa redesign. Mapping penjualan dibaca dari company sumber dan harus owner Vuca (4); tidak memerlukan validasi mapping PPN.
+- Perubahan lokal di luar invoicing tidak disentuh. Seluruh catatan pekerjaan sebelumnya dipertahankan.
+- Status akhir: keempat fase selesai; bukti pengujian, inventaris file dan keterbatasan dicatat dalam docs/invoicing-vuca-ui-validation-2026-10-21.md. Status endpoint/hash runtime tersedia di docs/invoicing-vuca-ui-manifest.json. Tidak ada migrasi, browser, perubahan database produksi atau publikasi Git.
+
+## Revisi kepadatan UI Vuca - 2026-10-21
+
+- Tujuan: kurangi whitespace sesuai screenshot pengguna, dengan ukuran teks/kontrol tetap terbaca.
+- Perubahan: CSS khusus .vuca-invoice untuk padding/jarak lebih rapat, customer sebagai grid label/nilai, field dokumen tidak stretch; gabungkan TOP dan COA dalam kolom kiri dengan ringkasan terbatas 360px di kanan. Stack satu kolom pada layar sempit; tabel tetap scroll lokal.
+- Validasi: tes render Vuca/reguler dan client Vuca, lint view, whitespace, pemeriksaan scope CSS dan manifest hash. Tidak mengubah JavaScript, controller, mapping, rumus atau writer; hasil integrasi sebelumnya dipakai kembali karena dependensinya tetap.
+
+## Pemadatan add_invoice mengikuti Vuca - 2026-10-21
+
+- Terapkan aturan compact Vuca yang sama melalui class invoice-compact hanya pada mode add di consulting_invoice. TOP dan COA menjadi kolom kiri, ringkasan di kanan; mode edit/detail mempertahankan struktur sebelumnya.
+- Pertahankan seluruh field PPN, COA, nominal, fingerprint, ID client dan endpoint. Tidak mengubah controller, writer, JavaScript atau rumus.
+- Validasi: render semua mode/perlakuan PPN, client reguler/Vuca, lint PHP, DOM grouping, scope CSS, whitespace dan hash manifest. Hasil integrasi transaksi terdahulu dipakai kembali karena seluruh dependensi transaksi tetap.
+
+---
