@@ -9,7 +9,7 @@ define('BASEPATH',dirname(__DIR__,4).'/system/'); define('APPPATH',dirname(__DIR
 function base_url($p=''){return '/'.$p;}
 function is_php($v){return version_compare(PHP_VERSION,$v,'>=');}
 function log_message($l,$m){}
-function show_error($m){throw new RuntimeException($m);}
+function show_error($m,$status=500){$GLOBALS['last_http_error']=$status;throw new RuntimeException($m);}
 function has_permission($p){return !in_array($p,$GLOBALS['denied']??array(),true);}
 function int_to_roman($n){return array(1=>'I',2=>'II',3=>'III',4=>'IV',5=>'V',6=>'VI',7=>'VII',8=>'VIII',9=>'IX',10=>'X',11=>'XI',12=>'XII')[(int)$n];}
 function &get_instance(){return $GLOBALS['test_ci'];}
@@ -30,7 +30,7 @@ require dirname(__DIR__,2).'/report_piutang_per_invoice/models/Report_piutang_pe
 require dirname(__DIR__,2).'/penerimaan_pph_23/controllers/Penerimaan_pph_23.php';
 $GLOBALS['checks']=0;
 function verify($ok,$m){$GLOBALS['checks']++;if(!$ok)throw new RuntimeException($m);}
-class ConsultingAuth { function user_id(){return '7';} function user_name(){return 'Admin';} function restrict($p){if(!has_permission($p))throw new RuntimeException('Forbidden');} }
+class ConsultingAuth { function user_id(){return '7';} function user_name(){return 'Admin';} function is_admin(){return empty($GLOBALS['not_admin']);} function restrict($p){if(!has_permission($p))throw new RuntimeException('Forbidden');} }
 class ConsultingInput {public $values=array();function post($key=null){return $key===null?$this->values:($this->values[$key]??null);} function get($key){return $this->values[$key]??null;} }
 class ConsultingLoader {
     public $ci;
@@ -128,6 +128,12 @@ try {
     $codes=array();$i=1;foreach(Invoice_consulting::roles()as $role=>$label){$code=sprintf('4101-01-%02d',$i++);$codes[$role]=$code;$db->insert('coa_master',array('no_perkiraan'=>$code,'nama'=>$label));}
     $settings=array('source_company_id'=>'1','owner_company_id'=>'7','accounts'=>$codes,'mapping_fingerprint'=>Invoice_calculation::fingerprint(array()));
     $GLOBALS['denied']=array('Invoicing.Configure');verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Configuration permission');$GLOBALS['denied']=array();
+    $GLOBALS['not_admin']=true;$beforeMapping=$service->rows('SELECT * FROM ms_invoice_coa_mapping');$beforeAudit=count($GLOBALS['audit']);
+    verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Non-admin with Configure permission cannot save COA mapping');
+    verify($service->rows('SELECT * FROM ms_invoice_coa_mapping')===$beforeMapping,'Denied COA mapping leaves configuration unchanged');
+    verify(count($GLOBALS['audit'])===$beforeAudit+1 && end($GLOBALS['audit'])[1]===0,'Denied COA mapping produces one failed audit');
+    try{$ci->coa_settings();verify(false,'Non-admin settings route must reject');}catch(RuntimeException $error){verify(($GLOBALS['last_http_error']??null)===403,'Non-admin direct settings URL returns forbidden');}
+    $GLOBALS['not_admin']=false;
     verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===1,'Mapping endpoint');
     verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Mapping stale fingerprint');
     $validMapping=$service->one('SELECT * FROM ms_invoice_coa_mapping WHERE source_company_id=1');

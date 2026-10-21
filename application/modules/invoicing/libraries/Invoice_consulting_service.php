@@ -172,6 +172,7 @@ class Invoice_consulting_service
     public function save_mapping($post)
     {
         return $this->mutate('save_coa_mapping',function()use($post){
+            if (!$this->ci->auth->is_admin()) throw new RuntimeException('Pengaturan COA hanya dapat diubah oleh admin.');
             if (!has_permission('Invoicing.Configure')) throw new RuntimeException('Tidak memiliki izin konfigurasi invoice.');
             $this->transactional(array('ms_invoice_coa_mapping'));
             $source=$this->required($post,'source_company_id',20); $this->company($source);

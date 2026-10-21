@@ -1886,3 +1886,35 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Kandidat Git d7014b0d4fc6f7eafc46db67ab4f6bdeb856af6c diekspor beserta dependensi HEAD untuk pengujian terisolasi. PASS 532 integrasi MariaDB sementara, 656 pemeriksaan mapping/render/client/kalkulasi, parity PHP/JS, legacy Vuca receipt, lint 12 PHP/2 JS, 21 path rilis, scan conflict marker dan staged whitespace.
 - Snapshot/kandidat: scratch/publish-invoicing-ui-20261021. Laporan: docs/invoicing-ui-publication-2026-10-21.md. Dokumentasi hasil publikasi dikirim sebagai commit dokumentasi lanjutan; kode tetap pada commit di atas.
 - Batas: tanpa browser, migrasi, database produksi, force push atau publikasi branch lain. Tidak ada TODO implementasi/publikasi kode; prasyarat mapping COA Vuca tetap seperti laporan implementasi.
+
+## Dropdown kolom Action invoicing - 2026-10-21
+
+- Fase 1 (grounding) dan fase 2 (implementasi) selesai; fase 3 (regresi/review) aktif.
+- Runtime: view index.php, assets/js/invoicing/action-menu.js (baru), assets/css/invoicing.css dan RELEASE_FILES.txt. Satu tombol Aksi pada kedua tab; node link/button asli dipertahankan agar URL, izin/status server, data-id, data-target dan handler modal tidak berubah.
+- Keputusan: menu memakai portal body berposisi fixed untuk menghindari clipping pada invoice-table-scroll. Menu kembali ke cell saat ditutup; posisi dibatasi viewport dan dapat membuka ke atas. Satu menu aktif, keyboard panah/Home/End/Escape/Tab, klik luar, scroll/resize dan preDraw DataTables ditangani. Tidak menambah/mengaktifkan aksi yang tidak dikirim server.
+- RED/GREEN: tes awal gagal karena modul belum ada; setelah implementasi, 36 pemeriksaan menu PASS. Kesalahan ekspektasi posisi awal diperbaiki berdasarkan koordinat rect (right-width=760), lalu ditambah kasus clamp viewport terpisah.
+- PASS awal: 53 list client, 43 UI client, 254 render, lint PHP index dan JS modul. Integrasi callback kedua kolom dan redraw ditambahkan ke list test untuk validasi akhir.
+- Tidak mengubah controller, model, database, rumus atau alur transaksi. Berikutnya: tutup regresi, update manifest/README dan checkpoint hasil akhir; tanpa browser sesuai instruksi pengguna.
+
+### Penutupan dropdown Aksi
+
+- Fase 3 selesai; seluruh fase task dropdown selesai dan tidak ada fase aktif/TODO implementasi.
+- PASS akhir: 36 menu, 55 list client, 43 UI client, 48 feedback, 254 render dan 25 Vuca render (461 pemeriksaan), lint PHP index, syntax JS, whitespace, path rilis dan hash terkait. Model/controller/status/izin/URL/query/transaksi tidak berubah.
+- Handler preDraw memakai satu binding delegated untuk kedua tabel agar tidak bertambah setiap kali filter menginisialisasi DataTables. createdCell kedua kolom teruji memanggil enhancer.
+- Manifest runtime dan README/RELEASE_FILES diperbarui; laporan bukti di docs/invoicing-action-dropdown-2026-10-21.md. Hasil integrasi 532 terdahulu tetap dipakai kembali karena dependensinya tidak berubah.
+- Tidak browser, database, migrasi, commit atau push. Perubahan lokal lain tetap dipertahankan. Berikutnya: refresh daftar invoicing untuk memuat aset terbaru; tampilan/handler modal aktual belum diperiksa melalui browser sesuai instruksi.
+
+### Revisi ikon dan aksen warna dropdown - selesai
+
+- Runtime berubah: assets/js/invoicing/action-menu.js dan assets/css/invoicing.css. Menu kini memakai ikon dokumen/mata/pensil/printer/PDF/tutup sesuai aksi yang sudah tersedia; tombol Aksi tint biru, ikon dan hover/focus biru/hijau/amber/merah sesuai semantik. Ikon aria-hidden dan label teks tetap.
+- Atribut modal, URL, class handler dan node link/button tidak berubah. Tidak menambah aksi yang tidak tersedia. Klik ikon nested, keyboard dan fallback label prototype diuji.
+- PASS batch revisi: 50 menu + 55 list client (105), syntax dua JS, enam pasangan warna kontras 6,14-7,71:1 dan whitespace. Hasil 370 render/feedback/UI client sebelumnya serta 532 integrasi dipakai kembali karena dependensinya tetap. Total tes menu/list/render/client terkait kini 475.
+- Tes berubah: Action_menu_test.js; rencana, laporan dropdown dan kedua manifest diperbarui dengan hash terbaru. Tidak ada fase aktif/TODO implementasi.
+- Batas: tanpa browser/database/commit/push. Berikutnya: refresh daftar invoicing untuk memuat ikon dan warna terbaru. Pemeriksaan visual browser tetap tidak dilakukan sesuai instruksi.
+
+## Admin-only Pengaturan COA dan publikasi dropdown - 2026-10-21
+
+- Implementasi admin-only selesai. Runtime: index.php memakai Auth::is_admin()+Configure untuk tombol, controller coa_settings menolak non-admin dengan 403, Invoice_consulting_service::save_mapping memeriksa admin dalam boundary audit/transaksi. Auth global, group/izin user dan data COA tidak diubah.
+- Tes RED: non-admin dengan Configure masih melihat tombol sebelum perubahan. GREEN: 255 render dan 538 integrasi disposable MariaDB; non-admin dengan Configure tidak melihat tombol, GET langsung 403, POST ditolak tanpa perubahan mapping dan tepat satu audit gagal. Admin dan izin Configure yang ada tetap lulus.
+- Dropdown/ikon tetap lulus 50 menu, 55 list client, 43 UI client dan 48 feedback. README, RELEASE_FILES (service COA), laporan dropdown dan manifest diperbarui.
+- Fase aktif: isolasi staging dan validasi kandidat Git sebelum commit/push development. Fase belum selesai: konfirmasi publikasi remote. Pertahankan seluruh perubahan lokal di luar invoicing dan pilih hanya bagian task ini dalam dokumen bersama.

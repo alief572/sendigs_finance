@@ -54,7 +54,8 @@
     "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php",
     "assets/css/invoicing.css",
     "assets/js/invoicing/consulting-form.js",
-    "assets/js/invoicing/save-feedback.js"
+    "assets/js/invoicing/save-feedback.js",
+    "assets/js/invoicing/action-menu.js"
   ],
   "migration_files": [
     "application/modules/invoicing/migrations/003_consulting_v3.sql",
@@ -79,15 +80,15 @@
     "assets/dist/sweetalert2.min.css"
   ],
   "sha256": {
-    "application/modules/invoicing/controllers/Invoicing.php": "cb05065f88d9a8368e9046c520770ad746360e1926357a1264b1e18b94d0588f",
+    "application/modules/invoicing/controllers/Invoicing.php": "f99435d5127ebaea3350f065bfb7d2e205043678fdcf55f4ae259c1e352876bf",
     "application/modules/invoicing/models/Invoicing_model.php": "2dfea04810cdf8d568124768153d9b53fd8cf4acf1d1cfb0fe8cbe98833f2ec5",
     "application/modules/invoicing/libraries/Invoice_consulting.php": "f5555ec0d14adc67b2849b16c6eb58beb28a4a7a2043d79fe610fb5a2fff7de5",
-    "application/modules/invoicing/libraries/Invoice_consulting_service.php": "5ff8ccfbc9406ff9606ddc725a5119481d3e288442f21e42cec3be73469326e8",
+    "application/modules/invoicing/libraries/Invoice_consulting_service.php": "554a7916f2e7b304b89110e5e738df4e22927b432dcd21fa3200b20061e892c9",
     "application/modules/invoicing/libraries/Consulting_posting.php": "d7981e1a96b7de6026f5553497b95b323bacdea993c77f06a4db643508ba86ba",
     "application/modules/invoicing/views/consulting_invoice.php": "e4ed69a26d334804a8a05472f1bf0411aea010c1cdba2606a41c35386ab0190e",
     "application/modules/invoicing/views/consulting_settings.php": "0b71be1d08cae6dee8c5237658bd8577066b88d2d2e5c3aff0486299dc9992da",
     "application/modules/invoicing/views/consulting_print.php": "fabe99af4cc4e6af44161ecfaf3a85bb787f139b6a308bcfa6eee66bc7216972",
-    "application/modules/invoicing/views/index.php": "c3d9ebea1b65dd3a5b1daee047ae6c0016dea3fd8af27efd7286089bf02e795d",
+    "application/modules/invoicing/views/index.php": "c38ee8d5440f2582d23770b04a05983660f6b29ff99f94a1ca56dbeb5395c2d6",
     "application/modules/invoicing/views/download_excel.php": "5c8ec6c1fbbd8b2f301562965c3629b13b4e1c05d306187629acf23729724e97",
     "application/modules/invoicing/views/print_kwitansi.php": "f1a21e90abea46e2f7fd81f22ceef11a1f8c153ac8ab34c22bb15bef31b53886",
     "assets/js/invoicing/consulting.js": "40af1af50e55a208b021fb189915a03c32090f4fcb1de272845c2f32a7539e95",
@@ -103,7 +104,7 @@
     "application/modules/penerimaan_pph_23/models/Penerimaan_pph_23_model.php": "65b202726ea255ab2e601e89fae42ce7de92699ff6cb523e9942e8483978a7d7",
     "application/modules/invoicing/tests/Consulting_calculation_test.php": "9a111087a9c319d5d615483090e8afd0d5880d26db90cca734c5a0b39415a093",
     "application/modules/invoicing/tests/Consulting_calculation_test.js": "4930c874142d5ca2b360af649e0a6badd4ff0643dc56740db6b256488ed3b3d7",
-    "application/modules/invoicing/tests/Consulting_integration_test.php": "b5014eff7532e9bcbe92d2c3513abcbdd0765cb9fd962131c1e5cae987a37d77",
+    "application/modules/invoicing/tests/Consulting_integration_test.php": "328309739beab230f884156e248e53ade07185b7d52cac2a474e3cf1db47dcfa",
     "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php": "19d124ff480230db40d584eae6b2d4dbeadd3e673877a70c86b246f0284ac2f1",
     "application/modules/invoicing/migrations/003_consulting_v3.sql": "ef15a0e8b8c9598f1277bc8adc2d7008b1b2438d4f17dbc9526f4473d3c9f236",
     "application/modules/invoicing/migrations/003_consulting_v3_rollback.sql": "490e6bf8ecdf3cd8d1b1e17f4d25a40837a912c6d60a7bcd00eb5c67bc511323",
@@ -111,15 +112,18 @@
     "application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php": "421f6fbaddcd0a3d88875d75755e6b83d2a8cf40908e0bd8cfbe38bf6475bb9b",
     "application/libraries/Module_audit_recorder.php": "370c38930c6837e261503c8311f0a6d72879fd9949e5ff9eea873acf5417c3b0",
     "application/modules/penerimaan_uang/models/Penerimaan_uang_model.php": "e8b0ce89d312c790f34e76047fe2772caa7e86f2160ed49c728bd8585a6cf1e6",
-    "assets/css/invoicing.css": "520be30d1d53360dcbbbed8b7b58f3c2b81fd62594e78d8830198d4aa6cc3533",
+    "assets/css/invoicing.css": "cddb638ffa420a051936b721ac6cb5d9206fe8e3a42a55546a595334e8000b5f",
     "assets/js/invoicing/consulting-form.js": "e6dd3dbb02bec691c7c857d3bf5f15fc41ec2d8f47a10f2fd0764b973fab800a",
-    "application/modules/invoicing/tests/Ui_render_test.php": "ade610bd4100eb3db05e604ddc6be90f5d094b1b4bd68c1f12ac64eb6c91a058",
+    "application/modules/invoicing/tests/Ui_render_test.php": "ceb3ef8c99d33e0db386ddf6708821bb0bb9fcaf56d104188304cb4ea7d7eba5",
     "application/modules/invoicing/tests/Ui_client_test.js": "624f7add44c2880ad7c60dc4476a668d52f7fb4643161c2397aef55c57e4ed2a",
-    "application/modules/invoicing/tests/Ui_list_client_test.js": "4e349c0bb6f93afc8e6a32eb5b406847b410e980aa8b7b3b020218eedd8a1a62",
+    "application/modules/invoicing/tests/Ui_list_client_test.js": "4bd8f9955d18f31f9c5a68f77a97023f4f962fe4ac6258ff63f8c00c7e9506bf",
     "assets/js/invoicing/save-feedback.js": "08e2bb4453289aca36f0683147d490c9da3a0324d94359048e3aca587e6cbf1a",
     "application/modules/invoicing/tests/Save_feedback_client_test.js": "7e917a8b3daf0a4a095dbec641988b55121427bb6920f7f327659d7a5ca89ca2",
     "assets/dist/sweetalert2.min.js": "633e045bd47a72c3f21649a59c5fc17a013d75c4e96ca7fabe5e18b03658f424",
-    "assets/dist/sweetalert2.min.css": "708be0f0bbf65ef93f4f259d66bc09a2c6d4791e5d5b913834c3346b02dd01b6"
+    "assets/dist/sweetalert2.min.css": "708be0f0bbf65ef93f4f259d66bc09a2c6d4791e5d5b913834c3346b02dd01b6",
+    "application/modules/invoicing/RELEASE_FILES.txt": "bf7c590892049d7b3214ced46d57c7f03c9cefd770fd482bfb91dcaab1237dc1",
+    "application/modules/invoicing/tests/Action_menu_test.js": "626b3ee7941dfc0e2e44c40905d943a7b87f7b1cf5ec3aa37308a2f089420a8b",
+    "assets/js/invoicing/action-menu.js": "9f45c8453762c18bea3e5e6433553952ad997ffb5db559f2937daeac50ccd72a"
   },
   "validation": {
     "calculation_checks": 72,
@@ -231,5 +235,29 @@
     "scope": "add_invoice only; same density rules as Vuca; VAT/calculation/edit/detail unchanged",
     "report": "docs/invoicing-compact-ui-2026-10-21.md",
     "verification": "400 render/client checks, 9 DOM mode/tax cases, CSS declaration equivalence, PHP lint and whitespace; previous transaction checks reused"
+  },
+  "action_dropdown": {
+    "date": "2026-10-21",
+    "scope": "Consulting and non-consulting list action columns; server action availability/URLs unchanged",
+    "report": "docs/invoicing-action-dropdown-2026-10-21.md",
+    "checks": 475,
+    "browser": "not performed per user instruction",
+    "publication": "local, not committed or pushed",
+    "icon_revision": {
+      "description": "Semantic Font Awesome icons and soft accent colors; original action nodes and attributes retained",
+      "fresh_checks": 105,
+      "reused_checks": 370,
+      "contrast_pairs": 6,
+      "minimum_contrast": "6.14:1"
+    }
+  },
+  "coa_admin_only": {
+    "date": "2026-10-21",
+    "rule": "Auth::is_admin() and existing Configure permission",
+    "ui": "Non-admin button hidden even with Configure",
+    "get": "Non-admin coa_settings returns HTTP 403",
+    "post": "Non-admin save_mapping rejected inside transaction/audit",
+    "checks": "255 render, 538 integration; denied mapping unchanged and single failed audit",
+    "report": "docs/invoicing-action-dropdown-2026-10-21.md"
   }
 }

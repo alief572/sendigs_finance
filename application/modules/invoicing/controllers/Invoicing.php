@@ -84,6 +84,10 @@ class Invoicing extends Admin_Controller
 
     public function coa_settings()
     {
+        if (!$this->auth->is_admin()) {
+            show_error('Pengaturan COA hanya dapat diakses oleh admin.', 403);
+            return;
+        }
         $this->auth->restrict('Invoicing.Configure');
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $service=new Invoice_consulting_service($this);

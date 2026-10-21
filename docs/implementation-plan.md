@@ -733,3 +733,24 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Fase 3 selesai: commit kode 535fa47ae63c733e03427d0735c5bee4a299ff9b dan push tanpa force ke origin/development; konfirmasi SHA remote. Hasil publikasi dicatat pada checkpoint dan docs/invoicing-ui-publication-2026-10-21.md sebagai dokumentasi lanjutan.
 
 ---
+
+## Dropdown aksi daftar invoicing - 2026-10-21
+
+- Fase 1: grounding kolom option/action, handler modal dan lifecycle DataTables; pertahankan aksi yang dibentuk server berdasarkan status/izin.
+- Fase 2: satu tombol Aksi per baris pada kedua tab; menu memakai node aksi asli agar URL, data attribute dan handler modal tetap bekerja. Menu ditempatkan di body saat terbuka agar tidak terpotong scroll container, lalu dikembalikan saat ditutup.
+- Fase 3: uji pilihan menu, keyboard, klik luar, pergantian baris, redraw/scroll/resize, posisi viewport, dan pemeliharaan atribut; jalankan regresi render/list/client serta lint. Tanpa perubahan database/rumus atau browser.
+
+### Penyempurnaan ikon dan warna dropdown
+
+- Tambahkan ikon Font Awesome yang sudah digunakan aplikasi: dokumen untuk buat, mata untuk lihat, pensil untuk revisi, printer untuk invoice, PDF untuk kwitansi, tanda tutup untuk aksi tutup yang memang tersedia.
+- Aksen biru/hijau lembut membedakan invoice reguler/Vuca; amber untuk revisi dan merah untuk tutup. Warna dibatasi ikon dan hover/focus, tombol Aksi memakai tint biru. Ikon dekoratif aria-hidden dan label teks dipertahankan.
+- Validasi hanya batch menu/list, syntax dan kontras warna; hasil tes transaksi serta render sebelumnya dipakai kembali karena dependensinya tidak berubah.
+
+## Pembatasan Pengaturan COA dan publikasi dropdown - 2026-10-21
+
+- Gunakan Auth::is_admin() yang sudah memeriksa group admin (id_group=1), tanpa menebak dari nama user atau user ID. Tombol hanya tampil untuk admin yang mempunyai izin Configure; non-admin tetap tidak melihat meskipun diberi izin Configure.
+- Lindungi GET coa_settings dengan 403 untuk non-admin dan save_mapping melalui pengecekan admin di dalam boundary transaksi/audit yang sudah ada. Tidak mengubah role/izin user, akun COA, atau data transaksi.
+- Uji render admin/non-admin, GET langsung, POST dengan Configure, konfigurasi tidak berubah saat ditolak dan audit tunggal; jalankan suite integrasi/audit yang terkait.
+- Setelah validasi, pilih perubahan dropdown/ikon/admin-COA saja, pertahankan perubahan lokal modul lain dan sebagian dokumen bersama, lalu commit/push ke origin/development dan verifikasi SHA remote.
+
+---

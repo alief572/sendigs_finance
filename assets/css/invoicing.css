@@ -128,6 +128,30 @@
     .invoice-workspace .invoice-summary .invoice-grand-total { font-size: 14px; }
     .invoice-workspace .invoice-actions { flex-wrap: wrap; }
 }
+.invoice-workspace .invoice-list-table .invoice-action-toggle { min-height: 34px; padding: 6px 8px; border-radius: 5px; white-space: nowrap; font-weight: 600; }
+.invoice-action-toggle::after { content: ''; display: inline-block; margin-left: 7px; vertical-align: middle; border: 4px solid transparent; border-bottom: 0; border-top-color: currentColor; }
+/* The open menu lives in body so the table's horizontal scroll cannot clip it. */
+.invoice-action-menu { position: fixed; z-index: 1060; width: 220px; max-width: calc(100vw - 16px); padding: 5px; overflow-y: auto; background: #fff; border: 1px solid #dce4ed; border-radius: 6px; box-shadow: 0 6px 18px rgba(23, 43, 64, .16); font-size: 14px; }
+.invoice-action-menu[hidden] { display: none; }
+.invoice-action-menu > a, .invoice-action-menu > button { display: block; width: 100%; min-height: 40px; padding: 9px 12px; border: 0; border-radius: 4px; background: transparent; color: #172b40; text-align: left; text-decoration: none; line-height: 1.5; white-space: normal; }
+.invoice-action-menu > a:hover, .invoice-action-menu > button:hover { background: #edf3f8; color: #205f84; }
+.invoice-action-menu > a:focus-visible, .invoice-action-menu > button:focus-visible { outline: 2px solid #2876a3; outline-offset: -2px; background: #edf3f8; }
+.invoice-workspace .invoice-list-table .invoice-action-toggle { color: #205f84; background: #edf5fb; border-color: #b6cedf; }
+.invoice-workspace .invoice-list-table .invoice-action-toggle:hover,
+.invoice-workspace .invoice-list-table .invoice-action-toggle[aria-expanded="true"] { color: #174b6b; background: #dcecf7; border-color: #8bb5cf; }
+.invoice-action-menu > a, .invoice-action-menu > button { display: flex; align-items: center; gap: 10px; }
+.invoice-action-menu > [data-action-tone="blue"] { --action-accent: #205f84; --action-tint: #eaf3fa; }
+.invoice-action-menu > [data-action-tone="green"] { --action-accent: #186145; --action-tint: #e6f4ed; }
+.invoice-action-menu > [data-action-tone="amber"] { --action-accent: #785512; --action-tint: #fff3d8; }
+.invoice-action-menu > [data-action-tone="red"] { --action-accent: #9c2d2d; --action-tint: #fbecec; }
+.invoice-action-menu .invoice-action-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; height: 28px; border-radius: 5px; color: var(--action-accent); background: var(--action-tint); font-size: 14px; }
+.invoice-action-menu > [data-action-tone]:hover,
+.invoice-action-menu > [data-action-tone]:focus-visible { color: var(--action-accent); background: var(--action-tint); }
+.invoice-action-menu > .disabled, .invoice-action-menu > [aria-disabled="true"], .invoice-action-menu > [disabled] { color: #64748b; cursor: not-allowed; pointer-events: none; }
+@media (max-width: 767px) {
+    .invoice-workspace .invoice-list-table .invoice-action-toggle,
+    .invoice-action-menu > a, .invoice-action-menu > button { min-height: 44px; }
+}
 /* Compact invoice forms share spacing; document rows do not stretch with the customer panel. */
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .invoice-heading { padding: 16px 20px; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .box-body { padding: 18px 20px; }

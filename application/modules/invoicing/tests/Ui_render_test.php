@@ -6,6 +6,8 @@ function base_url($path='') { return '/'.$path; }
 function has_permission($permission) { return !in_array($permission,$GLOBALS['denied']??[],true); }
 function verifyUi($condition,$message) { $GLOBALS['checks']++; if(!$condition)throw new RuntimeException($message); }
 class UiTemplate {
+    public $auth;
+    function __construct() { $this->auth=new class {public $admin=true;function is_admin(){return $this->admin;}}; }
     function render($name,$data) { extract($data); ob_start(); include dirname(__DIR__).'/views/'.$name.'.php'; return ob_get_clean(); }
 }
 function htmlQuery($html) {
@@ -71,6 +73,10 @@ verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"]')->length===1
 verifyUi($xpath->query('//*[@id="table_penawaran"]//th')->length===7,'Consulting grouped into seven columns');
 verifyUi($xpath->query('//*[@id="table_penawaran_non_konsultasi"]//th')->length===10,'Other columns preserved');
 verifyUi(strpos($html,'invoicing/coa_settings')!==false,'Configure navigation visible with permission');
+$renderer->auth->admin=false;
+$nonAdminHtml=$renderer->render('index',['data_company'=>[]]);
+verifyUi(strpos($nonAdminHtml,'invoicing/coa_settings')===false,'Non-admin cannot see COA settings even with Configure permission');
+$renderer->auth->admin=true;
 verifyUi(strpos($html,'invoicing/list_penawaran_non_kons')!==false,'Create visible with permission');
 $GLOBALS['denied']=['Invoicing.Configure','Invoicing.Add'];$html=$renderer->render('index',['data_company'=>[]]);
 verifyUi(strpos($html,'invoicing/coa_settings')===false,'Configure permission respected');

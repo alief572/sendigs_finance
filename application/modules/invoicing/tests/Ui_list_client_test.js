@@ -21,6 +21,8 @@ class Query {
     dataTable(options) { tableOptions.set(this.items[0].selector, options); return this; }
     index(item) { return this.items.indexOf(item); }
     eq(index) { return new Query([this.items[index]]); }
+    find() { return new Query([]); }
+    each(callback) { this.items.forEach(item => callback.call(item)); return this; }
     trigger(event) { this.items.forEach(item => { if (event === 'focus') focused = item.selector; if (event === 'click') delegated.get('click ' + (item.selector === '#invoice-tab-other' ? '.tab_2' : '.tab_1')).call(item); }); return this; }
 }
 function $(selector) {
@@ -101,4 +103,12 @@ check(element('#invoice-other-status').text, '', 'Other list successful response
 check(element('#invoice-other-status').attributes['data-state'], undefined, 'Other list state reset on recovery');
 element('#filter_tahun_non_kons').value = '2025'; const otherRequest = {}; other.ajax.data(otherRequest);
 check(otherRequest, {filter_tahun: '2025'}, 'Other list filter request contract');
+const enhancedCells = []; let menuCloses = 0;
+context.window.InvoiceActionMenu = {enhance(cell) { enhancedCells.push(cell); }, close() { menuCloses++; }};
+const consultingActionCell = element('consulting-action-cell'), otherActionCell = element('other-action-cell');
+consulting.columns[6].createdCell(consultingActionCell);
+other.columns[9].createdCell(otherActionCell);
+check(enhancedCells, [consultingActionCell, otherActionCell], 'Both action columns enhance existing server actions into dropdowns');
+delegated.get('preDraw.dt #table_penawaran, #table_penawaran_non_konsultasi')();
+check(menuCloses, 1, 'Delegated redraw lifecycle closes open menus for both tables');
 console.log('UI list client PASS: ' + checks + ' checks');

@@ -12,7 +12,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 <div class="box invoice-workspace" id="invoicing-workspace">
     <div class="invoice-heading">
         <div><h2>Daftar invoice</h2><p>Kelola tagihan konsultasi per TOP dan invoice non konsultasi.</p></div>
-        <div class="invoice-heading-actions"><?php if (has_permission('Invoicing.Configure')): ?><a href="<?= base_url('invoicing/coa_settings') ?>" class="btn btn-default"><i class="fa fa-sliders" aria-hidden="true"></i> Pengaturan COA</a><?php endif; ?></div>
+        <div class="invoice-heading-actions"><?php if ($this->auth->is_admin() && has_permission('Invoicing.Configure')): ?><a href="<?= base_url('invoicing/coa_settings') ?>" class="btn btn-default"><i class="fa fa-sliders" aria-hidden="true"></i> Pengaturan COA</a><?php endif; ?></div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
@@ -285,6 +285,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/invoicing/action-menu.js?v='.filemtime(FCPATH.'assets/js/invoicing/action-menu.js')) ?>"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
@@ -664,6 +665,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             var title = $(this).attr('title');
             $(this).attr('aria-label', title).find('i').attr('aria-hidden', 'true');
         });
+        if (window.InvoiceActionMenu) window.InvoiceActionMenu.enhance(cell);
     }
 
     function invoiceCellText(value) {
@@ -688,6 +690,10 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         if (type !== 'display') return [row.project_leader || '', row.sales || ''].join(' ');
         return '<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>' + invoiceCellText(row.project_leader) + '</dd><dt>Sales</dt><dd>' + invoiceCellText(row.sales) + '</dd></dl>';
     }
+
+    $(document).on('preDraw.dt', '#table_penawaran, #table_penawaran_non_konsultasi', function() {
+        if (window.InvoiceActionMenu) window.InvoiceActionMenu.close();
+    });
 
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();

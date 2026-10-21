@@ -85,6 +85,24 @@ upload fixture, harness, tool koreksi, atau laporan bisnis ke folder publik.
 Pengujian tidak membuka web dan deployment server belum dilakukan.
 # Form tambah Invoice Vuca (2026-10-21)
 
+## Dropdown aksi daftar invoice
+
+Kolom Aksi pada tab Konsultasi dan Non Konsultasi memakai satu tombol dropdown.
+`assets/js/invoicing/action-menu.js` mengelompokkan node aksi yang sudah dikirim
+server, tanpa mengubah URL, handler cetak/modal, atribut data, atau aturan
+status/izin. Menu terbuka dipasang pada body agar tidak terpotong area scroll
+tabel, lalu dikembalikan saat ditutup. Keyboard panah/Home/End, Escape/Tab,
+klik luar, scroll/resize dan redraw DataTables didukung.
+
+Tes: `node application/modules/invoicing/tests/Action_menu_test.js` dan
+`node application/modules/invoicing/tests/Ui_list_client_test.js`.
+Laporan: `docs/invoicing-action-dropdown-2026-10-21.md`.
+
+Tombol Pengaturan COA hanya tampil untuk admin (`Auth::is_admin()`, group 1)
+yang memiliki izin Configure. Non-admin tetap ditolak meskipun memiliki izin
+Configure: GET pengaturan menghasilkan 403 dan POST save mapping ditolak di
+boundary transaksi/audit tanpa mengubah konfigurasi.
+
 `add_invoice_vuca` memakai layout yang sama dengan `add_invoice`, tanpa pilihan
 PPN. Empat `sales_role` mengikuti kategori `Invoice_consulting::revenues()`.
 Mapping diambil dari `ms_invoice_coa_mapping` company sumber, wajib owner Vuca
