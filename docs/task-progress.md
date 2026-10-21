@@ -1961,3 +1961,7 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Kandidat lulus Debt_group26/Debt_posting142/Query130/Mapping47/Mixed20/Concurrency72/Controller86/Dispatcher45/Legacy198/Metadata20/Petty113/Revision24/Client49; lint19 PHP dan whitespace lulus. Password fixture menggunakan environment, tidak ditanam pada kode.
 - Audit_test kandidat gagal metadata storage warning baris40; direproduksi dengan controller HEAD asli. Workspace utama lulus karena perbaikan ownership audit Expense lokal yang sengaja tidak dipublikasi. Tidak ada assertion dilemahkan. Rincian pada laporan grouping bagian verifikasi kandidat publikasi.
 - Aktif: review staged diff, commit dan push development, lalu cocokkan SHA remote. Tidak melakukan migrasi tambahan atau posting database aplikasi.
+### Publikasi grouping hutang development — selesai 2026-10-21
+- Commit implementasi 10ed0a29612592c3d155ae187e1a72fab07b952d berhasil dipush origin/development; SHA remote dikonfirmasi lewat git ls-remote. Cakupan 29 file grouping/mapping dependensi, pengujian dan dokumentasi; perubahan lokal lain tidak ikut.
+- Pengujian kandidat dan batas baseline merujuk checkpoint persiapan serta laporan grouping. Tidak ada pengujian browser, migrasi tambahan atau posting database aplikasi pada publikasi ini.
+- Semua langkah publikasi selesai; dokumentasi ini menjadi follow-up commit. Branch lokal akan diselaraskan ke tip publikasi dengan index-only reset setelah memastikan tidak ada staging pengguna; isi seluruh file kerja dipertahankan.
