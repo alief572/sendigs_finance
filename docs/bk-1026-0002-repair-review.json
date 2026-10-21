@@ -1,0 +1,11 @@
+{
+  "voucher": "BK--1026-0002",
+  "bank_company": "STM",
+  "bank_id": "18",
+  "bank_coa": "1101-02-01",
+  "reviewed_by": "User bank-owner confirmation; source-path review 2026-10-21",
+  "bank_confirmation": "Pengguna mengonfirmasi bank tersebut milik STM pada 2026-10-21.",
+  "legacy_jurnaltras": "retain_existing_trace_no_replay",
+  "legacy_trace_basis": "1183-1185 tetap dipertahankan. Pencarian accounting terkait pada database tujuan terkonfigurasi kosong; handler Jurnal Payment menulis dari tr_jurnal, bukan replay jurnaltras. Flag stspos=1 tetap sebagai data historis, bukan bukti accounting yang diasumsikan.",
+  "periodik_coa_decision": "Pengguna mengotorisasi pelengkapan master STM pada 2026-10-21. Salin definisi 6207-00-00 dan 6206-01-07 beserta parent 6206-00-00/6206-01-00 dari master global; pertahankan kode/nama/level, tanpa saldo atau mutasi."
+}

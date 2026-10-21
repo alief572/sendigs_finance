@@ -1,5 +1,7 @@
 # Validasi Jurnal Pembayaran dan Rekonsiliasi BK--1026-0002
 
+Pembaruan: koreksi kemudian diotorisasi dan diterapkan pada2026-10-21 setelah master STM dilengkapi. Laporan ini mempertahankan temuan snapshot sebelum koreksi; hasil terbaru dan backup tersedia pada docs/bk-1026-0002-source-repair-2026-10-21.md. Tidak ada posting accounting pada koreksi tersebut.
+
 ## Status akhir
 
 Implementasi pencegahan jurnal tidak balance dan metadata legacy selesai. Dry-run/laporan koreksi tersedia. **Koreksi existing belum layak diterapkan dan tidak diterapkan.** Tidak ada migrasi, perubahan data bisnis, posting, commit, push, deployment atau pengujian browser.

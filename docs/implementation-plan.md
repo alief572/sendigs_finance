@@ -769,3 +769,16 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Keputusan engine: sumber/registry/detail accounting/counter wajib InnoDB. Header japh legacy MyISAM didukung dengan kompensasi hanya header milik percobaan yang telah dibuktikan belum ada; cleanup diperiksa dan hanya boleh sebelum commit accounting mana pun dicoba. Cleanup gagal, commit tidak pasti atau proses terhenti memblokir retry otomatis.
 - Registry lokal siap dan kosong; delapan baris hutang serta counter ketiga tujuan identik sebelum/sesudah migrasi. Pembacaan model lokal READ ONLY/rollback; seluruh uji posting hanya pada schema disposable.
 - Bukti pengujian, daftar file, batas baseline dan prosedur rekonsiliasi: docs/jurnal-all-debt-grouping-2026-10-21.md. Tidak mengoreksi BK--1026-0002, tidak menjalankan posting aplikasi, browser, commit/push/deploy.
+
+# Koreksi khusus BK--1026-0002 — 2026-10-21
+- Otorisasi pengguna: rekonsiliasi dan koreksi staging setelah bukti lengkap; tidak menjalankan posting accounting atau membuat pembayaran ulang.
+- Fase1: refresh READ ONLY seluruh sumber/bank/company/jurnaltras/accounting dan identifikasi jalur aktif. Kriteria: owner dan risiko duplikasi terbukti, bukan asumsi header.
+- Fase2: script koreksi voucher tunggal, snapshot ketat, backup, transaksi/lock, idempotensi, abort saat sumber berubah/posted/accounting overlap tak terselesaikan. TDD fixture sukses/gagal/rollback/retry.
+- Fase3: dry-run konkret lalu apply hanya bila prasyarat fase1 terpenuhi; jika bukti belum cukup, blokir apply dan minta fakta yang hilang dengan laporan siap tinjau.
+- Fase4: verifikasi before/after nominal/company/detail/refill/status/counter/accounting, update laporan/checkpoint. Tanpa browser/commit/push/deploy.
+
+- Checkpoint: fase1/2 selesai; apply fase3 menunggu keputusan master/kode Periodik6207-00-00 dan6206-01-07 yang hilang di STM. Bank telah dikonfirmasi dan ownership PR terbukti. Detail laporan docs/bk-1026-0002-source-repair-2026-10-21.md.
+
+- Otorisasi lanjutan: pengguna meminta lengkapi master COA. Batch tambahan: dua kode + dua parent yang hilang pada master STM, definisi/level asli dan nilai finansial nol; backup+table lock karena MyISAM. Tes pure/disposable sebelum apply master, lalu ulangi koreksi staging dan invariant accounting.
+
+- Status akhir koreksi BK--1026-0002: fase1–4 selesai. Master empat definisi lengkap, koreksi source berhasil dan idempotent, Payment8713202/refill207000 balance/pending. Accounting/counter/approval/paid/jurnaltras tetap. Bukti laporan source-repair dan checkpoint penutupan.
