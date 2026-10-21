@@ -240,9 +240,9 @@
     "date": "2026-10-21",
     "scope": "Consulting and non-consulting list action columns; server action availability/URLs unchanged",
     "report": "docs/invoicing-action-dropdown-2026-10-21.md",
-    "checks": 475,
+    "checks": 476,
     "browser": "not performed per user instruction",
-    "publication": "local, not committed or pushed",
+    "publication": "origin/development, code commit dbfaed8cbba4edc2c8864f7a522f60b002b3bdd6",
     "icon_revision": {
       "description": "Semantic Font Awesome icons and soft accent colors; original action nodes and attributes retained",
       "fresh_checks": 105,
@@ -258,6 +258,12 @@
     "get": "Non-admin coa_settings returns HTTP 403",
     "post": "Non-admin save_mapping rejected inside transaction/audit",
     "checks": "255 render, 538 integration; denied mapping unchanged and single failed audit",
-    "report": "docs/invoicing-action-dropdown-2026-10-21.md"
+    "report": "docs/invoicing-action-dropdown-2026-10-21.md",
+    "publication": {
+      "branch": "development",
+      "code_commit": "dbfaed8cbba4edc2c8864f7a522f60b002b3bdd6",
+      "candidate_tree": "9c66c68506ed35aa7bb66638fb5c8de96d98b4eb",
+      "isolated_unique_checks": 1247
+    }
   }
 }

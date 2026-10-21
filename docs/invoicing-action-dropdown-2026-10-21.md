@@ -37,3 +37,12 @@
 - Tidak mengubah role user atau konfigurasi COA. Penolakan POST mempertahankan mapping dan menghasilkan tepat satu audit gagal dengan mekanisme metadata aman yang sudah ada.
 - Tes RED render awal menunjukkan tombol masih terlihat untuk non-admin, lalu PASS setelah guard ditambahkan. Ui_render_test.php kini 255 pemeriksaan dan Consulting_integration_test.php kini 538 terhadap database acak sementara.
 - Service COA ditambahkan ke daftar rilis agar pembatasan server ikut diperbarui saat deployment. Perubahan dropdown, ikon dan pembatasan admin disiapkan bersama untuk branch development; status publikasi dicatat setelah push.
+
+## Publikasi development
+
+- Commit kode: dbfaed8cbba4edc2c8864f7a522f60b002b3bdd6, parent ea95598af33aa80ce8282d50d414e5b7da1f0049.
+- Candidate tree: 9c66c68506ed35aa7bb66638fb5c8de96d98b4eb. Tepat 16 path terkait task; catatan pekerjaan lain dalam dokumen bersama tidak ikut staging. Sebanyak 17 file lokal termodifikasi di luar scope tetap identik.
+- Push ke origin/development berhasil tanpa force; git ls-remote mengonfirmasi commit kode. Dokumentasi hasil ini dikirim sebagai commit lanjutan.
+- Tes diulang pada kandidat terisolasi dengan dependensi HEAD: 538 integrasi MariaDB sementara + 709 pemeriksaan menu/render/list/client/kalkulasi = 1.247 pemeriksaan unik; parity PHP/JS dan legacy Vuca receipt juga PASS.
+- Tiga suite audit Recorder/Logger/Legacy PASS. Lint 5 PHP/3 JS, dependency rilis, conflict-marker scan, staged whitespace dan hash scope PASS. Tidak mengandalkan perubahan lokal modul lain.
+- Snapshot lokal di scratch/publish-invoicing-actions-admin-20261021 tidak dipublikasikan. Tanpa browser, migrasi, database produksi atau perubahan branch lain. Tidak ada TODO implementasi/publikasi kode tersisa.

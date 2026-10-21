@@ -1918,3 +1918,11 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Tes RED: non-admin dengan Configure masih melihat tombol sebelum perubahan. GREEN: 255 render dan 538 integrasi disposable MariaDB; non-admin dengan Configure tidak melihat tombol, GET langsung 403, POST ditolak tanpa perubahan mapping dan tepat satu audit gagal. Admin dan izin Configure yang ada tetap lulus.
 - Dropdown/ikon tetap lulus 50 menu, 55 list client, 43 UI client dan 48 feedback. README, RELEASE_FILES (service COA), laporan dropdown dan manifest diperbarui.
 - Fase aktif: isolasi staging dan validasi kandidat Git sebelum commit/push development. Fase belum selesai: konfirmasi publikasi remote. Pertahankan seluruh perubahan lokal di luar invoicing dan pilih hanya bagian task ini dalam dokumen bersama.
+
+### Publikasi dropdown dan COA admin-only - selesai
+
+- Seluruh fase selesai: kandidat tree 9c66c68506ed35aa7bb66638fb5c8de96d98b4eb, commit kode dbfaed8cbba4edc2c8864f7a522f60b002b3bdd6, parent ea95598af33aa80ce8282d50d414e5b7da1f0049. Push tanpa force ke origin/development berhasil dan SHA remote dikonfirmasi.
+- Scope commit kode tepat 16 file terkait dropdown/ikon/admin-only. Dokumen bersama di-stage dari HEAD + bagian task ini saja; 17 file lokal berubah di luar scope tetap identik terhadap snapshot dan tidak ikut commit.
+- Kandidat terisolasi dengan dependensi HEAD lulus 538 integrasi, 709 pemeriksaan menu/list/render/client/kalkulasi (1.247 total unik), parity PHP/JS, legacy Vuca receipt, tiga suite audit Recorder/Logger/Legacy, lint 5 PHP/3 JS, path rilis, scan conflict marker dan staged whitespace. Pengulangan list test tidak dihitung dua kali.
+- Snapshot/kandidat lokal: scratch/publish-invoicing-actions-admin-20261021. Laporan docs/invoicing-action-dropdown-2026-10-21.md diperbarui dan dikirim bersama checkpoint sebagai commit dokumentasi lanjutan.
+- Tidak ada TODO implementasi/publikasi kode. Tanpa browser, migrasi, perubahan database produksi, force push atau publikasi branch lain. Hak akses berasal dari admin group yang sudah ada, bukan nama user.
