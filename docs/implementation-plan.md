@@ -676,13 +676,15 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
    - Hanya file modul invoicing, aset terkait, dan dokumentasi yang di-stage dan di-commit.
    - Push ke `origin/development` dan verifikasi SHA remote.
 
-# Publikasi pembatasan kelompok List Request Payment - 2026-10-20
+# Pembatasan kelompok List Request Payment — 2026-10-20
 
-- Validasi kelompok pada pilih, Proses, form dan simpan; kasbon/expense membedakan SQL NULL persis, string kosong bukan NULL. Checkbox kelompok berbeda disabled; clear/uncheck terakhir melepas kelompok.
-- Metadata batch berdasarkan payment_approve.tipe dan no_doc ke tr_kasbon/tr_expense. Lock users.id_user menserialisasi perubahan pilihan/reset; validasi simpan dilakukan dalam transaksi sebelum upload dan penulisan bisnis.
-- Publikasi dipisahkan dari pekerjaan audit lokal lain: kandidat dibangun dari dasar development/main masing-masing, hanya endpoint fitur dan helper audit yang diperlukan. Tidak merge antarbranch, migrasi atau perubahan konfigurasi.
-- Pengujian kandidat: Selection_test.php (98 skenario) dan Selection_client_test.js (27 pemeriksaan), lint PHP/JS dan whitespace; tanpa browser/database operasional. Detail ada pada checkpoint task ini.
-
+- Fase 1: validasi bersama berdasarkan payment_approve.tipe; kasbon/expense dibedakan menurut SQL NULL pada kolom consultant. Metadata batch, pilihan per pengguna diserialisasi dengan lock users.id_user, validasi ulang pada pilih/proses/form/simpan. Sukses tulis hanya setelah commit; audit tetap satu hasil per aksi.
+- Fase 2 (setelah fase 1): checkbox tidak kompatibel dinonaktifkan; redraw mempertahankan halaman, request perubahan diserialisasi di client, kegagalan memulihkan state dan menampilkan pesan. Clear/pilihan kosong membuka semua kelompok.
+- Fase 3 (setelah fase 2): tes PHP dan Node.js, regresi Material Batch1/Batch2, lint dan whitespace. Tidak menggunakan browser. Perbarui docs/task-progress.md pada penutupan tiap fase.
+- Kriteria: tipe berbeda tidak dapat digabung; NULL berbeda dari bukan NULL (termasuk string kosong); nomor consultant berbeda boleh digabung jika status NULL sama. Endpoint langsung tidak melewati aturan; kegagalan tidak menulis pembayaran.
+- Tidak migrasi, tidak refactor di luar cakupan, tidak commit/push; pertahankan seluruh perubahan lokal sebelumnya.
+- Status akhir 2026-10-20: seluruh fase selesai; hasil validasi, file dan batas pengujian tercatat pada checkpoint task ini di docs/task-progress.md.
+- Publikasi 2026-10-20 selesai ke development dan main dengan commit terpisah yang dibatasi sembilan path fitur; SHA dan validasi tercatat di checkpoint publikasi docs/task-progress.md.
 # Detail barang index Outgoing ATK Household - 2026-10-20
 
 - Fase 1: tes RED lalu query header/count/search barang dengan EXISTS, whitelist sorting/pagination dan satu query batch detail halaman aktif. Sumber warehouse_adjustment_detail.qty_order, accessories.stock_name/id_stock dan ms_satuan.code via id_unit; transaksi tetap satu baris.
@@ -696,12 +698,14 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Tes render PHP untuk note utama, baris baru, HTML, nol literal, data historis dan keterangan per barang; lint dan whitespace. Tidak mengubah controller, query, penyimpanan, stok atau index. Tanpa browser/commit/push.
 - Status keterangan modal: selesai; 11 tes detail dan 15 pemeriksaan regresi render/client PASS. Rincian ada di checkpoint task terkait.
 
-# Publikasi perubahan Outgoing - validasi kandidat 2026-10-20
+# Publikasi perubahan Outgoing - selesai 2026-10-20
 
-- Commit ini mencakup detail barang pada index dan keterangan transaksi pada modal Detail Request, beserta empat file tes dan dokumentasi. Tepat sembilan path; tidak mengikutkan perubahan lokal modul lain, konfigurasi atau database.
-- Kandidat dibuat dari dasar masing-masing branch development/main, tanpa merge antarbranch. Masing-masing lulus 111 pemeriksaan (85 query, 7 render index, 11 render detail, 8 client), lint PHP/JS dan whitespace sebelum commit.
-- Tanpa browser atau database operasional; SQL diuji SQLite in-memory dan client melalui Node VM. Publikasi memakai push atomik tanpa force dan verifikasi SHA remote; hasil akhirnya dicatat pada checkpoint workspace.
-
+- Selesai: pemilahan sembilan path, validasi kandidat, commit terpisah dan push atomik tanpa force ke development/main, verifikasi remote SHA dan preservasi file kerja. Tidak ada fase aktif/pending atau blocker publikasi.
+- development: b999a087d50381e49d29e3b00555483182632b55, parent 7f7056bc8fa784aa5983b82070b30269a83e9e6a. main: 4685b337d9c49d6d179658ef0edfc3eb90431079, parent b61f1872c26f96f03a0de8dab0990cd10ea0dd35. git ls-remote mengonfirmasi kedua SHA.
+- Tepat sembilan path per commit: model Outgoing_stok_atk_model.php; view index.php dan modal_request_edit.php; tests Index_test.php, Index_view_test.php, Index_client_test.js dan Detail_view_test.php pada modul outgoing_stok_atk; docs/implementation-plan.md dan docs/task-progress.md. Detail barang index dan keterangan utama modal sama-sama termasuk.
+- PASS masing-masing kandidat: 85 pemeriksaan query SQLite, 7 render index, 11 render detail dan 8 client Node (total111), lint PHP/JS, whitespace dan manifest scope. Kandidat menggunakan dasar branch masing-masing; tidak merge antarbranch, tidak membawa perubahan konfigurasi/modul lain.
+- Semua hash kode workspace cocok dengan snapshot; hanya dokumentasi publikasi diperbarui. HEAD/index lokal development diselaraskan tanpa checkout/overwrite file; index kosong. Perubahan lokal lain dipertahankan.
+- Bukti: scratch/publish-outgoing-details-20261020 berisi kandidat, patch, parent/SHA, manifest sembilan path dan snapshot hash. Tanpa browser/database operasional, migrasi atau deploy. Tidak ada TODO publikasi; batas verifikasi MySQL/browser tetap seperti task implementasi.
 # Perbaikan UI Add Invoice Vuca - 2026-10-21
 
 - Tujuan: samakan form tambah Vuca dengan add_invoice; tanpa pilihan PPN dan tanpa perubahan rumus Vuca.
@@ -732,8 +736,6 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Fase 2 selesai: ekspor staging menjadi kandidat Git terisolasi dengan dependensi HEAD; jalankan ulang tes, integrasi disposable MariaDB, lint, scan conflict dan verifikasi scope/hash.
 - Fase 3 selesai: commit kode 535fa47ae63c733e03427d0735c5bee4a299ff9b dan push tanpa force ke origin/development; konfirmasi SHA remote. Hasil publikasi dicatat pada checkpoint dan docs/invoicing-ui-publication-2026-10-21.md sebagai dokumentasi lanjutan.
 
----
-
 ## Dropdown aksi daftar invoicing - 2026-10-21
 
 - Fase 1: grounding kolom option/action, handler modal dan lifecycle DataTables; pertahankan aksi yang dibentuk server berdasarkan status/izin.
@@ -757,6 +759,40 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 
 ---
 
+# Perbaikan Mapping Pembayaran Jurnal All — 2026-10-21
+
+## Tujuan dan kontrak
+- No. Transaksi menampilkan payment_approve.id_payment; id adalah identitas approval. tr_jurnal.no_transaksi tetap kunci native untuk grouping/posting.
+- Kasus STM BK--0926-0015 dan SUSTAIN BK--1026-0055 harus menampilkan voucher BK--0926-0015, referensi PHP-2026-0012, kategori Payment Hutang Petty Cash, tanpa metadata Cash DPM-2026-00020.
+- Tidak mengubah data bisnis, schema, writer/posting, modul legacy, endpoint, atau respons publik; tanpa commit/push/deploy/browser.
+
+## Fase dan dependensi
+1. Reproduksi: tambah fixture benturan id/id_payment; tes harus gagal pada model lama. Grounding writer: jurnal_hutang_1 menyimpan ID approval, jurnal_hutang_2 menyimpan voucher; Payment/Refill memakai daftar ID approval.
+2. Resolver (sesudah 1): indeks terpisah id/id_payment/no_doc, filter tipe petty_cash_hutang/refill_pettycash sebelum memilih tier id -> voucher -> dokumen; per token pilih satu tier, deduplikasi id. Cache batch request-local tanpa query per baris. Semua metadata/eligibility memakai hasil yang sama; grouping, nominal dan fallback tetap.
+3. Validasi (sesudah 2): regresi benturan, multi-ID, tipe/cache, kosong/tidak ditemukan, list/detail/posted/filter/search/sort/Excel; suite Jurnal All, lint, whitespace dan query model lokal READ ONLY + rollback. Perbarui README/laporan/checkpoint.
+
+## Kriteria selesai
+- Dua sisi kasus nyata menghasilkan metadata yang tepat dengan jumlah/detail/nominal/status tetap.
+- Multi-pembayaran valid tetap didukung; metadata dari tier lain atau tipe petty yang tidak sesuai tidak bocor.
+- Tidak ada kegagalan tes relevan yang belum dijelaskan; catat anomali data tanpa koreksi otomatis.
+
+## Status akhir mapping Pembayaran — 2026-10-21
+- Fase 1–3 selesai; implementasi dan verifikasi model lokal sesuai kontrak. Laporan: docs/jurnal-all-payment-mapping-2026-10-21.md.
+- Suite terkait mapping lulus; dua kegagalan lintasfitur teridentifikasi dan dicatat pada laporan/checkpoint (stress invoicing baseline dan schema fixture migrasi menu). Tidak ada perubahan data bisnis atau publikasi.
+
+# Validasi Jurnal Pembayaran dan Rekonsiliasi BK--1026-0002 — 2026-10-21
+
+- Kontrak: satu tipe transaksi per voucher dipertahankan; tidak mengubah pembentukan nominal/writer accounting, schema, counter, atau data existing. Koreksi existing hanya laporan dan CLI dry-run tanpa mode apply; tanpa browser/commit/push/deploy.
+- Fase 1: reproduksi kegagalan debit Payment 8713202/kredit 0; validator integer cents + overflow, group native key/jenis, tolak kosong/negatif/invalid/COA aktif kosong; guard sesudah arr_jurnal sebelum insert tr_jurnal. Rollback dan satu audit invalid_journal, sukses hanya sesudah commit. Perbaiki fixture sukses agar balance dan pertahankan fault injection.
+- Fase 2 (sesudah 1): kelompok Payment dengan sibling refill/hutang key sama mengecualikan tipe khusus yang dimiliki sibling. Metadata/search/filter/Excel sama; tanpa sibling pertahankan referensi. Header Payment deterministik kategori unik terurut + voucher/native. Lookup sibling batch, row COA dan nominal tetap.
+- Fase 3 (sesudah 2): CLI READ ONLY/rollback voucher spesifik; rekonsiliasi enam approval, paid, snapshot jurnal11079–11089, jurnaltras, posting metadata, jurnal/japh semua target. Cocokkan token/norm daftar/nomor terkait; fail closed jika sumber berubah/posted/overlap/identitas bank-company tidak pasti. Usulan kredit 8713202 hanya artefak, tidak diterapkan.
+- Fase 4: suite selection/audit material + regresi Jurnal All, dry-run nyata dan snapshot, lint/whitespace; dokumentasi/checkpoint tiap fase. Kegagalan baseline dicatat tanpa melemahkan tes.
+- Penerimaan: transaksi baru tidak menyimpan jurnal tidak balance; dua kelompok voucher lama tetap nominal/detail/statusnya dengan metadata tepat; dry-run dapat diulang tanpa mutasi dan menampilkan blocker eksplisit.
+
+## Status akhir validasi jurnal/rekonsiliasi — 2026-10-21
+- Fase1–4 selesai. Guard validasi dan metadata legacy terimplementasi; CLI dry-run/review proposal selesai tanpa penerapan koreksi.
+- Koreksi BK--1026-0002 belum layak diterapkan: company sumber tidak lengkap dan overlap jurnaltras. Rincian keputusan, hasil tes, batas baseline serta TODO pada docs/payment-journal-reconciliation-2026-10-21.md dan checkpoint terakhir.
+
 # Grouping Payment Hutang / Modal per Accounting — 2026-10-21
 - Tujuan: satu voucher hutang menjadi satu baris nominal bisnis sekali; modal satu tabel per tujuan, satu tombol posting. Native row/key tetap. Berlaku debt subtype saja, tanpa koreksi data lama atau posting database aplikasi.
 - Fase1 resolver: relasi typed approval/voucher, snapshot semua status, anggota native, company/source verification, nominal unik, pending/posted/partial, filter/search/summary/export konsisten. Ambigu tetap terlihat blocked.
@@ -769,6 +805,7 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Keputusan engine: sumber/registry/detail accounting/counter wajib InnoDB. Header japh legacy MyISAM didukung dengan kompensasi hanya header milik percobaan yang telah dibuktikan belum ada; cleanup diperiksa dan hanya boleh sebelum commit accounting mana pun dicoba. Cleanup gagal, commit tidak pasti atau proses terhenti memblokir retry otomatis.
 - Registry lokal siap dan kosong; delapan baris hutang serta counter ketiga tujuan identik sebelum/sesudah migrasi. Pembacaan model lokal READ ONLY/rollback; seluruh uji posting hanya pada schema disposable.
 - Bukti pengujian, daftar file, batas baseline dan prosedur rekonsiliasi: docs/jurnal-all-debt-grouping-2026-10-21.md. Tidak mengoreksi BK--1026-0002, tidak menjalankan posting aplikasi, browser, commit/push/deploy.
+
 
 # Koreksi khusus BK--1026-0002 — 2026-10-21
 - Otorisasi pengguna: rekonsiliasi dan koreksi staging setelah bukti lengkap; tidak menjalankan posting accounting atau membuat pembayaran ulang.
@@ -783,12 +820,45 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 
 - Status akhir koreksi BK--1026-0002: fase1–4 selesai. Master empat definisi lengkap, koreksi source berhasil dan idempotent, Payment8713202/refill207000 balance/pending. Accounting/counter/approval/paid/jurnaltras tetap. Bukti laporan source-repair dan checkpoint penutupan.
 
-### Pemulihan format print invoice konsultasi — 2026-10-21
+
+# Koreksi BK--1026-0002 pada remote dev — 2026-10-21
+- Pengguna meminta koreksi database dev remote; otorisasi case yang sama mencakup pelengkapan master terverifikasi dan staging, bukan posting accounting.
+- Fase1: verifikasi konfigurasi remote *_dev/identity dan snapshot READ ONLY; fase2 adapter CLI profil eksplisit + collector baca reusable + tes guard profile; fase3 preflight accounting/ownership, backup terpisah per profile, apply master lalu staging hanya bila baseline cocok; fase4 READ ONLY model/metadata/accounting invariants, idempotensi, laporan/checkpoint.
+- Tidak menggunakan runner local hardcoded3307 untuk remote. Tidak mengubah konfigurasi, jurnal historis lain, status pembayaran, counter atau menjalankan posting/commit/push/deploy/browser.
+
+- Penyesuaian hasil grounding remote: dua Cash milik SUSTAIN (konfirmasi pengguna); bankSTM. Accounting TEST100000/no101BKA260000273 dikonfirmasi transaksi berbeda dan dipertahankan melalui whitelist fingerprint exact. Koreksi memisahkan native key dua row SUSTAIN agar handler Payment existing tidak merutekan keduanya keSTM; tambahkan piutangSTM/hutangSUSTAIN1637000 selain kreditbank8713202. Tidak menyamakan hasil remote dengan data lokal yang semuaCashSTM. Bukti/rencana konkret pada checkpoint pre-apply.
+
+# Perbaikan Data Jurnal Pembayaran & Pengelompokan Nomor Voucher — 2026-10-21
+- Konteks: Pada modul Jurnal All tab Pembayaran ditemukan 6 jurnal tidak balance (BK--1026-0002, BK--0926-0017, BK--0826-0009, BK--0426-0033, BK--0426-0027, BK--0426-0022) dan 7 voucher muncul berulang (BK--0126-0003, BK--0126-0006, BK--0126-0008, BK--0126-0014, BK--0426-0003, BK--0926-0017, BK--1026-0002).
+- Bagian A: Perbaikan 6 Jurnal Database:
+  * Fase 1: Preflight & Snapshot Data Remote Dev (db_sendigs_ss_dev).
+  * Fase 2: Eksekusi Koreksi BK--1026-0002 (Intercompany & Bank).
+  * Fase 3: Eksekusi Koreksi BK--0926-0017 & BK--0826-0009.
+  * Fase 4: Eksekusi Koreksi 3 Jurnal Transport (BK--0426-0033, BK--0426-0027, BK--0426-0022).
+- Bagian B: Pengelompokan Nomor Voucher pada Aplikasi:
+  * Fase 5: Ekstensi Voucher Grouping pada Jurnal_all_model.php (agregasi baris berdasarkan id_payment).
+  * Fase 6: Integrasi Modal Detail & Posting Multi-Member Voucher.
+- Bagian C: Verifikasi Komprehensif:
+  * Fase 7: Automated Test & Invariant Regression.
+  * Fase 8: Verifikasi Listing Web & Checkpoint Dokumentasi.
+
+
+- Status akhir remote: fase1–4 selesai. Master4 lengkap, staging14row balance per native target (STM Payment8713202/SUSTAIN1637000/refill207000) dan pending; TEST serta accounting/counter/approval/paid/jurnaltras tetap. Rerun nol write. Rincian laporan remote-dev-repair dan checkpoint penutupan.
+
+### Pemulihan format print invoice konsultasi � 2026-10-21
 - Cakupan: invoice v3 pada print_invoicing memakai kembali template print_invoice existing; tidak mengubah penyimpanan, jurnal, atau kalkulasi invoice.
 - Fase 1: telusuri routing dan reproduksi render tanpa kop lama. Selesai: consulting_form(print) memilih consulting_print sederhana; tes Print_invoice_test gagal pada kop STM.
 - Fase 2: adaptasikan data snapshot ke kontrak template lama, pertahankan keterangan tersimpan dan nominal/PPN/total invoice. Layout dan perilaku legacy tetap.
 - Fase 3: uji render STM/Sustain/Vuca, PKP/WAPU/KB, escaping, error, fallback legacy; regresi UI/kalkulasi, lint dan whitespace. Tanpa browser, perubahan database, commit atau push.
 - Kriteria selesai: kop/tabel/rekening/tanda tangan/dialog print lama kembali; angka invoice v3 dan perilaku legacy tetap.
-- Hasil akhir: fase 2–3 selesai; adapter/template dan regresi terverifikasi. Bukti dan batasan: docs/invoicing-print-restoration-2026-10-21.md serta checkpoint print invoice pada docs/task-progress.md.
+- Hasil akhir: fase 2�3 selesai; adapter/template dan regresi terverifikasi. Bukti dan batasan: docs/invoicing-print-restoration-2026-10-21.md serta checkpoint print invoice pada docs/task-progress.md.
 
 - Publikasi diotorisasi pengguna pada 2026-10-21: commit kandidat terbatas tujuh file ke development setelah verifikasi checkout terisolasi. Tidak ada deployment.
+
+# Perbaikan No. Referensi Tab Invoicing (Opsi A) — 2026-10-21
+- Konteks: Kolom No. Referensi pada tab Invoicing modul Jurnal All kosong (tanda dash) pada invoice non-konsultasi karena sistem sebelumnya hanya mengambil id_spk_penawaran.
+- Fase 1: Perluasan retrieval invoiceMap() di Jurnal_all_model.php dengan menyertakan id_penawaran, no_po, dan non_kons.
+- Fase 2: Penerapan hierarki Opsi A: SPK Penawaran -> No. Penawaran Non-Konsultasi -> No. PO Customer, dengan sanitasi nilai dash default '-'.
+- Fase 3: Pengayaan indeks extra_search agar pencarian invoice dapat menemukan nomor penawaran dan PO.
+- Fase 4: Pembaruan fixture mock skema tr_invoicing pada Query_test.php dan Mysql_test.php serta penambahan 5 assertions pengujian hierarki referensi dan pencarian.
+- Fase 5: Verifikasi regresi 135 assertions Query_test.php, 86 assertions Controller_test.php, dan verifikasi data aktual database dev remote.

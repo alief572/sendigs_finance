@@ -728,11 +728,16 @@ class Jurnal_all_model extends BF_Model
                     $row['invoice_available']=$invoice['no_invoice']!==null && ($row['source']==='RCV'||$invoice['no_invoice']!=='');
                     $row['no_referensi']=$invoice['no_invoice']; $row['id_company']=$invoice['company_id']; $row['nm_company']=$invoice['company_name'] ?? '';
                     $row['companies']=[['id'=>(string)$row['id_company'],'name'=>$row['nm_company']]];
-                    $row['extra_search']=implode(' ',[$invoice['nm_customer'],$invoice['nm_project'],$invoice['id_spk_penawaran']]);
+                    $clean=function($v){$s=trim((string)$v);return ($s===''||$s==='-')?'':$s;};
+                    $spk=$clean($invoice['id_spk_penawaran'] ?? '');
+                    $penawaran=$clean($invoice['id_penawaran'] ?? '');
+                    $po=$clean($invoice['no_po'] ?? '');
+                    $row['extra_search']=implode(' ',array_filter([$invoice['nm_customer'],$invoice['nm_project'],$spk,$penawaran,$po],function($v){return $v!=='';}));
                     if ($row['source']==='INV') {
                         $row['invoice_number']=trim((string)$invoice['no_invoice']);
                         $row['display_no_transaksi']=$row['invoice_number'];
-                        $row['no_referensi']=trim((string)$invoice['id_spk_penawaran']);
+                        $isNonKons=(string)($invoice['non_kons'] ?? '')==='1'||strpos($penawaran,'NON-KONS')!==false;
+                        $row['no_referensi']=$spk!==''?$spk:(($isNonKons&&$penawaran!=='')?$penawaran:$po);
                         $names=[trim((string)$invoice['nm_customer']),trim((string)$invoice['nm_project'])];
                         $row['keterangan']=implode(' - ',array_filter($names,function($name){return $name!=='';}));
                     } else {
@@ -890,7 +895,7 @@ class Jurnal_all_model extends BF_Model
     {
         if (!$ids) return [];
         $company="COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company)";
-        $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran, ".$company.' AS company_id,co.nm_company AS company_name',false)
+        $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran,b.id_penawaran,b.no_po,b.non_kons, ".$company.' AS company_id,co.nm_company AS company_name',false)
             ->from('tr_invoicing b')->join(DBCNL.'.kons_tr_penawaran c','c.id_quotation=b.id_penawaran','left')
             ->join(DBCNL.'.kons_tr_spk_penawaran s','s.id_spk_penawaran=b.id_spk_penawaran','left')
             ->join(DBCNL.'.kons_tr_penawaran_non_konsultasi n','n.id_penawaran=b.id_penawaran','left')

@@ -43,7 +43,7 @@ try {
     sql('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
     sql('CREATE TABLE kons_tr_expense_report_project_header (id VARCHAR(100),id_header VARCHAR(100))');
     sql('CREATE TABLE kons_tr_kasbon_project_header (id VARCHAR(100))');
-    sql('CREATE TABLE tr_invoicing (id VARCHAR(255) PRIMARY KEY,no_invoice VARCHAR(255),nm_customer VARCHAR(255),nm_project VARCHAR(255),id_penawaran VARCHAR(255),id_spk_penawaran VARCHAR(255))');
+    sql('CREATE TABLE tr_invoicing (id VARCHAR(255) PRIMARY KEY,no_invoice VARCHAR(255),nm_customer VARCHAR(255),nm_project VARCHAR(255),id_penawaran VARCHAR(255),id_spk_penawaran VARCHAR(255),no_po VARCHAR(255),non_kons VARCHAR(10))');
     sql('CREATE TABLE tr_penerimaan_piutang_detail (id_header VARCHAR(255),id_inv VARCHAR(255))');
     sql('CREATE TABLE tr_expense_petty_cash (id INT PRIMARY KEY,no_pencatatan VARCHAR(255))');
     sql('CREATE TABLE tr_pelaporan_petty_cash_detail (pencatatan_id INT,pelaporan_id INT)');
