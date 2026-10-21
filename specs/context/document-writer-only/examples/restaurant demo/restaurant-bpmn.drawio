@@ -1,0 +1,222 @@
+<mxfile host="Electron">
+  <diagram id="restaurantprocess" name="Small Restaurant Order Process">
+    <mxGraphModel dx="1088" dy="739" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Small Restaurant Order Process (Collaboration Diagram)" vertex="1">
+          <mxGeometry height="30" width="900" x="40" y="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="poolCustomer" parent="1" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;horizontal=1;startSize=20;horizontalStack=0;whiteSpace=wrap;" value="Customer" vertex="1">
+          <mxGeometry height="260" width="2760" x="40" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="laneCustomer" parent="poolCustomer" style="swimlane;html=1;startSize=20;horizontal=0;" value="Customer" vertex="1">
+          <mxGeometry height="240" width="2760" y="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="start_customer" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=standard;symbol=none;" value="Arrives, Sits at Table" vertex="1">
+          <mxGeometry height="40" width="40" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="task_scan" parent="laneCustomer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=user;" value="Scan Table Barcode to Order" vertex="1">
+          <mxGeometry height="80" width="120" x="120" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="task_eat" parent="laneCustomer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=manual;" value="Eat Meal" vertex="1">
+          <mxGeometry height="80" width="120" x="1520" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_merge" parent="laneCustomer" style="shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];gwType=exclusive;outline=none;symbol=none;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="1680" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="task_pay" parent="laneCustomer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=user;" value="Scan Barcode to Pay" vertex="1">
+          <mxGeometry height="80" width="120" x="1760" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="catch_receipt" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=catching;symbol=message;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="2520" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="end_customer" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=none;" value="Leaves Satisfied" vertex="1">
+          <mxGeometry height="40" width="40" x="2640" y="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="catch_unavail" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=catching;symbol=message;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="440" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="end_declined" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=none;" value="Leaves, Order Cancelled" vertex="1">
+          <mxGeometry height="40" width="40" x="540" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="catch_payfail" parent="laneCustomer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=catching;symbol=message;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="2240" y="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" edge="1" parent="laneCustomer" source="start_customer" target="task_scan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="laneCustomer" source="task_eat" target="gw_merge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="laneCustomer" source="gw_merge" target="task_pay" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="laneCustomer" source="catch_receipt" target="end_customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="laneCustomer" source="catch_unavail" target="end_declined" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="laneCustomer" source="catch_payfail" target="gw_merge" value="retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2260" y="120" />
+              <mxPoint x="1700" y="120" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="poolRestaurant" parent="1" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;horizontal=1;startSize=20;horizontalStack=0;whiteSpace=wrap;" value="Restaurant" vertex="1">
+          <mxGeometry height="580" width="2760" x="40" y="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lanePOS" parent="poolRestaurant" style="swimlane;html=1;startSize=20;horizontal=0;" value="POS / Cashier System" vertex="1">
+          <mxGeometry height="240" width="2760" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="start_order" parent="lanePOS" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=standard;symbol=message;" value="Order Received" vertex="1">
+          <mxGeometry height="40" width="40" x="160" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="task_checkavail" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=businessRule;" value="Check Item Availability" vertex="1">
+          <mxGeometry height="80" width="120" x="280" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_avail" parent="lanePOS" style="shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];gwType=exclusive;outline=none;symbol=none;" value="All Items Available?" vertex="1">
+          <mxGeometry height="40" width="40" x="440" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="end_unavail" parent="lanePOS" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=message;" value="Item Unavailable" vertex="1">
+          <mxGeometry height="40" width="40" x="440" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="task_createorder" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=service;" value="Create Order &amp; Send Ticket to Kitchen" vertex="1">
+          <mxGeometry height="80" width="120" x="560" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="task_genbill" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=service;" value="Generate Bill" vertex="1">
+          <mxGeometry height="80" width="120" x="1760" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="send_paymentreq" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=send;" value="Send Payment Request" vertex="1">
+          <mxGeometry height="80" width="120" x="1920" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="receive_paymentresult" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=receive;" value="Receive Payment Result" vertex="1">
+          <mxGeometry height="80" width="120" x="2080" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_paysuccess" parent="lanePOS" style="shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];gwType=exclusive;outline=none;symbol=none;" value="Payment Successful?" vertex="1">
+          <mxGeometry height="40" width="40" x="2240" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="end_payfail" parent="lanePOS" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=message;" value="Payment Failed" vertex="1">
+          <mxGeometry height="40" width="40" x="2240" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="task_receipt" parent="lanePOS" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=service;" value="Generate Receipt" vertex="1">
+          <mxGeometry height="80" width="120" x="2360" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="end_receipt" parent="lanePOS" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=message;" value="Receipt Sent" vertex="1">
+          <mxGeometry height="40" width="40" x="2520" y="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" edge="1" parent="lanePOS" source="start_order" target="task_checkavail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="lanePOS" source="task_checkavail" target="gw_avail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="lanePOS" source="gw_avail" target="end_unavail" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="lanePOS" source="gw_avail" target="task_createorder" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="lanePOS" source="task_genbill" target="send_paymentreq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="lanePOS" source="receive_paymentresult" target="gw_paysuccess" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="lanePOS" source="gw_paysuccess" target="end_payfail" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="lanePOS" source="gw_paysuccess" target="task_receipt" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="lanePOS" source="task_receipt" target="end_receipt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="laneKitchen" parent="poolRestaurant" style="swimlane;html=1;startSize=20;horizontal=0;" value="Kitchen" vertex="1">
+          <mxGeometry height="160" width="2760" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="receive_ticket" parent="laneKitchen" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=user;" value="View Order Ticket" vertex="1">
+          <mxGeometry height="80" width="120" x="760" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="task_cook" parent="laneKitchen" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=manual;" value="Cook Food" vertex="1">
+          <mxGeometry height="80" width="120" x="920" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="laneKitchen" source="receive_ticket" target="task_cook" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="laneServer" parent="poolRestaurant" style="swimlane;html=1;startSize=20;horizontal=0;" value="Server" vertex="1">
+          <mxGeometry height="160" width="2760" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="task_receiveinfo" parent="laneServer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=user;" value="View Ready Order &amp; Table Number" vertex="1">
+          <mxGeometry height="80" width="120" x="1080" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="task_serve" parent="laneServer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=manual;" value="Serve Food to Table" vertex="1">
+          <mxGeometry height="80" width="120" x="1240" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="task_confirmdelivered" parent="laneServer" style="shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];taskMarker=user;" value="Confirm Food Delivered" vertex="1">
+          <mxGeometry height="80" width="120" x="1400" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="end_served" parent="laneServer" style="shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];outline=end;symbol=message;" value="Food Delivered" vertex="1">
+          <mxGeometry height="40" width="40" x="1560" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e16a" edge="1" parent="laneServer" source="task_receiveinfo" target="task_serve" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16b" edge="1" parent="laneServer" source="task_serve" target="task_confirmdelivered" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="laneServer" source="task_confirmdelivered" target="end_served" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="task_createorder" target="receive_ticket" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="task_cook" target="task_receiveinfo" value="Food Ready" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="paymentGateway" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="Payment Gateway" vertex="1">
+          <mxGeometry height="80" width="200" x="2040" y="700" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mf1" edge="1" parent="1" source="task_scan" target="start_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;" value="Order">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf2" edge="1" parent="1" source="end_unavail" target="catch_unavail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf3" edge="1" parent="1" source="end_served" target="task_eat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf4" edge="1" parent="1" source="task_pay" target="task_genbill" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;" value="Pay Request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf5" edge="1" parent="1" source="send_paymentreq" target="paymentGateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;exitX=0.6;exitY=1;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf6" edge="1" parent="1" source="paymentGateway" target="receive_paymentresult" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;exitX=0.75;exitY=0;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf7" edge="1" parent="1" source="end_payfail" target="catch_payfail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mf8" edge="1" parent="1" source="end_receipt" target="catch_receipt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;startArrow=oval;startFill=0;" value="Receipt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

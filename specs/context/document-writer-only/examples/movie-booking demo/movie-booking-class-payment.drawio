@@ -1,0 +1,61 @@
+<mxfile host="Electron">
+  <diagram id="d1" name="Payment Module - Class Diagram (EBC)">
+    <mxGraphModel dx="1088" dy="739" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Payment Module - Class Diagram (EBC)" vertex="1">
+          <mxGeometry height="30" width="760" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Boundary" vertex="1">
+          <mxGeometry height="440" width="280" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g_control" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Control" vertex="1">
+          <mxGeometry height="440" width="280" x="380" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g_entity" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Entity" vertex="1">
+          <mxGeometry height="440" width="280" x="720" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_PaymentView" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&#171;boundary&#187;&lt;br&gt;PaymentView" vertex="1">
+          <mxGeometry height="60" width="200" x="80" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c_SubmitPaymentController" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&#171;control&#187;&lt;br&gt;SubmitPaymentController" vertex="1">
+          <mxGeometry height="60" width="200" x="420" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c_PaymentGatewayAdapter" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&#171;control&#187;&lt;br&gt;PaymentGatewayAdapter" vertex="1">
+          <mxGeometry height="60" width="200" x="420" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="c_Booking" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;Booking" vertex="1">
+          <mxGeometry height="60" width="200" x="760" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c_Payment" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;Payment" vertex="1">
+          <mxGeometry height="60" width="200" x="760" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="c_ETicket" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;ETicket" vertex="1">
+          <mxGeometry height="60" width="200" x="760" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="c_Refund" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;Refund" vertex="1">
+          <mxGeometry height="60" width="200" x="760" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="c_PaymentView" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="c_SubmitPaymentController">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="c_SubmitPaymentController" style="endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="c_PaymentGatewayAdapter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="c_SubmitPaymentController" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="c_Booking">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="c_SubmitPaymentController" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="c_Payment">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="c_SubmitPaymentController" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="c_ETicket">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="c_PaymentGatewayAdapter" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="c_Refund">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

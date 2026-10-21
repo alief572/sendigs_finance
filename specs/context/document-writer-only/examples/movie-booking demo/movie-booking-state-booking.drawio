@@ -1,0 +1,58 @@
+<mxfile host="Electron">
+  <diagram id="statebooking" name="Booking Lifecycle">
+    <mxGraphModel dx="1088" dy="739" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Booking - State Diagram" vertex="1">
+          <mxGeometry height="30" width="520" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="init" parent="1" style="ellipse;fillColor=strokeColor;html=1;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="80" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="s_draft" parent="1" style="shape=umlState;rounded=1;whiteSpace=wrap;html=1;" value="Draft" vertex="1">
+          <mxGeometry height="60" width="160" x="170" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="s_confirmed" parent="1" style="shape=umlState;rounded=1;whiteSpace=wrap;html=1;" value="Confirmed" vertex="1">
+          <mxGeometry height="60" width="160" x="520" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="s_expired" parent="1" style="shape=umlState;rounded=1;whiteSpace=wrap;html=1;" value="Expired" vertex="1">
+          <mxGeometry height="60" width="160" x="520" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="s_redeemed" parent="1" style="shape=umlState;rounded=1;whiteSpace=wrap;html=1;" value="Redeemed" vertex="1">
+          <mxGeometry height="60" width="160" x="900" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cancelled" parent="1" style="shape=umlState;rounded=1;whiteSpace=wrap;html=1;" value="Cancelled" vertex="1">
+          <mxGeometry height="60" width="160" x="900" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="fin" parent="1" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="1170" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" edge="1" parent="1" source="init" style="endArrow=open;endSize=8;html=1;" target="s_draft">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" edge="1" parent="1" source="s_draft" style="endArrow=open;endSize=8;html=1;labelBackgroundColor=#ffffff;" target="s_confirmed" value="pembayaran disetujui (UC-03)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" edge="1" parent="1" source="s_draft" style="endArrow=open;endSize=8;html=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="s_expired" value="hold 10 menit habis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" edge="1" parent="1" source="s_confirmed" style="endArrow=open;endSize=8;html=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="s_redeemed" value="tiket dipindai di gate (UC-N02)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" edge="1" parent="1" source="s_confirmed" style="endArrow=open;endSize=8;html=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="s_cancelled" value="dibatalkan pelanggan (UC-N01)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t6" edge="1" parent="1" source="s_redeemed" style="endArrow=open;endSize=8;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="fin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t7" edge="1" parent="1" source="s_cancelled" style="endArrow=open;endSize=8;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="fin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t8" edge="1" parent="1" source="s_expired" style="endArrow=open;endSize=8;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="fin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

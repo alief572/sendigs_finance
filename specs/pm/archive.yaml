@@ -1,0 +1,29 @@
+# Archive — closed work only. The counterpart to `pm/tracker.yaml`.
+#
+# A row moves here VERBATIM when its issue closes, with two fields changed and
+# two added:
+#
+#   status   → done | dropped
+#   summary  → what was actually built or decided, and how it was verified
+#   closed   → YYYY-MM-DD
+#   outcome  → for `dropped`, why. A dropped issue that does not say why gets
+#              re-raised by the next person who has the same idea.
+#
+# Nothing is edited after it lands here. A correction to a closed issue is a new
+# issue, not a rewrite of this file.
+#
+# Why an archive at all: `pm/tracker.yaml` is read at the start of every
+# session, so it has to stay the size of the open work. A tracker that also
+# holds a year of closed rows is a file nobody finishes reading, and the rows
+# that matter are the ones buried at the bottom.
+#
+# `depends_on` in the tracker is satisfied by a `done` row HERE as well as
+# there — a dependency that is not in the tracker is not missing, it is closed.
+#
+# The capsule is deleted on close, so the full plan lives only in git history.
+# Recover it by slug, never by id (ids can be reused by accident across a long
+# project; slugs are not):
+#
+#   git log --all --diff-filter=D -- '*{slug}*'
+
+issues: []

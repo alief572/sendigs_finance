@@ -1,0 +1,40 @@
+# Client source material — see input/README.md
+#
+# Text, notes, and small images under input/ are committed: provenance should travel with
+# the repo. Large or confidential binaries are not. When you exclude one, commit a stub
+# beside it (`<name>.<ext>.txt`) naming the file and where it actually lives — a missing
+# file that nothing points at is indistinguishable from a file that never existed.
+
+input/**/*.pdf
+input/**/*.mp4
+input/**/*.mov
+input/**/*.wav
+input/**/*.m4a
+input/**/*.zip
+
+# Stubs are the whole point — always keep them.
+!input/**/*.txt
+
+# External reference standards (specs are large and usually redistribution-restricted).
+# Same stub rule applies: keep a .txt naming the document and where to obtain it.
+context/files/*
+!context/files/*.txt
+!context/files/README.md
+
+# Diagram exports. Only the .drawio source is tracked — PNGs are regenerated on demand
+# (see the mandatory export-and-verify loop in drawio-general-guide.md).
+*.drawio.png
+**/examples/**/*.png
+docs/diagrams/*.png
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Anthropic's xlsx skill is source-available with a no-copies licence (THIRD_PARTY.md): never commit it.
+.claude/skills/xlsx/

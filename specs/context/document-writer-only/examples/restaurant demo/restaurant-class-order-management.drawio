@@ -1,0 +1,67 @@
+<mxfile host="Electron">
+  <diagram id="orderclass" name="Order Management - Class Diagram">
+    <mxGraphModel dx="1088" dy="739" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Order Management - Class Diagram (Entity-Boundary-Controller)" vertex="1">
+          <mxGeometry height="30" width="700" x="40" y="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="grp_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Boundary" vertex="1">
+          <mxGeometry height="140" width="220" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_control" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Control" vertex="1">
+          <mxGeometry height="140" width="220" x="340" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_entity" parent="1" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" value="Entity" vertex="1">
+          <mxGeometry height="640" width="220" x="640" y="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&#171;boundary&#187;&lt;br&gt;OrderBoundary" vertex="1">
+          <mxGeometry height="80" width="180" x="60" y="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_control" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&#171;control&#187;&lt;br&gt;PlaceOrderController" vertex="1">
+          <mxGeometry height="80" width="180" x="360" y="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_order" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;Order" vertex="1">
+          <mxGeometry height="80" width="180" x="660" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="e_orderdetail" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;OrderDetail" vertex="1">
+          <mxGeometry height="80" width="180" x="660" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="e_menuitem" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;MenuItem" vertex="1">
+          <mxGeometry height="80" width="180" x="660" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="e_stockcard" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;StockCard" vertex="1">
+          <mxGeometry height="80" width="180" x="660" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ingredient" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&#171;entity&#187;&lt;br&gt;Ingredient" vertex="1">
+          <mxGeometry height="80" width="180" x="660" y="610" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep_boundary_control" edge="1" parent="1" source="c_boundary" target="c_control" style="endArrow=open;endSize=12;html=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep_control_order" edge="1" parent="1" source="c_control" target="e_order" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep_control_orderdetail" edge="1" parent="1" source="c_control" target="e_orderdetail" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep_control_menuitem" edge="1" parent="1" source="c_control" target="e_menuitem" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep_control_stockcard" edge="1" parent="1" source="c_control" target="e_stockcard" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep_control_ingredient" edge="1" parent="1" source="c_control" target="e_ingredient" style="endArrow=open;endSize=12;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

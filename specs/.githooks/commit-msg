@@ -1,0 +1,13 @@
+#!/bin/sh
+# Enforces context/general-rules.md -> Version Control: the commit message carries
+# `Refs {id}`, or says the work has no issue. Merges, reverts and fixups are exempt.
+# Install once per clone: git config core.hooksPath .githooks
+msg=$(grep -v '^#' "$1")
+subject=$(printf '%s\n' "$msg" | head -n 1)
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+printf '%s\n' "$msg" | grep -qiE 'Refs [0-9]+|no issue' && exit 0
+echo "commit-msg: add 'Refs <id>' (the external issue id) or '(no issue)' to the message." >&2
+echo "  Rule: context/general-rules.md -> Version Control." >&2
+exit 1

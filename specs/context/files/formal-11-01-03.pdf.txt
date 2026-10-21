@@ -1,0 +1,19 @@
+# Stub — file not committed
+
+**Document:** Business Process Model and Notation (BPMN)
+**Version:** 2.0
+**Publisher:** Object Management Group (OMG)
+**OMG document number:** formal/2011-01-03 (January 2011)
+**Expected filename here:** `formal-11-01-03.pdf`
+
+**Where to obtain:** <https://www.omg.org/spec/BPMN/2.0/PDF>
+(the OMG specification page for BPMN 2.0 links the same PDF: <https://www.omg.org/spec/BPMN/2.0/>)
+
+**Cited by:**
+
+- `context/document-writer-only/bpmn-conventions.md` — by clause/section number throughout.
+
+**Why this stub exists.** `.gitignore` excludes specs from the repo (large, and OMG
+material carries redistribution terms). `context/files/README.md` and `CLAUDE.md` both
+require that an excluded-but-cited document leave a stub naming it and where to get it —
+a section number pointing at a file nobody can open is a claim, not a citation.

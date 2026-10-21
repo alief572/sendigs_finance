@@ -1,0 +1,20 @@
+# Stub — file not committed
+
+**Document:** OMG Unified Modeling Language (OMG UML)
+**Version:** 2.5.1
+**Publisher:** Object Management Group (OMG)
+**OMG document number:** formal/2017-12-05 (December 2017)
+**Expected filename here:** `formal-17-12-05.pdf`
+
+**Where to obtain:** <https://www.omg.org/spec/UML/2.5.1/PDF>
+(specification page: <https://www.omg.org/spec/UML/2.5.1/>)
+
+**Cited by:**
+
+- `context/document-writer-only/state-conventions.md` — the StateMachines clause, by section.
+- `context/guide/component-conventions.md` — the StructuredClassifiers clause, by section.
+
+**Why this stub exists.** `.gitignore` excludes specs from the repo (large, and OMG
+material carries redistribution terms). `context/files/README.md` and `CLAUDE.md` both
+require that an excluded-but-cited document leave a stub naming it and where to get it —
+a section number pointing at a file nobody can open is a claim, not a citation.
