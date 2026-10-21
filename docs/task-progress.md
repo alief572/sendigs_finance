@@ -1877,3 +1877,12 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Dokumentasi berubah: implementation-plan, task-progress, kedua manifest invoicing, serta laporan baru docs/invoicing-compact-ui-2026-10-21.md.
 - Batas: tanpa browser, database produksi, migrasi, commit atau push. Risiko visual pada ukuran layar aktual belum diverifikasi di browser sesuai instruksi. Tidak ada TODO implementasi.
 - Berikutnya: refresh add_invoice; filemtime CSS otomatis memuat versi baru.
+
+## Publikasi perubahan UI invoicing ke development - selesai 2026-10-21
+
+- Selesai: grounding remote, pemilahan staging, validasi kandidat terisolasi, commit kode dan push tanpa force. Tidak ada konflik atau perubahan remote yang perlu digabungkan.
+- Commit kode: 535fa47ae63c733e03427d0735c5bee4a299ff9b, parent b999a087d50381e49d29e3b00555483182632b55, branch origin/development. Push berhasil dan SHA remote dikonfirmasi melalui git ls-remote.
+- Scope: 23 path terkait invoicing, termasuk bagian task ini saja dari implementation-plan dan task-progress. Semua 17 file lokal termodifikasi di luar scope tetap identik terhadap snapshot; tidak ikut commit. Konfigurasi lokal, berkas untracked lain, database dan scratch tidak dipublikasikan.
+- Kandidat Git d7014b0d4fc6f7eafc46db67ab4f6bdeb856af6c diekspor beserta dependensi HEAD untuk pengujian terisolasi. PASS 532 integrasi MariaDB sementara, 656 pemeriksaan mapping/render/client/kalkulasi, parity PHP/JS, legacy Vuca receipt, lint 12 PHP/2 JS, 21 path rilis, scan conflict marker dan staged whitespace.
+- Snapshot/kandidat: scratch/publish-invoicing-ui-20261021. Laporan: docs/invoicing-ui-publication-2026-10-21.md. Dokumentasi hasil publikasi dikirim sebagai commit dokumentasi lanjutan; kode tetap pada commit di atas.
+- Batas: tanpa browser, migrasi, database produksi, force push atau publikasi branch lain. Tidak ada TODO implementasi/publikasi kode; prasyarat mapping COA Vuca tetap seperti laporan implementasi.

@@ -726,4 +726,10 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Pertahankan seluruh field PPN, COA, nominal, fingerprint, ID client dan endpoint. Tidak mengubah controller, writer, JavaScript atau rumus.
 - Validasi: render semua mode/perlakuan PPN, client reguler/Vuca, lint PHP, DOM grouping, scope CSS, whitespace dan hash manifest. Hasil integrasi transaksi terdahulu dipakai kembali karena seluruh dependensi transaksi tetap.
 
+## Publikasi perubahan invoicing ke development - 2026-10-21
+
+- Fase 1 selesai: fetch remote, pilih 23 path invoicing dan bagian dokumentasi task ini; pertahankan 17 perubahan lokal lain.
+- Fase 2 selesai: ekspor staging menjadi kandidat Git terisolasi dengan dependensi HEAD; jalankan ulang tes, integrasi disposable MariaDB, lint, scan conflict dan verifikasi scope/hash.
+- Fase 3 selesai: commit kode 535fa47ae63c733e03427d0735c5bee4a299ff9b dan push tanpa force ke origin/development; konfirmasi SHA remote. Hasil publikasi dicatat pada checkpoint dan docs/invoicing-ui-publication-2026-10-21.md sebagai dokumentasi lanjutan.
+
 ---
