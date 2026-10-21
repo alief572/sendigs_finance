@@ -37,6 +37,7 @@
 .invoice-workspace .invoice-consulting-table td { padding: 10px; vertical-align: top; overflow-wrap: break-word; }
 .invoice-workspace .invoice-consulting-table td:first-child,
 .invoice-workspace .invoice-consulting-table td:last-child { text-align: center; }
+.invoice-workspace .invoice-consulting-table td:last-child .btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .invoice-workspace .invoice-cell-primary { font-weight: 600; line-height: 1.5; }
 .invoice-workspace .invoice-cell-secondary { margin-top: 5px; color: #526477; line-height: 1.5; }
 .invoice-workspace .invoice-cell-label { font-size: 12px; color: #526477; }

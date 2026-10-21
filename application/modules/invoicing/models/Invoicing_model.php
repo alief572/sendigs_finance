@@ -58,7 +58,7 @@ class Invoicing_model extends BF_Model
             $filter_tahun = date('Y');
         }
 
-        $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
@@ -114,9 +114,14 @@ class Invoicing_model extends BF_Model
 
             $option = '';
             if ($item->sts_invoice != '1') {
-                $option = '<a href="' . base_url('invoicing/add_invoice/' . $item->id) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>';
+                $isVuca = ((string)($item->id_company ?? '') === '4' || trim((string)($item->company_name ?? '')) === 'Vuca');
+                if ($isVuca) {
+                    $option = '<a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-success" title="Buat Invoice Vuca"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice Vuca</a>';
+                } else {
+                    $option = '<a href="' . base_url('invoicing/add_invoice/' . $item->id) . '" class="btn btn-sm btn-primary" title="Buat Invoice"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice</a>';
+                }
 
-                $option .= ' <a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-primary" title="Create Invoice Vuca"><i class="fa fa-pencil"></i></a>';
+
             } else {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id_detail_plan_tagih' => $item->id])->row();
 

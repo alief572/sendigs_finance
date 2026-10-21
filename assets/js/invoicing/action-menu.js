@@ -51,7 +51,7 @@
     function enhance(cell) {
         if (cell.querySelector('.invoice-action-toggle')) return;
         var actions = Array.prototype.slice.call(cell.querySelectorAll('a,button'));
-        if (!actions.length) return;
+        if (actions.length <= 1) return;
         var button = document.createElement('button'), menu = document.createElement('div');
         var id = 'invoice-action-menu-' + (++sequence);
         button.type = 'button';
