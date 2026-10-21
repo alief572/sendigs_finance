@@ -2022,3 +2022,9 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Pengguna mengotorisasi commit/push ke development. Kandidat tujuh file terbatas template print, tes, README, laporan dan bagian dokumentasi print; perubahan modul lain/config/backup/scratch tidak disertakan.
 - Checkout publikasi bersih berbasis origin/development2669dd29: UI255/print70/kalkulasiPHP99/parityJS89 PASS (513 pemeriksaan), lint3 PASS, whitespace PASS. Parity memakai path PHP eksplisit karena runtime tidak ada pada PATH checkout terisolasi.
 - Review kebenaran, keamanan output, kompatibilitas legacy dan dependency selesai; tidak ada query atau perubahan data. Tahap berikutnya commit dan push fast-forward; tidak ada deployment.
+
+
+### Publikasi print invoice - push terverifikasi 2026-10-21
+- Commit b7772204feb596f1ef8e9896747a30679205128d berhasil dipush ke origin/development; SHA refs/heads/development dikonfirmasi identik melalui ls-remote.
+- Tujuh file memulihkan format print lama dengan nominal v3 tersimpan. Validasi checkout terisolasi 513 pemeriksaan/lint3/whitespace PASS. Tidak menjalankan database, browser, deployment atau publikasi perubahan modul lain.
+- Checkpoint ini menjadi commit dokumentasi lanjutan. Branch kerja lokal diselaraskan hanya melalui index setelah memastikan staging kosong dan hash isi file tidak berubah.
