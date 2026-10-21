@@ -128,7 +128,9 @@ check($pay[0]['debit']==='50.15'&&strpos($pay[0]['no_referensi'],'RPC-2026-2')!=
 $refillApprove=journal('Refill Pettycash','0','201','4','25.00','25.00');
 $model=new Jurnal_all_model();$model->db=$db;
 $payApprove=$model->groups(['tab'=>'PAY','year'=>2026,'q'=>'201']);
-check(count($payApprove)===1&&$payApprove[0]['no_transaksi']==='201'&&$payApprove[0]['display_no_transaksi']==='BATCH-1','payment journal with approval id displays voucher number');
+$approvalRows=array_values(array_filter($payApprove,function($row){return $row['no_transaksi']==='201';}));
+check(count($approvalRows)===1&&$approvalRows[0]['display_no_transaksi']==='BATCH-1','payment journal with approval id displays voucher number');
+check(count($payApprove)===2,'selected approval ID search also finds its voucher-key journal');
 check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BATCH-1']))===2,'search by payment voucher number matches both native and approval journals');
 check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'RPC-2026-1']))===2,'search by document number matches');
 $db->where('no_transaksi','201')->delete('tr_jurnal');

@@ -18,6 +18,11 @@ class Jurnal_payment_petty_cash_nomor_model extends CI_Model
     protected $accounting_vuca;
     protected $accounting_sustain;
 
+    public function bind_debt_connections($connections)
+    {
+        foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $group)if(isset($connections[$group]))$this->$group=$connections[$group];
+    }
+
     public function __construct()
     {
         parent::__construct();

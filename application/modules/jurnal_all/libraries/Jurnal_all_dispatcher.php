@@ -24,6 +24,11 @@ class Jurnal_all_dispatcher
         $detail=$model->detail($id,false); $header=$detail['header'];
         $source=$header['source'];
         if ($source!==$expectedSource || !isset(self::ROUTES[$source][$action])) throw new InvalidArgumentException('Aksi atau sumber jurnal tidak valid.');
+        if(!empty($header['debt_group'])){
+            if($action!=='post')throw new InvalidArgumentException('Aksi kelompok hutang tidak tersedia.');
+            require_once __DIR__.'/Jurnal_debt_posting.php';
+            return (new Jurnal_debt_posting(['ci'=>$this->ci]))->execute($id,$expectedSource);
+        }
         if ($action==='post'&&!$model->posting_metadata_ready()) throw new RuntimeException('Jalankan migrasi metadata posting Jurnal All sebelum posting.');
         $actor=$action==='post'?['id'=>$this->ci->auth->user_id(),'name'=>$this->ci->auth->user_name()]:null;
         if ($actor!==null&&(trim((string)$actor['id'])===''||trim((string)$actor['name'])==='')) throw new RuntimeException('User posting tidak tersedia.');

@@ -166,5 +166,14 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     await flush();
     check(node('#ja-loading').hidden && calls.slice(beforeReport).every(call => !call[0].endsWith('get_summary')), 'report load completes without pending-summary request');
     check(node('#ja-table tbody').innerHTML.includes('15 Oktober 2026') && node('#ja-table tbody').innerHTML.includes('FINAL-JV-1'), 'report shows confirmed number/clean date');
+    global.fetch = async (url, options) => {
+        const result = await nativeFetch(url, options);
+        if (!url.endsWith('get_data_jurnal')) return result;
+        const page = await result.json();
+        Object.assign(page.data[0], { debt_group: true, keterangan: '<script>debt</script>', group_status: 'Posting sebagian <img src=x>' });
+        return { ok: true, json: async () => page };
+    };
+    api.mount(workspace); await flush();
+    check(node('#ja-table tbody').innerHTML.includes('Posting sebagian &lt;img src=x&gt;') && !node('#ja-table tbody').innerHTML.includes('<script>debt'), 'debt status and description remain escaped');
     console.log('PASS Jurnal All client: ' + checks + ' assertions');
 })().catch(error => { console.error(error); process.exitCode = 1; });

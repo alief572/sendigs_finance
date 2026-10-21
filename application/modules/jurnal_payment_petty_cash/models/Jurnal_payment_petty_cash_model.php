@@ -23,6 +23,11 @@ class Jurnal_payment_petty_cash_model extends BF_Model
      */
     protected $unclear_coa = ['2103-01-01', '2103-01-02'];
 
+    public function bind_debt_connections($connections)
+    {
+        foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $group)if(isset($connections[$group]))$this->$group=$connections[$group];
+    }
+
     public function __construct()
     {
         parent::__construct();

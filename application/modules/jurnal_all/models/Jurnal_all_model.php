@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__).'/libraries/Jurnal_debt_groups.php';
 
 class Jurnal_all_model extends BF_Model
 {
@@ -13,9 +14,30 @@ class Jurnal_all_model extends BF_Model
     private $metadataReady=null;
     private $payments=[];
     private $paymentKeys=[];
+    private $paymentCompanions=[];
+    private $paymentCompanionKeys=[];
     private $glDbs=[];
     private $userMap=null;
     private $postingColumnsReady=null;
+    private $debtResolver=null;
+
+    public function debt_groups($refresh=false)
+    {
+        if($refresh || $this->debtResolver===null)$this->debtResolver=new Jurnal_debt_groups($this);
+        return $this->debtResolver;
+    }
+
+    public function debt_posting_ready()
+    {
+        return $this->debt_registry_ready() && $this->posting_metadata_ready();
+    }
+
+    public function debt_registry_ready()
+    {
+        if(!$this->db->table_exists('tr_jurnal_debt_attempts'))return false;
+        foreach(['group_key','fingerprint','status','actor_id','actor_name','target_results','created_at','updated_at'] as $field)if(!$this->db->field_exists($field,'tr_jurnal_debt_attempts'))return false;
+        return true;
+    }
 
     public function hasPostingColumns()
     {
@@ -59,6 +81,7 @@ class Jurnal_all_model extends BF_Model
         $f = $this->filters($values);
         $types = $f['tab'] === 'PAY' ? array_merge(self::SOURCES['PAY'], ['Refill Pettycash','Payment Hutang Petty Cash'])
             : ($f['tab'] === 'PCS' ? ['Petty Cash'] : self::SOURCES[$f['tab']]);
+        $types=array_values(array_diff($types,[Jurnal_debt_groups::TYPE]));
         $select = "MIN(a.id) AS id, a.no_transaksi, a.jenis_transaksi, MIN(a.tgl_jurnal) AS tgl_jurnal,
             MAX(a.nm_company) AS nm_company, MAX(a.id_company) AS id_company, MAX(a.nm_divisi) AS nm_divisi,
             MAX(a.keterangan) AS keterangan, SUM(a.debit) AS debit, SUM(a.kredit) AS kredit,
@@ -99,6 +122,13 @@ class Jurnal_all_model extends BF_Model
         }
         $rows = $this->read($this->db->get())->result_array();
         $this->enrich($rows);
+        if($f['tab']==='PAY')foreach($this->debt_groups()->all() as $detail){
+            $header=$detail['header'];
+            if($posted?($header['group_status']!=='Sudah posting'):($header['group_status']==='Sudah posting'))continue;
+            if($f['year']!=='' && (int)substr($header['tgl_jurnal'],0,4)!==$f['year'])continue;
+            if($f['month']!=='' && (int)substr($header['tgl_jurnal'],5,2)!==(int)$f['month'])continue;
+            $rows[]=$header;
+        }
         $result = [];
         foreach ($rows as $row) {
             if (!$posted && !$this->eligible($row)) continue;
@@ -169,6 +199,11 @@ class Jurnal_all_model extends BF_Model
         if (!is_scalar($id) || !preg_match('/^[1-9]\d*$/D',(string)$id)) throw new InvalidArgumentException('ID jurnal tidak valid.');
         $anchor=$this->read($this->db->get_where('tr_jurnal',['id'=>(int)$id]))->row_array();
         if (!$anchor || !$this->source($anchor['jenis_transaksi'])) throw new InvalidArgumentException('Jurnal tidak tersedia.');
+        if($anchor['jenis_transaksi']===Jurnal_debt_groups::TYPE){
+            $detail=$this->debt_groups()->find($id);
+            if($posted?($detail['header']['group_status']!=='Sudah posting'):($detail['header']['group_status']==='Sudah posting'))throw new InvalidArgumentException('Status kelompok hutang berubah. Muat ulang daftar.');
+            return $detail;
+        }
         $this->db->where(['no_transaksi'=>$anchor['no_transaksi'],'jenis_transaksi'=>$anchor['jenis_transaksi']]);
         if ($this->source($anchor['jenis_transaksi'])==='EXP') $this->db->where('id_company',$anchor['id_company']);
         $rows=$this->read($this->db->order_by('id','asc')->get('tr_jurnal'))->result_array();
@@ -608,6 +643,12 @@ class Jurnal_all_model extends BF_Model
         $headers=$this->groups($values,$posted); $result=[];
         // Fetch bounded batches, preserving the original group identity and all COA lines.
         foreach (array_chunk($headers,200) as $chunk) {
+            $ordinary=[];
+            foreach($chunk as $header){
+                if(!empty($header['debt_group']))foreach($this->debt_groups()->find($header['id'])['rows'] as $line)$result[]=['header'=>$header,'line'=>$line];
+                else $ordinary[]=$header;
+            }
+            $chunk=$ordinary;if(!$chunk)continue;
             $numbers=array_unique(array_column($chunk,'no_transaksi'));
             $rows=$this->read($this->db->where_in('no_transaksi',$numbers)->order_by('id','asc')->get('tr_jurnal'))->result_array();
             $map=[]; foreach ($chunk as $header) $map[$this->key($header)]=$header;
@@ -630,6 +671,7 @@ class Jurnal_all_model extends BF_Model
 
     public function key($row)
     {
+        if(!empty($row['debt_group']))return 'debt:'.$row['group_id'];
         return json_encode([$row['no_transaksi'],$row['jenis_transaksi'],$this->source($row['jenis_transaksi'])==='EXP' ? $row['id_company'] : null]);
     }
 
@@ -669,6 +711,7 @@ class Jurnal_all_model extends BF_Model
         $pettyReports=$this->pettyReportMap(array_unique($pettyNumbers));
         $expenseMap=$this->expenseMap($expenseNumbers);
         $paymentMap=$paymentKeys ? $this->paymentMap($paymentKeys) : [];
+        $paymentCompanions=$this->paymentCompanionMap($rows);
         foreach ($rows as &$row) {
             $row['source']=$this->source($row['jenis_transaksi']); $row['tab']=$this->tab($row['jenis_transaksi']);
             $row['display_no_transaksi']=$row['source']==='INV'?'':$row['no_transaksi'];
@@ -701,7 +744,9 @@ class Jurnal_all_model extends BF_Model
             }
             if ($row['source']==='PAY'||($row['source']==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) {
                 $matches=[];
-                foreach (array_unique(array_merge([$row['no_transaksi']],array_map('trim',explode(',',$row['no_transaksi'])))) as $key) foreach ($paymentMap[$key] ?? [] as $p) $matches[$p['id']]=$p;
+                foreach (array_unique(array_map('trim',explode(',',$row['no_transaksi']))) as $key) {
+                    foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? []) as $p) $matches[$p['id']]=$p;
+                }
                 $docs=[]; $categories=[]; $vouchers=[];
                 foreach ($matches as $p) {
                     $docs[]=$p['no_doc'];
@@ -716,6 +761,11 @@ class Jurnal_all_model extends BF_Model
                     $row['display_no_transaksi']=implode(', ',$uniqueVouchers);
                 }
                 if ($categories) $row['categories']=array_values(array_unique($categories));
+                if ($row['jenis_transaksi']==='Payment') {
+                    $headerCategories=$row['categories'];sort($headerCategories,SORT_NATURAL|SORT_FLAG_CASE);
+                    $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.$row['display_no_transaksi'];
+                }
+                $row['extra_search']=implode(' ',array_column($matches,'id'));
                 $row['payment_available']=(bool)$matches;
                 $row['petty_payment_eligible']=false;
                 foreach ($matches as $p) if (in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)||stripos($p['no_doc'],'RPC')!==false) $row['petty_payment_eligible']=true;
@@ -858,10 +908,40 @@ class Jurnal_all_model extends BF_Model
         foreach (array_chunk($missing,200) as $chunk) {
             $rows=$this->read($this->db->select('id,id_payment,no_doc,tipe')->group_start()->where_in('id',$chunk)
                 ->or_where_in('id_payment',$chunk)->or_where_in('no_doc',$chunk)->group_end()->get('payment_approve'))->result_array();
-            foreach ($rows as $row) foreach (array_unique([(string)$row['id'],(string)$row['id_payment'],(string)$row['no_doc']]) as $key) if ($key!=='') $this->payments[$key][$row['id']]=$row;
+            foreach ($rows as $row) foreach (['id','id_payment','no_doc'] as $field) {
+                $key=(string)$row[$field];
+                if ($key!=='') $this->payments[$field][$key][$row['id']]=$row;
+            }
         }
         $this->paymentKeys=array_merge($this->paymentKeys,$missing);
         return $this->payments;
+    }
+
+    private function paymentCompanionMap($rows)
+    {
+        $keys=[];
+        foreach ($rows as $row) if ($row['jenis_transaksi']==='Payment') $keys[]=$row['no_transaksi'];
+        $missing=array_values(array_diff(array_unique($keys),$this->paymentCompanionKeys));
+        $types=['Refill Pettycash'=>'refill_pettycash','Payment Hutang Petty Cash'=>'petty_cash_hutang'];
+        foreach (array_chunk($missing,200) as $chunk) {
+            $siblings=$this->read($this->db->select('no_transaksi,jenis_transaksi')->where_in('no_transaksi',$chunk)
+                ->where_in('jenis_transaksi',array_keys($types))->group_by(['no_transaksi','jenis_transaksi'])->get('tr_jurnal'))->result_array();
+            foreach ($siblings as $sibling) $this->paymentCompanions[$sibling['no_transaksi']][]=$types[$sibling['jenis_transaksi']];
+        }
+        $this->paymentCompanionKeys=array_merge($this->paymentCompanionKeys,$missing);
+        return $this->paymentCompanions;
+    }
+
+    private function resolvePayments($map,$key,$type,$excludedTypes=[])
+    {
+        $requiredType=['Payment Hutang Petty Cash'=>'petty_cash_hutang','Refill Pettycash'=>'refill_pettycash'][$type] ?? null;
+        foreach (['id','id_payment','no_doc'] as $field) {
+            $matches=$map[$field][$key] ?? [];
+            if ($requiredType!==null) $matches=array_filter($matches,function($payment)use($requiredType){return $payment['tipe']===$requiredType;});
+            if ($type==='Payment' && $excludedTypes) $matches=array_filter($matches,function($payment)use($excludedTypes){return !in_array($payment['tipe'],$excludedTypes,true);});
+            if ($matches) return $matches;
+        }
+        return [];
     }
 
     private function eligible($row)
@@ -883,7 +963,12 @@ class Jurnal_all_model extends BF_Model
     {
         $words=preg_split('/\s+/u',mb_strtolower(trim($query),'UTF-8'),-1,PREG_SPLIT_NO_EMPTY);
         if (!$words||!$headers) return $headers;
-        $numbers=array_unique(array_column($headers,'no_transaksi')); $matches=[];
+        $numbers=[];$matches=[];
+        foreach($headers as $header){
+            if(!empty($header['debt_group']))foreach($this->debt_groups()->find($header['id'])['rows'] as $line)$matches[$this->key($header)][]=mb_strtolower(implode(' ',[$line['coa'],$line['nm_coa'],$line['keterangan']]),'UTF-8');
+            else $numbers[]=$header['no_transaksi'];
+        }
+        $numbers=array_unique($numbers);
         foreach (array_chunk($numbers,200) as $chunk) {
             $this->db->select('no_transaksi,jenis_transaksi,id_company,coa,nm_coa,keterangan')->where_in('no_transaksi',$chunk)->group_start();
             foreach ($words as $word) foreach (['coa','nm_coa','keterangan'] as $field) $this->db->or_like($field,$word);

@@ -102,6 +102,7 @@
                     return '<td><button type="button" class="btn btn-sm btn-primary" data-id="' + Number(row.id) + '" data-source="' + escape(row.source) + '">' + (posted || !canManage ? 'Detail' : '+ Post') + '</button></td>';
                 }
                 const value = field === 'display_no_transaksi' ? (row.display_no_transaksi ?? row.no_transaksi) : row[field];
+                if (field === 'keterangan' && row.debt_group) return '<td class="ja-description">' + escape(value || '') + '<br><small>' + escape(row.group_status || '') + (row.relation_warning ? ' — ' + escape(row.relation_warning) : '') + '</small></td>';
                 const cellClass = ['debit', 'kredit'].includes(field) ? 'ja-money' : field === 'display_no_transaksi' ? 'ja-transaction' : field === 'keterangan' ? 'ja-description' : ['tgl_jurnal', 'no_referensi'].includes(field) ? 'ja-reference' : '';
                 return '<td class="' + cellClass + '">' + (['debit', 'kredit'].includes(field) ? money(value) : escape(field === 'tgl_jurnal' || field === 'posted_at' ? (value ? journalDate(String(value).slice(0, 10)) : (posted ? '-' : '—')) : (value || (posted ? '-' : '—')))) + '</td>';
             }).join('') + '</tr>').join('') : '<tr><td colspan="' + cols.length + '" class="text-center">Tidak ada jurnal sesuai filter dan pencarian. Ubah filter atau pilih Reset untuk memeriksa kembali.</td></tr>';

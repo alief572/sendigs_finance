@@ -125,6 +125,11 @@ class Jurnal extends Admin_Controller
             if (!$get_jurnal) {
                 throw new Exception('Data Jurnal tidak ditemukan');
             }
+            if($get_jurnal->jenis_transaksi==='Payment Hutang Petty Cash'){
+                $this->db->trans_rollback();
+                require_once dirname(__DIR__,2).'/jurnal_all/libraries/Jurnal_debt_posting.php';
+                Jurnal_debt_posting::forwardLegacy($get_jurnal);return;
+            }
 
             $id_company = $get_jurnal->id_company;
             $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi);

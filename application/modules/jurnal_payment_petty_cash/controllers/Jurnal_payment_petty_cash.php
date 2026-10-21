@@ -148,6 +148,9 @@ class Jurnal_payment_petty_cash extends Admin_Controller
 
         $no_transaksi = $this->input->post('no_transaksi');
         $jenis_transaksi = $this->input->post('jenis_transaksi') ?: 'Petty Cash';
+        if($jenis_transaksi==='Payment Hutang Petty Cash'){
+            $this->postDebtGroup();return;
+        }
 
         // Get all staging rows for this transaction
         $rows = $this->Jurnal_payment_petty_cash_model->get_detail_by_transaksi($no_transaksi, $jenis_transaksi);
@@ -246,6 +249,28 @@ class Jurnal_payment_petty_cash extends Admin_Controller
         } else {
             echo json_encode(['status' => 0, 'msg' => 'Company tidak dikenali untuk posting jurnal']);
             return;
+        }
+    }
+
+    protected function postDebtGroup()
+    {
+        $recorder=null;$ok=false;$outcome='failed';
+        try{
+            $this->load->library('Module_audit_recorder');$recorder=$this->module_audit_recorder;
+            $recorder->begin('jurnal_payment_petty_cash','save_posting_jurnal',[],['outcome']);
+            $this->load->model('jurnal_all/Jurnal_all_model');
+            require_once dirname(__DIR__,2).'/jurnal_all/libraries/Jurnal_debt_posting.php';
+            $id=$this->input->post('id');
+            if(!is_scalar($id)||!preg_match('/^[1-9]\d*$/D',(string)$id)){
+                $query=$this->db->select('id')->where(['no_transaksi'=>$this->input->post('no_transaksi'),'jenis_transaksi'=>'Payment Hutang Petty Cash'])->order_by('id')->limit(1)->get('tr_jurnal');
+                $anchor=$query?$query->row_array():null;$id=$anchor['id'] ?? 0;
+            }
+            $reply=(new Jurnal_debt_posting(['ci'=>$this]))->execute($id,'PCS');
+            $ok=(string)$reply['status']==='1';$outcome=$reply['outcome'] ?? 'failed';echo json_encode($reply);
+        }catch(Throwable $error){
+            echo json_encode(['status'=>0,'msg'=>$error instanceof InvalidArgumentException?$error->getMessage():'Posting hutang gagal. Periksa status sebelum mencoba kembali.']);
+        }finally{
+            if($recorder)try{$recorder->complete($ok?'Posting hutang berhasil':'Posting hutang gagal',$ok?1:0,['data'=>['outcome'=>$outcome],'sql'=>null]);}catch(Throwable $e){log_message('error','Debt posting: audit writer unavailable.');}
         }
     }
 

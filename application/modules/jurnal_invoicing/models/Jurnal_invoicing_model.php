@@ -41,6 +41,7 @@ class Jurnal_invoicing_model extends BF_Model
         require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
         $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
         if (!$consultingAnchor) { echo json_encode(array('save'=>0,'msg'=>'Jurnal berubah; muat ulang daftar.')); return; }
+        if(($consultingAnchor['jenis_transaksi'] ?? '')==='Payment Hutang Petty Cash'){echo json_encode(['save'=>0,'msg'=>'Gunakan posting hutang gabungan pada Jurnal All.']);return;}
         $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$consultingAnchor['no_transaksi']))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) {
             $posting=new Consulting_posting($this);

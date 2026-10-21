@@ -1,7 +1,8 @@
 <?php
 $e=function($value){return htmlspecialchars((string)$value,ENT_QUOTES,'UTF-8');};
 $h=$detail['header'];
-$perCompany=$h['source']==='PCS'&&($h['jenis_transaksi'] ?? '')==='Petty Cash';
+$debt=!empty($h['debt_group']);
+$perCompany=$debt||($h['source']==='PCS'&&($h['jenis_transaksi'] ?? '')==='Petty Cash');
 $format=function($value){$parts=explode('.',(string)$value);return preg_replace('/\B(?=(\d{3})+(?!\d))/',',',$parts[0]).'.'.str_pad($parts[1] ?? '',2,'0');};
 ?>
 <dl class="ja-meta">
@@ -10,7 +11,8 @@ $format=function($value){$parts=explode('.',(string)$value);return preg_replace(
     <div><dt>Company</dt><dd><?= $e($h['nm_company']) ?></dd></div>
     <div><dt>Divisi</dt><dd><?= $e($h['nm_divisi']) ?></dd></div>
     <div><dt>Tgl Jurnal</dt><dd><?= $e($h['tgl_jurnal']) ?></dd></div>
-    <div><dt>Status</dt><dd><?= $posted?'Sudah posting':'Belum posting' ?></dd></div>
+    <div><dt>Status</dt><dd><?= $e($h['group_status'] ?? ($posted?'Sudah posting':'Belum posting')) ?></dd></div>
+    <?php if($debt): ?><div><dt><?= empty($h['relation_warning'])?'Nominal pembayaran':'Nominal sumber (belum terverifikasi)' ?></dt><dd><?= $e($format($h['debit'])) ?></dd></div><?php endif; ?>
     <?php if($posted): ?>
     <div><dt>No. Jurnal Accounting</dt><dd><?= $e($h['source_numbers'] ?: '-') ?></dd></div>
     <div><dt>Tgl Posting</dt><dd><?= $e($h['posted_at'] ?? '-') ?><?= !empty($h['posted_at'])?' WIB':'' ?></dd></div>
@@ -21,6 +23,7 @@ $format=function($value){$parts=explode('.',(string)$value);return preg_replace(
 foreach($sections as $index=>$section): ?>
 <?php if($perCompany): ?><section class="ja-company-section" aria-labelledby="ja-company-<?= $index ?>">
     <h3 id="ja-company-<?= $index ?>">Sisi <?= $e($section['nm_company']) ?></h3>
+    <?php if($debt): ?><p><?= $e($section['status']) ?> | Accounting: <?= $e($section['accounting_status'] ?? '-') ?> | No. Accounting: <?= $e($section['accounting_number'] ?? '-') ?></p><?php endif; ?>
 <?php endif; ?>
 <div class="table-responsive"><table class="table table-bordered ja-lines"><thead><tr>
     <th>Tanggal</th><th>Tipe</th><?php if($h['source']==='PCS'): ?><th>Company</th><?php endif; ?><th>No. COA</th><th>Nama COA</th><th>Keterangan</th><th>No. Reff</th><th>Debit</th><th>Kredit</th>
@@ -28,6 +31,7 @@ foreach($sections as $index=>$section): ?>
 <?php foreach($section['rows'] as $line):
     if((float)$line['debit']==0&&(float)$line['kredit']==0) continue;
     $reference=$line['no_transaksi']; $description=$line['keterangan'];
+    if($debt)$reference=$section['no_referensi'];
     if(in_array($h['source'],['PAY','EXP'],true)&&preg_match('/\{REF:(.*?)\}/',(string)$description,$matches)){$reference=$matches[1];$description=trim(str_replace($matches[0],'',$description));}
     if(!$posted&&$h['source']==='INV'){$reference=$h['invoice_number'];$description=explode(' - ',(string)$description)[0].' - '.$reference;}
 ?>
@@ -40,4 +44,9 @@ foreach($sections as $index=>$section): ?>
 <p class="<?= $section['is_balance']?'text-success':'text-danger' ?>"><?= $section['is_balance']?'Debit dan kredit company ini seimbang.':'Debit dan kredit company ini tidak seimbang atau nominal tidak valid.' ?></p>
 </section><?php endif; ?>
 <?php endforeach; ?>
+<?php if($debt): ?>
+<p>Total seluruh jurnal accounting: Debit <?= $e($format($h['accounting_debit'])) ?> / Kredit <?= $e($format($h['accounting_kredit'])) ?></p>
+<?php foreach($detail['blockers'] as $reason): ?><p class="text-danger"><?= $e($reason) ?></p><?php endforeach; ?>
+<?php if(!$posted&&empty($detail['posting_ready'])): ?><p class="text-danger">Posting gabungan belum diaktifkan. Hubungi administrator.</p><?php endif; ?>
+<?php endif; ?>
 <p class="<?= $detail['is_balance']?'text-success':'text-danger' ?>"><?= $detail['is_balance']?($perCompany?'Total debit dan kredit seluruh company seimbang.':'Debit dan kredit seimbang.'):'Debit dan kredit tidak seimbang atau nominal tidak valid. Posting tidak tersedia.' ?></p>

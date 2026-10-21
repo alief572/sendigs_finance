@@ -756,3 +756,16 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Status akhir: implementasi, regresi, isolasi kandidat dan publikasi kode selesai. Commit dbfaed8cbba4edc2c8864f7a522f60b002b3bdd6 sudah dipush ke origin/development dan SHA remote dikonfirmasi; laporan/checkpoint publikasi dikirim sebagai dokumentasi lanjutan. Tidak ada fase aktif/pending.
 
 ---
+
+# Grouping Payment Hutang / Modal per Accounting — 2026-10-21
+- Tujuan: satu voucher hutang menjadi satu baris nominal bisnis sekali; modal satu tabel per tujuan, satu tombol posting. Native row/key tetap. Berlaku debt subtype saja, tanpa koreksi data lama atau posting database aplikasi.
+- Fase1 resolver: relasi typed approval/voucher, snapshot semua status, anggota native, company/source verification, nominal unik, pending/posted/partial, filter/search/summary/export konsisten. Ambigu tetap terlihat blocked.
+- Fase2 UI: server detail members/sections, subtotal/balance/status per tujuan, jumlah bisnis terpisah dari total accounting; report/Excel asli; tombol hanya bila semua sisi lengkap/pending/clear.
+- Fase3 orchestration: resolve ulang, canonical+member locks, percobaan durable sebelum side effects, writer/counter existing per target, precommit failure retryable dan partial/uncertain/crash blocked. Redirect semua entrypoint debt; audit satu outcome, metadata per native sesudah commit. Migrasi hanya registry baru; pada lokal diterapkan sebagai tabel kosong setelah fixture lulus, tanpa perubahan jurnal/counter historis atau posting aplikasi.
+- Fase4 verifikasi: TDD resolver/modal, concurrency/commit/fault-injection/retry, fixture accounting terisolasi, regresi existing, read-only model lokal. Update checkpoint setiap fase, README/laporan akhir. Tanpa browser/commit/push/deploy.
+
+## Status akhir grouping hutang — 2026-10-21
+- Fase1–4 selesai. Kasus PHP-2026-0012 dan PHP-2026-0003 masing-masing satu transaksi, nominal bisnis sekali, dua tabel tujuan dan empat baris accounting asli.
+- Keputusan engine: sumber/registry/detail accounting/counter wajib InnoDB. Header japh legacy MyISAM didukung dengan kompensasi hanya header milik percobaan yang telah dibuktikan belum ada; cleanup diperiksa dan hanya boleh sebelum commit accounting mana pun dicoba. Cleanup gagal, commit tidak pasti atau proses terhenti memblokir retry otomatis.
+- Registry lokal siap dan kosong; delapan baris hutang serta counter ketiga tujuan identik sebelum/sesudah migrasi. Pembacaan model lokal READ ONLY/rollback; seluruh uji posting hanya pada schema disposable.
+- Bukti pengujian, daftar file, batas baseline dan prosedur rekonsiliasi: docs/jurnal-all-debt-grouping-2026-10-21.md. Tidak mengoreksi BK--1026-0002, tidak menjalankan posting aplikasi, browser, commit/push/deploy.

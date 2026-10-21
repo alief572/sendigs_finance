@@ -32,6 +32,14 @@ function fixture($company='STM',$type='Petty Cash',$multi=false){
     $_POST=['no_transaksi'=>'NATIVE-KEY','jenis_transaksi'=>$type];return $c;
 }
 function invoke($c){ob_start();$c->save_posting_jurnal();$r=json_decode(ob_get_clean(),true);$GLOBALS['last_petty_response']=$r;check(is_array($r),'native petty response');return $r['status'];}
+function invokeRetainedDebtHelper($c){
+    $rows=$c->Jurnal_payment_petty_cash_model->rows;$company=$rows[0]->nm_company;
+    $method=new ReflectionMethod('Jurnal_payment_petty_cash',$company==='STM'?'_post_stm':'_post_intercompany');$method->setAccessible(true);
+    $header=(object)['tgl'=>'2026-10-14','jml'=>100.25,'no_reff'=>'NATIVE-KEY','user_id'=>7];
+    $args=[$header,$rows,'NATIVE-KEY','Payment Hutang Petty Cash'];if($company!=='STM')array_unshift($args,$company);
+    ob_start();$method->invokeArgs($c,$args);$r=json_decode(ob_get_clean(),true);$GLOBALS['last_petty_response']=$r;
+    check(is_array($r),'retained native helper response');return $r['status'];
+}
 foreach(['STM'=>'accounting_stm','VUCA'=>'accounting_vuca','SUSTAIN'=>'accounting_sustain'] as $company=>$db){
     foreach(['Petty Cash','Refill Pettycash'] as $type){
         $c=fixture($company,$type);check(invoke($c)===1,'single/refill '.$company.'/'.$type);
@@ -42,13 +50,13 @@ foreach(['STM'=>'accounting_stm','VUCA'=>'accounting_vuca','SUSTAIN'=>'accountin
 }
 foreach(['VUCA','SUSTAIN'] as $company){
     foreach(['Petty Cash','Payment Hutang Petty Cash'] as $type){
-        $c=fixture($company,$type,true);check(invoke($c)===1,'intercompany '.$company.'/'.$type);
+        $c=fixture($company,$type,true);check(($type==='Payment Hutang Petty Cash'?invokeRetainedDebtHelper($c):invoke($c))===1,'intercompany '.$company.'/'.$type);
         $db=$company==='VUCA'?'accounting_vuca':'accounting_sustain';
         check(in_array(['inter',$company,'BUK-'.$db,'BUK-accounting_stm'],$c->Jurnal_payment_petty_cash_model->events,true),'intercompany two native numbers');
         check($GLOBALS['last_petty_response']['accounting_numbers']===[['company'=>$company,'number'=>'BUK-'.$db],['company'=>'STM','number'=>'BUK-accounting_stm']],'intercompany reply contains both actual committed numbers');
     }
 }
-$c=fixture('STM','Payment Hutang Petty Cash');check(invoke($c)===1&&in_array(['stm','accounting_stm','BUK-accounting_stm'],$c->Jurnal_payment_petty_cash_model->events,true),'STM hutang native path');
+$c=fixture('STM','Payment Hutang Petty Cash');check(invokeRetainedDebtHelper($c)===1&&in_array(['stm','accounting_stm','BUK-accounting_stm'],$c->Jurnal_payment_petty_cash_model->events,true),'retained STM hutang helper');
 foreach(['empty','balance','write','source','transaction','commit-accounting_stm','commit-accounting_vuca','source_commit','source_begin','begin-accounting_stm','begin-accounting_vuca','number','counter','unclear'] as $failure){
     $c=fixture('VUCA','Petty Cash',true);
     if(in_array($failure,['number','counter'],true))$c->Jurnal_payment_petty_cash_nomor_model->fail=$failure;
@@ -65,7 +73,7 @@ foreach([['STM','Petty Cash'],['SUSTAIN','Refill Pettycash'],['STM','Payment Hut
         $c=fixture($scenario[0],$scenario[1]);
         if($failure==='source_commit')$c->db->fail='commit';
         else $c->Jurnal_payment_petty_cash_model->fail='commit-'.($scenario[0]==='STM'?'accounting_stm':'accounting_sustain');
-        check(invoke($c)===0,'distinct branch commit failure '.$scenario[1].'/'.$failure);
+        check(($scenario[1]==='Payment Hutang Petty Cash'?invokeRetainedDebtHelper($c):invoke($c))===0,'distinct branch commit failure '.$scenario[1].'/'.$failure);
     }
 }
 // Run the real ledger model to verify company-side batch splitting, not a copy of its logic.

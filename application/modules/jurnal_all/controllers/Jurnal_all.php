@@ -48,25 +48,35 @@ class Jurnal_all extends Admin_Controller
 
     public function preview()
     {
-        $this->endpoint(__FUNCTION__,function(){
-            $values=$this->values();
-            $detail=$this->Jurnal_all_model->detail($values['id'] ?? 0,$this->posted);
-            if (!$this->posted && $detail['header']['source']!==($values['source'] ?? null)) throw new InvalidArgumentException('Sumber jurnal tidak valid.');
-            $canManage=!$this->posted&&has_permission('Jurnal_All.Manage');
-            if (!$this->posted&&$detail['header']['source']==='EXP'&&!$canManage) throw new RuntimeException('Anda tidak memiliki akses preview jurnal ini.',403);
+        $this->endpoint(__FUNCTION__, function () {
+            $values = $this->values();
+            $detail = $this->Jurnal_all_model->detail($values['id'] ?? 0, $this->posted);
+            if (!$this->posted && $detail['header']['source'] !== ($values['source'] ?? null)) throw new InvalidArgumentException('Sumber jurnal tidak valid.');
+            $canManage = !$this->posted && has_permission('Jurnal_All.Manage');
+            if (!$this->posted && $detail['header']['source'] === 'EXP' && !$canManage) throw new RuntimeException('Anda tidak memiliki akses preview jurnal ini.', 403);
             $this->load->library('jurnal_all/Jurnal_all_dispatcher');
-            $revisable=isset(Jurnal_all_dispatcher::ROUTES[$detail['header']['source']]['revise']);
-            $blocked=false;
-            if (!$this->posted&&$detail['header']['source']==='PCS') {
+            $revisable = isset(Jurnal_all_dispatcher::ROUTES[$detail['header']['source']]['revise']);
+            $blocked = false;
+            if(!empty($detail['header']['debt_group']))$detail['posting_ready']=$this->Jurnal_all_model->debt_posting_ready();
+            if (!$this->posted && $detail['header']['source'] === 'PCS') {
                 $this->load->model('jurnal_payment_petty_cash/Jurnal_payment_petty_cash_model');
-                $blocked=(bool)$this->Jurnal_payment_petty_cash_model->find_unclear_coa($detail['rows']);
-                $nativeRows=$this->Jurnal_payment_petty_cash_model->get_detail_by_transaksi($detail['header']['no_transaksi'],$detail['header']['jenis_transaksi']);
-                $detail['rows']=array_map(function($row){return (array)$row;},$nativeRows);
+                $blocked = (bool)$this->Jurnal_payment_petty_cash_model->find_unclear_coa($detail['rows']);
+                $nativeRows = !empty($detail['header']['debt_group']) ? null : $this->Jurnal_payment_petty_cash_model->get_detail_by_transaksi($detail['header']['no_transaksi'], $detail['header']['jenis_transaksi']);
+                if($nativeRows!==null){
+                    $detail['rows'] = array_map(function ($row) {
+                        return (array)$row;
+                    }, $nativeRows);
+                }
             }
-            if ($detail['header']['source']==='PCS'&&$detail['header']['jenis_transaksi']==='Petty Cash') $detail['company_sections']=$this->Jurnal_all_model->company_sections($detail['rows']);
-            $html=$this->load->view('jurnal_all/preview',['detail'=>$detail,'posted'=>$this->posted],true);
-            return ['status'=>1,'html'=>$html,'can_post'=>$canManage&&$detail['is_balance']&&!$blocked,
-                'can_revise'=>$canManage&&$revisable,'blocked_coa'=>$blocked];
+            if ($detail['header']['source'] === 'PCS' && $detail['header']['jenis_transaksi'] === 'Petty Cash') $detail['company_sections'] = $this->Jurnal_all_model->company_sections($detail['rows']);
+            $html = $this->load->view('jurnal_all/preview', ['detail' => $detail, 'posted' => $this->posted], true);
+            return [
+                'status' => 1,
+                'html' => $html,
+                'can_post' => $canManage && $detail['is_balance'] && !$blocked && ($detail['can_post'] ?? true) && (empty($detail['header']['debt_group']) || $this->Jurnal_all_model->debt_posting_ready()),
+                'can_revise' => $canManage && $revisable,
+                'blocked_coa' => $blocked
+            ];
         });
     }
 
