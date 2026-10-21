@@ -2004,3 +2004,21 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Commit6c27c9f9a1fbc46c23806ed55bd4a77cb886cb72 dipush origin/development dan SHA remote dikonfirmasi. Isi19 file script/library/dependency/test/doc kasus; config, backup, scratch dan perubahan lokal lain tidak ikut.
 - Validasi kandidat129 assertions/lint13/whitespace/credential-pattern scan PASS. Tidak ada apply ulang database aplikasi, browser atau deployment selama publikasi. Dokumentasi ini menjadi follow-up commit.
 - Publikasi selesai. Branch lokal diselaraskan ke tip publikasi dengan index-only reset setelah memastikan tidak ada staging pengguna; hash isi kerja diperiksa agar tetap identik. Semua pekerjaan koreksi dan publikasi selesai.
+
+### Print invoice konsultasi — fase 1 selesai 2026-10-21
+- Akar masalah: jalur print_invoicing invoice v3 menuju consulting_form(print) lalu consulting_print, bukan template print_invoice lama.
+- Tes baru application/modules/invoicing/tests/Print_invoice_test.php mereproduksi kegagalan kop STM; UI existing 255 checks PASS sebelum assertion reproduksi gagal.
+- Fase aktif: adapter snapshot ke template lama, dengan nominal tersimpan agar KB tidak dihitung PPN ulang. Belum selesai: implementasi dan validasi akhir. Tidak mengubah database/konfigurasi atau pekerjaan modul lain.
+
+### Print invoice konsultasi — fase 2–3 selesai 2026-10-21
+- Perubahan: consulting_print menjadi adapter snapshot ke print_invoice lama; print_invoice menerima override PPN/total/presisi v3 dengan fallback legacy tetap. Kop, CSS/tabel, rekening, tanda tangan dan dialog print existing dipakai kembali. Tidak ada perubahan controller/database.
+- File: application/modules/invoicing/views/consulting_print.php, views/print_invoice.php, tests/Print_invoice_test.php, README.md; docs/implementation-plan.md, task-progress.md, invoicing-print-restoration-2026-10-21.md.
+- Keputusan: gunakan nominal invoice tersimpan dan TOP snapshot, tidak reread TOP mutable; override mencegah PPN dihitung ulang untuk KB. Escaping customer/keterangan dan presisi dua desimal v3 dipertahankan. print_keterangan tersimpan diprioritaskan; fallback deskripsi TOP.
+- Validasi: UI255 + print70 PASS; kalkulasiPHP99 + parityJS89 PASS; lint3file PASS; tiga aset logo tersedia; whitespace diperiksa. Nilai screenshot291000000/266750000/32010000/323010000 tercakup fixture. Tidak menjalankan integrasi database karena perubahan terbatas rendering tanpa query/simpan.
+- Semua fase selesai. Laporan docs/invoicing-print-restoration-2026-10-21.md. Batas: pagination printer/margin browser belum diperiksa, sesuai cakupan tanpa web. Tidak commit/push/deploy; tidak mengubah pekerjaan modul lain. Langkah berikutnya pengguna membuka ulang halaman print untuk memakai render baru.
+
+
+### Publikasi perbaikan print invoice - 2026-10-21
+- Pengguna mengotorisasi commit/push ke development. Kandidat tujuh file terbatas template print, tes, README, laporan dan bagian dokumentasi print; perubahan modul lain/config/backup/scratch tidak disertakan.
+- Checkout publikasi bersih berbasis origin/development2669dd29: UI255/print70/kalkulasiPHP99/parityJS89 PASS (513 pemeriksaan), lint3 PASS, whitespace PASS. Parity memakai path PHP eksplisit karena runtime tidak ada pada PATH checkout terisolasi.
+- Review kebenaran, keamanan output, kompatibilitas legacy dan dependency selesai; tidak ada query atau perubahan data. Tahap berikutnya commit dan push fast-forward; tidak ada deployment.

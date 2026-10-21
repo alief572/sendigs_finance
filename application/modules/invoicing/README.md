@@ -134,3 +134,8 @@ php application/modules/invoicing/tests/Consulting_integration_test.php
 Suite integrasi terakhir mencakup `Vuca_integration_cases.php` dan hanya memakai
 database acak sementara di MariaDB lokal port 33319. Laporan validasi sesi ini:
 `docs/invoicing-vuca-ui-validation-2026-10-21.md`.
+
+### Format print invoice konsultasi
+Print invoice v3 memakai template `views/print_invoice.php` yang sama dengan invoice konsultasi legacy. `consulting_print.php` hanya mengadaptasikan snapshot menjadi data template: kop/company berdasarkan owner tersimpan, deskripsi memakai print_keterangan atau deskripsi TOP snapshot, nominal/PPN/total memakai invoice tersimpan. Template legacy tetap memakai fallback perhitungan dan format angka sebelumnya; v3 mempertahankan dua desimal. Tidak membaca ulang nilai TOP yang dapat berubah.
+
+Regresi tanpa browser: `php application/modules/invoicing/tests/Print_invoice_test.php` (termasuk suite Ui_render_test). Laporan: `docs/invoicing-print-restoration-2026-10-21.md`.

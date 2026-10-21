@@ -782,3 +782,13 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Otorisasi lanjutan: pengguna meminta lengkapi master COA. Batch tambahan: dua kode + dua parent yang hilang pada master STM, definisi/level asli dan nilai finansial nol; backup+table lock karena MyISAM. Tes pure/disposable sebelum apply master, lalu ulangi koreksi staging dan invariant accounting.
 
 - Status akhir koreksi BK--1026-0002: fase1–4 selesai. Master empat definisi lengkap, koreksi source berhasil dan idempotent, Payment8713202/refill207000 balance/pending. Accounting/counter/approval/paid/jurnaltras tetap. Bukti laporan source-repair dan checkpoint penutupan.
+
+### Pemulihan format print invoice konsultasi — 2026-10-21
+- Cakupan: invoice v3 pada print_invoicing memakai kembali template print_invoice existing; tidak mengubah penyimpanan, jurnal, atau kalkulasi invoice.
+- Fase 1: telusuri routing dan reproduksi render tanpa kop lama. Selesai: consulting_form(print) memilih consulting_print sederhana; tes Print_invoice_test gagal pada kop STM.
+- Fase 2: adaptasikan data snapshot ke kontrak template lama, pertahankan keterangan tersimpan dan nominal/PPN/total invoice. Layout dan perilaku legacy tetap.
+- Fase 3: uji render STM/Sustain/Vuca, PKP/WAPU/KB, escaping, error, fallback legacy; regresi UI/kalkulasi, lint dan whitespace. Tanpa browser, perubahan database, commit atau push.
+- Kriteria selesai: kop/tabel/rekening/tanda tangan/dialog print lama kembali; angka invoice v3 dan perilaku legacy tetap.
+- Hasil akhir: fase 2–3 selesai; adapter/template dan regresi terverifikasi. Bukti dan batasan: docs/invoicing-print-restoration-2026-10-21.md serta checkpoint print invoice pada docs/task-progress.md.
+
+- Publikasi diotorisasi pengguna pada 2026-10-21: commit kandidat terbatas tujuh file ke development setelah verifikasi checkout terisolasi. Tidak ada deployment.
