@@ -21,19 +21,23 @@ class Pembayaran_material_model extends BF_Model
 		$query = $this->db->query($sql);
 		return $query->result();
 	}
-	public function get_data_json_request_payment($sqlwhere = '')
+	public function get_data_json_request_payment($sqlwhere = '', &$auditOk = null)
 	{
 
 		$sql = "SELECT a.*, b.nm_supplier FROM purchase_order_request_payment a left join supplier b on a.id_supplier =b.id_supplier WHERE 1=1 " . ($sqlwhere == '' ? '' : " and " . $sqlwhere) . " order by a.id desc ";
 		$query = $this->db->query($sql);
-		return $query->result();
+		$error = $this->db->error();
+		$auditOk = $query !== false && empty($error['code']);
+		return $query ? $query->result() : array();
 	}
-	public function get_data_json_request_payment_nm($sqlwhere = '')
+	public function get_data_json_request_payment_nm($sqlwhere = '', &$auditOk = null)
 	{
 
 		$sql = "SELECT a.*, b.nm_supplier FROM purchase_order_request_payment_nm a left join supplier b on a.id_supplier =b.id_supplier WHERE 1=1 " . ($sqlwhere == '' ? '' : " and " . $sqlwhere) . " order by a.no_po desc ";
 		$query = $this->db->query($sql);
-		return $query->result();
+		$error = $this->db->error();
+		$auditOk = $query !== false && empty($error['code']);
+		return $query ? $query->result() : array();
 	}
 	public function get_data_json_jurnal($sqlwhere = '')
 	{
@@ -95,10 +99,10 @@ class Pembayaran_material_model extends BF_Model
 
 		// 1. Kasbon
 		if ($tipe == 'kasbon' || strpos($no_doc, 'KS-') === 0) {
-			$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $no_doc])->row();
+			$get_kasbon = $this->auditTrackQuery($this->db->get_where('tr_kasbon', ['no_doc' => $no_doc]), $this->db)->row();
 			if (!empty($get_kasbon) && !empty($get_kasbon->no_kasbon_consultant)) {
 				$is_consultant = true;
-				$head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_kasbon->no_kasbon_consultant])->row();
+				$head = $this->auditTrackQuery($this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_kasbon->no_kasbon_consultant]), $this->consultant)->row();
 				if (!empty($head)) {
 					$id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
 					$id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
@@ -107,12 +111,12 @@ class Pembayaran_material_model extends BF_Model
 		}
 		// 2. Expense
 		elseif ($tipe == 'expense' || strpos($no_doc, 'EXP-') === 0 || strpos($no_doc, 'ER-') === 0) {
-			$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $no_doc])->row();
+			$get_expense = $this->auditTrackQuery($this->db->get_where('tr_expense', ['no_doc' => $no_doc]), $this->db)->row();
 			if (!empty($get_expense) && !empty($get_expense->no_expense_consultant)) {
 				$is_consultant = true;
-				$exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant])->row();
+				$exp_head = $this->auditTrackQuery($this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant]), $this->consultant)->row();
 				if (!empty($exp_head) && !empty($exp_head->id_header)) {
-					$head = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row();
+					$head = $this->auditTrackQuery($this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header]), $this->consultant)->row();
 					if (!empty($head)) {
 						$id_penawaran     = !empty($head->id_penawaran) ? $head->id_penawaran : null;
 						$id_spk_penawaran = !empty($head->id_spk_penawaran) ? $head->id_spk_penawaran : null;
@@ -122,7 +126,7 @@ class Pembayaran_material_model extends BF_Model
 		}
 		// 3. Direct Payment
 		elseif ($tipe == 'direct_payment' || strpos($no_doc, 'DPM') === 0 || strpos($no_doc, 'DP-') === 0) {
-			$get_dp = $this->db->get_where('tr_direct_payment', ['no_doc' => $no_doc])->row();
+			$get_dp = $this->auditTrackQuery($this->db->get_where('tr_direct_payment', ['no_doc' => $no_doc]), $this->db)->row();
 			if (!empty($get_dp)) {
 				$is_consultant = true;
 				$id_penawaran     = !empty($get_dp->id_penawaran) ? $get_dp->id_penawaran : null;
@@ -135,7 +139,7 @@ class Pembayaran_material_model extends BF_Model
 
 			// Langkah 1: Cek di kons_tr_penawaran.company
 			if (!empty($id_penawaran)) {
-				$pen = $this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran])->row();
+				$pen = $this->auditTrackQuery($this->consultant->select('company')->get_where('kons_tr_penawaran', ['id_quotation' => $id_penawaran]), $this->consultant)->row();
 				if (!empty($pen) && $pen->company !== null && $pen->company !== '') {
 					$company_id = $pen->company;
 				}
@@ -143,7 +147,7 @@ class Pembayaran_material_model extends BF_Model
 
 			// Langkah 2 (Fallback): Cek di kons_tr_spk_penawaran.id_company
 			if (empty($company_id) && !empty($id_spk_penawaran)) {
-				$spk = $this->consultant->select('id_company')->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran])->row();
+				$spk = $this->auditTrackQuery($this->consultant->select('id_company')->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $id_spk_penawaran]), $this->consultant)->row();
 				if (!empty($spk) && $spk->id_company !== null && $spk->id_company !== '') {
 					$company_id = $spk->id_company;
 				}
@@ -163,7 +167,7 @@ class Pembayaran_material_model extends BF_Model
 						'nm_company' => $norm_map[$company_id]['nama']
 					];
 				}
-				$comp = $this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $company_id])->row();
+				$comp = $this->auditTrackQuery($this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $company_id]), $this->consultant)->row();
 				if (!empty($comp)) {
 					return ['id_company' => (string)$comp->id, 'nm_company' => $comp->nm_company];
 				}
@@ -172,18 +176,18 @@ class Pembayaran_material_model extends BF_Model
 
 		// 4. Petty Cash (PHP / RPC)
 		if ($tipe == 'petty_cash_hutang' || $tipe == 'refill_pettycash' || strpos($no_doc, 'RPC') === 0 || strpos($no_doc, 'PHP') === 0) {
-			$get_petty_cash = $this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_doc])->row();
+			$get_petty_cash = $this->auditTrackQuery($this->db->select('company')->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $no_doc]), $this->db)->row();
 			if (!empty($get_petty_cash) && !empty($get_petty_cash->company)) {
 				return ['id_company' => '', 'nm_company' => $get_petty_cash->company];
 			}
-			$get_rpc = $this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_doc])->row();
+			$get_rpc = $this->auditTrackQuery($this->db->select('company')->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $no_doc]), $this->db)->row();
 			if (!empty($get_rpc) && !empty($get_rpc->company)) {
 				return ['id_company' => '', 'nm_company' => $get_rpc->company];
 			}
 		}
 
 		// 5. Fallback Non-Consultant (via payment_approve -> users -> departments -> hris_companies)
-		$pa = $this->db->select('nama, created_by')->get_where('payment_approve', ['no_doc' => $no_doc])->row();
+		$pa = $this->auditTrackQuery($this->db->select('nama, created_by')->get_where('payment_approve', ['no_doc' => $no_doc]), $this->db)->row();
 		$req_user = null;
 		if (!empty($pa)) {
 			$req_user = !empty($pa->nama) ? $pa->nama : $pa->created_by;
@@ -191,33 +195,33 @@ class Pembayaran_material_model extends BF_Model
 
 		if (empty($req_user)) {
 			if ($tipe == 'kasbon' || strpos($no_doc, 'KS-') === 0) {
-				$kb = $this->db->select('nama, created_by')->get_where('tr_kasbon', ['no_doc' => $no_doc])->row();
+				$kb = $this->auditTrackQuery($this->db->select('nama, created_by')->get_where('tr_kasbon', ['no_doc' => $no_doc]), $this->db)->row();
 				if (!empty($kb)) $req_user = !empty($kb->nama) ? $kb->nama : $kb->created_by;
 			} elseif ($tipe == 'expense' || strpos($no_doc, 'EXP-') === 0 || strpos($no_doc, 'ER-') === 0) {
-				$exp = $this->db->select('nama, created_by')->get_where('tr_expense', ['no_doc' => $no_doc])->row();
+				$exp = $this->auditTrackQuery($this->db->select('nama, created_by')->get_where('tr_expense', ['no_doc' => $no_doc]), $this->db)->row();
 				if (!empty($exp)) $req_user = !empty($exp->nama) ? $exp->nama : $exp->created_by;
 			} elseif ($tipe == 'direct_payment' || strpos($no_doc, 'DPM') === 0 || strpos($no_doc, 'DP-') === 0) {
-				$dp = $this->db->select('b.username, b.nm_lengkap')->from('tr_direct_payment a')->join('users b', 'b.id_user = a.created_by', 'left')->where('a.no_doc', $no_doc)->get()->row();
+				$dp = $this->auditTrackQuery($this->db->select('b.username, b.nm_lengkap')->from('tr_direct_payment a')->join('users b', 'b.id_user = a.created_by', 'left')->where('a.no_doc', $no_doc)->get(), $this->db)->row();
 				if (!empty($dp)) $req_user = !empty($dp->username) ? $dp->username : $dp->nm_lengkap;
 			}
 		}
 
 		if (!empty($req_user)) {
-			$user = $this->db->select('department_id')
+			$user = $this->auditTrackQuery($this->db->select('department_id')
 				->from('users')
 				->group_start()
 					->where('username', $req_user)
 					->or_where('nm_lengkap', $req_user)
 				->group_end()
-				->get()->row();
+				->get(), $this->db)->row();
 
 			if (!empty($user) && !empty($user->department_id)) {
-				$dept = $this->hris->select('company_id')->get_where('departments', ['id' => $user->department_id])->row();
+				$dept = $this->auditTrackQuery($this->hris->select('company_id')->get_where('departments', ['id' => $user->department_id]), $this->hris)->row();
 				if (!empty($dept) && !empty($dept->company_id)) {
 					$cmap = self::company_map();
 					if (isset($cmap[$dept->company_id])) {
 						$cid = $cmap[$dept->company_id];
-						$comp = $this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $cid])->row();
+						$comp = $this->auditTrackQuery($this->consultant->select('id, nm_company')->get_where('kons_tr_company', ['id' => $cid]), $this->consultant)->row();
 						if (!empty($comp)) {
 							return ['id_company' => (string)$comp->id, 'nm_company' => $comp->nm_company];
 						}
@@ -438,8 +442,10 @@ class Pembayaran_material_model extends BF_Model
 		]);
 	}
 
-	public function set_jurnal()
+	public function set_jurnal(&$auditSummary = null)
 	{
+		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
+		$this->auditReadState =& $auditSummary;
 		$post = $this->input->post();
 
 		$id_payment = $post['id_payment'];
@@ -469,7 +475,8 @@ class Pembayaran_material_model extends BF_Model
 		$this->db->select('a.*');
 		$this->db->from('payment_approve a');
 		$this->db->where_in('a.id', explode(',', $id_payment));
-		$get_payment = $this->db->get()->result();
+		$get_payment = $this->auditTrackQuery($this->db->get(), $this->db)->result();
+		$auditSummary['row_count'] = count($get_payment);
 
 		// Cek apakah semua pembayaran bertipe petty_cash_hutang
 		$is_all_petty_cash_hutang = true;
@@ -504,12 +511,12 @@ class Pembayaran_material_model extends BF_Model
 			$this->db->from('ms_bank a');
 			$this->db->join('list_bank b', 'b.id = a.bank', 'left');
 			$this->db->where('a.id', $bank);
-			$get_bank_detail = $this->db->get()->row();
+			$get_bank_detail = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 			if (!empty($get_bank_detail)) {
 				$coa_bank = $get_bank_detail->coa_bank;
 				$nm_bank = $get_bank_detail->rekening . ' - ' . $get_bank_detail->nama_bank . ' - ' . $get_bank_detail->nama;
 
-				$get_coa_bank = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_bank)->get()->row();
+				$get_coa_bank = $this->auditTrackQuery($this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_bank)->get(), $this->accounting)->row();
 				if (!empty($get_coa_bank)) {
 					$nm_coa_bank = $get_coa_bank->nama;
 				} else {
@@ -527,10 +534,10 @@ class Pembayaran_material_model extends BF_Model
 				}
 			}
 			if (!empty($missing)) {
-				$coas_data = $this->accounting->select('no_perkiraan as no_coa, nama as nm_coa')
+				$coas_data = $this->auditTrackQuery($this->accounting->select('no_perkiraan as no_coa, nama as nm_coa')
 					->from('coa_master')
 					->where_in('no_perkiraan', $missing)
-					->get()->result();
+					->get(), $this->accounting)->result();
 				foreach ($coas_data as $row) {
 					$coa_cache[$row->no_coa] = $row->nm_coa;
 				}
@@ -696,7 +703,8 @@ class Pembayaran_material_model extends BF_Model
 			$item_ref_id = (!empty($item_payment->no_doc) && (strpos($item_payment->no_doc, 'RPC') !== false || strpos($item_payment->no_doc, 'PHP') !== false)) ? $item_payment->no_doc : $item_payment->id;
 
 			if ($item_payment->tipe == 'kasbon') {
-				$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc])->row();
+				$get_kasbon = $this->auditTrackQuery($this->db->get_where('tr_kasbon', ['no_doc' => $item_payment->no_doc]), $this->db)->row();
+				if (!$get_kasbon) { $auditSummary['source_missing'] = true; }
 
 				$id_divisi = '';
 				$nm_divisi = '';
@@ -707,7 +715,7 @@ class Pembayaran_material_model extends BF_Model
 					$this->db->from('tr_kasbon a');
 					$this->db->join('users b', 'b.nm_lengkap = a.created_by');
 					$this->db->where('a.no_doc', $item_payment->no_doc);
-					$get_kasbon_user_title = $this->db->get()->row();
+					$get_kasbon_user_title = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 				}
 
 				if (!empty($get_kasbon_user_title)) {
@@ -716,7 +724,7 @@ class Pembayaran_material_model extends BF_Model
 						$this->hris->select('a.id as id_title, a.name as nm_title');
 						$this->hris->from('titles a');
 						$this->hris->where('a.id', $title_id);
-						$titles_cache[$title_id] = $this->hris->get()->row();
+						$titles_cache[$title_id] = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 					}
 					$get_titles = $titles_cache[$title_id];
 					$id_divisi = (!empty($get_titles)) ? $get_titles->id_title : '';
@@ -728,14 +736,14 @@ class Pembayaran_material_model extends BF_Model
 					$this->consultant->from('kons_tr_kasbon_project_header a');
 					$this->consultant->join('users b', 'b.id_user = a.created_by', 'left');
 					$this->consultant->where('a.id', $get_kasbon->no_kasbon_consultant);
-					$get_pengajuan_konsultan = $this->consultant->get()->row();
+					$get_pengajuan_konsultan = $this->auditTrackQuery($this->consultant->get(), $this->consultant)->row();
 
 					if (!empty($get_pengajuan_konsultan)) {
 						$this->hris->select('a.*, b.id as id_department, b.name as nm_department');
 						$this->hris->from('employees a');
 						$this->hris->join('departments b', 'b.id = a.department_id', 'left');
 						$this->hris->where('a.id', $get_pengajuan_konsultan->employee_id);
-						$get_department = $this->hris->get()->row();
+						$get_department = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 
 						$id_divisi = $get_department->id_department ?? '';
 						$nm_divisi = $get_department->nm_department ?? '';
@@ -745,13 +753,13 @@ class Pembayaran_material_model extends BF_Model
 						$this->db->select('a.department_id');
 						$this->db->from('users a');
 						$this->db->where('a.username', $get_kasbon->created_by);
-						$get_user = $this->db->get()->row();
+						$get_user = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 
 						if (!empty($get_user)) {
 							$this->hris->select('a.id as id_department, a.name as nm_department');
 							$this->hris->from('departments a');
 							$this->hris->where('a.id', $get_user->department_id);
-							$get_department = $this->hris->get()->row();
+							$get_department = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 
 							$id_divisi = $get_department->id_department ?? '';
 							$nm_divisi = $get_department->nm_department ?? '';
@@ -784,14 +792,14 @@ class Pembayaran_material_model extends BF_Model
 
 					if ($item_coa->no_coa == '1103-01-14') {
 						if (!empty($id_kasbon_consultant)) {
-							$get_kasbon_consultant = $this->consultant->select('a.*')
+							$get_kasbon_consultant = $this->auditTrackQuery($this->consultant->select('a.*')
 								->from('kons_tr_kasbon_project_header a')
 								->where('a.id', $id_kasbon_consultant)
-								->get()
+								->get(), $this->consultant)
 								->row();
 
 							if ($get_kasbon_consultant->tipe == '2') {
-								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
+								$get_kasbon_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
 									->from('kons_tr_kasbon_project_akomodasi a')
 									->join('kons_master_biaya b', 'b.id = a.id_item', 'left')
 									->join('kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -799,14 +807,14 @@ class Pembayaran_material_model extends BF_Model
 									->join('kons_tr_spk_penawaran e', 'e.id_spk_penawaran = a.id_spk_penawaran', 'left')
 									->join('kons_tr_company f', 'f.id = e.id_company', 'left')
 									->where('a.id_header', $id_kasbon_consultant)
-									->get()
+									->get(), $this->consultant)
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
 									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '3') {
-								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
+								$get_kasbon_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
 									->from('kons_tr_kasbon_project_others a')
 									->join('kons_master_biaya b', 'b.id = a.id_item', 'left')
 									->join('kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -814,7 +822,7 @@ class Pembayaran_material_model extends BF_Model
 									->join('kons_tr_spk_penawaran e', 'e.id_spk_penawaran = a.id_spk_penawaran', 'left')
 									->join('kons_tr_company f', 'f.id = e.id_company', 'left')
 									->where('a.id_header', $id_kasbon_consultant)
-									->get()
+									->get(), $this->consultant)
 									->result();
 
 								// print_r(get_kasbon_detail);
@@ -824,7 +832,7 @@ class Pembayaran_material_model extends BF_Model
 									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '4') {
-								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
+								$get_kasbon_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
 									->from('kons_tr_kasbon_project_lab a')
 									->join('kons_master_lab b', 'b.id = a.id_item', 'left')
 									->join('kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -832,14 +840,14 @@ class Pembayaran_material_model extends BF_Model
 									->join('kons_tr_spk_penawaran e', 'e.id_spk_penawaran = a.id_spk_penawaran', 'left')
 									->join('kons_tr_company f', 'f.id = e.id_company', 'left')
 									->where('a.id_header', $id_kasbon_consultant)
-									->get()
+									->get(), $this->consultant)
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
 									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else if ($get_kasbon_consultant->tipe == '5') {
-								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
+								$get_kasbon_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
 									->from('kons_tr_kasbon_project_subcont_tenaga_ahli a')
 									->join('kons_master_tenaga_ahli b', 'b.id = a.id_item', 'left')
 									->join('kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -847,14 +855,14 @@ class Pembayaran_material_model extends BF_Model
 									->join('kons_tr_spk_penawaran e', 'e.id_spk_penawaran = a.id_spk_penawaran', 'left')
 									->join('kons_tr_company f', 'f.id = e.id_company', 'left')
 									->where('a.id_header', $get_kasbon_consultant->id)
-									->get()
+									->get(), $this->consultant)
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
 									$debit += $item_kasbon->total_pengajuan;
 								endforeach;
 							} else {
-								$get_kasbon_detail = $this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
+								$get_kasbon_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.no_coa, b.nm_coa, COALESCE(d.id, f.id) as company_id, COALESCE(d.nm_company, f.nm_company) as company_name')
 									->from('kons_tr_kasbon_project_subcont_perusahaan a')
 									->join('kons_master_subcont_perusahaan b', 'b.id = a.id_item', 'left')
 									->join('kons_tr_penawaran c', 'c.id_quotation = a.id_penawaran', 'left')
@@ -862,7 +870,7 @@ class Pembayaran_material_model extends BF_Model
 									->join('kons_tr_spk_penawaran e', 'e.id_spk_penawaran = a.id_spk_penawaran', 'left')
 									->join('kons_tr_company f', 'f.id = e.id_company', 'left')
 									->where('a.id_header', $id_kasbon_consultant)
-									->get()
+									->get(), $this->consultant)
 									->result();
 
 								foreach ($get_kasbon_detail as $item_kasbon) :
@@ -908,19 +916,19 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->from('tr_transport a');
 				$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req');
 				$this->db->where('b.no_doc', $item_payment->no_doc);
-				$get_coa_transport = $this->db->get()->row();
+				$get_coa_transport = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 
 				$coa_transport = (!empty($get_coa_transport->no_coa)) ? $get_coa_transport->no_coa : '';
 				$nm_coa_transport = (!empty($get_coa_transport->nm_coa)) ? $get_coa_transport->nm_coa : '';
 
 				$get_users = null;
 				if (!empty($get_coa_transport)) {
-					$get_users = $this->db->get_where('users', ['username' => $get_coa_transport->created_by])->row();
+					$get_users = $this->auditTrackQuery($this->db->get_where('users', ['username' => $get_coa_transport->created_by]), $this->db)->row();
 				}
 
 				$get_department = null;
 				if (!empty($get_users)) {
-					$get_department = $this->hris->get_where('departments', ['id' => $get_users->department_id])->row();
+					$get_department = $this->auditTrackQuery($this->hris->get_where('departments', ['id' => $get_users->department_id]), $this->hris)->row();
 				}
 
 				$id_department = $get_department->id ?? '';
@@ -937,7 +945,7 @@ class Pembayaran_material_model extends BF_Model
 					$this->db->from('users a');
 					$this->db->join('tr_transport_req b', 'b.created_by = a.nm_lengkap');
 					$this->db->where('b.no_doc', $item_payment->no_doc);
-					$get_transport_title = $this->db->get()->row();
+					$get_transport_title = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 				}
 
 				$id_company = '';
@@ -953,7 +961,7 @@ class Pembayaran_material_model extends BF_Model
 
 				if ($target_comp_id !== '') {
 					if (!isset($company_cache[$target_comp_id])) {
-						$company_cache[$target_comp_id] = $this->consultant->get_where('kons_tr_company', ['id' => $target_comp_id])->row();
+						$company_cache[$target_comp_id] = $this->auditTrackQuery($this->consultant->get_where('kons_tr_company', ['id' => $target_comp_id]), $this->consultant)->row();
 					}
 					$get_company = $company_cache[$target_comp_id];
 					$id_company = (!empty($get_company)) ? $get_company->id : '';
@@ -965,7 +973,7 @@ class Pembayaran_material_model extends BF_Model
 				if (!empty($get_transport_title)) {
 					$title_id = $get_transport_title->title_id;
 					if (!isset($titles_cache[$title_id])) {
-						$titles_cache[$title_id] = $this->hris->get_where('titles', ['id' => $title_id])->row();
+						$titles_cache[$title_id] = $this->auditTrackQuery($this->hris->get_where('titles', ['id' => $title_id]), $this->hris)->row();
 					}
 					$get_title = $titles_cache[$title_id];
 					$id_divisi = (!empty($get_title)) ? $get_title->id : '';
@@ -1006,13 +1014,14 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_department, $nm_department, $item_coa->no_coa, $item_coa->nm_coa, $keterangan, $debit, $kredit);
 				}
 			} else if ($item_payment->tipe == 'expense') {
-				$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc])->row();
+				$get_expense = $this->auditTrackQuery($this->db->get_where('tr_expense', ['no_doc' => $item_payment->no_doc]), $this->db)->row();
+				if (!$get_expense) { $auditSummary['source_missing'] = true; }
 
 				if (!empty($get_expense->exp_inv_po)) {
 
-					$get_inv_po = $this->db->get_where('tr_invoice_po', ['id' => $get_expense->no_doc])->row();
-					$get_po = $this->db->get_where('tr_purchase_order', ['no_surat' => $get_inv_po->no_po])->row();
-					$get_top_po = $this->db->get_where('tr_top_po', ['id' => $get_inv_po->id_top])->row();
+					$get_inv_po = $this->auditTrackQuery($this->db->get_where('tr_invoice_po', ['id' => $get_expense->no_doc]), $this->db)->row();
+					$get_po = $this->auditTrackQuery($this->db->get_where('tr_purchase_order', ['no_surat' => $get_inv_po->no_po]), $this->db)->row();
+					$get_top_po = $this->auditTrackQuery($this->db->get_where('tr_top_po', ['id' => $get_inv_po->id_top]), $this->db)->row();
 
 					$id_company = '';
 					$nm_company = '';
@@ -1020,33 +1029,33 @@ class Pembayaran_material_model extends BF_Model
 					$nm_div = '';
 
 					if ($get_po->tipe == 'pr depart') {
-						$get_detail_po = $this->db->get_where('dt_trans_po', ['no_po' => $get_po->no_po])->row();
+						$get_detail_po = $this->auditTrackQuery($this->db->get_where('dt_trans_po', ['no_po' => $get_po->no_po]), $this->db)->row();
 
 						$this->db->select('a.*');
 						$this->db->from('rutin_non_planning_header a');
 						$this->db->join('rutin_non_planning_detail b', 'b.no_pengajuan = a.no_pengajuan');
 						$this->db->where('b.id', $get_detail_po->idpr);
-						$get_pr_header = $this->db->get()->row();
+						$get_pr_header = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 
 						if (!empty($get_pr_header)) {
 							$this->hris->select('a.id as id_comp, a.name as nm_comp');
 							$this->hris->from('companies a');
 							$this->hris->join('departments b', 'b.company_id = a.id');
 							$this->hris->where('b.id', $get_pr_header->id_dept);
-							$get_comp = $this->hris->get()->row();
+							$get_comp = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 
 							$this->hris->select('a.id as id_div, a.name as nm_div');
 							$this->hris->from('divisions a');
 							$this->hris->join('departments b', 'b.division_id = a.id');
 							$this->hris->where('b.id', $get_pr_header->id_dept);
-							$get_div_obj = $this->hris->get()->row();
+							$get_div_obj = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 
 							$id_div = (!empty($get_div_obj)) ? $get_div_obj->id_div : '';
 							$nm_div = (!empty($get_div_obj)) ? $get_div_obj->nm_div : '';
 
 							if (!empty($get_comp) && in_array($get_comp->id_comp, ['COM003', 'COM012', 'COM006'])) {
 								if (!isset($company_cache['4'])) {
-									$company_cache['4'] = $this->consultant->get_where('kons_tr_company', ['id' => '4'])->row();
+									$company_cache['4'] = $this->auditTrackQuery($this->consultant->get_where('kons_tr_company', ['id' => '4']), $this->consultant)->row();
 								}
 								$get_company = $company_cache['4'];
 
@@ -1093,17 +1102,17 @@ class Pembayaran_material_model extends BF_Model
 						$id_company = $comp_resolved['id_company'];
 						$nm_company = $comp_resolved['nm_company'];
 
-						$exp_head = $this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant])->row();
-						$get_kasbon = (!empty($exp_head) && !empty($exp_head->id_header)) ? $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header])->row() : null;
-						$get_spk_penawaran = (!empty($get_kasbon) && !empty($get_kasbon->id_spk_penawaran)) ? $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran])->row() : null;
+						$exp_head = $this->auditTrackQuery($this->consultant->get_where('kons_tr_expense_report_project_header', ['id' => $get_expense->no_expense_consultant]), $this->consultant)->row();
+						$get_kasbon = (!empty($exp_head) && !empty($exp_head->id_header)) ? $this->auditTrackQuery($this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $exp_head->id_header]), $this->consultant)->row() : null;
+						$get_spk_penawaran = (!empty($get_kasbon) && !empty($get_kasbon->id_spk_penawaran)) ? $this->auditTrackQuery($this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_kasbon->id_spk_penawaran]), $this->consultant)->row() : null;
 
 						$id_department = '';
 						$nm_department = '';
 						if (!empty($get_spk_penawaran) && !empty($get_spk_penawaran->id_divisi)) {
-							$get_department = $this->hris->select('a.id as id_depart, a.name as nm_depart')
+							$get_department = $this->auditTrackQuery($this->hris->select('a.id as id_depart, a.name as nm_depart')
 								->from('divisions a')
 								->where('a.id', $get_spk_penawaran->id_divisi)
-								->get()->row();
+								->get(), $this->hris)->row();
 
 							$id_department = $get_department->id_depart ?? '';
 							$nm_department = $get_department->nm_depart ?? '';
@@ -1130,7 +1139,9 @@ class Pembayaran_material_model extends BF_Model
 							if ($item_coa->no_coa == '9999-99-99') {
 								$debit = $item_payment->jumlah;
 
-								$get_expense = $this->db->get_where('tr_expense', array('no_doc' => $item_payment->no_doc))->row();
+								$get_expense = $this->auditTrackQuery($this->db->get_where('tr_expense', array('no_doc' => $item_payment->no_doc)), $this->db)->row();
+
+								if (!$get_expense) { $auditSummary['source_missing'] = true; }
 
 								$this->consultant->select('d.nm_paket');
 								$this->consultant->from('kons_tr_expense_report_project_header a');
@@ -1138,7 +1149,7 @@ class Pembayaran_material_model extends BF_Model
 								$this->consultant->join('kons_tr_spk_penawaran c', 'c.id_spk_penawaran = b.id_spk_penawaran');
 								$this->consultant->join('kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
 								$this->consultant->where('a.id', $get_expense->no_expense_consultant);
-								$get_expense_cons = $this->consultant->get()->row();
+								$get_expense_cons = $this->auditTrackQuery($this->consultant->get(), $this->consultant)->row();
 
 								$keterangan = $get_expense_cons->nm_paket ?? $item_coa->nm_coa;
 							} elseif ($item_coa->no_coa == '7201-01-04') {
@@ -1169,12 +1180,12 @@ class Pembayaran_material_model extends BF_Model
 							$nm_department = $get_expense->departement;
 							$user_check = !empty($get_expense->nama) ? $get_expense->nama : (!empty($get_expense->created_by) ? $get_expense->created_by : '');
 							if (!empty($user_check)) {
-								$get_usr = $this->db->get_where('users', ['username' => $user_check])->row();
+								$get_usr = $this->auditTrackQuery($this->db->get_where('users', ['username' => $user_check]), $this->db)->row();
 								if (empty($get_usr)) {
-									$get_usr = $this->db->get_where('users', ['nm_lengkap' => $user_check])->row();
+									$get_usr = $this->auditTrackQuery($this->db->get_where('users', ['nm_lengkap' => $user_check]), $this->db)->row();
 								}
 								if (!empty($get_usr) && !empty($get_usr->department_id)) {
-									$get_ms_dept = $this->db->get_where('ms_department', ['id' => $get_usr->department_id])->row();
+									$get_ms_dept = $this->auditTrackQuery($this->db->get_where('ms_department', ['id' => $get_usr->department_id]), $this->db)->row();
 									if (!empty($get_ms_dept)) {
 										$nm_department = $get_ms_dept->nama;
 									}
@@ -1187,7 +1198,7 @@ class Pembayaran_material_model extends BF_Model
 						$is_direct_expense = empty($get_expense->id_kasbon);
 						$expense_details = [];
 						if ($is_direct_expense) {
-							$expense_details = $this->db->get_where('tr_expense_detail', ['no_doc' => $item_payment->no_doc])->result();
+							$expense_details = $this->auditTrackQuery($this->db->get_where('tr_expense_detail', ['no_doc' => $item_payment->no_doc]), $this->db)->result();
 						}
 
 						if ($is_direct_expense && !empty($expense_details)) {
@@ -1201,7 +1212,7 @@ class Pembayaran_material_model extends BF_Model
 								$coa_item = !empty($dtl->coa) ? $dtl->coa : '1304-01-01';
 								$nm_item_coa = isset($coa_cache[$coa_item]) && $coa_cache[$coa_item] !== '' ? $coa_cache[$coa_item] : '';
 								if (empty($nm_item_coa)) {
-									$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_item)->get()->row();
+									$q_coa_acc = $this->auditTrackQuery($this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_item)->get(), $this->accounting)->row();
 									if (!empty($q_coa_acc)) {
 										$nm_item_coa = $q_coa_acc->nama;
 										$coa_cache[$coa_item] = $nm_item_coa;
@@ -1227,7 +1238,7 @@ class Pembayaran_material_model extends BF_Model
 							if (isset($coa_cache[$coa_hutang]) && $coa_cache[$coa_hutang] !== '') {
 								$nm_hutang = $coa_cache[$coa_hutang];
 							} else {
-								$q_coa_acc = $this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_hutang)->get()->row();
+								$q_coa_acc = $this->auditTrackQuery($this->accounting->select('nama')->from('coa_master')->where('no_perkiraan', $coa_hutang)->get(), $this->accounting)->row();
 								if (!empty($q_coa_acc)) {
 									$nm_hutang = $q_coa_acc->nama;
 								}
@@ -1277,9 +1288,10 @@ class Pembayaran_material_model extends BF_Model
 					}
 				}
 			} else if ($item_payment->tipe == 'direct_payment') {
-				$get_direct_payment = $this->db->get_where('tr_direct_payment', ['no_doc' => $item_payment->no_doc])->row();
-				$get_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_penawaran)) ? $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_direct_payment->id_penawaran])->row() : null;
-				$get_spk_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_spk_penawaran)) ? $this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_direct_payment->id_spk_penawaran])->row() : null;
+				$get_direct_payment = $this->auditTrackQuery($this->db->get_where('tr_direct_payment', ['no_doc' => $item_payment->no_doc]), $this->db)->row();
+				if (!$get_direct_payment) { $auditSummary['source_missing'] = true; }
+				$get_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_penawaran)) ? $this->auditTrackQuery($this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_direct_payment->id_penawaran]), $this->consultant)->row() : null;
+				$get_spk_penawaran = (!empty($get_direct_payment) && !empty($get_direct_payment->id_spk_penawaran)) ? $this->auditTrackQuery($this->consultant->get_where('kons_tr_spk_penawaran', ['id_spk_penawaran' => $get_direct_payment->id_spk_penawaran]), $this->consultant)->row() : null;
 
 				$comp_resolved = $this->resolve_document_company($item_payment->no_doc, 'direct_payment');
 				$id_company = $comp_resolved['id_company'];
@@ -1288,27 +1300,27 @@ class Pembayaran_material_model extends BF_Model
 				$id_divisi = '';
 				$nm_divisi = '';
 				if (!empty($get_penawaran) && !empty($get_penawaran->id_divisi)) {
-					$get_divisi = $this->hris->get_where('divisions', ['id' => $get_penawaran->id_divisi])->row();
+					$get_divisi = $this->auditTrackQuery($this->hris->get_where('divisions', ['id' => $get_penawaran->id_divisi]), $this->hris)->row();
 					$id_divisi = $get_divisi->id ?? '';
 					$nm_divisi = $get_divisi->name ?? '';
 				}
 
-				$get_kasbon_cons = $this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_direct_payment->ids])->row();
+				$get_kasbon_cons = $this->auditTrackQuery($this->consultant->get_where('kons_tr_kasbon_project_header', ['id' => $get_direct_payment->ids]), $this->consultant)->row();
 
 				$get_kasbon_cons_detail = [];
 				if ($get_kasbon_cons) {
 					if ($get_kasbon_cons->tipe == '1') {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, a.nm_aktifitas as nm_biaya')->from('kons_tr_kasbon_project_subcont a')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, a.nm_aktifitas as nm_biaya')->from('kons_tr_kasbon_project_subcont a')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '2') {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_akomodasi a')->join('kons_master_biaya b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_akomodasi a')->join('kons_master_biaya b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '3') {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_others a')->join('kons_master_biaya b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_others a')->join('kons_master_biaya b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '4') {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_lab a')->join('kons_master_lab b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_lab a')->join('kons_master_lab b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '5') {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_subcont_tenaga_ahli a')->join('kons_master_tenaga_ahli b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_subcont_tenaga_ahli a')->join('kons_master_tenaga_ahli b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else {
-						$get_kasbon_cons_detail = $this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_subcont_perusahaan a')->join('kons_master_subcont_perusahaan b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get()->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_subcont_perusahaan a')->join('kons_master_subcont_perusahaan b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					}
 				}
 
@@ -1362,7 +1374,8 @@ class Pembayaran_material_model extends BF_Model
 				$pelaporan_id = '';
 
 				if (strpos($item_payment->no_doc, 'PHP') === 0) {
-					$get_petty_cash = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc])->row();
+					$get_petty_cash = $this->auditTrackQuery($this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $item_payment->no_doc]), $this->db)->row();
+					if (!$get_petty_cash) { $auditSummary['source_missing'] = true; }
 					if (!empty($get_petty_cash)) {
 						$nm_company = $get_petty_cash->company;
 						$pelaporan_id = $get_petty_cash->pelaporan_id;
@@ -1373,7 +1386,7 @@ class Pembayaran_material_model extends BF_Model
 						$id_divisi = '';
 						$nm_divisi = '';
 
-						$get_company = $this->hris->get_where('companies', ['name' => $nm_company])->row();
+						$get_company = $this->auditTrackQuery($this->hris->get_where('companies', ['name' => $nm_company]), $this->hris)->row();
 						if (!empty($get_company)) {
 							$id_company = $get_company->id;
 						}
@@ -1386,7 +1399,7 @@ class Pembayaran_material_model extends BF_Model
 						$this->db->join('tr_expense_petty_cash_detail d', 'd.pencatatan_id = pd.pencatatan_id');
 						$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = d.coa_code', 'left');
 						$this->db->where('pd.pelaporan_id', $pelaporan_id);
-						$expense_details = $this->db->get()->result();
+						$expense_details = $this->auditTrackQuery($this->db->get(), $this->db)->result();
 
 						// 1. Jurnal Expense (Debit)
 						foreach ($expense_details as $detail) {
@@ -1416,7 +1429,8 @@ class Pembayaran_material_model extends BF_Model
 						}
 					}
 				} else if (strpos($item_payment->no_doc, 'RPC') === 0 || $item_payment->tipe == 'refill_pettycash') {
-					$get_pelaporan = $this->db->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item_payment->no_doc])->row();
+					$get_pelaporan = $this->auditTrackQuery($this->db->get_where('tr_pelaporan_petty_cash', ['no_pelaporan' => $item_payment->no_doc]), $this->db)->row();
+					if (!$get_pelaporan) { $auditSummary['source_missing'] = true; }
 					if (!empty($get_pelaporan)) {
 						$nm_company = $get_pelaporan->company;
 						$pelaporan_id = $get_pelaporan->id;
@@ -1427,13 +1441,13 @@ class Pembayaran_material_model extends BF_Model
 					$nm_divisi = '';
 
 					if (!empty($nm_company)) {
-						$get_company = $this->hris->get_where('companies', ['name' => $nm_company])->row();
+						$get_company = $this->auditTrackQuery($this->hris->get_where('companies', ['name' => $nm_company]), $this->hris)->row();
 						if (!empty($get_company)) {
 							$id_company = $get_company->id;
 						}
 					}
 
-					$get_stm = $this->hris->get_where('companies', ['name' => 'STM'])->row();
+					$get_stm = $this->auditTrackQuery($this->hris->get_where('companies', ['name' => 'STM']), $this->hris)->row();
 					$id_company_stm = !empty($get_stm) ? $get_stm->id : '';
 
 					$jumlah = $item_payment->jumlah;
@@ -1451,14 +1465,15 @@ class Pembayaran_material_model extends BF_Model
 					$ttl_kredit_refill += $jumlah;
 				}
 			} else if ($item_payment->tipe == 'periodik') {
-				$get_rutin = $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $item_payment->no_doc])->row();
+				$get_rutin = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $item_payment->no_doc]), $this->db)->row();
+				if (!$get_rutin) { $auditSummary['source_missing'] = true; }
 
 				$id_divisi = '';
 				$nm_divisi = '';
 				$idd_company = '';
 
 				if (!empty($get_rutin) && !empty($get_rutin->departement)) {
-					$get_department = $this->hris->get_where('departments', ['id' => $get_rutin->departement])->row();
+					$get_department = $this->auditTrackQuery($this->hris->get_where('departments', ['id' => $get_rutin->departement]), $this->hris)->row();
 					$id_divisi = $get_department->id ?? '';
 					$nm_divisi = $get_department->name ?? '';
 					$idd_company = $get_department->company_id ?? '';
@@ -1468,9 +1483,9 @@ class Pembayaran_material_model extends BF_Model
 					$this->db->select('a.department_id');
 					$this->db->from('users a');
 					$this->db->where('a.id_user', $get_rutin->created_by);
-					$get_user = $this->db->get()->row();
+					$get_user = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 					if (!empty($get_user->department_id)) {
-						$get_department = $this->hris->get_where('departments', ['id' => $get_user->department_id])->row();
+						$get_department = $this->auditTrackQuery($this->hris->get_where('departments', ['id' => $get_user->department_id]), $this->hris)->row();
 						$id_divisi = $get_department->id ?? '';
 						$nm_divisi = $get_department->name ?? '';
 						$idd_company = $get_department->company_id ?? '';
@@ -1492,14 +1507,14 @@ class Pembayaran_material_model extends BF_Model
 
 				if ($target_comp_id !== '') {
 					if (!isset($company_cache[$target_comp_id])) {
-						$company_cache[$target_comp_id] = $this->consultant->get_where('kons_tr_company', ['id' => $target_comp_id])->row();
+						$company_cache[$target_comp_id] = $this->auditTrackQuery($this->consultant->get_where('kons_tr_company', ['id' => $target_comp_id]), $this->consultant)->row();
 					}
 					$get_company = $company_cache[$target_comp_id];
 					$id_company = (!empty($get_company)) ? $get_company->id : '';
 					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 				}
 
-				$get_rutin_detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item_payment->no_doc])->result();
+				$get_rutin_detail = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item_payment->no_doc]), $this->db)->result();
 
 				if (!empty($get_rutin_detail)) {
 					$coas_to_load = [];
@@ -1557,7 +1572,7 @@ class Pembayaran_material_model extends BF_Model
 					}
 				}
 			} else {
-				$get_non_po = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc])->row();
+				$get_non_po = $this->auditTrackQuery($this->db->get_where('tr_pr_non_po', ['no_non_po' => $item_payment->no_doc]), $this->db)->row();
 
 				if (!empty($get_non_po)) {
 					$arr_coa_jurnal = ['1103-01-04', '7201-01-04'];
@@ -1573,16 +1588,16 @@ class Pembayaran_material_model extends BF_Model
 					$this->db->select('a.department_id');
 					$this->db->from('users a');
 					$this->db->where('a.id_user', $get_non_po->created_by);
-					$get_user = $this->db->get()->row();
+					$get_user = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 
 					if (!empty($get_user) && !empty($get_user->department_id)) {
-						$get_department = $this->hris->get_where('departments', ['id' => $get_user->department_id])->row();
+						$get_department = $this->auditTrackQuery($this->hris->get_where('departments', ['id' => $get_user->department_id]), $this->hris)->row();
 						$id_divisi = $get_department->id ?? '';
 						$nm_divisi = $get_department->name ?? '';
 					}
 					// Note: the original script does not loop and generate HTML for this case. We leave it empty as original.
 
-					$get_pr_details = $this->db->get_where('rutin_non_planning_detail', ['no_pr' => $get_non_po->no_pr])->result();
+					$get_pr_details = $this->auditTrackQuery($this->db->get_where('rutin_non_planning_detail', ['no_pr' => $get_non_po->no_pr]), $this->db)->result();
 					$total_pr_amount = 0;
 					foreach ($get_pr_details as $item_detail) {
 						$total_pr_amount += ($item_detail->qty * $item_detail->harga);
@@ -1751,8 +1766,10 @@ class Pembayaran_material_model extends BF_Model
 		return $get_transport_val;
 	}
 
-	public function set_jurnal_refill()
+	public function set_jurnal_refill(&$auditSummary = null)
 	{
+		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
+		$this->auditReadState =& $auditSummary;
 		$post = $this->input->post();
 
 		$id_payment = $post['id_payment'];
@@ -1763,7 +1780,8 @@ class Pembayaran_material_model extends BF_Model
 		$this->db->select('a.*');
 		$this->db->from('payment_approve a');
 		$this->db->where_in('a.id', explode(',', $id_payment));
-		$get_payment = $this->db->get()->result();
+		$get_payment = $this->auditTrackQuery($this->db->get(), $this->db)->result();
+		$auditSummary['row_count'] = count($get_payment);
 
 		$ttl_debit = 0;
 		$ttl_kredit = 0;
@@ -1774,7 +1792,8 @@ class Pembayaran_material_model extends BF_Model
 				$this->db->from('tr_transport_req a');
 				$this->db->join('users b', 'b.nm_lengkap = a.created_by');
 				$this->db->where('a.no_doc', $item_payment->no_doc);
-				$get_check_transport_title_user = $this->db->get()->row();
+				$get_check_transport_title_user = $this->auditTrackQuery($this->db->get(), $this->db)->row();
+				if (!$get_check_transport_title_user) { $auditSummary['source_missing'] = true; }
 
 				$id_divisi = '';
 				$nm_divisi = '';
@@ -1785,7 +1804,7 @@ class Pembayaran_material_model extends BF_Model
 					$this->hris->select('a.id as id_title, a.name as nm_title');
 					$this->hris->from('titles a');
 					$this->hris->where('a.id', $get_check_transport_title_user->title_id);
-					$get_titles = $this->hris->get()->row();
+					$get_titles = $this->auditTrackQuery($this->hris->get(), $this->hris)->row();
 
 					$id_divisi = (!empty($get_titles)) ? $get_titles->id_title : '';
 					$nm_divisi = (!empty($get_titles)) ? $get_titles->nm_title : '';
@@ -1797,7 +1816,7 @@ class Pembayaran_material_model extends BF_Model
 						$this->db->from('ms_bank a');
 						$this->db->join('list_bank b', 'b.id = a.bank', 'left');
 						$this->db->where('a.id', $bank);
-						$get_bank = $this->db->get()->row();
+						$get_bank = $this->auditTrackQuery($this->db->get(), $this->db)->row();
 
 						$nm_bank = $get_bank->rekening . ' a/n ' . $get_bank->nm_bank;
 
@@ -1807,7 +1826,7 @@ class Pembayaran_material_model extends BF_Model
 					$this->accounting->select('a.no_perkiraan as no_coa, a.nama as nm_coa');
 					$this->accounting->from('coa_master a');
 					$this->accounting->where_in('a.no_perkiraan', $arr_coa_jurnal_refill);
-					$get_coa_jurnal_refill = $this->accounting->get()->result();
+					$get_coa_jurnal_refill = $this->auditTrackQuery($this->accounting->get(), $this->accounting)->result();
 
 					$no_jurnal = 0;
 					foreach ($get_coa_jurnal_refill as $item_coa) {
@@ -1827,7 +1846,7 @@ class Pembayaran_material_model extends BF_Model
 						$this->consultant->select('a.id, a.nm_company');
 						$this->consultant->from('kons_tr_company a');
 						$this->consultant->where('a.id', 4);
-						$get_company = $this->consultant->get()->row();
+						$get_company = $this->auditTrackQuery($this->consultant->get(), $this->consultant)->row();
 
 						$id_company = (!empty($get_company)) ? $get_company->id : '';
 						$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
@@ -1908,8 +1927,9 @@ class Pembayaran_material_model extends BF_Model
 		}
 	}
 
-	public function get_server_side_payment_list_pr()
+	public function get_server_side_payment_list_pr(&$auditSummary = null)
 	{
+		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
 		$post = $this->input->post();
 
 		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
@@ -1921,7 +1941,7 @@ class Pembayaran_material_model extends BF_Model
 		$where_sql = "a.status = 2 AND b.exp_inv_po = 1 AND a.id_payment IS NOT NULL AND a.id_payment <> ''";
 
 		$sql_total = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$where_sql}";
-		$recordsTotal = (int) $this->db->query($sql_total)->row()->total;
+		$recordsTotal = (int) $this->auditReadQuery($this->db->query($sql_total), $auditSummary)->row()->total;
 
 		$search_sql = "";
 		if (!empty($search)) {
@@ -1937,7 +1957,7 @@ class Pembayaran_material_model extends BF_Model
 		$final_where = $where_sql . $search_sql;
 
 		$sql_filtered = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$final_where}";
-		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
+		$recordsFiltered = (int) $this->auditReadQuery($this->db->query($sql_filtered), $auditSummary)->row()->total;
 
 		$sort_cols = [
 			0 => 'a.id_payment',
@@ -1969,7 +1989,7 @@ class Pembayaran_material_model extends BF_Model
 			{$limit_clause}
 		";
 
-		$query_data = $this->db->query($sql_data)->result();
+		$query_data = $this->auditReadQuery($this->db->query($sql_data), $auditSummary)->result();
 
 		$hasil = [];
 		foreach ($query_data as $item) {
@@ -2003,6 +2023,7 @@ class Pembayaran_material_model extends BF_Model
 			];
 		}
 
+		$auditSummary['row_count'] = count($hasil);
 		echo json_encode([
 			'draw'            => $draw,
 			'recordsTotal'    => $recordsTotal,
@@ -2011,8 +2032,9 @@ class Pembayaran_material_model extends BF_Model
 		]);
 	}
 
-	public function get_server_side_payment_list_non_pr()
+	public function get_server_side_payment_list_non_pr(&$auditSummary = null)
 	{
+		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
 		$post = $this->input->post();
 
 		$draw   = isset($post['draw']) ? intval($post['draw']) : 0;
@@ -2021,38 +2043,48 @@ class Pembayaran_material_model extends BF_Model
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 		$order  = isset($post['order']) ? $post['order'] : [];
 
-		$where_sql = "a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND a.id_payment IS NOT NULL";
+		$base_grouped_sql = "
+			SELECT 
+				COALESCE(NULLIF(a.id_payment, ''), a.id) as no_payment,
+				GROUP_CONCAT(DISTINCT a.no_doc ORDER BY a.id ASC SEPARATOR ', ') as no_doc,
+				MAX(a.tgl_bayar) as tgl_bayar,
+				SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(NULLIF(a.created_by, ''), a.nm_supplier, '-') ORDER BY a.id ASC SEPARATOR '|||'), '|||', 1) as requestor,
+				COALESCE(NULLIF(MAX(a.payment_bank), 0), SUM(a.jumlah), 0) as nilai_bayar,
+				MAX(a.keterangan_pembayaran) as keterangan,
+				GROUP_CONCAT(DISTINCT a.link_doc SEPARATOR ',') as link_docs
+			FROM payment_approve a
+			LEFT JOIN tr_expense b ON b.no_doc = a.no_doc
+			WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND a.id_payment IS NOT NULL
+			GROUP BY COALESCE(NULLIF(a.id_payment, ''), a.id)
+		";
 
-		$sql_total = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$where_sql}";
-		$recordsTotal = (int) $this->db->query($sql_total)->row()->total;
+		$sql_total = "SELECT COUNT(*) as total FROM ({$base_grouped_sql}) as grouped_base";
+		$recordsTotal = (int) $this->auditReadQuery($this->db->query($sql_total), $auditSummary)->row()->total;
 
 		$search_sql = "";
 		if (!empty($search)) {
 			$escaped_search = $this->db->escape_like_str($search);
-			$search_sql = " AND (
-				a.id_payment LIKE '%{$escaped_search}%' OR
-				a.no_doc LIKE '%{$escaped_search}%' OR
-				a.created_by LIKE '%{$escaped_search}%' OR
-				a.nm_supplier LIKE '%{$escaped_search}%' OR
-				a.keterangan_pembayaran LIKE '%{$escaped_search}%'
+			$search_sql = " WHERE (
+				grouped.no_payment LIKE '%{$escaped_search}%' OR
+				grouped.no_doc LIKE '%{$escaped_search}%' OR
+				grouped.requestor LIKE '%{$escaped_search}%' OR
+				grouped.keterangan LIKE '%{$escaped_search}%'
 			)";
 		}
 
-		$final_where = $where_sql . $search_sql;
-
-		$sql_filtered = "SELECT COUNT(DISTINCT a.id) as total FROM payment_approve a LEFT JOIN tr_expense b ON b.no_doc = a.no_doc WHERE {$final_where}";
-		$recordsFiltered = (int) $this->db->query($sql_filtered)->row()->total;
+		$sql_filtered = "SELECT COUNT(*) as total FROM ({$base_grouped_sql}) as grouped {$search_sql}";
+		$recordsFiltered = (int) $this->auditReadQuery($this->db->query($sql_filtered), $auditSummary)->row()->total;
 
 		$sort_cols = [
-			0 => 'a.id_payment',
-			1 => 'a.no_doc',
-			2 => 'a.tgl_bayar',
-			3 => 'a.created_by',
-			4 => 'a.payment_bank',
-			5 => 'a.keterangan_pembayaran'
+			0 => 'grouped.no_payment',
+			1 => 'grouped.no_doc',
+			2 => 'grouped.tgl_bayar',
+			3 => 'grouped.requestor',
+			4 => 'grouped.nilai_bayar',
+			5 => 'grouped.keterangan'
 		];
 
-		$order_by = "ORDER BY a.tgl_bayar DESC, a.id DESC";
+		$order_by = "ORDER BY grouped.tgl_bayar DESC, grouped.no_payment DESC";
 		if (!empty($order) && isset($sort_cols[$order[0]['column']])) {
 			$dir = (strtolower($order[0]['dir']) === 'asc') ? 'ASC' : 'DESC';
 			$order_by = "ORDER BY " . $sort_cols[$order[0]['column']] . " " . $dir;
@@ -2064,34 +2096,39 @@ class Pembayaran_material_model extends BF_Model
 		}
 
 		$sql_data = "
-			SELECT a.*
-			FROM payment_approve a
-			LEFT JOIN tr_expense b ON b.no_doc = a.no_doc
-			WHERE {$final_where}
-			GROUP BY a.id
+			SELECT grouped.*
+			FROM ({$base_grouped_sql}) as grouped
+			{$search_sql}
 			{$order_by}
 			{$limit_clause}
 		";
 
-		$query_data = $this->db->query($sql_data)->result();
+		$query_data = $this->auditReadQuery($this->db->query($sql_data), $auditSummary)->result();
 
 		$hasil = [];
 		foreach ($query_data as $item) {
-			$nilai_bayar = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
-			$no_payment  = !empty($item->id_payment) ? $item->id_payment : $item->id;
-			$requestor   = !empty($item->created_by) ? $item->created_by : $item->nm_supplier;
+			$no_payment  = !empty($item->no_payment) ? $item->no_payment : (!empty($item->id_payment) ? $item->id_payment : ($item->id ?? '-'));
+			$no_doc      = !empty($item->no_doc) ? $item->no_doc : '-';
+			$tgl_bayar   = !empty($item->tgl_bayar) ? date('d F Y', strtotime($item->tgl_bayar)) : '-';
+			$requestor   = !empty($item->requestor) ? $item->requestor : (!empty($item->created_by) ? $item->created_by : ($item->nm_supplier ?? '-'));
+			$nilai_bayar = isset($item->nilai_bayar) ? (float) $item->nilai_bayar : (!empty($item->jumlah) ? (float) $item->jumlah : (float) ($item->payment_bank ?? 0));
+			$keterangan  = !empty($item->keterangan) ? $item->keterangan : ($item->keterangan_pembayaran ?? '');
+			$link_docs   = !empty($item->link_docs) ? $item->link_docs : ($item->link_doc ?? '');
 
-			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $item->id_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
-			if (!empty($item->link_doc)) {
+			$opt = '<a href="' . base_url('pembayaran_material/view_payment_new/' . $no_payment) . '" target="_blank" class="btn btn-sm btn-info view" title="View Request Payment"><i class="fa fa-eye"></i></a>';
+			if (!empty($link_docs)) {
 				$docs = [];
-				$decoded = json_decode($item->link_doc, true);
-				if (is_array($decoded)) {
-					$docs = $decoded;
-				} else if (strpos($item->link_doc, ',') !== false) {
-					$docs = explode(',', $item->link_doc);
-				} else {
-					$docs = [$item->link_doc];
+				$exploded = explode(',', $link_docs);
+				foreach ($exploded as $raw_doc) {
+					$raw_doc = trim($raw_doc);
+					$decoded = json_decode($raw_doc, true);
+					if (is_array($decoded)) {
+						$docs = array_merge($docs, $decoded);
+					} else if (!empty($raw_doc)) {
+						$docs[] = $raw_doc;
+					}
 				}
+				$docs = array_unique($docs);
 				foreach ($docs as $doc_item) {
 					$doc_item = trim($doc_item);
 					if (!empty($doc_item) && file_exists('assets/expense/' . $doc_item)) {
@@ -2102,21 +2139,29 @@ class Pembayaran_material_model extends BF_Model
 
 			$hasil[] = [
 				'no_payment'  => $no_payment,
-				'no_doc'      => $item->no_doc,
-				'tgl_bayar'   => !empty($item->tgl_bayar) ? date('d F Y', strtotime($item->tgl_bayar)) : '-',
+				'no_doc'      => $no_doc,
+				'tgl_bayar'   => $tgl_bayar,
 				'requestor'   => $requestor,
 				'nilai_bayar' => number_format($nilai_bayar, 2),
-				'keterangan'  => $item->keterangan_pembayaran,
+				'keterangan'  => $keterangan,
 				'option'      => $opt
 			];
 		}
 
+		$auditSummary['row_count'] = count($hasil);
 		echo json_encode([
 			'draw'            => $draw,
 			'recordsTotal'    => $recordsTotal,
 			'recordsFiltered' => $recordsFiltered,
 			'data'            => $hasil
 		]);
+	}
+	private function auditReadQuery($query, &$summary)
+	{
+		$error = $this->db->error();
+		$summary['queries_ok'] = $summary['queries_ok'] && $query !== false && empty($error['code']);
+		if ($query === false) { throw new RuntimeException('Payment list query failed'); }
+		return $query;
 	}
 
 	private function auditTrackQuery($query, $connection)
@@ -2128,6 +2173,5 @@ class Pembayaran_material_model extends BF_Model
 		}
 		return $query;
 	}
-
 
 }

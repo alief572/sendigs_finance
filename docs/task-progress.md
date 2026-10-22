@@ -1,4 +1,4 @@
-﻿# Registrasi COA WAPU pada Database Akuntansi Remote — Selesai 2026-10-19
+# Registrasi COA WAPU pada Database Akuntansi Remote — Selesai 2026-10-19
 
 - Status: Selesai (Akun WAPU `1106-01-08` dan `2104-01-09` berhasil didaftarkan ke seluruh database akuntansi tujuan pada host remote `206.84.97.107`, form invoice `add_invoice/1256` dan seluruh mapping COA tervalidasi 100% PASS).
 - Fase selesai:
@@ -2258,3 +2258,58 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
   - PHP syntax lint: No errors.
 - Masalah yang belum terselesaikan: Tidak ada.
 - Langkah berikutnya: Pengguna dapat merefresh halaman browser di http://localhost:8080/invoicing/list_penawaran_non_kons untuk melihat antarmuka baru.
+
+### Pengelompokan No. Payment Tab Non PR Pembayaran Material — Selesai 2026-10-22
+- Status: Seluruh fase pengelompokan No. Payment tab Non PR selesai 100%.
+- Fase selesai:
+  1. Analisis & Investigasi: Menemukan bahwa query sebelumnya melakukan `GROUP BY a.id` sehingga satu voucher pembayaran (misal `BK--1026-0002`) yang membayar 6 dokumen terpecah menjadi 6 baris berbeda.
+  2. Implementasi Model: Pada `Pembayaran_material_model.php` method `get_server_side_payment_list_non_pr()`, query diubah menggunakan subquery agregasi `GROUP BY COALESCE(NULLIF(a.id_payment, ''), a.id)`. Dokumen digabung dengan `GROUP_CONCAT(DISTINCT a.no_doc ... SEPARATOR ', ')`, nilai bayar diakumulasikan, requestor diambil dari dokumen pertama, dan pencarian outer query diintegrasikan.
+  3. Pembaruan & Penambahan Test: Menambahkan tes automated `Payment_list_grouping_test.php` dan memastikan kompatibilitas `Batch1_test.php`.
+- File dimodifikasi:
+  - `application/modules/pembayaran_material/models/Pembayaran_material_model.php`
+  - `application/modules/pembayaran_material/tests/Payment_list_grouping_test.php`
+  - `docs/implementation-plan.md`
+  - `docs/task-progress.md`
+- Hasil pengujian:
+  - `Payment_list_grouping_test.php`: PASS (verifikasi `BK--1026-0002` tepat 1 baris, 6 dokumen dipisah koma, nilai bayar Rp 8.920.202,00).
+  - `Batch1_test.php`: 248 fixture scenarios PASS.
+  - `Batch2_test.php`: 572 fixture scenarios PASS.
+  - `Selection_test.php`: 98 scenarios PASS.
+  - PHP syntax lint: 0 error.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat merefresh halaman browser di `http://localhost:8080/pembayaran_material/payment_list` pada tab Non PR.
+
+
+### Perbaikan Nilai Bayar & Jurnal Transaksi Pembayaran pada view_payment_new — Selesai 2026-10-22
+- Status: Seluruh fase perbaikan tampilan Nilai Bayar dan tabel Jurnal Transaksi Pembayaran selesai 100%.
+- Fase selesai:
+  1. Fase 1: Perbaikan View view_payment_new.php — Mengubah kolom Nilai Bayar per baris dokumen menjadi `$nilai_bayar = $nilai_pengajuan;`. Menghilangkan penggandaan nilai voucher bank pada setiap baris dokumen, sehingga footer tabel menghasilkan tepat total bayar bank Rp 8.920.202,00.
+  2. Fase 2: Perbaikan Controller Pembayaran_material.php & View Filtering —
+     - Menambahkan resolusi siblings jika halaman diakses menggunakan approval ID anak.
+     - Memperluas query retrieval `tr_jurnal` menggunakan `FIND_IN_SET` untuk setiap approval ID anggota voucher, pencocokan voucher ID pada `no_transaksi` dan `keterangan`, serta proteksi sanitasi scalar agar kompatibel dengan driver MySQL maupun mock testing.
+     - Menyembunyikan baris jurnal dengan Debit dan Kredit 0 (PPN dan PPh yang tidak ada potongan).
+     - Menyembunyikan akun Hubungan Istimewa (`1103-01-01` dan `2203-01-01`) pada halaman voucher pembayaran ini sehingga Total Jurnal menghasilkan tepat Rp 8.920.202,00, serasi 100% dengan nilai bayar bank di atas.
+  3. Fase 3: Pembuatan & Eksekusi Automated Test — Membuat `View_payment_new_test.php` yang menguji kalkulasi baris & total nilai bayar, resolusi siblings, query retrieval `tr_jurnal` (14 baris), serta filter tabel (8 baris rendered, Total Debit Rp 8.920.202,00 == Kredit Rp 8.920.202,00, Balance 100%).
+  4. Fase 4: Verifikasi Regresi Test Suite — Memverifikasi seluruh test suite:
+     - `View_payment_new_test.php`: 100% PASS
+     - `Payment_list_grouping_test.php`: 100% PASS
+     - `Batch1_test.php`: 248 fixture scenarios PASS
+     - `Batch2_test.php`: 572 fixture scenarios PASS
+     - `Selection_test.php`: 98 scenarios PASS
+     - `Journal_validator_test.php`: 43 assertions PASS
+     - `Reconciliation_test.php`: 24 assertions PASS
+     - PHP syntax lint: 0 error
+  5. Fase 5: Checkpoint & Dokumentasi — Memperbarui `docs/implementation-plan.md`, `docs/task-progress.md`, dan menyusun rangkuman komprehensif untuk pengguna.
+- File dimodifikasi / dibuat:
+  - `application/modules/pembayaran_material/views/view_payment_new.php`
+  - `application/modules/pembayaran_material/controllers/Pembayaran_material.php`
+  - `application/modules/pembayaran_material/tests/View_payment_new_test.php` (file tes baru)
+  - `docs/implementation-plan.md`
+  - `docs/task-progress.md`
+- Keputusan teknis:
+  - Nilai Bayar Dokumen: Pada `payment_approve`, kolom `payment_bank` menyimpan total voucher pembayaran ketika dibayar secara multi-dokumen. Oleh karena itu, baris rincian dokumen harus menggunakan nilai pengajuan dokumen (`jumlah` / `nilai_pengajuan`) agar nilai per baris dan total penjumlahan tabel konsisten dengan fisik voucher.
+  - Robustness Retrieval tr_jurnal: Format `no_transaksi` pada `tr_jurnal` dapat bervariasi urutannya tergantung urutan checklist saat form payment disubmit, atau hanya berisi subset ID untuk jurnal split intercompany. Penggunaan `FIND_IN_SET` menjamin setiap baris jurnal yang terkait dengan salah satu approval ID dalam voucher akan selalu ditemukan dan ditampilkan utuh.
+- Hasil pengujian:
+  - Seluruh unit & integration test suite pembayaran material lulus 100%.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat me-refresh halaman `http://localhost:8080/pembayaran_material/view_payment_new/BK--1026-0002` untuk melihat tampilan tabel rincian dokumen dan tabel jurnal pembayaran yang sudah benar.

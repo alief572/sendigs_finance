@@ -226,7 +226,7 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 							$nilai_pengajuan = ($item->jumlah > 0) ? $item->jumlah : $item->payment_bank;
 							$ppn = (float) $item->total_ppn;
 							$pph = (float) $item->total_pph;
-							$nilai_bayar = ($item->payment_bank > 0) ? $item->payment_bank : $nilai_pengajuan;
+							$nilai_bayar = $nilai_pengajuan;
 
 							$tot_pengajuan += $nilai_pengajuan;
 							$tot_ppn += $ppn;
@@ -292,6 +292,20 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 							foreach ($list_jurnal as $jr) {
 								$debit = (float) $jr->debit;
 								$kredit = (float) $jr->kredit;
+								// Abaikan baris jurnal jika nilai debit dan kredit-nya sama-sama 0
+								if ($debit <= 0 && $kredit <= 0) {
+									continue;
+								}
+
+								// Sembunyikan akun penyeimbang hubungan istimewa agar total jurnal mencerminkan transaksi riil dokumen vs bank
+								$is_intercompany = (
+									(!empty($jr->coa) && in_array($jr->coa, ['1103-01-01', '2203-01-01'])) ||
+									(!empty($jr->nm_coa) && stripos($jr->nm_coa, 'Hubungan Istimewa') !== false)
+								);
+								if ($is_intercompany) {
+									continue;
+								}
+
 								$total_debit += $debit;
 								$total_kredit += $kredit;
 

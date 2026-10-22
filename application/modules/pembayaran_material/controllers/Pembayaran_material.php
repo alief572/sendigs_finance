@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__).'/libraries/Payment_journal_validator.php';
 $data_status = array();
 class Pembayaran_material extends Admin_Controller
 {
@@ -19,13 +20,11 @@ class Pembayaran_material extends Admin_Controller
 			array('data' => $this->auditSafeData($data)), array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
 	}
 
-
 	private function completeAudit($message, $status, $data = array())
 	{
 		return $this->module_audit_recorder->complete($message, $status,
 			array('data' => $this->auditSafeData($data), 'sql' => null));
 	}
-
 
 	private function auditFilters()
 	{
@@ -44,7 +43,6 @@ class Pembayaran_material extends Admin_Controller
 		return $data;
 	}
 
-
 	private function auditSafeData($data)
 	{
 		$out = array();
@@ -61,7 +59,6 @@ class Pembayaran_material extends Admin_Controller
 		return $out;
 	}
 
-
 	private function auditQuery($query)
 	{
 		$error = $this->db->error();
@@ -70,6 +67,26 @@ class Pembayaran_material extends Admin_Controller
 		return $query;
 	}
 
+	private function auditWrite($result)
+	{
+		$this->auditQuery($result);
+		if (!$this->auditQueriesOk || $result === false) { throw new RuntimeException('Payment write failed'); }
+		return $result;
+	}
+
+	private function auditUpdate($table, $data, $where)
+	{
+		return $this->auditWrite($this->db->update($table, $data, $where));
+	}
+
+	private function auditCommit()
+	{
+		if (!$this->auditQueriesOk || !$this->db->trans_status() || !$this->db->trans_commit()) {
+			$this->db->trans_rollback();
+			return false;
+		}
+		return true;
+	}
 
 	public function __construct()
 	{
@@ -88,9 +105,13 @@ class Pembayaran_material extends Admin_Controller
 	//==================================================================================================================
 	function index()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('row_count'));
 		$data_Group			= $this->master_model->getArray('groups', array(), 'id', 'name');
-		$data_list 			= $this->pembayaran_material_model->get_data_json_request_payment();
-		$data_listnm 			= $this->pembayaran_material_model->get_data_json_request_payment_nm();
+		$this->auditQuery($data_Group);
+		$materialOk = true; $nonmaterialOk = true;
+		$data_list = $this->pembayaran_material_model->get_data_json_request_payment('', $materialOk);
+		$data_listnm = $this->pembayaran_material_model->get_data_json_request_payment_nm('', $nonmaterialOk);
+		$this->auditQueriesOk = $this->auditQueriesOk && $materialOk && $nonmaterialOk;
 		$data = array(
 			'title'			=> 'Indeks Of Request Payment',
 			'action'		=> 'index',
@@ -101,11 +122,14 @@ class Pembayaran_material extends Admin_Controller
 		);
 		history('View Request Payment');
 		$this->load->view('Pembayaran_material/index_request_payment', $data);
+		$this->completeAudit('Membuka daftar request pembayaran material', $this->auditQueriesOk ? 1 : 0,
+			array('row_count' => count($data_list) + count($data_listnm)));
 	}
 
 
 	public function request_payment_save()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('request_id', 'request_number', 'transaction_type', 'item_count'));
 		$id_req = $this->input->post("id_req");
 		$request_date = $this->input->post("request_date");
 		$no_po = $this->input->post("no_po");
@@ -137,53 +161,65 @@ class Pembayaran_material extends Admin_Controller
 		$Username 		= $this->session->userdata['ORI_User']['username'];
 		$dateTime		= date('Y-m-d H:i:s');
 
-		$this->db->trans_begin();
-		$dataheader =  array(
-			'nilai_po_invoice' => $nilai_po_invoice,
-			'nilai_pph_invoice' => $nilai_pph_invoice,
-			'request_payment' => $request_payment,
-			'request_date' => $request_date,
-			'no_invoice' => $no_invoice,
-			'nilai_invoice' => $nilai_invoice,
-			'keterangan' => $keterangan,
-			'tipe' => $tipe,
-			'invoice_ppn' => $invoice_ppn,
-			'potongan_dp' => $potongan_dp,
-			'potongan_claim' => $potongan_claim,
-			'keterangan_potongan' => $keterangan_potongan,
-			'coa_pph' => $coa_pph,
-			'bank_transfer' => $bank_transfer,
-			'modified_on' => date('Y-m-d H:i:s'),
-			'modified_by' => $Username
-		);
-		if ($tipetrans == "2") {
-			$this->All_model->DataUpdate('purchase_order_request_payment_nm', $dataheader, array('id' => $id_req));
-			$this->All_model->DataUpdate('tran_po_detail', array('status_pay' => ''), array('status_pay' => $no_request));
-			if (!empty($payfor)) {
-				foreach ($payfor as $val) {
-					if ($val != "") $this->All_model->DataUpdate('tran_po_detail', array('status_pay' => $no_request), array('id' => $val));
+		if (!is_scalar($id_req) || trim((string) $id_req) === '' || ($payfor !== null && !is_array($payfor))) {
+			$this->completeAudit('Edit request pembayaran gagal', 0, array('reason' => 'invalid_input'));
+			echo json_encode(array('save' => false)); return;
+		}
+		try {
+			$table = $tipetrans == '2' ? 'purchase_order_request_payment_nm' : 'purchase_order_request_payment';
+			$source = $this->auditQuery($this->db->get_where($table, array('id' => $id_req)))->row();
+			if (!$source) { throw new RuntimeException('Missing payment source'); }
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
+			$dataheader =  array(
+				'nilai_po_invoice' => $nilai_po_invoice,
+				'nilai_pph_invoice' => $nilai_pph_invoice,
+				'request_payment' => $request_payment,
+				'request_date' => $request_date,
+				'no_invoice' => $no_invoice,
+				'nilai_invoice' => $nilai_invoice,
+				'keterangan' => $keterangan,
+				'tipe' => $tipe,
+				'invoice_ppn' => $invoice_ppn,
+				'potongan_dp' => $potongan_dp,
+				'potongan_claim' => $potongan_claim,
+				'keterangan_potongan' => $keterangan_potongan,
+				'coa_pph' => $coa_pph,
+				'bank_transfer' => $bank_transfer,
+				'modified_on' => date('Y-m-d H:i:s'),
+				'modified_by' => $Username
+			);
+			if ($tipetrans == "2") {
+				$this->auditUpdate('purchase_order_request_payment_nm', $dataheader, array('id' => $id_req));
+				$this->auditUpdate('tran_po_detail', array('status_pay' => ''), array('status_pay' => $no_request));
+				if (!empty($payfor)) {
+					foreach ($payfor as $val) {
+						if ($val != "") $this->auditUpdate('tran_po_detail', array('status_pay' => $no_request), array('id' => $val));
+					}
+				}
+			} else {
+				$this->auditUpdate('purchase_order_request_payment', $dataheader, array('id' => $id_req));
+				$this->auditUpdate('tran_material_po_detail', array('status_pay' => ''), array('status_pay' => $no_request));
+				if (!empty($payfor)) {
+					foreach ($payfor as $val) {
+						if ($val != "") $this->auditUpdate('tran_material_po_detail', array('status_pay' => $no_request), array('id' => $val));
+					}
 				}
 			}
-		} else {
-			$this->All_model->DataUpdate('purchase_order_request_payment', $dataheader, array('id' => $id_req));
-			$this->All_model->DataUpdate('tran_material_po_detail', array('status_pay' => ''), array('status_pay' => $no_request));
-			if (!empty($payfor)) {
-				foreach ($payfor as $val) {
-					if ($val != "") $this->All_model->DataUpdate('tran_material_po_detail', array('status_pay' => $no_request), array('id' => $val));
-				}
+			if ($this->auditCommit()) {
+				$keterangan     = "SUKSES, simpan data ";
+				$result         = TRUE;
+			} else {
+				$this->db->trans_rollback();
+				$keterangan     = "GAGAL, simpan data ";
+				$result = FALSE;
+				history('Save Edit Request Payment, No ' . $id_req);
 			}
+		} catch (Throwable $error) {
+			$this->db->trans_rollback(); $result = false;
 		}
-		$this->db->trans_complete();
-		if ($this->db->trans_status()) {
-			$this->db->trans_commit();
-			$keterangan     = "SUKSES, simpan data ";
-			$result         = TRUE;
-		} else {
-			$this->db->trans_rollback();
-			$keterangan     = "GAGAL, simpan data ";
-			$result = FALSE;
-			history('Save Edit Request Payment, No ' . $id_req);
-		}
+		$this->completeAudit('Mengubah request pembayaran', $result ? 1 : 0, array(
+			'request_id' => $id_req, 'request_number' => $no_request, 'transaction_type' => $tipetrans,
+			'item_count' => is_array($payfor) ? count($payfor) : 0, 'outcome' => $result ? 'saved' : 'failed'));
 		$param = array(
 			'save' => $result
 		);
@@ -197,6 +233,7 @@ class Pembayaran_material extends Admin_Controller
 	//==================================================================================================================
 	public function payment_list()
 	{
+		$this->beginAudit(__FUNCTION__);
 		$data = array(
 			'title'			=> 'Payment List',
 			'action'		=> 'index',
@@ -204,16 +241,23 @@ class Pembayaran_material extends Admin_Controller
 		);
 		$this->template->set($data);
 		$this->template->render('index_payment_new');
+		$this->completeAudit('Membuka Payment List', 1);
 	}
 
 	public function get_data_payment_list_pr()
 	{
-		$this->Pembayaran_material_model->get_server_side_payment_list_pr();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count'));
+		$summary = array();
+		$this->Pembayaran_material_model->get_server_side_payment_list_pr($summary);
+		$this->completeAudit('Membaca tabel pembayaran', !empty($summary['queries_ok']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0));
 	}
 
 	public function get_data_payment_list_non_pr()
 	{
-		$this->Pembayaran_material_model->get_server_side_payment_list_non_pr();
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count'));
+		$summary = array();
+		$this->Pembayaran_material_model->get_server_side_payment_list_non_pr($summary);
+		$this->completeAudit('Membaca tabel pembayaran', !empty($summary['queries_ok']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0));
 	}
 
 
@@ -303,10 +347,12 @@ class Pembayaran_material extends Admin_Controller
 
 	public function save_payment_new()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('document_ids', 'document_count', 'payment_date', 'currency', 'payment_number', 'admin_charge_bearer'));
 		// Validate admin_charge_bearer if present
 		$admin_charge_bearer = $this->input->post('admin_charge_bearer');
 		if ($admin_charge_bearer !== null && $admin_charge_bearer !== false) {
 			if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+				$this->completeAudit('Pembayaran ditolak', 0, array('reason' => 'invalid_admin_charge_bearer'));
 				echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
 				return;
 			}
@@ -338,12 +384,21 @@ class Pembayaran_material extends Admin_Controller
 		$alokasi_hutang = $this->input->post("alokasi_hutang");
 		$tipetrans = $this->input->post("tipetrans");
 		$selisih_kurs1 = 0;
-		$this->db->trans_begin();
+
 		$jenis_jurnal = 'BUK20';
 		if ($curs_header != 'IDR') $jenis_jurnal = 'BUK21';
 		try {
+			if (!is_array($id_req) || !$id_req) { throw new RuntimeException('Empty payment selection'); }
+			foreach ($id_req as $requestId) {
+				if (!is_scalar($requestId) || trim((string) $requestId) === '') { throw new RuntimeException('Invalid payment selection'); }
+				$source = $this->auditQuery($this->db->get_where('purchase_order_request_payment', array('id' => $requestId)))->row();
+				if (!$source) { throw new RuntimeException('Missing payment source'); }
+			}
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
 
 			$no_payment = $this->All_model->GetAutoGenerate('format_payment');
+			$this->auditQuery($no_payment);
+			if (!$no_payment) { throw new RuntimeException('Payment number unavailable'); }
 			$nomor_jurnal = $jenis_jurnal . $no_payment . rand(100, 999);
 
 			$dataheader =  array(
@@ -368,8 +423,8 @@ class Pembayaran_material extends Admin_Controller
 				'created_by' => $Username
 			);
 
-			$this->All_model->dataSave('purchase_order_request_payment_header', $dataheader);
-			$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('1','4','8') order by parameter_no")->result();
+			$this->auditWrite($this->db->insert('purchase_order_request_payment_header', $dataheader));
+			$datajurnal1 = $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('1','4','8') order by parameter_no"))->result();
 			$det_Jurnaltes1 = array();
 			$total = 0;
 			foreach ($datajurnal1 as $rec) {
@@ -469,12 +524,14 @@ class Pembayaran_material extends Admin_Controller
 			$Bln	= substr($tanggal, 5, 2);
 			$Thn	= substr($tanggal, 0, 4);
 			$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
+			$this->auditQuery($Nomor_JV);
+			if (!$Nomor_JV) { throw new RuntimeException('Journal number unavailable'); }
 			foreach ($id_req as $keys) {
-				$this->All_model->DataUpdate('purchase_order_request_payment', array('status' => '2', 'payment_date' => $payment_date, 'no_payment' => $no_payment), array('id' => $keys));
-				$data = $this->db->query("select * from purchase_order_request_payment where id='" . $keys . "'")->row();
+				$this->auditUpdate('purchase_order_request_payment', array('status' => '2', 'payment_date' => $payment_date, 'no_payment' => $no_payment), array('id' => $keys));
+				$data = $this->auditQuery($this->db->query("select * from purchase_order_request_payment where id='" . $keys . "'"))->row();
 				$selisih_kurs = 0;
 				$nilai_terima_barang_idr = 0;
-				$datapoheader = $this->db->query("select * from tran_material_po_header where no_po='" . $data->no_po . "'")->row();
+				$datapoheader = $this->auditQuery($this->db->query("select * from tran_material_po_header where no_po='" . $data->no_po . "'"))->row();
 				if ($datapoheader->terima_barang_idr != 0) {
 					$kurs_hutang = $datapoheader->kurs_terima;
 					$selisih_kurs = (($data->nilai_po_invoice * $curs) - $data->nilai_po_invoice * $datapoheader->kurs_terima);
@@ -507,7 +564,7 @@ class Pembayaran_material extends Admin_Controller
 				}
 
 				if ($data->tipe == 'TR-01') {
-					$this->db->query("update tran_material_po_header set terima_barang_kurs=0, terima_barang_idr=0
+					$this->auditWrite($this->db->query("update tran_material_po_header set terima_barang_kurs=0, terima_barang_idr=0
 				" . $addsql . ", total_bayar=(total_bayar+" . ($data->nilai_po_invoice) . "),
 				total_bayar_rupiah=(total_bayar_rupiah+" . ($data->nilai_po_invoice * $curs) . "),
 				bayar_kurs=(bayar_kurs+" . ($data->nilai_po_invoice) . "),
@@ -516,11 +573,11 @@ class Pembayaran_material extends Admin_Controller
 						($data->tipe == 'TR-01' ?
 							",nilai_dp=(nilai_dp+" . $data->nilai_po_invoice . "), sisa_dp=(sisa_dp+" . $data->nilai_po_invoice . ")" :
 							", nilai_dp=(nilai_dp-" . $data->potongan_dp . "), sisa_dp=(sisa_dp-" . $data->potongan_dp . ")") .
-						" where no_po='" . $data->no_po . "'");
+						" where no_po='" . $data->no_po . "'"));
 				}
 
 				if ($data->tipe == 'TR-02') {
-					$this->db->query("update tran_material_po_header set terima_barang_kurs=0, terima_barang_idr=0
+					$this->auditWrite($this->db->query("update tran_material_po_header set terima_barang_kurs=0, terima_barang_idr=0
 				" . $addsql . ", total_bayar=(total_bayar+" . ($data->nilai_po_invoice) . "),
 				total_bayar_rupiah=(total_bayar_rupiah+" . ($data->nilai_po_invoice * $curs) . "),
 				bayar_kurs=(bayar_kurs+" . ($data->nilai_po_invoice) . "),
@@ -531,13 +588,13 @@ class Pembayaran_material extends Admin_Controller
 						($data->tipe == 'TR-01' ?
 							",nilai_dp=(nilai_dp+" . $data->nilai_po_invoice . "), sisa_dp=(sisa_dp+" . $data->nilai_po_invoice . ")" :
 							", nilai_dp=(nilai_dp-" . $data->potongan_dp . "), sisa_dp=(sisa_dp-" . $data->potongan_dp . ")") .
-						" where no_po='" . $data->no_po . "'");
+						" where no_po='" . $data->no_po . "'"));
 				}
 
 				$keterangan		= 'Pembayaran ' . $no_payment;
-				$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='3'")->row();
-				$data_supplier 	= $this->db->query("select * from supplier where id_supplier='" . $data->id_supplier . "'")->row();
-				$data_coa2 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='2'")->row();
+				$data_coa 	= $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='3'"))->row();
+				$data_supplier 	= $this->auditQuery($this->db->query("select * from supplier where id_supplier='" . $data->id_supplier . "'"))->row();
+				$data_coa2 	= $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='2'"))->row();
 
 				if ($data->curs_header == 'IDR') {
 					$coahutang = '2101-01-01';
@@ -562,7 +619,7 @@ class Pembayaran_material extends Admin_Controller
 						'kredit_usd'	=> 0,
 
 					);
-					$this->db->insert('tr_kartu_hutang', $datahutang);
+					$this->auditWrite($this->db->insert('tr_kartu_hutang', $datahutang));
 				}
 
 
@@ -583,10 +640,10 @@ class Pembayaran_material extends Admin_Controller
 						'kredit_usd'	=> 0,
 
 					);
-					$this->db->insert('tr_kartu_hutang', $datahutang);
+					$this->auditWrite($this->db->insert('tr_kartu_hutang', $datahutang));
 				}
 
-				$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('2','3','5','6','7','9') order by parameter_no")->result();
+				$datajurnal1 = $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('2','3','5','6','7','9') order by parameter_no"))->result();
 				foreach ($datajurnal1 as $rec) {
 					if ($data->modul == 'PO') {
 						// UANG MUKA
@@ -740,7 +797,7 @@ class Pembayaran_material extends Admin_Controller
 					}
 				}
 			}
-			$this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
+			$this->auditWrite($this->db->insert_batch('jurnaltras', $det_Jurnaltes1));
 
 			//auto jurnal
 
@@ -758,7 +815,7 @@ class Pembayaran_material extends Admin_Controller
 					'nilai_valas_kredit'		=> $vals['nilai_valas_kredit'],
 				);
 				$total = ($total + $vals['debet']);
-				$this->db->insert(DBACC . '.jurnal', $datadetail);
+				$this->auditWrite($this->db->insert(DBACC . '.jurnal', $datadetail));
 			}
 
 			$keterangan		= 'Pembayaran ' . $no_payment;
@@ -776,27 +833,29 @@ class Pembayaran_material extends Admin_Controller
 				'ho_valid'			=> '',
 			);
 
-			$this->db->insert(DBACC . '.japh', $dataJVhead);
+			$this->auditWrite($this->db->insert(DBACC . '.japh', $dataJVhead));
 			$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
-			$this->db->query($Qry_Update_Cabang_acc);
+			$this->auditWrite($this->db->query($Qry_Update_Cabang_acc));
 
 
 			//end auto jurnal
 
-			$this->db->trans_complete();
-			if ($this->db->trans_status()) {
-				$this->db->trans_commit();
+			if ($this->auditCommit()) {
 				$result         = TRUE;
 				history('Save Payment');
 			} else {
 				$this->db->trans_rollback();
 				$result = FALSE;
 			}
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			$this->db->trans_rollback();
 			$result = FALSE;
 		}
 
+		$this->completeAudit('Menyimpan pembayaran dan jurnal', $result ? 1 : 0, array(
+			'document_ids' => is_array($id_req) ? $id_req : array(), 'document_count' => is_array($id_req) ? count($id_req) : 0,
+			'payment_date' => $payment_date, 'currency' => $curs_header, 'payment_number' => $no_payment ?? null,
+			'admin_charge_bearer' => $admin_charge_bearer, 'outcome' => $result ? 'saved' : 'failed'));
 		$param = array(
 			'save' => $result
 		);
@@ -804,18 +863,23 @@ class Pembayaran_material extends Admin_Controller
 	}
 	public function view_payment_new($id)
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('payment_id', 'payment_ids', 'document_count', 'row_count', 'journal_count', 'jenis_payment', 'admin_charge_bearer'));
 		$list_id_payment = [];
-		$get_id_payment = $this->db->select('a.id')->get_where('payment_approve a', ['a.id_payment' => $id])->result();
+		$get_id_payment = $this->auditQuery($this->db->select('a.id, a.id_payment')->get_where('payment_approve a', ['a.id_payment' => $id]))->result();
 		if (!empty($get_id_payment)) {
 			foreach ($get_id_payment as $item_id_payment) {
 				$list_id_payment[] = $item_id_payment->id;
 			}
 		} else {
-			$get_id_payment = $this->db->select('a.id')->get_where('payment_approve a', ['a.id' => $id])->result();
-			if (!empty($get_id_payment)) {
-				foreach ($get_id_payment as $item_id_payment) {
-					$list_id_payment[] = $item_id_payment->id;
+			// Cek apakah $id adalah payment_approve.id yang memiliki voucher parent (id_payment)
+			$check_item = $this->auditQuery($this->db->select('a.id, a.id_payment')->get_where('payment_approve a', ['a.id' => $id]))->row();
+			if (!empty($check_item) && !empty($check_item->id_payment)) {
+				$get_siblings = $this->auditQuery($this->db->select('a.id')->get_where('payment_approve a', ['a.id_payment' => $check_item->id_payment]))->result();
+				foreach ($get_siblings as $sib) {
+					$list_id_payment[] = $sib->id;
 				}
+			} elseif (!empty($check_item)) {
+				$list_id_payment[] = $check_item->id;
 			}
 		}
 
@@ -825,15 +889,15 @@ class Pembayaran_material extends Admin_Controller
 			$id_payment = $list_id_payment;
 		}
 
-		$get_payment = $this->db
+		$get_payment = $this->auditQuery($this->db
 			->select('a.*')
 			->from('payment_approve a')
 			->where_in('a.id', $id_payment)
 			->get()
-			->result();
+			)->result();
 
-		$get_supplier = $this->db->get('new_supplier')->result();
-		$get_mata_uang = $this->db->get_where('mata_uang', ['deleted_by' => 0, 'activation' => 'active'])->result();
+		$get_supplier = $this->auditQuery($this->db->get('new_supplier'))->result();
+		$get_mata_uang = $this->auditQuery($this->db->get_where('mata_uang', ['deleted_by' => 0, 'activation' => 'active']))->result();
 
 		// Query Bank dengan sumber yang sama persis seperti saat input proses payment
 		$this->db->select('a.id, a.rekening, a.nama, a.coa_bank, b.nama_bank, c.nama as nm_coa');
@@ -841,19 +905,19 @@ class Pembayaran_material extends Admin_Controller
 		$this->db->join('list_bank b', 'b.id = a.bank', 'left');
 		$this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = a.coa_bank', 'left');
 		$this->db->where('a.deleted', '0');
-		$get_bank = $this->db->get()->result();
+		$get_bank = $this->auditQuery($this->db->get())->result();
 
-		$get_payment_header = $this->db
+		$get_payment_header = $this->auditQuery($this->db
 			->select('a.*')
 			->from('payment_approve a')
 			->where_in('a.id', $id_payment)
 			->order_by('a.id', 'ASC')
 			->get()
-			->row();
+			)->row();
 
 		$bank_charge = 0;
 		$id_paid_voucher = !empty($get_payment_header->id_payment) ? $get_payment_header->id_payment : $id;
-		$get_bank_charge = $this->db->get_where('tr_payment_paid a', ['a.id' => $id_paid_voucher])->row();
+		$get_bank_charge = $this->auditQuery($this->db->get_where('tr_payment_paid a', ['a.id' => $id_paid_voucher]))->row();
 		if (!empty($get_bank_charge)) {
 			$bank_charge = $get_bank_charge->bank_charge;
 		}
@@ -874,25 +938,45 @@ class Pembayaran_material extends Admin_Controller
 
 		// 2. Query dari tr_jurnal
 		$list_jurnal = [];
-		if (!empty($search_keys)) {
-			$this->db->where_in('no_transaksi', $search_keys);
+		if (!empty($search_keys) || !empty($id_payment)) {
+			$this->db->group_start();
+			if (!empty($search_keys)) {
+				$this->db->where_in('no_transaksi', $search_keys);
+				$this->db->or_where_in('no_jurnal', $search_keys);
+			}
+			if (!empty($id_paid_voucher)) {
+				$this->db->or_like('no_transaksi', $id_paid_voucher);
+				$this->db->or_like('keterangan', $id_paid_voucher);
+			}
+			// Cek FIND_IN_SET untuk setiap approval ID jika no_transaksi berupa daftar ID koma
+			if (!empty($id_payment)) {
+				foreach ($id_payment as $pid) {
+					if (!empty($pid) && is_scalar($pid)) {
+						$escaped_pid = (method_exists($this->db, 'escape_str') && is_string($this->db->escape_str($pid)))
+							? $this->db->escape_str($pid)
+							: addslashes((string) $pid);
+						$this->db->or_where("FIND_IN_SET('{$escaped_pid}', no_transaksi) >", 0, FALSE);
+					}
+				}
+			}
+			$this->db->group_end();
 			$this->db->order_by('id', 'ASC');
-			$list_jurnal = $this->db->get('tr_jurnal')->result();
+			$list_jurnal = $this->auditQuery($this->db->get('tr_jurnal'))->result();
 		}
 
-		// 3. Jika tr_jurnal belum ditemukan dengan exact match, coba LIKE no_transaksi
-		if (empty($list_jurnal) && !empty($id_paid_voucher)) {
-			$list_jurnal = $this->db->like('no_transaksi', $id_paid_voucher)->order_by('id', 'ASC')->get('tr_jurnal')->result();
-		}
-
-		// 4. Jika masih kosong, coba query dari jurnaltras (Accounting)
+		// 3. Fallback jika masih kosong: coba query dari jurnaltras (Accounting)
 		if (empty($list_jurnal) && !empty($search_keys)) {
 			$this->db->select('a.nomor as no_jurnal, a.tanggal as tgl_jurnal, a.tipe as jenis_transaksi, a.no_perkiraan as coa, b.nama as nm_coa, a.keterangan, a.debet as debit, a.kredit, a.no_reff');
 			$this->db->from('jurnaltras a');
 			$this->db->join(DBACC . '.coa_master b', 'b.no_perkiraan = a.no_perkiraan', 'left');
+			$this->db->group_start();
 			$this->db->where_in('a.no_reff', $search_keys);
+			if (!empty($id_paid_voucher)) {
+				$this->db->or_like('a.no_reff', $id_paid_voucher);
+			}
+			$this->db->group_end();
 			$this->db->order_by('a.id', 'ASC');
-			$list_jurnal = $this->db->get()->result();
+			$list_jurnal = $this->auditQuery($this->db->get())->result();
 		}
 
 		$data = [
@@ -906,8 +990,12 @@ class Pembayaran_material extends Admin_Controller
 			'bank_charge'      => $bank_charge,
 			'list_jurnal'      => $list_jurnal
 		];
+		if (empty($get_payment)) {
+			$this->completeAudit('Dokumen pembayaran tidak ditemukan', 0, array('reason' => 'not_found')); show_error('Dokumen pembayaran tidak ditemukan', 404); return;
+		}
 		$this->template->set('results', $data);
 		$this->template->render('view_payment_new');
+		$this->completeAudit('Membuka view_payment_new', $this->auditQueriesOk ? 1 : 0, array('payment_id' => $id, 'row_count' => count($get_payment), 'journal_count' => count($list_jurnal)));
 	}
 
 
@@ -920,10 +1008,12 @@ class Pembayaran_material extends Admin_Controller
 
 	public function save_payment_new_nonmaterial()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('document_ids', 'document_count', 'payment_date', 'currency', 'payment_number', 'admin_charge_bearer'));
 		// Validate admin_charge_bearer if present
 		$admin_charge_bearer = $this->input->post('admin_charge_bearer');
 		if ($admin_charge_bearer !== null && $admin_charge_bearer !== false) {
 			if (!in_array($admin_charge_bearer, ['company', 'recipient'])) {
+				$this->completeAudit('Pembayaran ditolak', 0, array('reason' => 'invalid_admin_charge_bearer'));
 				echo json_encode(['status' => 0, 'pesan' => 'Parameter penanggung admin charge tidak valid']);
 				return;
 			}
@@ -954,18 +1044,29 @@ class Pembayaran_material extends Admin_Controller
 		$alokasi_dp = $this->input->post("alokasi_dp");
 		$alokasi_hutang = $this->input->post("alokasi_hutang");
 		$tipetrans = $this->input->post("tipetrans");
-		$this->db->trans_begin();
+
 		$jenis_jurnal = 'BUK20';
 		if ($curs_header != 'IDR') $jenis_jurnal = 'BUK21';
 		try {
+			if (!is_array($id_req) || !$id_req) { throw new RuntimeException('Empty payment selection'); }
+			foreach ($id_req as $requestId) {
+				if (!is_scalar($requestId) || trim((string) $requestId) === '') { throw new RuntimeException('Invalid payment selection'); }
+				$source = $this->auditQuery($this->db->get_where('purchase_order_request_payment_nm', array('id' => $requestId)))->row();
+				if (!$source) { throw new RuntimeException('Missing payment source'); }
+			}
+			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
 
 			$no_payment = $this->All_model->GetAutoGenerate('format_payment');
+			$this->auditQuery($no_payment);
+			if (!$no_payment) { throw new RuntimeException('Payment number unavailable'); }
 			$nomor_jurnal = $jenis_jurnal . $no_payment . rand(100, 999);
 
 			$tanggal = $payment_date;
 			$Bln	= substr($tanggal, 5, 2);
 			$Thn	= substr($tanggal, 0, 4);
 			$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
+			$this->auditQuery($Nomor_JV);
+			if (!$Nomor_JV) { throw new RuntimeException('Journal number unavailable'); }
 
 			$dataheader =  array(
 				'no_payment' => $no_payment,
@@ -990,8 +1091,8 @@ class Pembayaran_material extends Admin_Controller
 				'created_by' => $Username
 			);
 
-			$this->All_model->dataSave('purchase_order_request_payment_header', $dataheader);
-			$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('1','4','8') order by parameter_no")->result();
+			$this->auditWrite($this->db->insert('purchase_order_request_payment_header', $dataheader));
+			$datajurnal1 = $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('1','4','8') order by parameter_no"))->result();
 			$det_Jurnaltes1 = array();
 			foreach ($datajurnal1 as $rec) {
 				// CASH BANK
@@ -1077,11 +1178,11 @@ class Pembayaran_material extends Admin_Controller
 				}
 			}
 			foreach ($id_req as $keys) {
-				$this->All_model->DataUpdate('purchase_order_request_payment_nm', array('status' => '2', 'payment_date' => $payment_date, 'no_payment' => $no_payment), array('id' => $keys));
-				$data = $this->db->query("select * from purchase_order_request_payment_nm where id='" . $keys . "'")->row();
+				$this->auditUpdate('purchase_order_request_payment_nm', array('status' => '2', 'payment_date' => $payment_date, 'no_payment' => $no_payment), array('id' => $keys));
+				$data = $this->auditQuery($this->db->query("select * from purchase_order_request_payment_nm where id='" . $keys . "'"))->row();
 				$selisih_kurs = 0;
 				$nilai_terima_barang_idr = 0;
-				$datapoheader = $this->db->query("select * from tran_po_header where no_po='" . $data->no_po . "'")->row();
+				$datapoheader = $this->auditQuery($this->db->query("select * from tran_po_header where no_po='" . $data->no_po . "'"))->row();
 				if ($datapoheader->terima_barang_idr != 0) {
 					$selisih_kurs = (($data->nilai_po_invoice * $curs) - $datapoheader->terima_barang_idr);
 				}
@@ -1092,18 +1193,18 @@ class Pembayaran_material extends Admin_Controller
 					$nilai_dp_kurs = ($data->nilai_po_invoice * $curs);
 					$addsql = ", nilai_dp_kurs=" . $nilai_dp_kurs . "";
 				}
-				$this->db->query("update tran_po_header set terima_barang_kurs=0, terima_barang_idr=0
+				$this->auditWrite($this->db->query("update tran_po_header set terima_barang_kurs=0, terima_barang_idr=0
 				" . $addsql . ", total_bayar=(total_bayar+" . ($data->nilai_po_invoice) . "),
 				total_bayar_rupiah=(total_bayar_rupiah+" . ($data->nilai_po_invoice * $curs) . ")
 				" .
 					($data->tipe == 'TR-01' ?
 						",nilai_dp=(nilai_dp+" . $data->nilai_po_invoice . "), sisa_dp=(sisa_dp+" . $data->nilai_po_invoice . ")" :
 						", nilai_dp=(nilai_dp-" . $data->potongan_dp . "), sisa_dp=(sisa_dp-" . $data->potongan_dp . ")") .
-					" where no_po='" . $data->no_po . "'");
+					" where no_po='" . $data->no_po . "'"));
 
 				$keterangan		= 'Pembayaran ' . $no_payment;
-				$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='3'")->row();
-				$data_supplier 	= $this->db->query("select * from supplier where id_supplier='" . $data->id_supplier . "'")->row();
+				$data_coa 	= $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no='3'"))->row();
+				$data_supplier 	= $this->auditQuery($this->db->query("select * from supplier where id_supplier='" . $data->id_supplier . "'"))->row();
 				$datahutang = array(
 					'tipe'       	 => 'BUK',
 					'nomor'       	 => $Nomor_JV,
@@ -1119,7 +1220,7 @@ class Pembayaran_material extends Admin_Controller
 					'debet_usd'		 => (($curs_header != 'IDR') ? ($data->nilai_po_invoice + $data->invoice_ppn) : 0),
 					'kredit_usd'	=> 0,
 				);
-				$this->db->insert('tr_kartu_hutang', $datahutang);
+				$this->auditWrite($this->db->insert('tr_kartu_hutang', $datahutang));
 
 
 				if ($data->curs_header == 'IDR') {
@@ -1129,7 +1230,7 @@ class Pembayaran_material extends Admin_Controller
 				}
 
 
-				$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('2','3','5','6','7','9') order by parameter_no")->result();
+				$datajurnal1 = $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal='" . $jenis_jurnal . "' and parameter_no in ('2','3','5','6','7','9') order by parameter_no"))->result();
 				foreach ($datajurnal1 as $rec) {
 					if ($data->modul == 'PO') {
 						// UANG MUKA
@@ -1269,7 +1370,7 @@ class Pembayaran_material extends Admin_Controller
 					}
 				}
 			}
-			$this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
+			$this->auditWrite($this->db->insert_batch('jurnaltras', $det_Jurnaltes1));
 
 
 			//auto jurnal
@@ -1277,6 +1378,8 @@ class Pembayaran_material extends Admin_Controller
 			$Bln	= substr($tanggal, 5, 2);
 			$Thn	= substr($tanggal, 0, 4);
 			$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
+			$this->auditQuery($Nomor_JV);
+			if (!$Nomor_JV) { throw new RuntimeException('Journal number unavailable'); }
 			$total = 0;
 			foreach ($det_Jurnaltes1 as $vals) {
 				$datadetail = array(
@@ -1290,7 +1393,7 @@ class Pembayaran_material extends Admin_Controller
 					'kredit'		=> $vals['kredit'],
 				);
 				$total = ($total + $vals['debet']);
-				$this->db->insert(DBACC . '.jurnal', $datadetail);
+				$this->auditWrite($this->db->insert(DBACC . '.jurnal', $datadetail));
 			}
 
 			$dataJVhead = array(
@@ -1307,26 +1410,28 @@ class Pembayaran_material extends Admin_Controller
 				'ho_valid'			=> '',
 			);
 
-			$this->db->insert(DBACC . '.japh', $dataJVhead);
+			$this->auditWrite($this->db->insert(DBACC . '.japh', $dataJVhead));
 			$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
-			$this->db->query($Qry_Update_Cabang_acc);
+			$this->auditWrite($this->db->query($Qry_Update_Cabang_acc));
 
 			//end auto jurnal
 
-			$this->db->trans_complete();
-			if ($this->db->trans_status()) {
-				$this->db->trans_commit();
+			if ($this->auditCommit()) {
 				$result         = TRUE;
 				history('Save Payment');
 			} else {
 				$this->db->trans_rollback();
 				$result = FALSE;
 			}
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			$this->db->trans_rollback();
 			$result = FALSE;
 		}
 
+		$this->completeAudit('Menyimpan pembayaran dan jurnal', $result ? 1 : 0, array(
+			'document_ids' => is_array($id_req) ? $id_req : array(), 'document_count' => is_array($id_req) ? count($id_req) : 0,
+			'payment_date' => $payment_date, 'currency' => $curs_header, 'payment_number' => $no_payment ?? null,
+			'admin_charge_bearer' => $admin_charge_bearer, 'outcome' => $result ? 'saved' : 'failed'));
 		$param = array(
 			'save' => $result
 		);
@@ -1439,7 +1544,8 @@ class Pembayaran_material extends Admin_Controller
 
 	public function save_payment()
 	{
-		$this->beginAudit(__FUNCTION__, array(), array('payment_ids', 'document_count'));
+		$this->beginAudit(__FUNCTION__, array(), array('payment_ids', 'document_count', 'payment_date', 'amount', 'payment_number', 'upload_failed_count', 'journal_count', 'admin_charge_bearer'));
+		$uploadFailed = 0;
 		$post = $this->input->post();
 
 		$post['mata_uang'] = 'IDR';
@@ -1450,7 +1556,8 @@ class Pembayaran_material extends Admin_Controller
 		foreach ($required_fields as $field) {
 			if (!isset($post[$field]) || $post[$field] === '') {
 				$this->completeAudit('Pembayaran ditolak', 0, array('reason' => 'invalid_input'));
-				echo json_encode(['status' => 0, 'pesan' => "Field {$field} wajib diisi!"]);
+
+			echo json_encode(['status' => 0, 'pesan' => "Field {$field} wajib diisi!"]);
 				return;
 			}
 		}
@@ -1463,13 +1570,14 @@ class Pembayaran_material extends Admin_Controller
 			return;
 		}
 
+
 		try {
-			if (!is_string($post['id_payment'])) { throw new DomainException('Pilihan pembayaran tidak valid.'); }
+			if (!is_string($post['id_payment'])) { throw new RuntimeException('Invalid payment selection'); }
 			$selectedIds = explode(',', $post['id_payment']);
 			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
 			$this->Pembayaran_material_model->lock_payment_selection($this->auth->user_id());
 			$this->Pembayaran_material_model->validate_payment_selection($selectedIds);
-			$get_coa_bank = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $post['bank']])->row();
+			$get_coa_bank = $this->auditQuery($this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $post['bank']]))->row();
 			$nm_coa_bank = '';
 			$kode_bank = '';
 			if (!empty($get_coa_bank)) {
@@ -1478,6 +1586,8 @@ class Pembayaran_material extends Admin_Controller
 			}
 
 			$id_payment_paid = $this->Pembayaran_material_model->generate_id_payment_paid($kode_bank, $post['tgl_bayar']);
+			$this->auditQuery($id_payment_paid);
+			if (!$id_payment_paid) { throw new RuntimeException('Payment number unavailable'); }
 
 			$config['upload_path'] = 'assets/expense/';
 			$config['allowed_types'] = '*';
@@ -1500,7 +1610,7 @@ class Pembayaran_material extends Admin_Controller
 							if ($this->upload->do_upload('file')) {
 								$uploadData = $this->upload->data();
 								$uploaded_files[] = $uploadData['file_name'];
-							}
+							} else { $uploadFailed++; }
 						}
 					}
 				} else {
@@ -1514,7 +1624,7 @@ class Pembayaran_material extends Admin_Controller
 					if ($this->upload->do_upload('file')) {
 						$uploadData = $this->upload->data();
 						$uploaded_files[] = $uploadData['file_name'];
-					}
+					} else { $uploadFailed++; }
 				}
 			}
 
@@ -1523,13 +1633,13 @@ class Pembayaran_material extends Admin_Controller
 				$filenames = (count($uploaded_files) === 1) ? $uploaded_files[0] : json_encode($uploaded_files);
 			}
 
-			$insert_payment_paid = $this->db->insert('tr_payment_paid', [
+			$insert_payment_paid = $this->auditWrite($this->db->insert('tr_payment_paid', [
 				'id' => $id_payment_paid,
 				'bank_charge' => str_replace(',', '', $post['bank_charge']),
 				'admin_charge_bearer' => $admin_charge_bearer,
 				'created_by' => $this->auth->user_id(),
 				'created_on' => date('Y-m-d H:i:s')
-			]);
+			]));
 			if (!$insert_payment_paid) {
 				throw new Exception($this->db->error($insert_payment_paid));
 			}
@@ -1539,7 +1649,7 @@ class Pembayaran_material extends Admin_Controller
 			$kurs_payment_clean = str_replace(',', '', $post['kurs_payment']);
 
 			$this->db->where_in('id', explode(',', $post['id_payment']));
-			$update_payment1 = $this->db->update('payment_approve', [
+			$update_payment1 = $this->auditWrite($this->db->update('payment_approve', [
 				'id_payment' => $id_payment_paid,
 				'tgl_bayar' => $post['tgl_bayar'],
 				'supplier' => $post['supplier_input'],
@@ -1555,7 +1665,7 @@ class Pembayaran_material extends Admin_Controller
 				'id_supplier' => $post['supplier_input'],
 				'nm_supplier' => $post['nm_supplier_input'],
 				'kurs_payment' => $kurs_payment_clean
-			]);
+			]));
 			if (!$update_payment1) {
 				throw new Exception($this->db->error($update_payment1));
 			}
@@ -1568,11 +1678,11 @@ class Pembayaran_material extends Admin_Controller
 					$tipe_pph = ($detail['tipe_pph'] == 1) ? 'PPH 23' : 'PPH 22';
 
 					$this->db->where('id', $detail['id_payment']);
-					$update_payment_detail = $this->db->update('payment_approve', [
+					$update_payment_detail = $this->auditWrite($this->db->update('payment_approve', [
 						'total_ppn' => str_replace(',', '', $detail['nilai_ppn']),
 						'total_pph' => str_replace(',', '', $detail['nilai_pph']),
 						'tipe_pph' => $tipe_pph
-					]);
+					]));
 
 					$kurs_invoice = $detail['kurs_invoice'];
 					$last_detail_ppn = str_replace(',', '', $detail['nilai_ppn']);
@@ -1589,15 +1699,11 @@ class Pembayaran_material extends Admin_Controller
 			$processed_ids_check = explode(',', $post['id_payment']);
 			$this->db->where_in('id', $processed_ids_check);
 			$this->db->where('tipe !=', 'petty_cash_hutang');
-			$non_petty_count = $this->db->count_all_results('payment_approve');
+			$non_petty_count = $this->auditQuery($this->db->count_all_results('payment_approve'));
 			$is_all_petty_cash_hutang = ($non_petty_count == 0);
 
 			// Debug: log data jurnal_refill_pettycash yang diterima
-			log_message('error', 'DEBUG save_payment - is_all_petty_cash_hutang: ' . ($is_all_petty_cash_hutang ? 'true' : 'false'));
-			log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash isset: ' . (isset($post['jurnal_refill_pettycash']) ? 'YES' : 'NO'));
 			if (isset($post['jurnal_refill_pettycash'])) {
-				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash count: ' . count($post['jurnal_refill_pettycash']));
-				log_message('error', 'DEBUG save_payment - jurnal_refill_pettycash data: ' . json_encode($post['jurnal_refill_pettycash']));
 			}
 
 			// Save Jurnal Hutang if it's all petty cash hutang
@@ -1606,13 +1712,15 @@ class Pembayaran_material extends Admin_Controller
 					foreach ($post['jurnal_hutang_1'] as $jr) {
 						$coa_nm = $jr['nama_account'];
 						if (!empty($jr['coa'])) {
-							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							$nm_coa = $this->auditQuery($this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']]))->row();
 							if (!empty($nm_coa)) {
 								$coa_nm = $nm_coa->nama;
 							}
 						}
 
 						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+					$this->auditQuery($id_jurnal);
+					if (!$id_jurnal) { throw new RuntimeException('Journal number unavailable'); }
 						$arr_jurnal[] = [
 							'no_jurnal' => $id_jurnal,
 							'tgl_jurnal' => $jr['tanggal_jurnal'],
@@ -1636,13 +1744,15 @@ class Pembayaran_material extends Admin_Controller
 					foreach ($post['jurnal_hutang_2'] as $jr) {
 						$coa_nm = $jr['nama_account'];
 						if (!empty($jr['coa'])) {
-							$nm_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']])->row();
+							$nm_coa = $this->auditQuery($this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $jr['coa']]))->row();
 							if (!empty($nm_coa)) {
 								$coa_nm = $nm_coa->nama;
 							}
 						}
 
 						$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+					$this->auditQuery($id_jurnal);
+					if (!$id_jurnal) { throw new RuntimeException('Journal number unavailable'); }
 						$arr_jurnal[] = [
 							'no_jurnal' => $id_jurnal,
 							'tgl_jurnal' => $jr['tanggal_jurnal'],
@@ -1674,6 +1784,8 @@ class Pembayaran_material extends Admin_Controller
 					$tipe_jurnal = 'Payment';
 
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+					$this->auditQuery($id_jurnal);
+					if (!$id_jurnal) { throw new RuntimeException('Journal number unavailable'); }
 
 					$ket_jurnal = $item_jurnal['keterangan'];
 					if (isset($item_jurnal['id_payment_ref']) && !empty($item_jurnal['id_payment_ref'])) {
@@ -1710,6 +1822,8 @@ class Pembayaran_material extends Admin_Controller
 					$tipe_jurnal = 'Payment';
 
 					$id_jurnal = $this->Pembayaran_material_model->generate_id_invoice_jurnal($no_jurnal);
+					$this->auditQuery($id_jurnal);
+					if (!$id_jurnal) { throw new RuntimeException('Journal number unavailable'); }
 
 					$ket_jurnal = (isset($item_jurnal['keterangan']) ? $item_jurnal['keterangan'] : (isset($item_jurnal['deskripsi']) ? $item_jurnal['deskripsi'] : ''));
 					if (isset($item_jurnal['id_payment_ref']) && !empty($item_jurnal['id_payment_ref'])) {
@@ -1746,9 +1860,10 @@ class Pembayaran_material extends Admin_Controller
 			// print_r($arr_jurnal);
 			// exit;
 
+			Payment_journal_validator::validate($arr_jurnal);
 			// if (!empty($arr_jurnal)) {
 			if (!empty($arr_jurnal)) {
-				$insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_jurnal);
+				$insert_jurnal = $this->auditWrite($this->db->insert_batch('tr_jurnal', $arr_jurnal));
 				if (!$insert_jurnal) {
 					throw new Exception('Data jurnal gagal dibuat !');
 				}
@@ -1797,7 +1912,7 @@ class Pembayaran_material extends Admin_Controller
 				$no_reff     = $post['id_payment'];
 				$Username    = $this->auth->user_id();
 
-				$datajurnal1 = $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? order by parameter_no", [$jenis_jurnal])->result();
+				$datajurnal1 = $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? order by parameter_no", [$jenis_jurnal]))->result();
 				$det_Jurnaltes1 = array();
 				foreach ($datajurnal1 as $rec) {
 					if ($rec->parameter_no == "1") {
@@ -1870,7 +1985,7 @@ class Pembayaran_material extends Admin_Controller
 						}
 					}
 				}
-				$insert_jurnal_tras = $this->db->insert_batch('jurnaltras', $det_Jurnaltes1);
+				$insert_jurnal_tras = $this->auditWrite($this->db->insert_batch('jurnaltras', $det_Jurnaltes1));
 				if (!$insert_jurnal_tras) {
 					throw new Exception('Input JurnalTras gagal !');
 				}
@@ -1880,6 +1995,8 @@ class Pembayaran_material extends Admin_Controller
 				$Bln	= substr($tanggal, 5, 2);
 				$Thn	= substr($tanggal, 0, 4);
 				$Nomor_JV = $this->Jurnal_model->get_no_buk('101', $tanggal);
+				$this->auditQuery($Nomor_JV);
+				if (!$Nomor_JV) { throw new RuntimeException('Journal number unavailable'); }
 				$total = 0;
 				foreach ($det_Jurnaltes1 as $vals) {
 					$datadetail = array(
@@ -1893,7 +2010,7 @@ class Pembayaran_material extends Admin_Controller
 						'kredit'		=> $vals['kredit'],
 					);
 					$total = ($total + $vals['debet']);
-					$insert_jurnal_det = $this->db->insert(DBACC . '.jurnal', $datadetail);
+					$insert_jurnal_det = $this->auditWrite($this->db->insert(DBACC . '.jurnal', $datadetail));
 					if (!$insert_jurnal_det) {
 						throw new Exception('Input Jurnal Detail gagal !');
 					}
@@ -1914,14 +2031,14 @@ class Pembayaran_material extends Admin_Controller
 					'ho_valid'			=> '',
 				);
 
-				$insert_japh = $this->db->insert(DBACC . '.japh', $dataJVhead);
+				$insert_japh = $this->auditWrite($this->db->insert(DBACC . '.japh', $dataJVhead));
 				if (!$insert_japh) {
 					throw new Exception('Insert JAPH gagak !');
 				}
 				$Qry_Update_Cabang_acc	 = "UPDATE " . DBACC . ".pastibisa_tb_cabang SET nobuk=nobuk + 1 WHERE nocab='101'";
-				$this->db->query($Qry_Update_Cabang_acc);
+				$this->auditQuery($this->db->query($Qry_Update_Cabang_acc));
 
-				$data_coa 	= $this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? and parameter_no='3'", [$jenis_jurnal])->row();
+				$data_coa 	= $this->auditQuery($this->db->query("select * from " . DBACC . ".master_oto_jurnal_detail where kode_master_jurnal=? and parameter_no='3'", [$jenis_jurnal]))->row();
 				$datahutang = array(
 					'tipe'       	 => 'BUK',
 					'nomor'       	 => $Nomor_JV,
@@ -1935,7 +2052,7 @@ class Pembayaran_material extends Admin_Controller
 					'nama_supplier'  => $nm_supplier,
 					'no_request'     => $no_request,
 				);
-				$insert_kartu_hutang = $this->db->insert('tr_kartu_hutang', $datahutang);
+				$insert_kartu_hutang = $this->auditWrite($this->db->insert('tr_kartu_hutang', $datahutang));
 				if (!$insert_kartu_hutang) {
 					throw new Exception('Insert Kartu Hutang gagal !');
 				}
@@ -1949,7 +2066,7 @@ class Pembayaran_material extends Admin_Controller
 			$valid = 1;
 			$pesan = 'Selamat, data telah berhasil dibayar !';
 
-			$this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]);
+			$this->auditWrite($this->db->delete('tr_choosed_payment', ['id_user' => $this->auth->user_id()]));
 			// }
 			// Keep the report status and payment in the same transaction.
 			// Return a JSON failure instead of a database error page in development.
@@ -1962,7 +2079,7 @@ class Pembayaran_material extends Admin_Controller
 				$this->db->join('tr_petty_cash_vuca_sustain pc', 'pc.no_payment_hutang = CONVERT(pa.no_doc USING utf8mb4) COLLATE utf8mb4_general_ci', 'inner', false);
 				$this->db->where_in('pa.id', explode(',', $post['id_payment']));
 				$this->db->where('pa.status', 2);
-				$petty_cash_query = $this->db->get();
+				$petty_cash_query = $this->auditQuery($this->db->get());
 				if ($petty_cash_query === false) {
 					throw new Exception('Gagal memeriksa status payment petty cash.');
 				}
@@ -1979,12 +2096,16 @@ class Pembayaran_material extends Admin_Controller
 				$this->db->db_debug = $status_db_debug;
 			}
 
-			$payment_committed = $this->db->trans_status() && $this->db->trans_commit();
+			$payment_committed = $this->auditCommit();
 			if ($payment_committed === FALSE || $this->db->trans_status() === FALSE) {
 				throw new Exception('Transaksi gagal, data telah di-rollback.');
 			}
 
-			$this->completeAudit('Menyimpan pembayaran', 1, array('payment_ids' => $selectedIds, 'document_count' => count($selectedIds)));
+			$this->completeAudit('Menyimpan pembayaran dan jurnal', $uploadFailed ? 0 : 1, array(
+				'payment_ids' => $selectedIds, 'document_count' => count($selectedIds), 'payment_date' => $post['tgl_bayar'],
+				'amount' => $payment_bank_clean, 'payment_number' => $id_payment_paid, 'journal_count' => count($arr_jurnal),
+				'upload_failed_count' => $uploadFailed, 'admin_charge_bearer' => $admin_charge_bearer,
+				'outcome' => $uploadFailed ? 'partial_upload_failure' : 'saved'));
 			echo json_encode([
 				'status' => $valid,
 				'pesan' => $pesan
@@ -1994,10 +2115,10 @@ class Pembayaran_material extends Admin_Controller
 
 			$response = [
 				'status' => 0,
-				'pesan' => $e->getMessage()
+				'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Pembayaran gagal diproses.'
 			];
 
-			$this->completeAudit('Pembayaran ditolak', 0, array('reason' => $e instanceof DomainException ? 'incompatible_selection' : 'operation_failure'));
+			$this->completeAudit('Pembayaran gagal', 0, array('reason' => $e instanceof Invalid_payment_journal ? 'invalid_journal' : ($e instanceof DomainException ? 'incompatible_selection' : 'operation_failure')));
 			echo json_encode($response);
 		}
 	}
@@ -2019,12 +2140,22 @@ class Pembayaran_material extends Admin_Controller
 
 	public function set_jurnal()
 	{
-		$this->Pembayaran_material_model->set_jurnal();
+		$selection = $this->input->post('id_payment');
+		$ids = is_string($selection) ? explode(',', $selection) : array();
+		$this->beginAudit(__FUNCTION__, array_merge($this->auditFilters(), array('payment_ids' => $ids, 'document_count' => count($ids))), array('row_count', 'document_count', 'payment_ids'));
+		$summary = array();
+		$this->Pembayaran_material_model->set_jurnal($summary);
+		$this->completeAudit('Menyiapkan set_jurnal', !empty($summary['queries_ok']) && !empty($summary['row_count']) && empty($summary['source_missing']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0, 'outcome' => empty($summary['row_count']) || !empty($summary['source_missing']) ? 'not_found' : (!empty($summary['queries_ok']) ? 'prepared' : 'failed')));
 	}
 
 
 	public function set_jurnal_refill()
 	{
-		$this->Pembayaran_material_model->set_jurnal_refill();
+		$selection = $this->input->post('id_payment');
+		$ids = is_string($selection) ? explode(',', $selection) : array();
+		$this->beginAudit(__FUNCTION__, array_merge($this->auditFilters(), array('payment_ids' => $ids, 'document_count' => count($ids))), array('row_count', 'document_count', 'payment_ids'));
+		$summary = array();
+		$this->Pembayaran_material_model->set_jurnal_refill($summary);
+		$this->completeAudit('Menyiapkan set_jurnal_refill', !empty($summary['queries_ok']) && !empty($summary['row_count']) && empty($summary['source_missing']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0, 'outcome' => empty($summary['row_count']) || !empty($summary['source_missing']) ? 'not_found' : (!empty($summary['queries_ok']) ? 'prepared' : 'failed')));
 	}
 }

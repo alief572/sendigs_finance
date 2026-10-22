@@ -1,4 +1,4 @@
-﻿# Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
+# Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
 
 ## Konteks dan Kebutuhan
 Pengguna meminta agar saat melakukan posting jurnal pada modul `jurnal_all`, sistem menampilkan notifikasi menggunakan **SweetAlert2**, baik untuk skenario sukses maupun skenario gagal.
@@ -890,3 +890,56 @@ Pengguna meminta perbaikan dan peningkatan UI pada modul **List Penawaran Non Ko
   - Menjalankan unit test JS (Action_menu_test.js), unit test PHP (Ui_render_test.php), dan verifikasi render view terisolasi.
 - **Fase 5: Checkpoint & Dokumentasi**:
   - Menyusun rangkuman perubahan pada docs/task-progress.md dan docs/implementation-plan.md.
+
+---
+
+# Pengelompokan No. Payment pada Tab Non PR Modul Pembayaran Material — 2026-10-22
+
+## 1. Konteks dan Kebutuhan
+Pengguna meminta agar pada modul **Pembayaran Material > Payment List** (`localhost:8080/pembayaran_material/payment_list`) khususnya tab **Non PR**, `No. Payment` tidak boleh muncul lebih dari 1 kali. Jika dalam 1 pembayaran terdapat lebih dari 1 dokumen, nomor dokumen digabungkan menjadi satu baris dan dipisahkan tanda koma (`, `).
+
+## 2. Keputusan Desain & Arsitektur
+- **Cakupan**: Khusus diterapkan pada tab Non PR (`get_server_side_payment_list_non_pr()`). Tab PR tetap dipertahankan seperti semula sesuai permintaan pengguna.
+- **Arsitektur Query Agregasi**:
+  Menggunakan subquery agregasi `GROUP BY COALESCE(NULLIF(a.id_payment, ''), a.id)`:
+  - `no_payment`: `COALESCE(NULLIF(a.id_payment, ''), a.id)`
+  - `no_doc`: `GROUP_CONCAT(DISTINCT a.no_doc ORDER BY a.id ASC SEPARATOR ', ')`
+  - `nilai_bayar`: `COALESCE(NULLIF(MAX(a.payment_bank), 0), SUM(a.jumlah), 0)`
+  - `requestor`: `SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(NULLIF(a.created_by, ''), a.nm_supplier, '-') ORDER BY a.id ASC SEPARATOR '|||'), '|||', 1)`
+  - `keterangan`: `MAX(a.keterangan_pembayaran)`
+  - `link_docs`: `GROUP_CONCAT(DISTINCT a.link_doc SEPARATOR ',')`
+- **Pencarian & Pagination**:
+  Pencarian filter search diaplikasikan pada outer query subquery agregasi sehingga pencarian nomor dokumen manapun tetap menemukan voucher induk dan pagination DataTables (`recordsTotal` dan `recordsFiltered`) akurat.
+- **Kompatibilitas Mock Test**:
+  Looping formatting data di PHP dilengkapi fallback defensif untuk mendukung data riil MySQL maupun mock object pada unit test `Batch1_test.php`.
+
+
+---
+
+# Perbaikan Nilai Bayar & Jurnal Transaksi Pembayaran pada view_payment_new — 2026-10-22
+
+## 1. Konteks dan Kebutuhan
+Pengguna melaporkan dua masalah pada halaman rincian voucher pembayaran `pembayaran_material/view_payment_new/{id}`:
+1. Kolom "Nilai Bayar" pada tabel rincian dokumen tidak sesuai (sebelumnya menampilkan nilai total voucher bank pada setiap baris dokumen, sehingga total baris berlipat ganda). Seharusnya menampilkan nilai pengajuan per dokumen.
+2. Tabel "Jurnal Transaksi Pembayaran" tidak menampilkan data jurnal (muncul pesan *"Tidak ada data jurnal yang tersimpan untuk transaksi payment ini"*).
+
+## 2. Keputusan Desain & Arsitektur
+- **Nilai Bayar per Baris Dokumen**:
+  Pada `view_payment_new.php`, kolom `Nilai Bayar` diubah menjadi `$nilai_bayar = $nilai_pengajuan;`.
+  Nilai pengajuan dokumen diambil dari `$item->jumlah > 0 ? $item->jumlah : $item->payment_bank`.
+  Dengan perubahan ini, setiap baris tagihan menampilkan nilai dokumen riil dan total footer tabel menghasilkan tepat nilai total voucher bank (`Rp 8.920.202,00`), konsisten dengan kartu ringkasan header.
+- **Resolusi Dokumen Satu Voucher (Siblings Resolution)**:
+  Pada `Pembayaran_material::view_payment_new()`, jika URL diakses menggunakan approval ID anak (`a.id`) yang memiliki voucher parent (`a.id_payment`), controller otomatis mengambil seluruh dokumen saudara (`a.id_payment`) sehingga tampilan detail selalu lengkap dan konsisten.
+- **Query Retrieval tr_jurnal Robust**:
+  Di `tr_jurnal`, kolom `no_transaksi` menyimpan approval ID yang dipisahkan koma dengan urutan submission (bukan urutan sorting controller), serta menyimpan subset ID untuk entri hubungan istimewa multi-company (STM vs SUSTAIN).
+  Query retrieval diperluas menggunakan:
+  - `FIND_IN_SET('{$escaped_pid}', no_transaksi)` untuk setiap approval ID anggota voucher, diproteksi dengan pemeriksaan scalar dan sanitasi aman (`escape_str` / `addslashes`) agar kompatibel dengan lingkungan mock test `MaterialDb`.
+  - `where_in('no_transaksi', $search_keys)` dan `or_where_in('no_jurnal', $search_keys)`.
+  - `or_like('no_transaksi', $id_paid_voucher)` dan `or_like('keterangan', $id_paid_voucher)`.
+  - Seluruh 14 baris jurnal transaksi pembayaran (11 AJV + 3 baris penyeimbang intercompany) berhasil ditampilkan dengan total Debit Rp 10.557.202,00 = Kredit Rp 10.557.202,00 (Balance).
+
+- **Penyaringan Baris Jurnal Kosong & Hubungan Istimewa (Intercompany Filter)**:
+  Berdasarkan arahan pengguna:
+  1. Baris jurnal dengan nilai Debit dan Kredit 0 (seperti PPN dan PPh yang tidak ada pemotongan) disembunyikan dari tabel tampilan agar tabel lebih ringkas.
+  2. Akun Hubungan Istimewa (`1103-01-01` Piutang Hubungan Istimewa dan `2203-01-01` Hutang Hubungan Istimewa) disembunyikan pada halaman voucher operasional ini karena merupakan jurnal penyeimbang antar-entitas untuk GL.
+  Hasil penyaringan: Tabel merender tepat 8 baris transaksi operasional riil dokumen vs kas/bank, dengan Total Debit Rp 8.920.202,00 = Total Kredit Rp 8.920.202,00 (Balance 100%), tepat sama dengan Total Nilai Bayar (Bank) di kartu informasi header.
