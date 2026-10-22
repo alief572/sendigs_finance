@@ -156,6 +156,26 @@ class MockDb {
     }
 
     public function update($table, $data, $where = []) {
+        if ($table === 'tr_expense') {
+            $valid_cols = [
+                'id', 'no_doc', 'tgl_doc', 'departement', 'coa', 'nama', 'approval', 'status',
+                'created_by', 'created_on', 'modified_by', 'modified_on', 'approved_by', 'approved_on',
+                'jumlah', 'total_kasbon', 'informasi', 'bank_id', 'accnumber', 'accname', 'pettycash',
+                'st_reject', 'transfer_coa_bank', 'transfer_tanggal', 'transfer_jumlah', 'transfer_file',
+                'no_so', 'add_ppn_nilai', 'add_ppn_coa', 'add_pph_nilai', 'add_pph_coa', 'sts_reject',
+                'sts_reject_manage', 'rejected_by', 'rejected_on', 'reject_reason', 'exp_pib',
+                'exp_inv_po', 'tipe_penggantian', 'tipe_pengembalian', 'expense_id_kembalian', 'id_po',
+                'bon_bukti', 'bukti_pengembalian', 'lebih_bayar', 'kurang_bayar', 'keterangan_kurang_bayar',
+                'keterangan_pengembalian', 'id_kasbon', 'project_consultant', 'no_expense_consultant',
+                'sts_finance', 'app_finance_date', 'tgl_approval_direktur', 'verified_by', 'verified_on',
+                'verif_checklist', 'verif_reject_reason', 'reject_reason_finance', 'id_bank_pengembalian'
+            ];
+            foreach (array_keys($data) as $col) {
+                if (!in_array($col, $valid_cols, true)) {
+                    throw new Exception("Unknown column '{$col}' in 'field list' for table tr_expense");
+                }
+            }
+        }
         $this->updated_data[$table][] = ['data' => $data, 'where' => $where];
         if ($table === 'tr_expense' && isset($where['id'])) {
             $id = $where['id'];

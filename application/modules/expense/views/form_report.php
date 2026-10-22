@@ -159,7 +159,7 @@ foreach ($option_coa as $keys => $val) {
 						<i class="fa <?= $st3_icon ?>"></i>
 					</div>
 					<div style="font-size:13px; font-weight:700; color:#2d3748;">3. Direktur / Final</div>
-					<div style="font-size:11px; color:#718096;"><?= !empty($data->approved_by_manage) ? htmlspecialchars($data->approved_by_manage) : $st3_label ?></div>
+					<div style="font-size:11px; color:#718096;"><?= !empty($data->tgl_approval_direktur) ? htmlspecialchars(!empty($data->approval) ? $data->approval : (!empty($data->approved_by) ? $data->approved_by : 'Direktur')) : $st3_label ?></div>
 					<div style="font-size:10px; color:#a0aec0;"><?= !empty($data->tgl_approval_direktur) ? date('d/m/Y H:i', strtotime($data->tgl_approval_direktur)) : '' ?></div>
 				</div>
 			</div>

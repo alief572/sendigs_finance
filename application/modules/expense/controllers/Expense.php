@@ -2065,9 +2065,9 @@ class Expense extends Admin_Controller
 
 					$arr_update = [
 						'status' => $statusTarget,
-						'status_manage' => 1,
-						'approved_by_manage' => $this->auth->user_name(),
-						'approved_on_manage' => date('Y-m-d H:i:s'),
+						'approval' => $this->auth->user_name(),
+						'approved_by' => $this->auth->user_name(),
+						'approved_on' => date('Y-m-d H:i:s'),
 						'tgl_approval_direktur' => date('Y-m-d H:i:s'),
 						'sts_reject_manage' => null,
 						'st_reject' => null,

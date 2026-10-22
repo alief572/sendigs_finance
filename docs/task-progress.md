@@ -58,6 +58,11 @@
      - Penambahan Filter Eksklusi Dokumen Invoice PO / Pembayaran PO (`PI-`):
        * Menambahkan filter kondisi `(a.id_po IS NULL OR a.id_po = '')`, `(a.exp_inv_po IS NULL OR a.exp_inv_po = '')`, dan `a.no_doc NOT LIKE 'PI-%'` pada `get_dat_expense_data()`, `get_dat_expense_pc()`, `get_dat_approval_expense()`, `get_dat_approval_expense_manage()`, `get_expense_app_finance()`, `list_expense_approval_manage()`, badge counter di `index()`, `get_dat_pengembalian_kasbon()`, `get_dat_lebih_expense()`, dan `get_dat_verifikasi_pengembalian()`.
        * Memastikan dokumen transaksi Purchasing/PO invoice yang tercatat di `tr_expense` (mis. `PI-2025-07-000001` dengan DP PO `PO-001/MP/07/2025`) tidak muncul di tabel laporan expense maupun antrian approval expense.
+     - Perbaikan Bug Approval Direktur (Error 1054 Unknown Column status_manage):
+       * Menghapus referensi field non-eksisten `status_manage`, `approved_by_manage`, dan `approved_on_manage` pada array update `approve()` tahap Management di `Expense.php`.
+       * Menggantinya dengan mapping kolom aktual database: `status`, `approval`, `approved_by`, `approved_on`, dan `tgl_approval_direktur`.
+       * Memperbarui `form_report.php` agar membaca nama approver dari `approval`/`approved_by`.
+       * Menambahkan validasi skema ketat pada `MockDb::update()` dalam `Expense_report_updated_test.php` untuk mencegah penggunaan kolom database yang tidak terdaftar.
      - Pengujian komprehensif:
        * Menulis test suite `application/modules/expense/tests/Expense_report_updated_test.php` (36 assertions, 100% PASS mencakup 6 kelompok uji: Jurnal 1, Approval Berjenjang, Verifikasi Jurnal 2, Tolak Verifikasi, Status Badge, dan Filter Eksklusi Dokumen PI/id_po NULL).
        * Memastikan kompatibilitas test regresi `Reject_test.php` dan `Kasbon_attachments_test.php` (100% PASS).
