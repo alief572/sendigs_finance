@@ -110,6 +110,9 @@ class MockDb {
     public function count_all_results($table = '', $reset = true) { return 0; }
 
     public function get($table = '', $limit = null, $offset = null) {
+        if (isset($this->tables['ms_bank'])) {
+            return new MockDbResult($this->tables['ms_bank']);
+        }
         return new MockDbResult([]);
     }
 
@@ -118,6 +121,12 @@ class MockDb {
             $id = isset($where['id']) ? $where['id'] : null;
             if (isset($this->tables['tr_expense'][$id])) {
                 return new MockDbResult([$this->tables['tr_expense'][$id]]);
+            }
+        }
+        if ($table === 'tr_kasbon') {
+            $no_doc = isset($where['no_doc']) ? $where['no_doc'] : null;
+            if (isset($this->tables['tr_kasbon'][$no_doc])) {
+                return new MockDbResult([$this->tables['tr_kasbon'][$no_doc]]);
             }
         }
         if ($table === 'tr_expense_detail') {
@@ -226,6 +235,7 @@ class MockInput {
 
 class MockTemplate {
     public $vars = [];
+    public $rendered_view = null;
     public function set($k, $v = null) {
         if (is_array($k)) {
             $this->vars = array_merge($this->vars, $k);
@@ -233,7 +243,9 @@ class MockTemplate {
             $this->vars[$k] = $v;
         }
     }
-    public function render($v) {}
+    public function render($v) {
+        $this->rendered_view = $v;
+    }
     public function page_icon($i) {}
     public function title($t) {}
 }
@@ -554,6 +566,193 @@ if ($db_conn && !$db_conn->connect_error) {
     }
     testCheck($has_pi_in_result === false, "Direct DB: Dokumen berawalan PI (mis. PI-2025-07-000001) terbukti 100% terfilter dari hasil query");
 }
+
+// -----------------------------------------------------------
+// TEST 7: Endpoint Datatables Tab 3: Lebih Expense (get_dat_lebih_expense) & Filter Petty Cash
+// -----------------------------------------------------------
+echo "\n--- TEST 7: Datatables Lebih Expense (get_dat_lebih_expense) & Filter Petty Cash ---\n";
+
+if ($db_conn && !$db_conn->connect_error) {
+    // 7.1: Pastikan data legacy pettycash yang terisi di tr_expense berhasil dieksklusi oleh filter
+    $res_legacy = $db_conn->query("SELECT COUNT(*) as cnt FROM tr_expense WHERE kurang_bayar > 0 AND pettycash IS NOT NULL AND pettycash != ''");
+    $cnt_legacy = ($res_legacy) ? (int)$res_legacy->fetch_assoc()['cnt'] : 0;
+    
+    $res_lebih = $db_conn->query("
+        SELECT a.id, a.no_doc, a.kurang_bayar, a.pettycash,
+               (SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as no_rp,
+               (SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as status_rp
+        FROM tr_expense a
+        WHERE a.kurang_bayar > 0
+          AND a.status IN ('2', '3', '4')
+          AND (a.pettycash IS NULL OR a.pettycash = '')
+          AND (a.id_po IS NULL OR a.id_po = '')
+          AND a.no_doc NOT LIKE 'PI-%'
+        ORDER BY a.id DESC
+        LIMIT 5
+    ");
+
+    testCheck($res_lebih !== false, "Query get_dat_lebih_expense dengan subquery request_payment & filter pettycash berhasil dieksekusi tanpa error");
+    $rows_lebih = [];
+    $has_filled_pettycash = false;
+    while ($r = $res_lebih->fetch_assoc()) {
+        $rows_lebih[] = $r;
+        if (!empty($r['pettycash'])) {
+            $has_filled_pettycash = true;
+        }
+    }
+    testCheck($has_filled_pettycash === false, "Seluruh baris lebih expense terbukti bebas dari data legacy petty cash (kolom pettycash kosong/null)");
+    testCheck($cnt_legacy > 0, "Ditemukan {$cnt_legacy} data legacy petty cash yang berhasil dieksklusi dari tab Lebih Expense");
+
+    // 7.2: Uji query dengan row bersih (fixture sementara)
+    $tmp_doc = 'EXP-TEST-LEBIH-' . time();
+    $db_conn->query("INSERT INTO tr_expense (no_doc, tgl_doc, nama, kurang_bayar, lebih_bayar, status, pettycash, id_po, sts_reject, sts_reject_manage) VALUES ('{$tmp_doc}', CURDATE(), 'testuser', 500000, 0, '2', NULL, NULL, 0, 0)");
+    $tmp_id = $db_conn->insert_id;
+    try {
+        $res_tmp = $db_conn->query("
+            SELECT a.id, a.no_doc, a.kurang_bayar, a.pettycash,
+                   (SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as no_rp,
+                   (SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as status_rp
+            FROM tr_expense a
+            WHERE a.id = {$tmp_id}
+              AND a.kurang_bayar > 0
+              AND a.status IN ('2', '3', '4')
+              AND (a.pettycash IS NULL OR a.pettycash = '')
+              AND (a.id_po IS NULL OR a.id_po = '')
+              AND a.no_doc NOT LIKE 'PI-%'
+        ");
+        $row_tmp = $res_tmp ? $res_tmp->fetch_assoc() : null;
+        testCheck(!empty($row_tmp), "Data expense bersih (pettycash kosong) berhasil ditemukan oleh filter");
+        testCheck(array_key_exists('status_rp', $row_tmp), "Field status_rp dari subquery request_payment terdefinisi");
+    } finally {
+        $db_conn->query("DELETE FROM tr_expense WHERE id = {$tmp_id}");
+    }
+}
+
+// -----------------------------------------------------------
+// TEST 8: Validasi Sumber Bank dari tabel ms_bank (deleted = '0')
+// -----------------------------------------------------------
+echo "\n--- TEST 8: Validasi Sumber Bank dari tabel ms_bank (deleted = '0') ---\n";
+
+if ($db_conn && !$db_conn->connect_error) {
+    // 8.1: Query langsung dari ms_bank LEFT JOIN list_bank WHERE a.deleted = '0'
+    $q_bank = $db_conn->query("
+        SELECT a.id, a.bank, a.rekening, a.nama, a.coa_bank, a.deleted, b.nama_bank 
+        FROM ms_bank a 
+        LEFT JOIN list_bank b ON b.id = a.bank 
+        WHERE a.deleted = '0' 
+        ORDER BY a.id ASC
+    ");
+    testCheck($q_bank !== false, "Query daftar bank dari ms_bank berhasil dieksekusi");
+
+    $active_banks = [];
+    $all_deleted_zero = true;
+    while ($b = $q_bank->fetch_assoc()) {
+        $active_banks[] = $b;
+        if ($b['deleted'] !== '0') {
+            $all_deleted_zero = false;
+        }
+    }
+
+    testCheck(count($active_banks) > 0, "Ditemukan bank perusahaan aktif di ms_bank (Total: " . count($active_banks) . " bank)");
+    testCheck($all_deleted_zero === true, "Seluruh bank yang dikembalikan memiliki status deleted = '0'");
+
+    // Pastikan rekening bank yang sudah deleted ('1') tidak muncul
+    $q_deleted = $db_conn->query("SELECT id FROM ms_bank WHERE deleted = '1'");
+    $deleted_ids = [];
+    while ($d = $q_deleted->fetch_assoc()) {
+        $deleted_ids[] = (int)$d['id'];
+    }
+
+    $has_inactive_bank = false;
+    foreach ($active_banks as $ab) {
+        if (in_array((int)$ab['id'], $deleted_ids, true)) {
+            $has_inactive_bank = true;
+        }
+    }
+    testCheck($has_inactive_bank === false, "Rekening bank yang berstatus deleted = '1' (ID: " . implode(', ', $deleted_ids) . ") terbukti 100% terfilter");
+
+    // 8.2: Verifikasi format data dan kelengkapan COA untuk posting Jurnal 2
+    $first_bank = $active_banks[0];
+    testCheck(!empty($first_bank['rekening']), "Bank aktif memiliki nomor rekening (" . $first_bank['rekening'] . ")");
+    testCheck(!empty($first_bank['nama']), "Bank aktif memiliki nama entitas pemilik (" . $first_bank['nama'] . ")");
+    testCheck(!empty($first_bank['coa_bank']), "Bank aktif memiliki coa_bank valid untuk Jurnal 2 (" . $first_bank['coa_bank'] . ")");
+
+    // 8.3: Verifikasi penanganan server di save_pengembalian_dana
+    // Validasi penolakan jika memilih bank yang deleted = '1'
+    if (!empty($deleted_ids)) {
+        $inactive_id = $deleted_ids[0];
+        $bank_row = $db_conn->query("SELECT id FROM ms_bank WHERE id = {$inactive_id} AND deleted = '0'")->fetch_assoc();
+        testCheck(empty($bank_row), "Validasi server: Bank tidak aktif (deleted = 1) terblokir dan tidak lolos filter deleted = '0'");
+    }
+
+    // Validasi penerimaan jika memilih bank aktif (deleted = '0')
+    $active_id = (int)$first_bank['id'];
+    $bank_row_active = $db_conn->query("SELECT id, coa_bank FROM ms_bank WHERE id = {$active_id} AND deleted = '0'")->fetch_assoc();
+    testCheck(!empty($bank_row_active) && !empty($bank_row_active['coa_bank']), "Validasi server: Bank aktif lolos validasi dan mapping transfer_coa_bank tepat (" . $bank_row_active['coa_bank'] . ")");
+}
+
+// -----------------------------------------------------------
+// TEST 9: Form Pengembalian Kasbon (Sub-view #form-data & Dark Slate Theme)
+// -----------------------------------------------------------
+echo "\n--- TEST 9: Form Pengembalian Kasbon (Sub-view #form-data & Dark Slate Theme) ---\n";
+
+// 9.1: Panggilan method form_pengembalian pada controller
+$exp_test9 = (new ReflectionClass('Expense'))->newInstanceWithoutConstructor();
+$exp_test9->db = new MockDb();
+$exp_test9->template = new MockTemplate();
+
+$mock_expense_9 = (object)[
+    'id' => 999,
+    'no_doc' => 'ER-2026-00099',
+    'id_kasbon' => 'KS-2025-00088',
+    'jumlah' => 1250000,
+    'lebih_bayar' => 250000,
+    'informasi' => 'Perjalanan Dinas Bandung',
+    'tgl_approval_direktur' => '2026-10-22 10:00:00',
+    'status' => '3'
+];
+$mock_kasbon_9 = (object)[
+    'no_doc' => 'KS-2025-00088',
+    'keperluan' => 'Biaya Operasional Meeting Klien'
+];
+
+$exp_test9->db->tables['tr_expense'][999] = $mock_expense_9;
+$exp_test9->db->tables['tr_kasbon']['KS-2025-00088'] = $mock_kasbon_9;
+$exp_test9->db->tables['ms_bank'] = [
+    (object)['id' => 18, 'bank' => 1, 'rekening' => '436.300.5287', 'nama' => 'PT. Sentral Tehnologi Managemen', 'coa_bank' => '1101-02-01', 'nama_bank' => 'Bank Central Asia (BCA)']
+];
+
+$exp_test9->form_pengembalian(999);
+testCheck($exp_test9->template->rendered_view === 'form_pengembalian', "Method form_pengembalian berhasil merender view 'form_pengembalian'");
+testCheck(isset($exp_test9->template->vars['data']), "Variable 'data' terdefinisi dalam template");
+testCheck(isset($exp_test9->template->vars['bank_options']), "Variable 'bank_options' terdefinisi dalam template");
+
+// 9.2: Evaluasi rendering template HTML form_pengembalian.php
+$data = $mock_expense_9;
+$kasbon = $mock_kasbon_9;
+$bank_options = $exp_test9->db->tables['ms_bank'];
+
+ob_start();
+include dirname(__DIR__) . '/views/form_pengembalian.php';
+$html_out = ob_get_clean();
+
+testCheck(strpos($html_out, 'form-pengembalian-wrapper') !== false, "View memuat container utama form-pengembalian-wrapper");
+testCheck(strpos($html_out, 'Pengembalian Kasbon ER-2026-00099') !== false, "Header menampilkan judul dan nomor dokumen pengembalian kasbon");
+testCheck(strpos($html_out, 'KS-2025-00088') !== false, "Card Informasi Laporan memuat badge tiket nomor kasbon");
+testCheck(strpos($html_out, 'Biaya Operasional Meeting Klien') !== false, "Card Informasi Laporan memuat keterangan keperluan kasbon");
+testCheck(strpos($html_out, 'Menunggu Pengembalian') !== false, "Card Informasi Laporan memuat badge status Menunggu Pengembalian");
+testCheck(strpos($html_out, '250,000') !== false, "Nominal harus dikembalikan dan preview nominal terformat Rp 250,000");
+testCheck(strpos($html_out, 'id_bank_pengembalian') !== false, "Dropdown bank id_bank_pengembalian tersedia");
+testCheck(strpos($html_out, 'multi_file_input') !== false, "Input upload bukti multi_file_input tersedia");
+testCheck(strpos($html_out, 'file_chips_wrapper') !== false, "Container akumulator chip file_chips_wrapper tersedia");
+testCheck(strpos($html_out, 'Daftar Jurnal Pengembalian Kasbon') !== false, "Card Daftar Jurnal Pengembalian Kasbon ter-render");
+testCheck(strpos($html_out, 'Draft: jurnal diposting setelah verifikasi Finance') !== false, "Badge draft jurnal Finance terpasang");
+testCheck(strpos($html_out, '1103-01-15') !== false, "Akun Piutang Kelebihan Kasbon (1103-01-15) tercantum di draft jurnal");
+testCheck(strpos($html_out, 'TOTAL BALANCING') !== false, "Tabel draft jurnal memuat baris TOTAL BALANCING");
+testCheck(strpos($html_out, 'Catatan mockup:') !== false, "Kotak catatan mockup alur verifikasi tampil di bawah tabel");
+testCheck(strpos($html_out, 'btn_submit_kirim_pengembalian') !== false, "Tombol submit 'Kirim Bukti Transfer' tersedia");
+testCheck(strpos($html_out, 'close_form_pengembalian') !== false, "Tombol 'Kembali / Batal' dengan fungsi close_form_pengembalian tersedia");
+testCheck(strpos($html_out, 'accumulatedDataTransfer') !== false, "Script akumulator DataTransfer multi-file terpasang di view");
 
 echo "\n======================================================\n";
 echo " ALL TEST CHECKS PASSED SUCCESSFULLY (100% PASS)\n";

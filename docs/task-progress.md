@@ -2425,3 +2425,90 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
   - Seluruh unit & integration test suite pembayaran material lulus 100%.
 - Masalah yang belum terselesaikan: Tidak ada.
 - Langkah berikutnya: Pengguna dapat me-refresh halaman `http://localhost:8080/pembayaran_material/view_payment_new/BK--1026-0002` untuk melihat tampilan tabel rincian dokumen dan tabel jurnal pembayaran yang sudah benar.
+
+
+### Pembaruan Sumber Data Bank Modal Pengembalian Kasbon ke ms_bank (deleted = '0') — Selesai 2026-10-22
+- Status: Selesai 100%.
+- Rincian Perubahan:
+  1. Controller `Expense::index()`: Mengganti kueri `$q_bank` yang sebelumnya mengambil akun kas/bank dari `coa_master` menjadi kueri ke tabel `ms_bank a` yang di-LEFT JOIN dengan `list_bank b ON b.id = a.bank` dengan filter kondisi wajib `a.deleted = '0'` terurut `a.id ASC`.
+  2. View `expense/views/index.php`:
+     - Memperbarui elemen dropdown `<select name="id_bank_pengembalian" id="id_bank_pengembalian">` pada modal Upload Bukti Pengembalian Kasbon (`#modalUploadPengembalian`).
+     - Setiap opsi menampilkan label lengkap: `[nama_bank] - [rekening] (a.n [nama])` dan menyimpan atribut `data-coa="<?= $bk->coa_bank ?>"`.
+     - Menambahkan hidden input `transfer_coa_bank` yang terisi otomatis saat bank dipilih via event listener JavaScript.
+     - Memperbarui validasi client-side agar memeriksa pemilihan `id_bank_pengembalian`.
+  3. Controller `Expense::save_pengembalian_dana()`:
+     - Menerima parameter `id_bank_pengembalian` dan `transfer_coa_bank`.
+     - Melakukan validasi dan verifikasi keberadaan bank aktif di `ms_bank` (`deleted = '0'`). Jika bank tidak valid atau telah dinonaktifkan (`deleted = '1'`), request ditolak secara aman dengan pesan error yang jelas.
+     - Menyimpan nilai `id_bank_pengembalian` dan `transfer_coa_bank` ke tabel `tr_expense`.
+  4. Controller `Expense::get_dat_verifikasi_pengembalian()` & `verifikasi_pengembalian_detail()` & `verifikasi_pengembalian_approve()`:
+     - Menyelaraskan pengambilan nama dan rincian bank dari tabel `ms_bank` yang di-join dengan `list_bank` dengan filter `deleted = '0'`.
+     - Memastikan fallback COA bank tetap aman jika terjadi data transisi.
+  5. Automated Test `Expense_report_updated_test.php`:
+     - Memperbarui `TEST 7` untuk menangani filter petty cash secara presisi dengan data fixture sementara yang di-cleanup otomatis.
+     - Menambahkan `TEST 8` yang memverifikasi:
+       * Query `ms_bank` join `list_bank` hanya mengembalikan bank dengan `deleted = '0'` (4 bank aktif: 2 BCA dan 2 OCBC NISP).
+       * Memastikan 3 bank tidak aktif (`deleted = '1'`, ID: 2, 15, 16) 100% terfilter dan tidak muncul.
+       * Memastikan kelengkapan kolom `rekening`, `nama`, dan `coa_bank`.
+       * Memvalidasi proteksi server-side yang menolak input jika menggunakan bank `deleted = '1'`.
+- File dimodifikasi:
+  - `application/modules/expense/controllers/Expense.php`
+  - `application/modules/expense/views/index.php`
+  - `application/modules/expense/tests/Expense_report_updated_test.php`
+  - `docs/task-progress.md`
+- Hasil pengujian:
+  - `Expense_report_updated_test.php`: Seluruh 8 test suite PASS 100% (TEST 1 s/d TEST 8 tanpa error).
+  - PHP syntax lint pada `Expense.php` dan `index.php`: No syntax errors.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat mengakses tab Pengembalian Kasbon di `http://localhost:8080/expense/index` dan mencoba klik "Upload Bukti" untuk melihat dropdown daftar rekening bank perusahaan yang bersumber dari `ms_bank`.
+
+
+### Redesain Form Pengembalian Kasbon ke Sub-View Dark Slate Sesuai Konsep Mockup — Selesai 2026-10-22
+- Status: Selesai 100%.
+- Rincian Perubahan:
+  1. View Baru `expense/views/form_pengembalian.php`:
+     - Mengimplementasikan sub-view halaman penuh bertema **Dark Slate / Dark Navy** (`#0f172a` container, `#1e293b` card, `#334155` border) sesuai gambar konsep mockup pengguna.
+     - Header navigasi dengan tombol back `←` dan nomor dokumen.
+     - **Card 1 (Informasi Laporan)**: Rincian No. Dokumen, No. Kasbon (badge tiket biru) + Keperluan, Tgl Approval, Total Realisasi, Harus Dikembalikan (teks tebal hijau), dan Status (badge `Menunggu Pengembalian`).
+     - **Card 2 (Pengembalian Kelebihan Kasbon)**: Dropdown Bank Pengembalian dari `ms_bank` aktif (`deleted = '0'`), Tanggal Transfer (datepicker), Nominal Transfer (dengan helper text), dan upload bukti multi-file akumulatif dengan list chip file interaktif (nama file, ukuran KB/MB, dan tombol hapus silang per item).
+     - **Card 3 (Daftar Jurnal Pengembalian Kasbon)**: Live interactive preview draft Jurnal 2 (reaktif secara real-time terhadap pemilihan rekening bank dan tanggal transfer) dengan baris Debit Bank, baris Kredit Piutang Kelebihan Kasbon (`1103-01-15`), baris `TOTAL BALANCING`, serta kotak catatan mockup alur verifikasi.
+     - **Action Footer**: Tombol `[ Kirim Bukti Transfer ]` (submit AJAX ke `save_pengembalian_dana`) dan `[ Kembali / Batal ]` (menutup form dan mengembalikan tampilan list).
+  2. Controller `Expense::form_pengembalian($id)`:
+     - Mengambil data expense, kasbon terkait (`tr_kasbon`), dan daftar bank aktif dari `ms_bank a` JOIN `list_bank b` WHERE `a.deleted = '0'`.
+     - Me-render template `form_pengembalian`.
+  3. View `expense/views/index.php`:
+     - Menghapus modal pop-up lama `#modalUploadPengembalian` dan script submit modalnya.
+     - Mengarahkan tombol `.btn-upload-pengembalian` di Tab 2 agar menyembunyikan `.box, .nav-tabs-custom`, menampilkan `#form-data`, dan memuat endpoint `expense/form_pengembalian/{id}`.
+  4. Automated Tests `Expense_report_updated_test.php`:
+     - Menambahkan **TEST 9** (20 assertions): Menguji eksekusi method `Expense::form_pengembalian()`, parameter template, serta rendering lengkap elemen-elemen HTML di `form_pengembalian.php`.
+- File dimodifikasi / dibuat:
+  - `application/modules/expense/views/form_pengembalian.php` (file view baru)
+  - `application/modules/expense/controllers/Expense.php` (tambah method `form_pengembalian`)
+  - `application/modules/expense/views/index.php` (update trigger tombol Upload Bukti & bersihkan modal lama)
+  - `application/modules/expense/tests/Expense_report_updated_test.php` (tambah TEST 9)
+  - `docs/task-progress.md` (checkpoint update)
+- Hasil pengujian:
+  - PHP syntax lint pada `Expense.php`, `index.php`, dan `form_pengembalian.php`: 0 syntax error.
+  - `Expense_report_updated_test.php`: 9 test suite (TEST 1 s/d TEST 9) PASS 100%.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat mencoba klik tombol "Upload Bukti" pada Tab 2 di `http://localhost:8080/expense/index` untuk melihat dan menguji formulir pengembalian kasbon bertema dark slate yang baru.
+
+
+### Penyelarasan Tema Warna Form Pengembalian Kasbon dengan Desain Sekitar (Clean Theme SENDIGS SS) — Selesai 2026-10-22
+- Status: Selesai 100%.
+- Rincian Perubahan:
+  1. View `expense/views/form_pengembalian.php`:
+     - Mengubah tema warna formulir dari yang sebelumnya dark slate/hitam pekat menjadi tema bersih (*clean modern card theme*) yang selaras 100% dengan lingkungan sekitar AdminLTE dan SENDIGS SS.
+     - Container wrapper transparan yang menyatu dengan latar `#ecf0f5`.
+     - Panel card menggunakan background putih (`#ffffff`), border halus `#e2e8f0`, dan header abu-abu lembut `#f8fafc` dengan teks gelap `#2d3748`.
+     - Kontrol form (inputs & select) menggunakan background putih bersih dengan border `#cbd5e1` dan teks `#1e293b`.
+     - Tabel Draft Jurnal menggunakan header biru khas SENDIGS SS (`#2b6cb0` dengan teks putih), baris debit berlatar aksen hijau lembut `#f0fdf4`, baris kredit berlatar putih bersih, dan baris footer total balancing `#f8fafc`.
+     - Kotak catatan mockup menggunakan warna kartu informasi hangat (`background: #fffdf0; border: 1px solid #fef08a; border-left: 4px solid #f59e0b; color: #854d0e;`).
+     - Seluruh fungsionalitas interaktif tetap terjaga: live updating preview Jurnal 2, akumulator multi-file dengan chip list, serta tombol simpan dan batal.
+- File dimodifikasi:
+  - `application/modules/expense/views/form_pengembalian.php`
+  - `docs/task-progress.md`
+- Hasil pengujian:
+  - PHP syntax lint `form_pengembalian.php`: No syntax errors detected.
+  - `Expense_report_updated_test.php`: Seluruh 9 test suite (TEST 1 s/d TEST 9) PASS 100%.
+- Masalah yang belum terselesaikan: Tidak ada.
+- Langkah berikutnya: Pengguna dapat merefresh halaman browser di `http://localhost:8080/expense/index` dan melihat tampilan form pengembalian yang kini sudah menyatu dengan rapi bersama antarmuka SENDIGS SS.

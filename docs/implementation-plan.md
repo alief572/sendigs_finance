@@ -991,3 +991,28 @@ Pengguna melaporkan dua masalah pada halaman rincian voucher pembayaran `pembaya
   1. Baris jurnal dengan nilai Debit dan Kredit 0 (seperti PPN dan PPh yang tidak ada pemotongan) disembunyikan dari tabel tampilan agar tabel lebih ringkas.
   2. Akun Hubungan Istimewa (`1103-01-01` Piutang Hubungan Istimewa dan `2203-01-01` Hutang Hubungan Istimewa) disembunyikan pada halaman voucher operasional ini karena merupakan jurnal penyeimbang antar-entitas untuk GL.
   Hasil penyaringan: Tabel merender tepat 8 baris transaksi operasional riil dokumen vs kas/bank, dengan Total Debit Rp 8.920.202,00 = Total Kredit Rp 8.920.202,00 (Balance 100%), tepat sama dengan Total Nilai Bayar (Bank) di kartu informasi header.
+
+
+---
+
+# Redesain Form Pengembalian Kasbon Sesuai Konsep Mockup — 2026-10-22
+
+## 1. Konteks dan Kebutuhan
+Pengguna menyampaikan bahwa tampilan modal upload bukti pengembalian kelebihan kasbon sebelumnya tidak sesuai dengan konsep desain yang diharapkan. Pengguna melampirkan screenshot mockup konsep yang memperlihatkan antarmuka form sub-view halaman penuh bertema Dark Slate / Dark Navy yang memuat:
+1. Header navigasi kembali `←` dengan nomor dokumen.
+2. Card Informasi Laporan (No Dokumen, No Kasbon beserta keterangan keperluan, Tgl Approval, Total Realisasi, Nilai yang Harus Dikembalikan berwarna hijau, dan Status Menunggu Pengembalian).
+3. Card Pengembalian Kelebihan Kasbon (Dropdown Bank Tujuan Transfer dari `ms_bank` aktif, Tanggal Transfer, Nominal Transfer, dan Upload Bukti Transfer multi-file akumulatif dengan list chip).
+4. Card Daftar Jurnal Pengembalian Kasbon (Live interactive preview draft Jurnal 2 yang reaktif terhadap pilihan bank dan tanggal transfer).
+5. Tombol aksi `[ Kirim Bukti Transfer ]` dan `[ Kembali / Batal ]`.
+
+## 2. Kesepakatan Desain (/grill-me)
+- **Tampilan**: Sub-view penuh yang dimuat di `#form-data`, menyembunyikan `.box, .nav-tabs-custom`.
+- **Tema Visual**: Dark Slate / Dark Navy (`#0f172a` dan `#1e293b` dengan aksen border `#334155`).
+- **Upload Bukti**: Akumulator multi-file interaktif (bisa memilih berkali-kali dari folder berbeda dengan daftar chip dan tombol hapus silang per item).
+- **Jurnal Pengembalian**: Live preview draft visual saat pengisian form, sedangkan posting resmi ke `tr_jurnal` dieksekusi saat Finance menyetujui verifikasi di Menu 488.
+
+## 3. Komponen yang Dibuat / Dimodifikasi
+- **View Baru**: `application/modules/expense/views/form_pengembalian.php`
+- **Controller**: `application/modules/expense/controllers/Expense.php` (menambahkan endpoint `form_pengembalian($id)`)
+- **View Induk**: `application/modules/expense/views/index.php` (menyesuaikan trigger tombol Upload Bukti ke sub-view `#form-data` dan membersihkan modal pop-up lama)
+- **Automated Tests**: `application/modules/expense/tests/Expense_report_updated_test.php` (menambahkan skenario TEST 9 untuk endpoint dan live preview form pengembalian)

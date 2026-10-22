@@ -1309,8 +1309,13 @@ class Expense extends Admin_Controller
 	{
 		$this->beginAudit(__FUNCTION__, array('page' => 'index'), array('page', 'outcome'));
 
-		// Query daftar bank perusahaan aktif dari coa_master
-		$q_bank = $this->db->query("SELECT no_perkiraan, nama FROM " . DBACC . ".coa_master WHERE no_perkiraan LIKE '1101-02-%' AND level = '5' ORDER BY no_perkiraan");
+		// Query daftar bank perusahaan aktif dari ms_bank (deleted = '0')
+		$this->db->select('a.id, a.bank, a.rekening, a.nama, a.coa_bank, b.nama_bank');
+		$this->db->from('ms_bank a');
+		$this->db->join('list_bank b', 'b.id = a.bank', 'left');
+		$this->db->where('a.deleted', '0');
+		$this->db->order_by('a.id', 'ASC');
+		$q_bank = $this->db->get();
 		$this->auditObserve($q_bank);
 		$bank_options = $q_bank ? $q_bank->result() : [];
 
@@ -1320,6 +1325,10 @@ class Expense extends Admin_Controller
 
 		$this->db->where('lebih_bayar >', 0);
 		$this->db->where_in('status', ['3', '4']);
+		$this->db->group_start();
+		$this->db->where('pettycash', null);
+		$this->db->or_where('pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('id_po', null);
 		$this->db->or_where('id_po', '');
@@ -1332,6 +1341,10 @@ class Expense extends Admin_Controller
 
 		$this->db->where('kurang_bayar >', 0);
 		$this->db->where('status', '2');
+		$this->db->group_start();
+		$this->db->where('pettycash', null);
+		$this->db->or_where('pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('id_po', null);
 		$this->db->or_where('id_po', '');
@@ -1853,6 +1866,10 @@ class Expense extends Admin_Controller
 		$this->db->join('users c', 'a.nama=c.username', 'left');
 		$this->db->join('users d', 'a.approval=d.username', 'left');
 		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -5754,12 +5771,12 @@ class Expense extends Admin_Controller
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->join('users c', 'COALESCE(NULLIF(a.approved_by, ""), a.approval) = c.username', 'left');
-		if (empty($all)) {
-			$this->db->group_start();
-			$this->db->where('a.pettycash', null);
-			$this->db->or_where('a.pettycash', '');
-			$this->db->group_end();
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 
+		if (empty($all)) {
 			$this->db->group_start();
 			$this->db->where('a.exp_pib', null);
 			$this->db->or_where('a.exp_pib', '');
@@ -6135,6 +6152,10 @@ class Expense extends Admin_Controller
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
 		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
@@ -6147,6 +6168,10 @@ class Expense extends Admin_Controller
 		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -6170,6 +6195,10 @@ class Expense extends Admin_Controller
 		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -6865,6 +6894,10 @@ class Expense extends Admin_Controller
 		$this->db->where('a.lebih_bayar >', 0);
 		$this->db->where_in('a.status', ['3', '4']);
 		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
@@ -6879,6 +6912,10 @@ class Expense extends Admin_Controller
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->where('a.lebih_bayar >', 0);
 		$this->db->where_in('a.status', ['3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -6951,11 +6988,44 @@ class Expense extends Admin_Controller
 	}
 
 	/**
+	 * Sub-view Form Pengembalian Kasbon (Full-width view di #form-data)
+	 * Menampilkan informasi laporan, input bank, tanggal, upload akumulatif & live preview draft Jurnal 2
+	 */
+	public function form_pengembalian($id)
+	{
+		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($data)) {
+			echo '<div class="alert alert-danger" style="margin:20px;">Data expense tidak ditemukan.</div>';
+			return;
+		}
+
+		// Ambil data bank aktif dari ms_bank (deleted = '0')
+		$this->db->select('a.id, a.bank, a.rekening, a.nama, a.coa_bank, b.nama_bank');
+		$this->db->from('ms_bank a');
+		$this->db->join('list_bank b', 'b.id = a.bank', 'left');
+		$this->db->where('a.deleted', '0');
+		$this->db->order_by('a.id', 'ASC');
+		$bank_options = $this->db->get()->result();
+
+		// Ambil data kasbon terkait jika ada
+		$kasbon = null;
+		if (!empty($data->id_kasbon)) {
+			$kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+		}
+
+		$this->template->set('data', $data);
+		$this->template->set('kasbon', $kasbon);
+		$this->template->set('bank_options', $bank_options);
+		$this->template->render('form_pengembalian');
+	}
+
+	/**
 	 * Endpoint simpan data pengembalian dana & upload bukti transfer (Sisi User Pelapor)
 	 */
 	public function save_pengembalian_dana()
 	{
 		$id = $this->input->post('id_expense');
+		$id_bank_pengembalian = $this->input->post('id_bank_pengembalian');
 		$transfer_coa_bank = $this->input->post('transfer_coa_bank');
 		$transfer_tanggal = $this->input->post('transfer_tanggal');
 		$transfer_jumlah = floatval(str_replace(',', '', (string)$this->input->post('transfer_jumlah')));
@@ -6971,9 +7041,24 @@ class Expense extends Admin_Controller
 			return;
 		}
 
-		if (empty($transfer_coa_bank)) {
+		if (empty($id_bank_pengembalian) && empty($transfer_coa_bank)) {
 			echo json_encode(['save' => false, 'message' => 'Bank Tujuan Transfer perusahaan wajib dipilih!']);
 			return;
+		}
+
+		// Validasi dan sinkronisasi data bank terhadap tabel ms_bank (deleted = '0')
+		if (!empty($id_bank_pengembalian)) {
+			$bank_row = $this->db->get_where('ms_bank', ['id' => $id_bank_pengembalian, 'deleted' => '0'])->row();
+			if (empty($bank_row)) {
+				echo json_encode(['save' => false, 'message' => 'Rekening Bank Tujuan Perusahaan tidak valid atau sudah tidak aktif!']);
+				return;
+			}
+			$transfer_coa_bank = $bank_row->coa_bank;
+		} else if (!empty($transfer_coa_bank)) {
+			$bank_row = $this->db->get_where('ms_bank', ['coa_bank' => $transfer_coa_bank, 'deleted' => '0'])->row();
+			if (!empty($bank_row)) {
+				$id_bank_pengembalian = $bank_row->id;
+			}
 		}
 
 		if (empty($transfer_tanggal)) {
@@ -7017,6 +7102,7 @@ class Expense extends Admin_Controller
 		}
 
 		$update_data = [
+			'id_bank_pengembalian' => $id_bank_pengembalian,
 			'transfer_coa_bank' => $transfer_coa_bank,
 			'transfer_tanggal' => date('Y-m-d', strtotime($transfer_tanggal)),
 			'transfer_jumlah' => $transfer_jumlah,
@@ -7058,6 +7144,10 @@ class Expense extends Admin_Controller
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
@@ -7067,12 +7157,17 @@ class Expense extends Admin_Controller
 		}
 		$count_all = $this->db->count_all_results();
 
-		$this->db->select('a.*, b.nm_lengkap as nmuser, rp.no_doc as no_rp, rp.status as status_rp');
+		$this->db->select("a.*, b.nm_lengkap as nmuser,
+			(SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as no_rp,
+			(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as status_rp", false);
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
-		$this->db->join('tr_request_payment rp', 'rp.no_doc = a.no_doc AND rp.tipe = "expense"', 'left');
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -7102,17 +7197,19 @@ class Expense extends Admin_Controller
 			$kurang_bayar = floatval($item['kurang_bayar']);
 
 			// Status alur reimburse via Request Payment
-			$st_rp = isset($item['status_rp']) ? (int)$item['status_rp'] : 1;
-			if ($st_rp === 1) {
+			if ($item['status_rp'] === null) {
 				$badge_rp = '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
-			} else if ($st_rp === 2) {
-				$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Management</span>';
-			} else if ($st_rp === 3) {
-				$badge_rp = '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui / Siap Dibayar</span>';
-			} else if ($st_rp >= 4) {
-				$badge_rp = '<span class="badge bg-dark" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai Dibayar Kantor</span>';
 			} else {
-				$badge_rp = '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">Dalam Antrian</span>';
+				$st_rp = (int) $item['status_rp'];
+				if ($st_rp === 0) {
+					$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Management</span>';
+				} else if ($st_rp === 1) {
+					$badge_rp = '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui / Siap Dibayar</span>';
+				} else if ($st_rp >= 2) {
+					$badge_rp = '<span class="badge bg-dark" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai Dibayar Kantor</span>';
+				} else {
+					$badge_rp = '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">Dalam Antrian</span>';
+				}
 			}
 
 			$data[] = [
@@ -7165,6 +7262,10 @@ class Expense extends Admin_Controller
 		$this->db->where('a.status', 4);
 		$this->db->where('a.lebih_bayar >', 0);
 		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
@@ -7176,6 +7277,10 @@ class Expense extends Admin_Controller
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->where('a.status', 4);
 		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
 		$this->db->group_start();
 		$this->db->where('a.id_po', null);
 		$this->db->or_where('a.id_po', '');
@@ -7202,12 +7307,33 @@ class Expense extends Admin_Controller
 			$no++;
 			$lebih_bayar = floatval($item['lebih_bayar']);
 
-			// Cari nama bank
-			$bank_label = !empty($item['transfer_coa_bank']) ? $item['transfer_coa_bank'] : '-';
-			if (!empty($item['transfer_coa_bank'])) {
-				$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($item['transfer_coa_bank']))->row();
-				if ($qb) {
-					$bank_label = $qb->nama;
+			// Cari nama bank dari ms_bank
+			$bank_label = '-';
+			if (!empty($item['id_bank_pengembalian'])) {
+				$mb = $this->db->select('a.*, b.nama_bank')
+					->from('ms_bank a')
+					->join('list_bank b', 'b.id = a.bank', 'left')
+					->where('a.id', $item['id_bank_pengembalian'])
+					->get()->row();
+				if ($mb) {
+					$bank_label = (!empty($mb->nama_bank) ? $mb->nama_bank : 'Bank') . ' - ' . $mb->rekening;
+				}
+			} else if (!empty($item['transfer_coa_bank'])) {
+				$mb = $this->db->select('a.*, b.nama_bank')
+					->from('ms_bank a')
+					->join('list_bank b', 'b.id = a.bank', 'left')
+					->where('a.coa_bank', $item['transfer_coa_bank'])
+					->where('a.deleted', '0')
+					->get()->row();
+				if ($mb) {
+					$bank_label = (!empty($mb->nama_bank) ? $mb->nama_bank : 'Bank') . ' - ' . $mb->rekening;
+				} else {
+					$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($item['transfer_coa_bank']))->row();
+					if ($qb) {
+						$bank_label = $qb->nama;
+					} else {
+						$bank_label = $item['transfer_coa_bank'];
+					}
 				}
 			}
 
@@ -7250,11 +7376,30 @@ class Expense extends Admin_Controller
 			return;
 		}
 
-		$bank_name = $data->transfer_coa_bank;
-		if (!empty($data->transfer_coa_bank)) {
-			$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($data->transfer_coa_bank))->row();
-			if ($qb) {
-				$bank_name = $qb->nama;
+		$bank_name = !empty($data->transfer_coa_bank) ? $data->transfer_coa_bank : '-';
+		if (!empty($data->id_bank_pengembalian)) {
+			$mb = $this->db->select('a.*, b.nama_bank')
+				->from('ms_bank a')
+				->join('list_bank b', 'b.id = a.bank', 'left')
+				->where('a.id', $data->id_bank_pengembalian)
+				->get()->row();
+			if ($mb) {
+				$bank_name = (!empty($mb->nama_bank) ? $mb->nama_bank : 'Bank') . ' - ' . $mb->rekening . ' (a.n ' . $mb->nama . ')';
+			}
+		} else if (!empty($data->transfer_coa_bank)) {
+			$mb = $this->db->select('a.*, b.nama_bank')
+				->from('ms_bank a')
+				->join('list_bank b', 'b.id = a.bank', 'left')
+				->where('a.coa_bank', $data->transfer_coa_bank)
+				->where('a.deleted', '0')
+				->get()->row();
+			if ($mb) {
+				$bank_name = (!empty($mb->nama_bank) ? $mb->nama_bank : 'Bank') . ' - ' . $mb->rekening . ' (a.n ' . $mb->nama . ')';
+			} else {
+				$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($data->transfer_coa_bank))->row();
+				if ($qb) {
+					$bank_name = $qb->nama;
+				}
 			}
 		}
 
@@ -7296,7 +7441,16 @@ class Expense extends Admin_Controller
 			return;
 		}
 
-		$bank_coa = !empty($expense->transfer_coa_bank) ? $expense->transfer_coa_bank : '1101-02-01';
+		$bank_coa = $expense->transfer_coa_bank;
+		if (empty($bank_coa) && !empty($expense->id_bank_pengembalian)) {
+			$mb = $this->db->get_where('ms_bank', ['id' => $expense->id_bank_pengembalian, 'deleted' => '0'])->row();
+			if ($mb) {
+				$bank_coa = $mb->coa_bank;
+			}
+		}
+		if (empty($bank_coa)) {
+			$bank_coa = '1101-02-01';
+		}
 		$nominal = floatval($expense->transfer_jumlah > 0 ? $expense->transfer_jumlah : $expense->lebih_bayar);
 
 		$this->db->trans_begin();

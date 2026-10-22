@@ -263,79 +263,7 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 	</div>
 </div>
 
-<!-- MODAL UPLOAD BUKTI PENGEMBALIAN KASBON (TAB 2) -->
-<div class="modal fade" id="modalUploadPengembalian" tabindex="-1" role="dialog" aria-labelledby="modalUploadLabel" aria-hidden="true">
-	<div class="modal-dialog" style="width: 600px;">
-		<div class="modal-content" style="border-radius: 8px;">
-			<div class="modal-header" style="background:#6f42c1; color:#fff; border-radius: 8px 8px 0 0;">
-				<button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:0.8;">
-					<span aria-hidden="true">&times;</span>
-				</button>
-				<h4 class="modal-title" id="modalUploadLabel">
-					<i class="fa fa-upload"></i> Upload Bukti Pengembalian Kelebihan Kasbon
-				</h4>
-			</div>
-			<form id="formUploadPengembalian" enctype="multipart/form-data">
-				<input type="hidden" name="id_expense" id="upload_id_expense" value="">
-				<div class="modal-body" style="padding: 20px;">
-					<div class="well well-sm" style="background:#f8fafc; border-radius:6px; margin-bottom:15px; font-size:13px;">
-						<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-							<span>No. Dokumen:</span>
-							<b id="upload_no_doc">-</b>
-						</div>
-						<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-							<span>No. Kasbon:</span>
-							<b id="upload_no_kasbon">-</b>
-						</div>
-						<div style="display:flex; justify-content:space-between; font-size:14px; color:#6f42c1; border-top:1px dashed #cbd5e0; padding-top:4px;">
-							<b>Sisa Lebih Kasbon (Wajib Dikembalikan):</b>
-							<b id="upload_nominal_lebih">Rp 0</b>
-						</div>
-					</div>
-
-					<div class="form-group">
-						<label style="font-size:13px; font-weight:600; color:#2d3748;">Bank Tujuan Transfer Perusahaan <b class="text-danger">*</b></label>
-						<select name="transfer_coa_bank" id="transfer_coa_bank" class="form-control input-sm select2" style="width:100%;" required>
-							<option value="">-- Pilih Rekening Bank Perusahaan --</option>
-							<?php foreach ($bank_options as $bk): ?>
-								<option value="<?= htmlspecialchars($bk->no_perkiraan) ?>">
-									<?= htmlspecialchars($bk->no_perkiraan . ' - ' . $bk->nama) ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-
-					<div class="row">
-						<div class="col-sm-6">
-							<div class="form-group">
-								<label style="font-size:13px; font-weight:600; color:#2d3748;">Tanggal Transfer <b class="text-danger">*</b></label>
-								<input type="text" name="transfer_tanggal" id="transfer_tanggal" class="form-control input-sm tanggal" value="<?= date('Y-m-d') ?>" required autocomplete="off">
-							</div>
-						</div>
-						<div class="col-sm-6">
-							<div class="form-group">
-								<label style="font-size:13px; font-weight:600; color:#2d3748;">Nominal Transfer (Rp) <b class="text-danger">*</b></label>
-								<input type="text" name="transfer_jumlah" id="transfer_jumlah" class="form-control input-sm divide text-right" required>
-							</div>
-						</div>
-					</div>
-
-					<div class="form-group" style="margin-bottom:0;">
-						<label style="font-size:13px; font-weight:600; color:#2d3748;">File Bukti Transfer <b class="text-danger">*</b> <small class="text-muted">(JPG, PNG, PDF &mdash; boleh lebih dari 1 file)</small></label>
-						<input type="file" name="bukti_transfer[]" id="bukti_transfer" class="form-control input-sm" multiple required accept=".jpg,.jpeg,.png,.pdf">
-						<small class="text-muted" style="display:block; margin-top:4px;">Pastikan bukti transfer mencantumkan nomor referensi, tanggal, dan nominal yang sesuai.</small>
-					</div>
-				</div>
-				<div class="modal-footer" style="background:#f8fafc; border-radius:0 0 8px 8px;">
-					<button type="button" class="btn btn-default btn-sm btn-rounded" data-dismiss="modal">Batal</button>
-					<button type="submit" class="btn btn-primary btn-sm btn-rounded" style="background:#6f42c1; border-color:#6f42c1;" id="btn_submit_pengembalian">
-						<i class="fa fa-send"></i> Kirim Bukti Pengembalian
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
+<!-- Sub-view form pengembalian dimuat di #form-data -->
 
 <!-- DataTables & SweetAlert -->
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
@@ -552,71 +480,11 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 
 	$(document).on('click', '.btn-upload-pengembalian', function() {
 		var id = $(this).data('id');
-		var doc = $(this).data('doc');
-		var kasbon = $(this).data('kasbon');
-		var nominal = parseFloat($(this).data('nominal')) || 0;
-
-		$('#upload_id_expense').val(id);
-		$('#upload_no_doc').text(doc);
-		$('#upload_no_kasbon').text(kasbon || '-');
-		$('#upload_nominal_lebih').text('Rp ' + Number(nominal).toLocaleString('id-ID'));
-		$('#transfer_jumlah').val(Number(nominal).toLocaleString('en-US'));
-		$('#formUploadPengembalian')[0].reset();
-		$('#upload_id_expense').val(id);
-		$('#transfer_jumlah').val(Number(nominal).toLocaleString('en-US'));
-
-		$('#modalUploadPengembalian').modal('show');
-	});
-
-	$('#formUploadPengembalian').on('submit', function(e) {
-		e.preventDefault();
-		var bank = $('#transfer_coa_bank').val();
-		if (!bank) {
-			Swal.fire("Perhatian!", "Bank Tujuan Perusahaan wajib dipilih!", "warning");
-			return false;
+		if (id) {
+			$(".box, .nav-tabs-custom").hide();
+			$("#form-data").show();
+			$("#form-data").load(siteurl + 'expense/form_pengembalian/' + id);
 		}
-
-		var fileInput = document.getElementById('bukti_transfer');
-		if (!fileInput.files || fileInput.files.length === 0) {
-			Swal.fire("Perhatian!", "Bukti transfer pengembalian dana wajib dilampirkan!", "warning");
-			return false;
-		}
-
-		var formdata = new FormData(this);
-		$('#btn_submit_pengembalian').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengirim...');
-
-		$.ajax({
-			url: siteurl + 'expense/save_pengembalian_dana',
-			type: 'POST',
-			data: formdata,
-			processData: false,
-			contentType: false,
-			dataType: 'json',
-			success: function(res) {
-				$('#btn_submit_pengembalian').prop('disabled', false).html('<i class="fa fa-send"></i> Kirim Bukti Pengembalian');
-				if (res && res.save) {
-					$('#modalUploadPengembalian').modal('hide');
-					Swal.fire({
-						title: "Berhasil!",
-						text: res.message,
-						icon: "success"
-					}).then(() => {
-						load_table_pengembalian();
-						window.location.reload();
-					});
-				} else {
-					Swal.fire({
-						title: "Gagal!",
-						text: (res && res.message) ? res.message : "Gagal mengunggah bukti pengembalian.",
-						icon: "error"
-					});
-				}
-			},
-			error: function() {
-				$('#btn_submit_pengembalian').prop('disabled', false).html('<i class="fa fa-send"></i> Kirim Bukti Pengembalian');
-				Swal.fire("Gagal!", "Terjadi kesalahan pada server saat mengirim data.", "error");
-			}
-		});
 	});
 
 	// ==============================================================
