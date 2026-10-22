@@ -1,3 +1,110 @@
+# Eksekusi Pembaruan Modul Expense Report, Approval Berjenjang, dan Verifikasi Pengembalian Kasbon — Selesai 2026-10-22
+
+- Status: Selesai 100% (Seluruh 4 Fase Implementasi, Filter Eksklusi Dokumen PO Invoice/PI, & Test Suite tuntas 100% PASS).
+- Fase selesai:
+  1. Fase 1: Registrasi Master COA, Migrasi Database, dan Navigasi Menu:
+     - Menjalankan migrasi `application/modules/expense/migrations/006_update_expense_report_flow.sql` ke database remote `206.84.97.107`.
+     - Menambahkan kolom pelacak verifikasi pada `tr_expense`: `tgl_approval_direktur`, `verified_by`, `verified_on`, `verif_checklist`, `verif_reject_reason`.
+     - Mendaftarkan Menu ID 488 `Verifikasi Pengembalian Kasbon` (`link = 'expense/verifikasi_pengembalian'`, permission 979 `Expense_Approval.View`, parent ID 295 `Approval`).
+     - Menonaktifkan menu lama yang usang: `Pengembalian Expense` (354) dan `Approval Pengembalian Expense` (394) (`status = 0`).
+     - Mendaftarkan COA `1103-01-15` (`Piutang Kelebihan Kasbon`, tipe Aset Lancar, level 5, faktor 1) lintas 7 database: `db_sendigs_ss_stm_dev`, `db_sendigs_ss_vuca_dev`, `db_sendigs_ss_sustain_dev`, `db_sendigs_gl_ss_dev`, `db_sendigs_ss_stm`, `db_sendigs_ss_vuca`, `db_sendigs_ss_sustain`.
+     - Memperbarui database view `v_request_payment` agar Lebih Expense otomatis terbaca dengan `nilai_pengajuan = kurang_bayar`, keperluan `Lebih Expense - ...`, dan `status = 1` saat laporan berstatus `2`.
+  2. Fase 2: Pembaruan Form Expense Report (Pelapor):
+     - Memperbarui `application/modules/expense/views/form_report.php`:
+       * Menghapus input bank pengembalian dan file upload bukti transfer pengembalian di awal (FR-F01, FR-F02).
+       * Mengganti panel pengembalian dengan panel edukatif alur To-Be (pengembalian dilakukan pasca-approval Direktur) (FR-F03).
+       * Mempertahankan catatan alasan selisih kasbon (FR-F04).
+       * Validasi wajib melampirkan minimal 1 bon/nota per rincian realisasi > 0 dengan highlight merah baris tidak lengkap dan auto-scroll (FR-F05).
+       * Validasi wajib keterangan laporan tidak boleh kosong (FR-F06).
+       * Validasi total realisasi pengeluaran harus > 0 (FR-F08).
+     - Memperbarui `Expense.php`:
+       * `set_jurnal_expense()`: baris Lebih Kasbon mendebit `1103-01-15` (*Piutang Kelebihan Kasbon*) dan mengkredit `1103-01-14` (*Piutang Lain-lain Konsultan*).
+       * `save()`: validasi server-side keterangan wajib, total expense > 0, dan bon bukti per baris realisasi > 0.
+       * `get_kasbon()`: modal filter kasbon mengecualikan kasbon yang sedang dilaporkan atau selesai (status 0, 1, 2, 3, 4) (FR-F07).
+  3. Fase 3: Approval Berjenjang & Posting Jurnal 1 Final:
+     - Memperbarui `approve()` pada `Expense.php`:
+       * Penegakan Segregation of Duties (BR-12): pelapor dilarang meng-approve laporannya sendiri.
+       * Approval Jenjang 1 (Dept Head Finance): transisi status 0 -> 1 (`Waiting Approval Direktur`), timestamp `approved_by` dan `approved_on`.
+       * Approval Jenjang 2 (Direktur / Management): transisi status 1 -> 3 (`Menunggu Pengembalian`) jika Lebih Kasbon; atau 1 -> 2 (`Selesai/Approved`) jika Sama/Lebih Expense; timestamp `tgl_approval_direktur`.
+       * Posting otomatis **JURNAL 1**:
+         - Lebih Kasbon: Debit Beban (realisasi), Debit `1103-01-15` (*Piutang Kelebihan Kasbon*) sebesar sisa kasbon, Kredit `1103-01-14` (*Piutang Lain-lain Konsultan*) sebesar total kasbon awal. Total Debit == Total Kredit (100% Balance).
+         - Impas: Debit Beban, Kredit `1103-01-14`.
+         - Lebih Expense: Debit Beban, Kredit `1103-01-14`, Kredit `9999-99-99` (*Hutang Expense / Reimburse*).
+     - Memperbarui `reject()` dan `reject_manage()`:
+       * Penolakan di tingkat mana pun langsung berstatus `9` (`Ditolak`) kembali ke user pelapor dengan catatan revisi wajib (`reject_reason`).
+       * User dapat mengedit laporan yang ditolak dan mengajukan kembali (status reset ke `0`).
+     - Memperbarui visual timeline 3 tahap approval pada `form_report.php`.
+     - Memperbarui helper `_render_expense_status_badge()` untuk merender status 0, 1, 2, 3, 4, 9 secara akurat.
+  4. Fase 4: Pengembalian Kasbon, Verifikasi Finance, Monitoring Reimburse, dan Validasi:
+     - Memperbarui `application/modules/expense/views/index.php`:
+       * Menambahkan 3 Nav-Tabs: Tab 1 *Laporan Expense*, Tab 2 *Pengembalian Kasbon*, Tab 3 *Lebih Expense (Reimburse ke Karyawan)* dengan badge counter dokumen aktif.
+       * Tab 2: Antrian pengembalian kasbon milik pelapor (status 3 & 4), dilengkapi modal upload bukti transfer pengembalian dana ke bank perusahaan.
+       * Tab 3: Monitoring reimbursement Lebih Expense yang terintegrasi dengan status Request Payment.
+     - Membuat view baru `verifikasi_pengembalian_index.php` untuk Menu ID 488.
+     - Membuat view baru `verifikasi_pengembalian_detail.php`:
+       * Menampilkan detail pengembalian dana, preview file bukti transfer pelapor, dan 3 checklist wajib keuangan.
+       * Preview JURNAL 2 balancing (Debit Bank Perusahaan, Kredit `1103-01-15`).
+       * Tombol verifikasi aktif hanya jika 3 checklist dicentang; tombol tolak mengembalikan status ke 3.
+     - Menambahkan endpoint di `Expense.php`:
+       * `get_dat_pengembalian_kasbon()`
+       * `save_pengembalian_dana()`
+       * `get_dat_lebih_expense()`
+       * `verifikasi_pengembalian()`
+       * `get_dat_verifikasi_pengembalian()`
+       * `verifikasi_pengembalian_detail($id)`
+       * `verifikasi_pengembalian_approve()` -> posting JURNAL 2 & transisi status 4 -> 2.
+       * `verifikasi_pengembalian_reject()` -> transisi status 4 -> 3.
+       * `_post_jurnal_pengembalian_kasbon()`
+     - Penambahan Filter Eksklusi Dokumen Invoice PO / Pembayaran PO (`PI-`):
+       * Menambahkan filter kondisi `(a.id_po IS NULL OR a.id_po = '')`, `(a.exp_inv_po IS NULL OR a.exp_inv_po = '')`, dan `a.no_doc NOT LIKE 'PI-%'` pada `get_dat_expense_data()`, `get_dat_expense_pc()`, `get_dat_approval_expense()`, `get_dat_approval_expense_manage()`, `get_expense_app_finance()`, `list_expense_approval_manage()`, badge counter di `index()`, `get_dat_pengembalian_kasbon()`, `get_dat_lebih_expense()`, dan `get_dat_verifikasi_pengembalian()`.
+       * Memastikan dokumen transaksi Purchasing/PO invoice yang tercatat di `tr_expense` (mis. `PI-2025-07-000001` dengan DP PO `PO-001/MP/07/2025`) tidak muncul di tabel laporan expense maupun antrian approval expense.
+     - Pengujian komprehensif:
+       * Menulis test suite `application/modules/expense/tests/Expense_report_updated_test.php` (36 assertions, 100% PASS mencakup 6 kelompok uji: Jurnal 1, Approval Berjenjang, Verifikasi Jurnal 2, Tolak Verifikasi, Status Badge, dan Filter Eksklusi Dokumen PI/id_po NULL).
+       * Memastikan kompatibilitas test regresi `Reject_test.php` dan `Kasbon_attachments_test.php` (100% PASS).
+- Fase sedang dikerjakan: Tidak ada (seluruh fase selesai).
+- Fase belum dikerjakan: Tidak ada.
+- File yang dimodifikasi / dibuat:
+  1. `application/modules/expense/migrations/006_update_expense_report_flow.sql` (migrasi DB & COA)
+  2. `application/modules/expense/controllers/Expense.php` (logika approval, jurnal 1 & 2, tab 2 & 3, menu 488, filter id_po IS NULL & no_doc NOT LIKE 'PI%')
+  3. `application/modules/expense/views/form_report.php` (form pelaporan, timeline, validasi bukti per row)
+  4. `application/modules/expense/views/index.php` (3 tab, modal upload transfer balik)
+  5. `application/modules/expense/views/verifikasi_pengembalian_index.php` (menu 488 index)
+  6. `application/modules/expense/views/verifikasi_pengembalian_detail.php` (menu 488 verifikasi detail & 3 checklist)
+  7. `application/modules/expense/tests/Expense_report_updated_test.php` (automated test suite dengan 36 assertions)
+  8. `docs/implementation-plan.md`
+  9. `docs/task-progress.md`
+- Keputusan teknis:
+  1. COA `1103-01-15` (*Piutang Kelebihan Kasbon*) digunakan sebagai jembatan dua tahap: didebit saat Direktur menyetujui laporan (Jurnal 1) dan dikredit saat Finance memverifikasi pengembalian uang (Jurnal 2).
+  2. Validasi per rincian mewajibkan bukti nota pada level baris sebelum form dapat disubmit, mencegah dokumen tanpa bukti bon masuk ke antrian approval.
+  3. Segregation of Duties (BR-12) ditegakkan di level server controller pada approval tingkat 1, tingkat 2, maupun verifikasi Finance.
+  4. Penolakan di approval tingkat 2 (Direktur) langsung mengembalikan status ke pelapor (status 9) untuk direvisi tanpa melalui Finance kembali.
+  5. Filter eksklusi dokumen PO (`id_po IS NULL` dan awalan `PI-`) diterapkan di seluruh endpoint listing dan antrian approval modul Expense secara server-side agar transaksi pembayaran PO tidak bercampur dengan pengeluaran operasional / pertanggungjawaban kasbon.
+- Masalah yang belum terselesaikan: Tidak ada. Seluruh fungsionalitas dan logika jurnal tervalidasi berjalan baik.
+- Langkah berikutnya: Modul siap dideploy / dipublikasikan ke branch development dan diujicobakan pada user acceptance testing (UAT).
+- Fase sedang dikerjakan: Tidak ada (seluruh fase selesai).
+- Fase belum dikerjakan: Tidak ada.
+- File yang dimodifikasi / dibuat:
+  1. `application/modules/expense/migrations/006_update_expense_report_flow.sql` (migrasi DB & COA)
+  2. `application/modules/expense/controllers/Expense.php` (logika approval, jurnal 1 & 2, tab 2 & 3, menu 488)
+  3. `application/modules/expense/views/form_report.php` (form pelaporan, timeline, validasi bukti per row)
+  4. `application/modules/expense/views/index.php` (3 tab, modal upload transfer balik)
+  5. `application/modules/expense/views/verifikasi_pengembalian_index.php` (menu 488 index)
+  6. `application/modules/expense/views/verifikasi_pengembalian_detail.php` (menu 488 verifikasi detail & 3 checklist)
+  7. `application/modules/expense/tests/Expense_report_updated_test.php` (automated test suite)
+  8. `docs/implementation-plan.md`
+  9. `docs/task-progress.md`
+- Keputusan teknis:
+  1. COA `1103-01-15` (*Piutang Kelebihan Kasbon*) digunakan sebagai jembatan dua tahap: didebit saat Direktur menyetujui laporan (Jurnal 1) dan dikredit saat Finance memverifikasi pengembalian uang (Jurnal 2).
+  2. Validasi per rincian mewajibkan bukti nota pada level baris sebelum form dapat disubmit, mencegah dokumen tanpa bukti bon masuk ke antrian approval.
+  3. Segregation of Duties (BR-12) ditegakkan di level server controller pada approval tingkat 1, tingkat 2, maupun verifikasi Finance.
+  4. Penolakan di approval tingkat 2 (Direktur) langsung mengembalikan status ke pelapor (status 9) untuk direvisi tanpa melalui Finance kembali.
+- Masalah yang belum terselesaikan: Tidak ada. Seluruh fungsionalitas dan logika jurnal tervalidasi berjalan baik.
+- Langkah berikutnya: Modul siap dideploy / dipublikasikan ke branch development dan diujicobakan pada user acceptance testing (UAT).
+
+---
+
+---
+
 # Registrasi COA WAPU pada Database Akuntansi Remote — Selesai 2026-10-19
 
 - Status: Selesai (Akun WAPU `1106-01-08` dan `2104-01-09` berhasil didaftarkan ke seluruh database akuntansi tujuan pada host remote `206.84.97.107`, form invoice `add_invoice/1256` dan seluruh mapping COA tervalidasi 100% PASS).

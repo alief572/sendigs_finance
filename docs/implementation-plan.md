@@ -1,3 +1,51 @@
+# Pembaruan Modul Expense Report, Approval, dan Pengembalian Kasbon — 2026-10-22
+
+## Konteks dan Kebutuhan
+Berdasarkan dokumen FRD dan prototipe interaktif (FRD Expense Report Updated & Expense Report.html), modul Expense Report SENDIGS SS diperbarui agar:
+1. Memindahkan transfer pengembalian dan upload bukti transfer dari form awal laporan ke setelah disetujui Direktur.
+2. Membentuk jurnal dua tahap untuk kondisi Lebih Kasbon: Jurnal 1 (pengakuan Piutang Kelebihan Kasbon saat Direktur approve) dan Jurnal 2 (pengakuan Bank dan pelunasan Piutang saat Finance memverifikasi pengembalian).
+3. Menambahkan verifikasi Finance independen atas bukti transfer terhadap mutasi rekening perusahaan sebelum piutang ditutup.
+4. Menerapkan approval berjenjang (Dept Head Finance dan Direktur) di mana reject langsung mengembalikan laporan ke user untuk direvisi tanpa lanjut ke approver berikutnya.
+5. Menghubungkan kondisi Lebih Expense secara otomatis ke Request Payment (kategori Expense) serta menyediakan tab pemantauan read-only bagi user pelapor.
+6. Menata navigasi: 3 tab pada halaman Expense (Laporan Expense, Pengembalian Kasbon, Lebih Expense) serta menu baru Verifikasi Pengembalian Kasbon pada grup Approval.
+
+## Rencana Fase Implementasi
+- **Fase 1: Database, Master COA, dan Navigasi Menu** (Status: Selesai):
+  - Pendaftaran akun COA `1103-01-15` (`Piutang Kelebihan Kasbon`) pada `coa_master` di database akuntansi (`db_sendigs_ss_stm_dev`, `db_sendigs_ss_vuca_dev`, `db_sendigs_ss_sustain_dev`, `db_sendigs_gl_ss_dev`, `db_sendigs_ss_stm`, `db_sendigs_ss_vuca`, `db_sendigs_ss_sustain`).
+  - Penambahan kolom pelacak verifikasi dan audit pada tabel `tr_expense` (`tgl_approval_direktur`, `verified_by`, `verified_on`, `verif_checklist`, `verif_reject_reason`).
+  - Pendaftaran menu `Verifikasi Pengembalian Kasbon` (Menu ID 488) pada grup Approval (parent `295`, permission 979 `Expense_Approval.View`).
+  - Penonaktifan menu lama `Pengembalian Expense` (`id = 354`) dan `Approval Pengembalian Expense` (`id = 394`) (`status = 0`).
+  - Pembaruan view `v_request_payment` untuk kategori `Expense` (menampilkan Lebih Expense yang telah approved dengan nilai pengajuan = kurang bayar).
+- **Fase 2: Pembaruan Form Expense Report (Pelapor)** (Status: Selesai):
+  - Validasi wajib minimal satu bukti bon/nota (`tr_expense_detail_file`) per item yang bernilai realisasi > 0 dengan highlight baris merah dan scroll ke baris error (FR-F05).
+  - Penghapusan input pilihan bank dan upload bukti transfer balik dari form pembuatan laporan (FR-F01, FR-F02).
+  - Penambahan panel informasi alur pengembalian edukatif pasca-approval Direktur (FR-F03).
+  - Penambahan textarea keterangan/keperluan wajib diisi (FR-F06).
+  - Validasi total realisasi pengeluaran harus > 0 (FR-F08).
+  - Pembaruan modal `get_kasbon` memfilter kasbon yang belum dilaporkan atau berstatus aktif/selesai (status 0, 1, 2, 3, 4) (FR-F07).
+  - Pembaruan tabel Preview Jurnal untuk mendebit `1103-01-15` saat kondisi Lebih Kasbon.
+- **Fase 3: Approval Berjenjang & Posting Jurnal 1** (Status: Selesai):
+  - Penegakan Segregation of Duties (BR-12): pelapor dilarang meng-approve laporannya sendiri.
+  - `list_expense_approval` (Dept Head Finance): approve ke status `1` (`Menunggu Approval Direktur`), reject ke status `9` (`Ditolak`) dengan catatan revisi wajib.
+  - `list_expense_approval_manage` (Direktur): approve memicu posting Jurnal 1 final ke `tr_jurnal` dan pencatatan `tgl_approval_direktur`.
+  - Percabangan status pasca-approval Direktur:
+    - Sama / Lebih Expense: status `2` (`Disetujui` / Selesai); jika Lebih Expense otomatis masuk ke antrian Request Payment.
+    - Lebih Kasbon: status `3` (`Menunggu Pengembalian Kasbon`), Jurnal 1 mendebit `1103-01-15` (*Piutang Kelebihan Kasbon*) dan mengkredit `1103-01-14` (*Piutang Lain-lain Konsultan*).
+  - Timeline status visual alur 3 tahap pada form laporan.
+  - Pembaruan filter antrian approval Finance (`get_expense_app_finance`) dan Management (`get_dat_approval_expense_manage`).
+- **Fase 4: Pengembalian Kasbon, Verifikasi Finance, Monitoring, dan Validasi** (Status: Selesai):
+  - Halaman Expense memiliki 3 tab navigasi: Tab 1 *Laporan Expense*, Tab 2 *Pengembalian Kasbon*, Tab 3 *Lebih Expense (Reimburse ke Karyawan)* dengan badge counter realtime.
+  - Tab 2: Tabel antrian Lebih Kasbon (status 3 & 4) milik pelapor, dilengkapi modal upload bukti transfer pengembalian dana ke bank perusahaan (`save_pengembalian_dana()`).
+  - Tab 3: Monitoring reimbursement Lebih Expense terintegrasi dengan Request Payment.
+  - Menu ID 488: Halaman Verifikasi Pengembalian Kasbon (`verifikasi_pengembalian_index.php`) dan form detail (`verifikasi_pengembalian_detail.php`).
+  - 3 Butir checklist verifikasi keuangan wajib (bukti valid, mutasi rekening cocok, nominal sesuai).
+  - Posting otomatis **JURNAL 2** final saat verifikasi disetujui: Debit Bank Perusahaan, Kredit `1103-01-15` (*Piutang Kelebihan Kasbon*).
+  - Tombol tolak verifikasi mengembalikan status ke `3` dengan alasan penolakan wajib.
+  - Automated test suite komprehensif `application/modules/expense/tests/Expense_report_updated_test.php` (36 assertions, 100% PASS).
+  - Filter eksklusi dokumen PO invoice (`(a.id_po IS NULL OR a.id_po = '')` dan `a.no_doc NOT LIKE 'PI-%'`) pada seluruh endpoint listing DataTables dan antrian approval Expense.
+
+---
+
 # Penambahan Notifikasi SweetAlert2 pada Aksi Posting Jurnal All — 2026-10-16
 
 ## Konteks dan Kebutuhan

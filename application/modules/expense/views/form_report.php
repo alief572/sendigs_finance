@@ -100,6 +100,73 @@ foreach ($option_coa as $keys => $val) {
 
 <?php include __DIR__ . '/reject_card.php'; ?>
 
+<?php if (isset($data) && ($stsview == 'view' || $stsview == 'approval')): ?>
+	<div class="panel panel-default" style="margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+		<div class="panel-body" style="padding:15px 20px;">
+			<div style="font-weight:700; color:#4a5568; font-size:13px; margin-bottom:12px;">
+				<i class="fa fa-sitemap text-primary"></i> Alur Persetujuan Expense Report:
+			</div>
+			<div class="row text-center" style="display:flex; justify-content:space-around; align-items:flex-start;">
+				<!-- Step 1: Pelapor -->
+				<div style="flex:1;">
+					<div style="width:36px; height:36px; border-radius:50%; background:#28a745; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:6px; box-shadow:0 2px 6px rgba(40,167,69,0.3);">
+						<i class="fa fa-check"></i>
+					</div>
+					<div style="font-size:13px; font-weight:700; color:#2d3748;">1. Pelapor</div>
+					<div style="font-size:11px; color:#718096;"><?= !empty($data->nama) ? htmlspecialchars($data->nama) : 'Diajukan' ?></div>
+					<div style="font-size:10px; color:#a0aec0;"><?= !empty($data->created_on) ? date('d/m/Y H:i', strtotime($data->created_on)) : '' ?></div>
+				</div>
+
+				<!-- Step 2: Finance -->
+				<?php
+				$st2_color = '#e2e8f0';
+				$st2_icon = 'fa-clock-o';
+				$st2_bg = '#edf2f7';
+				$st2_label = 'Menunggu';
+				if ($data->status == 9 && empty($data->sts_finance)) {
+					$st2_bg = '#e53e3e'; $st2_color = '#fff'; $st2_icon = 'fa-times'; $st2_label = 'Ditolak Finance';
+				} else if ($data->sts_finance == '1' || in_array((string)$data->status, ['1','2','3','4'])) {
+					$st2_bg = '#28a745'; $st2_color = '#fff'; $st2_icon = 'fa-check'; $st2_label = 'Disetujui Finance';
+				} else if ((string)$data->status === '0') {
+					$st2_bg = '#f39c12'; $st2_color = '#fff'; $st2_icon = 'fa-hourglass-half'; $st2_label = 'Review Finance';
+				}
+				?>
+				<div style="flex:1;">
+					<div style="width:36px; height:36px; border-radius:50%; background:<?= $st2_bg ?>; color:<?= $st2_color ?>; display:inline-flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:6px;">
+						<i class="fa <?= $st2_icon ?>"></i>
+					</div>
+					<div style="font-size:13px; font-weight:700; color:#2d3748;">2. Dept Head Finance</div>
+					<div style="font-size:11px; color:#718096;"><?= !empty($data->approved_by) ? htmlspecialchars($data->approved_by) : $st2_label ?></div>
+					<div style="font-size:10px; color:#a0aec0;"><?= !empty($data->approved_on) ? date('d/m/Y H:i', strtotime($data->approved_on)) : '' ?></div>
+				</div>
+
+				<!-- Step 3: Direktur -->
+				<?php
+				$st3_color = '#e2e8f0';
+				$st3_icon = 'fa-clock-o';
+				$st3_bg = '#edf2f7';
+				$st3_label = 'Menunggu';
+				if ($data->status == 9 && ($data->sts_finance == '1' || $data->status == 1)) {
+					$st3_bg = '#e53e3e'; $st3_color = '#fff'; $st3_icon = 'fa-times'; $st3_label = 'Ditolak Direktur';
+				} else if (in_array((string)$data->status, ['2','3','4'])) {
+					$st3_bg = '#28a745'; $st3_color = '#fff'; $st3_icon = 'fa-check'; $st3_label = 'Disetujui Direktur';
+				} else if ((string)$data->status === '1') {
+					$st3_bg = '#f39c12'; $st3_color = '#fff'; $st3_icon = 'fa-hourglass-half'; $st3_label = 'Review Direktur';
+				}
+				?>
+				<div style="flex:1;">
+					<div style="width:36px; height:36px; border-radius:50%; background:<?= $st3_bg ?>; color:<?= $st3_color ?>; display:inline-flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:6px;">
+						<i class="fa <?= $st3_icon ?>"></i>
+					</div>
+					<div style="font-size:13px; font-weight:700; color:#2d3748;">3. Direktur / Final</div>
+					<div style="font-size:11px; color:#718096;"><?= !empty($data->approved_by_manage) ? htmlspecialchars($data->approved_by_manage) : $st3_label ?></div>
+					<div style="font-size:10px; color:#a0aec0;"><?= !empty($data->tgl_approval_direktur) ? date('d/m/Y H:i', strtotime($data->tgl_approval_direktur)) : '' ?></div>
+				</div>
+			</div>
+		</div>
+	</div>
+<?php endif; ?>
+
 <div class="box box-custom">
 	<div class="box-custom-header">
 		<h4 class="box-custom-title">
@@ -345,82 +412,16 @@ foreach ($option_coa as $keys => $val) {
 				<div class="row" style="margin-top: 15px;">
 					<div class="col-md-6" id="pengembalian" <?= ($grand_total > 0) ? "" : "hidden" ?>>
 						<input type="hidden" name="pengembalian" id="pengembalian_val" value="2">
-						<div class="panel panel-info" style="border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-							<div class="panel-heading" style="font-weight: 700;">
-								<i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon (Transfer ke Rekening Perusahaan)
+						<div class="panel panel-info" style="border-radius: 6px; border: 1px solid #c2e0ec; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+							<div class="panel-heading" style="font-weight: 700; background: #dceff6; color: #2b7b9d; border-bottom: 1px solid #c2e0ec;">
+								<i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon
 							</div>
-							<div class="panel-body">
-								<?php
-								// Bank pengembalian: bank yang tersimpan (edit/view) > fallback default lama (dokumen lama pra-fitur, BCA 1101-02-01) > kosong (dokumen baru)
-								$selected_bank_pengembalian = (isset($data->id_bank_pengembalian) && $data->id_bank_pengembalian !== '' && $data->id_bank_pengembalian !== null)
-									? $data->id_bank_pengembalian
-									: '';
-								if ($selected_bank_pengembalian === '' && isset($data) && $grand_total > 0) {
-									// Dokumen lama (sudah tersimpan sebelum fitur ini ada) tanpa id_bank_pengembalian -> fallback BCA
-									foreach ($list_bank as $lb_item) {
-										if ($lb_item->coa_bank == '1101-02-01') {
-											$selected_bank_pengembalian = $lb_item->id;
-											break;
-										}
-									}
-								}
-								?>
-								<div class="form-group" style="margin-left:0; margin-right:0;">
-									<label class="control-label">Bank Pengembalian (Tujuan Transfer) <b class="text-red">*</b></label>
-									<select class="form-control input-sm" name="bank_pengembalian" id="bank_pengembalian" onchange="set_jurnal()">
-										<option value="">- Pilih Bank -</option>
-										<?php
-										if (!empty($list_bank)) {
-											foreach ($list_bank as $lb_item) {
-												$lb_selected = ((string)$lb_item->id === (string)$selected_bank_pengembalian) ? 'selected' : '';
-												echo '<option value="' . $lb_item->id . '" ' . $lb_selected . '>(' . $lb_item->rekening . ' a/n ' . $lb_item->nama . ') - ' . $lb_item->nama_bank . '</option>';
-											}
-										}
-										?>
-									</select>
-								</div>
-								<div class="form-group" style="margin-left:0; margin-right:0; margin-bottom: 0;">
-									<label class="control-label">Upload Bukti Transfer Balik <b class="text-red">*</b></label>
-
-									<div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
-										<label class="btn btn-sm btn-primary btn-flat-custom stsview" style="cursor:pointer; margin-bottom:0;" title="Pilih File Bukti Transfer">
-											<i class="fa fa-folder-open"></i> Pilih Bukti Transfer
-											<input type="file" id="temp_bukti_pengembalian_picker" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
-										</label>
-										<span id="selected_bukti_count" class="text-muted" style="font-size:12px;"></span>
-									</div>
-
-									<input type="file" name="bukti_pengembalian[]" id="id_bukti_pengembalian" multiple style="display:none;" accept=".jpg,.jpeg,.png,.pdf">
-									<div id="new_bukti_pengembalian_list" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;"></div>
-									<small class="text-muted" style="font-size:11px; display:block; margin-top:4px;"><i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF. Bisa klik <b>Pilih Bukti Transfer</b> berkali-kali untuk memilih file dari berbagai folder satu per satu.</small>
-
-									<?php if (isset($data->bukti_pengembalian) && !empty($data->bukti_pengembalian)): 
-										$arr_files = explode(';', $data->bukti_pengembalian);
-									?>
-										<div class="existing-bukti-container" style="margin-top:10px;">
-											<label style="font-size:12px; font-weight:600; color:#555;"><i class="fa fa-paperclip"></i> Bukti Transfer Terlampir Sebelumnya:</label>
-											<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
-												<?php foreach ($arr_files as $f_item): 
-													if (empty($f_item)) continue;
-													$furl = base_url($f_item);
-													$is_fpdf = (stripos($f_item, '.pdf') !== false);
-													$fname = basename($f_item);
-												?>
-													<span class="badge file-badge-item" style="background:#3c8dbc; font-size:11px; font-weight:normal; padding:5px 8px; display:inline-flex; align-items:center; gap:6px;">
-														<a href="<?= $furl ?>" target="_blank" style="color:#fff; text-decoration:none;" title="<?= htmlspecialchars($fname) ?>">
-															<i class="fa <?= $is_fpdf ? 'fa-file-pdf-o' : 'fa-file-image-o' ?>"></i> <?= htmlspecialchars($fname) ?>
-														</a>
-														<input type="hidden" name="existing_bukti_pengembalian[]" value="<?= htmlspecialchars($f_item) ?>">
-														<?php if ($stsview != 'view' && $stsview != 'approval'): ?>
-															<button type="button" class="btn btn-xs btn-danger remove-existing-bukti" style="padding:0 4px; font-size:10px; line-height:1; border-radius:2px;" title="Hapus file ini">
-																<i class="fa fa-times"></i>
-															</button>
-														<?php endif; ?>
-													</span>
-												<?php endforeach; ?>
-											</div>
-										</div>
-									<?php endif; ?>
+							<div class="panel-body" style="font-size: 13px; color: #2d3748; line-height: 1.5; padding: 15px;">
+								<p style="margin-bottom: 10px;">
+									Kelebihan kasbon sebesar <b class="text-green" id="info_nominal_pengembalian" style="font-size: 14px;">Rp <?= number_format($grand_total > 0 ? $grand_total : 0) ?></b> dicatat sebagai <b>Piutang Kelebihan Kasbon</b> saat laporan disetujui Direktur.
+								</p>
+								<div class="alert alert-warning" style="margin-bottom: 0; padding: 10px 12px; font-size: 12px; border-radius: 4px; background: #fff8e6; border: 1px solid #f3dfa6; color: #8a4b12;">
+									<i class="fa fa-info-circle"></i> <b>Catatan Alur:</b> Transfer pengembalian dana dan upload bukti transfer dilakukan <b>setelah laporan disetujui penuh oleh Direktur</b>, melalui tab <b>Pengembalian Kasbon</b> pada menu Expense, lalu diverifikasi oleh Finance. Tidak ada upload bukti transfer di form ini.
 								</div>
 							</div>
 						</div>
@@ -478,12 +479,17 @@ foreach ($option_coa as $keys => $val) {
 			<div style="border-top: 2px solid #f4f4f4; padding-top: 15px; margin-top: 20px;">
 				<div class="text-right">
 					<?php
-					if (isset($data)) {
-						if ($data->status == 0) {
-							if ($stsview == 'approval') {
-								echo '<a class="btn btn-warning btn-sm btn-flat-custom" onclick="data_approve()" style="margin-right:5px;"><i class="fa fa-check-square-o">&nbsp;</i>Setujui (Approve)</a>';
-								echo '<a class="btn btn-danger btn-sm btn-flat-custom" onclick="data_reject()" style="margin-right:5px;"><i class="fa fa-ban">&nbsp;</i>Tolak (Reject)</a>';
-							}
+					if (isset($data) && $stsview == 'approval') {
+						$cur_user = $this->auth->user_name();
+						$is_author = (!empty($data->nama) && $data->nama === $cur_user);
+						if ($is_author) {
+							echo '<div class="alert alert-warning text-left" style="display:inline-block; margin-bottom:0; margin-right:10px; padding:6px 12px; font-size:12px;">';
+							echo '<i class="fa fa-exclamation-triangle"></i> Anda tidak dapat menyetujui laporan yang Anda buat sendiri (Segregation of Duties).';
+							echo '</div>';
+						} else if ($data->status == 0 || $data->status == 1) {
+							$btn_title = ($data->status == 0) ? 'Setujui (Dept Head Finance)' : 'Setujui (Direktur / Final)';
+							echo '<a class="btn btn-success btn-sm btn-flat-custom" onclick="data_approve()" style="margin-right:5px;"><i class="fa fa-check-square-o">&nbsp;</i>' . $btn_title . '</a>';
+							echo '<a class="btn btn-danger btn-sm btn-flat-custom" onclick="data_reject()" style="margin-right:5px;"><i class="fa fa-ban">&nbsp;</i>Tolak (Reject)</a>';
 						}
 					}
 					?>
@@ -565,6 +571,7 @@ foreach ($option_coa as $keys => $val) {
 		if (selisih > 0) {
 			$("#kontrol_row").show();
 			$("#kontrol").val(selisih);
+			$("#info_nominal_pengembalian").text("Rp " + Number(selisih).toLocaleString('id-ID'));
 			$("#kurang_bayar_row").hide();
 			$("#kurang_bayar").val(0);
 			$("#pengembalian").show();
@@ -784,29 +791,53 @@ foreach ($option_coa as $keys => $val) {
 	$('#frm_data').on('submit', function(e) {
 		e.preventDefault();
 		var errors = "";
-		if ($("#informasi").val() == "") errors = "Keterangan tidak boleh kosong";
+		if ($.trim($("#informasi").val()) == "") errors = "Keterangan laporan wajib diisi";
 		if ($("#tgl_doc").val() == "") errors = "Tanggal Dokumen tidak boleh kosong";
 		if ($("#detail_report_body tr").length == 0) errors = "Rincian pengeluaran belum ada";
 
 		var total_kasbon = parseFloat($("#total_kasbon").val().replace(/,/g, '')) || 0;
 		var total_expense = parseFloat($("#total_expense").val().replace(/,/g, '')) || 0;
-		var selisih = total_kasbon - total_expense;
-
-		if (selisih > 0) {
-			var bankPengembalian = $('#bank_pengembalian').val();
-			if (!bankPengembalian) {
-				errors = "Terdapat Lebih Kasbon sebesar Rp " + Number(selisih).toLocaleString('en-US') + ". Bank Pengembalian (Tujuan Transfer) WAJIB dipilih!";
-			}
-
-			var hasNewBukti = (typeof dtBuktiPengembalian !== 'undefined' && dtBuktiPengembalian.files.length > 0);
-			var hasExistingBukti = ($('input[name="existing_bukti_pengembalian[]"]').length > 0);
-			if (errors == "" && !hasNewBukti && !hasExistingBukti) {
-				errors = "Terdapat Lebih Kasbon sebesar Rp " + Number(selisih).toLocaleString('en-US') + ". Bukti Transfer Balik (Pengembalian ke Kantor) WAJIB diupload!";
-			}
+		if (total_expense <= 0 && errors == "") {
+			errors = "Total realisasi pengeluaran harus lebih dari 0";
 		}
+
+		// Validasi bukti bon/nota wajib per item (FR-F05)
+		var missingProofRows = [];
+		$("#detail_report_body tr.delAll").each(function() {
+			var rowId = $(this).find(".dtlloop").val();
+			var expVal = parseFloat($(this).find("input[name='expense[]']").val().replace(/,/g, '')) || 0;
+			if (expVal > 0) {
+				var hasNewFiles = (dtDetailMap[rowId] && dtDetailMap[rowId].files.length > 0);
+				var hasExistingFiles = ($(this).find("input[name='existing_files_" + rowId + "[]']").length > 0);
+				var hasSingleFile = ($(this).find("input[name='filename[]']").val() !== "");
+				if (!hasNewFiles && !hasExistingFiles && !hasSingleFile) {
+					var itemDeskripsi = $(this).find("textarea[name='deskripsi[]']").val() || ("Baris " + rowId);
+					missingProofRows.push({ rowId: rowId, name: itemDeskripsi, el: $(this) });
+					$(this).css("background-color", "#fde8e8");
+				} else {
+					$(this).css("background-color", "");
+				}
+			} else {
+				$(this).css("background-color", "");
+			}
+		});
 
 		if (errors != "") {
 			Swal.fire({ title: "Perhatian!", text: errors, icon: "warning" });
+			return false;
+		}
+
+		if (missingProofRows.length > 0) {
+			var listNames = missingProofRows.map(function(m) { return m.name; }).join(", ");
+			Swal.fire({
+				title: "Bukti Wajib Dilampirkan!",
+				html: "Setiap item pengeluaran dengan nilai realisasi lebih dari 0 wajib melampirkan minimal satu file bon / nota.<br><br><b>Belum ada bukti pada:</b><br><span class='text-danger'>" + listNames + "</span>",
+				icon: "warning"
+			}).then(function() {
+				$('html, body').animate({
+					scrollTop: missingProofRows[0].el.offset().top - 120
+				}, 400);
+			});
 			return false;
 		}
 
@@ -859,7 +890,7 @@ foreach ($option_coa as $keys => $val) {
 	function data_approve() {
 		Swal.fire({
 			title: "Setujui Expense?",
-			text: "Dokumen akan diproses ke tahap persetujuan!",
+			text: "Pastikan seluruh data realisasi pengeluaran dan lampiran bukti sudah diperiksa!",
 			icon: "question",
 			showCancelButton: true,
 			confirmButtonText: "Ya, Setujui!",
@@ -870,13 +901,16 @@ foreach ($option_coa as $keys => $val) {
 				var id = $("#id").val();
 				$.post(siteurl + 'expense/approve/' + id, function(result) {
 					if (result.save) {
-						Swal.fire("Sukses!", "Expense berhasil disetujui.", "success").then(() => {
+						Swal.fire("Sukses!", result.message || "Expense berhasil disetujui.", "success").then(() => {
 							window.location.reload();
 						});
 					} else {
-						Swal.fire("Gagal!", "Gagal memproses approval.", "error");
+						Swal.fire("Gagal!", result.message || "Gagal memproses approval.", "error");
 					}
-				}, "json");
+				}, "json").fail(function(xhr) {
+					var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : "Terjadi kesalahan pada server.";
+					Swal.fire("Gagal!", err, "error");
+				});
 			}
 		});
 	}
@@ -885,14 +919,14 @@ foreach ($option_coa as $keys => $val) {
 		Swal.fire({
 			title: "Tolak Dokumen Expense",
 			input: "textarea",
-			inputLabel: "Alasan Penolakan (Reject Reason)",
-			inputPlaceholder: "Tuliskan alasan penolakan di sini...",
+			inputLabel: "Alasan Penolakan (Reject Reason) - Wajib Diisi",
+			inputPlaceholder: "Tuliskan catatan revisi atau alasan penolakan secara jelas...",
 			showCancelButton: true,
 			confirmButtonText: "Tolak Dokumen",
 			cancelButtonText: "Batal",
 			confirmButtonColor: "#d33",
 			inputValidator: (value) => {
-				if (!value) {
+				if (!value || $.trim(value) === "") {
 					return "Alasan penolakan wajib diisi!";
 				}
 			}
@@ -900,10 +934,17 @@ foreach ($option_coa as $keys => $val) {
 			if (res.isConfirmed) {
 				var id = $("#id").val();
 				$.post(siteurl + 'expense/reject', { id: id, reason: res.value, table: 'tr_expense' }, function(result) {
-					Swal.fire("Ditolak!", "Dokumen telah ditolak.", "info").then(() => {
-						window.location.reload();
-					});
-				}, "json");
+					if (result.save) {
+						Swal.fire("Ditolak!", "Dokumen telah ditolak dan dikembalikan ke pelapor untuk revisi.", "info").then(() => {
+							window.location.reload();
+						});
+					} else {
+						Swal.fire("Gagal!", result.message || "Gagal memproses penolakan.", "error");
+					}
+				}, "json").fail(function(xhr) {
+					var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : "Terjadi kesalahan pada server.";
+					Swal.fire("Gagal!", err, "error");
+				});
 			}
 		});
 	}

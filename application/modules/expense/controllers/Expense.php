@@ -52,8 +52,65 @@ class Expense extends Admin_Controller
 		date_default_timezone_set('Asia/Bangkok');
 		$this->status = array("0" => "Waiting Approval Finance", "1" => "Approved", "2" => "Approved", "3" => "Approved", "9" => "Rejected");
 	}
+
+	private $auditQueriesOk = true;
+
+	private function beginAudit($method, $data = array(), $keys = array())
+	{
+		$this->auditQueriesOk = true;
+		if (isset($this->load) && method_exists($this->load, 'library')) {
+			$this->load->library('Module_audit_recorder');
+		}
+		if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+			return $this->module_audit_recorder->begin('expense', $method,
+				array('data' => $this->auditSafeData($data)),
+				array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+		}
+		return false;
+	}
+
+	private function completeAudit($message, $status, $data = array())
+	{
+		if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+			return $this->module_audit_recorder->complete($message, $status,
+				array('data' => $this->auditSafeData($data), 'sql' => null));
+		}
+		return false;
+	}
+
+	private function auditSafeData($data)
+	{
+		$safe = array();
+		foreach ($data as $key => $value) {
+			if (in_array($key, array('amount', 'total_amount', 'jumlah_kasbon'), true) && (!is_scalar($value) || !is_numeric($value))) { continue; }
+			if (in_array($key, array('department_id', 'id'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string) $value))) { continue; }
+			if (in_array($key, array('no_doc', 'no_pr'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9\/_.-]{1,100}$/', (string) $value))) { continue; }
+			if (in_array($key, array('password', 'secret', 'token', 'raw_sql', 'doc_file', 'doc_file_2'), true)) { continue; }
+			if (is_scalar($value) || $value === null) {
+				$safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+			}
+		}
+		return $safe;
+	}
+
+	private function auditObserve($result, $connection = null)
+	{
+		$connection = $connection ?: (isset($this->db) ? $this->db : null);
+		if ($connection && method_exists($connection, 'error')) {
+			$error = $connection->error();
+			if (!empty($error['code'])) {
+				$this->auditQueriesOk = false;
+			}
+		}
+		if ($result === false) {
+			$this->auditQueriesOk = false;
+		}
+		return $result;
+	}
+
 	public function kasbon()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
 		// $where = array('a.nama' => $this->auth->user_name());
 		// $data = $this->Expense_model->GetListDataKasbon();
 		// $this->template->set('results', $data);
@@ -61,22 +118,25 @@ class Expense extends Admin_Controller
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Kasbon');
 		$this->template->render('kasbon_list');
+		$this->completeAudit('Membuka halaman daftar kasbon', 1, array('outcome' => 'rendered'));
 	}
 	// list kasbon all
 	public function kasbon_list_all()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
 		// $data = $this->Expense_model->GetListDataKasbon();
 		// $this->template->set('results', $data);
 		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Kasbon List');
 		$this->template->render('kasbon_list_all');
+		$this->completeAudit('Membuka halaman semua daftar kasbon', 1, array('outcome' => 'rendered'));
 	}
 
 	// kasbon create
 	public function kasbon_create()
 	{
-
+		$this->beginAudit(__FUNCTION__, array(), array('outcome', 'item_count'));
 		$list_pr_non_po = [];
 		$this->db->select('b.no_pr, b.category')
 			->from('material_planning_base_on_produksi_detail a')
@@ -89,12 +149,16 @@ class Expense extends Admin_Controller
 			->where('a.kasbon_created', null)
 			->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = b.no_pr)', null, false)
 			->group_by('b.no_pr');
-		$get_detail_pr_stok_material = $this->db->get()->result_array();
-		foreach ($get_detail_pr_stok_material as $item) {
-			$list_pr_non_po[] = [
-				'no_pr' => $item['no_pr'],
-				'keterangan' => strtoupper($item['category'])
-			];
+		$q_mat = $this->db->get();
+		$this->auditObserve($q_mat);
+		$get_detail_pr_stok_material = $q_mat ? $q_mat->result_array() : array();
+		if (is_array($get_detail_pr_stok_material)) {
+			foreach ($get_detail_pr_stok_material as $item) {
+				$list_pr_non_po[] = [
+					'no_pr' => $item['no_pr'],
+					'keterangan' => strtoupper($item['category'])
+				];
+			}
 		}
 
 		$this->db->select('b.no_pr, b.project_name')
@@ -105,12 +169,16 @@ class Expense extends Admin_Controller
 			->where('a.kasbon_created', null)
 			->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = b.no_pr)', null, false)
 			->group_by('b.no_pr');
-		$get_detail_pr_departemen = $this->db->get()->result_array();
-		foreach ($get_detail_pr_departemen as $item) {
-			$list_pr_non_po[] = [
-				'no_pr' => $item['no_pr'],
-				'keterangan' => $item['project_name']
-			];
+		$q_dept = $this->db->get();
+		$this->auditObserve($q_dept);
+		$get_detail_pr_departemen = $q_dept ? $q_dept->result_array() : array();
+		if (is_array($get_detail_pr_departemen)) {
+			foreach ($get_detail_pr_departemen as $item) {
+				$list_pr_non_po[] = [
+					'no_pr' => $item['no_pr'],
+					'keterangan' => $item['project_name']
+				];
+			}
 		}
 
 		$this->db->select('a.no_pr, b.nama_asset');
@@ -121,20 +189,29 @@ class Expense extends Admin_Controller
 		$this->db->where('b.no_pr IS NOT NULL');
 		$this->db->where('NOT EXISTS (SELECT 1 FROM tr_kasbon k WHERE k.id_pr = a.no_pr)', null, false);
 		$this->db->group_by('a.no_pr');
-		$get_pr_asset = $this->db->get()->result_array();
-		foreach ($get_pr_asset as $item) {
-			$list_pr_non_po[] = [
-				'no_pr' => $item['no_pr'],
-				'keterangan' => strtoupper($item['nama_asset'])
-			];
+		$q_asset = $this->db->get();
+		$this->auditObserve($q_asset);
+		$get_pr_asset = $q_asset ? $q_asset->result_array() : array();
+		if (is_array($get_pr_asset)) {
+			foreach ($get_pr_asset as $item) {
+				$list_pr_non_po[] = [
+					'no_pr' => $item['no_pr'],
+					'keterangan' => strtoupper($item['nama_asset'])
+				];
+			}
 		}
 
 		$get_list_coa = $this->Expense_model->GetListCoa('Kasbon');
+		$this->auditObserve($get_list_coa);
 
 		$this->template->set('list_pr_non_po', $list_pr_non_po);
 		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('mod', '');
 		$this->template->render('kasbon_form');
+		$this->completeAudit('Membuka form pembuatan kasbon', $this->auditQueriesOk ? 1 : 0, array(
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error',
+			'item_count' => count($list_pr_non_po)
+		));
 	}
 
 	// kasbon save
@@ -162,6 +239,15 @@ class Expense extends Admin_Controller
 		$coa = $this->input->post("coa");
 		$nm_coa = $this->input->post("nm_coa");
 		$metode_pembayaran	= 1;
+
+		$this->beginAudit(__FUNCTION__, array(
+			'id' => $id,
+			'no_doc' => $no_doc,
+			'department_id' => $departement,
+			'amount' => $jumlah_kasbon,
+			'no_pr' => $no_pr,
+			'tipe_pr' => $tipe_pr,
+		), array('id', 'no_doc', 'department_id', 'amount', 'no_pr', 'tipe_pr', 'outcome', 'reason'));
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
@@ -229,6 +315,16 @@ class Expense extends Admin_Controller
 			}
 		} catch (RuntimeException $e) {
 			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan kasbon: exception lampiran', 0, array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'department_id' => $departement,
+				'amount' => $jumlah_kasbon,
+				'no_pr' => $no_pr,
+				'tipe_pr' => $tipe_pr,
+				'outcome' => 'attachment_error',
+				'reason' => mb_substr($e->getMessage(), 0, 255)
+			));
 			echo json_encode(array('save' => false, 'id' => $id, 'message' => $e->getMessage()));
 			return;
 		}
@@ -412,11 +508,10 @@ class Expense extends Admin_Controller
 			}
 			// print_r($this->db->last_query());
 			// exit;
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = false;
 			} else {
-				$this->db->trans_commit();
 				$result = true;
 			}
 		} else {
@@ -561,11 +656,10 @@ class Expense extends Admin_Controller
 			// } else {
 			// 	$result = FALSE;
 			// }
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
-				$this->db->trans_commit();
 				$result = TRUE;
 			}
 		}
@@ -573,11 +667,30 @@ class Expense extends Admin_Controller
 			'save' => $result,
 			'id' => $id
 		);
+		$status = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? ($id !== "" ? 'Berhasil memperbarui kasbon' : 'Berhasil membuat kasbon baru') : 'Gagal menyimpan kasbon: transaksi dibatalkan',
+			$status,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'department_id' => $departement,
+				'amount' => $jumlah_kasbon,
+				'no_pr' => $no_pr,
+				'tipe_pr' => $tipe_pr,
+				'outcome' => $result ? 'saved' : 'commit_failed'
+			)
+		);
 		echo json_encode($param);
 	}
 
 	public function get_kasbon($nama = '', $departement = '')
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'filter_nama' => $nama,
+			'department_id' => $departement,
+		), array('filter_nama', 'department_id', 'record_count', 'outcome'));
+
 		$where_filter = "";
 		if (!empty($nama) && !empty($departement)) {
 			$where_filter = " AND a.nama = " . $this->db->escape($nama) . " AND a.departement = " . $this->db->escape($departement) . " ";
@@ -607,7 +720,8 @@ class Expense extends Admin_Controller
 			WHERE
 				a.status IN ('2', '3') AND
 				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . " AND
-				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.status IN ('0','1','2','3')) <= 0
+				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.status IN ('0','1','2','3','4')) <= 0 AND
+				(SELECT COUNT(ab2.id) FROM tr_expense ab2 WHERE ab2.id_kasbon = a.no_doc AND ab2.status IN ('0','1','2','3','4')) <= 0
 			
 			UNION ALL
 
@@ -635,106 +749,137 @@ class Expense extends Admin_Controller
 			WHERE
 				a.status IN ('2', '3') AND
 				a.metode_pembelian = '2' AND 
-				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3')) < 1
+				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3','4')) < 1
 		";
 
-		$data = $this->db->query($sql_kasbon)->result();
-			if (!$data) {
-				print_r($this->db->error($data));
-				exit;
-			}
+		$query = $this->db->query($sql_kasbon);
+		$this->auditObserve($query);
+		$data = $query ? $query->result() : false;
+		if (!$data) {
+			$this->completeAudit('Gagal membaca data kasbon: query error atau data kosong', 0, array(
+				'filter_nama' => $nama,
+				'department_id' => $departement,
+				'outcome' => 'query_error'
+			));
+			print_r($this->db->error($data));
+			exit;
+		}
 
-			if (!empty($data) && is_array($data)) {
-				foreach ($data as &$item) {
-					$coa_code = '';
-					$coa_name = '';
+		if (!empty($data) && is_array($data)) {
+			foreach ($data as &$item) {
+				$coa_code = '';
+				$coa_name = '';
 
-					if (!empty($item->no_doc)) {
-						// Cek apakah ada di tr_pr_detail_kasbon
-						$this->db->select('a.*');
-						$this->db->from('tr_pr_detail_kasbon a');
-						$this->db->where('a.id_kasbon', $item->no_doc);
-						$q_pr = $this->db->get()->result_array();
+				if (!empty($item->no_doc)) {
+					// Cek apakah ada di tr_pr_detail_kasbon
+					$this->db->select('a.*');
+					$this->db->from('tr_pr_detail_kasbon a');
+					$this->db->where('a.id_kasbon', $item->no_doc);
+					$q_pr = $this->db->get();
+					$this->auditObserve($q_pr);
+					$q_pr_rows = $q_pr ? $q_pr->result_array() : array();
 
-						if (!empty($q_pr)) {
-							foreach ($q_pr as $item_pr) {
-								if ($item_pr['tipe_pr'] == 'pr stok') {
-									// 1. Ambil COA dari accessories
-									if (!empty($item_pr['id_material'])) {
-										$get_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']])->row();
-										if (!empty($get_acc) && !empty($get_acc->no_coa)) {
-											$coa_code = $get_acc->no_coa;
-											$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
-											break;
-										}
+					if (!empty($q_pr_rows)) {
+						foreach ($q_pr_rows as $item_pr) {
+							$tipePr = isset($item_pr['tipe_pr']) ? $item_pr['tipe_pr'] : '';
+							if ($tipePr == 'pr stok') {
+								// 1. Ambil COA dari accessories
+								if (!empty($item_pr['id_material'])) {
+									$q_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']]);
+									$this->auditObserve($q_acc);
+									$get_acc = $q_acc ? $q_acc->row() : null;
+									if (!empty($get_acc) && !empty($get_acc->no_coa)) {
+										$coa_code = $get_acc->no_coa;
+										$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
+										break;
 									}
-								} else if ($item_pr['tipe_pr'] == 'pr departemen') {
-									// 1. Ambil COA dari detail baris rutin_non_planning_detail
-									if (!empty($item_pr['id_detail'])) {
-										$get_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
-										if (!empty($get_dtl) && !empty($get_dtl->coa)) {
-											$coa_code = $get_dtl->coa;
-											break;
-										}
+								}
+							} else if ($tipePr == 'pr departemen') {
+								// 1. Ambil COA dari detail baris rutin_non_planning_detail
+								if (!empty($item_pr['id_detail'])) {
+									$q_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']]);
+									$this->auditObserve($q_dtl);
+									$get_dtl = $q_dtl ? $q_dtl->row() : null;
+									if (!empty($get_dtl) && !empty($get_dtl->coa)) {
+										$coa_code = $get_dtl->coa;
+										break;
 									}
-									// 2. Jika detail kosong, ambil COA dari header rutin_non_planning_header
-									if (empty($coa_code) && !empty($item_pr['no_pr'])) {
-										$get_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
-										if (!empty($get_dept) && !empty($get_dept->coa)) {
-											$coa_code = $get_dept->coa;
-											break;
-										}
+								}
+								// 2. Jika detail kosong, ambil COA dari header rutin_non_planning_header
+								if (empty($coa_code) && !empty($item_pr['no_pr'])) {
+									$q_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']]);
+									$this->auditObserve($q_dept);
+									$get_dept = $q_dept ? $q_dept->row() : null;
+									if (!empty($get_dept) && !empty($get_dept->coa)) {
+										$coa_code = $get_dept->coa;
+										break;
 									}
 								}
 							}
 						}
 					}
-
-					// Fallback ke field coa / no_coa pada kasbon
-					if (empty($coa_code)) {
-						$coa_code = !empty($item->coa) ? $item->coa : '';
-					}
-					if (empty($coa_code) && !empty($item->no_doc)) {
-						$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_doc])->row();
-						if (!empty($get_kb)) {
-							$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
-						}
-					}
-
-					// Default fallback 1304-01-01
-					if (empty($coa_code)) {
-						$coa_code = '1304-01-01';
-					}
-
-					if (empty($coa_name)) {
-						$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-						if (!empty($q_coa_acc)) {
-							$coa_name = $q_coa_acc->nama;
-						} else {
-							$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
-						}
-					}
-
-					$item->coa = $coa_code;
-					$item->coa_name = $coa_name;
 				}
-			}
 
+				// Fallback ke field coa / no_coa pada kasbon
+				if (empty($coa_code)) {
+					$coa_code = !empty($item->coa) ? $item->coa : '';
+				}
+				if (empty($coa_code) && !empty($item->no_doc)) {
+					$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $item->no_doc]);
+					$this->auditObserve($q_kb);
+					$get_kb = $q_kb ? $q_kb->row() : null;
+					if (!empty($get_kb)) {
+						$coa_code = !empty($get_kb->no_coa) ? $get_kb->no_coa : (!empty($get_kb->coa) ? $get_kb->coa : '');
+					}
+				}
+
+				// Default fallback 1304-01-01
+				if (empty($coa_code)) {
+					$coa_code = '1304-01-01';
+				}
+
+				if (empty($coa_name)) {
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'");
+					$this->auditObserve($q_coa_acc);
+					$row_coa_acc = $q_coa_acc ? $q_coa_acc->row() : null;
+					if (!empty($row_coa_acc)) {
+						$coa_name = $row_coa_acc->nama;
+					} else {
+						$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
+					}
+				}
+
+				$item->coa = $coa_code;
+				$item->coa_name = $coa_name;
+			}
+		}
+
+		$this->completeAudit('Membaca data kasbon', 1, array(
+			'filter_nama' => $nama,
+			'department_id' => $departement,
+			'record_count' => is_array($data) ? count($data) : 0,
+			'outcome' => 'fetched'
+		));
 		echo json_encode($data);
 	}
 
 	// kasbon edit
 	public function kasbon_edit($id, $mod = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'mod' => $mod), array('id', 'no_doc', 'mod', 'outcome'));
 		$data = $this->Expense_model->GetDataKasbon($id);
+		$this->auditObserve($data);
 
 		$this->db->select('a.*, IF(b.code IS NULL, a.unit, b.code) as satuan');
 		$this->db->from('tr_pr_detail_kasbon a');
 		$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
-		$this->db->where('a.id_kasbon', $data->no_doc);
-		$get_pr_detail_kasbon = $this->db->get()->result_array();
+		$this->db->where('a.id_kasbon', !empty($data->no_doc) ? $data->no_doc : '');
+		$q_pr = $this->db->get();
+		$this->auditObserve($q_pr);
+		$get_pr_detail_kasbon = $q_pr ? $q_pr->result_array() : array();
 
 		$get_list_coa = $this->Expense_model->GetListCoa('Kasbon');
+		$this->auditObserve($get_list_coa);
 
 		$this->template->set('mod', $mod);
 		$this->template->set('status', $this->status);
@@ -745,19 +890,30 @@ class Expense extends Admin_Controller
 		$this->template->title('Kasbon Form');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('kasbon_form');
+		$this->completeAudit('Membuka form edit kasbon', ($data && $this->auditQueriesOk) ? 1 : 0, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'mod' => $mod,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	public function kasbon_edit_manage($id, $mod = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'mod' => $mod), array('id', 'no_doc', 'mod', 'outcome'));
 		$data = $this->Expense_model->GetDataKasbon($id);
+		$this->auditObserve($data);
 
 		$this->db->select('a.*, IF(b.code IS NULL, a.unit, b.code) as satuan');
 		$this->db->from('tr_pr_detail_kasbon a');
 		$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
-		$this->db->where('a.id_kasbon', $data->no_doc);
-		$get_pr_detail_kasbon = $this->db->get()->result_array();
+		$this->db->where('a.id_kasbon', !empty($data->no_doc) ? $data->no_doc : '');
+		$q_pr = $this->db->get();
+		$this->auditObserve($q_pr);
+		$get_pr_detail_kasbon = $q_pr ? $q_pr->result_array() : array();
 
 		$get_list_coa = $this->Expense_model->GetListCoa('Kasbon');
+		$this->auditObserve($get_list_coa);
 
 		$this->template->set('mod', $mod);
 		$this->template->set('status', $this->status);
@@ -768,22 +924,35 @@ class Expense extends Admin_Controller
 		$this->template->title('Approval Kasbon by Management');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('app_kasbon_manage');
+		$this->completeAudit('Membuka form edit approval kasbon manajemen', ($data && $this->auditQueriesOk) ? 1 : 0, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'mod' => $mod,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 	// kasbon print
 	public function kasbon_print($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'tipe_pr', 'outcome'));
 		$results = $this->Expense_model->GetDataKasbon($id);
+		$this->auditObserve($results);
 
 		if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr departemen') {
 			// PR Department print flow
 			$pr_header = $this->Expense_model->GetPrDeptHeader($results->id_pr);
+			$this->auditObserve($pr_header);
 			$pr_details = $this->Expense_model->GetPrDeptDetails($results->id_pr);
+			$this->auditObserve($pr_details);
 			$dept_name = $this->Expense_model->GetDepartmentName($pr_header->id_dept ?? '');
+			$this->auditObserve($dept_name);
 
 			// Get request by name from users table
 			$request_by = '';
 			if (!empty($pr_header->created_by)) {
-				$user = $this->db->get_where('users', ['id_user' => $pr_header->created_by])->row();
+				$q_user = $this->db->get_where('users', ['id_user' => $pr_header->created_by]);
+				$this->auditObserve($q_user);
+				$user = $q_user ? $q_user->row() : null;
 				$request_by = !empty($user) ? $user->nm_lengkap : '';
 			}
 
@@ -799,7 +968,9 @@ class Expense extends Admin_Controller
 		} else if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr stok') {
 			// PR Stok print flow
 			$pr_header = $this->Expense_model->GetPrStokHeader($results->id_pr);
+			$this->auditObserve($pr_header);
 			$pr_details = $this->Expense_model->GetPrStokDetails($pr_header->so_number ?? '');
+			$this->auditObserve($pr_details);
 
 			// Get request by name
 			$request_by = !empty($pr_header->nama_user) ? $pr_header->nama_user : '';
@@ -815,7 +986,9 @@ class Expense extends Admin_Controller
 		} else if (!empty($results->tipe_pr) && $results->tipe_pr == 'pr asset') {
 			// PR Asset print flow
 			$pr_asset = $this->Expense_model->GetPrAssetData($results->id_pr);
+			$this->auditObserve($pr_asset);
 			$dept_name = $this->Expense_model->GetDepartmentName($pr_asset->id_dept ?? '');
+			$this->auditObserve($dept_name);
 
 			// Get request by name
 			$request_by = !empty($pr_asset->nama_user) ? $pr_asset->nama_user : '';
@@ -830,16 +1003,20 @@ class Expense extends Admin_Controller
 			$this->load->view('kasbon_pr_asset_print', $data);
 		} else {
 			// Existing flow (unchanged)
-			$nmuser = $results->created_by;
-			if ($results->tipe_pr !== '') {
+			$nmuser = !empty($results->created_by) ? $results->created_by : '';
+			if (!empty($results->tipe_pr)) {
 				if ($results->tipe_pr == 'pr stok') {
 					$this->db->select('b.nm_lengkap');
 					$this->db->from('material_planning_base_on_produksi a');
 					$this->db->join('users b', 'b.id_user = a.created_by');
 					$this->db->where('a.no_pr', $results->id_pr);
-					$get_single_detail = $this->db->get()->row();
+					$q_detail = $this->db->get();
+					$this->auditObserve($q_detail);
+					$get_single_detail = $q_detail ? $q_detail->row() : null;
 
-					$nmuser = $get_single_detail->nm_lengkap;
+					if ($get_single_detail) {
+						$nmuser = $get_single_detail->nm_lengkap;
+					}
 				}
 
 				if ($results->tipe_pr == 'pr asset') {
@@ -847,9 +1024,13 @@ class Expense extends Admin_Controller
 					$this->db->from('tran_pr_header a');
 					$this->db->join('users b', 'b.id_user = a.created_by');
 					$this->db->where('a.no_pr', $results->id_pr);
-					$get_single_detail = $this->db->get()->row();
+					$q_detail = $this->db->get();
+					$this->auditObserve($q_detail);
+					$get_single_detail = $q_detail ? $q_detail->row() : null;
 
-					$nmuser = $get_single_detail->nm_lengkap;
+					if ($get_single_detail) {
+						$nmuser = $get_single_detail->nm_lengkap;
+					}
 				}
 			}
 
@@ -861,19 +1042,36 @@ class Expense extends Admin_Controller
 			);
 			$this->load->view('kasbon_print', $data);
 		}
+
+		$status = ($results && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Mencetak dokumen kasbon', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($results->no_doc) ? $results->no_doc : null,
+			'tipe_pr' => !empty($results->tipe_pr) ? $results->tipe_pr : null,
+			'outcome' => ($results && $this->auditQueriesOk) ? 'printed' : ($results ? 'query_error' : 'not_found')
+		));
 	}
 
 	public function periodik_print($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		// Fetch header record
-		$header = $this->db->get_where('tr_pengajuan_rutin', ['id' => $id])->row();
+		$q_header = $this->db->get_where('tr_pengajuan_rutin', ['id' => $id]);
+		$this->auditObserve($q_header);
+		$header = $q_header ? $q_header->row() : null;
 
 		if (empty($header)) {
+			$this->completeAudit('Gagal mencetak pengajuan periodik: data tidak ditemukan', 0, array(
+				'id' => $id,
+				'outcome' => 'not_found'
+			));
 			show_404();
 		}
 
 		// Fetch detail records
-		$detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $header->no_doc])->result();
+		$q_detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $header->no_doc]);
+		$this->auditObserve($q_detail);
+		$detail = $q_detail ? $q_detail->result() : array();
 
 		// Resolve department name
 		$dept_name = $this->Expense_model->GetDepartmentName($header->departement);
@@ -882,11 +1080,15 @@ class Expense extends Admin_Controller
 		}
 
 		// Resolve COA display for each detail record
-		foreach ($detail as $item) {
-			$coa_row = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $item->coa])->row();
-			$item->coa_display = $coa_row
-				? $coa_row->no_perkiraan . ' - ' . $coa_row->nama
-				: $item->coa;
+		if (is_array($detail)) {
+			foreach ($detail as $item) {
+				$q_coa = $this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $item->coa]);
+				$this->auditObserve($q_coa);
+				$coa_row = $q_coa ? $q_coa->row() : null;
+				$item->coa_display = $coa_row
+					? $coa_row->no_perkiraan . ' - ' . $coa_row->nama
+					: $item->coa;
+			}
 		}
 
 		// Pass resolved data to view
@@ -898,18 +1100,27 @@ class Expense extends Admin_Controller
 		);
 
 		$this->load->view('periodik_print', $view_data);
+		$this->completeAudit('Mencetak pengajuan periodik', $this->auditQueriesOk ? 1 : 0, array(
+			'id' => $id,
+			'no_doc' => $header->no_doc,
+			'outcome' => $this->auditQueriesOk ? 'printed' : 'query_error'
+		));
 	}
 
 	// kasbon view
 	public function kasbon_view($id, $mod = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'mod' => $mod), array('id', 'no_doc', 'mod', 'outcome'));
 		$data = $this->Expense_model->GetDataKasbon($id);
+		$this->auditObserve($data);
 
 		$this->db->select('a.*, b.code as satuan');
 		$this->db->from('tr_pr_detail_kasbon a');
 		$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
-		$this->db->where('a.id_kasbon', $data->no_doc);
-		$get_pr_detail_kasbon = $this->db->get()->result_array();
+		$this->db->where('a.id_kasbon', !empty($data->no_doc) ? $data->no_doc : '');
+		$q_pr = $this->db->get();
+		$this->auditObserve($q_pr);
+		$get_pr_detail_kasbon = $q_pr ? $q_pr->result_array() : array();
 
 		$this->template->set('mod', $mod);
 		$this->template->set('status', $this->status);
@@ -919,10 +1130,17 @@ class Expense extends Admin_Controller
 		$this->template->title('Kasbon Form');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('kasbon_form_detail');
+		$this->completeAudit('Membuka detail kasbon', ($data && $this->auditQueriesOk) ? 1 : 0, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'mod' => $mod,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 	// kasbon approval
 	public function kasbon_fin()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'kasbon_list_fin'), array('page', 'outcome'));
 		// $datawhere = ("a.status = 0");
 		// $data = $this->Expense_model->GetListDataKasbon($datawhere);
 		$this->template->set('status', $this->status);
@@ -931,11 +1149,16 @@ class Expense extends Admin_Controller
 		$this->template->title('Kasbon Approval by Finance');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('kasbon_list_fin');
+		$this->completeAudit('Membuka halaman approval kasbon finance', 1, array(
+			'page' => 'kasbon_list_fin',
+			'outcome' => 'rendered'
+		));
 	}
 
 	// kasbon approve
 	public function kasbon_approve($id = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'coa' => $this->input->post('coa')), array('id', 'no_coa', 'sts_finance', 'outcome'));
 		$result = false;
 		if ($id != "") {
 			// $data = array(
@@ -956,6 +1179,7 @@ class Expense extends Admin_Controller
 			];
 
 			$result 		= $this->All_model->dataUpdate('tr_kasbon', $data, array('id' => $id));
+			$this->auditObserve($result);
 			$keterangan     = "SUKSES, Update data " . $id;
 			$status         = 1;
 			$nm_hak_akses   = $this->managePermission;
@@ -968,11 +1192,23 @@ class Expense extends Admin_Controller
 			'save' => $result,
 			'id' => $id
 		);
+		$auditStatus = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menyetujui kasbon finance' : 'Gagal menyetujui kasbon finance',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_coa' => $this->input->post('coa'),
+				'sts_finance' => $result ? '1' : null,
+				'outcome' => $result ? 'approved' : ($id === '' ? 'empty_id' : 'update_failed')
+			)
+		);
 		echo json_encode($param);
 	}
 
 	public function kasbon_approve_manage($id = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'status', 'outcome'));
 		$result = false;
 		if ($id != "") {
 			$data = array(
@@ -991,6 +1227,7 @@ class Expense extends Admin_Controller
 			// ];
 
 			$result 		= $this->All_model->dataUpdate('tr_kasbon', $data, array('id' => $id));
+			$this->auditObserve($result);
 			$keterangan     = "SUKSES, Update data " . $id;
 			$status         = 1;
 			$nm_hak_akses   = $this->managePermission;
@@ -1003,64 +1240,143 @@ class Expense extends Admin_Controller
 			'save' => $result,
 			'id' => $id
 		);
+		$auditStatus = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menyetujui kasbon management' : 'Gagal menyetujui kasbon management',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'status' => $result ? 1 : null,
+				'outcome' => $result ? 'approved' : ($id === '' ? 'empty_id' : 'update_failed')
+			)
+		);
 		echo json_encode($param);
 	}
 
 	// kasbon delete
 	public function kasbon_delete($id)
 	{
-		$get_kasbon = $this->db->get_where('tr_kasbon', ['id' => $id])->row();
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
+		$q_kasbon = $this->db->get_where('tr_kasbon', ['id' => $id]);
+		$this->auditObserve($q_kasbon);
+		$get_kasbon = $q_kasbon ? $q_kasbon->row() : null;
 
-		$no_doc = $get_kasbon->no_doc;
-		$get_detail_kasbon = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $no_doc])->result_array();
-		// print_r($get_detail_kasbon);
-		// exit;
-		foreach ($get_detail_kasbon as $detail_kasbon) :
-			if ($detail_kasbon['tipe_pr'] == 'pr departemen') {
-				$this->db->update('rutin_non_planning_detail', ['kasbon_created' => null], ['id' => $detail_kasbon['id_detail']]);
+		$result = false;
+		$no_doc = null;
+		if ($get_kasbon) {
+			$no_doc = $get_kasbon->no_doc;
+			$q_detail = $this->db->get_where('tr_pr_detail_kasbon', ['id_kasbon' => $no_doc]);
+			$this->auditObserve($q_detail);
+			$get_detail_kasbon = $q_detail ? $q_detail->result_array() : array();
+			// print_r($get_detail_kasbon);
+			// exit;
+			foreach ($get_detail_kasbon as $detail_kasbon) :
+				if (isset($detail_kasbon['tipe_pr']) && $detail_kasbon['tipe_pr'] == 'pr departemen') {
+					$up = $this->db->update('rutin_non_planning_detail', ['kasbon_created' => null], ['id' => $detail_kasbon['id_detail']]);
+					$this->auditObserve($up);
+				} else {
+					$up = $this->db->update('material_planning_base_on_produksi_detail', ['kasbon_created' => null], ['id' => $detail_kasbon['id_detail']]);
+					$this->auditObserve($up);
+				}
+			endforeach;
+			$del_detail = $this->db->delete('tr_pr_detail_kasbon', ['id_kasbon' => $no_doc]);
+			$this->auditObserve($del_detail);
+			$result = $this->All_model->dataDelete('tr_kasbon', array('id' => $id));
+			$this->auditObserve($result);
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				$result = false;
 			} else {
-				$this->db->update('material_planning_base_on_produksi_detail', ['kasbon_created' => null], ['id' => $detail_kasbon['id_detail']]);
+				$this->db->trans_commit();
 			}
-		endforeach;
-		$this->db->delete('tr_pr_detail_kasbon', ['id_kasbon' => $no_doc]);
-		$result = $this->All_model->dataDelete('tr_kasbon', array('id' => $id));
-		if ($this->db->trans_status() === FALSE) {
-			$this->db->trans_rollback();
-		} else {
-			$this->db->trans_commit();
 		}
 		$param = array('delete' => $result);
+		$auditStatus = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menghapus kasbon' : 'Gagal menghapus kasbon',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'outcome' => $result ? 'deleted' : ($get_kasbon ? 'delete_failed' : 'not_found')
+			)
+		);
 		echo json_encode($param);
 	}
 
 	// list
 	public function index()
 	{
-		// $data = $this->Expense_model->GetListData(array('nama' => $this->auth->user_name(), 'pettycash' => null, 'exp_pib' => null));
-		// $data_detail = $this->Expense_model->GetListDataAll(array('nama' => $this->auth->user_name(), 'pettycash' => null, 'exp_pib' => null));
-		// $this->template->set('results', $data);
-		// $this->template->set('data_detail', $data_detail);
+		$this->beginAudit(__FUNCTION__, array('page' => 'index'), array('page', 'outcome'));
+
+		// Query daftar bank perusahaan aktif dari coa_master
+		$q_bank = $this->db->query("SELECT no_perkiraan, nama FROM " . DBACC . ".coa_master WHERE no_perkiraan LIKE '1101-02-%' AND level = '5' ORDER BY no_perkiraan");
+		$this->auditObserve($q_bank);
+		$bank_options = $q_bank ? $q_bank->result() : [];
+
+		// Hitung counter untuk badge Tab 2 (Pengembalian Kasbon) dan Tab 3 (Lebih Expense)
+		$cur_user = $this->auth->user_name();
+		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+
+		$this->db->where('lebih_bayar >', 0);
+		$this->db->where_in('status', ['3', '4']);
+		$this->db->group_start();
+		$this->db->where('id_po', null);
+		$this->db->or_where('id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('nama', $cur_user);
+		}
+		$count_pengembalian = $this->db->count_all_results('tr_expense');
+
+		$this->db->where('kurang_bayar >', 0);
+		$this->db->where('status', '2');
+		$this->db->group_start();
+		$this->db->where('id_po', null);
+		$this->db->or_where('id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('nama', $cur_user);
+		}
+		$count_lebih_expense = $this->db->count_all_results('tr_expense');
+
 		$this->template->set('status', $this->status);
+		$this->template->set('bank_options', $bank_options);
+		$this->template->set('count_pengembalian', $count_pengembalian);
+		$this->template->set('count_lebih_expense', $count_lebih_expense);
 		$this->template->page_icon('fa fa-cubes');
 		$this->template->title('Expense');
 		$this->template->render('index');
+		$this->completeAudit('Membuka daftar expense', 1, array(
+			'page' => 'index',
+			'count_pengembalian' => $count_pengembalian,
+			'count_lebih_expense' => $count_lebih_expense,
+			'outcome' => 'rendered'
+		));
 	}
 
 	// create (Direct Expense)
 	public function create()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'form'), array('page', 'pre_id', 'outcome'));
 		$detail_files = [];
 		$this->template->set('detail_files', $detail_files);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$this->auditObserve($data_budget);
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
-		$coa_field 		= $data_coa->coa;
+		$this->auditObserve($data_coa);
+		$coa_field 		= !empty($data_coa->coa) ? $data_coa->coa : '';
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+		$this->auditObserve($option_coa);
 
 		// Pre-ID No. Dokumen
 		$pre_id = '';
 		$data_gen = $this->All_model->GetOneData('ms_generate', array('tipe' => 'format_expense'));
-		if ($data_gen !== false) {
+		$this->auditObserve($data_gen);
+		if ($data_gen !== false && !empty($data_gen)) {
 			if (stripos($data_gen->info, 'YEAR', 0) !== false) {
 				$years = ($data_gen->info3 != date("Y")) ? date("Y") : $data_gen->info3;
 				$number = ($data_gen->info3 != date("Y")) ? 1 : ($data_gen->info2 + 1);
@@ -1083,23 +1399,36 @@ class Expense extends Admin_Controller
 		$this->template->title('Expense');
 
 		$this->template->render('form');
+		$status = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka form direct expense', $status, array(
+			'page' => 'form',
+			'pre_id' => $pre_id,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 	// create_report (Pertanggungjawaban Kasbon Sendigs)
 	public function create_report($id_kasbon = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id_kasbon' => $id_kasbon), array('id_kasbon', 'item_count', 'outcome'));
 		$id_kasbon = urldecode($id_kasbon);
-		$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $id_kasbon])->row();
+		$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $id_kasbon]);
+		$this->auditObserve($q_kb);
+		$data_kasbon = $q_kb ? $q_kb->row() : null;
 
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$this->auditObserve($data_budget);
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
-		$coa_field 		= $data_coa->coa;
+		$this->auditObserve($data_coa);
+		$coa_field 		= !empty($data_coa->coa) ? $data_coa->coa : '';
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+		$this->auditObserve($option_coa);
 
 		// Pre-ID No. Dokumen
 		$pre_id = '';
 		$data_gen = $this->All_model->GetOneData('ms_generate', array('tipe' => 'format_expense'));
-		if ($data_gen !== false) {
+		$this->auditObserve($data_gen);
+		if ($data_gen !== false && !empty($data_gen)) {
 			if (stripos($data_gen->info, 'YEAR', 0) !== false) {
 				$years = ($data_gen->info3 != date("Y")) ? date("Y") : $data_gen->info3;
 				$number = ($data_gen->info3 != date("Y")) ? 1 : ($data_gen->info2 + 1);
@@ -1120,31 +1449,39 @@ class Expense extends Admin_Controller
 			$this->db->from('tr_pr_detail_kasbon a');
 			$this->db->join('ms_satuan b', 'b.id = a.unit', 'left');
 			$this->db->where('a.id_kasbon', $id_kasbon);
-			$q_pr = $this->db->get()->result_array();
+			$q_pr = $this->db->get();
+			$this->auditObserve($q_pr);
+			$res_pr = $q_pr ? $q_pr->result_array() : array();
 
-			if (!empty($q_pr)) {
+			if (!empty($res_pr)) {
 				$no = 1;
-				foreach ($q_pr as $item_pr) {
+				foreach ($res_pr as $item_pr) {
 					$coa_code = '';
 					$coa_name = '';
 
-					if ($item_pr['tipe_pr'] == 'pr stok') {
+					if (isset($item_pr['tipe_pr']) && $item_pr['tipe_pr'] == 'pr stok') {
 						if (!empty($item_pr['id_material'])) {
-							$get_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']])->row();
+							$q_acc = $this->db->select('no_coa, nm_coa')->get_where('accessories', ['id' => $item_pr['id_material']]);
+							$this->auditObserve($q_acc);
+							$get_acc = $q_acc ? $q_acc->row() : null;
 							if (!empty($get_acc) && !empty($get_acc->no_coa)) {
 								$coa_code = $get_acc->no_coa;
 								$coa_name = !empty($get_acc->nm_coa) ? $get_acc->nm_coa : '';
 							}
 						}
-					} else if ($item_pr['tipe_pr'] == 'pr departemen') {
+					} else if (isset($item_pr['tipe_pr']) && $item_pr['tipe_pr'] == 'pr departemen') {
 						if (!empty($item_pr['id_detail'])) {
-							$get_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']])->row();
+							$q_dtl = $this->db->select('coa')->get_where('rutin_non_planning_detail', ['id' => $item_pr['id_detail']]);
+							$this->auditObserve($q_dtl);
+							$get_dtl = $q_dtl ? $q_dtl->row() : null;
 							if (!empty($get_dtl) && !empty($get_dtl->coa)) {
 								$coa_code = $get_dtl->coa;
 							}
 						}
 						if (empty($coa_code) && !empty($item_pr['no_pr'])) {
-							$get_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']])->row();
+							$q_dept = $this->db->select('coa')->get_where('rutin_non_planning_header', ['no_pr' => $item_pr['no_pr']]);
+							$this->auditObserve($q_dept);
+							$get_dept = $q_dept ? $q_dept->row() : null;
 							if (!empty($get_dept) && !empty($get_dept->coa)) {
 								$coa_code = $get_dept->coa;
 							}
@@ -1159,23 +1496,25 @@ class Expense extends Admin_Controller
 					}
 
 					if (empty($coa_name)) {
-						$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-						if (!empty($q_coa_acc)) {
-							$coa_name = $q_coa_acc->nama;
+						$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'");
+						$this->auditObserve($q_coa_acc);
+						$row_coa_acc = $q_coa_acc ? $q_coa_acc->row() : null;
+						if (!empty($row_coa_acc)) {
+							$coa_name = $row_coa_acc->nama;
 						} else {
 							$coa_name = ($coa_code == '1304-01-01') ? 'Peralatan Kantor' : 'Biaya Pengeluaran';
 						}
 					}
 
-					$qty_k = floatval($item_pr['qty']);
-					$harga_k = floatval($item_pr['harga']);
-					$total_k = floatval($item_pr['total_harga']);
+					$qty_k = floatval(isset($item_pr['qty']) ? $item_pr['qty'] : 0);
+					$harga_k = floatval(isset($item_pr['harga']) ? $item_pr['harga'] : 0);
+					$total_k = floatval(isset($item_pr['total_harga']) ? $item_pr['total_harga'] : 0);
 
 					$detail_items[] = [
 						'id' => $no,
-						'no_pr' => $item_pr['no_pr'],
-						'tipe_pr' => $item_pr['tipe_pr'],
-						'deskripsi' => $item_pr['nm_material'],
+						'no_pr' => isset($item_pr['no_pr']) ? $item_pr['no_pr'] : '',
+						'tipe_pr' => isset($item_pr['tipe_pr']) ? $item_pr['tipe_pr'] : '',
+						'deskripsi' => isset($item_pr['nm_material']) ? $item_pr['nm_material'] : '',
 						'keterangan' => !empty($item_pr['no_pr']) ? 'No. PR: ' . $item_pr['no_pr'] : '',
 						'tanggal' => !empty($data_kasbon->tgl_doc) ? $data_kasbon->tgl_doc : date('Y-m-d'),
 						'coa' => $coa_code,
@@ -1186,15 +1525,17 @@ class Expense extends Admin_Controller
 						'qty' => $qty_k,
 						'harga' => $harga_k,
 						'expense' => $total_k,
-						'id_expense_detail' => $item_pr['id_detail']
+						'id_expense_detail' => isset($item_pr['id_detail']) ? $item_pr['id_detail'] : ''
 					];
 					$no++;
 				}
 			} else {
 				// Kasbon umum
 				$coa_code = !empty($data_kasbon->no_coa) ? $data_kasbon->no_coa : (!empty($data_kasbon->coa) ? $data_kasbon->coa : '1304-01-01');
-				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
-				$coa_name = !empty($q_coa_acc) ? $q_coa_acc->nama : 'Peralatan Kantor';
+				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'");
+				$this->auditObserve($q_coa_acc);
+				$row_coa_acc = $q_coa_acc ? $q_coa_acc->row() : null;
+				$coa_name = !empty($row_coa_acc) ? $row_coa_acc->nama : 'Peralatan Kantor';
 
 				$j_kasbon = !empty($data_kasbon->jumlah_kasbon) ? floatval($data_kasbon->jumlah_kasbon) : 0;
 				$detail_items[] = [
@@ -1228,27 +1569,42 @@ class Expense extends Admin_Controller
 		$this->template->page_icon('fa fa-ticket');
 		$this->template->title('Expense Report');
 		$this->template->render('form_report');
+
+		$status = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka form pelaporan expense', $status, array(
+			'id_kasbon' => $id_kasbon,
+			'item_count' => count($detail_items),
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 
 	// edit
 	public function edit($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'form_type', 'outcome'));
 		$data 			= $this->Expense_model->GetDataHeader($id);
+		$this->auditObserve($data);
 		$detail_files = [];
 		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
-			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			$q_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc]);
+			$this->auditObserve($q_df);
+			$get_df = $q_df ? $q_df->result() : array();
 			foreach ($get_df as $df) {
 				$detail_files[$df->id_detail][] = $df;
 			}
 		}
 		$this->template->set('detail_files', $detail_files);
-		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
+		$data_detail	= !empty($data->no_doc) ? $this->Expense_model->GetDataDetail($data->no_doc) : array();
+		$this->auditObserve($data_detail);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$this->auditObserve($data_budget);
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
-		$coa_field 		= $data_coa->coa;
+		$this->auditObserve($data_coa);
+		$coa_field 		= !empty($data_coa->coa) ? $data_coa->coa : '';
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+		$this->auditObserve($option_coa);
 
 		$this->template->set('option_coa', $option_coa);
 		$this->template->set('data_budget', $data_budget);
@@ -1258,28 +1614,42 @@ class Expense extends Admin_Controller
 		$this->template->set('stsview', '');
 
 		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
-		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
-			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+		$form_type = 'direct';
+		if (!empty($data) && (!empty($data->id_kasbon) || (isset($data->total_kasbon) && floatval($data->total_kasbon) > 0))) {
+			$form_type = 'report';
+			$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon]);
+			$this->auditObserve($q_kb);
+			$data_kasbon = $q_kb ? $q_kb->row() : null;
+
 			$detail_items = [];
-			foreach ($data_detail as $rec) {
-				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
-				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
-				$detail_items[] = [
-					'id' => $rec->id,
-					'deskripsi' => $rec->deskripsi,
-					'keterangan' => $rec->keterangan,
-					'tanggal' => $rec->tanggal,
-					'coa' => $row_coa,
-					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
-					'qty_kasbon' => floatval($rec->qty),
-					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
-					'total_kasbon' => floatval($rec->kasbon),
-					'qty' => floatval($rec->qty),
-					'harga' => floatval($rec->harga),
-					'expense' => floatval($rec->expense),
-					'doc_file' => $rec->doc_file,
-					'id_expense_detail' => $rec->id_expense_detail
-				];
+			if (is_array($data_detail)) {
+				foreach ($data_detail as $rec) {
+					$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+					$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'");
+					$this->auditObserve($q_c);
+					$row_c = $q_c ? $q_c->row() : null;
+					$rec_qty = isset($rec->qty) ? floatval($rec->qty) : 0;
+					$rec_kasbon = isset($rec->kasbon) ? floatval($rec->kasbon) : 0;
+					$rec_harga = isset($rec->harga) ? floatval($rec->harga) : 0;
+					$rec_expense = isset($rec->expense) ? floatval($rec->expense) : 0;
+
+					$detail_items[] = [
+						'id' => isset($rec->id) ? $rec->id : null,
+						'deskripsi' => isset($rec->deskripsi) ? $rec->deskripsi : '',
+						'keterangan' => isset($rec->keterangan) ? $rec->keterangan : '',
+						'tanggal' => isset($rec->tanggal) ? $rec->tanggal : '',
+						'coa' => $row_coa,
+						'coa_name' => !empty($row_c) ? $row_c->nama : 'Peralatan Kantor',
+						'qty_kasbon' => $rec_qty,
+						'harga_kasbon' => floatval($rec_kasbon > 0 ? ($rec_kasbon / ($rec_qty > 0 ? $rec_qty : 1)) : $rec_harga),
+						'total_kasbon' => $rec_kasbon,
+						'qty' => $rec_qty,
+						'harga' => $rec_harga,
+						'expense' => $rec_expense,
+						'doc_file' => isset($rec->doc_file) ? $rec->doc_file : null,
+						'id_expense_detail' => isset($rec->id_expense_detail) ? $rec->id_expense_detail : null
+					];
+				}
 			}
 			$this->template->set('data_kasbon', $data_kasbon);
 			$this->template->set('detail_items', $detail_items);
@@ -1291,26 +1661,42 @@ class Expense extends Admin_Controller
 			$this->template->title('Expense');
 			$this->template->render('form');
 		}
+
+		$status = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Membuka form edit expense', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'form_type' => $form_type,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	// view
 	public function view($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'form_type', 'outcome'));
 		$data = $this->Expense_model->GetDataHeader($id);
+		$this->auditObserve($data);
 		$detail_files = [];
 		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
-			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			$q_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc]);
+			$this->auditObserve($q_df);
+			$get_df = $q_df ? $q_df->result() : array();
 			foreach ($get_df as $df) {
 				$detail_files[$df->id_detail][] = $df;
 			}
 		}
 		$this->template->set('detail_files', $detail_files);
-		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
+		$data_detail	= !empty($data->no_doc) ? $this->Expense_model->GetDataDetail($data->no_doc) : array();
+		$this->auditObserve($data_detail);
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$this->auditObserve($data_budget);
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
-		$coa_field 		= $data_coa->coa;
+		$this->auditObserve($data_coa);
+		$coa_field 		= !empty($data_coa->coa) ? $data_coa->coa : '';
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
+		$this->auditObserve($option_coa);
 
 		$this->template->set('option_coa', $option_coa);
 		$this->template->set('data_budget', $data_budget);
@@ -1320,28 +1706,42 @@ class Expense extends Admin_Controller
 		$this->template->set('stsview', 'view');
 
 		// Deteksi apakah Expense Report (ada Kasbon) atau Direct Expense
-		if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
-			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+		$form_type = 'direct';
+		if (!empty($data) && (!empty($data->id_kasbon) || (isset($data->total_kasbon) && floatval($data->total_kasbon) > 0))) {
+			$form_type = 'report';
+			$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon]);
+			$this->auditObserve($q_kb);
+			$data_kasbon = $q_kb ? $q_kb->row() : null;
+
 			$detail_items = [];
-			foreach ($data_detail as $rec) {
-				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
-				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
-				$detail_items[] = [
-					'id' => $rec->id,
-					'deskripsi' => $rec->deskripsi,
-					'keterangan' => $rec->keterangan,
-					'tanggal' => $rec->tanggal,
-					'coa' => $row_coa,
-					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
-					'qty_kasbon' => floatval($rec->qty),
-					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
-					'total_kasbon' => floatval($rec->kasbon),
-					'qty' => floatval($rec->qty),
-					'harga' => floatval($rec->harga),
-					'expense' => floatval($rec->expense),
-					'doc_file' => $rec->doc_file,
-					'id_expense_detail' => $rec->id_expense_detail
-				];
+			if (is_array($data_detail)) {
+				foreach ($data_detail as $rec) {
+					$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+					$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'");
+					$this->auditObserve($q_c);
+					$row_c = $q_c ? $q_c->row() : null;
+					$rec_qty = isset($rec->qty) ? floatval($rec->qty) : 0;
+					$rec_kasbon = isset($rec->kasbon) ? floatval($rec->kasbon) : 0;
+					$rec_harga = isset($rec->harga) ? floatval($rec->harga) : 0;
+					$rec_expense = isset($rec->expense) ? floatval($rec->expense) : 0;
+
+					$detail_items[] = [
+						'id' => isset($rec->id) ? $rec->id : null,
+						'deskripsi' => isset($rec->deskripsi) ? $rec->deskripsi : '',
+						'keterangan' => isset($rec->keterangan) ? $rec->keterangan : '',
+						'tanggal' => isset($rec->tanggal) ? $rec->tanggal : '',
+						'coa' => $row_coa,
+						'coa_name' => !empty($row_c) ? $row_c->nama : 'Peralatan Kantor',
+						'qty_kasbon' => $rec_qty,
+						'harga_kasbon' => floatval($rec_kasbon > 0 ? ($rec_kasbon / ($rec_qty > 0 ? $rec_qty : 1)) : $rec_harga),
+						'total_kasbon' => $rec_kasbon,
+						'qty' => $rec_qty,
+						'harga' => $rec_harga,
+						'expense' => $rec_expense,
+						'doc_file' => isset($rec->doc_file) ? $rec->doc_file : null,
+						'id_expense_detail' => isset($rec->id_expense_detail) ? $rec->id_expense_detail : null
+					];
+				}
 			}
 			$this->template->set('data_kasbon', $data_kasbon);
 			$this->template->set('detail_items', $detail_items);
@@ -1353,16 +1753,29 @@ class Expense extends Admin_Controller
 			$this->template->title('Expense');
 			$this->template->render('form');
 		}
+
+		$status = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Melihat detail expense', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'form_type' => $form_type,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 	// print
 	public function expense_print($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$response = $this->Expense_model->GetDataHeader($id);
-		$data_detail	= $this->Expense_model->GetDataDetail($response->no_doc);
+		$this->auditObserve($response);
+		$data_detail = (!empty($response) && !empty($response->no_doc)) ? $this->Expense_model->GetDataDetail($response->no_doc) : array();
+		$this->auditObserve($data_detail);
 
 		$detail_files = [];
-		if (!empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
-			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc])->result();
+		if (!empty($response) && !empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$q_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc]);
+			$this->auditObserve($q_df);
+			$get_df = $q_df ? $q_df->result() : array();
 			foreach ($get_df as $df) {
 				$detail_files[$df->id_detail][] = $df;
 			}
@@ -1375,15 +1788,27 @@ class Expense extends Admin_Controller
 			'detail_files'	=> $detail_files,
 		);
 		$this->load->view('expense_print', $data);
+
+		$status = ($response && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Mencetak dokumen expense', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($response->no_doc) ? $response->no_doc : null,
+			'outcome' => ($response && $this->auditQueriesOk) ? 'printed' : ($response ? 'query_error' : 'not_found')
+		));
 	}
 	public function expense_pettycash_print($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$response = $this->Expense_model->GetDataHeader($id);
-		$data_detail	= $this->Expense_model->GetDataDetail($response->no_doc);
+		$this->auditObserve($response);
+		$data_detail = (!empty($response) && !empty($response->no_doc)) ? $this->Expense_model->GetDataDetail($response->no_doc) : array();
+		$this->auditObserve($data_detail);
 
 		$detail_files = [];
-		if (!empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
-			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc])->result();
+		if (!empty($response) && !empty($response->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
+			$q_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $response->no_doc]);
+			$this->auditObserve($q_df);
+			$get_df = $q_df ? $q_df->result() : array();
 			foreach ($get_df as $df) {
 				$detail_files[$df->id_detail][] = $df;
 			}
@@ -1396,39 +1821,64 @@ class Expense extends Admin_Controller
 			'detail_files'	=> $detail_files,
 		);
 		$this->load->view('expense_pettycash_print', $data);
+
+		$status = ($response && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Mencetak dokumen expense pettycash', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($response->no_doc) ? $response->no_doc : null,
+			'outcome' => ($response && $this->auditQueriesOk) ? 'printed' : ($response ? 'query_error' : 'not_found')
+		));
 	}
 	public function list_expense_approval()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'index_approval'), array('page', 'outcome'));
 		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Expense Approval By Finance');
 		$this->template->render('index_approval');
+		$this->completeAudit('Membuka daftar approval expense finance', 1, array(
+			'page' => 'index_approval',
+			'outcome' => 'rendered'
+		));
 	}
 
 	public function list_expense_approval_manage()
 	{
-
+		$this->beginAudit(__FUNCTION__, array('page' => 'index_approval_manage'), array('page', 'item_count', 'outcome'));
 		// $data = $this->Expense_model->GetListData('sts_finance = "1"');
 
-		$this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
+		$this->db->select('a.*, COALESCE(NULLIF(a.jumlah, 0), SUM(b.total_harga), 0) as nominal, c.username as nmuser, d.username as nmapproval');
 		$this->db->from('tr_expense a');
 		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama=c.username', 'left');
 		$this->db->join('users d', 'a.approval=d.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '1');
-		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		$this->db->group_by('a.no_doc');
-		$data = $this->db->get()->result();
+		$q_data = $this->db->get();
+		$this->auditObserve($q_data);
+		$data = $q_data ? $q_data->result() : array();
 
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Expense Approval By Management');
 		$this->template->render('index_approval_manage');
+
+		$status = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka daftar approval expense management', $status, array(
+			'page' => 'index_approval_manage',
+			'item_count' => is_array($data) ? count($data) : 0,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 	public function expense_list_all()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'index', 'all' => 1), array('page', 'all', 'outcome'));
 		// $data = $this->Expense_model->GetListData();
 		// $data_detail = $this->Expense_model->GetListDataAll();
 		// $this->template->page_icon('fa fa-list');
@@ -1438,26 +1888,43 @@ class Expense extends Admin_Controller
 		// $this->template->set('results', $data);
 		// $this->template->set('data_detail', $data_detail);
 		$this->template->render('index');
+		$this->completeAudit('Membuka seluruh daftar expense report', 1, array(
+			'page' => 'index',
+			'all' => 1,
+			'outcome' => 'rendered'
+		));
 	}
 
 	public function approval($id)
 	{
-		$data 			= $this->Expense_model->GetDataHeader($id);
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'form_type', 'outcome'));
+		$data = $this->Expense_model->GetDataHeader($id);
+		$this->auditObserve($data);
+
 		$detail_files = [];
 		if (!empty($data->no_doc) && $this->db->table_exists('tr_expense_detail_file')) {
-			$get_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc])->result();
+			$q_df = $this->db->get_where('tr_expense_detail_file', ['no_doc' => $data->no_doc]);
+			$this->auditObserve($q_df);
+			$get_df = $q_df ? $q_df->result() : array();
 			foreach ($get_df as $df) {
 				$detail_files[$df->id_detail][] = $df;
 			}
 		}
 		$this->template->set('detail_files', $detail_files);
-		$data_detail 	= $this->Expense_model->GetDataDetail($data->no_doc);
+		$data_detail 	= !empty($data->no_doc) ? $this->Expense_model->GetDataDetail($data->no_doc) : array();
+		$this->auditObserve($data_detail);
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
+		$this->auditObserve($data_budget);
 		$data_coa 		= $this->Coa_expense_model->GetDataWithJenis('Expense');
-		$coa_field 		= $data_coa->coa;
+		$this->auditObserve($data_coa);
+		$coa_field 		= !empty($data_coa->coa) ? $data_coa->coa : '';
 		$coa_array 		= explode(';', $coa_field);
 		$option_coa 	= $this->All_model->GetListCoa($coa_array);
-		$list_bank 		= $this->db->get_where('ms_bank', ['deleted' => 0])->result_array();
+		$this->auditObserve($option_coa);
+		$q_bank 		= $this->db->get_where('ms_bank', ['deleted' => 0]);
+		$this->auditObserve($q_bank);
+		$list_bank 		= $q_bank ? $q_bank->result_array() : array();
+
 		$this->template->set('list_bank', $list_bank);
 		$this->template->set('data_coa', $data_coa);
 		$this->template->set('option_coa', $option_coa);
@@ -1468,30 +1935,45 @@ class Expense extends Admin_Controller
 		$this->template->set('stsview', 'approval');
 		$this->template->page_icon('fa fa-list');
 
+		$form_type = 'direct';
 		if (!empty($data->pettycash)) {
+			$form_type = 'pc';
 			$this->template->render('form_pc');
-		} else if (!empty($data->id_kasbon) || floatval($data->total_kasbon) > 0) {
-			$data_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+		} else if (!empty($data->id_kasbon) || (isset($data->total_kasbon) && floatval($data->total_kasbon) > 0)) {
+			$form_type = 'report';
+			$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon]);
+			$this->auditObserve($q_kb);
+			$data_kasbon = $q_kb ? $q_kb->row() : null;
+
 			$detail_items = [];
-			foreach ($data_detail as $rec) {
-				$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
-				$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'")->row();
-				$detail_items[] = [
-					'id' => $rec->id,
-					'deskripsi' => $rec->deskripsi,
-					'keterangan' => $rec->keterangan,
-					'tanggal' => $rec->tanggal,
-					'coa' => $row_coa,
-					'coa_name' => !empty($q_c) ? $q_c->nama : 'Peralatan Kantor',
-					'qty_kasbon' => floatval($rec->qty),
-					'harga_kasbon' => floatval($rec->kasbon > 0 ? ($rec->kasbon / ($rec->qty > 0 ? $rec->qty : 1)) : $rec->harga),
-					'total_kasbon' => floatval($rec->kasbon),
-					'qty' => floatval($rec->qty),
-					'harga' => floatval($rec->harga),
-					'expense' => floatval($rec->expense),
-					'doc_file' => $rec->doc_file,
-					'id_expense_detail' => $rec->id_expense_detail
-				];
+			if (is_array($data_detail)) {
+				foreach ($data_detail as $rec) {
+					$row_coa = !empty($rec->coa) ? $rec->coa : '1304-01-01';
+					$q_c = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $row_coa . "'");
+					$this->auditObserve($q_c);
+					$row_c = $q_c ? $q_c->row() : null;
+					$rec_qty = isset($rec->qty) ? floatval($rec->qty) : 0;
+					$rec_kasbon = isset($rec->kasbon) ? floatval($rec->kasbon) : 0;
+					$rec_harga = isset($rec->harga) ? floatval($rec->harga) : 0;
+					$rec_expense = isset($rec->expense) ? floatval($rec->expense) : 0;
+
+					$detail_items[] = [
+						'id' => isset($rec->id) ? $rec->id : null,
+						'deskripsi' => isset($rec->deskripsi) ? $rec->deskripsi : '',
+						'keterangan' => isset($rec->keterangan) ? $rec->keterangan : '',
+						'tanggal' => isset($rec->tanggal) ? $rec->tanggal : '',
+						'coa' => $row_coa,
+						'coa_name' => !empty($row_c) ? $row_c->nama : 'Peralatan Kantor',
+						'qty_kasbon' => $rec_qty,
+						'harga_kasbon' => floatval($rec_kasbon > 0 ? ($rec_kasbon / ($rec_qty > 0 ? $rec_qty : 1)) : $rec_harga),
+						'total_kasbon' => $rec_kasbon,
+						'qty' => $rec_qty,
+						'harga' => $rec_harga,
+						'expense' => $rec_expense,
+						'doc_file' => isset($rec->doc_file) ? $rec->doc_file : null,
+						'id_expense_detail' => isset($rec->id_expense_detail) ? $rec->id_expense_detail : null
+					];
+				}
 			}
 			$this->template->set('data_kasbon', $data_kasbon);
 			$this->template->set('detail_items', $detail_items);
@@ -1499,111 +1981,139 @@ class Expense extends Admin_Controller
 		} else {
 			$this->template->render('form');
 		}
+
+		$status = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Membuka form approval expense', $status, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'form_type' => $form_type,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	// approve
 	public function approve($id = '')
 	{
-
-
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'stage', 'status', 'outcome'));
 		$result = false;
+		$stage = null;
+		$auditStatusVal = null;
+		$err_msg = '';
+
 		if ($id != "") {
-			$get_expense 		= $this->db->get_where('tr_expense', ['id' => $id])->row();
-			$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $get_expense->no_doc])->result();
+			$q_expense 		= $this->db->get_where('tr_expense', ['id' => $id]);
+			$this->auditObserve($q_expense);
+			$get_expense 	= $q_expense ? $q_expense->row() : null;
 
-			if ($get_expense->sts_finance == '0') {
-				$arr_update = [
-					'sts_finance' => '1',
-					'app_finance_date' => date('Y-m-d H:i:s')
-				];
-
-				$update_expense = $this->db->update('tr_expense', $arr_update, ['id' => $id]);
-				if ($update_expense) {
-					$result = true;
+			if ($get_expense) {
+				// BR-12: Pelapor tidak boleh meng-approve laporannya sendiri
+				$current_user = $this->auth->user_name();
+				if (!empty($get_expense->nama) && $get_expense->nama === $current_user) {
+					$param = array(
+						'save' => false,
+						'message' => 'Anda tidak dapat menyetujui laporan expense yang Anda buat sendiri (Segregation of Duties)!'
+					);
+					echo json_encode($param);
+					return;
 				}
-			} else {
-				if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar > 0) {
-					$data = array(
-						array(
-							'id' => $id,
-							'status' => 1,
-							'st_reject' => "",
-							'approved_by' => $this->auth->user_name(),
-							'approved_on' => date("Y-m-d h:i:s")
-						)
-					);
-				} else if ($get_expense->id_kasbon != null && $get_expense->kurang_bayar == null) {
-					$data = array(
-						array(
-							'id' => $id,
-							'status' => 3,
-							'st_reject' => "",
-							'approved_by' => $this->auth->user_name(),
-							'approved_on' => date("Y-m-d h:i:s")
-						)
-					);
-				} else if ($get_expense->id_kasbon != null && $get_expense->lebih_bayar != null) {
-					$data = array(
-						array(
-							'id' => $id,
-							'status' => 3,
-							'st_reject' => "",
-							'approved_by' => $this->auth->user_name(),
-							'approved_on' => date("Y-m-d h:i:s")
-						)
-					);
+
+				$q_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $get_expense->no_doc]);
+				$this->auditObserve($q_detail);
+				$get_expense_detail = $q_detail ? $q_detail->result() : array();
+
+				// Evaluasi tahap approval: jika sts_finance belum '1' dan status == 0 -> Tahap 1 (Finance)
+				if ($get_expense->sts_finance != '1' && (string)$get_expense->status === '0') {
+					$stage = 'finance';
+					$arr_update = [
+						'sts_finance' => '1',
+						'app_finance_date' => date('Y-m-d H:i:s'),
+						'status' => 1,
+						'approved_by' => $this->auth->user_name(),
+						'approved_on' => date('Y-m-d H:i:s'),
+						'st_reject' => null,
+						'reject_reason' => null,
+						'reject_reason_finance' => null
+					];
+
+					$update_expense = $this->db->update('tr_expense', $arr_update, ['id' => $id]);
+					$this->auditObserve($update_expense);
+					if ($update_expense) {
+						$result = true;
+						$auditStatusVal = '1';
+					}
 				} else {
-					$data = array(
-						array(
-							'id' => $id,
-							'status' => 1,
-							'st_reject' => "",
-							'approved_by' => $this->auth->user_name(),
-							'approved_on' => date("Y-m-d h:i:s")
-						)
-					);
+					// Tahap 2: Direktur / Management Approval
+					$stage = 'management';
+
+					$tot_kasbon = floatval($get_expense->total_kasbon);
+					$tot_expense = floatval($get_expense->jumlah);
+					if ($tot_kasbon <= 0 && !empty($get_expense->id_kasbon)) {
+						$qkb = $this->db->get_where('tr_kasbon', ['no_doc' => $get_expense->id_kasbon])->row();
+						if ($qkb) {
+							$tot_kasbon = floatval($qkb->jumlah_kasbon);
+						}
+					}
+					$selisih = $tot_kasbon - $tot_expense;
+
+					// Jika Lebih Kasbon (kasbon > expense) -> status 3 (Menunggu Pengembalian Kasbon)
+					// Jika Sama / Lebih Expense atau Direct Expense -> status 2 (Selesai/Approved)
+					if ($selisih > 0 && $tot_kasbon > 0) {
+						$statusTarget = 3;
+					} else {
+						$statusTarget = 2;
+					}
+
+					$arr_update = [
+						'status' => $statusTarget,
+						'status_manage' => 1,
+						'approved_by_manage' => $this->auth->user_name(),
+						'approved_on_manage' => date('Y-m-d H:i:s'),
+						'tgl_approval_direktur' => date('Y-m-d H:i:s'),
+						'sts_reject_manage' => null,
+						'st_reject' => null,
+						'reject_reason' => null
+					];
+
+					$update_expense = $this->db->update('tr_expense', $arr_update, ['id' => $id]);
+					$this->auditObserve($update_expense);
+					if ($update_expense) {
+						$result = true;
+						$auditStatusVal = (string)$statusTarget;
+
+						// Update detail rows status ke 2
+						$this->db->update('tr_expense_detail', ['status' => 2], ['no_doc' => $get_expense->no_doc]);
+
+						// Posting JURNAL 1 final saat disetujui Direktur
+						if (method_exists($this, '_post_jurnal_expense_report')) {
+							$this->_post_jurnal_expense_report($id);
+						}
+
+						$keterangan     = "SUKSES, Approve Direktur/Management expense " . $id;
+						$status_act     = 1;
+						$nm_hak_akses   = $this->managePermission;
+						$kode_universal = $id;
+						$jumlah 		= 1;
+						$sql            = $this->db->last_query();
+						simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status_act);
+					}
 				}
-				$result = $this->Expense_model->update_batch($data, 'id');
-
-				$nilai_expense = 0;
-				foreach ($get_expense_detail as $item) {
-					$nilai_expense += $item->expense;
-					$detail = array(
-						'status' => 2,
-					);
-					$this->db->update('tr_expense_detail', $detail, ['id' => $item->id]);
-				}
-
-				// Posting otomatis ke tr_jurnal jika Expense Report (Lebih Expense atau Impas)
-				$this->_post_jurnal_expense_report($id);
-
-				// if ($get_expense->pettycash !== '' && $get_expense->pettycash !== null) {
-				// 	$get_pettycash = $this->db->get_where('ms_petty_cash', ['nama' => $get_expense->pettycash])->row();
-
-				// 	$nilai_update_pettycash = ($get_pettycash->budget - $nilai_expense);
-
-				// 	$this->db->update('ms_petty_cash', ['budget' => $nilai_update_pettycash], ['id' => $get_pettycash->id]);
-				// 	$this->db->update('tr_pengembalian_expense', [
-				// 		'status' => 1,
-				// 		'app_by' => $this->auth->user_id(),
-				// 		'app_date' => date('Y-m-d H:i:s')
-				// 	], [
-				// 		'id_expense_pettycash' => $get_expense->no_doc
-				// 	]);
-				// }
-
-				$keterangan     = "SUKSES, Approve data " . $id;
-				$status         = 1;
-				$nm_hak_akses   = $this->managePermission;
-				$kode_universal = $id;
-				$jumlah 		= 1;
-				$sql            = $this->db->last_query();
-				simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
 			}
 		}
 		$param = array(
 			'save' => $result,
-			'id' => $id
+			'id' => $id,
+			'message' => $result ? 'Berhasil menyetujui expense.' : ($err_msg ?: 'Gagal memproses persetujuan.')
+		);
+		$auditStatus = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? ('Berhasil menyetujui expense (' . ($stage ?: 'approval') . ')') : 'Gagal menyetujui expense',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'stage' => $stage,
+				'status' => $auditStatusVal,
+				'outcome' => $result ? 'approved' : ($id === '' ? 'empty_id' : (!empty($get_expense) ? 'update_failed' : 'not_found'))
+			)
 		);
 		echo json_encode($param);
 	}
@@ -1611,6 +2121,12 @@ class Expense extends Admin_Controller
 	// save
 	public function save()
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'id' => $this->input->post('id'),
+			'no_doc' => $this->input->post('no_doc'),
+			'departement' => $this->input->post('departement')
+		), array('id', 'no_doc', 'departement', 'amount', 'outcome', 'reason'));
+
 		$post = $this->input->post();
 
 		$id             		= $this->input->post("id");
@@ -1676,21 +2192,74 @@ class Expense extends Admin_Controller
 					'save' => false,
 					'message' => implode(', ', $upload_errors)
 				);
+				$this->completeAudit('Gagal menyimpan expense (validasi bon bukti)', 0, array(
+					'id' => $id,
+					'no_doc' => $no_doc,
+					'departement' => $departement,
+					'amount' => $total_expense,
+					'outcome' => 'validation_failed',
+					'reason' => 'bon_bukti_required'
+				));
 				echo json_encode($param);
 				return;
 			}
 		}
 
-		// Validasi server-side: jika LEBIH KASBON (Kasbon > Expense), bukti transfer pengembalian WAJIB diupload
-		$grand_total_check = $total_kasbon - $total_expense;
-		if ($grand_total_check > 0 && $total_kasbon > 0) {
-			$has_existing_bukti = !empty($post['existing_bukti_pengembalian']);
-			$has_new_bukti = !empty($_FILES['bukti_pengembalian']['name'][0]);
-			if (!$has_existing_bukti && !$has_new_bukti) {
+		// Validasi server-side: Keterangan laporan wajib diisi (FR-F06)
+		if (empty(trim((string)$informasi))) {
+			$param = array(
+				'save' => false,
+				'message' => 'Keterangan laporan expense wajib diisi!'
+			);
+			echo json_encode($param);
+			return;
+		}
+
+		// Validasi server-side: Total realisasi pengeluaran harus > 0 (FR-F08)
+		if ($total_expense <= 0) {
+			$param = array(
+				'save' => false,
+				'message' => 'Total realisasi pengeluaran harus lebih dari 0!'
+			);
+			echo json_encode($param);
+			return;
+		}
+
+		// Validasi server-side (FR-F05): Setiap item Expense Report dengan nilai realisasi > 0 WAJIB memiliki minimal 1 file bon/nota
+		$is_expense_report = !empty($no_doc_kasbon) || !empty($id_kasbon);
+		if ($is_expense_report && !empty($detail_id)) {
+			$missing_proof = [];
+			foreach ($detail_id as $keys => $val) {
+				$exp_val = isset($expense[$keys]) ? floatval($expense[$keys]) : (isset($qty[$keys], $harga[$keys]) ? floatval($qty[$keys]) * floatval($harga[$keys]) : 0);
+				if ($exp_val > 0) {
+					$has_new = !empty($_FILES['doc_files_' . $val]['name'][0]) || !empty($_FILES['doc_file_' . $val]['name']);
+					$has_existing = !empty($post['existing_files_' . $val]) || !empty($filename[$keys]);
+					if (!$has_new && !$has_existing) {
+						// Periksa juga ke database tr_expense_detail_file jika sedang mode edit/revisi
+						$existing_in_db = 0;
+						if (!empty($id_detail[$keys])) {
+							$existing_in_db = $this->db->get_where('tr_expense_detail_file', ['id_detail' => $id_detail[$keys]])->num_rows();
+						}
+						if ($existing_in_db == 0) {
+							$item_label = !empty($deskripsi[$keys]) ? $deskripsi[$keys] : 'Baris ' . ($keys + 1);
+							$missing_proof[] = $item_label;
+						}
+					}
+				}
+			}
+			if (!empty($missing_proof)) {
 				$param = array(
 					'save' => false,
-					'message' => 'Terdapat Lebih Kasbon sebesar Rp ' . number_format($grand_total_check) . '. Bukti Transfer Balik (Pengembalian ke Kantor) WAJIB diupload!'
+					'message' => 'Bon / Bukti pengeluaran wajib dilampirkan untuk setiap item yang ada realisasinya. Belum ada bukti pada: ' . implode(', ', $missing_proof)
 				);
+				$this->completeAudit('Gagal menyimpan expense (validasi bukti item wajib)', 0, array(
+					'id' => $id,
+					'no_doc' => $no_doc,
+					'departement' => $departement,
+					'amount' => $total_expense,
+					'outcome' => 'validation_failed',
+					'reason' => 'item_proof_required'
+				));
 				echo json_encode($param);
 				return;
 			}
@@ -2024,15 +2593,22 @@ class Expense extends Admin_Controller
 					'save' => false,
 					'message' => $upload_failed_msg
 				);
+				$this->completeAudit('Gagal memperbarui expense (upload file gagal)', 0, array(
+					'id' => $id,
+					'no_doc' => $no_doc,
+					'departement' => $departement,
+					'amount' => $total_expense,
+					'outcome' => 'upload_failed',
+					'reason' => $upload_failed_msg
+				));
 				echo json_encode($param);
 				return;
 			}
 
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
-				$this->db->trans_commit();
 				$result = TRUE;
 			}
 		}
@@ -2275,15 +2851,22 @@ class Expense extends Admin_Controller
 					'save' => false,
 					'message' => $upload_failed_msg
 				);
+				$this->completeAudit('Gagal membuat expense baru (upload file gagal)', 0, array(
+					'id' => $id,
+					'no_doc' => $no_doc,
+					'departement' => $departement,
+					'amount' => $total_expense,
+					'outcome' => 'upload_failed',
+					'reason' => $upload_failed_msg
+				));
 				echo json_encode($param);
 				return;
 			}
 
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
-				$this->db->trans_commit();
 				$result = TRUE;
 			}
 		}
@@ -2293,41 +2876,88 @@ class Expense extends Admin_Controller
 			'save' => $result,
 			'id' => $id
 		);
+		$status = $result ? 1 : 0;
+		$isUpdate = ($id != "");
+		$this->completeAudit(
+			$result ? ($isUpdate ? 'Berhasil memperbarui expense' : 'Berhasil membuat expense baru') : 'Gagal menyimpan expense: transaksi dibatalkan',
+			$status,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'departement' => $departement,
+				'amount' => $total_expense,
+				'outcome' => $result ? ($isUpdate ? 'updated' : 'created') : 'transaction_failed'
+			)
+		);
 		echo json_encode($param);
 	}
 
 	// delete
 	public function delete($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$this->db->trans_begin();
 		$data = $this->Expense_model->GetDataHeader($id);
+		$this->auditObserve($data !== false);
 
-		$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc])->result();
-		foreach ($get_expense_detail as $item) {
-			if ($item->kasbon_pr_non_po_pett !== null) {
-				$this->db->update('tr_kasbon', ['id_expense_pett_pr_non_po' => null], ['id_expense_pett_pr_non_po' => $data->no_doc]);
+		$result = false;
+		$no_doc = null;
+		if ($data) {
+			$no_doc = !empty($data->no_doc) ? $data->no_doc : null;
+			$q_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc]);
+			$this->auditObserve($q_detail);
+			$get_expense_detail = $q_detail ? $q_detail->result() : array();
+			if (is_array($get_expense_detail)) {
+				foreach ($get_expense_detail as $item) {
+					if (isset($item->kasbon_pr_non_po_pett) && $item->kasbon_pr_non_po_pett !== null) {
+						$u_kb = $this->db->update('tr_kasbon', ['id_expense_pett_pr_non_po' => null], ['id_expense_pett_pr_non_po' => $data->no_doc]);
+						$this->auditObserve($u_kb);
+					}
+					if (isset($item->id_expense_bayar_sisa) && $item->id_expense_bayar_sisa !== null) {
+						$u_ex = $this->db->update('tr_expense', ['expense_id_kembalian' => null], ['expense_id_kembalian' => $data->no_doc]);
+						$this->auditObserve($u_ex);
+						$d_pg = $this->db->delete('tr_pengembalian_expense', ['id_expense_pettycash' => $data->no_doc]);
+						$this->auditObserve($d_pg);
+					}
+				}
 			}
-			if ($item->id_expense_bayar_sisa !== null) {
-				$this->db->update('tr_expense', ['expense_id_kembalian' => null], ['expense_id_kembalian' => $data->no_doc]);
-				$this->db->delete('tr_pengembalian_expense', ['id_expense_pettycash' => $data->no_doc]);
-			}
-		}
 
-		$this->All_model->dataDelete('tr_expense_detail', array('no_doc' => $data->no_doc));
-		$this->All_model->dataDelete('tr_expense', array('no_doc' => $data->no_doc));
-		if ($this->db->trans_status() === FALSE) {
-			$this->db->trans_rollback();
-			$result = FALSE;
+			$d1 = $this->All_model->dataDelete('tr_expense_detail', array('no_doc' => $data->no_doc));
+			$this->auditObserve($d1);
+			$d2 = $this->All_model->dataDelete('tr_expense', array('no_doc' => $data->no_doc));
+			$this->auditObserve($d2);
+
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+				$this->db->trans_rollback();
+				$result = false;
+			} else {
+				$result = true;
+			}
 		} else {
-			$this->db->trans_commit();
-			$result = TRUE;
+			$this->db->trans_rollback();
 		}
 		$param = array('delete' => $result);
+		$auditStatus = $result ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menghapus expense' : 'Gagal menghapus expense',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'outcome' => $result ? 'deleted' : ($data ? 'delete_failed' : 'not_found')
+			)
+		);
 		echo json_encode($param);
 	}
 
 	function cekbudget()
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'coa' => $this->input->post('coa'),
+			'tgl_doc' => $this->input->post('tgl_doc'),
+			'dtl' => $this->input->post('dtl')
+		), array('coa', 'tahun', 'sisa', 'outcome'));
+
 		$dtl		= $this->input->post("dtl");
 		$divisi		= $this->input->post("divisi");
 
@@ -2335,17 +2965,20 @@ class Expense extends Admin_Controller
 		$coa	= $this->input->post("coa");
 		$tahun = date("Y", strtotime($tanggal));
 		$data = $this->Expense_model->GetBudget($coa, $tahun);
+		$this->auditObserve(null);
 		$param = array();
-		if ($data !== false) {
+		$sisaVal = null;
+		if ($data !== false && !empty($data)) {
 			if ($dtl == '') {
 				$bulan = date("n", strtotime($tanggal));
 				$budget = 0;
 				$terpakai = 0;
 				for ($i = 1; $i <= $bulan; $i++) {
-					$budget = ($budget + $data->{"bulan_" . $i});
-					$terpakai = ($terpakai + $data->{"terpakai_bulan_" . $i});
+					$budget = ($budget + (isset($data->{"bulan_" . $i}) ? $data->{"bulan_" . $i} : 0));
+					$terpakai = ($terpakai + (isset($data->{"terpakai_bulan_" . $i}) ? $data->{"terpakai_bulan_" . $i} : 0));
 				}
 				$sisa = ($budget - $terpakai);
+				$sisaVal = $sisa;
 				$param = array(
 					'budget' => $budget,
 					'terpakai' => $terpakai,
@@ -2356,6 +2989,7 @@ class Expense extends Admin_Controller
 			}
 		} else {
 			if ($dtl == '') {
+				$sisaVal = 0;
 				$param = array(
 					'budget' => 0,
 					'terpakai' => 0,
@@ -2364,59 +2998,110 @@ class Expense extends Admin_Controller
 				);
 			}
 		}
+
+		$status = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Mengecek budget COA', $status, array(
+			'coa' => $coa,
+			'tahun' => $tahun,
+			'sisa' => $sisaVal,
+			'outcome' => $this->auditQueriesOk ? (!empty($data) ? 'found' : 'not_found') : 'query_error'
+		));
 		echo json_encode($param);
 	}
 	// list management transport
 	public function transport_req_mgt()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_mgt_list'), array('page', 'item_count', 'outcome'));
 		$data = $this->Expense_model->GetListDataTransportRequest($this->auth->user_name());
+		$this->auditObserve(null);
 		$this->template->set('results', $data);
 		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Persetujuan Managemen Penggantian Transport');
 		$this->template->render('transport_req_mgt_list');
+		$status = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka daftar persetujuan manajemen penggantian transport', $status, array(
+			'page' => 'transport_req_mgt_list',
+			'item_count' => is_array($data) ? count($data) : 0,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 	// list finance transport
 	public function transport_req_fin()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_fin_list'), array('page', 'outcome'));
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengecekan Finance Penggantian Transport');
 		$this->template->render('transport_req_fin_list');
+		$this->completeAudit('Membuka daftar pengecekan finance penggantian transport', 1, array(
+			'page' => 'transport_req_fin_list',
+			'outcome' => 'rendered'
+		));
 	}
 	// list pengajuan transport
 	public function transport_req_all()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_all'), array('page', 'item_count', 'outcome'));
 		$status = array("0" => "Baru", "1" => "Disetujui", "2" => "Selesai", "3" => "Selesai", "9" => "Ditolak");
 		$data = $this->Expense_model->GetListDataTransportRequest();
+		$this->auditObserve(null);
 		$data_detail = $this->Expense_model->GetListDataTransportRequestAll();
+		$this->auditObserve(null);
 		$this->template->set('results', $data);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->set('status', $status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengajuan  Transport');
 		$this->template->render('transport_req_all');
+
+		$auditStatus = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka daftar seluruh pengajuan transport', $auditStatus, array(
+			'page' => 'transport_req_all',
+			'item_count' => is_array($data) ? count($data) : 0,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 	// list pengajuan transport
 	public function transport_req()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_list'), array('page', 'outcome'));
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengajuan Penggantian Transport');
 		$this->template->render('transport_req_list');
+		$this->completeAudit('Membuka daftar pengajuan penggantian transport', 1, array(
+			'page' => 'transport_req_list',
+			'outcome' => 'rendered'
+		));
 	}
 	// transport pengajuan create
 	public function transport_req_create()
 	{
+		$this->beginAudit(__FUNCTION__, array('form' => 'transport_req_form'), array('form', 'item_count', 'outcome'));
 		$list_coa = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
 		$this->template->set('list_coa', $list_coa);
 		$this->template->set('mod', '');
 		$this->template->render('transport_req_form');
+
+		$auditStatus = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka form pengajuan transport baru', $auditStatus, array(
+			'form' => 'transport_req_form',
+			'item_count' => is_array($list_coa) ? count($list_coa) : 0,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 	// transport req save
 	public function transport_req_save()
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'id' => $this->input->post('id'),
+			'no_doc' => $this->input->post('no_doc'),
+			'departement' => $this->input->post('departement')
+		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+
 		$id             = $this->input->post("id");
 		$tgl_doc  		= $this->input->post("tgl_doc");
 		$no_doc		    = $this->input->post("no_doc");
@@ -2588,12 +3273,11 @@ class Expense extends Admin_Controller
 					$result = $this->All_model->dataUpdate('tr_transport', $detail_data, array('id' => $val));
 				}
 			}
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = 0;
-				$error_msg = $this->db->error()['message'];
+				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
-				$this->db->trans_commit();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -2680,12 +3364,11 @@ class Expense extends Admin_Controller
 			} else {
 				$result = FALSE;
 			}
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = 0;
-				$error_msg = $this->db->error()['message'];
+				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
-				$this->db->trans_commit();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -2695,16 +3378,33 @@ class Expense extends Admin_Controller
 			'id' => $id,
 			'msg' => isset($error_msg) ? $error_msg : ''
 		);
+		$auditStatus = ($result == 1) ? 1 : 0;
+		$isUpdate = ($this->input->post("id") != "");
+		$this->completeAudit(
+			($result == 1) ? ($isUpdate ? 'Berhasil memperbarui pengajuan transport' : 'Berhasil membuat pengajuan transport') : 'Gagal menyimpan pengajuan transport',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'departement' => $departement,
+				'amount' => $jumlah_expense,
+				'outcome' => ($result == 1) ? ($isUpdate ? 'updated' : 'created') : 'transaction_failed'
+			)
+		);
 		echo json_encode($param);
 	}
 
 	// transport req edit
 	public function transport_req_edit($id, $mod = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'mod' => $mod), array('id', 'no_doc', 'mod', 'outcome'));
 		$data = $this->Expense_model->GetDataTransportReq($id);
-		$data_detail = $this->Expense_model->GetDataTransportInReq($data->no_doc);
+		$this->auditObserve($data);
+		$data_detail = (!empty($data) && !empty($data->no_doc)) ? $this->Expense_model->GetDataTransportInReq($data->no_doc) : array();
+		$this->auditObserve(null);
 
 		$list_coa = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
 
 		$this->template->set('list_coa', $list_coa);
 		$this->template->set('data_detail', $data_detail);
@@ -2715,29 +3415,43 @@ class Expense extends Admin_Controller
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengajuan Transport');
 		$this->template->render('transport_req_form');
+
+		$auditStatus = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Membuka form edit pengajuan transport', $auditStatus, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'mod' => $mod,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 	public function transport_req_print($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$results = $this->Expense_model->GetDataTransportReq($id);
-		$data_detail = $this->Expense_model->GetDataTransportInReq($results->no_doc);
+		$this->auditObserve($results);
+		$data_detail = (!empty($results) && !empty($results->no_doc)) ? $this->Expense_model->GetDataTransportInReq($results->no_doc) : array();
+		$this->auditObserve(null);
 
 		// Resolve department name from HRIS
 		$dept_name = '';
-		if (!empty($results->departement)) {
+		if (!empty($results) && !empty($results->departement)) {
 			$dept_name = $this->Expense_model->GetDepartmentName($results->departement);
+			$this->auditObserve(null);
 		}
 
 		// Resolve request by name from users table
 		$request_by = '';
-		if (!empty($results->nama)) {
-			$user = $this->db->get_where('users', ['username' => $results->nama])->row();
+		if (!empty($results) && !empty($results->nama)) {
+			$q_u = $this->db->get_where('users', ['username' => $results->nama]);
+			$this->auditObserve($q_u);
+			$user = $q_u ? $q_u->row() : null;
 			$request_by = !empty($user) ? $user->nm_lengkap : $results->nama;
 		}
 
 		// Get COA from first detail record
 		$coa_display = '';
 		if (!empty($data_detail) && isset($data_detail[0])) {
-			$coa_display = $data_detail[0]->no_coa . ' - ' . $data_detail[0]->nm_coa;
+			$coa_display = (isset($data_detail[0]->no_coa) ? $data_detail[0]->no_coa : '') . ' - ' . (isset($data_detail[0]->nm_coa) ? $data_detail[0]->nm_coa : '');
 		}
 
 		$data = array(
@@ -2750,13 +3464,25 @@ class Expense extends Admin_Controller
 			'coa_display'	=> $coa_display,
 		);
 		$this->load->view('transport_req_print', $data);
+
+		$auditStatus = ($results && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Mencetak dokumen pengajuan transport', $auditStatus, array(
+			'id' => $id,
+			'no_doc' => !empty($results->no_doc) ? $results->no_doc : null,
+			'outcome' => ($results && $this->auditQueriesOk) ? 'printed' : ($results ? 'query_error' : 'not_found')
+		));
 	}
 	// transport req view
 	public function transport_req_view($id, $mod = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'mod' => $mod), array('id', 'no_doc', 'mod', 'outcome'));
 		$data = $this->Expense_model->GetDataTransportReq($id);
-		$data_detail = $this->Expense_model->GetDataTransportInReq($data->no_doc);
+		$this->auditObserve($data);
+		$data_detail = (!empty($data) && !empty($data->no_doc)) ? $this->Expense_model->GetDataTransportInReq($data->no_doc) : array();
+		$this->auditObserve(null);
+
 		$list_coa = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
 
 		$this->template->set('list_coa', $list_coa);
 		$this->template->set('data_detail', $data_detail);
@@ -2767,34 +3493,59 @@ class Expense extends Admin_Controller
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Pengajuan Transport');
 		$this->template->render('transport_req_form');
+
+		$auditStatus = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Melihat dokumen pengajuan transport', $auditStatus, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'mod' => $mod,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	// list transport
 	public function transport()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_list'), array('page', 'outcome'));
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Transportasi');
 		$this->template->render('transport_list');
+		$this->completeAudit('Membuka daftar transportasi', 1, array(
+			'page' => 'transport_list',
+			'outcome' => 'rendered'
+		));
 	}
 
 	// transport create
 	public function transport_create()
 	{
-		// $data_departement = $this->All_model->GetDeptCombo();
-		// $this->template->title('Pengajuan Transport');
-		// $this->template->set('data_departement', $data_departement);
+		$this->beginAudit(__FUNCTION__, array('form' => 'transport_form'), array('form', 'item_count', 'outcome'));
 		$list_coa_transport = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
 
 		$data = [
 			'list_coa' => $list_coa_transport
 		];
 		$this->template->set($data);
 		$this->template->render('transport_form');
+
+		$auditStatus = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Membuka form pembuatan transport baru', $auditStatus, array(
+			'form' => 'transport_form',
+			'item_count' => is_array($list_coa_transport) ? count($list_coa_transport) : 0,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 	// transport save
 	public function transport_save()
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'id' => $this->input->post('id'),
+			'no_doc' => $this->input->post('no_doc'),
+			'departement' => $this->input->post('departement')
+		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+
 		$id             = $this->input->post("id");
 		$tgl_doc  		= date('Y-m-d', strtotime($this->input->post("tgl_doc")));
 		$no_doc		    = $this->input->post("no_doc");
@@ -2820,15 +3571,12 @@ class Expense extends Admin_Controller
 		$no_coa = $this->input->post('coa');
 		$nm_coa = $this->input->post('nm_coa');
 
-		// print_r($tgl_doc);
-
 		$valid_photo = 1;
 		$msg = '';
 
 		$this->db->trans_begin();
 		$config['upload_path'] = 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
-		// $config['max_size'] = 5120000;
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
 		$filenames = $filename;
@@ -2847,14 +3595,11 @@ class Expense extends Admin_Controller
 				$valid_photo = 0;
 				$msg = $this->upload->display_errors();
 			}
-			// else {
-			// 	print_r($this->upload->display_errors());
-			// 	exit;
-			// }
 		}
 
+		$isUpdate = ($id !== "");
 		if ($valid_photo == 1) {
-			if ($id !== "") {
+			if ($isUpdate) {
 				$result = $this->db->update('tr_transport', [
 					'tgl_doc' => $tgl_doc,
 					'departement' => $departement,
@@ -2902,17 +3647,15 @@ class Expense extends Admin_Controller
 					'created_on' => date("Y-m-d h:i:s"),
 				);
 				$id = $this->All_model->dataSave('tr_transport', $data);
+				$result = ($id !== false);
 			}
 
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
 				$result = FALSE;
-
 				$msg = 'Data gagal di simpan !';
 			} else {
-				$this->db->trans_commit();
 				$result = TRUE;
-
 				$msg = 'Data berhasil di simpan !';
 			}
 		} else {
@@ -2920,17 +3663,46 @@ class Expense extends Admin_Controller
 			$result = FALSE;
 		}
 
-
 		$param = array(
 			'save' => $result,
 			'id' => $id,
 			'msg' => $msg
 		);
+
+		if ($valid_photo == 0) {
+			$auditOutcome = 'upload_failed';
+			$auditStatus = 0;
+		} elseif ($result) {
+			$auditOutcome = ($isUpdate ? 'updated' : 'created');
+			$auditStatus = 1;
+		} else {
+			$auditOutcome = 'transaction_failed';
+			$auditStatus = 0;
+		}
+
+		$this->completeAudit(
+			($result ? ($isUpdate ? 'Berhasil memperbarui data transportasi' : 'Berhasil membuat data transportasi') : ($valid_photo == 0 ? 'Gagal mengunggah berkas transportasi' : 'Gagal menyimpan data transportasi')),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'departement' => $departement,
+				'amount' => ($bensin + $tol + $parkir + $lainnya),
+				'outcome' => $auditOutcome
+			)
+		);
+
 		echo json_encode($param);
 	}
 
 	public function get_list_req_transport($nama, $departement, $date1, $date2)
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'departement' => $departement,
+			'date1' => $date1,
+			'date2' => $date2
+		), array('departement', 'date1', 'date2', 'item_count', 'outcome'));
+
 		$existing_ids = $this->input->post('existing_ids');
 		$no_doc = $this->input->post('no_doc');
 
@@ -2949,47 +3721,95 @@ class Expense extends Admin_Controller
 			$where .= " AND id NOT IN (" . implode(',', $escaped_ids) . ")";
 		}
 
-		$data = $this->db->query("SELECT * FROM tr_transport WHERE " . $where . " ORDER BY tgl_doc")->result();
+		$query = $this->db->query("SELECT * FROM tr_transport WHERE " . $where . " ORDER BY tgl_doc");
+		$this->auditObserve($query !== false);
+		$data = ($query !== false) ? $query->result() : array();
+
+		$auditStatus = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Mengambil daftar permohonan transport untuk form', $auditStatus, array(
+			'departement' => $departement,
+			'date1' => $date1,
+			'date2' => $date2,
+			'item_count' => is_array($data) ? count($data) : 0,
+			'outcome' => $this->auditQueriesOk ? 'fetched' : 'query_error'
+		));
 
 		echo json_encode($data);
-		die();
 	}
+
 	public function get_transport($nama, $departement)
 	{
+		$this->beginAudit(__FUNCTION__, array(
+			'departement' => $departement
+		), array('departement', 'item_count', 'outcome'));
+
 		$data = $this->All_model->GetOneTable('tr_transport', array('nama' => $nama, 'departement' => $departement, 'status' => '1'), 'tgl_doc');
+		$this->auditObserve(null);
+
+		$auditStatus = $this->auditQueriesOk ? 1 : 0;
+		$this->completeAudit('Mengambil data transportasi aktif', $auditStatus, array(
+			'departement' => $departement,
+			'item_count' => is_array($data) ? count($data) : 0,
+			'outcome' => $this->auditQueriesOk ? 'fetched' : 'query_error'
+		));
+
 		echo json_encode($data);
-		die();
 	}
 
 	// transport edit
 	public function transport_edit($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$data = $this->Expense_model->GetDataTransport($id);
+		$this->auditObserve($data);
 		$get_list_coa = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
+
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('stsview', '');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('transport_form');
+
+		$auditStatus = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Membuka form edit transportasi', $auditStatus, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	// transport view
 	public function transport_view($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$data = $this->Expense_model->GetDataTransport($id);
+		$this->auditObserve($data);
 		$get_list_coa = $this->Expense_model->getCoaTransport();
+		$this->auditObserve(null);
+
 		$this->template->set('status', $this->status);
 		$this->template->set('data', $data);
 		$this->template->set('list_coa', $get_list_coa);
 		$this->template->set('stsview', 'view');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('transport_form');
+
+		$auditStatus = ($data && $this->auditQueriesOk) ? 1 : 0;
+		$this->completeAudit('Melihat detail transportasi', $auditStatus, array(
+			'id' => $id,
+			'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+			'outcome' => ($data && $this->auditQueriesOk) ? 'rendered' : ($data ? 'query_error' : 'not_found')
+		));
 	}
 
 	// transport fin approve
-	public function transport_req_approve($id = '', $status)
+	public function transport_req_approve($id = '', $status = null)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'status' => $status), array('id', 'status', 'stage', 'outcome'));
+		$stage = ($status == 1) ? 'finance' : (($status == 2) ? 'management' : 'unknown');
+
 		$result = false;
 		if ($id != "") {
 			$data = array(
@@ -3009,26 +3829,42 @@ class Expense extends Admin_Controller
 			}
 			$result = $this->All_model->dataUpdate('tr_transport_req', $data, array('id' => $id));
 			$keterangan     = "SUKSES, Update data " . $id;
-			$status         = 1;
+			$logStatus      = 1;
 			$nm_hak_akses   = $this->managePermission;
 			$kode_universal = $id;
 			$jumlah = 1;
 			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $logStatus);
 		} else {
 			$result = false;
 			$id = 0;
 		}
+
 		$param = array(
 			'save' => $result,
 			'id' => $id
 		);
+
+		$auditStatus = ($result) ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menyetujui pengajuan transport' : ($id == 0 ? 'ID pengajuan transport kosong' : 'Gagal menyetujui pengajuan transport'),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'status' => $status,
+				'stage' => $stage,
+				'outcome' => $result ? 'approved' : ($id == 0 ? 'empty_id' : 'update_failed')
+			)
+		);
+
 		echo json_encode($param);
 	}
 
 	// transport approve
 	public function transport_approve($id = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'status', 'outcome'));
+
 		$result = false;
 		if ($id != "") {
 			$data = array(
@@ -3037,78 +3873,128 @@ class Expense extends Admin_Controller
 			);
 			$result = $this->All_model->dataUpdate('tr_transport', $data, array('id' => $id));
 			$keterangan     = "SUKSES, Update data " . $id;
-			$status         = 1;
+			$logStatus      = 1;
 			$nm_hak_akses   = $this->managePermission;
 			$kode_universal = $id;
 			$jumlah = 1;
 			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $logStatus);
+		} else {
+			$id = 0;
 		}
+
 		$param = array(
 			'save' => $result,
 			'id' => $id
 		);
+
+		$auditStatus = ($result) ? 1 : 0;
+		$this->completeAudit(
+			$result ? 'Berhasil menyetujui transportasi' : ($id == 0 ? 'ID transportasi kosong' : 'Gagal menyetujui transportasi'),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'status' => 1,
+				'outcome' => $result ? 'approved' : ($id == 0 ? 'empty_id' : 'update_failed')
+			)
+		);
+
 		echo json_encode($param);
 	}
 
 	// transport delete
 	public function transport_delete($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
 		$this->db->trans_begin();
 		$result = $this->All_model->dataDelete('tr_transport', array('id' => $id));
-		if ($this->db->trans_status() === FALSE) {
+		if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 			$this->db->trans_rollback();
+			$result = false;
+			$auditOutcome = 'delete_failed';
+			$auditStatus = 0;
 		} else {
-			$this->db->trans_commit();
+			$auditOutcome = $result ? 'deleted' : 'delete_failed';
+			$auditStatus = $result ? 1 : 0;
 		}
+
 		$param = array('delete' => $result);
+
+		$this->completeAudit(
+			$result ? 'Berhasil menghapus data transportasi' : 'Gagal menghapus data transportasi',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'outcome' => $auditOutcome
+			)
+		);
+
 		echo json_encode($param);
 	}
 
 	// transport delete
 	public function transport_req_delete($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		$this->db->trans_begin();
 		$data = $this->Expense_model->GetDataTransportReq($id);
-		$this->All_model->dataUpdate('tr_transport', array('status' => 0, 'no_req' => ''), array('no_req' => $data->no_doc));
-		$result = $this->All_model->dataDelete('tr_transport_req', array('id' => $id));
-		if ($this->db->trans_status() === FALSE) {
-			$this->db->trans_rollback();
+		$this->auditObserve($data);
+
+		if ($data) {
+			$this->All_model->dataUpdate('tr_transport', array('status' => 0, 'no_req' => ''), array('no_req' => $data->no_doc));
+			$result = $this->All_model->dataDelete('tr_transport_req', array('id' => $id));
 		} else {
-			$this->db->trans_commit();
+			$result = false;
 		}
+
+		if (!$data) {
+			$this->db->trans_rollback();
+			$auditOutcome = 'not_found';
+			$auditStatus = 0;
+		} elseif ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+			$this->db->trans_rollback();
+			$result = false;
+			$auditOutcome = 'delete_failed';
+			$auditStatus = 0;
+		} else {
+			$auditOutcome = $result ? 'deleted' : 'delete_failed';
+			$auditStatus = $result ? 1 : 0;
+		}
+
 		$param = array('delete' => $result);
+
+		$this->completeAudit(
+			($result ? 'Berhasil menghapus pengajuan transport' : ($data ? 'Gagal menghapus pengajuan transport' : 'Pengajuan transport tidak ditemukan')),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => !empty($data->no_doc) ? $data->no_doc : null,
+				'outcome' => $auditOutcome
+			)
+		);
+
 		echo json_encode($param);
 	}
 
 	// list petty_cash
 	public function petty_cash()
 	{
-		// $data = $this->Expense_model->GetListData(array('nama' => $this->auth->user_name(), 'pettycash != ' => ''));
-		// print_r($data);
-		// exit;
-
-		// $this->db->select('a.*, IF(SUM(b.total_harga) IS NULL, 0, SUM(b.total_harga)) as nominal, c.username as nmuser, d.username as nmapproval');
-		// $this->db->from('tr_expense a');
-		// $this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
-		// $this->db->join('users c', 'a.nama=c.username', 'left');
-		// $this->db->join('users d', 'a.approval=d.username', 'left');
-		// $this->db->where('a.nama', $this->auth->user_name());
-		// $this->db->where('a.pettycash !=', '');
-		// $this->db->group_by('a.no_doc');
-		// $this->db->order_by('a.created_on', 'DESC');
-		// $data = $this->db->get()->result();
-
-		// $this->template->set('results', $data);
+		$this->beginAudit(__FUNCTION__, array('page' => 'index_pc'), array('page', 'outcome'));
 		$this->template->set('status', $this->status);
 		$this->template->page_icon('fa fa-list');
 		$this->template->title('Petty Cash');
 		$this->template->render('index_pc');
+		$this->completeAudit('Membuka daftar petty cash', 1, array(
+			'page' => 'index_pc',
+			'outcome' => 'rendered'
+		));
 	}
 
 	// create petty_cash
 	public function create_pc()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'form_pc'), array('page', 'outcome'));
+
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
 		$data_kasbon_pr_pet = $this->db->get_where('tr_kasbon', ['metode_pembayaran' => 2, 'id_expense_pett_pr_non_po' => null])->result();
@@ -3136,14 +4022,24 @@ class Expense extends Admin_Controller
 		$this->template->set('data_penggantian_kasbon', $data_penggantian_kasbon);
 		$this->template->set('data_detail', $data_detail);
 		$this->template->render('form_pc');
+
+		$this->completeAudit('Membuka form pembuatan petty cash', 1, array(
+			'page' => 'form_pc',
+			'outcome' => 'rendered'
+		));
 	}
 
 	// edit petty_cash
 	public function edit_pc($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
+
 		$data = $this->Expense_model->GetDataHeader($id);
-		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
-		$data_budget = $this->All_model->GetPettyCashComboCoa($data->pettycash);
+		$this->auditObserve($data);
+		$no_doc = is_object($data) ? ($data->no_doc ?? null) : null;
+
+		$data_detail	= $this->Expense_model->GetDataDetail($no_doc);
+		$data_budget = $this->All_model->GetPettyCashComboCoa(is_object($data) ? ($data->pettycash ?? '') : '');
 		$data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
 		$data_kasbon_pr_pet = $this->db->get_where('tr_kasbon', ['metode_pembayaran' => 2, 'id_expense_pett_pr_non_po' => null])->result();
 
@@ -3171,13 +4067,28 @@ class Expense extends Admin_Controller
 		$this->template->set('data_penggantian_kasbon', $data_penggantian_kasbon);
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('form_pc');
+
+		$this->completeAudit(
+			$data ? 'Membuka form edit petty cash' : 'Data petty cash tidak ditemukan untuk diedit',
+			1,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'outcome' => $data ? 'rendered' : 'not_found'
+			)
+		);
 	}
 
 	// view petty_cash
 	public function view_pc($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
+
 		$data = $this->Expense_model->GetDataHeader($id);
-		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
+		$this->auditObserve($data);
+		$no_doc = is_object($data) ? ($data->no_doc ?? null) : null;
+
+		$data_detail	= $this->Expense_model->GetDataDetail($no_doc);
 		$data_budget = $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$data_pc = $this->All_model->GetOneTable('ms_petty_cash', '', 'nama');
 		$this->template->set('data_pc', $data_pc);
@@ -3188,18 +4099,36 @@ class Expense extends Admin_Controller
 		$this->template->set('stsview', 'view');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('form_pc');
+
+		$this->completeAudit(
+			$data ? 'Membuka view detail petty cash' : 'Data petty cash tidak ditemukan',
+			1,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'outcome' => $data ? 'rendered' : 'not_found'
+			)
+		);
 	}
 	function getcoabudget()
 	{
 		$coa = $this->input->post("coa");
+		$this->beginAudit(__FUNCTION__, array('coa' => $coa), array('coa', 'count', 'outcome'));
+
 		$coabudget = str_ireplace(";", "','", $coa);
 		$datacombocoa = "";
 		$data_budget = $this->db->query("select * from " . DBACC . ".coa_master where no_perkiraan in ('" . $coabudget . "')")->result();
 		foreach ($data_budget as $keys) {
 			$datacombocoa .= "<option value='" . $keys->no_perkiraan . "'>" . $keys->no_perkiraan . " - " . $keys->nama . "</option>";
 		}
+
+		$this->completeAudit('Mengambil combo COA budget', 1, array(
+			'coa' => $coa,
+			'count' => count($data_budget),
+			'outcome' => 'success'
+		));
+
 		echo $datacombocoa;
-		die();
 	}
 	public function reject()
 	{
@@ -3210,13 +4139,25 @@ class Expense extends Admin_Controller
 		$reason = $this->input->post("reason");
 		$table  = $this->input->post("table");
 
-		$result = false;
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'table' => $table, 'reason' => $reason), array('id', 'table', 'reason', 'outcome'));
 
+		$result = false;
+		$auditOutcome = 'failed';
+		$auditStatus = 0;
+
+		$previous_db_debug = isset($this->db->db_debug) ? $this->db->db_debug : true;
 		$this->db->trans_begin();
 
 		try {
 			if (empty($id) || empty($table)) {
+				$auditOutcome = 'empty_id';
 				throw new Exception('ID atau Tabel tidak ditemukan!');
+			}
+
+			$allowed_tables = array('tr_transport_req', 'tr_expense', 'tr_kasbon');
+			if (!in_array($table, $allowed_tables, true)) {
+				$auditOutcome = 'invalid_table';
+				throw new Exception('Tabel tidak diizinkan untuk operasi reject!');
 			}
 
 			$data = array(
@@ -3225,33 +4166,62 @@ class Expense extends Admin_Controller
 				'app_finance_date'      => null,
 				'reject_reason_finance' => $reason,
 				'reject_reason'         => $reason,
-				'st_reject'             => $reason,
-				'rejected_by'           => $this->auth->user_name(),
-				'rejected_on'           => date('Y-m-d H:i:s')
+				'st_reject'             => $reason
 			);
 
+			if (method_exists($this->db, 'field_exists')) {
+				if ($this->db->field_exists('rejected_by', $table)) {
+					$data['rejected_by'] = $this->auth->user_name();
+				}
+				if ($this->db->field_exists('rejected_on', $table)) {
+					$data['rejected_on'] = date('Y-m-d H:i:s');
+				}
+			} else {
+				$data['rejected_by'] = $this->auth->user_name();
+				$data['rejected_on'] = date('Y-m-d H:i:s');
+			}
+
+			$this->db->db_debug = false;
 			$this->db->where('id', $id);
 			$update = $this->db->update($table, $data);
 
 			if (!$update) {
-				throw new Exception($this->db->error()['message']);
+				$auditOutcome = 'update_failed';
+				throw new Exception(isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Gagal update database');
 			}
 
 			// Jika semua oke, commit transaksinya
-			if ($this->db->trans_status() === FALSE) {
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 				$this->db->trans_rollback();
+				$auditOutcome = 'transaction_failed';
 				throw new Exception('Transaction Failed!');
 			} else {
-				$this->db->trans_commit();
 				$result = true;
 				$message = "Berhasil mereject data.";
+				$auditOutcome = 'rejected';
+				$auditStatus = 1;
 			}
 		} catch (Exception $e) {
 			$this->db->trans_rollback();
 			$result = false;
 			$message = $e->getMessage();
 			http_response_code(400); // Bad Request atau 500
+		} finally {
+			if (isset($this->db)) {
+				$this->db->db_debug = $previous_db_debug;
+			}
 		}
+
+		$this->completeAudit(
+			$result ? 'Berhasil menolak data' : 'Gagal menolak data: ' . ($message ?? ''),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'table' => $table,
+				'reason' => $reason,
+				'outcome' => $auditOutcome
+			)
+		);
 
 		$param = array(
 			'save'    => $result,
@@ -3264,11 +4234,20 @@ class Expense extends Admin_Controller
 
 	public function reject_manage()
 	{
+		header('Content-Type: application/json');
+
 		$result = false;
 		$id		= $this->input->post("id");
 		$reason	= $this->input->post("reason");
 		$table	= $this->input->post("table");
-		if ($id != "") {
+
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'table' => $table, 'reason' => $reason), array('id', 'table', 'reason', 'outcome'));
+
+		$auditOutcome = 'failed';
+		$auditStatus = 0;
+
+		if ($id != "" && !empty($table)) {
+			$this->db->trans_begin();
 			$data = array(
 				'status' => 9,
 				'sts_finance' => '0',
@@ -3281,15 +4260,38 @@ class Expense extends Admin_Controller
 				'rejected_by' => $this->auth->user_name(),
 				'rejected_on' => date('Y-m-d H:i:s')
 			);
-			$result = $this->All_model->dataUpdate($table, $data, array('id' => $id));
-			$keterangan     = "SUKSES, Reject data " . $id;
-			$status         = 1;
-			$nm_hak_akses   = $this->managePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+			$updateResult = $this->All_model->dataUpdate($table, $data, array('id' => $id));
+			if ($updateResult && $this->db->trans_status() !== FALSE && $this->db->trans_commit() !== FALSE) {
+				$result = true;
+				$keterangan     = "SUKSES, Reject data " . $id;
+				$status         = 1;
+				$nm_hak_akses   = $this->managePermission;
+				$kode_universal = $id;
+				$jumlah = 1;
+				$sql            = $this->db->last_query();
+				simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+				$auditOutcome = 'rejected';
+				$auditStatus = 1;
+			} else {
+				$this->db->trans_rollback();
+				$result = false;
+				$auditOutcome = 'update_failed';
+			}
+		} else {
+			$auditOutcome = empty($id) ? 'empty_id' : 'empty_table';
 		}
+
+		$this->completeAudit(
+			$result ? 'Berhasil menolak data manajemen' : 'Gagal menolak data manajemen',
+			$auditStatus,
+			array(
+				'id' => $id,
+				'table' => $table,
+				'reason' => $reason,
+				'outcome' => $auditOutcome
+			)
+		);
+
 		$param = array(
 			'save' => $result,
 			'id' => $id
@@ -3299,10 +4301,15 @@ class Expense extends Admin_Controller
 
 	public function review($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
+
 		// $controller			= ucfirst(strtolower($this->uri->segment(1)));
 		// $Arr_Akses			= getAcccesmenu($controller);
-		$data = $this->Expense_model->GetDataHeader($id);
-		$data_detail	= $this->Expense_model->GetDataDetail($data->no_doc);
+		$dataHeader = $this->Expense_model->GetDataHeader($id);
+		$this->auditObserve($dataHeader);
+		$no_doc = is_object($dataHeader) ? ($dataHeader->no_doc ?? null) : null;
+
+		$data_detail	= $this->Expense_model->GetDataDetail($no_doc);
 		// $data_departement = $this->All_model->GetDeptCombo();
 		$data_budget = $this->All_model->GetCoaCombo('5');
 		$data_user = $this->All_model->GetUserCombo();
@@ -3331,7 +4338,7 @@ class Expense extends Admin_Controller
 			'data_budget'	=> $data_budget,
 			'data_departement'	=> $data_departement,
 			'data_detail'	=> $data_detail,
-			'data'	    	=> $data,
+			'data'	    	=> $dataHeader,
 			'stsview'	    => 'review',
 			'combodept'		=> $combodept,
 			'status'	    => $this->status,
@@ -3342,15 +4349,33 @@ class Expense extends Admin_Controller
 		$this->template->set($data);
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('expense_review');
+
+		$this->completeAudit(
+			$dataHeader ? 'Membuka form review expense' : 'Data expense tidak ditemukan untuk di-review',
+			1,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'outcome' => $dataHeader ? 'rendered' : 'not_found'
+			)
+		);
 		// $this->template('expense_review', $data);
 	}
 
 	public function return_confirm($id = '')
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'valid', 'outcome'));
+
 		$result = false;
+		$valid  = 0;
+		$auditOutcome = 'failed';
+		$auditStatus = 0;
+		$no_doc = null;
+
 		$data_session	= $this->session->userdata;
 		$dateTime = date('Y-m-d H:i:s');
-		$UserName = $data_session['app_session']['username'];
+		$UserName = isset($data_session['app_session']['username']) ? $data_session['app_session']['username'] : '';
+
 		if ($id != "") {
 			$transfer_coa_bank	= $this->input->post("transfer_coa_bank");
 			$transfer_tanggal	= $this->input->post("transfer_tanggal");
@@ -3358,26 +4383,29 @@ class Expense extends Admin_Controller
 			//			$transferfile		= $this->input->post("transferfile");
 
 			$get_expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
-			$get_pengembalian_expense = $this->db->get_where('tr_pengembalian_expense', ['no_doc' => $get_expense->no_doc])->result();
+			$this->auditObserve($get_expense);
+			$no_doc = $get_expense ? ($get_expense->no_doc ?? null) : null;
+			$get_pengembalian_expense = $get_expense ? $this->db->get_where('tr_pengembalian_expense', ['no_doc' => $get_expense->no_doc])->result() : [];
 
 			$nilai_on_kembali = 0;
 			foreach ($get_pengembalian_expense as $item) {
 				$nilai_on_kembali += $item->transfer_jumlah;
 			}
 
-			if ($get_expense->jumlah < 0) {
+			if ($get_expense && $get_expense->jumlah < 0) {
 				$sisa_expense = ($get_expense->jumlah * -1);
 			} else {
-				$sisa_expense = $get_expense->jumlah;
+				$sisa_expense = $get_expense ? $get_expense->jumlah : 0;
 			}
 
 			$total_nilai = ($transfer_jumlah + $nilai_on_kembali);
 			$valid = 1;
 			if ($total_nilai > $sisa_expense) {
 				$valid = 2;
+				$auditOutcome = 'over_limit';
 			}
 
-			if ($valid == 1) {
+			if ($valid == 1 && $get_expense) {
 				// $data = array(
 				// 	'status' => 3,
 				// 	'transfer_coa_bank' => $transfer_coa_bank,
@@ -3548,16 +4576,34 @@ class Expense extends Admin_Controller
 				// } else {
 				// 	$result = FALSE;
 				// }
-				if ($this->db->trans_status() === FALSE) {
+				if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
 					$result = FALSE;
 					$this->db->trans_rollback();
+					$auditOutcome = 'insert_failed';
 				} else {
 					$result = TRUE;
-					$this->db->trans_commit();
+					$auditOutcome = 'confirmed';
+					$auditStatus = 1;
 				}
 				// history('Approve data expense : ' . $id);
+			} elseif (!$get_expense) {
+				$auditOutcome = 'not_found';
 			}
+		} else {
+			$auditOutcome = 'empty_id';
 		}
+
+		$this->completeAudit(
+			$result ? 'Berhasil konfirmasi pengembalian expense' : ($valid == 2 ? 'Pengembalian melebihi sisa expense' : 'Gagal konfirmasi pengembalian expense'),
+			$auditStatus,
+			array(
+				'id' => $id,
+				'no_doc' => $no_doc,
+				'valid' => $valid,
+				'outcome' => $auditOutcome
+			)
+		);
+
 		$param = array(
 			'save' => $result,
 			'id' => $id,
@@ -3569,6 +4615,7 @@ class Expense extends Admin_Controller
 	public function get_pr_non_po()
 	{
 		$no_pr = $this->input->post('no_pr');
+		$this->beginAudit(__FUNCTION__, array('no_pr' => $no_pr), array('no_pr', 'valid', 'outcome'));
 
 		$this->db->select('if(c.nama IS NULL, e.stock_name, c.nama) as material_name, a.propose_purchase as qty, if(d.code IS NULL, f.code, d.code) as unit, b.category as tipe_pr, a.id, a.price_ref')
 			->from('material_planning_base_on_produksi_detail a')
@@ -3683,6 +4730,16 @@ class Expense extends Admin_Controller
 			$pesan = 'Sorry, PR not found !';
 		}
 
+		$this->completeAudit(
+			$valid == 1 ? 'Berhasil mengambil detail PR Non-PO' : 'PR Non-PO tidak ditemukan',
+			1,
+			array(
+				'no_pr' => $no_pr,
+				'valid' => $valid,
+				'outcome' => $valid == 1 ? 'found' : 'not_found'
+			)
+		);
+
 		echo json_encode([
 			'sts' => $valid,
 			'hasil' => $hasil,
@@ -3695,101 +4752,212 @@ class Expense extends Admin_Controller
 	public function del_detail()
 	{
 		$id_detail = $this->input->post('id_detail');
+		$this->beginAudit(__FUNCTION__, array('id_detail' => $id_detail), array('id_detail', 'outcome'));
 
 		$this->db->trans_begin();
 
 		$this->db->delete('tr_expense_detail', ['id' => $id_detail]);
 
-		$this->db->trans_commit();
+		if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+			$this->db->trans_rollback();
+			$auditOutcome = 'delete_failed';
+			$auditStatus = 0;
+		} else {
+			$auditOutcome = 'deleted';
+			$auditStatus = 1;
+		}
+
+		$this->completeAudit(
+			$auditStatus ? 'Berhasil menghapus detail expense' : 'Gagal menghapus detail expense',
+			$auditStatus,
+			array(
+				'id_detail' => $id_detail,
+				'outcome' => $auditOutcome
+			)
+		);
 	}
 
 	public function del_detail_kasbon_non_po()
 	{
 		$id_detail = $this->input->post('id_detail');
 		$id_kasbon_non_po = $this->input->post('id_kasbon_non_po');
+		$this->beginAudit(__FUNCTION__, array('id_detail' => $id_detail, 'id_kasbon_non_po' => $id_kasbon_non_po), array('id_detail', 'id_kasbon_non_po', 'outcome'));
 
 		$this->db->trans_begin();
 
 		$this->db->update('tr_kasbon', ['id_expense_pett_pr_non_po' => null], ['no_doc' => $id_kasbon_non_po]);
 		$this->db->delete('tr_expense_detail', ['id' => $id_detail]);
 
-		$this->db->trans_commit();
+		if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+			$this->db->trans_rollback();
+			$auditOutcome = 'delete_failed';
+			$auditStatus = 0;
+		} else {
+			$auditOutcome = 'deleted';
+			$auditStatus = 1;
+		}
+
+		$this->completeAudit(
+			$auditStatus ? 'Berhasil menghapus detail kasbon non PO' : 'Gagal menghapus detail kasbon non PO',
+			$auditStatus,
+			array(
+				'id_detail' => $id_detail,
+				'id_kasbon_non_po' => $id_kasbon_non_po,
+				'outcome' => $auditOutcome
+			)
+		);
 	}
 
 	public function add_kasbon_pr()
 	{
 		$post = $this->input->post();
+		$no_doc = isset($post['no_doc']) ? $post['no_doc'] : null;
+		$this->beginAudit(__FUNCTION__, array('no_doc' => $no_doc), array('no_doc', 'outcome'));
 
-		$get_kasbon = $this->db->get_where('tr_kasbon', ['no_doc' => $post['no_doc']])->row();
+		$get_kasbon = !empty($no_doc) ? $this->db->get_where('tr_kasbon', ['no_doc' => $no_doc])->row() : null;
+		if ($get_kasbon) {
+			$this->auditObserve($get_kasbon);
+			$auditOutcome = 'found';
+			$auditStatus = 1;
+		} else {
+			$auditOutcome = 'not_found';
+			$auditStatus = 0;
+		}
+
+		$this->completeAudit(
+			$auditStatus ? 'Data kasbon ditemukan' : 'Data kasbon tidak ditemukan',
+			$auditStatus,
+			array(
+				'no_doc' => $no_doc,
+				'outcome' => $auditOutcome
+			)
+		);
 
 		echo json_encode([
-			'no_doc' => $get_kasbon->no_doc,
-			'keperluan' => $get_kasbon->keperluan,
-			'jumlah_kasbon' => $get_kasbon->jumlah_kasbon,
+			'no_doc' => !empty($get_kasbon) ? $get_kasbon->no_doc : '',
+			'keperluan' => !empty($get_kasbon) ? $get_kasbon->keperluan : '',
+			'jumlah_kasbon' => !empty($get_kasbon) ? $get_kasbon->jumlah_kasbon : 0,
 		]);
 	}
 
 	public function add_ganti_expense()
 	{
 		$post = $this->input->post();
+		$no_doc = isset($post['no_doc']) ? $post['no_doc'] : null;
+		$tgl = isset($post['tgl']) ? $post['tgl'] : date('Y-m-d');
+		$this->beginAudit(__FUNCTION__, array('no_doc' => $no_doc, 'tgl' => $tgl), array('no_doc', 'id_detail', 'outcome'));
 
-		$get_expense = $this->db->get_where('tr_expense', ['no_doc' => $post['no_doc']])->row();
-
-		$this->db->trans_start();
-
-		$this->db->insert('tr_expense_detail', [
-			'tanggal' => $post['tgl'],
-			'no_doc' => $this->auth->user_id(),
-			'qty' => 1,
-			'harga' => $get_expense->jumlah,
-			'total_harga' => $get_expense->jumlah,
-			'status' => 0,
-			'expense' => $get_expense->jumlah,
-			'created_by' => $this->auth->user_name(),
-			'created_on' => date('Y-m-d H:i:s'),
-			'id_expense_bayar_sisa' => $post['no_doc']
-		]);
-
-		if ($this->db->trans_status() === false) {
-			$this->db->trans_rollback();
-		} else {
-			$this->db->trans_commit();
+		$get_expense = !empty($no_doc) ? $this->db->get_where('tr_expense', ['no_doc' => $no_doc])->row() : null;
+		if ($get_expense) {
+			$this->auditObserve($get_expense);
 		}
 
-		$get_expensed_bayar = $this->db->get_where('tr_expense_detail', ['id_expense_bayar_sisa' => $post['no_doc']])->row();
+		$id_detail = null;
+		$no_doc2 = null;
+		$auditStatus = 0;
+		$auditOutcome = 'failed';
 
+		if (empty($get_expense)) {
+			$auditOutcome = 'not_found';
+			$auditStatus = 0;
+			$response = [
+				'no_doc' => $no_doc,
+				'informasi' => '',
+				'jumlah' => 0,
+				'id_detail' => null,
+				'no_doc2' => null
+			];
+		} else {
+			$this->db->trans_begin();
 
-		echo json_encode([
-			'no_doc' => $get_expense->no_doc,
-			'informasi' => $get_expense->informasi,
-			'jumlah' => $get_expense->jumlah,
-			'id_detail' => $get_expensed_bayar->id,
-			'no_doc2' => $get_expensed_bayar->no_doc
-		]);
+			$jumlah = isset($get_expense->jumlah) ? $get_expense->jumlah : 0;
+			$this->db->insert('tr_expense_detail', [
+				'tanggal' => $tgl,
+				'no_doc' => $this->auth->user_id(),
+				'qty' => 1,
+				'harga' => $jumlah,
+				'total_harga' => $jumlah,
+				'status' => 0,
+				'expense' => $jumlah,
+				'created_by' => $this->auth->user_name(),
+				'created_on' => date('Y-m-d H:i:s'),
+				'id_expense_bayar_sisa' => $no_doc
+			]);
+
+			if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+				$this->db->trans_rollback();
+				$auditOutcome = 'insert_failed';
+				$auditStatus = 0;
+			} else {
+				$auditOutcome = 'created';
+				$auditStatus = 1;
+			}
+
+			$get_expensed_bayar = $this->db->get_where('tr_expense_detail', ['id_expense_bayar_sisa' => $no_doc])->row();
+			if (!empty($get_expensed_bayar)) {
+				$id_detail = $get_expensed_bayar->id;
+				$no_doc2 = $get_expensed_bayar->no_doc;
+			}
+
+			$response = [
+				'no_doc' => $get_expense->no_doc,
+				'informasi' => $get_expense->informasi,
+				'jumlah' => $get_expense->jumlah,
+				'id_detail' => $id_detail,
+				'no_doc2' => $no_doc2
+			];
+		}
+
+		$this->completeAudit(
+			$auditStatus ? 'Berhasil menambah ganti expense' : 'Gagal menambah ganti expense',
+			$auditStatus,
+			array(
+				'no_doc' => $no_doc,
+				'id_detail' => $id_detail,
+				'outcome' => $auditOutcome
+			)
+		);
+
+		echo json_encode($response);
 	}
 
 	public function refresh_list_kasbon_non_pr()
 	{
 		$post = $this->input->post();
+		$no_doc = isset($post['no_doc']) ? $post['no_doc'] : null;
+		$this->beginAudit(__FUNCTION__, array('no_doc' => $no_doc), array('no_doc', 'row_count', 'outcome'));
 
-		if ($post['no_doc'] !== '' && $post['no_doc'] !== null) {
-			$data_kasbon_pr_pet = $this->db->get_where('tr_kasbon', ['no_doc !=' => $post['no_doc'], 'metode_pembayaran' => 2, 'id_expense_pett_pr_non_po' => null])->result();
+		if (!empty($no_doc)) {
+			$data_kasbon_pr_pet = $this->db->get_where('tr_kasbon', ['no_doc !=' => $no_doc, 'metode_pembayaran' => 2, 'id_expense_pett_pr_non_po' => null])->result();
 		} else {
 			$data_kasbon_pr_pet = $this->db->get_where('tr_kasbon', ['metode_pembayaran' => 2, 'id_expense_pett_pr_non_po' => null])->result();
 		}
 
+		$rowCount = is_array($data_kasbon_pr_pet) ? count($data_kasbon_pr_pet) : 0;
 		$hasil = '';
-		foreach ($data_kasbon_pr_pet as $item) {
-			$hasil .= '<tr>';
-			$hasil .= '<td class="text-center">' . $item->created_by . '</td>';
-			$hasil .= '<td class="text-left">' . $item->no_doc . '</td>';
-			$hasil .= '<td class="text-left">' . $item->keperluan . '</td>';
-			$hasil .= '<td class="text-center">' . number_format($item->jumlah_kasbon) . '</td>';
-			$hasil .= '<td class="text-center">
-									<button type="button" class="btn btn-sm btn-success add_kasbon_pr" data-no_doc="' . $item->no_doc . '">Bayar</button>
+		if (!empty($data_kasbon_pr_pet)) {
+			foreach ($data_kasbon_pr_pet as $item) {
+				$hasil .= '<tr>';
+				$hasil .= '<td class="text-center">' . (isset($item->created_by) ? $item->created_by : '') . '</td>';
+				$hasil .= '<td class="text-left">' . (isset($item->no_doc) ? $item->no_doc : '') . '</td>';
+				$hasil .= '<td class="text-left">' . (isset($item->keperluan) ? $item->keperluan : '') . '</td>';
+				$hasil .= '<td class="text-center">' . number_format(isset($item->jumlah_kasbon) ? $item->jumlah_kasbon : 0) . '</td>';
+				$hasil .= '<td class="text-center">
+									<button type="button" class="btn btn-sm btn-success add_kasbon_pr" data-no_doc="' . (isset($item->no_doc) ? $item->no_doc : '') . '">Bayar</button>
 								</td>';
-			$hasil .= '</tr>';
+				$hasil .= '</tr>';
+			}
 		}
+
+		$this->completeAudit(
+			'Berhasil me-refresh list kasbon non PR',
+			1,
+			array(
+				'no_doc' => $no_doc,
+				'row_count' => $rowCount,
+				'outcome' => 'rendered'
+			)
+		);
 
 		echo $hasil;
 	}
@@ -3797,31 +4965,8 @@ class Expense extends Admin_Controller
 	public function refresh_list_expense_kembalian()
 	{
 		$post = $this->input->post();
-
-		// if ($post['no_doc'] !== '' && $post['no_doc'] !== null) {
-		// 	$this->db->select('a.*');
-		// 	$this->db->from('tr_expense a');
-		// 	$this->db->where('(a.tipe_pengembalian = 1 OR a.tipe_penggantian = 1)');
-		// 	$this->db->where('a.status', 1);
-		// 	$this->db->where('a.jumlah <>', 0);
-		// 	$this->db->where('a.exp_pib', null);
-		// 	$this->db->where('a.exp_inv_po', null);
-		// 	$this->db->where('a.pettycash', null);
-		// 	$this->db->where('a.expense_id_kembalian', null);
-		// 	$this->db->where('a.no_doc <>', $post['no_doc']);
-		// 	$data_expense_kembalian = $this->db->get()->result();
-		// } else {
-		// 	$this->db->select('a.*');
-		// 	$this->db->from('tr_expense a');
-		// 	$this->db->where('(a.tipe_pengembalian = 1 OR a.tipe_penggantian = 1)');
-		// 	$this->db->where('a.status', 1);
-		// 	$this->db->where('a.jumlah <>', 0);
-		// 	$this->db->where('a.exp_pib', null);
-		// 	$this->db->where('a.exp_inv_po', null);
-		// 	$this->db->where('a.pettycash', null);
-		// 	$this->db->where('a.expense_id_kembalian', null);
-		// 	$data_expense_kembalian = $this->db->get()->result();
-		// }
+		$no_doc = isset($post['no_doc']) ? $post['no_doc'] : null;
+		$this->beginAudit(__FUNCTION__, array('no_doc' => $no_doc), array('no_doc', 'row_count', 'outcome'));
 
 		$this->db->select('a.*');
 		$this->db->from('tr_expense a');
@@ -3835,18 +4980,31 @@ class Expense extends Admin_Controller
 		$this->db->where('(SELECT COUNT(aa.id) FROM tr_expense_detail aa WHERE aa.id_expense_bayar_sisa = a.no_doc) <', 1);
 		$data_expense_kembalian = $this->db->get()->result();
 
+		$rowCount = is_array($data_expense_kembalian) ? count($data_expense_kembalian) : 0;
 		$hasil = '';
-		foreach ($data_expense_kembalian as $item) {
-			$hasil .= '<tr>';
-			$hasil .= '<td class="text-center">' . $item->created_by . '</td>';
-			$hasil .= '<td class="text-left">' . $item->no_doc . '</td>';
-			$hasil .= '<td class="text-left">' . $item->informasi . '</td>';
-			$hasil .= '<td class="text-center">' . number_format($item->jumlah) . '</td>';
-			$hasil .= '<td class="text-center">
-									<button type="button" class="btn btn-sm btn-success add_ganti_expense" data-no_doc="' . $item->no_doc . '">Bayar</button>
+		if (!empty($data_expense_kembalian)) {
+			foreach ($data_expense_kembalian as $item) {
+				$hasil .= '<tr>';
+				$hasil .= '<td class="text-center">' . (isset($item->created_by) ? $item->created_by : '') . '</td>';
+				$hasil .= '<td class="text-left">' . (isset($item->no_doc) ? $item->no_doc : '') . '</td>';
+				$hasil .= '<td class="text-left">' . (isset($item->informasi) ? $item->informasi : '') . '</td>';
+				$hasil .= '<td class="text-center">' . number_format(isset($item->jumlah) ? $item->jumlah : 0) . '</td>';
+				$hasil .= '<td class="text-center">
+									<button type="button" class="btn btn-sm btn-success add_ganti_expense" data-no_doc="' . (isset($item->no_doc) ? $item->no_doc : '') . '">Bayar</button>
 								</td>';
-			$hasil .= '</tr>';
+				$hasil .= '</tr>';
+			}
 		}
+
+		$this->completeAudit(
+			'Berhasil me-refresh list expense kembalian',
+			1,
+			array(
+				'no_doc' => $no_doc,
+				'row_count' => $rowCount,
+				'outcome' => 'rendered'
+			)
+		);
 
 		echo $hasil;
 	}
@@ -3855,42 +5013,70 @@ class Expense extends Admin_Controller
 	{
 		$id_detail = $this->input->post('id_detail');
 		$id_expense_kembalian = $this->input->post('id_expense_kembalian');
+		$this->beginAudit(__FUNCTION__, array('id_detail' => $id_detail, 'id_expense_kembalian' => $id_expense_kembalian), array('id_detail', 'id_expense_kembalian', 'outcome'));
 
 		$this->db->trans_begin();
 
 		$this->db->update('tr_expense', ['expense_id_kembalian' => null], ['no_doc' => $id_expense_kembalian]);
 		$this->db->delete('tr_expense_detail', ['id' => $id_detail]);
 
-		$this->db->trans_commit();
+		if ($this->db->trans_status() === FALSE || $this->db->trans_commit() === FALSE) {
+			$this->db->trans_rollback();
+			$auditOutcome = 'delete_failed';
+			$auditStatus = 0;
+		} else {
+			$auditOutcome = 'deleted';
+			$auditStatus = 1;
+		}
+
+		$this->completeAudit(
+			$auditStatus ? 'Berhasil menghapus detail kembalian expense' : 'Gagal menghapus detail kembalian expense',
+			$auditStatus,
+			array(
+				'id_detail' => $id_detail,
+				'id_expense_kembalian' => $id_expense_kembalian,
+				'outcome' => $auditOutcome
+			)
+		);
 	}
 
 	public function copy_pr_doc()
 	{
 		$post = $this->input->post();
+		$no_pr = isset($post['no_pr']) ? $post['no_pr'] : null;
+		$this->beginAudit(__FUNCTION__, array('no_pr' => $no_pr), array('no_pr', 'source_type', 'attachment_count', 'outcome'));
 
-		$no_pr = $post['no_pr'];
+		$get_pr_dept = null;
+		$get_pr_asset = null;
+		if (!empty($no_pr)) {
+			$this->db->select('a.id, a.no_pr, a.document');
+			$this->db->from('rutin_non_planning_header a');
+			$this->db->where('a.no_pr', $no_pr);
+			$get_pr_dept = $this->db->get()->row();
 
-		$this->db->select('a.id, a.no_pr, a.document');
-		$this->db->from('rutin_non_planning_header a');
-		$this->db->where('a.no_pr', $no_pr);
-		$get_pr_dept = $this->db->get()->row();
-
-		$this->db->select('a.no_pr, a.dokumen_pendukung');
-		$this->db->from('tran_pr_header a');
-		$this->db->where('a.no_pr', $no_pr);
-		$get_pr_asset = $this->db->get()->row();
+			$this->db->select('a.no_pr, a.dokumen_pendukung');
+			$this->db->from('tran_pr_header a');
+			$this->db->where('a.no_pr', $no_pr);
+			$get_pr_asset = $this->db->get()->row();
+		}
 
 		$file_name = '';
 		$doc_file = '';
 		$to_doc_file = '';
+		$source_type = 'none';
 		$directory = !empty($get_pr_dept) ? 'assets/pr/' : 'uploads/pr_asset/';
 		if (!empty($get_pr_dept)) {
 			$file_name = $get_pr_dept->document;
+			$source_type = 'rutin_non_planning';
+			$this->auditObserve($get_pr_dept);
 		} elseif (!empty($get_pr_asset)) {
 			$file_name = $get_pr_asset->dokumen_pendukung;
+			$source_type = 'asset';
+			$this->auditObserve($get_pr_asset);
 		}
 
 		$attachments = array();
+		$attachment_error = null;
 		try {
 			foreach (kasbon_attachment_names($file_name) as $name) {
 				if ($doc_file === '') {
@@ -3903,6 +5089,21 @@ class Expense extends Admin_Controller
 		} catch (RuntimeException $e) {
 			$attachment_error = $e->getMessage();
 		}
+
+		$auditOutcome = ($source_type !== 'none') ? 'found' : 'not_found';
+		$auditStatus = empty($attachment_error) ? 1 : 0;
+
+		$this->completeAudit(
+			$auditStatus ? 'Berhasil membaca dokumen PR' : 'Gagal membaca dokumen PR',
+			$auditStatus,
+			array(
+				'no_pr' => $no_pr,
+				'source_type' => $source_type,
+				'attachment_count' => count($attachments),
+				'outcome' => $auditOutcome
+			)
+		);
+
 		echo json_encode([
 			'file_name' => $file_name,
 			'doc_file' => $doc_file,
@@ -3914,15 +5115,23 @@ class Expense extends Admin_Controller
 
 	public function get_data_transport_input()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_input'), array('page', 'outcome'));
 		$this->Expense_model->get_data_transport_input();
+		$this->completeAudit('Data transport input berhasil diambil', 1, array('page' => 'transport_input', 'outcome' => 'rendered'));
 	}
+
 	public function get_data_transport_req_fin_list()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_fin_list'), array('page', 'outcome'));
 		$this->Expense_model->get_data_transport_req_fin_list();
+		$this->completeAudit('Data transport req finance list berhasil diambil', 1, array('page' => 'transport_req_fin_list', 'outcome' => 'rendered'));
 	}
+
 	public function get_data_transport_req()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req'), array('page', 'outcome'));
 		$this->Expense_model->get_data_transport_req();
+		$this->completeAudit('Data transport request berhasil diambil', 1, array('page' => 'transport_req', 'outcome' => 'rendered'));
 	}
 
 	public function get_data_transport_req_all()
@@ -4080,9 +5289,9 @@ class Expense extends Admin_Controller
 		$status_val = is_array($item) ? (isset($item['status']) ? (string)$item['status'] : '') : (isset($item->status) ? (string)$item->status : '');
 		$sts_fin    = is_array($item) ? (isset($item['sts_finance']) ? (string)$item['sts_finance'] : '') : (isset($item->sts_finance) ? (string)$item->sts_finance : '');
 
-		// 4. Rejected
+		// 1. Rejected (9)
 		if ($status_val === '9') {
-			$sts = '<span class="badge bg-red" style="font-size:11px; padding:4px 8px;">Rejected</span>';
+			$sts = '<span class="badge bg-red" style="font-size:11px; padding:4px 8px;"><i class="fa fa-times-circle"></i> Ditolak</span>';
 			$reason = '';
 			if (is_array($item)) {
 				$reason = !empty($item['reject_reason']) ? $item['reject_reason'] : (!empty($item['reject_reason_finance']) ? $item['reject_reason_finance'] : (!empty($item['st_reject']) ? $item['st_reject'] : ''));
@@ -4095,17 +5304,32 @@ class Expense extends Admin_Controller
 			return $sts;
 		}
 
-		// 3. Approved
-		if (in_array($status_val, ['1', '2', '3'])) {
-			return '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;">Approved</span>';
-		}
-
-		// 1 & 2. Waiting Approval
+		// 2. Waiting Approval Finance (0)
 		if ($status_val === '0' || $status_val === '') {
 			if ($sts_fin === '1') {
-				return '<span class="badge" style="background-color:#f39c12 !important; color:#fff; font-size:11px; padding:4px 8px;">Waiting Approval Management</span>';
+				return '<span class="badge" style="background-color:#f39c12 !important; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Approval Direktur</span>';
 			}
-			return '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;">Waiting Approval Finance</span>';
+			return '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Approval Finance</span>';
+		}
+
+		// 3. Waiting Approval Direktur (1)
+		if ($status_val === '1') {
+			return '<span class="badge" style="background-color:#f39c12 !important; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Approval Direktur</span>';
+		}
+
+		// 4. Menunggu Pengembalian Kasbon (3)
+		if ($status_val === '3') {
+			return '<span class="badge" style="background-color:#6f42c1 !important; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-reply"></i> Menunggu Pengembalian</span>';
+		}
+
+		// 5. Menunggu Verifikasi Pengembalian (4)
+		if ($status_val === '4') {
+			return '<span class="badge" style="background-color:#fd7e14 !important; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Verifikasi</span>';
+		}
+
+		// 6. Selesai / Disetujui (2)
+		if ($status_val === '2') {
+			return '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui</span>';
 		}
 
 		return '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">-</span>';
@@ -4542,6 +5766,17 @@ class Expense extends Admin_Controller
 			$this->db->group_end();
 		}
 
+		// Filter dokumen invoice PO / pembayaran material (hanya tampilkan yang id_po NULL dan bukan prefix PI-)
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->group_start();
+		$this->db->where('a.exp_inv_po', null);
+		$this->db->or_where('a.exp_inv_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+
 		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '1' && !has_permission('Expense.Manage')) {
 			$this->db->group_start();
 			$this->db->where('a.nama', $this->auth->user_name());
@@ -4674,6 +5909,11 @@ class Expense extends Admin_Controller
 		$this->db->join('users c', 'COALESCE(NULLIF(a.approved_by, ""), a.approval) = c.username', 'left');
 		$this->db->where('a.pettycash IS NOT NULL');
 		$this->db->where('a.exp_pib', null);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
 		if ($this->auth->user_id() !== '7') {
 			$this->db->where('a.nama', $this->auth->user_name());
@@ -4780,6 +6020,11 @@ class Expense extends Admin_Controller
 		$this->db->where('a.status', 0);
 		$this->db->where('a.sts_finance IS NULL');
 		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		$this->db->group_by('a.no_doc');
 
 		$count_all = $this->db->count_all_results();
@@ -4791,6 +6036,11 @@ class Expense extends Admin_Controller
 		$this->db->join('users d', 'a.approval=d.username', 'left');
 		$this->db->where('a.status', 0);
 		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
 		if (!empty($search)) {
 			$this->db->group_start();
@@ -4814,6 +6064,11 @@ class Expense extends Admin_Controller
 		$this->db->join('users d', 'a.approval=d.username', 'left');
 		$this->db->where('a.status', 0);
 		$this->db->where('b.id_kasbon IS NULL');
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
 		if (!empty($search)) {
 			$this->db->group_start();
@@ -4876,19 +6131,27 @@ class Expense extends Admin_Controller
 		// Total semua record
 		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '1');
+		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		$count_all = (int) $this->db->get()->row()->cnt;
 
 		// Total setelah filter
 		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '1');
+		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if ($search !== '') {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $search, 'both');
@@ -4901,13 +6164,17 @@ class Expense extends Admin_Controller
 
 		// Data aktual
 		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status, a.sts_finance, a.reject_reason, a.reject_reason_finance, a.st_reject,
-			IFNULL(SUM(b.total_harga), 0) as nominal,
+			COALESCE(NULLIF(a.jumlah, 0), SUM(b.total_harga), 0) as nominal,
 			c.username as nmuser');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
-		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '1');
+		$this->db->where('(a.status = 1 OR (a.status = 0 AND a.sts_finance = "1"))', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if ($search !== '') {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $search, 'both');
@@ -4980,19 +6247,29 @@ class Expense extends Admin_Controller
 		// Total semua record (tanpa filter)
 		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '0');
+		$this->db->where('(a.sts_finance = "0" OR a.sts_finance IS NULL)', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		$count_all = (int) $this->db->get()->row()->cnt;
 
 		// Total setelah filter search
 		$this->db->select('COUNT(DISTINCT a.no_doc) as cnt');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '0');
+		$this->db->where('(a.sts_finance = "0" OR a.sts_finance IS NULL)', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if ($keyword !== '') {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $keyword);
@@ -5005,13 +6282,18 @@ class Expense extends Admin_Controller
 
 		// Data aktual dengan limit & offset
 		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.informasi, a.status, a.sts_finance, a.reject_reason, a.reject_reason_finance, a.st_reject,
-			IFNULL(SUM(b.total_harga), 0) as nominal,
+			COALESCE(NULLIF(a.jumlah, 0), SUM(b.total_harga), 0) as nominal,
 			c.username as nmuser');
 		$this->db->from('tr_expense a');
-		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc AND b.id_kasbon IS NULL', 'left');
+		$this->db->join('tr_expense_detail b', 'b.no_doc = a.no_doc', 'left');
 		$this->db->join('users c', 'a.nama = c.username', 'left');
 		$this->db->where('a.status', 0);
-		$this->db->where('a.sts_finance', '0');
+		$this->db->where('(a.sts_finance = "0" OR a.sts_finance IS NULL)', null, false);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if ($keyword !== '') {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $keyword);
@@ -5102,30 +6384,32 @@ class Expense extends Admin_Controller
 		}
 
 		try {
-			$consultant = $this->load->database('consultant', true);
-			if (!empty($first_kasbon_doc)) {
-				$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
-				if (!empty($get_kb) && !empty($get_kb->project)) {
-					$consultant->select('a.id, a.nm_company');
-					$consultant->from('kons_tr_company a');
-					$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-					$consultant->where('b.id_quotation', $get_kb->project);
-					$get_comp = $consultant->get()->row();
-					if (!empty($get_comp)) {
-						$id_company = $get_comp->id;
-						$nm_company = $get_comp->nm_company;
+			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
+				$consultant = $this->load->database('consultant', true);
+				if (!empty($first_kasbon_doc)) {
+					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
+					if (!empty($get_kb) && !empty($get_kb->project)) {
+						$consultant->select('a.id, a.nm_company');
+						$consultant->from('kons_tr_company a');
+						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+						$consultant->where('b.id_quotation', $get_kb->project);
+						$get_comp = $consultant->get()->row();
+						if (!empty($get_comp)) {
+							$id_company = $get_comp->id;
+							$nm_company = $get_comp->nm_company;
+						}
+					}
+				}
+
+				if (empty($nm_company)) {
+					$get_first_comp = $consultant->get('kons_tr_company')->row();
+					if (!empty($get_first_comp)) {
+						$id_company = $get_first_comp->id;
+						$nm_company = $get_first_comp->nm_company;
 					}
 				}
 			}
-
-			if (empty($nm_company)) {
-				$get_first_comp = $consultant->get('kons_tr_company')->row();
-				if (!empty($get_first_comp)) {
-					$id_company = $get_first_comp->id;
-					$nm_company = $get_first_comp->nm_company;
-				}
-			}
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			$id_company = '';
 			$nm_company = '';
 		}
@@ -5191,20 +6475,20 @@ class Expense extends Admin_Controller
 			$ttl_debit += $total_expense;
 		}
 
-		// Jika LEBIH KASBON (Kasbon > Expense / Selisih > 0): Sisi DEBIT Bank Pengembalian
+		// Jika LEBIH KASBON (Kasbon > Expense / Selisih > 0): Sisi DEBIT Piutang Kelebihan Kasbon (1103-01-15)
 		if ($selisih > 0) {
 			$no_jurnal++;
-			$coa_bank = '1101-02-01';
-			$nm_bank = 'Bank BCA (Pengembalian Kasbon)';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_bank . "'")->row();
-			if (!empty($q_coa_acc)) $nm_bank = $q_coa_acc->nama;
+			$coa_piutang = '1103-01-15';
+			$nm_piutang = 'Piutang Kelebihan Kasbon';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
+			if (!empty($q_coa_acc)) $nm_piutang = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr style="background:#e8fadf;">';
 			$hasil_jurnal .= '<td class="text-center">' . $tgl_doc . '<input type="hidden" name="jurnal[' . $no_jurnal . '][tgl_jurnal]" value="' . $tgl_jurnal_val . '"></td>';
-			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_bank . '"></td>';
+			$hasil_jurnal .= '<td class="text-center"><b>' . $coa_piutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][coa]" value="' . $coa_piutang . '"></td>';
 			$hasil_jurnal .= '<td class="text-center"><b>' . $nm_company . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][id_company]" value="' . $id_company . '"><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_company]" value="' . $nm_company . '"></td>';
-			$hasil_jurnal .= '<td><b>' . $nm_bank . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_bank . '"></td>';
-			$hasil_jurnal .= '<td><span class="text-green"><i class="fa fa-reply"></i> Pengembalian Kelebihan Kasbon (Transfer ke Rekening Perusahaan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Pengembalian Kelebihan Kasbon"></td>';
+			$hasil_jurnal .= '<td><b>' . $nm_piutang . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][nm_coa]" value="' . $nm_piutang . '"></td>';
+			$hasil_jurnal .= '<td><span class="text-green"><i class="fa fa-reply"></i> Piutang Kelebihan Kasbon (Menunggu Pengembalian ke Rekening Perusahaan)</span><input type="hidden" name="jurnal[' . $no_jurnal . '][deskripsi]" value="Piutang Kelebihan Kasbon"></td>';
 			$hasil_jurnal .= '<td class="text-right"><b>' . number_format($selisih) . '</b><input type="hidden" name="jurnal[' . $no_jurnal . '][debit]" value="' . $selisih . '"></td>';
 			$hasil_jurnal .= '<td class="text-right">0<input type="hidden" name="jurnal[' . $no_jurnal . '][kredit]" value="0"></td>';
 			$hasil_jurnal .= '</tr>';
@@ -5371,11 +6655,6 @@ class Expense extends Admin_Controller
 
 		$selisih = $total_kasbon - $total_expense;
 
-		// Hanya untuk kondisi Lebih Expense ($selisih < 0) atau Impas ($selisih == 0)
-		if ($selisih > 0) {
-			return;
-		}
-
 		$tgl_doc = !empty($data->tgl_doc) ? $data->tgl_doc : date('Y-m-d');
 		$month_num = (int) date('m', strtotime($tgl_doc));
 		$month_roman = int_to_roman($month_num);
@@ -5395,30 +6674,32 @@ class Expense extends Admin_Controller
 		$id_company = '';
 		$nm_company = '';
 		try {
-			$consultant = $this->load->database('consultant', true);
-			if (!empty($data->id_kasbon)) {
-				$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
-				if (!empty($get_kb) && !empty($get_kb->project)) {
-					$consultant->select('a.id, a.nm_company');
-					$consultant->from('kons_tr_company a');
-					$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-					$consultant->where('b.id_quotation', $get_kb->project);
-					$get_comp = $consultant->get()->row();
-					if (!empty($get_comp)) {
-						$id_company = $get_comp->id;
-						$nm_company = $get_comp->nm_company;
+			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
+				$consultant = $this->load->database('consultant', true);
+				if (!empty($data->id_kasbon)) {
+					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+					if (!empty($get_kb) && !empty($get_kb->project)) {
+						$consultant->select('a.id, a.nm_company');
+						$consultant->from('kons_tr_company a');
+						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+						$consultant->where('b.id_quotation', $get_kb->project);
+						$get_comp = $consultant->get()->row();
+						if (!empty($get_comp)) {
+							$id_company = $get_comp->id;
+							$nm_company = $get_comp->nm_company;
+						}
+					}
+				}
+
+				if (empty($nm_company)) {
+					$get_first_comp = $consultant->get('kons_tr_company')->row();
+					if (!empty($get_first_comp)) {
+						$id_company = $get_first_comp->id;
+						$nm_company = $get_first_comp->nm_company;
 					}
 				}
 			}
-
-			if (empty($nm_company)) {
-				$get_first_comp = $consultant->get('kons_tr_company')->row();
-				if (!empty($get_first_comp)) {
-					$id_company = $get_first_comp->id;
-					$nm_company = $get_first_comp->nm_company;
-				}
-			}
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			$id_company = '';
 			$nm_company = '';
 		}
@@ -5465,6 +6746,37 @@ class Expense extends Admin_Controller
 					'created_date'    => date('Y-m-d H:i:s')
 				];
 			}
+		}
+
+		// Sisi DEBIT: Piutang Kelebihan Kasbon (1103-01-15) jika LEBIH KASBON ($selisih > 0)
+		if ($selisih > 0) {
+			$coa_piutang = '1103-01-15';
+			$nm_piutang = 'Piutang Kelebihan Kasbon';
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
+			if (!empty($q_coa_acc)) {
+				$nm_piutang = $q_coa_acc->nama;
+			}
+
+			$desk_piutang = 'Piutang Kelebihan Kasbon (Menunggu Pengembalian) - ' . $data->no_doc;
+
+			$arr_insert[] = [
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_doc,
+				'coa'             => $coa_piutang,
+				'id_company'      => $id_company,
+				'nm_company'      => $nm_company,
+				'nm_coa'          => $nm_piutang,
+				'debit'           => $selisih,
+				'kredit'          => 0,
+				'keterangan'      => $desk_piutang,
+				'sts'             => '0',
+				'no_transaksi'    => $data->no_doc,
+				'jenis_transaksi' => 'Expense Report',
+				'id_divisi'       => $id_divisi,
+				'nm_divisi'       => $nm_divisi,
+				'created_by'      => $this->auth->user_id(),
+				'created_date'    => date('Y-m-d H:i:s')
+			];
 		}
 
 		// 2. Sisi KREDIT: Kasbon Awal (Piutang Lain-lain Konsultan)
@@ -5533,6 +6845,602 @@ class Expense extends Admin_Controller
 		if (!empty($arr_insert)) {
 			$this->db->insert_batch('tr_jurnal', $arr_insert);
 		}
+	}
+
+	/**
+	 * Datatables endpoint untuk Tab 2: Pengembalian Kasbon (Sisi User Pelapor)
+	 */
+	public function get_dat_pengembalian_kasbon()
+	{
+		$post   = $this->input->post();
+		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
+		$length = isset($post['length']) ? (int) $post['length'] : 10;
+		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+
+		$cur_user = $this->auth->user_name();
+		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+
+		$this->db->from('tr_expense a');
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->where_in('a.status', ['3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.nama', $cur_user);
+		}
+		$count_all = $this->db->count_all_results();
+
+		$this->db->select('a.*, b.nm_lengkap as nmuser');
+		$this->db->from('tr_expense a');
+		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->where_in('a.status', ['3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.nama', $cur_user);
+		}
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.id_kasbon', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->group_end();
+		}
+		$count_filter = $this->db->count_all_results('', false);
+
+		$this->db->order_by('a.id', 'DESC');
+		$this->db->limit($length, $start);
+		$rows = $this->db->get()->result_array();
+
+		$data = [];
+		$no = $start;
+		foreach ($rows as $item) {
+			$no++;
+			$nominal_lebih = floatval($item['lebih_bayar']);
+			$status_badge = $this->_render_expense_status_badge($item);
+
+			// Tampilkan alasan penolakan verifikasi jika ada
+			if (!empty($item['verif_reject_reason']) && (string)$item['status'] === '3') {
+				$status_badge .= '<br><span class="badge" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; font-weight:normal; font-size:10px; margin-top:3px; display:inline-block; max-width:180px; white-space:normal; text-align:center;">'
+					. '<i class="fa fa-info-circle"></i> Catatan Finance: ' . htmlspecialchars($item['verif_reject_reason']) . '</span>';
+			}
+
+			$action = '';
+			if ((string)$item['status'] === '3') {
+				$action = '<button type="button" class="btn btn-primary btn-xs btn-rounded btn-upload-pengembalian" '
+					. 'data-id="' . $item['id'] . '" '
+					. 'data-doc="' . htmlspecialchars($item['no_doc']) . '" '
+					. 'data-kasbon="' . htmlspecialchars($item['id_kasbon'] ?? '') . '" '
+					. 'data-nominal="' . $nominal_lebih . '">'
+					. '<i class="fa fa-upload"></i> Upload Bukti</button>';
+			} else if ((string)$item['status'] === '4') {
+				$action = '<a class="btn btn-info btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')">'
+					. '<i class="fa fa-eye"></i> Detail Bukti</a>';
+			}
+
+			$data[] = [
+				'no' => $no,
+				'no_doc' => $item['no_doc'],
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
+				'tgl_doc' => $item['tgl_doc'],
+				'informasi' => htmlspecialchars($item['informasi']),
+				'total_kasbon' => number_format(floatval($item['total_kasbon'])),
+				'realisasi' => number_format(floatval($item['jumlah'])),
+				'lebih_bayar' => '<b>Rp ' . number_format($nominal_lebih) . '</b>',
+				'status' => $status_badge,
+				'action' => $action
+			];
+		}
+
+		echo json_encode([
+			'draw' => $draw,
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data' => $data
+		]);
+	}
+
+	/**
+	 * Endpoint simpan data pengembalian dana & upload bukti transfer (Sisi User Pelapor)
+	 */
+	public function save_pengembalian_dana()
+	{
+		$id = $this->input->post('id_expense');
+		$transfer_coa_bank = $this->input->post('transfer_coa_bank');
+		$transfer_tanggal = $this->input->post('transfer_tanggal');
+		$transfer_jumlah = floatval(str_replace(',', '', (string)$this->input->post('transfer_jumlah')));
+
+		if (empty($id)) {
+			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
+			return;
+		}
+
+		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($expense)) {
+			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
+			return;
+		}
+
+		if (empty($transfer_coa_bank)) {
+			echo json_encode(['save' => false, 'message' => 'Bank Tujuan Transfer perusahaan wajib dipilih!']);
+			return;
+		}
+
+		if (empty($transfer_tanggal)) {
+			echo json_encode(['save' => false, 'message' => 'Tanggal transfer wajib diisi!']);
+			return;
+		}
+
+		if ($transfer_jumlah <= 0) {
+			echo json_encode(['save' => false, 'message' => 'Nominal transfer pengembalian harus lebih dari 0!']);
+			return;
+		}
+
+		// Validasi upload bukti transfer: minimal 1 file
+		$uploaded_files = [];
+		$upload_dir = 'assets/expense_bukti_pengembalian/';
+		if (!is_dir($upload_dir)) {
+			mkdir($upload_dir, 0777, true);
+		}
+
+		if (!empty($_FILES['bukti_transfer']['name'][0])) {
+			foreach ($_FILES['bukti_transfer']['name'] as $idx => $fname) {
+				if (!empty($_FILES['bukti_transfer']['tmp_name'][$idx])) {
+					$tmp = $_FILES['bukti_transfer']['tmp_name'][$idx];
+					$clean = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($fname));
+					$dest = $upload_dir . $clean;
+					if (move_uploaded_file($tmp, $dest)) {
+						$uploaded_files[] = $dest;
+					}
+				}
+			}
+		}
+
+		// Jika ada file existing sebelumnya dan user tidak unggah baru
+		if (empty($uploaded_files) && !empty($expense->bukti_pengembalian)) {
+			$uploaded_files = explode(';', $expense->bukti_pengembalian);
+		}
+
+		if (empty($uploaded_files)) {
+			echo json_encode(['save' => false, 'message' => 'Bukti transfer pengembalian dana wajib diunggah (minimal 1 file gambar / PDF)!']);
+			return;
+		}
+
+		$update_data = [
+			'transfer_coa_bank' => $transfer_coa_bank,
+			'transfer_tanggal' => date('Y-m-d', strtotime($transfer_tanggal)),
+			'transfer_jumlah' => $transfer_jumlah,
+			'bukti_pengembalian' => implode(';', $uploaded_files),
+			'status' => 4, // Menunggu Verifikasi Finance
+			'verif_reject_reason' => null
+		];
+
+		$this->db->trans_begin();
+		$this->db->update('tr_expense', $update_data, ['id' => $id]);
+
+		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
+			$this->db->trans_rollback();
+			echo json_encode(['save' => false, 'message' => 'Gagal menyimpan data pengembalian kasbon.']);
+			return;
+		}
+
+		echo json_encode([
+			'save' => true,
+			'message' => 'Bukti pengembalian kasbon berhasil diunggah! Laporan kini berstatus "Menunggu Verifikasi Finance".'
+		]);
+	}
+
+	/**
+	 * Datatables endpoint untuk Tab 3: Lebih Expense (Reimburse ke Karyawan)
+	 */
+	public function get_dat_lebih_expense()
+	{
+		$post   = $this->input->post();
+		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
+		$length = isset($post['length']) ? (int) $post['length'] : 10;
+		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+
+		$cur_user = $this->auth->user_name();
+		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+
+		$this->db->from('tr_expense a');
+		$this->db->where('a.kurang_bayar >', 0);
+		$this->db->where_in('a.status', ['2', '3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.nama', $cur_user);
+		}
+		$count_all = $this->db->count_all_results();
+
+		$this->db->select('a.*, b.nm_lengkap as nmuser, rp.no_doc as no_rp, rp.status as status_rp');
+		$this->db->from('tr_expense a');
+		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->join('tr_request_payment rp', 'rp.no_doc = a.no_doc AND rp.tipe = "expense"', 'left');
+		$this->db->where('a.kurang_bayar >', 0);
+		$this->db->where_in('a.status', ['2', '3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.nama', $cur_user);
+		}
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.id_kasbon', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->group_end();
+		}
+		$count_filter = $this->db->count_all_results('', false);
+
+		$this->db->order_by('a.id', 'DESC');
+		$this->db->limit($length, $start);
+		$rows = $this->db->get()->result_array();
+
+		$data = [];
+		$no = $start;
+		foreach ($rows as $item) {
+			$no++;
+			$kurang_bayar = floatval($item['kurang_bayar']);
+
+			// Status alur reimburse via Request Payment
+			$st_rp = isset($item['status_rp']) ? (int)$item['status_rp'] : 1;
+			if ($st_rp === 1) {
+				$badge_rp = '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
+			} else if ($st_rp === 2) {
+				$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Management</span>';
+			} else if ($st_rp === 3) {
+				$badge_rp = '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui / Siap Dibayar</span>';
+			} else if ($st_rp >= 4) {
+				$badge_rp = '<span class="badge bg-dark" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai Dibayar Kantor</span>';
+			} else {
+				$badge_rp = '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">Dalam Antrian</span>';
+			}
+
+			$data[] = [
+				'no' => $no,
+				'no_doc' => $item['no_doc'],
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
+				'tgl_doc' => $item['tgl_doc'],
+				'informasi' => htmlspecialchars($item['informasi']),
+				'kurang_bayar' => '<b style="color:#00a65a; font-size:13px;">Rp ' . number_format($kurang_bayar) . '</b>',
+				'status_reimburse' => $badge_rp,
+				'action' => '<a class="btn btn-default btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i> Detail</a>'
+			];
+		}
+
+		echo json_encode([
+			'draw' => $draw,
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data' => $data
+		]);
+	}
+
+	/**
+	 * Halaman index Menu ID 488: Verifikasi Pengembalian Kasbon (Finance)
+	 */
+	public function verifikasi_pengembalian()
+	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'verifikasi_pengembalian_index'), array('page', 'outcome'));
+		$this->template->page_icon('fa fa-check-square-o');
+		$this->template->title('Verifikasi Pengembalian Kasbon');
+		$this->template->render('verifikasi_pengembalian_index');
+		$this->completeAudit('Membuka daftar verifikasi pengembalian kasbon', 1, array(
+			'page' => 'verifikasi_pengembalian_index',
+			'outcome' => 'rendered'
+		));
+	}
+
+	/**
+	 * Datatables endpoint Menu 488: Verifikasi Pengembalian Kasbon
+	 */
+	public function get_dat_verifikasi_pengembalian()
+	{
+		$post   = $this->input->post();
+		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
+		$length = isset($post['length']) ? (int) $post['length'] : 10;
+		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
+		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+
+		$this->db->from('tr_expense a');
+		$this->db->where('a.status', 4);
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		$count_all = $this->db->count_all_results();
+
+		$this->db->select('a.*, b.nm_lengkap as nmuser');
+		$this->db->from('tr_expense a');
+		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->where('a.status', 4);
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!empty($search)) {
+			$this->db->group_start();
+			$this->db->like('a.no_doc', $search, 'both');
+			$this->db->or_like('a.id_kasbon', $search, 'both');
+			$this->db->or_like('a.informasi', $search, 'both');
+			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('b.nm_lengkap', $search, 'both');
+			$this->db->group_end();
+		}
+		$count_filter = $this->db->count_all_results('', false);
+
+		$this->db->order_by('a.id', 'DESC');
+		$this->db->limit($length, $start);
+		$rows = $this->db->get()->result_array();
+
+		$data = [];
+		$no = $start;
+		foreach ($rows as $item) {
+			$no++;
+			$lebih_bayar = floatval($item['lebih_bayar']);
+
+			// Cari nama bank
+			$bank_label = !empty($item['transfer_coa_bank']) ? $item['transfer_coa_bank'] : '-';
+			if (!empty($item['transfer_coa_bank'])) {
+				$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($item['transfer_coa_bank']))->row();
+				if ($qb) {
+					$bank_label = $qb->nama;
+				}
+			}
+
+			$status_badge = '<span class="badge" style="background:#fd7e14; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Verifikasi</span>';
+
+			$action = '<button type="button" class="btn btn-primary btn-xs btn-rounded" onclick="data_verif_detail(' . $item['id'] . ')">'
+				. '<i class="fa fa-check-square-o"></i> Proses Verifikasi</button>';
+
+			$data[] = [
+				'no' => $no,
+				'no_doc' => $item['no_doc'],
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
+				'tgl_doc' => $item['tgl_doc'],
+				'nmuser' => !empty($item['nmuser']) ? htmlspecialchars($item['nmuser']) : htmlspecialchars($item['nama']),
+				'informasi' => htmlspecialchars($item['informasi']),
+				'lebih_bayar' => '<b>Rp ' . number_format($lebih_bayar) . '</b>',
+				'bank_name' => htmlspecialchars($bank_label),
+				'transfer_tanggal' => !empty($item['transfer_tanggal']) ? $item['transfer_tanggal'] : '-',
+				'status' => $status_badge,
+				'action' => $action
+			];
+		}
+
+		echo json_encode([
+			'draw' => $draw,
+			'recordsTotal' => $count_all,
+			'recordsFiltered' => $count_filter,
+			'data' => $data
+		]);
+	}
+
+	/**
+	 * Form detail verifikasi pengembalian kasbon (Menu 488)
+	 */
+	public function verifikasi_pengembalian_detail($id)
+	{
+		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($data)) {
+			echo '<div class="alert alert-danger">Data expense tidak ditemukan.</div>';
+			return;
+		}
+
+		$bank_name = $data->transfer_coa_bank;
+		if (!empty($data->transfer_coa_bank)) {
+			$qb = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($data->transfer_coa_bank))->row();
+			if ($qb) {
+				$bank_name = $qb->nama;
+			}
+		}
+
+		$this->template->set('data', $data);
+		$this->template->set('bank_name', $bank_name);
+		$this->template->render('verifikasi_pengembalian_detail');
+	}
+
+	/**
+	 * Aksi setujui verifikasi pengembalian kasbon & posting Jurnal 2 (Menu 488)
+	 */
+	public function verifikasi_pengembalian_approve()
+	{
+		$id = $this->input->post('id');
+		$chk_bukti = (int)$this->input->post('chk_bukti');
+		$chk_mutasi = (int)$this->input->post('chk_mutasi');
+		$chk_nominal = (int)$this->input->post('chk_nominal');
+
+		if (empty($id)) {
+			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
+			return;
+		}
+
+		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($expense)) {
+			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
+			return;
+		}
+
+		// BR-12: Verifikator tidak boleh pelapor sendiri
+		if ($expense->nama === $this->auth->user_name()) {
+			echo json_encode(['save' => false, 'message' => 'Anda tidak dapat memverifikasi pengembalian untuk laporan Anda sendiri (Segregation of Duties)!']);
+			return;
+		}
+
+		// Validasi 3 checklist wajib
+		if ($chk_bukti !== 1 || $chk_mutasi !== 1 || $chk_nominal !== 1) {
+			echo json_encode(['save' => false, 'message' => 'Ketiga butir checklist verifikasi wajib dicentang sebelum menyetujui!']);
+			return;
+		}
+
+		$bank_coa = !empty($expense->transfer_coa_bank) ? $expense->transfer_coa_bank : '1101-02-01';
+		$nominal = floatval($expense->transfer_jumlah > 0 ? $expense->transfer_jumlah : $expense->lebih_bayar);
+
+		$this->db->trans_begin();
+
+		// Update tr_expense status ke 2 (Selesai/Approved)
+		$this->db->update('tr_expense', [
+			'status' => 2,
+			'verified_by' => $this->auth->user_name(),
+			'verified_on' => date('Y-m-d H:i:s'),
+			'verif_checklist' => 'bukti,mutasi,nominal',
+			'verif_reject_reason' => null
+		], ['id' => $id]);
+
+		// Posting JURNAL 2 (Debit Bank, Kredit 1103-01-15)
+		$this->_post_jurnal_pengembalian_kasbon($id, $bank_coa, $nominal);
+
+		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
+			$this->db->trans_rollback();
+			echo json_encode(['save' => false, 'message' => 'Gagal memverifikasi pengembalian kasbon (kesalahan database).']);
+			return;
+		}
+
+		echo json_encode([
+			'save' => true,
+			'message' => 'Verifikasi pengembalian kasbon selesai! Jurnal 2 berhasil dibukukan dan status laporan telah Selesai.'
+		]);
+	}
+
+	/**
+	 * Aksi tolak verifikasi pengembalian kasbon (Menu 488)
+	 */
+	public function verifikasi_pengembalian_reject()
+	{
+		$id = $this->input->post('id');
+		$reason = trim((string)$this->input->post('reason'));
+
+		if (empty($id)) {
+			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
+			return;
+		}
+
+		if (empty($reason)) {
+			echo json_encode(['save' => false, 'message' => 'Alasan penolakan verifikasi wajib diisi!']);
+			return;
+		}
+
+		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($expense)) {
+			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
+			return;
+		}
+
+		// Update tr_expense kembali ke status 3 (Menunggu Pengembalian)
+		$this->db->trans_begin();
+		$this->db->update('tr_expense', [
+			'status' => 3,
+			'verif_reject_reason' => $reason
+		], ['id' => $id]);
+
+		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
+			$this->db->trans_rollback();
+			echo json_encode(['save' => false, 'message' => 'Gagal menolak verifikasi pengembalian kasbon.']);
+			return;
+		}
+
+		echo json_encode([
+			'save' => true,
+			'message' => 'Pengembalian kasbon ditolak. Dokumen telah dikembalikan ke antrian pelapor untuk perbaikan.'
+		]);
+	}
+
+	/**
+	 * Posting otomatis JURNAL 2 saat Finance memverifikasi pengembalian kasbon
+	 * Debit : Bank Perusahaan (transfer_coa_bank)
+	 * Kredit: 1103-01-15 (Piutang Kelebihan Kasbon)
+	 */
+	private function _post_jurnal_pengembalian_kasbon($id, $coa_bank, $nominal)
+	{
+		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
+		if (empty($data)) return false;
+
+		$tgl_doc = !empty($data->transfer_tanggal) ? $data->transfer_tanggal : date('Y-m-d');
+		$month_num = (int) date('m', strtotime($tgl_doc));
+		$month_roman = int_to_roman($month_num);
+		$year_short = date('y', strtotime($tgl_doc));
+
+		// Generate nomor jurnal otomatis NNNNN-BUM-{MM}-{YY}
+		$srcMtr = "SELECT MAX(no_jurnal) as maxP FROM tr_jurnal WHERE no_jurnal LIKE '%-BUM-" . $month_roman . "-" . $year_short . "%'";
+		$resultMtr = $this->db->query($srcMtr)->row_array();
+		$urutan = 0;
+		if (!empty($resultMtr['maxP'])) {
+			$urutan = (int) substr($resultMtr['maxP'], 0, 5);
+		}
+		$urutan++;
+		$no_jurnal = sprintf('%05s', $urutan) . '-BUM-' . $month_roman . '-' . $year_short;
+
+		// Ambil nama bank dari coa_master
+		$q_bank = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_bank))->row();
+		$nm_bank = !empty($q_bank) ? $q_bank->nama : 'Bank Perusahaan';
+
+		$coa_piutang = '1103-01-15';
+		$q_piutang = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_piutang))->row();
+		$nm_piutang = !empty($q_piutang) ? $q_piutang->nama : 'Piutang Kelebihan Kasbon';
+
+		$arr_insert = [
+			[
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_doc,
+				'coa'             => $coa_bank,
+				'id_company'      => '',
+				'nm_company'      => '',
+				'nm_coa'          => $nm_bank,
+				'debit'           => $nominal,
+				'kredit'          => 0,
+				'keterangan'      => 'Penerimaan Pengembalian Kelebihan Kasbon - ' . $data->no_doc . (!empty($data->id_kasbon) ? ' (' . $data->id_kasbon . ')' : ''),
+				'sts'             => '0',
+				'no_transaksi'    => $data->no_doc,
+				'jenis_transaksi' => 'Pengembalian Kasbon',
+				'id_divisi'       => !empty($data->departement) ? $data->departement : '',
+				'nm_divisi'       => !empty($data->departement) ? $data->departement : '',
+				'created_by'      => $this->auth->user_id(),
+				'created_date'    => date('Y-m-d H:i:s')
+			],
+			[
+				'no_jurnal'       => $no_jurnal,
+				'tgl_jurnal'      => $tgl_doc,
+				'coa'             => $coa_piutang,
+				'id_company'      => '',
+				'nm_company'      => '',
+				'nm_coa'          => $nm_piutang,
+				'debit'           => 0,
+				'kredit'          => $nominal,
+				'keterangan'      => 'Penghapusan Piutang Kelebihan Kasbon - ' . $data->no_doc,
+				'sts'             => '0',
+				'no_transaksi'    => $data->no_doc,
+				'jenis_transaksi' => 'Pengembalian Kasbon',
+				'id_divisi'       => !empty($data->departement) ? $data->departement : '',
+				'nm_divisi'       => !empty($data->departement) ? $data->departement : '',
+				'created_by'      => $this->auth->user_id(),
+				'created_date'    => date('Y-m-d H:i:s')
+			]
+		];
+
+		return $this->db->insert_batch('tr_jurnal', $arr_insert);
 	}
 }
 
