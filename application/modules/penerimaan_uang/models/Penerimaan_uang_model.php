@@ -66,6 +66,11 @@ class Penerimaan_uang_model extends BF_Model
         // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
         $this->db->where('YEAR(a.tanggal_transaksi) >=', 2025);
 
+        $tab = $this->input->post('tab');
+        if ($tab === 'draft') {
+            $this->db->where('NOT EXISTS (SELECT 1 FROM tr_penerimaan_piutang p WHERE p.id_alokasi = s.id)', null, false);
+        }
+
         if (!empty($bank)) {
             $this->db->where('a.tipe_bank', $bank);
         }
@@ -289,5 +294,256 @@ class Penerimaan_uang_model extends BF_Model
         // Step 3: Not found in either table
         log_message('error', 'resolve_alokasi: id_alokasi=' . $id_alokasi . ' not found in tr_alokasi_split or tr_alokasi_detail');
         return null;
+    }
+
+    public function getDistinctYears()
+    {
+        $rows = $this->db->query("SELECT DISTINCT YEAR(COALESCE(a.tanggal_transaksi, p.created_date)) as yr FROM tr_penerimaan_piutang p LEFT JOIN tr_alokasi_split s ON s.id = p.id_alokasi LEFT JOIN tr_alokasi_detail a ON a.id = s.id_alokasi_detail WHERE p.created_date IS NOT NULL ORDER BY yr DESC")->result_array();
+        $years = array();
+        foreach ($rows as $r) {
+            if (!empty($r['yr'])) $years[] = (string)$r['yr'];
+        }
+        if (empty($years)) {
+            $years = array(date('Y'), (string)((int)date('Y') - 1));
+        }
+        return $years;
+    }
+
+    public function get_report_data($year = '', $month = '', $company = '', $search = '')
+    {
+        $this->db->select('p.id, p.no_surat, p.id_alokasi, p.id_customer, p.nm_customer, p.nominal_penerimaan_bank, p.pph23_dipotong, p.created_date, ' .
+            'd.id as detail_id, d.id_inv, d.penerimaan, d.biaya_admin, d.sisa_piutang, d.pph23, d.consulting_snapshot, ' .
+            'i.no_invoice, i.tax_treatment, i.total_akhir_jurnal, i.total_nominal_jurnal, i.ppn_jurnal, ' .
+            'a.tanggal_transaksi, a.keterangan, ' .
+            'b.nama as nama_bank_acc, b.rekening, c.nama_bank as nm_bank');
+        $this->db->from('tr_penerimaan_piutang p');
+        $this->db->join('tr_penerimaan_piutang_detail d', 'd.id_header = p.no_surat', 'left');
+        $this->db->join('tr_invoicing i', 'i.id = d.id_inv', 'left');
+        $this->db->join('tr_alokasi_split s', 's.id = p.id_alokasi', 'left');
+        $this->db->join('tr_alokasi_detail a', 'a.id = COALESCE(s.id_alokasi_detail, p.id_alokasi)', 'left');
+        $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
+        $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
+
+        if (!empty($year)) {
+            $this->db->where('(YEAR(a.tanggal_transaksi) = ' . (int)$year . ' OR (a.tanggal_transaksi IS NULL AND YEAR(p.created_date) = ' . (int)$year . '))');
+        }
+        if (!empty($month)) {
+            $this->db->where('(MONTH(a.tanggal_transaksi) = ' . (int)$month . ' OR (a.tanggal_transaksi IS NULL AND MONTH(p.created_date) = ' . (int)$month . '))');
+        }
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('p.no_surat', $search);
+            $this->db->or_like('p.nm_customer', $search);
+            $this->db->or_like('i.no_invoice', $search);
+            $this->db->or_like('a.keterangan', $search);
+            $this->db->or_like('b.nama', $search);
+            $this->db->or_like('c.nama_bank', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('COALESCE(a.tanggal_transaksi, p.created_date) DESC', '', false);
+        $this->db->order_by('p.id', 'DESC');
+        $this->db->order_by('d.id', 'ASC');
+
+        $rows = $this->db->get()->result_array();
+
+        // Group rows by p.id
+        $groups = array();
+        foreach ($rows as $r) {
+            $pid = $r['id'];
+            $snap = json_decode($r['consulting_snapshot'] ?? '', true);
+            $coName = $snap['owner']['nm_company'] ?? '';
+            if (empty($coName)) {
+                $bankStr = strtoupper(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? ''));
+                if (strpos($bankStr, 'VUCA') !== false) $coName = 'VUCA';
+                elseif (strpos($bankStr, 'SUSTAIN') !== false) $coName = 'SUSTAIN';
+                else $coName = 'STM';
+            }
+
+            if (!empty($company) && stripos($coName, $company) === false) {
+                continue;
+            }
+
+            $taxCode = !empty($r['tax_treatment']) ? $r['tax_treatment'] : ($snap['tax_treatment'] ?? ((float)$r['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU'));
+
+            if (!isset($groups[$pid])) {
+                $bankName = trim(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? ''));
+                if (empty($bankName)) $bankName = 'Bank';
+
+                $checkPosted = $this->db->get_where('tr_jurnal', array('no_transaksi' => $r['no_surat'], 'sts' => '1'))->num_rows();
+
+                $groups[$pid] = array(
+                    'id' => $r['id'],
+                    'no_surat' => $r['no_surat'],
+                    'tanggal_transaksi' => $r['tanggal_transaksi'] ?: $r['created_date'],
+                    'bank_name' => $bankName,
+                    'keterangan' => $r['keterangan'] ?: '-',
+                    'nm_customer' => $r['nm_customer'],
+                    'nominal_penerimaan_bank' => $r['nominal_penerimaan_bank'],
+                    'pph23_dipotong' => $r['pph23_dipotong'],
+                    'company_main' => $coName,
+                    'is_posted' => ($checkPosted > 0),
+                    'details' => array()
+                );
+            }
+
+            $groups[$pid]['details'][] = array(
+                'detail_id' => $r['detail_id'],
+                'id_inv' => $r['id_inv'],
+                'no_invoice' => $r['no_invoice'] ?: '-',
+                'company_name' => $coName,
+                'tax_treatment' => $taxCode,
+                'total_akhir_jurnal' => $r['total_akhir_jurnal'] ?: $r['total_nominal_jurnal'],
+                'penerimaan' => $r['penerimaan'],
+                'biaya_admin' => $r['biaya_admin'],
+                'sisa_piutang' => $r['sisa_piutang'],
+                'pph23' => $r['pph23']
+            );
+        }
+
+        return array_values($groups);
+    }
+
+    public function get_report_penerimaan_serverside($year = '', $month = '', $company = '', $search = '', $start = 0, $length = 10, $orderCol = 1, $orderDir = 'desc')
+    {
+        // 1. Total records (unfiltered count)
+        $qTotal = $this->db->query("SELECT COUNT(*) as total FROM tr_penerimaan_piutang");
+        $rowTotal = $qTotal->row_array();
+        $recordsTotal = (int)($rowTotal['total'] ?? 0);
+
+        // 2. Build filter conditions
+        $whereClauses = array();
+        $params = array();
+
+        if (!empty($year)) {
+            $whereClauses[] = "(YEAR(a.tanggal_transaksi) = ? OR (a.tanggal_transaksi IS NULL AND YEAR(p.created_date) = ?))";
+            $params[] = (int)$year;
+            $params[] = (int)$year;
+        }
+        if (!empty($month)) {
+            $whereClauses[] = "(MONTH(a.tanggal_transaksi) = ? OR (a.tanggal_transaksi IS NULL AND MONTH(p.created_date) = ?))";
+            $params[] = (int)$month;
+            $params[] = (int)$month;
+        }
+        if (!empty($company)) {
+            if ($company === 'VUCA') {
+                $whereClauses[] = "b.nama LIKE '%VUCA%'";
+            } elseif ($company === 'SUSTAIN') {
+                $whereClauses[] = "b.nama LIKE '%SUSTAIN%'";
+            } elseif ($company === 'STM') {
+                $whereClauses[] = "(b.nama LIKE '%Sentral Tehnologi Managemen%' OR (b.nama NOT LIKE '%VUCA%' AND b.nama NOT LIKE '%SUSTAIN%'))";
+            }
+        }
+        if (!empty($search)) {
+            $whereClauses[] = "(p.no_surat LIKE ? OR p.nm_customer LIKE ? OR i.no_invoice LIKE ? OR a.keterangan LIKE ? OR b.nama LIKE ? OR c.nama_bank LIKE ?)";
+            $like = '%' . $search . '%';
+            $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
+        }
+        $whereSql = !empty($whereClauses) ? "WHERE " . implode(" AND ", $whereClauses) : "";
+
+        // 3. Filtered summary (counts and total nominal)
+        $sqlSub = "SELECT p.id, p.nominal_penerimaan_bank, COUNT(d.id) as inv_cnt
+                   FROM tr_penerimaan_piutang p
+                   LEFT JOIN tr_penerimaan_piutang_detail d ON d.id_header = p.no_surat
+                   LEFT JOIN tr_invoicing i ON i.id = d.id_inv
+                   LEFT JOIN tr_alokasi_split s ON s.id = p.id_alokasi
+                   LEFT JOIN tr_alokasi_detail a ON a.id = COALESCE(s.id_alokasi_detail, p.id_alokasi)
+                   LEFT JOIN ms_bank b ON b.id = a.tipe_bank
+                   LEFT JOIN list_bank c ON c.id = a.jenis_bank
+                   $whereSql
+                   GROUP BY p.id";
+
+        $sqlSummary = "SELECT COUNT(*) as filtered_receipts,
+                              COALESCE(SUM(t.nominal_penerimaan_bank), 0) as total_nominal,
+                              COALESCE(SUM(t.inv_cnt), 0) as total_invoices
+                       FROM ($sqlSub) as t";
+        $sumRow = $this->db->query($sqlSummary, $params)->row_array();
+        $recordsFiltered = (int)($sumRow['filtered_receipts'] ?? 0);
+        $totalNominal = (float)($sumRow['total_nominal'] ?? 0);
+        $totalInvoices = (int)($sumRow['total_invoices'] ?? 0);
+
+        // 4. Order mapping
+        $orderMap = array(
+            1 => 'COALESCE(a.tanggal_transaksi, p.created_date)',
+            2 => 'b.nama',
+            3 => 'a.keterangan',
+            4 => 'p.nm_customer',
+            8 => 'p.nominal_penerimaan_bank'
+        );
+        $orderBy = $orderMap[$orderCol] ?? 'COALESCE(a.tanggal_transaksi, p.created_date)';
+        $dir = strtolower($orderDir) === 'asc' ? 'ASC' : 'DESC';
+
+        // 5. Paginated page query
+        $pageParams = $params;
+        $pageParams[] = (int)$length;
+        $pageParams[] = (int)$start;
+
+        $sqlPage = "SELECT p.id, p.no_surat, p.id_alokasi, p.id_customer, p.nm_customer, p.nominal_penerimaan_bank, p.pph23_dipotong, p.created_date,
+                           a.tanggal_transaksi, a.keterangan,
+                           b.nama as nama_bank_acc, b.rekening, c.nama_bank as nm_bank
+                    FROM tr_penerimaan_piutang p
+                    LEFT JOIN tr_penerimaan_piutang_detail d ON d.id_header = p.no_surat
+                    LEFT JOIN tr_invoicing i ON i.id = d.id_inv
+                    LEFT JOIN tr_alokasi_split s ON s.id = p.id_alokasi
+                    LEFT JOIN tr_alokasi_detail a ON a.id = COALESCE(s.id_alokasi_detail, p.id_alokasi)
+                    LEFT JOIN ms_bank b ON b.id = a.tipe_bank
+                    LEFT JOIN list_bank c ON c.id = a.jenis_bank
+                    $whereSql
+                    GROUP BY p.id
+                    ORDER BY $orderBy $dir, p.id DESC
+                    LIMIT ? OFFSET ?";
+
+        $resPage = $this->db->query($sqlPage, $pageParams)->result_array();
+
+        $receipts = array();
+        $suratList = array();
+        foreach ($resPage as $r) {
+            $pid = $r['id'];
+            $receipts[$pid] = $r;
+            $receipts[$pid]['details'] = array();
+            $receipts[$pid]['is_posted'] = false;
+            $suratList[] = $r['no_surat'];
+        }
+
+        if (!empty($suratList)) {
+            $this->db->select('d.id_header, d.id_inv, d.penerimaan, d.biaya_admin, d.sisa_piutang, d.pph23, d.consulting_snapshot, ' .
+                'i.no_invoice, i.tax_treatment, i.total_akhir_jurnal, i.total_nominal_jurnal, i.ppn_jurnal');
+            $this->db->from('tr_penerimaan_piutang_detail d');
+            $this->db->join('tr_invoicing i', 'i.id = d.id_inv', 'left');
+            $this->db->where_in('d.id_header', $suratList);
+            $this->db->order_by('d.id', 'ASC');
+            $details = $this->db->get()->result_array();
+
+            foreach ($details as $d) {
+                foreach ($receipts as $pid => $rec) {
+                    if ($rec['no_surat'] === $d['id_header']) {
+                        $receipts[$pid]['details'][] = $d;
+                    }
+                }
+            }
+
+            // Check posted journals
+            $this->db->select('DISTINCT(no_transaksi) as no_transaksi');
+            $this->db->from('tr_jurnal');
+            $this->db->where_in('no_transaksi', $suratList);
+            $this->db->where('sts', '1');
+            $posted = $this->db->get()->result_array();
+
+            foreach ($posted as $pst) {
+                foreach ($receipts as $pid => $rec) {
+                    if ($rec['no_surat'] === $pst['no_transaksi']) {
+                        $receipts[$pid]['is_posted'] = true;
+                    }
+                }
+            }
+        }
+
+        return array(
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'total_nominal' => $totalNominal,
+            'total_invoices' => $totalInvoices,
+            'receipts' => array_values($receipts)
+        );
     }
 }

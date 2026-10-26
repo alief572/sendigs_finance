@@ -30,4 +30,63 @@ foreach (array('1,234.56', 'NaN', '1,234', array(), '99999999999999') as $bad) {
 foreach (array(array(100, 0, 'N', 101, 0), array(100, 0, 'Y', -1, 0), array(100, 0, 'X', 1, 0)) as $bad) {
     try { call_user_func_array(array($C, 'calculate'), $bad); throw new RuntimeException('Accepted invalid calculation'); } catch (InvalidArgumentException $expected) {}
 }
-echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals and invalid input\n";
+
+// === NEW CONSULTING TO-BE TAX & CONTROL TESTS ===
+// 1. PKP test case
+$pkp = $C::tax_calc(200000000, 'PKP');
+check($pkp['sales'] === 200000000, 'PKP sales');
+check($pkp['dpp_lain'] === 183333333, 'PKP dpp lain 11/12');
+check($pkp['ppn'] === 22000000, 'PKP ppn 12%');
+check($pkp['pph_default'] === 3666667, 'PKP pph 2%');
+check($pkp['tagihan'] === 222000000, 'PKP tagihan sales+ppn');
+check($pkp['piutang'] === 222000000, 'PKP piutang');
+
+// 2. WAPU test case
+$wapu = $C::tax_calc(300000000, 'WAPU');
+check($wapu['sales'] === 300000000, 'WAPU sales');
+check($wapu['dpp_lain'] === 275000000, 'WAPU dpp lain');
+check($wapu['ppn'] === 0, 'WAPU ppn 0');
+check($wapu['pph_default'] === 5500000, 'WAPU pph default');
+check($wapu['tagihan'] === 300000000, 'WAPU tagihan sales only');
+check($wapu['piutang'] === 300000000, 'WAPU piutang');
+
+// 3. KB (Kawasan Berikat) test case
+$kb = $C::tax_calc(6000000000, 'KB');
+check($kb['sales'] === 6000000000, 'KB sales');
+check($kb['dpp_lain'] === 5500000000, 'KB dpp lain');
+check($kb['ppn'] === 0, 'KB ppn 0');
+check($kb['pph_default'] === 110000000, 'KB pph default');
+check($kb['tagihan'] === 6000000000, 'KB tagihan sales only');
+check($kb['piutang'] === 6000000000, 'KB piutang');
+
+// 4. Kontrol zero-balance calculation
+// Formula: (Piutang - PPh - Admin - Sisa) - Uang Masuk = 0
+$k1 = $C::kontrol(222000000, 3666667, 250000, 0, 218083333);
+check($k1 === 0, 'Kontrol zero for PKP full payment with admin');
+
+$kKurang = $C::kontrol(222000000, 3666667, 0, 100000000, 118333333);
+check($kKurang === 0, 'Kontrol zero for PKP partial payment with sisa piutang');
+
+// 5. Batch validation
+$validBatch = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>222000000, 'pph'=>3666667, 'admin'=>250000, 'sisa'=>0)
+);
+$resValid = $C::validate_batch($validBatch, 218083333, 'Y');
+check($resValid['valid'] === true && $resValid['kontrol'] === 0, 'Valid batch passes');
+
+$invalidKontrol = $C::validate_batch($validBatch, 210000000, 'Y');
+check($invalidKontrol['valid'] === false && count($invalidKontrol['errors']) > 0, 'Unbalanced batch fails kontrol');
+
+$overAdmin = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>222000000, 'pph'=>3666667, 'admin'=>1500000, 'sisa'=>0) // Admin Rp 15.000 > 10.000
+);
+$resAdmin = $C::validate_batch($overAdmin, 216833333, 'Y');
+check($resAdmin['valid'] === false && strpos($resAdmin['errors'][0], '10.000') !== false, 'Admin > 10.000 rejected');
+
+$negVal = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>222000000, 'pph'=>-1, 'admin'=>0, 'sisa'=>0)
+);
+$resNeg = $C::validate_batch($negVal, 222000001, 'Y');
+check($resNeg['valid'] === false && strpos($resNeg['errors'][0], 'negatif') !== false, 'Negative value rejected');
+
+echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, and batch validation\n";

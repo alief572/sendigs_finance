@@ -1,3 +1,72 @@
+# Pengembangan Modul Penerimaan Uang (Penerimaan Piutang Consultant To-Be) — SELESAI 2026-10-26
+
+- **Status:** Selesai 100% (Seluruh 5 Fase Implementasi, Refactor Detail View, Server-Side Excel Export, DataTables Server-Side Tab Report Penerimaan, & Automated Test Suites Tuntas 100% PASS).
+- **Fase selesai:**
+  - **Fase 0: Analisis & Penyelarasan Kebutuhan (/plan & /grill-me)**
+    * Telaah tuntas mockup interaktif `Penerimaan Piutang Consultant.html` dan spreadsheet konsep/test case `Penerimaan Piutang - Consultant.xlsx`.
+    * Klarifikasi & persetujuan 6 keputusan arsitektur utama bersama user.
+    * Dokumentasi komprehensif di `docs/implementation-plan.md` dan artifact plan.
+  - **Fase 1: Engine Kalkulasi & Jurnal Backend**
+    * `Penerimaan_calculation.php`: Ditambahkan konstanta `MAX_ADMIN_CENTS = 1000000` (Rp 10.000), helper kalkulasi pajak `tax_calc($salesCents, $taxTreatment)` untuk PKP (11/12 DPP Lain, 12% PPN, 2% PPh 23), WAPU (PPN = 0), dan Kawasan Berikat (KB, PPN = 0).
+    * Helper validasi `kontrol($piutang, $pph, $admin, $sisa, $uangMasuk)` dan `validate_batch($rows, $uangMasuk, $choice)`.
+    * `Consulting_receipt.php`: Deteksi tipe perlakuan pajak otomatis, dukungan editable PPh 23 granular per invoice, validasi zero-balance Kontrol terhadap uang masuk bank, pencegahan admin > Rp 10.000, pembentukan jurnal 2 baris piutang dagang saat terdapat sisa piutang (Kredit Piutang Gross dan Debit Sisa Piutang) yang 100% balance, penundaan mutasi invoice (`tr_invoicing`) hingga seluruh validasi lolos, dan rollback aman yang memulihkan saldo piutang dan pemakaian alokasi bank.
+    * `calculation_test.php`: Diperluas dengan test cases PKP, WAPU, KB, zero-balance kontrol, dan validasi batch (100% PASS).
+  - **Fase 2: UI Form Pre-process & Modal Alokasi To-Be**
+    * `views/add.php`: Menghapus dropdown manual PPN, merapikan form pre-process Customer & PPh 23 (Dipotong / Tidak Dipotong), tabel daftar invoice 11 kolom dengan TAX code badge (`PKP`, `WAPU`, `KB`), dynamic invoice loading via AJAX, pemanggilan modal alokasi To-Be, dan validasi client-side.
+    * `views/consulting_process.php`: Dibuat modal interaktif lengkap dengan kolom invoice, TAX code badge, Penjualan, DPP, PPN, PPh 23 (editable + link reset default), Tagihan, Piutang, Alokasi Penerimaan, Biaya Admin (max 10rb), Sisa Piutang, Summary Card rekonsiliasi, Dynamic Kontrol Badge (hijau jika 0, merah jika != 0), dan live balancing preview jurnal akuntansi.
+  - **Fase 3: UI Tab Navigation, Report Penerimaan & Modal Detail**
+    * `views/index.php`: Ditulis ulang dengan Tab Navigation (Tab 1: *Penerimaan Draft*, Tab 2: *Report Penerimaan*), filter interaktif Tahun, Bulan, Company, dan Pencarian teks, tombol *Export to Excel*, modal detail dinamis, dan handler konfirmasi SweetAlert untuk Rollback transaksi draft (`sts = '0'`).
+    * `views/detail.php`: Dibuat header card info yang bersih dan profesional menampilkan No. Surat Penerimaan, Customer, Bank Penerima, Tanggal Rekening Koran, Nominal Uang Masuk Bank, Status PPh 23, tabel rincian invoice penerimaan dengan TAX badge, serta tabel jurnal akuntansi lengkap dengan status balancing badge (100% backward-compatible).
+  - **Fase 4: Controller & Server-Side Excel Export Endpoint**
+    * `views/export_excel.php`: Template view Excel akuntansi server-side dengan format XML spreadsheet kompatibel, header perusahaan & periode, dan format angka akuntansi `mso-number-format`.
+    * `Penerimaan_uang_model.php`: Ditambahkan filter `$tab === 'draft'` pada `get_alokasi_penerimaan()`, method `getDistinctYears()` untuk dropdown filter dinamis, dan method `get_report_data($year, $month, $company, $search)` untuk data report penerimaan.
+    * `controllers/Penerimaan_uang.php`: Diperbarui `index()` untuk memuat data filter tahun & company, method `get_inv_by_cust()` dengan format angka presisi adaptif (2 desimal untuk invoice baru, tanpa desimal untuk legacy), method `get_report_penerimaan()` (AJAX handler Tab 2), method `export_excel()`, dan pengayaan data bank & TAX badge pada method `detail()`.
+  - **Fase 5: Automated Testing, Integration Validation & Rollback Verification**
+    * Dibuat test suite baru `tests/Consulting_receipt_tobe_test.php` mencakup 6 skenario kritis (PKP, WAPU, Partial Payment, Editable PPh 23, Validasi Kontrol, Rollback Verification - 100% PASS).
+  - **Fase 6: Transformasi DataTables Server-Side Tab Report Penerimaan**
+    * `Penerimaan_uang_model.php`: Dibuat method baru `get_report_penerimaan_serverside($year, $month, $company, $search, $start, $length, $orderCol, $orderDir)` yang efisien, mengembalikan `recordsTotal`, `recordsFiltered`, total nominal aggregate, count invoices, dan slice record paginasi parent receipt beserta rincian child invoices & status jurnal posted.
+    * `controllers/Penerimaan_uang.php`: Method `get_report_penerimaan()` diperbarui merespons format JSON standar DataTables server-side (`draw`, `recordsTotal`, `recordsFiltered`, `data`, `total_nominal`, `count_invoices`) lengkap dengan badge TAX, badge Company, status PPh, dan tombol aksi (Lihat & Rollback).
+    * `views/index.php`: Diinisialisasi DataTables server-side pada `#table_report` lengkap dengan filter dinamis Tahun, Bulan, Company, Search Bebas, callback update summary total di footer table, pagination controls, dynamic page length (10, 25, 50, 100), dan sinkronisasi link Export Excel.
+    * `tests/Report_penerimaan_serverside_test.php`: Dibuat test suite khusus server-side mencakup 6 skenario (Default Page 1, Search Invoice, Filter Company VUCA, Filter Company SUSTAIN, Pagination offset, Sorting by nominal - 100% PASS).
+- **Fase sedang dikerjakan:** Tidak ada (Selesai).
+- **Fase belum dikerjakan:** Tidak ada. (Fitur Deposit ditiadakan secara definitif sesuai arahan user).
+- **File yang dimodifikasi / dibuat:**
+  1. `application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php` (Helper kalkulasi & validasi)
+  2. `application/modules/penerimaan_uang/libraries/Consulting_receipt.php` (Engine To-Be & Jurnal)
+  3. `application/modules/penerimaan_uang/controllers/Penerimaan_uang.php` (Controller penerimaan, AJAX DataTables Tab 2, export excel, detail)
+  4. `application/modules/penerimaan_uang/models/Penerimaan_uang_model.php` (Model data alokasi, tahun, report penerimaan & DataTables server-side query)
+  5. `application/modules/penerimaan_uang/views/add.php` (Form pre-process customer & PPh 23)
+  6. `application/modules/penerimaan_uang/views/consulting_process.php` (Modal alokasi interaktif To-Be)
+  7. `application/modules/penerimaan_uang/views/index.php` (Tab Navigation & DataTables Server-Side Report Penerimaan)
+  8. `application/modules/penerimaan_uang/views/detail.php` (Modal detail penerimaan & preview jurnal)
+  9. `application/modules/penerimaan_uang/views/export_excel.php` (Server-side Excel template)
+  10. `application/modules/penerimaan_uang/tests/calculation_test.php` (Unit test engine kalkulasi)
+  11. `application/modules/penerimaan_uang/tests/detail_journal_test.php` (Unit test modal detail & jurnal)
+  12. `application/modules/penerimaan_uang/tests/Consulting_receipt_tobe_test.php` (Integration test To-Be & Rollback)
+  13. `application/modules/penerimaan_uang/tests/Report_penerimaan_serverside_test.php` (Integration test Tab 2 DataTables Server-Side)
+  14. `docs/implementation-plan.md` (Dokumentasi rencana kerja 5 fase)
+  15. `docs/task-progress.md` (Dokumentasi progres checkpoint)
+- **Keputusan teknis:**
+  1. Penguncian PPN otomatis dari tipe invoice konsultasi (`PKP` = 12% dari DPP Lain, `WAPU` = 0, `Kawasan Berikat` = 0) menggantikan dropdown manual PPN di form pre-process.
+  2. PPh 23 granular per invoice: default 2% DPP Lain (jika dipotong), namun editable jika terdapat selisih bukti potong dari customer.
+  3. Kontrol Zero-Balance: `(Piutang - PPh 23 - Admin - Sisa) - Uang Masuk = 0` sebelum submit diperbolehkan di sisi frontend maupun backend.
+  4. Format jurnal double entry 2 baris piutang dagang saat terdapat sisa piutang (Kredit Piutang Gross dan Debit Sisa Piutang) untuk transparansi mutasi piutang pada buku besar.
+  5. Server-side stream untuk export Excel report penerimaan tanpa dependensi script client-side/CDN luar.
+  6. Isolasi alur To-Be khusus untuk Invoice Consulting versi baru (`consulting_version = 3`) agar invoice legacy tetap berjalan stabil tanpa regresi.
+  7. Arsitektur DataTables server-side pada Tab Report Penerimaan: paginasi dilakukan pada level transaksi penerimaan (parent receipt) dengan child invoice di-render terstruktur per baris sel, menjaga integritas DOM DataTables, pagination, sorting, dan dynamic total footer secara akurat.
+- **Masalah yang belum terselesaikan:** Tidak ada.
+- **Hasil Pengujian & Validasi:**
+  - `php application/modules/penerimaan_uang/tests/Report_penerimaan_serverside_test.php`: **PASS** (Default Page 1, Search Invoice, Filter Company VUCA, Filter Company SUSTAIN, Pagination offset rows 11-20, Sorting by nominal).
+  - `php application/modules/penerimaan_uang/tests/calculation_test.php`: **PASS** (money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, batch validation).
+  - `php application/modules/penerimaan_uang/tests/detail_journal_test.php`: **PASS** (receipt detail journal lookup, posted rows, COA rendering, totals, isolated receipts and empty history).
+  - `php application/modules/penerimaan_uang/tests/Consulting_receipt_tobe_test.php`: **PASS** (6 skenario: PKP, WAPU, Kurang Bayar 2-line receivable journal, Editable PPh 23, Rejection validations, Rollback).
+  - `php application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php`: **PASS** (regresi legacy invoice & VUCA 100% aman).
+  - `php application/modules/invoicing/tests/calculation_test.php`: **PASS**.
+  - `php application/modules/invoicing/tests/Consulting_calculation_test.php`: **PASS** (99 consulting calculation checks).
+- **Langkah berikutnya:** Seluruh cakupan To-Be Penerimaan Piutang, Report Penerimaan DataTables Server-Side, dan export Excel telah tuntas dan terverifikasi 100% tanpa ketergantungan pada fitur deposit. Modul siap digunakan secara penuh.
+
+---
+
 # Eksekusi Pembaruan Modul Expense Report, Approval Berjenjang, dan Verifikasi Pengembalian Kasbon — Selesai 2026-10-22
 
 - Status: Selesai 100% (Seluruh 4 Fase Implementasi, Filter Eksklusi Dokumen PO Invoice/PI, & Test Suite tuntas 100% PASS).
@@ -2524,4 +2593,6 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Regresi writer/dependensi PASS: Record_request_payment Items_export_test 412 cumulative assertions real XLSX roundtrip; Audit_test 57 scenarios; Request_payment Batch5_test 371 scenarios; Asset import rules dan Excel PCLZip roundtrip. Tidak ada tes browser/DB layanan eksternal.
 - Validasi akhir PASS: lint seluruh PHP yang diubah/ditambah (7 file), Node syntax dan git diff --check scoped. Setelah penyesuaian posisi tombol, render dengan/tanpa View dan client dijalankan ulang dan PASS. Git hanya memberi pemberitahuan normalisasi LF/CRLF. Tidak ada blocker. Batasan: workbook PHPExcel tetap memakai memori sebanding total baris, dan pembacaan batch tidak menyediakan snapshot transaksi saat data berubah bersamaan. Belum commit/push. Langkah berikutnya: siap ditinjau pengguna.
 - Publikasi diotorisasi pengguna ke development dan main. Fetch berhasil; tip development 7bab9eef dan main 4685b337. Modul outgoing dan PHPExcel identik antarkedua tip. Kandidat terisolasi: scratch/publish-outgoing-excel-20261026; workspace utama tetap pada development dan perubahan lokal lain dipertahankan. Aktif: validasi kandidat, commit terbatas task, push fast-forward dan verifikasi remote.
-- Kandidat development tervalidasi: 158 pemeriksaan modul, lint 7 PHP, client Node, whitespace; regresi Record export 412 assertions/Audit57, Request Payment371, Asset roundtrip lulus. Kandidat dibangun dari tip development tanpa menyertakan perubahan lokal modul lain.
+- Publikasi selesai: commit development c58efb4c132cee2f396930e5ddefda8c1e22753c (parent 7bab9eef) dan main 283ed5ea4f4d3b8d0960f7b45d791ac0bc109c0e (parent 4685b337). Push --atomic tanpa force berhasil; ls-remote mengonfirmasi kedua hash persis.
+- Kedua kandidat lulus 158 pemeriksaan modul serta regresi Record XLSX412/Audit57, Request Payment371, Asset roundtrip; lint 7 PHP pada kandidat development berlaku kembali untuk main karena parity kode dan writer diperiksa identik; staged whitespace bersih di kedua commit. Scope commit masing-masing 10 file: 7 file modul (termasuk 2 tes baru), writer PHPExcel, dan 2 dokumentasi. Tidak menyertakan modul lain/AGENTS/config/scratch.
+- Tidak ada fase publikasi tertunda. Workspace utama dipertahankan tanpa checkout/reset/stash; commit berada di repository kandidat terisolasi dan GitHub. Snapshot perubahan lokal export masih ada di workspace utama pada HEAD lama, sehingga jangan menimpa pekerjaan lokal lain ketika menyelaraskan branch di sesi berikutnya.
