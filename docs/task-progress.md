@@ -2607,3 +2607,16 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Publikasi selesai: commit development c58efb4c132cee2f396930e5ddefda8c1e22753c (parent 7bab9eef) dan main 283ed5ea4f4d3b8d0960f7b45d791ac0bc109c0e (parent 4685b337). Push --atomic tanpa force berhasil; ls-remote mengonfirmasi kedua hash persis.
 - Kedua kandidat lulus 158 pemeriksaan modul serta regresi Record XLSX412/Audit57, Request Payment371, Asset roundtrip; lint 7 PHP pada kandidat development berlaku kembali untuk main karena parity kode dan writer diperiksa identik; staged whitespace bersih di kedua commit. Scope commit masing-masing 10 file: 7 file modul (termasuk 2 tes baru), writer PHPExcel, dan 2 dokumentasi. Tidak menyertakan modul lain/AGENTS/config/scratch.
 - Tidak ada fase publikasi tertunda. Workspace utama dipertahankan tanpa checkout/reset/stash; commit berada di repository kandidat terisolasi dan GitHub. Snapshot perubahan lokal export masih ada di workspace utama pada HEAD lama, sehingga jangan menimpa pekerjaan lokal lain ketika menyelaraskan branch di sesi berikutnya.
+
+
+### Tombol Action Approval Expense Management - 2026-10-26
+
+- Implementasi selesai; validasi runtime PHP tertunda karena PHP CLI tidak tersedia di lingkungan sesi ini (PATH kosong untuk PHP; lokasi terdokumentasi C:/xampp74/php/php.exe tidak ada).
+- Grounding: index_approval_manage memuat get_dat_approval_expense_manage; query antrean menerima status 1 atau status 0 dengan sts_finance 1. Kondisi tombol sebelumnya hanya menerima status 0 sehingga tombol Approval hilang pada status 1.
+- File diubah: application/modules/expense/controllers/Expense.php; docs/task-progress.md. File baru: application/modules/expense/tests/Management_actions_test.php.
+- Tombol Approval hijau mengikuti kondisi antrean management; View kuning memanggil data_view menuju expense/view/{id}, sedangkan Approval tetap data_approve menuju expense/approval/{id}. Hak View dan Manage tetap diperiksa secara terpisah. Gaya dan ikon mengikuti list_expense_approval.
+- Tes disiapkan: 60 pemeriksaan output endpoint untuk lima kombinasi status/finance dan empat kombinasi hak View/Manage, termasuk jumlah tombol dan routing handler. Tes belum dapat dieksekusi; jangan anggap lulus.
+- Validasi statis: diff controller hanya dua baris; handler dan endpoint tujuan tersedia; git diff --check scoped lulus. Tidak melakukan tes browser. Tidak mengubah query, penyimpanan, atau kontrak audit; transaksi/commit dan penulis audit tidak terdampak.
+- Sisa/TODO: jalankan PHP lint controller/tes serta Management_actions_test.php saat PHP CLI tersedia. Tidak ada perubahan kode lain yang tertunda dan tidak ada commit/push untuk task ini.
+
+- Publikasi: diotorisasi ke development; kandidat berdasarkan remote 73694cc9, hanya controller, tes action, dan bagian checkpoint task ini. Validasi runtime PHP tetap belum tersedia.

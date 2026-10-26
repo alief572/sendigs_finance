@@ -6232,9 +6232,9 @@ class Expense extends Admin_Controller
 		foreach ($rows as $row) {
 			$action = '';
 			if (has_permission('Approval Expense Management.View')) {
-				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
+				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_view(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
 			}
-			if (has_permission('Approval Expense Management.Manage') && $row->status == 0) {
+			if (has_permission('Approval Expense Management.Manage') && ($row->status == 1 || ($row->status == 0 && $row->sts_finance == '1'))) {
 				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
 			}
 			$data[] = array(
