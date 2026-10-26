@@ -27,6 +27,9 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 <form action="#" method="POST" id="form_proses" enctype="multipart/form-data">
 	<div class="box">
 		<div class="box-header">
+			<?php if ($ENABLE_VIEW) { ?>
+				<a id="export-excel" class="btn btn-success btn-sm pull-right" style="margin-left:8px;" href="<?= base_url('outgoing_stok_atk/export_excel') ?>" title="Export seluruh hasil pencarian ke Excel"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Export Excel</a>
+			<?php } ?>
 			<?php if ($ENABLE_ADD) { ?>
 				<a class="btn btn-primary btn-sm" style='float:right;' href="<?= base_url('outgoing_stok_atk/request') ?>" title="Request">Add Outgoing</a>
 			<?php } ?>
@@ -135,6 +138,15 @@ $ENABLE_DELETE  = has_permission('Outgoing_Stok_ATK.Delete');
 		$(document).on('change', '#sales_order', function() {
 			var sales_order = $("#sales_order").val();
 			DataTables(sales_order);
+		});
+	});
+
+	$(document).on('click', '#export-excel', function(e) {
+		e.preventDefault();
+		var table = $('#example2').DataTable();
+		var order = table.order()[0] || [1, 'desc'];
+		window.location.href = this.href.split('?')[0] + '?' + $.param({
+			search: table.search(), column: order[0], direction: order[1]
 		});
 	});
 

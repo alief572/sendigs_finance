@@ -1,3 +1,13 @@
+# Export Excel Outgoing Stok ATK — 2026-10-26
+
+- Fase 1: grounding index, query, PHPExcel dan fixture; tambah tes export (RED).
+- Fase 2: generator data memakai query index per 150 transaksi, workbook XLSX dan endpoint berizin View, tombol mengikuti pencarian/sorting aktif.
+- Fase 3: tes model/controller/workbook/client, regresi seluruh modul, lint dan whitespace; perbarui checkpoint.
+- Kriteria: seluruh hasil lintas halaman, satu baris per barang, teks aman dari formula, qty numerik, fallback master/detail kosong, error aman tanpa file parsial. Tanpa migrasi/dependensi baru atau tes browser.
+- Penyesuaian terverifikasi: dua kondisi `count(boolean)` pada writer AutoFilter PHPExcel diperbaiki menjadi `count(array) > 0`; diperlukan agar serialisasi XLSX tidak menghasilkan warning. Regresi writer dengan filter rule nyata dan export/import modul lain wajib lulus.
+- Status akhir: seluruh fase selesai; bukti validasi dan batasan dicatat pada checkpoint task 2026-10-26.
+- Publikasi diotorisasi pengguna: siapkan kandidat terisolasi dari tip terbaru development dan main, sertakan hanya file task export dan dependensi writer, jalankan regresi kandidat, commit lalu push fast-forward tanpa force; verifikasi hash remote kedua branch.
+
 # Rencana Implementasi Audit Trail
 
 ## Publikasi dua modul Expense — 2026-10-15
