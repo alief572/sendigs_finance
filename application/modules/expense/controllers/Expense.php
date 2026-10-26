@@ -2023,9 +2023,9 @@ class Expense extends Admin_Controller
 			$get_expense 	= $q_expense ? $q_expense->row() : null;
 
 			if ($get_expense) {
-				// BR-12: Pelapor tidak boleh meng-approve laporannya sendiri
+				// BR-12: Self-approval hanya diizinkan untuk anggota grup Admin.
 				$current_user = $this->auth->user_name();
-				if (!empty($get_expense->nama) && $get_expense->nama === $current_user) {
+				if (!empty($get_expense->nama) && $get_expense->nama === $current_user && !$this->auth->is_admin()) {
 					$param = array(
 						'save' => false,
 						'message' => 'Anda tidak dapat menyetujui laporan expense yang Anda buat sendiri (Segregation of Duties)!'

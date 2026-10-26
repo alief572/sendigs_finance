@@ -5,7 +5,7 @@
  * Verifikasi:
  * 1. set_jurnal_expense(): Jurnal 1 preview untuk Lebih Kasbon (Debit 1103-01-15), Impas, dan Lebih Expense.
  * 2. approve(): Approval jenjang 1 (Finance: 0 -> 1) dan jenjang 2 (Direktur: 1 -> 3 untuk Lebih Kasbon, 1 -> 2 untuk Impas/Lebih Expense).
- * 3. Segregation of Duties (BR-12): Pelapor dilarang meng-approve atau memverifikasi laporannya sendiri.
+ * 3. Segregation of Duties (BR-12): Self-approval hanya untuk admin; self-verifikasi tetap dilarang.
  * 4. verifikasi_pengembalian_approve(): Verifikasi 3-checklist dan posting Jurnal 2 (Debit Bank, Kredit 1103-01-15).
  * 5. verifikasi_pengembalian_reject(): Tolak verifikasi kembali ke status 3 dengan alasan wajib.
  * 6. _render_expense_status_badge(): Pemetaan badge visual 6-status (0, 1, 2, 3, 4, 9).
@@ -221,8 +221,10 @@ class MockDb {
 class MockAuth {
     public $username = 'admin_tester';
     public $userid = '999';
+    public $admin = false;
     public function user_name() { return $this->username; }
     public function user_id() { return $this->userid; }
+    public function is_admin() { return $this->admin; }
 }
 
 class MockInput {
@@ -365,6 +367,16 @@ $json2a = json_decode($out2a, true);
 testCheck($json2a['save'] === false, "BR-12 Blokir: Pelapor dilarang meng-approve laporannya sendiri");
 testCheck(strpos($json2a['message'], 'Segregation of Duties') !== false, "Pesan error memuat 'Segregation of Duties'");
 
+$mockDb->tables['tr_expense'][10]['status'] = '1';
+$mockDb->tables['tr_expense'][10]['sts_finance'] = '1';
+ob_start();
+$exp->approve('10');
+$jsonSelfManagement = json_decode(ob_get_clean(), true);
+testCheck($jsonSelfManagement['save'] === false, 'Non-admin tetap ditolak untuk self-approval management');
+testCheck(empty($mockDb->updated_data), 'Penolakan self-approval non-admin tidak menulis database');
+$mockDb->tables['tr_expense'][10]['status'] = '0';
+$mockDb->tables['tr_expense'][10]['sts_finance'] = '0';
+
 // Case 2B: Approval Jenjang 1 (Finance) dari status 0 -> 1
 $mockAuth->username = 'dept_head_finance';
 ob_start();
@@ -402,6 +414,28 @@ foreach ($mockDb->inserted_jurnal as $j) {
 testCheck($j1_debit_beban == 800000, "Jurnal 1: Debit Beban Rp 800.000");
 testCheck($j1_debit_piutang == 200000, "Jurnal 1: Debit Piutang Kelebihan Kasbon (1103-01-15) Rp 200.000");
 testCheck($j1_kredit_kasbon == 1000000, "Jurnal 1: Kredit Piutang Kasbon Konsultan (1103-01-14) Rp 1.000.000");
+
+$adminExpense = (new ReflectionClass('Expense'))->newInstanceWithoutConstructor();
+$adminExpense->db = new MockDb();
+$adminExpense->db->tables = $mockDb->tables;
+$adminExpense->db->tables['tr_expense'][10]['status'] = '0';
+$adminExpense->db->tables['tr_expense'][10]['sts_finance'] = '0';
+$adminExpense->auth = new MockAuth();
+$adminExpense->auth->username = 'febry_pelapor';
+$adminExpense->auth->admin = true;
+$adminExpense->input = new MockInput();
+ob_start();
+$adminExpense->approve('10');
+$jsonAdminFinance = json_decode(ob_get_clean(), true);
+testCheck($jsonAdminFinance['save'] === true, 'Admin boleh self-approval finance');
+testCheck($adminExpense->db->tables['tr_expense'][10]['status'] === 1, 'Self-approval admin tetap melewati tahap finance ke status 1');
+testCheck($adminExpense->db->tables['tr_expense'][10]['approved_by'] === 'febry_pelapor', 'Self-approval mencatat identitas admin sebenarnya');
+ob_start();
+$adminExpense->approve('10');
+$jsonAdminManagement = json_decode(ob_get_clean(), true);
+testCheck($jsonAdminManagement['save'] === true, 'Admin boleh self-approval management');
+testCheck($adminExpense->db->tables['tr_expense'][10]['status'] === 3, 'Self-approval management admin tetap mengikuti kondisi lebih kasbon');
+testCheck(count($adminExpense->db->inserted_jurnal) === 3, 'Self-approval admin tetap memposting Jurnal 1');
 
 // -----------------------------------------------------------
 // TEST 3: Verifikasi Pengembalian Kasbon & Posting Jurnal 2

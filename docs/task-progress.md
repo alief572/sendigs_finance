@@ -2620,3 +2620,18 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Sisa/TODO: jalankan PHP lint controller/tes serta Management_actions_test.php saat PHP CLI tersedia. Tidak ada perubahan kode lain yang tertunda dan tidak ada commit/push untuk task ini.
 
 - Publikasi: diotorisasi ke development; kandidat berdasarkan remote 73694cc9, hanya controller, tes action, dan bagian checkpoint task ini. Validasi runtime PHP tetap belum tersedia.
+
+
+### Self-approval Expense untuk Admin - 2026-10-26
+
+- Grounding selesai: kedua list menggunakan endpoint approval/approve bersama; guard server approve dan footer form_report menolak pemohon sendiri. Admin resmi memakai Auth::is_admin, grup 1.
+- Aktif: menambahkan regresi dan pengecualian admin pada dua guard. Berikutnya: review statis, validasi yang tersedia, checkpoint akhir.
+- Scope: controller Expense.php, view form_report.php, tests/Expense_report_updated_test.php, implementation-plan dan checkpoint. Alur posting, transaksi, audit serta verifikasi pengembalian tidak diubah.
+- Kendala lingkungan: PHP CLI tidak tersedia pada pemeriksaan sebelumnya; tes runtime akan dicatat belum berjalan bila tidak ada perubahan lingkungan.
+- Implementasi selesai: guard self-approval pada Expense::approve dan footer form_report kini menolak hanya pemohon non-admin menggunakan auth->is_admin(). Kedua list berbagi endpoint ini. Tidak ada hardcode ID/username atau input client untuk menentukan admin.
+- Regresi disiapkan di Expense_report_updated_test.php: non-admin self-approval management ditolak tanpa update; admin self-approval finance ke status 1 dan management ke status 3, approved_by aktual, serta Jurnal 1 tetap terposting. Tes non-admin finance dan approval dokumen orang lain yang sudah ada dipertahankan.
+- Validasi tersedia PASS: lima pemeriksaan statis untuk kesamaan guard UI/server, grup admin 1, kesamaan seluruh fungsi verifikasi pengembalian terhadap HEAD, serta kesamaan seluruh approve selain guard/comment. git diff --check scoped lulus. Perubahan action management dari task sebelumnya dipertahankan.
+- Batasan: tes PHP/lint belum dijalankan karena runtime belum tersedia; tidak ada tes browser atau koneksi database. Audit/commit/jurnal tidak diubah, sehingga tidak ada perubahan deduplikasi, metadata, atau failure handling penulis audit.
+- Status akhir: grounding dan implementasi selesai, review statis selesai, validasi runtime tertunda. Tidak ada perubahan kode yang masih direncanakan. Berikutnya: jalankan tes report dan regresi Batch3 audit di lingkungan PHP yang sesuai (suite report yang ada juga memiliki bagian integrasi DB, perhatikan konfigurasi lingkungan). Belum commit/push untuk perubahan self-approval ini.
+
+- Publikasi diotorisasi pengguna ke development; kandidat berdasarkan f06bdf13, review diff dan whitespace sebelum push, validasi PHP tetap tertunda.

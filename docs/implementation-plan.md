@@ -179,3 +179,10 @@ Mengadaptasi tampilan form pemilihan invoice dan modal alokasi sesuai mockup `Pe
    - Klik tombol "Export to Excel" dan pastikan file Excel terunduh dengan data yang akurat.
    - Klik tombol "Lihat" untuk memeriksa detail transaksi.
    - Jika jurnal masih Draft, pastikan tombol "Rollback" tersedia dan berfungsi membatalkan penerimaan dengan aman.
+
+
+## Pengecualian self-approval expense untuk admin - 2026-10-26
+
+1. Grounding: kedua list memakai expense/approval/{id} dan expense/approve/{id}; pembatasan pemohon sendiri berada pada approve dan footer form_report. Gunakan Auth::is_admin (grup 1), bukan ID/nama akun atau permission umum.
+2. Implementasi: kecualikan admin pada kedua guard tersebut; pertahankan guard non-admin, urutan tahap finance/management, jurnal, dan larangan verifikasi pengembalian sendiri. Tambahkan regresi admin/non-admin kedua tahap pada tes report yang tersedia.
+3. Validasi: review seluruh diff dan whitespace; jalankan tes PHP jika runtime tersedia. PHP CLI sebelumnya tidak tersedia, sehingga keterbatasan runtime tetap berlaku tanpa bukti perubahan lingkungan. Perbarui checkpoint; tidak melakukan tes web.
