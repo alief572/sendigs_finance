@@ -1,3 +1,14 @@
+## Print lampiran PDF Transport — 26 Oktober 2026
+
+- Status: seluruh fase selesai; tidak ada fase aktif atau tertunda.
+- Selesai: grounding route request_payment → expense/transport_req_print, dependensi PDF.js lokal dan audit Batch4; RED gagal pada iframe existing, implementasi, regresi dan review lokal selesai. Kebutuhan semua halaman PDF dikonfirmasi pengguna.
+- File produksi: application/modules/expense/views/transport_req_print.php (iframe diganti container, CSS A4/page break, URL escaped, controls); assets/js/transport-print.js (renderer PDF.js canvas, readiness PDF/gambar, failure link, cetak ulang).
+- File tes: application/modules/expense/tests/Transport_print_js_test.js. Dokumentasi: docs/implementation-plan.md dan docs/task-progress.md; catatan pekerjaan lain dipertahankan.
+- Keputusan: A4 portrait margin 10mm; setiap halaman PDF fit proporsional pada area 190 × 276mm tanpa crop, sisa 1mm untuk pembulatan; landscape tetap utuh. Canvas 150 DPI, render berurutan dan release PDF sesudah selesai untuk membatasi beban memori. Tidak mengubah controller, database, atau audit.
+- Validasi PASS: node application/modules/expense/tests/Transport_print_js_test.js (multipage, portrait/landscape, urutan, fit, readiness, tanpa lampiran, cetak ulang, PDF rusak/password/missing library/render error, gambar load/error/cache); node --check renderer dan test; scratch/runtime/php74/php.exe -l view; Expense Batch4_audit_test.php (51 fixture scenarios + 1 shutdown subprocess). PDF.js dan DOM dimock pada tes Node; review diff dan whitespace lokal selesai.
+- Batas/risiko: tanpa pengujian web atau cetak fisik; skala/margin/header/footer dialog printer dapat memengaruhi hasil. PDF panjang memerlukan memori canvas sesuai jumlah halaman; semua halaman dipertahankan untuk cetak. Tidak ada masalah implementasi tersisa yang ditemukan pada pemeriksaan lokal.
+- Langkah berikutnya: gunakan print Transport; verifikasi hasil fisik bila diperlukan. Tidak ada migration atau deployment dilakukan.
+
 # Checkpoint Utama Audit Trail
 
 ## Publikasi dua modul Expense — 2026-10-15

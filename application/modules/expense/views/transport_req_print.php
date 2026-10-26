@@ -6,7 +6,7 @@
  * Test Scenarios:
  * 1. Valid ID: Load /expense/transport_req_print/{valid_id} — all 5 sections render correctly
  * 2. Empty Detail: Test with a transport request with no detail records — empty tbody, totals show Rp 0
- * 3. Multiple Attachments: Test with mixed PDF and image attachments — PDFs in iframes, images inline
+ * 3. Multiple Attachments: Test with mixed PDF and image attachments — each PDF page renders fully
  * 4. Print Preview: Use browser Ctrl+P — page break before attachments, clean layout
  * 5. Long Text: Test with long keperluan/rute values — no overflow issues
  * 6. Empty Bank Info: Test with empty bank fields — shows "-" placeholder
@@ -123,20 +123,56 @@ function formatDate($date)
 			margin: 10px 0;
 		}
 
+		.transport-pdf-page {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 10px 0;
+		}
+
+		.transport-pdf-page canvas {
+			display: block;
+			max-width: 100%;
+		}
+
+		@page {
+			size: A4 portrait;
+			margin: 10mm;
+		}
+
 		@media print {
+			.transport-print-controls,
 			.attachment-separator {
+				display: none;
+			}
+
+			.transport-pdf-page {
+				break-before: page;
 				page-break-before: always;
-				border-top: 3px solid #4CAF50;
+				break-inside: avoid;
+				page-break-inside: avoid;
+				width: 190mm;
+				height: 276mm;
+				margin: 0;
+			}
+
+			.transport-image-attachment {
+				break-before: page;
+				page-break-before: always;
 			}
 
 			body {
-				padding: 10px;
+				padding: 0;
 			}
 		}
 	</style>
 </head>
 
 <body>
+	<div class="transport-print-controls">
+		<p id="transport-print-status" role="status">Menyiapkan dokumen dan lampiran untuk dicetak...</p>
+		<button id="transport-print-button" type="button" class="btn btn-default" disabled>Cetak ulang</button>
+	</div>
 	<!-- Document Header -->
 	<div class="document-header">
 		<h4>Pengajuan Transportasi</h4>
@@ -300,16 +336,19 @@ function formatDate($date)
 		<div class="attachment-separator"></div>
 		<?php foreach ($attachments as $doc_file) : ?>
 			<?php if (strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
-				<iframe src="<?= base_url('assets/expense/' . $doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
+				<div class="transport-pdf-attachment" data-pdf-url="<?= htmlspecialchars(base_url('assets/expense/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>">
+					<p class="transport-pdf-notice">Memproses lampiran PDF...</p>
+				</div>
 			<?php else : ?>
-				<img src="<?= base_url('assets/expense/' . $doc_file) ?>" class="attachment-img">
+				<div class="transport-image-attachment">
+					<img src="<?= htmlspecialchars(base_url('assets/expense/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>" class="attachment-img" alt="Lampiran Transport">
+				</div>
 			<?php endif; ?>
 		<?php endforeach; ?>
 	<?php endif; ?>
 
-	<script>
-		window.print();
-	</script>
+	<script src="<?= base_url('assets/js/pdfjs/pdf.min.js') ?>"></script>
+	<script src="<?= base_url('assets/js/transport-print.js') ?>" data-worker-url="<?= base_url('assets/js/pdfjs/pdf.worker.min.js') ?>"></script>
 </body>
 
 </html>
