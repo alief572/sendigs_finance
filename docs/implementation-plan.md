@@ -186,3 +186,10 @@ Mengadaptasi tampilan form pemilihan invoice dan modal alokasi sesuai mockup `Pe
 1. Grounding: kedua list memakai expense/approval/{id} dan expense/approve/{id}; pembatasan pemohon sendiri berada pada approve dan footer form_report. Gunakan Auth::is_admin (grup 1), bukan ID/nama akun atau permission umum.
 2. Implementasi: kecualikan admin pada kedua guard tersebut; pertahankan guard non-admin, urutan tahap finance/management, jurnal, dan larangan verifikasi pengembalian sendiri. Tambahkan regresi admin/non-admin kedua tahap pada tes report yang tersedia.
 3. Validasi: review seluruh diff dan whitespace; jalankan tes PHP jika runtime tersedia. PHP CLI sebelumnya tidak tersedia, sehingga keterbatasan runtime tetap berlaku tanpa bukti perubahan lingkungan. Perbarui checkpoint; tidak melakukan tes web.
+
+
+## Routing tombol View dan Approval Expense - 2026-10-26
+
+1. Reproduksi terfokus: finance View masih memanggil data_approve; nama fungsi pembuka approval pada kedua list sama dengan fungsi submit di form AJAX. Uji routing berdasarkan callback action controller dan script list melalui Node VM, termasuk saat basic.js/form mengubah fungsi global lama.
+2. Implementasi: gunakan nama pembuka khusus openExpenseApproval/openExpenseView di kedua list dan action kedua endpoint; View menuju expense/view, Approval menuju expense/approval. Tidak mengubah fungsi submit maupun endpoint penyimpanan.
+3. Validasi: jalankan tes Node RED/GREEN dan syntax; sesuaikan tes PHP management, review diff/whitespace dan checkpoint. Tanpa browser; runtime PHP sebelumnya tidak tersedia.

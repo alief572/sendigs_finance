@@ -43,8 +43,8 @@ foreach (array(array(1, '1'), array(0, '1'), array(0, '0'), array(2, '1'), array
         $action = $response['data'][0]['action'];
         $eligible = $state[0] === 1 || ($state[0] === 0 && $state[1] === '1');
         $expected = array(
-            'view route' => array(substr_count($action, 'data_view('), $rights[0] ? 1 : 0),
-            'approval route' => array(substr_count($action, 'data_approve('), $rights[1] && $eligible ? 1 : 0),
+            'view route' => array(substr_count($action, 'openExpenseView('), $rights[0] ? 1 : 0),
+            'approval route' => array(substr_count($action, 'openExpenseApproval('), $rights[1] && $eligible ? 1 : 0),
             'button count' => array(substr_count($action, '<a '), ($rights[0] ? 1 : 0) + ($rights[1] && $eligible ? 1 : 0)),
         );
         foreach ($expected as $label => $values) {

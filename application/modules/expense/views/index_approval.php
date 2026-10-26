@@ -79,26 +79,23 @@ $ENABLE_DELETE  = has_permission('Expense_Approval.Delete');
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script type="text/javascript">
-	var url_approval = siteurl + 'expense/approval/';
-	var url_view     = siteurl + 'expense/view/';
-
 	$(document).ready(function() {
 		DataTables();
 	});
 
-	function data_approve(id) {
+	function openExpenseApproval(id) {
 		if (id != "") {
 			$(".box").hide();
 			$("#form-data").show();
-			$("#form-data").load(url_approval + id);
+			$("#form-data").load(siteurl + 'expense/approval/' + id);
 		}
 	}
 
-	function data_view(id) {
+	function openExpenseView(id) {
 		if (id != "") {
 			$(".box").hide();
 			$("#form-data").show();
-			$("#form-data").load(url_view + id);
+			$("#form-data").load(siteurl + 'expense/view/' + id);
 		}
 	}
 

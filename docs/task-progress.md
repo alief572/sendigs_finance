@@ -2635,3 +2635,17 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Status akhir: grounding dan implementasi selesai, review statis selesai, validasi runtime tertunda. Tidak ada perubahan kode yang masih direncanakan. Berikutnya: jalankan tes report dan regresi Batch3 audit di lingkungan PHP yang sesuai (suite report yang ada juga memiliki bagian integrasi DB, perhatikan konfigurasi lingkungan). Belum commit/push untuk perubahan self-approval ini.
 
 - Publikasi diotorisasi pengguna ke development; kandidat berdasarkan f06bdf13, review diff dan whitespace sebelum push, validasi PHP tetap tertunda.
+
+
+### Perbaikan Routing View/Approval Expense - 2026-10-26
+
+- Grounding: finance get_expense_app_finance masih mengirim tombol View dengan data_approve; management saat ini mengirim data_view/ data_approve. Kedua list mendefinisikan data_approve(id), sementara form/form_report/form_pc yang dimuat AJAX juga mendefinisikan data_approve() untuk submit. basic.js mendefinisikan data_view global.
+- Aktif: tes Node untuk routing callback controller ke URL list sebelum/setelah benturan global, kemudian handler pembuka khusus pada kedua list. Keputusan: memperbaiki pemetaan dan menghilangkan benturan nama, bukan menukar warna tombol.
+- Belum selesai: implementasi, RED/GREEN Node, review/checkpoint. PHP/browser tidak digunakan; endpoint write, audit, dan self-approval admin tidak diubah.
+- Selesai: controller get_expense_app_finance/get_dat_approval_expense_manage mengirim openExpenseView untuk kuning/eye dan openExpenseApproval untuk hijau/check. Kedua view index memuat URL tujuan langsung dari siteurl di handler khusus tersebut, tidak memakai data_approve/data_view global. Fungsi submit form dan endpoint write tidak diubah.
+- File task: controllers/Expense.php, views/index_approval.php, views/index_approval_manage.php, tests/Approval_actions_client_test.js (baru), tests/Management_actions_test.php (ekspektasi nama callback), docs/implementation-plan.md dan checkpoint ini. Self-approval admin dan permission/status tetap dipertahankan.
+- RED Node terbukti: View finance menghasilkan /app/expense/approval/42 alih-alih /app/expense/view/42. GREEN: Approval_actions_client_test.js 16 checks PASS untuk View/Approval kedua list, ID kosong, sebelum/setelah global lama ditimpa, dengan basic.js dimuat. Node syntax check dan scoped git diff --check PASS.
+- Review: handler baru hanya membuka form, tombol submit form tetap memakai fungsi lama; tidak ada query, commit transaksi, penulis audit, metadata, atau deduplikasi yang berubah. Belum membuktikan gejala pertukaran persis pada runtime management pengguna melalui browser; mapping controller-ke-script kedua halaman kini diverifikasi Node.
+- Status akhir: implementasi dan validasi Node/review selesai, tidak ada fase kode tertunda. Tes PHP/lint tetap belum dijalankan karena PHP CLI tidak tersedia; tidak melakukan tes web. Belum commit/push untuk perbaikan routing ini. Langkah berikutnya: validasi PHP saat runtime tersedia dan publikasi jika diminta.
+
+- Publikasi diotorisasi pengguna ke development; kandidat berdasarkan 08e14b1b dan hanya memuat tujuh file task routing. Validasi PHP tetap tertunda.
