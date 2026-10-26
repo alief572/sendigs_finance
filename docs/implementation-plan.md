@@ -1,3 +1,15 @@
+## Print lampiran PDF Transport — 26 Oktober 2026
+
+Tujuan: setiap halaman PDF mendapat satu halaman cetak A4 tersendiri, utuh dan proporsional. Semua halaman dan urutan lampiran dipertahankan; tidak mengubah endpoint, database, atau audit.
+
+1. Grounding dan RED: verifikasi route request_payment ke expense/transport_req_print, view iframe 600px, PDF.js lokal, serta regresi audit Batch4. Tambahkan tes Node untuk readiness, multipage, ukuran, urutan, dan failure.
+2. Implementasi: render PDF.js lokal berurutan ke canvas; fit area A4 margin 10mm; tunggu PDF dan gambar; cetak otomatis hanya jika semuanya siap; tombol cetak ulang dan pesan/link file gagal.
+3. Validasi: tes Node, syntax PHP bila tersedia, regresi audit Batch4, review diff/whitespace; perbarui checkpoint. Tanpa browser/web dan tanpa perubahan pekerjaan lain.
+
+Kriteria selesai: tiap halaman PDF utuh pada halaman terpisah; landscape tidak terdistorsi; tidak mencetak otomatis saat lampiran gagal. Risiko: pengaturan dialog printer dapat mengubah skala/margin; hasil fisik tidak diverifikasi lewat web.
+
+Status: seluruh fase selesai. Tes Node renderer dan syntax JS lulus; lint view PHP lulus; regresi Expense Batch4 lulus (51 fixture scenarios + 1 shutdown subprocess). Renderer memakai canvas 150 DPI dan tinggi area 276mm (sisa 1mm untuk pembulatan cetak). Bukti dan daftar file ada pada checkpoint Transport di docs/task-progress.md. Tidak ada pengujian browser atau cetak fisik.
+
 # Implementation Plan: Pengembangan Modul Penerimaan Uang (Penerimaan Piutang Consultant To-Be)
 
 ## Problem & Background Context
