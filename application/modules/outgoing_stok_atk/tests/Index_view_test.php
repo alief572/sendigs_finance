@@ -1,5 +1,5 @@
 <?php
-function has_permission($permission) { return true; }
+function has_permission($permission) { return $permission !== 'Outgoing_Stok_ATK.View' || !in_array('--no-view', $GLOBALS['argv'], true); }
 function base_url($path = '') { return '/fixture/' . $path; }
 ob_start(); require dirname(__DIR__) . '/views/index.php'; $html = ob_get_clean();
 if (($argv[1] ?? '') === '--render') { echo $html; exit; }
@@ -10,6 +10,11 @@ $headers = $xpath->query('//table[@id="example2"]/thead/tr/th');
 $checks = 0;
 function check_view($condition, $message) { global $checks; $checks++; if (!$condition) { throw new RuntimeException($message); } }
 check_view($headers->length === 10, 'Ten visible table headers');
+$export = $xpath->query('//a[@id="export-excel"]');
+check_view($export->length === (has_permission('Outgoing_Stok_ATK.View') ? 1 : 0), 'Export button follows View permission');
+if ($export->length) {
+    check_view($export->item(0)->getAttribute('href') === '/fixture/outgoing_stok_atk/export_excel', 'Export button has real endpoint');
+}
 check_view(trim($headers->item(3)->textContent) === 'Department' && trim($headers->item(4)->textContent) === 'Detail Barang', 'Detail follows department');
 check_view(strpos($headers->item(4)->getAttribute('class'), 'no-sort') !== false, 'Detail is not sortable');
 check_view(trim($headers->item(5)->textContent) === 'Qty Unit' && trim($headers->item(9)->textContent) === 'Option', 'Original columns follow shifted indices');

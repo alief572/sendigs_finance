@@ -46,6 +46,63 @@ class Outgoing_stok_atk extends Admin_Controller
     $this->outgoing_stok_atk_model->data_side_request_material();
   }
 
+  public function export_excel()
+  {
+    $this->auth->restrict($this->viewPermission);
+    $book = null;
+    $file = null;
+    try {
+      $this->load->library('PHPExcel');
+      $rows = $this->outgoing_stok_atk_model->get_export_rows(
+        $this->input->get('search'), $this->input->get('column'), $this->input->get('direction'));
+      $book = new PHPExcel();
+      $sheet = $book->getActiveSheet();
+      $sheet->setTitle('Outgoing ATK');
+      $headers = array('No', 'No Trans', 'Tanggal', 'Department', 'Nama Barang', 'Qty Barang', 'Satuan', 'PIC', 'By', 'Dated');
+      $sheet->fromArray($headers, null, 'A1');
+      $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+      $widths = array('A' => 8, 'B' => 25, 'C' => 16, 'D' => 35, 'E' => 45,
+        'F' => 16, 'G' => 14, 'H' => 25, 'I' => 25, 'J' => 25);
+      foreach ($widths as $column => $width) { $sheet->getColumnDimension($column)->setWidth($width); }
+      $sheet->freezePane('A2');
+      $rowNumber = 1;
+      foreach ($rows as $row) {
+        $rowNumber++;
+        if ($rowNumber > 1048576) { throw new RuntimeException('Outgoing export exceeds Excel row limit'); }
+        $sheet->setCellValue('A' . $rowNumber, $rowNumber - 1);
+        $text = array('B' => 'kode_trans', 'C' => 'tanggal', 'D' => 'department', 'E' => 'name',
+          'G' => 'unit', 'H' => 'pic', 'I' => 'by', 'J' => 'dated');
+        foreach ($text as $column => $key) {
+          $sheet->setCellValueExplicit($column . $rowNumber, (string) $row[$key], PHPExcel_Cell_DataType::TYPE_STRING);
+        }
+        if ($row['qty'] !== null) { $sheet->setCellValue('F' . $rowNumber, (float) $row['qty']); }
+      }
+      $sheet->setAutoFilter('A1:J' . $rowNumber);
+      if ($rowNumber > 1) {
+        $sheet->getStyle('F2:F' . $rowNumber)->getNumberFormat()->setFormatCode('#,##0.00##');
+        $sheet->getStyle('D2:E' . $rowNumber)->getAlignment()->setWrapText(true);
+      }
+      // Finish serialization before sending download headers so failures cannot produce a partial file.
+      $file = tempnam(sys_get_temp_dir(), 'outgoing_atk_');
+      if ($file === false) { throw new RuntimeException('Outgoing export temporary file unavailable'); }
+      PHPExcel_IOFactory::createWriter($book, 'Excel2007')->save($file);
+      $contents = file_get_contents($file);
+      if ($contents === false) { throw new RuntimeException('Outgoing export file unavailable'); }
+      $this->output->set_header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      $this->output->set_header('Content-Disposition: attachment; filename="Outgoing_ATK_' . date('Ymd_His') . '.xlsx"');
+      $this->output->set_header('Cache-Control: private, no-store');
+      $this->output->set_output($contents);
+    } catch (Throwable $e) {
+      log_message('error', 'Outgoing ATK Excel export failed');
+      if ($file && is_file($file)) { unlink($file); $file = null; }
+      if ($book) { $book->disconnectWorksheets(); $book = null; }
+      show_error('Export Excel outgoing gagal. Silakan coba lagi.', 500);
+    } finally {
+      if ($file && is_file($file)) { unlink($file); }
+      if ($book) { $book->disconnectWorksheets(); }
+    }
+  }
+
   public function request($id = null)
   {
     if ($this->input->post()) {
