@@ -193,3 +193,22 @@ Mengadaptasi tampilan form pemilihan invoice dan modal alokasi sesuai mockup `Pe
 1. Reproduksi terfokus: finance View masih memanggil data_approve; nama fungsi pembuka approval pada kedua list sama dengan fungsi submit di form AJAX. Uji routing berdasarkan callback action controller dan script list melalui Node VM, termasuk saat basic.js/form mengubah fungsi global lama.
 2. Implementasi: gunakan nama pembuka khusus openExpenseApproval/openExpenseView di kedua list dan action kedua endpoint; View menuju expense/view, Approval menuju expense/approval. Tidak mengubah fungsi submit maupun endpoint penyimpanan.
 3. Validasi: jalankan tes Node RED/GREEN dan syntax; sesuaikan tes PHP management, review diff/whitespace dan checkpoint. Tanpa browser; runtime PHP sebelumnya tidak tersedia.
+
+# Akses index Expense dan upload Linux — 2026-10-27
+
+Status akhir: fase 1–4 selesai dan diverifikasi pada fixture PHP/Linux. Tidak ada fase implementasi tertunda. Uji database aplikasi/server tujuan tidak dijalankan; provisioning hak OS tetap menjadi langkah deployment yang terdokumentasi pada docs/expense-access-upload-linux.md. Bukti dan batas validasi pada checkpoint utama.
+
+1. Filter index: pusatkan akses semua pemohon pada Auth::is_admin() atau Expense_Approval.Manage; user lainnya memakai nama pemohon saja. Terapkan pada data/count/pencarian ketiga tab dan badge. Lulus bila ID akun/Expense.Manage/parameter all tidak melewati filter.
+2. Approval: verifikasi antrean finance/management lintas pemohon sesuai tahap. Pertahankan kategori existing (management mengecualikan petty cash), izin tombol, routing, dan kebijakan self-approval.
+3. Upload: helper direktori di bawah FCPATH untuk seluruh upload Expense/kasbon/transport/pengembalian, termasuk salinan PR. Direktori Linux grup www-data mode 02775, file baru 0664; kegagalan permission/upload menggagalkan transaksi dan membersihkan hanya file baru request yang belum commit. Dokumentasikan provisioning hak OS.
+4. Validasi: regresi akses/approval, filesystem dan kegagalan upload/commit, suite audit terdampak, lint PHP, Node existing, serta whitespace. Tanpa tes browser. Catat keterbatasan runtime secara faktual.
+
+Scope: controller Expense, helper upload baru, integrasi helper salinan kasbon, tes modul dan dokumentasi. Tidak mengubah skema/kontrak respons/URL; tidak commit/push. Pekerjaan lokal lain dipertahankan. docs/task-progress.md adalah checkpoint utama.
+
+# Perbaikan HTTP 500 index Expense — 2026-10-27
+
+Status: selesai; hasil RED/GREEN dan regresi tercatat di checkpoint. Tidak mengubah kebijakan akses atau menyentuh data aplikasi.
+
+1. Grounding/RED: log aplikasi menunjukkan SELECT * tanpa FROM pada get_dat_expense_data. Reproduksi memakai Auth dan query builder CodeIgniter asli dengan persistensi fixture.
+2. Perbaikan: hitung pengecualian admin/finance sebelum menyusun query tr_expense; jangan memanggil lookup role ketika builder daftar masih aktif. Pertahankan filter pemohon dan kategori.
+3. Verifikasi: data terisi dan count/query untuk admin, finance, user biasa, pencarian, parameter all; regresi visibility dan lint. Perubahan upload/approval tidak diulang karena tidak berubah. Simpan hasil di checkpoint.

@@ -4,6 +4,8 @@ if (!defined('BASEPATH')) {
 	exit('No direct script access allowed');
 }
 
+require_once dirname(__DIR__, 3) . '/helpers/expense_upload_helper.php';
+
 /*
  * @author Harboens
  * @copyright Copyright (c) 2020
@@ -54,6 +56,53 @@ class Expense extends Admin_Controller
 	}
 
 	private $auditQueriesOk = true;
+	private $expenseUploads;
+	private $expenseUploadTransactionStarted = false;
+
+	private function withExpenseUploads($saveMethod)
+	{
+		$this->expenseUploads = new Expense_upload_files(FCPATH);
+		$this->expenseUploadTransactionStarted = false;
+		try {
+			$this->$saveMethod();
+		} catch (Expense_upload_exception $e) {
+			if ($this->expenseUploadTransactionStarted) { $this->db->trans_rollback(); }
+			$databaseFailure = $e->getCode() === 2;
+			$this->completeAudit('Gagal menyimpan lampiran expense', 0, array(
+				'outcome' => $databaseFailure ? 'transaction_failed' : 'upload_failed',
+				'reason' => $databaseFailure ? 'database_write_failed' : 'upload_storage_failed'
+			));
+			$id = $this->input->post($saveMethod === 'saveReturnEvidenceWithFiles' ? 'id_expense' : 'id');
+			echo json_encode(array('save' => false, 'id' => $id, 'message' => $e->getMessage(), 'msg' => $e->getMessage()));
+		} finally {
+			$this->expenseUploads->cleanup();
+			$this->expenseUploads = null;
+		}
+	}
+
+	private function uploadExpenseFile($field)
+	{
+		$this->expenseUploads->directory();
+		if (!$this->upload->do_upload($field)) {
+			throw new Expense_upload_exception('Gagal mengunggah lampiran. Silakan ulangi.');
+		}
+		$data = $this->upload->data();
+		$this->expenseUploads->uploaded(FCPATH . 'assets/expense/' . $data['file_name']);
+		return true;
+	}
+
+	private function copyExpenseAttachments($names, $source)
+	{
+		if (!$names) { return; }
+		$destination = $this->expenseUploads->copyDirectory();
+		$created = kasbon_copy_attachments($names, $source, $destination);
+		$this->expenseUploads->uploadedBatch($created);
+	}
+
+	private function canViewAllExpenseRequesters()
+	{
+		return $this->auth->is_admin() || has_permission('Expense_Approval.Manage');
+	}
 
 	private function beginAudit($method, $data = array(), $keys = array())
 	{
@@ -217,6 +266,11 @@ class Expense extends Admin_Controller
 	// kasbon save
 	public function kasbon_save()
 	{
+		$this->withExpenseUploads('saveKasbonWithFiles');
+	}
+
+	private function saveKasbonWithFiles()
+	{
 		$id             	= $this->input->post("id");
 		$tgl_doc  			= $this->input->post("tgl_doc");
 		$no_doc		   	 	= $this->input->post("no_doc");
@@ -240,7 +294,7 @@ class Expense extends Admin_Controller
 		$nm_coa = $this->input->post("nm_coa");
 		$metode_pembayaran	= 1;
 
-		$this->beginAudit(__FUNCTION__, array(
+		$this->beginAudit('kasbon_save', array(
 			'id' => $id,
 			'no_doc' => $no_doc,
 			'department_id' => $departement,
@@ -248,9 +302,11 @@ class Expense extends Admin_Controller
 			'no_pr' => $no_pr,
 			'tipe_pr' => $tipe_pr,
 		), array('id', 'no_doc', 'department_id', 'amount', 'no_pr', 'tipe_pr', 'outcome', 'reason'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$this->db->trans_begin();
-		$config['upload_path'] = 'assets/expense/';
+		$this->expenseUploadTransactionStarted = true;
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = '*';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -269,7 +325,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file']['size'];
 			// $this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
 			}
@@ -289,7 +345,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file_2']['size'];
 			// $this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData2 = $this->upload->data();
 				$filenames2 = $uploadData2['file_name'];
 			}
@@ -305,12 +361,12 @@ class Expense extends Admin_Controller
 					$prFiles = kasbon_attachment_names(kasbon_pr_document($this->db, $no_pr));
 					if ($prFiles) { $filenames = json_encode($prFiles); }
 					kasbon_check_attachment_capacity($this->db, $filenames);
-					kasbon_copy_attachments($prFiles, FCPATH . 'assets/pr', FCPATH . 'assets/expense');
+					$this->copyExpenseAttachments($prFiles, FCPATH . 'assets/pr');
 				}
 			} elseif (!empty($file_name)) {
 				$prFiles = kasbon_attachment_names($file_name);
 				$source = $tipe_pr === 'pr asset' ? 'uploads/pr_asset' : 'assets/pr';
-				kasbon_copy_attachments($prFiles, FCPATH . $source, FCPATH . 'assets/expense');
+				$this->copyExpenseAttachments($prFiles, FCPATH . $source);
 				$filenames = $file_name;
 			}
 		} catch (RuntimeException $e) {
@@ -383,8 +439,7 @@ class Expense extends Admin_Controller
 							if (!$update_rutin_non_planning_detail) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -393,8 +448,7 @@ class Expense extends Admin_Controller
 					if (!$insert_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				} else if ($tipe_pr == 'pr asset') {
 					$this->db->select('a.*, b.nama_asset as nm_barang, "Pcs" as satuan, b.qty');
@@ -430,8 +484,7 @@ class Expense extends Admin_Controller
 							if (!$update_tran_pr_header) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -440,8 +493,7 @@ class Expense extends Admin_Controller
 					if (!$update_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				} else {
 					// $get_detail_pr = $this->db->get_where('material_planning_base_on_produksi_detail', ['no_pr' => $no_pr])->result_array();
@@ -483,8 +535,7 @@ class Expense extends Admin_Controller
 							if (!$update_planning_detail) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -493,8 +544,7 @@ class Expense extends Admin_Controller
 					if (!$update_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				}
 			}
@@ -503,8 +553,7 @@ class Expense extends Admin_Controller
 			if (!$update_kasbon) {
 				$this->db->trans_rollback();
 
-				print_r($this->db->last_query());
-				exit;
+				throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 			}
 			// print_r($this->db->last_query());
 			// exit;
@@ -512,6 +561,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = false;
 			} else {
+				$this->expenseUploads->committed();
 				$result = true;
 			}
 		} else {
@@ -660,6 +710,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -1321,7 +1372,7 @@ class Expense extends Admin_Controller
 
 		// Hitung counter untuk badge Tab 2 (Pengembalian Kasbon) dan Tab 3 (Lebih Expense)
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenseRequesters();
 
 		$this->db->where('lebih_bayar >', 0);
 		$this->db->where_in('status', ['3', '4']);
@@ -1340,7 +1391,7 @@ class Expense extends Admin_Controller
 		$count_pengembalian = $this->db->count_all_results('tr_expense');
 
 		$this->db->where('kurang_bayar >', 0);
-		$this->db->where('status', '2');
+		$this->db->where_in('status', ['2', '3', '4']);
 		$this->db->group_start();
 		$this->db->where('pettycash', null);
 		$this->db->or_where('pettycash', '');
@@ -2138,11 +2189,17 @@ class Expense extends Admin_Controller
 	// save
 	public function save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveExpenseWithFiles');
+	}
+
+	private function saveExpenseWithFiles()
+	{
+		$this->beginAudit('save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome', 'reason'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$post = $this->input->post();
 
@@ -2284,6 +2341,7 @@ class Expense extends Admin_Controller
 
 		//proses utama update tr_expense
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 		if ($id != "") {
 			$grand_total = $total_kasbon - $total_expense;
 			if ($grand_total < 0) {
@@ -2304,18 +2362,10 @@ class Expense extends Admin_Controller
 				}
 			}
 			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
-				$uploadDirectory = 'assets/expense_bukti_pengembalian/';
-				if (!is_dir($uploadDirectory)) {
-					mkdir($uploadDirectory, 0777, true);
-				}
 				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
 					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
 						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
-						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
-						$filePath = $uploadDirectory . $cleanName;
-						if (move_uploaded_file($tmpName, $filePath)) {
-							$pathBuktiPengembalian[] = $filePath;
-						}
+						$pathBuktiPengembalian[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense_bukti_pengembalian');
 					}
 				}
 			}
@@ -2359,7 +2409,7 @@ class Expense extends Admin_Controller
 					// proses update jika ada id_detail
 					if ($id_detail[$keys] !== '') {
 						if ($qty[$keys] > 0) {
-							$config['upload_path'] = './assets/expense/';
+							$config['upload_path'] = FCPATH . 'assets/expense/';
 							$config['allowed_types'] = '*';
 							$config['remove_spaces'] = TRUE;
 							$config['encrypt_name'] = TRUE;
@@ -2376,7 +2426,7 @@ class Expense extends Admin_Controller
 								$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 								$this->load->library('upload', $config);
 								$this->upload->initialize($config);
-								if ($this->upload->do_upload('file')) {
+								if ($this->uploadExpenseFile('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
 								} else {
@@ -2481,7 +2531,7 @@ class Expense extends Admin_Controller
 					// proses insert karena tidak ada id_detail
 					else {
 						if ($qty[$keys] > 0) {
-							$config['upload_path'] = './assets/expense/';
+							$config['upload_path'] = FCPATH . 'assets/expense/';
 							$config['allowed_types'] = '*';
 							$config['remove_spaces'] = TRUE;
 							$config['encrypt_name'] = TRUE;
@@ -2495,7 +2545,7 @@ class Expense extends Admin_Controller
 								$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 								$this->load->library('upload', $config);
 								$this->upload->initialize($config);
-								if ($this->upload->do_upload('file')) {
+								if ($this->uploadExpenseFile('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
 								} else {
@@ -2626,6 +2676,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -2633,20 +2684,13 @@ class Expense extends Admin_Controller
 		else {
 			$no_doc = $this->All_model->GetAutoGenerate('format_expense');
 
-			$uploadDirectory = "./assets/expense/";
 			$pathBonBukti = [];
 			$pathBuktiPengembalian = [];
 
 			if (!empty($_FILES['doc_file']['name'][0])) {
 				foreach ($_FILES['doc_file']['name'] as $index => $name) {
 					$tmpName = $_FILES['doc_file']['tmp_name'][$index];
-					$filePath = $uploadDirectory . basename($name);
-
-					if (move_uploaded_file($tmpName, $filePath)) {
-						$pathBonBukti[] = $filePath;
-					} else {
-						echo "Gagal mengunggah file: $name<br>";
-					}
+					$pathBonBukti[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense');
 				}
 			}
 			$bonBukti = implode(";", $pathBonBukti);
@@ -2657,18 +2701,10 @@ class Expense extends Admin_Controller
 				}
 			}
 			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
-				if (!is_dir($uploadDirectory)) {
-					mkdir($uploadDirectory, 0777, true);
-				}
 				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
 					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
 						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
-						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
-						$filePath = $uploadDirectory . $cleanName;
-
-						if (move_uploaded_file($tmpName, $filePath)) {
-							$pathBuktiPengembalian[] = $filePath;
-						}
+						$pathBuktiPengembalian[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense_bukti_pengembalian');
 					}
 				}
 			}
@@ -2720,8 +2756,7 @@ class Expense extends Admin_Controller
 			$insert_expense = $this->db->insert('tr_expense', $data);
 
 			if (!$insert_expense) {
-				print_r($this->db->error($insert_expense));
-				exit;
+				throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 			}
 
 			$this->db->delete('tr_expense_detail', ['no_doc' => $this->auth->user_id()]);
@@ -2733,7 +2768,7 @@ class Expense extends Admin_Controller
 				foreach ($detail_id as $keys => $val) {
 					$no_doc			= $no_doc;
 					if ($qty[$keys] > 0) {
-						$config['upload_path'] = './assets/expense/';
+						$config['upload_path'] = FCPATH . 'assets/expense/';
 						$config['allowed_types'] = '*';
 						$config['remove_spaces'] = TRUE;
 						$config['encrypt_name'] = TRUE;
@@ -2746,7 +2781,7 @@ class Expense extends Admin_Controller
 							$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 							$this->load->library('upload', $config);
 							$this->upload->initialize($config);
-							if ($this->upload->do_upload('file')) {
+							if ($this->uploadExpenseFile('file')) {
 								$uploadData = $this->upload->data();
 								$filenames = $uploadData['file_name'];
 							} else {
@@ -2809,8 +2844,7 @@ class Expense extends Admin_Controller
 
 							$update_expense_kembalian = $this->db->update('tr_expense', ['expense_id_kembalian' => $no_doc], ['no_doc' => $post['pengembalian_expense_' . $detail_id[$keys]]]);
 							if (!$update_expense_kembalian) {
-								print_r($this->db->error($update_expense_kembalian));
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 
 							$insert_log_kembalian = $this->db->insert('tr_pengembalian_expense', [
@@ -2824,8 +2858,7 @@ class Expense extends Admin_Controller
 								'created_date' => date('Y-m-d H:i:s')
 							]);
 							if (!$insert_log_kembalian) {
-								print_r($this->db->error($insert_log_kembalian));
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 
@@ -2853,8 +2886,7 @@ class Expense extends Admin_Controller
 
 						$insert_detail_expense = $this->db->insert('tr_expense_detail', $data_detail);
 						if (!$insert_detail_expense) {
-							print_r($this->db->error($insert_detail_expense));
-							exit;
+							throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 						}
 						$new_dtl_id = $this->db->insert_id();
 						$this->_handle_detail_files($no_doc, $new_dtl_id, $val);
@@ -2884,6 +2916,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -3113,11 +3146,17 @@ class Expense extends Admin_Controller
 	// transport req save
 	public function transport_req_save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveTransportRequestWithFiles');
+	}
+
+	private function saveTransportRequestWithFiles()
+	{
+		$this->beginAudit('transport_req_save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$id             = $this->input->post("id");
 		$tgl_doc  		= $this->input->post("tgl_doc");
@@ -3180,9 +3219,10 @@ class Expense extends Admin_Controller
 		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
 
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 
 		// Configure upload library
-		$config['upload_path'] = 'assets/expense/';
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -3281,7 +3321,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 
-						if ($this->upload->do_upload('file')) {
+						if ($this->uploadExpenseFile('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
 						}
@@ -3295,6 +3335,7 @@ class Expense extends Admin_Controller
 				$result = 0;
 				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
+				$this->expenseUploads->committed();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -3367,7 +3408,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 
-						if ($this->upload->do_upload('file')) {
+						if ($this->uploadExpenseFile('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
 						}
@@ -3386,6 +3427,7 @@ class Expense extends Admin_Controller
 				$result = 0;
 				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
+				$this->expenseUploads->committed();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -3557,11 +3599,17 @@ class Expense extends Admin_Controller
 	// transport save
 	public function transport_save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveTransportWithFiles');
+	}
+
+	private function saveTransportWithFiles()
+	{
+		$this->beginAudit('transport_save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$id             = $this->input->post("id");
 		$tgl_doc  		= date('Y-m-d', strtotime($this->input->post("tgl_doc")));
@@ -3592,7 +3640,8 @@ class Expense extends Admin_Controller
 		$msg = '';
 
 		$this->db->trans_begin();
-		$config['upload_path'] = 'assets/expense/';
+		$this->expenseUploadTransactionStarted = true;
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -3605,7 +3654,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file']['size'];
 			$this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
 			} else {
@@ -3672,6 +3721,7 @@ class Expense extends Admin_Controller
 				$result = FALSE;
 				$msg = 'Data gagal di simpan !';
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 				$msg = 'Data berhasil di simpan !';
 			}
@@ -5759,6 +5809,8 @@ class Expense extends Admin_Controller
 	public function get_dat_expense_data()
 	{
 		$post = $this->input->post();
+		// Lookup role memakai Query Builder yang sama; selesaikan sebelum menyusun query daftar.
+		$canViewAll = $this->canViewAllExpenseRequesters();
 
 		$all = (isset($post['all']) && !empty($post['all']) && $post['all'] == '1') ? $post['all'] : '';
 
@@ -5794,11 +5846,8 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
-		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '1' && !has_permission('Expense.Manage')) {
-			$this->db->group_start();
+		if (!$canViewAll) {
 			$this->db->where('a.nama', $this->auth->user_name());
-			$this->db->or_where('a.created_by', $this->auth->user_name());
-			$this->db->group_end();
 		}
 
 		$this->db->order_by('a.created_on', 'DESC');
@@ -6609,7 +6658,7 @@ class Expense extends Admin_Controller
 			$files = $_FILES['doc_files_' . $row_key];
 			$count = is_array($files['name']) ? count($files['name']) : 0;
 
-			$config['upload_path']   = './assets/expense/';
+			$config['upload_path']   = FCPATH . 'assets/expense/';
 			$config['allowed_types'] = '*';
 			$config['remove_spaces'] = TRUE;
 			$config['encrypt_name']  = TRUE;
@@ -6624,7 +6673,7 @@ class Expense extends Admin_Controller
 					$_FILES['single_dtl_file']['size']     = $files['size'][$i];
 
 					$this->upload->initialize($config);
-					if ($this->upload->do_upload('single_dtl_file')) {
+					if ($this->uploadExpenseFile('single_dtl_file')) {
 						$uData = $this->upload->data();
 						$this->db->insert('tr_expense_detail_file', [
 							'no_doc'     => $no_doc,
@@ -6888,7 +6937,7 @@ class Expense extends Admin_Controller
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenseRequesters();
 
 		$this->db->from('tr_expense a');
 		$this->db->where('a.lebih_bayar >', 0);
@@ -7024,6 +7073,13 @@ class Expense extends Admin_Controller
 	 */
 	public function save_pengembalian_dana()
 	{
+		$this->withExpenseUploads('saveReturnEvidenceWithFiles');
+	}
+
+	private function saveReturnEvidenceWithFiles()
+	{
+		$this->beginAudit('save_pengembalian_dana', array(), array('id', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 		$id = $this->input->post('id_expense');
 		$id_bank_pengembalian = $this->input->post('id_bank_pengembalian');
 		$transfer_coa_bank = $this->input->post('transfer_coa_bank');
@@ -7031,17 +7087,20 @@ class Expense extends Admin_Controller
 		$transfer_jumlah = floatval(str_replace(',', '', (string)$this->input->post('transfer_jumlah')));
 
 		if (empty($id)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
 			return;
 		}
 
 		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($expense)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
 			return;
 		}
 
 		if (empty($id_bank_pengembalian) && empty($transfer_coa_bank)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Bank Tujuan Transfer perusahaan wajib dipilih!']);
 			return;
 		}
@@ -7050,6 +7109,7 @@ class Expense extends Admin_Controller
 		if (!empty($id_bank_pengembalian)) {
 			$bank_row = $this->db->get_where('ms_bank', ['id' => $id_bank_pengembalian, 'deleted' => '0'])->row();
 			if (empty($bank_row)) {
+				$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 				echo json_encode(['save' => false, 'message' => 'Rekening Bank Tujuan Perusahaan tidak valid atau sudah tidak aktif!']);
 				return;
 			}
@@ -7062,31 +7122,25 @@ class Expense extends Admin_Controller
 		}
 
 		if (empty($transfer_tanggal)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Tanggal transfer wajib diisi!']);
 			return;
 		}
 
 		if ($transfer_jumlah <= 0) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Nominal transfer pengembalian harus lebih dari 0!']);
 			return;
 		}
 
 		// Validasi upload bukti transfer: minimal 1 file
 		$uploaded_files = [];
-		$upload_dir = 'assets/expense_bukti_pengembalian/';
-		if (!is_dir($upload_dir)) {
-			mkdir($upload_dir, 0777, true);
-		}
 
 		if (!empty($_FILES['bukti_transfer']['name'][0])) {
 			foreach ($_FILES['bukti_transfer']['name'] as $idx => $fname) {
 				if (!empty($_FILES['bukti_transfer']['tmp_name'][$idx])) {
 					$tmp = $_FILES['bukti_transfer']['tmp_name'][$idx];
-					$clean = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($fname));
-					$dest = $upload_dir . $clean;
-					if (move_uploaded_file($tmp, $dest)) {
-						$uploaded_files[] = $dest;
-					}
+					$uploaded_files[] = $this->expenseUploads->move($tmp, $fname, 'assets/expense_bukti_pengembalian');
 				}
 			}
 		}
@@ -7097,6 +7151,7 @@ class Expense extends Admin_Controller
 		}
 
 		if (empty($uploaded_files)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Bukti transfer pengembalian dana wajib diunggah (minimal 1 file gambar / PDF)!']);
 			return;
 		}
@@ -7112,14 +7167,18 @@ class Expense extends Admin_Controller
 		];
 
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 		$this->db->update('tr_expense', $update_data, ['id' => $id]);
 
 		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
 			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'transaction_failed'));
 			echo json_encode(['save' => false, 'message' => 'Gagal menyimpan data pengembalian kasbon.']);
 			return;
 		}
 
+		$this->expenseUploads->committed();
+		$this->completeAudit('Berhasil menyimpan bukti pengembalian kasbon', 1, array('id' => $id, 'outcome' => 'saved'));
 		echo json_encode([
 			'save' => true,
 			'message' => 'Bukti pengembalian kasbon berhasil diunggah! Laporan kini berstatus "Menunggu Verifikasi Finance".'
@@ -7138,7 +7197,7 @@ class Expense extends Admin_Controller
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenseRequesters();
 
 		$this->db->from('tr_expense a');
 		$this->db->where('a.kurang_bayar >', 0);

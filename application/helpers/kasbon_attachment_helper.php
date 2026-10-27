@@ -67,6 +67,7 @@ function kasbon_copy_attachments($names, $source, $destination)
         }
         $created[] = $target;
     }
+    return $created;
 }
 
 function kasbon_check_attachment_capacity($db, $value)
