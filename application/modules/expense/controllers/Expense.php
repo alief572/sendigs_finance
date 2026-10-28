@@ -1413,42 +1413,77 @@ class Expense extends Admin_Controller
 		$cur_user = $this->auth->user_name();
 		$is_admin = $this->canViewAllExpenses();
 
-		$this->db->where('lebih_bayar >', 0);
-		$this->db->where_in('status', ['3', '4']);
+		// TAB 2: Pengembalian Kasbon counts (upload=3, verif=4, done=2)
+		$this->db->select("
+			SUM(CASE WHEN a.status = '3' THEN 1 ELSE 0 END) as cnt_upload,
+			SUM(CASE WHEN a.status = '4' THEN 1 ELSE 0 END) as cnt_verif,
+			SUM(CASE WHEN a.status = '2' THEN 1 ELSE 0 END) as cnt_done
+		", false);
+		$this->db->from('tr_expense a');
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
-		$this->db->where('pettycash', null);
-		$this->db->or_where('pettycash', '');
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
 		$this->db->group_end();
 		$this->db->group_start();
-		$this->db->where('id_po', null);
-		$this->db->or_where('id_po', '');
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
-		$this->db->not_like('no_doc', 'PI-', 'after');
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('created_by', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
-		$count_pengembalian = $this->db->count_all_results('tr_expense');
+		$q_pk_counts = $this->db->get()->row();
+		$count_pk_upload = $q_pk_counts ? (int)$q_pk_counts->cnt_upload : 0;
+		$count_pk_verif  = $q_pk_counts ? (int)$q_pk_counts->cnt_verif : 0;
+		$count_pk_done   = $q_pk_counts ? (int)$q_pk_counts->cnt_done : 0;
+		// Badge header tab utama Pengembalian Kasbon: menghitung item Perlu Upload
+		$count_pengembalian = $count_pk_upload;
 
-		$this->db->where('kurang_bayar >', 0);
-		$this->db->where_in('status', ['2', '3', '4']);
-		$this->db->group_start();
-		$this->db->where('pettycash', null);
-		$this->db->or_where('pettycash', '');
-		$this->db->group_end();
-		$this->db->group_start();
-		$this->db->where('id_po', null);
-		$this->db->or_where('id_po', '');
-		$this->db->group_end();
-		$this->db->not_like('no_doc', 'PI-', 'after');
-		if (!$is_admin) {
-			$this->db->where('created_by', $cur_user);
-		}
-		$count_lebih_expense = $this->db->count_all_results('tr_expense');
+		// TAB 3: Lebih Expense counts (belum, menunggu, selesai)
+		$sub_rp_done = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'done' AND d.decision = 'approved' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_pending = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'pending' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_legacy = "(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+
+		$where_le_creator = !$is_admin ? " AND a.created_by = " . $this->db->escape($cur_user) : "";
+		$sql_le_counts = "
+			SELECT 
+				SUM(CASE WHEN (z.done_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status >= 1)) THEN 1 ELSE 0 END) as cnt_selesai,
+				SUM(CASE WHEN (z.done_doc IS NULL AND (z.legacy_status IS NULL OR z.legacy_status < 1) AND (z.pending_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status = 0))) THEN 1 ELSE 0 END) as cnt_menunggu,
+				SUM(CASE WHEN (z.done_doc IS NULL AND z.pending_doc IS NULL AND (z.legacy_status IS NULL)) THEN 1 ELSE 0 END) as cnt_belum
+			FROM (
+				SELECT a.id,
+					{$sub_rp_done} as done_doc,
+					{$sub_rp_pending} as pending_doc,
+					{$sub_rp_legacy} as legacy_status
+				FROM tr_expense a
+				WHERE a.kurang_bayar > 0
+				  AND a.status IN ('2', '3', '4')
+				  AND (a.pettycash IS NULL OR a.pettycash = '')
+				  AND (a.id_po IS NULL OR a.id_po = '')
+				  AND a.no_doc NOT LIKE 'PI-%'
+				  {$where_le_creator}
+			) z
+		";
+		$q_le_counts = $this->db->query($sql_le_counts)->row();
+		$count_rb_belum    = $q_le_counts ? (int)$q_le_counts->cnt_belum : 0;
+		$count_rb_menunggu = $q_le_counts ? (int)$q_le_counts->cnt_menunggu : 0;
+		$count_rb_selesai  = $q_le_counts ? (int)$q_le_counts->cnt_selesai : 0;
+		// Badge header tab utama Lebih Expense: dokumen berjalan (belum + menunggu)
+		$count_lebih_expense = $count_rb_belum + $count_rb_menunggu;
 
 		$this->template->set('status', $this->status);
 		$this->template->set('bank_options', $bank_options);
 		$this->template->set('count_pengembalian', $count_pengembalian);
+		$this->template->set('count_pk_upload', $count_pk_upload);
+		$this->template->set('count_pk_verif', $count_pk_verif);
+		$this->template->set('count_pk_done', $count_pk_done);
+
 		$this->template->set('count_lebih_expense', $count_lebih_expense);
+		$this->template->set('count_rb_belum', $count_rb_belum);
+		$this->template->set('count_rb_menunggu', $count_rb_menunggu);
+		$this->template->set('count_rb_selesai', $count_rb_selesai);
 		$this->template->page_icon('fa fa-cubes');
 		$this->template->title('Expense');
 		$this->template->render('index');
@@ -6998,13 +7033,49 @@ class Expense extends Admin_Controller
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
 		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$subtab = isset($post['subtab']) ? trim($post['subtab']) : 'upload';
 
 		$cur_user = $this->auth->user_name();
 		$is_admin = $this->canViewAllExpenses();
 
+		// Hitung counts untuk ketiga subtab
+		$this->db->select("
+			SUM(CASE WHEN a.status = '3' THEN 1 ELSE 0 END) as cnt_upload,
+			SUM(CASE WHEN a.status = '4' THEN 1 ELSE 0 END) as cnt_verif,
+			SUM(CASE WHEN a.status = '2' THEN 1 ELSE 0 END) as cnt_done
+		", false);
 		$this->db->from('tr_expense a');
 		$this->db->where('a.lebih_bayar >', 0);
-		$this->db->where_in('a.status', ['3', '4']);
+		$this->db->where_in('a.status', ['2', '3', '4']);
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.created_by', $cur_user);
+		}
+		$q_cnt = $this->db->get()->row();
+		$cnt_upload = $q_cnt ? (int)$q_cnt->cnt_upload : 0;
+		$cnt_verif  = $q_cnt ? (int)$q_cnt->cnt_verif : 0;
+		$cnt_done   = $q_cnt ? (int)$q_cnt->cnt_done : 0;
+
+		// Query DataTables terfilter per subtab
+		$this->db->from('tr_expense a');
+		$this->db->where('a.lebih_bayar >', 0);
+		if ($subtab === 'upload') {
+			$this->db->where('a.status', '3');
+		} else if ($subtab === 'verif') {
+			$this->db->where('a.status', '4');
+		} else if ($subtab === 'done') {
+			$this->db->where('a.status', '2');
+		} else {
+			$this->db->where_in('a.status', ['2', '3', '4']);
+		}
 		$this->db->group_start();
 		$this->db->where('a.pettycash', null);
 		$this->db->or_where('a.pettycash', '');
@@ -7023,7 +7094,15 @@ class Expense extends Admin_Controller
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->where('a.lebih_bayar >', 0);
-		$this->db->where_in('a.status', ['3', '4']);
+		if ($subtab === 'upload') {
+			$this->db->where('a.status', '3');
+		} else if ($subtab === 'verif') {
+			$this->db->where('a.status', '4');
+		} else if ($subtab === 'done') {
+			$this->db->where('a.status', '2');
+		} else {
+			$this->db->where_in('a.status', ['2', '3', '4']);
+		}
 		$this->db->group_start();
 		$this->db->where('a.pettycash', null);
 		$this->db->or_where('a.pettycash', '');
@@ -7056,33 +7135,50 @@ class Expense extends Admin_Controller
 		foreach ($rows as $item) {
 			$no++;
 			$nominal_lebih = floatval($item['lebih_bayar']);
-			$status_badge = $this->_render_expense_status_badge($item);
 
-			// Tampilkan alasan penolakan verifikasi jika ada
-			if (!empty($item['verif_reject_reason']) && (string)$item['status'] === '3') {
-				$status_badge .= '<br><span class="badge" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; font-weight:normal; font-size:10px; margin-top:3px; display:inline-block; max-width:180px; white-space:normal; text-align:center;">'
-					. '<i class="fa fa-info-circle"></i> Catatan Finance: ' . htmlspecialchars($item['verif_reject_reason']) . '</span>';
+			// Keterangan & Catatan Penolakan jika ada
+			$keperluan_text = htmlspecialchars($item['informasi']);
+			if ((string)$item['status'] === '3' && !empty($item['verif_reject_reason'])) {
+				$keperluan_text .= '<br><span class="badge" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; font-weight:normal; font-size:11px; margin-top:4px; display:inline-block; max-width:280px; white-space:normal; text-align:left;">'
+					. '<i class="fa fa-info-circle"></i> Ditolak Finance: ' . htmlspecialchars($item['verif_reject_reason']) . '</span>';
 			}
 
-			$action = '';
+			// Format tanggal approval direktur
+			$tgl_appr = !empty($item['tgl_approval_direktur']) ? date('Y-m-d', strtotime($item['tgl_approval_direktur'])) : (!empty($item['approved_on']) ? date('Y-m-d', strtotime($item['approved_on'])) : $item['tgl_doc']);
+
+			// Status badge
 			if ((string)$item['status'] === '3') {
-				$action = '<button type="button" class="btn btn-primary btn-xs btn-rounded btn-upload-pengembalian" '
+				$status_badge = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Pengembalian</span>';
+			} else if ((string)$item['status'] === '4') {
+				$status_badge = '<span class="badge" style="background:#6f42c1; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Verifikasi</span>';
+			} else if ((string)$item['status'] === '2') {
+				$status_badge = '<span class="badge" style="background:#00a65a; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai</span>';
+			} else {
+				$status_badge = $this->_render_expense_status_badge($item);
+			}
+
+			// Action button
+			if ((string)$item['status'] === '3') {
+				$action = '<button type="button" class="btn btn-warning btn-xs btn-rounded btn-upload-pengembalian" '
 					. 'data-id="' . $item['id'] . '" '
 					. 'data-doc="' . htmlspecialchars($item['no_doc']) . '" '
 					. 'data-kasbon="' . htmlspecialchars($item['id_kasbon'] ?? '') . '" '
 					. 'data-nominal="' . $nominal_lebih . '">'
 					. '<i class="fa fa-upload"></i> Upload Bukti</button>';
-			} else if ((string)$item['status'] === '4') {
-				$action = '<a class="btn btn-info btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')">'
-					. '<i class="fa fa-eye"></i> Detail Bukti</a>';
+			} else {
+				$action = '<button type="button" class="btn btn-default btn-xs btn-rounded btn-upload-pengembalian" '
+					. 'data-id="' . $item['id'] . '" '
+					. 'data-readonly="1" '
+					. 'data-doc="' . htmlspecialchars($item['no_doc']) . '">'
+					. '<i class="fa fa-eye"></i> Lihat</button>';
 			}
 
 			$data[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
-				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
-				'tgl_doc' => $item['tgl_doc'],
-				'informasi' => htmlspecialchars($item['informasi']),
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . htmlspecialchars($item['id_kasbon']) . '</span>' : '-',
+				'informasi' => $keperluan_text,
+				'tgl_approval' => $tgl_appr,
 				'total_kasbon' => number_format(floatval($item['total_kasbon'])),
 				'realisasi' => number_format(floatval($item['jumlah'])),
 				'lebih_bayar' => '<b>Rp ' . number_format($nominal_lebih) . '</b>',
@@ -7095,7 +7191,13 @@ class Expense extends Admin_Controller
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_filter,
-			'data' => $data
+			'data' => $data,
+			'counts' => [
+				'upload' => $cnt_upload,
+				'verif'  => $cnt_verif,
+				'done'   => $cnt_done,
+				'total'  => $cnt_upload
+			]
 		]);
 	}
 
@@ -7105,10 +7207,15 @@ class Expense extends Admin_Controller
 	 */
 	public function form_pengembalian($id)
 	{
+		$is_readonly = (isset($this->input) && method_exists($this->input, 'get')) ? ((string)$this->input->get('readonly') === '1') : false;
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($data)) {
 			echo '<div class="alert alert-danger" style="margin:20px;">Data expense tidak ditemukan.</div>';
 			return;
+		}
+
+		if (in_array((string)$data->status, ['2', '4'])) {
+			$is_readonly = true;
 		}
 
 		// Ambil data bank aktif dari ms_bank (deleted = '0')
@@ -7128,6 +7235,7 @@ class Expense extends Admin_Controller
 		$this->template->set('data', $data);
 		$this->template->set('kasbon', $kasbon);
 		$this->template->set('bank_options', $bank_options);
+		$this->template->set('is_readonly', $is_readonly);
 		$this->template->render('form_pengembalian');
 	}
 
@@ -7258,10 +7366,45 @@ class Expense extends Admin_Controller
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
 		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$subtab = isset($post['subtab']) ? trim($post['subtab']) : 'belum';
 
 		$cur_user = $this->auth->user_name();
 		$is_admin = $this->canViewAllExpenses();
 
+		$sub_rp_done = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'done' AND d.decision = 'approved' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_pending = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'pending' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_legacy = "(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+		$sub_rp_legacy_doc = "(SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+		$sub_rp_reject = "(SELECT r.alasan FROM tr_rp_reject_log r WHERE r.no_dokumen = a.no_doc ORDER BY r.id DESC LIMIT 1)";
+
+		$where_le_creator = !$is_admin ? " AND a.created_by = " . $this->db->escape($cur_user) : "";
+
+		// Hitung counts untuk ketiga subtab
+		$sql_counts = "
+			SELECT 
+				SUM(CASE WHEN (z.done_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status >= 1)) THEN 1 ELSE 0 END) as cnt_selesai,
+				SUM(CASE WHEN (z.done_doc IS NULL AND (z.legacy_status IS NULL OR z.legacy_status < 1) AND (z.pending_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status = 0))) THEN 1 ELSE 0 END) as cnt_menunggu,
+				SUM(CASE WHEN (z.done_doc IS NULL AND z.pending_doc IS NULL AND (z.legacy_status IS NULL)) THEN 1 ELSE 0 END) as cnt_belum
+			FROM (
+				SELECT a.id,
+					{$sub_rp_done} as done_doc,
+					{$sub_rp_pending} as pending_doc,
+					{$sub_rp_legacy} as legacy_status
+				FROM tr_expense a
+				WHERE a.kurang_bayar > 0
+				  AND a.status IN ('2', '3', '4')
+				  AND (a.pettycash IS NULL OR a.pettycash = '')
+				  AND (a.id_po IS NULL OR a.id_po = '')
+				  AND a.no_doc NOT LIKE 'PI-%'
+				  {$where_le_creator}
+			) z
+		";
+		$q_cnt = $this->db->query($sql_counts)->row();
+		$cnt_belum    = $q_cnt ? (int)$q_cnt->cnt_belum : 0;
+		$cnt_menunggu = $q_cnt ? (int)$q_cnt->cnt_menunggu : 0;
+		$cnt_selesai  = $q_cnt ? (int)$q_cnt->cnt_selesai : 0;
+
+		// Query DataTables terfilter per subtab
 		$this->db->from('tr_expense a');
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
@@ -7276,14 +7419,27 @@ class Expense extends Admin_Controller
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
 			$this->db->where('a.created_by', $cur_user);
+		}
+
+		if ($subtab === 'selesai') {
+			$this->db->where("({$sub_rp_done} IS NOT NULL OR {$sub_rp_legacy} >= 1)", null, false);
+		} else if ($subtab === 'menunggu') {
+			$this->db->where("({$sub_rp_done} IS NULL AND ({$sub_rp_legacy} IS NULL OR {$sub_rp_legacy} < 1) AND ({$sub_rp_pending} IS NOT NULL OR {$sub_rp_legacy} = 0))", null, false);
+		} else { // 'belum'
+			$this->db->where("({$sub_rp_done} IS NULL AND {$sub_rp_pending} IS NULL AND {$sub_rp_legacy} IS NULL)", null, false);
 		}
 		$count_all = $this->db->count_all_results();
 
-		$this->db->select("a.*, b.nm_lengkap as nmuser,
-			(SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as no_rp,
-			(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as status_rp", false);
+		$this->db->select("a.*, b.nm_lengkap as nmuser, d.name as hris_company_name,
+			{$sub_rp_done} as no_pengajuan_done,
+			{$sub_rp_pending} as no_pengajuan_pending,
+			{$sub_rp_legacy} as status_rp_legacy,
+			{$sub_rp_legacy_doc} as no_rp_legacy,
+			{$sub_rp_reject} as reject_reason_rp", false);
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->join('departments c', 'c.id = b.department_id', 'left');
+		$this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
@@ -7298,12 +7454,22 @@ class Expense extends Admin_Controller
 		if (!$is_admin) {
 			$this->db->where('a.created_by', $cur_user);
 		}
+
+		if ($subtab === 'selesai') {
+			$this->db->where("({$sub_rp_done} IS NOT NULL OR {$sub_rp_legacy} >= 1)", null, false);
+		} else if ($subtab === 'menunggu') {
+			$this->db->where("({$sub_rp_done} IS NULL AND ({$sub_rp_legacy} IS NULL OR {$sub_rp_legacy} < 1) AND ({$sub_rp_pending} IS NOT NULL OR {$sub_rp_legacy} = 0))", null, false);
+		} else { // 'belum'
+			$this->db->where("({$sub_rp_done} IS NULL AND {$sub_rp_pending} IS NULL AND {$sub_rp_legacy} IS NULL)", null, false);
+		}
+
 		if (!empty($search)) {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.id_kasbon', $search, 'both');
 			$this->db->or_like('a.informasi', $search, 'both');
 			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('b.nm_lengkap', $search, 'both');
 			$this->db->group_end();
 		}
 		$count_filter = $this->db->count_all_results('', false);
@@ -7318,30 +7484,64 @@ class Expense extends Admin_Controller
 			$no++;
 			$kurang_bayar = floatval($item['kurang_bayar']);
 
-			// Status alur reimburse via Request Payment
-			if ($item['status_rp'] === null) {
-				$badge_rp = '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
+			// Tentukan status RP dan No Pengajuan
+			$no_pengajuan = '-';
+			$status_code = 'belum';
+			if (!empty($item['no_pengajuan_done']) || (!empty($item['status_rp_legacy']) && (int)$item['status_rp_legacy'] >= 1)) {
+				$status_code = 'selesai';
+				$no_pengajuan = !empty($item['no_pengajuan_done']) ? $item['no_pengajuan_done'] : (!empty($item['no_rp_legacy']) ? $item['no_rp_legacy'] : '-');
+			} else if (!empty($item['no_pengajuan_pending']) || (isset($item['status_rp_legacy']) && $item['status_rp_legacy'] !== null && (int)$item['status_rp_legacy'] === 0)) {
+				$status_code = 'menunggu';
+				$no_pengajuan = !empty($item['no_pengajuan_pending']) ? $item['no_pengajuan_pending'] : (!empty($item['no_rp_legacy']) ? $item['no_rp_legacy'] : '-');
+			}
+
+			// Render Status Badge
+			if ($status_code === 'selesai') {
+				$badge_rp = '<span class="badge" style="background:#00a65a; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-check"></i> Disetujui</span>';
+			} else if ($status_code === 'menunggu') {
+				$badge_rp = '<span class="badge" style="background:#605ca8; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Pembayaran</span>';
 			} else {
-				$st_rp = (int) $item['status_rp'];
-				if ($st_rp === 0) {
-					$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Management</span>';
-				} else if ($st_rp === 1) {
-					$badge_rp = '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui / Siap Dibayar</span>';
-				} else if ($st_rp >= 2) {
-					$badge_rp = '<span class="badge bg-dark" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai Dibayar Kantor</span>';
-				} else {
-					$badge_rp = '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">Dalam Antrian</span>';
+				$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
+				if (!empty($item['reject_reason_rp'])) {
+					$badge_rp .= '<br><span class="badge" style="background:#dd4b39; color:#fff; font-size:10px; padding:2px 6px; margin-top:3px;"><i class="fa fa-times-circle"></i> Ditolak di Request Payment</span>';
 				}
+			}
+
+			// Company
+			$company_str = 'STM';
+			if (!empty($item['hris_company_name'])) {
+				$c_upper = strtoupper($item['hris_company_name']);
+				if (strpos($c_upper, 'VUCA') !== false) {
+					$company_str = 'Vuca';
+				} else if (strpos($c_upper, 'SUSTAIN') !== false) {
+					$company_str = 'Sustain';
+				} else if (strpos($c_upper, 'TEKNO MEDIKA') !== false || strpos($c_upper, 'STM') !== false) {
+					$company_str = 'STM';
+				} else {
+					$company_str = htmlspecialchars($item['hris_company_name']);
+				}
+			}
+
+			// Format tanggal approval direktur
+			$tgl_appr = !empty($item['tgl_approval_direktur']) ? date('Y-m-d', strtotime($item['tgl_approval_direktur'])) : (!empty($item['approved_on']) ? date('Y-m-d', strtotime($item['approved_on'])) : $item['tgl_doc']);
+
+			// Keterangan penolakan jika ada
+			$keterangan_text = '-';
+			if ($status_code === 'belum' && !empty($item['reject_reason_rp'])) {
+				$keterangan_text = '<span style="color:#dd4b39; font-size:11.5px;"><i class="fa fa-info-circle"></i> ' . htmlspecialchars($item['reject_reason_rp']) . '. Diproses ulang oleh Finance.</span>';
 			}
 
 			$data[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
-				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
-				'tgl_doc' => $item['tgl_doc'],
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . htmlspecialchars($item['id_kasbon']) . '</span>' : '-',
 				'informasi' => htmlspecialchars($item['informasi']),
+				'company' => $company_str,
+				'tgl_approval' => $tgl_appr,
 				'kurang_bayar' => '<b style="color:#00a65a; font-size:13px;">Rp ' . number_format($kurang_bayar) . '</b>',
 				'status_reimburse' => $badge_rp,
+				'no_pengajuan' => ($no_pengajuan !== '-' ? '<span class="badge bg-gray" style="font-weight:600;">' . htmlspecialchars($no_pengajuan) . '</span>' : '-'),
+				'keterangan' => $keterangan_text,
 				'action' => '<a class="btn btn-default btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i> Detail</a>'
 			];
 		}
@@ -7350,7 +7550,13 @@ class Expense extends Admin_Controller
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_filter,
-			'data' => $data
+			'data' => $data,
+			'counts' => [
+				'belum'    => $cnt_belum,
+				'menunggu' => $cnt_menunggu,
+				'selesai'  => $cnt_selesai,
+				'total'    => ($cnt_belum + $cnt_menunggu)
+			]
 		]);
 	}
 

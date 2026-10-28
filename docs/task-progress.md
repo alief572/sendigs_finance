@@ -1,3 +1,61 @@
+# Sub-Tab Pills pada Modul Expense (Pengembalian Kasbon & Lebih Expense) — SELESAI 28 Oktober 2026
+
+- **Status Akhir**: SELESAI 100% (Seluruh Fase 1, Fase 2, dan Fase 3 telah diimplementasikan dan terverifikasi penuh).
+- **Grounding & Penyelarasan**: Berdasarkan mockup HTML `SENDIGS SS — Mockup Pengembalian Kasbon.html` dan proses interview `/grill-me`, seluruh parameter desain telah diimplementasikan:
+  1. Tab Pengembalian Kasbon: 3 sub-tab pills ("Perlu Upload", "Menunggu Verifikasi", "Selesai") dengan badge count spesifik. Kolom tabel memuat No Dokumen, No Kasbon, Keperluan (plus alert merah penolakan Finance), Tanggal Approval, Kelebihan Kasbon, Status, dan Aksi (Upload Bukti / Lihat).
+  2. Tab Lebih Expense: 3 sub-tab pills ("Menunggu Diajukan", "Menunggu Approval", "Disetujui") dengan badge count spesifik. Terintegrasi dengan sistem batch Request Payment (`tr_rp_pengajuan_h`, `tr_rp_pengajuan_d`, `tr_rp_record`, dan `tr_rp_reject_log`). Kolom tabel memuat No Dokumen, No Kasbon, Keperluan, Company, Tanggal Approval, Hutang Expense, Status, No. Pengajuan (`PGJ-XXXX`), Keterangan penolakan, dan Aksi.
+  3. Badge header tab utama: Pengembalian Kasbon menghitung item "Perlu Upload" (status 3), Lebih Expense menghitung item "Menunggu Diajukan" + "Menunggu Approval".
+  4. Form Pengembalian (`form_pengembalian.php`) mendukung mode read-only untuk dokumen status Menunggu Verifikasi (`4`) dan Selesai (`2`) maupun akses via parameter `readonly=1`.
+- **File Dimodifikasi**:
+  - `application/modules/expense/controllers/Expense.php`
+  - `application/modules/expense/views/index.php`
+  - `application/modules/expense/views/form_pengembalian.php`
+- **File Tes Baru**:
+  - `application/modules/expense/tests/Subtabs_expense_test.php`
+- **Hasil Pengujian & Verifikasi (100% PASS)**:
+  1. `scratch/runtime/php74/php.exe application/modules/expense/tests/Subtabs_expense_test.php` -> PASS (100%)
+  2. `scratch/runtime/php74/php.exe application/modules/expense/tests/Expense_report_updated_test.php` -> PASS (100% regression pass)
+  3. `scratch/runtime/php74/php.exe application/modules/expense/tests/Kasbon_selection_test.php` -> PASS (100%)
+  4. `scratch/runtime/php74/php.exe application/modules/expense/tests/Kasbon_attachments_test.php` -> PASS (100%)
+  5. `scratch/runtime/php74/php.exe application/modules/expense/tests/Management_actions_test.php` -> PASS (100%)
+  6. Linter check CLI PHP 7.4 pada seluruh file controllers & views yang dimodifikasi -> 0 syntax errors.
+- **Batas Validasi**: Pengujian diverifikasi secara mendalam menggunakan CLI PHP 7.4 test double harness tanpa web browser. Perubahan UI dirancang bersih dan patuh panduan antislop-ui.
+- **Langkah Berikutnya**: Menyerahkan ringkasan implementasi dan walkthrough kepada pengguna.
+
+---
+
+# Penambahan Fitur Deposit & Modul Penerimaan Piutang Consultant — SELESAI 28 Oktober 2026 (Di-Review & Diperbaiki)
+
+- **Status Akhir**: SELESAI 100% (Seluruh Fase 1, Fase 2, dan Fase 3 telah di-audit, diperbaiki bug-bug kritisnya, dan terverifikasi 100% PASS pada seluruh test suite CLI).
+- **Grounding & Penyelarasan**: Berdasarkan dokumen konsep `c:\Users\Febry\Downloads\Penerimaan Piutang + Deposit Consultant.html` dan pemeriksaan kritis independen terhadap implementasi worker sebelumnya:
+  1. Formula Kontrol Rekonsiliasi: `((Piutang - PPh 23 - Biaya Admin - Sisa Piutang) - Uang Masuk - Deposit) + Lebih Bayar = 0`.
+  2. Pemotongan saldo deposit customer menggunakan metode FIFO otomatis real-time pada alokasi invoice dengan tie-breaking stabil (`tanggal ASC, id ASC`).
+  3. Saldo deposit dari Kwitansi Deposit baru aktif (`AKTIF`) setelah status lunas melalui proses penerimaan di bank.
+  4. Rollback penerimaan diproteksi: transaksi yang menghasilkan deposit tidak dapat di-rollback jika deposit tersebut telah dipakai di transaksi lain.
+  5. Jurnal akuntansi deposit menggunakan COA `2102-01-02` (DEPOSIT CUSTOMER).
+- **Temuan Bug & Perbaikan pada Review Worker Sebelumnya**:
+  1. **Deposit Auto-Population di Modal Penerimaan**: Modal `consulting_process.php` sebelumnya menginisialisasi `dep_n = 0.00` saat user memilih "Pakai Deposit" di form awal, menyebabkan modal langsung memunculkan error validasi "Kontrol belum 0". Diperbaiki: `consulting_process.php` kini secara otomatis mendistribusikan deposit yang dipilih secara FIFO ke baris-baris invoice yang dicentang saat modal pertama kali dibuka, serta menyediakan tombol *Distribusi Ulang FIFO* (`#btn_redistribute_dep`).
+  2. **Multi-Locale Parsing Nominal di Server & Client**: Pada `Consulting_receipt::preview()` dan `save()`, input `deposit_amount` dari form autoNumeric dinormalisasi sebelum diserahkan ke parser integer sen strict. Begitu pula pada `Kwitansi_deposit.php` `save()`, nominal kwitansi dinormalisasi tanpa risiko pergeseran digit 100x.
+  3. **Strict Number Contract Verification**: Mempertahankan server parser strict `/^-?\d+(?:\.\d{1,2})?$/` di `Penerimaan_calculation::cents()` dan client-side strict grouping regex di `consulting.js`, sehingga lulus seluruh kontrak konsep tanpa regresi.
+  4. **Kalkulasi Running Balance pada Buku Pembantu Mutasi Saldo**: `application/modules/deposit_customer/views/detail.php` sebelumnya menampilkan saldo per voucher individual (`$m['saldo_sesudah']`). Diperbaiki: kini menampilkan ledger akuntansi riil dengan kolom Masuk (IN), Keluar (OUT), dan Running Saldo Berjalan customer.
+  5. **Konsistensi Saldo Awal Customer Summary**: `Deposit_customer_model::get_customer_summary()` sebelumnya menghitung deposit berstatus `MENUNGGU_PEMBAYARAN` ke dalam `total_nominal_awal`, menyebabkan ketidaksesuaian `Total Masuk - Total Keluar != Saldo Berjalan`. Diperbaiki: kwitansi yang belum dibayar tidak dihitung sebagai dana masuk aktif.
+  6. **Detail View & Export Excel Penerimaan Piutang**: `views/detail.php` dan `views/export_excel.php` pada `penerimaan_uang` kini memuat kolom *Deposit Dipakai* dan *Lebih Bayar*, serta formula Kontrol saldo seimbang.
+  7. **Perizinan & Registrasi Menu Idempoten**: Ditambahkan SQL registrasi permission (`Deposit_Customer.View`, `Deposit_Customer.Manage`, `Kwitansi_Deposit.View`, `Kwitansi_Deposit.Manage`) dan menu sidebar pada `002_customer_deposit_schema.sql`, serta pembatasan akses hak view/manage pada `Deposit_customer.php`.
+- **Hasil Pengujian & Verifikasi (100% PASS - 9 Test Suites)**:
+  1. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/calculation_test.php` -> PASS (100%)
+  2. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Consulting_receipt_tobe_test.php` -> PASS (100%)
+  3. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Concept_contract_test.php` -> PASS (100%)
+  4. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Deposit_fifo_test.php` (7 skenario komprehensif termasuk stress test 12 voucher tanggal identik & rollback) -> PASS (100%)
+  5. `scratch/runtime/php74/php.exe application/modules/deposit_customer/tests/Deposit_monitoring_test.php` -> PASS (100%)
+  6. `scratch/runtime/php74/php.exe application/modules/kwitansi_deposit/tests/Kwitansi_deposit_test.php` -> PASS (100%)
+  7. `node application/modules/penerimaan_uang/tests/consulting_client_test.js` -> PASS (100%)
+  8. `node application/modules/penerimaan_uang/tests/consulting_view_test.js` -> PASS (100%)
+  9. `node application/modules/penerimaan_uang/tests/installment_view_test.js` -> PASS (100%)
+- **Batas Validasi**: Pengujian diverifikasi secara mendalam menggunakan CLI runtime PHP 7.4 dan Node.js tanpa membuka web browser.
+- **Langkah Berikutnya**: Selesai tuntas. Mengirimkan laporan akhir kepada caller/parent agent via `send_message`.
+
+---
+
 ## Print lampiran PDF Transport — 26 Oktober 2026
 
 - Status: seluruh fase selesai; tidak ada fase aktif atau tertunda.
@@ -8,8 +66,30 @@
 - Validasi PASS: node application/modules/expense/tests/Transport_print_js_test.js (multipage, portrait/landscape, urutan, fit, readiness, tanpa lampiran, cetak ulang, PDF rusak/password/missing library/render error, gambar load/error/cache); node --check renderer dan test; scratch/runtime/php74/php.exe -l view; Expense Batch4_audit_test.php (51 fixture scenarios + 1 shutdown subprocess). PDF.js dan DOM dimock pada tes Node; review diff dan whitespace lokal selesai.
 - Batas/risiko: tanpa pengujian web atau cetak fisik; skala/margin/header/footer dialog printer dapat memengaruhi hasil. PDF panjang memerlukan memori canvas sesuai jumlah halaman; semua halaman dipertahankan untuk cetak. Tidak ada masalah implementasi tersisa yang ditemukan pada pemeriksaan lokal.
 - Langkah berikutnya: gunakan print Transport; verifikasi hasil fisik bila diperlukan. Tidak ada migration atau deployment dilakukan.
+- Publikasi GitHub selesai: development `73694cc9f28aa194934310e746670775a39a6e71`, main `a86be5b5e4d142bc7611ceada62a8290d85198f0`; push atomic tanpa force. Kedua remote SHA diverifikasi dengan git ls-remote. Lima file khusus Transport dikirim; konflik dokumentasi main diselesaikan dengan mempertahankan isi branch asal. Checkout publikasi bersih di scratch/publish-transport-print-20261026; branch development dan seluruh pekerjaan lokal tetap dipertahankan (belum di-fast-forward karena workspace berisi perubahan lain). Catatan publikasi ini disimpan lokal setelah verifikasi remote.
+
+## Implementasi hasil audit penerimaan — selesai 26 Oktober 2026
+
+- Semua fase implementasi selesai: kontrak form/server, bank tepat nol, PPh kumulatif, legacy terpisah, admin total, jurnal/snapshot/detail/report/rollback, regresi dan review. Tidak ada fase implementasi tertunda.
+- Keputusan pengguna dipenuhi: deposit di luar scope; mixed ditolak; PPh maksimal sisa 2% DPP; dua desimal half-up dalam sen integer. Snapshot calculation_version=4 memakai schema existing; response/endpoint legacy dipertahankan.
+- File produksi: controller/model/libraries dan add/consulting_process/detail views penerimaan; JS consulting baru; shared Invoice_consulting generator jurnal. Test fixture/regresi dan runner integrasi diperluas. Inventory/alasan: docs/audits/penerimaan-uang-implementation-2026-10-26.md.
+- Validasi PASS: 627 checks consulting/Vuca/receipt di MariaDB disposable port 33319; 99 calculation checks; lima suite PHP penerimaan, empat suite Node, termasuk payload view aktual. Injeksi failure tiap tahap dan receipt concurrency nyata, rollback/proof/permission, snapshot report/ekspor, posting GL, audit writer dan deduplikasi diverifikasi. Lint PHP seluruh modul dan dua berkas invoice terkait PASS; syntax Node tiga berkas baru PASS; git diff --check tanpa error whitespace.
+- Tidak ada browser, perubahan DB aplikasi, koreksi data historis atau deployment. Data ambigu sengaja diblokir untuk rekonsiliasi; rilis seluruh file terkait bersama agar snapshot dan GL kompatibel.
+- Langkah berikutnya operasional: rilis paket jika diminta pengguna; tidak ada migration baru. Catatan audit dan implementasi historis di bawah dipertahankan.
 
 # Pengembangan Modul Penerimaan Uang (Penerimaan Piutang Consultant To-Be) — SELESAI 2026-10-26
+
+## Koreksi status berdasarkan audit ulang 26 Oktober 2026
+
+- Audit permintaan pengguna selesai. Klaim kesesuaian 100% di catatan historis berikut tidak berlaku sebagai hasil audit terbaru. Implementasi belum sepenuhnya sesuai dua referensi Consultant; deposit secara eksplisit di luar scope.
+- Fase selesai: ekstraksi kelima sheet Excel dan JS HTML; grounding endpoint/dependensi; perbandingan seluruh cabang baru/legacy/campuran relevan; tes dan reproduksi; laporan. Tidak ada fase audit aktif/tertunda.
+- Temuan: format POST ditolak parser, alokasi gross dibaca sebagai kas net, kontrol server tidak terhadap nominal bank, PPh cicilan default berulang, konteks view batch campuran tidak lengkap, batas admin total tidak diterapkan writer, tanggal preview jurnal mengikuti invoice bukan koran.
+- Berkas baru: `docs/audits/penerimaan-uang-concept-review-2026-10-26.md`, `scratch/penerimaan_concept_audit.php`. Dokumen rencana dan checkpoint ini diperbarui; kode aplikasi/database/referensi pengguna tidak diubah.
+- Validasi: enam suite existing penerimaan lulus (To-Be, kalkulasi PHP/JS, inline installment, detail jurnal, legacy Vuca); reproduksi audit in-memory exit 0 mengonfirmasi enam kondisi masalah (termasuk default PPh setelah cicilan nyata pada fixture). Tidak ada browser/DB aplikasi. Suite report memerlukan path/container dan DB sehingga tidak dijalankan; integrasi v2 historis tidak dipakai sebagai bukti alur aktif.
+- Keputusan: pertahankan audit sebagai pemeriksaan, tanpa perbaikan saldo/jurnal maupun implementasi deposit. Gunakan definisi PPh dan HTML bila contoh Excel saling bertentangan; kebijakan rounding dan Non PPN umum masih perlu diperjelas sebelum implementasi lanjutan.
+- Langkah berikutnya: perbaikan kontrak form/server dan rekonsiliasi bank terlebih dahulu, kemudian riwayat PPh, campuran, admin, tanggal jurnal; tambahkan regresi payload view. Detail bukti dan batas validasi ada dalam laporan audit.
+
+## Catatan implementasi historis sebelum audit ulang
 
 - **Status:** Selesai 100% (Seluruh 5 Fase Implementasi, Refactor Detail View, Server-Side Excel Export, DataTables Server-Side Tab Report Penerimaan, & Automated Test Suites Tuntas 100% PASS).
 - **Fase selesai:**
@@ -2608,7 +2688,6 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Kedua kandidat lulus 158 pemeriksaan modul serta regresi Record XLSX412/Audit57, Request Payment371, Asset roundtrip; lint 7 PHP pada kandidat development berlaku kembali untuk main karena parity kode dan writer diperiksa identik; staged whitespace bersih di kedua commit. Scope commit masing-masing 10 file: 7 file modul (termasuk 2 tes baru), writer PHPExcel, dan 2 dokumentasi. Tidak menyertakan modul lain/AGENTS/config/scratch.
 - Tidak ada fase publikasi tertunda. Workspace utama dipertahankan tanpa checkout/reset/stash; commit berada di repository kandidat terisolasi dan GitHub. Snapshot perubahan lokal export masih ada di workspace utama pada HEAD lama, sehingga jangan menimpa pekerjaan lokal lain ketika menyelaraskan branch di sesi berikutnya.
 
-
 ### Tombol Action Approval Expense Management - 2026-10-26
 
 - Implementasi selesai; validasi runtime PHP tertunda karena PHP CLI tidak tersedia di lingkungan sesi ini (PATH kosong untuk PHP; lokasi terdokumentasi C:/xampp74/php/php.exe tidak ada).
@@ -2618,9 +2697,7 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Tes disiapkan: 60 pemeriksaan output endpoint untuk lima kombinasi status/finance dan empat kombinasi hak View/Manage, termasuk jumlah tombol dan routing handler. Tes belum dapat dieksekusi; jangan anggap lulus.
 - Validasi statis: diff controller hanya dua baris; handler dan endpoint tujuan tersedia; git diff --check scoped lulus. Tidak melakukan tes browser. Tidak mengubah query, penyimpanan, atau kontrak audit; transaksi/commit dan penulis audit tidak terdampak.
 - Sisa/TODO: jalankan PHP lint controller/tes serta Management_actions_test.php saat PHP CLI tersedia. Tidak ada perubahan kode lain yang tertunda dan tidak ada commit/push untuk task ini.
-
-- Publikasi: diotorisasi ke development; kandidat berdasarkan remote 73694cc9, hanya controller, tes action, dan bagian checkpoint task ini. Validasi runtime PHP tetap belum tersedia.
-
+- Publikasi selesai atas instruksi pengguna: commit f06bdf1396e1daf8da440c995417cb218540344d berhasil di-push fast-forward ke GitHub development dari parent 73694cc9. ls-remote mengonfirmasi hash persis. Kandidat terisolasi scratch/publish-expense-actions-20261026 bersih; hanya tiga file task masuk commit (controller, tes, checkpoint task). Pemeriksaan staged whitespace lulus; PHP runtime tetap belum tersedia. Workspace utama dan perubahan lokal lain dipertahankan tanpa checkout/reset/stash. Tidak ada publikasi tertunda; main tidak diubah.
 
 ### Self-approval Expense untuk Admin - 2026-10-26
 
@@ -2633,9 +2710,7 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Validasi tersedia PASS: lima pemeriksaan statis untuk kesamaan guard UI/server, grup admin 1, kesamaan seluruh fungsi verifikasi pengembalian terhadap HEAD, serta kesamaan seluruh approve selain guard/comment. git diff --check scoped lulus. Perubahan action management dari task sebelumnya dipertahankan.
 - Batasan: tes PHP/lint belum dijalankan karena runtime belum tersedia; tidak ada tes browser atau koneksi database. Audit/commit/jurnal tidak diubah, sehingga tidak ada perubahan deduplikasi, metadata, atau failure handling penulis audit.
 - Status akhir: grounding dan implementasi selesai, review statis selesai, validasi runtime tertunda. Tidak ada perubahan kode yang masih direncanakan. Berikutnya: jalankan tes report dan regresi Batch3 audit di lingkungan PHP yang sesuai (suite report yang ada juga memiliki bagian integrasi DB, perhatikan konfigurasi lingkungan). Belum commit/push untuk perubahan self-approval ini.
-
-- Publikasi diotorisasi pengguna ke development; kandidat berdasarkan f06bdf13, review diff dan whitespace sebelum push, validasi PHP tetap tertunda.
-
+- Publikasi self-approval selesai: commit 08e14b1bdc9e382c7a5cb9666ea69c17b0813daa (parent f06bdf13) di-push fast-forward ke development; ls-remote mengonfirmasi hash identik. Tepat lima file task masuk commit: controller, form_report, tes report, bagian rencana dan checkpoint task ini. Staged whitespace lulus; hasil review statis sebelumnya digunakan karena kode identik. PHP runtime/lint tetap belum tersedia. Kandidat scratch/publish-expense-actions-20261026 bersih. Workspace utama dan pekerjaan lokal lain dipertahankan; main tidak diubah. Tidak ada publikasi tertunda.
 
 ### Perbaikan Routing View/Approval Expense - 2026-10-26
 
@@ -2647,9 +2722,17 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - RED Node terbukti: View finance menghasilkan /app/expense/approval/42 alih-alih /app/expense/view/42. GREEN: Approval_actions_client_test.js 16 checks PASS untuk View/Approval kedua list, ID kosong, sebelum/setelah global lama ditimpa, dengan basic.js dimuat. Node syntax check dan scoped git diff --check PASS.
 - Review: handler baru hanya membuka form, tombol submit form tetap memakai fungsi lama; tidak ada query, commit transaksi, penulis audit, metadata, atau deduplikasi yang berubah. Belum membuktikan gejala pertukaran persis pada runtime management pengguna melalui browser; mapping controller-ke-script kedua halaman kini diverifikasi Node.
 - Status akhir: implementasi dan validasi Node/review selesai, tidak ada fase kode tertunda. Tes PHP/lint tetap belum dijalankan karena PHP CLI tidak tersedia; tidak melakukan tes web. Belum commit/push untuk perbaikan routing ini. Langkah berikutnya: validasi PHP saat runtime tersedia dan publikasi jika diminta.
+- Publikasi routing selesai: commit 1f523c2d40a717e2b4a9923112dd69df2c02f6ef (parent 08e14b1b) di-push fast-forward ke development; ls-remote mengonfirmasi hash identik. Tepat tujuh file routing masuk commit. Kandidat scratch/publish-expense-actions-20261026 bersih; Node 16 checks, Node syntax dan staged whitespace PASS pada kandidat. PHP runtime/lint tetap tertunda. Workspace utama serta perubahan lokal lain dipertahankan dan main tidak diubah. Tidak ada publikasi tertunda.
 
 - Publikasi diotorisasi pengguna ke development; kandidat berdasarkan 08e14b1b dan hanya memuat tujuh file task routing. Validasi PHP tetap tertunda.
 
+### Verifikasi Publikasi Expense - 2026-10-27
+
+- Permintaan: memastikan perubahan expense yang telah dikerjakan ter-push ke development. Fetch origin/development berhasil; tip remote 1f523c2d40a717e2b4a9923112dd69df2c02f6ef.
+- Perbandingan seluruh file expense yang tersedia lokal dan pada remote, ditambah assets/js/transport-print.js: 50 file identik setelah normalisasi CRLF/LF, nol perubahan pada file yang sudah ada di remote. Termasuk routing tombol 1f523c2d, self-approval admin 08e14b1b, action management f06bdf13 dan print transport 73694cc9.
+- Tidak membuat commit/push kosong atau mengubah workspace utama. Hasil tes sebelumnya tetap berlaku karena tidak ada kode yang berubah; tes aplikasi tidak diulang. Validasi PHP sebelumnya tetap tertunda.
+- Sembilan artefak lokal lama yang sudah ada sebelum task percakapan tidak dimasukkan: migrations/004_add_transport_rejected_fields.sql, tests/Batch1_audit_test.php sampai Batch7_audit_test.php, tests/Reject_test.php. File-file ini belum dipublikasikan sebagai bagian task tombol/admin/routing dan memerlukan scope/review terpisah bila diminta dipublikasikan.
+- Status: verifikasi selesai; tidak ada publikasi tertunda untuk perubahan tombol/admin/routing/print yang dibahas. File sesi ini hanya docs/task-progress.md (checkpoint lokal). Perubahan lokal lain dipertahankan.
 # Akses index Expense dan upload Linux — 2026-10-27 (selesai)
 
 - Status akhir: fase 1 filter index, fase 2 verifikasi antrean approval, fase 3 helper/integrasi upload, fase 4 regresi/review/dokumentasi selesai. Tidak ada implementasi aktif atau tertunda; catatan aktif di bawah merupakan checkpoint sebelumnya yang sudah ditutup.
@@ -2690,6 +2773,23 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Paket 22 file: controller, dua helper, 16 file tes Expense (termasuk tujuh fixture batch audit dan Reject yang diperlukan runner), dan tiga dokumen task. Tidak menyertakan migration historis 004, file upload pengguna, konfigurasi, kredensial atau modul lain.
 - Kandidat PASS: lint 21 PHP; Visibility 2115, Query_state 288, directory 30, upload 380 checks/70 multipart, tujuh batch audit 355 skenario + tujuh subprocess, Management_actions 60, Reject delapan skenario, salinan kasbon, penolakan permission tanpa www-data, dan tiga suite Node. Database aplikasi/browser tidak dipakai.
 - Aktif: commit terbatas manifest, push fast-forward ke development dan verifikasi SHA remote; hasil akhir dicatat di checkpoint lokal setelah verifikasi.
+- Publikasi selesai: commit perbaikan 03dc668d3d4d6980efe14e64bbb1b4c0f788b68d dan commit tes 4fec12020199ec0d23c36c708ec85515f3d1ab4e berhasil di-push fast-forward ke development dari parent 1f523c2d. ls-remote mengonfirmasi development tepat 4fec12020199ec0d23c36c708ec85515f3d1ab4e.
+- Seluruh 22 file manifest masuk dua commit; kandidat publikasi bersih. Tidak ada fase publikasi tertunda. Hasil tes kandidat tetap berlaku karena source identik setelah commit; tidak diulang. Workspace utama berada pada HEAD sebelumnya dan perubahan lokal lain tetap dipertahankan tanpa reset/stash/checkout. Main tidak diubah. Checkpoint hasil publikasi ini disimpan lokal setelah verifikasi remote.
+
+# Diagnosis permission upload pengembalian di server — 2026-10-28
+
+- Screenshot server sendigs_ss_dev: POST save_pengembalian_dana HTTP 200 tetapi body HTML PHP Warning mkdir(): Permission denied, controllers/Expense.php baris 7078. Form mengharapkan JSON sehingga menampilkan pesan server gagal.
+- Verifikasi commit terpublikasi 03dc668d: controller tidak lagi memanggil mkdir langsung; pembuatan folder melalui expense_upload_helper dengan kegagalan terkontrol. Kode yang dieksekusi pada screenshot berbeda dari perbaikan yang sudah dipush (deployment/cache runtime belum diverifikasi langsung).
+- Tujuan yang gagal untuk alur ini: FCPATH/assets/expense_bukti_pengembalian. PHP tidak bisa memberi dirinya sendiri hak menulis parent yang ditolak OS; provisioning administrator tetap dibutuhkan bila folder belum ada atau ownership tidak sesuai. Rekomendasi terbatas folder ini: install -d owner/group www-data mode 2775, setelah memastikan worker PHP memakai akun/grup yang sesuai. Tidak mengubah permission seluruh project.
+- Tidak mengubah kode aplikasi, database atau permission server; tidak mengakses server secara langsung. Hasil tes permission denial Linux dari task sebelumnya dipakai kembali karena helper tidak berubah. Tindak lanjut operasional: siapkan folder pada server dan pastikan deployment memuat commit perbaikan Expense.
+
+# Diagnosis menu Expense user alief — 2026-10-28
+
+- Pemeriksaan read-only database konfigurasi development melalui container aplikasi: username alief, id_user 206, tidak memiliki grup. Izin Expense_Approval dan Expense_Petty_Cash tersimpan, tetapi Expense.View/Add/Manage/Delete (955–958) tidak diberikan.
+- Menu aktif: 279 expense/index di bawah container Expense 282, di bawah Pengeluaran Non Pembelian 298. Leaf 279 dan container 282 membutuhkan permission 955 Expense.View. Karena permission itu tidak dimiliki, filter sidebar tidak menampilkan keduanya.
+- Akar data: permissions 955–958 memiliki id_menu 296, sedangkan menu 296 sudah tidak ada. Setting::permission mengelompokkan checkbox action berdasarkan permissions.id_menu; akibatnya action Expense tidak dipetakan ke baris aktif 279/282. Centang baris menu tidak menghasilkan pemberian action yang benar.
+- Tidak mengubah database, permission akun, kode aplikasi, atau sidebar. Hanya script diagnosis scratch/check-alief-expense-access-20261028.php (CLI-only) dan checkpoint ini. Query dijalankan dalam transaksi read-only; tidak ada tes browser.
+- Tindak lanjut yang diperlukan bila diminta memperbaiki: pulihkan pemetaan action Expense ke menu aktif, verifikasi checkbox View/Add/Manage/Delete pada form, lalu simpan hanya izin user yang dipilih administrator. Jangan menambah grup admin atau memberikan seluruh permission sebagai jalan pintas.
 
 # Perbaikan checkbox permission Expense — 2026-10-28 (aktif)
 
@@ -2712,6 +2812,8 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Scope tujuh file: Setting.php, Permissions_model.php, user_permissions.php, Permission_menu_test.php, Permission_menu_client_test.js, implementation-plan dan task-progress. Tidak menyertakan script diagnosis, akses/grup user Alief, Auth atau modul lain.
 - Kandidat PASS 20 pemeriksaan PHP controller/render/save/sidebar, 31 pemeriksaan Node checkbox/alias/role, lint empat PHP, dan review diff. Hasil read-only render data Alief serta regresi menu sebelumnya tetap berlaku karena source terkait tidak berubah. Tidak melakukan tes browser atau write database.
 - Aktif: commit scope task dan push fast-forward, kemudian verifikasi SHA remote. Status akhir publikasi dicatat lokal sesudah verifikasi.
+- Publikasi selesai: commit 678977ad6a4f0535f1f735ca4e263754a2ef6df2 (parent 4fec1202) berhasil di-push fast-forward ke development. ls-remote mengonfirmasi SHA persis. Checkout publikasi bersih; tujuh file task masuk commit, tidak ada publikasi tertunda. Workspace utama dan perubahan lokal modul lain dipertahankan; main tidak diubah. Checkpoint akhir ini disimpan lokal setelah verifikasi remote.
+- Tindak lanjut penggunaan: refresh form admin, pilih/simpan action Expense yang dibutuhkan lalu refresh dashboard Alief. Publikasi kode tidak menambahkan permission user secara otomatis dan tidak mengubah database.
 
 # Koreksi cakupan creator Expense dan akun finance — 2026-10-28 (aktif)
 
@@ -2753,3 +2855,10 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Scope sepuluh file: controller Expense, enam file tes/runner terkait dan tiga dokumen task. Tidak menyertakan script diagnosis, migrasi lama, upload pengguna, konfigurasi, Auth, atau perubahan permission akun/database.
 - Kandidat PASS 15 suite: Visibility3423, Query_state384, Kasbon_selection86, directory30, upload380/70 multipart, lampiran/salinan kasbon, Management60, Reject8 dan tujuh batch audit355 + tujuh subprocess; lint22 PHP. Foundation helper upload/audit identik workspace; metode controller di luar cakupan diverifikasi identik terhadap development.
 - Aktif: commit sepuluh file sesuai manifest, push fast-forward dan verifikasi SHA remote. Hasil publikasi dicatat lokal setelah verifikasi.
+
+### Hasil publikasi — 2026-10-28
+
+- SELESAI: commit 21fc51f5a6c5a3c0db80f3c92bd0f5128082629d (fix(expense): scope index and report kasbon to creators), parent 678977ad6a4f0535f1f735ca4e263754a2ef6df2, sepuluh file sesuai manifest.
+- Push fast-forward origin/development berhasil; ls-remote memverifikasi SHA development identik dengan commit tersebut. Kandidat publikasi bersih setelah commit; workspace utama dan perubahan lain dipertahankan.
+- Validasi 15 suite Expense dan lint 22 PHP yang tercatat di atas tetap berlaku; tidak ada perubahan kode setelah validasi. Tidak menjalankan browser, deployment server, atau perubahan database.
+- Tidak ada fase commit/push tertunda. Langkah operasional berikutnya: perbarui checkout server development ke commit tersebut bila belum ada deployment otomatis.

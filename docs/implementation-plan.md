@@ -1,3 +1,77 @@
+# Implementation Plan: Sub-Tab Pills pada Modul Expense (Pengembalian Kasbon & Lebih Expense) — 28 Oktober 2026 (Aktif)
+
+Dokumen rencana kerja teknis untuk penyelarasan index modul `expense` (`views/index.php` dan `Expense.php`) dengan menambahkan sub-tab pills, badge counter dinamis, dan struktur kolom pada tab Pengembalian Kasbon dan Lebih Expense sesuai mockup `SENDIGS SS — Mockup Pengembalian Kasbon.html` hasil interview `/grill-me`.
+
+## 1. Goal Description
+Index modul Expense saat ini belum memiliki sub-tab di dalam tab **Pengembalian Kasbon** dan **Lebih Expense (Reimburse ke Karyawan)**. Diperlukan penyesuaian:
+1. **Tab Pengembalian Kasbon**:
+   - 3 sub-tab pills: **Perlu Upload** (status `3`), **Menunggu Verifikasi** (status `4`), dan **Selesai** (status `2`).
+   - Badge tab utama menampilkan jumlah dokumen yang membutuhkan upload bukti (`Perlu Upload`).
+   - Kolom tabel: `#`, `No. Dokumen`, `No. Kasbon`, `Keperluan / Keterangan` (termasuk alert merah `Ditolak Finance: [alasan]`), `Tanggal Approval`, `Kelebihan Kasbon (Rp)`, `Status`, `Aksi` (Upload Bukti untuk status 3, Lihat untuk status 4 & 2).
+2. **Tab Lebih Expense (Reimburse ke Karyawan)**:
+   - 3 sub-tab pills: **Menunggu Diajukan** (`belum`), **Menunggu Approval** (`menunggu`), dan **Disetujui** (`selesai`).
+   - Badge tab utama menampilkan jumlah dokumen yang masih berjalan (`belum` + `menunggu`).
+   - Kolom tabel: `#`, `No. Dokumen Expense`, `No. Kasbon`, `Keperluan`, `Company`, `Tanggal Approval`, `Hutang Expense (Rp)`, `Status`, `No. Pengajuan`, `Keterangan` (alasan penolakan jika ditolak di Request Payment), `Aksi`.
+3. **Sub-view Form Pengembalian (`form_pengembalian.php`)**:
+   - Mode read-only saat dibuka untuk dokumen status `4` atau `2`: input disabled/static, tombol upload dan tombol submit disembunyikan, daftar bukti yang sudah diupload ditampilkan.
+
+## 2. Keputusan Arsitektur Disepakati
+1. **Server-side Processing DataTables**: Setiap sub-tab pill memicu reload DataTables dengan parameter POST `subtab` (`upload`/`verif`/`done` untuk Pengembalian Kasbon; `belum`/`menunggu`/`selesai` untuk Lebih Expense).
+2. **Dynamic Badge Counters**: Endpoint JSON mengembalikan objek `counts` agar badge pada pill dan header tab utama selalu ter-update otomatis tanpa me-refresh seluruh halaman.
+3. **Sinkronisasi Request Payment**: Status dokumen Lebih Expense dilacak langsung dari relasi batch Request Payment (`tr_rp_pengajuan_h`, `tr_rp_pengajuan_d`, `tr_rp_record`, dan `tr_rp_reject_log`).
+
+## 3. Pentahapan Pengerjaan
+- **Fase 1**: Backend Controller `Expense.php`:
+  - Update `index()` untuk menghitung badge counters spesifik per sub-tab dan tab utama.
+  - Update `get_dat_pengembalian_kasbon()` untuk filter per sub-tab, formatting kolom (keperluan + alasan penolakan, tgl approval, badge status, tombol aksi), dan response payload `counts`.
+  - Update `get_dat_lebih_expense()` untuk filter per sub-tab, linking ke tabel `tr_rp_*`, resolusi `company`, formatting kolom lengkap, dan response payload `counts`.
+- **Fase 2**: Client-side UI `views/index.php`:
+  - Styling pills (`.subtab-pills`, `.cnt`).
+  - Markup sub-tab pills pada `#tab_pengembalian` dan `#tab_reimburse`.
+  - Script AJAX DataTables, click event handler, dan pembaruan badge counter dinamis.
+- **Fase 3**: Sub-view `form_pengembalian.php` & Verifikasi:
+  - Dukungan mode read-only untuk status verif (`4`) dan selesai (`2`).
+  - Pengujian syntax PHP CLI 7.4, verifikasi integritas data, dan regression check pada test suite modul Expense.
+
+---
+
+# Implementation Plan: Penambahan Fitur Deposit & Modul Penerimaan Piutang Consultant — 28 Oktober 2026 (Selesai)
+
+Dokumen rencana kerja teknis untuk penyelarasan modul `penerimaan_uang` serta pembuatan modul baru `deposit_customer` dan `kwitansi_deposit` berdasarkan spesifikasi konsep `Penerimaan Piutang + Deposit Consultant.html` hasil interview `/grill-me`.
+
+## 1. Goal Description
+Sistem penerimaan piutang eksisting diperluas untuk mendukung alur deposit end-to-end:
+1. **Penerimaan Piutang & Deposit**:
+   - Pre-process: Opsi *Pakai Deposit* (menampilkan saldo deposit aktif customer dan input nominal deposit yang ingin dipakai).
+   - Tabel Alokasi: Kolom *Lebih Bayar* dan *Sisa Piutang* (Kurang Bayar) per-baris invoice.
+   - Formula Kontrol Rekonsiliasi:
+     $$\text{Kontrol} = ((\text{Piutang} - \text{PPh 23} - \text{Biaya Admin} - \text{Kurang Bayar}) - \text{Uang Masuk} - \text{Deposit}) + \text{Lebih Bayar} = 0$$
+   - Jurnal Akuntansi otomatis ke COA `2102-01-02` (*DEPOSIT CUSTOMER*): Kredit saat Lebih Bayar, Debit saat Bayar Pakai Deposit.
+   - Integritas Rollback: Rollback penerimaan diblokir bila deposit yang dihasilkan telah digunakan di transaksi lain.
+2. **Modul Penampungan & Monitoring Deposit Customer (`deposit_customer`)**:
+   - Menu/submodul baru read-only untuk memantau ringkasan saldo deposit berjalan per customer.
+   - Buku pembantu mutasi *IN* (Lebih Bayar / Pelunasan Kwitansi) dan *OUT* (Pelunasan Piutang) serta export Excel.
+   - Laporan Deposit vs Kwitansi vs Invoice.
+3. **Modul Kwitansi Deposit Customer (`kwitansi_deposit`)**:
+   - Penerbitan dokumen tagihan deposit terhubung ke PO Customer dengan nomor otomatis.
+   - Jurnal akrual deposit: Debit *Piutang Dagang Usaha* vs Kredit *Deposit Customer*.
+   - Pelunasan via alokasi rekening koran di `penerimaan_uang`, otomatis mengupdate status menjadi *Lunas*, mengaktifkan saldo deposit customer, dan mengisi referensi *No Penerimaan*.
+
+## 2. Keputusan Arsitektur & Aturan Bisnis Disepakati
+1. **Metode Konsumsi Saldo Deposit**: Otomatis menggunakan metode **FIFO (First-In, First-Out)** pada deposit berstatus aktif milik customer terkait.
+2. **Aktivasi Saldo Kwitansi Deposit**: Deposit dari Kwitansi Deposit baru menjadi saldo aktif yang dapat dibelanjakan **setelah lunas** diterima di bank melalui proses alokasi penerimaan.
+3. **Integritas Rollback**: Rollback penerimaan yang menghasilkan lebih bayar (deposit) **diblokir** jika saldo deposit tersebut sudah terlanjur dipakai pada transaksi lain.
+4. **Mapping COA**: Akun Deposit Customer menggunakan kode COA resmi perusahaan `2102-01-02` (*DEPOSIT CUSTOMER*).
+5. **Batas Biaya Admin**: Maksimal Rp 10.000,00 per transaksi penerimaan bank.
+6. **Presisi Nominal**: Seluruh kalkulasi monetary menggunakan integer cents (dua desimal) dengan pembulatan *half-up* dan kontrol tepat 0.00.
+
+## 3. Pentahapan Pengerjaan
+- **Fase 1**: Skema Database Deposit (`tr_customer_deposit`, `tr_customer_deposit_mutasi`, `tr_kwitansi_deposit`), Engine Kalkulasi `Penerimaan_calculation.php`, Integrasi `Consulting_receipt.php` (FIFO, Lebih Bayar, Jurnal Balancing, Rollback Guard), View `add.php` & `consulting_process.php`, serta Unit Test Kalkulasi & FIFO.
+- **Fase 2**: Modul Monitoring Deposit Customer (`deposit_customer`), Controller, Model, View Rekap Saldo per Customer, Detail Mutasi IN/OUT, Export Excel, dan Laporan Rekonsiliasi.
+- **Fase 3**: Modul Kwitansi Deposit Customer (`kwitansi_deposit`), Controller, Model, Form Buat Kwitansi per PO, Jurnal Kwitansi, Integrasi Listing di Penerimaan Piutang, Settlement Bank, dan End-to-End Suite Validation.
+
+---
+
 ## Print lampiran PDF Transport — 26 Oktober 2026
 
 Tujuan: setiap halaman PDF mendapat satu halaman cetak A4 tersendiri, utuh dan proporsional. Semua halaman dan urutan lampiran dipertahankan; tidak mengubah endpoint, database, atau audit.
@@ -10,7 +84,20 @@ Kriteria selesai: tiap halaman PDF utuh pada halaman terpisah; landscape tidak t
 
 Status: seluruh fase selesai. Tes Node renderer dan syntax JS lulus; lint view PHP lulus; regresi Expense Batch4 lulus (51 fixture scenarios + 1 shutdown subprocess). Renderer memakai canvas 150 DPI dan tinggi area 276mm (sisa 1mm untuk pembulatan cetak). Bukti dan daftar file ada pada checkpoint Transport di docs/task-progress.md. Tidak ada pengujian browser atau cetak fisik.
 
+## Implementasi hasil audit penerimaan — selesai 26 Oktober 2026
+
+Status: semua tahap berikut selesai. Bukti dan inventory: `docs/audits/penerimaan-uang-implementation-2026-10-26.md`. Tidak ada deployment atau perubahan database aplikasi.
+
+Kontrak disetujui: deposit di luar scope; invoice legacy dipisahkan dan batch campuran ditolak; PPh kumulatif maksimal sisa 2% DPP; dua desimal, sen integer dan kontrol tepat nol.
+1. RED regresi payload view, alokasi gross, bank, PPh, campuran dan admin.
+2. GREEN kontrak form/server serta kontrol terhadap sisa split bank database.
+3. Riwayat PPh, snapshot, tanggal jurnal, detail/report/export dan rollback.
+4. Regresi lokal, transaksi/failure/concurrency pada DB terisolasi bila tersedia; review dan dokumentasi.
+Kriteria selesai: preview/payload/save identik, seluruh nominal bank direkonsiliasi, riwayat lama tidak diubah, respons sukses setelah commit, tes lokal lulus dan keterbatasan eksternal dinyatakan. Tidak ada migration schema baru.
+
 # Implementation Plan: Pengembangan Modul Penerimaan Uang (Penerimaan Piutang Consultant To-Be)
+
+> Audit ulang 26 Oktober 2026 selesai: implementasi belum sepenuhnya sesuai konsep, deposit dikecualikan sesuai instruksi pengguna. Lihat `docs/audits/penerimaan-uang-concept-review-2026-10-26.md`. Tahap audit: (1) ekstraksi dua referensi dan grounding endpoint, (2) perbandingan kontrak form/server/jurnal/legacy, (3) suite existing dan reproduksi fixture tanpa browser/DB aplikasi, (4) laporan/checkpoint. Semua tahap audit selesai; perbaikan aplikasi tidak termasuk task pemeriksaan ini. Kriteria audit adalah temuan dengan bukti, bukan mengubah seluruh pemeriksaan menjadi lulus. Catatan implementasi di bawah dipertahankan sebagai riwayat.
 
 ## Problem & Background Context
 Modul **Penerimaan Uang** (`application/modules/penerimaan_uang`) saat ini menangani pelunasan invoice berdasarkan mutasi bank dari modul alokasi. Berdasarkan spesifikasi konsep terbaru (`Penerimaan Piutang Consultant.html` dan `Penerimaan Piutang - Consultant.xlsx`), terdapat kebutuhan perbaikan alur untuk **Invoice Consulting (versi baru)**:
@@ -180,13 +267,11 @@ Mengadaptasi tampilan form pemilihan invoice dan modal alokasi sesuai mockup `Pe
    - Klik tombol "Lihat" untuk memeriksa detail transaksi.
    - Jika jurnal masih Draft, pastikan tombol "Rollback" tersedia dan berfungsi membatalkan penerimaan dengan aman.
 
-
 ## Pengecualian self-approval expense untuk admin - 2026-10-26
 
 1. Grounding: kedua list memakai expense/approval/{id} dan expense/approve/{id}; pembatasan pemohon sendiri berada pada approve dan footer form_report. Gunakan Auth::is_admin (grup 1), bukan ID/nama akun atau permission umum.
 2. Implementasi: kecualikan admin pada kedua guard tersebut; pertahankan guard non-admin, urutan tahap finance/management, jurnal, dan larangan verifikasi pengembalian sendiri. Tambahkan regresi admin/non-admin kedua tahap pada tes report yang tersedia.
 3. Validasi: review seluruh diff dan whitespace; jalankan tes PHP jika runtime tersedia. PHP CLI sebelumnya tidak tersedia, sehingga keterbatasan runtime tetap berlaku tanpa bukti perubahan lingkungan. Perbarui checkpoint; tidak melakukan tes web.
-
 
 ## Routing tombol View dan Approval Expense - 2026-10-26
 
