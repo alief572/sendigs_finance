@@ -2862,3 +2862,36 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Push fast-forward origin/development berhasil; ls-remote memverifikasi SHA development identik dengan commit tersebut. Kandidat publikasi bersih setelah commit; workspace utama dan perubahan lain dipertahankan.
 - Validasi 15 suite Expense dan lint 22 PHP yang tercatat di atas tetap berlaku; tidak ada perubahan kode setelah validasi. Tidak menjalankan browser, deployment server, atau perubahan database.
 - Tidak ada fase commit/push tertunda. Langkah operasional berikutnya: perbarui checkout server development ke commit tersebut bila belum ada deployment otomatis.
+
+## Pemeriksaan sumber No Transaksi Payment — 28 Oktober 2026
+- Status: selesai; penelusuran read-only kode Payment List, tanpa perubahan aplikasi.
+- Sumber: view payment_list.php memakai respons no_payment dari Request_payment_model::get_server_side_payment_list(). Join payment_approve berdasarkan no_doc; nomor mengutamakan id_payment, fallback id, lalu tanda minus.
+- Status tabel menggunakan tgl_bayar; nomor dapat tampil ketika Open karena fallback nomor approval. Pembayaran aktual di Pembayaran_material menyimpan tr_payment_paid.id serta mengisi payment_approve.id_payment dan tgl_bayar.
+- Pembentukan nomor diperiksa pada generate_id_payment()/generate_id_payment2() dan generate_id_payment_paid(): awalan BK, kode bank, periode my, nomor urut. Data historis spesifik KS-2026-00330/BK-1026-0072 belum diverifikasi ke database; jangan simpulkan field aktual hanya dari screenshot.
+- Validasi: pemeriksaan statis view, endpoint controller, query/formatter model, generator nomor, serta penulis pembayaran. Tidak menjalankan browser atau tes aplikasi karena tidak ada perubahan aplikasi.
+- File diubah: docs/task-progress.md (checkpoint ini). Fase aktif/tertunda: tidak ada. Langkah opsional berikutnya: SELECT payment_approve untuk no_doc tersebut bila perlu memastikan nilai id dan id_payment aktual.
+
+## Lanjutan pemeriksaan nomor Payment tampil dua kali — 28 Oktober 2026
+- Selesai: generator approval membaca urutan payment_approve.id; generator pembayaran aktual membaca urutan tr_payment_paid.id. Keduanya memakai format BK-kode_bank-mmyy-urutan, sehingga nilai lintas tabel dapat sama. Kode bank kosong menghasilkan BK--.
+- Payment List mencampur id_payment dan fallback id dalam kolom no_payment; pencarian juga mencakup keduanya. Screenshot BK--1026-0004 memperlihatkan KS-2026-00331 Paid dan PERIODIK-2026-00170 Open; indikasi benturan tampilan dua jenis nomor, belum bukti pembayaran ganda.
+- Validasi: baca ulang generator serta formatter/status. Nilai aktual kedua record belum diperiksa ke database. Tidak ada perubahan aplikasi atau tes browser; hanya docs/task-progress.md diperbarui. Tidak ada fase implementasi aktif. Tindak lanjut bila diperlukan: verifikasi SELECT id, no_doc, id_payment, tgl_bayar dari payment_approve untuk kedua dokumen sebelum mengubah data atau tampilan.
+
+## Perbaikan No Transaksi Payment hanya nomor aktual — 28 Oktober 2026
+- Status: SELESAI. Permintaan pengguna: tampilkan payment_approve.id_payment saja; bila kosong tampilkan tanda minus.
+- File aplikasi diubah: application/modules/request_payment/models/Request_payment_model.php, tepat dua formatter no_payment pada excel_payment_list() dan get_server_side_payment_list(). Fallback payment_approve.id dihapus agar nomor approval tidak dianggap sebagai nomor pembayaran aktual.
+- Keputusan: aturan identik untuk tabel dan ekspor Excel; tidak mengubah generator, pencarian, status pembayaran, query join, atau data transaksi. Mengikuti sumber id_payment tanpa menambah syarat tgl_bayar.
+- Validasi: PHP 7.4 scratch/runtime/php74/php.exe lint model lulus; Batch4_test.php 810 skenario lulus; Audit_test.php 94 skenario lulus; git diff --check file aplikasi lulus. Review diff: dua perubahan formatter saja. Tidak menguji browser/database langsung.
+- File dokumentasi diubah: docs/task-progress.md. Fase aktif/tertunda dan blocker: tidak ada. Risiko tersisa: validitas isi id_payment historis bergantung pada data yang tersimpan; tidak ada perbaikan data dalam task ini. Langkah berikutnya: tidak ada implementasi lanjutan yang diperlukan.
+
+## Perbaikan pencarian Payment List setelah pemisahan nomor — 28 Oktober 2026
+- Status: SELESAI. Screenshot pengguna membuktikan nomor approval masih mencocokkan baris Open meskipun no_payment sudah minus.
+- Akar masalah: search_where pada get_server_side_payment_list() masih mengandung pa.id LIKE. Kondisi ini dihapus; pencarian nomor pembayaran tetap memakai pa.id_payment LIKE. Pencarian dokumen, nama, keperluan, tipe, dan pengguna tetap berlaku.
+- File diubah: application/modules/request_payment/models/Request_payment_model.php (satu kondisi pencarian dihapus), docs/task-progress.md (checkpoint). search_where digunakan bersama oleh query recordsFiltered dan query data sehingga keduanya konsisten.
+- Validasi: lint PHP 7.4 lulus; Audit_test.php 94 skenario lulus; Batch4_test.php 810 skenario lulus; diff --check lulus. Pemeriksaan statis memastikan pencarian tidak lagi memakai pa.id. Tes yang tersedia bukan pembuktian pencarian SQL dengan data aktual; tidak menguji browser/database langsung.
+- Tidak ada data transaksi diubah, fase aktif/tertunda, atau blocker. Batas: pencarian global masih bisa menemukan nomor yang tercantum dalam kolom pencarian lain seperti keperluan; itu perilaku pencarian global yang dipertahankan. Langkah implementasi berikutnya: tidak ada.
+
+## Publikasi perbaikan Payment List ke development — 28 Oktober 2026
+- Target publikasi yang diotorisasi: origin/development pada github.com/alief572/sendigs_finance.
+- Review: hanya model Request_payment_model.php (formatter tabel/Excel dan kondisi pencarian) serta checkpoint terkait dalam docs/task-progress.md. Perubahan lain workspace tidak termasuk.
+- Verifikasi sebelum commit: fetch berhasil; HEAD dan origin/development identik (0 ahead/0 behind); diff --check lulus. Hasil lint, Audit_test 94, Batch4_test 810 sebelumnya tetap berlaku karena kode tidak berubah sejak pengujian.
+- Batas: tidak menjalankan browser, deployment, atau perubahan data. Publikasi diverifikasi melalui SHA remote setelah push; hasil akhir dilaporkan pada respons sesi.
