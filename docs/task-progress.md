@@ -2690,3 +2690,25 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Paket 22 file: controller, dua helper, 16 file tes Expense (termasuk tujuh fixture batch audit dan Reject yang diperlukan runner), dan tiga dokumen task. Tidak menyertakan migration historis 004, file upload pengguna, konfigurasi, kredensial atau modul lain.
 - Kandidat PASS: lint 21 PHP; Visibility 2115, Query_state 288, directory 30, upload 380 checks/70 multipart, tujuh batch audit 355 skenario + tujuh subprocess, Management_actions 60, Reject delapan skenario, salinan kasbon, penolakan permission tanpa www-data, dan tiga suite Node. Database aplikasi/browser tidak dipakai.
 - Aktif: commit terbatas manifest, push fast-forward ke development dan verifikasi SHA remote; hasil akhir dicatat di checkpoint lokal setelah verifikasi.
+
+# Perbaikan checkbox permission Expense — 2026-10-28 (aktif)
+
+- Pengguna mengonfirmasi save ulang masih gagal; screenshot form menunjukkan hanya Check All pada kedua baris Expense, tidak ada action View/Add/Manage/Delete. Diagnosis sebelumnya: orphan permissions.id_menu 296 dan user alief 206 tanpa permission 955–958.
+- Keputusan: perbaiki resolver pemetaan runtime pada form, bukan menambahkan akses akun langsung. Mapping valid tetap dipertahankan; orphan dipulihkan berdasarkan keluarga View dan menu aktif. Alias checkbox tersinkron dan penyimpanan dideduplikasi agar tidak ada baris izin ganda. Database/menu permission yang ada tidak ditulis otomatis.
+- Aktif: fase 1 regresi RED. Berikutnya: perubahan model/controller/view dan tes PHP/Node, verifikasi data/render read-only lokal, checkpoint. Scope hanya pengaturan permission; tidak mengubah Auth, whitelist approval, filter expense, atau modul lain.
+
+## Penutupan perbaikan checkbox permission Expense — 2026-10-28
+
+- Fase 1–3 selesai; tidak ada implementasi aktif/tertunda. RED diverifikasi ulang dengan Setting dari HEAD dan fixture yang sudah benar: checkbox Expense 279 tidak terbentuk.
+- Produksi: users/models/Permissions_model.php menambah resolver actions_by_menu; users/controllers/Setting.php memakai resolver dan deduplikasi pilihan saat save; users/views/user_permissions.php menyinkron alias permission dan mempertahankan checkbox role yang disabled saat Check All. Tidak mengubah Menu_generator, Auth, akses Expense, atau database.
+- Resolver mempertahankan mapping id_menu yang valid. Hanya action dengan target yang tidak ada pada menu aktif dipulihkan ke alias menu aktif dengan keluarga .View yang sama. Expense 955–958 tampil pada kedua baris 279/282 tanpa hardcode ID. Data id_menu legacy tidak dimutasi.
+- Tes baru users/tests/Permission_menu_test.php PASS 20 checks: controller/render empat action kedua alias, tanpa pemberian otomatis, mapping valid/non-Expense/legacy, deduplikasi baris menu/POST, role disabled, penyimpanan hanya View/Add, sidebar asli muncul setelah View dipilih dan tersembunyi untuk Add saja. Permission_menu_client_test.js PASS 31 checks: sinkron parent/leaf, row/column/global Check All, disabled role immutable. Regresi Audit Trail Menu_test PASS. Lint empat PHP dan Node syntax/whitespace PASS.
+- Validasi database aktual read-only melalui scratch/check-alief-expense-access-20261028.php --verify-form: user alief 206, empat checkbox dirender pada menu 279 dan 282; seluruh izin tersimpan tidak berubah sebelum/sesudah render. Tidak melakukan tes browser atau write database.
+- File dokumentasi: implementation-plan dan checkpoint ini. Tidak ada commit/push untuk task checkbox. Langkah pengguna: refresh halaman admin users/setting/permission/206, pilih View dan action yang diperlukan, simpan, lalu refresh dashboard Alief. Izin lama yang gagal tersimpan tidak ditambahkan otomatis.
+
+## Publikasi checkbox permission Expense — 2026-10-28
+
+- Diotorisasi pengguna untuk commit dan push ke development. Kandidat terisolasi berawal dari 4fec12020199ec0d23c36c708ec85515f3d1ab4e; workspace utama dan main dipertahankan.
+- Scope tujuh file: Setting.php, Permissions_model.php, user_permissions.php, Permission_menu_test.php, Permission_menu_client_test.js, implementation-plan dan task-progress. Tidak menyertakan script diagnosis, akses/grup user Alief, Auth atau modul lain.
+- Kandidat PASS 20 pemeriksaan PHP controller/render/save/sidebar, 31 pemeriksaan Node checkbox/alias/role, lint empat PHP, dan review diff. Hasil read-only render data Alief serta regresi menu sebelumnya tetap berlaku karena source terkait tidak berubah. Tidak melakukan tes browser atau write database.
+- Aktif: commit scope task dan push fast-forward, kemudian verifikasi SHA remote. Status akhir publikasi dicatat lokal sesudah verifikasi.

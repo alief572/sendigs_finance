@@ -65,6 +65,29 @@ class Permissions_model extends BF_Model
         parent::__construct();
     }
 
+    public function actions_by_menu($menus, $actions)
+    {
+        $activeMenus = array();
+        $viewMenus = array();
+        foreach ($menus as $menu) {
+            $activeMenus[$menu['id']] = true;
+            $viewMenus[$menu['nm_permission']][$menu['id']] = $menu['id'];
+        }
+
+        $mapped = array();
+        foreach ($actions as $action) {
+            $targets = array($action['id_menu']);
+            if (!isset($activeMenus[$action['id_menu']])) {
+                $separator = strrpos($action['nm_permission'], '.');
+                $view = $separator === false ? '' : substr($action['nm_permission'], 0, $separator) . '.View';
+                // Older menu IDs may be gone while the same View permission still serves active menu aliases.
+                if (isset($viewMenus[$view])) { $targets = $viewMenus[$view]; }
+            }
+            foreach ($targets as $menuId) { $mapped[$menuId][] = $action; }
+        }
+        return $mapped;
+    }
+
     public function update_user_permission()
     {
         $this->db->trans_begin();

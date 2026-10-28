@@ -212,3 +212,11 @@ Status: selesai; hasil RED/GREEN dan regresi tercatat di checkpoint. Tidak mengu
 1. Grounding/RED: log aplikasi menunjukkan SELECT * tanpa FROM pada get_dat_expense_data. Reproduksi memakai Auth dan query builder CodeIgniter asli dengan persistensi fixture.
 2. Perbaikan: hitung pengecualian admin/finance sebelum menyusun query tr_expense; jangan memanggil lookup role ketika builder daftar masih aktif. Pertahankan filter pemohon dan kategori.
 3. Verifikasi: data terisi dan count/query untuk admin, finance, user biasa, pencarian, parameter all; regresi visibility dan lint. Perubahan upload/approval tidak diulang karena tidak berubah. Simpan hasil di checkpoint.
+
+# Perbaikan checkbox permission Expense — 2026-10-28
+
+1. RED: fixture menu aktif 279/282 dan action Expense 955–958 yang masih menunjuk id_menu 296 hilang. Verifikasi form belum menampilkan empat checkbox dan belum dapat menyimpan akses yang dipilih.
+2. Implementasi: pertahankan mapping id_menu yang valid; pulihkan mapping action orphan ke alias menu aktif dengan permission View keluarga yang sama. Kedua baris Expense berbagi izin yang sama; sinkronkan checkbox alias dan deduplikasi ID saat menyimpan. Tidak mengubah user_permissions atau grup alief secara otomatis, tidak memakai ID akun/menu hardcode.
+3. GREEN: verifikasi rendering empat action, alias sinkron/check-all, simpan fixture hanya pilihan admin, menu terlihat sesudah Expense.View dipilih dan tersembunyi tanpa View, regresi non-Expense/role, serta pembacaan data lokal/render tanpa browser. Lint/whitespace dan checkpoint akhir.
+
+Status perbaikan checkbox permission Expense: fase 1–3 selesai. RED pada controller baseline, GREEN form/simpan/sidebar fixture, sinkron alias, lint dan render read-only data Alief. Tidak ada migrasi atau penambahan akses user otomatis; administrator perlu refresh form lalu memilih/menyimpan izin yang diinginkan.

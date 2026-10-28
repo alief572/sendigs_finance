@@ -267,10 +267,7 @@ class Setting extends Admin_Controller
             $ArrPermissionDetail[$value['parent_id']][] = $value;
         }
 
-        $ArrActionPers = [];
-        foreach ($permissopn_action as $key => $value) {
-            $ArrActionPers[$value['id_menu']][] = $value;
-        }
+        $ArrActionPers = $this->permissions_model->actions_by_menu(array_merge($permissions, $permissions_detail), $permissopn_action);
 
         // echo "<pre>";
         // print_r($ArrActionPers);
@@ -300,7 +297,7 @@ class Setting extends Admin_Controller
 
         $insert_data = array();
         if ($id_permissions) {
-            foreach ($id_permissions as $key => $idp) {
+            foreach (array_unique($id_permissions) as $key => $idp) {
                 $insert_data[] = array(
                     'id_user' => $id_user,
                     'id_permission' => $idp
