@@ -95,6 +95,9 @@ class Jurnal_all_model extends BF_Model
         }
         $this->db->select($select, false);
         $this->db->from('tr_jurnal a')->where_in('a.jenis_transaksi', $types);
+        if (!$posted && $f['tab'] === 'PCS') {
+            $this->db->where('EXISTS (SELECT 1 FROM tr_expense_petty_cash pc WHERE pc.no_pencatatan = a.no_transaksi)', null, false);
+        }
         if ($posted) $this->db->where('a.sts', '1');
         else $this->db->group_start()
             ->group_start()->where_in('a.jenis_transaksi', array_merge(self::SOURCES['INV'],self::SOURCES['EXP']))
