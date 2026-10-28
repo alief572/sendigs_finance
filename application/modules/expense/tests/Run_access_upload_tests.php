@@ -9,7 +9,7 @@ foreach ($lintFiles as $file) {
     if ($status !== 0) { $failed = true; echo implode(PHP_EOL, $output) . PHP_EOL; }
 }
 echo 'PHP lint: ' . count($lintFiles) . ' files checked' . PHP_EOL;
-$tests = array('Visibility_test.php', 'Query_state_test.php', 'Upload_directory_test.php', 'Upload_requests_test.php',
+$tests = array('Visibility_test.php', 'Query_state_test.php', 'Kasbon_selection_test.php', 'Upload_directory_test.php', 'Upload_requests_test.php',
     'Kasbon_attachments_test.php', 'Management_actions_test.php', 'Reject_test.php');
 for ($batch = 1; $batch <= 7; $batch++) { $tests[] = 'Batch' . $batch . '_audit_test.php'; }
 foreach ($tests as $test) {

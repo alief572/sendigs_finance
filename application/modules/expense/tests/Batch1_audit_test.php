@@ -480,6 +480,11 @@ class ExpenseTestLoader extends FixtureLoad {
 
 class ExpenseTestController extends Expense {}
 
+class ExpenseSelectionAuditAuth extends FixtureAuth {
+    public function is_admin() { return false; }
+    public function user_id() { return 7; }
+}
+
 function expense_run($method, $options = array(), $post = array(), $args = array()) {
     global $ci, $scenario, $events, $scenarioCount;
     $scenarioCount++;
@@ -495,7 +500,7 @@ function expense_run($method, $options = array(), $post = array(), $args = array
     $ci->input = new FixtureInput();
     $ci->template = new ExpenseTestTemplate();
     $ci->upload = new ExpenseTestUpload();
-    $ci->auth = new FixtureAuth();
+    $ci->auth = new ExpenseSelectionAuditAuth();
     $ci->Expense_model = new ExpenseTestModel($db);
     $ci->All_model = new ExpenseAllModel();
 

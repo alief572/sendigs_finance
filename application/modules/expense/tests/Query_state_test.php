@@ -40,7 +40,7 @@ class QueryStateDb extends CI_DB_query_builder {
         $this->record->sql[] = $sql;
         if (strpos($sql, 'COUNT(') !== false) { return new QueryStateResult((object) array('numrows' => 1)); }
         return new QueryStateResult((object) array('id' => 10, 'no_doc' => 'EXP-TEST', 'tgl_doc' => '2026-10-27',
-            'nama' => 'alice', 'nmuser' => 'Alice', 'nmapproval' => '', 'jumlah' => 100,
+            'nama' => 'hikmat', 'nmuser' => 'Hikmat', 'nmapproval' => '', 'jumlah' => 100,
             'informasi' => 'Expense fixture', 'status' => 3, 'total_kasbon' => 150, 'lebih_bayar' => 50,
             'kurang_bayar' => 50, 'no_rp' => null, 'status_rp' => null));
     }
@@ -61,7 +61,7 @@ function queryStateCheck($ok, $message) {
     global $checks; $checks++;
     if (!$ok) { throw new RuntimeException($message); }
 }
-foreach (array(array(false, false), array(false, true), array(true, false)) as $roles) {
+foreach (array(array(false, false, 'alice', false), array(false, true, 'alief', false), array(false, false, 'finance', true), array(true, false, 'admin', true)) as $roles) {
     foreach (array('', 'Expense') as $search) {
         foreach (array('0', '1') as $all) {
             foreach (array('get_dat_expense_data', 'get_dat_pengembalian_kasbon', 'get_dat_lebih_expense') as $endpoint) {
@@ -71,7 +71,7 @@ foreach (array(array(false, false), array(false, true), array(true, false)) as $
                 $ci->users_model = new QueryStateUserModel($ci->db, 'users');
                 $ci->user_groups_model = new QueryStateUserModel($ci->db, 'user_groups');
                 $ci->auth = (new ReflectionClass('Auth'))->newInstanceWithoutConstructor();
-                foreach (array('ci' => $ci, 'user' => array('id_user' => '42', 'username' => 'alice')) as $name => $value) {
+                foreach (array('ci' => $ci, 'user' => array('id_user' => '42', 'username' => $roles[2])) as $name => $value) {
                     $property = new ReflectionProperty('Auth', $name);
                     $property->setAccessible(true); $property->setValue($ci->auth, $value);
                 }
@@ -84,8 +84,8 @@ foreach (array(array(false, false), array(false, true), array(true, false)) as $
                 queryStateCheck($response['recordsTotal'] === 1 && $response['recordsFiltered'] === 1 && count($response['data']) === 1, $endpoint . ': populated result and counts');
                 queryStateCheck(count($ci->db->record->sql) === 3, $endpoint . ': total, filtered count and page query');
                 foreach ($ci->db->record->sql as $sql) {
-                    $scoped = strpos($sql, "`a`.`nama` = 'alice'") !== false;
-                    queryStateCheck($scoped === !($roles[0] || $roles[1]), $endpoint . ': requester scope retained');
+                    $scoped = strpos($sql, "`a`.`created_by` = '" . $roles[2] . "'") !== false;
+                    queryStateCheck($scoped === !$roles[3], $endpoint . ': creator scope retained');
                     queryStateCheck(strpos($sql, '`a`.`id_po`') !== false && strpos($sql, '`a`.`no_doc`') !== false, $endpoint . ': base filters retained');
                 }
             }

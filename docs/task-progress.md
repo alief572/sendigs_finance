@@ -2712,3 +2712,44 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Scope tujuh file: Setting.php, Permissions_model.php, user_permissions.php, Permission_menu_test.php, Permission_menu_client_test.js, implementation-plan dan task-progress. Tidak menyertakan script diagnosis, akses/grup user Alief, Auth atau modul lain.
 - Kandidat PASS 20 pemeriksaan PHP controller/render/save/sidebar, 31 pemeriksaan Node checkbox/alias/role, lint empat PHP, dan review diff. Hasil read-only render data Alief serta regresi menu sebelumnya tetap berlaku karena source terkait tidak berubah. Tidak melakukan tes browser atau write database.
 - Aktif: commit scope task dan push fast-forward, kemudian verifikasi SHA remote. Status akhir publikasi dicatat lokal sesudah verifikasi.
+
+# Koreksi cakupan creator Expense dan akun finance — 2026-10-28 (aktif)
+
+- Grounding: helper lama menganggap Expense_Approval.Manage sebagai finance, sehingga user alief 206 (memiliki izin tersebut) melihat semua dokumen. Akun finance sebenarnya username finance ID203; kedua akun tidak punya grup. Contoh ER-2026-00041 nama Hikmat, created_by admin; ER40/39 juga dibuat admin.
+- Keputusan terbaru pengguna mengubah kontrak ownership sebelumnya: index harus berdasarkan pembuat (created_by), bukan pemohon (nama). Pengecualian dikonfirmasi hanya admin dan akun username finance; izin approval tidak menjadi pengecualian. Hindari hardcode ID Alief/finance. Antrean approval tetap lintas user sesuai tahap.
+- Fase aktif: regresi RED lalu filter/controller/test/docs. Semua pemeriksaan data menggunakan transaksi read-only; tidak mengubah izin atau creator dokumen. Scope tiga tab expense/index dan badge, tidak termasuk transport/kasbon/petty cash terpisah.
+
+## Penutupan koreksi cakupan creator Expense dan akun finance — 2026-10-28
+
+- Fase 1–3 selesai. RED pertama mereproduksi filter pemohon; setelah ownership diubah, RED khusus alief 206 + Expense_Approval.Manage membuktikan bypass finance lama. GREEN setelah pengecualian dibatasi admin/username finance.
+- Produksi hanya controller Expense.php: helper canViewAllExpenses mengganti canViewAllExpenseRequesters, tanpa hardcode ID; ketiga tab/count/search/badge memakai created_by. Lookup is_admin tetap sebelum query daftar. Nama Pemohon dan data historis tidak diubah. Tidak menyentuh approval, upload, Auth, menu atau hak akun.
+- File tes diubah: Visibility_test.php (3423 checks PASS) meliputi Alief 206 berizin approval tetap dibatasi, ID1/7/203 bukan bypass, akun finance saja dan admin bebas, pencarian/all/badge/count/data serta antrean approval tidak dibatasi creator. Query_state_test.php (384 checks PASS) memakai Auth/CI builder asli, pemohon Hikmat berbeda dari actor, total/count/page dan pencarian/sorting tetap benar.
+- Regresi PASS: Batch2 audit 54 skenario + satu subprocess; Management_actions 60 checks; lint controller dan dua tes PHP, serta scoped whitespace. Perbandingan metode terhadap kandidat publikasi membuktikan seluruh fungsi approval/upload identik; tes bagian tersebut tidak diulang karena source/dependensi tidak berubah.
+- Validasi DB read-only: alief tetap memiliki Expense_Approval.Manage, finance adalah username finance ID203, keduanya tanpa grup. ER41/40/39 dibuat admin, bukan alief. Dari 10 record kategori index, created_by alief = 0 (nama alief juga 0). Setelah perubahan, index Alief akan kosong sampai ada dokumen created_by alief; ini bukan error pengambilan data.
+- Dokumentasi diperbarui: expense-access-upload-linux.md dengan kontrak creator dan akun finance; implementation-plan serta checkpoint ini. Script diagnosis scratch/check-alief-expense-access-20261028.php diperluas read-only, tidak untuk deployment.
+- Tidak ada fase implementasi tertunda, tidak ada write database/tes browser, belum commit/push untuk koreksi ini. Langkah berikutnya: deploy koreksi bila diminta, refresh ketiga tab; admin dan akun finance tetap melihat semua, daftar approval tetap lintas user.
+
+# Pembatasan pemilihan kasbon untuk Expense Report — 2026-10-28 (aktif)
+
+- User meminta modal pilihan kasbon hanya menampilkan kasbon yang dibuat user biasa itu sendiri; pengecualian admin/username finance mengikuti keputusan sebelumnya.
+- Grounding: index memanggil get_kasbon tanpa parameter, lalu create_report/{no_doc}; query UNION sumber tr_kasbon dan tr_pengajuan_rutin_detail/header belum membatasi pembuat. create_report dan save juga belum menolak referensi user lain. get_kasbon menganggap hasil kosong sebagai error dan exit non-JSON; perlu [] normal untuk akun tanpa data.
+- Ownership: tr_kasbon.created_by username; tr_pengajuan_rutin.created_by id_user (sesuai save_data). Scope daftar/modal dan penggunaan referensi report, bukan modul transport/approval. Fase aktif regresi RED; berikutnya guard server dan verifikasi. Tidak mengubah data/izin user atau source creator historis.
+
+## Penutupan pembatasan pemilihan kasbon untuk Expense Report — 2026-10-28
+
+- Fase 1–3 selesai; tidak ada implementasi aktif/tertunda. RED mereproduksi modal mengembalikan empat fixture lintas pembuat untuk user Alief. GREEN membatasi dua sumber ke pembuat yang login. Pengecualian hanya admin dan username finance; pemilik izin approval biasa tetap dibatasi.
+- Produksi controller Expense.php: get_kasbon menambahkan filter username pada tr_kasbon dan id_user pada header pengajuan rutin; status, filter tambahan dan anti-report-ganda existing dipertahankan. Hasil kosong menjadi [] sukses; query gagal HTTP500 JSON aman, tanpa print_r/exit/SQL bocor.
+- create_report memakai no_doc + created_by untuk user biasa; missing/foreign kasbon HTTP404 tanpa render data, lookup error HTTP500. save memvalidasi batch referensi header/row kasbon dan sumber rutin sebelum transaksi/write/upload; salah satu referensi asing/missing/invalid menolak seluruh request dengan satu audit aman. Tidak mengubah alur approval atau hak akun.
+- Grounding lanjutan menemukan id_expense_detail juga dipakai sebagai metadata PR pada report kasbon. Saat header/row memiliki referensi kasbon, ownership kasbon yang diperiksa; metadata PR tidak diuji sebagai sumber rutin. Regresi RED/GREEN khusus membuktikan own kasbon dengan metadata PR tetap tersimpan.
+- File task: controller; tests/Kasbon_selection_test.php baru; Batch1_audit_test.php dilengkapi Auth fixture, Batch2_audit_test.php dilengkapi Output fixture; Run_access_upload_tests.php menambahkan suite; docs implementation-plan/task-progress/expense-access-upload-linux.md. Script scratch diagnosis diperluas CLI-only/read-only, bukan artefak deploy.
+- Kasbon_selection_test PASS 86 checks memakai recorder audit asli: user biasa/admin/finance/approval-holder, kedua sumber, escaping filter, URL own/foreign/missing, hasil kosong, error DB, batch campuran/invalid, save forging ditolak sebelum write/transaksi, metadata PR, dan kegagalan writer tanpa deduplikasi/response rusak.
+- Penutupan fase: runner lengkap PASS 15 suite + lint 22 PHP. Visibility3423, Query_state384, Kasbon_selection86, Upload_directory30, Upload_requests380/70 multipart, Kasbon attachments/copy, Management60, Reject8, tujuh batch audit 355 skenario + tujuh subprocess. Node Approval_actions 16 PASS. Tidak ada browser atau database write.
+- Validasi database aktual: SQL get_kasbon ditangkap dari controller dan dijalankan dalam transaksi read-only; seluruh eligible kedua sumber 189, eligible buatan Alief 206 adalah 0, sesuai pola screenshot. Hasil kosong untuk Alief benar sampai memiliki kasbon/sumber sendiri yang eligible.
+- Belum commit/push untuk perubahan ini maupun koreksi creator-index yang mendahuluinya. Langkah berikutnya: refresh modal di lokal atau publikasikan koreksi bila diminta. Tidak mengubah ownership historis atau menambahkan akses user.
+
+## Publikasi koreksi creator index dan pembatasan kasbon — 2026-10-28
+
+- Pengguna mengotorisasi commit dan push kedua koreksi ke development. Kandidat terisolasi berbasis 678977ad6a4f0535f1f735ca4e263754a2ef6df2; workspace utama, main dan perubahan modul lain dipertahankan.
+- Scope sepuluh file: controller Expense, enam file tes/runner terkait dan tiga dokumen task. Tidak menyertakan script diagnosis, migrasi lama, upload pengguna, konfigurasi, Auth, atau perubahan permission akun/database.
+- Kandidat PASS 15 suite: Visibility3423, Query_state384, Kasbon_selection86, directory30, upload380/70 multipart, lampiran/salinan kasbon, Management60, Reject8 dan tujuh batch audit355 + tujuh subprocess; lint22 PHP. Foundation helper upload/audit identik workspace; metode controller di luar cakupan diverifikasi identik terhadap development.
+- Aktif: commit sepuluh file sesuai manifest, push fast-forward dan verifikasi SHA remote. Hasil publikasi dicatat lokal setelah verifikasi.

@@ -396,6 +396,11 @@ class ExpenseBatch2Input {
     }
 }
 
+class ExpenseBatch2Output {
+    public $status = 200;
+    public function set_status_header($status) { $this->status = $status; return $this; }
+}
+
 function expense_b2_run($method, $options = array(), $post = array(), $args = array()) {
     global $scenario, $events, $ci;
     $scenario = $options;
@@ -408,6 +413,7 @@ function expense_b2_run($method, $options = array(), $post = array(), $args = ar
     $ci->module_audit_recorder = $recorder;
     $ci->db = new ExpenseBatch2Db();
     $ci->input = new ExpenseBatch2Input();
+    $ci->output = new ExpenseBatch2Output();
     $ci->auth = new ExpenseBatch2Auth();
     $ci->template = new ExpenseBatch2Template();
     $ci->load = new ExpenseBatch2Load();

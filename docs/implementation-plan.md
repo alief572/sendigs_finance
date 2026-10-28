@@ -220,3 +220,19 @@ Status: selesai; hasil RED/GREEN dan regresi tercatat di checkpoint. Tidak mengu
 3. GREEN: verifikasi rendering empat action, alias sinkron/check-all, simpan fixture hanya pilihan admin, menu terlihat sesudah Expense.View dipilih dan tersembunyi tanpa View, regresi non-Expense/role, serta pembacaan data lokal/render tanpa browser. Lint/whitespace dan checkpoint akhir.
 
 Status perbaikan checkbox permission Expense: fase 1–3 selesai. RED pada controller baseline, GREEN form/simpan/sidebar fixture, sinkron alias, lint dan render read-only data Alief. Tidak ada migrasi atau penambahan akses user otomatis; administrator perlu refresh form lalu memilih/menyimpan izin yang diinginkan.
+
+# Koreksi cakupan creator Expense dan akun finance — 2026-10-28
+
+1. RED: Alief 206 memiliki Expense_Approval.Manage tetapi bukan akun finance; dokumen ER-2026-00041/40/39 dibuat admin. Tambahkan regresi agar izin approval tidak membuka index dan ownership memakai created_by, bukan nama pemohon.
+2. Implementasi: pengecualian hanya Auth::is_admin atau username finance (disetujui pengguna); seluruh data/count/pencarian ketiga tab dan badge memakai created_by = username login. Pertahankan lookup akses sebelum query builder dan antrean approval lintas pembuat.
+3. GREEN: regresi actor/role/akun khusus/ID akun tanpa bypass, creator berbeda pemohon, pencarian/all/count/page SQL dengan Auth dan builder asli; validasi DB read-only dan audit index yang terdampak; lint/whitespace/checkpoint. Tidak mengubah creator historis, hak akun, transaksi upload atau approval.
+
+Status koreksi creator/finance: fase 1–3 selesai. Visibility 3423 checks dan query state 384 checks PASS, audit index dan action approval PASS, validasi database read-only menunjukkan Alief belum memiliki dokumen yang dibuatnya pada kategori index. Tidak mengubah izin atau creator historis; hasil kosong untuk Alief adalah benar pada data tersebut.
+
+# Pembatasan pemilihan kasbon untuk Expense Report — 2026-10-28
+
+1. Grounding/RED: get_kasbon digunakan modal dan menggabungkan tr_kasbon dengan detail pengajuan rutin. Kasbon dibuat dengan username; header rutin dibuat dengan id_user. Uji agar filter pembuat diterapkan pada kedua sumber, tanpa bypass filter pemohon/departemen/client.
+2. Implementasi: user biasa hanya kasbon created_by username dan rutin header created_by id_user; admin/akun finance mengikuti pengecualian disepakati. Hasil kosong harus JSON [] yang valid. Lindungi create_report dan save referensi kasbon/rutin sebelum render/write agar request langsung tidak memilih dokumen orang lain. Pertahankan status/anti-pemakaian-ganda existing.
+3. GREEN: daftar/empty/query-error, kedua sumber, admin/finance/user berizin approval, URL/post milik sendiri/lain/missing/invalid, kegagalan DB, audit dan tidak ada write sebelum penolakan. Regresi batch audit terdampak dan upload, lint/whitespace; baca hitungan riil read-only tanpa browser.
+
+Status pembatasan pemilihan kasbon: fase 1–3 selesai. Filter kedua cabang UNION, JSON kosong, guard pembukaan/simpan report, konteks ID detail PR, serta audit telah diverifikasi. Suite lengkap Expense PASS dan validasi SQL aktual read-only: 189 eligible keseluruhan, 0 buatan Alief. Tidak mengubah database atau hak akun.

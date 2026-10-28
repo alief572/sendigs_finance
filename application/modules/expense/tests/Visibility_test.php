@@ -7,9 +7,10 @@ function base_url($path) { return '/' . $path; }
 class VisibilityAuth {
     public $admin = false;
     public $id = '7';
+    public $username = 'alice';
     public function is_admin() { return $this->admin; }
     public function user_id() { return $this->id; }
-    public function user_name() { return 'alice'; }
+    public function user_name() { return $this->username; }
 }
 class VisibilityInput {
     public $values = array();
@@ -54,13 +55,16 @@ $controller->auth = new VisibilityAuth();
 $controller->input = new VisibilityInput();
 $controller->template = new VisibilityTemplate();
 foreach (array(
-    array(false, '7', array('Expense.Manage'), false),
-    array(false, '1', array(), false),
-    array(false, '42', array('Approval Expense Management.Manage'), false),
-    array(false, '42', array('Expense_Approval.Manage'), true),
-    array(true, '42', array(), true),
+    array(false, '7', 'alice', array('Expense.Manage'), false),
+    array(false, '1', 'alice', array(), false),
+    array(false, '42', 'alice', array('Approval Expense Management.Manage'), false),
+    array(false, '206', 'alief', array('Expense_Approval.Manage'), false),
+    array(false, '203', 'alice', array(), false),
+    array(false, '42', 'finance-team', array('Expense_Approval.Manage'), false),
+    array(false, '42', 'finance', array(), true),
+    array(true, '42', 'alice', array(), true),
 ) as $case) {
-    list($controller->auth->admin, $controller->auth->id, $GLOBALS['rights'], $allUsers) = $case;
+    list($controller->auth->admin, $controller->auth->id, $controller->auth->username, $GLOBALS['rights'], $allUsers) = $case;
     foreach (array('', 'bob') as $search) {
         foreach (array('0', '1') as $all) {
             $controller->input->values = array('draw' => 1, 'start' => 10, 'length' => 10,
@@ -74,13 +78,13 @@ foreach (array(
                 if ($method === 'index') { array_shift($queries); }
                 visibilityCheck(count($queries) >= 2, $method . ' must query counts and data');
                 foreach ($queries as $conditions) {
-                    $owner = array_filter($conditions, function ($condition) {
-                        return $condition[0] === 'where' && in_array($condition[1][0], array('nama', 'a.nama'), true)
-                            && $condition[1][1] === 'alice';
+                    $owner = array_filter($conditions, function ($condition) use ($controller) {
+                        return $condition[0] === 'where' && in_array($condition[1][0], array('created_by', 'a.created_by'), true)
+                            && $condition[1][1] === $controller->auth->user_name();
                     });
-                    visibilityCheck((bool) $owner === !$allUsers, $method . ': requester scope case=' . json_encode($case));
+                    visibilityCheck((bool) $owner === !$allUsers, $method . ': creator scope case=' . json_encode($case));
                     foreach ($conditions as $condition) {
-                        visibilityCheck(strpos($condition[1][0], 'created_by') === false, 'Creator must not grant visibility');
+                        visibilityCheck(!in_array($condition[1][0], array('nama', 'a.nama'), true), 'Requester must not determine ownership');
                     }
                 }
                 if ($method !== 'index') {

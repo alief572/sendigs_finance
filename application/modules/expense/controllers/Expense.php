@@ -99,9 +99,41 @@ class Expense extends Admin_Controller
 		$this->expenseUploads->uploadedBatch($created);
 	}
 
-	private function canViewAllExpenseRequesters()
+	private function canViewAllExpenses()
 	{
-		return $this->auth->is_admin() || has_permission('Expense_Approval.Manage');
+		// Pengecualian index mengikuti akun finance; izin approval tetap terpisah.
+		return $this->auth->is_admin() || $this->auth->user_name() === 'finance';
+	}
+
+	private function ownsReportKasbonReferences($documents, $routineDetails)
+	{
+		$normalize = function ($values) {
+			$result = array();
+			foreach ($values as $value) {
+				if ($value === null || $value === '' || $value === '0' || $value === 0) { continue; }
+				if (!is_scalar($value)) { return false; }
+				$result[] = (string)$value;
+			}
+			return array_values(array_unique($result));
+		};
+		$documents = $normalize($documents);
+		$routineDetails = $normalize($routineDetails);
+		if ($documents === false || $routineDetails === false) { return false; }
+		if ((!$documents && !$routineDetails) || $this->canViewAllExpenses()) { return true; }
+		if ($documents) {
+			$query = $this->db->select('no_doc')->where_in('no_doc', $documents)
+				->where('created_by', $this->auth->user_name())->get('tr_kasbon');
+			$this->auditObserve($query);
+			if (!$query || array_diff($documents, array_column($query->result_array(), 'no_doc'))) { return false; }
+		}
+		if ($routineDetails) {
+			$query = $this->db->select('a.id')->from('tr_pengajuan_rutin_detail a')
+				->join('tr_pengajuan_rutin b', 'b.no_doc = a.no_doc', 'left')
+				->where_in('a.id', $routineDetails)->where('b.created_by', $this->auth->user_id())->get();
+			$this->auditObserve($query);
+			if (!$query || array_diff($routineDetails, array_column($query->result_array(), 'id'))) { return false; }
+		}
+		return true;
 	}
 
 	private function beginAudit($method, $data = array(), $keys = array())
@@ -743,6 +775,12 @@ class Expense extends Admin_Controller
 		), array('filter_nama', 'department_id', 'record_count', 'outcome'));
 
 		$where_filter = "";
+		$where_creator = '';
+		$where_routine_creator = '';
+		if (!$this->canViewAllExpenses()) {
+			$where_creator = ' AND a.created_by = ' . $this->db->escape($this->auth->user_name());
+			$where_routine_creator = ' AND b.created_by = ' . $this->db->escape($this->auth->user_id());
+		}
 		if (!empty($nama) && !empty($departement)) {
 			$where_filter = " AND a.nama = " . $this->db->escape($nama) . " AND a.departement = " . $this->db->escape($departement) . " ";
 		}
@@ -770,7 +808,7 @@ class Expense extends Admin_Controller
 				tr_kasbon a
 			WHERE
 				a.status IN ('2', '3') AND
-				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . " AND
+				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . $where_creator . " AND
 				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.status IN ('0','1','2','3','4')) <= 0 AND
 				(SELECT COUNT(ab2.id) FROM tr_expense ab2 WHERE ab2.id_kasbon = a.no_doc AND ab2.status IN ('0','1','2','3','4')) <= 0
 			
@@ -799,22 +837,23 @@ class Expense extends Admin_Controller
 				LEFT JOIN tr_pengajuan_rutin b ON b.no_doc = a.no_doc
 			WHERE
 				a.status IN ('2', '3') AND
-				a.metode_pembelian = '2' AND 
+				a.metode_pembelian = '2' " . $where_routine_creator . " AND
 				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3','4')) < 1
 		";
 
 		$query = $this->db->query($sql_kasbon);
 		$this->auditObserve($query);
-		$data = $query ? $query->result() : false;
-		if (!$data) {
-			$this->completeAudit('Gagal membaca data kasbon: query error atau data kosong', 0, array(
+		if (!$query) {
+			$this->completeAudit('Gagal membaca data kasbon', 0, array(
 				'filter_nama' => $nama,
 				'department_id' => $departement,
 				'outcome' => 'query_error'
 			));
-			print_r($this->db->error($data));
-			exit;
+			$this->output->set_status_header(500);
+			echo json_encode(array('message' => 'Gagal membaca daftar kasbon.'));
+			return;
 		}
+		$data = $query->result();
 
 		if (!empty($data) && is_array($data)) {
 			foreach ($data as &$item) {
@@ -1372,7 +1411,7 @@ class Expense extends Admin_Controller
 
 		// Hitung counter untuk badge Tab 2 (Pengembalian Kasbon) dan Tab 3 (Lebih Expense)
 		$cur_user = $this->auth->user_name();
-		$is_admin = $this->canViewAllExpenseRequesters();
+		$is_admin = $this->canViewAllExpenses();
 
 		$this->db->where('lebih_bayar >', 0);
 		$this->db->where_in('status', ['3', '4']);
@@ -1386,7 +1425,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('nama', $cur_user);
+			$this->db->where('created_by', $cur_user);
 		}
 		$count_pengembalian = $this->db->count_all_results('tr_expense');
 
@@ -1402,7 +1441,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('nama', $cur_user);
+			$this->db->where('created_by', $cur_user);
 		}
 		$count_lebih_expense = $this->db->count_all_results('tr_expense');
 
@@ -1475,9 +1514,19 @@ class Expense extends Admin_Controller
 	{
 		$this->beginAudit(__FUNCTION__, array('id_kasbon' => $id_kasbon), array('id_kasbon', 'item_count', 'outcome'));
 		$id_kasbon = urldecode($id_kasbon);
-		$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $id_kasbon]);
+		$where_kasbon = array('no_doc' => $id_kasbon);
+		if (!$this->canViewAllExpenses()) { $where_kasbon['created_by'] = $this->auth->user_name(); }
+		$q_kb = $this->db->get_where('tr_kasbon', $where_kasbon);
 		$this->auditObserve($q_kb);
 		$data_kasbon = $q_kb ? $q_kb->row() : null;
+		if (!$data_kasbon) {
+			$this->completeAudit('Kasbon tidak tersedia untuk expense report', 0, array(
+				'id_kasbon' => $id_kasbon, 'outcome' => $q_kb ? 'not_found' : 'query_error'
+			));
+			$this->output->set_status_header($q_kb ? 404 : 500);
+			echo '<div class="alert alert-danger">Kasbon tidak tersedia untuk akun Anda.</div>';
+			return;
+		}
 
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$this->auditObserve($data_budget);
@@ -2235,6 +2284,20 @@ class Expense extends Admin_Controller
 		$id_expense_detail		= $this->input->post("id_expense_detail");
 		$no_doc_kasbon			= $this->input->post("no_doc_kasbon");
 		$idKasbon				= $this->input->post("idKasbon");
+
+		$routine_references = array();
+		foreach ((array)$id_expense_detail as $key => $reference) {
+			// Detail PR pada report kasbon bukan ID sumber pengajuan rutin.
+			if (empty($no_doc_kasbon) && empty($id_kasbon[$key])) { $routine_references[] = $reference; }
+		}
+		if (!$this->ownsReportKasbonReferences(array_merge(array($no_doc_kasbon), (array)$id_kasbon), $routine_references)) {
+			$this->completeAudit('Referensi kasbon expense report tidak dapat diakses', 0, array(
+				'id' => $id, 'no_doc' => $no_doc,
+				'outcome' => $this->auditQueriesOk ? 'forbidden' : 'query_error', 'reason' => 'kasbon_not_accessible'
+			));
+			echo json_encode(array('save' => false, 'message' => 'Kasbon yang dipilih tidak tersedia untuk akun Anda.'));
+			return;
+		}
 
 		$pengembalian = $this->input->post('pengembalian');
 		if (!isset($pengembalian)) {
@@ -5810,7 +5873,7 @@ class Expense extends Admin_Controller
 	{
 		$post = $this->input->post();
 		// Lookup role memakai Query Builder yang sama; selesaikan sebelum menyusun query daftar.
-		$canViewAll = $this->canViewAllExpenseRequesters();
+		$canViewAll = $this->canViewAllExpenses();
 
 		$all = (isset($post['all']) && !empty($post['all']) && $post['all'] == '1') ? $post['all'] : '';
 
@@ -5847,7 +5910,7 @@ class Expense extends Admin_Controller
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
 		if (!$canViewAll) {
-			$this->db->where('a.nama', $this->auth->user_name());
+			$this->db->where('a.created_by', $this->auth->user_name());
 		}
 
 		$this->db->order_by('a.created_on', 'DESC');
@@ -6937,7 +7000,7 @@ class Expense extends Admin_Controller
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = $this->canViewAllExpenseRequesters();
+		$is_admin = $this->canViewAllExpenses();
 
 		$this->db->from('tr_expense a');
 		$this->db->where('a.lebih_bayar >', 0);
@@ -6952,7 +7015,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
 		$count_all = $this->db->count_all_results();
 
@@ -6971,7 +7034,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
 		if (!empty($search)) {
 			$this->db->group_start();
@@ -7197,7 +7260,7 @@ class Expense extends Admin_Controller
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = $this->canViewAllExpenseRequesters();
+		$is_admin = $this->canViewAllExpenses();
 
 		$this->db->from('tr_expense a');
 		$this->db->where('a.kurang_bayar >', 0);
@@ -7212,7 +7275,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
 		$count_all = $this->db->count_all_results();
 
@@ -7233,7 +7296,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
 		if (!empty($search)) {
 			$this->db->group_start();
