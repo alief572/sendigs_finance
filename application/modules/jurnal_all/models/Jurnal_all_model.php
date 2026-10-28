@@ -1,13 +1,14 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Jurnal_debt_groups.php';
+require_once dirname(__DIR__).'/libraries/Payment_reference.php';
 
 class Jurnal_all_model extends BF_Model
 {
     const SOURCES = [
         'INV'=>['Invoicing'], 'RCV'=>['Penerimaan Piutang'],
         'PAY'=>['Payment','Transport','Transportasi','Kasbon','Expense'],
-        'EXP'=>['Expense Report','Expense Report Consultant'],
+        'EXP'=>['Expense Report','Expense Report Consultant','Pengembalian Kasbon'],
         'PCS'=>['Petty Cash','Refill Pettycash','Payment Hutang Petty Cash']
     ];
     const TITLES = ['INV'=>'Jurnal Invoicing','RCV'=>'Jurnal Penerimaan','PAY'=>'Jurnal Pembayaran','EXP'=>'Jurnal Expense Report','PCS'=>'Jurnal Pencatatan Petty Cash'];
@@ -20,6 +21,7 @@ class Jurnal_all_model extends BF_Model
     private $userMap=null;
     private $postingColumnsReady=null;
     private $debtResolver=null;
+    private $paymentReference=null;
 
     public function debt_groups($refresh=false)
     {
@@ -121,7 +123,7 @@ class Jurnal_all_model extends BF_Model
             }
         }
         $rows = $this->read($this->db->get())->result_array();
-        $this->enrich($rows);
+        $this->enrich($rows, $posted);
         if($f['tab']==='PAY')foreach($this->debt_groups()->all() as $detail){
             $header=$detail['header'];
             if($posted?($header['group_status']!=='Sudah posting'):($header['group_status']==='Sudah posting'))continue;
@@ -219,9 +221,9 @@ class Jurnal_all_model extends BF_Model
         $anchor['source_numbers']=implode(', ',array_unique(array_filter(array_column($rows,'no_jurnal'))));
         $anchor['receipt_lines']=count(array_filter($rows,function($r){return !in_array($r['coa'],['1102-01-01','1106-01-02','7201-01-04','1106-01-05'],true)&&($this->cents($r['debit'])>0||$this->cents($r['kredit'])>0);}));
         $anchor['active_lines']=count(array_filter($rows,function($r){return $this->cents($r['debit'])>0||$this->cents($r['kredit'])>0;}));
-        $headers=[$anchor]; $this->enrich($headers); $anchor=$headers[0];
+        $headers=[$anchor]; $this->enrich($headers, $posted); $anchor=$headers[0];
         if (!$posted && !$this->eligible($anchor)) throw new InvalidArgumentException('Dokumen sumber jurnal tidak tersedia.');
-        return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit];
+        return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit,'can_post'=>empty($anchor['payment_reference_error'])];
     }
 
     public function posting_metadata_ready()
@@ -692,8 +694,11 @@ class Jurnal_all_model extends BF_Model
     private function scalar($value) { return is_scalar($value) ? mb_substr((string)$value,0,255,'UTF-8') : ''; }
     private function read($query) { if ($query===false) throw new RuntimeException('Gagal membaca data jurnal.'); return $query; }
 
-    private function enrich(&$rows)
+    private function enrich(&$rows, $posted = false)
     {
+        if (!$posted) {
+            if ($this->paymentReference===null) $this->paymentReference=new Payment_reference((object)['db'=>$this->db], true);
+        }
         $invoices=[]; $receipts=[]; $paymentKeys=[]; $pettyNumbers=[]; $expenseNumbers=[];
         foreach ($rows as $row) {
             $source=$this->source($row['jenis_transaksi']);
@@ -711,6 +716,12 @@ class Jurnal_all_model extends BF_Model
         $pettyReports=$this->pettyReportMap(array_unique($pettyNumbers));
         $expenseMap=$this->expenseMap($expenseNumbers);
         $paymentMap=$paymentKeys ? $this->paymentMap($paymentKeys) : [];
+        if (!$posted) {
+            $keys=[];foreach($rows as $row)if($row['jenis_transaksi']==='Payment')$keys[]=$row['no_transaksi'];
+            $known=[];foreach(($paymentMap['id'] ?? []) as $bucket)foreach($bucket as $p)$known[$p['id']]=$p;
+            try { $this->paymentReference->prime($keys,$known); }
+            catch (Throwable $error) { Payment_reference::log('Payment: batch relasi voucher belum dapat diperiksa.'); }
+        }
         $paymentCompanions=$this->paymentCompanionMap($rows);
         foreach ($rows as &$row) {
             $row['source']=$this->source($row['jenis_transaksi']); $row['tab']=$this->tab($row['jenis_transaksi']);
@@ -753,11 +764,12 @@ class Jurnal_all_model extends BF_Model
                     foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? []) as $p) $matches[$p['id']]=$p;
                 }
                 $docs=[]; $categories=[]; $vouchers=[];
+                $categoryNames=['kasbon'=>'Kasbon','transport'=>'Transport','transportasi'=>'Transport','periodik'=>'Periodik','expense'=>'Expense','refill_pettycash'=>'Refill Petty Cash','petty_cash_hutang'=>'Payment Hutang Petty Cash'];
                 foreach ($matches as $p) {
                     $docs[]=$p['no_doc'];
                     $voucher=trim((string)($p['id_payment'] ?? ''));
                     if ($voucher!=='') $vouchers[]=$voucher;
-                    $category=['kasbon'=>'Kasbon','transport'=>'Transport','transportasi'=>'Transport','periodik'=>'Periodik','expense'=>'Expense','refill_pettycash'=>'Refill Petty Cash','petty_cash_hutang'=>'Payment Hutang Petty Cash'][$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
+                    $category=$categoryNames[$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
                     if ($category!=='') $categories[]=$category;
                 }
                 if ($docs) $row['no_referensi']=implode(', ',array_unique($docs));
@@ -774,6 +786,25 @@ class Jurnal_all_model extends BF_Model
                 $row['payment_available']=(bool)$matches;
                 $row['petty_payment_eligible']=false;
                 foreach ($matches as $p) if (in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)||stripos($p['no_doc'],'RPC')!==false) $row['petty_payment_eligible']=true;
+                if (!$posted && $row['jenis_transaksi']==='Payment') {
+                    try {
+                        if ($this->paymentReference===null) $this->paymentReference=new Payment_reference((object)['db'=>$this->db], true);
+                        $reference=$this->paymentReference->resolve($row['no_transaksi']);
+                        $row['payment_voucher']=$reference['voucher'];
+                        $row['display_no_transaksi']=$reference['voucher'];
+                        $row['no_referensi']=implode(', ',array_unique(array_column($reference['approvals'],'no_doc')));
+                        $categories=[];
+                        foreach($reference['approvals'] as $p)$categories[]=$categoryNames[$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
+                        $row['categories']=array_values(array_unique(array_filter($categories,'strlen')));
+                        $headerCategories=$row['categories'];sort($headerCategories,SORT_NATURAL|SORT_FLAG_CASE);
+                        $row['extra_search']=implode(' ',array_column($reference['approvals'],'id'));
+                        $row['payment_available']=true;
+                        $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.$reference['voucher'];
+                    } catch (Throwable $error) {
+                        $row['display_no_transaksi']='-';
+                        $row['payment_reference_error']=$error instanceof DomainException?$error->getMessage():'Relasi nomor pembayaran belum dapat diverifikasi.';
+                    }
+                }
             }
             if ($row['source']==='EXP') {
                 $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']];
@@ -800,7 +831,7 @@ class Jurnal_all_model extends BF_Model
     private function expenseMap($numbers)
     {
         $map=[]; $headers=[]; $links=[]; $totals=[];
-        $regular=array_unique($numbers['Expense Report'] ?? []);
+        $regular=array_unique(array_merge($numbers['Expense Report'] ?? [],$numbers['Pengembalian Kasbon'] ?? []));
         foreach (array_chunk($regular,200) as $chunk) {
             foreach ($this->read($this->db->where_in('no_doc',$chunk)->get('tr_expense'))->result_array() as $expense) {
                 $headers[$expense['no_doc']]=$expense;
@@ -837,6 +868,10 @@ class Jurnal_all_model extends BF_Model
             }
             $map['Expense Report'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
                 'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').' - '.($names?implode(', ',$names):'-')];
+            if (in_array($number,$numbers['Pengembalian Kasbon'] ?? [],true)) {
+                $map['Pengembalian Kasbon'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
+                    'description'=>'Pengembalian Kasbon - '.($names?implode(', ',$names):'-')];
+            }
         }
         foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
             $refs=[];

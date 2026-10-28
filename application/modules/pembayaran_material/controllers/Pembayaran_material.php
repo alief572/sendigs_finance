@@ -1571,7 +1571,11 @@ class Pembayaran_material extends Admin_Controller
 		}
 
 
+		require_once dirname(__DIR__, 2).'/jurnal_all/libraries/Payment_reference.php';
+		$referenceLocked = false;
 		try {
+			Payment_reference::acquire($this->db);
+			$referenceLocked = true;
 			if (!is_string($post['id_payment'])) { throw new RuntimeException('Invalid payment selection'); }
 			$selectedIds = explode(',', $post['id_payment']);
 			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
@@ -1588,6 +1592,9 @@ class Pembayaran_material extends Admin_Controller
 			$id_payment_paid = $this->Pembayaran_material_model->generate_id_payment_paid($kode_bank, $post['tgl_bayar']);
 			$this->auditQuery($id_payment_paid);
 			if (!$id_payment_paid) { throw new RuntimeException('Payment number unavailable'); }
+			if ((new Payment_reference($this))->rows($id_payment_paid)) {
+				throw new DomainException('Nomor pembayaran bertabrakan dengan kelompok jurnal Payment lama; perlu rekonsiliasi.');
+			}
 
 			$config['upload_path'] = 'assets/expense/';
 			$config['allowed_types'] = '*';
@@ -1804,7 +1811,7 @@ class Pembayaran_material extends Admin_Controller
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
 						'keterangan' => $ket_jurnal,
-						'no_transaksi' => $post['id_payment'],
+						'no_transaksi' => $tipe_jurnal === 'Payment' ? $id_payment_paid : $post['id_payment'],
 						'jenis_transaksi' => $tipe_jurnal,
 						'id_divisi' => $item_jurnal['id_divisi'],
 						'nm_divisi' => $item_jurnal['nm_divisi'],
@@ -2120,6 +2127,8 @@ class Pembayaran_material extends Admin_Controller
 
 			$this->completeAudit('Pembayaran gagal', 0, array('reason' => $e instanceof Invalid_payment_journal ? 'invalid_journal' : ($e instanceof DomainException ? 'incompatible_selection' : 'operation_failure')));
 			echo json_encode($response);
+		} finally {
+			if ($referenceLocked) Payment_reference::release($this->db);
 		}
 	}
 

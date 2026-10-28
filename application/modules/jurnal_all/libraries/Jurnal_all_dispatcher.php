@@ -39,7 +39,13 @@ class Jurnal_all_dispatcher
         if (!$lock || !($lock=$lock->row()) || (int)$lock->acquired!==1) throw new RuntimeException('Transaksi sedang diproses. Muat ulang sebelum mencoba kembali.');
         $original=$_POST;
         $bufferLevel=ob_get_level();
+        $referenceLocked=false;
         try {
+            if ($header['jenis_transaksi']==='Payment') {
+                require_once __DIR__.'/Payment_reference.php';
+                Payment_reference::acquire($this->ci->db);
+                $referenceLocked=true;
+            }
             $fresh=$model->detail($id,false);
             if ($model->key($fresh['header'])!==$model->key($header)) throw new InvalidArgumentException('Kelompok jurnal berubah. Silakan muat ulang.');
             if ($action==='post') {
@@ -82,6 +88,7 @@ class Jurnal_all_dispatcher
         } finally {
             $_POST=$original;
             while (ob_get_level()>$bufferLevel) ob_end_clean();
+            if ($referenceLocked) Payment_reference::release($this->ci->db);
             try {
                 if ($this->ci->db->query('SELECT RELEASE_LOCK(?)',[$key])===false) log_message('error','Jurnal All: advisory lock release tidak tersedia.');
             } catch (Throwable $error) { log_message('error','Jurnal All: advisory lock release tidak tersedia.'); }

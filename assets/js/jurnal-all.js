@@ -28,6 +28,7 @@
         const form = find('#ja-filters');
         let active = tabs.includes(el.dataset.tab) ? el.dataset.tab : 'INV';
         let generation = 0, detailGeneration = 0, busy = false, loading = false, selected = null, searchTimer, summaryGeneration = 0;
+        let canPost = false, postBlockReason = '';
         const message = (text, modal, warning) => { const box = find(modal ? '#ja-modal-message' : '#ja-message'); box.classList.toggle('alert-warning', !!warning); box.classList.toggle('alert-danger', !warning); box.textContent = text || ''; box.hidden = !text; };
         function params(values) {
             const result = new URLSearchParams();
@@ -141,6 +142,8 @@
             if (busy || loading) return;
             const token = ++detailGeneration;
             selected = { id: button.dataset.id, source: button.dataset.source };
+            canPost = false; postBlockReason = '';
+            find('#ja-post').disabled = true;
             find('#ja-post').hidden = true; find('#ja-revise').hidden = true; find('#ja-reason-wrap').hidden = true; find('#ja-reason').value = '';
             find('#ja-detail').textContent = 'Memuat detail…'; message('', true);
             root.jQuery(find('#ja-modal')).modal('show');
@@ -148,7 +151,13 @@
                 const detail = await request('preview', selected);
                 if (token !== detailGeneration) return;
                 find('#ja-detail').innerHTML = detail.html;
-                find('#ja-post').hidden = !detail.can_post; find('#ja-revise').hidden = !detail.can_revise; find('#ja-reason-wrap').hidden = !detail.can_revise;
+                canPost = !posted && canManage && !!detail.can_post;
+                postBlockReason = detail.post_block_reason || 'Posting belum tersedia; periksa peringatan detail jurnal.';
+                find('#ja-post').hidden = posted || !canManage || detail.show_post === false;
+                find('#ja-post').disabled = !canPost;
+                find('#ja-post').setAttribute('aria-disabled', String(!canPost));
+                find('#ja-post').setAttribute('title', canPost ? '' : postBlockReason);
+                find('#ja-revise').hidden = !detail.can_revise; find('#ja-reason-wrap').hidden = !detail.can_revise;
                 if (detail.blocked_coa) message('Posting diblokir: COA hutang ke STM belum final dikonfirmasi Finance.', true);
             } catch (error) { if (token === detailGeneration) message(error.message, true); }
         }
@@ -156,6 +165,7 @@
             if (busy || !selected) return;
             const reason = find('#ja-reason').value.trim();
             const isRevise = action === 'revisi_jurnal';
+            if (!isRevise && !canPost) { message(postBlockReason, true); return; }
             if (isRevise && !reason) {
                 message('Alasan revisi wajib diisi.', true);
                 find('#ja-reason').focus();
@@ -220,7 +230,7 @@
                     root.swal(errorTitle, errorMsg, 'error');
                 }
             }
-            finally { busy = false; find('#ja-post').disabled = false; find('#ja-revise').disabled = false; }
+            finally { busy = false; find('#ja-post').disabled = !canPost; find('#ja-revise').disabled = false; }
         }
         all('.ja-tab, .ja-card').forEach(button => button.addEventListener('click', () => activate(button.dataset.tab)));
         all('.ja-tab').forEach(button => button.addEventListener('keydown', event => {
@@ -243,7 +253,7 @@
         });
         find('#ja-action-form').addEventListener('submit', event => { event.preventDefault(); write('save_posting_jurnal'); });
         find('#ja-revise').addEventListener('click', () => write('revisi_jurnal'));
-        root.jQuery(find('#ja-modal')).on('hide.bs.modal', event => { if (busy) event.preventDefault(); else { detailGeneration++; selected = null; } });
+        root.jQuery(find('#ja-modal')).on('hide.bs.modal', event => { if (busy) event.preventDefault(); else { detailGeneration++; selected = null; canPost = false; } });
         activate(active); summary();
     }
     if (typeof module !== 'undefined' && module.exports) module.exports = { defaults, columns, escape, money, journalDate, mount };

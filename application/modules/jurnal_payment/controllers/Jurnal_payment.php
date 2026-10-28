@@ -152,6 +152,14 @@ class Jurnal_payment extends Admin_Controller
             if (!$get_jurnal) {
                 throw new Exception('Data Jurnal_payment tidak ditemukan');
             }
+            if ($get_jurnal->jenis_transaksi === 'Payment') {
+                $this->db->trans_rollback();
+                require_once dirname(__DIR__, 2).'/jurnal_all/libraries/Payment_posting.php';
+                try { $result = (new Payment_posting($this))->execute($post['id'] ?? 0); }
+                catch (Throwable $error) { $result = ['save'=>0,'msg'=>$error->getMessage()]; }
+                echo json_encode($result);
+                return;
+            }
             if($get_jurnal->jenis_transaksi==='Payment Hutang Petty Cash'){
                 $this->db->trans_rollback();
                 require_once dirname(__DIR__,2).'/jurnal_all/libraries/Jurnal_debt_posting.php';
