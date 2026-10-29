@@ -321,3 +321,17 @@ Status koreksi creator/finance: fase 1–3 selesai. Visibility 3423 checks dan q
 3. GREEN: daftar/empty/query-error, kedua sumber, admin/finance/user berizin approval, URL/post milik sendiri/lain/missing/invalid, kegagalan DB, audit dan tidak ada write sebelum penolakan. Regresi batch audit terdampak dan upload, lint/whitespace; baca hitungan riil read-only tanpa browser.
 
 Status pembatasan pemilihan kasbon: fase 1–3 selesai. Filter kedua cabang UNION, JSON kosong, guard pembukaan/simpan report, konteks ID detail PR, serta audit telah diverifikasi. Suite lengkap Expense PASS dan validasi SQL aktual read-only: 189 eligible keseluruhan, 0 buatan Alief. Tidak mengubah database atau hak akun.
+
+# Perbaikan voucher Report Jurnal All — 29 Oktober 2026
+
+- Fase 1: Tambahkan tes regresi report PAY untuk tabrakan ID approval/voucher, multi-approval, dan histori tanpa voucher.
+- Fase 2: Batasi resolver mode report source PAY pada `payment_approve.id_payment`; pertahankan pending/posting dan pengelompokan hutang petty cash.
+- Fase 3: Verifikasi daftar/detail/filter/search/Excel dan nominal, jalankan regresi terkait serta lint PHP, perbarui checkpoint dan README.
+- Kriteria selesai: tidak ada fallback report PAY ke `id`/`no_doc`; histori tanpa kecocokan tetap terlihat dengan metadata pembayaran `-`; tidak mengubah data database atau perubahan workspace lain.
+
+## Pemulihan tiga histori PAY terverifikasi — 29 Oktober 2026
+
+- Fase 1: Konfigurasi mapping eksplisit `BK--0626-0019` → `BK--0926-0001`, `BK--0426-0045` → `BK--0426-0008`, `BK--0726-0040` → `BK--0126-0001`, dengan guard jenis/company/tanggal/total debit-kredit. Tambahkan tes yang gagal sebelum implementasi.
+- Fase 2: Terapkan mapping hanya untuk lookup `id_payment` pada report; identitas sumber tetap dipakai untuk grouping, detail, dan metadata accounting. Mapping yang guard-nya gagal tidak boleh menggunakan identitas lain sebagai fallback.
+- Fase 3: Uji regresi report/query/metadata/controller dan lint; verifikasi model aktual secara read-only untuk daftar/detail/search/filter/Excel. Perbarui README dan checkpoint.
+- Kriteria: ketiga voucher/referensi/kategori pulih, nomor accounting serta total enam transaksi Rp25.394.927 tetap, tidak mengubah data database, posting, maupun resolver khusus petty cash.

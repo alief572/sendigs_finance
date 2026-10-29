@@ -3127,3 +3127,32 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
   - `Posting_test.php` (Jurnal Expense) -> PASS (153 assertions)
   - PHP 7.4 Lint pada seluruh file -> 0 errors.
 - **Verifikasi Remote**: `git ls-remote origin development` mengonfirmasi HEAD remote identik dengan commit `d34ee0a956493644b9aaf0135256cec14802c8e6`. Workspace lokal modul lainnya tetap dipertahankan.
+# Report Jurnal All: pencocokan voucher PAY — 29 Oktober 2026
+
+- Selesai: grounding controller/model bersama; tes awal mereproduksi collision; implementasi `id_payment` saja pada report source PAY; README dan fixture mixed Payment disesuaikan.
+- Status task: implementasi, tes regresi, review diff, dan dokumentasi selesai. Tidak ada fase implementasi tersisa; validasi database aktual tetap terbatas oleh akses fixture MySQL.
+- File task: `Jurnal_all_model.php`, `Report_payment_mapping_test.php`, `Mixed_payment_metadata_test.php`, README `report_jurnal_all`, `docs/implementation-plan.md`, checkpoint ini.
+- Keputusan: tanpa fallback `id`/`no_doc`; jurnal tanpa kecocokan tetap terlihat dengan metadata pembayaran `-`; pending/posting dan resolver khusus Refill/Hutang Petty Cash dipertahankan. Tidak ada migrasi atau perubahan data aplikasi.
+- Validasi akhir: 16 skrip PHP independen dari MySQL lulus (Audit, Challenger concurrency, Controller, Debt group, Dispatcher, Legacy posting, Metadata, Mixed payment metadata, Payment mapping, Payment normalization, Payment reference, Pengembalian kasbon, Petty posting, Query, Report payment mapping, Revision). Tes report baru: 36 assertions; Query: 140; Mixed metadata: 21; client: 54. PHP lint model dan kedua file tes lulus. Tes report juga mencakup token voucher CSV, semua tipe PAY, total tidak berlipat, dan placeholder histori. Pemeriksaan whitespace task lulus setelah merapikan newline akhir dokumen.
+- Masalah validasi: `Challenger_stress_test.php` gagal pada assertion rollback counter invoicing; diuji ulang memakai model versi HEAD di scratch dan gagal pada assertion identik (bukan regresi perubahan ini). `Debt_posting_test.php` tidak dapat terhubung MySQL disposable karena autentikasi root ditolak; jangan ulangi tanpa perubahan akses. Tes MySQL lain tidak dijalankan karena hambatan lingkungan yang sama.
+- Perubahan workspace lain dipertahankan; tidak ada tes browser atau backfill histori.
+
+## Pemulihan metadata tiga histori PAY — 29 Oktober 2026
+
+- Fase selesai: diagnosis database read-only; tes gagal sebelum implementasi; konfigurasi mapping dan guard; regresi lokal; verifikasi model development read-only; review serta dokumentasi.
+- Status akhir: SELESAI; tidak ada fase implementasi tersisa. Tidak ada perubahan data database atau posting ulang.
+- File task: `jurnal_all/config/report_payment_history.php`, `jurnal_all/models/Jurnal_all_model.php`, `jurnal_all/tests/Report_payment_history_test.php`, `jurnal_all/tests/Report_payment_history_readonly.php`, README `report_jurnal_all`, rencana implementasi, checkpoint ini.
+- Mapping: `BK--0626-0019` → `BK--0926-0001` (Periodik; `PERIODIK-2026-00039`); `BK--0426-0045` → `BK--0426-0008` (Transport; `RQ-2026-00052`); `BK--0726-0040` → `BK--0126-0001` (Direct Payment; `DPM-2026-00001`).
+- Keputusan: konfigurasi eksplisit tiga histori dengan guard jenis/company/tanggal/debit/kredit, hanya untuk lookup report melalui `id_payment`. Native key dipertahankan agar nomor accounting tidak putus. Guard gagal menghasilkan metadata `-`, termasuk saat native key bertabrakan dengan voucher lain. Tidak ada fallback umum ke approval ID.
+- Validasi lokal akhir: 17 skrip tes PHP PASS. History 47 assertions; Report mapping 36; Mixed metadata 21; Query 140; Metadata 20; Controller 89; Payment mapping 47; Debt group 26; Payment reference 679; Dispatcher 45; Audit 10; tambahan normalization 464, legacy posting 198, petty posting 113, revision 24, concurrency/tampering 72, pengembalian kasbon 16. Lint empat file PHP task PASS; review diff dan whitespace task PASS.
+- Validasi aktual: `Report_payment_history_readonly.php` PASS 88 assertions pada `db_sendigs_ss_dev`. Daftar/detail/search/filter/Excel cocok; 6/5/23 baris COA tetap; nomor accounting September `101BK2600004`, April dan Januari `101BK2600001` tetap pada company/tanggal masing-masing. Nominal Rp985.350, Rp61.000, Rp22.865.077; total enam transaksi Rp25.394.927 debit/kredit. Snapshot source/payment/posting tidak berubah; setiap koneksi READ ONLY dan ROLLBACK.
+- Hambatan lama tidak diulang: fixture MySQL disposable ditolak autentikasi; stress counter invoicing gagal identik pada baseline task sebelumnya. Akses SELECT development berhasil melalui eskalasi jaringan, sehingga celah verifikasi data aktual untuk tiga histori ini sudah ditutup.
+- Sisa risiko/TODO: tidak ada blocker task ini. Mapping sengaja hanya untuk tiga histori; data historis lain memerlukan bukti terpisah. Guard dan verifier snapshot dapat menolak data yang berubah dan harus ditinjau, bukan dilonggarkan. Tidak ada tes browser, commit/push, atau modifikasi ledger/source/payment.
+
+## Publikasi perbaikan PAY ke development — 29 Oktober 2026
+
+- User mengotorisasi commit/push perbaikan `jurnal_all` dan `report_jurnal_all` ke GitHub branch `development`.
+- Grounding: branch lokal `development` dan HEAD remote sama-sama `8e0619750402c289a3de106717f80ed07529ed25`; index awal kosong. Perubahan modul lain di working tree tidak disertakan.
+- Cakupan: model bersama, config tiga histori, tiga file tes report, fixture mixed payment, README report, checkpoint, dan hanya tambahan rencana task jurnal pada index `docs/implementation-plan.md`. Isi lokal rencana task lain dipertahankan.
+- Validasi yang digunakan: 17 skrip PHP PASS, 88 pemeriksaan model database development READ ONLY PASS, lint dan whitespace PASS dari implementasi yang tidak berubah. Tidak mengulang tes yang sama atau mencoba ulang fixture MySQL/stress invoicing yang terhambat.
+- Status: review dan persiapan commit selesai; berikutnya commit scoped, push normal tanpa force, serta cocokkan SHA hasil push dengan branch remote.

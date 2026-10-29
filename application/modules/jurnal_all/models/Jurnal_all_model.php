@@ -22,6 +22,7 @@ class Jurnal_all_model extends BF_Model
     private $postingColumnsReady=null;
     private $debtResolver=null;
     private $paymentReference=null;
+    private $reportPaymentHistory=null;
 
     public function debt_groups($refresh=false)
     {
@@ -711,7 +712,10 @@ class Jurnal_all_model extends BF_Model
             if ($source==='EXP') $expenseNumbers[$row['jenis_transaksi']][]=$row['no_transaksi'];
             if ($source==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $pettyNumbers[]=$row['no_transaksi'];
             if ($source==='RCV') $receipts[]=$row['no_transaksi'];
-            if ($source==='PAY'||($source==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) $paymentKeys[]=$row['no_transaksi'];
+            if ($source==='PAY'||($source==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) {
+                $lookupKey=$this->paymentLookupKey($row,$posted);
+                if ($lookupKey!==null) $paymentKeys[]=$lookupKey;
+            }
         }
         $receiptMap=[];
         if ($receipts) foreach ($this->read($this->db->select('id_header, MIN(id_inv) AS id_inv')->where_in('id_header',array_unique($receipts))->group_by('id_header')->get('tr_penerimaan_piutang_detail'))->result_array() as $r) {
@@ -764,9 +768,16 @@ class Jurnal_all_model extends BF_Model
                 }
             }
             if ($row['source']==='PAY'||($row['source']==='PCS'&&$row['jenis_transaksi']!=='Petty Cash')) {
+                $voucherOnly=$posted && $row['source']==='PAY';
+                $lookupKey=$this->paymentLookupKey($row,$posted);
                 $matches=[];
-                foreach (array_unique(array_map('trim',explode(',',$row['no_transaksi']))) as $key) {
-                    foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? []) as $p) $matches[$p['id']]=$p;
+                foreach ($lookupKey===null?[]:array_unique(array_map('trim',explode(',',$lookupKey))) as $key) {
+                    foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? [],$voucherOnly) as $p) $matches[$p['id']]=$p;
+                }
+                if ($voucherOnly) {
+                    $row['display_no_transaksi']='-';
+                    $row['no_referensi']='-';
+                    $row['categories']=['-'];
                 }
                 $docs=[]; $categories=[]; $vouchers=[];
                 $categoryNames=['kasbon'=>'Kasbon','transport'=>'Transport','transportasi'=>'Transport','periodik'=>'Periodik','expense'=>'Expense','refill_pettycash'=>'Refill Petty Cash','petty_cash_hutang'=>'Payment Hutang Petty Cash'];
@@ -945,6 +956,22 @@ class Jurnal_all_model extends BF_Model
         return $map;
     }
 
+    private function paymentLookupKey($row,$posted)
+    {
+        $native=$row['no_transaksi'];
+        if (!$posted || $this->source($row['jenis_transaksi'])!=='PAY') return $native;
+        if ($this->reportPaymentHistory===null) $this->reportPaymentHistory=require dirname(__DIR__).'/config/report_payment_history.php';
+        $history=$this->reportPaymentHistory[$native] ?? null;
+        if ($history===null) return $native;
+        foreach (['jenis_transaksi','id_company','tgl_jurnal'] as $field) {
+            if ((string)$row[$field]!==$history[$field]) return null;
+        }
+        foreach (['debit','kredit'] as $field) {
+            if ($this->cents($row[$field])!==$this->cents($history[$field])) return null;
+        }
+        return $history['voucher'];
+    }
+
     private function paymentMap($numbers)
     {
         $keys=[];
@@ -977,10 +1004,10 @@ class Jurnal_all_model extends BF_Model
         return $this->paymentCompanions;
     }
 
-    private function resolvePayments($map,$key,$type,$excludedTypes=[])
+    private function resolvePayments($map,$key,$type,$excludedTypes=[],$voucherOnly=false)
     {
         $requiredType=['Payment Hutang Petty Cash'=>'petty_cash_hutang','Refill Pettycash'=>'refill_pettycash'][$type] ?? null;
-        foreach (['id','id_payment','no_doc'] as $field) {
+        foreach ($voucherOnly?['id_payment']:['id','id_payment','no_doc'] as $field) {
             $matches=$map[$field][$key] ?? [];
             if ($requiredType!==null) $matches=array_filter($matches,function($payment)use($requiredType){return $payment['tipe']===$requiredType;});
             if ($type==='Payment' && $excludedTypes) $matches=array_filter($matches,function($payment)use($excludedTypes){return !in_array($payment['tipe'],$excludedTypes,true);});
