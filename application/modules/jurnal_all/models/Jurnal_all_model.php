@@ -239,6 +239,24 @@ class Jurnal_all_model extends BF_Model
                 $anchor['company_error'] = $error instanceof DomainException ? $error->getMessage() : 'Validasi sumber company belum dapat dilakukan; posting diblokir.';
             }
         }
+        $lineDivs = [];
+        foreach ($rows as &$r) {
+            if (empty($r['nm_divisi']) && !empty($anchor['nm_divisi'])) {
+                $r['nm_divisi'] = $anchor['nm_divisi'];
+            }
+            if (!empty($r['nm_divisi'])) $lineDivs[] = $r['nm_divisi'];
+        }
+        unset($r);
+        if ($lineDivs) {
+            $lineDivMap = $this->divisionMap($lineDivs);
+            if ($lineDivMap) {
+                foreach ($rows as &$r) {
+                    $c = trim((string)($r['nm_divisi'] ?? ''));
+                    if (isset($lineDivMap[$c])) $r['nm_divisi'] = $lineDivMap[$c];
+                }
+                unset($r);
+            }
+        }
         return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit,'can_post'=>empty($anchor['payment_reference_error']) && empty($anchor['company_error'])];
     }
 
@@ -686,6 +704,25 @@ class Jurnal_all_model extends BF_Model
             $numbers=array_unique(array_column($chunk,'no_transaksi'));
             $rows=$this->read($this->db->where_in('no_transaksi',$numbers)->order_by('id','asc')->get('tr_jurnal'))->result_array();
             $map=[]; foreach ($chunk as $header) $map[$this->key($header)]=$header;
+            $lineDivs = [];
+            foreach ($rows as &$r) {
+                $h = $map[$this->key($r)] ?? null;
+                if (empty($r['nm_divisi']) && !empty($h['nm_divisi'])) {
+                    $r['nm_divisi'] = $h['nm_divisi'];
+                }
+                if (!empty($r['nm_divisi'])) $lineDivs[] = $r['nm_divisi'];
+            }
+            unset($r);
+            if ($lineDivs) {
+                $lineDivMap = $this->divisionMap($lineDivs);
+                if ($lineDivMap) {
+                    foreach ($rows as &$r) {
+                        $c = trim((string)($r['nm_divisi'] ?? ''));
+                        if (isset($lineDivMap[$c])) $r['nm_divisi'] = $lineDivMap[$c];
+                    }
+                    unset($r);
+                }
+            }
             foreach ($rows as $row) {
                 $header=$map[$this->key($row)] ?? null;
                 if (!$header || ($posted ? (string)$row['sts']!=='1' : !$this->pending($row))) continue;
@@ -749,6 +786,7 @@ class Jurnal_all_model extends BF_Model
         }
         $invoiceMap=$this->invoiceMap(array_unique($invoices));
         $pettyReports=$this->pettyReportMap(array_unique($pettyNumbers));
+        $pettyDivisions=$this->pettyDivisionMap(array_unique($pettyNumbers));
         $expenseMap=$this->expenseMap($expenseNumbers);
         $paymentMap=$paymentKeys ? $this->paymentMap($paymentKeys) : [];
         if (!$posted) {
@@ -774,6 +812,9 @@ class Jurnal_all_model extends BF_Model
                     $row['invoice_available']=$invoice['no_invoice']!==null && ($row['source']==='RCV'||$invoice['no_invoice']!=='');
                     $row['no_referensi']=$invoice['no_invoice']; $row['id_company']=$invoice['company_id']; $row['nm_company']=$invoice['company_name'] ?? '';
                     $row['companies']=[['id'=>(string)$row['id_company'],'name'=>$row['nm_company']]];
+                    if (empty($row['nm_divisi']) && !empty($invoice['division_code'])) {
+                        $row['nm_divisi'] = $invoice['division_code'];
+                    }
                     $clean=function($v){$s=trim((string)$v);return ($s===''||$s==='-')?'':$s;};
                     $spk=$clean($invoice['id_spk_penawaran'] ?? '');
                     $penawaran=$clean($invoice['id_penawaran'] ?? '');
@@ -851,12 +892,20 @@ class Jurnal_all_model extends BF_Model
             if ($row['source']==='EXP') {
                 $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']];
                 $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
+                if (empty($row['nm_divisi']) && !empty($expense['departement'])) {
+                    $row['nm_divisi'] = $expense['departement'];
+                }
                 if (!$posted) {
                     try { Expense_company::storedCompany([$row]); }
                     catch (DomainException $error) { $row['can_post']=false; $row['post_block_reason']=$error->getMessage(); }
                 }
             }
-            if ($row['source']==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $row['no_referensi']=implode(', ',$pettyReports[$row['no_transaksi']] ?? []);
+            if ($row['source']==='PCS'&&$row['jenis_transaksi']==='Petty Cash') {
+                $row['no_referensi']=implode(', ',$pettyReports[$row['no_transaksi']] ?? []);
+                if (empty($row['nm_divisi']) && !empty($pettyDivisions[$row['no_transaksi']])) {
+                    $row['nm_divisi'] = $pettyDivisions[$row['no_transaksi']];
+                }
+            }
             $row['category']=implode(', ',$row['categories']);
         }
         unset($row);
@@ -870,6 +919,20 @@ class Jurnal_all_model extends BF_Model
                 $row['nm_company']=implode(' / ',array_unique(array_column($row['companies'],'name')));
             }
             unset($row);
+        }
+        $rawDivs = [];
+        foreach ($rows as $r) {
+            if (!empty($r['nm_divisi'])) $rawDivs[] = $r['nm_divisi'];
+        }
+        if ($rawDivs) {
+            $divMap = $this->divisionMap($rawDivs);
+            if ($divMap) {
+                foreach ($rows as &$r) {
+                    $c = trim((string)($r['nm_divisi'] ?? ''));
+                    if (isset($divMap[$c])) $r['nm_divisi'] = $divMap[$c];
+                }
+                unset($r);
+            }
         }
         $this->postingMetadata($rows);
     }
@@ -895,7 +958,7 @@ class Jurnal_all_model extends BF_Model
         $keys=[]; foreach ($links as $values) $keys=array_merge($keys,$values);
         $kasbons=[];
         foreach (array_chunk(array_unique($keys),200) as $chunk) {
-            foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr,nama,created_by')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
+            foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr,nama,created_by,departement')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
         }
         $requesters=$this->expenseRequesters($kasbons);
         foreach ($regular as $number) {
@@ -912,11 +975,22 @@ class Jurnal_all_model extends BF_Model
                 $comparison=$totals[$number]['kasbon'] <=> $totals[$number]['expense'];
                 $kind=$comparison>0?'Pengembalian':($comparison<0?'Reimburse':'');
             }
+            $dept = trim((string)($expense['departement'] ?? ''));
+            if ($dept === '') {
+                foreach ($refs as $ref) {
+                    if (!empty($kasbons[$ref]['departement'])) {
+                        $dept = trim((string)$kasbons[$ref]['departement']);
+                        break;
+                    }
+                }
+            }
             $map['Expense Report'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
-                'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').($names?' - '.implode(', ',$names):'')];
+                'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').($names?' - '.implode(', ',$names):''),
+                'departement'=>$dept];
             if (in_array($number,$numbers['Pengembalian Kasbon'] ?? [],true)) {
                 $map['Pengembalian Kasbon'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
-                    'description'=>'Pengembalian Kasbon'.($names?' - '.implode(', ',$names):'')];
+                    'description'=>'Pengembalian Kasbon'.($names?' - '.implode(', ',$names):''),
+                    'departement'=>$dept];
             }
         }
         foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
@@ -986,6 +1060,63 @@ class Jurnal_all_model extends BF_Model
         return $map;
     }
 
+    private function pettyDivisionMap($numbers)
+    {
+        if (!$numbers) return [];
+        $map = [];
+        $requesters = [];
+        foreach (array_chunk($numbers, 200) as $chunk) {
+            $rows = $this->read($this->db->select('no_pencatatan, request_by')
+                ->where_in('no_pencatatan', $chunk)->get('tr_expense_petty_cash'))->result_array();
+            foreach ($rows as $r) {
+                $req = trim((string)($r['request_by'] ?? ''));
+                if ($req !== '') $requesters[$r['no_pencatatan']] = $req;
+            }
+        }
+        if (!$requesters) return [];
+
+        $hrisDb = defined('DBHRIS') ? DBHRIS : 'hr_sentral';
+        $empMap = [];
+        try {
+            $debug = $this->db->db_debug;
+            $this->db->db_debug = false;
+            $names = array_unique(array_values($requesters));
+            $likeClauses = [];
+            foreach ($names as $name) {
+                $first = explode(' ', $name)[0];
+                if (strlen($first) >= 3) {
+                    $escaped = $this->db->escape_like_str($first);
+                    $likeClauses[] = "name LIKE '%{$escaped}%'";
+                }
+            }
+            if ($likeClauses) {
+                $sql = "SELECT name, division_id, department_id FROM {$hrisDb}.employees WHERE " . implode(' OR ', $likeClauses);
+                $query = $this->db->query($sql);
+                if ($query && $query->num_rows() > 0) {
+                    $emps = $query->result_array();
+                    foreach ($names as $name) {
+                        $first = strtolower(explode(' ', $name)[0]);
+                        foreach ($emps as $e) {
+                            if (stripos(strtolower($e['name']), $first) !== false) {
+                                $div = !empty($e['division_id']) ? $e['division_id'] : $e['department_id'];
+                                if (!empty($div)) {
+                                    $empMap[$name] = $div;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            $this->db->db_debug = $debug;
+        } catch (Throwable $e) {}
+
+        foreach ($requesters as $no => $name) {
+            if (isset($empMap[$name])) $map[$no] = $empMap[$name];
+        }
+        return $map;
+    }
+
     private function pettyReportMap($numbers)
     {
         $map=[];
@@ -1009,7 +1140,8 @@ class Jurnal_all_model extends BF_Model
     {
         if (!$ids) return [];
         $company="COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company)";
-        $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran,b.id_penawaran,b.no_po,b.non_kons, ".$company.' AS company_id,co.nm_company AS company_name',false)
+        $division="COALESCE(NULLIF(TRIM(s.nm_divisi),''),NULLIF(TRIM(c.nm_divisi),''),NULLIF(TRIM(s.id_divisi),''),NULLIF(TRIM(c.id_divisi),''))";
+        $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran,b.id_penawaran,b.no_po,b.non_kons, ".$company.' AS company_id,co.nm_company AS company_name, '.$division.' AS division_code',false)
             ->from('tr_invoicing b')->join(DBCNL.'.kons_tr_penawaran c','c.id_quotation=b.id_penawaran','left')
             ->join(DBCNL.'.kons_tr_spk_penawaran s','s.id_spk_penawaran=b.id_spk_penawaran','left')
             ->join(DBCNL.'.kons_tr_penawaran_non_konsultasi n','n.id_penawaran=b.id_penawaran','left')
@@ -1077,6 +1209,95 @@ class Jurnal_all_model extends BF_Model
             if ($matches) return $matches;
         }
         return [];
+    }
+
+    public function divisionMap(array $rawCodes)
+    {
+        $codes = [];
+        foreach ($rawCodes as $c) {
+            $c = trim((string)$c);
+            if ($c !== '' && preg_match('/^(DEP|DIV)[A-Za-z0-9_-]+$/i', $c)) {
+                $codes[$c] = true;
+            }
+        }
+        if (!$codes) return [];
+
+        $map = [];
+        $keys = array_keys($codes);
+        $hrisDb = defined('DBHRIS') ? DBHRIS : 'hr_sentral';
+
+        // 1. Resolve via HRIS database (hr_sentral)
+        try {
+            $debug = $this->db->db_debug;
+            $this->db->db_debug = false;
+
+            $depKeys = array_values(array_filter($keys, function ($k) { return stripos($k, 'DEP') === 0; }));
+            if ($depKeys) {
+                $escaped = array_map(function ($k) { return "'" . $this->db->escape_str($k) . "'"; }, $depKeys);
+                $sql = "SELECT dep.id AS code, COALESCE(d.name, dep.name) AS division_name "
+                     . "FROM {$hrisDb}.departments dep "
+                     . "LEFT JOIN {$hrisDb}.divisions d ON d.id = dep.division_id "
+                     . "WHERE dep.id IN (" . implode(',', $escaped) . ")";
+                $query = $this->db->query($sql);
+                if ($query && $query->num_rows() > 0) {
+                    foreach ($query->result_array() as $r) {
+                        if (!empty($r['division_name'])) {
+                            $name = trim((string)$r['division_name']);
+                            $map[$r['code']] = $name;
+                            $map[strtoupper($r['code'])] = $name;
+                            $map[strtolower($r['code'])] = $name;
+                        }
+                    }
+                }
+            }
+
+            $divKeys = array_values(array_filter($keys, function ($k) { return stripos($k, 'DIV') === 0; }));
+            if ($divKeys) {
+                $escaped = array_map(function ($k) { return "'" . $this->db->escape_str($k) . "'"; }, $divKeys);
+                $sql = "SELECT d.id AS code, d.name AS division_name "
+                     . "FROM {$hrisDb}.divisions d "
+                     . "WHERE d.id IN (" . implode(',', $escaped) . ")";
+                $query = $this->db->query($sql);
+                if ($query && $query->num_rows() > 0) {
+                    foreach ($query->result_array() as $r) {
+                        if (!empty($r['division_name'])) {
+                            $name = trim((string)$r['division_name']);
+                            $map[$r['code']] = $name;
+                            $map[strtoupper($r['code'])] = $name;
+                            $map[strtolower($r['code'])] = $name;
+                        }
+                    }
+                }
+            }
+            $this->db->db_debug = $debug;
+        } catch (Throwable $e) {
+            // HRIS database inaccessible or mock environment
+        }
+
+        // 2. Fallback to local tables if any codes remain unresolved
+        $remaining = array_values(array_diff($keys, array_keys($map)));
+        if ($remaining) {
+            try {
+                $debug = $this->db->db_debug;
+                $this->db->db_debug = false;
+                $query = $this->db->select('id AS code, name AS division_name')
+                                  ->where_in('id', $remaining)
+                                  ->get('hris_divisions');
+                if ($query && $query->num_rows() > 0) {
+                    foreach ($query->result_array() as $r) {
+                        if (!empty($r['division_name'])) {
+                            $name = trim((string)$r['division_name']);
+                            $map[$r['code']] = $name;
+                            $map[strtoupper($r['code'])] = $name;
+                            $map[strtolower($r['code'])] = $name;
+                        }
+                    }
+                }
+                $this->db->db_debug = $debug;
+            } catch (Throwable $e) {}
+        }
+
+        return $map;
     }
 
     private function eligible($row)

@@ -205,16 +205,26 @@ class Expense_company
         $first = (array)reset($rows);
         if (in_array($first['jenis_transaksi'], ['Expense Report','Pengembalian Kasbon'], true)) {
             if ($lock) $this->lockSource($first['no_transaksi']);
-            $source = $first['jenis_transaksi'] === 'Pengembalian Kasbon' ? $this->resolveReturn($first['no_transaksi']) : $this->resolve($first['no_transaksi']);
-            if ($source['id'] !== $stored['id']) throw new DomainException('Company jurnal berbeda dengan company sumber transaksi.');
             if ($first['jenis_transaksi'] === 'Pengembalian Kasbon') {
+                $source = $this->resolveReturn($first['no_transaksi']);
+                if ($source['id'] !== $stored['id']) throw new DomainException('Company jurnal berbeda dengan company sumber transaksi.');
                 $this->validateReturnRealization($first['no_transaksi'], $source);
                 foreach ($rows as $line) {
                     $line = (array)$line;
                     if (((float)$line['debit'] > 0 && $line['coa'] !== $source['bank_coa']) || ((float)$line['kredit'] > 0 && $line['coa'] !== '1103-01-15')) throw new DomainException('COA jurnal pengembalian tidak sesuai bank tersimpan/piutang kasbon.');
                 }
+                return $source;
             }
-            return $source;
+            try {
+                $source = $this->resolve($first['no_transaksi']);
+                if ($source['id'] !== $stored['id']) throw new DomainException('Company jurnal berbeda dengan company sumber transaksi.');
+                return $source;
+            } catch (DomainException $e) {
+                if (strpos($e->getMessage(), 'berbeda dengan company sumber') !== false) {
+                    throw $e;
+                }
+                return $master;
+            }
         }
         return $master;
     }
