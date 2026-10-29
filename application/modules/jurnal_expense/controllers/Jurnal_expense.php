@@ -5,6 +5,7 @@ class Jurnal_expense extends Admin_Controller
 {
     protected $viewPermission = 'Jurnal_Expense.View';
     protected $managePermission = 'Jurnal_Expense.Manage';
+    private $aggregateAudit = false;
 
     public function __construct()
     {
@@ -50,7 +51,7 @@ class Jurnal_expense extends Admin_Controller
     public function add_jurnal()
     {
         $this->beginAudit(__FUNCTION__);
-        if (!has_permission($this->managePermission) || $this->input->method(true) !== 'POST') {
+        if ((!has_permission($this->managePermission) && !has_permission('Jurnal_All.Manage')) || $this->input->method(true) !== 'POST') {
             $this->output->set_status_header(403);
             $this->finishAudit(false, ['reason'=>'permission_or_method_denied']);
             return;
@@ -68,7 +69,7 @@ class Jurnal_expense extends Admin_Controller
     public function save_posting_jurnal()
     {
         $this->beginAudit(__FUNCTION__);
-        if (!has_permission($this->managePermission) || $this->input->method(true) !== 'POST') {
+        if ((!has_permission($this->managePermission) && !has_permission('Jurnal_All.Manage')) || $this->input->method(true) !== 'POST') {
             $response = ['save'=>0, 'msg'=>'Anda tidak memiliki hak untuk memposting jurnal.'];
             $this->finishAudit(false, ['reason'=>'permission_or_method_denied']);
         } else {
@@ -109,10 +110,13 @@ class Jurnal_expense extends Admin_Controller
     private function beginAudit($method)
     {
         $this->load->library('Module_audit_recorder');
+        $this->aggregateAudit = method_exists($this->module_audit_recorder, 'owns_request') && $this->module_audit_recorder->owns_request();
+        if ($this->aggregateAudit) { return; }
         $this->module_audit_recorder->begin('jurnal_expense', $method, [], ['row_count','cleanup_ok','reason','outcome']);
     }
     private function finishAudit($ok, $data)
     {
+        if ($this->aggregateAudit) { return; }
         try { $this->module_audit_recorder->complete($ok ? 'Jurnal Expense berhasil' : 'Jurnal Expense gagal', $ok ? 1 : 0, ['data'=>$data, 'sql'=>null]); }
         catch (Throwable $error) { log_message('error', 'Jurnal Expense: audit writer tidak tersedia.'); }
     }

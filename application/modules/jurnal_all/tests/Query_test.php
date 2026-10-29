@@ -17,6 +17,8 @@ $db->query("ATTACH DATABASE ':memory:' AS consultant");
 $db->query('CREATE TABLE tr_invoicing (id TEXT PRIMARY KEY, no_invoice TEXT, nm_customer TEXT, nm_project TEXT, id_penawaran TEXT, id_spk_penawaran TEXT, no_po TEXT, non_kons TEXT)');
 $db->query('CREATE TABLE tr_penerimaan_piutang_detail (id_header TEXT,id_inv TEXT)');
 $db->query('CREATE TABLE payment_approve (id TEXT,id_payment TEXT,no_doc TEXT,tipe TEXT)');
+$db->query('CREATE TABLE tr_payment_paid (id TEXT PRIMARY KEY)');
+$db->query("CREATE TRIGGER fixture_paid AFTER INSERT ON payment_approve WHEN NEW.id_payment IS NOT NULL AND NEW.id_payment <> '' BEGIN INSERT OR IGNORE INTO tr_payment_paid (id) VALUES (NEW.id_payment); END");
 $db->query('CREATE TABLE consultant.kons_tr_penawaran (id_quotation TEXT,company TEXT)');
 $db->query('CREATE TABLE consultant.kons_tr_spk_penawaran (id_spk_penawaran TEXT,id_company TEXT,nm_project TEXT)');
 $db->query('CREATE TABLE consultant.kons_tr_penawaran_non_konsultasi (id_penawaran TEXT,id_company TEXT)');
@@ -41,6 +43,15 @@ function journal($type,$status='0',$number='TRX-1',$company='7',$debit='100.25',
     return $id;
 }
 foreach(['Invoicing','Penerimaan Piutang','Payment','Transport','Transportasi','Kasbon','Expense','Expense Report','Expense Report Consultant','Petty Cash','Refill Pettycash','Payment Hutang Petty Cash'] as $type) journal($type,'0',$type);
+$db->insert('tr_expense_petty_cash',['id'=>10,'no_pencatatan'=>'Petty Cash']);
+$db->insert('tr_expense_petty_cash',['id'=>1,'no_pencatatan'=>'MULTI']);
+journal('Petty Cash','0','ORPHAN-PC');
+check(count($model->groups(['tab'=>'PCS','year'=>2026,'q'=>'ORPHAN-PC']))===0,'pending orphan petty cash excluded from list');
+check(count($model->export_rows(['tab'=>'PCS','year'=>2026,'q'=>'ORPHAN-PC']))===0,'pending orphan excluded from export');
+check($model->summary(['PCS'=>['year'=>2026]])['PCS']['count']===1,'summary excludes pending orphan');
+check($db->get_where('tr_jurnal',['no_transaksi'=>'ORPHAN-PC'])->num_rows()===2,'filter does not mutate orphan journal');
+$db->where('no_transaksi','ORPHAN-PC')->update('tr_jurnal',['sts'=>'1']);
+check(count($model->groups(['tab'=>'PCS','year'=>2026,'q'=>'ORPHAN-PC'],true))===1,'posted report preserves historical orphan');
 check($model->source('Expense Report')==='EXP','Expense Report owns one source');
 check($model->tab('Refill Pettycash')==='PAY','refill shown in payment');
 check($model->source('Refill Pettycash')==='PCS','refill routes to petty cash');
@@ -172,6 +183,7 @@ check(count($model->export_rows(['tab'=>'INV','year'=>2026],true))===2,'posted p
 foreach(['RCV'=>'Penerimaan Piutang','PAY'=>'Payment','EXP'=>'Expense Report','PCS'=>'Petty Cash'] as $tab=>$type) {
     $before=count($model->groups(['tab'=>$tab,'year'=>'']));
     $number='HIST-'.$tab;$historic=journal($type,'0',$number);
+    if($tab==='PCS')$db->insert('tr_expense_petty_cash',['id'=>11,'no_pencatatan'=>$number]);
     $db->where('no_transaksi',$number)->update('tr_jurnal',['tgl_jurnal'=>'2024-02-15']);
     if($tab==='RCV')$db->insert('tr_penerimaan_piutang_detail',['id_header'=>$number,'id_inv'=>'INV-OK']);
     check(count($model->groups(['tab'=>$tab,'year'=>'']))===$before+1,'all years includes historical transaction '.$tab);
@@ -183,7 +195,6 @@ foreach(['RCV'=>'Penerimaan Piutang','PAY'=>'Payment','EXP'=>'Expense Report','P
     $db->where('no_transaksi',$number)->update('tr_jurnal',['sts'=>'1']);
     check(count($model->groups(['tab'=>$tab,'year'=>'','q'=>$number],true))===1&&count($model->export_rows(['tab'=>$tab,'year'=>'','q'=>$number],true))===2,'posted all years keeps full group '.$tab);
 }
-$db->insert('tr_expense_petty_cash',['id'=>1,'no_pencatatan'=>'MULTI']);
 $db->insert('tr_pelaporan_petty_cash',['id'=>1,'no_pelaporan'=>'RPC-2026-0001','status'=>'approved']);
 $db->insert('tr_pelaporan_petty_cash',['id'=>2,'no_pelaporan'=>'RPC-2026-REJECTED','status'=>'rejected']);
 foreach([1,1,2] as $report)$db->insert('tr_pelaporan_petty_cash_detail',['pencatatan_id'=>1,'pelaporan_id'=>$report]);

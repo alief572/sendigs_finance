@@ -28,6 +28,10 @@ $model=new Jurnal_all_model();$model->db=$db;
 check($model->detail($payment,false)['header']['category']==='Cash, Periodik','posted sibling still owns its metadata');
 check($model->detail($refill,true)['header']['no_referensi']==='RPC-29','posted report keeps refill metadata');
 $db->where('jenis_transaksi','Payment')->update('tr_jurnal',['sts'=>'1']);
+check($model->detail($payment,true)['header']['no_referensi']==='-','posted approval-ID history has no voucher fallback');
+$db->where('no_transaksi',$key)->update('tr_jurnal',['no_transaksi'=>'BK--1026-0002']);
+$key='BK--1026-0002';
+$model=new Jurnal_all_model();$model->db=$db;
 check($model->detail($payment,true)['header']['keterangan']==='Pembayaran Cash, Periodik - BK--1026-0002','posted Payment uses deterministic header');
 
 $db->where('jenis_transaksi','Refill Pettycash')->delete('tr_jurnal');

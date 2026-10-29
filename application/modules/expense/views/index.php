@@ -5,8 +5,16 @@ $ENABLE_VIEW    = has_permission('Expense.View');
 $ENABLE_DELETE  = has_permission('Expense.Delete');
 
 $cnt_pengembalian = isset($count_pengembalian) ? (int)$count_pengembalian : 0;
-$cnt_lebih = isset($count_lebih_expense) ? (int)$count_lebih_expense : 0;
-$bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options : [];
+$cnt_pk_upload    = isset($count_pk_upload) ? (int)$count_pk_upload : $cnt_pengembalian;
+$cnt_pk_verif     = isset($count_pk_verif) ? (int)$count_pk_verif : 0;
+$cnt_pk_done      = isset($count_pk_done) ? (int)$count_pk_done : 0;
+
+$cnt_lebih        = isset($count_lebih_expense) ? (int)$count_lebih_expense : 0;
+$cnt_rb_belum     = isset($count_rb_belum) ? (int)$count_rb_belum : 0;
+$cnt_rb_menunggu  = isset($count_rb_menunggu) ? (int)$count_rb_menunggu : 0;
+$cnt_rb_selesai   = isset($count_rb_selesai) ? (int)$count_rb_selesai : 0;
+
+$bank_options     = isset($bank_options) && is_array($bank_options) ? $bank_options : [];
 ?>
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
@@ -77,6 +85,67 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 	.nav-tabs-custom > .nav-tabs > li.active > a {
 		color: #2b6cb0;
 	}
+
+	/* Sub-tab Pills (Anti-slop clean design system) */
+	.subtab-pills {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 14px;
+		margin-top: 10px;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+	.subtab-pill-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		border: 1px solid #cbd5e1;
+		background: #ffffff;
+		color: #475569;
+		padding: 6px 14px;
+		border-radius: 20px;
+		font-size: 12.5px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		outline: none;
+	}
+	.subtab-pill-btn:hover {
+		background: #f8fafc;
+		border-color: #94a3b8;
+		color: #1e293b;
+	}
+	.subtab-pill-btn .badge-pill-count {
+		background: #f1f5f9;
+		border: 1px solid #e2e8f0;
+		color: #64748b;
+		border-radius: 10px;
+		font-size: 11px;
+		font-weight: 700;
+		padding: 1px 7px;
+	}
+	/* Active state for Pengembalian Kasbon */
+	.subtab-pill-btn.active-purple {
+		background: #6f42c1;
+		border-color: #5a32a3;
+		color: #ffffff;
+	}
+	.subtab-pill-btn.active-purple .badge-pill-count {
+		background: #ffffff;
+		border-color: #ffffff;
+		color: #6f42c1;
+	}
+	/* Active state for Lebih Expense */
+	.subtab-pill-btn.active-green {
+		background: #00a65a;
+		border-color: #008d4c;
+		color: #ffffff;
+	}
+	.subtab-pill-btn.active-green .badge-pill-count {
+		background: #ffffff;
+		border-color: #ffffff;
+		color: #00a65a;
+	}
 </style>
 
 <div class="nav-tabs-custom box-custom" style="padding: 10px 15px 20px 15px;">
@@ -89,17 +158,13 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 		<li>
 			<a href="#tab_pengembalian" data-toggle="tab">
 				<i class="fa fa-reply" style="color:#6f42c1;"></i> Pengembalian Kasbon
-				<?php if ($cnt_pengembalian > 0): ?>
-					<span class="badge" style="background:#6f42c1; margin-left:5px;"><?= $cnt_pengembalian ?></span>
-				<?php endif; ?>
+				<span class="badge" id="badge_tab_pengembalian" style="background:#6f42c1; margin-left:5px; <?= ($cnt_pengembalian > 0 ? '' : 'display:none;') ?>"><?= $cnt_pengembalian ?></span>
 			</a>
 		</li>
 		<li>
 			<a href="#tab_reimburse" data-toggle="tab">
 				<i class="fa fa-money text-success"></i> Lebih Expense (Reimburse ke Karyawan)
-				<?php if ($cnt_lebih > 0): ?>
-					<span class="badge bg-green" style="margin-left:5px;"><?= $cnt_lebih ?></span>
-				<?php endif; ?>
+				<span class="badge bg-green" id="badge_tab_reimburse" style="margin-left:5px; <?= ($cnt_lebih > 0 ? '' : 'display:none;') ?>"><?= $cnt_lebih ?></span>
 			</a>
 		</li>
 	</ul>
@@ -151,16 +216,24 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 		<div class="tab-pane" id="tab_pengembalian">
 			<div class="box-custom-header" style="padding: 10px 0 15px 0;">
 				<h4 class="box-custom-title" style="color:#6f42c1;">
-					<i class="fa fa-reply"></i> Antrian Pengembalian Kelebihan Kasbon ke Rekening Perusahaan
+					<i class="fa fa-reply"></i> Daftar Piutang Kelebihan Kasbon
 				</h4>
 				<button class="btn btn-default btn-sm btn-rounded" type="button" onclick="load_table_pengembalian();">
 					<i class="fa fa-refresh"></i> Refresh
 				</button>
 			</div>
 
-			<div class="alert alert-info" style="border-radius:6px; font-size:13px; background:#fbf5ff; border:1px solid #d6bcfa; color:#553c9a;">
-				<i class="fa fa-info-circle"></i> <b>Petunjuk Pengembalian Kasbon:</b>
-				Laporan expense di bawah telah <b>disetujui penuh oleh Direktur</b> dengan realisasi pengeluaran lebih kecil dari kasbon yang diterima (<b>Lebih Kasbon</b>). Silakan transfer sisa uang ke rekening bank perusahaan dan klik tombol <b>Upload Bukti</b> agar Finance dapat memverifikasi pengembalian Anda.
+			<!-- Sub-tab Pills Pengembalian Kasbon -->
+			<div class="subtab-pills" role="tablist">
+				<button type="button" class="subtab-pill-btn active-purple" data-subtab-pk="upload" onclick="switch_subtab_pk('upload', this)">
+					Perlu Upload <span class="badge-pill-count" id="badge_pk_upload"><?= $cnt_pk_upload ?></span>
+				</button>
+				<button type="button" class="subtab-pill-btn" data-subtab-pk="verif" onclick="switch_subtab_pk('verif', this)">
+					Menunggu Verifikasi <span class="badge-pill-count" id="badge_pk_verif"><?= $cnt_pk_verif ?></span>
+				</button>
+				<button type="button" class="subtab-pill-btn" data-subtab-pk="done" onclick="switch_subtab_pk('done', this)">
+					Selesai <span class="badge-pill-count" id="badge_pk_done"><?= $cnt_pk_done ?></span>
+				</button>
 			</div>
 
 			<div class="table-responsive">
@@ -170,11 +243,9 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 							<th width="30">#</th>
 							<th width="130">No. Dokumen</th>
 							<th width="120">No. Kasbon</th>
-							<th width="90">Tanggal</th>
-							<th>Keterangan / Keperluan</th>
-							<th width="110" class="text-right">Total Kasbon</th>
-							<th width="110" class="text-right">Realisasi</th>
-							<th width="130" class="text-right">Lebih Kasbon (Rp)</th>
+							<th>Keperluan / Keterangan</th>
+							<th width="110">Tanggal Approval</th>
+							<th width="130" class="text-right">Kelebihan Kasbon (Rp)</th>
 							<th width="160" class="text-center">Status</th>
 							<th width="110" class="text-center">Aksi</th>
 						</tr>
@@ -191,16 +262,24 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 		<div class="tab-pane" id="tab_reimburse">
 			<div class="box-custom-header" style="padding: 10px 0 15px 0;">
 				<h4 class="box-custom-title" style="color:#00a65a;">
-					<i class="fa fa-money"></i> Status Reimbursement Lebih Expense (Kurang Bayar Kantor ke Karyawan)
+					<i class="fa fa-money"></i> Monitoring Lebih Expense (Reimburse ke Karyawan)
 				</h4>
 				<button class="btn btn-default btn-sm btn-rounded" type="button" onclick="load_table_lebih_expense();">
 					<i class="fa fa-refresh"></i> Refresh
 				</button>
 			</div>
 
-			<div class="alert alert-success" style="border-radius:6px; font-size:13px; background:#f0fff4; border:1px solid #c6f6d5; color:#22543d;">
-				<i class="fa fa-info-circle"></i> <b>Petunjuk Reimbursement:</b>
-				Laporan expense di bawah memiliki realisasi pengeluaran yang lebih besar dari kasbon (<b>Lebih Expense</b>). Nilai selisih secara otomatis masuk ke antrian <b>Request Payment</b> untuk proses persetujuan dan pencairan transfer penggantian uang dari kantor ke rekening Anda.
+			<!-- Sub-tab Pills Lebih Expense -->
+			<div class="subtab-pills" role="tablist">
+				<button type="button" class="subtab-pill-btn active-green" data-subtab-rb="belum" onclick="switch_subtab_rb('belum', this)">
+					Menunggu Diajukan <span class="badge-pill-count" id="badge_rb_belum"><?= $cnt_rb_belum ?></span>
+				</button>
+				<button type="button" class="subtab-pill-btn" data-subtab-rb="menunggu" onclick="switch_subtab_rb('menunggu', this)">
+					Menunggu Approval <span class="badge-pill-count" id="badge_rb_menunggu"><?= $cnt_rb_menunggu ?></span>
+				</button>
+				<button type="button" class="subtab-pill-btn" data-subtab-rb="selesai" onclick="switch_subtab_rb('selesai', this)">
+					Disetujui <span class="badge-pill-count" id="badge_rb_selesai"><?= $cnt_rb_selesai ?></span>
+				</button>
 			</div>
 
 			<div class="table-responsive">
@@ -210,11 +289,14 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 							<th width="30">#</th>
 							<th width="130">No. Dokumen Expense</th>
 							<th width="120">No. Kasbon</th>
-							<th width="90">Tanggal</th>
-							<th>Keterangan Laporan</th>
-							<th width="140" class="text-right">Nominal Reimburse (Rp)</th>
-							<th width="180" class="text-center">Status Request Payment</th>
-							<th width="90" class="text-center">Aksi</th>
+							<th>Keperluan</th>
+							<th width="90">Company</th>
+							<th width="110">Tanggal Approval</th>
+							<th width="140" class="text-right">Hutang Expense (Rp)</th>
+							<th width="180" class="text-center">Status</th>
+							<th width="120" class="text-center">No. Pengajuan</th>
+							<th>Keterangan</th>
+							<th width="80" class="text-center">Aksi</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -445,6 +527,26 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 	}
 
 	// ==============================================================
+	// SUB-TAB CONTROLLERS FOR PENGEMBALIAN KASBON & LEBIH EXPENSE
+	// ==============================================================
+	var current_subtab_pk = 'upload';
+	var current_subtab_rb = 'belum';
+
+	function switch_subtab_pk(subtab, el) {
+		current_subtab_pk = subtab;
+		$('.subtab-pill-btn[data-subtab-pk]').removeClass('active-purple');
+		$(el).addClass('active-purple');
+		load_table_pengembalian();
+	}
+
+	function switch_subtab_rb(subtab, el) {
+		current_subtab_rb = subtab;
+		$('.subtab-pill-btn[data-subtab-rb]').removeClass('active-green');
+		$(el).addClass('active-green');
+		load_table_lebih_expense();
+	}
+
+	// ==============================================================
 	// TAB 2: PENGEMBALIAN KASBON (DATATABLES & MODAL UPLOAD)
 	// ==============================================================
 	function load_table_pengembalian() {
@@ -460,16 +562,30 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 				type: 'POST',
 				url: siteurl + 'expense/get_dat_pengembalian_kasbon',
 				cache: false,
-				dataType: 'json'
+				dataType: 'json',
+				data: function(d) {
+					d.subtab = current_subtab_pk;
+				},
+				dataSrc: function(json) {
+					if (json && json.counts) {
+						$('#badge_pk_upload').text(json.counts.upload);
+						$('#badge_pk_verif').text(json.counts.verif);
+						$('#badge_pk_done').text(json.counts.done);
+						if (json.counts.upload > 0) {
+							$('#badge_tab_pengembalian').text(json.counts.upload).show();
+						} else {
+							$('#badge_tab_pengembalian').hide();
+						}
+					}
+					return json.data || [];
+				}
 			},
 			columns: [
 				{ data: 'no', orderable: false, className: 'text-center' },
 				{ data: 'no_doc' },
 				{ data: 'no_kasbon' },
-				{ data: 'tgl_doc', className: 'text-center' },
 				{ data: 'informasi' },
-				{ data: 'total_kasbon', className: 'text-right' },
-				{ data: 'realisasi', className: 'text-right' },
+				{ data: 'tgl_approval', className: 'text-center' },
 				{ data: 'lebih_bayar', className: 'text-right' },
 				{ data: 'status', className: 'text-center' },
 				{ data: 'action', orderable: false, className: 'text-center' }
@@ -480,10 +596,11 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 
 	$(document).on('click', '.btn-upload-pengembalian', function() {
 		var id = $(this).data('id');
+		var is_ro = $(this).data('readonly') ? '1' : '0';
 		if (id) {
 			$(".box, .nav-tabs-custom").hide();
 			$("#form-data").show();
-			$("#form-data").load(siteurl + 'expense/form_pengembalian/' + id);
+			$("#form-data").load(siteurl + 'expense/form_pengembalian/' + id + '?readonly=' + is_ro);
 		}
 	});
 
@@ -503,16 +620,36 @@ $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options 
 				type: 'POST',
 				url: siteurl + 'expense/get_dat_lebih_expense',
 				cache: false,
-				dataType: 'json'
+				dataType: 'json',
+				data: function(d) {
+					d.subtab = current_subtab_rb;
+				},
+				dataSrc: function(json) {
+					if (json && json.counts) {
+						$('#badge_rb_belum').text(json.counts.belum);
+						$('#badge_rb_menunggu').text(json.counts.menunggu);
+						$('#badge_rb_selesai').text(json.counts.selesai);
+						var total_active = json.counts.total;
+						if (total_active > 0) {
+							$('#badge_tab_reimburse').text(total_active).show();
+						} else {
+							$('#badge_tab_reimburse').hide();
+						}
+					}
+					return json.data || [];
+				}
 			},
 			columns: [
 				{ data: 'no', orderable: false, className: 'text-center' },
 				{ data: 'no_doc' },
 				{ data: 'no_kasbon' },
-				{ data: 'tgl_doc', className: 'text-center' },
 				{ data: 'informasi' },
+				{ data: 'company', className: 'text-center' },
+				{ data: 'tgl_approval', className: 'text-center' },
 				{ data: 'kurang_bayar', className: 'text-right' },
 				{ data: 'status_reimburse', className: 'text-center' },
+				{ data: 'no_pengajuan', className: 'text-center' },
+				{ data: 'keterangan' },
 				{ data: 'action', orderable: false, className: 'text-center' }
 			],
 			order: [[1, 'desc']]

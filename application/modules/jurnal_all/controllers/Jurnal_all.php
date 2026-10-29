@@ -3,46 +3,53 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Jurnal_all extends Admin_Controller
 {
-    protected $posted=false;
+    protected $posted = false;
 
     public function __construct()
     {
         parent::__construct();
-        $this->db->db_debug=false;
+        $this->db->db_debug = false;
         $this->load->model('jurnal_all/Jurnal_all_model');
         $this->load->library('Module_audit_recorder');
     }
 
     public function index()
     {
-        $this->endpoint(__FUNCTION__,function(){
-            $this->template->title($this->posted?'Report Jurnal':'Jurnal');
+        $this->endpoint(__FUNCTION__, function () {
+            $this->template->title($this->posted ? 'Report Jurnal' : 'Jurnal');
             $this->template->page_icon('fa fa-book');
-            $tab=$this->input->get('tab');
-            $this->template->set(['posted'=>$this->posted,'tabs'=>Jurnal_all_model::TITLES,
-                'initialTab'=>is_string($tab)&&isset(Jurnal_all_model::TITLES[$tab])?$tab:'INV',
-                'canManage'=>!$this->posted&&has_permission('Jurnal_All.Manage')]);
+            $tab = $this->input->get('tab');
+            $this->template->set([
+                'posted' => $this->posted,
+                'tabs' => Jurnal_all_model::TITLES,
+                'initialTab' => is_string($tab) && isset(Jurnal_all_model::TITLES[$tab]) ? $tab : 'INV',
+                'canManage' => !$this->posted && has_permission('Jurnal_All.Manage')
+            ]);
             $this->template->render('jurnal_all/workspace');
-            return ['outcome'=>'rendered'];
-        },false);
+            return ['outcome' => 'rendered'];
+        }, false);
     }
 
     public function get_data_jurnal()
     {
-        $this->endpoint(__FUNCTION__,function(){return $this->Jurnal_all_model->listing($this->values(),$this->posted);});
+        $this->endpoint(__FUNCTION__, function () {
+            return $this->Jurnal_all_model->listing($this->values(), $this->posted);
+        });
     }
 
     public function get_filters()
     {
-        $this->endpoint(__FUNCTION__,function(){return $this->Jurnal_all_model->options($this->values(),$this->posted);});
+        $this->endpoint(__FUNCTION__, function () {
+            return $this->Jurnal_all_model->options($this->values(), $this->posted);
+        });
     }
 
     public function get_summary()
     {
-        $this->endpoint(__FUNCTION__,function(){
+        $this->endpoint(__FUNCTION__, function () {
             if ($this->posted) throw new InvalidArgumentException('Ringkasan pending hanya tersedia pada Jurnal.');
-            $filters=$this->input->post('filters');
-            return $this->Jurnal_all_model->summary(is_array($filters)?$filters:[]);
+            $filters = $this->input->post('filters');
+            return $this->Jurnal_all_model->summary(is_array($filters) ? $filters : []);
         });
     }
 
@@ -51,6 +58,14 @@ class Jurnal_all extends Admin_Controller
         $this->endpoint(__FUNCTION__, function () {
             $values = $this->values();
             $detail = $this->Jurnal_all_model->detail($values['id'] ?? 0, $this->posted);
+            if (!$this->posted && ($detail['header']['jenis_transaksi'] ?? '') === 'Payment') {
+                require_once dirname(__DIR__).'/libraries/Payment_reference.php';
+                try { (new Payment_reference($this))->inspectForPosting($detail['header']['no_transaksi']); }
+                catch (Throwable $error) {
+                    $detail['can_post'] = false;
+                    $detail['header']['payment_reference_error'] = $error instanceof DomainException ? $error->getMessage() : 'Validasi Payment belum dapat dipastikan; posting diblokir.';
+                }
+            }
             if (!$this->posted && $detail['header']['source'] !== ($values['source'] ?? null)) throw new InvalidArgumentException('Sumber jurnal tidak valid.');
             $canManage = !$this->posted && has_permission('Jurnal_All.Manage');
             if (!$this->posted && $detail['header']['source'] === 'EXP' && !$canManage) throw new RuntimeException('Anda tidak memiliki akses preview jurnal ini.', 403);
@@ -70,81 +85,102 @@ class Jurnal_all extends Admin_Controller
             }
             if ($detail['header']['source'] === 'PCS' && $detail['header']['jenis_transaksi'] === 'Petty Cash') $detail['company_sections'] = $this->Jurnal_all_model->company_sections($detail['rows']);
             $html = $this->load->view('jurnal_all/preview', ['detail' => $detail, 'posted' => $this->posted], true);
+            $canPost=$canManage && $detail['is_balance'] && !$blocked && ($detail['can_post'] ?? true) && (empty($detail['header']['debt_group']) || $this->Jurnal_all_model->debt_posting_ready());
+            $postReason=$detail['header']['payment_reference_error'] ?? '';
+            if (!$postReason && !$canPost && $canManage) $postReason=!$detail['is_balance']?'Jurnal belum balance; posting diblokir.':($blocked?'COA belum final dikonfirmasi Finance; posting diblokir.':'Periksa peringatan detail jurnal sebelum posting.');
             return [
                 'status' => 1,
                 'html' => $html,
-                'can_post' => $canManage && $detail['is_balance'] && !$blocked && ($detail['can_post'] ?? true) && (empty($detail['header']['debt_group']) || $this->Jurnal_all_model->debt_posting_ready()),
+                'can_post' => $canPost,
+                'show_post' => $canManage,
+                'post_block_reason' => $postReason,
                 'can_revise' => $canManage && $revisable,
                 'blocked_coa' => $blocked
             ];
         });
     }
 
-    public function view_jurnal() { $this->preview(); }
-    public function save_posting_jurnal() { $this->writeAction('post',__FUNCTION__); }
-    public function revisi_jurnal() { $this->writeAction('revise',__FUNCTION__); }
-
-    public function legacy($tab='INV')
+    public function view_jurnal()
     {
-        $tab=isset(Jurnal_all_model::TITLES[$tab])?$tab:'INV';
-        $this->module_audit_recorder->begin($this->posted?'report_jurnal_all':'jurnal_all',__FUNCTION__,[],['outcome']);
-        try { $this->module_audit_recorder->complete('Halaman jurnal dialihkan',1,['data'=>['outcome'=>'redirected'],'sql'=>null]); }
-        catch (Throwable $error) { log_message('error','Jurnal gabungan: audit redirect tidak tersedia.'); }
-        redirect(($this->posted?'report_jurnal_all':'jurnal_all').'?tab='.$tab);
+        $this->preview();
+    }
+    public function save_posting_jurnal()
+    {
+        $this->writeAction('post', __FUNCTION__);
+    }
+    public function revisi_jurnal()
+    {
+        $this->writeAction('revise', __FUNCTION__);
+    }
+
+    public function legacy($tab = 'INV')
+    {
+        $tab = isset(Jurnal_all_model::TITLES[$tab]) ? $tab : 'INV';
+        $this->module_audit_recorder->begin($this->posted ? 'report_jurnal_all' : 'jurnal_all', __FUNCTION__, [], ['outcome']);
+        try {
+            $this->module_audit_recorder->complete('Halaman jurnal dialihkan', 1, ['data' => ['outcome' => 'redirected'], 'sql' => null]);
+        } catch (Throwable $error) {
+            log_message('error', 'Jurnal gabungan: audit redirect tidak tersedia.');
+        }
+        redirect(($this->posted ? 'report_jurnal_all' : 'jurnal_all') . '?tab=' . $tab);
     }
 
     public function export_excel()
     {
-        $this->endpoint(__FUNCTION__,function(){
-            $rows=$this->Jurnal_all_model->export_rows($this->values(),$this->posted);
-            $name=($this->posted?'Report_Jurnal':'Jurnal_Pending').'_'.date('Ymd_His').'.xls';
+        $this->endpoint(__FUNCTION__, function () {
+            $rows = $this->Jurnal_all_model->export_rows($this->values(), $this->posted);
+            $name = ($this->posted ? 'Report_Jurnal' : 'Jurnal_Pending') . '_' . date('Ymd_His') . '.xls';
             $this->output->set_header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-            $this->output->set_header('Content-Disposition: attachment; filename="'.$name.'"');
+            $this->output->set_header('Content-Disposition: attachment; filename="' . $name . '"');
             $this->output->set_header('Cache-Control: no-store');
-            $this->load->view('jurnal_all/export_excel',['rows'=>$rows,'posted'=>$this->posted]);
-            return ['row_count'=>count($rows),'outcome'=>'exported'];
-        },false);
+            $this->load->view('jurnal_all/export_excel', ['rows' => $rows, 'posted' => $this->posted]);
+            return ['row_count' => count($rows), 'outcome' => 'exported'];
+        }, false);
     }
 
-    protected function writeAction($action,$method)
+    protected function writeAction($action, $method)
     {
-        $this->endpoint($method,function()use($action){
-            if ($this->posted||$this->input->method(true)!=='POST'||!has_permission('Jurnal_All.Manage')) throw new RuntimeException('Anda tidak memiliki akses untuk aksi ini.',403);
+        $this->endpoint($method, function () use ($action) {
+            if ($this->posted || $this->input->method(true) !== 'POST' || !has_permission('Jurnal_All.Manage')) throw new RuntimeException('Anda tidak memiliki akses untuk aksi ini.', 403);
             $this->load->library('jurnal_all/Jurnal_all_dispatcher');
-            $values=$this->values();
-            return $this->jurnal_all_dispatcher->execute($action,$values['id'] ?? 0,$values['source'] ?? null,$values);
+            $values = $this->values();
+            return $this->jurnal_all_dispatcher->execute($action, $values['id'] ?? 0, $values['source'] ?? null, $values);
         });
     }
 
     protected function values()
     {
-        $values=$this->input->method(true)==='GET'?$this->input->get():$this->input->post();
-        return is_array($values)?$values:[];
+        $values = $this->input->method(true) === 'GET' ? $this->input->get() : $this->input->post();
+        return is_array($values) ? $values : [];
     }
 
-    protected function endpoint($method,$callback,$json=true)
+    protected function endpoint($method, $callback, $json = true)
     {
-        $module=$this->posted?'report_jurnal_all':'jurnal_all';
-        $this->module_audit_recorder->begin($module,$method,[],['row_count','reason','outcome']);
-        $ok=false; $audit=['reason'=>'request_failed'];
+        $module = $this->posted ? 'report_jurnal_all' : 'jurnal_all';
+        $this->module_audit_recorder->begin($module, $method, [], ['row_count', 'reason', 'outcome']);
+        $ok = false;
+        $audit = ['reason' => 'request_failed'];
         try {
-            if (!has_permission($this->posted?'Report_Jurnal_All.View':'Jurnal_All.View')) throw new RuntimeException('Anda tidak memiliki hak akses.',403);
-            $response=$callback();
-            $ok=!isset($response['status'])||(string)$response['status']==='1';
-            $audit=isset($response['outcome'])?$response:['row_count'=>isset($response['data'])?count($response['data']):0,$ok?'outcome':'reason'=>$ok?'completed':'action_failed'];
+            if (!has_permission($this->posted ? 'Report_Jurnal_All.View' : 'Jurnal_All.View')) throw new RuntimeException('Anda tidak memiliki hak akses.', 403);
+            $response = $callback();
+            $ok = !isset($response['status']) || (string)$response['status'] === '1';
+            $audit = isset($response['outcome']) ? $response : ['row_count' => isset($response['data']) ? count($response['data']) : 0, $ok ? 'outcome' : 'reason' => $ok ? 'completed' : 'action_failed'];
             if ($json) $this->output->set_content_type('application/json')->set_output(json_encode($response));
         } catch (Throwable $error) {
-            $code=$error->getCode()===403?403:($error instanceof InvalidArgumentException?400:500);
+            $code = $error->getCode() === 403 ? 403 : ($error instanceof InvalidArgumentException ? 400 : 500);
             $this->output->set_status_header($code);
-            $message=$error instanceof InvalidArgumentException||$code===403 ? $error->getMessage() : 'Proses jurnal gagal. Periksa status sebelum mencoba kembali.';
-            $draw=$this->values()['draw'] ?? 0;
-            $response=['status'=>0,'msg'=>$message,'error'=>$message,'draw'=>is_scalar($draw)?(int)$draw:0,'data'=>[],'recordsTotal'=>0,'recordsFiltered'=>0];
+            $message = $error instanceof InvalidArgumentException || $code === 403 ? $error->getMessage() : 'Proses jurnal gagal. Periksa status sebelum mencoba kembali.';
+            $draw = $this->values()['draw'] ?? 0;
+            $response = ['status' => 0, 'msg' => $message, 'error' => $message, 'draw' => is_scalar($draw) ? (int)$draw : 0, 'data' => [], 'recordsTotal' => 0, 'recordsFiltered' => 0];
             $this->output->set_content_type('application/json')->set_output(json_encode($response));
-            $audit=['reason'=>$code===403?'permission_denied':($code===400?'invalid_request':'operation_failed')];
-            if ($code===500) log_message('error',$module.': operation failed at '.$method);
+            $audit = ['reason' => $code === 403 ? 'permission_denied' : ($code === 400 ? 'invalid_request' : 'operation_failed')];
+            if ($code === 500) log_message('error', $module . ': operation failed at ' . $method);
         } finally {
-            try { $this->module_audit_recorder->complete($ok?'Jurnal gabungan berhasil':'Jurnal gabungan gagal',$ok?1:0,['data'=>$audit,'sql'=>null]); }
-            catch (Throwable $error) { log_message('error','Jurnal gabungan: audit writer tidak tersedia.'); }
+            try {
+                $this->module_audit_recorder->complete($ok ? 'Jurnal gabungan berhasil' : 'Jurnal gabungan gagal', $ok ? 1 : 0, ['data' => $audit, 'sql' => null]);
+            } catch (Throwable $error) {
+                log_message('error', 'Jurnal gabungan: audit writer tidak tersedia.');
+            }
         }
     }
 }

@@ -236,6 +236,63 @@ class Outgoing_stok_atk_model extends BF_Model
     return $details;
   }
 
+  public function get_export_rows($search = '', $column = 1, $direction = 'desc')
+  {
+    $debugSettings = array();
+    foreach (array($this->db, $this->dbhris) as $database) {
+      if (property_exists($database, 'db_debug')) {
+        $debugSettings[] = array($database, $database->db_debug);
+        $database->db_debug = false;
+      }
+    }
+    try {
+      yield from $this->export_rows($search, $column, $direction);
+    } finally {
+      foreach ($debugSettings as $setting) { $setting[0]->db_debug = $setting[1]; }
+    }
+  }
+
+  private function export_rows($search, $column, $direction)
+  {
+    $users = get_list_user();
+    $departments = array();
+    $start = 0;
+    do {
+      $fetch = $this->get_query_json_request_material($search, $column, $direction, $start, 150);
+      $headers = $fetch['query']->result_array();
+      $details = $this->get_outgoing_item_details(array_column($headers, 'kode_trans'));
+      foreach ($headers as $header) {
+        $departmentId = $header['id_dept'];
+        if (!array_key_exists($departmentId, $departments)) {
+          $query = $this->dbhris->select('a.name as nm_dept, b.name as nm_comp')
+            ->from('departments a')->join('companies b', 'b.id = a.company_id', 'left')
+            ->where('a.id', $departmentId)->get();
+          $error = method_exists($this->dbhris, 'error') ? $this->dbhris->error() : array();
+          if ($query === false || !empty($error['code'])) { throw new RuntimeException('Outgoing export department query failed'); }
+          $department = $query->row_array();
+          $departments[$departmentId] = $department ? strtoupper($department['nm_dept']) . ' - ' . strtoupper($department['nm_comp']) : '';
+        }
+        $items = $details[$header['kode_trans']] ?? array();
+        if (!$items) { $items = array(null); }
+        foreach ($items as $item) {
+          yield array(
+            'kode_trans' => strtoupper($header['kode_trans']),
+            'tanggal' => date('d-M-Y', strtotime($header['tanggal'])),
+            'department' => $departments[$departmentId],
+            'name' => $item === null ? 'Tidak ada detail barang' :
+              (($item['stock_name'] ?? '') !== '' ? $item['stock_name'] : 'Barang tidak tersedia (ID: ' . $item['id_material'] . ')'),
+            'qty' => $item === null ? null : (float) $item['qty_order'],
+            'unit' => !empty($item['unit_code']) ? $item['unit_code'] : '-',
+            'pic' => (string) $header['pic'],
+            'by' => !empty($users[$header['created_by']]['nama']) ? $users[$header['created_by']]['nama'] : '-',
+            'dated' => date('d-M-Y H:i:s', strtotime($header['created_date']))
+          );
+        }
+      }
+      $start += count($headers);
+    } while ($headers && $start < $fetch['totalFiltered']);
+  }
+
   private function render_outgoing_items($details)
   {
     if (!$details) { return '<div class="outgoing-items text-muted">Tidak ada detail barang</div>'; }

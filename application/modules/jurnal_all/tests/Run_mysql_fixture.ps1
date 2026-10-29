@@ -1,7 +1,9 @@
 param(
     [string]$PhpPath = 'C:\xampp74\php\php.exe',
     [string]$MysqlBin = 'C:\xampp74\mysql\bin',
-    [int]$Port = 33317
+    [int]$Port = 33317,
+    [ValidateSet('Mysql_test.php','Payment_reference_mysql_test.php','Debt_posting_test.php')]
+    [string]$TestScript = 'Mysql_test.php'
 )
 $ErrorActionPreference = 'Stop'
 $journalWorkspace = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../..')).Path
@@ -27,7 +29,7 @@ try {
     if (-not $journalReady) { throw 'Disposable MariaDB is not reachable; check localhost socket permissions.' }
     $env:JOURNAL_TEST_PORT = [string]$Port
     $env:JOURNAL_TEST_PASSWORD = $journalPassword
-    & $PhpPath (Join-Path $PSScriptRoot 'Mysql_test.php')
+    & $PhpPath (Join-Path $PSScriptRoot $TestScript)
     $journalExit = $LASTEXITCODE
 } finally {
     if ($journalServer) {

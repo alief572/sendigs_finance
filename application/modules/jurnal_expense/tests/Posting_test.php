@@ -54,7 +54,7 @@ class PendingExpense {
     public function get_pending_group($id,$lock=false) {
         foreach($this->db->rows as $row) {
             if(!in_array($row->sts,[null,'','0'],true))throw new InvalidArgumentException('posted');
-            if(!in_array($row->jenis_transaksi,['Expense Report','Expense Report Consultant'],true))throw new InvalidArgumentException('type');
+            if(!in_array($row->jenis_transaksi,['Expense Report','Expense Report Consultant','Pengembalian Kasbon'],true))throw new InvalidArgumentException('type');
         }
         if($id<=0)throw new InvalidArgumentException('id');
         if($lock)$this->db->events[]='source FOR UPDATE';
@@ -68,8 +68,9 @@ function fixture($company='1',$type='Expense Report Consultant') {
     $m=new Jurnal_expense_posting_model();$m->db=$db;$m->Jurnal_expense_model=new PendingExpense($db);$m->Jurnal_payment_nomor_model=new PostingNumber();return [$m,$db];
 }
 foreach(['1'=>'acc_stm','6'=>'acc_stm','7'=>'acc_stm','4'=>'acc_vuca','3'=>'acc_sustain'] as $company=>$schema) {
-    foreach(['Expense Report Consultant','Expense Report'] as $type) {
+    foreach(['Expense Report Consultant','Expense Report','Pengembalian Kasbon'] as $type) {
         [$m,$db]=fixture((string)$company,$type);$result=$m->post_journal(1,7);
+        if($result['save']===1)check($result['accounting_numbers'][0]['number']===$result['nomor'],'native expense reply preserves actual generated JV');
         check($result['save']===1 && $db->counter===11,'success and counter '.$company.'/'.$type);
         check(count($db->headers)===1 && $db->headers[0]['jml']===8800000 && $db->headers[0]['jenis']==='JV','JV header and source totals');
         check(count($db->details)===6 && $db->details[0]['no_reff']==='REF-1' && $db->details[0]['keterangan']==='Expense' && $db->details[0]['stspos']===1,'zero details skipped and REF parsed');

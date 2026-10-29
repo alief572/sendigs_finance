@@ -5,6 +5,7 @@ class Jurnal_all_dispatcher
 {
     const ROUTES = [
         'INV'=>['post'=>'jurnal_invoicing/save_posting_jurnal','revise'=>'jurnal_invoicing/update_sts_revisi_jurnal'],
+        'KWD'=>['post'=>'kwitansi_deposit/post_journal'],
         'RCV'=>['post'=>'jurnal_penerimaan/save_posting_jurnal','revise'=>'jurnal_penerimaan/update_sts_revisi_jurnal'],
         'PAY'=>['post'=>'jurnal_payment/save_posting_jurnal'],
         'EXP'=>['post'=>'jurnal_expense/save_posting_jurnal'],
@@ -39,7 +40,13 @@ class Jurnal_all_dispatcher
         if (!$lock || !($lock=$lock->row()) || (int)$lock->acquired!==1) throw new RuntimeException('Transaksi sedang diproses. Muat ulang sebelum mencoba kembali.');
         $original=$_POST;
         $bufferLevel=ob_get_level();
+        $referenceLocked=false;
         try {
+            if ($header['jenis_transaksi']==='Payment') {
+                require_once __DIR__.'/Payment_reference.php';
+                Payment_reference::acquire($this->ci->db);
+                $referenceLocked=true;
+            }
             $fresh=$model->detail($id,false);
             if ($model->key($fresh['header'])!==$model->key($header)) throw new InvalidArgumentException('Kelompok jurnal berubah. Silakan muat ulang.');
             if ($action==='post') {
@@ -82,6 +89,7 @@ class Jurnal_all_dispatcher
         } finally {
             $_POST=$original;
             while (ob_get_level()>$bufferLevel) ob_end_clean();
+            if ($referenceLocked) Payment_reference::release($this->ci->db);
             try {
                 if ($this->ci->db->query('SELECT RELEASE_LOCK(?)',[$key])===false) log_message('error','Jurnal All: advisory lock release tidak tersedia.');
             } catch (Throwable $error) { log_message('error','Jurnal All: advisory lock release tidak tersedia.'); }

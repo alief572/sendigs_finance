@@ -538,7 +538,7 @@ class Jurnal_payment_nomor_model extends CI_Model
         }
     }
 
-    public function get_no_buk($cabang, $id_company = '') //modelnya
+    public function get_no_buk($cabang, $id_company = '', $connection = null) //modelnya
     {
         //$db2=$this->load->database('accounting', TRUE);
         //$no_cab		= '101';
@@ -551,7 +551,7 @@ class Jurnal_payment_nomor_model extends CI_Model
         else {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         }
-        $q         = $this->db->query($ambil);
+        $q         = ($connection ?: $this->db)->query($ambil);
 
         if ($q->num_rows() > 0) {
             $ret =  $q->result();

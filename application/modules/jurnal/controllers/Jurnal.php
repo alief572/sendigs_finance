@@ -130,6 +130,11 @@ class Jurnal extends Admin_Controller
                 require_once dirname(__DIR__,2).'/jurnal_all/libraries/Jurnal_debt_posting.php';
                 Jurnal_debt_posting::forwardLegacy($get_jurnal);return;
             }
+            if ($get_jurnal->jenis_transaksi === 'Payment') {
+                $this->db->trans_rollback();
+                echo Modules::run('jurnal_payment/save_posting_jurnal');
+                return;
+            }
 
             $id_company = $get_jurnal->id_company;
             $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi);

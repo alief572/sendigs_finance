@@ -15,12 +15,12 @@ class Recorder {public $events=[],$fail=false;public function begin($module,$met
 class Loader {public $views=[],$models=[];public function library($name){}public function model($name){$this->models[]=$name;}public function view($name,$data,$return=false){$this->views[]=[$name,$data];return '<p>detail</p>';}}
 class Template {public $data=[];public function title($title){}public function page_icon($icon){}public function set($data){$this->data=$data;}public function render($view){}}
 class Data extends Jurnal_all_model {
-    public $calls=0,$fail=false,$source='PAY',$rows=[];
+    public $calls=0,$fail=false,$source='PAY',$rows=[],$balanced=true,$canPost=true,$blockReason='';
     private function read(){$this->calls++;if($this->fail)throw new RuntimeException('query');}
     public function listing($values,$posted=false){$this->read();return ['draw'=>1,'data'=>[['id'=>1]],'recordsTotal'=>1,'recordsFiltered'=>1];}
     public function options($values,$posted=false){$this->read();return ['years'=>[2026],'companies'=>[],'categories'=>[]];}
     public function summary($filters){$this->read();return ['INV'=>['count'=>1]];}
-    public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash'],'is_balance'=>true,'rows'=>$this->rows];}
+    public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash','payment_reference_error'=>$this->blockReason],'is_balance'=>$this->balanced,'can_post'=>$this->canPost,'rows'=>$this->rows];}
     public function export_rows($values,$posted=false){$this->read();return [];}
 }
 class Dispatcher {public $calls=0,$status=1;public function execute($action,$id,$source,$payload){$this->calls++;return ['status'=>$this->status,'msg'=>'outcome'];}}
@@ -34,6 +34,10 @@ $permissions=[];foreach($methods as $method){$c=fixture();$c->$method();check($c
 $permissions=['Jurnal_All.View'];foreach(['save_posting_jurnal','revisi_jurnal'] as $method){$c=fixture();$c->$method();check($c->output->status===403&&$c->jurnal_all_dispatcher->calls===0,'view cannot mutate');}
 $c=fixture();$c->Jurnal_all_model->source='EXP';$c->input->values['source']='EXP';$c->preview();check($c->output->status===403,'expense preview manage contract');
 $permissions=['Jurnal_All.View','Jurnal_All.Manage','Report_Jurnal_All.View'];
+$c=fixture();$c->Jurnal_all_model->canPost=false;$c->Jurnal_all_model->blockReason='Hasil accounting sudah ada; posting ulang diblokir.';$c->preview();$blockedPayload=json_decode($c->output->body,true);
+check($blockedPayload['show_post']===true&&$blockedPayload['can_post']===false&&strpos($blockedPayload['post_block_reason'],'accounting')!==false,'manager sees blocked posting and explicit reason without enabling it');
+$c=fixture();$c->Jurnal_all_model->balanced=false;$c->preview();$blockedPayload=json_decode($c->output->body,true);check($blockedPayload['show_post']&&!$blockedPayload['can_post']&&strpos($blockedPayload['post_block_reason'],'balance')!==false,'unbalanced preview stays blocked with visible action');
+$c=fixture('Report_jurnal_all');$c->preview();$reportPayload=json_decode($c->output->body,true);check(!$reportPayload['show_post']&&!$reportPayload['can_post'],'posted report never exposes posting action');
 $c=fixture();$c->input->values['source']='INV';$c->preview();check($c->output->status===400,'source mismatch');
 foreach(['save_posting_jurnal','revisi_jurnal'] as $method){$c=fixture();$c->input->verb='GET';$c->$method();check($c->output->status===403&&$c->jurnal_all_dispatcher->calls===0,'write POST only');}
 foreach(['get_data_jurnal','get_filters','preview','export_excel'] as $method){$c=fixture();$c->Jurnal_all_model->fail=true;$c->$method();check($c->output->status===500&&$c->module_audit_recorder->events[1][1]===0,'read/export failure '.$method);check(strpos($c->output->body,'query')===false,'no raw error leak');}

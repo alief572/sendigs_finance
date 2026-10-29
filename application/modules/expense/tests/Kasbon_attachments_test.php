@@ -31,6 +31,7 @@ class AttachmentDb {
     public $saved;
     public $rolledBack = false;
     public $committed = false;
+    public $failCommit = false;
     public $table;
     public $capacity = null;
     public function field_data($table) { return array((object)array('name' => 'doc_file', 'type' => $this->capacity === null ? 'text' : 'varchar', 'max_length' => $this->capacity)); }
@@ -46,7 +47,7 @@ class AttachmentDb {
     public function query($sql) { return new AttachmentDbResult(null); }
     public function trans_begin() {}
     public function trans_rollback() { $this->rolledBack = true; }
-    public function trans_commit() { $this->committed = true; }
+    public function trans_commit() { if ($this->failCommit) { return false; } $this->committed = true; return true; }
     public function trans_status() { return true; }
     public function insert($table, $data) { $this->saved = $data; return 10; }
     public function update($table, $data, $where) { if ($table === 'tr_kasbon') { $this->saved = $data; } return true; }
@@ -62,7 +63,7 @@ class AttachmentAuth { public function user_name() { return 'tester'; } }
 class AttachmentNumber { public function GetAutoGenerate($type) { return 'KS-TEST'; } }
 class AttachmentUpload {
     public function initialize($config) {}
-    public function do_upload($field) { return true; }
+    public function do_upload($field) { file_put_contents(FCPATH . 'assets/expense/manual.png', 'manual upload'); return true; }
     public function data() { return array('file_name' => 'manual.png'); }
 }
 function attachmentSave($db, $extra = array(), $upload = false) {
@@ -73,7 +74,7 @@ function attachmentSave($db, $extra = array(), $upload = false) {
     $controller->auth = new AttachmentAuth();
     $controller->All_model = new AttachmentNumber();
     $controller->upload = new AttachmentUpload();
-    $_FILES = $upload ? array('doc_file' => array('name' => 'manual.png', 'type' => 'image/png', 'tmp_name' => '', 'error' => 0, 'size' => 1)) : array();
+    $_FILES = $upload ? array('doc_file' => array('name' => 'manual.png', 'type' => 'image/png', 'tmp_name' => __FILE__, 'error' => 0, 'size' => 1)) : array();
     ob_start();
     $controller->kasbon_save();
     return json_decode(ob_get_clean(), true);
@@ -114,6 +115,21 @@ try {
     $db = new AttachmentDb();
     $reply = attachmentSave($db);
     attachmentCheck($reply['save'] && $db->committed && $db->saved['doc_file'] === $raw, 'Controller saves every PR file from DB, ignoring forged hidden inputs');
+    file_put_contents($root . '/assets/pr/transaction.pdf', 'transaction copy');
+    $db = new AttachmentDb();
+    $db->document = '["transaction.pdf"]';
+    $db->failCommit = true;
+    $reply = attachmentSave($db);
+    attachmentCheck(!$reply['save'] && $db->rolledBack && !file_exists($root . '/assets/expense/transaction.pdf'), 'Failed commit removes new PR copies');
+    attachmentCheck(file_get_contents($root . '/assets/expense/first.png') === 'first', 'Failed commit preserves older copies');
+    $db = new AttachmentDb();
+    $db->document = '["transaction.pdf"]';
+    $reply = attachmentSave($db);
+    attachmentCheck($reply['save'] && file_get_contents($root . '/assets/expense/transaction.pdf') === 'transaction copy', 'Successful commit keeps new PR copies');
+    if (PHP_OS_FAMILY === 'Linux') {
+        attachmentCheck((fileperms($root . '/assets/expense/transaction.pdf') & 07777) === 0664, 'Copied PR file has writable group mode');
+        attachmentCheck(filegroup($root . '/assets/expense/transaction.pdf') === posix_getgrnam('www-data')['gid'], 'Copied PR file belongs to www-data');
+    }
     $db = new AttachmentDb();
     $db->capacity = 50;
     $db->document = json_encode(array(str_repeat('a', 32) . '.png', str_repeat('b', 32) . '.png'));
@@ -183,6 +199,7 @@ try {
     }
     echo "Kasbon attachment normalization, copy, save, edit, fallback and rendering tests passed\n";
 } finally {
+    if (is_file($root . '/assets/expense/.pr-attachments.lock')) { unlink($root . '/assets/expense/.pr-attachments.lock'); }
     foreach (array('assets/pr', 'assets/expense') as $dir) {
         foreach (glob($root . '/' . $dir . '/*') as $file) { unlink($file); }
         rmdir($root . '/' . $dir);

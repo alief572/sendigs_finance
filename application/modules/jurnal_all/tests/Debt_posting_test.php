@@ -12,7 +12,7 @@ require APPPATH.'modules/jurnal_payment_petty_cash/models/Jurnal_payment_petty_c
 require APPPATH.'modules/jurnal_payment_petty_cash/controllers/Jurnal_payment_petty_cash.php';
 require APPPATH.'modules/jurnal_payment/controllers/Jurnal_payment.php';
 require APPPATH.'modules/jurnal/controllers/Jurnal.php';
-$cfg=['hostname'=>'127.0.0.1','port'=>3307,'username'=>'root','password'=>getenv('JOURNAL_TEST_PASSWORD')?:'',
+$cfg=['hostname'=>'127.0.0.1','port'=>(int)(getenv('JOURNAL_TEST_PORT')?:3307),'username'=>'root','password'=>getenv('JOURNAL_TEST_PASSWORD')?:'',
     'database'=>'','dbdriver'=>'mysqli','db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci','save_queries'=>true];
 $rootDb=DB($cfg,true);
 if(!$rootDb->conn_id){fwrite(STDERR,"Disposable MySQL connection unavailable.\n");exit(2);}

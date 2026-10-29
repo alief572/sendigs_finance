@@ -169,26 +169,33 @@
 
 <script>
 	$(document).ready(function() {
+		$('input[name="id_permissions[]"]').on('change', function() {
+			var permissionId = this.value;
+			$('input[name="id_permissions[]"]').filter(function() {
+				return this.value === permissionId && !this.disabled;
+			}).prop('checked', this.checked);
+		});
+
 		$("#chk_view").click(function() {
-			$('.detView').not(this).prop('checked', this.checked);
+			$('.detView').not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 		$("#chk_add").click(function() {
-			$('.detAdd').not(this).prop('checked', this.checked);
+			$('.detAdd').not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 		$("#chk_delete").click(function() {
-			$('.detDelete').not(this).prop('checked', this.checked);
+			$('.detDelete').not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 		$("#chk_manage").click(function() {
-			$('.detManage').not(this).prop('checked', this.checked);
+			$('.detManage').not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 
 		$(".all_baris").click(function() {
 			var id = $(this).data('id');
-			$('.menuID' + id).not(this).prop('checked', this.checked);
+			$('.menuID' + id).not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 
 		$("#chk_all").click(function() {
-			$('input:checkbox').not(this).prop('checked', this.checked);
+			$('input:checkbox').not(this).not(':disabled').prop('checked', this.checked).trigger('change');
 		});
 	});
 </script>

@@ -4,6 +4,8 @@ if (!defined('BASEPATH')) {
 	exit('No direct script access allowed');
 }
 
+require_once dirname(__DIR__, 3) . '/helpers/expense_upload_helper.php';
+
 /*
  * @author Harboens
  * @copyright Copyright (c) 2020
@@ -54,6 +56,85 @@ class Expense extends Admin_Controller
 	}
 
 	private $auditQueriesOk = true;
+	private $expenseUploads;
+	private $expenseUploadTransactionStarted = false;
+
+	private function withExpenseUploads($saveMethod)
+	{
+		$this->expenseUploads = new Expense_upload_files(FCPATH);
+		$this->expenseUploadTransactionStarted = false;
+		try {
+			$this->$saveMethod();
+		} catch (Expense_upload_exception $e) {
+			if ($this->expenseUploadTransactionStarted) { $this->db->trans_rollback(); }
+			$databaseFailure = $e->getCode() === 2;
+			$this->completeAudit('Gagal menyimpan lampiran expense', 0, array(
+				'outcome' => $databaseFailure ? 'transaction_failed' : 'upload_failed',
+				'reason' => $databaseFailure ? 'database_write_failed' : 'upload_storage_failed'
+			));
+			$id = $this->input->post($saveMethod === 'saveReturnEvidenceWithFiles' ? 'id_expense' : 'id');
+			echo json_encode(array('save' => false, 'id' => $id, 'message' => $e->getMessage(), 'msg' => $e->getMessage()));
+		} finally {
+			$this->expenseUploads->cleanup();
+			$this->expenseUploads = null;
+		}
+	}
+
+	private function uploadExpenseFile($field)
+	{
+		$this->expenseUploads->directory();
+		if (!$this->upload->do_upload($field)) {
+			throw new Expense_upload_exception('Gagal mengunggah lampiran. Silakan ulangi.');
+		}
+		$data = $this->upload->data();
+		$this->expenseUploads->uploaded(FCPATH . 'assets/expense/' . $data['file_name']);
+		return true;
+	}
+
+	private function copyExpenseAttachments($names, $source)
+	{
+		if (!$names) { return; }
+		$destination = $this->expenseUploads->copyDirectory();
+		$created = kasbon_copy_attachments($names, $source, $destination);
+		$this->expenseUploads->uploadedBatch($created);
+	}
+
+	private function canViewAllExpenses()
+	{
+		// Pengecualian index mengikuti akun finance; izin approval tetap terpisah.
+		return $this->auth->is_admin() || $this->auth->user_name() === 'finance';
+	}
+
+	private function ownsReportKasbonReferences($documents, $routineDetails)
+	{
+		$normalize = function ($values) {
+			$result = array();
+			foreach ($values as $value) {
+				if ($value === null || $value === '' || $value === '0' || $value === 0) { continue; }
+				if (!is_scalar($value)) { return false; }
+				$result[] = (string)$value;
+			}
+			return array_values(array_unique($result));
+		};
+		$documents = $normalize($documents);
+		$routineDetails = $normalize($routineDetails);
+		if ($documents === false || $routineDetails === false) { return false; }
+		if ((!$documents && !$routineDetails) || $this->canViewAllExpenses()) { return true; }
+		if ($documents) {
+			$query = $this->db->select('no_doc')->where_in('no_doc', $documents)
+				->where('created_by', $this->auth->user_name())->get('tr_kasbon');
+			$this->auditObserve($query);
+			if (!$query || array_diff($documents, array_column($query->result_array(), 'no_doc'))) { return false; }
+		}
+		if ($routineDetails) {
+			$query = $this->db->select('a.id')->from('tr_pengajuan_rutin_detail a')
+				->join('tr_pengajuan_rutin b', 'b.no_doc = a.no_doc', 'left')
+				->where_in('a.id', $routineDetails)->where('b.created_by', $this->auth->user_id())->get();
+			$this->auditObserve($query);
+			if (!$query || array_diff($routineDetails, array_column($query->result_array(), 'id'))) { return false; }
+		}
+		return true;
+	}
 
 	private function beginAudit($method, $data = array(), $keys = array())
 	{
@@ -217,6 +298,11 @@ class Expense extends Admin_Controller
 	// kasbon save
 	public function kasbon_save()
 	{
+		$this->withExpenseUploads('saveKasbonWithFiles');
+	}
+
+	private function saveKasbonWithFiles()
+	{
 		$id             	= $this->input->post("id");
 		$tgl_doc  			= $this->input->post("tgl_doc");
 		$no_doc		   	 	= $this->input->post("no_doc");
@@ -240,7 +326,7 @@ class Expense extends Admin_Controller
 		$nm_coa = $this->input->post("nm_coa");
 		$metode_pembayaran	= 1;
 
-		$this->beginAudit(__FUNCTION__, array(
+		$this->beginAudit('kasbon_save', array(
 			'id' => $id,
 			'no_doc' => $no_doc,
 			'department_id' => $departement,
@@ -248,9 +334,11 @@ class Expense extends Admin_Controller
 			'no_pr' => $no_pr,
 			'tipe_pr' => $tipe_pr,
 		), array('id', 'no_doc', 'department_id', 'amount', 'no_pr', 'tipe_pr', 'outcome', 'reason'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$this->db->trans_begin();
-		$config['upload_path'] = 'assets/expense/';
+		$this->expenseUploadTransactionStarted = true;
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = '*';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -269,7 +357,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file']['size'];
 			// $this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
 			}
@@ -289,7 +377,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file_2']['size'];
 			// $this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData2 = $this->upload->data();
 				$filenames2 = $uploadData2['file_name'];
 			}
@@ -305,12 +393,12 @@ class Expense extends Admin_Controller
 					$prFiles = kasbon_attachment_names(kasbon_pr_document($this->db, $no_pr));
 					if ($prFiles) { $filenames = json_encode($prFiles); }
 					kasbon_check_attachment_capacity($this->db, $filenames);
-					kasbon_copy_attachments($prFiles, FCPATH . 'assets/pr', FCPATH . 'assets/expense');
+					$this->copyExpenseAttachments($prFiles, FCPATH . 'assets/pr');
 				}
 			} elseif (!empty($file_name)) {
 				$prFiles = kasbon_attachment_names($file_name);
 				$source = $tipe_pr === 'pr asset' ? 'uploads/pr_asset' : 'assets/pr';
-				kasbon_copy_attachments($prFiles, FCPATH . $source, FCPATH . 'assets/expense');
+				$this->copyExpenseAttachments($prFiles, FCPATH . $source);
 				$filenames = $file_name;
 			}
 		} catch (RuntimeException $e) {
@@ -383,8 +471,7 @@ class Expense extends Admin_Controller
 							if (!$update_rutin_non_planning_detail) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -393,8 +480,7 @@ class Expense extends Admin_Controller
 					if (!$insert_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				} else if ($tipe_pr == 'pr asset') {
 					$this->db->select('a.*, b.nama_asset as nm_barang, "Pcs" as satuan, b.qty');
@@ -430,8 +516,7 @@ class Expense extends Admin_Controller
 							if (!$update_tran_pr_header) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -440,8 +525,7 @@ class Expense extends Admin_Controller
 					if (!$update_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				} else {
 					// $get_detail_pr = $this->db->get_where('material_planning_base_on_produksi_detail', ['no_pr' => $no_pr])->result_array();
@@ -483,8 +567,7 @@ class Expense extends Admin_Controller
 							if (!$update_planning_detail) {
 								$this->db->trans_rollback();
 
-								print_r($this->db->last_query());
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 					endforeach;
@@ -493,8 +576,7 @@ class Expense extends Admin_Controller
 					if (!$update_pr_detail_kasbon) {
 						$this->db->trans_rollback();
 
-						print_r($this->db->last_query());
-						exit;
+						throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 					}
 				}
 			}
@@ -503,8 +585,7 @@ class Expense extends Admin_Controller
 			if (!$update_kasbon) {
 				$this->db->trans_rollback();
 
-				print_r($this->db->last_query());
-				exit;
+				throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 			}
 			// print_r($this->db->last_query());
 			// exit;
@@ -512,6 +593,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = false;
 			} else {
+				$this->expenseUploads->committed();
 				$result = true;
 			}
 		} else {
@@ -660,6 +742,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -692,6 +775,12 @@ class Expense extends Admin_Controller
 		), array('filter_nama', 'department_id', 'record_count', 'outcome'));
 
 		$where_filter = "";
+		$where_creator = '';
+		$where_routine_creator = '';
+		if (!$this->canViewAllExpenses()) {
+			$where_creator = ' AND a.created_by = ' . $this->db->escape($this->auth->user_name());
+			$where_routine_creator = ' AND b.created_by = ' . $this->db->escape($this->auth->user_id());
+		}
 		if (!empty($nama) && !empty($departement)) {
 			$where_filter = " AND a.nama = " . $this->db->escape($nama) . " AND a.departement = " . $this->db->escape($departement) . " ";
 		}
@@ -719,7 +808,7 @@ class Expense extends Admin_Controller
 				tr_kasbon a
 			WHERE
 				a.status IN ('2', '3') AND
-				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . " AND
+				(a.no_kasbon_consultant IS NULL OR a.no_kasbon_consultant = '') " . $where_filter . $where_creator . " AND
 				(SELECT COUNT(aa.id) FROM tr_expense_detail aa JOIN tr_expense ab ON ab.no_doc = aa.no_doc WHERE aa.id_kasbon = a.no_doc AND ab.status IN ('0','1','2','3','4')) <= 0 AND
 				(SELECT COUNT(ab2.id) FROM tr_expense ab2 WHERE ab2.id_kasbon = a.no_doc AND ab2.status IN ('0','1','2','3','4')) <= 0
 			
@@ -748,22 +837,23 @@ class Expense extends Admin_Controller
 				LEFT JOIN tr_pengajuan_rutin b ON b.no_doc = a.no_doc
 			WHERE
 				a.status IN ('2', '3') AND
-				a.metode_pembelian = '2' AND 
+				a.metode_pembelian = '2' " . $where_routine_creator . " AND
 				(SELECT COUNT(aa.id) FROM tr_expense aa JOIN tr_expense_detail ab ON ab.no_doc = aa.no_doc WHERE ab.id_expense_detail = a.id AND aa.status IN ('0','1','2','3','4')) < 1
 		";
 
 		$query = $this->db->query($sql_kasbon);
 		$this->auditObserve($query);
-		$data = $query ? $query->result() : false;
-		if (!$data) {
-			$this->completeAudit('Gagal membaca data kasbon: query error atau data kosong', 0, array(
+		if (!$query) {
+			$this->completeAudit('Gagal membaca data kasbon', 0, array(
 				'filter_nama' => $nama,
 				'department_id' => $departement,
 				'outcome' => 'query_error'
 			));
-			print_r($this->db->error($data));
-			exit;
+			$this->output->set_status_header(500);
+			echo json_encode(array('message' => 'Gagal membaca daftar kasbon.'));
+			return;
 		}
+		$data = $query->result();
 
 		if (!empty($data) && is_array($data)) {
 			foreach ($data as &$item) {
@@ -1321,44 +1411,79 @@ class Expense extends Admin_Controller
 
 		// Hitung counter untuk badge Tab 2 (Pengembalian Kasbon) dan Tab 3 (Lebih Expense)
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenses();
 
-		$this->db->where('lebih_bayar >', 0);
-		$this->db->where_in('status', ['3', '4']);
+		// TAB 2: Pengembalian Kasbon counts (upload=3, verif=4, done=2)
+		$this->db->select("
+			SUM(CASE WHEN a.status = '3' THEN 1 ELSE 0 END) as cnt_upload,
+			SUM(CASE WHEN a.status = '4' THEN 1 ELSE 0 END) as cnt_verif,
+			SUM(CASE WHEN a.status = '2' THEN 1 ELSE 0 END) as cnt_done
+		", false);
+		$this->db->from('tr_expense a');
+		$this->db->where('a.lebih_bayar >', 0);
+		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
-		$this->db->where('pettycash', null);
-		$this->db->or_where('pettycash', '');
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
 		$this->db->group_end();
 		$this->db->group_start();
-		$this->db->where('id_po', null);
-		$this->db->or_where('id_po', '');
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
 		$this->db->group_end();
-		$this->db->not_like('no_doc', 'PI-', 'after');
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
-		$count_pengembalian = $this->db->count_all_results('tr_expense');
+		$q_pk_counts = $this->db->get()->row();
+		$count_pk_upload = $q_pk_counts ? (int)$q_pk_counts->cnt_upload : 0;
+		$count_pk_verif  = $q_pk_counts ? (int)$q_pk_counts->cnt_verif : 0;
+		$count_pk_done   = $q_pk_counts ? (int)$q_pk_counts->cnt_done : 0;
+		// Badge header tab utama Pengembalian Kasbon: menghitung item Perlu Upload
+		$count_pengembalian = $count_pk_upload;
 
-		$this->db->where('kurang_bayar >', 0);
-		$this->db->where('status', '2');
-		$this->db->group_start();
-		$this->db->where('pettycash', null);
-		$this->db->or_where('pettycash', '');
-		$this->db->group_end();
-		$this->db->group_start();
-		$this->db->where('id_po', null);
-		$this->db->or_where('id_po', '');
-		$this->db->group_end();
-		$this->db->not_like('no_doc', 'PI-', 'after');
-		if (!$is_admin) {
-			$this->db->where('nama', $cur_user);
-		}
-		$count_lebih_expense = $this->db->count_all_results('tr_expense');
+		// TAB 3: Lebih Expense counts (belum, menunggu, selesai)
+		$sub_rp_done = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'done' AND d.decision = 'approved' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_pending = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'pending' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_legacy = "(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+
+		$where_le_creator = !$is_admin ? " AND a.created_by = " . $this->db->escape($cur_user) : "";
+		$sql_le_counts = "
+			SELECT 
+				SUM(CASE WHEN (z.done_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status >= 1)) THEN 1 ELSE 0 END) as cnt_selesai,
+				SUM(CASE WHEN (z.done_doc IS NULL AND (z.legacy_status IS NULL OR z.legacy_status < 1) AND (z.pending_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status = 0))) THEN 1 ELSE 0 END) as cnt_menunggu,
+				SUM(CASE WHEN (z.done_doc IS NULL AND z.pending_doc IS NULL AND (z.legacy_status IS NULL)) THEN 1 ELSE 0 END) as cnt_belum
+			FROM (
+				SELECT a.id,
+					{$sub_rp_done} as done_doc,
+					{$sub_rp_pending} as pending_doc,
+					{$sub_rp_legacy} as legacy_status
+				FROM tr_expense a
+				WHERE a.kurang_bayar > 0
+				  AND a.status IN ('2', '3', '4')
+				  AND (a.pettycash IS NULL OR a.pettycash = '')
+				  AND (a.id_po IS NULL OR a.id_po = '')
+				  AND a.no_doc NOT LIKE 'PI-%'
+				  {$where_le_creator}
+			) z
+		";
+		$q_le_counts = $this->db->query($sql_le_counts)->row();
+		$count_rb_belum    = $q_le_counts ? (int)$q_le_counts->cnt_belum : 0;
+		$count_rb_menunggu = $q_le_counts ? (int)$q_le_counts->cnt_menunggu : 0;
+		$count_rb_selesai  = $q_le_counts ? (int)$q_le_counts->cnt_selesai : 0;
+		// Badge header tab utama Lebih Expense: dokumen berjalan (belum + menunggu)
+		$count_lebih_expense = $count_rb_belum + $count_rb_menunggu;
 
 		$this->template->set('status', $this->status);
 		$this->template->set('bank_options', $bank_options);
 		$this->template->set('count_pengembalian', $count_pengembalian);
+		$this->template->set('count_pk_upload', $count_pk_upload);
+		$this->template->set('count_pk_verif', $count_pk_verif);
+		$this->template->set('count_pk_done', $count_pk_done);
+
 		$this->template->set('count_lebih_expense', $count_lebih_expense);
+		$this->template->set('count_rb_belum', $count_rb_belum);
+		$this->template->set('count_rb_menunggu', $count_rb_menunggu);
+		$this->template->set('count_rb_selesai', $count_rb_selesai);
 		$this->template->page_icon('fa fa-cubes');
 		$this->template->title('Expense');
 		$this->template->render('index');
@@ -1424,9 +1549,19 @@ class Expense extends Admin_Controller
 	{
 		$this->beginAudit(__FUNCTION__, array('id_kasbon' => $id_kasbon), array('id_kasbon', 'item_count', 'outcome'));
 		$id_kasbon = urldecode($id_kasbon);
-		$q_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $id_kasbon]);
+		$where_kasbon = array('no_doc' => $id_kasbon);
+		if (!$this->canViewAllExpenses()) { $where_kasbon['created_by'] = $this->auth->user_name(); }
+		$q_kb = $this->db->get_where('tr_kasbon', $where_kasbon);
 		$this->auditObserve($q_kb);
 		$data_kasbon = $q_kb ? $q_kb->row() : null;
+		if (!$data_kasbon) {
+			$this->completeAudit('Kasbon tidak tersedia untuk expense report', 0, array(
+				'id_kasbon' => $id_kasbon, 'outcome' => $q_kb ? 'not_found' : 'query_error'
+			));
+			$this->output->set_status_header($q_kb ? 404 : 500);
+			echo '<div class="alert alert-danger">Kasbon tidak tersedia untuk akun Anda.</div>';
+			return;
+		}
 
 		$data_budget 	= $this->All_model->GetComboBudget('', 'EXPENSE', date('Y'));
 		$this->auditObserve($data_budget);
@@ -2023,9 +2158,9 @@ class Expense extends Admin_Controller
 			$get_expense 	= $q_expense ? $q_expense->row() : null;
 
 			if ($get_expense) {
-				// BR-12: Pelapor tidak boleh meng-approve laporannya sendiri
+				// BR-12: Self-approval hanya diizinkan untuk anggota grup Admin.
 				$current_user = $this->auth->user_name();
-				if (!empty($get_expense->nama) && $get_expense->nama === $current_user) {
+				if (!empty($get_expense->nama) && $get_expense->nama === $current_user && !$this->auth->is_admin()) {
 					$param = array(
 						'save' => false,
 						'message' => 'Anda tidak dapat menyetujui laporan expense yang Anda buat sendiri (Segregation of Duties)!'
@@ -2138,11 +2273,17 @@ class Expense extends Admin_Controller
 	// save
 	public function save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveExpenseWithFiles');
+	}
+
+	private function saveExpenseWithFiles()
+	{
+		$this->beginAudit('save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome', 'reason'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$post = $this->input->post();
 
@@ -2178,6 +2319,20 @@ class Expense extends Admin_Controller
 		$id_expense_detail		= $this->input->post("id_expense_detail");
 		$no_doc_kasbon			= $this->input->post("no_doc_kasbon");
 		$idKasbon				= $this->input->post("idKasbon");
+
+		$routine_references = array();
+		foreach ((array)$id_expense_detail as $key => $reference) {
+			// Detail PR pada report kasbon bukan ID sumber pengajuan rutin.
+			if (empty($no_doc_kasbon) && empty($id_kasbon[$key])) { $routine_references[] = $reference; }
+		}
+		if (!$this->ownsReportKasbonReferences(array_merge(array($no_doc_kasbon), (array)$id_kasbon), $routine_references)) {
+			$this->completeAudit('Referensi kasbon expense report tidak dapat diakses', 0, array(
+				'id' => $id, 'no_doc' => $no_doc,
+				'outcome' => $this->auditQueriesOk ? 'forbidden' : 'query_error', 'reason' => 'kasbon_not_accessible'
+			));
+			echo json_encode(array('save' => false, 'message' => 'Kasbon yang dipilih tidak tersedia untuk akun Anda.'));
+			return;
+		}
 
 		$pengembalian = $this->input->post('pengembalian');
 		if (!isset($pengembalian)) {
@@ -2284,6 +2439,7 @@ class Expense extends Admin_Controller
 
 		//proses utama update tr_expense
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 		if ($id != "") {
 			$grand_total = $total_kasbon - $total_expense;
 			if ($grand_total < 0) {
@@ -2304,18 +2460,10 @@ class Expense extends Admin_Controller
 				}
 			}
 			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
-				$uploadDirectory = 'assets/expense_bukti_pengembalian/';
-				if (!is_dir($uploadDirectory)) {
-					mkdir($uploadDirectory, 0777, true);
-				}
 				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
 					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
 						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
-						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
-						$filePath = $uploadDirectory . $cleanName;
-						if (move_uploaded_file($tmpName, $filePath)) {
-							$pathBuktiPengembalian[] = $filePath;
-						}
+						$pathBuktiPengembalian[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense_bukti_pengembalian');
 					}
 				}
 			}
@@ -2359,7 +2507,7 @@ class Expense extends Admin_Controller
 					// proses update jika ada id_detail
 					if ($id_detail[$keys] !== '') {
 						if ($qty[$keys] > 0) {
-							$config['upload_path'] = './assets/expense/';
+							$config['upload_path'] = FCPATH . 'assets/expense/';
 							$config['allowed_types'] = '*';
 							$config['remove_spaces'] = TRUE;
 							$config['encrypt_name'] = TRUE;
@@ -2376,7 +2524,7 @@ class Expense extends Admin_Controller
 								$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 								$this->load->library('upload', $config);
 								$this->upload->initialize($config);
-								if ($this->upload->do_upload('file')) {
+								if ($this->uploadExpenseFile('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
 								} else {
@@ -2481,7 +2629,7 @@ class Expense extends Admin_Controller
 					// proses insert karena tidak ada id_detail
 					else {
 						if ($qty[$keys] > 0) {
-							$config['upload_path'] = './assets/expense/';
+							$config['upload_path'] = FCPATH . 'assets/expense/';
 							$config['allowed_types'] = '*';
 							$config['remove_spaces'] = TRUE;
 							$config['encrypt_name'] = TRUE;
@@ -2495,7 +2643,7 @@ class Expense extends Admin_Controller
 								$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 								$this->load->library('upload', $config);
 								$this->upload->initialize($config);
-								if ($this->upload->do_upload('file')) {
+								if ($this->uploadExpenseFile('file')) {
 									$uploadData = $this->upload->data();
 									$filenames = $uploadData['file_name'];
 								} else {
@@ -2626,6 +2774,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -2633,20 +2782,13 @@ class Expense extends Admin_Controller
 		else {
 			$no_doc = $this->All_model->GetAutoGenerate('format_expense');
 
-			$uploadDirectory = "./assets/expense/";
 			$pathBonBukti = [];
 			$pathBuktiPengembalian = [];
 
 			if (!empty($_FILES['doc_file']['name'][0])) {
 				foreach ($_FILES['doc_file']['name'] as $index => $name) {
 					$tmpName = $_FILES['doc_file']['tmp_name'][$index];
-					$filePath = $uploadDirectory . basename($name);
-
-					if (move_uploaded_file($tmpName, $filePath)) {
-						$pathBonBukti[] = $filePath;
-					} else {
-						echo "Gagal mengunggah file: $name<br>";
-					}
+					$pathBonBukti[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense');
 				}
 			}
 			$bonBukti = implode(";", $pathBonBukti);
@@ -2657,18 +2799,10 @@ class Expense extends Admin_Controller
 				}
 			}
 			if (!empty($_FILES['bukti_pengembalian']['name'][0])) {
-				if (!is_dir($uploadDirectory)) {
-					mkdir($uploadDirectory, 0777, true);
-				}
 				foreach ($_FILES['bukti_pengembalian']['name'] as $index => $name) {
 					if (!empty($_FILES['bukti_pengembalian']['tmp_name'][$index])) {
 						$tmpName = $_FILES['bukti_pengembalian']['tmp_name'][$index];
-						$cleanName = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($name));
-						$filePath = $uploadDirectory . $cleanName;
-
-						if (move_uploaded_file($tmpName, $filePath)) {
-							$pathBuktiPengembalian[] = $filePath;
-						}
+						$pathBuktiPengembalian[] = $this->expenseUploads->move($tmpName, $name, 'assets/expense_bukti_pengembalian');
 					}
 				}
 			}
@@ -2720,8 +2854,7 @@ class Expense extends Admin_Controller
 			$insert_expense = $this->db->insert('tr_expense', $data);
 
 			if (!$insert_expense) {
-				print_r($this->db->error($insert_expense));
-				exit;
+				throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 			}
 
 			$this->db->delete('tr_expense_detail', ['no_doc' => $this->auth->user_id()]);
@@ -2733,7 +2866,7 @@ class Expense extends Admin_Controller
 				foreach ($detail_id as $keys => $val) {
 					$no_doc			= $no_doc;
 					if ($qty[$keys] > 0) {
-						$config['upload_path'] = './assets/expense/';
+						$config['upload_path'] = FCPATH . 'assets/expense/';
 						$config['allowed_types'] = '*';
 						$config['remove_spaces'] = TRUE;
 						$config['encrypt_name'] = TRUE;
@@ -2746,7 +2879,7 @@ class Expense extends Admin_Controller
 							$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 							$this->load->library('upload', $config);
 							$this->upload->initialize($config);
-							if ($this->upload->do_upload('file')) {
+							if ($this->uploadExpenseFile('file')) {
 								$uploadData = $this->upload->data();
 								$filenames = $uploadData['file_name'];
 							} else {
@@ -2809,8 +2942,7 @@ class Expense extends Admin_Controller
 
 							$update_expense_kembalian = $this->db->update('tr_expense', ['expense_id_kembalian' => $no_doc], ['no_doc' => $post['pengembalian_expense_' . $detail_id[$keys]]]);
 							if (!$update_expense_kembalian) {
-								print_r($this->db->error($update_expense_kembalian));
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 
 							$insert_log_kembalian = $this->db->insert('tr_pengembalian_expense', [
@@ -2824,8 +2956,7 @@ class Expense extends Admin_Controller
 								'created_date' => date('Y-m-d H:i:s')
 							]);
 							if (!$insert_log_kembalian) {
-								print_r($this->db->error($insert_log_kembalian));
-								exit;
+								throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 							}
 						}
 
@@ -2853,8 +2984,7 @@ class Expense extends Admin_Controller
 
 						$insert_detail_expense = $this->db->insert('tr_expense_detail', $data_detail);
 						if (!$insert_detail_expense) {
-							print_r($this->db->error($insert_detail_expense));
-							exit;
+							throw new Expense_upload_exception('Gagal menyimpan data expense. Silakan ulangi.', 2);
 						}
 						$new_dtl_id = $this->db->insert_id();
 						$this->_handle_detail_files($no_doc, $new_dtl_id, $val);
@@ -2884,6 +3014,7 @@ class Expense extends Admin_Controller
 				$this->db->trans_rollback();
 				$result = FALSE;
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 			}
 		}
@@ -3113,11 +3244,17 @@ class Expense extends Admin_Controller
 	// transport req save
 	public function transport_req_save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveTransportRequestWithFiles');
+	}
+
+	private function saveTransportRequestWithFiles()
+	{
+		$this->beginAudit('transport_req_save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$id             = $this->input->post("id");
 		$tgl_doc  		= $this->input->post("tgl_doc");
@@ -3180,9 +3317,10 @@ class Expense extends Admin_Controller
 		$jumlah_expense = str_replace(['.', ','], '', $jumlah_expense);
 
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 
 		// Configure upload library
-		$config['upload_path'] = 'assets/expense/';
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -3281,7 +3419,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 
-						if ($this->upload->do_upload('file')) {
+						if ($this->uploadExpenseFile('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
 						}
@@ -3295,6 +3433,7 @@ class Expense extends Admin_Controller
 				$result = 0;
 				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
+				$this->expenseUploads->committed();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -3367,7 +3506,7 @@ class Expense extends Admin_Controller
 						$_FILES['file']['error'] = $_FILES['doc_file_' . $val]['error'];
 						$_FILES['file']['size'] = $_FILES['doc_file_' . $val]['size'];
 
-						if ($this->upload->do_upload('file')) {
+						if ($this->uploadExpenseFile('file')) {
 							$uploadData = $this->upload->data();
 							$detail_data['doc_file'] = $uploadData['file_name'];
 						}
@@ -3386,6 +3525,7 @@ class Expense extends Admin_Controller
 				$result = 0;
 				$error_msg = isset($this->db->error()['message']) ? $this->db->error()['message'] : 'Transaction failed';
 			} else {
+				$this->expenseUploads->committed();
 				$result = 1;
 				$error_msg = '';
 			}
@@ -3557,11 +3697,17 @@ class Expense extends Admin_Controller
 	// transport save
 	public function transport_save()
 	{
-		$this->beginAudit(__FUNCTION__, array(
+		$this->withExpenseUploads('saveTransportWithFiles');
+	}
+
+	private function saveTransportWithFiles()
+	{
+		$this->beginAudit('transport_save', array(
 			'id' => $this->input->post('id'),
 			'no_doc' => $this->input->post('no_doc'),
 			'departement' => $this->input->post('departement')
 		), array('id', 'no_doc', 'departement', 'amount', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 
 		$id             = $this->input->post("id");
 		$tgl_doc  		= date('Y-m-d', strtotime($this->input->post("tgl_doc")));
@@ -3592,7 +3738,8 @@ class Expense extends Admin_Controller
 		$msg = '';
 
 		$this->db->trans_begin();
-		$config['upload_path'] = 'assets/expense/';
+		$this->expenseUploadTransactionStarted = true;
+		$config['upload_path'] = FCPATH . 'assets/expense/';
 		$config['allowed_types'] = 'jpg|jpeg|png|pdf';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
@@ -3605,7 +3752,7 @@ class Expense extends Admin_Controller
 			$_FILES['file']['size'] = $_FILES['doc_file']['size'];
 			$this->load->library('upload', $config);
 			$this->upload->initialize($config);
-			if ($this->upload->do_upload('file')) {
+			if ($this->uploadExpenseFile('file')) {
 				$uploadData = $this->upload->data();
 				$filenames = $uploadData['file_name'];
 			} else {
@@ -3672,6 +3819,7 @@ class Expense extends Admin_Controller
 				$result = FALSE;
 				$msg = 'Data gagal di simpan !';
 			} else {
+				$this->expenseUploads->committed();
 				$result = TRUE;
 				$msg = 'Data berhasil di simpan !';
 			}
@@ -5759,6 +5907,8 @@ class Expense extends Admin_Controller
 	public function get_dat_expense_data()
 	{
 		$post = $this->input->post();
+		// Lookup role memakai Query Builder yang sama; selesaikan sebelum menyusun query daftar.
+		$canViewAll = $this->canViewAllExpenses();
 
 		$all = (isset($post['all']) && !empty($post['all']) && $post['all'] == '1') ? $post['all'] : '';
 
@@ -5794,11 +5944,8 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 
-		if ($this->auth->user_id() !== '7' && $this->auth->user_id() !== '1' && !has_permission('Expense.Manage')) {
-			$this->db->group_start();
-			$this->db->where('a.nama', $this->auth->user_name());
-			$this->db->or_where('a.created_by', $this->auth->user_name());
-			$this->db->group_end();
+		if (!$canViewAll) {
+			$this->db->where('a.created_by', $this->auth->user_name());
 		}
 
 		$this->db->order_by('a.created_on', 'DESC');
@@ -6232,10 +6379,10 @@ class Expense extends Admin_Controller
 		foreach ($rows as $row) {
 			$action = '';
 			if (has_permission('Approval Expense Management.View')) {
-				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
+				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="openExpenseView(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
 			}
-			if (has_permission('Approval Expense Management.Manage') && $row->status == 0) {
-				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
+			if (has_permission('Approval Expense Management.Manage') && ($row->status == 1 || ($row->status == 0 && $row->sts_finance == '1'))) {
+				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="openExpenseApproval(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
 			}
 			$data[] = array(
 				'no'        => $no++,
@@ -6341,10 +6488,10 @@ class Expense extends Admin_Controller
 		foreach ($rows as $row) {
 			$action = '';
 			if (has_permission('Expense_Approval.View')) {
-				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
+				$action .= '<a class="btn btn-warning btn-sm" href="javascript:void(0)" title="View" onclick="openExpenseView(\'' . $row->id . '\')"><i class="fa fa-eye"></i></a> ';
 			}
 			if (has_permission('Expense_Approval.Manage') && $row->status == 0) {
-				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="data_approve(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
+				$action .= '<a class="btn btn-success btn-sm" href="javascript:void(0)" title="Approve" onclick="openExpenseApproval(\'' . $row->id . '\')"><i class="fa fa-check-square-o"></i></a>';
 			}
 			$data[] = array(
 				'no'        => $no++,
@@ -6609,7 +6756,7 @@ class Expense extends Admin_Controller
 			$files = $_FILES['doc_files_' . $row_key];
 			$count = is_array($files['name']) ? count($files['name']) : 0;
 
-			$config['upload_path']   = './assets/expense/';
+			$config['upload_path']   = FCPATH . 'assets/expense/';
 			$config['allowed_types'] = '*';
 			$config['remove_spaces'] = TRUE;
 			$config['encrypt_name']  = TRUE;
@@ -6624,7 +6771,7 @@ class Expense extends Admin_Controller
 					$_FILES['single_dtl_file']['size']     = $files['size'][$i];
 
 					$this->upload->initialize($config);
-					if ($this->upload->do_upload('single_dtl_file')) {
+					if ($this->uploadExpenseFile('single_dtl_file')) {
 						$uData = $this->upload->data();
 						$this->db->insert('tr_expense_detail_file', [
 							'no_doc'     => $no_doc,
@@ -6886,13 +7033,20 @@ class Expense extends Admin_Controller
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
 		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$subtab = isset($post['subtab']) ? trim($post['subtab']) : 'upload';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenses();
 
+		// Hitung counts untuk ketiga subtab
+		$this->db->select("
+			SUM(CASE WHEN a.status = '3' THEN 1 ELSE 0 END) as cnt_upload,
+			SUM(CASE WHEN a.status = '4' THEN 1 ELSE 0 END) as cnt_verif,
+			SUM(CASE WHEN a.status = '2' THEN 1 ELSE 0 END) as cnt_done
+		", false);
 		$this->db->from('tr_expense a');
 		$this->db->where('a.lebih_bayar >', 0);
-		$this->db->where_in('a.status', ['3', '4']);
+		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
 		$this->db->where('a.pettycash', null);
 		$this->db->or_where('a.pettycash', '');
@@ -6903,7 +7057,36 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
+		}
+		$q_cnt = $this->db->get()->row();
+		$cnt_upload = $q_cnt ? (int)$q_cnt->cnt_upload : 0;
+		$cnt_verif  = $q_cnt ? (int)$q_cnt->cnt_verif : 0;
+		$cnt_done   = $q_cnt ? (int)$q_cnt->cnt_done : 0;
+
+		// Query DataTables terfilter per subtab
+		$this->db->from('tr_expense a');
+		$this->db->where('a.lebih_bayar >', 0);
+		if ($subtab === 'upload') {
+			$this->db->where('a.status', '3');
+		} else if ($subtab === 'verif') {
+			$this->db->where('a.status', '4');
+		} else if ($subtab === 'done') {
+			$this->db->where('a.status', '2');
+		} else {
+			$this->db->where_in('a.status', ['2', '3', '4']);
+		}
+		$this->db->group_start();
+		$this->db->where('a.pettycash', null);
+		$this->db->or_where('a.pettycash', '');
+		$this->db->group_end();
+		$this->db->group_start();
+		$this->db->where('a.id_po', null);
+		$this->db->or_where('a.id_po', '');
+		$this->db->group_end();
+		$this->db->not_like('a.no_doc', 'PI-', 'after');
+		if (!$is_admin) {
+			$this->db->where('a.created_by', $cur_user);
 		}
 		$count_all = $this->db->count_all_results();
 
@@ -6911,7 +7094,15 @@ class Expense extends Admin_Controller
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
 		$this->db->where('a.lebih_bayar >', 0);
-		$this->db->where_in('a.status', ['3', '4']);
+		if ($subtab === 'upload') {
+			$this->db->where('a.status', '3');
+		} else if ($subtab === 'verif') {
+			$this->db->where('a.status', '4');
+		} else if ($subtab === 'done') {
+			$this->db->where('a.status', '2');
+		} else {
+			$this->db->where_in('a.status', ['2', '3', '4']);
+		}
 		$this->db->group_start();
 		$this->db->where('a.pettycash', null);
 		$this->db->or_where('a.pettycash', '');
@@ -6922,7 +7113,7 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
 		if (!empty($search)) {
 			$this->db->group_start();
@@ -6944,33 +7135,50 @@ class Expense extends Admin_Controller
 		foreach ($rows as $item) {
 			$no++;
 			$nominal_lebih = floatval($item['lebih_bayar']);
-			$status_badge = $this->_render_expense_status_badge($item);
 
-			// Tampilkan alasan penolakan verifikasi jika ada
-			if (!empty($item['verif_reject_reason']) && (string)$item['status'] === '3') {
-				$status_badge .= '<br><span class="badge" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; font-weight:normal; font-size:10px; margin-top:3px; display:inline-block; max-width:180px; white-space:normal; text-align:center;">'
-					. '<i class="fa fa-info-circle"></i> Catatan Finance: ' . htmlspecialchars($item['verif_reject_reason']) . '</span>';
+			// Keterangan & Catatan Penolakan jika ada
+			$keperluan_text = htmlspecialchars($item['informasi']);
+			if ((string)$item['status'] === '3' && !empty($item['verif_reject_reason'])) {
+				$keperluan_text .= '<br><span class="badge" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; font-weight:normal; font-size:11px; margin-top:4px; display:inline-block; max-width:280px; white-space:normal; text-align:left;">'
+					. '<i class="fa fa-info-circle"></i> Ditolak Finance: ' . htmlspecialchars($item['verif_reject_reason']) . '</span>';
 			}
 
-			$action = '';
+			// Format tanggal approval direktur
+			$tgl_appr = !empty($item['tgl_approval_direktur']) ? date('Y-m-d', strtotime($item['tgl_approval_direktur'])) : (!empty($item['approved_on']) ? date('Y-m-d', strtotime($item['approved_on'])) : $item['tgl_doc']);
+
+			// Status badge
 			if ((string)$item['status'] === '3') {
-				$action = '<button type="button" class="btn btn-primary btn-xs btn-rounded btn-upload-pengembalian" '
+				$status_badge = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Pengembalian</span>';
+			} else if ((string)$item['status'] === '4') {
+				$status_badge = '<span class="badge" style="background:#6f42c1; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Verifikasi</span>';
+			} else if ((string)$item['status'] === '2') {
+				$status_badge = '<span class="badge" style="background:#00a65a; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai</span>';
+			} else {
+				$status_badge = $this->_render_expense_status_badge($item);
+			}
+
+			// Action button
+			if ((string)$item['status'] === '3') {
+				$action = '<button type="button" class="btn btn-warning btn-xs btn-rounded btn-upload-pengembalian" '
 					. 'data-id="' . $item['id'] . '" '
 					. 'data-doc="' . htmlspecialchars($item['no_doc']) . '" '
 					. 'data-kasbon="' . htmlspecialchars($item['id_kasbon'] ?? '') . '" '
 					. 'data-nominal="' . $nominal_lebih . '">'
 					. '<i class="fa fa-upload"></i> Upload Bukti</button>';
-			} else if ((string)$item['status'] === '4') {
-				$action = '<a class="btn btn-info btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')">'
-					. '<i class="fa fa-eye"></i> Detail Bukti</a>';
+			} else {
+				$action = '<button type="button" class="btn btn-default btn-xs btn-rounded btn-upload-pengembalian" '
+					. 'data-id="' . $item['id'] . '" '
+					. 'data-readonly="1" '
+					. 'data-doc="' . htmlspecialchars($item['no_doc']) . '">'
+					. '<i class="fa fa-eye"></i> Lihat</button>';
 			}
 
 			$data[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
-				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
-				'tgl_doc' => $item['tgl_doc'],
-				'informasi' => htmlspecialchars($item['informasi']),
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . htmlspecialchars($item['id_kasbon']) . '</span>' : '-',
+				'informasi' => $keperluan_text,
+				'tgl_approval' => $tgl_appr,
 				'total_kasbon' => number_format(floatval($item['total_kasbon'])),
 				'realisasi' => number_format(floatval($item['jumlah'])),
 				'lebih_bayar' => '<b>Rp ' . number_format($nominal_lebih) . '</b>',
@@ -6983,7 +7191,13 @@ class Expense extends Admin_Controller
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_filter,
-			'data' => $data
+			'data' => $data,
+			'counts' => [
+				'upload' => $cnt_upload,
+				'verif'  => $cnt_verif,
+				'done'   => $cnt_done,
+				'total'  => $cnt_upload
+			]
 		]);
 	}
 
@@ -6993,10 +7207,15 @@ class Expense extends Admin_Controller
 	 */
 	public function form_pengembalian($id)
 	{
+		$is_readonly = (isset($this->input) && method_exists($this->input, 'get')) ? ((string)$this->input->get('readonly') === '1') : false;
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($data)) {
 			echo '<div class="alert alert-danger" style="margin:20px;">Data expense tidak ditemukan.</div>';
 			return;
+		}
+
+		if (in_array((string)$data->status, ['2', '4'])) {
+			$is_readonly = true;
 		}
 
 		// Ambil data bank aktif dari ms_bank (deleted = '0')
@@ -7016,6 +7235,7 @@ class Expense extends Admin_Controller
 		$this->template->set('data', $data);
 		$this->template->set('kasbon', $kasbon);
 		$this->template->set('bank_options', $bank_options);
+		$this->template->set('is_readonly', $is_readonly);
 		$this->template->render('form_pengembalian');
 	}
 
@@ -7024,6 +7244,13 @@ class Expense extends Admin_Controller
 	 */
 	public function save_pengembalian_dana()
 	{
+		$this->withExpenseUploads('saveReturnEvidenceWithFiles');
+	}
+
+	private function saveReturnEvidenceWithFiles()
+	{
+		$this->beginAudit('save_pengembalian_dana', array(), array('id', 'outcome'));
+		$this->expenseUploads->validateIncoming($_FILES);
 		$id = $this->input->post('id_expense');
 		$id_bank_pengembalian = $this->input->post('id_bank_pengembalian');
 		$transfer_coa_bank = $this->input->post('transfer_coa_bank');
@@ -7031,17 +7258,20 @@ class Expense extends Admin_Controller
 		$transfer_jumlah = floatval(str_replace(',', '', (string)$this->input->post('transfer_jumlah')));
 
 		if (empty($id)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
 			return;
 		}
 
 		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($expense)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
 			return;
 		}
 
 		if (empty($id_bank_pengembalian) && empty($transfer_coa_bank)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Bank Tujuan Transfer perusahaan wajib dipilih!']);
 			return;
 		}
@@ -7050,6 +7280,7 @@ class Expense extends Admin_Controller
 		if (!empty($id_bank_pengembalian)) {
 			$bank_row = $this->db->get_where('ms_bank', ['id' => $id_bank_pengembalian, 'deleted' => '0'])->row();
 			if (empty($bank_row)) {
+				$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 				echo json_encode(['save' => false, 'message' => 'Rekening Bank Tujuan Perusahaan tidak valid atau sudah tidak aktif!']);
 				return;
 			}
@@ -7062,31 +7293,25 @@ class Expense extends Admin_Controller
 		}
 
 		if (empty($transfer_tanggal)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Tanggal transfer wajib diisi!']);
 			return;
 		}
 
 		if ($transfer_jumlah <= 0) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Nominal transfer pengembalian harus lebih dari 0!']);
 			return;
 		}
 
 		// Validasi upload bukti transfer: minimal 1 file
 		$uploaded_files = [];
-		$upload_dir = 'assets/expense_bukti_pengembalian/';
-		if (!is_dir($upload_dir)) {
-			mkdir($upload_dir, 0777, true);
-		}
 
 		if (!empty($_FILES['bukti_transfer']['name'][0])) {
 			foreach ($_FILES['bukti_transfer']['name'] as $idx => $fname) {
 				if (!empty($_FILES['bukti_transfer']['tmp_name'][$idx])) {
 					$tmp = $_FILES['bukti_transfer']['tmp_name'][$idx];
-					$clean = time() . '_' . rand(100, 999) . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($fname));
-					$dest = $upload_dir . $clean;
-					if (move_uploaded_file($tmp, $dest)) {
-						$uploaded_files[] = $dest;
-					}
+					$uploaded_files[] = $this->expenseUploads->move($tmp, $fname, 'assets/expense_bukti_pengembalian');
 				}
 			}
 		}
@@ -7097,6 +7322,7 @@ class Expense extends Admin_Controller
 		}
 
 		if (empty($uploaded_files)) {
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'validation_failed'));
 			echo json_encode(['save' => false, 'message' => 'Bukti transfer pengembalian dana wajib diunggah (minimal 1 file gambar / PDF)!']);
 			return;
 		}
@@ -7112,14 +7338,18 @@ class Expense extends Admin_Controller
 		];
 
 		$this->db->trans_begin();
+		$this->expenseUploadTransactionStarted = true;
 		$this->db->update('tr_expense', $update_data, ['id' => $id]);
 
 		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
 			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan bukti pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'transaction_failed'));
 			echo json_encode(['save' => false, 'message' => 'Gagal menyimpan data pengembalian kasbon.']);
 			return;
 		}
 
+		$this->expenseUploads->committed();
+		$this->completeAudit('Berhasil menyimpan bukti pengembalian kasbon', 1, array('id' => $id, 'outcome' => 'saved'));
 		echo json_encode([
 			'save' => true,
 			'message' => 'Bukti pengembalian kasbon berhasil diunggah! Laporan kini berstatus "Menunggu Verifikasi Finance".'
@@ -7136,10 +7366,45 @@ class Expense extends Admin_Controller
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
 		$start  = isset($post['start'])  ? (int) $post['start']  : 0;
 		$search = isset($post['search']['value']) ? trim($post['search']['value']) : '';
+		$subtab = isset($post['subtab']) ? trim($post['subtab']) : 'belum';
 
 		$cur_user = $this->auth->user_name();
-		$is_admin = ($this->auth->user_id() === '7' || $this->auth->user_id() === '1' || has_permission('Expense.Manage'));
+		$is_admin = $this->canViewAllExpenses();
 
+		$sub_rp_done = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'done' AND d.decision = 'approved' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_pending = "(SELECT h.no_pengajuan FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id = d.id_pengajuan WHERE d.no_dokumen = a.no_doc AND h.deleted = 0 AND h.status = 'pending' ORDER BY h.id DESC LIMIT 1)";
+		$sub_rp_legacy = "(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+		$sub_rp_legacy_doc = "(SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1)";
+		$sub_rp_reject = "(SELECT r.alasan FROM tr_rp_reject_log r WHERE r.no_dokumen = a.no_doc ORDER BY r.id DESC LIMIT 1)";
+
+		$where_le_creator = !$is_admin ? " AND a.created_by = " . $this->db->escape($cur_user) : "";
+
+		// Hitung counts untuk ketiga subtab
+		$sql_counts = "
+			SELECT 
+				SUM(CASE WHEN (z.done_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status >= 1)) THEN 1 ELSE 0 END) as cnt_selesai,
+				SUM(CASE WHEN (z.done_doc IS NULL AND (z.legacy_status IS NULL OR z.legacy_status < 1) AND (z.pending_doc IS NOT NULL OR (z.legacy_status IS NOT NULL AND z.legacy_status = 0))) THEN 1 ELSE 0 END) as cnt_menunggu,
+				SUM(CASE WHEN (z.done_doc IS NULL AND z.pending_doc IS NULL AND (z.legacy_status IS NULL)) THEN 1 ELSE 0 END) as cnt_belum
+			FROM (
+				SELECT a.id,
+					{$sub_rp_done} as done_doc,
+					{$sub_rp_pending} as pending_doc,
+					{$sub_rp_legacy} as legacy_status
+				FROM tr_expense a
+				WHERE a.kurang_bayar > 0
+				  AND a.status IN ('2', '3', '4')
+				  AND (a.pettycash IS NULL OR a.pettycash = '')
+				  AND (a.id_po IS NULL OR a.id_po = '')
+				  AND a.no_doc NOT LIKE 'PI-%'
+				  {$where_le_creator}
+			) z
+		";
+		$q_cnt = $this->db->query($sql_counts)->row();
+		$cnt_belum    = $q_cnt ? (int)$q_cnt->cnt_belum : 0;
+		$cnt_menunggu = $q_cnt ? (int)$q_cnt->cnt_menunggu : 0;
+		$cnt_selesai  = $q_cnt ? (int)$q_cnt->cnt_selesai : 0;
+
+		// Query DataTables terfilter per subtab
 		$this->db->from('tr_expense a');
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
@@ -7153,15 +7418,28 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
+		}
+
+		if ($subtab === 'selesai') {
+			$this->db->where("({$sub_rp_done} IS NOT NULL OR {$sub_rp_legacy} >= 1)", null, false);
+		} else if ($subtab === 'menunggu') {
+			$this->db->where("({$sub_rp_done} IS NULL AND ({$sub_rp_legacy} IS NULL OR {$sub_rp_legacy} < 1) AND ({$sub_rp_pending} IS NOT NULL OR {$sub_rp_legacy} = 0))", null, false);
+		} else { // 'belum'
+			$this->db->where("({$sub_rp_done} IS NULL AND {$sub_rp_pending} IS NULL AND {$sub_rp_legacy} IS NULL)", null, false);
 		}
 		$count_all = $this->db->count_all_results();
 
-		$this->db->select("a.*, b.nm_lengkap as nmuser,
-			(SELECT rp.no_doc FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as no_rp,
-			(SELECT rp.status FROM request_payment rp WHERE rp.no_doc = a.no_doc AND rp.tipe = 'expense' ORDER BY rp.id DESC LIMIT 1) as status_rp", false);
+		$this->db->select("a.*, b.nm_lengkap as nmuser, d.name as hris_company_name,
+			{$sub_rp_done} as no_pengajuan_done,
+			{$sub_rp_pending} as no_pengajuan_pending,
+			{$sub_rp_legacy} as status_rp_legacy,
+			{$sub_rp_legacy_doc} as no_rp_legacy,
+			{$sub_rp_reject} as reject_reason_rp", false);
 		$this->db->from('tr_expense a');
 		$this->db->join('users b', 'a.nama=b.username', 'left');
+		$this->db->join('departments c', 'c.id = b.department_id', 'left');
+		$this->db->join('hris_companies d', 'd.id = c.company_id', 'left');
 		$this->db->where('a.kurang_bayar >', 0);
 		$this->db->where_in('a.status', ['2', '3', '4']);
 		$this->db->group_start();
@@ -7174,14 +7452,24 @@ class Expense extends Admin_Controller
 		$this->db->group_end();
 		$this->db->not_like('a.no_doc', 'PI-', 'after');
 		if (!$is_admin) {
-			$this->db->where('a.nama', $cur_user);
+			$this->db->where('a.created_by', $cur_user);
 		}
+
+		if ($subtab === 'selesai') {
+			$this->db->where("({$sub_rp_done} IS NOT NULL OR {$sub_rp_legacy} >= 1)", null, false);
+		} else if ($subtab === 'menunggu') {
+			$this->db->where("({$sub_rp_done} IS NULL AND ({$sub_rp_legacy} IS NULL OR {$sub_rp_legacy} < 1) AND ({$sub_rp_pending} IS NOT NULL OR {$sub_rp_legacy} = 0))", null, false);
+		} else { // 'belum'
+			$this->db->where("({$sub_rp_done} IS NULL AND {$sub_rp_pending} IS NULL AND {$sub_rp_legacy} IS NULL)", null, false);
+		}
+
 		if (!empty($search)) {
 			$this->db->group_start();
 			$this->db->like('a.no_doc', $search, 'both');
 			$this->db->or_like('a.id_kasbon', $search, 'both');
 			$this->db->or_like('a.informasi', $search, 'both');
 			$this->db->or_like('a.nama', $search, 'both');
+			$this->db->or_like('b.nm_lengkap', $search, 'both');
 			$this->db->group_end();
 		}
 		$count_filter = $this->db->count_all_results('', false);
@@ -7196,30 +7484,64 @@ class Expense extends Admin_Controller
 			$no++;
 			$kurang_bayar = floatval($item['kurang_bayar']);
 
-			// Status alur reimburse via Request Payment
-			if ($item['status_rp'] === null) {
-				$badge_rp = '<span class="badge bg-blue" style="font-size:11px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
+			// Tentukan status RP dan No Pengajuan
+			$no_pengajuan = '-';
+			$status_code = 'belum';
+			if (!empty($item['no_pengajuan_done']) || (!empty($item['status_rp_legacy']) && (int)$item['status_rp_legacy'] >= 1)) {
+				$status_code = 'selesai';
+				$no_pengajuan = !empty($item['no_pengajuan_done']) ? $item['no_pengajuan_done'] : (!empty($item['no_rp_legacy']) ? $item['no_rp_legacy'] : '-');
+			} else if (!empty($item['no_pengajuan_pending']) || (isset($item['status_rp_legacy']) && $item['status_rp_legacy'] !== null && (int)$item['status_rp_legacy'] === 0)) {
+				$status_code = 'menunggu';
+				$no_pengajuan = !empty($item['no_pengajuan_pending']) ? $item['no_pengajuan_pending'] : (!empty($item['no_rp_legacy']) ? $item['no_rp_legacy'] : '-');
+			}
+
+			// Render Status Badge
+			if ($status_code === 'selesai') {
+				$badge_rp = '<span class="badge" style="background:#00a65a; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-check"></i> Disetujui</span>';
+			} else if ($status_code === 'menunggu') {
+				$badge_rp = '<span class="badge" style="background:#605ca8; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Pembayaran</span>';
 			} else {
-				$st_rp = (int) $item['status_rp'];
-				if ($st_rp === 0) {
-					$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11px; padding:4px 8px;"><i class="fa fa-hourglass-half"></i> Menunggu Approval Management</span>';
-				} else if ($st_rp === 1) {
-					$badge_rp = '<span class="badge bg-green" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Disetujui / Siap Dibayar</span>';
-				} else if ($st_rp >= 2) {
-					$badge_rp = '<span class="badge bg-dark" style="font-size:11px; padding:4px 8px;"><i class="fa fa-check"></i> Selesai Dibayar Kantor</span>';
-				} else {
-					$badge_rp = '<span class="badge bg-gray" style="font-size:11px; padding:4px 8px;">Dalam Antrian</span>';
+				$badge_rp = '<span class="badge" style="background:#f39c12; color:#fff; font-size:11.5px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Menunggu Diajukan Finance</span>';
+				if (!empty($item['reject_reason_rp'])) {
+					$badge_rp .= '<br><span class="badge" style="background:#dd4b39; color:#fff; font-size:10px; padding:2px 6px; margin-top:3px;"><i class="fa fa-times-circle"></i> Ditolak di Request Payment</span>';
 				}
+			}
+
+			// Company
+			$company_str = 'STM';
+			if (!empty($item['hris_company_name'])) {
+				$c_upper = strtoupper($item['hris_company_name']);
+				if (strpos($c_upper, 'VUCA') !== false) {
+					$company_str = 'Vuca';
+				} else if (strpos($c_upper, 'SUSTAIN') !== false) {
+					$company_str = 'Sustain';
+				} else if (strpos($c_upper, 'TEKNO MEDIKA') !== false || strpos($c_upper, 'STM') !== false) {
+					$company_str = 'STM';
+				} else {
+					$company_str = htmlspecialchars($item['hris_company_name']);
+				}
+			}
+
+			// Format tanggal approval direktur
+			$tgl_appr = !empty($item['tgl_approval_direktur']) ? date('Y-m-d', strtotime($item['tgl_approval_direktur'])) : (!empty($item['approved_on']) ? date('Y-m-d', strtotime($item['approved_on'])) : $item['tgl_doc']);
+
+			// Keterangan penolakan jika ada
+			$keterangan_text = '-';
+			if ($status_code === 'belum' && !empty($item['reject_reason_rp'])) {
+				$keterangan_text = '<span style="color:#dd4b39; font-size:11.5px;"><i class="fa fa-info-circle"></i> ' . htmlspecialchars($item['reject_reason_rp']) . '. Diproses ulang oleh Finance.</span>';
 			}
 
 			$data[] = [
 				'no' => $no,
 				'no_doc' => $item['no_doc'],
-				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . $item['id_kasbon'] . '</span>' : '-',
-				'tgl_doc' => $item['tgl_doc'],
+				'no_kasbon' => !empty($item['id_kasbon']) ? '<span class="badge bg-blue"><i class="fa fa-ticket"></i> ' . htmlspecialchars($item['id_kasbon']) . '</span>' : '-',
 				'informasi' => htmlspecialchars($item['informasi']),
+				'company' => $company_str,
+				'tgl_approval' => $tgl_appr,
 				'kurang_bayar' => '<b style="color:#00a65a; font-size:13px;">Rp ' . number_format($kurang_bayar) . '</b>',
 				'status_reimburse' => $badge_rp,
+				'no_pengajuan' => ($no_pengajuan !== '-' ? '<span class="badge bg-gray" style="font-weight:600;">' . htmlspecialchars($no_pengajuan) . '</span>' : '-'),
+				'keterangan' => $keterangan_text,
 				'action' => '<a class="btn btn-default btn-xs btn-rounded" href="javascript:void(0);" onclick="data_view(' . $item['id'] . ')"><i class="fa fa-eye"></i> Detail</a>'
 			];
 		}
@@ -7228,7 +7550,13 @@ class Expense extends Admin_Controller
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
 			'recordsFiltered' => $count_filter,
-			'data' => $data
+			'data' => $data,
+			'counts' => [
+				'belum'    => $cnt_belum,
+				'menunggu' => $cnt_menunggu,
+				'selesai'  => $cnt_selesai,
+				'total'    => ($cnt_belum + $cnt_menunggu)
+			]
 		]);
 	}
 

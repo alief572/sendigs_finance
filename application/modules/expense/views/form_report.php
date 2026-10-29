@@ -482,7 +482,7 @@ foreach ($option_coa as $keys => $val) {
 					if (isset($data) && $stsview == 'approval') {
 						$cur_user = $this->auth->user_name();
 						$is_author = (!empty($data->nama) && $data->nama === $cur_user);
-						if ($is_author) {
+						if ($is_author && !$this->auth->is_admin()) {
 							echo '<div class="alert alert-warning text-left" style="display:inline-block; margin-bottom:0; margin-right:10px; padding:6px 12px; font-size:12px;">';
 							echo '<i class="fa fa-exclamation-triangle"></i> Anda tidak dapat menyetujui laporan yang Anda buat sendiri (Segregation of Duties).';
 							echo '</div>';

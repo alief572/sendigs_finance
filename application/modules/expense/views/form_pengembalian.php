@@ -8,6 +8,8 @@ $harus_kembali = isset($data->lebih_bayar) ? floatval($data->lebih_bayar) : 0;
 $bank_options = isset($bank_options) && is_array($bank_options) ? $bank_options : [];
 $default_tanggal = date('Y-m-d');
 $default_tanggal_display = date('d/m/Y');
+$is_readonly = isset($is_readonly) ? (bool)$is_readonly : in_array((string)$data->status, ['2', '4']);
+$existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_pengembalian) : [];
 ?>
 
 <style>
@@ -415,7 +417,7 @@ $default_tanggal_display = date('d/m/Y');
 					<label style="color:#2d3748; font-size:13px; font-weight:600; margin-bottom:6px; display:block;">
 						Bank Pengembalian (Tujuan Transfer) <span style="color:#e53e3e;">*</span>
 					</label>
-					<select name="id_bank_pengembalian" id="id_bank_pengembalian" class="sendigs-form-control" required>
+					<select name="id_bank_pengembalian" id="id_bank_pengembalian" class="sendigs-form-control" <?= ($is_readonly ? 'disabled' : 'required') ?>>
 						<option value="">- Pilih Bank -</option>
 						<?php foreach ($bank_options as $bk): ?>
 							<?php
@@ -427,12 +429,19 @@ $default_tanggal_display = date('d/m/Y');
 									$bank_company = 'SUSTAIN';
 								}
 								$bank_label = $bank_title . ' - ' . $bk->rekening . ' (a.n ' . $bk->nama . ')';
+								$is_selected = false;
+								if (!empty($data->id_bank_pengembalian) && $data->id_bank_pengembalian == $bk->id) {
+									$is_selected = true;
+								} else if (!empty($data->transfer_coa_bank) && $data->transfer_coa_bank == $bk->coa_bank) {
+									$is_selected = true;
+								}
 							?>
 							<option value="<?= htmlspecialchars($bk->id) ?>" 
 									data-coa="<?= htmlspecialchars($bk->coa_bank) ?>" 
 									data-bank-name="<?= htmlspecialchars($bank_title) ?>"
 									data-company="<?= htmlspecialchars($bank_company) ?>"
-									data-rekening="<?= htmlspecialchars($bk->rekening) ?>">
+									data-rekening="<?= htmlspecialchars($bk->rekening) ?>"
+									<?= ($is_selected ? 'selected' : '') ?>>
 								<?= htmlspecialchars($bank_label) ?>
 							</option>
 						<?php endforeach; ?>
@@ -444,7 +453,7 @@ $default_tanggal_display = date('d/m/Y');
 						Tanggal Transfer <span style="color:#e53e3e;">*</span>
 					</label>
 					<div class="input-group" style="width:100%;">
-						<input type="text" name="transfer_tanggal" id="transfer_tanggal_input" class="sendigs-form-control" value="<?= date('Y-m-d') ?>" required autocomplete="off">
+						<input type="text" name="transfer_tanggal" id="transfer_tanggal_input" class="sendigs-form-control" value="<?= (!empty($data->transfer_tanggal) ? htmlspecialchars($data->transfer_tanggal) : date('Y-m-d')) ?>" <?= ($is_readonly ? 'readonly' : 'required') ?> autocomplete="off">
 					</div>
 				</div>
 
@@ -452,7 +461,7 @@ $default_tanggal_display = date('d/m/Y');
 					<label style="color:#2d3748; font-size:13px; font-weight:600; margin-bottom:6px; display:block;">
 						Nominal Transfer
 					</label>
-					<input type="text" name="transfer_jumlah" id="transfer_jumlah_input" class="sendigs-form-control text-right" value="<?= number_format($harus_kembali) ?>" required style="font-weight:700; color:#2b6cb0;">
+					<input type="text" name="transfer_jumlah" id="transfer_jumlah_input" class="sendigs-form-control text-right" value="<?= number_format(!empty($data->transfer_jumlah) ? floatval($data->transfer_jumlah) : $harus_kembali) ?>" <?= ($is_readonly ? 'readonly' : 'required') ?> style="font-weight:700; color:#2b6cb0;">
 					<small style="display:block; color:#64748b; font-size:12px; margin-top:4px;">
 						<i class="fa fa-info-circle"></i> Harus sama dengan jumlah yang harus dikembalikan.
 					</small>
@@ -462,16 +471,31 @@ $default_tanggal_display = date('d/m/Y');
 					<label style="color:#2d3748; font-size:13px; font-weight:600; margin-bottom:6px; display:block;">
 						Upload Bukti Transfer Balik <span style="color:#e53e3e;">*</span>
 					</label>
-					<input type="file" id="multi_file_input" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
-					<button type="button" class="btn-upload-picker" onclick="$('#multi_file_input').trigger('click')">
-						<i class="fa fa-folder-open"></i> Pilih Bukti Transfer
-					</button>
-					<small style="display:block; color:#64748b; font-size:12px; margin-top:6px;">
-						<i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF. Bisa klik <b>Pilih Bukti Transfer</b> berkali-kali untuk memilih file dari berbagai folder satu per satu.
-					</small>
+					<?php if (!$is_readonly): ?>
+						<input type="file" id="multi_file_input" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" multiple>
+						<button type="button" class="btn-upload-picker" onclick="$('#multi_file_input').trigger('click')">
+							<i class="fa fa-folder-open"></i> Pilih Bukti Transfer
+						</button>
+						<small style="display:block; color:#64748b; font-size:12px; margin-top:6px;">
+							<i class="fa fa-info-circle"></i> Format: JPG, PNG, PDF. Bisa klik <b>Pilih Bukti Transfer</b> berkali-kali untuk memilih file dari berbagai folder satu per satu.
+						</small>
+					<?php endif; ?>
 
 					<!-- File list chip container -->
-					<div id="file_chips_wrapper" class="file-chip-container"></div>
+					<div id="file_chips_wrapper" class="file-chip-container">
+						<?php if (!empty($existing_files)): ?>
+							<?php foreach ($existing_files as $ef): ?>
+								<?php if (trim($ef) !== ''): ?>
+									<div class="file-chip">
+										<i class="fa fa-file-text-o file-icon"></i>
+										<a href="<?= base_url('assets/expense_bukti_pengembalian/' . trim($ef)) ?>" target="_blank" style="color:#1e293b; text-decoration:underline;">
+											<?= htmlspecialchars(trim($ef)) ?>
+										</a>
+									</div>
+								<?php endif; ?>
+							<?php endforeach; ?>
+						<?php endif; ?>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -480,7 +504,13 @@ $default_tanggal_display = date('d/m/Y');
 		<div class="card-sendigs">
 			<div class="card-sendigs-header">
 				<span><i class="fa fa-table"></i> Daftar Jurnal Pengembalian Kasbon</span>
-				<span class="badge-draft-jurnal">Draft: jurnal diposting setelah verifikasi Finance</span>
+				<?php if ((string)$data->status === '2'): ?>
+					<span class="badge" style="background:#00a65a; color:#fff; font-size:11px; padding:3px 8px;">Posted: Terverifikasi oleh Finance</span>
+				<?php elseif ((string)$data->status === '4'): ?>
+					<span class="badge-draft-jurnal">Draft: Menunggu Verifikasi Finance</span>
+				<?php else: ?>
+					<span class="badge-draft-jurnal">Draft: jurnal diposting setelah verifikasi Finance</span>
+				<?php endif; ?>
 			</div>
 			<div class="card-sendigs-body" style="padding:0;">
 				<div class="table-responsive">
@@ -545,14 +575,19 @@ $default_tanggal_display = date('d/m/Y');
 			<button type="button" class="btn-cancel-form" onclick="close_form_pengembalian()">
 				<i class="fa fa-reply"></i> Kembali / Batal
 			</button>
-			<button type="submit" class="btn-submit-kirim" id="btn_submit_kirim_pengembalian">
-				<i class="fa fa-send"></i> Kirim Bukti Transfer
-			</button>
+			<?php if (!$is_readonly): ?>
+				<button type="submit" class="btn-submit-kirim" id="btn_submit_kirim_pengembalian">
+					<i class="fa fa-send"></i> Kirim Bukti Transfer
+				</button>
+			<?php endif; ?>
 		</div>
 	</form>
 </div>
 
 <script>
+	$(document).ready(function() {
+		update_journal_preview();
+	});
 	// DataTransfer Accumulator untuk multi-file picker
 	var accumulatedDataTransfer = new DataTransfer();
 

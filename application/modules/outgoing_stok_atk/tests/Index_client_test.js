@@ -14,7 +14,10 @@ function element(selector) {
     if (!elements.has(selector)) elements.set(selector, {
         ready() { return this; },
         on(event, target, handler) { handlers.set(target, handler); return this; },
-        DataTable(config) { configurations.set(selector, config); return {}; },
+        DataTable(config) {
+            if (config) { configurations.set(selector, config); }
+            return {search: () => 'Kertas & A4', order: () => [[2, 'asc']]};
+        },
         html(value) { this.htmlValue = value; return this; },
         append(value) { this.appended = value; return this; },
         css(key, value) { this[key] = value; return this; }
@@ -23,6 +26,8 @@ function element(selector) {
 }
 function $(selector) { return element(selector === document ? 'document' : selector); }
 const sandbox = {$, document, siteurl: '/', active_controller: 'outgoing_stok_atk/'};
+$.param = values => new URLSearchParams(values).toString();
+sandbox.window = {location: {href: ''}};
 let checks = 0;
 function test(condition, message) { assert(condition, message); checks++; }
 for (const script of scripts) { new vm.Script(script); vm.runInNewContext(script, sandbox); }
@@ -34,6 +39,14 @@ test(config.columnDefs.some(c => c.targets === 'no-sort' && c.orderable === fals
 test(config.aaSorting[0][0] === 1 && config.aaSorting[0][1] === 'desc', 'Default transaction sorting preserved');
 test(JSON.stringify(config.aLengthMenu[0]) === JSON.stringify([10,20,50,100,150]), 'Page length options preserved');
 test(handlers.has('.detail'), 'Existing detail modal handler retained');
+test(handlers.has('#export-excel'), 'Excel export handler registered');
+let prevented = false;
+handlers.get('#export-excel').call({href: '/fixture/outgoing_stok_atk/export_excel'}, {preventDefault() { prevented = true; }});
+const download = new URL(sandbox.window.location.href, 'https://fixture.test');
+test(prevented && download.pathname === '/fixture/outgoing_stok_atk/export_excel', 'Export navigates to download endpoint');
+test(download.searchParams.get('search') === 'Kertas & A4', 'Search text encoded without losing special characters');
+test(download.searchParams.get('column') === '2' && download.searchParams.get('direction') === 'asc', 'Active sorting sent to export');
+test(!download.searchParams.has('start') && !download.searchParams.has('length'), 'Export is not limited to active page');
 config.ajax.error();
 test(element('#example2 tbody').htmlValue.includes('colspan="10"'), 'Transport failure fits ten columns');
 test(element('#example2_processing').display === 'none', 'Failure clears active table processing');
