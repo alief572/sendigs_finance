@@ -5,6 +5,7 @@ class Jurnal_all_dispatcher
 {
     const ROUTES = [
         'INV'=>['post'=>'jurnal_invoicing/save_posting_jurnal','revise'=>'jurnal_invoicing/update_sts_revisi_jurnal'],
+        'KWD'=>['post'=>'kwitansi_deposit/post_journal'],
         'RCV'=>['post'=>'jurnal_penerimaan/save_posting_jurnal','revise'=>'jurnal_penerimaan/update_sts_revisi_jurnal'],
         'PAY'=>['post'=>'jurnal_payment/save_posting_jurnal'],
         'EXP'=>['post'=>'jurnal_expense/save_posting_jurnal'],

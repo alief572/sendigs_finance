@@ -59,8 +59,9 @@ function fixture($class,$company='7',$type='Payment'){
     $_POST=['id'=>1];return $c;
 }
 function invoke($c){ob_start();$c->save_posting_jurnal();$value=json_decode(ob_get_clean(),true);$GLOBALS['last_native_response']=$value;check(is_array($value),'native JSON response');return $value['save']??$value['status'];}
+// Exact Payment now uses Payment_reference_test.php; Transport exercises the preserved legacy payment branch.
 foreach(['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=>'accounting_stm','3'=>'accounting_sustain'] as $company=>$target){
-    foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Payment'] as $class=>$type){
+    foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Transport'] as $class=>$type){
         $c=fixture($class,(string)$company,$type);check(invoke($c)===1,'native success '.$class.'/'.$company);
         $writes=$c->load->dbs[$target]->writes;check(count($writes)>0,'native routing '.$class.'/'.$target);
         foreach($c->load->dbs as $key=>$db)if($key!==$target)check(!$db->writes,'no other company '.$class.'/'.$key);
@@ -70,7 +71,7 @@ foreach(['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=
         check($GLOBALS['last_native_response']['accounting_numbers'][0]['number']===$headers[0][1]['nomor']&&$GLOBALS['last_native_response']['accounting_numbers'][0]['company']===(string)$company,'reply final number matches committed native header '.$class);
     }
 }
-foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Payment'] as $class=>$type){
+foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Transport'] as $class=>$type){
     foreach(['header','detail','source','counter','commit'] as $failure){
         $c=fixture($class,'7',$type);
         if($failure==='commit')$c->db->fail='commit';
@@ -85,7 +86,7 @@ foreach(['Jurnal_invoicing','Jurnal_penerimaan','Jurnal_payment'] as $class){
     $c=fixture($class);$permissions=[];check(invoke($c)===0&&$c->output->status===403,'source permission '.$class);
     $permissions=['Jurnal_All.Manage'];$c->input->verb='GET';check(invoke($c)===0,'source POST only '.$class);
 }
-foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Payment'] as $class=>$type){
+foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Transport'] as $class=>$type){
     $c=fixture($class,'7',$type);$c->db->fail='begin';check(invoke($c)===0&&!$c->load->dbs['accounting_stm']->writes,'transaction begin failure stops native writes '.$class);
 }
 echo "PASS native Invoice/Receipt/Payment handlers: {$checks} assertions\n";

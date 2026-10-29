@@ -54,6 +54,12 @@ foreach (['2026-02-30','2026-10-15 to 2026-10-14',"' OR 1=1"] as $date) {
     try { $model->filters(['tgl_jurnal'=>$date]); throw new LogicException('date must reject'); }
     catch (InvalidArgumentException $e) { check(true, 'invalid date input'); }
 }
+foreach ([101,102] as $id) $db->insert('tr_jurnal',['id'=>$id,'no_transaksi'=>'ER-RETURN','jenis_transaksi'=>'Pengembalian Kasbon','sts'=>$id===101?null:'0','id_company'=>'7','nm_company'=>'STM','tgl_jurnal'=>'2026-10-14']);
+check(count($model->get_list_jurnal(['no_transaksi'=>'ER-RETURN']))===1,'return appears in native expense list');
+check(count($model->get_pending_group(101))===2,'return accepted by posting group validation');
+$db->where('id',102)->update('tr_jurnal',['sts'=>'1']);
+try { $model->get_pending_group(101); throw new LogicException('partly posted return must reject'); }
+catch (InvalidArgumentException $e) { check(true,'return preserves mixed status guard'); }
 $db->query('DROP TABLE tr_jurnal');
 try { $model->get_list_jurnal(); throw new LogicException('failure must propagate'); }
 catch (RuntimeException $e) { check(true, 'failed query throws instead of false empty success'); }

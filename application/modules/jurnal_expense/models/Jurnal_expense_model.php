@@ -3,7 +3,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Jurnal_expense_model extends BF_Model
 {
-    const TYPES = ['Expense Report', 'Expense Report Consultant'];
+    const TYPES = ['Expense Report', 'Expense Report Consultant', 'Pengembalian Kasbon'];
 
     public function get_data_jurnal()
     {

@@ -65,7 +65,7 @@ class Jurnal_expense_posting_model extends BF_Model
             $counterWritten = true;
             if ($this->db->trans_status() === false || $this->db->trans_commit() === false) { throw new RuntimeException('Gagal commit transaksi jurnal.'); }
             $transaction = false;
-            return ['save'=>1, 'msg'=>'SUKSES, simpan data..!!!', 'nomor'=>$number, 'row_count'=>count($ids), 'cleanup_ok'=>true];
+            return ['save'=>1, 'msg'=>'SUKSES, simpan data..!!!', 'nomor'=>$number, 'accounting_numbers'=>[['company'=>(string)$first->id_company,'number'=>$number]], 'row_count'=>count($ids), 'cleanup_ok'=>true];
         } catch (Throwable $error) {
             $cleanupOk = true;
             if ($transaction) {

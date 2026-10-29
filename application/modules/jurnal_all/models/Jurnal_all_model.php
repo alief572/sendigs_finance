@@ -6,7 +6,7 @@ require_once dirname(__DIR__).'/libraries/Payment_reference.php';
 class Jurnal_all_model extends BF_Model
 {
     const SOURCES = [
-        'INV'=>['Invoicing'], 'RCV'=>['Penerimaan Piutang'],
+        'INV'=>['Invoicing'], 'KWD'=>['Kwitansi Deposit'], 'RCV'=>['Penerimaan Piutang'],
         'PAY'=>['Payment','Transport','Transportasi','Kasbon','Expense'],
         'EXP'=>['Expense Report','Expense Report Consultant','Pengembalian Kasbon'],
         'PCS'=>['Petty Cash','Refill Pettycash','Payment Hutang Petty Cash']
@@ -58,6 +58,7 @@ class Jurnal_all_model extends BF_Model
 
     public function tab($type)
     {
+        if ($type === 'Kwitansi Deposit') return 'INV';
         return in_array($type, ['Refill Pettycash','Payment Hutang Petty Cash'], true) ? 'PAY' : $this->source($type);
     }
 
@@ -84,6 +85,7 @@ class Jurnal_all_model extends BF_Model
         $types = $f['tab'] === 'PAY' ? array_merge(self::SOURCES['PAY'], ['Refill Pettycash','Payment Hutang Petty Cash'])
             : ($f['tab'] === 'PCS' ? ['Petty Cash'] : self::SOURCES[$f['tab']]);
         $types=array_values(array_diff($types,[Jurnal_debt_groups::TYPE]));
+        if ($f['tab'] === 'INV') $types=array_merge($types,self::SOURCES['KWD']);
         $select = "MIN(a.id) AS id, a.no_transaksi, a.jenis_transaksi, MIN(a.tgl_jurnal) AS tgl_jurnal,
             MAX(a.nm_company) AS nm_company, MAX(a.id_company) AS id_company, MAX(a.nm_divisi) AS nm_divisi,
             MAX(a.keterangan) AS keterangan, SUM(a.debit) AS debit, SUM(a.kredit) AS kredit,
@@ -100,7 +102,7 @@ class Jurnal_all_model extends BF_Model
         }
         if ($posted) $this->db->where('a.sts', '1');
         else $this->db->group_start()
-            ->group_start()->where_in('a.jenis_transaksi', array_merge(self::SOURCES['INV'],self::SOURCES['EXP']))
+            ->group_start()->where_in('a.jenis_transaksi', array_merge(self::SOURCES['INV'],self::SOURCES['KWD'],self::SOURCES['EXP']))
                 ->group_start()->where_in('a.sts',['','0'])->or_where('a.sts IS NULL',null,false)->group_end()->group_end()
             ->or_group_start()->where_in('a.jenis_transaksi',array_merge(self::SOURCES['RCV'],self::SOURCES['PAY']))->where('a.sts <>','1')->group_end()
             ->or_group_start()->where_in('a.jenis_transaksi',self::SOURCES['PCS'])->where_in('a.sts',['','0'])->group_end()
@@ -669,7 +671,7 @@ class Jurnal_all_model extends BF_Model
     public function pending($row)
     {
         $source=$this->source($row['jenis_transaksi']); $status=$row['sts'];
-        if (in_array($source,['INV','EXP'],true)) return in_array($status,[null,'','0',0],true);
+        if (in_array($source,['INV','KWD','EXP'],true)) return in_array($status,[null,'','0',0],true);
         if ($source==='PCS') return in_array($status,['','0',0],true);
         return $source!==null && $status!==null && (string)$status!=='1';
     }
