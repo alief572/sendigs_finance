@@ -895,7 +895,7 @@ class Jurnal_all_model extends BF_Model
         $keys=[]; foreach ($links as $values) $keys=array_merge($keys,$values);
         $kasbons=[];
         foreach (array_chunk(array_unique($keys),200) as $chunk) {
-            foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
+            foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr,nama,created_by')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
         }
         $requesters=$this->expenseRequesters($kasbons);
         foreach ($regular as $number) {
@@ -913,10 +913,10 @@ class Jurnal_all_model extends BF_Model
                 $kind=$comparison>0?'Pengembalian':($comparison<0?'Reimburse':'');
             }
             $map['Expense Report'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
-                'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').' - '.($names?implode(', ',$names):'-')];
+                'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').($names?' - '.implode(', ',$names):'')];
             if (in_array($number,$numbers['Pengembalian Kasbon'] ?? [],true)) {
                 $map['Pengembalian Kasbon'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
-                    'description'=>'Pengembalian Kasbon - '.($names?implode(', ',$names):'-')];
+                    'description'=>'Pengembalian Kasbon'.($names?' - '.implode(', ',$names):'')];
             }
         }
         foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
@@ -949,7 +949,40 @@ class Jurnal_all_model extends BF_Model
             }
         }
         $map=[];
-        foreach ($kasbons as $number=>$kasbon) $map[$number]=array_values($users[strtolower(trim((string)$kasbon['tipe_pr']))][$kasbon['id_pr']] ?? []);
+        $candidates=[];
+        foreach ($kasbons as $kasbon) {
+            $type=strtolower(trim((string)($kasbon['tipe_pr'] ?? '')));
+            $hasPr=!empty($kasbon['id_pr']) && !empty($users[$type][$kasbon['id_pr']]);
+            if (!$hasPr) {
+                $directName=trim((string)($kasbon['nama'] ?? ''));
+                if ($directName!=='') $candidates[]=$directName;
+                $creator=trim((string)($kasbon['created_by'] ?? ''));
+                if ($creator!=='') $candidates[]=$creator;
+            }
+        }
+        $userNames=[];
+        if ($candidates) {
+            foreach (array_chunk(array_unique($candidates),200) as $chunk) {
+                foreach ($this->read($this->db->select('username,nm_lengkap')->from('users')->where_in('username',$chunk)->or_where_in('nm_lengkap',$chunk)->get())->result_array() as $row) {
+                    $full=trim((string)$row['nm_lengkap']); $u=trim((string)($row['username'] ?? ''));
+                    if ($full!=='') {
+                        if ($u!=='') $userNames[$u]=$full;
+                        $userNames[$full]=$full;
+                    }
+                }
+            }
+        }
+        foreach ($kasbons as $number=>$kasbon) {
+            $type=strtolower(trim((string)($kasbon['tipe_pr'] ?? '')));
+            $resolved=array_values($users[$type][$kasbon['id_pr'] ?? ''] ?? []);
+            if (!$resolved) {
+                $direct=trim((string)($kasbon['nama'] ?? ''));
+                $creator=trim((string)($kasbon['created_by'] ?? ''));
+                $matched=$userNames[$direct] ?? ($direct!==''?$direct:($userNames[$creator] ?? ($creator!==''?$creator:'')));
+                if ($matched!=='') $resolved=[$matched];
+            }
+            $map[$number]=$resolved;
+        }
         return $map;
     }
 

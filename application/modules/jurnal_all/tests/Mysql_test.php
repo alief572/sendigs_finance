@@ -36,8 +36,8 @@ try {
     sql('CREATE TABLE tr_jurnal (id INT AUTO_INCREMENT PRIMARY KEY,no_jurnal VARCHAR(255),no_transaksi VARCHAR(255),jenis_transaksi VARCHAR(255),sts VARCHAR(10),id_company VARCHAR(10),nm_company VARCHAR(255),tgl_jurnal DATE,coa VARCHAR(30),nm_coa VARCHAR(255),debit DECIMAL(20,2),kredit DECIMAL(20,2),keterangan TEXT,nm_divisi VARCHAR(255))');
     sql('CREATE TABLE tr_expense (no_doc VARCHAR(100),id_kasbon VARCHAR(100),lebih_bayar DECIMAL(20,2),kurang_bayar DECIMAL(20,2),total_kasbon DECIMAL(20,2),jumlah DECIMAL(20,2))');
     sql('CREATE TABLE tr_expense_detail (no_doc VARCHAR(100),id_kasbon VARCHAR(100),kasbon_pr_non_po_pett VARCHAR(100),kasbon DECIMAL(20,2),expense DECIMAL(20,2))');
-    sql('CREATE TABLE tr_kasbon (no_doc VARCHAR(100),id_pr VARCHAR(100),tipe_pr VARCHAR(50),id_expense_pett_pr_non_po VARCHAR(100))');
-    sql('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255))');
+    sql('CREATE TABLE tr_kasbon (no_doc VARCHAR(100),id_pr VARCHAR(100),tipe_pr VARCHAR(50),id_expense_pett_pr_non_po VARCHAR(100),nama VARCHAR(100),created_by VARCHAR(100))');
+    sql('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255),username VARCHAR(100))');
     sql('CREATE TABLE rutin_non_planning_header (no_pr VARCHAR(100),created_by INTEGER)');
     sql('CREATE TABLE material_planning_base_on_produksi (no_pr VARCHAR(100),created_by INTEGER)');
     sql('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
