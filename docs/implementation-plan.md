@@ -1,337 +1,44 @@
-# Implementation Plan: Sub-Tab Pills pada Modul Expense (Pengembalian Kasbon & Lebih Expense) — 28 Oktober 2026 (Aktif)
+# Implementation Plan: Penyelarasan Jalur Posting Tab Pembayaran Jurnal All Mengikuti Entitas Jurnal Payment (VUCA)
 
-Dokumen rencana kerja teknis untuk penyelarasan index modul `expense` (`views/index.php` dan `Expense.php`) dengan menambahkan sub-tab pills, badge counter dinamis, dan struktur kolom pada tab Pengembalian Kasbon dan Lebih Expense sesuai mockup `SENDIGS SS — Mockup Pengembalian Kasbon.html` hasil interview `/grill-me`.
-
-## 1. Goal Description
-Index modul Expense saat ini belum memiliki sub-tab di dalam tab **Pengembalian Kasbon** dan **Lebih Expense (Reimburse ke Karyawan)**. Diperlukan penyesuaian:
-1. **Tab Pengembalian Kasbon**:
-   - 3 sub-tab pills: **Perlu Upload** (status `3`), **Menunggu Verifikasi** (status `4`), dan **Selesai** (status `2`).
-   - Badge tab utama menampilkan jumlah dokumen yang membutuhkan upload bukti (`Perlu Upload`).
-   - Kolom tabel: `#`, `No. Dokumen`, `No. Kasbon`, `Keperluan / Keterangan` (termasuk alert merah `Ditolak Finance: [alasan]`), `Tanggal Approval`, `Kelebihan Kasbon (Rp)`, `Status`, `Aksi` (Upload Bukti untuk status 3, Lihat untuk status 4 & 2).
-2. **Tab Lebih Expense (Reimburse ke Karyawan)**:
-   - 3 sub-tab pills: **Menunggu Diajukan** (`belum`), **Menunggu Approval** (`menunggu`), dan **Disetujui** (`selesai`).
-   - Badge tab utama menampilkan jumlah dokumen yang masih berjalan (`belum` + `menunggu`).
-   - Kolom tabel: `#`, `No. Dokumen Expense`, `No. Kasbon`, `Keperluan`, `Company`, `Tanggal Approval`, `Hutang Expense (Rp)`, `Status`, `No. Pengajuan`, `Keterangan` (alasan penolakan jika ditolak di Request Payment), `Aksi`.
-3. **Sub-view Form Pengembalian (`form_pengembalian.php`)**:
-   - Mode read-only saat dibuka untuk dokumen status `4` atau `2`: input disabled/static, tombol upload dan tombol submit disembunyikan, daftar bukti yang sudah diupload ditampilkan.
-
-## 2. Keputusan Arsitektur Disepakati
-1. **Server-side Processing DataTables**: Setiap sub-tab pill memicu reload DataTables dengan parameter POST `subtab` (`upload`/`verif`/`done` untuk Pengembalian Kasbon; `belum`/`menunggu`/`selesai` untuk Lebih Expense).
-2. **Dynamic Badge Counters**: Endpoint JSON mengembalikan objek `counts` agar badge pada pill dan header tab utama selalu ter-update otomatis tanpa me-refresh seluruh halaman.
-3. **Sinkronisasi Request Payment**: Status dokumen Lebih Expense dilacak langsung dari relasi batch Request Payment (`tr_rp_pengajuan_h`, `tr_rp_pengajuan_d`, `tr_rp_record`, dan `tr_rp_reject_log`).
-
-## 3. Pentahapan Pengerjaan
-- **Fase 1**: Backend Controller `Expense.php`:
-  - Update `index()` untuk menghitung badge counters spesifik per sub-tab dan tab utama.
-  - Update `get_dat_pengembalian_kasbon()` untuk filter per sub-tab, formatting kolom (keperluan + alasan penolakan, tgl approval, badge status, tombol aksi), dan response payload `counts`.
-  - Update `get_dat_lebih_expense()` untuk filter per sub-tab, linking ke tabel `tr_rp_*`, resolusi `company`, formatting kolom lengkap, dan response payload `counts`.
-- **Fase 2**: Client-side UI `views/index.php`:
-  - Styling pills (`.subtab-pills`, `.cnt`).
-  - Markup sub-tab pills pada `#tab_pengembalian` dan `#tab_reimburse`.
-  - Script AJAX DataTables, click event handler, dan pembaruan badge counter dinamis.
-- **Fase 3**: Sub-view `form_pengembalian.php` & Verifikasi:
-  - Dukungan mode read-only untuk status verif (`4`) dan selesai (`2`).
-  - Pengujian syntax PHP CLI 7.4, verifikasi integritas data, dan regression check pada test suite modul Expense.
+Dokumen perencanaan teknis ini disusun untuk menyelaraskan jalur posting transaksi pada modul **Jurnal All (Tab Pembayaran)** agar mengikuti aturan entitas perusahaan yang benar sebagaimana diakui pada modul **Jurnal Payment**.
 
 ---
 
-# Implementation Plan: Penambahan Fitur Deposit & Modul Penerimaan Piutang Consultant — 28 Oktober 2026 (Selesai)
+## 1. Analisis Kebutuhan & Hasil Investigasi
 
-Dokumen rencana kerja teknis untuk penyelarasan modul `penerimaan_uang` serta pembuatan modul baru `deposit_customer` dan `kwitansi_deposit` berdasarkan spesifikasi konsep `Penerimaan Piutang + Deposit Consultant.html` hasil interview `/grill-me`.
+### Keputusan User
+- Jalur yang benar adalah aturan entitas pada modul `jurnal_payment`, di mana company `STM-Vuca` diakui sebagai entitas **VUCA**.
+- Jalur posting pada modul `jurnal_all` di tab Pembayaran harus diselaraskan 100% mengikuti aturan tersebut sehingga data `STM-Vuca` masuk ke **`db_sendigs_ss_vuca_dev` (`accounting_vuca`)**.
 
-## 1. Goal Description
-Sistem penerimaan piutang eksisting diperluas untuk mendukung alur deposit end-to-end:
-1. **Penerimaan Piutang & Deposit**:
-   - Pre-process: Opsi *Pakai Deposit* (menampilkan saldo deposit aktif customer dan input nominal deposit yang ingin dipakai).
-   - Tabel Alokasi: Kolom *Lebih Bayar* dan *Sisa Piutang* (Kurang Bayar) per-baris invoice.
-   - Formula Kontrol Rekonsiliasi:
-     $$\text{Kontrol} = ((\text{Piutang} - \text{PPh 23} - \text{Biaya Admin} - \text{Kurang Bayar}) - \text{Uang Masuk} - \text{Deposit}) + \text{Lebih Bayar} = 0$$
-   - Jurnal Akuntansi otomatis ke COA `2102-01-02` (*DEPOSIT CUSTOMER*): Kredit saat Lebih Bayar, Debit saat Bayar Pakai Deposit.
-   - Integritas Rollback: Rollback penerimaan diblokir bila deposit yang dihasilkan telah digunakan di transaksi lain.
-2. **Modul Penampungan & Monitoring Deposit Customer (`deposit_customer`)**:
-   - Menu/submodul baru read-only untuk memantau ringkasan saldo deposit berjalan per customer.
-   - Buku pembantu mutasi *IN* (Lebih Bayar / Pelunasan Kwitansi) dan *OUT* (Pelunasan Piutang) serta export Excel.
-   - Laporan Deposit vs Kwitansi vs Invoice.
-3. **Modul Kwitansi Deposit Customer (`kwitansi_deposit`)**:
-   - Penerbitan dokumen tagihan deposit terhubung ke PO Customer dengan nomor otomatis.
-   - Jurnal akrual deposit: Debit *Piutang Dagang Usaha* vs Kredit *Deposit Customer*.
-   - Pelunasan via alokasi rekening koran di `penerimaan_uang`, otomatis mengupdate status menjadi *Lunas*, mengaktifkan saldo deposit customer, dan mengisi referensi *No Penerimaan*.
-
-## 2. Keputusan Arsitektur & Aturan Bisnis Disepakati
-1. **Metode Konsumsi Saldo Deposit**: Otomatis menggunakan metode **FIFO (First-In, First-Out)** pada deposit berstatus aktif milik customer terkait.
-2. **Aktivasi Saldo Kwitansi Deposit**: Deposit dari Kwitansi Deposit baru menjadi saldo aktif yang dapat dibelanjakan **setelah lunas** diterima di bank melalui proses alokasi penerimaan.
-3. **Integritas Rollback**: Rollback penerimaan yang menghasilkan lebih bayar (deposit) **diblokir** jika saldo deposit tersebut sudah terlanjur dipakai pada transaksi lain.
-4. **Mapping COA**: Akun Deposit Customer menggunakan kode COA resmi perusahaan `2102-01-02` (*DEPOSIT CUSTOMER*).
-5. **Batas Biaya Admin**: Maksimal Rp 10.000,00 per transaksi penerimaan bank.
-6. **Presisi Nominal**: Seluruh kalkulasi monetary menggunakan integer cents (dua desimal) dengan pembulatan *half-up* dan kontrol tepat 0.00.
-
-## 3. Pentahapan Pengerjaan
-- **Fase 1**: Skema Database Deposit (`tr_customer_deposit`, `tr_customer_deposit_mutasi`, `tr_kwitansi_deposit`), Engine Kalkulasi `Penerimaan_calculation.php`, Integrasi `Consulting_receipt.php` (FIFO, Lebih Bayar, Jurnal Balancing, Rollback Guard), View `add.php` & `consulting_process.php`, serta Unit Test Kalkulasi & FIFO.
-- **Fase 2**: Modul Monitoring Deposit Customer (`deposit_customer`), Controller, Model, View Rekap Saldo per Customer, Detail Mutasi IN/OUT, Export Excel, dan Laporan Rekonsiliasi.
-- **Fase 3**: Modul Kwitansi Deposit Customer (`kwitansi_deposit`), Controller, Model, Form Buat Kwitansi per PO, Jurnal Kwitansi, Integrasi Listing di Penerimaan Piutang, Settlement Bank, dan End-to-End Suite Validation.
+### Pemetaan Lengkap Multi-Entity
+1. **ID 1 (`STM-Vuca`) & ID 4 (`Vuca`)** $\rightarrow$ Entitas **VUCA** $\rightarrow$ Database: `db_sendigs_ss_vuca_dev` (`accounting_vuca`).
+2. **ID 6 (`STM-Sustain`) & ID 3 (`Sustain`)** $\rightarrow$ Entitas **Sustain** $\rightarrow$ Database: `db_sendigs_ss_sustain_dev` (`accounting_sustain`).
+3. **ID 7 (`STM`)** $\rightarrow$ Entitas **STM** $\rightarrow$ Database: `db_sendigs_ss_stm_dev` (`accounting_stm`).
 
 ---
 
-## Print lampiran PDF Transport — 26 Oktober 2026
+## 2. Rincian Perubahan Kode
 
-Tujuan: setiap halaman PDF mendapat satu halaman cetak A4 tersendiri, utuh dan proporsional. Semua halaman dan urutan lampiran dipertahankan; tidak mengubah endpoint, database, atau audit.
+### Modul Jurnal All
+1. `application/modules/jurnal_all/libraries/Payment_reference.php`:
+   - `target($company)`: petakan `['1', '4']` ke `accounting_vuca`, `['3', '6']` ke `accounting_sustain`, `['7']` ke `accounting_stm`.
+2. `application/modules/jurnal_all/models/Jurnal_all_model.php`:
+   - `getGlDb($companyId)` & `resolveGlMetadata(&$rows)`: selaraskan penentuan database accounting dan GL connection selector.
 
-1. Grounding dan RED: verifikasi route request_payment ke expense/transport_req_print, view iframe 600px, PDF.js lokal, serta regresi audit Batch4. Tambahkan tes Node untuk readiness, multipage, ukuran, urutan, dan failure.
-2. Implementasi: render PDF.js lokal berurutan ke canvas; fit area A4 margin 10mm; tunggu PDF dan gambar; cetak otomatis hanya jika semuanya siap; tombol cetak ulang dan pesan/link file gagal.
-3. Validasi: tes Node, syntax PHP bila tersedia, regresi audit Batch4, review diff/whitespace; perbarui checkpoint. Tanpa browser/web dan tanpa perubahan pekerjaan lain.
+### Modul Jurnal Payment
+1. `application/modules/jurnal_payment/models/Jurnal_payment_nomor_model.php`:
+   - `get_no_buk()` & `get_Nomor_Jurnal_Sales()`: ambil counter BUK/JC dari database VUCA bila `$id_company == '4' || $id_company == '1'`.
+2. `application/modules/jurnal_payment/controllers/Jurnal_payment.php`:
+   - `_get_acc_db()`: arahkan `$id_company == '1' || $id_company == '4'` ke `accounting_vuca` (`DBACC_VUCA`).
 
-Kriteria selesai: tiap halaman PDF utuh pada halaman terpisah; landscape tidak terdistorsi; tidak mencetak otomatis saat lampiran gagal. Risiko: pengaturan dialog printer dapat mengubah skala/margin; hasil fisik tidak diverifikasi lewat web.
-
-Status: seluruh fase selesai. Tes Node renderer dan syntax JS lulus; lint view PHP lulus; regresi Expense Batch4 lulus (51 fixture scenarios + 1 shutdown subprocess). Renderer memakai canvas 150 DPI dan tinggi area 276mm (sisa 1mm untuk pembulatan cetak). Bukti dan daftar file ada pada checkpoint Transport di docs/task-progress.md. Tidak ada pengujian browser atau cetak fisik.
-
-## Implementasi hasil audit penerimaan — selesai 26 Oktober 2026
-
-Status: semua tahap berikut selesai. Bukti dan inventory: `docs/audits/penerimaan-uang-implementation-2026-10-26.md`. Tidak ada deployment atau perubahan database aplikasi.
-
-Kontrak disetujui: deposit di luar scope; invoice legacy dipisahkan dan batch campuran ditolak; PPh kumulatif maksimal sisa 2% DPP; dua desimal, sen integer dan kontrol tepat nol.
-1. RED regresi payload view, alokasi gross, bank, PPh, campuran dan admin.
-2. GREEN kontrak form/server serta kontrol terhadap sisa split bank database.
-3. Riwayat PPh, snapshot, tanggal jurnal, detail/report/export dan rollback.
-4. Regresi lokal, transaksi/failure/concurrency pada DB terisolasi bila tersedia; review dan dokumentasi.
-Kriteria selesai: preview/payload/save identik, seluruh nominal bank direkonsiliasi, riwayat lama tidak diubah, respons sukses setelah commit, tes lokal lulus dan keterbatasan eksternal dinyatakan. Tidak ada migration schema baru.
-
-# Implementation Plan: Pengembangan Modul Penerimaan Uang (Penerimaan Piutang Consultant To-Be)
-
-> Audit ulang 26 Oktober 2026 selesai: implementasi belum sepenuhnya sesuai konsep, deposit dikecualikan sesuai instruksi pengguna. Lihat `docs/audits/penerimaan-uang-concept-review-2026-10-26.md`. Tahap audit: (1) ekstraksi dua referensi dan grounding endpoint, (2) perbandingan kontrak form/server/jurnal/legacy, (3) suite existing dan reproduksi fixture tanpa browser/DB aplikasi, (4) laporan/checkpoint. Semua tahap audit selesai; perbaikan aplikasi tidak termasuk task pemeriksaan ini. Kriteria audit adalah temuan dengan bukti, bukan mengubah seluruh pemeriksaan menjadi lulus. Catatan implementasi di bawah dipertahankan sebagai riwayat.
-
-## Problem & Background Context
-Modul **Penerimaan Uang** (`application/modules/penerimaan_uang`) saat ini menangani pelunasan invoice berdasarkan mutasi bank dari modul alokasi. Berdasarkan spesifikasi konsep terbaru (`Penerimaan Piutang Consultant.html` dan `Penerimaan Piutang - Consultant.xlsx`), terdapat kebutuhan perbaikan alur untuk **Invoice Consulting (versi baru)**:
-1. **Penguncian Jenis Pajak:** PPN tidak lagi dipilih secara manual lewat dropdown di form awal, melainkan terkunci dari invoice asal (PKP dengan PPN 12% dari DPP Lain, WAPU dengan PPN 0, dan Kawasan Berikat dengan PPN 0).
-2. **Kalkulasi & Pemilihan PPh 23 Dinamis:** PPh 23 dipilih di pre-process (Dipotong PPh vs Tidak Dipotong PPh). Jika dipotong, default nilai adalah 2% x DPP Lain, namun **dapat diedit secara granular per invoice** pada modal alokasi (misal jika ada penyesuaian bukti potong).
-3. **Penyelarasan Multi-Invoice & Sisa Piutang (Kurang Bayar):** User dapat memilih beberapa invoice sekaligus untuk satu mutasi transfer bank. Jika terdapat kurang bayar, dialokasikan ke Sisa Piutang, dan sistem menerapkan validasi **Kontrol (Zero-Balance Check)**: `(Piutang - PPh 23 - Biaya Admin - Sisa Piutang) - Uang Masuk = 0`.
-4. **Pencatatan Jurnal Akuntansi Transparan:** Untuk kasus sisa piutang/kurang bayar, akun *Piutang Dagang Usaha* dicatat 2 baris: Kredit sebesar Total Piutang awal dan Debit sebesar Sisa Piutang.
-5. **Restrukturisasi UI (Tab Navigation) & DataTables Server-Side:** Halaman index dipecah menjadi dua tab: **Tab 1: Penerimaan (Draft alokasi uang masuk)** dan **Tab 2: Report Penerimaan (Rekap penerimaan yang sudah Used / diproses dengan DataTables Server-Side, rincian invoice, filter Tahun, Bulan, Company, Search Bebas, dynamic footer total summary, dan Export Excel)**.
-6. **Server-side Excel Export:** Ekspor laporan penerimaan ke Excel yang andal di backend tanpa dependensi CDN JS eksternal.
-7. **Preservasi Rollback:** Transaksi yang jurnalnya masih berstatus Draft (`sts = '0'`) tetap dapat di-rollback.
+### Rangkaian Pengujian & Test Fixtures
+1. `application/modules/jurnal_all/tests/Payment_reference_test.php`:
+   - Perbarui loop company target agar menguji ID 1 ke `accounting_vuca` dan ID 6 ke `accounting_sustain`.
+2. Konfigurasi verifikasi histori dan read-only checks diselaraskan.
 
 ---
 
-## User Review Required
-
-> [!IMPORTANT]
-> **Keputusan Arsitektur & Lingkup (Sudah Disepakati via `/grill-me`):**
-> 1. **Cakupan Fitur:** Fokus implementasi pada alur Penerimaan Piutang & Report Penerimaan To-Be sesuai Mockup HTML. Fitur Deposit ditiadakan secara definitif sesuai arahan user (tidak diperlukan dalam sistem).
-> 2. **Target Transaksi:** Alur To-Be ini berlaku untuk Invoice Consulting (versi baru). Invoice non-konsultasi / legacy tetap aman menggunakan jalur kompatibilitas yang sudah ada.
-> 3. **Pencatatan Jurnal Sisa Piutang:** Dicatat 2 baris pada akun Piutang Dagang Usaha (Gross Credit `saldo_piutang` dan Debit `sisa_piutang`).
-> 4. **Export Excel:** Menggunakan server-side controller stream (standar CodeIgniter) agar tidak bergantung pada CDN JS.
-> 5. **Rollback:** Tetap tersedia pada Tab Report Penerimaan dan modal Detail untuk transaksi yang belum diposting (`sts = '0'`).
-
----
-
-## Proposed Changes
-
-The changes will be executed in **5 distinct phases**:
-
-```mermaid
-flowchart TD
-    A["Fase 1: Engine Kalkulasi & Jurnal Backend (Penerimaan_calculation & Consulting_receipt)"] --> B["Fase 2: UI Form Pre-process & Modal Alokasi To-Be (add.php & process.php)"]
-    B --> C["Fase 3: UI Tab Navigation & Report Penerimaan (index.php & detail.php)"]
-    C --> D["Fase 4: Backend Controller Endpoint & Server-side Excel Export"]
-    D --> E["Fase 5: Validasi, Unit & Integration Testing, Rollback Verification"]
-```
-
----
-
-### Component 1: Engine Kalkulasi & Jurnal (`Penerimaan_calculation.php` & `Consulting_receipt.php`)
-
-Menyesuaikan kalkulasi perlakuan pajak konsultasi, per-invoice editable PPh 23, validasi kontrol zero balance, dan penyusunan baris jurnal (2 baris untuk piutang dagang jika terdapat sisa piutang).
-
-#### [MODIFY] [application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/libraries/Penerimaan_calculation.php)
-- Menambahkan helper kalkulasi perlakuan PPN & PPh sesuai tipe pajak:
-  - PKP: `dpp_lain = round(penjualan * 11/12)`, `ppn = round(dpp_lain * 0.12)`, `pph = round(dpp_lain * 0.02)`. `tagihan = penjualan + ppn`.
-  - WAPU: `dpp_lain = round(penjualan * 11/12)`, `ppn = 0`, `pph = round(dpp_lain * 0.02)`. `tagihan = penjualan`.
-  - Kawasan Berikat: `dpp_lain = round(penjualan * 11/12)`, `ppn = 0`, `pph = round(dpp_lain * 0.02)`. `tagihan = penjualan`.
-- Menambahkan metode validasi Kontrol: `kontrol = (piutang - pph - admin - sisa) - uang_masuk`.
-- Validasi batas maksimal biaya admin (maks Rp 10.000).
-
-#### [MODIFY] [application/modules/penerimaan_uang/libraries/Consulting_receipt.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/libraries/Consulting_receipt.php)
-- Memperbarui `invoice_context` untuk mendeteksi `tax_treatment` (PKP, WAPU, Kawasan Berikat) dari invoice.
-- Memperbarui `preview` dan `save`:
-  - Menerima `pph_actual` per invoice (default 2% DPP Lain jika Dipotong PPh, 0 jika Tidak Dipotong).
-  - Menyusun jurnal:
-    - Akun Bank: Debit `piutang - pph - admin - sisa`.
-    - Akun PPh 23 Disetor: Debit `pph` (jika > 0).
-    - Akun Biaya Admin: Debit `admin` (jika > 0).
-    - Akun Piutang Dagang Usaha: Kredit `piutang`.
-    - Akun Piutang Dagang Usaha: Debit `sisa` (jika sisa > 0).
-  - Mengupdate `saldo_piutang` di `tr_invoicing` menjadi `sisa`.
-  - Menyimpan rincian alokasi di `tr_penerimaan_piutang_detail`.
-
----
-
-### Component 2: UI Form Pre-process & Modal Alokasi To-Be
-
-Mengadaptasi tampilan form pemilihan invoice dan modal alokasi sesuai mockup `Penerimaan Piutang Consultant.html`.
-
-#### [MODIFY] [application/modules/penerimaan_uang/views/add.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/views/add.php)
-- Menghilangkan dropdown `ppn_dipotong` dari form pre-process (karena PPN terkunci otomatis dari invoice).
-- Hanya menyisakan:
-  - `Nama Customer` (Select2/Chosen).
-  - `PPH23 Dipotong` (Dipotong PPh / Tidak Dipotong PPh).
-  - `Nominal Penerimaan Bank` (Readonly dari alokasi split).
-- Tabel daftar invoice menampilkan kolom:
-  `Tgl Invoice`, `Nomor Invoice`, `TAX Code` (badge PKP, WAPU, KB), `Penjualan`, `DPP`, `PPN`, `PPH 23`, `Total Tagihan (Penjualan+PPN)`, `Total Tagihan - PPH`, `Saldo Piutang`, `Pilih (Checkbox)`.
-
-#### [MODIFY] [application/modules/penerimaan_uang/views/consulting_process.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/views/consulting_process.php) (atau view modal alokasi)
-- Tabel alokasi interaktif:
-  - Kolom: `Nomor Invoice`, `TAX Code`, `Penjualan`, `DPP`, `PPN`, `PPH 23` (input number / autonumeric, editable jika Dipotong PPh), `Total Tagihan`, `Total Tagihan - PPH`, `Piutang Dagang`, `Alokasi Penerimaan`, `Biaya Admin`, `Sisa Piutang`.
-  - Footer rekonsiliasi: Total Piutang, Uang Masuk, Kontrol.
-  - Peringatan dinamis jika Kontrol $\neq 0$ atau Admin > 10.000.
-  - Preview Jurnal Penerimaan secara real-time di bawah tabel dengan balancing debit/kredit.
-  - Tombol Proses hanya aktif jika Kontrol == 0.
-
----
-
-### Component 3: UI Tab Navigation & Report Penerimaan (`index.php` & `detail.php`)
-
-#### [MODIFY] [application/modules/penerimaan_uang/views/index.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/views/index.php)
-- Menambahkan Tab Navigation di bagian atas konten:
-  - **Tab 1: Penerimaan (Draft)**:
-    - Filter Bank.
-    - Tabel DataTables uang masuk berstatus Draft yang siap dialokasikan.
-    - Kolom Action: Tombol "Proses" (mengarahkan ke `add_penerimaan_uang/$id`).
-  - **Tab 2: Report Penerimaan (Used)**:
-    - Filter Tahun, Bulan, Company, dan Search teks bebas.
-    - Tombol "Export to Excel".
-    - Tabel rekap penerimaan yang sudah diproses dengan rowspan transfer bank.
-    - Kolom Action: Tombol "Lihat" (detail modal) dan Tombol "Rollback" (jika `sts = '0'`).
-
-#### [MODIFY] [application/modules/penerimaan_uang/views/detail.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/views/detail.php)
-- Menampilkan rincian penerimaan sesuai mockup: info customer, tanggal, bank, status PPh, uang masuk, tabel alokasi invoice, tabel Jurnal Penerimaan Piutang, serta tombol Rollback jika jurnal belum diposting.
-
----
-
-### Component 4: Controller & Server-side Export Endpoint
-
-#### [MODIFY] [application/modules/penerimaan_uang/controllers/Penerimaan_uang.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/controllers/Penerimaan_uang.php)
-- Memperbarui `index()` untuk menyediakan data filter tahun, bulan, dan company.
-- Menambahkan method `get_report_penerimaan()` (AJAX/DataTables untuk Tab 2).
-- Menambahkan method `export_excel()`:
-  - Menarik data penerimaan yang sudah diproses berdasarkan filter (tahun, bulan, company).
-  - Menghasilkan file Excel berformat `.xls`/`.xlsx` dengan kolom lengkap sesuai mockup HTML:
-    `No, Tanggal Penerimaan, Bank, Detail Penerimaan Bank, Customer, Nomor Invoice, Company, TAX Code, PPh 23 Dipotong, Nominal PPh 23, Penerimaan Bank, Piutang Dagang, Alokasi Penerimaan, Biaya Admin, Sisa Piutang`.
-- Menyesuaikan `add_penerimaan_uang()`, `process_alokasi()`, dan `save_penerimaan_piutang()` untuk mendukung alur baru tanpa dropdown PPN manual.
-
-#### [NEW] [application/modules/penerimaan_uang/views/export_excel.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/views/export_excel.php)
-- Template view output server-side Excel dengan styling header dan number format khusus akuntansi (`#,##0.00`).
-
----
-
-### Component 5: Model & Database Queries
-
-#### [MODIFY] [application/modules/penerimaan_uang/models/Penerimaan_uang_model.php](file:///C:/web_dev/sendigs_finance/application/modules/penerimaan_uang/models/Penerimaan_uang_model.php)
-- Menambahkan method query untuk penarikan data Report Penerimaan (menggabungkan `tr_penerimaan_piutang`, `tr_penerimaan_piutang_detail`, `tr_invoicing`, `tr_alokasi_split`, `ms_bank`, dan `tr_jurnal`).
-- Query filter tahun unik dan company.
-
----
-
-## Verification Plan
-
-### Automated Tests
-1. **Unit Testing Kalkulasi Pajak & Kontrol:**
-   - Test case PKP (DPP 11/12, PPN 12%, PPh 2%).
-   - Test case WAPU (DPP 11/12, PPN 0, PPh 2%).
-   - Test case Kawasan Berikat (DPP 11/12, PPN 0, PPh 2%).
-   - Test case Kontrol `(Piutang - PPh - Admin - Sisa) - Uang Masuk = 0`.
-   - Test case Biaya Admin > 10.000 (harus rejected).
-2. **Integration Test Jurnal Double Entry:**
-   - Verifikasi total Debit == total Kredit.
-   - Verifikasi 2 baris Piutang Dagang Usaha (Gross Credit dan Sisa Debit) saat ada kurang bayar.
-   - Verifikasi akun Bank, PPh 23, dan Biaya Admin sesuai company penawaran.
-3. **Execution Command:**
-   ```powershell
-   php vendor/phpunit/phpunit/phpunit application/modules/penerimaan_uang/tests/
-   ```
-
-### Manual Verification
-1. Buka modul `penerimaan_uang`: pastikan Tab Navigation ("Penerimaan" & "Report Penerimaan") tampil rapi.
-2. Pada Tab 1, pilih mutasi bank draft dan klik "Proses":
-   - Pastikan dropdown Customer & PPh 23 tampil (tanpa dropdown PPN).
-   - Pastikan invoice konsultasi memunculkan badge TAX Code yang sesuai (PKP / WAPU / KB).
-   - Centang 1 atau lebih invoice, klik Proses:
-   - Di modal alokasi, verifikasi perhitungan otomatis DPP, PPN, dan PPh 23.
-   - Uji edit PPh 23, isi biaya admin, dan isi sisa piutang.
-   - Pastikan indikator Kontrol berubah secara real-time dan submit terkunci sampai Kontrol == 0.
-   - Verifikasi draft jurnal yang muncul di bawah tabel sudah balancing.
-3. Simpan penerimaan:
-   - Pastikan data berhasil tersimpan, saldo piutang invoice berkurang/tersisa sesuai input, dan jurnal terbentuk di `tr_jurnal`.
-   - Transaksi berpindah ke Tab 2 ("Report Penerimaan").
-4. Pada Tab 2:
-   - Uji filter Tahun, Bulan, dan Company.
-   - Klik tombol "Export to Excel" dan pastikan file Excel terunduh dengan data yang akurat.
-   - Klik tombol "Lihat" untuk memeriksa detail transaksi.
-   - Jika jurnal masih Draft, pastikan tombol "Rollback" tersedia dan berfungsi membatalkan penerimaan dengan aman.
-
-## Pengecualian self-approval expense untuk admin - 2026-10-26
-
-1. Grounding: kedua list memakai expense/approval/{id} dan expense/approve/{id}; pembatasan pemohon sendiri berada pada approve dan footer form_report. Gunakan Auth::is_admin (grup 1), bukan ID/nama akun atau permission umum.
-2. Implementasi: kecualikan admin pada kedua guard tersebut; pertahankan guard non-admin, urutan tahap finance/management, jurnal, dan larangan verifikasi pengembalian sendiri. Tambahkan regresi admin/non-admin kedua tahap pada tes report yang tersedia.
-3. Validasi: review seluruh diff dan whitespace; jalankan tes PHP jika runtime tersedia. PHP CLI sebelumnya tidak tersedia, sehingga keterbatasan runtime tetap berlaku tanpa bukti perubahan lingkungan. Perbarui checkpoint; tidak melakukan tes web.
-
-## Routing tombol View dan Approval Expense - 2026-10-26
-
-1. Reproduksi terfokus: finance View masih memanggil data_approve; nama fungsi pembuka approval pada kedua list sama dengan fungsi submit di form AJAX. Uji routing berdasarkan callback action controller dan script list melalui Node VM, termasuk saat basic.js/form mengubah fungsi global lama.
-2. Implementasi: gunakan nama pembuka khusus openExpenseApproval/openExpenseView di kedua list dan action kedua endpoint; View menuju expense/view, Approval menuju expense/approval. Tidak mengubah fungsi submit maupun endpoint penyimpanan.
-3. Validasi: jalankan tes Node RED/GREEN dan syntax; sesuaikan tes PHP management, review diff/whitespace dan checkpoint. Tanpa browser; runtime PHP sebelumnya tidak tersedia.
-
-# Akses index Expense dan upload Linux — 2026-10-27
-
-Status akhir: fase 1–4 selesai dan diverifikasi pada fixture PHP/Linux. Tidak ada fase implementasi tertunda. Uji database aplikasi/server tujuan tidak dijalankan; provisioning hak OS tetap menjadi langkah deployment yang terdokumentasi pada docs/expense-access-upload-linux.md. Bukti dan batas validasi pada checkpoint utama.
-
-1. Filter index: pusatkan akses semua pemohon pada Auth::is_admin() atau Expense_Approval.Manage; user lainnya memakai nama pemohon saja. Terapkan pada data/count/pencarian ketiga tab dan badge. Lulus bila ID akun/Expense.Manage/parameter all tidak melewati filter.
-2. Approval: verifikasi antrean finance/management lintas pemohon sesuai tahap. Pertahankan kategori existing (management mengecualikan petty cash), izin tombol, routing, dan kebijakan self-approval.
-3. Upload: helper direktori di bawah FCPATH untuk seluruh upload Expense/kasbon/transport/pengembalian, termasuk salinan PR. Direktori Linux grup www-data mode 02775, file baru 0664; kegagalan permission/upload menggagalkan transaksi dan membersihkan hanya file baru request yang belum commit. Dokumentasikan provisioning hak OS.
-4. Validasi: regresi akses/approval, filesystem dan kegagalan upload/commit, suite audit terdampak, lint PHP, Node existing, serta whitespace. Tanpa tes browser. Catat keterbatasan runtime secara faktual.
-
-Scope: controller Expense, helper upload baru, integrasi helper salinan kasbon, tes modul dan dokumentasi. Tidak mengubah skema/kontrak respons/URL; tidak commit/push. Pekerjaan lokal lain dipertahankan. docs/task-progress.md adalah checkpoint utama.
-
-# Perbaikan HTTP 500 index Expense — 2026-10-27
-
-Status: selesai; hasil RED/GREEN dan regresi tercatat di checkpoint. Tidak mengubah kebijakan akses atau menyentuh data aplikasi.
-
-1. Grounding/RED: log aplikasi menunjukkan SELECT * tanpa FROM pada get_dat_expense_data. Reproduksi memakai Auth dan query builder CodeIgniter asli dengan persistensi fixture.
-2. Perbaikan: hitung pengecualian admin/finance sebelum menyusun query tr_expense; jangan memanggil lookup role ketika builder daftar masih aktif. Pertahankan filter pemohon dan kategori.
-3. Verifikasi: data terisi dan count/query untuk admin, finance, user biasa, pencarian, parameter all; regresi visibility dan lint. Perubahan upload/approval tidak diulang karena tidak berubah. Simpan hasil di checkpoint.
-
-# Perbaikan checkbox permission Expense — 2026-10-28
-
-1. RED: fixture menu aktif 279/282 dan action Expense 955–958 yang masih menunjuk id_menu 296 hilang. Verifikasi form belum menampilkan empat checkbox dan belum dapat menyimpan akses yang dipilih.
-2. Implementasi: pertahankan mapping id_menu yang valid; pulihkan mapping action orphan ke alias menu aktif dengan permission View keluarga yang sama. Kedua baris Expense berbagi izin yang sama; sinkronkan checkbox alias dan deduplikasi ID saat menyimpan. Tidak mengubah user_permissions atau grup alief secara otomatis, tidak memakai ID akun/menu hardcode.
-3. GREEN: verifikasi rendering empat action, alias sinkron/check-all, simpan fixture hanya pilihan admin, menu terlihat sesudah Expense.View dipilih dan tersembunyi tanpa View, regresi non-Expense/role, serta pembacaan data lokal/render tanpa browser. Lint/whitespace dan checkpoint akhir.
-
-Status perbaikan checkbox permission Expense: fase 1–3 selesai. RED pada controller baseline, GREEN form/simpan/sidebar fixture, sinkron alias, lint dan render read-only data Alief. Tidak ada migrasi atau penambahan akses user otomatis; administrator perlu refresh form lalu memilih/menyimpan izin yang diinginkan.
-
-# Koreksi cakupan creator Expense dan akun finance — 2026-10-28
-
-1. RED: Alief 206 memiliki Expense_Approval.Manage tetapi bukan akun finance; dokumen ER-2026-00041/40/39 dibuat admin. Tambahkan regresi agar izin approval tidak membuka index dan ownership memakai created_by, bukan nama pemohon.
-2. Implementasi: pengecualian hanya Auth::is_admin atau username finance (disetujui pengguna); seluruh data/count/pencarian ketiga tab dan badge memakai created_by = username login. Pertahankan lookup akses sebelum query builder dan antrean approval lintas pembuat.
-3. GREEN: regresi actor/role/akun khusus/ID akun tanpa bypass, creator berbeda pemohon, pencarian/all/count/page SQL dengan Auth dan builder asli; validasi DB read-only dan audit index yang terdampak; lint/whitespace/checkpoint. Tidak mengubah creator historis, hak akun, transaksi upload atau approval.
-
-Status koreksi creator/finance: fase 1–3 selesai. Visibility 3423 checks dan query state 384 checks PASS, audit index dan action approval PASS, validasi database read-only menunjukkan Alief belum memiliki dokumen yang dibuatnya pada kategori index. Tidak mengubah izin atau creator historis; hasil kosong untuk Alief adalah benar pada data tersebut.
-
-# Pembatasan pemilihan kasbon untuk Expense Report — 2026-10-28
-
-1. Grounding/RED: get_kasbon digunakan modal dan menggabungkan tr_kasbon dengan detail pengajuan rutin. Kasbon dibuat dengan username; header rutin dibuat dengan id_user. Uji agar filter pembuat diterapkan pada kedua sumber, tanpa bypass filter pemohon/departemen/client.
-2. Implementasi: user biasa hanya kasbon created_by username dan rutin header created_by id_user; admin/akun finance mengikuti pengecualian disepakati. Hasil kosong harus JSON [] yang valid. Lindungi create_report dan save referensi kasbon/rutin sebelum render/write agar request langsung tidak memilih dokumen orang lain. Pertahankan status/anti-pemakaian-ganda existing.
-3. GREEN: daftar/empty/query-error, kedua sumber, admin/finance/user berizin approval, URL/post milik sendiri/lain/missing/invalid, kegagalan DB, audit dan tidak ada write sebelum penolakan. Regresi batch audit terdampak dan upload, lint/whitespace; baca hitungan riil read-only tanpa browser.
-
-Status pembatasan pemilihan kasbon: fase 1–3 selesai. Filter kedua cabang UNION, JSON kosong, guard pembukaan/simpan report, konteks ID detail PR, serta audit telah diverifikasi. Suite lengkap Expense PASS dan validasi SQL aktual read-only: 189 eligible keseluruhan, 0 buatan Alief. Tidak mengubah database atau hak akun.
-
-# Perbaikan voucher Report Jurnal All — 29 Oktober 2026
-
-- Fase 1: Tambahkan tes regresi report PAY untuk tabrakan ID approval/voucher, multi-approval, dan histori tanpa voucher.
-- Fase 2: Batasi resolver mode report source PAY pada `payment_approve.id_payment`; pertahankan pending/posting dan pengelompokan hutang petty cash.
-- Fase 3: Verifikasi daftar/detail/filter/search/Excel dan nominal, jalankan regresi terkait serta lint PHP, perbarui checkpoint dan README.
-- Kriteria selesai: tidak ada fallback report PAY ke `id`/`no_doc`; histori tanpa kecocokan tetap terlihat dengan metadata pembayaran `-`; tidak mengubah data database atau perubahan workspace lain.
-
-## Pemulihan tiga histori PAY terverifikasi — 29 Oktober 2026
-
-- Fase 1: Konfigurasi mapping eksplisit `BK--0626-0019` → `BK--0926-0001`, `BK--0426-0045` → `BK--0426-0008`, `BK--0726-0040` → `BK--0126-0001`, dengan guard jenis/company/tanggal/total debit-kredit. Tambahkan tes yang gagal sebelum implementasi.
-- Fase 2: Terapkan mapping hanya untuk lookup `id_payment` pada report; identitas sumber tetap dipakai untuk grouping, detail, dan metadata accounting. Mapping yang guard-nya gagal tidak boleh menggunakan identitas lain sebagai fallback.
-- Fase 3: Uji regresi report/query/metadata/controller dan lint; verifikasi model aktual secara read-only untuk daftar/detail/search/filter/Excel. Perbarui README dan checkpoint.
-- Kriteria: ketiga voucher/referensi/kategori pulih, nomor accounting serta total enam transaksi Rp25.394.927 tetap, tidak mengubah data database, posting, maupun resolver khusus petty cash.
+## 4. Status Implementasi: SELESAI (29 Oktober 2026)
+- Seluruh perubahan pada `Payment_reference.php`, `Jurnal_all_model.php`, `Jurnal_payment_nomor_model.php`, `Jurnal_payment.php`, `Payment_reference_test.php`, dan `Legacy_posting_test.php` telah diimplementasikan secara komprehensif.
+- Seluruh 15 test suite unit dan regresi telah dijalankan via container Docker `sendigs_ss` dengan status 100% PASS tanpa error.
+- Checkpoint dan dokumentasi kemajuan pekerjaan telah dicatat di `docs/task-progress.md`.

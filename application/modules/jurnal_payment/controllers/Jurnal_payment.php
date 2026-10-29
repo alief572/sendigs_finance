@@ -615,10 +615,10 @@ class Jurnal_payment extends Admin_Controller
 
 
         if ($jenis_transaksi == 'Invoicing') {
-            if ($id_company == '4') {
+            if (in_array($id_company, ['1', '4'])) {
                 $db_key = 'accounting_vuca';
                 $db_name = DBACC_VUCA;
-            } else if (in_array($id_company, ['1', '6', '7'])) {
+            } else if ($id_company == '7') {
                 $db_key = 'accounting_stm';
                 $db_name = DBACC_STM;
             } else {
@@ -627,10 +627,10 @@ class Jurnal_payment extends Admin_Controller
             }
         } else {
             // Mapping for other transactions (PPH 23, Payment, etc.)
-            if ($id_company == '4') {
+            if (in_array($id_company, ['1', '4'])) {
                 $db_key = 'accounting_vuca';
                 $db_name = DBACC_VUCA;
-            } else if (in_array($id_company, ['1', '6', '7'])) {
+            } else if ($id_company == '7') {
                 $db_key = 'accounting_stm';
                 $db_name = DBACC_STM;
             } else {

@@ -1,3 +1,68 @@
+# Penyelarasan Routing Posting Jurnal Payment & Jurnal All (Tab Pembayaran) untuk Entitas STM-Vuca — SELESAI 29 Oktober 2026
+
+- **Status Akhir**: SELESAI 100% (Seluruh fase investigasi, perbaikan routing model/controller/library, update test fixture, dan verifikasi regresi multi-database selesai dan terverifikasi 100% PASS).
+- **Fase Selesai**:
+  1. **Investigasi & Grounding Data Live**:
+     - Memeriksa transaksi baris ke-6 di `report_jurnal_all` (Voucher: `BK--0126-0001`, Native/approval: `BK--0726-0040`, Company: `STM-Vuca`, Ref: `DPM-2026-00001`, Nominal: Rp 22.865.077,00, No BUK: `101BK2600001`).
+     - Teridentifikasi bahwa data masuk ke `db_sendigs_ss_stm_dev` (`japh` dan `jurnal`) karena logika penomoran BUK dan penentuan database akuntansi target di `Jurnal_payment` dan `Payment_reference` sebelumnya mengelompokkan ID company `1` ke `accounting_stm`.
+     - Master `db_consultant_new_dev.kons_tr_company` mengonfirmasi:
+       - ID 1: `STM-Vuca` (anak entitas Vuca)
+       - ID 4: `Vuca` (Vuca)
+       - ID 6: `STM-Sustain` (anak entitas Sustain)
+       - ID 3: `Sustain` (Sustain)
+       - ID 7: `STM` (STM)
+     - Sesuai instruksi dan konfirmasi pengguna, transaksi ber-company `STM-Vuca` (ID 1) wajib masuk ke pembukuan VUCA (`db_sendigs_ss_vuca_dev` / `accounting_vuca`) dan menggunakan counter penomoran BUK milik VUCA.
+  2. **Penyelarasan Engine Posting & Database Selector**:
+     - `application/modules/jurnal_all/libraries/Payment_reference.php`:
+       - Method `target($company)` diperbarui: ID `'1'` dan `'4'` diarahkan ke `'accounting_vuca'`, ID `'3'` dan `'6'` diarahkan ke `'accounting_sustain'`, dan ID `'7'` diarahkan ke `'accounting_stm'`.
+     - `application/modules/jurnal_all/models/Jurnal_all_model.php`:
+       - Method `getGlDb($companyId)` dan `resolveGlMetadata()`: diisolasi khusus untuk baris Pembayaran (`$src === 'PAY'`) masuk bucket `'accounting_vuca'`, `['3', '6']` masuk `'accounting_sustain'`, dan selector DB resolver diperbaiki untuk menggunakan ID `'7'` saat memilih DB STM.
+     - `application/modules/jurnal_payment/models/Jurnal_payment_nomor_model.php`:
+       - Method `get_Nomor_Jurnal_Sales()`: `$comp == '4' || $comp == '1'` mengambil subcab/nomorJC dari `DBACC_VUCA.pastibisa_tb_cabang`.
+       - Method `get_no_buk()`: `$id_company == '4' || $id_company == '1'` mengambil counter `nobuk` dari `DBACC_VUCA.pastibisa_tb_cabang`.
+     - `application/modules/jurnal_payment/controllers/Jurnal_payment.php`:
+       - Helper `_get_acc_db($id_company)`: `in_array($id_company, ['1', '4'])` mengembalikan database instance `'accounting_vuca'`.
+  3. **Penyesuaian Test Fixture & Pengujian Regresi**:
+     - `application/modules/jurnal_all/tests/Payment_reference_test.php`: mapping loop pengujian diperbarui ke target VUCA untuk ID 1 dan Sustain untuk ID 6.
+     - `application/modules/jurnal_all/tests/Legacy_posting_test.php`: map perutean diselaraskan per kelas controller (`Jurnal_payment` merutekan ID 1 ke `accounting_vuca`).
+     - Seluruh file diverifikasi sintaks dengan `php -l` via container Docker `sendigs_ss` (0 error).
+- **File Dimodifikasi**:
+  - `application/modules/jurnal_all/libraries/Payment_reference.php`
+  - `application/modules/jurnal_all/models/Jurnal_all_model.php`
+  - `application/modules/jurnal_payment/models/Jurnal_payment_nomor_model.php`
+  - `application/modules/jurnal_payment/controllers/Jurnal_payment.php`
+  - `application/modules/jurnal_all/tests/Payment_reference_test.php`
+  - `application/modules/jurnal_all/tests/Legacy_posting_test.php`
+  - `docs/task-progress.md`
+  - `docs/implementation-plan.md`
+- **Keputusan Teknis**:
+  - Menggabungkan Company ID 1 (`STM-Vuca`) dengan Company ID 4 (`Vuca`) pada semua percabangan routing akuntansi pembayaran agar selalu konsisten masuk ke database `accounting_vuca` (`db_sendigs_ss_vuca_dev`).
+  - Menyelaraskan Company ID 6 (`STM-Sustain`) dengan Company ID 3 (`Sustain`) ke database `accounting_sustain` (`db_sendigs_ss_sustain_dev`).
+  - Menyisakan Company ID 7 murni sebagai entitas `STM` (`db_sendigs_ss_stm_dev`).
+  - Mengisolasi perubahan hanya pada modul `jurnal_all` (tab Pembayaran) dan `jurnal_payment`, tanpa mengganggu modul lain di luar persetujuan.
+- **Hasil Pengujian & Validasi (100% PASS via Docker Container `sendigs_ss`)**:
+  - `Payment_reference_test.php` -> PASS (679 assertions).
+  - `Payment_mapping_test.php` -> PASS (140 assertions query, 47 assertions mapping).
+  - `Mixed_payment_metadata_test.php` -> PASS (140 assertions query, 21 assertions metadata).
+  - `Debt_group_test.php` -> PASS (140 assertions query, 26 assertions debt group).
+  - `Query_test.php` -> PASS (140 assertions).
+  - `Controller_test.php` -> PASS (89 assertions).
+  - `Report_payment_history_test.php` -> PASS (140 assertions query, 47 assertions report).
+  - `Report_payment_mapping_test.php` -> PASS (140 assertions query, 36 assertions mapping).
+  - `Payment_normalization_test.php` -> PASS (679 assertions reference + 464 assertions normalization).
+  - `Legacy_posting_test.php` -> PASS (198 assertions).
+  - `Pengembalian_kasbon_test.php` -> PASS (140 assertions query, 16 assertions kasbon).
+  - `Audit_test.php` -> PASS (10 assertions).
+  - `Dispatcher_test.php` -> PASS (45 assertions).
+  - `Metadata_test.php` -> PASS (20 assertions).
+  - `Revision_test.php` -> PASS (24 assertions).
+- **Catatan Resiko / Sisa TODO**:
+  - *Data Historis*: Transaksi `BK--0726-0040` (`101BK2600001`) yang sudah terlanjur diposting ke `db_sendigs_ss_stm_dev` sebelum perbaikan ini tetap berada di STM. Untuk transaksi baru selanjutnya, seluruh posting STM-Vuca akan otomatis masuk ke VUCA. Jika user menghendaki migrasi/rekonsiliasi pemindahan voucher lama `BK--0726-0040` dari STM ke VUCA, dapat dilakukan rekonsiliasi database terisolasi tersendiri dengan memperhatikan counter `nobuk` VUCA (karena nomor `101BK2600001` di VUCA sudah terisi transaksi lain, sehingga perlu nomor BUK berikutnya dari VUCA seperti `101BK2600009`).
+- **Langkah Berikutnya**:
+  - Task selesai, menyajikan ringkasan hasil kepada pengguna.
+
+---
+
 # Penyesuaian & Penambahan Modul Penerimaan Uang, Kwitansi Deposit, dan Monitoring Deposit — SELESAI 28 Oktober 2026
 
 - **Status Akhir**: SELESAI 100% (Seluruh Fase 1, 2, 3, 4, dan 5 telah diimplementasikan, diselaraskan end-to-end sesuai HTML Mockup `Penerimaan Piutang + Deposit Consultant.html`, `Penerimaan - SSC.xlsx`, dan `Deposit - SSC.xlsx`, serta terverifikasi 100% PASS pada seluruh test suite CLI).
@@ -3158,3 +3223,49 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Status: SELESAI. Commit perbaikan `fb500a5422093b8a4d01fa0104134c53b18b88d6` (9 file; 338 insertions, 5 deletions) berhasil dipush normal tanpa force ke `origin/development`. `git ls-remote origin refs/heads/development` mengonfirmasi SHA identik dengan commit lokal setelah push.
 - Checkpoint publikasi disimpan melalui commit dokumentasi terpisah sesudah verifikasi commit perbaikan. Tidak ada perubahan kode baru setelah tes implementasi; index dan working tree kedua modul bersih. Perubahan task lain, termasuk isi lokal `docs/implementation-plan.md`, tetap dipertahankan di working tree.
 - Sisa risiko: batas mapping tiga histori serta batas verifikasi fixture yang sudah dicatat tetap berlaku. Tidak ada blocker publikasi; tidak ada deploy, migrasi, atau perubahan database.
+
+
+## Penutupan penerimaan Consultant ? 29 Oktober 2026
+- Aktif fase 1?4 sesuai tambahan rencana; user mengotorisasi implementasi. Keputusan: pilih customer lalu company; tunggal otomatis.
+- Baseline: enam suite PHP/Node lulus; integrasi disposable berhenti pada ConsultingLoader::model yang belum tersedia. Reproduksi read-only: voucher tanpa sumber/mutasi tetap tersedia; preview mengikuti request 2,1.
+- Belum selesai: lookup/company, validasi histori, urutan invoice, penutupan integrasi. Workspace task lain dipertahankan. Tidak deployment/data aplikasi.
+
+- Checkpoint penutupan 1?3: ID customer/company, lookup saldo dan kartu deposit, urutan tanggal+ID serta pengikatan payload ke invoice sudah terimplementasi. Company tunggal otomatis; legacy/Vuca dikelompokkan pada pilihan alur existing tanpa mengubah formula.
+- Validasi histori aktif membandingkan sumber kwitansi/lebih bayar, header/detail owner, mutasi/rantai saldo. Anomali memberi unavailable dan blokir pemakaian, cash preview tetap berjalan. Fixture lama kini memiliki source dan IN; assertion semua OUT tetap dipertahankan.
+- Bukti sementara: 829 pemeriksaan MariaDB disposable PASS termasuk real overpayment/use/rollback, fault deposit/mutasi/commit, dua proses memperebutkan saldo. Node company-context dan integrity22fault PASS; FIFO/company/kwitansi/monitoring/detail/to-be PASS. Regresi legacy/Vuca PASS setelah menemukan dan menghapus blok awal baris duplikat pada lookup dokumen.
+- Aktif fase4: memperluas multi-kwitansi/admin/konkurensi/GL, lint/regresi/review akhir. Tidak mengubah database aplikasi atau deploy.
+
+
+### Penutupan penerimaan Consultant ? hasil akhir 29 Oktober 2026
+- Status: SELESAI, fase1?4 terimplementasi dan terverifikasi. Tidak ada TODO coding dalam plan penutupan ini. Laporan: docs/penerimaan-deposit-closure.md; endpoint/dependency dan hash file: docs/penerimaan-deposit-closure-manifest.json.
+- Perubahan: ID customer lalu company canonical snapshot, otomatis tunggal, legacy/Vuca tetap alur existing; lookup/ledger scoped, tanpa fallback nama, reset/stale AJAX; pengelompokan monitoring per ID customer/company meskipun nama historis berbeda.
+- Integritas: sumber kwitansi/lebih bayar unik, snapshot nominal dan header/detail sumber, rantai IN/OUT, saldo/status/tanggal aktif, serta total OUT lintas voucher sesuai snapshot penerimaan. Voucher tanpa bukti/duplikat/negatif/ambigu diblokir. Cash-only tetap dapat commit. Tidak backfill atau posting ulang.
+- Urutan: tanggal invoice lalu ID, pembagian otomatis/manual tervalidasi, save mengikat nilai ke ID; FIFO voucher menurut tanggal aktif lalu ID. Endpoint jenis terkunci dan field kwitansi terlarang ditolak. Duplikasi render baris dan dependensi bootstrap lookup mandiri ikut diperbaiki.
+- File runtime: controller Penerimaan_uang, Consulting_receipt, views add/consulting_process, Deposit_customer_model. Adapter integrasi, fixture dan tes terkait diperbarui; enam tes baru (integrity/bootstrap/native closure/company-context/FIFO-view/kwitansi-view). README dan dokumentasi diperbarui. Inventaris lengkap ada di manifest.
+- Bukti final: native CI/MariaDB disposable PASS943; 28 suite PHP/Node PASS (19PHP+9Node); integrity28 fault branches PASS; PHP lint23 file PASS; JS syntax8 file PASS; whitespace task PASS. Dua worker nyata membuktikan saldo/aktivasi tidak ganda. Fault per tahap/commit, audit tunggal/writer gagal, rollback/posted, snapshot/report/ekspor/JV/BUM dan regresi legacy/Vuca ikut teruji.
+- Kegagalan awal ditutup dengan bukti RED/GREEN: urutan request, sumber/IN fixture tidak lengkap, adapter model(), getter POST legacy, duplikasi baris, serta bootstrap service yang tertutup preload harness. Assertion OUT tetap dipertahankan setelah fixture IN ditambahkan.
+- Batas/risiko tersisa: tidak deploy, commit/push, migration database aplikasi, atau koreksi histori. Penggunaan pada aplikasi memerlukan schema003 existing, COA/mapping/permission/InnoDB/GL siap dan rekonsiliasi histori yang diblokir. Tidak ada tes browser atau verifikasi database production; ini bukan blocker coding.
+
+## Investigasi & Perencanaan Koreksi Routing Accounting STM-Vuca & STM-Sustain — 29 Oktober 2026
+- Status: Rencana Diselaraskan Mengikuti Aturan Jurnal Payment (Menunggu Approval Final User untuk Eksekusi).
+- Fase yang sudah selesai:
+  1. Investigasi dan audit runtime transaksi `BK--0126-0001` (`BK--0726-0040`, DPM-2026-00001, Rp 22.865.077,00, `STM-Vuca`) di seluruh database terkait (`db_sendigs_ss_dev`, `db_sendigs_ss_stm_dev`, `db_sendigs_ss_vuca_dev`, `db_sendigs_gl_ss_dev`).
+  2. Grounding root cause kode di `Payment_reference::target()`, `Jurnal_all_model::getGlDb()`, `Jurnal_all_model::resolveGlMetadata()`, `Jurnal_payment_nomor_model::get_no_buk()`, dan `Jurnal_payment::_get_acc_db()`.
+  3. Konfirmasi arahan user: Jalur posting tab Pembayaran di Jurnal All wajib mengikuti aturan entitas pada Jurnal Payment (STM-Vuca masuk ke accounting VUCA).
+  4. Penyusunan implementation plan komprehensif di `docs/implementation-plan.md` dan artifact rencana.
+- Fase yang sedang dikerjakan:
+  - Menunggu persetujuan (approval) rencana implementasi dari user untuk mulai mengeksekusi perubahan file.
+- Fase yang belum dikerjakan:
+  1. Modifikasi kode di `Payment_reference.php`, `Jurnal_all_model.php`, `Jurnal_payment_nomor_model.php`, dan `Jurnal_payment.php`.
+  2. Penyesuaian test suite di `Payment_reference_test.php` dan file rujukan histori.
+  3. Eksekusi pengujian otomatis dan validasi regresi.
+- File yang akan dimodifikasi:
+  - `application/modules/jurnal_all/libraries/Payment_reference.php`
+  - `application/modules/jurnal_all/models/Jurnal_all_model.php`
+  - `application/modules/jurnal_payment/models/Jurnal_payment_nomor_model.php`
+  - `application/modules/jurnal_payment/controllers/Jurnal_payment.php`
+  - `application/modules/jurnal_all/tests/Payment_reference_test.php`
+- Keputusan teknis & alasan:
+  - Menyelaraskan seluruh komponen generator nomor, selector database, dan library posting secara konsisten sehingga tidak ada lagi celah di mana ID 1 atau 6 terlempar ke STM.
+- Langkah berikutnya:
+  - Mendapatkan persetujuan eksekusi rencana dari user, kemudian langsung menjalankan Fase 1 & 2.

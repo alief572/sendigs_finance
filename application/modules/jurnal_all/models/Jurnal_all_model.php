@@ -272,7 +272,7 @@ class Jurnal_all_model extends BF_Model
     private function getGlDb($companyId)
     {
         $id = (string)$companyId;
-        $group = in_array($id, ['1', '6', '7'], true) ? 'accounting_stm' : ($id === '4' ? 'accounting_vuca' : 'accounting_sustain');
+        $group = in_array($id, ['1', '4'], true) ? 'accounting_vuca' : (in_array($id, ['3', '6'], true) ? 'accounting_sustain' : 'accounting_stm');
         if (isset($this->glDbs[$group])) return $this->glDbs[$group];
         if (!function_exists('get_instance')) return null;
         $ci = &get_instance();
@@ -329,7 +329,12 @@ class Jurnal_all_model extends BF_Model
         $buckets = [];
         foreach ($pending as $idx => &$row) {
             $companyId = (string)($row['id_company'] ?? '');
-            $dbKey = in_array($companyId, ['1', '6', '7'], true) ? 'accounting_stm' : ($companyId === '4' ? 'accounting_vuca' : 'accounting_sustain');
+            $src = $row['source'] ?? '';
+            if ($src === 'PAY') {
+                $dbKey = in_array($companyId, ['1', '4'], true) ? 'accounting_vuca' : (in_array($companyId, ['3', '6'], true) ? 'accounting_sustain' : 'accounting_stm');
+            } else {
+                $dbKey = in_array($companyId, ['1', '6', '7'], true) ? 'accounting_stm' : ($companyId === '4' ? 'accounting_vuca' : 'accounting_sustain');
+            }
             $buckets[$dbKey][$idx] = &$row;
         }
         unset($row);
@@ -337,7 +342,7 @@ class Jurnal_all_model extends BF_Model
         $allUserIds = [];
 
         foreach ($buckets as $dbKey => &$groupRows) {
-            $gl = $this->getGlDb($dbKey === 'accounting_stm' ? '1' : ($dbKey === 'accounting_vuca' ? '4' : '3'));
+            $gl = $this->getGlDb($dbKey === 'accounting_stm' ? '7' : ($dbKey === 'accounting_vuca' ? '4' : '3'));
             if (!$gl || !method_exists($gl, 'table_exists')) continue;
 
             $invRows = []; $rcvRows = []; $payRows = []; $expRows = []; $pcsRows = [];

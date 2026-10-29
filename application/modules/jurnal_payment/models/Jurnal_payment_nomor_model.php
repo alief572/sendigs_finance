@@ -183,9 +183,9 @@ class Jurnal_payment_nomor_model extends CI_Model
         $nocab         = 'A';
         $bulan_Proses  = date('Y', strtotime($Tgl_Inv));
         $Urut          = 1;
-        if ($comp == '4') {
+        if ($comp == '4' || $comp == '1') {
             $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_VUCA . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
-        } else if ($comp == '1' || $comp == '6' || $comp == '7') {
+        } else if ($comp == '7') {
             $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_STM . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
         } else {
             $Query_Cab = "SELECT subcab,nomorJC FROM " . DBACC_SUST . ".pastibisa_tb_cabang WHERE nocab='" . $Cabang . "'";
@@ -542,10 +542,10 @@ class Jurnal_payment_nomor_model extends CI_Model
     {
         //$db2=$this->load->database('accounting', TRUE);
         //$no_cab		= '101';
-        if ($id_company == '4') {
+        if ($id_company == '4' || $id_company == '1') {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_VUCA . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         }
-        else if($id_company == '1' || $id_company == '6' || $id_company == '7') {
+        else if ($id_company == '7') {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_STM . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         } 
         else {

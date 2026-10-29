@@ -245,9 +245,9 @@ class Payment_reference
 
     public static function target($company)
     {
-        if ((string)$company === '4') return 'accounting_vuca';
-        if (in_array((string)$company, ['1','6','7'], true)) return 'accounting_stm';
-        if ((string)$company === '3') return 'accounting_sustain';
+        if (in_array((string)$company, ['1', '4'], true)) return 'accounting_vuca';
+        if (in_array((string)$company, ['3', '6'], true)) return 'accounting_sustain';
+        if ((string)$company === '7') return 'accounting_stm';
         throw new DomainException('Company Payment tidak dikenali.');
     }
 
