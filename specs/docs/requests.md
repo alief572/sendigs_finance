@@ -19,3 +19,4 @@ Permintaan disampaikan user lewat sesi chat dengan Claude Code. Teks permintaan 
 | R-08 | 2026-10-29 | "boleh ga buat progressnya menjadi tipe stepper" → "dibuat lebih kecil ya, jangan terlalu besar, menuhin tabel banget, lebih simple tapi informatif" → ikuti `input/Contoh Stepper.png` | FR-08, NFR-06 |
 | R-09 | 2026-10-29 | "approval budget oleh direktur, approval pengajuan oleh direktur" | FR-04, FR-10 |
 | R-10 | 2026-10-29 | "di input aku masukan HTML dengan nama "Periodik" nah ikutin kayak gitu ya, ada perubahan tadi". Isi perubahan di `input/Periodik.html`: nomor item PI-YYYY-NNNNN (bukan PERIODIK-, karena PERIODIK- adalah nomor batch lama), menu "Approval Perubahan Budget", tab "Sudah diputuskan", tombol "Tidak diajukan ulang" untuk item yang ditolak. | FR-05, FR-07, FR-08, FR-12, NFR-01 |
+| R-11 | 2026-10-29 | "buatin ERD diagramnya" | Bukan FR (dokumen): `docs/erd-pembayaran-periodik.drawio` |
