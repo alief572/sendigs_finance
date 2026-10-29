@@ -2,6 +2,8 @@
 if (!defined('AUDIT_FIXTURE_ONLY')) { define('AUDIT_FIXTURE_ONLY', true); }
 if (!defined('HRIS')) { define('HRIS', 'fixture_hris'); }
 if (!defined('DBACC')) { define('DBACC', 'fixture_acc'); }
+foreach (['DBACC_VUCA','DBACC_STM','DBACC_SUST'] as $constant) if (!defined($constant)) define($constant,'fixture_acc');
+if (!function_exists('int_to_roman')) { function int_to_roman($month) { return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][$month-1]; } }
 if (!defined('FCPATH')) { define('FCPATH', sys_get_temp_dir() . '/fcpath/'); }
 if (!is_dir(FCPATH)) { mkdir(FCPATH, 0775, true); }
 
@@ -67,6 +69,7 @@ class ExpenseBatch3Result {
 
     public function num_rows() {
         global $scenario;
+        if ($this->table === 'tr_jurnal') return 0;
         if (!empty($scenario['empty_result']) || !empty($scenario['missing_record'])) {
             return 0;
         }
@@ -75,6 +78,8 @@ class ExpenseBatch3Result {
 
     public function row() {
         global $scenario;
+        if (strpos($this->table,'GET_LOCK') !== false) return (object)['acquired'=>1];
+        if ($this->table === 'tr_kasbon') return (object)['no_doc'=>'KB-FIXTURE','project'=>'Q-FIXTURE','jumlah_kasbon'=>0];
         if (!empty($scenario['empty_result']) || !empty($scenario['missing_record'])) {
             return null;
         }
@@ -87,7 +92,7 @@ class ExpenseBatch3Result {
                 'sts_finance' => $sts_finance,
                 'status' => $sts_finance === '1' ? 1 : 0,
                 'total_kasbon' => 0,
-                'id_kasbon' => !empty($scenario['id_kasbon']) ? $scenario['id_kasbon'] : null,
+                'id_kasbon' => !empty($scenario['id_kasbon']) ? $scenario['id_kasbon'] : 'KB-FIXTURE',
                 'kurang_bayar' => !empty($scenario['kurang_bayar']) ? $scenario['kurang_bayar'] : null,
                 'lebih_bayar' => !empty($scenario['lebih_bayar']) ? $scenario['lebih_bayar'] : null,
                 'pettycash' => !empty($scenario['pettycash']) ? $scenario['pettycash'] : null,
@@ -138,6 +143,8 @@ class ExpenseBatch3Result {
                     'id' => 1,
                     'no_doc' => 'EXP-2026-001',
                     'expense' => 500000,
+                    'kasbon' => 0,
+                    'id_kasbon' => 'KB-FIXTURE',
                     'kasbon_pr_non_po_pett' => !empty($scenario['has_kasbon_non_po']) ? 'KB-001' : null,
                     'id_expense_bayar_sisa' => !empty($scenario['has_kembalian']) ? 'EXP-KEMB-001' : null
                 )
@@ -154,6 +161,11 @@ class ExpenseBatch3Result {
         if (!empty($scenario['empty_result'])) {
             return array();
         }
+        if ($this->table === 'tr_expense') return [(array)$this->row()];
+        if ($this->table === 'tr_expense_detail') return array_map(function($r){return (array)$r;},$this->result());
+        if ($this->table === 'tr_kasbon') return isset($this->params['id_expense_pett_pr_non_po']) ? [] : [['no_doc'=>'KB-FIXTURE','project'=>'Q-FIXTURE']];
+        if ($this->table === 'kons_tr_penawaran') return [['id_quotation'=>'Q-FIXTURE','company'=>'1']];
+        if ($this->table === 'kons_tr_company') return [['id'=>'1','nm_company'=>'STM-Vuca']];
         return array(
             array('id' => 1, 'doc_file' => 'receipt.png')
         );
@@ -161,6 +173,7 @@ class ExpenseBatch3Result {
 }
 
 class ExpenseBatch3Db {
+    public function insert_batch($table, $rows) { return $this->insert($table,$rows); }
     public function group_start() { return $this; }
     public function group_end() { return $this; }
     public function or_where($key, $value = null) { return $this; }
@@ -224,12 +237,13 @@ class ExpenseBatch3Db {
         return true;
     }
 
-    public function query($sql) {
+    public function query($sql, $values = []) {
         global $scenario;
         if (!empty($scenario['fail_query'])) {
             return false;
         }
         $this->lastQuery = $sql;
+        if (preg_match('/SELECT \* FROM (\w+) WHERE (\w+) = \? FOR UPDATE/', $sql, $match)) return new ExpenseBatch3Result('query',$match[1],[$match[2]=>$values[0]]);
         return new ExpenseBatch3Result('query', $sql);
     }
 
@@ -452,6 +466,7 @@ class ExpenseBatch3Template {
 }
 
 class ExpenseBatch3Load {
+    public function database($group, $return = true) { return new ExpenseBatch3Db(); }
     public $viewLoaded = '';
     public $viewData = array();
 

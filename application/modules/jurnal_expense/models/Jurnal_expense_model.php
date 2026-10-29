@@ -1,9 +1,15 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 
 class Jurnal_expense_model extends BF_Model
 {
     const TYPES = ['Expense Report', 'Expense Report Consultant', 'Pengembalian Kasbon'];
+
+    public function validate_company($rows, $lock = false)
+    {
+        return (new Expense_company($this->db, $this->load->database('consultant', true)))->validateJournal($rows, $lock);
+    }
 
     public function get_data_jurnal()
     {

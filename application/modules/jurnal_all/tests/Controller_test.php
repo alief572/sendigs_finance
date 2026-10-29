@@ -15,12 +15,12 @@ class Recorder {public $events=[],$fail=false;public function begin($module,$met
 class Loader {public $views=[],$models=[];public function library($name){}public function model($name){$this->models[]=$name;}public function view($name,$data,$return=false){$this->views[]=[$name,$data];return '<p>detail</p>';}}
 class Template {public $data=[];public function title($title){}public function page_icon($icon){}public function set($data){$this->data=$data;}public function render($view){}}
 class Data extends Jurnal_all_model {
-    public $calls=0,$fail=false,$source='PAY',$rows=[],$balanced=true,$canPost=true,$blockReason='';
+    public $calls=0,$fail=false,$source='PAY',$rows=[],$balanced=true,$canPost=true,$blockReason='',$companyError='';
     private function read(){$this->calls++;if($this->fail)throw new RuntimeException('query');}
     public function listing($values,$posted=false){$this->read();return ['draw'=>1,'data'=>[['id'=>1]],'recordsTotal'=>1,'recordsFiltered'=>1];}
     public function options($values,$posted=false){$this->read();return ['years'=>[2026],'companies'=>[],'categories'=>[]];}
     public function summary($filters){$this->read();return ['INV'=>['count'=>1]];}
-    public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash','payment_reference_error'=>$this->blockReason],'is_balance'=>$this->balanced,'can_post'=>$this->canPost,'rows'=>$this->rows];}
+    public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash','payment_reference_error'=>$this->blockReason,'company_error'=>$this->companyError],'is_balance'=>$this->balanced,'can_post'=>$this->canPost,'rows'=>$this->rows];}
     public function export_rows($values,$posted=false){$this->read();return [];}
 }
 class Dispatcher {public $calls=0,$status=1;public function execute($action,$id,$source,$payload){$this->calls++;return ['status'=>$this->status,'msg'=>'outcome'];}}
@@ -88,4 +88,6 @@ $posted=true;$detail['header']['source']='INV';$detail['header']['source_numbers
 ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();check(strpos($html,'FINAL-JV')!==false&&strpos($html,'15:50:00 WIB')!==false&&strpos($html,'&lt;img src=x&gt;')!==false,'posted detail shows confirmed number/date/escaped actor');
 $rows=[['header'=>array_merge($detail['header'],['tab'=>'INV','category'=>'Invoicing']),'line'=>array_merge($detail['rows'][0],['nm_divisi'=>'Finance','no_jurnal'=>'BAD-STAGING'])]];
 ob_start();include dirname(__DIR__).'/views/export_excel.php';$html=ob_get_clean();check(strpos($html,'FINAL-JV')!==false&&strpos($html,'BAD-STAGING')===false&&strpos($html,'2026-10-15')!==false,'posted Excel uses actual accounting metadata rather than staging number');
+$permissions=['Jurnal_All.View','Jurnal_All.Manage'];$c=fixture();$c->Jurnal_all_model->source='EXP';$c->input->values['source']='EXP';$c->Jurnal_all_model->canPost=false;$c->Jurnal_all_model->companyError='Sumber company belum pasti.';$c->preview();$response=json_decode($c->output->body,true);
+check($response['show_post']&&!$response['can_post']&&$response['post_block_reason']==='Sumber company belum pasti.','Expense preview preserves specific company block reason');
 echo "PASS Jurnal All controllers/routes/views: {$checks} assertions\n";

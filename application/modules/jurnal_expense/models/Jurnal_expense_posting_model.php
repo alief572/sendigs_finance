@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 
 class Jurnal_expense_posting_model extends BF_Model
 {
@@ -11,7 +12,7 @@ class Jurnal_expense_posting_model extends BF_Model
         try {
             $rows = $this->Jurnal_expense_model->get_pending_group($id);
             $first = $rows[0];
-            if (empty($first->id_company)) { throw new InvalidArgumentException('Company jurnal belum tersedia.'); }
+            $company = $this->Jurnal_expense_model->validate_company($rows);
             $schema = $this->accounting_schema($first->id_company);
             $lockName = 'jurnal_expense:' . $schema . ':101';
             $locked = $this->read($this->db->query('SELECT GET_LOCK(?, 10) AS acquired', [$lockName]))->row();
@@ -20,16 +21,25 @@ class Jurnal_expense_posting_model extends BF_Model
             $transaction = true;
             $rows = $this->Jurnal_expense_model->get_pending_group($id, true);
             $first = $rows[0];
+            $freshCompany = $this->Jurnal_expense_model->validate_company($rows, true);
+            if ($freshCompany !== $company) { throw new DomainException('Sumber company jurnal berubah. Muat ulang sebelum posting.'); }
             if ($this->accounting_schema($first->id_company) !== $schema) { throw new InvalidArgumentException('Company jurnal berubah. Silakan coba lagi.'); }
             $debit = $credit = 0;
             $details = [];
             $ids = [];
+            $checkedCoa = [];
             foreach ($rows as $row) {
                 $d = (int) round((float) $row->debit * 100);
                 $c = (int) round((float) $row->kredit * 100);
                 if ($d < 0 || $c < 0) { throw new InvalidArgumentException('Nominal jurnal tidak valid.'); }
                 $debit += $d; $credit += $c; $ids[] = (int) $row->id;
                 if ($d === 0 && $c === 0) { continue; }
+                if (!isset($checkedCoa[$row->coa])) {
+                    if ($this->read($this->db->get_where($schema.'.coa_master', ['no_perkiraan'=>$row->coa]))->num_rows() !== 1) {
+                        throw new DomainException('COA '.$row->coa.' tidak tersedia atau tidak unik pada TRAS tujuan.');
+                    }
+                    $checkedCoa[$row->coa] = true;
+                }
                 $reference = $row->no_transaksi;
                 $description = $row->keterangan;
                 if (preg_match('/\{REF:(.*?)\}/', $description, $matches)) {
@@ -83,7 +93,7 @@ class Jurnal_expense_posting_model extends BF_Model
             }
             if (!$cleanupOk) { log_message('error', 'Jurnal Expense: cleanup accounting gagal; periksa JV ' . $number); }
             $databaseError = $error instanceof mysqli_sql_exception || $error instanceof PDOException;
-            $message = !$databaseError && ($error instanceof InvalidArgumentException || $error instanceof RuntimeException) ? $error->getMessage() : 'Gagal memproses jurnal. Silakan coba lagi.';
+            $message = !$databaseError && ($error instanceof DomainException || $error instanceof InvalidArgumentException || $error instanceof RuntimeException) ? $error->getMessage() : 'Gagal memproses jurnal. Silakan coba lagi.';
             return ['save'=>0, 'msg'=>$cleanupOk ? $message : 'Posting gagal dan perlu pemeriksaan accounting oleh administrator.', 'cleanup_ok'=>$cleanupOk];
         } finally {
             if ($lockName !== null) {
@@ -94,9 +104,7 @@ class Jurnal_expense_posting_model extends BF_Model
 
     public function accounting_schema($company)
     {
-        $schema = (string) $company === '4' ? DBACC_VUCA : (in_array((string) $company, ['1','6','7'], true) ? DBACC_STM : DBACC_SUST);
-        if (!preg_match('/^[a-zA-Z0-9_]+$/D', $schema)) { throw new RuntimeException('Konfigurasi accounting tidak valid.'); }
-        return $schema;
+        return Expense_company::schema($company);
     }
     private function read($query) { if ($query === false) { throw new RuntimeException('Gagal membaca data accounting.'); } return $query; }
     private function write($ok, $message) { if ($ok === false) { throw new RuntimeException($message); } }

@@ -5,6 +5,7 @@ if (!defined('BASEPATH')) {
 }
 
 require_once dirname(__DIR__, 3) . '/helpers/expense_upload_helper.php';
+require_once dirname(__DIR__) . '/libraries/Expense_company.php';
 
 /*
  * @author Harboens
@@ -16,6 +17,52 @@ require_once dirname(__DIR__, 3) . '/helpers/expense_upload_helper.php';
 $status = array();
 class Expense extends Admin_Controller
 {
+	private function companyService()
+	{
+		return new Expense_company($this->db, $this->load->database('consultant', true));
+	}
+
+	private function withJournalTransaction($id, $expectedStatus, $callback)
+	{
+		$locked = $this->db->query('SELECT GET_LOCK(?, 10) AS acquired', ['expense_journal_build']);
+		if (!$locked || !($locked = $locked->row()) || (int)$locked->acquired !== 1) {
+			throw new RuntimeException('Pembuatan jurnal lain sedang berjalan. Silakan coba lagi.');
+		}
+		$transaction = false;
+		try {
+			if ($this->db->trans_begin() === false) throw new RuntimeException('Gagal memulai transaksi expense.');
+			$transaction = true;
+			$query = $this->db->query('SELECT * FROM tr_expense WHERE id = ? FOR UPDATE', [$id]);
+			if (!$query || !($expense = $query->row()) || (string)$expense->status !== $expectedStatus) {
+				throw new DomainException('Status expense berubah atau sudah diproses. Muat ulang data.');
+			}
+			$callback($expense);
+			if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
+				throw new RuntimeException('Gagal commit transaksi expense.');
+			}
+			$transaction = false;
+		} finally {
+			try { if ($transaction) $this->db->trans_rollback(); }
+			finally {
+				try { $this->db->query('SELECT RELEASE_LOCK(?)', ['expense_journal_build']); }
+				catch (Throwable $ignored) { log_message('error', 'Expense: gagal melepas lock jurnal.'); }
+			}
+		}
+	}
+
+	private function insertExpenseJournal($rows)
+	{
+		Expense_company::storedCompany($rows);
+		$debit = $credit = 0;
+		foreach ($rows as $row) {
+			$d = (int)round((float)$row['debit'] * 100);
+			$c = (int)round((float)$row['kredit'] * 100);
+			if ($d < 0 || $c < 0) throw new DomainException('Nominal jurnal expense tidak valid.');
+			$debit += $d; $credit += $c;
+		}
+		if ($debit <= 0 || $debit !== $credit) throw new DomainException('Jurnal expense tidak balance atau nominal kosong.');
+		if ($this->db->insert_batch('tr_jurnal', $rows) === false) throw new RuntimeException('Gagal menyimpan jurnal expense.');
+	}
 	//Permission
 	protected $viewPermission 	= 'Expense.View';
 	protected $addPermission  	= 'Expense.Add';
@@ -2226,27 +2273,20 @@ class Expense extends Admin_Controller
 						'reject_reason' => null
 					];
 
-					$update_expense = $this->db->update('tr_expense', $arr_update, ['id' => $id]);
-					$this->auditObserve($update_expense);
-					if ($update_expense) {
+					try {
+						$this->withJournalTransaction($id, '1', function ($lockedExpense) use ($id, $arr_update, $get_expense) {
+							if ((array)$lockedExpense != (array)$get_expense) throw new DomainException('Data expense berubah. Muat ulang sebelum approval.');
+							if ((string)$lockedExpense->sts_finance !== '1') throw new DomainException('Approval Finance belum selesai.');
+							$this->_post_jurnal_expense_report($id);
+							if ($this->db->update('tr_expense', $arr_update, ['id'=>$id]) === false
+								|| $this->db->update('tr_expense_detail', ['status'=>2], ['no_doc'=>$lockedExpense->no_doc]) === false) {
+								throw new RuntimeException('Gagal memperbarui status expense.');
+							}
+						});
 						$result = true;
 						$auditStatusVal = (string)$statusTarget;
-
-						// Update detail rows status ke 2
-						$this->db->update('tr_expense_detail', ['status' => 2], ['no_doc' => $get_expense->no_doc]);
-
-						// Posting JURNAL 1 final saat disetujui Direktur
-						if (method_exists($this, '_post_jurnal_expense_report')) {
-							$this->_post_jurnal_expense_report($id);
-						}
-
-						$keterangan     = "SUKSES, Approve Direktur/Management expense " . $id;
-						$status_act     = 1;
-						$nm_hak_akses   = $this->managePermission;
-						$kode_universal = $id;
-						$jumlah 		= 1;
-						$sql            = $this->db->last_query();
-						simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status_act);
+					} catch (Throwable $error) {
+						$err_msg = $error instanceof DomainException ? $error->getMessage() : 'Gagal menyimpan persetujuan dan jurnal expense.';
 					}
 				}
 			}
@@ -2257,16 +2297,18 @@ class Expense extends Admin_Controller
 			'message' => $result ? 'Berhasil menyetujui expense.' : ($err_msg ?: 'Gagal memproses persetujuan.')
 		);
 		$auditStatus = $result ? 1 : 0;
-		$this->completeAudit(
-			$result ? ('Berhasil menyetujui expense (' . ($stage ?: 'approval') . ')') : 'Gagal menyetujui expense',
-			$auditStatus,
-			array(
-				'id' => $id,
-				'stage' => $stage,
-				'status' => $auditStatusVal,
-				'outcome' => $result ? 'approved' : ($id === '' ? 'empty_id' : (!empty($get_expense) ? 'update_failed' : 'not_found'))
-			)
-		);
+		try {
+			$this->completeAudit(
+				$result ? ('Berhasil menyetujui expense (' . ($stage ?: 'approval') . ')') : 'Gagal menyetujui expense',
+				$auditStatus,
+				array(
+					'id' => $id,
+					'stage' => $stage,
+					'status' => $auditStatusVal,
+					'outcome' => $result ? 'approved' : ($id === '' ? 'empty_id' : (!empty($get_expense) ? 'update_failed' : 'not_found'))
+				)
+			);
+		} catch (Throwable $ignored) { log_message('error', 'Expense: audit approval tidak tersedia.'); }
 		echo json_encode($param);
 	}
 
@@ -6548,46 +6590,18 @@ class Expense extends Admin_Controller
 		$arr_kasbon = isset($post['kasbon']) ? (array)$post['kasbon'] : [];
 		$arr_tanggal = isset($post['tanggal']) ? (array)$post['tanggal'] : [];
 
-		// Tarik Nama Company dari database db_consultant_new (kons_tr_company)
-		$id_company = '';
-		$nm_company = '';
-		$first_kasbon_doc = '';
-		foreach ($arr_id_kasbon as $kb_item) {
-			if (!empty($kb_item)) {
-				$first_kasbon_doc = $kb_item;
-				break;
-			}
-		}
-
 		try {
-			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
-				$consultant = $this->load->database('consultant', true);
-				if (!empty($first_kasbon_doc)) {
-					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
-					if (!empty($get_kb) && !empty($get_kb->project)) {
-						$consultant->select('a.id, a.nm_company');
-						$consultant->from('kons_tr_company a');
-						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-						$consultant->where('b.id_quotation', $get_kb->project);
-						$get_comp = $consultant->get()->row();
-						if (!empty($get_comp)) {
-							$id_company = $get_comp->id;
-							$nm_company = $get_comp->nm_company;
-						}
-					}
-				}
-
-				if (empty($nm_company)) {
-					$get_first_comp = $consultant->get('kons_tr_company')->row();
-					if (!empty($get_first_comp)) {
-						$id_company = $get_first_comp->id;
-						$nm_company = $get_first_comp->nm_company;
-					}
-				}
+			$service = $this->companyService();
+			if ($no_doc !== '' && $this->db->get_where('tr_expense', ['no_doc'=>$no_doc])->num_rows() > 0) {
+				$company = $service->resolve($no_doc);
+			} else {
+				$company = $service->resolveKasbons($arr_id_kasbon);
 			}
-		} catch (Throwable $e) {
-			$id_company = '';
-			$nm_company = '';
+			$id_company = $company['id'];
+			$nm_company = htmlspecialchars($company['name'], ENT_QUOTES, 'UTF-8');
+		} catch (Throwable $error) {
+			echo json_encode(['status'=>0, 'hasil'=>'', 'message'=>$error instanceof DomainException ? $error->getMessage() : 'Validasi company belum dapat dilakukan.']);
+			return;
 		}
 
 		// 1. DEBIT: Setiap baris item Realisasi Expense yang diinput di form
@@ -6598,7 +6612,7 @@ class Expense extends Admin_Controller
 					$no_jurnal++;
 					$coa_code = isset($arr_coa[$idx]) && !empty($arr_coa[$idx]) ? $arr_coa[$idx] : '1304-01-01';
 					$coa_name = 'Peralatan Kantor';
-					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
 					if (!empty($q_coa_acc)) {
 						$coa_name = $q_coa_acc->nama;
 					} else {
@@ -6633,7 +6647,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_code = '1304-01-01';
 			$coa_name = 'Peralatan Kantor';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
 			if (!empty($q_coa_acc)) $coa_name = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr>';
@@ -6656,7 +6670,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_piutang = '1103-01-15';
 			$nm_piutang = 'Piutang Kelebihan Kasbon';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_piutang])->row();
 			if (!empty($q_coa_acc)) $nm_piutang = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr style="background:#e8fadf;">';
@@ -6677,7 +6691,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_kasbon = '1103-01-14';
 			$nm_kasbon = 'Piutang Lain-lain Konsultan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_kasbon])->row();
 			if (!empty($q_coa_acc)) $nm_kasbon = $q_coa_acc->nama;
 
 			$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_unique(array_filter($arr_id_kasbon))) . ')' : '');
@@ -6703,7 +6717,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_hutang = '9999-99-99';
 			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_hutang])->row();
 			if (!empty($q_coa_acc)) $nm_hutang = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr style="background:#fde8e8;">';
@@ -6792,28 +6806,22 @@ class Expense extends Admin_Controller
 	private function _post_jurnal_expense_report($id)
 	{
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
-		if (empty($data)) {
-			return;
-		}
-
-		// Pastikan ini adalah Expense Report (memiliki id_kasbon)
-		if (empty($data->id_kasbon)) {
-			return;
-		}
+		if (empty($data)) throw new DomainException('Data expense tidak tersedia.');
+		$service = $this->companyService();
+		$service->lockSource($data->no_doc);
+		$company = $service->resolve($data->no_doc);
+		$id_company = $company['id'];
+		$nm_company = $company['name'];
 
 		// Cek apakah sudah pernah di-insert ke tr_jurnal (mencegah duplikasi)
 		$cek_existing = $this->db->get_where('tr_jurnal', [
 			'no_transaksi' => $data->no_doc,
 			'jenis_transaksi' => 'Expense Report'
 		])->num_rows();
-		if ($cek_existing > 0) {
-			return;
-		}
+		if ($cek_existing > 0) throw new DomainException('Jurnal realisasi sudah tersedia. Periksa sebelum memproses ulang.');
 
 		$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc])->result();
-		if (empty($get_expense_detail)) {
-			return;
-		}
+		if (empty($get_expense_detail)) throw new DomainException('Detail expense belum tersedia.');
 
 		$total_expense = 0;
 		$total_kasbon = 0;
@@ -6846,39 +6854,6 @@ class Expense extends Admin_Controller
 		$urutan++;
 		$no_jurnal = sprintf('%05s', $urutan) . '-AJV-' . $month_roman . '-' . $year_short;
 
-		// Tarik info company
-		$id_company = '';
-		$nm_company = '';
-		try {
-			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
-				$consultant = $this->load->database('consultant', true);
-				if (!empty($data->id_kasbon)) {
-					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
-					if (!empty($get_kb) && !empty($get_kb->project)) {
-						$consultant->select('a.id, a.nm_company');
-						$consultant->from('kons_tr_company a');
-						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
-						$consultant->where('b.id_quotation', $get_kb->project);
-						$get_comp = $consultant->get()->row();
-						if (!empty($get_comp)) {
-							$id_company = $get_comp->id;
-							$nm_company = $get_comp->nm_company;
-						}
-					}
-				}
-
-				if (empty($nm_company)) {
-					$get_first_comp = $consultant->get('kons_tr_company')->row();
-					if (!empty($get_first_comp)) {
-						$id_company = $get_first_comp->id;
-						$nm_company = $get_first_comp->nm_company;
-					}
-				}
-			}
-		} catch (Throwable $e) {
-			$id_company = '';
-			$nm_company = '';
-		}
 
 		$id_divisi = !empty($data->departement) ? $data->departement : '';
 		$nm_divisi = !empty($data->departement) ? $data->departement : '';
@@ -6891,7 +6866,7 @@ class Expense extends Admin_Controller
 			if ($exp_num > 0) {
 				$coa_code = !empty($dtl->coa) ? $dtl->coa : '1304-01-01';
 				$coa_name = 'Peralatan Kantor';
-				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
+				$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
 				if (!empty($q_coa_acc)) {
 					$coa_name = $q_coa_acc->nama;
 				} else {
@@ -6928,7 +6903,7 @@ class Expense extends Admin_Controller
 		if ($selisih > 0) {
 			$coa_piutang = '1103-01-15';
 			$nm_piutang = 'Piutang Kelebihan Kasbon';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_piutang])->row();
 			if (!empty($q_coa_acc)) {
 				$nm_piutang = $q_coa_acc->nama;
 			}
@@ -6959,7 +6934,7 @@ class Expense extends Admin_Controller
 		if ($total_kasbon > 0) {
 			$coa_kasbon = '1103-01-14';
 			$nm_kasbon = 'Piutang Lain-lain Konsultan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_kasbon])->row();
 			if (!empty($q_coa_acc)) {
 				$nm_kasbon = $q_coa_acc->nama;
 			}
@@ -6991,7 +6966,7 @@ class Expense extends Admin_Controller
 			$kurang_bayar = abs($selisih);
 			$coa_hutang = '9999-99-99';
 			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_hutang])->row();
 			if (!empty($q_coa_acc)) {
 				$nm_hutang = $q_coa_acc->nama;
 			}
@@ -7018,9 +6993,7 @@ class Expense extends Admin_Controller
 			];
 		}
 
-		if (!empty($arr_insert)) {
-			$this->db->insert_batch('tr_jurnal', $arr_insert);
-		}
+		$this->insertExpenseJournal($arr_insert);
 	}
 
 	/**
@@ -7741,70 +7714,41 @@ class Expense extends Admin_Controller
 	 */
 	public function verifikasi_pengembalian_approve()
 	{
+		$this->beginAudit(__FUNCTION__, [], ['id','outcome']);
 		$id = $this->input->post('id');
-		$chk_bukti = (int)$this->input->post('chk_bukti');
-		$chk_mutasi = (int)$this->input->post('chk_mutasi');
-		$chk_nominal = (int)$this->input->post('chk_nominal');
-
-		if (empty($id)) {
-			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
-			return;
-		}
-
-		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
-		if (empty($expense)) {
-			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
-			return;
-		}
-
-		// BR-12: Verifikator tidak boleh pelapor sendiri
-		if ($expense->nama === $this->auth->user_name()) {
-			echo json_encode(['save' => false, 'message' => 'Anda tidak dapat memverifikasi pengembalian untuk laporan Anda sendiri (Segregation of Duties)!']);
-			return;
-		}
-
-		// Validasi 3 checklist wajib
-		if ($chk_bukti !== 1 || $chk_mutasi !== 1 || $chk_nominal !== 1) {
-			echo json_encode(['save' => false, 'message' => 'Ketiga butir checklist verifikasi wajib dicentang sebelum menyetujui!']);
-			return;
-		}
-
-		$bank_coa = $expense->transfer_coa_bank;
-		if (empty($bank_coa) && !empty($expense->id_bank_pengembalian)) {
-			$mb = $this->db->get_where('ms_bank', ['id' => $expense->id_bank_pengembalian, 'deleted' => '0'])->row();
-			if ($mb) {
-				$bank_coa = $mb->coa_bank;
+		$response = ['save'=>false, 'message'=>'Gagal memverifikasi pengembalian kasbon.'];
+		try {
+			if (!is_scalar($id) || !preg_match('/^[1-9]\d*$/D', (string)$id)) throw new DomainException('ID Expense tidak valid.');
+			if (!has_permission($this->managePermission)) throw new DomainException('Anda tidak memiliki hak verifikasi expense.');
+			foreach (['chk_bukti','chk_mutasi','chk_nominal'] as $check) {
+				if ((string)$this->input->post($check) !== '1') throw new DomainException('Ketiga butir checklist verifikasi wajib dicentang sebelum menyetujui!');
 			}
+			$this->withJournalTransaction($id, '4', function ($expense) use ($id) {
+				if ($expense->nama === $this->auth->user_name()) throw new DomainException('Anda tidak dapat memverifikasi pengembalian untuk laporan Anda sendiri (Segregation of Duties)!');
+				$bankCoa = trim((string)$expense->transfer_coa_bank);
+				if ($bankCoa === '' && !empty($expense->id_bank_pengembalian)) {
+					$query = $this->db->get_where('ms_bank', ['id'=>$expense->id_bank_pengembalian, 'deleted'=>'0']);
+					if (!$query) throw new RuntimeException('Gagal memeriksa bank pengembalian.');
+					$bank = $query->row();
+					$bankCoa = $bank ? trim((string)$bank->coa_bank) : '';
+				}
+				if ($bankCoa === '') throw new DomainException('COA bank pengembalian belum tersedia.');
+				$nominal = (float)($expense->transfer_jumlah > 0 ? $expense->transfer_jumlah : $expense->lebih_bayar);
+				$this->_post_jurnal_pengembalian_kasbon($id, $bankCoa, $nominal);
+				if ($this->db->update('tr_expense', [
+					'status'=>2, 'verified_by'=>$this->auth->user_name(), 'verified_on'=>date('Y-m-d H:i:s'),
+					'verif_checklist'=>'bukti,mutasi,nominal', 'verif_reject_reason'=>null
+				], ['id'=>$id]) === false) throw new RuntimeException('Gagal memperbarui status pengembalian.');
+			});
+			$response = ['save'=>true, 'message'=>'Verifikasi pengembalian kasbon selesai! Jurnal 2 berhasil dibukukan dan status laporan telah Selesai.'];
+		} catch (Throwable $error) {
+			if ($error instanceof DomainException) $response['message'] = $error->getMessage();
 		}
-		if (empty($bank_coa)) {
-			$bank_coa = '1101-02-01';
-		}
-		$nominal = floatval($expense->transfer_jumlah > 0 ? $expense->transfer_jumlah : $expense->lebih_bayar);
-
-		$this->db->trans_begin();
-
-		// Update tr_expense status ke 2 (Selesai/Approved)
-		$this->db->update('tr_expense', [
-			'status' => 2,
-			'verified_by' => $this->auth->user_name(),
-			'verified_on' => date('Y-m-d H:i:s'),
-			'verif_checklist' => 'bukti,mutasi,nominal',
-			'verif_reject_reason' => null
-		], ['id' => $id]);
-
-		// Posting JURNAL 2 (Debit Bank, Kredit 1103-01-15)
-		$this->_post_jurnal_pengembalian_kasbon($id, $bank_coa, $nominal);
-
-		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
-			$this->db->trans_rollback();
-			echo json_encode(['save' => false, 'message' => 'Gagal memverifikasi pengembalian kasbon (kesalahan database).']);
-			return;
-		}
-
-		echo json_encode([
-			'save' => true,
-			'message' => 'Verifikasi pengembalian kasbon selesai! Jurnal 2 berhasil dibukukan dan status laporan telah Selesai.'
-		]);
+		try {
+			$this->completeAudit($response['save'] ? 'Berhasil memverifikasi pengembalian kasbon' : 'Gagal memverifikasi pengembalian kasbon', $response['save'] ? 1 : 0,
+				['id'=>$id, 'outcome'=>$response['save'] ? 'verified' : 'verification_failed']);
+		} catch (Throwable $ignored) { log_message('error', 'Expense: audit verifikasi pengembalian tidak tersedia.'); }
+		echo json_encode($response);
 	}
 
 	/**
@@ -7858,7 +7802,13 @@ class Expense extends Admin_Controller
 	private function _post_jurnal_pengembalian_kasbon($id, $coa_bank, $nominal)
 	{
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
-		if (empty($data)) return false;
+		if (empty($data)) throw new DomainException('Data expense tidak tersedia.');
+		$existing = $this->db->get_where('tr_jurnal', ['no_transaksi'=>$data->no_doc, 'jenis_transaksi'=>'Pengembalian Kasbon']);
+		if (!$existing || $existing->num_rows() > 0) throw new DomainException('Jurnal pengembalian sudah tersedia atau belum dapat diperiksa.');
+		$service = $this->companyService();
+		$service->lockSource($data->no_doc);
+		$company = $service->resolveReturn($data->no_doc);
+		$service->validateReturnRealization($data->no_doc, $company);
 
 		$tgl_doc = !empty($data->transfer_tanggal) ? $data->transfer_tanggal : date('Y-m-d');
 		$month_num = (int) date('m', strtotime($tgl_doc));
@@ -7876,11 +7826,11 @@ class Expense extends Admin_Controller
 		$no_jurnal = sprintf('%05s', $urutan) . '-BUM-' . $month_roman . '-' . $year_short;
 
 		// Ambil nama bank dari coa_master
-		$q_bank = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_bank))->row();
+		$q_bank = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_bank))->row();
 		$nm_bank = !empty($q_bank) ? $q_bank->nama : 'Bank Perusahaan';
 
 		$coa_piutang = '1103-01-15';
-		$q_piutang = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_piutang))->row();
+		$q_piutang = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = " . $this->db->escape($coa_piutang))->row();
 		$nm_piutang = !empty($q_piutang) ? $q_piutang->nama : 'Piutang Kelebihan Kasbon';
 
 		$arr_insert = [
@@ -7888,8 +7838,8 @@ class Expense extends Admin_Controller
 				'no_jurnal'       => $no_jurnal,
 				'tgl_jurnal'      => $tgl_doc,
 				'coa'             => $coa_bank,
-				'id_company'      => '',
-				'nm_company'      => '',
+				'id_company'      => $company['id'],
+				'nm_company'      => $company['name'],
 				'nm_coa'          => $nm_bank,
 				'debit'           => $nominal,
 				'kredit'          => 0,
@@ -7906,8 +7856,8 @@ class Expense extends Admin_Controller
 				'no_jurnal'       => $no_jurnal,
 				'tgl_jurnal'      => $tgl_doc,
 				'coa'             => $coa_piutang,
-				'id_company'      => '',
-				'nm_company'      => '',
+				'id_company'      => $company['id'],
+				'nm_company'      => $company['name'],
 				'nm_coa'          => $nm_piutang,
 				'debit'           => 0,
 				'kredit'          => $nominal,
@@ -7922,7 +7872,7 @@ class Expense extends Admin_Controller
 			]
 		];
 
-		return $this->db->insert_batch('tr_jurnal', $arr_insert);
+		$this->insertExpenseJournal($arr_insert);
 	}
 }
 

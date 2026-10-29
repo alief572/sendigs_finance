@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 require_once dirname(__DIR__).'/libraries/Jurnal_debt_groups.php';
 require_once dirname(__DIR__).'/libraries/Payment_reference.php';
 
@@ -229,7 +230,24 @@ class Jurnal_all_model extends BF_Model
         $anchor['active_lines']=count(array_filter($rows,function($r){return $this->cents($r['debit'])>0||$this->cents($r['kredit'])>0;}));
         $headers=[$anchor]; $this->enrich($headers, $posted); $anchor=$headers[0];
         if (!$posted && !$this->eligible($anchor)) throw new InvalidArgumentException('Dokumen sumber jurnal tidak tersedia.');
-        return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit,'can_post'=>empty($anchor['payment_reference_error'])];
+        if (!$posted && $anchor['source'] === 'EXP') {
+            try {
+                $company = $this->validate_expense_company($rows);
+                $anchor['accounting_target'] = $company['target'];
+                $anchor['company_error'] = '';
+            } catch (Throwable $error) {
+                $anchor['company_error'] = $error instanceof DomainException ? $error->getMessage() : 'Validasi sumber company belum dapat dilakukan; posting diblokir.';
+            }
+        }
+        return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit,'can_post'=>empty($anchor['payment_reference_error']) && empty($anchor['company_error'])];
+    }
+
+    public function validate_expense_company($rows)
+    {
+        Expense_company::storedCompany($rows);
+        if (!function_exists('get_instance')) throw new RuntimeException('Koneksi sumber company tidak tersedia.');
+        $ci = &get_instance();
+        return (new Expense_company($this->db, $ci->load->database('consultant', true)))->validateJournal($rows);
     }
 
     public function posting_metadata_ready()
@@ -330,7 +348,10 @@ class Jurnal_all_model extends BF_Model
         foreach ($pending as $idx => &$row) {
             $companyId = (string)($row['id_company'] ?? '');
             $src = $row['source'] ?? '';
-            if ($src === 'PAY') {
+            if ($src === 'EXP') {
+                try { $dbKey = Expense_company::target($companyId); }
+                catch (DomainException $error) { continue; }
+            } elseif ($src === 'PAY') {
                 $dbKey = in_array($companyId, ['1', '4'], true) ? 'accounting_vuca' : (in_array($companyId, ['3', '6'], true) ? 'accounting_sustain' : 'accounting_stm');
             } else {
                 $dbKey = in_array($companyId, ['1', '6', '7'], true) ? 'accounting_stm' : ($companyId === '4' ? 'accounting_vuca' : 'accounting_sustain');
@@ -830,6 +851,10 @@ class Jurnal_all_model extends BF_Model
             if ($row['source']==='EXP') {
                 $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']];
                 $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
+                if (!$posted) {
+                    try { Expense_company::storedCompany([$row]); }
+                    catch (DomainException $error) { $row['can_post']=false; $row['post_block_reason']=$error->getMessage(); }
+                }
             }
             if ($row['source']==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $row['no_referensi']=implode(', ',$pettyReports[$row['no_transaksi']] ?? []);
             $row['category']=implode(', ',$row['categories']);

@@ -25,6 +25,7 @@ class PostingDb {
     public function trans_rollback() { $this->events[]='rollback'; $this->rows=$this->backup; return true; }
     public function get_where($table,$where) {
         if($this->fail==='read') return false;
+        if(strpos($table,'coa_master')!==false) return new PostingResult($this->fail==='coa_missing' ? [] : [['no_perkiraan'=>$where['no_perkiraan']]]);
         if(strpos($table,'pastibisa')!==false) return new PostingResult($this->fail==='branch_missing' ? [] : [['nomorJC'=>$this->counter,'subcab'=>'A']]);
         if($this->fail==='number_exists') return new PostingResult([['nomor'=>'existing']]);
         return new PostingResult([]);
@@ -51,6 +52,7 @@ class PostingDb {
 class PendingExpense {
     private $db;
     public function __construct($db) { $this->db=$db; }
+    public function validate_company($rows) { return Expense_company::storedCompany($rows); }
     public function get_pending_group($id,$lock=false) {
         foreach($this->db->rows as $row) {
             if(!in_array($row->sts,[null,'','0'],true))throw new InvalidArgumentException('posted');
@@ -64,10 +66,10 @@ class PendingExpense {
 class PostingNumber { public function get_Nomor_Jurnal_Sales($branch,$date,$company) { return '101-AJV2600011'; } }
 function fixture($company='1',$type='Expense Report Consultant') {
     $db=new PostingDb();
-    foreach([[1,0,8800000],[2,2500000,0],[3,1200000,0],[4,2800000,0],[5,1500000,0],[6,800000,0],[7,0,0]] as $r)$db->rows[]=(object)['id'=>$r[0],'debit'=>$r[1],'kredit'=>$r[2],'sts'=>$r[0]===1?null:'0','no_transaksi'=>'ER-2026-00031','jenis_transaksi'=>$type,'id_company'=>$company,'tgl_jurnal'=>'2026-10-14','coa'=>'5101-01-03','keterangan'=>'Expense {REF:REF-1}'];
+    foreach([[1,0,8800000],[2,2500000,0],[3,1200000,0],[4,2800000,0],[5,1500000,0],[6,800000,0],[7,0,0]] as $r)$db->rows[]=(object)['id'=>$r[0],'debit'=>$r[1],'kredit'=>$r[2],'sts'=>$r[0]===1?null:'0','no_transaksi'=>'ER-2026-00031','jenis_transaksi'=>$type,'id_company'=>$company,'nm_company'=>'Company '.$company,'tgl_jurnal'=>'2026-10-14','coa'=>'5101-01-03','keterangan'=>'Expense {REF:REF-1}'];
     $m=new Jurnal_expense_posting_model();$m->db=$db;$m->Jurnal_expense_model=new PendingExpense($db);$m->Jurnal_payment_nomor_model=new PostingNumber();return [$m,$db];
 }
-foreach(['1'=>'acc_stm','6'=>'acc_stm','7'=>'acc_stm','4'=>'acc_vuca','3'=>'acc_sustain'] as $company=>$schema) {
+foreach(['1'=>'acc_vuca','6'=>'acc_sustain','7'=>'acc_stm','4'=>'acc_vuca','3'=>'acc_sustain'] as $company=>$schema) {
     foreach(['Expense Report Consultant','Expense Report','Pengembalian Kasbon'] as $type) {
         [$m,$db]=fixture((string)$company,$type);$result=$m->post_journal(1,7);
         if($result['save']===1)check($result['accounting_numbers'][0]['number']===$result['nomor'],'native expense reply preserves actual generated JV');
@@ -79,7 +81,7 @@ foreach(['1'=>'acc_stm','6'=>'acc_stm','7'=>'acc_stm','4'=>'acc_vuca','3'=>'acc_
         check($m->post_journal(1,7)['save']===0 && count($db->headers)===1,'repeat posting refused');
     }
 }
-foreach(['lock','begin','read','branch_missing','number_exists','header','detail','source_status','source_conflict','counter','counter_conflict','status_transaction','commit'] as $failure) {
+foreach(['lock','begin','read','coa_missing','branch_missing','number_exists','header','detail','source_status','source_conflict','counter','counter_conflict','status_transaction','commit'] as $failure) {
     [$m,$db]=fixture();$db->fail=$failure;$result=$m->post_journal(1,7);
     check($result['save']===0,'no false success at '.$failure);
     check(!$db->headers && !$db->details && $db->counter===10,'MyISAM compensation at '.$failure);
@@ -100,4 +102,9 @@ check($m->post_journal(1,7)['save']===1 && $db->headers[0]['jml']===100.25,'cent
 $result=$m->post_journal(1,7);
 check($result['save']===0&&!$result['cleanup_ok']&&strpos($result['msg'],'administrator')!==false,'residual accounting cleanup failure is explicit');
 check($db->rows[0]->sts===null,'cleanup failure still rolls back source');
+foreach(['','0','99'] as $id){[$m,$db]=fixture($id);check($m->post_journal(1,7)['save']===0&&!$db->headers&&!$db->details,'unknown company has no accounting writes '.$id);}
+[$m,$db]=fixture();$db->rows[1]->id_company='7';
+check($m->post_journal(1,7)['save']===0&&!$db->headers,'mixed company blocked before accounting');
+[$m,$db]=fixture();$db->rows[1]->nm_company='WRONG';
+check($m->post_journal(1,7)['save']===0&&!$db->headers,'mixed company names blocked before accounting');
 echo "PASS Jurnal Expense posting: {$checks} assertions\n";

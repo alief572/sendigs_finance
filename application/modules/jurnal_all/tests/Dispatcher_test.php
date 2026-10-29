@@ -13,8 +13,8 @@ class Data extends Jurnal_all_model {
     public $metadataReady=true,$metadataFail=false,$saved=[];
     public function posting_metadata_ready(){return $this->metadataReady;}
     public function save_posting_metadata($header,$actor,$numbers){if($this->metadataFail||!$numbers)throw new RuntimeException('metadata failure');$this->saved[]=[$header,$actor,$numbers];}
-    public $type='Payment';public $posted=false;public $balance=true;
-    public function detail($id,$posted){if($this->posted)throw new InvalidArgumentException('posted');return ['header'=>['id'=>$id,'source'=>$this->source($this->type),'no_transaksi'=>'1, 2','jenis_transaksi'=>$this->type,'id_company'=>'7'], 'rows'=>[['debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>$this->balance];}
+    public $type='Payment';public $posted=false;public $balance=true;public $canPost=true;
+    public function detail($id,$posted){if($this->posted)throw new InvalidArgumentException('posted');return ['header'=>['id'=>$id,'source'=>$this->source($this->type),'no_transaksi'=>'1, 2','jenis_transaksi'=>$this->type,'id_company'=>'7','company_error'=>'Company sumber belum tersedia.'], 'rows'=>[['debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>$this->balance,'can_post'=>$this->canPost];}
 }
 class Modules {
     public static $calls=[];public static $response='{"save":1,"msg":"posted","accounting_numbers":[{"company":"7","number":"FINAL-JV-1"}]}';public static $fail=false;
@@ -53,4 +53,7 @@ check(count($ci->Jurnal_all_model->saved)===$before,'failed native commit never 
 $ci->Jurnal_all_model->metadataFail=true;Modules::$response='{"save":1,"accounting_numbers":[{"company":"7","number":"FINAL-TRUSTED"}]}';
 $result=$dispatch->execute('post',1,'PAY',[]);check($result['status']===1&&!$result['metadata_saved']&&isset($result['warning'])&&$result['outcome']==='posted_metadata_missing','metadata writer failure preserves committed business outcome and warns without retry');
 $ci->Jurnal_all_model->metadataFail=false;
+$ci->Jurnal_all_model->type='Pengembalian Kasbon';$ci->Jurnal_all_model->canPost=false;$before=count(Modules::$calls);
+try{$dispatch->execute('post',1,'EXP',['id_company'=>'1']);check(false,'blocked company');}
+catch(DomainException $error){check(count(Modules::$calls)===$before&&strpos($error->getMessage(),'Company')!==false,'blocked company cannot invoke native handler or accept client override');}
 echo "PASS Jurnal All dispatcher: {$checks} assertions\n";

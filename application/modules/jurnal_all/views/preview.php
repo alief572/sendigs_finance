@@ -8,10 +8,14 @@ $format=function($value){$parts=explode('.',(string)$value);return preg_replace(
 <?php if (!$posted && !empty($h['payment_reference_error'])): ?>
 <p class="alert alert-warning"><?= $e($h['payment_reference_error']) ?></p>
 <?php endif; ?>
+<?php if (!$posted && !empty($h['company_error'])): ?>
+<p class="alert alert-warning"><?= $e($h['company_error']) ?></p>
+<?php endif; ?>
 <dl class="ja-meta">
     <div><dt>No. Transaksi</dt><dd><?= $e(($h['display_no_transaksi'] ?? $h['no_transaksi']) ?: '—') ?></dd></div>
     <div><dt>No. Referensi</dt><dd><?= $e($h['no_referensi']) ?></dd></div>
     <div><dt>Company</dt><dd><?= $e($h['nm_company']) ?></dd></div>
+    <?php if (!$posted && !empty($h['accounting_target'])): ?><div><dt>Tujuan TRAS</dt><dd><?= $e(['accounting_vuca'=>'VUCA','accounting_sustain'=>'Sustain','accounting_stm'=>'STM'][$h['accounting_target']] ?? '-') ?></dd></div><?php endif; ?>
     <div><dt>Divisi</dt><dd><?= $e($h['nm_divisi']) ?></dd></div>
     <div><dt>Tgl Jurnal</dt><dd><?= $e($h['tgl_jurnal']) ?></dd></div>
     <div><dt>Status</dt><dd><?= $e($h['group_status'] ?? ($posted?'Sudah posting':'Belum posting')) ?></dd></div>

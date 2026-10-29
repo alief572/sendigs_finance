@@ -50,6 +50,7 @@ class Jurnal_all_dispatcher
             $fresh=$model->detail($id,false);
             if ($model->key($fresh['header'])!==$model->key($header)) throw new InvalidArgumentException('Kelompok jurnal berubah. Silakan muat ulang.');
             if ($action==='post') {
+                if (($fresh['can_post'] ?? true) === false) throw new DomainException(($fresh['header']['company_error'] ?? '') ?: 'Posting diblokir. Periksa peringatan jurnal.');
                 if (!$fresh['is_balance']) throw new InvalidArgumentException('Jurnal tidak balance atau nominal kosong.');
                 foreach ($fresh['rows'] as $row) if ($model->cents($row['debit'])<0||$model->cents($row['kredit'])<0) throw new InvalidArgumentException('Nominal jurnal tidak valid.');
             }
