@@ -1,0 +1,30 @@
+<?php
+require __DIR__.'/Debt_group_test.php';
+$db->query('DELETE FROM tr_jurnal');$db->query('DELETE FROM payment_approve');$db->query('DELETE FROM tr_petty_cash_vuca_sustain');
+$db->query('ALTER TABLE tr_petty_cash_vuca_sustain ADD COLUMN pelaporan_id INTEGER');$db->data_cache=[];
+$db->insert('tr_pelaporan_petty_cash',['id'=>8801,'no_pelaporan'=>'RPC-DEBT-DIV']);
+$db->insert('tr_expense_petty_cash',['id'=>8801,'no_pencatatan'=>'PCP-DEBT-DIV','request_by'=>'Debt Requester']);
+$db->insert('tr_pelaporan_petty_cash_detail',['pelaporan_id'=>8801,'pencatatan_id'=>8801]);
+$db->insert('users',['id_user'=>8801,'username'=>'debt-requester','nm_lengkap'=>'Debt Requester','department_id'=>'DEP003']);
+$db->insert('tr_petty_cash_vuca_sustain',['no_payment_hutang'=>'PHP-DEBT-DIV','company'=>'SUSTAIN','pelaporan_id'=>8801]);
+$db->insert('payment_approve',['id'=>'DEBT-DIV-APP','id_payment'=>'BK-DEBT-DIV','no_doc'=>'PHP-DEBT-DIV','tipe'=>'petty_cash_hutang','jumlah'=>'100.25']);
+$stm=journal(Jurnal_debt_groups::TYPE,'0','BK-DEBT-DIV','1');
+$sustain=journal(Jurnal_debt_groups::TYPE,'0','DEBT-DIV-APP','1');
+$db->where('no_transaksi','DEBT-DIV-APP')->update('tr_jurnal',['nm_company'=>'SUSTAIN']);
+$db->where('jenis_transaksi',Jurnal_debt_groups::TYPE)->update('tr_jurnal',['nm_divisi'=>'']);
+function debtDivisionModel(){global $db;$m=new Invoice_department_fixture_model();$m->db=$db;$m->departmentDb=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false],true);$m->departmentDb->query('CREATE TABLE departments (id TEXT,name TEXT)');$m->departmentDb->insert('departments',['id'=>'DEP003','name'=>'Quality']);return $m;}
+$before=$checks;$model=debtDivisionModel();$detail=$model->detail($stm,false);
+check($detail['header']['nm_divisi']==='Quality','debt header resolves PHP report requester through separate HRIS');
+foreach($detail['company_sections'] as $section)foreach($section['rows'] as $r)check($r['nm_divisi']==='Quality','both company sections receive the source division');
+foreach($detail['rows'] as $r)check($r['nm_divisi']==='Quality','flat debt detail agrees with company sections');
+check($model->groups(['tab'=>'PAY','year'=>''])[0]['nm_divisi']==='Quality','listing uses the same division');
+foreach($model->export_rows(['tab'=>'PAY','year'=>'']) as $item)check($item['line']['nm_divisi']==='Quality','export retains resolved department');
+$fingerprint=$detail['fingerprint'];$canPost=$detail['can_post'];
+$db->where('no_payment_hutang','PHP-DEBT-DIV')->update('tr_petty_cash_vuca_sustain',['pelaporan_id'=>null]);
+$missing=debtDivisionModel()->detail($stm,false);
+check(empty($missing['header']['nm_divisi']),'missing report relation does not invent department');
+check($missing['fingerprint']===$fingerprint && $missing['can_post']===$canPost,'display-only division does not alter financial fingerprint or posting guards');
+$db->where('no_payment_hutang','PHP-DEBT-DIV')->update('tr_petty_cash_vuca_sustain',['pelaporan_id'=>8801]);
+$db->where('jenis_transaksi',Jurnal_debt_groups::TYPE)->update('tr_jurnal',['sts'=>'1']);
+check(debtDivisionModel()->detail($stm,true)['header']['nm_divisi']==='Quality','posted debt also resolves division');
+echo 'PASS debt payment division: '.($checks-$before).' assertions'.PHP_EOL;

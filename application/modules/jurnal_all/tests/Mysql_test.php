@@ -37,7 +37,7 @@ try {
     sql('CREATE TABLE tr_expense (no_doc VARCHAR(100),id_kasbon VARCHAR(100),lebih_bayar DECIMAL(20,2),kurang_bayar DECIMAL(20,2),total_kasbon DECIMAL(20,2),jumlah DECIMAL(20,2))');
     sql('CREATE TABLE tr_expense_detail (no_doc VARCHAR(100),id_kasbon VARCHAR(100),kasbon_pr_non_po_pett VARCHAR(100),kasbon DECIMAL(20,2),expense DECIMAL(20,2))');
     sql('CREATE TABLE tr_kasbon (no_doc VARCHAR(100),id_pr VARCHAR(100),tipe_pr VARCHAR(50),id_expense_pett_pr_non_po VARCHAR(100),nama VARCHAR(100),created_by VARCHAR(100))');
-    sql('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255),username VARCHAR(100))');
+    sql('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255),username VARCHAR(100),department_id VARCHAR(100))');
     sql('CREATE TABLE rutin_non_planning_header (no_pr VARCHAR(100),created_by INTEGER)');
     sql('CREATE TABLE material_planning_base_on_produksi (no_pr VARCHAR(100),created_by INTEGER)');
     sql('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
@@ -51,7 +51,7 @@ try {
     sql('CREATE TABLE payment_approve (id VARCHAR(255),id_payment VARCHAR(255),no_doc VARCHAR(255),tipe VARCHAR(255))');
     sql('CREATE TABLE kons_tr_penawaran (id_quotation VARCHAR(255),company VARCHAR(10))');
     sql('CREATE TABLE kons_tr_spk_penawaran (id_spk_penawaran VARCHAR(255),id_company VARCHAR(10),nm_project VARCHAR(255))');
-    sql('CREATE TABLE kons_tr_penawaran_non_konsultasi (id_penawaran VARCHAR(255),id_company VARCHAR(10))');
+    sql('CREATE TABLE kons_tr_penawaran_non_konsultasi (id_penawaran VARCHAR(255),id_company VARCHAR(10),id_divisi VARCHAR(100),nm_divisi VARCHAR(255))');
     sql('CREATE TABLE kons_tr_company (id VARCHAR(10),nm_company VARCHAR(255))');
     sql("INSERT INTO tr_jurnal(no_transaksi,jenis_transaksi,sts,id_company,nm_company,tgl_jurnal,coa,nm_coa,debit,kredit,keterangan,nm_divisi) VALUES('ER-1','Expense Report',NULL,'7','STM','2026-10-14','5101','Biaya',100.25,0,'Detail','Finance'),('ER-1','Expense Report','0','7','STM','2026-10-14','1101','Kas',0,100.25,'Detail','Finance')");
     require BASEPATH.'database/DB.php';require dirname(__DIR__).'/models/Jurnal_all_model.php';

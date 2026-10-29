@@ -24,6 +24,7 @@ class Jurnal_all_model extends BF_Model
     private $debtResolver=null;
     private $paymentReference=null;
     private $reportPaymentHistory=null;
+    private $invoiceHrisDb=null;
 
     public function debt_groups($refresh=false)
     {
@@ -241,6 +242,8 @@ class Jurnal_all_model extends BF_Model
         }
         $lineDivs = [];
         foreach ($rows as &$r) {
+            $r=$this->periodicLineDivision($anchor,$r);
+            $r=$this->expenseLineDivision($anchor,$r);
             if (empty($r['nm_divisi']) && !empty($anchor['nm_divisi'])) {
                 $r['nm_divisi'] = $anchor['nm_divisi'];
             }
@@ -707,6 +710,8 @@ class Jurnal_all_model extends BF_Model
             $lineDivs = [];
             foreach ($rows as &$r) {
                 $h = $map[$this->key($r)] ?? null;
+                if($h) $r=$this->periodicLineDivision($h,$r);
+                if($h) $r=$this->expenseLineDivision($h,$r);
                 if (empty($r['nm_divisi']) && !empty($h['nm_divisi'])) {
                     $r['nm_divisi'] = $h['nm_divisi'];
                 }
@@ -789,6 +794,10 @@ class Jurnal_all_model extends BF_Model
         $pettyDivisions=$this->pettyDivisionMap(array_unique($pettyNumbers));
         $expenseMap=$this->expenseMap($expenseNumbers);
         $paymentMap=$paymentKeys ? $this->paymentMap($paymentKeys) : [];
+        $paymentApprovals=[];
+        foreach(($paymentMap['id'] ?? []) as $bucket) foreach($bucket as $approval) $paymentApprovals[$approval['id']]=$approval;
+        $paymentDivisions=$this->pettyPaymentDivisionMap($paymentApprovals);
+        $periodicDivisions=$this->periodicDivisionMap($paymentApprovals);
         if (!$posted) {
             $keys=[];foreach($rows as $row)if($row['jenis_transaksi']==='Payment')$keys[]=$row['no_transaksi'];
             $known=[];foreach(($paymentMap['id'] ?? []) as $bucket)foreach($bucket as $p)$known[$p['id']]=$p;
@@ -855,6 +864,22 @@ class Jurnal_all_model extends BF_Model
                     $category=$categoryNames[$p['tipe']] ?? ucwords(str_replace('_',' ',$p['tipe']));
                     if ($category!=='') $categories[]=$category;
                 }
+                if (empty($row['nm_divisi'])) {
+                    $divisions=[];
+                    foreach($matches as $p) foreach(($paymentDivisions[$p['id']] ?? []) as $name) $divisions[$name]=true;
+                    $names=array_keys($divisions);sort($names,SORT_NATURAL|SORT_FLAG_CASE);
+                    $row['nm_divisi']=implode(', ',$names);
+                }
+                $periodicNames=[];$periodicLines=[];
+                foreach($matches as $p) foreach(($periodicDivisions[$p['no_doc']] ?? []) as $budget) {
+                    $periodicNames[$budget['department_name']]=true;$periodicLines[]=$budget;
+                }
+                if($periodicNames) {
+                    if(count(array_filter($matches,function($p){return $p['tipe']!=='periodik';})) && !empty($row['nm_divisi'])) $periodicNames[$row['nm_divisi']]=true;
+                    $names=array_keys($periodicNames);sort($names,SORT_NATURAL|SORT_FLAG_CASE);
+                    $row['nm_divisi']=implode(', ',$names);
+                    $row['periodic_department_lines']=$periodicLines;
+                }
                 if ($docs) $row['no_referensi']=implode(', ',array_unique($docs));
                 if ($vouchers) {
                     $uniqueVouchers=array_values(array_unique($vouchers));
@@ -894,6 +919,11 @@ class Jurnal_all_model extends BF_Model
                 $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
                 if (empty($row['nm_divisi']) && !empty($expense['departement'])) {
                     $row['nm_divisi'] = $expense['departement'];
+                }
+                $rawDivision=trim((string)($row['nm_divisi'] ?? ''));
+                if(isset($expense['division_name']) && ($rawDivision==='' || ctype_digit($rawDivision) || preg_match('/^(DEP|DIV)[A-Za-z0-9_-]+$/i',$rawDivision))) {
+                    $row['nm_divisi']=$expense['division_name'];
+                    $row['expense_division_name']=$expense['division_name'];
                 }
                 if (!$posted) {
                     try { Expense_company::storedCompany([$row]); }
@@ -961,6 +991,7 @@ class Jurnal_all_model extends BF_Model
             foreach ($this->read($this->db->select('no_doc,id_pr,tipe_pr,nama,created_by,departement')->where_in('no_doc',$chunk)->get('tr_kasbon'))->result_array() as $kasbon) $kasbons[$kasbon['no_doc']]=$kasbon;
         }
         $requesters=$this->expenseRequesters($kasbons);
+        $divisionNames=$this->expenseDivisionNames($headers,$kasbons,$links);
         foreach ($regular as $number) {
             $refs=[]; $names=[];
             foreach (array_unique($links[$number] ?? []) as $key) if (isset($kasbons[$key])) {
@@ -986,11 +1017,11 @@ class Jurnal_all_model extends BF_Model
             }
             $map['Expense Report'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
                 'description'=>'Realisasi Kasbon'.($kind!==''?' '.$kind:'').($names?' - '.implode(', ',$names):''),
-                'departement'=>$dept];
+                'departement'=>$dept,'division_name'=>$divisionNames[$number] ?? null];
             if (in_array($number,$numbers['Pengembalian Kasbon'] ?? [],true)) {
                 $map['Pengembalian Kasbon'][$number]=['reference'=>$refs?implode(', ',$refs):'-',
                     'description'=>'Pengembalian Kasbon'.($names?' - '.implode(', ',$names):''),
-                    'departement'=>$dept];
+                    'departement'=>$dept,'division_name'=>$divisionNames[$number] ?? null];
             }
         }
         foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
@@ -1003,6 +1034,62 @@ class Jurnal_all_model extends BF_Model
                 $values=array_values($refs[$number] ?? []); sort($values,SORT_NATURAL);
                 $map['Expense Report Consultant'][$number]=['reference'=>$values?implode(', ',$values):'-','description'=>'Expense Report Consultant - '.$number];
             }
+        }
+        return $map;
+    }
+
+    private function expenseLineDivision(array $header,array $line)
+    {
+        $raw=trim((string)($line['nm_divisi'] ?? ''));
+        if(isset($header['expense_division_name']) && ($raw==='' || ctype_digit($raw) || preg_match('/^(DEP|DIV)[A-Za-z0-9_-]+$/i',$raw))) {
+            $line['nm_divisi']=$header['expense_division_name'];
+        }
+        return $line;
+    }
+
+    private function expenseDivisionNames(array $headers,array $kasbons,array $links)
+    {
+        $raw=[];$candidates=[];$codes=[];$legacy=[];
+        foreach($headers as $number=>$expense) {
+            $dept=trim((string)($expense['departement'] ?? ''));
+            $names=[];$name=trim((string)($expense['nama'] ?? ''));if($name!=='')$names[]=$name;
+            foreach(($links[$number] ?? []) as $ref) {
+                $kasbon=$kasbons[$ref] ?? [];
+                if($dept==='')$dept=trim((string)($kasbon['departement'] ?? ''));
+                $name=trim((string)($kasbon['nama'] ?? ''));if($name!=='')$names[]=$name;
+            }
+            if($dept==='')continue;
+            $raw[$number]=$dept;$codes[]=$dept;
+            if(ctype_digit($dept)) {$legacy[]=$dept;$candidates[$number]=array_unique($names);}
+        }
+        $departments=$this->invoiceDepartmentMap($codes);$legacyNames=[];
+        if($legacy && $this->db->table_exists('ms_department'))foreach(array_chunk(array_unique($legacy),200) as $chunk) {
+            foreach($this->read($this->db->select('id,nama')->where_in('id',$chunk)->get('ms_department'))->result_array() as $r) {
+                if(trim((string)$r['nama'])!=='')$legacyNames[(string)$r['id']]=trim($r['nama']);
+            }
+        }
+        $names=[];foreach($candidates as $values)$names=array_merge($names,$values);
+        $users=[];$userCodes=[];
+        foreach(array_chunk(array_unique($names),200) as $chunk) {
+            $rows=$this->read($this->db->select('username,nm_lengkap,department_id')->from('users')->group_start()
+                ->where_in('username',$chunk)->or_where_in('nm_lengkap',$chunk)->group_end()->get())->result_array();
+            foreach($rows as $r)if(trim((string)$r['department_id'])!=='') {
+                foreach(['username','nm_lengkap'] as $field)$users[trim((string)$r[$field])][$r['department_id']]=true;
+                $userCodes[]=$r['department_id'];
+            }
+        }
+        $userDepartments=$this->invoiceDepartmentMap($userCodes);$map=[];
+        foreach($raw as $number=>$dept) {
+            if(isset($departments[$dept])){$map[$number]=$departments[$dept];continue;}
+            if(isset($legacyNames[$dept])){$map[$number]=$legacyNames[$dept];continue;}
+            if(!ctype_digit($dept))continue;
+            $resolved=[];
+            foreach(($candidates[$number] ?? []) as $name) {
+                $matches=array_keys($users[$name] ?? []);
+                if(count($matches)===1 && !empty($userDepartments[$matches[0]]))$resolved[$userDepartments[$matches[0]]]=true;
+            }
+            $values=array_keys($resolved);sort($values,SORT_NATURAL|SORT_FLAG_CASE);
+            $map[$number]=$values?implode(', ',$values):'-';
         }
         return $map;
     }
@@ -1056,6 +1143,92 @@ class Jurnal_all_model extends BF_Model
                 if ($matched!=='') $resolved=[$matched];
             }
             $map[$number]=$resolved;
+        }
+        return $map;
+    }
+
+    private function periodicDivisionMap(array $approvals)
+    {
+        $docs=[];
+        foreach($approvals as $p) if($p['tipe']==='periodik') $docs[]=$p['no_doc'];
+        if(!$docs || !$this->db->table_exists('tr_pengajuan_rutin_detail') || !$this->db->table_exists('ms_budget_rutin'))return [];
+        $rows=[];$codes=[];
+        foreach(array_chunk(array_unique($docs),200) as $chunk) {
+            $found=$this->read($this->db->select('d.no_doc,d.coa,d.nama,d.nilai,b.departement')->from('tr_pengajuan_rutin_detail d')
+                ->join('ms_budget_rutin b','b.id=d.id_budget')->where_in('d.no_doc',$chunk)->get())->result_array();
+            foreach($found as $r) {$rows[]=$r;$codes[]=$r['departement'];}
+        }
+        $departments=$this->invoiceDepartmentMap($codes);$map=[];
+        foreach($rows as $r) if(!empty($departments[$r['departement']])) {
+            $r['department_name']=$departments[$r['departement']];$map[$r['no_doc']][]=$r;
+        }
+        return $map;
+    }
+
+    private function periodicLineDivision(array $header,array $line)
+    {
+        $budgets=$header['periodic_department_lines'] ?? [];
+        if(!$budgets)return $line;
+        $names=[];
+        foreach($budgets as $budget) {
+            $name=trim((string)$budget['nama']);$description=trim((string)$line['keterangan']);
+            if((string)$budget['coa']===(string)$line['coa'] && $this->cents($budget['nilai'])===$this->cents($line['debit'])
+                && $name!=='' && ($description===$name || strpos($description,$name.' - ')===0)) $names[$budget['department_name']]=true;
+        }
+        if($names) {
+            $names=array_keys($names);sort($names,SORT_NATURAL|SORT_FLAG_CASE);$line['nm_divisi']=implode(', ',$names);
+        } elseif($this->cents($line['debit'])===0 && $this->cents($line['kredit'])>0) {
+            $line['nm_divisi']=$header['nm_divisi'];
+        }
+        return $line;
+    }
+
+    public function pettyPaymentDivisionMap(array $approvals)
+    {
+        $docs=[];
+        foreach($approvals as $p) if(in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)) $docs[]=$p['no_doc'];
+        if(!$docs) return [];
+        foreach(['tr_pelaporan_petty_cash','tr_pelaporan_petty_cash_detail','tr_expense_petty_cash'] as $table) if(!$this->db->table_exists($table))return [];
+        $sourceReports=[];
+        if($this->db->table_exists('tr_petty_cash_vuca_sustain') && $this->db->field_exists('pelaporan_id','tr_petty_cash_vuca_sustain')) {
+            foreach(array_chunk(array_unique($docs),200) as $chunk) {
+                $links=$this->read($this->db->select('h.no_payment_hutang,p.no_pelaporan')->from('tr_petty_cash_vuca_sustain h')
+                    ->join('tr_pelaporan_petty_cash p','p.id=h.pelaporan_id')->where_in('h.no_payment_hutang',$chunk)->get())->result_array();
+                foreach($links as $link){$sourceReports[$link['no_payment_hutang']][]=$link['no_pelaporan'];$docs[]=$link['no_pelaporan'];}
+            }
+        }
+        $requesters=[];$names=[];
+        foreach(array_chunk(array_unique($docs),200) as $chunk) {
+            $rows=$this->read($this->db->select('p.no_pelaporan,e.request_by')->from('tr_pelaporan_petty_cash p')
+                ->join('tr_pelaporan_petty_cash_detail d','d.pelaporan_id=p.id')
+                ->join('tr_expense_petty_cash e','e.id=d.pencatatan_id')->where_in('p.no_pelaporan',$chunk)->get())->result_array();
+            foreach($rows as $row) {
+                $name=trim((string)$row['request_by']);
+                if($name!=='') {$requesters[$row['no_pelaporan']][]=$name;$names[]=$name;}
+            }
+        }
+        $users=[];$codes=[];
+        foreach(array_chunk(array_unique($names),200) as $chunk) {
+            $rows=$this->read($this->db->select('username,nm_lengkap,department_id')->from('users')
+                ->group_start()->where_in('username',$chunk)->or_where_in('nm_lengkap',$chunk)->group_end()->get())->result_array();
+            foreach($rows as $row) {
+                $code=trim((string)$row['department_id']);
+                if($code==='')continue;
+                foreach(['username','nm_lengkap'] as $field) $users[trim((string)$row[$field])][$code]=true;
+                $codes[]=$code;
+            }
+        }
+        $departments=$this->invoiceDepartmentMap($codes);
+        $map=[];
+        foreach($approvals as $p) if(in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)) {
+            $reportNames=[];
+            foreach(($sourceReports[$p['no_doc']] ?? [$p['no_doc']]) as $report) $reportNames=array_merge($reportNames,$requesters[$report] ?? []);
+            foreach(array_unique($reportNames) as $name) {
+                $matches=array_keys($users[$name] ?? []);
+                // Ambiguous requester identities must not assign an arbitrary department.
+                if(count($matches)===1 && !empty($departments[$matches[0]])) $map[$p['id']][]=$departments[$matches[0]];
+            }
+            if(isset($map[$p['id']]))$map[$p['id']]=array_values(array_unique($map[$p['id']]));
         }
         return $map;
     }
@@ -1140,14 +1313,30 @@ class Jurnal_all_model extends BF_Model
     {
         if (!$ids) return [];
         $company="COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company)";
-        $division="COALESCE(NULLIF(TRIM(s.nm_divisi),''),NULLIF(TRIM(c.nm_divisi),''),NULLIF(TRIM(s.id_divisi),''),NULLIF(TRIM(c.id_divisi),''))";
+        $division="CASE WHEN n.id_penawaran IS NOT NULL THEN COALESCE(NULLIF(TRIM(n.id_divisi),''),NULLIF(TRIM(n.nm_divisi),'')) ELSE COALESCE(NULLIF(TRIM(s.nm_divisi),''),NULLIF(TRIM(c.nm_divisi),''),NULLIF(TRIM(s.id_divisi),''),NULLIF(TRIM(c.id_divisi),'')) END";
         $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran,b.id_penawaran,b.no_po,b.non_kons, ".$company.' AS company_id,co.nm_company AS company_name, '.$division.' AS division_code',false)
             ->from('tr_invoicing b')->join(DBCNL.'.kons_tr_penawaran c','c.id_quotation=b.id_penawaran','left')
             ->join(DBCNL.'.kons_tr_spk_penawaran s','s.id_spk_penawaran=b.id_spk_penawaran','left')
             ->join(DBCNL.'.kons_tr_penawaran_non_konsultasi n','n.id_penawaran=b.id_penawaran','left')
             ->join(DBCNL.'.kons_tr_company co','co.id='.$company,'left',false)
             ->where_in('b.id',$ids)->get())->result_array();
-        $map=[]; foreach ($rows as $row) $map[$row['id']]=$row;
+        $departmentCodes=[];
+        foreach ($rows as $row) {
+            if ((string)$row['non_kons']==='1' || strpos((string)$row['id_penawaran'],'NON-KONS')!==false) {
+                $departmentCodes[]=$row['division_code'];
+            }
+        }
+        // Non-consulting offers select HRIS departments, not their parent divisions.
+        $departments=$this->invoiceDepartmentMap($departmentCodes);
+        $map=[];
+        foreach ($rows as $row) {
+            if ((string)$row['non_kons']==='1' || strpos((string)$row['id_penawaran'],'NON-KONS')!==false) {
+                if (preg_match('/^(DEP|DIV)[A-Za-z0-9_-]+$/i',(string)$row['division_code'])) {
+                    $row['division_code']=$departments[$row['division_code']] ?? '';
+                }
+            }
+            $map[$row['id']]=$row;
+        }
         return $map;
     }
 
@@ -1209,6 +1398,35 @@ class Jurnal_all_model extends BF_Model
             if ($matches) return $matches;
         }
         return [];
+    }
+
+    protected function invoiceDepartmentDatabase()
+    {
+        if ($this->invoiceHrisDb===null) {
+            $ci =& get_instance();
+            $this->invoiceHrisDb=$ci->load->database('hris',true);
+        }
+        return $this->invoiceHrisDb;
+    }
+
+    private function invoiceDepartmentMap(array $codes)
+    {
+        $codes=array_values(array_unique(array_filter($codes,function($code){
+            return preg_match('/^(DEP|DIV)[A-Za-z0-9_-]+$/i',(string)$code);
+        })));
+        if (!$codes) return [];
+        try {
+            // HRIS is hosted separately; querying its schema on the finance connection returns different data.
+            $hris=$this->invoiceDepartmentDatabase();
+            $query=$hris->select('id,name')->where_in('id',$codes)->get('departments');
+            if (!$query) return [];
+            $map=[];
+            foreach($query->result_array() as $row) $map[$row['id']]=trim((string)$row['name']);
+            return $map;
+        } catch (Throwable $error) {
+            log_message('error','Jurnal All: HRIS department lookup unavailable.');
+            return [];
+        }
     }
 
     public function divisionMap(array $rawCodes)

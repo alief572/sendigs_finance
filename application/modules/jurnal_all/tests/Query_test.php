@@ -21,7 +21,7 @@ $db->query('CREATE TABLE tr_payment_paid (id TEXT PRIMARY KEY)');
 $db->query("CREATE TRIGGER fixture_paid AFTER INSERT ON payment_approve WHEN NEW.id_payment IS NOT NULL AND NEW.id_payment <> '' BEGIN INSERT OR IGNORE INTO tr_payment_paid (id) VALUES (NEW.id_payment); END");
 $db->query('CREATE TABLE consultant.kons_tr_penawaran (id_quotation TEXT,company TEXT,id_divisi TEXT,nm_divisi TEXT)');
 $db->query('CREATE TABLE consultant.kons_tr_spk_penawaran (id_spk_penawaran TEXT,id_company TEXT,nm_project TEXT,id_divisi TEXT,nm_divisi TEXT)');
-$db->query('CREATE TABLE consultant.kons_tr_penawaran_non_konsultasi (id_penawaran TEXT,id_company TEXT)');
+$db->query('CREATE TABLE consultant.kons_tr_penawaran_non_konsultasi (id_penawaran TEXT,id_company TEXT,id_divisi TEXT,nm_divisi TEXT)');
 $db->query('CREATE TABLE consultant.kons_tr_company (id TEXT,nm_company TEXT)');
 $db->query('CREATE TABLE tr_expense_petty_cash (id INTEGER PRIMARY KEY,no_pencatatan TEXT,request_by TEXT)');
 $db->query('CREATE TABLE tr_pelaporan_petty_cash_detail (pencatatan_id INTEGER,pelaporan_id INTEGER)');
@@ -29,13 +29,17 @@ $db->query('CREATE TABLE tr_pelaporan_petty_cash (id INTEGER PRIMARY KEY,no_pela
 $db->query('CREATE TABLE tr_expense (no_doc VARCHAR(100),id_kasbon VARCHAR(100),lebih_bayar DECIMAL(20,2),kurang_bayar DECIMAL(20,2),total_kasbon DECIMAL(20,2),jumlah DECIMAL(20,2),departement VARCHAR(100))');
 $db->query('CREATE TABLE tr_expense_detail (no_doc VARCHAR(100),id_kasbon VARCHAR(100),kasbon_pr_non_po_pett VARCHAR(100),kasbon DECIMAL(20,2),expense DECIMAL(20,2))');
 $db->query('CREATE TABLE tr_kasbon (no_doc VARCHAR(100),id_pr VARCHAR(100),tipe_pr VARCHAR(50),id_expense_pett_pr_non_po VARCHAR(100),nama VARCHAR(100),created_by VARCHAR(100),departement VARCHAR(100))');
-$db->query('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255),username VARCHAR(100))');
+$db->query('CREATE TABLE users (id_user INTEGER,nm_lengkap VARCHAR(255),username VARCHAR(100),department_id VARCHAR(100))');
 $db->query('CREATE TABLE rutin_non_planning_header (no_pr VARCHAR(100),created_by INTEGER)');
 $db->query('CREATE TABLE material_planning_base_on_produksi (no_pr VARCHAR(100),created_by INTEGER)');
 $db->query('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
 $db->query('CREATE TABLE consultant.kons_tr_expense_report_project_header (id VARCHAR(100),id_header VARCHAR(100))');
 $db->query('CREATE TABLE consultant.kons_tr_kasbon_project_header (id VARCHAR(100))');
-$model = new Jurnal_all_model(); $model->db = $db;
+class Invoice_department_fixture_model extends Jurnal_all_model {
+    public $departmentDb;
+    protected function invoiceDepartmentDatabase() { return $this->departmentDb; }
+}
+$model = new Invoice_department_fixture_model(); $model->db = $db;
 $id=0;
 function journal($type,$status='0',$number='TRX-1',$company='7',$debit='100.25',$credit='100.25') {
     global $db,$id;
@@ -132,12 +136,12 @@ $db->insert('payment_approve',['id'=>'201','id_payment'=>'BATCH-1','no_doc'=>'RP
 $db->insert('payment_approve',['id'=>'202','id_payment'=>'BATCH-1','no_doc'=>'RPC-2026-2','tipe'=>'refill_pettycash']);
 $refill=journal('Refill Pettycash','0','BATCH-1','4','50.15','50.15');
 // A model instance is request-local, so start a fresh instance after changing fixture master data.
-$model=new Jurnal_all_model();$model->db=$db;
+$model=new Invoice_department_fixture_model();$model->db=$db;
 $pay=$model->groups(['tab'=>'PAY','year'=>2026,'category'=>'Refill Petty Cash']);
 check(count($pay)===1&&$pay[0]['source']==='PCS'&&$pay[0]['no_transaksi']==='BATCH-1'&&$pay[0]['display_no_transaksi']==='BATCH-1','refill display category keeps native key and resolves display voucher');
 check($pay[0]['debit']==='50.15'&&strpos($pay[0]['no_referensi'],'RPC-2026-2')!==false,'payment master join cannot multiply money');
 $refillApprove=journal('Refill Pettycash','0','201','4','25.00','25.00');
-$model=new Jurnal_all_model();$model->db=$db;
+$model=new Invoice_department_fixture_model();$model->db=$db;
 $payApprove=$model->groups(['tab'=>'PAY','year'=>2026,'q'=>'201']);
 $approvalRows=array_values(array_filter($payApprove,function($row){return $row['no_transaksi']==='201';}));
 check(count($approvalRows)===1&&$approvalRows[0]['display_no_transaksi']==='BATCH-1','payment journal with approval id displays voucher number');
@@ -289,4 +293,38 @@ $searchPenawaran=$model->groups(['tab'=>'INV','year'=>'','q'=>'P-NON-KONS-007-09
 check(count($searchPenawaran)===1&&$searchPenawaran[0]['no_transaksi']==='INV-NONKONS','search finds invoice by non-konsultasi penawaran reference');
 $searchPo=$model->groups(['tab'=>'INV','year'=>'','q'=>'PO-1845/AKS/2026']);
 check(count($searchPo)===1&&$searchPo[0]['no_transaksi']==='INV-POONLY','search finds invoice by PO number');
+$db->where('no_transaksi','INV-NONKONS')->update('tr_jurnal',['nm_divisi'=>'']);
+$db->where('id_penawaran','P-NON-KONS-007-09-26')->update('consultant.kons_tr_penawaran_non_konsultasi',['id_divisi'=>'DEP025','nm_divisi'=>'   ']);
+$db->query("ATTACH DATABASE ':memory:' AS hr_sentral");
+$db->query('CREATE TABLE hr_sentral.departments (id TEXT,name TEXT,division_id TEXT)');
+$db->query('CREATE TABLE hr_sentral.divisions (id TEXT,name TEXT)');
+$db->insert('hr_sentral.departments',['id'=>'DEP025','name'=>'Finance & Accounting','division_id'=>'DIV025']);
+$model->departmentDb=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false],true);
+$model->departmentDb->query('CREATE TABLE departments (id TEXT,name TEXT)');
+$model->departmentDb->insert('departments',['id'=>'DEP025','name'=>'Training Department']);
+$db->insert('hr_sentral.divisions',['id'=>'DIV025','name'=>'Finance & Accounting']);
+$nonKonsId=$db->select('id')->where('no_transaksi','INV-NONKONS')->get('tr_jurnal')->row_array()['id'];
+$nonKonsDetail=$model->detail($nonKonsId,false);
+check($nonKonsDetail['header']['nm_divisi']==='Training Department','non-consulting department code resolves to division in detail header');
+foreach($nonKonsDetail['rows'] as $line) check($line['nm_divisi']==='Training Department','non-consulting division propagates to detail lines');
+$db->insert('consultant.kons_tr_penawaran_non_konsultasi',['id_penawaran'=>'P-NON-KONS-SECOND','id_company'=>'4','id_divisi'=>'DEP018']);
+$db->insert('hr_sentral.departments',['id'=>'DEP018','name'=>'Wrong Finance Host','division_id'=>'DIV025']);
+$model->departmentDb->insert('departments',['id'=>'DEP018','name'=>'Support']);
+$db->insert('tr_invoicing',['id'=>'INV-NONKONS-SECOND','no_invoice'=>'SECOND/2026','id_penawaran'=>'P-NON-KONS-SECOND','non_kons'=>'1']);
+$secondId=journal('Invoicing','0','INV-NONKONS-SECOND');
+$db->where('no_transaksi','INV-NONKONS-SECOND')->update('tr_jurnal',['nm_divisi'=>'']);
+check($model->detail($secondId,false)['header']['nm_divisi']==='Support','different non-consulting offers sharing a parent retain distinct department names');
+check($model->detail($nonKonsId,false)['header']['nm_divisi']==='Training Department','second invoice cannot overwrite the first invoice division');
+$db->where('id_penawaran','P-NON-KONS-007-09-26')->update('consultant.kons_tr_penawaran_non_konsultasi',['nm_divisi'=>'Outdated Name']);
+check($model->detail($nonKonsId,false)['header']['nm_divisi']==='Training Department','department name is authoritative when offer has a department ID');
+$db->where('id_penawaran','P-NON-KONS-007-09-26')->update('consultant.kons_tr_penawaran_non_konsultasi',['id_divisi'=>null,'nm_divisi'=>'Public Training']);
+check($model->detail($nonKonsId,false)['header']['nm_divisi']==='Public Training','offer division name is fallback when department ID is absent');
+$db->where('no_transaksi','INV-NONKONS')->update('tr_jurnal',['nm_divisi'=>'Saved Division']);
+check($model->detail($nonKonsId,false)['header']['nm_divisi']==='Saved Division','existing journal division remains authoritative');
+$db->where('no_transaksi','INV-NONKONS')->update('tr_jurnal',['nm_divisi'=>'','sts'=>'1']);
+check($model->detail($nonKonsId,true)['header']['nm_divisi']==='Public Training','posted invoice shares non-consulting division enrichment');
+$db->where('id_penawaran','P-NON-KONS-007-09-26')->update('consultant.kons_tr_penawaran_non_konsultasi',['id_divisi'=>null,'nm_divisi'=>null]);
+check(empty($model->detail($nonKonsId,true)['header']['nm_divisi']),'missing non-consulting division does not invent a value');
+$model->departmentDb->query('DROP TABLE departments');
+check(empty($model->detail($secondId,false)['header']['nm_divisi']),'HRIS query failure must not fall back to wrong finance-host department');
 echo "PASS Jurnal All query: {$checks} assertions\n";
