@@ -1,3 +1,72 @@
+# Penyesuaian & Penambahan Modul Penerimaan Uang, Kwitansi Deposit, dan Monitoring Deposit — SELESAI 28 Oktober 2026
+
+- **Status Akhir**: SELESAI 100% (Seluruh Fase 1, 2, 3, 4, dan 5 telah diimplementasikan, diselaraskan end-to-end sesuai HTML Mockup `Penerimaan Piutang + Deposit Consultant.html`, `Penerimaan - SSC.xlsx`, dan `Deposit - SSC.xlsx`, serta terverifikasi 100% PASS pada seluruh test suite CLI).
+- **Fase Selesai**:
+  1. **Fase 1: Penyelarasan Modul Kwitansi Deposit (`kwitansi_deposit`)**:
+     - Format penomoran kwitansi diselaraskan menjadi `KD/YYYY/MM/XXXX` (`KD/2026/10/0001`) reset bulanan/tahunan.
+     - Form `kwitansi_deposit/views/add.php` menghapus hardcode `id_company = 1`, menambahkan field readonly preview `No Kwitansi` (auto-update saat ganti tanggal), dan field `Company` otomatis dari SPK.
+     - Panel Preview Draft Jurnal Akrual Kwitansi Deposit (`Piutang Dagang Usaha (D)` dan `Deposit Customer (2102-01-02) (K)`) live update mengikuti nominal input dan pilihan SPK customer.
+     - Halaman `kwitansi_deposit/views/index.php` diselaraskan memuat kolom No SPK, Company, Saldo Piutang, Status, No Penerimaan, dan Aksi.
+  2. **Fase 2: Tab Badge, Pre-Process Form (`add.php`), & Kartu Deposit (`penerimaan_uang`)**:
+     - Halaman utama `penerimaan_uang/views/index.php` menampilkan badge counter data dinamis pada 3 tab (`Penerimaan Piutang Invoice`, `Penerimaan Piutang Kwitansi Deposit`, dan `Report Penerimaan`) yang otomatis ter-update via DataTables drawCallback.
+     - Form pre-process `penerimaan_uang/views/add.php` membedakan tampilan:
+       - Mode Kwitansi Deposit: form khusus judul "Proses Penerimaan Piutang Kwitansi Deposit", menyembunyikan input PPh23 & Deposit, hanya menampilkan customer dengan kwitansi belum lunas (`DEP`, `saldo_piutang > 0`), serta tabel 7 kolom ringkas (`Tgl Kwitansi`, `No Kwitansi`, `No SPK`, `Company`, `Nilai Kwitansi`, `Saldo Piutang`, `Action`).
+       - Mode Invoice: begitu Customer dipilih, langsung menampilkan info saldo aktif customer dan tombol modal "Lihat kartu deposit" (mutasi MASUK/KELUAR customer) tanpa harus menunggu invoice dicentang.
+  3. **Fase 3: Modal Konfirmasi Interaktif (`consulting_process.php`) & Detail Penerimaan (`detail.php`)**:
+     - Auto-distribusi FIFO `Deposit Dipakai`: nominal deposit di form otomatis dialokasikan ke baris invoice berdasarkan tanggal invoice paling lama, dengan banner informasi deposit dan tombol *Distribusi Ulang FIFO*.
+     - Tombol reset `↺ 2%` pada kolom PPh 23 jika nilai diubah dari default 2% DPP.
+     - Live-update tabel Jurnal Akuntansi di modal secara real-time saat alokasi, PPh, admin, deposit, lebih bayar, atau sisa piutang diubah.
+     - Modal konfirmasi dan modal detail (`detail.php`) beradaptasi penuh ketika transaksi yang diproses/dilihat adalah Kwitansi Deposit (7 kolom ringkas dengan rumus kontrol `(Piutang - Biaya Admin) - Bank = 0`).
+  4. **Fase 4: Penyelarasan Modul Monitoring Deposit (`deposit_customer`) & Export Excel**:
+     - 4 KPI Summary Cards di `deposit_customer/views/index.php`: Total Sisa Saldo Deposit, Customer Punya Saldo (X / Y), Jumlah Deposit Masuk (Z transaksi — Kwitansi: A &middot; Lebih Bayar: B), Total Terpakai.
+     - Filter pencarian dan Filter Status Saldo (`Semua Customer`, `Punya Saldo (> 0)`, `Saldo Habis (0)`).
+     - Kolom tabel summary 11 kolom dengan breakdown Dari Kwitansi Deposit, Dari Lebih Bayar, Total Nilai Deposit, Total Terpakai, Total Sisa Saldo, dan Deposit Terakhir beserta baris footer TOTAL.
+     - Dukungan Export Excel monitoring & ledger kartu deposit.
+  5. **Fase 5: Pengujian, Verifikasi Regresi, & Dokumentasi**:
+     - Seluruh file PHP/JS divalidasi dengan linter syntax (0 syntax errors).
+     - Seluruh suite integrasi dan unit test diverifikasi lulus 100%.
+- **File Dimodifikasi**:
+  - `application/modules/kwitansi_deposit/models/Kwitansi_deposit_model.php`
+  - `application/modules/kwitansi_deposit/controllers/Kwitansi_deposit.php`
+  - `application/modules/kwitansi_deposit/views/add.php`
+  - `application/modules/kwitansi_deposit/views/index.php`
+  - `application/modules/kwitansi_deposit/tests/Kwitansi_deposit_test.php`
+  - `application/modules/deposit_customer/models/Deposit_customer_model.php`
+  - `application/modules/deposit_customer/views/index.php`
+  - `application/modules/penerimaan_uang/controllers/Penerimaan_uang.php`
+  - `application/modules/penerimaan_uang/views/index.php`
+  - `application/modules/penerimaan_uang/views/add.php`
+  - `application/modules/penerimaan_uang/views/consulting_process.php`
+  - `application/modules/penerimaan_uang/views/detail.php`
+  - `docs/implementation-plan.md`
+  - `docs/task-progress.md`
+- **Hasil Pengujian & Validasi (100% PASS - 9 Test Suites)**:
+  1. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/calculation_test.php` -> PASS (100%)
+  2. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Consulting_receipt_tobe_test.php` -> PASS (100%)
+  3. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Concept_contract_test.php` -> PASS (100%)
+  4. `scratch/runtime/php74/php.exe application/modules/penerimaan_uang/tests/Deposit_fifo_test.php` -> PASS (100%)
+  5. `scratch/runtime/php74/php.exe application/modules/deposit_customer/tests/Deposit_monitoring_test.php` -> PASS (100%)
+  6. `scratch/runtime/php74/php.exe application/modules/kwitansi_deposit/tests/Kwitansi_deposit_test.php` -> PASS (100%)
+  7. `node application/modules/penerimaan_uang/tests/consulting_client_test.js` -> PASS (100%)
+  8. `node application/modules/penerimaan_uang/tests/consulting_view_test.js` -> PASS (100%)
+  9. `node application/modules/penerimaan_uang/tests/installment_view_test.js` -> PASS (100%)
+  10. PHP 7.4 CLI Lint on all modified files -> 0 errors.
+- **Batas & Catatan Lingkungan**: Seluruh pengujian diverifikasi secara mendalam menggunakan CLI runtime PHP 7.4 dan Node.js test fixture tanpa membuka web browser eksternal.
+
+---
+
+# Posting Payment ke accounting company tujuan — SELESAI 28 Oktober 2026
+
+- **Selesai**: fase 1 resolver target/readiness + preview, fase 2 writer InnoDB/MyISAM + generator koneksi target + readback/retry barrier, fase 3 fixture/regresi + migrasi007 development + readiness aktual. Tidak ada fase aktif atau sisa implementasi dalam scope.
+- **Keputusan**: sesuai instruksi terbaru, histori jurnaltras/default accounting tidak menghalangi posting ke company tujuan yang belum memiliki hasil. Source posted/metadata/attempt tidak pasti dan duplicate target tetap diblokir. `inspect()`/strict patch lama dipertahankan; preview dan native memakai `inspectForPosting()`.
+- **File**: Payment_reference.php, Payment_posting.php, Jurnal_all.php (preview), Jurnal_payment_nomor_model.php (koneksi opsional generator), Payment_reference_test.php, Payment_reference_mysql_test.php, scratch/payment_posting_readiness.php, docs/implementation-plan.md dan docs/payment-posting-company-target-2026-10-28.md. Migration007 yang sudah tersedia diterapkan; tidak mengubah schema/engine accounting.
+- **Validasi**: Payment679, normalization464, MariaDB disposable38, client54 dan seluruh suite lokal Jurnal All terkait (audit/concurrency/controller/query/dispatcher/native/metadata/mapping/petty/revision) lulus. Pembayaran batch1 248/batch2 581/selection98/validator43/invalid regression lulus. Lint/diff aktif lulus. Browser tidak diperlukan.
+- **Development**: BK--1026-0004 eligible ke VUCA company4, ID11176–11179; counter/COA/engine dan izin target LOCK/UNLOCK terverifikasi. Registry007 InnoDB tersedia. Tidak menjalankan posting: sumber tetap pending, jurnal lama 101BKA260000276 utuh. Hash seluruh source journal7643, metadata5, alias1518, jurnaltras1146 dan accounting kasus sebelum/sesudah sama.
+- **Masalah/batas**: MyISAM tidak atomik; kemungkinan partial write/commit sumber tidak pasti => reconcile/durable started, retry diblokir, tanpa penghapusan accounting otomatis. Cek lock diagnostik awal ditolak oleh session read-only; diperbaiki menjadi lock-only tanpa DML, lalu read-only dipulihkan. Baseline Challenger invoice mock/general MySQL fixture001 tetap seperti catatan sebelumnya; bukan regresi aktif.
+- **Berikutnya**: pengguna dapat refresh preview dan menjalankan posting jika memang diinginkan; transaksi sebenarnya tidak dieksekusi agen. Belum commit/push. Bukti detail ada di laporan di atas dan posting-readiness-20261028.json di folder artefak luar document root.
+
+---
+
 # Sub-Tab Pills pada Modul Expense (Pengembalian Kasbon & Lebih Expense) — SELESAI 28 Oktober 2026
 
 - **Status Akhir**: SELESAI 100% (Seluruh Fase 1, Fase 2, dan Fase 3 telah diimplementasikan dan terverifikasi penuh).
@@ -2895,3 +2964,166 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
 - Review: hanya model Request_payment_model.php (formatter tabel/Excel dan kondisi pencarian) serta checkpoint terkait dalam docs/task-progress.md. Perubahan lain workspace tidak termasuk.
 - Verifikasi sebelum commit: fetch berhasil; HEAD dan origin/development identik (0 ahead/0 behind); diff --check lulus. Hasil lint, Audit_test 94, Batch4_test 810 sebelumnya tetap berlaku karena kode tidak berubah sejak pengujian.
 - Batas: tidak menjalankan browser, deployment, atau perubahan data. Publikasi diverifikasi melalui SHA remote setelah push; hasil akhir dilaporkan pada respons sesi.
+
+## Pemeriksaan identitas Jurnal Pembayaran dan referensi TRAS — 28 Oktober 2026
+- Status: pemeriksaan kode selesai; tidak mengubah aplikasi/data. Screenshot Jurnal All menampilkan BK--1026-0004 dan referensi KS-2026-00331.
+- Temuan: assets/js/jurnal-all.js memakai display_no_transaksi. Jurnal_all_model::enrich memulai dari tr_jurnal.no_transaksi lalu mengganti tampilan PAY dengan payment_approve.id_payment jika tersedia; no_referensi diisi payment_approve.no_doc. Jadi tampilan tidak selalu sama dengan nilai mentah tr_jurnal.no_transaksi.
+- Posting PAY diteruskan dispatcher ke jurnal_payment/save_posting_jurnal dengan identitas mentah. Handler membaca tr_jurnal berdasarkan id; detail accounting jurnal.no_reff memakai item.no_transaksi, kecuali token {REF:...} pada keterangan yang menjadi override. Header japh.no_reff memakai no_transaksi mentah tanpa override. Nomor jurnal accounting dibuat terpisah lewat get_no_buk(). Pembentukan tr_jurnal pembayaran normal dapat menyimpan post id_payment (ID approval terpilih) sebagai no_transaksi, bukan id_payment_paid.
+- Bukti file: Jurnal_all_model.php sekitar 717/752-766; Jurnal_all_dispatcher.php forwarding POST; Jurnal_payment.php 447-515; Pembayaran_material.php sekitar 1797-1807.
+- Validasi: Payment_mapping_test.php lulus (135 assertion query + 47 mapping), Legacy_posting_test.php 198 assertion lulus. Tidak menguji browser/database aktual/TRAS, sehingga nilai mentah dan no_reff transaksi spesifik belum dipastikan.
+- File diubah: docs/task-progress.md saja untuk checkpoint. Fase aktif/tertunda: tidak ada. Langkah berikutnya bila perlu diagnosis data aktual: cocokkan tr_jurnal.no_transaksi/keterangan dan payment_approve.id/id_payment/no_doc dengan jurnal.no_reff serta japh.no_reff pada accounting tujuan; jangan mengubah referensi posting tanpa menyepakati kontraknya.
+
+## Rekomendasi konsistensi referensi Payment/TRAS — 28 Oktober 2026
+- Diskusi solusi; belum ada otorisasi/perubahan implementasi atau patch data.
+- Kontrak yang ditegaskan pengguna: jenis_transaksi Payment memakai payment_approve.id_payment sebagai nomor pembayaran; tampilan dan referensi TRAS harus konsisten.
+- Rekomendasi: aturan server terpusat (bukan setting tampilan/toggle), dipakai handler posting dan pembentukan jurnal baru. Jurnal lama diselesaikan melalui mapping approval ke voucher tanpa mengubah identitas pengelompokan saat posting. Ambiguitas/tidak ada voucher wajib ditolak, tidak memilih satu sembarang. Header japh.no_reff dan detail jurnal.no_reff harus mengikuti kontrak voucher; evaluasi override REF secara eksplisit.
+- Patching data historis bukan prasyarat menyamakan referensi posting. Jika pengguna menghendaki normalisasi fisik no_transaksi, siapkan dry-run per kelompok/batch, pastikan mapping voucher tunggal, balance, company/jenis/status tidak tergabung keliru. Jurnal sudah posted tidak diubah sepihak karena tidak otomatis memperbarui accounting dan metadata posting.
+- Pemeriksaan tambahan: Jurnal All group_by no_transaksi + jenis_transaksi; handler Payment memvalidasi payment_approve.id; mengganti no_transaksi tanpa memperbaiki lookup/grouping dapat memutus posting atau menggabungkan kelompok.
+- File diubah: docs/task-progress.md saja. Tidak ada tes ulang karena tidak mengubah kode; validasi berupa review bagian query, resolver, handler. Langkah berikutnya menunggu pemilihan cakupan implementasi pengguna.
+
+## Side conversation: tampilkan Pengembalian Kasbon pada tab Expense Report — 28 Oktober 2026
+- Status: SELESAI untuk permintaan penambahan sumber jurnal; tidak melanjutkan pekerjaan Payment chat utama.
+- File aplikasi: application/modules/jurnal_all/models/Jurnal_all_model.php (tambahkan Pengembalian Kasbon ke EXP dan metadata relasi expense-kasbon); application/modules/jurnal_expense/models/Jurnal_expense_model.php (izinkan jenis yang sama pada list/validasi pending native). Pengelompokan tetap nomor transaksi + jenis + company; nominal/status/data database tidak dimutasi.
+- Keputusan: description khusus Pengembalian Kasbon - pengaju PR; No Referensi mengikuti kasbon yang valid melalui relasi expense existing, fallback minus. Source EXP membuat list, badge/summary, preview, export dan report memakai lingkup sama. Handler Expense existing tetap memeriksa company dan status posted.
+- Tes diubah/ditambah: jurnal_all/tests/Pengembalian_kasbon_test.php (16 assertion baru); jurnal_expense/tests/Query_test.php (27 assertion total, termasuk pengembalian dan mixed-status); jurnal_expense/tests/Posting_test.php (153 assertion total, jenis baru diuji pada seluruh company routing existing).
+- Regresi lulus: Jurnal All Query 135, Dispatcher 45, Controller 86, Mixed payment metadata 20, Audit 10, Metadata 20, Revision 24, Payment mapping 47; Jurnal Expense Controller 35. Baseline Query yang dijalankan sebagai dependensi hanya dihitung sekali (total unik 618 assertion). Lint kelima file PHP yang disentuh lulus; diff --check lulus. Tidak menguji browser atau database aplikasi.
+- Batas: writer pengembalian existing dapat mengisi company kosong. Record tetap terlihat; posting tetap ditolak oleh pemeriksaan company existing. Pengisian/migrasi company di luar permintaan ini.
+- File dokumentasi: docs/task-progress.md (append checkpoint ini). Fase aktif/tertunda pada task ini: tidak ada. Tidak commit/push. Perubahan Payment dan perubahan workspace lainnya dipertahankan. Langkah berikutnya: tidak ada implementasi wajib untuk permintaan tampilan ini.
+
+## Implementasi kontrak Payment/Jurnal All — 28 Oktober 2026 (berjalan)
+- Fase 1 selesai: Payment_reference memverifikasi approval/voucher/tr_payment_paid, menolak benturan ID/voucher, memisahkan companion, memeriksa status/metadata/balance/company/collision dan accounting tujuan + accounting otomatis + jurnaltras. Batch lookup tetap memenuhi batas query fixture 205 kelompok.
+- Fase 2 selesai dan tes terarah lulus: staging jenis tepat Payment memakai id_payment_paid; preview dan handler native memakai resolver yang sama. Payment_posting menggunakan registry percobaan InnoDB, lock bersama dan commit accounting sebelum staging; hasil tidak pasti memerlukan rekonsiliasi. Dispatcher menahan lock bersama sampai metadata selesai. Jenis lain/auto-jurnal tidak dinormalisasi.
+- Fase 3 implementasi tersedia: Payment_patch dan CLI dry-run/apply/rollback; fingerprint/ID eksplisit, collision guard, lock/cek ulang, manifest di luar document root dan journal checkpoint append-only (rename overwrite diblokir Windows). Penerapan data aplikasi BELUM dilakukan.
+- Validasi sementara: Payment_reference_test 402 assertion; Payment_mapping 47 + query135; Mixed20 + query135; Dispatcher45; Legacy198; Material batch1 248/batch2 581; validator43; invalid journal regression; Selection98 lulus. Real MariaDB fixture (schema acak) 15 assertion lulus termasuk GET_LOCK koneksi kedua, apply/rollback, native generator nomor dan commit posting. Tidak menggunakan browser.
+- Baseline terkonfirmasi: Challenger_stress_test gagal pada fixture Invoice counter rollback; salinan tes dengan model Jurnal_all/controller Jurnal_payment dari HEAD mengulang kegagalan identik (scratch/payment-baseline-challenger.php). Jalur Invoice tidak diubah untuk menyamarkan kegagalan ini.
+- Aktif: fase4 review safety, perluasan kegagalan/manifest, dokumentasi operasional dan regresi akhir. Perubahan user lain pada controller Jurnal_all/workspace dan Selection_fixture dipertahankan. Daftar final file/bukti akan dilengkapi saat penutupan.
+
+## Penutupan implementasi Payment reference — 28 Oktober 2026
+- Status: implementasi dan verifikasi fase1–4 SELESAI; rollout operasional data BELUM dijalankan. Tidak ada fase coding tertunda. Rencana aktif diperbarui di docs/implementation-plan.md; inventaris lengkap file, tes dan batas ada di docs/payment-reference-implementation-report.md; panduan CLI di docs/payment-reference-normalization.md.
+- File kode: Payment_reference/Payment_posting/Payment_patch, CLI Payment_reference_cli, migrasi007; integrasi model/controller/preview/dispatcher Jurnal All, native Jurnal_payment/Jurnal, writer Pembayaran_material. File tes: dua suite Payment baru, fixtures Query/Mapping/Legacy, runner MySQL/Debt port, fixture Material Batch1/Batch2/Selection. Perubahan user sebelumnya pada controller Jurnal_all/workspace dan Selection_fixture dipertahankan; workspace.php tidak diedit task ini.
+- Keputusan final: exact Payment memakai voucher server; input approval tetap untuk auto-jurnal lama. ID/voucher ambigu termasuk pada key tujuan diblokir. Companion canonical/legacy dipisahkan, tidak menggabungkan kelompok. Status NULL/tidak dikenal tidak dianggap aman. Accounting yang sudah ada, registry/metadata posted, atau pembacaan tak pasti memblokir patch/posting.
+- Patch memakai manifest JSON immutable + journal append-only (keduanya wajib disimpan), environment hash, ID/fingerprint dan verifikasi ulang. Update hanya no_transaksi. Rollback hanya pending tanpa accounting dan dengan relasi/fingerprint sesuai. Registry posting menjaga commit tidak pasti/metadata gagal agar tidak diulang. Logger gagal tidak mengubah sukses bisnis.
+- Validasi akhir: Payment_reference_test 451 assertion LULUS; Payment_reference_mysql_test 15 assertion LULUS pada MariaDB sementara; Debt_posting_test 142 assertion LULUS pada port33318 disposable. PHP suite lokal Jurnal All lainnya (Audit/Concurrency/Controller/Debt_group/Dispatcher/Legacy/Metadata/Mixed/Mapping/Query/Petty/Revision) lulus; client49 + selectionclient27 lulus. Material Batch1 248/Batch2 581, Selection98, validator43, invalid journal, COA17, reconciliation24, voucher/remote suites lulus. Lint20 filePHP cakupan dan diff --check lulus, tanpa browser.
+- Masalah baseline: Challenger_stress_test gagal pada mock Invoice counter rollback; direproduksi dengan file HEAD sebelum perubahan Payment. Mysql_test umum terhenti di fixture migrasi001 karena kolom created_by belum ada; setup tersebut tidak disentuh. Kedua kegagalan dicatat, tidak disembunyikan atau dilemahkan. View_payment_new/live grouping tidak tersedia/skip karena socket DB aplikasi; tidak dihitung lulus atau dicoba ulang.
+- Tindakan yang TIDAK dilakukan: migrasi atau patch database aplikasi, modifikasi data posted/accounting lama, perubahan engine, commit/push, deployment. Semua tes menulis hanya fixture terisolasi.
+- Risiko/sisa operasional: environment target perlu migrasi registry007 dan engine InnoDB, koneksi accounting dapat diverifikasi; lalu hentikan penulisan, jalankan dry-run dan review manifest sebelum apply. Target MyISAM ditolak dan tidak dikonversi otomatis. Pending yang sudah punya auto-jurnal tetap dilewati untuk rekonsiliasi terpisah. Jangan rollback kode lama setelah normalisasi tanpa verifikasi kompatibilitas voucher.
+
+## Diagnosis tombol posting Payment tersembunyi — 28 Oktober 2026
+- Screenshot menunjukkan warning ambigu dan balance 600000. Pemeriksaan kode mengonfirmasi preview mengembalikan can_post=false ketika Payment_reference::inspect gagal; assets/js/jurnal-all.js menyembunyikan ja-post berdasarkan flag tersebut.
+- Pemicu yang sesuai pesan: resolver menemukan string sebagai id approval dan id_payment voucher dengan relasi berbeda. inspect juga melakukan resolve ulang voucher tujuan (Payment_reference.php sekitar161-162), sehingga mapping approval sumber yang valid tetap dapat diblokir oleh benturan namespace voucher/approval lain, seperti kasus historis yang dibahas sebelumnya.
+- Tidak menyimpulkan nilai database spesifik dari screenshot; belum ada pemeriksaan record database tambahan. Balance tidak menghapus blocker identitas/accounting.
+- Perubahan file: docs/task-progress.md saja. Tidak mengubah guard, tombol, transaksi atau posted data. Validasi statis controller/resolver/JS; tes aplikasi tidak diulang karena tidak ada perubahan kode. Langkah berikutnya bila diperbaiki: eksplisitkan konteks identitas voucher vs approval dari anchor/relasi terverifikasi, tanpa melewati validasi posted/existing accounting.
+
+## Perbaikan lanjutan validasi identitas Payment — 28 Oktober 2026 (fase1–2 selesai)
+- Reproduksi RED: fixture source APP-1 -> voucher BK--1026-0004 ditolak karena resolve ulang voucher bertemu approval lain; tes baru gagal pada Payment_reference.php:162 sebelum perbaikan.
+- Resolver kini membedakan kandidat approval/voucher melalui suffix ID approval yang tepat atau token REF tepat pada jurnal server. Bukti jurnal yang bertentangan atau dua jalur valid tanpa pembeda tetap ambigu. Tanpa marker pembeda, hanya satu kandidat dengan relasi tr_payment_paid valid dapat dipilih; marker yang menunjuk kandidat invalid tetap gagal, tidak dialihkan ke kandidat lain.
+- Voucher hasil mapping source tidak di-resolve ulang sebagai nomor bebas. Model batch memuat bukti jurnal per chunk, metadata kategori/dokumen memakai approval yang benar. Guard posted/metadata/accounting/registry/balance/company/collision tidak dilonggarkan.
+- Payment_patch memeriksa proyeksi key pada inventory dan ulang sebelum apply/rollback agar konteks tidak hilang setelah normalisasi, termasuk benturan yang baru muncul setelah dry-run.
+- File diubah sejauh ini: Payment_reference.php, Payment_patch.php, Jurnal_all_model.php, Payment_reference_test.php, Payment_reference_mysql_test.php, docs/implementation-plan.md dan checkpoint ini.
+- Verifikasi sementara GREEN: Payment_reference_test 522 assertion lulus; Payment_mapping47 + Query135 dan Mixed20 + Query135 lulus. Fase3 aktif: regresi seluruh suite lokal yang bergantung resolver dan MySQL fixture contextual. Tidak ada data aplikasi/posted/accounting diubah.
+
+## Penutupan perbaikan konteks identitas Payment — 28 Oktober 2026
+- Status: SELESAI, fase1–3 terverifikasi. Resolver tidak lagi menolak voucher hanya karena nilainya kebetulan sama dengan approval lain; keputusan memakai relasi paid valid dan bukti suffix ID/REF tepat pada jurnal server. Dua relasi valid tanpa pembeda, bukti bertentangan, relasi yang tidak valid dan collision kelompok tetap diblokir.
+- Mapping approval sumber yang telah valid tidak di-resolve ulang sebagai key bebas. Model batch memakai bukti jurnal per chunk dan kategori/dokumen/extra_search dari approval hasil resolver. Payment_patch melakukan simulasi nomor tujuan pada inventory dan verifikasi ulang sebelum apply/rollback, termasuk perubahan relasi setelah dry-run.
+- File aplikasi diubah: application/modules/jurnal_all/libraries/Payment_reference.php, libraries/Payment_patch.php, models/Jurnal_all_model.php. Tes diperbarui: tests/Payment_reference_test.php dan tests/Payment_reference_mysql_test.php. Dokumentasi: docs/implementation-plan.md, docs/payment-reference-normalization.md, docs/payment-reference-implementation-report.md, docs/task-progress.md.
+- Pengujian akhir: Payment_reference_test522 assertion LULUS; MariaDB nyata Payment_reference_mysql_test21 assertion LULUS (server sementara, schema acak, cleanup selesai). Seluruh suite lokal Jurnal All yang bergantung resolver lulus: Audit10, Concurrency72, Controller86, Query135, Debt_group26, Dispatcher45, Legacy198, Metadata20, Mixed20, Mapping47, Petty113, Revision24; Pengembalian Kasbon16 dari pekerjaan lain ikut lulus. Lint5 filePHP yang berubah dan diff --check lulus. Batas baseline terdahulu tidak berubah dan tes yang sudah diketahui terhambat tidak diulang.
+- Perlindungan eksplisit: tes collision memastikan data posted, metadata, hasil accounting/jurnaltras dan registry committed tetap menolak posting, serta snapshot staging/accounting tidak berubah. Record approval yang bertabrakan tidak diubah. Tidak menulis data aplikasi, tidak menjalankan patch/migrasi/deployment, tidak commit/push, tidak menguji browser.
+- Tidak ada fase coding tertunda atau blocker implementasi. Batas operasional: tombol tetap diblokir jika ada hasil accounting, status posted/metadata/registry atau pengaman lain yang gagal; perbaikan ini bukan bypass pengaman. Registry/migrasi serta akses accounting lingkungan target tetap perlu tersedia sesuai panduan rollout sebelumnya.
+
+## Runtime tombol Posting BK--1026-0004 — 28 Oktober 2026 (fase1–2 selesai)
+- Pemeriksaan development read-only berhasil melalui konfigurasi aplikasi; ini bukti perubahan pendekatan dari pemeriksaan socket lokal lama. Semua koneksi memakai transaksi read-only dan ROLLBACK, tanpa perubahan schema/data.
+- Source: approval BK--1026-0073 -> voucher BK--1026-0004 / KS-2026-00331. Staging11176–11179 masih sts0, nativekey BK--1026-0073, company4, balance600000. Registry Payment belum tersedia sehingga error awal RuntimeException tertutup pesan umum.
+- Bukti accounting: jurnaltras3 baris dengan no_reff approval/no_request voucher; accounting default memiliki jurnal3/header1 nomor101BKA260000276. VUCA tidak memiliki hasil terkait. Tabel jurnal/japh/counter tujuan/default MyISAM. Temuan berarti rekonsiliasi status/routing diperlukan; patch nomor semata tidak mengizinkan posting ulang.
+- Kode: Payment_reference memberi prerequisite terkontrol dan menampilkan bukti jurnal historis sebelum registry yang belum tersedia. Controller mengembalikan show_post/post_block_reason dengan can_post tetap terjaga. JS menampilkan tombol nonaktif bagi manager serta mencegah submit keyboard/manual; tidak membuka aksi bagi laporan/tanpa izin.
+- Validasi terarah: Client54, Controller88, Payment_reference531 assertion lulus. Recheck inspect terhadap source aktual mengembalikan Payment_reference_issue dengan alasan eksplisit catatan jurnal sudah ada/status pending/perlu rekonsiliasi. Tidak membuka guard atau mengubah data agar tombol aktif.
+- Aktif: fase3 regresi akhir/documentation. File utama: Payment_reference.php, Jurnal_all.php, assets/js/jurnal-all.js dan tiga suite terkait. Bukti lengkap di docs/payment-bk-1026-0004-posting-diagnosis.md; scratch/diagnose_payment_reference.php hanya alat baca tanpa kredensial tertanam.
+
+## Penutupan visibilitas tombol dan diagnosis data aktual — 28 Oktober 2026
+- Status: fase1–3 SELESAI. Tombol Posting tampil nonaktif bagi manager saat guard menolak; report/tanpa izin tetap tersembunyi. Client tetap memblokir submit keyboard/manual, menjaga disabled setelah request/modal ditutup. Server tidak melonggarkan can_post.
+- Akar masalah runtime terkonfirmasi: schema registry007 belum ada sehingga error awal disamarkan; setelah pemeriksaan lanjutan, Payment BK--1026-0073/voucher BK--1026-0004 memang sudah punya jurnaltras3 dan hasil accounting default nomor101BKA260000276 (detail3/header1), sementara staging11176–11179 masih sts0 dan VUCA kosong. Bukan masalah nomor semata. Tidak aman mengaktifkan posting ulang, mengubah sts atau memindahkan jurnal tanpa rekonsiliasi tujuan accounting.
+- Validasi langsung read-only setelah perubahan mengembalikan Payment_reference_issue dengan pesan spesifik voucher sudah memiliki catatan jurnal/status pending/perlu rekonsiliasi. Registry yang hilang tidak lagi menutupi bukti jurnal yang sudah ditemukan. Seluruh koneksi diagnostik dibatasi transaksi READ ONLY dan diakhiri ROLLBACK.
+- File aplikasi diubah: assets/js/jurnal-all.js; application/modules/jurnal_all/controllers/Jurnal_all.php; libraries/Payment_reference.php. Tes: Client_test.js, Controller_test.php, Payment_reference_test.php. Dokumen: implementation-plan, task-progress, payment-reference-normalization, payment-reference-implementation-report, dan laporan baru payment-bk-1026-0004-posting-diagnosis.md. Alat sementara scratch/diagnose_payment_reference.php CLI-only, tanpa kredensial tertanam.
+- Pengujian penutupan: Client54, Controller89, Payment_reference531, MariaDB disposable21 lulus. Seluruh suite lokal Jurnal All relevan lulus (Audit10, Concurrency72, Query135, Debt_group26, Dispatcher45, Legacy198, Metadata20, Mixed20, Mapping47, Petty113, Revision24; Pengembalian Kasbon16 ikut lulus). Lint5 filePHP perubahan, node --check dan diff --check lulus. Tidak menguji browser. Kegagalan baseline terdahulu tidak diulang karena fondasinya tidak berubah.
+- Tidak ada perubahan data/schema aplikasi, posted/history, registry, status, routing accounting, engine, commit/push atau deployment. Hanya pembacaan diagnosis yang mengakses development aktual; seluruh tes penulisan menggunakan fixture terisolasi.
+- Tidak ada coding tertunda. TODO operasional yang perlu keputusan terpisah: rekonsiliasi hasil default accounting versus tujuan VUCA, kemudian penyelarasan status staging berdasarkan bukti final. Prerequisite registry007/engine transactional untuk Payment lain tetap berlaku; tidak dibuat/dikonversi otomatis. Mengganti no_transaksi saja tidak menyelesaikan kasus ini.
+
+## Normalisasi massal Payment pending — 28 Oktober 2026 (fase1–2 selesai, fase3 aktif)
+- Scope baru yang diotorisasi: termasuk pending dengan hasil accounting, normalisasi nomor saja. Penggabungan satu voucher diizinkan jika seluruh kelompok pending, company/tanggal sama, tiap kelompok balance dan bebas histori posted. Alur patch lama tidak dilonggarkan.
+- Fase1: migrasi008 alias InnoDB, resolver alias lengkap per-ID/batch, referensi native/CSV lama dipertahankan untuk guard accounting/metadata. Alias tidak lengkap, duplikat atau relasi berubah tetap menolak posting. Lookup205 kelompok alias diverifikasi tanpa query per-row.
+- Fase2: Payment_normalization + CLI normalize dry-run/apply/rollback/verify tersedia. Cohort lengkap, transaksi nomor+alias pervoucher, backup utuh, fingerprint, journal delta append-only yang hemat ruang, retry commit tidak pasti, histori alias inactive saat rollback. Rollback menolak bukti accounting baru/berubah. Existing accounting tidak mencegah normalisasi.
+- Validasi: Payment_reference531 assertion, Payment_normalization447 assertion LULUS; MariaDB disposable29 assertion LULUS, termasuk migrasi alias idempotent, merge, guard old reference dan rollback dengan accounting existing. Belum ada perubahan schema/data development aplikasi pada checkpoint ini.
+- File baru: Payment_normalization.php, migration008, Payment_normalization_test.php, scratch/run_payment_normalization.php (CLI-only, konfigurasi dibaca tanpa kredensial tertanam). Integrasi: Payment_reference.php, Payment_reference_cli.php, dua suite fixtureexisting dan rencana/checkpoint.
+- Aktif: fase3 regresi seluruh dependensi dan review safety sebelum fase4. Fase4 belum: migrate008 development, backup/dry-run/review manifest di luar document root, apply eligible, verifikasi posted54/metadata/nonPayment/accounting tetap utuh. Alur accounting hanya dibaca dan koneksinya dibatasi READ ONLY saat operasi.
+
+## Normalisasi Payment — fase3 selesai, fase4 dimulai (28 Oktober 2026)
+- Regresi seluruh suite lokal Jurnal All terkait lulus; Material Batch1 248/Batch2 581, Selection98 dan invalid journal lulus. Client54, Payment_reference531, Payment_normalization447 dan MariaDB disposable29 lulus; lint7 filePHP perubahan lulus.
+- Implementasi memisahkan normalisasi dari guard posting; accounting existing tidak ditulis/dijadikan syarat eligible. Alias per-ID menyimpan old key/CSV dan approval terverifikasi, guard metadata/accounting tetap memakai seluruh referensi lama. Checkpoint manifest berupa delta per-cohort, bukan menyalin backup/batch berulang.
+- Berikutnya fase4: migrasi008 development yang diotorisasi, backup/prepare/review manifest, apply semua eligible di bawah lock bersama, lalu verifikasi bidang source lain, posted, metadata, nonPayment dan snapshot accounting. Artefak di luar document root: C:/Users/Febry/.codex/visualizations/2026/10/28/01a18142-f6d5-75c0-bb7f-b65a7c778d4c/payment-normalization/.
+- Tidak ada perubahan data aplikasi sebelum checkpoint ini; migrasi dan eksekusi akan dicatat terpisah beserta jumlah hasil aktual. Blocker baseline lama tidak diulang atau disamarkan.
+
+## Development normalisasi — migrasi dan dry-run batch1 terverifikasi (28 Oktober 2026)
+- Migrasi008 berhasil pada db_sendigs_ss_dev; hanya tabel alias InnoDB baru dibuat. Belum ada no_transaksi aplikasi diubah.
+- Backup dan manifest dibuat di luar document root: .../payment-normalization/development-20261028.json (+.backup.json,+.protected.json). Run dcc48c2a1631342cba93368885d56788. Snapshot seluruh Payment2022 baris, termasuk posted54; metadata/nonPayment diproteksi checksum.
+- Review offline: eligible192 cohort /1177 ID unik; consistent1 cohort/5 baris; skipped158 cohort/840 ID unik (termasuk54posted). Total408 kelompok asal unik. Satu kelompok ambigu dapat terkait beberapa kandidat voucher, sehingga jumlah skipped mentah tidak boleh dijumlahkan tanpa deduplikasi; summarizer diperbaiki agar menghitung ID/key unik.
+- BK--1026-0004 eligible: ID11176–11179, company4; no_transaksi akan berubah dari BK--1026-0073 dan seluruh field lain dipertahankan.
+- Pengecualian utama: target masih dipakai kelompok pending lain (97cohort), relasi ambigu, company tidak dikenal, beda company/tanggal, tidak balance, record paid invalid dan histori posted. Review dependency menunjukkan35 target dipakai cohort yang saat ini eligible; setelah batch1 berhasil, dry-run baru dapat membebaskan kandidat lanjutan tanpa temporary key atau menggabungkan kelompok salah. Siklus/blocked owners tetap dilaporkan, tidak dipaksa.
+- Berikutnya: apply seluruh kandidat batch1 yang telah direview, verify field/posted/metadata/nonPayment/accounting, lalu ulang inventory baru hingga tidak ada eligible tambahan. Tetap tidak mengubah status atau accounting.
+
+## Development normalisasi — batch1 COMMIT dan verifikasi lulus (28 Oktober 2026)
+- Run dcc48c2a1631342cba93368885d56788:192 cohort applied,1177 no_transaksi berubah, pengurangan34 kelompok. Alias1177 anggota tersimpan atomik. BK--1026-0004 applied pada ID11176–11179; status/nominal/dll tetap.
+- Verifikasi: Payment2022 total; posted54 tetap identik; semua field selain no_transaksi yang diizinkan identik; metadataPayment dan seluruh metadata tidak berubah; nonPayment tidak berubah; snapshot accounting seluruh cohort identik,0 unverified. Hasil .../payment-normalization/development-20261028.json.result.json.
+- Semua operasi di bawah lock bersama; koneksi accounting READ ONLY. Tidak ada penulisan status, counter, header/detail accounting atau data posted. Migrasi007/konversi engine tidak dijalankan.
+- Berikutnya: prepare/review batch2 untuk target yang sudah dibebaskan batch1; lanjut hingga fixed point tanpa eligible. Exceptions masih dipertahankan dan akan direkap per ID/key unik.
+
+## Batch2 berhenti aman dan perbaikan membership berbasis alias (28 Oktober 2026)
+- Dry-run batch2:34 eligible cohort/214 baris, 193 consistent cohort/1182 baris. Run93162c47b1d08da47b62247af99aaa6e. Backup/protected snapshot terpisah tersedia di development-20261028-batch2.json.*.
+- Apply berhenti pada BK--0126-0008 karena checkMapping masih membandingkan token approval dengan nomor canonical kelompok lain. Verifikasi checkpoint mengonfirmasi31 baris batch2 sudah commit sebelum penghentian; seluruh field lain, posted54, metadata dan accounting tetap identik. Bukan kegagalan commit atau kerusakan data.
+- Bug direproduksi fixture sebelum diperbaiki: kelompok lain dengan alias otoritatif voucher berbeda harus dibedakan dari approval yang kebetulan memakai nomornya. Membership kini memakai resolver/alias untuk token bertabrakan; slot target fisik yang benar-benar terpakai dan relasi tak pasti tetap ditolak. No-op batch lama tidak mensyaratkan slot asal kosong jika slot tersebut telah menjadi voucher canonical lain; rollback lama tetap menolak sampai batch dependent dirollback.
+- Tes Payment_reference531 + normalisasi463 lulus; MariaDB29 lulus untuk perbaikan membership utama. Resume batch2 akan memakai manifest/checkpoint yang sama, cohort terdahulu menjadi no-op dan kandidat lain diverifikasi ulang. Tidak membuka guard posted/accounting atau mengganti angka/status.
+
+## Development batch2–3 selesai terverifikasi (28 Oktober 2026)
+- Batch2 run93162c47b1d08da47b62247af99aaa6e selesai34 cohort/214 perubahan nomor (31 baris partial sebelumnya diverifikasi no-op saat resume), pengurangan8 kelompok. Batch3 runedf77d4779d2f034dc7721e243c47a9c selesai14 cohort/77 perubahan nomor, pengurangan1 kelompok.
+- Setiap batch: Payment2022, posted54, seluruh field selain nomor yang diizinkan, semua metadata, nonPayment dan accounting tetap identik;0 cohort accounting unverified. Total sementara1468 nomor pending sudah disamakan,5 baris canonical awal tidak perlu diubah.
+- Target yang dibebaskan diproses melalui dry-run baru, bukan temporary key. Kelompok ambigu/protected/unbalanced/company/tanggal bermasalah tetap dilewati. Berikutnya batch4/fixed point, lalu verifikasi agregat terhadap backup batch1 dan laporan final.
+
+## PENUTUPAN normalisasi massal Payment pending — 28 Oktober 2026
+- Status: SELESAI sesuai kriteria, implementasi + penerapan development + verifikasi agregat. Tidak ada eligible aman tersisa pada dry-run batch7. Fase1–4 selesai; tidak ada coding/penerapan kandidat aman tertunda.
+- Hasil nyata db_sendigs_ss_dev:1968 pending tetap1968;1518 no_transaksi diubah ke voucher aktual,5 sebelumnya canonical,445pending/103kelompok tidak diubah karena guard. Total Payment2022 tetap2022. Alias aktif1518. Sebanyak293 kelompok asal disatukan menjadi249 cohort voucher (pengurangan44); kelompok pending397 menjadi353.
+- Enam batch applied:192/34/14/5/2/2 cohort, dengan1177/214/77/30/10/10 perubahan nomor. Batch7 fixed point:0 eligible,250consistentcohort/1523baris,445pending exception +54posted dipertahankan. Ketergantungan target diselesaikan melalui batch baru, bukan temporary key atau merge paksa.
+- Verifikasi agregat terhadap backup awal LULUS: seluruh field selain no_transaksi yang diotorisasi identik;54posted/11kelompok identik;5621nonPayment identik;semua5metadata posting identik;accounting249cohort identik,0unverified. Tidak menjalankan posting atau mengganti status/routing/nominal/COA/tanggal/company/keterangan/ID. Migrasi008 saja diterapkan;007/konversi engine tidak dilakukan.
+- Kasus BK--1026-0004:ID11176–11179 sekarang no_transaksi BK--1026-0004 (dulu BK--1026-0073),tetapsts0,totals600000 seimbang,barisnol tetap. Read-only runtime memastikan guard masih mendeteksi catatan accounting historis melalui alias;hasil101BKA260000276 utuh dan posting ulang tetap diblokir.
+- Pengecualian unik445baris/103kelompok:terhubungposted20/4;ambigu84/22;targetkelompokberbeda201/39;company/tanggalberbeda32/5;recordpaidinvalid5/1;companykosong85/18;tidakbalance/kosong13/13;relasitidakditemukan5/1. Jangan menambah jumlah cohort mentah karena mapping ambigu bisa menggandakan keanggotaan kandidat.
+- Bukti/backup/manifest/journal/result di C:/Users/Febry/.codex/visualizations/2026/10/28/01a18142-f6d5-75c0-bb7f-b65a7c778d4c/payment-normalization/. final-verification.json berisi bukti agregat;final-exceptions.json berisi IDs/key/reason/company/date. Semua artefak di luar document root. Rollback dependent dari batch terbaru ke terlama, dengan guard fingerprint/metadata/registry/evidenceaccounting;histori alias tidak dihapus.
+- File baru:Payment_normalization.php,migrasi008,Payment_normalization_test.php,docs/payment-pending-normalization.md,docs/payment-pending-normalization-result-2026-10-28.md;alat CLI-only scratch/run_payment_normalization.php. Integrasi Payment_reference.php(aliasbatch/ref lama/metadata/membership otoritatif),Payment_reference_cli.php(normalize modes),fixturePayment_reference+MySQL. Rencana/checkpoint/laporan sebelumnya diperbarui;perubahan user lainnya dipertahankan.
+- Pengujian akhir:Payment_reference531,Payment_normalization464,MariaDB disposable29 assertion LULUS;seluruh suite lokal Jurnal All relevan lulus(Audit10,Concurrency72,Controller89,Query135,Debt_group26,Dispatcher45,Legacy198,Metadata20,Mixed20,Mapping47,Petty113,Revision24;PengembalianKasbon16ikutlulus). Client54 dan MaterialBatch1 248/Batch2 581/Selection98/invalidjournal lulus pada fase3;kode mereka tidak berubah sesudahnya. Lint7filePHP/diff--check lulus. Tidak menguji browser. BaselineInvoiceStress/MysqlSetup lama tetap terdokumentasi dan tidak diulang tanpa perubahan fondasi.
+- Keputusan penting saat batch2:membership token mentah salah menolak canonicalvoucher lain yang nomornya sama dengan approval. Direproduksi RED,perbaikan memakairesolveralias tanpa membuka truecollision.31baris partialsudahcommit dilindungi checkpoint,resume menjadi no-op. Fixture tambahan menguji old-slot reuse dan rollback reverseorder. Guard posting shared juga memakai relasi alias untuk benturan nama kelompok berbeda.
+- Risiko/TODO residual:445pending memerlukan pemeriksaan/perbaikan sumber terpisah,terutama85bariscompanykosong. Rekonsiliasi status/routing default vsVUCA tetap di luar scope. Kode belum di-commit/push;checkout lain yang mengakses development ini harus memakai dukungan alias/voucher sebelum posting. Jangan rollback handlerlama tanpa kompatibilitas terhadap data canonical/alias.
+
+---
+
+## Publikasi perbaikan modul Jurnal All dan Jurnal Expense ke development — 29 Oktober 2026
+- **Status Publikasi**: SELESAI (Commit `d34ee0a956493644b9aaf0135256cec14802c8e6` berhasil di-push ke remote `origin/development`).
+- **Scope Perubahan (11 File)**:
+  1. `application/modules/jurnal_all/libraries/Jurnal_all_dispatcher.php`: registrasi route posting Kwitansi Deposit (`KWD` -> `kwitansi_deposit/post_journal`).
+  2. `application/modules/jurnal_all/models/Jurnal_all_model.php`: penambahan tipe `Pengembalian Kasbon` ke tab `EXP`, dan `Kwitansi Deposit` ke tab `INV`.
+  3. `application/modules/jurnal_all/tests/Debt_posting_test.php`: port test MySQL disesuaikan dinamis via `JOURNAL_TEST_PORT`.
+  4. `application/modules/jurnal_all/tests/Legacy_posting_test.php`: pemisahan rute pengujian exact Payment ke `Payment_reference_test.php` dan pengujian legacy branch menggunakan tipe `Transport`.
+  5. `application/modules/jurnal_all/tests/Pengembalian_kasbon_test.php`: unit & integration test suite baru untuk verifikasi kemunculan dan pemisahan Pengembalian Kasbon di tab Expense Report (16 assertions).
+  6. `application/modules/jurnal_all/views/workspace.php`: perapihan layout view dan tag PHP.
+  7. `application/modules/jurnal_expense/controllers/Jurnal_expense.php`: otorisasi posting menggunakan permission `Jurnal_All.Manage` serta penanganan aggregasi audit recorder.
+  8. `application/modules/jurnal_expense/models/Jurnal_expense_model.php`: pendaftaran `Pengembalian Kasbon` ke dalam konstanta `TYPES`.
+  9. `application/modules/jurnal_expense/models/Jurnal_expense_posting_model.php`: payload kembalian menyertakan struktur array `accounting_numbers` untuk kompatibilitas workspace Jurnal All.
+  10. `application/modules/jurnal_expense/tests/Posting_test.php`: verifikasi posting Expense & Pengembalian Kasbon di seluruh company.
+  11. `application/modules/jurnal_expense/tests/Query_test.php`: validasi query native list dan pending group untuk Pengembalian Kasbon.
+- **Validasi Pengujian (100% PASS)**:
+  - `Pengembalian_kasbon_test.php` -> PASS (16 assertions)
+  - `Query_test.php` (Jurnal All) -> PASS (140 assertions)
+  - `Dispatcher_test.php` (Jurnal All) -> PASS (45 assertions)
+  - `Controller_test.php` (Jurnal All) -> PASS (89 assertions)
+  - `Legacy_posting_test.php` (Jurnal All) -> PASS (198 assertions)
+  - `Payment_reference_test.php` (Jurnal All) -> PASS (679 assertions)
+  - `Client_test.js` (Jurnal All) -> PASS (54 assertions)
+  - `Query_test.php` (Jurnal Expense) -> PASS (27 assertions)
+  - `Posting_test.php` (Jurnal Expense) -> PASS (153 assertions)
+  - PHP 7.4 Lint pada seluruh file -> 0 errors.
+- **Verifikasi Remote**: `git ls-remote origin development` mengonfirmasi HEAD remote identik dengan commit `d34ee0a956493644b9aaf0135256cec14802c8e6`. Workspace lokal modul lainnya tetap dipertahankan.
