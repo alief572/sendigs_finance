@@ -288,3 +288,12 @@ Kriteria: semua hasil pencarian approved diekspor, nominal snapshot konsisten, V
 - Commit ini mencakup detail barang pada index dan keterangan transaksi pada modal Detail Request, beserta empat file tes dan dokumentasi. Tepat sembilan path; tidak mengikutkan perubahan lokal modul lain, konfigurasi atau database.
 - Kandidat dibuat dari dasar masing-masing branch development/main, tanpa merge antarbranch. Masing-masing lulus 111 pemeriksaan (85 query, 7 render index, 11 render detail, 8 client), lint PHP/JS dan whitespace sebelum commit.
 - Tanpa browser atau database operasional; SQL diuji SQLite in-memory dan client melalui Node VM. Publikasi memakai push atomik tanpa force dan verifikasi SHA remote; hasil akhirnya dicatat pada checkpoint workspace.
+
+
+## Perapihan print invoice non-konsultasi — 2026-10-30
+
+1. Grounding: endpoint print_invoice_non_kons memuat views/print_invoice_non_konsultasi.php; company 3/4/5 memaksa detail setinggi 200px.
+2. Perbaikan: tinggi detail mengikuti isi, padding kecil, cegah pemisahan satu baris saat cetak; hapus spacer kosong setelah detail pada kedua cabang company. Pertahankan nominal, logo, dan footer.
+3. Validasi: periksa markup aktif kedua cabang, CSS, whitespace dan diff; PHP lint bila runtime tersedia. Tanpa browser/database operasional.
+
+Kriteria berhasil: tidak ada tinggi tetap/spacer pada detail, kedua cabang menggunakan gaya baris ringkas, dan ekspresi data/perhitungan tetap sama.

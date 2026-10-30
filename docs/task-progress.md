@@ -667,3 +667,17 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - Validasi akhir PASS: lint seluruh PHP yang diubah/ditambah (7 file), Node syntax dan git diff --check scoped. Setelah penyesuaian posisi tombol, render dengan/tanpa View dan client dijalankan ulang dan PASS. Git hanya memberi pemberitahuan normalisasi LF/CRLF. Tidak ada blocker. Batasan: workbook PHPExcel tetap memakai memori sebanding total baris, dan pembacaan batch tidak menyediakan snapshot transaksi saat data berubah bersamaan. Belum commit/push. Langkah berikutnya: siap ditinjau pengguna.
 - Publikasi diotorisasi pengguna ke development dan main. Fetch berhasil; tip development 7bab9eef dan main 4685b337. Modul outgoing dan PHPExcel identik antarkedua tip. Kandidat terisolasi: scratch/publish-outgoing-excel-20261026; workspace utama tetap pada development dan perubahan lokal lain dipertahankan. Aktif: validasi kandidat, commit terbatas task, push fast-forward dan verifikasi remote.
 - Kandidat main dari 4685b337 tervalidasi: 158 pemeriksaan modul dan regresi Record export412/Audit57, Request Payment371, Asset roundtrip lulus. Kode outgoing dan writer sama dengan kandidat development c58efb4c; dokumentasi main sebelumnya dipertahankan.
+
+
+## Perapihan print invoice non-konsultasi — selesai 2026-10-30
+
+- Fase selesai: grounding, perbaikan template, validasi lokal. Tidak ada fase aktif atau tertunda.
+- Penyebab: company 3/4/5 menetapkan tinggi 200px pada setiap sel detail; cabang lainnya mempunyai spacer kosong 165px.
+- File diubah: application/modules/invoicing/views/print_invoice_non_konsultasi.php; docs/implementation-plan.md; docs/task-progress.md.
+- Detail kedua cabang memakai tinggi mengikuti isi, padding 5px, line-height 1.3 dan pembungkusan teks panjang; cegah pemisahan satu baris antarhalaman. Spacer kosong setelah detail dihapus. Logo, footer, ekspresi data, format angka dan trigger print dipertahankan.
+- Validasi: reproduksi statis sebelum perbaikan membuktikan tinggi 200px; pemeriksaan markup aktif setelah perbaikan PASS untuk kedua cabang, tanpa tinggi tetap/spacer; seluruh urutan variabel/ekspresi data dan number_format identik dengan HEAD. Logo dan window.print tetap sama. Scoped git diff --check PASS.
+- Batas: PHP CLI tidak tersedia di PATH/lokasi lokal yang diperiksa, sehingga lint/render PHP belum dijalankan. Tanpa browser/database operasional, tidak ada pengukuran jumlah halaman aktual.
+- Branch main; stash development 97736147 tidak disentuh. Konfigurasi database lokal dari permintaan sebelumnya tetap dipertahankan dan tidak masuk commit.
+- Langkah berikutnya: pengguna membuka ulang halaman print untuk menilai hasil pada pengaturan kertas/printer yang dipakai; tidak ada TODO kode yang diketahui.
+
+- Publikasi ke main diotorisasi pengguna: commit terbatas pada template print dan dua dokumen task ini, kemudian push fast-forward tanpa force. Review diff dan whitespace PASS; hasil validasi lokal sebelumnya dipakai kembali karena kode tidak berubah. Hasil sinkronisasi remote dan integritas stash diverifikasi setelah push dan dilaporkan pada respons akhir.

@@ -32,6 +32,17 @@
         text-align: center;
     }
 
+    .table_list_barang .invoice-item td {
+        padding: 5px;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    .table_list_barang .invoice-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
     @media print {
         .table_list_barang thead {
             -webkit-print-color-adjust: exact;
@@ -150,24 +161,17 @@
                 $no_item++;
 
                 echo '
-                    <tr>
-                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
-                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
-                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
-                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                        <td style="text-align: right; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
+                    <tr class="invoice-item">
+                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
+                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
+                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
+                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;"></td>
+                        <td style="text-align: right; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
                         
                     </tr>
                 ';
             }
         ?>
-            <tr>
-                <td style="min-height: 200px; border-right: 1px solid black;"></td>
-                <td style="min-height: 200px; border-right: 1px solid black;"></td>
-                <td style="min-height: 200px; border-right: 1px solid black;"></td>
-                <td style="min-height: 200px; border-right: 1px solid black;"></td>
-                <td style="min-height: 200px; border-right: 1px solid black;"></td>
-            </tr>
             <!-- <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
@@ -361,7 +365,7 @@
                 $no_item++;
 
                 echo '
-                    <tr>
+                    <tr class="invoice-item">
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
@@ -371,13 +375,6 @@
                 ';
             }
         ?>
-            <tr>
-                <td style="height: 165px; border-right: 1px solid black;"></td>
-                <td style="height: 165px; border-right: 1px solid black;"></td>
-                <td style="height: 165px; border-right: 1px solid black;"></td>
-                <td style="height: 165px; border-right: 1px solid black;"></td>
-                <td style="height: 165px; border-right: 1px solid black;"></td>
-            </tr>
             <!-- <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
