@@ -297,3 +297,17 @@ Kriteria: semua hasil pencarian approved diekspor, nominal snapshot konsisten, V
 3. Validasi: periksa markup aktif kedua cabang, CSS, whitespace dan diff; PHP lint bila runtime tersedia. Tanpa browser/database operasional.
 
 Kriteria berhasil: tidak ada tinggi tetap/spacer pada detail, kedua cabang menggunakan gaya baris ringkas, dan ekspresi data/perhitungan tetap sama.
+
+
+### Penyesuaian satu item — 2026-10-30
+
+Permintaan lanjutan: khusus invoice dengan tepat satu detail, pertahankan ruang baris setinggi 200px. Tambahkan class tabel berdasarkan jumlah detail dan batasi aturan tinggi ke class tersebut; invoice kosong/banyak item tetap memakai tinggi otomatis. Berlaku untuk kedua cabang company. Validasi lokal tanpa browser/database; tidak mengubah perhitungan.
+
+
+### Area detail minimum dengan sisa ruang pada item terakhir — 2026-10-30
+
+1. Ganti aturan khusus satu item dengan pengukuran tinggi alami seluruh baris detail.
+2. Pertahankan area detail minimum 200px; tambahkan kekurangan tinggi hanya pada sel item terakhir. Ukur ulang sebelum print agar mengikuti lebar cetak dan idempoten. Jangan mengecilkan konten panjang.
+3. Tes Node VM untuk kosong/satu/banyak item, isi panjang, pengukuran ulang dan trigger print; tanpa browser/database.
+
+Batas: minimum 200px bukan pemaksaan semua invoice menjadi satu halaman; jumlah halaman tergantung isi, footer dan pengaturan cetak.

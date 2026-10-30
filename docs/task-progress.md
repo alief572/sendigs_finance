@@ -681,3 +681,26 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - Langkah berikutnya: pengguna membuka ulang halaman print untuk menilai hasil pada pengaturan kertas/printer yang dipakai; tidak ada TODO kode yang diketahui.
 
 - Publikasi ke main diotorisasi pengguna: commit terbatas pada template print dan dua dokumen task ini, kemudian push fast-forward tanpa force. Review diff dan whitespace PASS; hasil validasi lokal sebelumnya dipakai kembali karena kode tidak berubah. Hasil sinkronisasi remote dan integritas stash diverifikasi setelah push dan dilaporkan pada respons akhir.
+
+
+### Print invoice satu item — selesai 2026-10-30
+
+- Selesai: penyesuaian template dan validasi statis; tidak ada fase tertunda.
+- File: views/print_invoice_non_konsultasi.php pada modul invoicing; docs/implementation-plan.md; docs/task-progress.md.
+- Tepat satu detail menambahkan class single-item pada tabel; hanya sel detail pada tabel tersebut mendapat height 200px. Item tetap rata atas sehingga ruang kosong berada di bawahnya. Banyak item tetap ringkas dengan padding 5px dan tinggi otomatis; tanpa spacer tambahan.
+- Validasi statis PASS: kondisi jumlah tepat satu, selector tinggi terbatas single-item, dua cabang company memakai class invoice-item, dan ekspresi number_format sama dengan HEAD. Scoped git diff --check PASS.
+- Batas: tanpa browser/database; PHP CLI belum tersedia sehingga lint/render belum dijalankan. Tinggi dapat bertambah jika isi satu item melebihi 200px.
+- Perubahan masih lokal, belum commit/push. Stash development 97736147 tetap dipertahankan. Langkah berikutnya: tinjau hasil print; tidak ada TODO kode.
+
+
+### Ruang bawah pada item terakhir — selesai 2026-10-30
+
+- Menggantikan aturan single-item pada penyesuaian sebelumnya: ukur tinggi alami semua baris detail, lalu tambahkan kekurangan menuju area minimum 200px hanya pada sel baris terakhir. Baris awal tetap ringkas; konten yang melebihi minimum tidak dikecilkan.
+- File: application/modules/invoicing/views/print_invoice_non_konsultasi.php; application/modules/invoicing/tests/Non_consulting_print_test.js (baru); docs/implementation-plan.md; docs/task-progress.md.
+- Pengukuran setelah load menunggu aset; beforeprint mengulang pengukuran mengikuti lebar cetak. Reset tinggi sebelum ukur mencegah akumulasi pada cetak berulang. box-sizing border-box memasukkan padding dalam tinggi sel.
+- Fase grounding, implementasi dan validasi selesai; tidak ada fase aktif/pending atau blocker kode.
+- Validasi: tes Node VM RED sebelum implementasi, GREEN sesudahnya; cakupan kosong/satu/banyak item, konten melebihi minimum, print berulang, pembungkusan berubah, dan halaman sudah selesai load. Node syntax dan scoped git diff --check PASS; variabel PHP, ekspresi number_format dan kedua cabang detail tetap sama dengan HEAD.
+- Batas: tanpa browser/database; hasil pagination visual belum diukur, PHP CLI belum tersedia. Minimum area detail 200px tidak menjamin satu halaman untuk semua isi/pengaturan kertas.
+- Masih lokal di main, belum commit/push; stash development 97736147 tetap sama. Langkah berikutnya: tinjau print pada pengaturan pengguna; tidak ada TODO kode yang diketahui.
+
+- Publikasi penyesuaian item terakhir diotorisasi pengguna ke main: commit hanya template print, Non_consulting_print_test.js dan dua dokumen task. Review diff dan whitespace PASS; hasil tes Node VM/syntax sebelumnya dipakai kembali karena kode dan lingkungan tidak berubah. Push tanpa force; sinkronisasi HEAD/origin/main dan ID stash diperiksa setelah publikasi.

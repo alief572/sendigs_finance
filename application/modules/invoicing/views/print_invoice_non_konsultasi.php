@@ -33,6 +33,7 @@
     }
 
     .table_list_barang .invoice-item td {
+        box-sizing: border-box;
         padding: 5px;
         line-height: 1.3;
         overflow-wrap: anywhere;
@@ -515,5 +516,37 @@
 
 
 <script>
-    window.print();
+    function fitInvoiceDetails() {
+        var rows = Array.from(document.querySelectorAll('.table_list_barang > tbody > .invoice-item'));
+        if (!rows.length) {
+            return;
+        }
+
+        rows.forEach(function (row) {
+            Array.from(row.cells).forEach(function (cell) {
+                cell.style.height = '';
+            });
+        });
+
+        var totalHeight = rows.reduce(function (total, row) {
+            return total + row.getBoundingClientRect().height;
+        }, 0);
+        var lastRow = rows[rows.length - 1];
+        var lastHeight = Math.ceil(lastRow.getBoundingClientRect().height + Math.max(0, 200 - totalHeight));
+        Array.from(lastRow.cells).forEach(function (cell) {
+            cell.style.height = lastHeight + 'px';
+        });
+    }
+
+    function printInvoice() {
+        fitInvoiceDetails();
+        window.print();
+    }
+
+    window.addEventListener('beforeprint', fitInvoiceDetails);
+    if (document.readyState === 'complete') {
+        printInvoice();
+    } else {
+        window.addEventListener('load', printInvoice, { once: true });
+    }
 </script>
