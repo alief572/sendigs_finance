@@ -1,3 +1,13 @@
+## Print lampiran PDF Periodik Full Halaman (A4) — 30 Oktober 2026
+
+Tujuan: Di modul expense/periodik_print, jika attachment berupa PDF, tampilkan berkas PDF tersebut menjadi 1 halaman penuh (A4 utuh, proporsional, per halaman tanpa container iframe terpotong). Pola mengikuti arsitektur yang sudah terbukti pada transport_req_print.php dan assets/js/transport-print.js.
+
+1. Fase 1: Analisis & Spesifikasi Pengujian (RED Test) - Buat unit test Node.js application/modules/expense/tests/Periodik_print_js_test.js.
+2. Fase 2: Implementasi Script & View - Buat assets/js/periodik-print.js dan perbarui application/modules/expense/views/periodik_print.php.
+3. Fase 3: Validasi & Regresi - Jalankan Periodik_print_js_test.js, Transport_print_js_test.js, PHP lint, Batch1_audit_test.php, dan git diff --check.
+
+Status: Seluruh fase selesai. Kriteria keberhasilan terpenuhi 100%.
+
 # Implementation Plan: Penyelarasan Jalur Posting Tab Pembayaran Jurnal All Mengikuti Entitas Jurnal Payment (VUCA)
 
 Dokumen perencanaan teknis ini disusun untuk menyelaraskan jalur posting transaksi pada modul **Jurnal All (Tab Pembayaran)** agar mengikuti aturan entitas perusahaan yang benar sebagaimana diakui pada modul **Jurnal Payment**.

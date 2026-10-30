@@ -109,20 +109,80 @@ function formatDate($date)
 			margin: 10px 0;
 		}
 
+		.periodik-print-controls {
+			margin-bottom: 12px;
+			padding: 8px 12px;
+			background: #f5f5f5;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+		}
+
+		.periodik-print-controls p {
+			margin: 0;
+			font-size: 11px;
+			color: #333;
+		}
+
+		.periodik-pdf-notice {
+			margin: 10px 0;
+			font-size: 11px;
+			color: #666;
+		}
+
+		.periodik-pdf-page {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 10px 0;
+		}
+
+		.periodik-pdf-page canvas {
+			display: block;
+			max-width: 100%;
+		}
+
+		@page {
+			size: A4 portrait;
+			margin: 10mm;
+		}
+
 		@media print {
+			.periodik-print-controls,
 			.attachment-separator {
+				display: none;
+			}
+
+			.periodik-pdf-page {
+				break-before: page;
 				page-break-before: always;
-				border-top: 3px solid #4CAF50;
+				break-inside: avoid;
+				page-break-inside: avoid;
+				width: 190mm;
+				height: 276mm;
+				margin: 0;
+			}
+
+			.periodik-image-attachment {
+				break-before: page;
+				page-break-before: always;
 			}
 
 			body {
-				padding: 10px;
+				padding: 0;
 			}
 		}
 	</style>
 </head>
 
 <body>
+	<div class="periodik-print-controls">
+		<p id="periodik-print-status" role="status">Menyiapkan dokumen dan lampiran untuk dicetak...</p>
+		<button id="periodik-print-button" type="button" class="btn btn-default" disabled>Cetak ulang</button>
+	</div>
 
 	<!-- Document Header -->
 	<div class="document-header">
@@ -230,32 +290,32 @@ function formatDate($date)
 
 	<!-- Attachments -->
 	<?php
-	$has_attachments = false;
-	foreach ($detail as $item) {
-		if (!empty($item->doc_file)) {
-			$has_attachments = true;
-			break;
+	$attachments = [];
+	if (!empty($detail)) {
+		foreach ($detail as $record) {
+			if (!empty($record->doc_file)) {
+				$attachments[] = $record->doc_file;
+			}
 		}
 	}
 	?>
-	<?php if ($has_attachments): ?>
+	<?php if (!empty($attachments)) : ?>
 		<div class="attachment-separator"></div>
-		<?php foreach ($detail as $item): ?>
-			<?php if (!empty($item->doc_file)):
-				$ext = strtolower(pathinfo($item->doc_file, PATHINFO_EXTENSION));
-			?>
-				<?php if ($ext == 'pdf'): ?>
-					<iframe src="<?= base_url('assets/bayar_rutin/' . $item->doc_file) ?>" width="100%" height="600px" style="border: none;"></iframe>
-				<?php elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])): ?>
-					<img src="<?= base_url('assets/bayar_rutin/' . $item->doc_file) ?>" class="attachment-img">
-				<?php endif; ?>
+		<?php foreach ($attachments as $doc_file) : ?>
+			<?php if (strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
+				<div class="periodik-pdf-attachment" data-pdf-url="<?= htmlspecialchars(base_url('assets/bayar_rutin/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>">
+					<p class="periodik-pdf-notice">Memproses lampiran PDF...</p>
+				</div>
+			<?php elseif (in_array(strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif'])) : ?>
+				<div class="periodik-image-attachment">
+					<img src="<?= htmlspecialchars(base_url('assets/bayar_rutin/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>" class="attachment-img" alt="Lampiran Pengajuan Periodik">
+				</div>
 			<?php endif; ?>
 		<?php endforeach; ?>
 	<?php endif; ?>
 
-	<script>
-		window.print();
-	</script>
+	<script src="<?= base_url('assets/js/pdfjs/pdf.min.js') ?>"></script>
+	<script src="<?= base_url('assets/js/periodik-print.js') ?>" data-worker-url="<?= base_url('assets/js/pdfjs/pdf.worker.min.js') ?>"></script>
 </body>
 
 </html>
