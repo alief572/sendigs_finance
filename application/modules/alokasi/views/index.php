@@ -456,6 +456,7 @@
     <option value="5">Transaksi Bank</option>
     <option value="6">Pembayaran</option>
     <option value="7">Alokasi Kalibrasi</option>
+    <option value="8">Deposit</option>
 </script>
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -519,7 +520,7 @@
                         total += split.nominal;
                         rows += '<tr>';
                         rows += '<td class="text-center">' + (index + 1) + '</td>';
-                        rows += '<td>' + split.jenis_alokasi + '</td>';
+                        rows += '<td>' + $('<div>').text(split.jenis_alokasi + (split.no_kwitansi ? ' - ' + split.no_kwitansi : '')).html() + '</td>';
                         rows += '<td class="text-right">Rp. ' + number_format(split.nominal, 2) + '</td>';
                         rows += '</tr>';
                     });
@@ -758,6 +759,46 @@
      * initializes autoNumeric, shows delete buttons on all rows,
      * and recalculates the total.
      */
+    var openKwitansiList = null;
+
+    function kwitansiPickerHtml() {
+        return '<div class="split-kwitansi-wrap" style="display:none; margin-top:6px;">' +
+            '<select class="form-control split-kwitansi"><option value="">-- Kwitansi Deposit (opsional) --</option></select></div>';
+    }
+
+    function fillKwitansiPicker($select) {
+        var render = function(list) {
+            var current = $select.val();
+            var html = '<option value="">-- Kwitansi Deposit (opsional) --</option>';
+            list.forEach(function(k) {
+                html += '<option value="' + $('<div>').text(k.no_kwitansi).html() + '">' +
+                    $('<div>').text(k.no_kwitansi + ' - ' + k.nm_customer + ' - ' + k.no_spk + ' - Rp. ' + number_format(k.nilai_kwitansi, 2)).html() + '</option>';
+            });
+            $select.html(html).val(current || '');
+        };
+        if (openKwitansiList !== null) {
+            render(openKwitansiList);
+            return;
+        }
+        $.getJSON(siteurl + active_controller + 'get_open_kwitansi_deposit', function(res) {
+            openKwitansiList = (res && res.status == 1) ? res.data : [];
+            render(openKwitansiList);
+            if (!openKwitansiList.length) {
+                $('.split-kwitansi-wrap').hide();
+            }
+        });
+    }
+
+    $(document).on('change', '#split-table-body .split-jenis-alokasi', function() {
+        var $wrap = $(this).closest('td').find('.split-kwitansi-wrap');
+        if ($(this).val() === '8') {
+            $wrap.show();
+            fillKwitansiPicker($wrap.find('.split-kwitansi'));
+        } else {
+            $wrap.hide().find('.split-kwitansi').val('');
+        }
+    });
+
     function addSplitRow() {
         var rowCount = $('#split-table-body tr.split-row').length;
         var newRowNum = rowCount + 1;
@@ -765,7 +806,7 @@
 
         var row = '<tr class="split-row">';
         row += '<td class="text-center">' + newRowNum + '</td>';
-        row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select></td>';
+        row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select>' + kwitansiPickerHtml() + '</td>';
         row += '<td><input type="text" class="form-control split-nominal text-right" value=""></td>';
         row += '<td class="text-center"><button type="button" class="btn btn-xs btn-danger btn-remove-split" onclick="removeSplitRow(this)"><i class="fa fa-trash"></i></button></td>';
         row += '</tr>';
@@ -924,7 +965,8 @@
             var nominal = $(this).find('.split-nominal').autoNumeric('get');
             splits.push({
                 jenis_alokasi: jenisAlokasi,
-                nominal: nominal
+                nominal: nominal,
+                no_kwitansi: jenisAlokasi === '8' ? ($(this).find('.split-kwitansi').val() || '') : ''
             });
         });
 
@@ -1026,7 +1068,7 @@
                     var optionsHtml = $('#template-jenis-alokasi').html();
                     var row = '<tr class="split-row">';
                     row += '<td class="text-center">' + rowNum + '</td>';
-                    row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select></td>';
+                    row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select>' + kwitansiPickerHtml() + '</td>';
                     row += '<td><input type="text" class="form-control split-nominal text-right" value=""></td>';
                     row += '<td class="text-center"><button type="button" class="btn btn-xs btn-danger btn-remove-split" onclick="removeSplitRow(this)" style="display:none;"><i class="fa fa-trash"></i></button></td>';
                     row += '</tr>';

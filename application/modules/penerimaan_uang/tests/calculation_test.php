@@ -89,4 +89,44 @@ $negVal = array(
 $resNeg = $C::validate_batch($negVal, 222000001, 'Y');
 check($resNeg['valid'] === false && strpos($resNeg['errors'][0], 'negatif') !== false, 'Negative value rejected');
 
-echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, and batch validation\n";
+// 6. Deposit & Lebih Bayar Kontrol & Batch Validation
+// Kontrol formula: ((Piutang - PPh - Admin - Sisa) - Uang Masuk - Deposit) + Lebih Bayar = 0
+// Case A: Pakai Deposit (Piutang 100jt, PPh 0, Admin 0, Sisa 0, Uang Masuk 70jt, Deposit 30jt, Lebih 0) -> Kontrol 0
+$kDep = $C::kontrol(100000000, 0, 0, 0, 70000000, 30000000, 0);
+check($kDep === 0, 'Kontrol zero with deposit usage');
+check($C::kontrol_v2(100000000, 0, 0, 0, 70000000, 30000000, 0) === 0, 'kontrol_v2 alias matches kontrol');
+
+// Case B: Lebih Bayar (Piutang 100jt, PPh 0, Admin 0, Sisa 0, Uang Masuk 120jt, Deposit 0, Lebih Bayar 20jt) -> Kontrol 0
+$kLebih = $C::kontrol(100000000, 0, 0, 0, 120000000, 0, 20000000);
+check($kLebih === 0, 'Kontrol zero with overpayment (lebih bayar)');
+
+// Batch with deposit:
+$batchDep = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>100000000, 'pph'=>0, 'admin'=>0, 'sisa'=>0, 'dep'=>30000000, 'lebih'=>0)
+);
+$resDepValid = $C::validate_batch($batchDep, 70000000, 'N', 'Y', 30000000, 50000000);
+check($resDepValid['valid'] === true && $resDepValid['kontrol'] === 0, 'Valid batch with deposit passes');
+
+// Batch with deposit exceeding customer active balance:
+try {
+    $C::validate_batch($batchDep, 70000000, 'N', 'Y', 30000000, 20000000);
+    check(false, 'Should throw if deposit exceeds active customer deposit');
+} catch (InvalidArgumentException $e) {
+    check(strpos($e->getMessage(), 'melebihi saldo deposit') !== false, 'Excess deposit exception message correct');
+}
+
+// Batch with both deposit and lebih bayar (forbidden):
+$batchBoth = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>100000000, 'pph'=>0, 'admin'=>0, 'sisa'=>0, 'dep'=>10000000, 'lebih'=>5000000)
+);
+$resBoth = $C::validate_batch($batchBoth, 95000000, 'N', 'Y', 10000000, 50000000);
+check($resBoth['valid'] === false && strpos($resBoth['errors'][0], 'bersamaan') !== false, 'Simultaneous deposit and lebih bayar rejected');
+
+// Kode pajak tersimpan: snapshot menang atas kolom, kolom menang atas snapshot type, kosong bila tidak ada (tidak menebak dari PPN).
+check($C::stored_tax_code(array('tax_treatment' => 'WAPU'), 'PKP') === 'WAPU', 'Snapshot tax_treatment wins over invoice column');
+check($C::stored_tax_code(null, 'KB') === 'KB', 'Invoice column used without snapshot');
+check($C::stored_tax_code(array('type' => 'DEP'), '') === 'DEP', 'Snapshot type is the last stored source');
+check($C::stored_tax_code(array('type' => 'DEP'), 'PKP') === 'PKP', 'Invoice column wins over snapshot type');
+check($C::stored_tax_code(null, '') === '' && $C::stored_tax_code(false, null) === '' && $C::stored_tax_code(array('ppn' => 5000), '') === '', 'No stored tax code returns empty, never PKP/WAPU');
+
+echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";

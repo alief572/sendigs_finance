@@ -14,11 +14,25 @@ class Penerimaan_uang extends Admin_Controller
 
     protected $viewPermission = 'Penerimaan_Uang.View';
 
-    protected $managePermission = 'Penerimaan_Uang.Manage';
-
     protected $addPermission = 'Penerimaan_Uang.Add';
 
     protected $deletePermission = 'Penerimaan_Uang.Delete';
+
+    /**
+     * Cek izin untuk endpoint AJAX. Mengembalikan true (dan sudah menjawab 403) bila ditolak.
+     * auth->restrict() tidak dipakai di sini karena me-redirect ke halaman login, sedangkan AJAX membutuhkan jawaban yang jelas.
+     */
+    private function deny_without($permission, $json = true)
+    {
+        if (has_permission($permission)) return false;
+        http_response_code(403);
+        if ($json) {
+            echo json_encode(array('status' => 0, 'msg' => 'Tidak memiliki izin.', 'message' => 'Tidak memiliki izin.'));
+        } else {
+            echo '<div class="alert alert-danger" role="alert">Tidak memiliki izin.</div>';
+        }
+        return true;
+    }
 
 
 
@@ -69,6 +83,7 @@ class Penerimaan_uang extends Admin_Controller
 
     public function get_report_penerimaan()
     {
+        if ($this->deny_without($this->viewPermission)) return;
         $draw = (int)$this->input->post('draw');
         $start = (int)$this->input->post('start');
         $length = (int)$this->input->post('length');
@@ -97,7 +112,7 @@ class Penerimaan_uang extends Admin_Controller
         }
 
         $result = $this->Penerimaan_uang_model->get_report_penerimaan_serverside(
-            $year, $month, $company, $searchVal, $start, $length, $orderCol, $orderDir
+            $year, $month, $company, $searchVal, $start, $length, $orderCol, $orderDir, $this->input->post('receipt_kind'), $this->input->post('id_customer')
         );
 
         $dataRows = array();
@@ -112,6 +127,7 @@ class Penerimaan_uang extends Admin_Controller
             if (strpos($bankUpper, 'VUCA') !== false) $coName = 'VUCA';
             elseif (strpos($bankUpper, 'SUSTAIN') !== false) $coName = 'SUSTAIN';
             else $coName = 'STM';
+            if (!empty($r['company_main'])) $coName = $r['company_main'];
             $coBadge = '<span class="label label-primary">' . htmlspecialchars($coName, ENT_QUOTES, 'UTF-8') . '</span>';
 
             $invHtmlArr = array();
@@ -121,12 +137,18 @@ class Penerimaan_uang extends Admin_Controller
             if (!empty($r['details'])) {
                 foreach ($r['details'] as $d) {
                     $snap = json_decode($d['consulting_snapshot'] ?? '', true);
-                    $taxCode = !empty($d['tax_treatment']) ? $d['tax_treatment'] : ($snap['tax_treatment'] ?? ((float)$d['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU'));
+                    // Hanya perlakuan PPN yang benar-benar tersimpan di Invoicing; invoice lama tanpa data itu tampil "-" (tidak ditebak dari nilai PPN).
+                    $taxCode = Penerimaan_calculation::stored_tax_code($snap, $d['tax_treatment'] ?? '');
                     $invNo = $d['no_invoice'] ?: '-';
 
                     $invHtmlArr[] = '<div style="padding: 2px 0;">' . htmlspecialchars($invNo, ENT_QUOTES, 'UTF-8') . '</div>';
-                    $taxBadge = '<span class="tax-badge tax-' . htmlspecialchars($taxCode, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($taxCode, ENT_QUOTES, 'UTF-8') . '</span>';
-                    $taxHtmlArr[] = '<div style="padding: 2px 0;">' . $taxBadge . '<div style="font-size: 11px; color: #777; margin-top: 1px;">' . $pphText . '</div></div>';
+                    $isDepositReceipt = ($taxCode === 'DEP');
+                    $taxLabel = $isDepositReceipt ? 'Deposit' : $taxCode;
+                    $taxBadge = $taxCode === ''
+                        ? '<span class="text-muted" title="Perlakuan PPN belum tercatat di Invoicing">-</span>'
+                        : '<span class="tax-badge tax-' . htmlspecialchars($taxCode, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($taxLabel, ENT_QUOTES, 'UTF-8') . '</span>';
+                    $subLabel = $isDepositReceipt ? 'Kwitansi Deposit' : $pphText;
+                    $taxHtmlArr[] = '<div style="padding: 2px 0;">' . $taxBadge . '<div style="font-size: 11px; color: #777; margin-top: 1px;">' . $subLabel . '</div></div>';
                 }
                 $invHtml = implode('', $invHtmlArr);
                 $taxHtml = implode('', $taxHtmlArr);
@@ -166,12 +188,13 @@ class Penerimaan_uang extends Admin_Controller
 
     public function export_excel()
     {
+        $this->auth->restrict($this->viewPermission);
         $year = $this->input->get('year');
         $month = $this->input->get('month');
         $company = $this->input->get('company');
         $search = $this->input->get('search');
 
-        $report_data = $this->Penerimaan_uang_model->get_report_data($year, $month, $company, $search);
+        $report_data = $this->Penerimaan_uang_model->get_report_data($year, $month, $company, $search, $this->input->get('receipt_kind'), $this->input->get('id_customer'));
 
         $months_id = array(1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember');
         $filtInfo = 'Tahun: ' . (!empty($year) ? $year : 'Semua') . ' | Bulan: ' . (!empty($month) ? ($months_id[(int)$month] ?? $month) : 'Semua') . ' | Company: ' . (!empty($company) ? $company : 'Semua');
@@ -230,50 +253,149 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-        // Get all customers from all invoices (konsultasi + non-konsultasi) grouped by nm_customer
+        $receiptKind = (string)$result['jenis_alokasi'] === '8' ? 'deposit' : 'invoice';
 
-        $this->db->select('a.id_customer, a.nm_customer');
-
+        // Get customers filtered by receipt kind
+        $this->db->select('a.id_customer, MAX(a.nm_customer) AS nm_customer');
         $this->db->from('tr_invoicing a');
-
         $this->db->where('a.nm_customer !=', '');
-
         $this->db->where('a.nm_customer IS NOT NULL', null, false);
-
-        $this->db->group_by('a.nm_customer');
-
+        $this->db->where('a.saldo_piutang >', 0);
+        if ($receiptKind === 'deposit') {
+            $this->db->where('a.tax_treatment', 'DEP');
+        } else {
+            $this->db->where('(a.tax_treatment IS NULL OR a.tax_treatment <> "DEP")', null, false);
+        }
+        $this->db->group_by('a.id_customer');
         $this->db->order_by('a.nm_customer', 'ASC');
-
         $get_customer = $this->db->get()->result_array();
 
-
+        // Saran kwitansi dari pilihan di Alokasi (opsional): preselect customer dan kwitansi di form
+        $kwitansiHint = null;
+        if ($receiptKind === 'deposit' && !empty($result['no_kwitansi'])) {
+            $hintInvoice = $this->db->select('id, id_customer')->get_where('tr_invoicing', ['no_invoice' => $result['no_kwitansi'], 'tax_treatment' => 'DEP', 'saldo_piutang >' => 0])->row_array();
+            if ($hintInvoice) {
+                $kwitansiHint = ['no_kwitansi' => $result['no_kwitansi'], 'id_customer' => (string)$hintInvoice['id_customer'], 'invoice_id' => (string)$hintInvoice['id']];
+            }
+        }
 
         $data = [
-
             'id_alokasi' => $result['id'],
-
+            'kwitansi_hint' => $kwitansiHint,
+            'receipt_kind' => $receiptKind,
             'list_customer' => $get_customer,
-
             'nominal_penerimaan_bank' => $nominal_penerimaan_bank
-
         ];
 
-
-
         $this->template->set('results', $data);
-
-        $this->template->title('Penerimaan Piutang');
-
+        $this->template->title($receiptKind === 'deposit' ? 'Penerimaan Piutang Kwitansi Deposit' : 'Penerimaan Piutang Invoice');
         $this->template->render('add');
-
     }
 
+    private function deposit_context()
+    {
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $customer = $this->input->post('id_customer'); $company = $this->input->post('id_company');
+        $id = $this->input->post('id_invoice');
+        foreach (array($customer, $company, $id) as $value) if ($value !== null && !is_scalar($value)) throw new InvalidArgumentException('Identitas deposit tidak valid.');
+        if ($id !== null && $id !== '') {
+            $invoice = $this->db->get_where('tr_invoicing', array('id'=>$id))->row_array();
+            if (!$invoice || !Invoice_consulting::is_new($invoice)) throw new InvalidArgumentException('Invoice Consultant baru tidak ditemukan.');
+            $snapshot = Invoice_consulting::snapshot($invoice);
+            if (($customer !== null && $customer !== '' && (string)$customer !== (string)$invoice['id_customer'])
+                || ($company !== null && $company !== '' && (string)$company !== (string)$snapshot['owner']['id'])) throw new InvalidArgumentException('Customer/company tidak sesuai invoice.');
+            $customer = $invoice['id_customer']; $company = $snapshot['owner']['id'];
+        }
+        if (trim((string)$customer) === '' || trim((string)$company) === '') throw new InvalidArgumentException('Pilih customer dan company deposit.');
+        if (!Invoice_consulting_service::is_journal_owner($company)) throw new InvalidArgumentException('Company deposit tidak valid.');
+        return array((string)$customer, (string)$company, $id);
+    }
 
+    public function get_receipt_companies()
+    {
+        $this->auth->restrict($this->viewPermission);
+        try {
+            $customer = $this->input->post('id_customer');
+            if (!is_scalar($customer) || trim((string)$customer) === '') throw new InvalidArgumentException('Pilih customer.');
+            $invoices = $this->db->get_where('tr_invoicing', array('id_customer'=>$customer, 'saldo_piutang >'=>0))->result_array();
+            $companies = array(); $deposit = $this->input->post('receipt_kind') === 'deposit';
+            foreach ($invoices as $invoice) {
+                if ((($invoice['tax_treatment'] ?? '') === 'DEP') !== $deposit) continue;
+                if (Invoice_consulting::is_new($invoice)) {
+                    $snapshot = Invoice_consulting::snapshot($invoice);
+                    $companies[(string)$snapshot['owner']['id']] = array('id'=>(string)$snapshot['owner']['id'], 'name'=>$snapshot['owner']['nm_company']);
+                } elseif (!$deposit) $companies['legacy'] = array('id'=>'legacy', 'name'=>'Invoice lama / Vuca (alur existing)');
+            }
+            $result = array('status'=>1, 'companies'=>array_values($companies));
+        } catch (Throwable $e) { $result = array('status'=>0, 'message'=>$e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Company tidak dapat dimuat.', 'companies'=>array()); }
+        echo json_encode($result);
+    }
+
+    public function get_customer_deposit()
+    {
+        $this->auth->restrict($this->viewPermission);
+        $result = array('status'=>0, 'saldo'=>null, 'formatted'=>'Belum tersedia', 'id_customer'=>null, 'id_company'=>null, 'id_invoice'=>null);
+        try {
+            list($customer, $company, $invoiceId) = $this->deposit_context();
+            require_once __DIR__.'/../libraries/Consulting_receipt.php';
+            $cents = (new Consulting_receipt($this))->get_customer_active_deposit($customer, $company);
+            $result = array('status'=>1, 'saldo'=>Penerimaan_calculation::decimal($cents), 'formatted'=>'Rp '.number_format($cents/100,2,',','.'),
+                'id_customer'=>$customer, 'id_company'=>$company, 'id_invoice'=>$invoiceId, 'error'=>null);
+        } catch (Throwable $e) { $result['error'] = $e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Saldo deposit tidak dapat dimuat.'; $result['message'] = $result['error']; }
+        header('Content-Type: application/json'); echo json_encode($result);
+    }
+
+    public function get_customer_deposit_ledger()
+    {
+        $this->auth->restrict($this->viewPermission);
+        try { list($customerId, $companyId) = $this->deposit_context(); }
+        catch (Throwable $e) { echo json_encode(array('status'=>0, 'message'=>$e instanceof InvalidArgumentException ? $e->getMessage() : 'Konteks deposit tidak valid.')); return; }
+        $this->load->model('deposit_customer/Deposit_customer_model');
+        $ledger = $this->Deposit_customer_model->get_customer_mutasi_ledger($customerId, $companyId);
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $depositError = null;
+        try { $available = (new Consulting_receipt($this))->get_customer_active_deposit($customerId, $companyId); }
+        catch (RuntimeException $e) { $available = null; $depositError = $e->getMessage(); }
+
+        $totMasuk = 0;
+        $totKeluar = 0;
+        $running = 0;
+        $rows = array();
+        foreach ($ledger as $m) {
+            $in = ($m['jenis_mutasi'] === 'IN') ? Penerimaan_calculation::cents($m['nominal']) : 0;
+            $out = ($m['jenis_mutasi'] === 'OUT') ? Penerimaan_calculation::cents($m['nominal']) : 0;
+            $totMasuk += $in;
+            $totKeluar += $out;
+            $running += ($in - $out);
+
+            $rows[] = array(
+                'tanggal' => date('d-M-Y', strtotime($m['tanggal'])),
+                'tipe' => $m['jenis_mutasi'],
+                'sumber' => $m['tipe_sumber'] ?? $m['jenis_mutasi'],
+                'no_dokumen' => $m['no_deposit'] ?? '-',
+                'no_transaksi' => $m['no_transaksi'] ?? '-',
+                'company' => $m['id_company'] ?? '-',
+                'keterangan' => $m['keterangan'] ?? '-',
+                'masuk' => number_format($in/100, 2, ',', '.'),
+                'keluar' => number_format($out/100, 2, ',', '.'),
+                'saldo' => number_format($running/100, 2, ',', '.')
+            );
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            'status' => 1,
+            'total_masuk' => 'Rp ' . number_format($totMasuk/100, 2, ',', '.'),
+            'total_keluar' => 'Rp ' . number_format($totKeluar/100, 2, ',', '.'),
+            'saldo_aktif' => $available === null ? 'Perlu rekonsiliasi' : 'Rp ' . number_format($available/100, 2, ',', '.'),
+            'error' => $depositError, 'id_customer'=>$customerId, 'id_company'=>$companyId,
+            'ledger' => $rows
+        ));
+    }
 
     public function get_inv_by_cust()
-
     {
-
+        $this->auth->restrict($this->viewPermission);
         $post = $this->input->post();
 
         $nm_customer = is_array($post) && isset($post['nm_customer']) ? $post['nm_customer'] : '';
@@ -282,15 +404,26 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-        $this->db->select('a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons, a.tipe_invoice, a.tax_treatment, a.consulting_version, a.consulting_snapshot');
+        $this->db->select('a.id_customer, a.tanggal_invoice, a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons, a.tipe_invoice, a.tax_treatment, a.consulting_version, a.consulting_snapshot');
 
         $this->db->from('tr_invoicing a');
 
-        $this->db->where('a.nm_customer', $nm_customer);
+        $customerId = $this->input->post('id_customer'); $companyId = $this->input->post('id_company');
+        if (($customerId !== null && !is_scalar($customerId)) || ($companyId !== null && !is_scalar($companyId))) { echo '<tr><td colspan="11">Identitas customer/company tidak valid.</td></tr>'; return; }
+        if (is_scalar($customerId) && trim((string)$customerId) !== '') {
+            if (!is_scalar($companyId) || trim((string)$companyId) === '') { echo '<tr><td colspan="11">Pilih company terlebih dahulu.</td></tr>'; return; }
+            $this->db->where('a.id_customer', $customerId);
+        } else {
+            $this->db->where('a.nm_customer', is_scalar($nm_customer) ? $nm_customer : '');
+            $this->db->where('(a.consulting_version IS NULL OR a.consulting_version <> 3)', null, false);
+        }
 
         $this->db->where('a.saldo_piutang >', 0);
+        if ($this->input->post('receipt_kind') === 'deposit') $this->db->where('a.tax_treatment', 'DEP');
+        else $this->db->where("(a.tax_treatment IS NULL OR a.tax_treatment <> 'DEP')", null, false);
 
-        $this->db->order_by('a.created_date', 'ASC');
+        $this->db->order_by('a.tanggal_invoice', 'ASC');
+        $this->db->order_by('a.id', 'ASC');
 
         $get_invoice = $this->db->get()->result_array();
 
@@ -303,20 +436,29 @@ class Penerimaan_uang extends Admin_Controller
             foreach ($get_invoice as $item) {
 
                 $isNew = Invoice_consulting::is_new($item);
-
-                $taxTreatment = !empty($item['tax_treatment']) ? $item['tax_treatment'] : '';
-
-                if (empty($taxTreatment)) {
-
-                    $snapshot = json_decode($item['consulting_snapshot'] ?? '', true);
-
-                    $taxTreatment = !empty($snapshot['type']) ? $snapshot['type'] : ((float)$item['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU');
-
+                if (is_scalar($customerId) && trim((string)$customerId) !== '') {
+                    if ($isNew) {
+                        try { $ownerSnapshot = Invoice_consulting::snapshot($item); }
+                        catch (RuntimeException $e) { continue; }
+                        if ((string)$ownerSnapshot['owner']['id'] !== (string)$companyId) continue;
+                    } elseif ($companyId !== 'legacy') continue;
                 }
+
+
+                // Label memakai kode pajak yang tersimpan; invoice lama tanpa data itu tampil "-".
+                $taxStored = Penerimaan_calculation::stored_tax_code(json_decode($item['consulting_snapshot'] ?? '', true), $item['tax_treatment'] ?? '');
+                // Hitungan angka invoice lama tetap memakai perkiraan dari PPN supaya Total Tagihan tidak berubah; hanya label yang tidak menebak.
+                $taxTreatment = $taxStored !== '' ? $taxStored : ((float)$item['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU');
 
                 if ($item['non_kons'] == '1') {
 
                     $taxBadge = '<span class="label label-warning">Non Kons</span>';
+
+                } elseif ($taxStored === '') {
+                    $taxBadge = '<span class="text-muted" title="Perlakuan PPN belum tercatat di Invoicing">-</span>';
+                } elseif ($taxTreatment === 'DEP') {
+
+                    $taxBadge = '<span class="tax-badge tax-DEP">Kwitansi Deposit</span>';
 
                 } else {
 
@@ -349,6 +491,19 @@ class Penerimaan_uang extends Admin_Controller
 
 
                 $pphDefault = round($dppLain * 0.02);
+                $receiptBlocked = false;
+                if ($isNew) {
+                    require_once __DIR__ . '/../libraries/Consulting_receipt.php';
+                    try {
+                        $contextInvoice = $item; $contextInvoice['id'] = $item['no_inv'];
+                        $tax = Penerimaan_calculation::tax_calc(Penerimaan_calculation::cents($item['total_nominal_jurnal']), $taxTreatment);
+                        $pphDefault = (new Consulting_receipt($this))->available_pph($contextInvoice, $tax['pph_default']) / 100;
+                        $dppLain = $tax['dpp_lain'] / 100;
+                    } catch (RuntimeException | InvalidArgumentException $error) {
+                        $receiptBlocked = true;
+                        $pphDefault = 0;
+                    }
+                }
 
                 $pphVal = ($pph23_dipotong === 'Y') ? $pphDefault : 0;
 
@@ -356,54 +511,58 @@ class Penerimaan_uang extends Admin_Controller
 
                 $tagihanMinPph = $tagihan - $pphVal;
 
-                $tgl = !empty($item['created_date']) ? date('d-M-Y', strtotime($item['created_date'])) : '-';
+                $invoiceDate = $item['tanggal_invoice'] ?? '';
+                $invoiceTimestamp = $invoiceDate !== '' && $invoiceDate !== '0000-00-00' ? strtotime($invoiceDate) : false;
+                $tgl = $invoiceTimestamp !== false ? date('d-M-Y', $invoiceTimestamp) : '-';
 
 
 
-                $hasil .= '<tr>';
+                $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
+                if ($isDepositKind) {
+                    $snapshot = json_decode($item['consulting_snapshot'] ?? '', true);
+                    $noSpk = $snapshot['spk'] ?? (!empty($item['id_spk_penawaran']) ? $item['id_spk_penawaran'] : '-');
+                    $nmCompany = $snapshot['owner']['nm_company'] ?? 'STM';
 
-                $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
-
-                $hasil .= '<td class="text-center font-bold">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
-
-                $hasil .= '<td class="text-center">' . $taxBadge . '</td>';
-
-                $hasil .= '<td class="text-right">' . number_format($sales, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right">' . number_format($dppLain, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right">' . number_format($ppn, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right">' . number_format($pphVal, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right font-bold">' . number_format($tagihan, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right">' . number_format($tagihanMinPph, $decimals) . '</td>';
-
-                $hasil .= '<td class="text-right font-bold">' . number_format((float)$item['saldo_piutang'], $decimals) . '</td>';
-
-                $hasil .= '<td class="text-center">';
-
-                $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . $item['no_inv'] . '" style="cursor:pointer; width:16px; height:16px;">';
-
-                $hasil .= '</td>';
-
-                $hasil .= '</tr>';
-
+                    $hasil .= '<tr>';
+                    $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
+                    $hasil .= '<td class="text-center font-bold" style="font-family: monospace;">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="text-center">' . htmlspecialchars($noSpk, ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="text-center"><span class="label label-info">' . htmlspecialchars($nmCompany, ENT_QUOTES, 'UTF-8') . '</span></td>';
+                    $hasil .= '<td class="text-right font-bold">Rp ' . number_format((float)$item['total_nominal_jurnal'], 2) . '</td>';
+                    $hasil .= '<td class="text-right font-bold text-danger">Rp ' . number_format((float)$item['saldo_piutang'], 2) . '</td>';
+                    $hasil .= '<td class="text-center">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '" style="cursor:pointer; width:16px; height:16px;">';
+                    $hasil .= '</td>';
+                    $hasil .= '</tr>';
+                } else {
+                    $hasil .= '<tr>';
+                    $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
+                    $hasil .= '<td class="text-center font-bold">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="text-center">' . $taxBadge . '</td>';
+                    $hasil .= '<td class="text-right">' . number_format($sales, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right">' . number_format($dppLain, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right">' . number_format($ppn, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right">' . number_format($pphVal, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right font-bold">' . number_format($tagihan, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right">' . number_format($tagihanMinPph, $decimals) . '</td>';
+                    $hasil .= '<td class="text-right font-bold">' . number_format((float)$item['saldo_piutang'], $decimals) . '</td>';
+                    $hasil .= '<td class="text-center">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . ($receiptBlocked ? ' disabled' : '') . ' style="cursor:pointer; width:16px; height:16px;">';
+                    if ($receiptBlocked) $hasil .= '<small class="text-danger">Riwayat PPh perlu rekonsiliasi.</small>';
+                    $hasil .= '</td>';
+                    $hasil .= '</tr>';
+                }
             }
-
         } else {
-
-            $hasil = '<tr>';
-
-            $hasil .= '<td colspan="11" class="text-center text-muted" style="padding: 16px;">No Data Found</td>';
-
-            $hasil .= '</tr>';
-
+            $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
+            $colSpan = $isDepositKind ? '7' : '11';
+            $msg = $isDepositKind ? 'Belum ada tagihan Kwitansi Deposit terbuka untuk customer ini' : 'Tidak ada tagihan invoice terbuka';
+            $hasil = '<tr><td colspan="' . $colSpan . '" class="text-center text-muted" style="padding: 16px;">' . $msg . '</td></tr>';
         }
 
 
 
+        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center">Tidak ada dokumen terbuka untuk customer/company ini.</td></tr>';
         echo $hasil;
 
     }
@@ -413,6 +572,7 @@ class Penerimaan_uang extends Admin_Controller
     public function process_alokasi()
 
     {
+        if ($this->deny_without($this->addPermission, false)) return;
 
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
 
@@ -422,7 +582,8 @@ class Penerimaan_uang extends Admin_Controller
 
             try {
 
-                $data=$consulting->preview($this->input->post());
+                $post=$this->input->post(); $post['receipt_kind']='invoice';
+                $data=$consulting->preview($post);
 
                 $this->template->set($data);$this->template->render('consulting_process');
 
@@ -440,7 +601,7 @@ class Penerimaan_uang extends Admin_Controller
 
         $pph23_dipotong = $post['pph23_dipotong'];
 
-        $ppn_dipotong = $post['ppn_dipotong'];
+        $ppn_dipotong = ($post['ppn_dipotong'] ?? null);
 
 
 
@@ -982,7 +1143,7 @@ class Penerimaan_uang extends Admin_Controller
 
             'nm_customer' => $post['customer'],
 
-            'ppn_dipotong' => $post['ppn_dipotong'],
+            'ppn_dipotong' => ($post['ppn_dipotong'] ?? null),
 
             'pph23_dipotong' => $post['pph23_dipotong'],
 
@@ -998,9 +1159,32 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+    public function process_kwitansi_deposit()
+    {
+        if ($this->deny_without($this->addPermission, false)) return;
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        try {
+            $post = $this->input->post(); $post['receipt_kind'] = 'deposit';
+            $data = (new Consulting_receipt($this))->preview($post);
+            $this->template->set($data); $this->template->render('consulting_process');
+        } catch (Throwable $e) {
+            log_message('error', 'process_kwitansi_deposit: ' . get_class($e) . ': ' . $e->getMessage());
+            echo '<div class="alert alert-danger">'.htmlspecialchars($e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Preview gagal.', ENT_QUOTES, 'UTF-8').'</div>';
+        }
+    }
+
+    public function save_kwitansi_deposit()
+    {
+        if ($this->deny_without($this->addPermission)) return;
+        require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $post = $this->input->post(); $post['receipt_kind'] = 'deposit';
+        echo json_encode((new Consulting_receipt($this))->save($post));
+    }
+
     public function save_penerimaan_piutang()
 
     {
+        if ($this->deny_without($this->addPermission)) return;
 
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
 
@@ -1012,7 +1196,7 @@ class Penerimaan_uang extends Admin_Controller
 
         for($n=1;$n<=$count;$n++)$ids[]=$post['id_inv_'.$n]??'';
 
-        if($consulting->contains_new($ids)){echo json_encode($consulting->save($post));return;}
+        if($consulting->contains_new($ids)){$post['receipt_kind']='invoice';echo json_encode($consulting->save($post));return;}
 
         $service=new Invoice_consulting_service($this);
 
@@ -1090,7 +1274,7 @@ class Penerimaan_uang extends Admin_Controller
 
             'nm_customer' => $nm_customer,
 
-            'ppn_dipotong' => $post['ppn_dipotong'],
+            'ppn_dipotong' => ($post['ppn_dipotong'] ?? null),
 
             'pph23_dipotong' => $post['pph23_dipotong'],
 
@@ -1152,7 +1336,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_spk_penawaran['id_penawaran']])->row_array();
 
-                
+
 
                 $company = (!empty($get_penawaran['company'])) ? $get_penawaran['company'] : $get_spk_penawaran['id_company'];
 
@@ -1627,16 +1811,21 @@ class Penerimaan_uang extends Admin_Controller
     public function detail()
 
     {
+        if ($this->deny_without($this->viewPermission, false)) return;
 
         $post = $this->input->post();
 
 
 
-        $id = $post['id_alokasi'];
+        $id = $post['id_alokasi'] ?? '';
 
 
 
         $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id' => $id])->row_array();
+        if (empty($get_penerimaan)) {
+            echo '<div class="alert alert-danger" role="alert">Penerimaan tidak ditemukan.</div>';
+            return;
+        }
 
 
 
@@ -1650,7 +1839,7 @@ class Penerimaan_uang extends Admin_Controller
 
         $this->db->where('a.id_header', $get_penerimaan['no_surat']);
 
-        $get_penerimaan_detail = $this->db->get()->result_array();
+        $get_penerimaan_detail = array_map(array('Penerimaan_calculation', 'receipt_detail'), $this->db->get()->result_array());
 
 
 
@@ -1708,6 +1897,7 @@ class Penerimaan_uang extends Admin_Controller
     public function get_alokasi_penerimaan()
 
     {
+        if ($this->deny_without($this->viewPermission)) return;
 
         $this->Penerimaan_uang_model->get_alokasi_penerimaan();
 

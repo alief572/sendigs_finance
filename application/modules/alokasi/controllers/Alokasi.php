@@ -522,6 +522,29 @@ class Alokasi extends Admin_Controller
         ]);
     }
 
+    public function get_open_kwitansi_deposit()
+    {
+        $this->auth->restrict($this->viewPermission);
+        $list = array();
+        if ($this->db->field_exists('no_kwitansi', 'tr_alokasi_split')) {
+            $this->load->model('kwitansi_deposit/Kwitansi_deposit_model');
+            $rows = $this->db->select('no_kwitansi, nm_customer, nilai_kwitansi, id_spk_penawaran, po_customer, spk_snapshot')
+                ->from('tr_kwitansi_deposit')
+                ->where('status', 'MENUNGGU_PEMBAYARAN')
+                ->order_by('tanggal_kwitansi', 'ASC')->order_by('id', 'ASC')
+                ->get()->result_array();
+            foreach ($rows as $row) {
+                $list[] = array(
+                    'no_kwitansi' => $row['no_kwitansi'],
+                    'nm_customer' => $row['nm_customer'],
+                    'no_spk' => Kwitansi_deposit_model::spk_number($row),
+                    'nilai_kwitansi' => floatval($row['nilai_kwitansi'])
+                );
+            }
+        }
+        echo json_encode(array('status' => 1, 'data' => $list));
+    }
+
     public function save_split_alokasi()
     {
         $id = $this->input->post('id');
@@ -550,7 +573,7 @@ class Alokasi extends Admin_Controller
             $jenis = isset($split['jenis_alokasi']) ? intval($split['jenis_alokasi']) : 0;
             $nominal = isset($split['nominal']) ? floatval($split['nominal']) : 0;
 
-            if ($jenis < 1 || $jenis > 7) {
+            if ($jenis < 1 || $jenis > 8) {
                 echo json_encode([
                     'status' => 0,
                     'msg' => 'Semua baris harus memiliki jenis alokasi'
@@ -565,6 +588,27 @@ class Alokasi extends Admin_Controller
                 ]);
                 return;
             }
+        }
+
+        // Kwitansi deposit tujuan (opsional, hanya untuk jenis Deposit)
+        $usedKwitansi = array();
+        foreach ($splits as $index => $split) {
+            $noKwitansi = isset($split['no_kwitansi']) && is_scalar($split['no_kwitansi']) ? trim((string) $split['no_kwitansi']) : '';
+            if (intval($split['jenis_alokasi']) !== 8 || $noKwitansi === '' || !$this->db->field_exists('no_kwitansi', 'tr_alokasi_split')) {
+                $splits[$index]['no_kwitansi'] = null;
+                continue;
+            }
+            if (isset($usedKwitansi[$noKwitansi])) {
+                echo json_encode(['status' => 0, 'msg' => 'Kwitansi deposit ' . $noKwitansi . ' dipilih lebih dari satu kali']);
+                return;
+            }
+            $open = $this->db->get_where('tr_kwitansi_deposit', ['no_kwitansi' => $noKwitansi, 'status' => 'MENUNGGU_PEMBAYARAN'])->row_array();
+            if (!$open) {
+                echo json_encode(['status' => 0, 'msg' => 'Kwitansi deposit ' . $noKwitansi . ' tidak ditemukan atau sudah lunas']);
+                return;
+            }
+            $usedKwitansi[$noKwitansi] = true;
+            $splits[$index]['no_kwitansi'] = $noKwitansi;
         }
 
         // Get transaction to validate sum
@@ -652,7 +696,8 @@ class Alokasi extends Admin_Controller
             '4' => 'Mutasi',
             '5' => 'Transaksi Bank',
             '6' => 'Pembayaran',
-            '7' => 'Alokasi Kalibrasi'
+            '7' => 'Alokasi Kalibrasi',
+            '8' => 'Deposit'
         ];
 
         $splits = [];
@@ -660,6 +705,7 @@ class Alokasi extends Admin_Controller
             $splits[] = [
                 'jenis_alokasi' => isset($jenis_labels[$split['jenis_alokasi']]) ? $jenis_labels[$split['jenis_alokasi']] : '-',
                 'nominal' => floatval($split['nominal']),
+                'no_kwitansi' => isset($split['no_kwitansi']) ? $split['no_kwitansi'] : null,
                 'created_date' => $split['created_date']
             ];
         }

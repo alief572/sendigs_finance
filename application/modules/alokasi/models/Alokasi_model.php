@@ -97,7 +97,8 @@ class Alokasi_model extends BF_Model
                     '4' => 'Mutasi',
                     '5' => 'Transaksi Bank',
                     '6' => 'Pembayaran',
-                    '7' => 'Alokasi Kalibrasi'
+                    '7' => 'Alokasi Kalibrasi',
+            '8' => 'Deposit'
                 ];
                 $badges = '';
                 foreach ($split_data as $split) {
@@ -210,6 +211,9 @@ class Alokasi_model extends BF_Model
                 'created_by'        => $user_id,
                 'created_date'      => date('Y-m-d H:i:s')
             ];
+            if (!empty($split['no_kwitansi']) && $this->db->field_exists('no_kwitansi', 'tr_alokasi_split')) {
+                $data['no_kwitansi'] = $split['no_kwitansi'];
+            }
             $this->db->insert('tr_alokasi_split', $data);
         }
 
@@ -224,7 +228,8 @@ class Alokasi_model extends BF_Model
             '4' => 'Mutasi',
             '5' => 'Transaksi Bank',
             '6' => 'Pembayaran',
-            '7' => 'Alokasi Kalibrasi'
+            '7' => 'Alokasi Kalibrasi',
+            '8' => 'Deposit'
         ];
         $split_details = [];
         foreach ($splits as $split) {

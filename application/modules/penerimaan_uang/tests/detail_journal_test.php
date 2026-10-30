@@ -1,4 +1,5 @@
 <?php
+if (!function_exists('has_permission')) { function has_permission($permission) { return true; } }
 // Controller + rendered view regression; no database writes or browser.
 define('BASEPATH', __DIR__);
 class Admin_Controller {}
@@ -57,8 +58,30 @@ checkDetail(strpos($html,'<td class="text-center">1101-02-01</td>')!==false,'COA
 checkDetail(strpos($html,'<td class="text-center">1102-01-01</td>')!==false,'Receivable COA appears');
 checkDetail(strpos($html,'value="44100000"')!==false && $total_debit===44100000 && $total_kredit===44100000,'Journal totals reflect saved rows');
 checkDetail(strpos($html,'OTHER JOURNAL')===false && strpos($html,'WRONG TYPE')===false,'Unrelated receipt/type excluded');
+// Invoice lama: Piutang Dagang (44.100.000) sudah neto setelah PPh 23 (900.000), jadi PPh tidak boleh dikurangkan lagi di Kontrol.
+checkDetail(preg_match('/name="kontrol"[^>]*value="0"/',$html)===1 && strpos($html,'Selisih')===false,'Legacy row: Kontrol is 0 and PPh is not subtracted twice');
 $controller->input->id=2; $controller->detail();
 checkDetail(count($controller->template->data['list_jurnal'])===1 && $controller->template->data['list_jurnal'][0]['nm_coa']==='OTHER JOURNAL','Second receipt isolates its own journal');
 $db->journals=array(); $controller->input->id=1; $controller->detail();
 checkDetail($controller->template->data['list_jurnal']===array(),'Absent journals remain absent, no fabricated entries');
-echo "PASS: receipt detail journal lookup, posted rows, COA rendering, totals, isolated receipts and empty history\n";
+function renderDetail($data) { extract($data); ob_start(); include dirname(__DIR__).'/views/detail.php'; return ob_get_clean(); }
+
+// Penerimaan model baru (calculation_version 4): Piutang Dagang bruto 1.000.000, PPh 20.000, bank 980.000 -> PPh tetap ikut rumus Kontrol.
+$v4Number='00099/RKN-KRG/X/26';
+$cents=function($rupiah){return (int)round($rupiah*100);};
+$snapshot=array('calculation_version'=>4,'date'=>'2026-10-01','invoice_no'=>'999/STM/2026','tax_treatment'=>'PKP','balance'=>$cents(1000000),'alok'=>$cents(980000),'admin'=>0,'pph'=>$cents(20000),'sisa'=>0,'sales'=>$cents(1000000),'dpp_lain'=>0,'ppn'=>0,'tagihan'=>$cents(1000000));
+$db->headers[]=array('id'=>3,'no_surat'=>$v4Number,'id_alokasi'=>12,'nominal_penerimaan_bank'=>'980000.00');
+$db->details[]=array('id_inv'=>'V4-INV','id_header'=>$v4Number,'no_invoice'=>'999/STM/2026','tgl_inv'=>'2026-10-01','consulting_version'=>3,'consulting_snapshot'=>json_encode($snapshot),'dpp'=>0,'dpp_lain'=>0,'ppn'=>0,'pph23'=>0,'tagihan_ppn'=>0,'total_akhir_jurnal'=>0,'penerimaan'=>0,'biaya_admin'=>0,'sisa_piutang'=>0,'total'=>0);
+$controller->input->id=3; $controller->detail();
+$v4Html=renderDetail($controller->template->data);
+checkDetail(preg_match('/name="kontrol"[^>]*value="0"/',$v4Html)===1 && strpos($v4Html,'Selisih')===false,'Version 4 row: PPh stays in the Kontrol formula and Kontrol is 0');
+// Jika bank kurang Rp 1.000 dari seharusnya, Kontrol harus menampakkan selisih (rumus tidak boleh selalu 0).
+$db->headers[2]['nominal_penerimaan_bank']='979000.00'; $controller->detail();
+checkDetail(strpos(renderDetail($controller->template->data),'Selisih')!==false,'Version 4 row: a real difference is still reported');
+
+// ID penerimaan tidak ada: pesan jelas, tidak ada view, tidak ada notice.
+$controller->template->view=null; $controller->input->id=999;
+ob_start(); $controller->detail(); $notFound=ob_get_clean();
+checkDetail($controller->template->view===null && strpos($notFound,'Penerimaan tidak ditemukan')!==false,'Unknown receipt id shows a clear message without rendering the view');
+
+echo "PASS: receipt detail journal lookup, Kontrol legacy/version 4, unknown id, posted rows, COA rendering, totals, isolated receipts and empty history\n";

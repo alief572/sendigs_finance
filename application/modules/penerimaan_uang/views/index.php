@@ -72,12 +72,17 @@
     <ul class="nav nav-tabs" id="penerimaan_tabs" role="tablist">
         <li class="active">
             <a href="#tab_penerimaan" data-toggle="tab" role="tab">
-                <i class="fa fa-hourglass-half text-yellow"></i> Penerimaan (Draft)
+                <i class="fa fa-hourglass-half text-yellow"></i> Penerimaan Piutang Invoice <span class="badge bg-yellow" id="badge_draft_invoice" style="margin-left: 4px;">0</span>
+            </a>
+        </li>
+        <li>
+            <a href="#tab_kwitansi" data-toggle="tab" role="tab">
+                <i class="fa fa-ticket text-aqua"></i> Penerimaan Piutang Kwitansi Deposit <span class="badge bg-aqua" id="badge_draft_deposit" style="margin-left: 4px;">0</span>
             </a>
         </li>
         <li>
             <a href="#tab_report" data-toggle="tab" role="tab">
-                <i class="fa fa-check-square-o text-green"></i> Report Penerimaan (Sudah Diproses)
+                <i class="fa fa-check-square-o text-green"></i> Report Penerimaan <span class="badge bg-green" id="badge_report" style="margin-left: 4px;">0</span>
             </a>
         </li>
     </ul>
@@ -123,8 +128,51 @@
             </div>
         </div>
 
+        <div class="tab-pane" id="tab_kwitansi">
+            <div class="filter-panel">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="bank_filter_kwitansi">Filter Bank Penerima</label>
+                        <select name="bank" id="bank_filter_kwitansi" class="form-control form-control-sm bank">
+                            <option value="">- Semua Bank -</option>
+                            <?php foreach ($list_bank as $item_bank) : ?>
+                                <option value="<?= $item_bank['id'] ?>"><?= htmlspecialchars($item_bank['nama_bank'] . ' - ' . $item_bank['rekening'] . ' - ' . $item_bank['nama']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2" style="margin-top: 22px;">
+                        <button type="button" class="btn btn-sm btn-primary search" id="btn_search_kwitansi">
+                            <i class="fa fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="table_kwitansi" style="width: 100%;">
+                    <thead>
+                        <tr style="background-color: #f8fafc;">
+                            <th class="text-center" style="width: 50px;">No.</th>
+                            <th class="text-center" style="width: 120px;">Tanggal Transaksi</th>
+                            <th class="text-center" style="width: 140px;">Reference No.</th>
+                            <th style="min-width: 180px;">Bank</th>
+                            <th style="min-width: 220px;">Keterangan</th>
+                            <th class="text-right" style="width: 130px;">Nominal (Rp)</th>
+                            <th class="text-center" style="width: 90px;">Status</th>
+                            <th class="text-center" style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- TAB 2: REPORT PENERIMAAN (USED) -->
         <div class="tab-pane" id="tab_report">
+            <div class="row" style="margin-bottom:12px">
+                <div class="col-md-4"><label for="rep_kind">Jenis Penerimaan</label><select id="rep_kind" class="form-control"><option value="">Semua</option><option value="invoice">Invoice</option><option value="deposit">Kwitansi Deposit</option></select></div>
+                <div class="col-md-4"><label for="rep_customer">ID Customer</label><input id="rep_customer" class="form-control" placeholder="Semua customer"></div>
+            </div>
             <div class="filter-panel">
                 <div class="row">
                     <div class="col-md-2">
@@ -184,7 +232,7 @@
                             <th style="min-width: 140px;">Bank</th>
                             <th style="min-width: 180px;">Detail Penerimaan Bank</th>
                             <th style="min-width: 160px;">Customer</th>
-                            <th class="text-center" style="width: 140px;">Nomor Invoice</th>
+                            <th class="text-center" style="width: 140px;">Nomor Invoice / Kwitansi</th>
                             <th class="text-center" style="width: 90px;">Company</th>
                             <th class="text-center" style="width: 130px;">TAX Code & PPh 23</th>
                             <th class="text-right" style="width: 140px;">Penerimaan Bank</th>
@@ -252,11 +300,49 @@
                 { data: 'action', className: 'text-center nowrap' }
             ],
             order: [[1, 'desc']],
-            pageLength: 25
+            pageLength: 25,
+            drawCallback: function(settings) {
+                var cnt = (settings.json && settings.json.recordsFiltered !== undefined) ? settings.json.recordsFiltered : 0;
+                $('#badge_draft_invoice').text(cnt);
+            }
         });
 
         $('#btn_search_draft').on('click', function() {
             table.draw();
+        });
+
+        var table_kwitansi = $('#table_kwitansi').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: siteurl + active_controller + 'get_alokasi_penerimaan',
+                type: 'POST',
+                data: function(d) {
+                    d.bank = $('#bank_filter_kwitansi').val();
+                    d.tab = 'draft';
+                    d.receipt_kind = 'deposit';
+                }
+            },
+            columns: [
+                { data: 'no', className: 'text-center' },
+                { data: 'tgl_transaksi_bank', className: 'text-center nowrap' },
+                { data: 'reference_no', className: 'text-center' },
+                { data: 'bank' },
+                { data: 'keterangan' },
+                { data: 'nominal', className: 'text-right font-bold' },
+                { data: 'status', className: 'text-center' },
+                { data: 'action', className: 'text-center nowrap' }
+            ],
+            order: [[1, 'desc']],
+            pageLength: 25,
+            drawCallback: function(settings) {
+                var cnt = (settings.json && settings.json.recordsFiltered !== undefined) ? settings.json.recordsFiltered : 0;
+                $('#badge_draft_deposit').text(cnt);
+            }
+        });
+
+        $('#btn_search_kwitansi').on('click', function() {
+            table_kwitansi.draw();
         });
 
         // Init DataTables for Tab 2 (Report Penerimaan Server-Side)
@@ -270,6 +356,8 @@
                     d.year = $('#rep_year').val();
                     d.month = $('#rep_month').val();
                     d.company = $('#rep_company').val();
+                    d.receipt_kind = $('#rep_kind').val();
+                    d.id_customer = $('#rep_customer').val();
                     d.custom_search = $('#rep_search').val();
                 }
             },
@@ -293,6 +381,7 @@
                 if (json) {
                     var countRec = json.recordsFiltered !== undefined ? json.recordsFiltered : 0;
                     var countInv = json.count_invoices !== undefined ? json.count_invoices : 0;
+                    $('#badge_report').text(countRec);
                     $('#foot_summary_report').html('<b>Total (' + countRec + ' penerimaan, ' + countInv + ' invoice):</b>');
                     $('#foot_tot_nominal_report').html('<b>' + (json.total_nominal || 'Rp. 0,00') + '</b>');
                 }
@@ -309,7 +398,7 @@
             var expUrl = siteurl + active_controller + 'export_excel?year=' + encodeURIComponent(year) +
                 '&month=' + encodeURIComponent(month) +
                 '&company=' + encodeURIComponent(company) +
-                '&search=' + encodeURIComponent(search);
+                '&search=' + encodeURIComponent(search) + '&receipt_kind=' + encodeURIComponent($('#rep_kind').val()) + '&id_customer=' + encodeURIComponent($('#rep_customer').val());
             $('#btn_export_excel').attr('href', expUrl);
         }
 
@@ -323,7 +412,7 @@
             }
         });
 
-        $('#rep_year, #rep_month, #rep_company').on('change', function() {
+        $('#rep_year, #rep_month, #rep_company, #rep_kind, #rep_customer').on('change', function() {
             table_report.draw();
         });
 
@@ -332,6 +421,7 @@
             $('#rep_month').val('');
             $('#rep_company').val('');
             $('#rep_search').val('');
+            $('#rep_kind, #rep_customer').val('');
             table_report.draw();
         });
 
@@ -342,8 +432,15 @@
                 table_report.columns.adjust().draw();
             } else if (target === '#tab_penerimaan') {
                 table.columns.adjust().draw();
+            } else if (target === '#tab_kwitansi') {
+                table_kwitansi.columns.adjust().draw();
             }
         });
+
+        // Buka tab dari alamat, mis. penerimaan_uang#tab_kwitansi dari daftar Kwitansi Deposit
+        if (['#tab_penerimaan', '#tab_kwitansi', '#tab_report'].indexOf(window.location.hash) !== -1) {
+            $('#penerimaan_tabs a[href="' + window.location.hash + '"]').tab('show');
+        }
 
         // Detail Modal Click
         $(document).on('click', '.detail', function() {
@@ -357,6 +454,13 @@
                 data: { id_alokasi: id },
                 success: function(result) {
                     $('#MyModalBody').html(result);
+                    // Input total/kontrol di modal detail memakai class autonum; tanpa init nominalnya tampil tanpa pemisah ribuan.
+                    $('#MyModalBody .autonum').autoNumeric('init', {
+                        vMin: '-9999999999999.99',
+                        vMax: '9999999999999.99',
+                        aSep: ',',
+                        aDec: '.'
+                    });
                 },
                 error: function() {
                     $('#MyModalBody').html('<div class="alert alert-danger">Gagal memuat rincian data penerimaan.</div>');

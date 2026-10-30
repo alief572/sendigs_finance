@@ -136,3 +136,63 @@ CREATE TABLE IF NOT EXISTS `tr_penerimaan_pph_23` (
   `created_date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `tr_customer_deposit` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `no_deposit` VARCHAR(50) NOT NULL UNIQUE,
+  `id_customer` VARCHAR(100) NOT NULL,
+  `nm_customer` VARCHAR(255) NOT NULL,
+  `id_company` VARCHAR(50) NOT NULL DEFAULT '1',
+  `tipe_sumber` ENUM('LEBIH_BAYAR', 'KWITANSI_DEPOSIT') NOT NULL,
+  `no_referensi` VARCHAR(100) NOT NULL,
+  `po_customer` TEXT NULL,
+  `tanggal` DATE NOT NULL,
+  `nominal_awal` DECIMAL(20,2) NOT NULL,
+  `nominal_terpakai` DECIMAL(20,2) NOT NULL DEFAULT '0.00',
+  `sisa_saldo` DECIMAL(20,2) NOT NULL,
+  `status` ENUM('MENUNGGU_PEMBAYARAN', 'AKTIF', 'TERPAKAI_SEBAGIAN', 'LUNAS_TERPAKAI') NOT NULL DEFAULT 'AKTIF',
+  `keterangan` TEXT NULL,
+  `created_by` VARCHAR(100) NOT NULL,
+  `created_date` DATETIME NOT NULL,
+  `updated_by` VARCHAR(100) NULL,
+  `updated_date` DATETIME NULL,
+  INDEX `idx_cust_status` (`id_customer`, `status`),
+  INDEX `idx_reff` (`no_referensi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `tr_customer_deposit_mutasi` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `id_deposit` INT NOT NULL,
+  `id_customer` VARCHAR(100) NOT NULL,
+  `no_transaksi` VARCHAR(100) NOT NULL,
+  `tanggal` DATE NOT NULL,
+  `jenis_mutasi` ENUM('IN', 'OUT') NOT NULL,
+  `nominal` DECIMAL(20,2) NOT NULL,
+  `saldo_sebelum` DECIMAL(20,2) NOT NULL,
+  `saldo_sesudah` DECIMAL(20,2) NOT NULL,
+  `keterangan` TEXT NULL,
+  `created_by` VARCHAR(100) NOT NULL,
+  `created_date` DATETIME NOT NULL,
+  INDEX `idx_deposit` (`id_deposit`),
+  INDEX `idx_transaksi` (`no_transaksi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `tr_kwitansi_deposit` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `no_kwitansi` VARCHAR(100) NOT NULL UNIQUE,
+  `tanggal_kwitansi` DATE NOT NULL,
+  `id_customer` VARCHAR(100) NOT NULL,
+  `nm_customer` VARCHAR(255) NOT NULL,
+  `id_company` VARCHAR(50) NOT NULL DEFAULT '1',
+  `po_customer` TEXT NOT NULL,
+  `nilai_kwitansi` DECIMAL(20,2) NOT NULL,
+  `status` ENUM('MENUNGGU_PEMBAYARAN', 'LUNAS') NOT NULL DEFAULT 'MENUNGGU_PEMBAYARAN',
+  `no_penerimaan` VARCHAR(100) NULL,
+  `keterangan` TEXT NULL,
+  `created_by` VARCHAR(100) NOT NULL,
+  `created_date` DATETIME NOT NULL,
+  `updated_by` VARCHAR(100) NULL,
+  `updated_date` DATETIME NULL,
+  INDEX `idx_kw_cust` (`id_customer`),
+  INDEX `idx_kw_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

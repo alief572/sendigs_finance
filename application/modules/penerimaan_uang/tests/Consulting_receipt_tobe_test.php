@@ -1,366 +1,11 @@
 <?php
-// Test Suite for To-Be Consulting Receipt Engine & Accounting Journal
-define('BASEPATH', __DIR__);
-define('DBCNL', 'consultant_fixture');
-set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
-class Admin_Controller {}
-class BF_Model {}
-function has_permission($p) { return true; }
-function int_to_roman($m) { return array(1=>'I',2=>'II',3=>'III',4=>'IV',5=>'V',6=>'VI',7=>'VII',8=>'VIII',9=>'IX',10=>'X',11=>'XI',12=>'XII')[(int)$m]; }
-function log_message($level, $message) {}
-
-require_once dirname(__DIR__, 2) . '/invoicing/libraries/Invoice_calculation.php';
-require_once dirname(__DIR__, 2) . '/invoicing/libraries/Invoice_consulting.php';
-require_once dirname(__DIR__, 2) . '/invoicing/libraries/Invoice_consulting_service.php';
-require_once dirname(__DIR__) . '/libraries/Penerimaan_calculation.php';
-require_once dirname(__DIR__) . '/libraries/Consulting_receipt.php';
-
-function checkAssert($cond, $msg) {
-    if (!$cond) throw new RuntimeException("ASSERTION FAILED: " . $msg);
-}
-
-class MockResult {
-    private $rows;
-    public function __construct($rows = array()) { $this->rows = $rows; }
-    public function row_array() { return $this->rows ? $this->rows[0] : array(); }
-    public function result_array() { return $this->rows; }
-    public function row() { return $this->rows ? (object)$this->rows[0] : null; }
-    public function num_rows() { return count($this->rows); }
-}
-
-class MockDb {
-    public $invoices = array();
-    public $alloc_splits = array();
-    public $alloc_details = array();
-    public $banks = array();
-    public $coa_masters = array();
-    public $receipts = array();
-    public $receipt_details = array();
-    public $journals = array();
-    public $spk_rows = array();
-    public $journalCounter = 0;
-    public $db_debug = false;
-
-    public function query($sql, $params = array()) {
-        if (strpos($sql, 'SELECT GET_LOCK(') === 0) {
-            return new MockResult(array(array('acquired' => 1)));
-        }
-        if (strpos($sql, 'SELECT RELEASE_LOCK(') === 0) {
-            return new MockResult(array(array('released' => 1)));
-        }
-        if (strpos($sql, 'SELECT * FROM ms_bank WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->banks, function($b) use ($id) { return $b['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT * FROM tr_alokasi_split WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->alloc_splits, function($s) use ($id) { return $s['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT * FROM tr_alokasi_detail WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->alloc_details, function($d) use ($id) { return $d['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT COALESCE(SUM(nominal_penerimaan_bank),0) AS cash FROM tr_penerimaan_piutang WHERE id_alokasi=?') !== false) {
-            $allocId = $params[0];
-            $sum = 0;
-            foreach ($this->receipts as $r) {
-                if ($r['id_alokasi'] == $allocId) $sum += (float)$r['nominal_penerimaan_bank'];
-            }
-            return new MockResult(array(array('cash' => Invoice_calculation::decimal(Penerimaan_calculation::cents((string)$sum)))));
-        }
-        if (strpos($sql, 'SELECT COALESCE(SUM(h.nominal_penerimaan_bank),0) AS cash FROM tr_penerimaan_piutang h LEFT JOIN tr_alokasi_split sp') !== false) {
-            $sum = 0;
-            foreach ($this->receipts as $r) $sum += (float)$r['nominal_penerimaan_bank'];
-            return new MockResult(array(array('cash' => Invoice_calculation::decimal(Penerimaan_calculation::cents((string)$sum)))));
-        }
-        if (strpos($sql, 'SELECT * FROM tr_invoicing WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->invoices, function($i) use ($id) { return $i['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT id FROM tr_invoicing WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->invoices, function($i) use ($id) { return $i['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT no_spk FROM') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->spk_rows, function($s) use ($id) { return $s['id_spk_penawaran'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'FROM tr_jurnal WHERE no_jurnal LIKE') !== false || strpos($sql, 'max_no FROM tr_jurnal') !== false || strpos($sql, 'SELECT MAX(id) as max_id FROM tr_jurnal') !== false) {
-            return new MockResult(array(array('max_no' => ++$this->journalCounter, 'max_id' => $this->journalCounter)));
-        }
-        if (strpos($sql, 'SELECT MAX(no_surat) as maxP FROM tr_penerimaan_piutang') !== false) {
-            return new MockResult(array(array('maxP' => '00001/RKN-KRG/X/26')));
-        }
-        if (strpos($sql, 'SELECT * FROM tr_jurnal WHERE no_transaksi=?') !== false) {
-            $num = $params[0];
-            $found = array_values(array_filter($this->journals, function($j) use ($num) { return $j['no_transaksi'] == $num; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT id FROM tr_penerimaan_piutang WHERE no_surat=?') !== false) {
-            $num = $params[0];
-            $found = array_values(array_filter($this->receipts, function($r) use ($num) { return $r['no_surat'] == $num; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT * FROM tr_penerimaan_piutang WHERE id=?') !== false) {
-            $id = $params[0];
-            $found = array_values(array_filter($this->receipts, function($r) use ($id) { return $r['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT * FROM tr_penerimaan_piutang_detail WHERE id_header=?') !== false) {
-            $hdr = $params[0];
-            $found = array_values(array_filter($this->receipt_details, function($d) use ($hdr) { return $d['id_header'] == $hdr; }));
-            return new MockResult($found);
-        }
-        if (strpos($sql, 'SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=? AND id>?') !== false) {
-            return new MockResult(array());
-        }
-        if (strpos($sql, 'SELECT ENGINE FROM information_schema.TABLES') !== false) {
-            return new MockResult(array(array('ENGINE' => 'InnoDB')));
-        }
-        return new MockResult(array());
-    }
-
-    public function field_exists($field, $table) { return true; }
-    public function table_exists($table) { return true; }
-    private $txSnapshot;
-    public function trans_begin() {
-        $this->txSnapshot = array(
-            'invoices' => $this->invoices,
-            'receipts' => $this->receipts,
-            'receipt_details' => $this->receipt_details,
-            'journals' => $this->journals,
-            'alloc_details' => $this->alloc_details,
-            'alloc_splits' => $this->alloc_splits
-        );
-        return true;
-    }
-    public function trans_status() { return true; }
-    public function trans_commit() { $this->txSnapshot = null; return true; }
-    public function trans_rollback() {
-        if ($this->txSnapshot !== null) {
-            $this->invoices = $this->txSnapshot['invoices'];
-            $this->receipts = $this->txSnapshot['receipts'];
-            $this->receipt_details = $this->txSnapshot['receipt_details'];
-            $this->journals = $this->txSnapshot['journals'];
-            $this->alloc_details = $this->txSnapshot['alloc_details'];
-            $this->alloc_splits = $this->txSnapshot['alloc_splits'];
-            $this->txSnapshot = null;
-        }
-        return true;
-    }
-
-    public function get_where($table, $where) {
-        if ($table === 'tr_invoicing') {
-            $id = $where['id'];
-            $found = array_values(array_filter($this->invoices, function($i) use ($id) { return $i['id'] == $id; }));
-            return new MockResult($found);
-        }
-        if ($table === 'ms_bank') {
-            $id = $where['id'];
-            $found = array_values(array_filter($this->banks, function($b) use ($id) { return $b['id'] == $id; }));
-            return new MockResult($found);
-        }
-        return new MockResult(array());
-    }
-
-    public function insert($table, $row) {
-        if ($table === 'tr_penerimaan_piutang') {
-            $row['id'] = count($this->receipts) + 1;
-            $this->receipts[] = $row;
-            return true;
-        }
-        return true;
-    }
-
-    public function insert_batch($table, $rows) {
-        if ($table === 'tr_penerimaan_piutang_detail') {
-            foreach ($rows as $r) {
-                $r['id'] = count($this->receipt_details) + 1;
-                $this->receipt_details[] = $r;
-            }
-            return true;
-        }
-        if ($table === 'tr_jurnal') {
-            foreach ($rows as $r) {
-                $r['id'] = count($this->journals) + 1;
-                $this->journals[] = $r;
-            }
-            return true;
-        }
-        return true;
-    }
-
-    public function update($table, $data, $where) {
-        if ($table === 'tr_invoicing') {
-            $id = $where['id'];
-            foreach ($this->invoices as &$inv) {
-                if ($inv['id'] == $id) {
-                    $inv = array_merge($inv, $data);
-                }
-            }
-            return true;
-        }
-        if ($table === 'tr_alokasi_detail') {
-            $id = $where['id'];
-            foreach ($this->alloc_details as &$d) {
-                if ($d['id'] == $id) {
-                    $d = array_merge($d, $data);
-                }
-            }
-            return true;
-        }
-        if ($table === 'tr_alokasi_split') {
-            $id = $where['id'];
-            foreach ($this->alloc_splits as &$s) {
-                if ($s['id'] == $id) {
-                    $s = array_merge($s, $data);
-                }
-            }
-            return true;
-        }
-        return true;
-    }
-
-    public function delete($table, $where) {
-        if ($table === 'tr_jurnal') {
-            $no = $where['no_transaksi'];
-            $this->journals = array_values(array_filter($this->journals, function($j) use ($no) { return $j['no_transaksi'] !== $no; }));
-            return true;
-        }
-        if ($table === 'tr_penerimaan_piutang_detail') {
-            $hdr = $where['id_header'];
-            $this->receipt_details = array_values(array_filter($this->receipt_details, function($d) use ($hdr) { return $d['id_header'] !== $hdr; }));
-            return true;
-        }
-        if ($table === 'tr_penerimaan_piutang') {
-            $id = $where['id'];
-            $this->receipts = array_values(array_filter($this->receipts, function($r) use ($id) { return $r['id'] != $id; }));
-            return true;
-        }
-        return true;
-    }
-}
-
-class MockAuth { public function user_id() { return 'tester-user'; } }
-
-class MockModel {
-    public function generate_id() { return '00001/RKN-KRG/X/26'; }
-}
-
-class MockCi {
-    public $db;
-    public $auth;
-    public $Penerimaan_uang_model;
-    public function __construct($db) {
-        $this->db = $db;
-        $this->auth = new MockAuth();
-        $this->Penerimaan_uang_model = new MockModel();
-    }
-}
-
-// Setup common fixtures
-function createFixtures() {
-    $db = new MockDb();
-
-    // Banks
-    $db->banks = array(
-        array('id' => 1, 'nama' => 'Bank Mandiri', 'coa_bank' => '1101-02-01')
-    );
-
-    // Allocation: Bank deposit Rp 500.000.000
-    $db->alloc_details = array(
-        array(
-            'id' => 10,
-            'bank' => 1,
-            'tipe_bank' => 1,
-            'tanggal_transaksi' => '2026-10-26',
-            'nominal_debit' => '500000000.00',
-            'nilai_terpakai' => '0.00',
-            'saldo' => '500000000.00',
-            'keterangan' => 'Terima Transfer'
-        )
-    );
-    $db->alloc_splits = array(
-        array(
-            'id' => 100,
-            'id_alokasi_detail' => 10,
-            'nominal' => '500000000.00',
-            'nilai_terpakai' => '0.00',
-            'jenis_alokasi' => '1'
-        )
-    );
-
-    // COA Master for Company 1
-    $db->coa_masters = array(
-        array('no_perkiraan' => '1101-02-01', 'nama' => 'Bank Mandiri Operasional'),
-        array('no_perkiraan' => '1102-01-01', 'nama' => 'Piutang Dagang Usaha'),
-        array('no_perkiraan' => '1106-01-02', 'nama' => 'PPh 23 Disetor'),
-        array('no_perkiraan' => '7201-01-04', 'nama' => 'Biaya Administrasi Bank')
-    );
-
-    // SPK
-    $db->spk_rows = array(
-        array('id_spk_penawaran' => 'SPK-001', 'no_spk' => 'SPK/KONS/X/2026')
-    );
-
-    return $db;
-}
-
-function makeInvoice($id, $no, $taxTreatment, $sales, $dppLain, $ppn, $pph, $tagihan, $saldo) {
-    $snapshot = array(
-        'type' => $taxTreatment,
-        'owner' => array('id' => '1', 'nm_company' => 'PT Konsultan Prima'),
-        'accounts' => array(
-            'receivable' => array('code' => '1102-01-01', 'name' => 'Piutang Dagang Usaha'),
-            'pph' => array('code' => '1106-01-02', 'name' => 'PPh 23 Disetor')
-        )
-    );
-    return array(
-        'id' => $id,
-        'no_invoice' => $no,
-        'tanggal_invoice' => '2026-10-25',
-        'id_customer' => 'CUST-001',
-        'nm_customer' => 'PT Mitra Sejahtera',
-        'id_spk_penawaran' => 'SPK-001',
-        'consulting_version' => 3,
-        'tax_treatment' => $taxTreatment,
-        'total_nominal_jurnal' => Invoice_calculation::decimal($sales),
-        'dpp_lain_lain_jurnal' => Invoice_calculation::decimal($dppLain),
-        'ppn_jurnal' => Invoice_calculation::decimal($ppn),
-        'pph_jurnal' => Invoice_calculation::decimal($pph),
-        'tagihan_ppn_jurnal' => Invoice_calculation::decimal($tagihan),
-        'total_akhir_jurnal' => Invoice_calculation::decimal($tagihan),
-        'saldo_piutang' => Invoice_calculation::decimal($saldo),
-        'consulting_snapshot' => json_encode($snapshot),
-        'tipe_invoice' => '0',
-        'non_kons' => '0'
-    );
-}
-
-class CustomService extends Invoice_consulting_service {
-    public function master($owner) {
-        return array(
-            array('no_perkiraan' => '1101-02-01', 'nama' => 'Bank Mandiri Operasional'),
-            array('no_perkiraan' => '1102-01-01', 'nama' => 'Piutang Dagang Usaha'),
-            array('no_perkiraan' => '1106-01-02', 'nama' => 'PPh 23 Disetor'),
-            array('no_perkiraan' => '7201-01-04', 'nama' => 'Biaya Administrasi Bank')
-        );
-    }
-}
-
-echo "Starting Consulting Receipt To-Be Test Suite...\n\n";
-
-// =========================================================================
+require __DIR__ . '/consulting_fixture.php';
 // TEST 1: PKP Invoice Receipt (Full Payment with Biaya Admin & PPh 23)
 // =========================================================================
 echo "=== TEST 1: PKP Full Payment with Admin & PPh 23 ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '218330833.33';
+$db->alloc_details[0]['nominal_debit'] = '218330833.33';
 // PKP: Sales 200jt, DPP Lain 183.333.333,33, PPN 22jt, PPh 3.666.666,67, Tagihan/Piutang 222jt
 $inv1 = makeInvoice(1, 'INV-PKP-001', 'PKP', 20000000000, 18333333333, 2200000000, 366666667, 22200000000, 22200000000);
 $db->invoices = array($inv1);
@@ -383,6 +28,8 @@ $prevRes = $engine->preview($prevPost);
 checkAssert(count($prevRes['rows']) === 1, 'Preview returns 1 invoice row');
 checkAssert($prevRes['rows'][0]['tax_treatment'] === 'PKP', 'Preview detects PKP');
 checkAssert($prevRes['rows'][0]['default_pph'] === 366666667, 'Preview default PPh 23 matches 2%');
+// Nomor SPK = id_spk_penawaran (kons_tr_spk_penawaran tidak punya kolom no_spk); fixture melempar bila kolom itu di-query.
+checkAssert($prevRes['rows'][0]['spk'] === 'SPK-001', 'Preview SPK number comes from id_spk_penawaran without querying no_spk');
 
 // 1b. Save
 // Piutang: 222.000.000 (22200000000 cents), PPh: 3.666.666,67 (366666667 cents), Admin: 2.500 (250000 cents), Sisa: 0
@@ -399,7 +46,7 @@ $savePost = array(
     'pph_actual_1' => '3666666.67',
     'biaya_admin_1' => '2500.00',
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '218330833.33'
+    'penerimaan_1' => '222000000.00'
 );
 $saveRes = $engine->save($savePost);
 checkAssert($saveRes['status'] === 1 && $saveRes['save'] === 1, 'PKP Save success: ' . ($saveRes['msg'] ?? ''));
@@ -425,6 +72,8 @@ echo "PASS: PKP Full Payment with Admin & PPh 23\n\n";
 // =========================================================================
 echo "=== TEST 2: WAPU Invoice Receipt ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '294500000.00';
+$db->alloc_details[0]['nominal_debit'] = '294500000.00';
 // WAPU: Sales 300jt, DPP Lain 275jt, PPN 0, PPh 5.5jt, Tagihan/Piutang 300jt
 $inv2 = makeInvoice(2, 'INV-WAPU-001', 'WAPU', 30000000000, 27500000000, 0, 550000000, 30000000000, 30000000000);
 $db->invoices = array($inv2);
@@ -447,7 +96,7 @@ $saveRes = $engine->save(array(
     'pph_actual_1' => '5500000.00',
     'biaya_admin_1' => '0.00',
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '294500000.00'
+    'penerimaan_1' => '300000000.00'
 ));
 checkAssert($saveRes['status'] === 1, 'WAPU Save success: ' . ($saveRes['msg'] ?? ''));
 $totDebit = 0; $totKredit = 0;
@@ -464,6 +113,8 @@ echo "PASS: WAPU Invoice Receipt\n\n";
 // =========================================================================
 echo "=== TEST 3: Partial Payment (Underpayment) - 2 Receivable Journal Lines ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '100000000.00';
+$db->alloc_details[0]['nominal_debit'] = '100000000.00';
 // Invoice Piutang 222jt, PPh 3.666.666,67.
 $inv3 = makeInvoice(3, 'INV-PARTIAL-001', 'PKP', 20000000000, 18333333333, 2200000000, 366666667, 22200000000, 22200000000);
 $db->invoices = array($inv3);
@@ -489,7 +140,7 @@ $saveRes = $engine->save(array(
     'pph_actual_1' => '3666666.67',
     'biaya_admin_1' => '0.00',
     'sisa_piutang_1' => '118333333.33',
-    'penerimaan_1' => '100000000.00'
+    'penerimaan_1' => '103666666.67'
 ));
 checkAssert($saveRes['status'] === 1, 'Partial payment save success: ' . ($saveRes['msg'] ?? ''));
 
@@ -529,6 +180,8 @@ echo "PASS: Partial Payment with 2 Receivable Journal Lines (Decision 3)\n\n";
 // =========================================================================
 echo "=== TEST 4: Editable PPh 23 per Invoice ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '218334000.00';
+$db->alloc_details[0]['nominal_debit'] = '218334000.00';
 $inv4 = makeInvoice(4, 'INV-PPH-EDIT', 'PKP', 20000000000, 18333333333, 2200000000, 366666667, 22200000000, 22200000000);
 $db->invoices = array($inv4);
 $ci = new MockCi($db);
@@ -550,7 +203,7 @@ $saveRes = $engine->save(array(
     'pph_actual_1' => '3666000.00',
     'biaya_admin_1' => '0.00',
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '218334000.00'
+    'penerimaan_1' => '222000000.00'
 ));
 checkAssert($saveRes['status'] === 1, 'Custom PPh 23 save success: ' . ($saveRes['msg'] ?? ''));
 $savedPphDebit = 0;
@@ -565,6 +218,8 @@ echo "PASS: Editable PPh 23 per Invoice\n\n";
 // =========================================================================
 echo "=== TEST 5: Rejection Validations ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '218330833.33';
+$db->alloc_details[0]['nominal_debit'] = '218330833.33';
 $inv5 = makeInvoice(5, 'INV-REJECT', 'PKP', 20000000000, 18333333333, 2200000000, 366666667, 22200000000, 22200000000);
 $db->invoices = array($inv5);
 $ci = new MockCi($db);
@@ -585,7 +240,7 @@ $resKontrol = $engine->save(array(
     'pph_actual_1' => '3666666.67',
     'biaya_admin_1' => '0.00',
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '200000000.00' // Unbalanced by ~18.333.333
+    'penerimaan_1' => '222000000.00' // Unbalanced by ~18.333.333
 ));
 checkAssert($resKontrol['status'] === 0 && strpos($resKontrol['msg'], 'Kontrol belum 0') !== false, 'Rejected non-zero kontrol');
 
@@ -601,7 +256,7 @@ $resAdmin = $engine->save(array(
     'pph_actual_1' => '3666666.67',
     'biaya_admin_1' => '15000.00', // Admin 15.000 > 10.000
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '218318333.33'
+    'penerimaan_1' => '222000000.00'
 ));
 checkAssert($resAdmin['status'] === 0 && strpos($resAdmin['msg'], '10.000') !== false, 'Rejected admin > 10.000');
 echo "PASS: Rejection Validations\n\n";
@@ -611,6 +266,8 @@ echo "PASS: Rejection Validations\n\n";
 // =========================================================================
 echo "=== TEST 6: Rollback Verification ===\n";
 $db = createFixtures();
+$db->alloc_splits[0]['nominal'] = '218330833.33';
+$db->alloc_details[0]['nominal_debit'] = '218330833.33';
 $inv6 = makeInvoice(6, 'INV-ROLLBACK', 'PKP', 20000000000, 18333333333, 2200000000, 366666667, 22200000000, 22200000000);
 $db->invoices = array($inv6);
 $ci = new MockCi($db);
@@ -629,7 +286,7 @@ $saveRes = $engine->save(array(
     'pph_actual_1' => '3666666.67',
     'biaya_admin_1' => '2500.00',
     'sisa_piutang_1' => '0.00',
-    'penerimaan_1' => '218330833.33'
+    'penerimaan_1' => '222000000.00'
 ));
 checkAssert($saveRes['status'] === 1, 'Initial receipt saved for rollback');
 $receiptId = $db->receipts[0]['id'];

@@ -1,3 +1,37 @@
+# Penyelarasan konsep penerimaan Consultant — 26 Oktober 2026
+
+Implementasi workspace mengikuti keputusan pengguna: deposit customer ditambahkan pada 30 Oktober 2026 (lihat bagian "Deposit Customer" di bawah); invoice legacy tetap jalur historis; batch baru/legacy ditolak; PPh kumulatif maksimal sisa 2% DPP; dua desimal, pembulatan half-up dan kontrol tepat nol.
+
+## Kontrak aktif
+
+- Untuk invoice baru, `penerimaan_<n>` adalah alokasi pelunasan piutang gross. Alokasi + sisa = saldo awal transaksi. Kas bank = alokasi - PPh aktual - admin. Pilihan PPh N selalu nol.
+- Seluruh kas batch harus sama dengan sisa nominal alokasi bank database. Uang berlebih diisi sebagai Lebih Bayar per invoice (masuk ke saldo Deposit Customer) atau dibagi ulang di modul alokasi. Total admin maksimal Rp10.000 per penerimaan.
+- Form memformat angka dengan koma ribuan/titik desimal dan menserialisasi monetary fields sebagai angka mentah dua desimal. Server tetap memakai parser ketat, menghitung ulang nominal/jurnal, memeriksa fingerprint dan mengunci invoice/alokasi dengan mekanisme transaksi existing.
+- Default PPh adalah sisa batas 2% DPP setelah snapshot penerimaan yang masih berlaku. Riwayat yang tidak lengkap, tidak sesuai jurnal, atau tidak sesuai rantai saldo ditolak untuk rekonsiliasi. Tidak ada koreksi historis otomatis.
+- Snapshot baru memakai `calculation_version=4` dalam kolom JSON existing. `consulting_version=3` dan `consulting_batch=3` dipertahankan untuk integrasi modul existing. Tidak ada migration/tabel baru.
+- Preview, jurnal simpan dan GL menggunakan komponen/COA snapshot yang sama: debit kas/PPh/admin, kredit saldo awal transaksi, debit sisa. Tanggal mengikuti rekening koran; rincian/report/ekspor memakai snapshot untuk angka historis.
+- Rollback mengembalikan saldo, pemakaian bank, dan batas PPh; menolak transaksi posted, cicilan bukan terbaru, jurnal/snapshot berbeda, serta bukti potong terkait. Header/detail/jurnal/saldo berubah atomik dan sukses hanya setelah commit.
+- Response endpoint tetap `status`, `save` saat sukses save, `msg`, dan `message`; field serta endpoint legacy tidak dimigrasikan ke kontrak gross baru.
+
+## Paket rilis
+
+Rilis controller/model/library/view modul penerimaan, `assets/js/penerimaan_uang/consulting.js`, dan `application/modules/invoicing/libraries/Invoice_consulting.php` bersamaan. Library invoice diperlukan agar posting GL menerima snapshot kalkulasi baru. Gunakan schema consulting v3 existing; tidak menjalankan ulang migration atau rollback schema.
+
+Belum ada deployment atau perubahan database aplikasi. Data lama dengan riwayat ambigu tetap memerlukan rekonsiliasi terpisah. Pengujian tidak membuka browser.
+
+## Validasi
+
+- `scratch/runtime/php74/php.exe application/modules/invoicing/tests/Consulting_integration_test.php --isolated-local-db`: **627 checks PASS**, MariaDB disposable port 33319, database acak `codex_consulting_*`, dibersihkan dalam finally. Meliputi submit bersamaan, kegagalan header/detail/jurnal/update saldo/update bank/commit, rollback gagal/sukses, bukti potong, permission, PPh historis, posting GL, report/ekspor, audit writer failure, serta regresi consulting/Vuca.
+- PHP penerimaan: `Concept_contract_test.php`, `Consulting_receipt_tobe_test.php`, `calculation_test.php`, `detail_journal_test.php`, `legacy_vuca_preview_test.php`: PASS.
+- PHP invoice: `Consulting_calculation_test.php`: **99 checks PASS** termasuk kontrak snapshot lama.
+- Node penerimaan: `consulting_client_test.js`, `consulting_view_test.js`, `calculation_test.js`, `installment_view_test.js`: PASS. Tes view menjalankan script dari render PHP aktual, mengirim payload normalisasi ke writer, dan mencocokkan preview dengan jurnal tersimpan tanpa browser.
+- `scratch/penerimaan_concept_audit.php` sekarang meneruskan ke regresi kontrak baru; laporan audit sebelumnya tetap merupakan bukti kondisi sebelum perbaikan.
+
+Detail inventory dan batas pekerjaan: `docs/audits/penerimaan-uang-implementation-2026-10-26.md`.
+
+---
+Catatan berikut adalah riwayat implementasi sebelumnya, bukan kontrak terbaru.
+
 # Integrasi invoice konsultasi reguler versi 3 — 18 Oktober 2026
 
 Batch yang memuat invoice reguler baru memakai Consulting_receipt: PPh aktual didebit saat penerimaan, pengurangan piutang kas+admin+PPh, snapshot per detail, rollback tepat, dan posting GL per owner snapshot. Batch campuran mempertahankan formula legacy pada tiap baris lama. Old-only tetap jalur existing dengan mutex; alokasi induk yang dipakai v3 dilindungi dari overwrite/penghapusan split legacy.
@@ -200,3 +234,44 @@ Pengujian tambahan mencakup edit tanpa field gross, hidden net/jurnal dimanipula
 blokir edit posted/berpenerimaan, penerimaan Vuca kedua pilihan, penolakan lebih
 bayar, dan snapshot gross legacy. Regresi MINARTA dan concurrency tetap lulus.
 Kode hanya berada di workspace; belum diupload ke server website.
+
+
+## Penutupan kontrak deposit Consultant (29 Oktober 2026)
+
+Form memilih ID customer lalu company accounting; company tunggal otomatis. Pilihan
+`legacy` hanya memisahkan invoice lama/Vuca ke alur existing, tanpa mengaktifkan deposit
+pada alur tersebut. Invoice baru tidak dapat dicampur dengan kelompok legacy.
+
+Lookup company: `get_receipt_companies(id_customer, receipt_kind)`. Daftar dokumen,
+saldo dan kartu deposit memakai `id_customer` + `id_company`. Lookup saldo/kartu juga
+menerima `id_invoice` Consultant baru; customer/company diturunkan dari snapshot dan
+identitas eksplisit yang bertentangan ditolak. Company kosong tidak menggabungkan saldo.
+Respons saldo gagal memakai `status=0`, `saldo=null`, dan `error/message`; bukan saldo nol.
+
+Saldo tersedia diverifikasi dari sumber kwitansi/lebih bayar, snapshot penerimaan,
+mutasi IN/OUT dan rantai saldo. Histori ambigu perlu rekonsiliasi dan tidak boleh
+dipakai. Penerimaan tanpa deposit tetap berjalan. Tidak ada backfill atau posting ulang.
+
+Preview/distribusi invoice menggunakan tanggal invoice lalu ID; save memasangkan
+nominal ke ID request. FIFO voucher menggunakan tanggal aktif lalu ID. DataTables,
+export dan detail tetap memakai snapshot penerimaan existing. Laporan verifikasi dan
+kontrak lengkap: `docs/penerimaan-deposit-closure.md`.
+
+Tes tanpa browser: `Deposit_integrity_test.php`, `Deposit_company_test.php`,
+`Deposit_fifo_test.php`, `Concept_contract_test.php`, serta Node
+`company_context_test.js`, `consulting_view_test.js`, `consulting_fifo_view_test.js`,
+`consulting_kwitansi_view_test.js`. Integrasi CI/MariaDB: jalankan
+`application/modules/invoicing/tests/Consulting_integration_test.php --isolated-local-db`
+dengan PHP CLI. Runner tidak membaca kredensial aplikasi; seluruh writes berada pada
+database acak disposable dan dihapus dalam finally.
+
+## Deposit Customer (30 Oktober 2026)
+
+Mengikuti mockup to-be "Penerimaan Piutang + Deposit Consultant" dan jurnal pada "Deposit - SSC.xlsx".
+
+- **Tiga tab** pada Penerimaan Piutang: Penerimaan Piutang Invoice, Penerimaan Piutang Kwitansi Deposit, dan Report Penerimaan. Draft deposit berasal dari alokasi jenis Deposit (id 8) yang menunjuk satu kwitansi.
+- **Kwitansi Deposit** (modul `kwitansi_deposit`) dibuat terikat satu SPK. Jurnal saat dibuat: Piutang Dagang Usaha (D) / Deposit Customer 2102-01-02 (K). Pembayaran tidak diproses di halaman kwitansi.
+- **Penerimaan Kwitansi Deposit**: hanya Biaya Admin yang dapat diisi; kontrol = (nilai kwitansi - admin) - uang masuk = 0; tidak ada PPN, PPh 23, Lebih Bayar, maupun Sisa Piutang. Jurnal: Bank (D) + Biaya Admin (D) / Piutang Dagang Usaha (K). Kwitansi menjadi Lunas dan saldo deposit customer bertambah.
+- **Penerimaan Invoice**: Pakai Deposit (nominal diketik, dibagi per invoice berurutan tanggal; mesin pencatatan memakai voucher FIFO per company) dan Lebih Bayar (masuk saldo). Jurnal baris Deposit Customer: D = dipakai, K = lebih bayar.
+- **Monitoring Deposit** (modul `deposit_customer`) hanya baca: saldo per customer = total masuk - total keluar dari mutasi (Kwitansi Deposit, Lebih Bayar, Deposit Dipakai), tanpa dimensi company.
+- Report Penerimaan menampilkan "Kwitansi Deposit" pada kolom TAX Code & PPh 23 untuk penerimaan kwitansi; export memakai kolom Biaya Admin sebelum Lebih Bayar.

@@ -61,7 +61,8 @@ class Penerimaan_uang_model extends BF_Model
         $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
         $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
         $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
-        $this->db->where('s.jenis_alokasi', 1);
+        $receiptKind = $this->input->post('receipt_kind') === 'deposit' ? 'deposit' : 'invoice';
+        $this->db->where('s.jenis_alokasi', $receiptKind === 'deposit' ? 8 : 1);
 
         // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
         $this->db->where('YEAR(a.tanggal_transaksi) >=', 2025);
@@ -309,7 +310,14 @@ class Penerimaan_uang_model extends BF_Model
         return $years;
     }
 
-    public function get_report_data($year = '', $month = '', $company = '', $search = '')
+    private function receipt_kind_expression()
+    {
+        $dep = "EXISTS (SELECT 1 FROM tr_penerimaan_piutang_detail dk JOIN tr_invoicing ik ON ik.id=dk.id_inv WHERE dk.id_header=p.no_surat AND ik.tax_treatment='DEP')";
+        $ordinary = "EXISTS (SELECT 1 FROM tr_penerimaan_piutang_detail dk LEFT JOIN tr_invoicing ik ON ik.id=dk.id_inv WHERE dk.id_header=p.no_surat AND (ik.tax_treatment IS NULL OR ik.tax_treatment<>'DEP'))";
+        return "COALESCE(p.jenis_penerimaan, CASE WHEN $dep AND NOT $ordinary THEN 'deposit' WHEN NOT $dep THEN 'invoice' ELSE 'mixed' END)";
+    }
+
+    public function get_report_data($year = '', $month = '', $company = '', $search = '', $kind = '', $customer = '')
     {
         $this->db->select('p.id, p.no_surat, p.id_alokasi, p.id_customer, p.nm_customer, p.nominal_penerimaan_bank, p.pph23_dipotong, p.created_date, ' .
             'd.id as detail_id, d.id_inv, d.penerimaan, d.biaya_admin, d.sisa_piutang, d.pph23, d.consulting_snapshot, ' .
@@ -323,6 +331,8 @@ class Penerimaan_uang_model extends BF_Model
         $this->db->join('tr_alokasi_detail a', 'a.id = COALESCE(s.id_alokasi_detail, p.id_alokasi)', 'left');
         $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
         $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
+        if (in_array($kind, array('invoice','deposit'), true)) $this->db->where($this->receipt_kind_expression().' = '.$this->db->escape($kind), null, false);
+        if (is_scalar($customer) && (string)$customer !== '') $this->db->where('p.id_customer', $customer);
 
         if (!empty($year)) {
             $this->db->where('(YEAR(a.tanggal_transaksi) = ' . (int)$year . ' OR (a.tanggal_transaksi IS NULL AND YEAR(p.created_date) = ' . (int)$year . '))');
@@ -350,9 +360,10 @@ class Penerimaan_uang_model extends BF_Model
         // Group rows by p.id
         $groups = array();
         foreach ($rows as $r) {
+            $r = Penerimaan_calculation::receipt_detail($r);
             $pid = $r['id'];
             $snap = json_decode($r['consulting_snapshot'] ?? '', true);
-            $coName = $snap['owner']['nm_company'] ?? '';
+            $coName = array('7'=>'STM','3'=>'SUSTAIN','4'=>'VUCA')[(string)($snap['owner']['id'] ?? '')] ?? ($snap['owner']['nm_company'] ?? '');
             if (empty($coName)) {
                 $bankStr = strtoupper(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? ''));
                 if (strpos($bankStr, 'VUCA') !== false) $coName = 'VUCA';
@@ -364,7 +375,8 @@ class Penerimaan_uang_model extends BF_Model
                 continue;
             }
 
-            $taxCode = !empty($r['tax_treatment']) ? $r['tax_treatment'] : ($snap['tax_treatment'] ?? ((float)$r['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU'));
+            // Tanpa perlakuan PPN tersimpan (invoice lama) dibiarkan kosong; tidak ditebak dari nilai PPN.
+            $taxCode = Penerimaan_calculation::stored_tax_code($snap, $r['tax_treatment'] ?? '');
 
             if (!isset($groups[$pid])) {
                 $bankName = trim(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? ''));
@@ -375,7 +387,7 @@ class Penerimaan_uang_model extends BF_Model
                 $groups[$pid] = array(
                     'id' => $r['id'],
                     'no_surat' => $r['no_surat'],
-                    'tanggal_transaksi' => $r['tanggal_transaksi'] ?: $r['created_date'],
+                    'tanggal_transaksi' => (int)($snap['calculation_version'] ?? 0) === 4 ? $snap['date'] : ($r['tanggal_transaksi'] ?: $r['created_date']),
                     'bank_name' => $bankName,
                     'keterangan' => $r['keterangan'] ?: '-',
                     'nm_customer' => $r['nm_customer'],
@@ -397,14 +409,16 @@ class Penerimaan_uang_model extends BF_Model
                 'penerimaan' => $r['penerimaan'],
                 'biaya_admin' => $r['biaya_admin'],
                 'sisa_piutang' => $r['sisa_piutang'],
-                'pph23' => $r['pph23']
+                'pph23' => $r['pph23'],
+                'dep' => $r['dep'] ?? '0.00',
+                'lebih' => $r['lebih'] ?? '0.00'
             );
         }
 
         return array_values($groups);
     }
 
-    public function get_report_penerimaan_serverside($year = '', $month = '', $company = '', $search = '', $start = 0, $length = 10, $orderCol = 1, $orderDir = 'desc')
+    public function get_report_penerimaan_serverside($year = '', $month = '', $company = '', $search = '', $start = 0, $length = 10, $orderCol = 1, $orderDir = 'desc', $kind = '', $customer = '')
     {
         // 1. Total records (unfiltered count)
         $qTotal = $this->db->query("SELECT COUNT(*) as total FROM tr_penerimaan_piutang");
@@ -414,6 +428,8 @@ class Penerimaan_uang_model extends BF_Model
         // 2. Build filter conditions
         $whereClauses = array();
         $params = array();
+        if (in_array($kind, array('invoice','deposit'), true)) { $whereClauses[] = $this->receipt_kind_expression().' = ?'; $params[] = $kind; }
+        if (is_scalar($customer) && (string)$customer !== '') { $whereClauses[]='p.id_customer = ?'; $params[]=$customer; }
 
         if (!empty($year)) {
             $whereClauses[] = "(YEAR(a.tanggal_transaksi) = ? OR (a.tanggal_transaksi IS NULL AND YEAR(p.created_date) = ?))";
@@ -426,12 +442,18 @@ class Penerimaan_uang_model extends BF_Model
             $params[] = (int)$month;
         }
         if (!empty($company)) {
+            $legacyCompany = '';
             if ($company === 'VUCA') {
-                $whereClauses[] = "b.nama LIKE '%VUCA%'";
+                $legacyCompany = "b.nama LIKE '%VUCA%'";
             } elseif ($company === 'SUSTAIN') {
-                $whereClauses[] = "b.nama LIKE '%SUSTAIN%'";
+                $legacyCompany = "b.nama LIKE '%SUSTAIN%'";
             } elseif ($company === 'STM') {
-                $whereClauses[] = "(b.nama LIKE '%Sentral Tehnologi Managemen%' OR (b.nama NOT LIKE '%VUCA%' AND b.nama NOT LIKE '%SUSTAIN%'))";
+                $legacyCompany = "(b.nama LIKE '%Sentral Tehnologi Managemen%' OR (b.nama NOT LIKE '%VUCA%' AND b.nama NOT LIKE '%SUSTAIN%'))";
+            }
+            if ($legacyCompany !== '') {
+                $ownerId = array('STM'=>'7','SUSTAIN'=>'3','VUCA'=>'4')[$company];
+                $whereClauses[] = "((p.consulting_batch=3 AND EXISTS (SELECT 1 FROM tr_penerimaan_piutang_detail dc WHERE dc.id_header=p.no_surat AND JSON_VALID(dc.consulting_snapshot) AND JSON_UNQUOTE(JSON_EXTRACT(dc.consulting_snapshot,'$.owner.id'))=?)) OR (COALESCE(p.consulting_batch,0)<>3 AND $legacyCompany))";
+                $params[]=$ownerId;
             }
         }
         if (!empty($search)) {
@@ -515,8 +537,12 @@ class Penerimaan_uang_model extends BF_Model
             $details = $this->db->get()->result_array();
 
             foreach ($details as $d) {
+                $d = Penerimaan_calculation::receipt_detail($d);
                 foreach ($receipts as $pid => $rec) {
                     if ($rec['no_surat'] === $d['id_header']) {
+                        $snap = json_decode($d['consulting_snapshot'] ?? '', true);
+                        if (!empty($snap['owner']['id'])) $receipts[$pid]['company_main'] = array('7'=>'STM','3'=>'SUSTAIN','4'=>'VUCA')[(string)$snap['owner']['id']] ?? $snap['owner']['nm_company'];
+                        if ((int)($snap['calculation_version'] ?? 0) === 4) $receipts[$pid]['tanggal_transaksi'] = $snap['date'];
                         $receipts[$pid]['details'][] = $d;
                     }
                 }

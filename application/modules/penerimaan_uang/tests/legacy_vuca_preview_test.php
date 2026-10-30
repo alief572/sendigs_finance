@@ -1,4 +1,5 @@
 <?php
+if (!function_exists('has_permission')) { function has_permission($permission) { return true; } }
 // Exercise the active controllers with in-memory fixtures; no DB or browser.
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
@@ -50,7 +51,7 @@ class LegacyDb {
     function trans_status() { return true; }
     function update($table, $values, $where) { return true; }
 }
-class LegacyInput { public $values; function post($key = null) { return $key === null ? $this->values : $this->values[$key]; } }
+class LegacyInput { public $values; function post($key = null) { return $key === null ? $this->values : ($this->values[$key] ?? null); } }
 class LegacyTemplate { public $data; function set($data) { $this->data = $data; } function render($name) {} }
 class LegacyModel {
     public $db;

@@ -60,7 +60,7 @@ $e = function($val) {
                 <th>Bank</th>
                 <th>Detail Penerimaan Bank</th>
                 <th>Customer</th>
-                <th>Nomor Invoice</th>
+                <th>Nomor Invoice / Kwitansi</th>
                 <th>Company</th>
                 <th>TAX Code</th>
                 <th>PPh 23 Dipotong</th>
@@ -68,7 +68,9 @@ $e = function($val) {
                 <th>Penerimaan Bank</th>
                 <th>Piutang Dagang</th>
                 <th>Alokasi Penerimaan</th>
+                <th>Deposit Dipakai</th>
                 <th>Biaya Admin</th>
+                <th>Lebih Bayar</th>
                 <th>Sisa Piutang</th>
             </tr>
         </thead>
@@ -76,6 +78,8 @@ $e = function($val) {
             <?php
             $tUM = 0;
             $tPen = 0;
+            $tDep = 0;
+            $tLebih = 0;
             $tPph = 0;
             $tAdmin = 0;
             $tSisa = 0;
@@ -90,6 +94,8 @@ $e = function($val) {
 
                 foreach ($group['details'] as $idx => $d) :
                     $tPen += (float)$d['penerimaan'];
+                    $tDep += (float)($d['dep'] ?? 0);
+                    $tLebih += (float)($d['lebih'] ?? 0);
                     $tPph += (float)$d['pph23'];
                     $tAdmin += (float)$d['biaya_admin'];
                     $tSisa += (float)$d['sisa_piutang'];
@@ -106,8 +112,8 @@ $e = function($val) {
 
                         <td class="text"><?= $e($d['no_invoice']) ?></td>
                         <td class="text-center text"><?= $e($d['company_name']) ?></td>
-                        <td class="text-center text"><?= $e($d['tax_treatment']) ?></td>
-                        <td class="text-center text"><?= ($group['pph23_dipotong'] === 'Y' ? 'Potong' : 'Tidak potong') ?></td>
+                        <td class="text-center text"><?= $e($d['tax_treatment'] !== '' && $d['tax_treatment'] !== null ? $d['tax_treatment'] : '-') ?></td>
+                        <td class="text-center text"><?= (($d['tax_treatment'] ?? '') === 'DEP' ? '-' : ($group['pph23_dipotong'] === 'Y' ? 'Potong' : 'Tidak potong')) ?></td>
                         <td class="num"><?= (float)$d['pph23'] ?></td>
 
                         <?php if ($first) : ?>
@@ -116,7 +122,9 @@ $e = function($val) {
 
                         <td class="num"><?= (float)$d['total_akhir_jurnal'] ?></td>
                         <td class="num"><?= (float)$d['penerimaan'] ?></td>
+                        <td class="num"><?= (float)($d['dep'] ?? 0) ?></td>
                         <td class="num"><?= (float)$d['biaya_admin'] ?></td>
+                        <td class="num"><?= (float)($d['lebih'] ?? 0) ?></td>
                         <td class="num"><?= (float)$d['sisa_piutang'] ?></td>
                     </tr>
             <?php
@@ -130,7 +138,9 @@ $e = function($val) {
                 <td class="num"><b><?= $tUM ?></b></td>
                 <td class="num"><b><?= $tPiutang ?></b></td>
                 <td class="num"><b><?= $tPen ?></b></td>
+                <td class="num"><b><?= $tDep ?></b></td>
                 <td class="num"><b><?= $tAdmin ?></b></td>
+                <td class="num"><b><?= $tLebih ?></b></td>
                 <td class="num"><b><?= $tSisa ?></b></td>
             </tr>
         </tbody>
