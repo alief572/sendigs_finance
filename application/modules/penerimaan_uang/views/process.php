@@ -298,10 +298,10 @@
         return s.join(dec);
     }
 
-    // PPh yang disesuaikan pada baris i. N: min(sisa batas, penerimaan). Y: sisa batas - PPh yang benar-benar dipotong (kolom PPH 23 editable);
+    // PPh yang disesuaikan pada baris i. N: 0 (tidak dipotong). Y: sisa batas - PPh yang benar-benar dipotong (kolom PPH 23 editable);
     // tanpa kolom itu (atau default) penyesuaiannya 0 sehingga hasil sama dengan alur lama.
     function pphAdjustment(i, remaining_pph, penerimaan, errors) {
-        if ($('input[name="pph23_dipotong"]').val() == 'N') { return Math.min(remaining_pph, penerimaan); }
+        if ($('input[name="pph23_dipotong"]').val() == 'N') { return 0; }
         var el = $('input[name="pph_actual_' + i + '"]');
         if (!el.length) { return 0; }
         var actual = get_num(el.val());
@@ -332,7 +332,7 @@
         var current = get_num($('input[name="penerimaan_' + i + '"]').val());
         var x = Math.round((piutang - sisa - admin) * 100) / 100, pen;
         if ($('input[name="pph23_dipotong"]').val() == 'N') {
-            pen = x > 0 ? x + remaining : Math.min(current, remaining);
+            pen = x > 0 ? x : 0;
         } else {
             pen = x + pphAdjustment(i, remaining, Math.max(current, x + remaining), []);
         }

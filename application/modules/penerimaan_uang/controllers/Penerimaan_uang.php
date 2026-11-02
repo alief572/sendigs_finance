@@ -801,12 +801,13 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil .= '<td class="text-right"><input type="text" class="form-control form-control-sm text-right autonum" name="pph_actual_' . $no . '" data-default="' . $pphDefault . '" value="' . $pphDefault . '" onkeyup="pphEdited(' . $no . ')">'
                     . '<div class="reset-pph-link-' . $no . '" style="display:none; font-size: 11px; margin-top: 2px;"><a href="javascript:void(0)" onclick="resetPph(' . $no . ')">&#8634; Default (Rp ' . number_format($remaining_pph / 100) . ')</a></div></td>';
             } else {
-                $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
+                $hasil .= '<td class="text-right">0</td>';
             }
 
             $hasil .= '<td class="text-right">' . number_format($tagihan_ppn) . '</td>';
 
-            $hasil .= '<td class="text-right">' . number_format($get_inv['total_akhir_jurnal']) . '</td>';
+            // Tidak dipotong: tidak ada PPh yang dikurangkan dari tagihan.
+            $hasil .= '<td class="text-right">' . number_format($pph23_dipotong === 'N' ? $tagihan_ppn : $get_inv['total_akhir_jurnal']) . '</td>';
 
             $hasil .= '<td>';
 
@@ -956,12 +957,6 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
-
-                        $value_kredit = $remaining_pph / 100;
-
-                    }
-
 
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
@@ -1082,12 +1077,6 @@ class Penerimaan_uang extends Admin_Controller
                     $value_kredit = 0;
 
 
-
-                    if ($post['pph23_dipotong'] == 'N' && $item_coa_jurnal['no_perkiraan'] == $coa_pph) {
-
-                        $value_kredit = $remaining_pph / 100;
-
-                    }
 
                     if ($item_coa_jurnal['no_perkiraan'] == '1102-01-01') {
 

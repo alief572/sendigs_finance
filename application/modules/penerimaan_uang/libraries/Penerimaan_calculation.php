@@ -107,7 +107,8 @@ class Penerimaan_calculation
                 throw new InvalidArgumentException('PPh 23 terlalu kecil: selisihnya melebihi penerimaan.');
             }
         }
-        $adjustment = $choice === 'N' ? min($remainingPph, $receipt) : ($pphActual !== null ? $remainingPph - $pphActual : 0);
+        // N: tidak ada PPh yang dipotong maupun disesuaikan.
+        $adjustment = $choice === 'N' ? 0 : ($pphActual !== null ? $remainingPph - $pphActual : 0);
         $reduction = $receipt + $admin - $adjustment;
         if ($reduction > $balance) {
             throw new InvalidArgumentException('Penerimaan dan biaya admin melebihi saldo piutang.');
