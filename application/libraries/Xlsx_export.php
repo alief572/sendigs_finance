@@ -135,8 +135,10 @@ class Xlsx_export
             $rows[] = array(++$no, array('date' => $m['tanggal']), (string)$m['no_transaksi'], (string)call_user_func($sourceLabel, $m),
                 (string)($m['keterangan'] ?? ''), $in ? $nom : 0.0, $in ? 0.0 : $nom, $run);
         }
-        return array('sheet' => 'Mutasi Deposit', 'title' => 'Mutasi Deposit - ' . $nmCustomer, 'numfmt' => '#,##0.00',
+        // Seperti mockup: sheet = nama customer (maks 31 karakter; karakter terlarang Excel diganti), file = Deposit_<nama dengan spasi jadi _>.
+        $sheet = trim(mb_substr(preg_replace('/[\\/?*\[\]:]/', ' ', (string)$nmCustomer), 0, 31));
+        return array('sheet' => $sheet !== '' ? $sheet : 'Mutasi Deposit', 'title' => 'Mutasi Deposit - ' . $nmCustomer, 'numfmt' => '#,##0.00',
             'head' => array('No', 'Tanggal', 'No Penerimaan Piutang', 'Sumber', 'Keterangan', 'Masuk', 'Keluar', 'Saldo'),
-            'rows' => $rows, 'filename' => 'Deposit_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $nmCustomer) . '.xlsx');
+            'rows' => $rows, 'filename' => 'Deposit_' . preg_replace('/\s+/', '_', trim((string)$nmCustomer)) . '.xlsx');
     }
 }

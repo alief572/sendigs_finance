@@ -9,6 +9,7 @@ class Deposit_customer extends Admin_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->helper('mockup_format');
         $this->load->model('deposit_customer/Deposit_customer_model');
         require_once dirname(__DIR__, 2) . '/penerimaan_uang/libraries/Penerimaan_calculation.php';
     }
@@ -37,7 +38,10 @@ class Deposit_customer extends Admin_Controller
 
         $data = $this->customer_ledger_data($id_customer);
         if ($data === null) {
-            redirect('deposit_customer');
+            // Seperti mockup: customer tidak dikenal menampilkan pesan + tautan kembali.
+            $this->template->set('results', array('not_found' => true));
+            $this->template->title('Monitoring Deposit');
+            $this->template->render('detail');
             return;
         }
 
@@ -59,7 +63,7 @@ class Deposit_customer extends Admin_Controller
         require_once APPPATH . 'libraries/Xlsx_export.php';
         if (!empty($id_customer)) {
             $data = $this->customer_ledger_data($id_customer);
-            if ($data === null) {
+            if ($data === null || empty($data['mutasi'])) {
                 redirect('deposit_customer');
                 return;
             }
@@ -77,7 +81,8 @@ class Deposit_customer extends Admin_Controller
         if (!is_scalar($id_customer) || trim((string)$id_customer) === '') return null;
 
         $mutasi = $this->Deposit_customer_model->get_ledger_rows($id_customer);
-        if (empty($mutasi)) return null;
+        $listedName = $this->Deposit_customer_model->get_customer_name($id_customer);
+        if (empty($mutasi) && $listedName === null) return null;
 
         $masuk = 0; $keluar = 0; $kw = 0; $lebih = 0;
         foreach ($mutasi as $m) {
@@ -92,7 +97,7 @@ class Deposit_customer extends Admin_Controller
 
         return array(
             'id_customer' => $id_customer,
-            'nm_customer' => !empty($mutasi[0]['nm_customer']) ? $mutasi[0]['nm_customer'] : $id_customer,
+            'nm_customer' => $listedName !== null && $listedName !== '' ? $listedName : (!empty($mutasi[0]['nm_customer']) ? $mutasi[0]['nm_customer'] : $id_customer),
             'summary' => array(
                 'total_nilai' => Penerimaan_calculation::decimal($masuk),
                 'dari_kwitansi' => Penerimaan_calculation::decimal($kw),

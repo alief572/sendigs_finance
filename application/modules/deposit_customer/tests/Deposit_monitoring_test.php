@@ -29,14 +29,22 @@ class MockDb {
     public $deposit_mutasi = array();
     private $where = array();
 
-    public function select($cols) { return $this; }
-    public function from($table) { return $this; }
+    private $table = '';
+    public function select($cols, $escape = null) { return $this; }
+    public function from($table) { $this->table = $table; return $this; }
+    public function group_by($col) { return $this; }
     public function join($table, $cond, $type = '') { return $this; }
     public function where($k, $v = null) { $this->where[$k] = $v; return $this; }
     public function order_by($k, $dir = 'ASC') { return $this; }
 
     // Emulates: mutasi LEFT JOIN deposit, d.status != MENUNGGU_PEMBAYARAN, optional m.id_customer, ORDER BY tanggal,id.
     public function get() {
+        if ($this->table === 'tr_customer_deposit') {
+            // get_listed_customers(): semua customer yang punya voucher (apa pun statusnya).
+            $byCust = array();
+            foreach ($this->customer_deposits as $d) $byCust[$d['id_customer']] = array('id_customer' => $d['id_customer'], 'nm_customer' => $d['nm_customer']);
+            return new MockResult(array_values($byCust));
+        }
         $deps = array();
         foreach ($this->customer_deposits as $d) $deps[$d['id']] = $d;
         $rows = array();
@@ -84,9 +92,10 @@ $model->db = $db;
 
 echo "--- TEST 1: Customer summary = IN - OUT lintas company, kwitansi belum dibayar tidak dihitung ---\n";
 $summary = $model->get_customer_summary();
-checkAssert(count($summary) === 2, 'Customer dengan kwitansi belum dibayar tidak muncul');
+checkAssert(count($summary) === 3, 'Customer dengan kwitansi belum dibayar tetap tampil (mockup depCusts) dengan nilai nol');
 $by = array();
 foreach ($summary as $c) $by[$c['id_customer']] = $c;
+checkAssert(isset($by['CUST-003']) && Penerimaan_calculation::cents($by['CUST-003']['total_nominal_awal']) === 0 && (int)$by['CUST-003']['jumlah_deposit'] === 0, 'Customer hanya-kwitansi-belum-lunas bernilai nol');
 $c1 = $by['CUST-001'];
 checkAssert(Penerimaan_calculation::cents($c1['total_nominal_awal']) === 1500000000, 'CUST-001 total nilai 15.000.000 (dua company digabung)');
 checkAssert(Penerimaan_calculation::cents($c1['total_dari_kwitansi']) === 1000000000, 'CUST-001 dari kwitansi 10.000.000');

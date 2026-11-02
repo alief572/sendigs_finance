@@ -29,6 +29,26 @@ class Deposit_customer_model extends BF_Model
         return $this->db->get()->result_array();
     }
 
+    /** Semua customer yang punya voucher deposit (termasuk MENUNGGU_PEMBAYARAN): id => nama. */
+    public function get_listed_customers()
+    {
+        $this->db->select('id_customer, MAX(nm_customer) AS nm_customer', false);
+        $this->db->from('tr_customer_deposit');
+        $this->db->group_by('id_customer');
+        $out = array();
+        foreach ($this->db->get()->result_array() as $r) {
+            $out[(string)$r['id_customer']] = (string)$r['nm_customer'];
+        }
+        return $out;
+    }
+
+    /** Nama customer bila punya voucher deposit apa pun statusnya, selain itu null. */
+    public function get_customer_name($id_customer)
+    {
+        $all = $this->get_listed_customers();
+        return isset($all[(string)$id_customer]) ? $all[(string)$id_customer] : null;
+    }
+
     /** Label sumber mutasi sesuai mockup Monitoring Deposit. */
     public static function source_label($row)
     {
@@ -53,6 +73,12 @@ class Deposit_customer_model extends BF_Model
                 if ((string)$m['tanggal'] > $out[$cid]['last_deposit_date']) $out[$cid]['last_deposit_date'] = (string)$m['tanggal'];
             } else {
                 $out[$cid]['_keluar'] += $c;
+            }
+        }
+        // Seperti mockup (depCusts): customer yang baru punya kwitansi belum lunas tetap tampil dengan nilai nol.
+        foreach ($this->get_listed_customers() as $cid => $name) {
+            if (!isset($out[$cid])) {
+                $out[$cid] = array('id_customer' => $cid, 'nm_customer' => $name, 'jumlah_deposit' => 0, '_kw' => 0, '_lebih' => 0, '_masuk' => 0, '_keluar' => 0, 'last_deposit_date' => '');
             }
         }
         $rows = array();
