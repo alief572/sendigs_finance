@@ -143,4 +143,9 @@ foreach (array('p above budget'=>array($d + 1), 'negative p'=>array(-1), 'adjust
 }
 check($C::calculate(257499000, $d, 'N', 257499000, 0, 0)['adjustment'] === 0, 'N ignores the actual PPh argument');
 
+// Jurnal Y bergaya mockup (a > 0): Dr Bank + Admin + PPh = Cr Piutang bruto (alokasi + admin + PPh).
+$r = 36180000; $a = 30000000; $cash = 19718100; $adm = 5000;
+$calc = $C::calculate(2007990000, $r, 'Y', $cash, $adm, $a);
+check($r - $calc['adjustment'] === $a && $cash + $adm + $a === $cash + $adm + ($r - $calc['adjustment']), 'Y mockup journal balances');
+
 echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";

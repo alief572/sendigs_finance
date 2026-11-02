@@ -239,7 +239,9 @@ class Penerimaan_uang_model extends BF_Model
                 }
             }
             if (count($matches) === 1) {
-                $credit = Penerimaan_calculation::cents($matches[0]['kredit']) - Penerimaan_calculation::cents($matches[0]['debit']);
+                $debit = Penerimaan_calculation::cents($matches[0]['debit']);
+                // Jurnal gaya mockup mencatat debit = PPh yang dipotong; penyesuaian = sisa anggaran saat itu - PPh dipotong.
+                $credit = $debit > 0 ? ($total - $used) - $debit : Penerimaan_calculation::cents($matches[0]['kredit']);
                 if ($credit > 0) { $used += $credit; }
             }
         }

@@ -1607,6 +1607,17 @@ class Penerimaan_uang extends Admin_Controller
 
                     : ($item_jurnal['no_perkiraan'] === $coa_pph ? Penerimaan_calculation::decimal($calculation['adjustment']) : '0.00');
 
+                $pph_a = $post['pph23_dipotong'] === 'Y' ? $remaining_pph - $calculation['adjustment'] : 0;
+                if ($pph_a > 0) {
+                    // Mockup: Debit PPh 23 Disetor = PPh dipotong, Kredit Piutang bruto (alokasi + admin + PPh). PPh 0 memakai bentuk lama di atas.
+                    if ($item_jurnal['no_perkiraan'] === $coa_pph) {
+                        $value_debit = Penerimaan_calculation::decimal($pph_a);
+                        $value_kredit = '0.00';
+                    } elseif ($item_jurnal['no_perkiraan'] === '1102-01-01') {
+                        $value_kredit = Penerimaan_calculation::decimal($receipt_cents + $admin_cents + $pph_a);
+                    }
+                }
+
 
 
                 $get_no_invoice = $this->db->select('a.no_invoice')

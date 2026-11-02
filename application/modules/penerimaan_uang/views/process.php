@@ -369,10 +369,18 @@
             // Use the remaining PPh from history, never the previous rendered credit.
             var remaining_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
             var pph23_inv = pphAdjustment(i, remaining_pph, penerimaan, inputErrors);
+            // Dipotong (mockup): PPh 23 Disetor didebit sebesar PPh yang dipotong, Piutang dikredit bruto (alokasi + admin + PPh).
+            // PPh 0: tidak ada debit, pakai bentuk lama (kredit PPh = penyesuaian) supaya sisa anggaran PPh tetap tercatat.
+            var pph_debit = (pph23_dipotong == 'Y') ? Math.round((remaining_pph - pph23_inv) * 100) / 100 : 0;
+            var pph_kredit = pph_debit > 0 ? 0 : pph23_inv;
             $.each(['1106-01-02', '1106-01-05'], function(index, coa) {
-                var cell = $('.td_kredit_' + coa + '_' + i);
-                if (cell.length) {
-                    cell.html(number_format(pph23_inv) + '<input type="hidden" name="kredit_' + coa + '_' + i + '" value="' + pph23_inv + '">');
+                var cellK = $('.td_kredit_' + coa + '_' + i);
+                if (cellK.length) {
+                    cellK.html(number_format(pph_kredit) + '<input type="hidden" name="kredit_' + coa + '_' + i + '" value="' + pph_kredit + '">');
+                }
+                var cellD = $('.td_debit_' + coa + '_' + i);
+                if (cellD.length) {
+                    cellD.html(number_format(pph_debit) + '<input type="hidden" name="debit_' + coa + '_' + i + '" value="' + pph_debit + '">');
                 }
             });
 
@@ -397,7 +405,7 @@
                 index = index + 1;
                 if (value == '1102-01-01') {
                     // Dipotong maupun tidak: kredit piutang dagang = penerimaan + biaya admin - penyesuaian PPh (0 pada Dipotong default).
-                    var kredit_piutang_dagang = penerimaan + biaya_admin - pph23_inv;
+                    var kredit_piutang_dagang = pph_debit > 0 ? penerimaan + biaya_admin + pph_debit : penerimaan + biaya_admin - pph23_inv;
                     kredit_piutang_dagang = Math.round(kredit_piutang_dagang * 100) / 100;
                     var resp_piutang = number_format(kredit_piutang_dagang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
@@ -423,7 +431,7 @@
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
             ttl_sisa_piutang += sisa_dipakai;
-            ttl_pph23 += get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
+            ttl_pph23 += pph23_inv;
 
         }
 
