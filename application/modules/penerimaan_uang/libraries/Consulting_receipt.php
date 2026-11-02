@@ -203,12 +203,48 @@ class Consulting_receipt
         );
     }
 
+    /**
+     * Form menampilkan saldo per customer, tetapi deposit hanya boleh menutup invoice dari company voucher yang sama.
+     * Dipanggil saat Process (setelah preview) agar pengguna mendapat pesan jelas sebelum modal alokasi tampil.
+     */
+    public function assert_deposit_within_company($preview)
+    {
+        if (($preview['deposit_choice'] ?? 'N') !== 'Y') return;
+        $amount = (int)$preview['deposit_amount']; $available = (int)$preview['customer_deposit'];
+        if ($amount <= $available) return;
+        $total = $this->get_customer_active_deposit_by_company((string)$preview['rows'][0]['invoice']['id_customer'])['total'];
+        throw new InvalidArgumentException('Deposit dipakai (' . Penerimaan_calculation::decimal($amount) . ') melebihi saldo deposit yang bisa dipakai untuk company invoice ini (' . Penerimaan_calculation::decimal($available) . '). Total saldo deposit customer di semua company: ' . Penerimaan_calculation::decimal($total) . '.');
+    }
+
     public function get_customer_active_deposit($customerId, $companyId)
     {
         if (!is_scalar($customerId) || !is_scalar($companyId) || trim((string)$customerId) === '' || trim((string)$companyId) === '') throw new InvalidArgumentException('Pilih customer dan company deposit.');
         $total = 0;
         foreach ($this->active_deposits($customerId, $companyId) as $voucher) $total += Penerimaan_calculation::cents($voucher['sisa_saldo']);
         return $total;
+    }
+
+    /**
+     * Saldo deposit aktif per customer (tanpa memilih company) beserta rincian per company.
+     * Tiap voucher tetap divalidasi oleh active_deposits; satu company tidak konsisten membuat hasilnya gagal.
+     * Pemakaian deposit saat Process tetap dibatasi ke company invoice (lihat save()).
+     */
+    public function get_customer_active_deposit_by_company($customerId)
+    {
+        if (!is_scalar($customerId) || trim((string)$customerId) === '') throw new InvalidArgumentException('Pilih customer deposit.');
+        if (!$this->s->db->field_exists('id_company', 'tr_customer_deposit')) throw new RuntimeException('Terapkan migration 003_deposit_contract.');
+        $companies = $this->s->rows('SELECT DISTINCT id_company FROM tr_customer_deposit WHERE id_customer=? ORDER BY id_company', array($customerId));
+        $total = 0; $byCompany = array();
+        foreach ($companies as $company) {
+            $companyId = (string)$company['id_company'];
+            if ($companyId === '') continue;
+            $saldo = $this->get_customer_active_deposit($customerId, $companyId);
+            if ($saldo === 0) continue;
+            $total += $saldo;
+            $name = array('7'=>'STM', '3'=>'SUSTAIN', '4'=>'VUCA')[$companyId] ?? $companyId;
+            $byCompany[] = array('id'=>$companyId, 'name'=>$name, 'saldo'=>$saldo);
+        }
+        return array('total'=>$total, 'by_company'=>$byCompany);
     }
 
     private function active_deposits($customerId, $companyId, $lock = false)
@@ -274,9 +310,24 @@ class Consulting_receipt
         $headers = $this->s->rows('SELECT * FROM tr_penerimaan_piutang WHERE no_surat=?', array($number));
         $details = $this->s->rows('SELECT * FROM tr_penerimaan_piutang_detail WHERE id_header=?', array($number));
         $valid = count($headers) === 1 && (string)$headers[0]['id_customer'] === (string)$voucher['id_customer'] && $details;
-        $total = 0; $cash = 0;
+        $total = 0; $cash = 0; $legacyLebih = false;
         foreach ($details as $detail) {
             $snapshot = json_decode($detail['consulting_snapshot'] ?? '', true);
+            if (is_array($snapshot) && !empty($snapshot['legacy'])) {
+                // Penerimaan invoice lama: semantik legacy (penerimaan = kas), jadi persamaan snapshot versi baru tidak berlaku.
+                // Yang diverifikasi: owner/customer, bilangan bulat tak negatif, kesamaan dengan kolom detail, dan kas + lebih bayar = uang bank header.
+                $legacyLebih = true;
+                if ($field !== 'lebih' || (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company'] || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
+                foreach (array('cash','admin','pph','lebih','balance','sisa') as $money) {
+                    if (!isset($snapshot[$money]) || !is_int($snapshot[$money]) || $snapshot[$money] < 0) $valid = false;
+                }
+                if ($valid && (Penerimaan_calculation::cents($detail['penerimaan']) !== $snapshot['cash']
+                    || Penerimaan_calculation::cents($detail['biaya_admin']) !== $snapshot['admin']
+                    || Penerimaan_calculation::cents($detail['pph23']) !== $snapshot['pph']
+                    || Penerimaan_calculation::cents($detail['sisa_piutang']) !== $snapshot['sisa'])) $valid = false;
+                if ($valid) { $cash += $snapshot['cash'] + $snapshot['lebih']; $total += $snapshot['lebih']; }
+                continue;
+            }
             if (!$snapshot || (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company'] || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
             foreach (array('cash','admin','pph','dep','lebih','balance','sisa','reduction') as $money) {
                 if (!isset($snapshot[$money]) || !is_int($snapshot[$money]) || $snapshot[$money] < 0) $valid = false;
@@ -291,6 +342,12 @@ class Consulting_receipt
             if ($exact && $invoiceId !== null && (string)$detail['id_inv'] === (string)$invoiceId
                 && (($snapshot['tax_treatment'] ?? '') !== 'DEP' || $snapshot['sisa'] !== 0 || $snapshot['pph'] !== 0 || $snapshot['dep'] !== 0 || $snapshot['lebih'] !== 0)) $valid = false;
             if ($invoiceId === null || (string)$detail['id_inv'] === (string)$invoiceId) $total += (int)($snapshot[$field] ?? 0);
+        }
+        if ($legacyLebih) {
+            // Jurnal penerimaan lama harus mencatat kredit Deposit Customer sebesar lebih bayar (Dr bank sudah mencakup kas + lebih bayar).
+            $credit = 0;
+            foreach ($this->s->rows("SELECT kredit FROM tr_jurnal WHERE no_transaksi=? AND coa='2102-01-02' AND jenis_transaksi='Penerimaan Piutang'", array($number)) as $line) $credit += Penerimaan_calculation::cents($line['kredit']);
+            if ($credit !== $total) $valid = false;
         }
         if ($field === 'dep') {
             $mutations = $this->s->rows("SELECT m.*, d.id_customer AS deposit_customer, d.id_company AS deposit_company FROM tr_customer_deposit_mutasi m LEFT JOIN tr_customer_deposit d ON d.id=m.id_deposit WHERE m.no_transaksi=? AND m.jenis_mutasi='OUT' ORDER BY m.id", array($number));
@@ -317,6 +374,48 @@ class Consulting_receipt
             $seq = $lastSeq + 1;
         }
         return $prefix . sprintf('%04d', $seq);
+    }
+
+    /**
+     * Voucher deposit + mutasi IN dari kelebihan bayar. Dipakai penerimaan Consultant baru dan invoice lama
+     * (harus dipanggil di dalam transaksi pemanggil; kegagalan insert melempar RuntimeException).
+     */
+    public function create_lebih_bayar_voucher($number, $customerId, $customerName, $companyId, $poCustomer, $date, $cents, $invNosStr)
+    {
+        $s = $this->s;
+        $depNo = $this->generate_deposit_number($date);
+        $s->checked($s->db->insert('tr_customer_deposit', array(
+            'no_deposit' => $depNo,
+            'id_customer' => $customerId,
+            'nm_customer' => $customerName,
+            'id_company' => $companyId,
+            'tipe_sumber' => 'LEBIH_BAYAR',
+            'no_referensi' => $number,
+            'po_customer' => $poCustomer,
+            'tanggal' => $date,
+            'tanggal_aktif' => $date,
+            'nominal_awal' => Invoice_calculation::decimal($cents),
+            'nominal_terpakai' => '0.00',
+            'sisa_saldo' => Invoice_calculation::decimal($cents),
+            'status' => 'AKTIF',
+            'keterangan' => 'Lebih bayar penerimaan ' . $invNosStr,
+            'created_by' => $s->ci->auth->user_id(),
+            'created_date' => date('Y-m-d H:i:s')
+        )));
+        $depId = $s->db->insert_id();
+        $s->checked($s->db->insert('tr_customer_deposit_mutasi', array(
+            'id_deposit' => $depId,
+            'id_customer' => $customerId,
+            'no_transaksi' => $number,
+            'tanggal' => $date,
+            'jenis_mutasi' => 'IN',
+            'nominal' => Invoice_calculation::decimal($cents),
+            'saldo_sebelum' => '0.00',
+            'saldo_sesudah' => Invoice_calculation::decimal($cents),
+            'keterangan' => 'Lebih bayar penerimaan ' . $invNosStr,
+            'created_by' => $s->ci->auth->user_id(),
+            'created_date' => date('Y-m-d H:i:s')
+        )));
     }
 
     public function save($post)
@@ -565,39 +664,7 @@ class Consulting_receipt
             }
 
             if ($totLebih > 0) {
-                $depNo = $this->generate_deposit_number($allocation['detail']['tanggal_transaksi']);
-                $s->checked($s->db->insert('tr_customer_deposit', array(
-                    'no_deposit' => $depNo,
-                    'id_customer' => $customerId,
-                    'nm_customer' => $preview['rows'][0]['invoice']['nm_customer'],
-                    'id_company' => $preview['rows'][0]['owner']['id'] ?? '1',
-                    'tipe_sumber' => 'LEBIH_BAYAR',
-                    'no_referensi' => $number,
-                    'po_customer' => $preview['rows'][0]['spk'] ?? '',
-                    'tanggal' => $allocation['detail']['tanggal_transaksi'],
-                    'tanggal_aktif' => $allocation['detail']['tanggal_transaksi'],
-                    'nominal_awal' => Invoice_calculation::decimal($totLebih),
-                    'nominal_terpakai' => '0.00',
-                    'sisa_saldo' => Invoice_calculation::decimal($totLebih),
-                    'status' => 'AKTIF',
-                    'keterangan' => 'Lebih bayar penerimaan ' . $invNosStr,
-                    'created_by' => $s->ci->auth->user_id(),
-                    'created_date' => date('Y-m-d H:i:s')
-                )));
-                $depId = $s->db->insert_id();
-                $s->checked($s->db->insert('tr_customer_deposit_mutasi', array(
-                    'id_deposit' => $depId,
-                    'id_customer' => $customerId,
-                    'no_transaksi' => $number,
-                    'tanggal' => $allocation['detail']['tanggal_transaksi'],
-                    'jenis_mutasi' => 'IN',
-                    'nominal' => Invoice_calculation::decimal($totLebih),
-                    'saldo_sebelum' => '0.00',
-                    'saldo_sesudah' => Invoice_calculation::decimal($totLebih),
-                    'keterangan' => 'Lebih bayar penerimaan ' . $invNosStr,
-                    'created_by' => $s->ci->auth->user_id(),
-                    'created_date' => date('Y-m-d H:i:s')
-                )));
+                $this->create_lebih_bayar_voucher($number, $customerId, $preview['rows'][0]['invoice']['nm_customer'], $preview['rows'][0]['owner']['id'] ?? '1', $preview['rows'][0]['spk'] ?? '', $allocation['detail']['tanggal_transaksi'], $totLebih, $invNosStr);
             }
 
             if ($s->db->table_exists('tr_kwitansi_deposit')) {

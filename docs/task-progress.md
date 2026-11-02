@@ -3444,3 +3444,120 @@ User mengotorisasi commit/push development, mengecualikan config.php, constants.
     - `ER-2026-00042` (kasbon `KS-2025-00132`) -> `Pengembalian Kasbon - Lita` (tetap sesuai PR)
     - Seluruh tanda `- -` hilang 100%.
 - Sisa risiko/TODO: Tidak ada blocker atau TODO kode. Tidak ada mutasi skema database atau mutasi tabel jurnal.
+
+## Penyelarasan modul Deposit ke mockup to-be — 30 Oktober 2026
+
+- Status: SELESAI (kode + tes lokal). Tidak ada perubahan schema/data/jurnal; tidak diuji di browser.
+- Keputusan pengguna: (1) Monitoring Deposit mengikuti mockup, saldo = IN - OUT per customer tanpa company/voucher; (2) kwitansi tetap 1 SPK.
+- Keputusan teknis: tabel voucher/mutasi dan mesin FIFO `Consulting_receipt` tidak diubah (rollback/jurnal aman); hanya lapisan baca Monitoring yang diganti. ID jenis alokasi tidak diubah. "No Penerimaan" tetap teks karena detail penerimaan adalah modal POST, bukan halaman mandiri. Search server kwitansi dipertahankan agar export ikut filter.
+- File diubah:
+  * deposit_customer: models/Deposit_customer_model.php (get_ledger_rows, source_label, get_customer_summary, get_kpi_summary berbasis ledger; get_customer_vouchers/get_customer_active_deposit_total/get_customer_mutasi_ledger dipertahankan untuk tes lain), controllers/Deposit_customer.php, views/index.php, detail.php, export_excel.php; tes Deposit_monitoring_test.php, Index_render_test.php, Index_client_test.js ditulis ulang.
+  * kwitansi_deposit: views/index.php, views/export_excel.php, controllers/Kwitansi_deposit.php (export membawa search); tes Index_render_test.php, Index_client_test.js (10 kolom), Spk_display_test.php (export 9 kolom).
+  * penerimaan_uang: controllers/Penerimaan_uang.php (get_report_penerimaan: label Deposit/Kwitansi Deposit), views/index.php, views/export_excel.php, README.md; tes Concept_integration_cases.php dan Deposit_closure_cases.php (ringkasan monitoring per customer, bukan per customer/company).
+- Hasil tes (php74 lokal + node): Deposit_monitoring, Index_render, Index_client (deposit_customer) PASS; kwitansi_deposit Index_render, Index_client, Add_company, Amount_input, Save_confirmation, Company_source, Spk_display, Cross_schema, Kwitansi_deposit_test PASS; penerimaan_uang calculation, Add_template, Concept_contract, Deposit_integrity, Deposit_fifo, Deposit_company, Invoice_list_date, Lookup_bootstrap, detail_journal, legacy_vuca_preview, Consulting_receipt_tobe, serta 6 tes JS view PASS; invoicing/Consulting_integration_test: 1010 checks PASS (memuat Concept_integration_cases dan Deposit_closure_cases). PHP lint file berubah PASS.
+- Tidak dijalankan: Report_penerimaan_serverside_test.php (butuh path /var/www/html Docker); perubahan report hanya label HTML.
+- Sisa risiko/TODO: (1) saldo Monitoring menggabung semua company, padahal pemakaian deposit di Penerimaan Invoice tetap per company; (2) permission Kwitansi_Deposit.Add/.Export belum diseed migration 002 (hanya View/Manage); (3) belum diverifikasi visual di browser.
+
+### Perbaikan error preview Proses Penerimaan Kwitansi Deposit — 30 Oktober 2026
+- Gejala: klik Proses Alokasi pada penerimaan kwitansi menampilkan "Gagal memproses preview alokasi". Log: Unknown column no_spk pada SELECT no_spk FROM kons_tr_spk_penawaran.
+- Penyebab: Consulting_receipt::invoice_context mengambil nomor SPK dari kolom no_spk yang tidak ada di tabel dev; fixture tes meniru kolom itu sehingga bug lolos.
+- Perbaikan: nomor SPK = id_spk_penawaran invoice (sama dengan jurnal Invoicing), tanpa query. Fixture consulting_fixture.php kini melempar error bila query lama dipanggil.
+- Validasi: 5 tes penerimaan_uang dan Consulting_integration_test (1010 checks) PASS. Tidak diuji di browser.
+- Hardening lanjutan: process_kwitansi_deposit kini log_message error pada catch; add.php menampilkan kode HTTP pada error AJAX; asersi baru di Consulting_receipt_tobe_test (SPK preview = id_spk_penawaran). Regresi 4 tes PHP, 2 tes JS, dan Consulting_integration_test (1010) PASS. Verifikasi browser menunggu pengguna.
+
+## Konfigurasi database diarahkan ke lokal — 30 Oktober 2026
+- Permintaan pengguna: application/config/development/database.php ke lokal, suffix _dev dihapus (juga di application/config/constants.php).
+- database.php (tidak ter-track git): ketujuh grup (default, accounting, accounting_vuca/stm/sustain, hris, consultant) memakai host `mysql` (Docker) dengan kredensial lokal yang sebelumnya dikomentari; baris remote dibiarkan sebagai komentar. Nama database tanpa _dev. Backup file asli ada di folder scratchpad sesi (database.php.bak).
+- constants.php (ter-track git): DBERP, DBACC, DBACC_VUCA, DBACC_SUSTAIN, DBACC_SUST, DBACC_STM, DBCNL tanpa _dev.
+- Validasi: dari container sendigs_ss, 7 grup terkoneksi OK ke database lokal; PHP lint OK. Database lokal sudah memuat tabel deposit, kolom jenis_penerimaan, menu 489/490, COA 2102-01-02 pada STM/Sustain/Vuca, dan alokasi 5286.
+- Risiko: constants.php dipakai semua environment; jangan commit/push tanpa mengembalikan _dev atau memisahkan per environment, karena server development akan mencari database tanpa suffix. Script scratch lama masih terkunci ke nama _dev.
+
+## Report Penerimaan: tidak lagi menebak TAX Code — 30 Oktober 2026
+- Masalah: invoice lama tanpa tax_treatment/snapshot ditampilkan PKP (PPN>0) atau WAPU (PPN=0) hasil tebakan, seolah perlakuan PPN resmi. Data: 748 dari 757 invoice lokal tanpa tax_treatment.
+- Perbaikan (opsi 1 pilihan pengguna): Penerimaan_uang::get_report_penerimaan, Penerimaan_uang_model (report serverside/export) memakai hanya snapshot/tax_treatment tersimpan; kosong tampil "-". Export Excel menulis "-". Keterangan Potong/Tidak potong PPh 23 tetap dari data penerimaan. Penebakan pada form proses dan Consulting_receipt tidak diubah (logika pemrosesan).
+- Validasi: Report_penerimaan_serverside_test 6 tes PASS di container (DB lokal), render 043/VSB/2026 menampilkan "-"; detail_journal, Consulting_receipt_tobe, Deposit_integrity, Concept_contract, legacy_vuca_preview PASS; lint OK.
+
+## Detail penerimaan: separator nominal dan seksi jurnal — 30 Oktober 2026
+- Separator: modal detail (views/index.php handler .detail) kini menginisialisasi autoNumeric pada input .autonum setelah AJAX, sehingga Total, Uang Masuk Bank, Deposit, Lebih Bayar, dan Kontrol tampil dengan pemisah ribuan.
+- Jurnal: penerimaan 00031-00042 (batch 16 Okt 2026, created_by NULL) tidak punya baris di tr_jurnal lokal, sehingga tabel jurnal kosong. Keputusan pengguna: bila tidak ada di tr_jurnal, seksi tidak ditampilkan. views/detail.php membungkus seksi dengan if (!empty($list_jurnal)). Tidak ada rekonstruksi jurnal dan tidak ada penulisan data.
+- Validasi: lint OK; detail_journal_test dan Add_template_contract_test PASS. Belum dicek di browser.
+
+## Koreksi nominal header penerimaan 100x — 30 Oktober 2026
+- Masalah: Report Penerimaan dan kotak "Uang Masuk Bank" di modal detail menampilkan nominal 100x (mis. 181/STM/2026: 1.130.535.000 vs 11.305.350). Sumber bank (tr_alokasi_split), rincian, dan jurnal benar; hanya tr_penerimaan_piutang.nominal_penerimaan_bank salah.
+- Skala: 237 baris, semua created_by NULL, dibuat 1 Apr - 19 Okt 2026 (pola impor/skrip, bukan bug kode simpan saat ini). Total nominal tabel 544.362.248.930 turun ke 12.396.136.828,73.
+- Tindakan (disetujui pengguna): UPDATE bertransaksi pada database lokal db_sendigs_ss, hanya kolom nominal_penerimaan_bank = nominal/100 untuk baris yang tepat 100x nominal alokasi dan alokasinya tidak dipakai penerimaan lain. ROW_COUNT 237 sesuai dry-run. Detail/jurnal/alokasi tidak diubah (717 detail, 7674 jurnal, jumlah penerimaan detail identik).
+- Backup: scratchpad sesi, tr_penerimaan_piutang.before-fix-20261030.sql (mysqldump 681 baris). Skrip ulang pakai: application/modules/penerimaan_uang/tools/fix_header_nominal_100x.sql.
+- Validasi: sisa 100x = 0; Report 181/STM/2026 = Rp 11.305.350; Report_penerimaan_serverside_test PASS di container.
+- Risiko/TODO: database dev remote/produksi kemungkinan punya data salah yang sama; jalankan skrip di sana terpisah dengan backup. 2 penerimaan berbagi alokasi 2163 (00003/00004 Feb 2026) dan 13 selisih non-100x tidak disentuh. Penerimaan 00031-00042 tidak punya jurnal di tr_jurnal (isu terpisah).
+
+## Kontrol di modal detail penerimaan lama — 30 Oktober 2026
+- Gejala: 00003/RKN-KRG/X/26 (056/SSC/2026) Kontrol selisih -480.000 padahal penerimaan pas (bank 26.157.500 + admin 2.500 = Piutang Dagang 26.160.000; jurnal balance).
+- Penyebab: untuk invoice lama total_akhir_jurnal (Piutang Dagang) sudah neto setelah PPh 23, tetapi views/detail.php tetap mengurangkan PPh di rumus Kontrol (rumus To-Be dengan piutang bruto) sehingga PPh terhitung dua kali.
+- Perbaikan: PPh ikut rumus Kontrol hanya untuk baris snapshot calculation_version 4 (To-Be); baris lama memakai Piutang - Admin - Sisa - Bank. Tampilan kolom PPH 23 tidak berubah.
+- Hasil: 00003 Kontrol 0/Balanced. Dari 392 penerimaan lama, 256 yang selisihnya karena PPh ganda kini 0; 136 masih selisih karena data memang tidak konsisten (mis. 00033: bank+admin = tagihan bruto 14.500.000 sedangkan Piutang Dagang neto 14.210.000), tidak diubah. Lint dan 3 tes terkait PASS.
+
+## Perbaikan hasil review modul penerimaan_uang — 30 Oktober 2026
+- Izin akses: Penerimaan_uang.php memakai helper deny_without() (has_permission, jawaban 403 JSON/HTML). View: get_report_penerimaan, detail, get_alokasi_penerimaan; export_excel lewat auth->restrict(View). Add: process_alokasi, process_kwitansi_deposit, save_kwitansi_deposit, save_penerimaan_piutang. Properti managePermission yang tidak terpakai dihapus. Tes baru Permission_test.php (mutation check: gagal bila penjaga dimatikan). Rollout: non-admin yang hanya punya View tidak lagi bisa memproses/menyimpan; cek grup/user di server sebelum rilis (di DB lokal tidak ada grant Penerimaan_Uang.*, admin lolos otomatis).
+- detail(): ID tidak ada menampilkan pesan, tanpa notice; kasus tes ditambah.
+- Kontrol: detail_journal_test kini menguji baris lama (PPh tidak dikurangi dua kali), baris versi 4 (PPh tetap ikut), dan selisih nyata tetap terlihat (mutation check gagal bila rumus lama dikembalikan).
+- Tes report: Report_penerimaan_serverside_test.php tidak lagi memakai assert() (di PHP 7.4 hanya warning; sebelumnya tes tetap menulis LULUS walau 290 vs 291 gagal) dan tidak memakai angka tetap; pembanding SQL independen, exit(1) saat gagal. Koreksi laporan sebelumnya: hasil "6 dari 6 lulus" tidak benar karena satu pemeriksaan sebenarnya gagal.
+- Kode pajak: Penerimaan_calculation::stored_tax_code() (snapshot, kolom invoice, snapshot type; tanpa tebakan PPN) dipakai Report (controller dan model). Form proses: LABEL tampil "-" untuk invoice lama; HITUNGAN angka invoice lama tetap memakai perkiraan dari PPN agar Total Tagihan tidak berubah (taxTreatment dipakai di ppn/tagihan/tax_calc). Catatan: asumsi awal bahwa nilai itu hanya untuk lencana keliru dan dikoreksi saat implementasi.
+- ppn_dipotong: notice dihilangkan dengan ?? null (tiga tempat).
+- Validasi: 12 tes PHP + 7 tes JS penerimaan_uang PASS, Report test di container PASS (6 pemeriksaan), Consulting_integration_test 1010 checks PASS. Lint OK. Belum dicek di browser; belum commit.
+
+## Publikasi ke GitHub development — 30 Oktober 2026
+- Atas permintaan pengguna: commit c1e6ed04 (70 file, modul alokasi, penerimaan_uang, deposit_customer, kwitansi_deposit) dipush normal ke origin/development (16c3d94b..c1e6ed04). ls-remote sama dengan HEAD lokal.
+- Tidak ikut: application/config/constants.php (tanpa _dev, hanya untuk lokal), config/development/database.php (tidak ter-track), docs/, scratch/, dan perubahan modul lain di working tree.
+- Migrasi SQL ikut sebagai berkas (alokasi 003/004, penerimaan_uang 002-004) tetapi tidak dijalankan di server. Server development perlu: git pull --ff-only origin development, lalu menjalankan migrasi yang belum ada dan memeriksa grant Penerimaan_Uang.View/Add.
+
+## Kredensial database development diganti — 1 November 2026
+- Atas permintaan pengguna: application/config/development/database.php (tidak ter-track git) memakai host 206.84.97.107 untuk semua grup kecuali hris (206.84.97.106) dengan username/password yang diberikan pengguna. Kredensial tidak dicatat di dokumen ini. Kredensial lokal Docker disimpan sebagai komentar pada tiap blok.
+- Validasi: koneksi tujuh grup OK dari container sendigs_ss (hanya membuka koneksi).
+- Peringatan: nama database tanpa _dev (db_sendigs_ss, db_sendigs_gl_ss, ..., db_consultant_new) pada versi lama file ini berlabel Production. Aplikasi lokal kini terhubung ke database tersebut di server remote.
+
+## Nama database kembali ke _dev — 1 November 2026
+- Atas pilihan pengguna: database.php development dan constants.php kembali memakai nama _dev (hr_sentral tetap). constants.php identik dengan HEAD. Kredensial tetap versi remote yang diberikan pengguna. Koneksi tujuh grup diuji OK.
+
+## Koreksi nominal header 100x di db_sendigs_ss_dev (remote) — 1 November 2026
+- Atas persetujuan pengguna. Dry-run read-only: 237 kandidat (semua created_by NULL, 1 Apr - 19 Okt 2026, tidak ada alokasi bersama). Backup: dump tr_penerimaan_piutang (680 baris) di scratchpad sesi, remote_tr_penerimaan_piutang.before-fix-20261101.sql.
+- UPDATE satu transaksi dengan guard (harus tepat 237, kalau tidak ROLLBACK): baris diubah 237, COMMIT. Verifikasi: sisa 100x = 0; kolom lain tabel penerimaan, tabel detail, dan jumlah jurnal identik sebelum/sesudah; total nominal 544.353.528.930 -> 12.387.416.828,73; 00005/RKN-KRG/X/26 = 11.305.350.
+- Produksi/server lain belum disentuh. Skrip: application/modules/penerimaan_uang/tools/fix_header_nominal_100x.sql.
+
+## Penyelarasan UI Penerimaan Piutang ke mockup "Penerimaan Piutang + Deposit Consultant.html" — 2 November 2026
+- Status: SELESAI (view saja; controller, model, jurnal, dan kontrak POST tidak diubah).
+- Keputusan pengguna: ikuti mockup kecuali dropdown Company (dipertahankan untuk kontrak deposit per company); modal hanya disusun ulang kolom + footer; detail tetap modal.
+- `penerimaan_uang/views/index.php`: kolom Reference No dihapus dari dua daftar draft (7 kolom); filter Report jadi satu baris (Tahun, Bulan, Company, Jenis, Search, Export), tanpa ID Customer dan tombol Filter/Reset, filter berjalan langsung (select saat change, Search dengan jeda 300 ms); footer "Total (n penerimaan, m invoice/kwitansi)". Parameter `id_customer` tetap dikirim kosong agar kontrak server sama.
+- `penerimaan_uang/views/add.php`: PPH23 default "- Pilih -" (validasi kosong sudah ada); Deposit, saldo + link kartu, Nominal Deposit Dipakai dipindah ke kolom kanan; alert info PPN dihapus; tombol Back (merah) / Process.
+- `penerimaan_uang/views/consulting_process.php` (mode invoice): urutan kolom Alokasi, Deposit Dipakai, Biaya Admin, Lebih Bayar, Sisa Piutang; kartu ringkasan diganti baris footer tabel (Total Piutang, Uang Masuk, Deposit Dipakai, Lebih Bayar, Kontrol). ID elemen dipertahankan sehingga skrip kalkulasi tidak berubah. Mode kwitansi deposit tidak diubah.
+- Validasi: php -l 3 view OK; consulting_view, consulting_fifo_view, consulting_kwitansi_view, company_context (Node), Add_template_contract, calculation, Concept_contract PASS; git diff --check bersih. Tes harus dijalankan dari root repo (path relatif scratch/runtime). Report_penerimaan_serverside_test tidak dapat dijalankan lokal (butuh path container /var/www/html). Tidak ada uji browser.
+- Risiko: filter ID Customer tidak lagi tersedia di UI (backend tetap mendukung); PPH23 kosong membuat kolom PPH di daftar invoice tampil 0 sampai dipilih; urutan kolom modal baru perlu dicek visual oleh pengguna.
+
+## Penerimaan Piutang: select Company dihapus, deposit per customer — 2 November 2026
+- Keputusan pengguna: ikuti mockup, deposit dilihat per customer; deposit hanya menutup invoice company yang sama dengan voucher (tanpa jurnal antar-company); hanya form Penerimaan Piutang (modul kwitansi_deposit tidak diubah).
+- `penerimaan_uang/views/add.php`: select `#receipt_company` dan seluruh rujukannya dihapus; pilih customer langsung memuat daftar dokumen + saldo deposit; checkbox membawa `data-group`, dokumen company lain dikunci setelah satu dicentang; invoice lama menonaktifkan Pakai Deposit; hint "Bisa dipakai untuk <company>"; kartu deposit per customer.
+- `penerimaan_uang/controllers/Penerimaan_uang.php`: `get_inv_by_cust` tanpa company (menandai tiap dokumen dengan `data-group` + label company); `get_customer_deposit` dan `get_customer_deposit_ledger` menerima konteks customer saja (`customer_only_context`), respons memuat `by_company`; kontrak lama (company/invoice) tetap; guard deposit untuk invoice lama di `process_alokasi` dan `save_penerimaan_piutang`.
+- `penerimaan_uang/libraries/Consulting_receipt.php`: `get_customer_active_deposit_by_company`; `preview` menolak nominal deposit di atas saldo company invoice dengan pesan yang menyebut saldo company dan total customer. Logika FIFO/konsumsi di `save()` tidak diubah.
+- `deposit_customer/models/Deposit_customer_model.php`: `get_customer_mutasi_ledger_all`. Method lama yang menolak company kosong tidak diubah.
+- Tes diperbarui: `company_context_test.js` (ditulis ulang: tanpa company, request hanya id_customer, stale AJAX, pembatas satu company, invoice lama), `Lookup_bootstrap_test.php`, `Deposit_closure_cases.php` (customer-only lookup/ledger, daftar lintas company, campur company ditolak, deposit melebihi saldo company ditolak). README modul diperbarui.
+- Penyesuaian: pemeriksaan 'deposit melebihi saldo company invoice' ada di `Consulting_receipt::assert_deposit_within_company`, dipanggil controller `process_alokasi` setelah `preview`. `preview` sengaja tidak diubah karena `Deposit_fifo_test` mengharapkan penolakan di `save()`.
+- Validasi: php -l file yang diubah OK; Node company_context, consulting_view, consulting_fifo_view, consulting_kwitansi_view, installment_view, consulting_client PASS; PHP Lookup_bootstrap, Deposit_company, Deposit_fifo, Deposit_integrity, Concept_contract, Add_template_contract, legacy_vuca_preview, detail_journal, Permission, Invoice_list_date PASS; native MariaDB disposable (Consulting_integration_test --isolated-local-db) PASS 1020 pemeriksaan. Tidak ada uji browser. Report_penerimaan_serverside_test tidak dapat dijalankan lokal (butuh path container).
+- Risiko: saldo yang tampil per customer bisa lebih besar daripada yang dapat dipakai untuk satu company (ditangani hint + pesan penolakan); filter/UX checkbox satu-company hanya diuji lewat stub JS, belum di browser.
+
+## Modal invoice lama: petunjuk saat Kontrol ≠ 0 (tanpa Lebih Bayar) — 2 November 2026
+- Keputusan pengguna: alur legacy tidak diberi Lebih Bayar. Alasan teknis: voucher LEBIH_BAYAR hanya valid bila detail penerimaan sumbernya punya consulting_snapshot v4 (`Consulting_receipt::deposit_receipt`), sedangkan simpan legacy tidak menulisnya; voucher legacy akan mengunci saldo deposit customer ("perlu rekonsiliasi"). Migrasi simpan legacy ke snapshot v4 + pemetaan company legacy ke 7/3/4 = pekerjaan terpisah.
+- `views/process.php`: `get_num` membaca format `140,610,000.00` maupun `2.574.990,00` (sebelumnya kontrol salah: 140,61); penerimaan default = piutang dagang; `hitungAll()` dipanggil dari `add.php` saat modal dibuka; sel `#kontrol_hint` menjelaskan selisih (uang masuk lebih besar / penerimaan melebihi uang masuk).
+- `tests/installment_view_test.js`: skenario uang masuk > penerimaan, penerimaan > uang masuk, dan kontrol 0. PASS bersama legacy_vuca_preview_test dan Add_template_contract_test. Tanpa uji browser.
+
+## Lebih Bayar untuk invoice lama — 2 November 2026
+- Keputusan pengguna: invoice lama mendukung Lebih Bayar. Legacy tidak dialihkan ke engine baru karena Piutang Dagang legacy neto PPh; Lebih Bayar ditambahkan di alur simpan legacy dengan snapshot ringkas `{legacy:true,...}` agar voucher lolos validasi.
+- `views/process.php`: kolom Lebih Bayar + total, kontrol = penerimaan + lebih − uang masuk, bank debit = penerimaan + lebih, baris jurnal Deposit Customer, petunjuk kontrol; `get_num` membaca dua format angka. `controllers/Penerimaan_uang.php`: kolom/eligibility di preview (`lebih_eligible`), `legacy_cents`, simpan (jurnal, snapshot, voucher+mutasi, id_customer invoice, nilai_terpakai total), rollback hapus/tolak voucher, nama customer dari invoice bila `customer` tidak dikirim, penerimaan default = piutang dagang. `libraries/Consulting_receipt.php`: `create_lebih_bayar_voucher` (diekstrak dari save), cabang `legacy` di `deposit_receipt`. `libraries/Penerimaan_calculation.php`: `receipt_detail` membaca lebih dari snapshot legacy.
+- Tes: `legacy_fixture.php` (fixture dipisah) + kasus baru di `legacy_vuca_preview_test.php` (preview, simpan, voucher, penolakan, rollback) dan `Deposit_closure_cases.php` (validator legacy + 4 tamper); `installment_view_test.js`. Native MariaDB disposable PASS 1035 pemeriksaan; semua suite PHP/Node penerimaan PASS. Tanpa uji browser.
+- Risiko: ASUMSI id kons_tr_company STM/SUSTAIN/VUCA = 7/3/4 belum diverifikasi pada data nyata (bila beda, Lebih Bayar terkunci tanpa menulis data); alur simpan legacy menulis voucher/jurnal GL sehingga sebaiknya dicoba di staging sebelum produksi; invoice non-konsultasi (company id '1') tidak eligible.
+
+## Penyesuaian modal invoice lama ke mockup + perbaikan pemetaan company — 2 November 2026
+- Temuan dari screenshot pengguna: Lebih Bayar terkunci untuk invoice company STM-Sustain karena asumsi id company 7/3/4 salah. Data `kons_tr_company` (backup_sendigs.sql): 1 STM-Vuca, 2 Calibration, 3 Sustain, 4 Vuca, 5 Vuca-Sustain, 6 STM-Sustain, 7 STM; modul lain memetakan 1→4 dan 6→3. Perbaikan: `Penerimaan_uang::legacy_owner_id` (1→4, 4→4, 6→3, 3→3, 7→7; lainnya tidak eligible). Snapshot/voucher memakai owner hasil pemetaan; jurnal Deposit Customer tetap memakai id company legacy seperti baris jurnal lain pada penerimaan itu. Tes: kasus 6→3, 1→4, 3, 4, dan company 2 ditolak.
+- `views/process.php` + preview di controller mengikuti mockup: kolom Nomor Invoice, TAX Code (badge dari kode pajak tersimpan, '-' bila tidak ada), Penjualan, DPP, PPN, PPH 23, Total Tagihan (Penjualan + PPN), Total Tagihan - PPH, Piutang Dagang, Alokasi Penerimaan, Biaya Admin, Lebih Bayar, Sisa Piutang; baris footer Total Piutang, Uang Masuk, Lebih Bayar, Kontrol (+ rumus); kotak catatan merah/biru di bawah tabel; judul "Jurnal Penerimaan Piutang"; kolom Deskripsi terpisah dari Nama Account; baris jurnal bernilai nol disembunyikan (input tetap terkirim); "Balancing" menggantikan "Grand Total".
+- Tidak diubah (sengaja): tombol simpan tidak dikunci saat Kontrol ≠ 0 (alur lama tidak memaksanya; hanya catatan), kolom Deposit Dipakai tidak ada (invoice lama tidak memakai deposit), jurnal selalu terlihat.
+- Validasi: php -l OK; semua suite PHP/Node penerimaan PASS; render nyata `process.php` dengan data preview tanpa notice. Native MariaDB tidak dijalankan ulang (perubahan hanya view/preview/pemetaan). Tanpa uji browser.
+- Perbaikan (laporan pengguna: Kontrol 0 tetapi tombol Simpan tetap disabled): tombol `.btn_proses` di footer modal `add.php` statis `disabled` dan tidak ada kode yang mengaktifkannya untuk modal invoice lama (hanya `consulting_process.php` yang mengatur). `views/process.php::hitungAll()` kini mengaktifkan tombol bila Kontrol = 0, ada uang bank, dan jurnal seimbang (toleransi 0,01); `installment_view_test.js` menguji aktif/nonaktif. Koreksi catatan sebelumnya: tombol simpan alur lama terkunci dan handler submit juga menolak Kontrol ≠ 0.
+- Report Penerimaan: default filter Tahun kini 'Semua' (mockup). Sebelumnya terpilih tahun berjalan sehingga penerimaan bertanggal mutasi bank tahun lalu (mis. 31-Des-2025) tidak tampil; filter Tahun/Bulan memakai tanggal mutasi bank, bukan tanggal proses.

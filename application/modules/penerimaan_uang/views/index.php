@@ -115,7 +115,6 @@
                         <tr style="background-color: #f8fafc;">
                             <th class="text-center" style="width: 50px;">No.</th>
                             <th class="text-center" style="width: 120px;">Tanggal Transaksi</th>
-                            <th class="text-center" style="width: 140px;">Reference No.</th>
                             <th style="min-width: 180px;">Bank</th>
                             <th style="min-width: 220px;">Keterangan</th>
                             <th class="text-right" style="width: 130px;">Nominal (Rp)</th>
@@ -154,7 +153,6 @@
                         <tr style="background-color: #f8fafc;">
                             <th class="text-center" style="width: 50px;">No.</th>
                             <th class="text-center" style="width: 120px;">Tanggal Transaksi</th>
-                            <th class="text-center" style="width: 140px;">Reference No.</th>
                             <th style="min-width: 180px;">Bank</th>
                             <th style="min-width: 220px;">Keterangan</th>
                             <th class="text-right" style="width: 130px;">Nominal (Rp)</th>
@@ -169,10 +167,6 @@
 
         <!-- TAB 2: REPORT PENERIMAAN (USED) -->
         <div class="tab-pane" id="tab_report">
-            <div class="row" style="margin-bottom:12px">
-                <div class="col-md-4"><label for="rep_kind">Jenis Penerimaan</label><select id="rep_kind" class="form-control"><option value="">Semua</option><option value="invoice">Invoice</option><option value="deposit">Kwitansi Deposit</option></select></div>
-                <div class="col-md-4"><label for="rep_customer">ID Customer</label><input id="rep_customer" class="form-control" placeholder="Semua customer"></div>
-            </div>
             <div class="filter-panel">
                 <div class="row">
                     <div class="col-md-2">
@@ -180,7 +174,7 @@
                         <select id="rep_year" class="form-control form-control-sm">
                             <option value="">Semua</option>
                             <?php foreach ($list_years as $yr) : ?>
-                                <option value="<?= $yr ?>" <?= ($yr == date('Y')) ? 'selected' : '' ?>><?= $yr ?></option>
+                                <option value="<?= $yr ?>"><?= $yr ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -205,17 +199,19 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label for="rep_search">Search Bebas</label>
-                        <input type="text" id="rep_search" class="form-control form-control-sm" placeholder="Cari invoice, customer, bank, keterangan...">
+                    <div class="col-md-2">
+                        <label for="rep_kind">Jenis</label>
+                        <select id="rep_kind" class="form-control form-control-sm">
+                            <option value="">Semua</option>
+                            <option value="invoice">Penerimaan Piutang Invoice</option>
+                            <option value="deposit">Penerimaan Piutang Kwitansi Deposit</option>
+                        </select>
                     </div>
-                    <div class="col-md-3 text-right" style="margin-top: 22px;">
-                        <button type="button" class="btn btn-sm btn-primary" id="btn_filter_report">
-                            <i class="fa fa-filter"></i> Filter
-                        </button>
-                        <button type="button" class="btn btn-sm btn-default" id="btn_reset_report">
-                            <i class="fa fa-refresh"></i> Reset
-                        </button>
+                    <div class="col-md-2">
+                        <label for="rep_search">Search</label>
+                        <input type="search" id="rep_search" class="form-control form-control-sm" placeholder="Cari apa saja: teks, angka, tanggal">
+                    </div>
+                    <div class="col-md-2 text-right" style="margin-top: 22px;">
                         <a href="javascript:void(0)" class="btn btn-sm btn-success" id="btn_export_excel" title="Download Excel">
                             <i class="fa fa-file-excel-o"></i> Export to Excel
                         </a>
@@ -292,7 +288,6 @@
             columns: [
                 { data: 'no', className: 'text-center' },
                 { data: 'tgl_transaksi_bank', className: 'text-center nowrap' },
-                { data: 'reference_no', className: 'text-center' },
                 { data: 'bank' },
                 { data: 'keterangan' },
                 { data: 'nominal', className: 'text-right font-bold' },
@@ -326,7 +321,6 @@
             columns: [
                 { data: 'no', className: 'text-center' },
                 { data: 'tgl_transaksi_bank', className: 'text-center nowrap' },
-                { data: 'reference_no', className: 'text-center' },
                 { data: 'bank' },
                 { data: 'keterangan' },
                 { data: 'nominal', className: 'text-right font-bold' },
@@ -357,7 +351,7 @@
                     d.month = $('#rep_month').val();
                     d.company = $('#rep_company').val();
                     d.receipt_kind = $('#rep_kind').val();
-                    d.id_customer = $('#rep_customer').val();
+                    d.id_customer = '';
                     d.custom_search = $('#rep_search').val();
                 }
             },
@@ -382,7 +376,7 @@
                     var countRec = json.recordsFiltered !== undefined ? json.recordsFiltered : 0;
                     var countInv = json.count_invoices !== undefined ? json.count_invoices : 0;
                     $('#badge_report').text(countRec);
-                    $('#foot_summary_report').html('<b>Total (' + countRec + ' penerimaan, ' + countInv + ' invoice):</b>');
+                    $('#foot_summary_report').html('<b>Total (' + countRec + ' penerimaan, ' + countInv + ' invoice/kwitansi)</b>');
                     $('#foot_tot_nominal_report').html('<b>' + (json.total_nominal || 'Rp. 0,00') + '</b>');
                 }
                 updateExportLink();
@@ -398,30 +392,20 @@
             var expUrl = siteurl + active_controller + 'export_excel?year=' + encodeURIComponent(year) +
                 '&month=' + encodeURIComponent(month) +
                 '&company=' + encodeURIComponent(company) +
-                '&search=' + encodeURIComponent(search) + '&receipt_kind=' + encodeURIComponent($('#rep_kind').val()) + '&id_customer=' + encodeURIComponent($('#rep_customer').val());
+                '&search=' + encodeURIComponent(search) + '&receipt_kind=' + encodeURIComponent($('#rep_kind').val()) + '&id_customer=';
             $('#btn_export_excel').attr('href', expUrl);
         }
 
-        $('#btn_filter_report').on('click', function() {
-            table_report.draw();
-        });
-
-        $('#rep_search').on('keyup', function(e) {
-            if (e.keyCode === 13) {
+        // Filter report berjalan langsung (seperti mockup): select saat berubah, pencarian bebas dengan jeda singkat.
+        var searchTimer = null;
+        $('#rep_search').on('input', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function() {
                 table_report.draw();
-            }
+            }, 300);
         });
 
-        $('#rep_year, #rep_month, #rep_company, #rep_kind, #rep_customer').on('change', function() {
-            table_report.draw();
-        });
-
-        $('#btn_reset_report').on('click', function() {
-            $('#rep_year').val('<?= date('Y') ?>');
-            $('#rep_month').val('');
-            $('#rep_company').val('');
-            $('#rep_search').val('');
-            $('#rep_kind, #rep_customer').val('');
+        $('#rep_year, #rep_month, #rep_company, #rep_kind').on('change', function() {
             table_report.draw();
         });
 

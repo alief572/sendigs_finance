@@ -42,6 +42,11 @@ class Penerimaan_calculation
     public static function receipt_detail($row)
     {
         $snapshot = json_decode($row['consulting_snapshot'] ?? '', true);
+        if (is_array($snapshot) && !empty($snapshot['legacy'])) {
+            // Invoice lama dengan Lebih Bayar: kolom legacy tetap dipakai apa adanya, hanya lebih bayar yang ditambahkan dari snapshot.
+            $row['lebih'] = isset($snapshot['lebih']) && is_int($snapshot['lebih']) && $snapshot['lebih'] >= 0 ? self::decimal($snapshot['lebih']) : '0.00';
+            return $row;
+        }
         if ((int)($snapshot['calculation_version'] ?? 0) !== 4) return $row;
         $fields = array('balance'=>'total', 'alok'=>'penerimaan', 'admin'=>'biaya_admin', 'pph'=>'pph23',
             'sisa'=>'sisa_piutang', 'sales'=>'dpp', 'dpp_lain'=>'dpp_lain', 'ppn'=>'ppn', 'tagihan'=>'tagihan_ppn');

@@ -33,7 +33,11 @@ verify($receiptService->get_customer_active_deposit($closureCustomer,$closureOwn
 verify($monitor->get_customer_active_deposit_total($closureCustomer,$closureOwner)===20.0,'Model compatibility lookup shares integrity validator');
 $context=array('id_customer'=>$closureCustomer,'id_company'=>$closureOwner);
 verify(controllerCall($receiptCi,'get_customer_deposit',$context)['status']===1,'Explicit customer/company balance works');
-verify(controllerCall($receiptCi,'get_customer_deposit',array('id_customer'=>$closureCustomer))['status']===0,'Missing company never combines balances');
+$customerOnly=controllerCall($receiptCi,'get_customer_deposit',array('id_customer'=>$closureCustomer));
+verify($customerOnly['status']===1&&$customerOnly['saldo']==='20.00','Customer-only lookup returns the per-customer balance (form has no company selector)');
+verify(count($customerOnly['by_company'])===1&&(string)$customerOnly['by_company'][0]['id']===(string)$closureOwner&&$customerOnly['by_company'][0]['saldo']==='20.00','Customer-only lookup breaks the balance down per company');
+$customerLedger=controllerCall($receiptCi,'get_customer_deposit_ledger',array('id_customer'=>$closureCustomer));
+verify($customerLedger['status']===1&&$customerLedger['saldo_aktif']==='Rp 20,00'&&count($customerLedger['ledger'])>=1,'Customer-only ledger covers every company');
 verify(controllerCall($receiptCi,'get_customer_deposit',array('id_invoice'=>$useId,'id_company'=>'foreign'))['status']===0,'Forged invoice company rejected');
 verify(controllerCall($receiptCi,'get_customer_deposit',array('id_invoice'=>$useId,'id_customer'=>'foreign'))['status']===0,'Forged invoice customer rejected');
 verify(controllerCall($receiptCi,'get_customer_deposit_ledger',$context)['id_company']===(string)$closureOwner,'Ledger reports selected company');
@@ -42,7 +46,13 @@ verify(substr_count($invoiceList,'value="'.$useId.'"')===1,'Native invoice looku
 $foreign=$sourceInvoice;$foreign['id']='CLOSURE-FOREIGN';$foreign['id_actual_plan_tagih']='CLOSURE-FOREIGN';$foreign['consulting_top_key']=null;$foreign['saldo_piutang']='100.00';
 $foreignSnapshot=json_decode($foreign['consulting_snapshot'],true);$foreignSnapshot['owner']=array('id'=>'3','nm_company'=>'Sustain');$foreign['consulting_snapshot']=json_encode($foreignSnapshot);
 verify($db->insert('tr_invoicing',$foreign),'Foreign company open invoice');
-$receiptCi->input->values=$context+array('receipt_kind'=>'invoice','pph23_dipotong'=>'N');ob_start();$receiptCi->get_inv_by_cust();$invoiceList=ob_get_clean();verify(strpos($invoiceList,'CLOSURE-FOREIGN')===false,'Native document lookup excludes foreign company');
+$receiptCi->input->values=$context+array('receipt_kind'=>'invoice','pph23_dipotong'=>'N');ob_start();$receiptCi->get_inv_by_cust();$invoiceList=ob_get_clean();verify(strpos($invoiceList,'value="CLOSURE-FOREIGN"')!==false&&strpos($invoiceList,'data-group="3"')!==false&&strpos($invoiceList,'data-group="'.$closureOwner.'"')!==false,'Customer lookup lists every company and tags each document with its company group');
+$receiptCi->input->values=array('id_customer'=>$closureCustomer,'receipt_kind'=>'invoice','pph23_dipotong'=>'N');ob_start();$receiptCi->get_inv_by_cust();$customerList=ob_get_clean();
+verify($customerList===$invoiceList,'Invoice list does not depend on a company selection');
+$mixed=false;try{$receiptService->preview(array('choose_inv'=>array($useId,'CLOSURE-FOREIGN'),'id_alokasi'=>$closureAllocation(2091,'121.00'),'receipt_kind'=>'invoice','pph23_dipotong'=>'N'));}catch(Throwable $e){$mixed=strpos($e->getMessage(),'company yang sama')!==false;}
+verify($mixed,'One receipt cannot mix invoices from different companies');
+$tooMuch=false;try{$tooMuchPreview=$receiptService->preview(array('choose_inv'=>array($useId),'id_alokasi'=>$closureAllocation(2092,'122.00'),'receipt_kind'=>'invoice','pph23_dipotong'=>'N','deposit_choice'=>'Y','deposit_amount'=>'20.01'));$receiptService->assert_deposit_within_company($tooMuchPreview);}catch(Throwable $e){$tooMuch=strpos($e->getMessage(),'company invoice')!==false;}
+verify($tooMuch,'Deposit above the invoice company balance is refused with an explicit message');
 $choices=controllerCall($receiptCi,'get_receipt_companies',array('id_customer'=>$closureCustomer,'receipt_kind'=>'invoice'));verify(in_array('3',array_column($choices['companies'],'id'),true),'Multiple-company selector includes other invoice owner');
 verify($db->delete('tr_invoicing',array('id'=>'CLOSURE-FOREIGN')),'Remove foreign-company invoice');
 $companyChoices=controllerCall($receiptCi,'get_receipt_companies',array('id_customer'=>$closureCustomer,'receipt_kind'=>'invoice'));
@@ -134,4 +144,25 @@ $kwPage=$receiptModel->get_report_penerimaan_serverside('', '', '', $kwWinner['n
 $kwAnchor=$service->one("SELECT id FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Penerimaan Piutang' ORDER BY id LIMIT 1",array($kwWinner['no_surat']));
 $kwPosting=new Consulting_posting($receiptCi);$beforeGl=$service->one('SELECT COUNT(*) n FROM jurnal');$db->fault='commit';verify($kwPosting->receipt($kwAnchor['id'])['status']===0&&$db->fault==='','Kwitansi payment GL commit failure');verify($service->one('SELECT COUNT(*) n FROM jurnal')===$beforeGl,'Kwitansi GL failure leaves no partial ledger');
 $glPosted=$kwPosting->receipt($kwAnchor['id']);verify($glPosted['status']===1,'Kwitansi payment posts native BUM');verify($kwPosting->receipt($kwAnchor['id'])['status']===0,'Kwitansi BUM cannot post twice');verify(controllerCall($receiptCi,'rollback_penerimaan',array('id_penerimaan'=>$kwHeader['id']))['status']===0,'Posted kwitansi payment cannot rollback');
+// Penerimaan invoice lama dengan Lebih Bayar: sumber voucher dibuktikan snapshot legacy + jurnal Deposit Customer.
+$legacyNo='LEGACY-LEBIH-1';$legacyCustomer='LEG-CUST';$legacyOwner='7';$legacyLebih=1242501000;$legacyCash=257499000;
+verify($db->insert('tr_penerimaan_piutang',array('no_surat'=>$legacyNo,'id_alokasi'=>'1','id_customer'=>$legacyCustomer,'nm_customer'=>'Legacy','ppn_dipotong'=>'Y','pph23_dipotong'=>'N','nominal_penerimaan_bank'=>Invoice_calculation::decimal($legacyCash+$legacyLebih),'created_date'=>'2026-11-02 00:00:00')),'Legacy receipt header');
+verify($db->insert('tr_penerimaan_piutang_detail',array('id_header'=>$legacyNo,'id_alokasi'=>'1','id_inv'=>'LEGACY-INV','id_customer'=>$legacyCustomer,'nm_customer'=>'Legacy','penerimaan'=>Invoice_calculation::decimal($legacyCash),'biaya_admin'=>'0.00','pph23'=>'0.00','sisa_piutang'=>'0.00',
+    'consulting_snapshot'=>json_encode(array('legacy'=>true,'owner'=>array('id'=>$legacyOwner,'nm_company'=>'STM'),'cash'=>$legacyCash,'admin'=>0,'pph'=>0,'lebih'=>$legacyLebih,'balance'=>$legacyCash,'sisa'=>0)))),'Legacy receipt detail with snapshot');
+verify($db->insert('tr_jurnal',array('no_jurnal'=>'LEG-1','tgl_jurnal'=>'2026-11-02','coa'=>'2102-01-02','id_company'=>$legacyOwner,'nm_company'=>'STM','nm_coa'=>'Deposit Customer','debit'=>'0.00','kredit'=>Invoice_calculation::decimal($legacyLebih),'no_transaksi'=>$legacyNo,'jenis_transaksi'=>'Penerimaan Piutang','sts'=>'0')),'Legacy Deposit Customer credit');
+$receiptService->create_lebih_bayar_voucher($legacyNo,$legacyCustomer,'Legacy',$legacyOwner,'','2026-11-02',$legacyLebih,'LEGACY-INV');
+verify($receiptService->get_customer_active_deposit($legacyCustomer,$legacyOwner)===$legacyLebih,'Legacy Lebih Bayar voucher validates against its legacy snapshot');
+$legacyLookup=controllerCall($receiptCi,'get_customer_deposit',array('id_customer'=>$legacyCustomer));
+verify($legacyLookup['status']===1&&$legacyLookup['saldo']===Invoice_calculation::decimal($legacyLebih),'Customer lookup includes the legacy voucher');
+$legacyBroken=function($label,$mutate,$restore) use($receiptService,$legacyCustomer,$legacyOwner){
+    $mutate();$failed=false;try{$receiptService->get_customer_active_deposit($legacyCustomer,$legacyOwner);}catch(RuntimeException $e){$failed=strpos($e->getMessage(),'rekonsiliasi')!==false;}
+    $restore();verify($failed,'Legacy voucher is blocked when '.$label);
+    verify($receiptService->get_customer_active_deposit($legacyCustomer,$legacyOwner)===1242501000,'Legacy voucher valid again after restoring: '.$label);
+};
+$legacyBroken('Deposit Customer journal differs',function()use($db,$legacyNo){$db->update('tr_jurnal',array('kredit'=>'1.00'),array('no_transaksi'=>$legacyNo));},function()use($db,$legacyNo){$db->update('tr_jurnal',array('kredit'=>Invoice_calculation::decimal(1242501000)),array('no_transaksi'=>$legacyNo));});
+$legacyBroken('bank money differs from cash + lebih bayar',function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang',array('nominal_penerimaan_bank'=>'1.00'),array('no_surat'=>$legacyNo));},function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang',array('nominal_penerimaan_bank'=>Invoice_calculation::decimal(257499000+1242501000)),array('no_surat'=>$legacyNo));});
+$legacyBroken('the detail receipt differs from the snapshot cash',function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang_detail',array('penerimaan'=>'1.00'),array('id_header'=>$legacyNo));},function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang_detail',array('penerimaan'=>Invoice_calculation::decimal(257499000)),array('id_header'=>$legacyNo));});
+$legacyBroken('the snapshot owner is another company',function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang_detail',array('id_customer'=>'OTHER'),array('id_header'=>$legacyNo));},function()use($db,$legacyNo){$db->update('tr_penerimaan_piutang_detail',array('id_customer'=>'LEG-CUST'),array('id_header'=>$legacyNo));});
+// Voucher invoice lama tidak membuka pemakaian lintas company: invoice company lain tidak melihat saldonya.
+verify($receiptService->get_customer_active_deposit($legacyCustomer,'3')===0,'Legacy voucher stays inside its own company');
 $GLOBALS['test_ci']=$ci;

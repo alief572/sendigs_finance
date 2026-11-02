@@ -292,6 +292,14 @@ class Penerimaan_uang extends Admin_Controller
         $this->template->render('add');
     }
 
+    /** True bila request hanya membawa customer (tanpa company/invoice): saldo & kartu dilihat per customer. */
+    private function customer_only_context()
+    {
+        $customer = $this->input->post('id_customer'); $company = $this->input->post('id_company'); $id = $this->input->post('id_invoice');
+        foreach (array($customer, $company, $id) as $value) if ($value !== null && !is_scalar($value)) throw new InvalidArgumentException('Identitas deposit tidak valid.');
+        return trim((string)$customer) !== '' && trim((string)$company) === '' && trim((string)$id) === '';
+    }
+
     private function deposit_context()
     {
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
@@ -336,6 +344,19 @@ class Penerimaan_uang extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
         $result = array('status'=>0, 'saldo'=>null, 'formatted'=>'Belum tersedia', 'id_customer'=>null, 'id_company'=>null, 'id_invoice'=>null);
         try {
+            if ($this->customer_only_context()) {
+                // Form tidak memilih company: saldo ditampilkan per customer, dengan rincian per company
+                // supaya jelas berapa yang bisa dipakai untuk invoice dari company tertentu.
+                require_once __DIR__.'/../libraries/Consulting_receipt.php';
+                $customer = (string)$this->input->post('id_customer');
+                $summary = (new Consulting_receipt($this))->get_customer_active_deposit_by_company($customer);
+                $result = array('status'=>1, 'saldo'=>Penerimaan_calculation::decimal($summary['total']), 'formatted'=>'Rp '.number_format($summary['total']/100,2,',','.'),
+                    'id_customer'=>$customer, 'id_company'=>null, 'id_invoice'=>null, 'error'=>null, 'by_company'=>array());
+                foreach ($summary['by_company'] as $row) {
+                    $result['by_company'][] = array('id'=>$row['id'], 'name'=>$row['name'], 'saldo'=>Penerimaan_calculation::decimal($row['saldo']), 'formatted'=>'Rp '.number_format($row['saldo']/100,2,',','.'));
+                }
+                header('Content-Type: application/json'); echo json_encode($result); return;
+            }
             list($customer, $company, $invoiceId) = $this->deposit_context();
             require_once __DIR__.'/../libraries/Consulting_receipt.php';
             $cents = (new Consulting_receipt($this))->get_customer_active_deposit($customer, $company);
@@ -348,14 +369,25 @@ class Penerimaan_uang extends Admin_Controller
     public function get_customer_deposit_ledger()
     {
         $this->auth->restrict($this->viewPermission);
-        try { list($customerId, $companyId) = $this->deposit_context(); }
+        $customerOnly = false;
+        try {
+            $customerOnly = $this->customer_only_context();
+            if ($customerOnly) { $customerId = (string)$this->input->post('id_customer'); $companyId = null; }
+            else list($customerId, $companyId) = $this->deposit_context();
+        }
         catch (Throwable $e) { echo json_encode(array('status'=>0, 'message'=>$e instanceof InvalidArgumentException ? $e->getMessage() : 'Konteks deposit tidak valid.')); return; }
         $this->load->model('deposit_customer/Deposit_customer_model');
-        $ledger = $this->Deposit_customer_model->get_customer_mutasi_ledger($customerId, $companyId);
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
         $depositError = null;
-        try { $available = (new Consulting_receipt($this))->get_customer_active_deposit($customerId, $companyId); }
-        catch (RuntimeException $e) { $available = null; $depositError = $e->getMessage(); }
+        if ($customerOnly) {
+            $ledger = $this->Deposit_customer_model->get_customer_mutasi_ledger_all($customerId);
+            try { $available = (new Consulting_receipt($this))->get_customer_active_deposit_by_company($customerId)['total']; }
+            catch (RuntimeException $e) { $available = null; $depositError = $e->getMessage(); }
+        } else {
+            $ledger = $this->Deposit_customer_model->get_customer_mutasi_ledger($customerId, $companyId);
+            try { $available = (new Consulting_receipt($this))->get_customer_active_deposit($customerId, $companyId); }
+            catch (RuntimeException $e) { $available = null; $depositError = $e->getMessage(); }
+        }
 
         $totMasuk = 0;
         $totKeluar = 0;
@@ -408,10 +440,9 @@ class Penerimaan_uang extends Admin_Controller
 
         $this->db->from('tr_invoicing a');
 
-        $customerId = $this->input->post('id_customer'); $companyId = $this->input->post('id_company');
-        if (($customerId !== null && !is_scalar($customerId)) || ($companyId !== null && !is_scalar($companyId))) { echo '<tr><td colspan="11">Identitas customer/company tidak valid.</td></tr>'; return; }
+        $customerId = $this->input->post('id_customer');
+        if ($customerId !== null && !is_scalar($customerId)) { echo '<tr><td colspan="11">Identitas customer tidak valid.</td></tr>'; return; }
         if (is_scalar($customerId) && trim((string)$customerId) !== '') {
-            if (!is_scalar($companyId) || trim((string)$companyId) === '') { echo '<tr><td colspan="11">Pilih company terlebih dahulu.</td></tr>'; return; }
             $this->db->where('a.id_customer', $customerId);
         } else {
             $this->db->where('a.nm_customer', is_scalar($nm_customer) ? $nm_customer : '');
@@ -435,14 +466,18 @@ class Penerimaan_uang extends Admin_Controller
 
             foreach ($get_invoice as $item) {
 
+                // Company tidak lagi dipilih di form: setiap baris membawa grupnya (id company, atau 'legacy')
+                // supaya satu penerimaan hanya memuat invoice dari satu company.
                 $isNew = Invoice_consulting::is_new($item);
-                if (is_scalar($customerId) && trim((string)$customerId) !== '') {
-                    if ($isNew) {
-                        try { $ownerSnapshot = Invoice_consulting::snapshot($item); }
-                        catch (RuntimeException $e) { continue; }
-                        if ((string)$ownerSnapshot['owner']['id'] !== (string)$companyId) continue;
-                    } elseif ($companyId !== 'legacy') continue;
+                $group = 'legacy'; $groupName = 'Invoice lama';
+                if ($isNew) {
+                    try { $ownerSnapshot = Invoice_consulting::snapshot($item); }
+                    catch (RuntimeException $e) { continue; }
+                    $group = (string)$ownerSnapshot['owner']['id'];
+                    $groupName = (string)($ownerSnapshot['owner']['nm_company'] ?? $group);
                 }
+                $groupAttr = ' data-group="' . htmlspecialchars($group, ENT_QUOTES, 'UTF-8') . '" data-group-name="' . htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') . '"';
+                $groupLabel = '<br><small class="text-muted">' . htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') . '</small>';
 
 
                 // Label memakai kode pajak yang tersimpan; invoice lama tanpa data itu tampil "-".
@@ -531,13 +566,13 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil .= '<td class="text-right font-bold">Rp ' . number_format((float)$item['total_nominal_jurnal'], 2) . '</td>';
                     $hasil .= '<td class="text-right font-bold text-danger">Rp ' . number_format((float)$item['saldo_piutang'], 2) . '</td>';
                     $hasil .= '<td class="text-center">';
-                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '" style="cursor:pointer; width:16px; height:16px;">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ' style="cursor:pointer; width:16px; height:16px;">';
                     $hasil .= '</td>';
                     $hasil .= '</tr>';
                 } else {
                     $hasil .= '<tr>';
                     $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
-                    $hasil .= '<td class="text-center font-bold">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="text-center font-bold">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . $groupLabel . '</td>';
                     $hasil .= '<td class="text-center">' . $taxBadge . '</td>';
                     $hasil .= '<td class="text-right">' . number_format($sales, $decimals) . '</td>';
                     $hasil .= '<td class="text-right">' . number_format($dppLain, $decimals) . '</td>';
@@ -547,7 +582,7 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil .= '<td class="text-right">' . number_format($tagihanMinPph, $decimals) . '</td>';
                     $hasil .= '<td class="text-right font-bold">' . number_format((float)$item['saldo_piutang'], $decimals) . '</td>';
                     $hasil .= '<td class="text-center">';
-                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . ($receiptBlocked ? ' disabled' : '') . ' style="cursor:pointer; width:16px; height:16px;">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ($receiptBlocked ? ' disabled' : '') . ' style="cursor:pointer; width:16px; height:16px;">';
                     if ($receiptBlocked) $hasil .= '<small class="text-danger">Riwayat PPh perlu rekonsiliasi.</small>';
                     $hasil .= '</td>';
                     $hasil .= '</tr>';
@@ -562,7 +597,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center">Tidak ada dokumen terbuka untuk customer/company ini.</td></tr>';
+        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center">Tidak ada dokumen terbuka untuk customer ini.</td></tr>';
         echo $hasil;
 
     }
@@ -583,7 +618,7 @@ class Penerimaan_uang extends Admin_Controller
             try {
 
                 $post=$this->input->post(); $post['receipt_kind']='invoice';
-                $data=$consulting->preview($post);
+                $data=$consulting->preview($post);$consulting->assert_deposit_within_company($data);
 
                 $this->template->set($data);$this->template->render('consulting_process');
 
@@ -597,7 +632,18 @@ class Penerimaan_uang extends Admin_Controller
 
         $post = $this->input->post();
 
+        if (($post['deposit_choice'] ?? 'N') === 'Y') {
+            // Alur invoice lama tidak mengenal deposit; dulu dicegah lewat pilihan company 'legacy' di form.
+            echo '<div class="alert alert-danger" role="alert">Invoice lama tidak dapat memakai deposit customer. Pilih Tidak Pakai Deposit.</div>';
+            return;
+        }
 
+        // Form hanya mengirim id_customer; alur invoice lama bekerja dengan nama customer, jadi ambil dari invoice yang dicentang.
+        if (!isset($post['customer'])) {
+            $firstInv = is_array($post['choose_inv'] ?? null) ? reset($post['choose_inv']) : '';
+            $invRow = is_scalar($firstInv) ? $this->db->select('nm_customer')->get_where('tr_invoicing', array('id' => $firstInv))->row_array() : null;
+            $post['customer'] = $invRow['nm_customer'] ?? '';
+        }
 
         $pph23_dipotong = $post['pph23_dipotong'];
 
@@ -639,6 +685,7 @@ class Penerimaan_uang extends Admin_Controller
 
         $no = 0;
 
+        $lebihCompanies = array(); $lebihInvoiceNos = array();
         foreach ($post['choose_inv'] as $item) {
 
 
@@ -699,6 +746,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            $lebihCompanies[$this->legacy_owner_id($id_company)] = (string)$nm_company;
+            $lebihInvoiceNos[] = (string)$get_inv['no_invoice'];
             $get_bank = $this->db->get_where('ms_bank', ['id' => $detail['tipe_bank']])->row_array();
 
 
@@ -731,17 +780,12 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<tr>';
 
-            $hasil .= '<td class="text-center">';
-
-            $hasil .= date('d-F-Y', strtotime($get_inv['tanggal_invoice']));
-
+            $legacyTax = Penerimaan_calculation::stored_tax_code(json_decode($get_inv['consulting_snapshot'] ?? '', true), $get_inv['tax_treatment'] ?? '');
+            $hasil .= '<td class="text-center nowrap">' . htmlspecialchars((string)$get_inv['no_invoice'], ENT_QUOTES, 'UTF-8');
             $hasil .= '<input type="hidden" name="id_inv_' . $no . '" value="' . $item . '">';
-
             $hasil .= '<input type="hidden" name="remaining_pph_' . $no . '" value="' . Penerimaan_calculation::decimal($remaining_pph) . '">';
-
             $hasil .= '</td>';
-
-            $hasil .= '<td class="text-center">' . $get_inv['no_invoice'] . '</td>';
+            $hasil .= '<td class="text-center">' . ($legacyTax !== '' ? '<span class="tax-badge tax-' . htmlspecialchars($legacyTax, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($legacyTax, ENT_QUOTES, 'UTF-8') . '</span>' : '-') . '</td>';
 
             $hasil .= '<td class="text-right">' . number_format($get_inv['total_nominal_jurnal']) . '</td>';
 
@@ -763,13 +807,20 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<td class="text-left">';
 
-            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" onkeyup="hitungAll()">';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" value="' . $saldo_piutang . '" onkeyup="hitungAll()">';
 
             $hasil .= '</td>';
 
             $hasil .= '<td class="text-left">';
 
             $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="biaya_admin_' . $no . '" onkeyup="hitungAll()">';
+
+            $hasil .= '</td>';
+
+            $hasil .= '<td class="text-left">';
+
+            // Lebih Bayar: kelebihan uang masuk menjadi saldo deposit customer; dikunci di bawah bila company invoice tidak eligible.
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="lebih_bayar_' . $no . '" data-lebih onkeyup="hitungAll()">';
 
             $hasil .= '</td>';
 
@@ -793,7 +844,7 @@ class Penerimaan_uang extends Admin_Controller
 
             if ($no == 1) {
 
-                $hasil_jurnal .= '<tr>';
+                $hasil_jurnal .= '<tr class="tr_jurnal_row">';
 
 
 
@@ -831,11 +882,12 @@ class Penerimaan_uang extends Admin_Controller
 
                 $hasil_jurnal .= '<td class="text-center">';
 
-                $hasil_jurnal .= $nm_coa_bank . ' - ' . $get_inv['no_invoice'];
+                $hasil_jurnal .= $nm_coa_bank;
 
                 $hasil_jurnal .= '<input type="hidden" name="nm_coa_bank_debit" value="' . $nm_coa_bank . '">';
 
                 $hasil_jurnal .= '</td>';
+                $hasil_jurnal .= '<td class="text-left">' . $nm_coa_bank . ' - ' . $get_inv['no_invoice'] . '</td>';
 
 
 
@@ -917,7 +969,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-                    $hasil_jurnal .= '<tr>';
+                    $hasil_jurnal .= '<tr class="tr_jurnal_row">';
 
 
 
@@ -955,11 +1007,12 @@ class Penerimaan_uang extends Admin_Controller
 
                     $hasil_jurnal .= '<td class="text-center">';
 
-                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'];
+                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
 
                     $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
 
                     $hasil_jurnal .= '</td>';
+                    $hasil_jurnal .= '<td class="text-left">' . $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'] . '</td>';
 
 
 
@@ -1035,7 +1088,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-                    $hasil_jurnal .= '<tr>';
+                    $hasil_jurnal .= '<tr class="tr_jurnal_row">';
 
 
 
@@ -1073,11 +1126,12 @@ class Penerimaan_uang extends Admin_Controller
 
                     $hasil_jurnal .= '<td class="text-center">';
 
-                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'];
+                    $hasil_jurnal .= $item_coa_jurnal['nm_coa'];
 
                     $hasil_jurnal .= '<input type="hidden" name="nm_coa_' . $item_coa_jurnal['no_perkiraan'] . '_' . $no . '" value="' . $item_coa_jurnal['nm_coa'] . '">';
 
                     $hasil_jurnal .= '</td>';
+                    $hasil_jurnal .= '<td class="text-left">' . $item_coa_jurnal['nm_coa'] . ' - ' . $get_inv['no_invoice'] . '</td>';
 
 
 
@@ -1121,6 +1175,21 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+        // Lebih Bayar invoice lama: hanya bila semua invoice satu company pemilik jurnal (7/3/4), karena voucher deposit dipakai per company.
+        $lebihEligible = count($lebihCompanies) === 1 && Invoice_consulting_service::is_journal_owner((string)key($lebihCompanies));
+        if (!$lebihEligible) $hasil = str_replace(' data-lebih ', ' data-lebih readonly ', $hasil);
+        $coaDeposit = $this->accounting->get_where('coa_master', ['no_perkiraan' => '2102-01-02'])->row_array();
+        $nmCoaDeposit = !empty($coaDeposit['nama']) ? $coaDeposit['nama'] : 'Deposit Customer';
+        $hasil_jurnal .= '<tr class="tr_jurnal_lebih" style="display:none;">';
+        $hasil_jurnal .= '<td class="text-center">' . date('d-F-Y', strtotime($detail['tanggal_transaksi'])) . '</td>';
+        $hasil_jurnal .= '<td class="text-center">2102-01-02</td>';
+        $hasil_jurnal .= '<td class="text-center">' . htmlspecialchars((string)reset($lebihCompanies), ENT_QUOTES, 'UTF-8') . '</td>';
+        $hasil_jurnal .= '<td class="text-center">' . htmlspecialchars($nmCoaDeposit, ENT_QUOTES, 'UTF-8') . '</td>';
+        $hasil_jurnal .= '<td class="text-left">' . htmlspecialchars($nmCoaDeposit, ENT_QUOTES, 'UTF-8') . ' - ' . htmlspecialchars(implode(', ', $lebihInvoiceNos), ENT_QUOTES, 'UTF-8') . '</td>';
+        $hasil_jurnal .= '<td class="text-center">0</td>';
+        $hasil_jurnal .= '<td class="text-center td_kredit_lebih">0<input type="hidden" name="kredit_lebih" value="0"></td>';
+        $hasil_jurnal .= '</tr>';
+
         $data = [
 
             'hasil' => $hasil,
@@ -1140,6 +1209,7 @@ class Penerimaan_uang extends Admin_Controller
             'total_debit' => $total_debit,
 
             'total_kredit' => $total_kredit,
+            'lebih_eligible' => $lebihEligible,
 
             'nm_customer' => $post['customer'],
 
@@ -1198,6 +1268,8 @@ class Penerimaan_uang extends Admin_Controller
 
         if($consulting->contains_new($ids)){$post['receipt_kind']='invoice';echo json_encode($consulting->save($post));return;}
 
+        if(($post['deposit_choice']??'N')==='Y'){echo json_encode(array('status'=>0,'msg'=>'Invoice lama tidak dapat memakai deposit customer.','message'=>'Invoice lama tidak dapat memakai deposit customer.'));return;}
+
         $service=new Invoice_consulting_service($this);
 
         return $service->serialized(function()use($consulting,$post){
@@ -1213,6 +1285,27 @@ class Penerimaan_uang extends Admin_Controller
     }
 
 
+
+    /** Nominal modal invoice lama: menerima '140,610,000.00' (autoNumeric add.php) maupun '2.574.990,00' (format Indonesia); keduanya tidak ambigu. */
+    private function legacy_cents($raw)
+    {
+        $v = trim((string)$raw);
+        if ($v === '') return 0;
+        if (preg_match('/^-?\d{1,3}(,\d{3})+(\.\d{1,2})?$/', $v) || preg_match('/^-?\d+\.\d{1,2}$/', $v)) return Penerimaan_calculation::cents(str_replace(',', '', $v));
+        return Penerimaan_calculation::cents($v, true);
+    }
+
+    /** id kons_tr_company -> owner jurnal/deposit (7 STM, 3 Sustain, 4 Vuca); STM-Sustain(6) dan STM-Vuca(1) mengikuti pemetaan modul lain. Selain itu '' (tidak eligible). */
+    private function legacy_owner_id($companyId)
+    {
+        $map = array('1' => '4', '4' => '4', '6' => '3', '3' => '3', '7' => '7');
+        return $map[(string)$companyId] ?? '';
+    }
+
+    private function legacy_fail($message)
+    {
+        echo json_encode(array('status' => 0, 'msg' => $message, 'message' => $message));
+    }
 
     private function save_legacy_penerimaan_piutang()
 
@@ -1303,6 +1396,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
         $no_jurnal = 0;
+        $lebihRows = array();
 
         for ($i = 1; $i <= $post['no_inv']; $i++) {
 
@@ -1384,9 +1478,9 @@ class Penerimaan_uang extends Admin_Controller
 
                 $remaining_pph = $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $post['pph23_dipotong']);
 
-                $receipt_cents = Penerimaan_calculation::cents($post['penerimaan_' . $i], true);
+                $receipt_cents = $this->legacy_cents($post['penerimaan_' . $i]);
 
-                $admin_cents = Penerimaan_calculation::cents($post['biaya_admin_' . $i], true);
+                $admin_cents = $this->legacy_cents($post['biaya_admin_' . $i]);
 
                 $calculation = Penerimaan_calculation::calculate(Penerimaan_calculation::cents($saldo_piutang), $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents);
 
@@ -1398,6 +1492,13 @@ class Penerimaan_uang extends Admin_Controller
 
             }
 
+            try {
+                $lebih_cents = $this->legacy_cents($post['lebih_bayar_' . $i] ?? '');
+                if ($lebih_cents < 0) throw new InvalidArgumentException('Lebih Bayar tidak boleh negatif.');
+            } catch (InvalidArgumentException $e) {
+                $this->legacy_fail($e->getMessage());
+                return;
+            }
             $penerimaan = Penerimaan_calculation::decimal($receipt_cents);
 
             $biaya_admin = Penerimaan_calculation::decimal($admin_cents);
@@ -1456,6 +1557,10 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            $lebihRows[] = array('detail' => count($arr_insert_detail) - 1, 'cash' => $receipt_cents, 'admin' => $admin_cents,
+                'pph' => Penerimaan_calculation::cents($pph), 'lebih' => $lebih_cents, 'balance' => Penerimaan_calculation::cents($saldo_piutang),
+                'sisa' => $calculation['remaining'], 'company' => $this->legacy_owner_id($id_company), 'legacy_company' => (string)$id_company, 'nm_company' => (string)$nm_company,
+                'customer' => (string)($get_inv['id_customer'] ?? ''), 'nm_customer' => (string)($get_inv['nm_customer'] ?? ''), 'no_invoice' => (string)($get_inv['no_invoice'] ?? ''));
             $total_penerimaan_cents += $receipt_cents;
 
 
@@ -1646,13 +1751,50 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-        if (!empty($arr_insert_jurnal)) {
-
-            $arr_insert_jurnal[0]['debit'] = Penerimaan_calculation::decimal($total_penerimaan_cents);
-
+        // Lebih Bayar invoice lama: kelebihan uang bank menjadi voucher deposit customer (company pemilik jurnal 7/3/4).
+        $total_lebih_cents = 0;
+        foreach ($lebihRows as $lr) $total_lebih_cents += $lr['lebih'];
+        if ($total_lebih_cents > 0) {
+            $lebihCompanyIds = array_unique(array_column($lebihRows, 'company'));
+            $lebihCustomerIds = array_unique(array_column($lebihRows, 'customer'));
+            $allocNominal = !empty($split) ? $split['nominal'] : ($detail['nominal_kredit'] ?? 0);
+            if (count($lebihCompanyIds) !== 1 || !Invoice_consulting_service::is_journal_owner($lebihCompanyIds[0])) { $this->legacy_fail('Lebih Bayar hanya untuk invoice dari satu company pemilik jurnal (STM, Sustain, atau Vuca).'); return; }
+            if (count($lebihCustomerIds) !== 1 || trim($lebihCustomerIds[0]) === '') { $this->legacy_fail('Lebih Bayar membutuhkan invoice dari satu customer.'); return; }
+            if ($total_penerimaan_cents + $total_lebih_cents !== Penerimaan_calculation::cents($allocNominal)) { $this->legacy_fail('Penerimaan + Lebih Bayar harus sama dengan uang masuk alokasi bank.'); return; }
+            if (!$this->db->field_exists('consulting_snapshot', 'tr_penerimaan_piutang_detail') || !$this->db->table_exists('tr_customer_deposit')) { $this->legacy_fail('Skema deposit belum tersedia; terapkan migration deposit.'); return; }
+            // Snapshot ringkas (sen) agar Consulting_receipt::deposit_receipt dapat memverifikasi sumber voucher invoice lama.
+            foreach ($lebihRows as $lr) {
+                $arr_insert_detail[$lr['detail']]['id_customer'] = $lr['customer'];
+                $arr_insert_detail[$lr['detail']]['consulting_snapshot'] = json_encode(array(
+                    'legacy' => true, 'owner' => array('id' => $lr['company'], 'nm_company' => $lr['nm_company']),
+                    'cash' => $lr['cash'], 'admin' => $lr['admin'], 'pph' => $lr['pph'], 'lebih' => $lr['lebih'],
+                    'balance' => $lr['balance'], 'sisa' => $lr['sisa']
+                ));
+            }
+            $arr_insert_header['id_customer'] = $lebihCustomerIds[0];
+            $no_jurnal++;
+            $coaDepositRow = $this->accounting->get_where('coa_master', ['no_perkiraan' => '2102-01-02'])->row_array();
+            $arr_insert_jurnal[] = [
+                'no_jurnal' => $this->Penerimaan_uang_model->generate_id_invoice_jurnal($no_jurnal),
+                'tgl_jurnal' => $detail['tanggal_transaksi'],
+                'coa' => '2102-01-02',
+                'id_company' => $lebihRows[0]['legacy_company'],
+                'nm_company' => $lebihRows[0]['nm_company'],
+                'nm_coa' => !empty($coaDepositRow['nama']) ? $coaDepositRow['nama'] : 'Deposit Customer',
+                'debit' => '0.00',
+                'kredit' => Penerimaan_calculation::decimal($total_lebih_cents),
+                'keterangan' => (!empty($coaDepositRow['nama']) ? $coaDepositRow['nama'] : 'Deposit Customer') . ' - ' . implode(', ', array_column($lebihRows, 'no_invoice')),
+                'sts' => '0',
+                'no_transaksi' => $id,
+                'jenis_transaksi' => 'Penerimaan Piutang',
+                'created_by' => $this->auth->user_id(),
+                'created_date' => date('Y-m-d H:i:s')
+            ];
         }
-
-        $total_penerimaan = Penerimaan_calculation::decimal($total_penerimaan_cents);
+        if (!empty($arr_insert_jurnal)) {
+            $arr_insert_jurnal[0]['debit'] = Penerimaan_calculation::decimal($total_penerimaan_cents + $total_lebih_cents);
+        }
+        $total_penerimaan = Penerimaan_calculation::decimal($total_penerimaan_cents + $total_lebih_cents);
 
         $arr_insert_header['nominal_penerimaan_bank'] = $total_penerimaan;
 
@@ -1766,6 +1908,15 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+        if ($total_lebih_cents > 0) {
+            try {
+                (new Consulting_receipt($this))->create_lebih_bayar_voucher($id, $lebihRows[0]['customer'], $lebihRows[0]['nm_customer'], $lebihRows[0]['company'], '', $detail['tanggal_transaksi'], $total_lebih_cents, implode(', ', array_column($lebihRows, 'no_invoice')));
+            } catch (Throwable $e) {
+                $this->db->trans_rollback();
+                $this->legacy_fail('Voucher deposit lebih bayar gagal dibuat; penerimaan dibatalkan.');
+                return;
+            }
+        }
         if ($this->db->trans_status() === false) {
 
             $this->db->trans_rollback();
@@ -2018,6 +2169,19 @@ class Penerimaan_uang extends Admin_Controller
             return;
 
         }
+        // Lebih Bayar invoice lama: voucher deposit hanya boleh dihapus bila belum terpakai sama sekali.
+        $lebihVoucher = $this->db->table_exists('tr_customer_deposit')
+            ? $this->db->get_where('tr_customer_deposit', ['no_referensi' => $no_surat, 'tipe_sumber' => 'LEBIH_BAYAR'])->row_array() : null;
+        if (!empty($lebihVoucher)) {
+            $voucherMutations = $this->db->get_where('tr_customer_deposit_mutasi', ['id_deposit' => $lebihVoucher['id']])->result_array();
+            $voucherUsed = $lebihVoucher['status'] !== 'AKTIF' || Penerimaan_calculation::cents($lebihVoucher['nominal_terpakai']) !== 0
+                || count($voucherMutations) !== 1 || $voucherMutations[0]['jenis_mutasi'] !== 'IN';
+            if ($voucherUsed) {
+                echo json_encode(['status' => 0, 'msg' => 'Deposit hasil lebih bayar sudah dipakai; rollback penerimaan yang memakainya terlebih dahulu.']);
+                return;
+            }
+        }
+
 
 
 
@@ -2151,6 +2315,10 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+        if (!empty($lebihVoucher)) {
+            $this->db->delete('tr_customer_deposit_mutasi', ['id_deposit' => $lebihVoucher['id']]);
+            $this->db->delete('tr_customer_deposit', ['id' => $lebihVoucher['id']]);
+        }
         // Delete Jurnal
 
         $this->db->delete('tr_jurnal', ['no_transaksi' => $no_surat, 'jenis_transaksi' => 'Penerimaan Piutang']);

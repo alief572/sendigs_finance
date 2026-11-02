@@ -236,16 +236,38 @@ bayar, dan snapshot gross legacy. Regresi MINARTA dan concurrency tetap lulus.
 Kode hanya berada di workspace; belum diupload ke server website.
 
 
+## Lebih Bayar untuk invoice lama (2 November 2026)
+
+Modal invoice lama (`views/process.php`) punya kolom Lebih Bayar per invoice. Kontrol = total penerimaan + total lebih bayar − uang masuk; Dr bank = penerimaan + lebih bayar; Cr Deposit Customer (2102-01-02) = lebih bayar. Perhitungan AR/PPh/admin/sisa invoice lama tidak berubah.
+
+- Hanya aktif bila semua invoice berasal dari satu company pemilik jurnal (id 7/3/4, `Invoice_consulting_service::is_journal_owner`) dan satu customer; selain itu kolom dikunci dan server menolak nilai > 0. Invoice lama tetap tidak dapat memakai deposit.
+- Simpan (`save_legacy_penerimaan_piutang`) menulis, dalam satu transaksi: jurnal Deposit Customer, `consulting_snapshot` ringkas `{legacy:true, owner, cash, admin, pph, lebih, balance, sisa}` pada setiap detail, header/detail `id_customer` = id customer invoice, `nilai_terpakai` = penerimaan + lebih bayar, dan voucher `LEBIH_BAYAR` + mutasi IN lewat `Consulting_receipt::create_lebih_bayar_voucher` (kode yang sama dengan alur baru). Wajib: penerimaan + lebih bayar = uang masuk alokasi.
+- Validasi saldo: `Consulting_receipt::deposit_receipt` punya cabang snapshot `legacy`: owner/customer cocok, integer ≥ 0, kolom detail = snapshot, kas + lebih = nominal header, dan kredit jurnal 2102-01-02 = lebih bayar. Cabang snapshot versi baru tidak berubah.
+- Rollback legacy menghapus voucher + mutasi bila status AKTIF, belum terpakai, dan hanya satu mutasi IN; bila tidak, ditolak dengan pesan yang meminta rollback penerimaan pemakainya dulu.
+- Pembaca nominal modal lama (`legacy_cents`) menerima `140,610,000.00` (autoNumeric) maupun `2.574.990,00` (Indonesia).
+- ASUMSI yang perlu dicek pada data nyata: id `kons_tr_company` STM/SUSTAIN/VUCA = 7/3/4. Bila berbeda, Lebih Bayar terkunci (tidak ada data yang ditulis).
+- Tes: `legacy_vuca_preview_test.php` (+ `legacy_fixture.php`), `installment_view_test.js`, dan kasus native di `Deposit_closure_cases.php`.
+
 ## Penutupan kontrak deposit Consultant (29 Oktober 2026)
 
-Form memilih ID customer lalu company accounting; company tunggal otomatis. Pilihan
-`legacy` hanya memisahkan invoice lama/Vuca ke alur existing, tanpa mengaktifkan deposit
-pada alur tersebut. Invoice baru tidak dapat dicampur dengan kelompok legacy.
+Pembaruan 2 November 2026: form Penerimaan Piutang tidak lagi memiliki pilihan company (mengikuti
+mockup). Memilih customer langsung memuat daftar dokumen dan saldo deposit per customer. Company
+ditentukan dari dokumen yang dicentang: setiap checkbox membawa `data-group` (id company atau
+`legacy`), dan setelah satu dokumen dicentang dokumen company lain dikunci karena satu penerimaan
+hanya boleh satu company. Invoice lama (`legacy`) menonaktifkan pilihan Pakai Deposit; server juga
+menolak deposit untuk invoice lama.
 
-Lookup company: `get_receipt_companies(id_customer, receipt_kind)`. Daftar dokumen,
-saldo dan kartu deposit memakai `id_customer` + `id_company`. Lookup saldo/kartu juga
+Lookup saldo/kartu: `get_customer_deposit` dan `get_customer_deposit_ledger` cukup menerima
+`id_customer` (saldo total + `by_company`, ledger lintas company). Kontrak lama dengan
+`id_customer` + `id_company` atau `id_invoice` tetap didukung dan tetap divalidasi. Pemakaian
+deposit tidak berubah: FIFO hanya atas voucher company yang sama dengan invoice, sehingga tidak ada
+jurnal antar-company. Bila nominal deposit melebihi saldo company invoice, Process ditolak dengan
+pesan yang menyebut saldo company dan total saldo customer. `get_receipt_companies` masih ada tetapi
+tidak dipanggil lagi oleh form. Modul `kwitansi_deposit` tidak berubah.
+
+Kontrak sebelumnya (29 Oktober 2026): lookup memakai `id_customer` + `id_company`. Lookup saldo/kartu juga
 menerima `id_invoice` Consultant baru; customer/company diturunkan dari snapshot dan
-identitas eksplisit yang bertentangan ditolak. Company kosong tidak menggabungkan saldo.
+identitas eksplisit yang bertentangan ditolak. Model lama `Deposit_customer_model::get_customer_vouchers/get_customer_mutasi_ledger/get_customer_active_deposit_total` tetap menolak company kosong; tampilan per customer memakai method baru `get_customer_mutasi_ledger_all` dan `Consulting_receipt::get_customer_active_deposit_by_company`.
 Respons saldo gagal memakai `status=0`, `saldo=null`, dan `error/message`; bukan saldo nol.
 
 Saldo tersedia diverifikasi dari sumber kwitansi/lebih bayar, snapshot penerimaan,

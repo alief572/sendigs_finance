@@ -111,6 +111,20 @@ class Deposit_customer_model extends BF_Model
         return $res;
     }
 
+    /** Kartu deposit per customer lintas company (form Penerimaan Piutang tidak memilih company). */
+    public function get_customer_mutasi_ledger_all($id_customer)
+    {
+        if (!is_scalar($id_customer) || trim((string)$id_customer) === '') return array();
+        $this->db->select('m.*, d.no_deposit, d.no_referensi, d.tipe_sumber, d.id_company');
+        $this->db->from('tr_customer_deposit_mutasi m');
+        $this->db->join('tr_customer_deposit d', 'd.id = m.id_deposit', 'left');
+        $this->db->where('m.id_customer', $id_customer);
+        $this->db->where('d.id_customer', $id_customer);
+        $this->db->order_by('m.tanggal', 'ASC');
+        $this->db->order_by('m.id', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
     public function get_customer_mutasi_ledger($id_customer, $id_company = null)
     {
         if (!is_scalar($id_customer) || !is_scalar($id_company) || trim((string)$id_customer) === '' || trim((string)$id_company) === '') return array();

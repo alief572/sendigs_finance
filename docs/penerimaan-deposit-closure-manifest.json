@@ -1,0 +1,116 @@
+{
+  "task": "Penutupan penerimaan/deposit Consultant",
+  "date": "2026-10-29",
+  "status": "complete",
+  "phases": {
+    "1_identity_lookup": "verified",
+    "2_integrity": "verified",
+    "3_order_and_receipt": "verified",
+    "4_regression": "verified"
+  },
+  "tests": {
+    "native_disposable_checks": 943,
+    "offline_suites": 28,
+    "php_lint_files": 23,
+    "js_syntax_files": 8
+  },
+  "endpoints": {
+    "get_receipt_companies": "verified",
+    "get_inv_by_cust": "verified",
+    "get_customer_deposit": "verified",
+    "get_customer_deposit_ledger": "verified",
+    "process_alokasi": "verified",
+    "save_penerimaan_piutang": "verified",
+    "process_kwitansi_deposit": "verified",
+    "save_kwitansi_deposit": "verified",
+    "rollback_penerimaan": "verified"
+  },
+  "files": [
+    {
+      "path": "application/modules/penerimaan_uang/controllers/Penerimaan_uang.php",
+      "sha256": "783f25cde893f6bc808ab9b69bc1a72b8fabd6dc8890886b4820a7dc6d6a7609"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/libraries/Consulting_receipt.php",
+      "sha256": "f13267e921e3f35da951bda291dec85b1020023a036ac2cdab904452b5eea6bf"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/views/add.php",
+      "sha256": "aa9301255283c1ee100ab4c80c090b1527abd67349105dae2ad33b297599e8dc"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/views/consulting_process.php",
+      "sha256": "9312b7dbffbe155ca8829096ee0039fe78fff70a8d7331fe459ded6861708055"
+    },
+    {
+      "path": "application/modules/deposit_customer/models/Deposit_customer_model.php",
+      "sha256": "63e0cbe5ff027790a6575e5d44546e4c3a1ecba639a65ead977f82b33bfa5fcd"
+    },
+    {
+      "path": "application/modules/invoicing/tests/Consulting_integration_test.php",
+      "sha256": "ff6381984f0e57d11379100b0efe30f31f23375ba4421476e524e40dbb531049"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/README.md",
+      "sha256": "8af91d3ccf40d25aeb71e0ce4e7c19bed105dcae4fbc03142a535f02c7e2cf92"
+    },
+    {
+      "path": "docs/penerimaan-deposit-closure.md",
+      "sha256": "7140bb137ed2df0904821fe9ac9daccc19b4718ce5754efe7580038601a53803"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Concept_integration_cases.php",
+      "sha256": "4331af3bc32bb2485144a9c9101a1ba0e4bec6c539242128b8d6eeaecd8a65a7"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/consulting_fixture.php",
+      "sha256": "62eee711bec93a9b404948b8a8ed64f947de161a4262496ce3617087361bf2d2"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Deposit_company_test.php",
+      "sha256": "aedeb8bdce9725403f830581c8e659f4338a6fdd8f6905211ba362a356ffa4d5"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Deposit_fifo_test.php",
+      "sha256": "c72f0398c7736967fa5425f3333b75e7758a404af5aec8200a8c444a0e75a3a9"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/legacy_vuca_preview_test.php",
+      "sha256": "629f25f0aeede0ffcf9437b234eaca00b55946f58b462b4fe7752d0a36fcdcd5"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/render_consulting_fixture.php",
+      "sha256": "145a388942d6e383e79ef08ebdb70a7aed918b0128f91cb567a31b94b07ecedb"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Deposit_integrity_test.php",
+      "sha256": "415d88d244c64b5e9968e5d92587bd87188016bb2cd851111d732e40e3763ecf"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Lookup_bootstrap_test.php",
+      "sha256": "a8bcca648b3ddb4d356b85a0f5ff694d05eecfe3246e6a5f81938f907fd4e420"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/Deposit_closure_cases.php",
+      "sha256": "5e67fbc3b8ed81f2a94c40277b07651eaea5222d008f7f630f642f5e5a19884c"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/company_context_test.js",
+      "sha256": "3e12855e357fe1be3f94fd38d9461b6db6f84009dc528de3c7fd0b82631e6de5"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/consulting_fifo_view_test.js",
+      "sha256": "338f8162c7150b2cf95f16fd98c4bf0596775b0992f1dd81654395d1198933a5"
+    },
+    {
+      "path": "application/modules/penerimaan_uang/tests/consulting_kwitansi_view_test.js",
+      "sha256": "e89f030b61251aec99a7c8cc52e21dd95d438eadbe5688d81b8261adcfffcb3d"
+    }
+  ],
+  "limits": [
+    "No deployment or application migration",
+    "No historical corrections",
+    "No application/production database verification",
+    "No browser testing"
+  ]
+}

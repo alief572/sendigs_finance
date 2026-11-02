@@ -72,10 +72,6 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="receipt_company">Company <span class="text-red">*</span></label>
-                        <select class="form-control" id="receipt_company" name="id_company" required><option value="">Pilih customer terlebih dahulu</option></select>
-                    </div>
                     <div id="deposit_context_message" class="text-warning" role="status"></div>
                     <?php if ($isDeposit): ?>
                         <input type="hidden" name="pph23_dipotong" id="pph23_dipotong" value="N">
@@ -85,38 +81,32 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                         <div class="form-group">
                             <label for="pph23_dipotong">PPH23 Dipotong <span class="text-red">*</span></label>
                             <select class="form-control form-control-sm" name="pph23_dipotong" id="pph23_dipotong">
-                                <option value="Y" selected>Dipotong PPh</option>
+                                <option value="" selected>- Pilih -</option>
+                                <option value="Y">Dipotong PPh</option>
                                 <option value="N">Tidak Dipotong PPh</option>
                             </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="deposit_choice">Deposit Customer</label>
-                                    <select class="form-control form-control-sm" name="deposit_choice" id="deposit_choice">
-                                        <option value="N" selected>Tidak Pakai Deposit</option>
-                                        <option value="Y">Pakai Deposit</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6" id="wrap_deposit_amount" style="display:none;">
-                                <div class="form-group">
-                                    <label for="deposit_amount">Nominal Deposit Dipakai</label>
-                                    <input type="text" name="deposit_amount" id="deposit_amount" class="form-control form-control-sm text-right" value="0.00">
-                                </div>
-                            </div>
-                        </div>
-                        <div id="customer_deposit_badge_wrap" style="display:none; margin-bottom: 12px;">
-                            <span class="label label-info" style="font-size: 12px; padding: 4px 8px; display: inline-block;">
-                                <i class="fa fa-money"></i> Saldo aktif: <strong id="lbl_cust_deposit">Rp 0,00</strong>
-                            </span>
-                            <button type="button" class="btn btn-xs btn-default" id="btn_view_kartu_deposit" style="margin-left: 8px; font-weight: 600;">
-                                <i class="fa fa-credit-card text-primary"></i> Lihat kartu deposit
-                            </button>
                         </div>
                     <?php endif; ?>
                 </div>
                 <div class="col-md-6">
+                    <?php if (!$isDeposit): ?>
+                        <div class="form-group">
+                            <label for="deposit_choice">Deposit <span class="text-red">*</span></label>
+                            <select class="form-control form-control-sm" name="deposit_choice" id="deposit_choice">
+                                <option value="N" selected>Tidak Pakai Deposit</option>
+                                <option value="Y">Pakai Deposit</option>
+                            </select>
+                            <div id="customer_deposit_badge_wrap" style="display:none; margin-top: 4px;">
+                                <span class="text-muted" style="font-size: 12px;">Saldo deposit: <strong id="lbl_cust_deposit">Rp 0,00</strong></span>
+                                <button type="button" class="btn btn-link btn-xs" id="btn_view_kartu_deposit" style="font-size: 12px;">Lihat kartu deposit</button>
+                            </div>
+                        </div>
+                        <div class="form-group" id="wrap_deposit_amount" style="display:none;">
+                            <label for="deposit_amount">Nominal Deposit Dipakai <span class="text-red">*</span></label>
+                            <input type="text" name="deposit_amount" id="deposit_amount" class="form-control form-control-sm text-right" value="0.00">
+                            <span class="text-muted" style="font-size: 12px;">Diisi sendiri, maksimal sebesar saldo deposit. Saat Process, nominal ini dibagi ke invoice yang dicentang.</span>
+                        </div>
+                    <?php endif; ?>
                     <div class="form-group">
                         <label for="nominal_penerimaan_bank">Nominal Penerimaan Bank <span class="text-red">*</span></label>
                         <input type="text" name="nominal_penerimaan_bank" id="nominal_penerimaan_bank" class="form-control form-control-sm text-right" value="<?= $results['nominal_penerimaan_bank'] ?>" readonly style="font-size: 16px; font-weight: 700; background-color: #f8fafc;">
@@ -124,10 +114,6 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     <?php if ($isDeposit): ?>
                         <div class="alert alert-info" style="margin-top: 10px; padding: 10px 14px; font-size: 12px; border-radius: 4px;">
                             <i class="fa fa-info-circle"></i> <strong>Pelunasan Kwitansi Deposit:</strong> Pembayaran bank ini akan mengaktifkan saldo deposit customer sebesar nilai kwitansi utuh. Biaya admin (jika ada) ditanggung perusahaan.
-                        </div>
-                    <?php else: ?>
-                        <div class="alert alert-info" style="margin-top: 10px; padding: 10px 14px; font-size: 12px; border-radius: 4px;">
-                            <i class="fa fa-info-circle"></i> Jenis perlakuan PPN (PKP, WAPU, Kawasan Berikat) terkunci otomatis dari data invoice asal.
                         </div>
                     <?php endif; ?>
                 </div>
@@ -178,11 +164,11 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 
             <div class="row" style="margin-top: 20px;">
                 <div class="col-md-12">
-                    <a href="<?= base_url('penerimaan_uang') ?>" class="btn btn-default" style="margin-right: 10px;">
-                        <i class="fa fa-arrow-left"></i> Kembali
+                    <a href="<?= base_url('penerimaan_uang') ?>" class="btn btn-danger" style="margin-right: 10px;">
+                        <i class="fa fa-arrow-left"></i> Back
                     </a>
                     <button type="submit" class="btn btn-success btn_submit_process">
-                        <i class="fa fa-check"></i> Proses Alokasi
+                        <i class="fa fa-check"></i> Process
                     </button>
                 </div>
             </div>
@@ -280,6 +266,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     var custDepositBalance = 0;
+    var depositByCompany = [];
     var depositRequestVersion = 0;
     var isDepositKind = <?= json_encode($isDeposit) ?>;
     var kwitansiHint = <?= json_encode($results['kwitansi_hint'] ?? null) ?>;
@@ -322,6 +309,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
     function resetReceiptContext() {
         depositRequestVersion++;
         custDepositBalance = 0;
+        depositByCompany = [];
         $('#MyModalBody').empty();
         $('#dialog-popup').modal('hide');
         $('#tbody_kartu_dep').empty();
@@ -338,18 +326,19 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 
     function loadInvoices() {
         resetReceiptContext();
-        var customer = $('#customer').val(), company = $('#receipt_company').val();
+        var customer = $('#customer').val();
         var version = depositRequestVersion;
-        if (!customer || !company) return;
-        var context = {id_customer:customer, id_company:company, receipt_kind:isDepositKind ? 'deposit' : 'invoice', pph23_dipotong:$('#pph23_dipotong').val() || 'N'};
+        if (!customer) return;
+        // Company tidak dipilih di form: ditentukan dari invoice yang dicentang (satu penerimaan = satu company).
+        var context = {id_customer:customer, receipt_kind:isDepositKind ? 'deposit' : 'invoice', pph23_dipotong:$('#pph23_dipotong').val() || 'N'};
         $.ajax({type:'post', url:siteurl+active_controller+'get_inv_by_cust', data:context,
             success:function(html) { if (version === depositRequestVersion) { $('.tbody_list').html(html); applyKwitansiHint(); } },
             error:function() { if (version === depositRequestVersion) $('#deposit_context_message').text('Daftar dokumen gagal dimuat.'); }
         });
-        if (!isDepositKind && company !== 'legacy') {
+        if (!isDepositKind) {
             $('#customer_deposit_badge_wrap').show();
             $('#lbl_cust_deposit').text('Memuat saldo...');
-            $.ajax({type:'post', url:siteurl+active_controller+'get_customer_deposit', data:context, dataType:'json',
+            $.ajax({type:'post', url:siteurl+active_controller+'get_customer_deposit', data:{id_customer:customer}, dataType:'json',
                 success:function(res) {
                     if (version !== depositRequestVersion) return;
                     if (res.status !== 1) {
@@ -358,30 +347,51 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                         return;
                     }
                     custDepositBalance = Number(res.saldo) || 0;
+                    depositByCompany = res.by_company || [];
                     $('#lbl_cust_deposit').text(res.formatted);
                     $('#deposit_choice').prop('disabled', custDepositBalance <= 0).trigger('chosen:updated');
+                    updateDepositHint();
                 },
                 error:function() { if (version === depositRequestVersion) { $('#lbl_cust_deposit').text('Belum tersedia'); $('#deposit_context_message').text('Saldo gagal dimuat. Muat ulang sebelum menggunakan deposit.'); } }
             });
         }
     }
 
-    $(document).on('change', '#customer', function() {
-        resetReceiptContext();
-        $('#receipt_company').empty().append($('<option>').val('').text('Pilih company'));
-        var customer = $('#customer').val(), version = depositRequestVersion;
-        if (!customer) return;
-        $.ajax({type:'post', url:siteurl+active_controller+'get_receipt_companies', data:{id_customer:customer, receipt_kind:isDepositKind ? 'deposit' : 'invoice'}, dataType:'json',
-            success:function(res) {
-                if (version !== depositRequestVersion) return;
-                if (res.status !== 1) { $('#deposit_context_message').text(res.message); return; }
-                res.companies.forEach(function(company) { $('#receipt_company').append($('<option>').val(company.id).text(company.name)); });
-                if (res.companies.length === 1) { $('#receipt_company').val(res.companies[0].id); loadInvoices(); }
-            },
-            error:function() { if (version === depositRequestVersion) $('#deposit_context_message').text('Company gagal dimuat.'); }
+    // Deposit hanya boleh menutup invoice dari company yang sama dengan voucher; tampilkan angka yang bisa dipakai.
+    function updateDepositHint() {
+        var group = selectedGroup();
+        var hint = '';
+        if (group && group.id !== 'legacy' && depositByCompany.length) {
+            var match = depositByCompany.filter(function(row) { return String(row.id) === String(group.id); })[0];
+            hint = 'Bisa dipakai untuk ' + group.name + ': ' + (match ? match.formatted : 'Rp 0,00');
+        } else if (depositByCompany.length > 1) {
+            hint = 'Saldo per company: ' + depositByCompany.map(function(row) { return row.name + ' ' + row.formatted; }).join(', ');
+        }
+        $('#deposit_context_message').text(hint);
+    }
+
+    function selectedGroup() {
+        var first = $('.tbody_list input[name="choose_inv[]"]:checked').first();
+        return first.length ? {id: String(first.data('group')), name: String(first.data('group-name'))} : null;
+    }
+
+    // Satu penerimaan hanya untuk satu company: setelah satu dokumen dicentang, dokumen company lain dikunci.
+    $(document).on('change', '.tbody_list input[name="choose_inv[]"]', function() {
+        var group = selectedGroup();
+        $('.tbody_list input[name="choose_inv[]"]').each(function() {
+            var other = group && String($(this).data('group')) !== group.id;
+            if (other) $(this).prop('checked', false);
+            $(this).prop('disabled', !!other).attr('title', other ? 'Satu penerimaan hanya untuk satu company (' + group.name + ')' : '');
         });
+        if (!isDepositKind) {
+            var legacy = !!group && group.id === 'legacy';
+            if (legacy) { $('#deposit_choice').val('N'); $('#wrap_deposit_amount').hide(); $('#deposit_amount').autoNumeric('set', '0.00'); }
+            $('#deposit_choice').prop('disabled', legacy || custDepositBalance <= 0).trigger('chosen:updated');
+            updateDepositHint();
+        }
     });
-    $(document).on('change', '#receipt_company', loadInvoices);
+
+    $(document).on('change', '#customer', loadInvoices);
 
     $(document).on('change', '#pph23_dipotong', function() {
         loadInvoices();
@@ -408,7 +418,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         var cust = $('#customer').val();
         if (!cust) return;
         $('#kartu_dep_warning').hide().text('');
-        $('#kartu_dep_cust_name').text($('#customer option:selected').text() + ' / ' + $('#receipt_company option:selected').text());
+        $('#kartu_dep_cust_name').text($('#customer option:selected').text());
         var ledgerVersion = depositRequestVersion;
         $('#tbody_kartu_dep').html('<tr><td colspan="10" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat riwayat mutasi deposit...</td></tr>');
         $('#modal_kartu_deposit').modal('show');
@@ -416,7 +426,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         $.ajax({
             type: 'POST',
             url: siteurl + active_controller + 'get_customer_deposit_ledger',
-            data: { id_customer: cust, id_company: $('#receipt_company').val() },
+            data: { id_customer: cust },
             dataType: 'json',
             success: function(resp) {
                 if (ledgerVersion !== depositRequestVersion) return;
@@ -469,11 +479,11 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         var depositChoice = $('#deposit_choice').val();
         var check_data = $('input[name="choose_inv\\[\\]"]:checked').length;
 
-        if (customer === '' || !$('#receipt_company').val()) {
+        if (customer === '') {
             swal({
                 type: 'warning',
                 title: 'Peringatan !',
-                text: 'Customer dan company wajib dipilih !',
+                text: 'Customer wajib dipilih !',
                 timer: 3000
             });
             return false;
@@ -540,6 +550,8 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     aSep: ',',
                     aDec: '.'
                 });
+                // Modal invoice lama mengisi Penerimaan default = Piutang Dagang; hitung total/kontrol/jurnal sejak awal.
+                if (typeof hitungAll === 'function') hitungAll();
             },
             error: function(xhr) {
                 if (previewVersion !== depositRequestVersion) return;

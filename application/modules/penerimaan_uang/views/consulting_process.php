@@ -176,12 +176,12 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <th class="text-right" style="width: 115px;">Total Tagihan<br><small class="text-muted font-normal">- PPH</small></th>
                         <th class="text-right" style="width: 115px;">Piutang Dagang</th>
                         <th class="text-right" style="width: 120px;">Alokasi Penerimaan</th>
-                        <th class="text-right" style="width: 110px;">Biaya Admin<br><small class="text-muted font-normal">(maks 10rb)</small></th>
-                        <th class="text-right" style="width: 115px;">Sisa Piutang</th>
                         <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
                             <th class="text-right" style="width: 115px;">Deposit Dipakai</th>
                         <?php endif; ?>
+                        <th class="text-right" style="width: 110px;">Biaya Admin<br><small class="text-muted font-normal">(maks 10rb)</small></th>
                         <th class="text-right" style="width: 115px;">Lebih Bayar</th>
+                        <th class="text-right" style="width: 115px;">Sisa Piutang</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -252,16 +252,6 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                     name="penerimaan_<?= $n ?>" id="penerimaan_<?= $n ?>" data-row="<?= $n ?>"
                                     value="<?= number_format($saldo, 2) ?>">
                             </td>
-                            <td class="text-right">
-                                <input type="text" class="form-control input-sm text-right autonum input-admin"
-                                    name="biaya_admin_<?= $n ?>" id="biaya_admin_<?= $n ?>" data-row="<?= $n ?>"
-                                    value="0.00">
-                            </td>
-                            <td class="text-right">
-                                <input type="text" class="form-control input-sm text-right autonum input-sisa"
-                                    name="sisa_piutang_<?= $n ?>" id="sisa_piutang_<?= $n ?>" data-row="<?= $n ?>"
-                                    value="0.00">
-                            </td>
                             <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
                                 <td class="text-right">
                                     <input type="text" class="form-control input-sm text-right autonum input-dep"
@@ -272,8 +262,18 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                 <input type="hidden" name="dep_<?= $n ?>" value="0.00">
                             <?php endif; ?>
                             <td class="text-right">
+                                <input type="text" class="form-control input-sm text-right autonum input-admin"
+                                    name="biaya_admin_<?= $n ?>" id="biaya_admin_<?= $n ?>" data-row="<?= $n ?>"
+                                    value="0.00">
+                            </td>
+                            <td class="text-right">
                                 <input type="text" class="form-control input-sm text-right autonum input-lebih"
                                     name="lebih_bayar_<?= $n ?>" id="lebih_bayar_<?= $n ?>" data-row="<?= $n ?>"
+                                    value="0.00">
+                            </td>
+                            <td class="text-right">
+                                <input type="text" class="form-control input-sm text-right autonum input-sisa"
+                                    name="sisa_piutang_<?= $n ?>" id="sisa_piutang_<?= $n ?>" data-row="<?= $n ?>"
                                     value="0.00">
                             </td>
                         </tr>
@@ -286,12 +286,40 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <td colspan="2"></td>
                         <td class="text-right" id="foot_tot_piutang">0.00</td>
                         <td class="text-right" id="foot_tot_alok">0.00</td>
-                        <td class="text-right" id="foot_tot_admin">0.00</td>
-                        <td class="text-right" id="foot_tot_sisa">0.00</td>
                         <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
                             <td class="text-right" id="foot_tot_dep">0.00</td>
                         <?php endif; ?>
+                        <td class="text-right" id="foot_tot_admin">0.00</td>
                         <td class="text-right" id="foot_tot_lebih">0.00</td>
+                        <td class="text-right" id="foot_tot_sisa">0.00</td>
+                    </tr>
+                    <?php $restCols = (($deposit_choice ?? 'N') === 'Y') ? 5 : 4; ?>
+                    <tr>
+                        <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan+PPN)</td>
+                        <td class="text-right"><strong id="card_tot_piutang">Rp. 0,00</strong></td>
+                        <td colspan="<?= $restCols ?>"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="8" class="text-right text-muted">Uang Masuk</td>
+                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong></td>
+                        <td colspan="<?= $restCols ?>"></td>
+                    </tr>
+                    <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
+                        <tr>
+                            <td colspan="8" class="text-right text-muted">Deposit Dipakai</td>
+                            <td class="text-right"><strong id="card_tot_dep" class="text-primary">Rp. 0,00</strong></td>
+                            <td colspan="<?= $restCols ?>" class="text-muted small">Total per invoice harus sama dengan Nominal Deposit Dipakai di form</td>
+                        </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <td colspan="8" class="text-right text-muted">Lebih Bayar</td>
+                        <td class="text-right"><strong id="card_tot_lebih" class="text-success">Rp. 0,00</strong></td>
+                        <td colspan="<?= $restCols ?>" class="text-muted small">Masuk ke saldo deposit customer</td>
+                    </tr>
+                    <tr>
+                        <td colspan="8" class="text-right text-muted">Kontrol</td>
+                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span></td>
+                        <td colspan="<?= $restCols ?>" class="text-muted small">((Piutang &minus; PPH 23 &minus; biaya admin &minus; sisa piutang) &minus; uang masuk &minus; deposit dipakai) + lebih bayar</td>
                     </tr>
                 </tfoot>
             </table>
@@ -300,7 +328,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
 
     <!-- Summary & Kontrol Bar -->
     <div class="row" style="margin-top: 15px;">
-        <div class="col-md-7">
+        <div class="<?= $isDeposit ? 'col-md-7' : 'col-md-12' ?>">
             <div id="box-error-message" class="alert alert-danger" style="display: none; padding: 10px 14px; margin-bottom: 0;">
                 <i class="fa fa-exclamation-circle"></i> <span id="error-text"></span>
             </div>
@@ -308,9 +336,9 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                 <i class="fa fa-check-circle"></i> <strong>Kontrol 0 (Sesuai).</strong> Periksa tabel jurnal di bawah sebelum memproses.
             </div>
         </div>
+        <?php if ($isDeposit) : ?>
         <div class="col-md-5">
             <div class="tbl-summary-card">
-                <?php if ($isDeposit) : ?>
                     <div class="summary-item">
                         <span>Total Nilai Kwitansi:</span>
                         <strong id="card_tot_piutang">Rp. 0,00</strong>
@@ -327,32 +355,9 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <span>Kontrol Formula ((Piutang - Admin) - Bank):</span>
                         <span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span>
                     </div>
-                <?php else : ?>
-                    <div class="summary-item">
-                        <span>Total Piutang (Penjualan + PPN):</span>
-                        <strong id="card_tot_piutang">Rp. 0,00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Uang Masuk (Alokasi Bank):</span>
-                        <strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong>
-                    </div>
-                    <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
-                        <div class="summary-item">
-                            <span>Deposit Dipakai:</span>
-                            <strong id="card_tot_dep" class="text-primary">Rp. 0,00</strong>
-                        </div>
-                    <?php endif; ?>
-                    <div class="summary-item">
-                        <span>Lebih Bayar:</span>
-                        <strong id="card_tot_lebih" class="text-success">Rp. 0,00</strong>
-                    </div>
-                    <div class="summary-item highlight">
-                        <span>Kontrol Formula ((Piutang-PPh-Admin-Sisa)-Bank-Dep)+Lebih:</span>
-                        <span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span>
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Preview Jurnal Penerimaan -->

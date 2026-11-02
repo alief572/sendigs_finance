@@ -142,17 +142,18 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th class="text-center">Tgl invoice</th>
             <th class="text-center">Nomor Invoice</th>
+            <th class="text-center">TAX Code</th>
+            <th class="text-center">Penjualan</th>
             <th class="text-center">DPP</th>
-            <th class="text-center">DPP Lain</th>
             <th class="text-center">PPN</th>
             <th class="text-center">PPH 23</th>
-            <th class="text-center">Tagihan + Ppn</th>
-            <th class="text-center">Tagihan + Ppn - Pph</th>
-            <th class="text-center">Piutang Dagang</th>
-            <th class="text-center">Penerimaan</th>
+            <th class="text-center">Total Tagihan<br><small class="text-muted">(Penjualan + PPN)</small></th>
+            <th class="text-center">Total Tagihan<br><small class="text-muted">- PPH</small></th>
+            <th class="text-center">Piutang Dagang<br><small class="text-muted">(Penjualan + PPN)</small></th>
+            <th class="text-center">Alokasi Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
+            <th class="text-center">Lebih Bayar</th>
             <th class="text-center">Sisa Piutang</th>
         </tr>
     </thead>
@@ -175,44 +176,47 @@
                 <input type="text" name="total_biaya_admin" id="total_biaya_admin" class="form-control form-control-sm autonum text-right" readonly>
             </td>
             <td>
+                <input type="text" name="total_lebih" id="total_lebih" class="form-control form-control-sm autonum text-right" readonly>
+            </td>
+            <td>
                 <input type="text" name="total_sisa_piutang" id="total_sisa_piutang" class="form-control form-control-sm autonum text-right" readonly>
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right">Total Alokasi Penerimaan</td>
+            <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan + PPN)</td>
             <td>
-                <input type="text" name="grand_total" class="form-control form-control-sm autonum text-right" id="grand_total" readonly>
+                <input type="text" id="footer_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang_dagang ?>" readonly>
+                <input type="text" name="grand_total" id="grand_total" class="autonum" style="display:none" readonly>
             </td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="4"></td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right">Uang Masuk</td>
+            <td colspan="8" class="text-right text-muted">Uang Masuk</td>
             <td>
                 <input type="text" name="uang_masuk" class="form-control form-control-sm autonum text-right" id="uang_masuk" value="<?= $uang_masuk ?>" readonly>
             </td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="4"></td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right">Kontrol</td>
+            <td colspan="8" class="text-right text-muted">Lebih Bayar</td>
+            <td>
+                <input type="text" id="footer_lebih" class="form-control form-control-sm autonum text-right" readonly>
+            </td>
+            <td colspan="4" class="text-muted small">Masuk ke saldo deposit customer</td>
+        </tr>
+        <tr>
+            <td colspan="8" class="text-right text-muted">Kontrol</td>
             <td>
                 <input type="text" name="kontrol" class="form-control form-control-sm autonum text-right" id="kontrol" readonly>
             </td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="4" class="text-muted small">(Alokasi Penerimaan + Lebih Bayar) &minus; Uang Masuk</td>
         </tr>
     </tbody>
 </table>
 
-<br><br>
+<div id="kontrol_alert" class="alert alert-danger" role="alert" style="display:none; font-size: 13px;"><b id="kontrol_title"></b><div id="kontrol_hint"></div></div>
 
+<div class="section-t" style="font-weight:700; margin: 14px 0 8px;">Jurnal Penerimaan Piutang</div>
 <table class="table table-striped">
     <thead>
         <tr>
@@ -220,6 +224,7 @@
             <th class="text-center">COA</th>
             <th class="text-center">Nama Company</th>
             <th class="text-center">Nama Account</th>
+            <th class="text-center">Deskripsi</th>
             <th class="text-center">Debit</th>
             <th class="text-center">Credit</th>
         </tr>
@@ -229,7 +234,7 @@
     </tbody>
     <tbody>
         <tr>
-            <th colspan="4" class="text-center">Grand Total</th>
+            <th colspan="5" class="text-center">Balancing</th>
             <td class="text-center td_total_debit_jurnal">
                 <?= number_format($total_debit) ?>
                 <input type="hidden" name="total_debit" value="<?= $total_debit ?>">
@@ -245,9 +250,12 @@
 <script>
     function get_num(nilai = null) {
         if (nilai !== '' && nilai !== null) {
-            nilai = nilai.split('.').join('');
-            nilai = nilai.replace(',', '.');
-            nilai = parseFloat(nilai);
+            // Format bisa '140,610,000.00' (autoNumeric di add.php) atau '2.574.990,00' (Indonesia):
+            // pemisah terakhir yang diikuti 1-2 digit adalah desimal, pemisah lain adalah ribuan.
+            nilai = String(nilai).trim();
+            var dec = /[.,](\d{1,2})$/.exec(nilai);
+            nilai = dec ? parseFloat(nilai.slice(0, dec.index).replace(/[.,]/g, '') + '.' + dec[1]) : parseFloat(nilai.replace(/[.,]/g, ''));
+            if (isNaN(nilai)) nilai = 0;
         } else {
             nilai = 0;
         }
@@ -302,6 +310,8 @@
         // Debit bank akan ditambahkan di akhir setelah ttl_penerimaan dihitung
         ttl_kredit_jurnal += get_num2($('input[name="kredit_bank_debit"]').val());
 
+        var lebihEligible = <?= json_encode(!empty($lebih_eligible)) ?>;
+        var ttl_lebih = 0;
         var ttl_piutang_dagang = 0;
         var ttl_penerimaan = 0;
         var ttl_biaya_admin = 0;
@@ -311,6 +321,7 @@
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
+            ttl_lebih += lebihEligible ? Math.max(0, get_num($('input[name="lebih_bayar_' + i + '"]').val())) : 0;
             // Use the remaining PPh from history, never the previous rendered credit.
             var remaining_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
             var pph23_inv = pph23_dipotong == 'N' ? Math.min(remaining_pph, penerimaan) : 0;
@@ -374,7 +385,28 @@
         }
 
         var grand_total = Math.round(ttl_penerimaan * 100) / 100;
-        var kontrol = Math.round((grand_total - uang_masuk) * 100) / 100;
+        // Lebih Bayar ikut sisi bank: uang masuk = penerimaan + lebih bayar.
+        var kontrol = Math.round((grand_total + ttl_lebih - uang_masuk) * 100) / 100;
+        // Catatan kontrol (mengikuti mockup): merah bila kontrol belum 0, biru bila 0. Lebih Bayar hanya tersedia bila semua invoice satu company pemilik jurnal.
+        var kontrolTitle, kontrolMsg;
+        if (kontrol < 0) {
+            kontrolTitle = 'Catatan: kontrol belum 0.';
+            kontrolMsg = lebihEligible
+                ? 'Uang masuk lebih besar ' + number_format(-kontrol) + '. Isi Lebih Bayar pada invoice untuk kelebihan ini (masuk ke saldo deposit customer), atau tambah invoice yang dibayar.'
+                : 'Uang masuk lebih besar ' + number_format(-kontrol) + ' dari penerimaan. Lebih Bayar tidak tersedia untuk invoice ini (company belum terpetakan atau campuran): tambah invoice yang dibayar, atau kembalikan ke Alokasi untuk dialokasikan ulang.';
+        } else if (kontrol > 0) {
+            kontrolTitle = 'Catatan: kontrol belum 0.';
+            kontrolMsg = 'Penerimaan + Lebih Bayar melebihi uang masuk ' + number_format(kontrol) + '. Kurangi nilai Alokasi Penerimaan atau Lebih Bayar.';
+        } else {
+            kontrolTitle = 'Kontrol 0.';
+            kontrolMsg = 'Periksa jurnal di bawah, lalu klik Simpan Penerimaan & Bentuk Jurnal.';
+        }
+        $('#kontrol_title').text(kontrolTitle);
+        $('#kontrol_hint').text(kontrolMsg);
+        $('#kontrol_alert').removeClass('alert-danger alert-info').addClass(kontrol === 0 ? 'alert-info' : 'alert-danger').show();
+        $('.tr_jurnal_lebih').toggle(ttl_lebih > 0);
+        $('.td_kredit_lebih').html(number_format(ttl_lebih) + '<input type="hidden" name="kredit_lebih" value="' + ttl_lebih + '">');
+        ttl_kredit_jurnal += ttl_lebih;
 
         $('input[name="total_penerimaan"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
@@ -384,6 +416,12 @@
         });
         $('input[name="total_piutang_dagang"]').autoNumeric('init', {
             vMin: '-9999999999999.99', // Ini kuncinya! Kasih range negatif yang luas
+            vMax: '9999999999999.99',
+            aSep: '.',
+            aDec: ','
+        });
+        $('input[name="total_lebih"]').autoNumeric('init', {
+            vMin: '-9999999999999.99',
             vMax: '9999999999999.99',
             aSep: '.',
             aDec: ','
@@ -412,15 +450,19 @@
         $('input[name="total_penerimaan"]').autoNumeric('set', ttl_penerimaan);
         $('input[name="total_piutang_dagang"]').autoNumeric('set', ttl_piutang_dagang);
         $('input[name="total_biaya_admin"]').autoNumeric('set', ttl_biaya_admin);
+        $('input[name="total_lebih"]').autoNumeric('set', ttl_lebih);
         $('input[name="total_sisa_piutang"]').autoNumeric('set', ttl_sisa_piutang);
         $('input[name="grand_total"]').autoNumeric('set', grand_total);
         $('input[name="kontrol"]').autoNumeric('set', kontrol);
+        $('#footer_piutang').autoNumeric('set', ttl_piutang_dagang);
+        $('#footer_lebih').autoNumeric('set', ttl_lebih);
 
         // Update nilai Bank Debit dengan total penerimaan yang diketik user
-        var resp_debit_bank_debit = number_format(ttl_penerimaan);
-        resp_debit_bank_debit += '<input type="hidden" name="debit_bank_debit" value="' + ttl_penerimaan + '">';
+        var bank_masuk = ttl_penerimaan + ttl_lebih;
+        var resp_debit_bank_debit = number_format(bank_masuk);
+        resp_debit_bank_debit += '<input type="hidden" name="debit_bank_debit" value="' + bank_masuk + '">';
         $('.td_debit_bank_debit').html(resp_debit_bank_debit);
-        ttl_debit_jurnal += ttl_penerimaan;
+        ttl_debit_jurnal += bank_masuk;
 
         var resp_ttl_debit_jurnal = number_format(ttl_debit_jurnal);
         resp_ttl_debit_jurnal += '<input type="hidden" name="total_debit_jurnal" value="' + ttl_debit_jurnal + '">';
@@ -430,6 +472,15 @@
 
         $('.td_total_debit_jurnal').html(resp_ttl_debit_jurnal);
         $('.td_total_kredit_jurnal').html(resp_ttl_kredit_jurnal);
+
+        // Tombol simpan di footer modal (add.php) aktif hanya bila Kontrol 0, ada uang bank yang dialokasikan, dan jurnal seimbang.
+        $('#dialog-popup button[type="submit"]').prop('disabled', !(kontrol === 0 && bank_masuk > 0 && Math.abs(ttl_debit_jurnal - ttl_kredit_jurnal) < 0.01));
+
+        // Seperti mockup: baris jurnal bernilai nol disembunyikan (inputnya tetap ada di form).
+        $('.tr_jurnal_row').each(function () {
+            var row = $(this);
+            row.toggle(get_num2(row.find('input[name^="debit_"]').val() || '') + get_num2(row.find('input[name^="kredit_"]').val() || '') > 0);
+        });
 
     }
 </script>

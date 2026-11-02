@@ -1,3 +1,14 @@
+## Penyelarasan Penerimaan Piutang, Kwitansi Deposit, dan Monitoring Deposit ke mockup to-be — 30 Oktober 2026
+
+Acuan: mockup `Penerimaan Piutang + Deposit Consultant.html` (UI/alur) dan `Deposit - SSC.xlsx` (jurnal Kwitansi Deposit: Piutang Dagang Usaha D / Deposit Customer K). Keputusan pengguna: saldo Monitoring Deposit = total masuk - total keluar per customer tanpa dimensi company; Kwitansi tetap terikat 1 SPK.
+
+1. Fase 1: deposit_customer menjadi ledger baca-saja per customer (sumber tunggal `get_ledger_rows`, KPI dan tabel dari sumber sama, label sumber, detail 6 field + export).
+2. Fase 2: kwitansi_deposit: kolom Saldo Piutang dihapus (10 kolom), urutan filter, export 9 kolom (Company, status berlabel, ikut search).
+3. Fase 3: penerimaan_uang: label "Kwitansi Deposit"/"Deposit" di Report, header Nomor Invoice / Kwitansi, urutan kolom export, README. Mesin FIFO voucher, jurnal, jenis alokasi (id 8) tidak diubah.
+4. Fase 4: regresi seluruh suite lokal + Consulting_integration_test (MariaDB disposable) + update dokumen.
+
+Status: seluruh fase selesai (lihat docs/task-progress.md).
+
 ## Print lampiran PDF Periodik Full Halaman (A4) — 30 Oktober 2026
 
 Tujuan: Di modul expense/periodik_print, jika attachment berupa PDF, tampilkan berkas PDF tersebut menjadi 1 halaman penuh (A4 utuh, proporsional, per halaman tanpa container iframe terpotong). Pola mengikuti arsitektur yang sudah terbukti pada transport_req_print.php dan assets/js/transport-print.js.
