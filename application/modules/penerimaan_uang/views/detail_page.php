@@ -69,34 +69,25 @@ if ($showKartu) {
     }
 }
 ?>
-<style>
-    .rcp-kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; font-size: 13px; margin-bottom: 8px; }
-    .rcp-kv > div > span:first-child { display: block; color: #777; font-size: 12px; }
-    .rcp-state-ok { color: #00a65a; font-weight: 700; }
-    .rcp-state-bad { color: #dd4b39; font-weight: 700; }
-    .rcp-section { font-weight: 700; margin: 18px 0 8px; }
-    .tax-badge { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 700; border: 1px solid; white-space: nowrap; }
-    .tax-PKP { color: #2e6da4; border-color: #2e6da4; } .tax-WAPU { color: #8a5a00; border-color: #c28a00; } .tax-KB { color: #5b4a9e; border-color: #7d6cc0; } .tax-DEP { color: #0369a1; border-color: #0369a1; }
-    @media (max-width: 900px) { .rcp-kv { grid-template-columns: 1fr 1fr; } }
-</style>
-<?= mk_tax_badge_css() ?>
+<?= mk_ui_assets() ?>
+<div class="mk">
 <script>
 // Pesan singkat setelah simpan (mockup toast), dikirim dari form lewat sessionStorage.
 try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionStorage.removeItem('pu_flash'); document.addEventListener('DOMContentLoaded', function () { var t = document.createElement('div'); t.textContent = puFlash; t.style.cssText = 'position:fixed;right:16px;bottom:16px;background:#333;color:#fff;padding:10px 14px;border-radius:3px;z-index:2000;font-size:13px;max-width:340px'; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600); }); } } catch (e) {}
 </script>
-<h1 style="font-size: 24px; margin: 0 0 14px;">Penerimaan Piutang</h1>
-<div class="box box-primary">
-    <div class="box-body">
-        <div class="text-muted" style="font-size: 12px; margin-bottom: 14px;"><a href="<?= site_url('penerimaan_uang') ?>#tab_report">Report Penerimaan</a> / Detail</div>
+<h1>Penerimaan Piutang</h1>
+<div class="crumb"><a href="<?= site_url('penerimaan_uang') ?>#tab_report">Report Penerimaan</a> / Detail</div>
+<div class="box primary">
+    <div>
 
-        <div class="rcp-kv">
+        <div class="kv">
             <div><span>Customer</span><?= $e($customer) ?></div>
             <?php if ($isDeposit) : ?><div><span>Nomor Penerimaan</span><?= $e($header['no_surat'] ?? '-') ?></div><?php endif; ?>
             <div><span>Tanggal rekening koran</span><?= $e($fdate($tglKoran)) ?></div>
             <div><span>Bank</span><?= $e($bankName) ?></div>
-            <div><span>Status</span><span class="label label-success">Used</span></div>
+            <div><span>Status</span><span class="lbl used">Used</span></div>
             <?php if ($isDeposit) : ?>
-                <div><span>Jenis</span><span class="label label-success">Kwitansi Deposit</span></div>
+                <div><span>Jenis</span><span class="lbl used">Kwitansi Deposit</span></div>
                 <div><span>Uang masuk</span>Rp <?= $idn($uangMasuk) ?></div>
                 <div><span>Masuk ke deposit customer</span>Rp <?= $idn($tot['piutang']) ?></div>
             <?php else : ?>
@@ -106,35 +97,35 @@ try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionSt
                 <div><span>Deposit dipakai</span>Rp <?= $idn($tot['dep']) ?></div>
                 <div><span>Lebih bayar</span>Rp <?= $idn($tot['lebih']) ?></div>
             <?php endif; ?>
-            <div><span>Kontrol</span><span class="<?= abs($kontrol) < 0.01 ? 'rcp-state-ok' : 'rcp-state-bad' ?>"><?= $idn($kontrol) ?></span></div>
+            <div><span>Kontrol</span><span class="<?= abs($kontrol) < 0.01 ? 'state-ok' : 'state-bad' ?>"><?= $idn($kontrol) ?></span></div>
         </div>
 
-        <div class="table-responsive" style="margin-top: 8px;">
+        <div class="scroll" style="margin-top: 8px;">
             <?php if ($isDeposit) : ?>
-                <table class="table table-bordered table-striped table-hover" style="font-size: 13px;">
-                    <thead><tr><th>Nomor Kwitansi</th><th>No SPK</th><th class="text-right">Nilai Kwitansi</th><th class="text-right">Alokasi Penerimaan</th><th class="text-right">Biaya Admin</th><th>Status Kwitansi</th></tr></thead>
+                <table>
+                    <thead><tr><th>Nomor Kwitansi</th><th>No SPK</th><th class="r">Nilai Kwitansi</th><th class="r">Alokasi Penerimaan</th><th class="r">Biaya Admin</th><th>Status Kwitansi</th></tr></thead>
                     <tbody>
                         <?php foreach ($rows as $r) : ?>
-                            <tr><td><?= $e($r['no']) ?></td><td><?= $e($r['spk'] !== '' ? $r['spk'] : '-') ?></td><td class="text-right"><?= $en($r['piutang']) ?></td><td class="text-right"><?= $en($r['alok']) ?></td><td class="text-right"><?= $en($r['admin']) ?></td><td><span class="label label-success">Lunas</span></td></tr>
+                            <tr><td><?= $e($r['no']) ?></td><td><?= $e($r['spk'] !== '' ? $r['spk'] : '-') ?></td><td class="r"><?= $en($r['piutang']) ?></td><td class="r"><?= $en($r['alok']) ?></td><td class="r"><?= $en($r['admin']) ?></td><td><span class="lbl used">Lunas</span></td></tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             <?php else : ?>
-                <table class="table table-bordered table-striped table-hover" style="font-size: 13px;">
-                    <thead><tr><th>Nomor Invoice</th><th>TAX Code</th><th class="text-right">PPH 23</th><th class="text-right">Piutang Dagang</th><th class="text-right">Alokasi Penerimaan</th><th class="text-right">Deposit Dipakai</th><th class="text-right">Biaya Admin</th><th class="text-right">Lebih Bayar</th><th class="text-right">Sisa Piutang</th><th>Status Invoice</th></tr></thead>
+                <table>
+                    <thead><tr><th>Nomor Invoice</th><th>TAX Code</th><th class="r">PPH 23</th><th class="r">Piutang Dagang</th><th class="r">Alokasi Penerimaan</th><th class="r">Deposit Dipakai</th><th class="r">Biaya Admin</th><th class="r">Lebih Bayar</th><th class="r">Sisa Piutang</th><th>Status Invoice</th></tr></thead>
                     <tbody>
                         <?php foreach ($rows as $r) : ?>
                             <tr>
                                 <td><?= $e($r['no']) ?></td>
                                 <td><?= $r['tax'] !== '' ? mk_tax_badge($r['tax']) : '<span class="text-muted">-</span>' ?></td>
-                                <td class="text-right"><?= $en($r['pph']) ?></td>
-                                <td class="text-right"><?= $en($r['piutang']) ?></td>
-                                <td class="text-right"><?= $en($r['alok']) ?></td>
-                                <td class="text-right"><?= $en($r['dep']) ?></td>
-                                <td class="text-right"><?= $en($r['admin']) ?></td>
-                                <td class="text-right"><?= $en($r['lebih']) ?></td>
-                                <td class="text-right"><?= $en($r['sisa']) ?></td>
-                                <td><?= $r['sisa'] > 0 ? '<span class="label label-warning">Sisa piutang</span>' : '<span class="label label-success">Lunas</span>' ?></td>
+                                <td class="r"><?= $en($r['pph']) ?></td>
+                                <td class="r"><?= $en($r['piutang']) ?></td>
+                                <td class="r"><?= $en($r['alok']) ?></td>
+                                <td class="r"><?= $en($r['dep']) ?></td>
+                                <td class="r"><?= $en($r['admin']) ?></td>
+                                <td class="r"><?= $en($r['lebih']) ?></td>
+                                <td class="r"><?= $en($r['sisa']) ?></td>
+                                <td><?= $r['sisa'] > 0 ? '<span class="lbl partial">Sisa piutang</span>' : '<span class="lbl used">Lunas</span>' ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -142,13 +133,13 @@ try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionSt
             <?php endif; ?>
         </div>
 
-        <div class="rcp-section"><?= $isDeposit ? 'Jurnal Penerimaan Piutang Kwitansi Deposit' : 'Jurnal Penerimaan Piutang' ?></div>
+        <div class="section-t"><?= $isDeposit ? 'Jurnal Penerimaan Piutang Kwitansi Deposit' : 'Jurnal Penerimaan Piutang' ?></div>
         <?php if (empty($jurnal)) : ?>
             <div class="text-muted">Belum ada baris jurnal untuk penerimaan ini.</div>
         <?php else : ?>
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover" style="font-size: 13px;">
-                    <thead><tr><th>Tanggal Jurnal</th><th>COA</th><th>Nama Company</th><th>Nama Account</th><th>Deskripsi</th><th class="text-right">Debit</th><th class="text-right">Credit</th></tr></thead>
+            <div class="scroll">
+                <table>
+                    <thead><tr><th>Tanggal Jurnal</th><th>COA</th><th>Nama Company</th><th>Nama Account</th><th>Deskripsi</th><th class="r">Debit</th><th class="r">Credit</th></tr></thead>
                     <tbody>
                         <?php foreach ($jurnal as $j) : ?>
                             <tr>
@@ -157,33 +148,33 @@ try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionSt
                                 <td><?= $e($j['nm_company'] ?? '') ?></td>
                                 <td><?= $e($j['nm_coa'] ?? '') ?></td>
                                 <td><?= $e($j['keterangan'] ?? '') ?></td>
-                                <td class="text-right"><?= $en($j['dr']) ?></td>
-                                <td class="text-right"><?= $en($j['cr']) ?></td>
+                                <td class="r"><?= $en($j['dr']) ?></td>
+                                <td class="r"><?= $en($j['cr']) ?></td>
                             </tr>
                         <?php endforeach; ?>
-                        <tr><td colspan="5" class="text-center"><strong>Balancing</strong></td><td class="text-right"><strong><?= $en($jDebit) ?></strong></td><td class="text-right"><strong><?= $en($jKredit) ?></strong></td></tr>
+                        <tr><td colspan="5" class="text-center"><strong>Balancing</strong></td><td class="r"><strong><?= $en($jDebit) ?></strong></td><td class="r"><strong><?= $en($jKredit) ?></strong></td></tr>
                     </tbody>
                 </table>
             </div>
         <?php endif; ?>
 
         <?php if ($showKartu) : ?>
-            <div class="rcp-section">Kartu Deposit Customer (setelah penerimaan)</div>
+            <div class="section-t">Kartu Deposit Customer (setelah penerimaan)</div>
             <?php if (empty($kartu)) : ?>
                 <div class="text-muted">Belum ada mutasi deposit untuk customer ini.</div>
             <?php else : ?>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-hover" style="font-size: 13px;">
-                        <thead><tr><th>Tanggal</th><th>Referensi</th><th>Keterangan</th><th class="text-right">Masuk</th><th class="text-right">Keluar</th><th class="text-right">Saldo</th></tr></thead>
+                <div class="scroll">
+                    <table>
+                        <thead><tr><th>Tanggal</th><th>Referensi</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead>
                         <tbody>
                             <?php foreach ($kartu as $k) : ?>
                                 <tr>
                                     <td class="text-nowrap"><?= $e($fdate($k['tanggal'])) ?></td>
                                     <td class="text-nowrap"><a href="<?= site_url('penerimaan_uang/view_surat?no=' . urlencode((string)$k['ref'])) ?>"><?= $e($k['ref']) ?></a></td>
                                     <td><?= $e($k['ket']) ?></td>
-                                    <td class="text-right"><?= $en($k['masuk']) ?></td>
-                                    <td class="text-right"><?= $en($k['keluar']) ?></td>
-                                    <td class="text-right"><?= $en($k['saldo']) ?></td>
+                                    <td class="r"><?= $en($k['masuk']) ?></td>
+                                    <td class="r"><?= $en($k['keluar']) ?></td>
+                                    <td class="r"><?= $en($k['saldo']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -194,4 +185,5 @@ try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionSt
 
         <div style="margin-top: 12px;"><a class="btn btn-danger" href="<?= site_url('penerimaan_uang') ?>#tab_report">Back</a></div>
     </div>
+</div>
 </div>

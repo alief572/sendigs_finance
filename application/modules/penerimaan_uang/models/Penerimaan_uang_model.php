@@ -121,7 +121,7 @@ class Penerimaan_uang_model extends BF_Model
 
             $nominal = $item['split_nominal'];
 
-            $status = '<span class="pu-lbl pu-lbl-draft">Draft</span>';
+            $status = '<span class="lbl draft">Draft</span>';
 
             $action = '<a href="' . base_url('penerimaan_uang/add_penerimaan_uang/' . $item['split_id']) . '" class="btn btn-primary btn-xs">Proses</a>';
 
@@ -158,6 +158,34 @@ class Penerimaan_uang_model extends BF_Model
         ];
 
         echo json_encode($response);
+    }
+
+    /** Daftar draft untuk tab (mockup viewPenerimaanList): seluruh baris belum diproses, filter/pencarian/paging dikerjakan di browser. */
+    public function get_draft_rows($kind)
+    {
+        $this->db->select('s.id AS id, s.nominal AS nominal, a.tanggal_transaksi AS tgl, a.keterangan AS ket, b.nama AS bank_acc, b.rekening, b.id AS bank_id, c.nama_bank');
+        $this->db->from('tr_alokasi_split s');
+        $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
+        $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
+        $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
+        $this->db->where('s.jenis_alokasi', $kind === 'deposit' ? 8 : 1);
+        $this->db->where('YEAR(a.tanggal_transaksi) >=', 2025);
+        $this->db->where('NOT EXISTS (SELECT 1 FROM tr_penerimaan_piutang p WHERE p.id_alokasi = s.id)', null, false);
+        $this->db->group_by('s.id');
+        $this->db->order_by('a.tanggal_transaksi', 'ASC');
+        $this->db->order_by('s.id', 'ASC');
+        $rows = array();
+        foreach ($this->db->get()->result_array() as $r) {
+            $rows[] = array(
+                'id' => (int)$r['id'],
+                'tgl' => !empty($r['tgl']) && $r['tgl'] !== '0000-00-00' ? substr((string)$r['tgl'], 0, 10) : '',
+                'bankId' => (string)$r['bank_id'],
+                'bank' => trim(($r['nama_bank'] ?? '') . ' - ' . ($r['rekening'] ?? '') . ' - ' . ($r['bank_acc'] ?? ''), ' -'),
+                'ket' => (string)$r['ket'],
+                'nominal' => (float)$r['nominal']
+            );
+        }
+        return $rows;
     }
 
     /** Angka pada tab (mockup tabs()): draft invoice, draft kwitansi deposit, dan penerimaan yang sudah diproses; tidak terpengaruh filter. */

@@ -15,9 +15,9 @@ $db->invoice['tanggal_invoice']='2025-09-17';$db->invoice['consulting_version']=
 $db->invoice['total_nominal_jurnal']='15000000.00';$db->invoice['ppn_jurnal']='1650000.00';
 $c->input->values=array('nm_customer'=>'Customer','receipt_kind'=>'invoice','pph23_dipotong'=>'N');
 ob_start();$c->get_inv_by_cust();$legacyHtml=ob_get_clean();
-expectLegacy(strpos($legacyHtml,'Perlakuan PPN belum tercatat')!==false && strpos($legacyHtml,'mk-tax mk-tax-PKP')===false && strpos($legacyHtml,'mk-tax mk-tax-WAPU')===false,'Legacy invoice without stored tax treatment shows "-" instead of a guessed badge');
+expectLegacy(strpos($legacyHtml,'Perlakuan PPN belum tercatat')!==false && strpos($legacyHtml,'class="tax PKP"')===false && strpos($legacyHtml,'class="tax WAPU"')===false,'Legacy invoice without stored tax treatment shows "-" instead of a guessed badge');
 expectLegacy(strpos($legacyHtml,'16,650,000')!==false,'Legacy PKP-like invoice keeps Total Tagihan = penjualan + PPN');
 $db->invoice['tax_treatment']='PKP';
 ob_start();$c->get_inv_by_cust();$storedHtml=ob_get_clean();
-expectLegacy(strpos($storedHtml,'mk-tax mk-tax-PKP')!==false && strpos($storedHtml,'Perlakuan PPN belum tercatat')===false,'Stored tax treatment still renders its badge');
+expectLegacy(strpos($storedHtml,'class="tax PKP"')!==false && strpos($storedHtml,'Perlakuan PPN belum tercatat')===false,'Stored tax treatment still renders its badge');
 echo "PASS: invoice/kwitansi list date uses tanggal_invoice, independent of created_date, with missing/zero-date handling, and no guessed tax label\n";

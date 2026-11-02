@@ -1,179 +1,100 @@
 <?php
 $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 ?>
-<?= mk_tax_badge_css() ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+<?= mk_ui_assets() ?>
 <style>
-    .tax-badge {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-    }
-    .tax-PKP { background: #e8f4fd; color: #1976d2; border: 1px solid #bbdefb; }
-    .tax-WAPU { background: #fef8e7; color: #b78103; border: 1px solid #ffe082; }
-    .tax-KB { background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
-    .tax-DEP { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-
-    .table_list th {
-        background-color: #f4f6f9;
-        font-weight: 700;
-        font-size: 12px;
-        color: #333;
-        vertical-align: middle !important;
-        white-space: nowrap;
-    }
-    .table_list td {
-        vertical-align: middle !important;
-        font-size: 13px;
-    }
-    .nowrap {
-        white-space: nowrap;
-    }
-    .font-bold {
-        font-weight: 700;
-    }
-    .form-control-sm {
-        height: 34px;
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-    .pu-hint { font-size: 12px; color: #777; }
-    .state-bad { color: #dd4b39; font-weight: 700; }
-    .pu-toast { position: fixed; right: 16px; bottom: 16px; background: #333; color: #fff; padding: 10px 14px; border-radius: 3px; z-index: 2000; font-size: 13px; max-width: 340px; }
-    .pu-hint .btn-link { padding: 0; font-size: 12px; }
+    /* Modal alokasi memakai gaya modal mockup: header polos 18px, footer [Proses] [Batal] rata kanan. */
+    #dialog-popup .modal-header, #modal_kartu_deposit .modal-header { background: #fff; color: #333; border-bottom: 1px solid #e3e6ea; padding: 12px 16px; }
+    #dialog-popup .modal-title, #modal_kartu_deposit .modal-title { font-size: 18px; font-weight: 400; }
+    #dialog-popup .modal-footer, #modal_kartu_deposit .modal-footer { border-top: 1px solid #e3e6ea; background: #fff; text-align: right; }
+    #dialog-popup .close, #modal_kartu_deposit .close { color: #777; opacity: 1; font-size: 22px; }
+    .pu-toast-host { display: none; }
 </style>
-
-<h1 style="font-size: 24px; margin: 0 0 14px;">Penerimaan Piutang</h1>
+<div class="mk">
+<h1>Penerimaan Piutang</h1>
 <?php if ($isDeposit): ?>
-    <div style="font-size: 12px; color: #777; margin: -8px 0 14px;"><a href="<?= base_url('penerimaan_uang') ?>#tab_kwitansi">Penerimaan Piutang Kwitansi Deposit</a> / Proses</div>
+    <div class="crumb"><a href="<?= base_url('penerimaan_uang') ?>#tab_kwitansi">Penerimaan Piutang Kwitansi Deposit</a> / Proses</div>
 <?php endif; ?>
 
-<div class="box box-primary">
-    <div class="box-body">
-        <form action="" method="post" id="form_data">
-            <input type="hidden" name="receipt_kind" value="<?= htmlspecialchars($results['receipt_kind'] ?? 'invoice', ENT_QUOTES, 'UTF-8') ?>">
-            <input type="hidden" name="id_alokasi" value="<?= $results['id_alokasi'] ?>">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="customer">Nama Customer <span class="text-red">*</span></label>
-                        <select class="form-control form-control-sm" name="id_customer" id="customer">
-                            <option value="">- Pilih Customer -</option>
-                            <?php
-                            foreach ($results['list_customer'] as $item) {
-                                echo '<option value="' . htmlspecialchars($item['id_customer'], ENT_QUOTES) . '">' . htmlspecialchars($item['nm_customer']) . '</option>';
-                            }
-                            ?>
+<div class="box primary">
+    <form action="" method="post" id="form_data">
+        <input type="hidden" name="receipt_kind" value="<?= htmlspecialchars($results['receipt_kind'] ?? 'invoice', ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="id_alokasi" value="<?= $results['id_alokasi'] ?>">
+        <div class="grid2">
+            <div>
+                <div class="fg">
+                    <label for="customer">Nama Customer <span class="req">*</span></label>
+                    <select name="id_customer" id="customer">
+                        <option value="">- Pilih Customer -</option>
+                        <?php foreach ($results['list_customer'] as $item) {
+                            echo '<option value="' . htmlspecialchars($item['id_customer'], ENT_QUOTES) . '">' . htmlspecialchars($item['nm_customer']) . '</option>';
+                        } ?>
+                    </select>
+                    <?php if ($isDeposit): ?><span class="hint">Hanya customer yang punya Kwitansi Deposit belum lunas.</span><?php endif; ?>
+                </div>
+                <div id="deposit_context_message" role="status" style="display:none"></div>
+                <?php if ($isDeposit): ?>
+                    <input type="hidden" name="pph23_dipotong" id="pph23_dipotong" value="N">
+                    <input type="hidden" name="deposit_choice" id="deposit_choice" value="N">
+                    <input type="hidden" name="deposit_amount" id="deposit_amount" value="0.00">
+                <?php else: ?>
+                    <div class="fg">
+                        <label for="pph23_dipotong">PPH23 Dipotong <span class="req">*</span></label>
+                        <select name="pph23_dipotong" id="pph23_dipotong">
+                            <option value="" selected>- Pilih -</option>
+                            <option value="Y">Dipotong PPh</option>
+                            <option value="N">Tidak Dipotong PPh</option>
                         </select>
-                        <?php if ($isDeposit): ?>
-                            <span class="pu-hint">Hanya customer yang punya Kwitansi Deposit belum lunas.</span>
-                        <?php endif; ?>
                     </div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <?php if ($isDeposit): ?>
+                    <div class="fg"><label>Tanggal &amp; Bank</label><input type="text" readonly value="<?= htmlspecialchars($results['tanggal_bank'] ?? '-', ENT_QUOTES, 'UTF-8') ?>"></div>
+                <?php else: ?>
+                    <div class="fg">
+                        <label for="deposit_choice">Deposit <span class="req">*</span></label>
+                        <select name="deposit_choice" id="deposit_choice" disabled>
+                            <option value="N" selected>Tidak Pakai Deposit</option>
+                            <option value="Y">Pakai Deposit</option>
+                        </select>
+                        <span class="hint" id="customer_deposit_badge_wrap" style="display:none">Saldo deposit: <span id="lbl_cust_deposit">Rp 0,00</span><span id="wrap_kartu_link"> &middot; <button type="button" class="btn-link" id="btn_view_kartu_deposit">Lihat kartu deposit</button></span></span>
+                    </div>
+                    <div class="fg" id="wrap_deposit_amount" style="display:none">
+                        <label for="deposit_amount">Nominal Deposit Dipakai <span class="req">*</span></label>
+                        <input type="text" name="deposit_amount" id="deposit_amount" class="num" value="" placeholder="0,00" inputmode="decimal">
+                        <span class="hint">Diisi sendiri, maksimal Rp <span id="dep_max_label">0,00</span>. Saat Process, nominal ini dibagi ke invoice yang dicentang.</span>
+                    </div>
+                <?php endif; ?>
+                <div class="fg">
+                    <label for="nominal_penerimaan_bank">Nominal Penerimaan Bank <span class="req">*</span></label>
+                    <input type="text" name="nominal_penerimaan_bank" id="nominal_penerimaan_bank" class="num" value="<?= $results['nominal_penerimaan_bank'] ?>" readonly>
+                </div>
+            </div>
+        </div>
 
-                    <div id="deposit_context_message" class="text-warning" role="status"></div>
+        <div class="scroll" style="margin-top: 12px;">
+            <table>
+                <thead>
                     <?php if ($isDeposit): ?>
-                        <input type="hidden" name="pph23_dipotong" id="pph23_dipotong" value="N">
-                        <input type="hidden" name="deposit_choice" id="deposit_choice" value="N">
-                        <input type="hidden" name="deposit_amount" id="deposit_amount" value="0.00">
+                        <tr><th>Tgl Kwitansi</th><th>No Kwitansi</th><th>No SPK</th><th>Company</th><th class="r">Nilai Kwitansi</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr>
                     <?php else: ?>
-                        <div class="form-group">
-                            <label for="pph23_dipotong">PPH23 Dipotong <span class="text-red">*</span></label>
-                            <select class="form-control form-control-sm" name="pph23_dipotong" id="pph23_dipotong">
-                                <option value="" selected>- Pilih -</option>
-                                <option value="Y">Dipotong PPh</option>
-                                <option value="N">Tidak Dipotong PPh</option>
-                            </select>
-                        </div>
+                        <tr><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="r">Penjualan</th><th class="r">DPP</th><th class="r">PPN</th><th class="r">PPH 23</th><th class="r">Total Tagihan<br>(Penjualan + PPN)</th><th class="r">Total Tagihan<br>- PPH</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr>
                     <?php endif; ?>
-                </div>
-                <div class="col-md-6">
-                    <?php if ($isDeposit): ?>
-                        <div class="form-group">
-                            <label>Tanggal &amp; Bank</label>
-                            <input type="text" class="form-control form-control-sm" readonly value="<?= htmlspecialchars($results['tanggal_bank'] ?? '-', ENT_QUOTES, 'UTF-8') ?>">
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!$isDeposit): ?>
-                        <div class="form-group">
-                            <label for="deposit_choice">Deposit <span class="text-red">*</span></label>
-                            <select class="form-control form-control-sm" name="deposit_choice" id="deposit_choice" disabled>
-                                <option value="N" selected>Tidak Pakai Deposit</option>
-                                <option value="Y">Pakai Deposit</option>
-                            </select>
-                            <div id="customer_deposit_badge_wrap" class="pu-hint" style="display:none; margin-top: 4px;">
-                                Saldo deposit: <span id="lbl_cust_deposit">Rp 0,00</span><span id="wrap_kartu_link"> &middot; <button type="button" class="btn btn-link" id="btn_view_kartu_deposit">Lihat kartu deposit</button></span>
-                            </div>
-                        </div>
-                        <div class="form-group" id="wrap_deposit_amount" style="display:none;">
-                            <label for="deposit_amount">Nominal Deposit Dipakai <span class="text-red">*</span></label>
-                            <input type="text" name="deposit_amount" id="deposit_amount" class="form-control form-control-sm text-right" value="" placeholder="0,00" inputmode="decimal">
-                            <span class="pu-hint">Diisi sendiri, maksimal Rp <span id="dep_max_label">0,00</span>. Saat Process, nominal ini dibagi ke invoice yang dicentang.</span>
-                        </div>
-                    <?php endif; ?>
-                    <div class="form-group">
-                        <label for="nominal_penerimaan_bank">Nominal Penerimaan Bank <span class="text-red">*</span></label>
-                        <input type="text" name="nominal_penerimaan_bank" id="nominal_penerimaan_bank" class="form-control form-control-sm text-right" value="<?= $results['nominal_penerimaan_bank'] ?>" readonly style="font-size: 16px; font-weight: 700; background-color: #f8fafc;">
-                    </div>
-                </div>
-            </div>
+                </thead>
+                <tbody class="tbody_list">
+                    <tr><td colspan="<?= $isDeposit ? 7 : 11 ?>" class="empty"><?= $isDeposit ? 'Pilih customer untuk menampilkan kwitansi deposit yang masih terbuka.' : 'No Data Found' ?></td></tr>
+                </tbody>
+            </table>
+        </div>
 
-            <div class="row" style="margin-top: 15px;">
-                <div class="col-md-12">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table_list">
-                            <thead>
-                                <?php if ($isDeposit): ?>
-                                    <tr>
-                                        <th class="text-center" style="width: 100px;">Tgl Kwitansi</th>
-                                        <th class="text-center" style="width: 160px;">No Kwitansi</th>
-                                        <th class="text-center" style="width: 140px;">No SPK</th>
-                                        <th class="text-center" style="width: 120px;">Company</th>
-                                        <th class="text-right" style="width: 130px;">Nilai Kwitansi</th>
-                                        <th class="text-right" style="width: 130px;">Saldo Piutang</th>
-                                        <th class="text-center" style="width: 60px;">Action</th>
-                                    </tr>
-                                <?php else: ?>
-                                    <tr>
-                                        <th class="text-center" style="width: 100px;">Tgl Invoice</th>
-                                        <th class="text-center" style="width: 140px;">Nomor Invoice</th>
-                                        <th class="text-center" style="width: 80px;">TAX Code</th>
-                                        <th class="text-right" style="width: 110px;">Penjualan</th>
-                                        <th class="text-right" style="width: 100px;">DPP</th>
-                                        <th class="text-right" style="width: 90px;">PPN</th>
-                                        <th class="text-right" style="width: 90px;">PPH 23</th>
-                                        <th class="text-right" style="width: 120px;">Total Tagihan<br>(Penjualan + PPN)</th>
-                                        <th class="text-right" style="width: 120px;">Total Tagihan<br>- PPH</th>
-                                        <th class="text-right" style="width: 120px;">Saldo Piutang</th>
-                                        <th class="text-center" style="width: 60px;">Action</th>
-                                    </tr>
-                                <?php endif; ?>
-                            </thead>
-                            <tbody class="tbody_list">
-                                <tr>
-                                    <td colspan="<?= $isDeposit ? 7 : 11 ?>" class="text-center text-muted" style="padding: 20px;">
-                                        <?= $isDeposit ? 'Pilih customer untuk menampilkan kwitansi deposit yang masih terbuka.' : 'No Data Found' ?>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row" style="margin-top: 20px;">
-                <div class="col-md-12">
-                    <a href="<?= base_url('penerimaan_uang') . ($isDeposit ? '#tab_kwitansi' : '') ?>" class="btn btn-danger" style="margin-right: 8px;">Back</a>
-                    <button type="submit" class="btn btn-success btn_submit_process">Process</button>
-                    <span class="pu-hint" id="fmsg" style="margin-left: 8px;"></span>
-                </div>
-            </div>
-        </form>
-    </div>
+        <div class="inline" style="margin-top: 12px;">
+            <a href="<?= base_url('penerimaan_uang') . ($isDeposit ? '#tab_kwitansi' : '') ?>" class="btn btn-danger">Back</a>
+            <button type="submit" class="btn btn-success btn_submit_process">Process</button>
+            <span class="hint" id="fmsg"></span>
+        </div>
+    </form>
+</div>
 </div>
 
 <!-- Modal Kartu Deposit Customer (mockup depCardModal) -->
@@ -235,8 +156,6 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="<?= base_url('assets/js/penerimaan_uang/consulting.js') ?>"></script>
-<script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     var custDepositBalance = 0;
     var depositByCompany = [];
@@ -252,17 +171,11 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
     }
 
     $(document).ready(function() {
-        $('#customer').chosen({
-            width: '100%',
-            search_contains: true
-        });
         if (kwitansiHint && $('#customer option[value="' + kwitansiHint.id_customer + '"]').length) {
-            $('#customer').val(kwitansiHint.id_customer).trigger('chosen:updated').trigger('change');
+            $('#customer').val(kwitansiHint.id_customer).trigger('change');
         }
 
         if (!isDepositKind) {
-            $('#pph23_dipotong').chosen({ width: '100%' });
-            $('#deposit_choice').chosen({ width: '100%' });
             $('#deposit_amount').autoNumeric('init', {
                 vMin: '0.00',
                 vMax: '9999999999999.99',
@@ -292,7 +205,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         $('#deposit_context_message').text('');
         $('.tbody_list').empty();
         if (!isDepositKind) {
-            $('#deposit_choice').val('N').prop('disabled', true).trigger('chosen:updated');
+            $('#deposit_choice').val('N').prop('disabled', true);
             $('#wrap_deposit_amount').hide();
             $('#deposit_amount').val('');
         }
@@ -335,9 +248,9 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     // Link kartu deposit hanya bila saldo > 0 (mockup 753); nominal maksimal ikut saldo.
                     $('#wrap_kartu_link').toggle(custDepositBalance > 0);
                     $('#dep_max_label').text(String(res.formatted || '').replace(/^Rp\s*/, ''));
-                    $('#deposit_choice').prop('disabled', custDepositBalance <= 0).trigger('chosen:updated');
+                    $('#deposit_choice').prop('disabled', custDepositBalance <= 0);
                     if (preDepChoice === 'Y' && custDepositBalance > 0) {
-                        $('#deposit_choice').val('Y').trigger('chosen:updated').trigger('change');
+                        $('#deposit_choice').val('Y').trigger('change');
                         if (preDepAmount) $('#deposit_amount').val(preDepAmount);
                     }
                     updateDepositHint();
@@ -376,14 +289,14 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         if (!isDepositKind) {
             var legacy = !!group && group.id === 'legacy';
             if (legacy) { $('#deposit_choice').val('N'); $('#wrap_deposit_amount').hide(); $('#deposit_amount').val(''); }
-            $('#deposit_choice').prop('disabled', legacy || custDepositBalance <= 0).trigger('chosen:updated');
+            $('#deposit_choice').prop('disabled', legacy || custDepositBalance <= 0);
             updateDepositHint();
         }
     });
 
     $(document).on('change', '#customer', function() {
         // Ganti customer mereset pilihan PPh dan deposit (mockup newForm).
-        if (!isDepositKind) { $('#pph23_dipotong').val('').trigger('chosen:updated'); }
+        if (!isDepositKind) { $('#pph23_dipotong').val(''); }
         formMsg('');
         loadInvoices(false);
     });
@@ -406,15 +319,9 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         var v = parseFloat($(this).autoNumeric('get')) || 0;
         if (v > custDepositBalance) {
             $(this).autoNumeric('set', custDepositBalance);
-            puToast('Nominal deposit dibatasi sebesar saldo ' + $('#lbl_cust_deposit').text() + '.');
+            MockupUI.toast('Nominal deposit dibatasi sebesar saldo ' + $('#lbl_cust_deposit').text() + '.');
         }
     });
-
-    function puToast(msg) {
-        $('.pu-toast').remove();
-        var t = $('<div class="pu-toast"></div>').text(msg).appendTo('body');
-        setTimeout(function() { t.remove(); }, 2600);
-    }
 
     function formMsg(text) {
         $('#fmsg').html(text ? '<span class="state-bad">' + ledgerText(text) + '</span>' : '');
@@ -517,12 +424,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                 if (previewVersion !== depositRequestVersion) return;
                 // Tampilkan kode HTTP agar kegagalan server (500) bisa dibedakan dari jaringan; detail ada di application/logs.
                 var detail = xhr && xhr.status ? ' (HTTP ' + xhr.status + ', detail di log server)' : ' (tidak ada respons dari server)';
-                swal({
-                    type: 'error',
-                    title: 'Error !',
-                    text: 'Gagal memproses preview alokasi' + detail + '. Coba lagi nanti.',
-                    timer: 5000
-                });
+                MockupUI.toast('Gagal memproses preview alokasi' + detail + '. Coba lagi nanti.');
                 $('#dialog-popup').modal('hide');
             }
         });
@@ -530,87 +432,43 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 
     $(document).on('submit', '#frm_data', function(e) {
         e.preventDefault();
-
-        var kontrolVal = parseFloat($('input[name="kontrol"]').val()) || 0;
-        if (Math.abs(kontrolVal) > 0.009) {
-            swal({
-                type: 'warning',
-                title: 'Kontrol Belum 0 !',
-                text: 'Kontrol harus 0 sebelum penerimaan dapat disimpan.',
-                timer: 3000
-            });
-            return false;
-        }
-
-        var debitJurnal = parseFloat($('input[name="total_debit_jurnal"]').val()) || 0;
-        var kreditJurnal = parseFloat($('input[name="total_kredit_jurnal"]').val()) || 0;
-
-        if (Math.abs(debitJurnal - kreditJurnal) > 0.009) {
-            swal({
-                type: 'error',
-                title: 'Jurnal Tidak Balance !',
-                text: 'Total Debit tidak sama dengan Total Kredit. Harap periksa kembali alokasi.',
-                timer: 3000
-            });
-            return false;
-        }
-
-        swal({
-            type: 'warning',
-            title: 'Konfirmasi',
-            text: isDepositKind ? 'Simpan penerimaan kwitansi deposit dan bentuk jurnal?' : 'Simpan penerimaan piutang dan bentuk jurnal?',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Simpan',
-            cancelButtonText: 'Batal',
-            confirmButtonColor: '#00a65a'
-        }, function(isConfirm) {
-            if (isConfirm) {
-                var postData;
-                try {
-                    postData = document.getElementById('consulting-receipt-container')
-                        ? $.param(ConsultingReceiptMoney.normalizeFields($('#frm_data').serializeArray()))
-                        : $('#frm_data').serialize();
-                } catch (error) {
-                    swal({type: 'warning', title: 'Nominal Tidak Valid', text: error.message});
-                    return;
-                }
-                $.ajax({
-                    type: 'post',
-                    url: siteurl + active_controller + <?= json_encode($isDeposit ? 'save_kwitansi_deposit' : 'save_penerimaan_piutang') ?>,
-                    data: postData,
-                    cache: false,
-                    dataType: 'json',
-                    success: function(result) {
-                        if (result.status == '1' || result.save == '1') {
-                            // Mockup (869-870): buka halaman hasil penerimaan + pesan singkat.
-                            var noSurat = result.no_surat || '';
-                            var custName = $('#customer option:selected').text();
-                            var doneMsg = isDepositKind
-                                ? 'Penerimaan ' + noSurat + ' tersimpan. Saldo deposit ' + custName + ' bertambah.'
-                                : 'Penerimaan piutang tersimpan dan jurnal terbentuk.';
-                            try { sessionStorage.setItem('pu_flash', doneMsg); } catch (err) {}
-                            window.location.href = noSurat
-                                ? siteurl + active_controller + 'view_surat?no=' + encodeURIComponent(noSurat)
-                                : siteurl + active_controller;
-                        } else {
-                            swal({
-                                type: 'warning',
-                                title: 'Gagal Menyimpan',
-                                text: result.msg || result.message || 'Terjadi kesalahan saat menyimpan.',
-                                timer: 4000
-                            });
-                        }
-                    },
-                    error: function() {
-                        swal({
-                            type: 'error',
-                            title: 'Error !',
-                            text: 'Gagal menghubungi server. Silakan coba kembali.',
-                            timer: 3000
-                        });
-                    }
-                });
+        // Tombol Proses sudah nonaktif sampai Kontrol 0 dan jurnal seimbang (mockup), jadi tidak ada pre-check tambahan di sini.
+        MockupUI.confirmBox('Konfirmasi', isDepositKind ? 'Simpan penerimaan kwitansi deposit dan bentuk jurnal?' : 'Simpan penerimaan piutang dan bentuk jurnal?', function() {
+            var postData;
+            try {
+                postData = document.getElementById('consulting-receipt-container')
+                    ? $.param(ConsultingReceiptMoney.normalizeFields($('#frm_data').serializeArray()))
+                    : $('#frm_data').serialize();
+            } catch (error) {
+                MockupUI.toast(error.message);
+                return;
             }
+            $.ajax({
+                type: 'post',
+                url: siteurl + active_controller + <?= json_encode($isDeposit ? 'save_kwitansi_deposit' : 'save_penerimaan_piutang') ?>,
+                data: postData,
+                cache: false,
+                dataType: 'json',
+                success: function(result) {
+                    if (result.status == '1' || result.save == '1') {
+                        // Mockup (869-870): buka halaman hasil penerimaan + pesan singkat.
+                        var noSurat = result.no_surat || '';
+                        var custName = $('#customer option:selected').text();
+                        var doneMsg = isDepositKind
+                            ? 'Penerimaan ' + noSurat + ' tersimpan. Saldo deposit ' + custName + ' bertambah.'
+                            : 'Penerimaan piutang tersimpan dan jurnal terbentuk.';
+                        try { sessionStorage.setItem('pu_flash', doneMsg); } catch (err) {}
+                        window.location.href = noSurat
+                            ? siteurl + active_controller + 'view_surat?no=' + encodeURIComponent(noSurat)
+                            : siteurl + active_controller;
+                    } else {
+                        MockupUI.toast(result.msg || result.message || 'Terjadi kesalahan saat menyimpan.');
+                    }
+                },
+                error: function() {
+                    MockupUI.toast('Gagal menghubungi server. Silakan coba kembali.');
+                }
+            });
         });
     });
 </script>

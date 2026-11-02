@@ -94,7 +94,7 @@ foreach (array('VUCA', 'SUSTAIN') as $i => $company) {
     $res = runTest($controller, "Company $company", post2026(array('company' => $company)));
     check($res['count_receipts'] <= $expectedCount, "$company tidak boleh lebih banyak dari seluruh penerimaan");
     check($res['count_receipts'] >= 1, "$company harus punya penerimaan di data uji");
-    check(strpos($res['html'], '<span class="pu-lbl">' . $company . '</span>') !== false, "Baris $company harus berlabel $company");
+    check(strpos($res['html'], '<span class="lbl">' . $company . '</span>') !== false, "Baris $company harus berlabel $company");
     echo "PASS: Company $company: {$res['count_receipts']} penerimaan.
 ";
 }

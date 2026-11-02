@@ -45,7 +45,7 @@ detailCheck(kontrolOf($html) === '0,00' && strpos(textOf($html), 'PPh 23 Tidak d
 $snap = json_encode(array('calculation_version'=>4,'tax_treatment'=>'PKP','date'=>'2026-10-31','balance'=>100000000,'pph'=>0,'admin'=>0,'sisa'=>0,'dep'=>0,'lebih'=>0,'cash'=>100000000));
 $v4 = array_replace($row, array('consulting_snapshot'=>$snap,'tax_treatment'=>'PKP'));
 $html = renderPage(array_replace($base, array('detail'=>array($v4))));
-detailCheck(kontrolOf($html) === '0,00' && strpos($html, 'mk-tax mk-tax-PKP') !== false && strpos($html, '31-October-2026') !== false, 'Snapshot row: formula, TAX badge, snapshot date');
+detailCheck(kontrolOf($html) === '0,00' && strpos($html, 'class="tax PKP"') !== false && strpos($html, '31-October-2026') !== false, 'Snapshot row: formula, TAX badge, snapshot date');
 
 // 5) Lebih Bayar / Deposit Dipakai: kartu deposit dengan saldo berjalan dan tautan referensi.
 $ledger = array(array('tanggal'=>'2026-10-29','jenis_mutasi'=>'IN','nominal'=>'500000.00','no_transaksi'=>'00039/RKN-KRG/X/26','keterangan'=>'Lebih bayar'),

@@ -133,7 +133,8 @@ class Penerimaan_uang extends Admin_Controller
                     // Hanya perlakuan PPN yang benar-benar tersimpan di Invoicing; invoice lama tanpa data itu tampil "-" (tidak ditebak dari nilai PPN).
                     $taxCode = Penerimaan_calculation::stored_tax_code($snap, $d['tax_treatment'] ?? '');
                     $invNo = $d['no_invoice'] ?: '-';
-                    $spkHint = !empty($d['id_spk_penawaran']) ? '<div class="pu-hint">SPK ' . $e($d['id_spk_penawaran']) . '</div>' : '';
+                    $spkNo = !empty($snap['spk']) ? $snap['spk'] : ($d['id_spk_penawaran'] ?? '');
+                    $spkHint = $spkNo !== '' ? '<div class="hint">SPK ' . $e($spkNo) . '</div>' : '';
                 }
                 $sub = $taxCode === 'DEP' ? 'Kwitansi Deposit' : $pphText;
                 $row = '<tr>';
@@ -145,7 +146,7 @@ class Penerimaan_uang extends Admin_Controller
                         . '<td rowspan="' . $rs . '" style="min-width:160px">' . $e($r['nm_customer']) . '</td>';
                 }
                 $row .= '<td style="white-space:nowrap">' . $e($invNo) . $spkHint . '</td>';
-                if ($first) $row .= '<td rowspan="' . $rs . '"><span class="pu-lbl">' . $e($coName) . '</span></td>';
+                if ($first) $row .= '<td rowspan="' . $rs . '"><span class="lbl">' . $e($coName) . '</span></td>';
                 $row .= '<td>' . ($taxCode === '' ? '-' : mk_tax_badge($taxCode)) . '<div style="font-size:12px;margin-top:2px;white-space:nowrap">' . $e($sub) . '</div></td>';
                 if ($first) {
                     $row .= '<td rowspan="' . $rs . '" class="r">' . mk_en($r['nominal_penerimaan_bank']) . '</td>'
@@ -538,10 +539,10 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
                     $hasil .= '<td class="nowrap">' . htmlspecialchars($noSpk, ENT_QUOTES, 'UTF-8') . '</td>';
                     $hasil .= '<td>' . htmlspecialchars($nmCompany, ENT_QUOTES, 'UTF-8') . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($item['total_nominal_jurnal']) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($item['saldo_piutang']) . '</td>';
-                    $hasil .= '<td class="text-center">';
-                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ' style="cursor:pointer; width:16px; height:16px;">';
+                    $hasil .= '<td class="r">' . mk_en($item['total_nominal_jurnal']) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($item['saldo_piutang']) . '</td>';
+                    $hasil .= '<td class="c">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . '>';
                     $hasil .= '</td>';
                     $hasil .= '</tr>';
                 } else {
@@ -549,15 +550,15 @@ class Penerimaan_uang extends Admin_Controller
                     $hasil .= '<td class="nowrap">' . $tgl . '</td>';
                     $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
                     $hasil .= '<td>' . $taxBadge . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($sales) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($dppLain) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($ppn) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($pphVal) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($tagihan) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($tagihanMinPph) . '</td>';
-                    $hasil .= '<td class="text-right">' . mk_en($saldoShow) . '</td>';
-                    $hasil .= '<td class="text-center">';
-                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ($receiptBlocked ? ' disabled' : '') . ' style="cursor:pointer; width:16px; height:16px;">';
+                    $hasil .= '<td class="r">' . mk_en($sales) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($dppLain) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($ppn) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($pphVal) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($tagihan) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($tagihanMinPph) . '</td>';
+                    $hasil .= '<td class="r">' . mk_en($saldoShow) . '</td>';
+                    $hasil .= '<td class="c">';
+                    $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ($receiptBlocked ? ' disabled' : '') . '>';
                     if ($receiptBlocked) $hasil .= '<small class="text-danger">Riwayat PPh perlu rekonsiliasi.</small>';
                     $hasil .= '</td>';
                     $hasil .= '</tr>';
@@ -567,12 +568,12 @@ class Penerimaan_uang extends Admin_Controller
             $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
             $colSpan = $isDepositKind ? '7' : '11';
             $msg = $isDepositKind ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found';
-            $hasil = '<tr><td colspan="' . $colSpan . '" class="text-center text-muted" style="padding: 16px;">' . $msg . '</td></tr>';
+            $hasil = '<tr><td colspan="' . $colSpan . '" class="empty">' . $msg . '</td></tr>';
         }
 
 
 
-        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center text-muted">' . (($this->input->post('receipt_kind') === 'deposit') ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found') . '</td></tr>';
+        if ($hasil === '') $hasil = '<tr><td colspan="11" class="empty">' . (($this->input->post('receipt_kind') === 'deposit') ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found') . '</td></tr>';
         echo $hasil;
 
     }
@@ -2046,6 +2047,14 @@ class Penerimaan_uang extends Admin_Controller
 
         ];
         return $data;
+    }
+
+    /** JSON daftar draft untuk tab Invoice / Kwitansi Deposit (render di browser seperti mockup). */
+    public function draft_rows()
+    {
+        if ($this->deny_without($this->viewPermission)) return;
+        header('Content-Type: application/json');
+        echo json_encode(array('rows' => $this->Penerimaan_uang_model->get_draft_rows($this->input->post('receipt_kind') === 'deposit' ? 'deposit' : 'invoice'), 'counts' => $this->Penerimaan_uang_model->get_tab_counts()));
     }
 
     public function get_alokasi_penerimaan()
