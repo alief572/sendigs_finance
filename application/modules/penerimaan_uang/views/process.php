@@ -150,7 +150,7 @@
             <th class="text-center">PPH 23<?= $pph23_dipotong === 'Y' ? '<br><small class="text-muted">default 2% DPP, bisa diedit</small>' : '' ?></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">(Penjualan + PPN)</small></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">- PPH</small></th>
-            <th class="text-center">Piutang Dagang<br><small class="text-muted">(neto PPh)</small></th>
+            <th class="text-center">Piutang Dagang<br><small class="text-muted"><?= $pph23_dipotong === 'N' ? '(Penjualan + PPN)' : '(neto PPh)' ?></small></th>
             <th class="text-center">Alokasi Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
             <th class="text-center">Lebih Bayar</th>
@@ -183,7 +183,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right text-muted">Total Piutang Dagang (neto PPh)</td>
+            <td colspan="8" class="text-right text-muted">Total Piutang Dagang <?= $pph23_dipotong === 'N' ? '(Penjualan + PPN)' : '(neto PPh)' ?></td>
             <td>
                 <input type="text" id="footer_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang_dagang ?>" readonly>
                 <input type="text" name="grand_total" id="grand_total" class="autonum" style="display:none" readonly>

@@ -182,6 +182,13 @@ class Penerimaan_uang_model extends BF_Model
                 throw new InvalidArgumentException('Pilihan PPh harus sama dengan riwayat penerimaan invoice.');
             }
             if ($choice === 'Y' || $total === 0) { continue; }
+            // Penerimaan N bruto: seluruh sisa anggaran PPh gugur saat itu (ditandai di snapshot detail, tanpa baris PPh di jurnal).
+            $mark = json_decode($receipt['consulting_snapshot'] ?? '', true);
+            if (is_array($mark) && !empty($mark['pph_extinguished'])) {
+                $credits[$number] = (int)$mark['pph_extinguished'];
+                $used += (int)$mark['pph_extinguished'];
+                continue;
+            }
             $journals = $this->db->get_where('tr_jurnal', array('no_transaksi'=>$number))->result_array();
             $matches = array();
             foreach ($journals as $journal) {

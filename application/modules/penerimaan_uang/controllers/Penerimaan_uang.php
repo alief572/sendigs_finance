@@ -773,7 +773,8 @@ class Penerimaan_uang extends Admin_Controller
 
             // Keep the actual outstanding balance, including previous installments.
 
-            $saldo_piutang = Penerimaan_calculation::cents($get_inv['saldo_piutang']) / 100;
+            // Tidak dipotong (mockup): Piutang Dagang bruto = saldo (neto PPh) + sisa anggaran PPh yang belum gugur.
+            $saldo_piutang = (Penerimaan_calculation::cents($get_inv['saldo_piutang']) + ($pph23_dipotong === 'N' ? $remaining_pph : 0)) / 100;
 
             // Old Vuca invoices stored zero gross despite having a valid DPP.
 
@@ -1484,7 +1485,10 @@ class Penerimaan_uang extends Admin_Controller
 
                 $admin_cents = $this->legacy_cents($post['biaya_admin_' . $i]);
 
-                $calculation = Penerimaan_calculation::calculate(Penerimaan_calculation::cents($saldo_piutang), $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents, $pph_actual);
+                // N: saldo bruto = saldo tersimpan + sisa anggaran PPh (yang gugur setelah penerimaan ini).
+                $pph_extinguished = $post['pph23_dipotong'] === 'N' ? $remaining_pph : 0;
+                $balance_cents = Penerimaan_calculation::cents($saldo_piutang) + $pph_extinguished;
+                $calculation = Penerimaan_calculation::calculate($balance_cents, $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents, $pph_actual);
 
             } catch (InvalidArgumentException $e) {
 
@@ -1549,6 +1553,10 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            if ($pph_extinguished > 0) {
+                // Penanda PPh di muka gugur (dibaca remaining_receipt_pph() dan rollback); tanpa kolom baru.
+                $arr_insert_detail[count($arr_insert_detail) - 1]['consulting_snapshot'] = json_encode(array('pph_extinguished' => $pph_extinguished));
+            }
             $arr_update_inv[] = [
 
                 'id' => $post['id_inv_' . $i],
@@ -1560,7 +1568,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
             $lebihRows[] = array('detail' => count($arr_insert_detail) - 1, 'cash' => $receipt_cents, 'admin' => $admin_cents,
-                'pph' => Penerimaan_calculation::cents($pph), 'lebih' => $lebih_cents, 'balance' => Penerimaan_calculation::cents($saldo_piutang),
+                'pph' => Penerimaan_calculation::cents($pph), 'lebih' => $lebih_cents, 'balance' => $balance_cents, 'pph_ext' => $pph_extinguished,
                 'sisa' => $calculation['remaining'], 'company' => $this->legacy_owner_id($id_company), 'legacy_company' => (string)$id_company, 'nm_company' => (string)$nm_company,
                 'customer' => (string)($get_inv['id_customer'] ?? ''), 'nm_customer' => (string)($get_inv['nm_customer'] ?? ''), 'no_invoice' => (string)($get_inv['no_invoice'] ?? ''));
             $total_penerimaan_cents += $receipt_cents;
@@ -1781,7 +1789,7 @@ class Penerimaan_uang extends Admin_Controller
                 $arr_insert_detail[$lr['detail']]['consulting_snapshot'] = json_encode(array(
                     'legacy' => true, 'owner' => array('id' => $lr['company'], 'nm_company' => $lr['nm_company']),
                     'cash' => $lr['cash'], 'admin' => $lr['admin'], 'pph' => $lr['pph'], 'lebih' => $lr['lebih'],
-                    'balance' => $lr['balance'], 'sisa' => $lr['sisa']
+                    'balance' => $lr['balance'], 'sisa' => $lr['sisa'], 'pph_extinguished' => $lr['pph_ext']
                 ));
             }
             $arr_insert_header['id_customer'] = $lebihCustomerIds[0];
@@ -2267,6 +2275,9 @@ class Penerimaan_uang extends Admin_Controller
                 if ($get_penerimaan['pph23_dipotong'] == 'N') {
 
                     $amount_to_add = $penerimaan - $pph23 + $biaya_admin;
+                    // Penerimaan N bruto: saldo kembali neto karena anggaran PPh di muka kembali berlaku setelah detail dihapus.
+                    $snapN = json_decode($detail['consulting_snapshot'] ?? '', true);
+                    if (!empty($snapN['pph_extinguished'])) { $amount_to_add -= $snapN['pph_extinguished'] / 100; }
 
                 } else {
 

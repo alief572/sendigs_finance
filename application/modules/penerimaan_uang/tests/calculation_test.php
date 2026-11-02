@@ -148,4 +148,9 @@ $r = 36180000; $a = 30000000; $cash = 19718100; $adm = 5000;
 $calc = $C::calculate(2007990000, $r, 'Y', $cash, $adm, $a);
 check($r - $calc['adjustment'] === $a && $cash + $adm + $a === $cash + $adm + ($r - $calc['adjustment']), 'Y mockup journal balances');
 
+// N bruto: saldo neto + sisa anggaran PPh dilunasi penuh = 0; sebagian = saldo bruto - kas - admin.
+$gN = 1971810000 + 36180000;
+check($C::calculate($gN, 36180000, 'N', $gN, 0)['remaining'] === 0, 'N gross settles fully');
+check($C::calculate($gN, 36180000, 'N', 1000000000, 5000)['remaining'] === $gN - 1000005000, 'N gross partial');
+
 echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";
