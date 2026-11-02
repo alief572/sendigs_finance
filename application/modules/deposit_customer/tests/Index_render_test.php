@@ -37,7 +37,7 @@ assertIndex(strpos($populated,'30-October-2026')!==false,'Dates use full month n
 
 // Detail: three sources, running balance and summary, no voucher section.
 $c->Deposit_customer_model->ledger=array(
- array('id'=>1,'id_customer'=>'C1','nm_customer'=>'Customer <unsafe>','no_transaksi'=>'KD/2026/10/0001','tanggal'=>'2026-10-01','jenis_mutasi'=>'IN','nominal'=>'1000.00','keterangan'=>'Kwitansi','tipe_sumber'=>'KWITANSI_DEPOSIT'),
+ array('id'=>1,'id_customer'=>'C1','nm_customer'=>'Customer <unsafe>','penerimaan_id'=>11,'no_transaksi'=>'KD/2026/10/0001','tanggal'=>'2026-10-01','jenis_mutasi'=>'IN','nominal'=>'1000.00','keterangan'=>'Kwitansi','tipe_sumber'=>'KWITANSI_DEPOSIT'),
  array('id'=>2,'id_customer'=>'C1','nm_customer'=>'Customer <unsafe>','no_transaksi'=>'PP-2','tanggal'=>'2026-10-02','jenis_mutasi'=>'IN','nominal'=>'500.00','keterangan'=>'Lebih','tipe_sumber'=>'LEBIH_BAYAR'),
  array('id'=>3,'id_customer'=>'C1','nm_customer'=>'Customer <unsafe>','no_transaksi'=>'PP-3','tanggal'=>'2026-10-03','jenis_mutasi'=>'OUT','nominal'=>'300.00','keterangan'=>'Dipakai','tipe_sumber'=>'KWITANSI_DEPOSIT'));
 $c->detail('C1');$detail=$c->template->html;
@@ -45,7 +45,7 @@ foreach(array('Penerimaan Kwitansi Deposit','Lebih Bayar (Penerimaan Invoice)','
  assertIndex(strpos($detail,$needle)!==false,'Detail content: '.$needle);
 }
 assertIndex(strpos($detail,'Daftar Voucher')===false,'Detail has no voucher section');
-assertIndex(preg_match('~<a href="[^"]*penerimaan_uang/view_surat\?no=[^"]+">~',$detail)===1,'No Penerimaan links to the receipt page (mockup refLink)');
+assertIndex(preg_match('~<a href="[^"]*penerimaan_uang/view/11">~',$detail)===1,'No Penerimaan links to the receipt page (mockup refLink)');
 assertIndex(strpos($detail,'&lt;unsafe&gt;')!==false&&strpos($detail,'<unsafe>')===false,'Detail customer text escaped');
 $px=new DOMDocument;libxml_use_internal_errors(true);$px->loadHTML($detail);libxml_clear_errors();$xp=new DOMXPath($px);
 assertIndex($xp->query('//table/thead/tr/th')->length===8,'Detail ledger has eight columns');

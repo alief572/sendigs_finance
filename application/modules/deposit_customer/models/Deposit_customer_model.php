@@ -17,9 +17,10 @@ class Deposit_customer_model extends BF_Model
      */
     public function get_ledger_rows($id_customer = null)
     {
-        $this->db->select('m.*, d.nm_customer, d.no_deposit, d.no_referensi, d.tipe_sumber, d.id_company');
+        $this->db->select('m.*, d.nm_customer, d.no_deposit, d.no_referensi, d.tipe_sumber, d.id_company, pp.id AS penerimaan_id');
         $this->db->from('tr_customer_deposit_mutasi m');
         $this->db->join('tr_customer_deposit d', 'd.id = m.id_deposit', 'left');
+        $this->db->join('tr_penerimaan_piutang pp', 'pp.no_surat = m.no_transaksi', 'left');
         $this->db->where('d.status !=', 'MENUNGGU_PEMBAYARAN');
         if (is_scalar($id_customer) && trim((string)$id_customer) !== '') {
             $this->db->where('m.id_customer', $id_customer);

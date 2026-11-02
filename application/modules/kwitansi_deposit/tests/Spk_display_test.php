@@ -3,7 +3,7 @@ define('BASEPATH',__DIR__);class BF_Model{}
 require dirname(__DIR__,2).'/../helpers/mockup_format_helper.php';
 require dirname(__DIR__).'/models/Kwitansi_deposit_model.php';
 set_error_handler(function($level,$message,$file,$line){throw new ErrorException($message,0,$level,$file,$line);});
-function site_url($path=''){return '/'.$path;}
+function base_url($p=''){return '/'.$p;}function site_url($path=''){return '/'.$path;}
 function spkCheck($ok,$message){if(!$ok)throw new RuntimeException($message);}
 class SpkDisplayDb {
  public $rows=array(),$searchColumns=array();
@@ -27,7 +27,7 @@ foreach(array(
  foreach(array('index','detail')as $view){
   $results=array('kwitansiList'=>$list,'header'=>$header,'journals'=>array(),'customers'=>array(),'filters'=>array('status'=>'','id_customer'=>'','search'=>''));$kwitansiList=$list;
   ob_start();include dirname(__DIR__).'/views/'.$view.'.php';$html=ob_get_clean();
-  spkCheck(strpos($html,htmlspecialchars($case[1]))!==false,'SPK visible in '.$view);
+  $needle=$view==='index'?trim(json_encode($case[1],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT),'"'):htmlspecialchars($case[1]);spkCheck(strpos($html,$needle)!==false,'SPK visible in '.$view);
   spkCheck(strpos($html,'<snapshot>')===false,'SPK escaped in '.$view);
  }
  require_once dirname(__DIR__,3).'/libraries/Xlsx_export.php';$spec=Xlsx_export::kwitansi_spec($list);

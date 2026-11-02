@@ -45,21 +45,24 @@ if (!function_exists('mk_tax_label')) {
 }
 
 if (!function_exists('mk_tax_badge')) {
-    /** Badge TAX outline (.tax mockup); CSS ada di mk_tax_badge_css(). */
+    /** Badge TAX outline (.tax mockup); gayanya ada di assets/css/mockup_ui.css (wrapper .mk). */
     function mk_tax_badge($code)
     {
         $code = strtoupper(trim((string)$code));
         if ($code === '') return '-';
-        return '<span class="mk-tax mk-tax-' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(mk_tax_label($code), ENT_QUOTES, 'UTF-8') . '</span>';
+        return '<span class="tax ' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(mk_tax_label($code), ENT_QUOTES, 'UTF-8') . '</span>';
+    }
+}
+
+if (!function_exists('mk_ui_assets')) {
+    /** Tag CSS + JS bersama (gaya mockup, toast/confirmBox/pencarian/pager). Panggil sekali di awal view. */
+    function mk_ui_assets()
+    {
+        return '<link rel="stylesheet" href="' . base_url('assets/css/mockup_ui.css') . '"><script src="' . base_url('assets/js/penerimaan_uang/mockup_ui.js') . '"></script>';
     }
 }
 
 if (!function_exists('mk_tax_badge_css')) {
-    /** CSS badge TAX = .tax mockup (outline, 3px radius). */
-    function mk_tax_badge_css()
-    {
-        return '<style>.mk-tax{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:3px;border:1px solid;white-space:nowrap}'
-            . '.mk-tax-PKP{color:#2e6da4;border-color:#2e6da4}.mk-tax-WAPU{color:#8a5a00;border-color:#c28a00}'
-            . '.mk-tax-KB{color:#5b4a9e;border-color:#7d6cc0}.mk-tax-DEP{color:#2b7a4b;border-color:#3c9a62}</style>';
-    }
+    /** Kompatibilitas: gaya badge sudah ada di mockup_ui.css. */
+    function mk_tax_badge_css() { return ''; }
 }

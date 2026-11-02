@@ -198,6 +198,9 @@ class Kwitansi_deposit_model extends BF_Model
         $this->db->join('tr_customer_deposit p', 'p.no_referensi = k.no_kwitansi', 'left');
         $this->db->join('tr_invoicing i', 'i.no_invoice = k.no_kwitansi AND i.tax_treatment = "DEP"', 'left');
 
+        if (!empty($filters['ids'])) {
+            $this->db->where_in('k.id', $filters['ids']);
+        }
         if (!empty($filters['status'])) {
             $this->db->where('k.status', $filters['status']);
         }

@@ -462,7 +462,8 @@ class Penerimaan_uang_model extends BF_Model
             $taxCode = Penerimaan_calculation::stored_tax_code($snap, $r['tax_treatment'] ?? '');
 
             if (!isset($groups[$pid])) {
-                $bankName = trim(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? ''));
+                // Nama bank lengkap seperti mockup (b.name): "Bank - rekening - nama akun".
+                $bankName = trim(($r['nm_bank'] ?? '') . ' - ' . ($r['rekening'] ?? '') . ' - ' . ($r['nama_bank_acc'] ?? ''), ' -');
                 if (empty($bankName)) $bankName = 'Bank';
 
                 $checkPosted = $this->db->get_where('tr_jurnal', array('no_transaksi' => $r['no_surat'], 'sts' => '1'))->num_rows();

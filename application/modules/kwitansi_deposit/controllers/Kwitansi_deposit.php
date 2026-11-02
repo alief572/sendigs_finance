@@ -22,13 +22,9 @@ class Kwitansi_deposit extends Admin_Controller
             if (isset($this->auth)) $this->auth->restrict($this->viewPermission);
         }
 
-        $filters = array(
-            'status' => $this->input->get('status'),
-            'id_customer' => $this->input->get('id_customer'),
-            'start_date' => $this->input->get('start_date'),
-            'end_date' => $this->input->get('end_date'),
-            'search' => $this->input->get('search')
-        );
+        // Filter, pencarian dan paging dikerjakan di browser (mockup viewKwList); server mengirim seluruh daftar.
+        $filters = array('status' => '', 'id_customer' => '', 'start_date' => '', 'end_date' => '', 'search' => '');
+
 
         $kwitansiList = $this->Kwitansi_deposit_model->get_kwitansi_list($filters);
         $customers = $this->Kwitansi_deposit_model->get_kwitansi_customer_list();
@@ -225,8 +221,10 @@ class Kwitansi_deposit extends Admin_Controller
             'id_customer' => $this->input->get('id_customer'),
             'start_date' => $this->input->get('start_date'),
             'end_date' => $this->input->get('end_date'),
-            'search' => $this->input->get('search')
+            'search' => $this->input->get('search'),
+            'ids' => array_filter(array_map('intval', explode(',', (string)$this->input->get('ids'))))
         );
+
 
         $kwitansiList = $this->Kwitansi_deposit_model->get_kwitansi_list($filters);
 

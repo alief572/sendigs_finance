@@ -63,7 +63,7 @@ class Deposit_customer extends Admin_Controller
         require_once APPPATH . 'libraries/Xlsx_export.php';
         if (!empty($id_customer)) {
             $data = $this->customer_ledger_data($id_customer);
-            if ($data === null || empty($data['mutasi'])) {
+            if ($data === null) {
                 redirect('deposit_customer');
                 return;
             }
