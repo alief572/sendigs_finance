@@ -12,17 +12,19 @@ for(const [mode,html] of Object.entries(JSON.parse(result.stdout))){
  assert.ok(html.includes('id="modalJurnalKwitansi"')&&html.includes('/kwitansi_deposit/journal/'));
  for(const row of rows){assert.strictEqual([...row[1].matchAll(/<td[ >]/g)].length,headerCount);assert.ok(!/colspan|rowspan/.test(row[1]));}
  for(const alreadyInitialized of [false,true]){
-  const document={};let configuration,initialized=0,destroyed=0,customerSearch,journalHandler;
+  const document={};let configuration,initialized=0,destroyed=0,customerSearch,journalHandler,exportHref,searchHandler;
   function $(selector){
    if(selector===document)return {ready:fn=>fn()};
    if(selector==='select[name="id_customer"]')return {select2:options=>{customerSearch=options;}};
+   if(selector==='#btn_export_kw')return {attr:(name,value)=>{assert.strictEqual(name,'href');if(value===undefined)return '/kwitansi_deposit/export_excel?id_customer=C';exportHref=value;}};
    assert.strictEqual(selector,'#table_kwitansi');
-   return {on:(event,child,fn)=>{assert.strictEqual(event,'click');assert.strictEqual(child,'.btn-kwitansi-jurnal');journalHandler=fn;},DataTable:options=>{if(options){configuration=options;initialized++;return {};}return {destroy:()=>destroyed++};}};
+   return {on:(event,child,fn)=>{assert.strictEqual(event,'click');assert.strictEqual(child,'.btn-kwitansi-jurnal');journalHandler=fn;},DataTable:options=>{if(options){configuration=options;initialized++;return {on:(event,fn)=>{assert.strictEqual(event,'search.dt');searchHandler=fn;},search:()=>'KD/2026 satu'};}return {destroy:()=>destroyed++};}};
   }
   $.fn={DataTable:{isDataTable:selector=>{assert.strictEqual(selector,'#table_kwitansi');return alreadyInitialized;}}};
   const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];vm.runInNewContext(script,{$,document});
   assert.strictEqual(typeof journalHandler,'function');
   assert.strictEqual(initialized,1);assert.strictEqual(destroyed,alreadyInitialized?1:0);
+  assert.strictEqual(typeof searchHandler,'function');searchHandler();assert.strictEqual(exportHref,'/kwitansi_deposit/export_excel?id_customer=C&search='+encodeURIComponent('KD/2026 satu'),'Export follows the table Search box');
   assert.strictEqual(customerSearch.width,'100%');assert.strictEqual(customerSearch.minimumResultsForSearch,0);
   assert.strictEqual(configuration.language.emptyTable,'Belum ada tagihan kwitansi deposit.');
   assert.strictEqual(configuration.pageLength,25);assert.strictEqual(configuration.order[0][0],1);assert.strictEqual(configuration.order[0][1],'desc');

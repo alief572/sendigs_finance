@@ -149,13 +149,24 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                 </tbody>
                 <tfoot>
                     <tr class="bg-gray-light font-bold">
-                        <td colspan="4" class="text-right">Total:</td>
+                        <td colspan="4" class="text-right">Total</td>
                         <td class="text-right" id="foot_tot_piutang">0.00</td>
                         <td class="text-right" id="foot_tot_alok">0.00</td>
                         <td class="text-right" id="foot_tot_admin">0.00</td>
                     </tr>
+                    <tr>
+                        <td colspan="4" class="text-right text-muted">Uang Masuk</td>
+                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="text-right text-muted">Kontrol</td>
+                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span></td>
+                        <td colspan="2" class="text-muted small">(Piutang &minus; biaya admin) &minus; uang masuk</td>
+                    </tr>
                 </tfoot>
             </table>
+            <p class="text-muted" style="margin-top: 8px; font-size: 12px;">Saldo deposit customer bertambah sebesar nilai kwitansi (<strong id="card_tot_piutang">Rp. 0,00</strong>). Biaya admin bank menjadi beban perusahaan, tidak mengurangi deposit.</p>
         <?php else : ?>
             <!-- TABEL LENGKAP PENERIMAAN INVOICE -->
             <table class="table table-bordered table-hover tbl-alokasi" style="margin-bottom: 0;">
@@ -169,7 +180,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <th class="text-right" style="width: 120px;">
                             PPH 23
                             <?php if ($choice === 'Y') : ?>
-                                <br><small class="text-muted font-normal">(bisa diedit)</small>
+                                <br><small class="text-muted font-normal">default 2% DPP, bisa diedit</small>
                             <?php endif; ?>
                         </th>
                         <th class="text-right" style="width: 115px;">Total Tagihan<br><small class="text-muted font-normal">(Penjualan+PPN)</small></th>
@@ -328,42 +339,20 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
 
     <!-- Summary & Kontrol Bar -->
     <div class="row" style="margin-top: 15px;">
-        <div class="<?= $isDeposit ? 'col-md-7' : 'col-md-12' ?>">
+        <div class="col-md-12">
             <div id="box-error-message" class="alert alert-danger" style="display: none; padding: 10px 14px; margin-bottom: 0;">
                 <i class="fa fa-exclamation-circle"></i> <span id="error-text"></span>
             </div>
-            <div id="box-ok-message" class="alert alert-success" style="display: none; padding: 10px 14px; margin-bottom: 0;">
-                <i class="fa fa-check-circle"></i> <strong>Kontrol 0 (Sesuai).</strong> Periksa tabel jurnal di bawah sebelum memproses.
+            <div id="box-ok-message" class="alert alert-info" style="display: none; padding: 10px 14px; margin-bottom: 0;">
+                <i class="fa fa-check-circle"></i> <strong>Kontrol 0.</strong> Periksa jurnal di bawah, lalu klik Simpan Penerimaan &amp; Bentuk Jurnal.
             </div>
         </div>
-        <?php if ($isDeposit) : ?>
-        <div class="col-md-5">
-            <div class="tbl-summary-card">
-                    <div class="summary-item">
-                        <span>Total Nilai Kwitansi:</span>
-                        <strong id="card_tot_piutang">Rp. 0,00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Biaya Admin Bank:</span>
-                        <strong id="card_tot_admin" class="text-warning">Rp. 0,00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Uang Masuk Bank:</span>
-                        <strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong>
-                    </div>
-                    <div class="summary-item highlight">
-                        <span>Kontrol Formula ((Piutang - Admin) - Bank):</span>
-                        <span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span>
-                    </div>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
 
     <!-- Preview Jurnal Penerimaan -->
     <div class="journal-section">
         <h4 style="margin-top: 0; font-weight: 700; color: #2c3e50;">
-            <i class="fa fa-book"></i> Preview Jurnal Penerimaan Piutang
+            <i class="fa fa-book"></i> Jurnal Penerimaan Piutang
         </h4>
         <div class="table-responsive">
             <table class="table table-bordered table-striped" style="font-size: 12px; margin-bottom: 0;">
@@ -673,6 +662,9 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
         if (submitBtn) {
             submitBtn.disabled = !isOk;
         }
+        // Seperti mockup: jurnal hanya ditampilkan setelah Kontrol 0 (isian tetap terhitung di belakang layar).
+        var journalSection = document.querySelector('.journal-section');
+        if (journalSection && journalSection.style) journalSection.style.display = isOk ? '' : 'none';
     }
 
     function updateRow(e) {

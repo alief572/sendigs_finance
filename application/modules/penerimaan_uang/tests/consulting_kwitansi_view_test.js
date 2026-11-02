@@ -13,6 +13,9 @@ function runPhp(args, input) {
     return JSON.parse(result.stdout);
 }
 const html = runPhp(['--kwitansi']).html;
+assert.ok(html.includes('Saldo deposit customer bertambah sebesar nilai kwitansi'), 'Kwitansi modal explains the deposit effect (mockup)');
+assert.ok(!html.includes('class="tbl-summary-card"'), 'Kwitansi summary is table footer rows, not a card');
+assert.ok(/<td[^>]*>Uang Masuk<\/td>/.test(html) && /<td[^>]*>Kontrol<\/td>/.test(html), 'Footer rows Uang Masuk and Kontrol exist');
 const nodes = {}, names = {}, events = {}, inputs = [];
 function element(attrs = {}) {
     return {value: attrs.value || '', style: {}, children: [], textContent: '',

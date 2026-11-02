@@ -90,12 +90,24 @@ class Penerimaan_calculation
         return Invoice_calculation::vuca_totals($dpp, $pph);
     }
 
-    public static function calculate($balance, $remainingPph, $choice, $receipt, $admin)
+    /**
+     * $pphActual (sen, hanya cabang Y): PPh yang benar-benar dipotong customer. Default null = seluruh anggaran ($remainingPph) dipotong,
+     * sehingga tidak ada penyesuaian. Bila lebih kecil, selisihnya menjadi kredit PPh 23 Disetor dan mengurangi pelunasan piutang.
+     */
+    public static function calculate($balance, $remainingPph, $choice, $receipt, $admin, $pphActual = null)
     {
         if (!in_array($choice, array('Y', 'N'), true) || min($balance, $remainingPph, $receipt, $admin) < 0) {
             throw new InvalidArgumentException('Pilihan PPh atau nominal tidak valid.');
         }
-        $adjustment = $choice === 'N' ? min($remainingPph, $receipt) : 0;
+        if ($choice === 'Y' && $pphActual !== null) {
+            if ($pphActual < 0 || $pphActual > $remainingPph) {
+                throw new InvalidArgumentException('PPh 23 yang dipotong harus antara 0 dan sisa batas PPh invoice.');
+            }
+            if ($remainingPph - $pphActual > $receipt) {
+                throw new InvalidArgumentException('PPh 23 terlalu kecil: selisihnya melebihi penerimaan.');
+            }
+        }
+        $adjustment = $choice === 'N' ? min($remainingPph, $receipt) : ($pphActual !== null ? $remainingPph - $pphActual : 0);
         $reduction = $receipt + $admin - $adjustment;
         if ($reduction > $balance) {
             throw new InvalidArgumentException('Penerimaan dan biaya admin melebihi saldo piutang.');

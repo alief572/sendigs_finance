@@ -141,7 +141,8 @@ class Penerimaan_uang extends Admin_Controller
                     $taxCode = Penerimaan_calculation::stored_tax_code($snap, $d['tax_treatment'] ?? '');
                     $invNo = $d['no_invoice'] ?: '-';
 
-                    $invHtmlArr[] = '<div style="padding: 2px 0;">' . htmlspecialchars($invNo, ENT_QUOTES, 'UTF-8') . '</div>';
+                    $spkHint = !empty($d['id_spk_penawaran']) ? '<div style="font-size: 11px; color: #777;">SPK ' . htmlspecialchars((string)$d['id_spk_penawaran'], ENT_QUOTES, 'UTF-8') . '</div>' : '';
+                    $invHtmlArr[] = '<div style="padding: 2px 0;">' . htmlspecialchars($invNo, ENT_QUOTES, 'UTF-8') . $spkHint . '</div>';
                     $isDepositReceipt = ($taxCode === 'DEP');
                     $taxLabel = $isDepositReceipt ? 'Deposit' : $taxCode;
                     $taxBadge = $taxCode === ''
@@ -157,7 +158,7 @@ class Penerimaan_uang extends Admin_Controller
                 $taxHtml = '-';
             }
 
-            $action = '<button type="button" class="btn btn-xs btn-info detail" title="Lihat Detail" data-id="' . $r['id'] . '"><i class="fa fa-eye"></i> Lihat</button>';
+            $action = '<a href="' . base_url('penerimaan_uang/view/' . (int)$r['id']) . '" class="btn btn-xs btn-info" title="Lihat Detail"><i class="fa fa-eye"></i> Lihat</a>';
             if (!$r['is_posted']) {
                 $action .= ' <button type="button" class="btn btn-xs btn-danger rollback" title="Rollback Penerimaan" data-id="' . $r['id'] . '"><i class="fa fa-undo"></i> Rollback</button>';
             }
@@ -196,21 +197,9 @@ class Penerimaan_uang extends Admin_Controller
 
         $report_data = $this->Penerimaan_uang_model->get_report_data($year, $month, $company, $search, $this->input->get('receipt_kind'), $this->input->get('id_customer'));
 
-        $months_id = array(1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember');
-        $filtInfo = 'Tahun: ' . (!empty($year) ? $year : 'Semua') . ' | Bulan: ' . (!empty($month) ? ($months_id[(int)$month] ?? $month) : 'Semua') . ' | Company: ' . (!empty($company) ? $company : 'Semua');
-
-        $data = array(
-            'report_data' => $report_data,
-            'filter_info' => $filtInfo
-        );
-
-        $filename = 'Report_Penerimaan_' . (!empty($year) ? $year : 'Semua') . '_' . (!empty($month) ? $month : 'Semua') . '_' . (!empty($company) ? $company : 'Semua') . '_' . date('YmdHis') . '.xls';
-
-        header("Content-Type: application/vnd.ms-excel; charset=utf-8");
-        header("Content-Disposition: attachment; filename=\"" . $filename . "\"");
-        header("Cache-Control: max-age=0");
-
-        $this->load->view('export_excel', $data);
+        require_once APPPATH . 'libraries/Xlsx_export.php';
+        $spec = Xlsx_export::report_spec($report_data, $year, $month, $company);
+        Xlsx_export::download($spec, $spec['filename']);
     }
 
 
@@ -283,6 +272,7 @@ class Penerimaan_uang extends Admin_Controller
             'id_alokasi' => $result['id'],
             'kwitansi_hint' => $kwitansiHint,
             'receipt_kind' => $receiptKind,
+            'tanggal_bank' => $this->bank_label($result),
             'list_customer' => $get_customer,
             'nominal_penerimaan_bank' => $nominal_penerimaan_bank
         ];
@@ -298,6 +288,16 @@ class Penerimaan_uang extends Admin_Controller
         $customer = $this->input->post('id_customer'); $company = $this->input->post('id_company'); $id = $this->input->post('id_invoice');
         foreach (array($customer, $company, $id) as $value) if ($value !== null && !is_scalar($value)) throw new InvalidArgumentException('Identitas deposit tidak valid.');
         return trim((string)$customer) !== '' && trim((string)$company) === '' && trim((string)$id) === '';
+    }
+
+    /** "31-Dec-2025 · Bank BCA" untuk kolom readonly Tanggal & Bank pada form Kwitansi Deposit (mockup). */
+    private function bank_label($alokasi)
+    {
+        $tgl = !empty($alokasi['tanggal_transaksi']) ? date('d-M-Y', strtotime($alokasi['tanggal_transaksi'])) : '-';
+        $bank = !empty($alokasi['tipe_bank']) ? $this->db->get_where('ms_bank', ['id' => $alokasi['tipe_bank']])->row_array() : null;
+        $listBank = !empty($alokasi['jenis_bank']) ? $this->db->get_where('list_bank', ['id' => $alokasi['jenis_bank']])->row_array() : null;
+        $nama = trim((string)($listBank['nama_bank'] ?? '') . ' ' . (string)($bank['nama'] ?? ''));
+        return $nama !== '' ? $tgl . ' · ' . $nama : $tgl;
     }
 
     private function deposit_context()
@@ -698,7 +698,10 @@ class Penerimaan_uang extends Admin_Controller
 
             try {
 
-                $remaining_pph = $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $pph23_dipotong);
+                // Y: anggaran PPh yang bisa disesuaikan pengguna (kolom PPH 23 editable); N: sisa batas PPh seperti sebelumnya.
+                $remaining_pph = $pph23_dipotong === 'Y'
+                    ? $this->Penerimaan_uang_model->deducted_pph_budget($get_inv)
+                    : $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $pph23_dipotong);
 
             } catch (InvalidArgumentException $e) {
 
@@ -793,7 +796,13 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<td class="text-right">' . number_format($get_inv['ppn_jurnal']) . '</td>';
 
-            $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
+            if ($pph23_dipotong === 'Y') {
+                $pphDefault = Penerimaan_calculation::decimal($remaining_pph);
+                $hasil .= '<td class="text-right"><input type="text" class="form-control form-control-sm text-right autonum" name="pph_actual_' . $no . '" data-default="' . $pphDefault . '" value="' . $pphDefault . '" onkeyup="pphEdited(' . $no . ')">'
+                    . '<div class="reset-pph-link-' . $no . '" style="display:none; font-size: 11px; margin-top: 2px;"><a href="javascript:void(0)" onclick="resetPph(' . $no . ')">&#8634; Default (Rp ' . number_format($remaining_pph / 100) . ')</a></div></td>';
+            } else {
+                $hasil .= '<td class="text-right">' . number_format($get_inv['pph_jurnal']) . '</td>';
+            }
 
             $hasil .= '<td class="text-right">' . number_format($tagihan_ppn) . '</td>';
 
@@ -826,7 +835,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<td class="text-left">';
 
-            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="sisa_piutang_' . $no . '" onkeyup="hitungAll()" readonly>';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="sisa_piutang_' . $no . '" onkeyup="sisaEdited(' . $no . ')">';
 
             $hasil .= '</td>';
 
@@ -1476,13 +1485,17 @@ class Penerimaan_uang extends Admin_Controller
 
             try {
 
-                $remaining_pph = $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $post['pph23_dipotong']);
+                $remaining_pph = $post['pph23_dipotong'] === 'Y'
+                    ? $this->Penerimaan_uang_model->deducted_pph_budget($get_inv)
+                    : $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $post['pph23_dipotong']);
+                // Y: PPh yang benar-benar dipotong (default seluruh anggaran => tanpa penyesuaian); selain Y diabaikan.
+                $pph_actual = ($post['pph23_dipotong'] === 'Y' && isset($post['pph_actual_' . $i]) && trim((string)$post['pph_actual_' . $i]) !== '') ? $this->legacy_cents($post['pph_actual_' . $i]) : null;
 
                 $receipt_cents = $this->legacy_cents($post['penerimaan_' . $i]);
 
                 $admin_cents = $this->legacy_cents($post['biaya_admin_' . $i]);
 
-                $calculation = Penerimaan_calculation::calculate(Penerimaan_calculation::cents($saldo_piutang), $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents);
+                $calculation = Penerimaan_calculation::calculate(Penerimaan_calculation::cents($saldo_piutang), $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents, $pph_actual);
 
             } catch (InvalidArgumentException $e) {
 
@@ -1960,27 +1973,57 @@ class Penerimaan_uang extends Admin_Controller
 
 
     public function detail()
-
     {
         if ($this->deny_without($this->viewPermission, false)) return;
 
         $post = $this->input->post();
-
-
-
         $id = $post['id_alokasi'] ?? '';
-
-
-
-        $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id' => $id])->row_array();
-        if (empty($get_penerimaan)) {
+        $data = $this->build_detail_data($id);
+        if ($data === null) {
             echo '<div class="alert alert-danger" role="alert">Penerimaan tidak ditemukan.</div>';
             return;
+        }
+        $this->template->set($data);
+        $this->template->render('detail');
+    }
+
+    /** Halaman detail penerimaan (mockup: halaman penuh, bukan modal). */
+    public function view($id = '')
+    {
+        $this->auth->restrict($this->viewPermission);
+        $data = $this->build_detail_data(is_scalar($id) ? $id : '');
+        if ($data === null) {
+            $this->session->set_flashdata('error', 'Penerimaan tidak ditemukan.');
+            redirect('penerimaan_uang');
+            return;
+        }
+        $customerId = (string)($data['header']['id_customer'] ?? ($data['detail'][0]['id_customer'] ?? ''));
+        $this->load->model('deposit_customer/Deposit_customer_model');
+        $data['kartu_ledger'] = $customerId !== '' ? $this->Deposit_customer_model->get_customer_mutasi_ledger_all($customerId) : array();
+        $this->template->set($data);
+        $this->template->title('Penerimaan Piutang');
+        $this->template->render('detail_page');
+    }
+
+    /** Tautan dari modul lain (nomor surat mengandung '/'): cari id penerimaan lalu buka halaman detail. */
+    public function view_surat()
+    {
+        $this->auth->restrict($this->viewPermission);
+        $no = $this->input->get('no');
+        $row = is_scalar($no) && trim((string)$no) !== '' ? $this->db->select('id')->get_where('tr_penerimaan_piutang', ['no_surat' => $no])->row_array() : null;
+        redirect($row ? 'penerimaan_uang/view/' . (int)$row['id'] : 'penerimaan_uang#tab_report');
+    }
+
+    private function build_detail_data($id)
+    {
+        $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang', ['id' => $id])->row_array();
+        if (empty($get_penerimaan)) {
+            return null;
         }
 
 
 
-        $this->db->select('a.*, b.no_invoice, b.tax_treatment, b.total_nominal_jurnal, b.dpp_lain_lain_jurnal, b.ppn_jurnal, b.tagihan_ppn_jurnal, b.pph_jurnal, b.total_akhir_jurnal, b.saldo_piutang, c.no_surat');
+        $this->db->select('a.*, b.no_invoice, b.tax_treatment, b.total_nominal_jurnal, b.dpp_lain_lain_jurnal, b.ppn_jurnal, b.tagihan_ppn_jurnal, b.pph_jurnal, b.total_akhir_jurnal, b.saldo_piutang, b.id_spk_penawaran, c.no_surat');
 
         $this->db->from('tr_penerimaan_piutang_detail a');
 
@@ -2034,16 +2077,8 @@ class Penerimaan_uang extends Admin_Controller
             'list_jurnal' => $get_jurnal
 
         ];
-
-
-
-        $this->template->set($data);
-
-        $this->template->render('detail');
-
+        return $data;
     }
-
-
 
     public function get_alokasi_penerimaan()
 

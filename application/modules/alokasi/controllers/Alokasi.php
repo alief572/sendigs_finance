@@ -52,160 +52,45 @@ class Alokasi extends Admin_Controller
 
                 $id_header = $this->Alokasi_model->generate_id();
 
-                $account_no = '';
-                $periode_from = '';
-                $periode_to = '';
-                $saldo_awal = 0;
-                $total_debit = 0;
-                $total_kredit = 0;
-                $total_akhir = 0;
+                require_once dirname(__DIR__) . '/libraries/Rekening_koran_parser.php';
+                $parsed = Rekening_koran_parser::parse($csvData, $post, $id_header, $this->auth->user_id());
+                $account_no = $parsed['account_no'];
+                $periode_from = $parsed['periode_from'];
+                $periode_to = $parsed['periode_to'];
+                $saldo_awal = $parsed['saldo_awal'];
+                $total_debit = $parsed['total_debit'];
+                $total_kredit = $parsed['total_kredit'];
+                $total_akhir = $parsed['total_akhir'];
+                $arr_detail = $parsed['arr_detail'];
 
-                $arr_detail = [];
-
-                $no = 0;
-                foreach ($csvData as $row => $item) {
-
-                    // $insertData = array_combine($header, $item);
-
-                    if ($post['jenis_bank'] == '7') {
-                        $no++;
-                        if (isset($item[0]) && strpos($item[0], 'No. rekening : ') !== false && $account_no == '') {
-                            $account_no = str_replace('No. rekening : ', '', $item[0]);
-                        }
-                        if (isset($item[0]) && strpos($item[0], 'Periode : ') !== false && $periode_from == '' && $periode_to == '') {
-                            $periode_arr = str_replace('Periode : ', '', $item[0]);
-                            $split_periode = explode(' - ', $periode_arr);
-
-                            $periode_from = date('Y-m-d', strtotime(str_replace('/', '-', $split_periode[0])));
-                            $periode_to = date('Y-m-d', strtotime(str_replace('/', '-', $split_periode[1])));
-                        }
-                        if (isset($item[0]) && strpos($item[0], 'Saldo Awal : ') !== false && $saldo_awal == '') {
-                            $saldo_awal = str_replace('Saldo Awal : ', '', $item[0]);
-                            $saldo_awal = str_replace(',', '', $saldo_awal);
-                        }
-                        if (isset($item[0]) && strpos($item[0], 'Mutasi Debet : ') !== false && $total_debit == '') {
-                            $total_debit = str_replace('Mutasi Debet : ', '', $item[0]);
-                            $total_debit = str_replace(',', '', $total_debit);
-                        }
-                        if (isset($item[0]) && strpos($item[0], 'Mutasi Kredit : ') !== false && $total_kredit == '') {
-                            $total_kredit = str_replace('Mutasi Kredit : ', '', $item[0]);
-                            $total_kredit = str_replace(',', '', $total_kredit);
-                        }
-                        if (isset($item[0]) && strpos($item[0], 'Saldo Akhir : ') !== false && $total_akhir == '') {
-                            $total_akhir = str_replace('Saldo Akhir : ', '', $item[0]);
-                            $total_akhir = str_replace(',', '', $total_akhir);
-                        }
-
-                        if ($no >= 8) {
-                            if (strtotime(str_replace('/', '-', $item[0])) === false) {
-                                $tanggal_transaksi = $item[0];
-                            } else {
-                                $tanggal_transaksi = date('Y-m-d', strtotime(str_replace('/', '-', $item[0])));
-                            }
-
-                            $debit = 0;
-                            $kredit = 0;
-
-                            if (isset($item[3]) && strpos($item[3], 'CR') !== false) {
-                                $debit = str_replace('CR', '', $item[3]);
-                                $debit = str_replace(',', '', $item[3]);
-                                $debit = floatval($debit);
-                            } else {
-                                if (isset($item[3])) {
-                                    $kredit = str_replace('DB', '', $item[3]);
-                                    $kredit = str_replace(',', '', $item[3]);
-                                    $kredit = floatval($kredit);
-                                }
-                            }
-
-                            $saldo = 0;
-
-                            if (isset($item[4])) {
-                                $saldo = str_replace(',', '', $item[4]);
-                                $saldo = floatval($saldo);
-                            }
-
-                            if ($debit > 0 || $kredit > 0) {
-                                $arr_detail[] = [
-                                    'id_header' => $id_header,
-                                    'tipe_bank' => $post['bank'],
-                                    'jenis_bank' => $post['jenis_bank'],
-                                    'tanggal_transaksi' => $tanggal_transaksi,
-                                    'keterangan' => $item[1],
-                                    'cabang' => $item[2],
-                                    'nominal_debit' => $debit,
-                                    'nominal_kredit' => $kredit,
-                                    'saldo' => $saldo,
-                                    'reference_no' => '',
-                                    'cheque_no' => '',
-                                    'status_approval' => 'pending',
-                                    'created_by' => $this->auth->user_id(),
-                                    'created_date' => date('Y-m-d H:i:s')
-                                ];
-                            }
-                        }
-                        // print_r($account_no);
-                    }
-
-                    if ($post['jenis_bank'] == '22') {
-                        $no++;
-
-                        // print_r($no . '<br>');
-                        if ($no == '2') {
-                            $saldo_awal = str_replace(',', '', $item[7]);
-                            $saldo_awal = floatval($saldo_awal);
-                        }
-                        if (strpos($item[0], 'PERIOD :') !== false && $periode_from == '') {
-                            $split_periode = str_replace('/', '-', $item[1]);
-                            $split_periode = explode(' - ', $split_periode);
-
-                            $periode_from = date('Y-m-d', strtotime($split_periode[0]));
-                            $periode_to = date('Y-m-d', strtotime($split_periode[1]));
-                        }
-                        if (strpos($item[0], 'ACCOUNT NO :') !== false && $account_no == '') {
-                            $account_no = $item[1];
-                        }
-                        if (strpos($item[0], 'TOTAL DEBIT :') !== false && $total_kredit == 0) {
-                            $total_kredit = str_replace(',', '', $item[2]);
-                            $total_kredit = floatval($total_kredit);
-                        }
-                        if (strpos($item[0], 'TOTAL CREDIT :') !== false && $total_debit == 0) {
-                            $total_debit = str_replace(',', '', $item[2]);
-                            $total_debit = floatval($total_debit);
-                        }
-                        if (isset($item[6]) && strpos($item[6], 'CLOSING BALANCE :') !== false && $total_akhir == 0) {
-                            $total_akhir = str_replace(',', '', $item[7]);
-                            $total_akhir = floatval($total_akhir);
-                        }
-
-                        if ($no >= 11) {
-                            $tanggal_transaksi = str_replace('/', '-', $item[0]);
-                            $tanggal_transaksi = date('Y-m-d', strtotime($tanggal_transaksi));
-
-                            $arr_detail[] = [
-                                'id_header' => $id_header,
-                                'tipe_bank' => $post['bank'],
-                                'jenis_bank' => $post['jenis_bank'],
-                                'tanggal_transaksi' => $tanggal_transaksi,
-                                'keterangan' => $item[4],
-                                'cabang' => '',
-                                'nominal_debit' => str_replace(',', '', $item[6]),
-                                'nominal_kredit' => str_replace(',', '', $item[5]),
-                                'saldo' => str_replace(',', '', $item[7]),
-                                'reference_no' => str_replace("'", "", $item[2]),
-                                'cheque_no' => str_replace('', '', $item[3]),
-                                'status_approval' => 'pending',
-                                'created_by' => $this->auth->user_id(),
-                                'created_date' => date('Y-m-d H:i:s')
-                            ];
-                        }
-                    }
-
-                    // Example insert (adjust for your table and field names)
-                    // $this->db->insert('your_table', $insertData);
+                // Preview: tampilkan hasil baca file di modal tanpa menyimpan apa pun.
+                if (!empty($post['preview'])) {
+                    @unlink($filePath);
+                    $errors = Rekening_koran_parser::validate($arr_detail);
+                    echo json_encode([
+                        'status' => 1,
+                        'rows' => array_map(function ($r) {
+                            return ['tanggal' => $r['tanggal_transaksi'], 'keterangan' => $r['keterangan'], 'reference_no' => $r['reference_no'],
+                                'debit' => $r['nominal_debit'], 'kredit' => $r['nominal_kredit'], 'saldo' => $r['saldo']];
+                        }, $arr_detail),
+                        'errors' => (object)$errors,
+                        'periode_from' => $periode_from,
+                        'periode_to' => $periode_to,
+                        'account_no' => $account_no,
+                    ]);
+                    return;
                 }
 
-                // exit;
+                // Proses: simpan hanya bila semua baris valid; baris langsung Open (approved) tanpa langkah review.
+                $errors = Rekening_koran_parser::validate($arr_detail);
+                if (empty($arr_detail) || $errors) {
+                    @unlink($filePath);
+                    echo json_encode(['status' => 0, 'msg' => empty($arr_detail) ? 'Tidak ada baris transaksi pada file.' : 'Ada baris yang tidak valid; tidak ada yang disimpan.']);
+                    return;
+                }
+                foreach ($arr_detail as $k => $d) {
+                    $arr_detail[$k]['status_approval'] = 'approved';
+                }
 
                 $arr_header = [
                     'id' => $id_header,
@@ -518,7 +403,8 @@ class Alokasi extends Admin_Controller
             'nominal_kredit' => floatval($data['nominal_kredit']),
             'nominal_debit' => floatval($data['nominal_debit']),
             'saldo' => floatval($data['saldo']),
-            'reference_no' => $data['reference_no']
+            'reference_no' => $data['reference_no'],
+            'bank' => $this->bank_name($data)
         ]);
     }
 
@@ -649,9 +535,14 @@ class Alokasi extends Admin_Controller
             // Double-check: ensure sts is set to 8
             $this->db->query("UPDATE tr_alokasi_detail SET sts = '8' WHERE id = ?", array($id));
 
+            // Alokasi Penerimaan Piutang (1) dan Deposit (8) menjadi draft di menu Penerimaan Piutang.
+            $jenisSaved = array_map(function ($sp) { return (string)$sp['jenis_alokasi']; }, $splits);
+            $drafts = [];
+            if (in_array('1', $jenisSaved, true)) $drafts[] = 'Penerimaan Piutang Invoice';
+            if (in_array('8', $jenisSaved, true)) $drafts[] = 'Penerimaan Piutang Kwitansi Deposit';
             echo json_encode([
                 'status' => 1,
-                'msg' => 'Save Success !'
+                'msg' => 'Alokasi tersimpan.' . ($drafts ? ' Draft ' . implode(' dan ', $drafts) . ' siap diproses di menu Penerimaan Piutang.' : '')
             ]);
         } else {
             echo json_encode([
@@ -671,7 +562,7 @@ class Alokasi extends Admin_Controller
         }
 
         // Get transaction detail
-        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no');
+        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, tipe_bank, jenis_bank');
         $this->db->from('tr_alokasi_detail');
         $this->db->where('id', $id);
         $transaction = $this->db->get()->row_array();
@@ -702,7 +593,14 @@ class Alokasi extends Admin_Controller
 
         $splits = [];
         foreach ($split_data as $split) {
+            // Penerimaan Piutang yang dibuat dari split ini (tr_penerimaan_piutang.id_alokasi = split.id): ada = Used, belum = Draft.
+            $receipt = in_array((string)$split['jenis_alokasi'], ['1', '8'], true)
+                ? $this->db->select('id, no_surat')->get_where('tr_penerimaan_piutang', ['id_alokasi' => $split['id']])->row_array()
+                : null;
             $splits[] = [
+                'receipt_applicable' => in_array((string)$split['jenis_alokasi'], ['1', '8'], true),
+                'id_penerimaan' => $receipt ? (int)$receipt['id'] : null,
+                'no_surat' => $receipt ? $receipt['no_surat'] : null,
                 'jenis_alokasi' => isset($jenis_labels[$split['jenis_alokasi']]) ? $jenis_labels[$split['jenis_alokasi']] : '-',
                 'nominal' => floatval($split['nominal']),
                 'no_kwitansi' => isset($split['no_kwitansi']) ? $split['no_kwitansi'] : null,
@@ -723,8 +621,18 @@ class Alokasi extends Admin_Controller
             'nominal_debit' => floatval($transaction['nominal_debit']),
             'saldo' => floatval($transaction['saldo']),
             'reference_no' => $transaction['reference_no'],
+            'bank' => $this->bank_name($transaction),
             'splits' => $splits
         ]);
+    }
+
+    /** Nama bank rekening koran ("BCA Bank STM") dari tr_alokasi_detail.jenis_bank/tipe_bank; '-' bila tidak ada. */
+    private function bank_name($row)
+    {
+        $bank = !empty($row['tipe_bank']) ? $this->db->get_where('ms_bank', ['id' => $row['tipe_bank']])->row_array() : null;
+        $list = !empty($row['jenis_bank']) ? $this->db->get_where('list_bank', ['id' => $row['jenis_bank']])->row_array() : null;
+        $nama = trim((string)($list['nama_bank'] ?? '') . ' ' . (string)($bank['nama'] ?? ''));
+        return $nama !== '' ? $nama : '-';
     }
 
     public function review_upload($id_header)

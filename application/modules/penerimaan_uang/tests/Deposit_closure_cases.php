@@ -141,6 +141,10 @@ $kwRace=array();foreach($workers as $w)$kwRace[]=workerFinish($w);verify(array_s
 $kwWinner=$kwRace[0]['status']?$kwRace[0]:$kwRace[1];$kwHeader=$service->one('SELECT * FROM tr_penerimaan_piutang WHERE no_surat=?',array($kwWinner['no_surat']));
 verify($receiptService->get_customer_active_deposit('KW-CUST',$kwOwner)===4000000,'Admin does not reduce face-value deposit activation');
 $kwPage=$receiptModel->get_report_penerimaan_serverside('', '', '', $kwWinner['no_surat'],0,10,1,'desc','deposit','KW-CUST');verify($kwPage['recordsFiltered']===1&&count($kwPage['receipts'][0]['details'])===2,'Deposit report supports multi-document header');
+// Report: petunjuk SPK di bawah nomor invoice/kwitansi (mockup).
+$kwReport=controllerCall($receiptCi,'get_report_penerimaan',array('draw'=>1,'start'=>0,'length'=>10,'custom_search'=>$kwWinner['no_surat']));
+verify(array_key_exists('id_spk_penawaran',$kwPage['receipts'][0]['details'][0]),'Report detail rows carry the SPK number');
+verify(!empty($kwReport['data'])&&strpos($kwReport['data'][0]['action'],'penerimaan_uang/view/')!==false&&strpos($kwReport['data'][0]['action'],'class="btn btn-xs btn-info"')!==false,'Report Lihat is a link to the detail page, not a modal button');
 $kwAnchor=$service->one("SELECT id FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Penerimaan Piutang' ORDER BY id LIMIT 1",array($kwWinner['no_surat']));
 $kwPosting=new Consulting_posting($receiptCi);$beforeGl=$service->one('SELECT COUNT(*) n FROM jurnal');$db->fault='commit';verify($kwPosting->receipt($kwAnchor['id'])['status']===0&&$db->fault==='','Kwitansi payment GL commit failure');verify($service->one('SELECT COUNT(*) n FROM jurnal')===$beforeGl,'Kwitansi GL failure leaves no partial ledger');
 $glPosted=$kwPosting->receipt($kwAnchor['id']);verify($glPosted['status']===1,'Kwitansi payment posts native BUM');verify($kwPosting->receipt($kwAnchor['id'])['status']===0,'Kwitansi BUM cannot post twice');verify(controllerCall($receiptCi,'rollback_penerimaan',array('id_penerimaan'=>$kwHeader['id']))['status']===0,'Posted kwitansi payment cannot rollback');

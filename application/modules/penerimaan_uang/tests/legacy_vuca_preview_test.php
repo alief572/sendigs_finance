@@ -229,4 +229,58 @@ $db->voucher = array('id'=>77,'status'=>'AKTIF','nominal_terpakai'=>'0.00'); $db
 expectLegacy($rb['status'] === 0 && empty($db->deletes), 'Rollback refused when the voucher has extra mutations');
 $db->voucher = null; $db->voucherMutations = array(); $db->deletes = array(); $rb = $rollback();
 expectLegacy($rb['status'] === 1 && empty($db->deletes['tr_customer_deposit']), 'Rollback without a Lebih Bayar voucher is unchanged');
+// ---- Dipotong (Y): PPH 23 editable memengaruhi hitungan; Sisa Piutang editable ----
+$db->deposit = false; $db->companyId = '7';
+$db->invoice = $lebihInvoice; $db->history = array(array('id_header'=>'OLD')); $db->historyChoice = 'Y'; $db->journals = array(); $db->batches = array(); $db->inserts = array();
+$model = $c->Penerimaan_uang_model;
+expectLegacy($model->deducted_pph_budget($db->invoice) === 46818000, 'Y budget is the whole invoice PPh when no adjustment was ever booked');
+$pphRow = array('coa'=>'1106-01-02','nm_coa'=>'PPh 23 Disetor','keterangan'=>'PPh 23 Disetor - 189/STM/2026','debit'=>'0.00','kredit'=>'100000.00');
+$db->journals = array($pphRow);
+expectLegacy($model->deducted_pph_budget($db->invoice) === 36818000, 'Y budget shrinks by the PPh adjustment already booked');
+$db->journals = array($pphRow, $pphRow);
+expectLegacy($model->deducted_pph_budget($db->invoice) === 46818000, 'Ambiguous Y history is read leniently (never blocks)');
+$db->historyChoice = 'N'; $thrown = false;
+try { $model->deducted_pph_budget($db->invoice); } catch (InvalidArgumentException $e) { $thrown = true; }
+expectLegacy($thrown, 'Y budget still requires the same PPh choice as the history');
+$db->historyChoice = 'Y'; $db->journals = array();
+
+// Preview: Y merender PPH 23 + Sisa editable, N tidak merender PPH 23 editable.
+$yPreview = array('choose_inv'=>array('189'),'id_alokasi'=>5102,'pph23_dipotong'=>'Y','ppn_dipotong'=>'Y','nominal_penerimaan_bank'=>'15,000,000');
+$c->input->values = $yPreview; $c->process_alokasi();
+$yHtml = $c->template->data['hasil'];
+expectLegacy(strpos($yHtml, 'name="pph_actual_1"') !== false && strpos($yHtml, 'value="468180.00"') !== false, 'Y preview renders an editable PPH 23 defaulting to the budget');
+expectLegacy(strpos($yHtml, 'name="remaining_pph_1" value="468180.00"') !== false, 'Y preview passes the PPh budget to the view');
+expectLegacy(preg_match('/name="sisa_piutang_1"[^>]*readonly/', $yHtml) === 0 && strpos($yHtml, 'sisaEdited(1)') !== false, 'Sisa Piutang is editable');
+$db->historyChoice = 'N'; $db->history = array(); $c->input->values = array_replace($yPreview, array('pph23_dipotong'=>'N')); $c->process_alokasi();
+expectLegacy(isset($c->template->data['hasil']) && strpos($c->template->data['hasil'], 'name="penerimaan_1"') !== false && strpos($c->template->data['hasil'], 'pph_actual_1') === false, 'N preview has no editable PPH 23 (automatic like the mockup)');
+$db->historyChoice = 'Y'; $db->history = array(array('id_header'=>'OLD'));
+
+// Simpan Y.
+$yPost = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'Y','nominal_penerimaan_bank'=>'999','no_inv'=>1,'id_inv_1'=>'189',
+    'penerimaan_1'=>'2,574,990.00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
+$saveY = function ($overrides = array()) use ($c, $yPost) {
+    $c->input->values = array_replace($yPost, $overrides); ob_start(); $c->save_penerimaan_piutang(); return json_decode(ob_get_clean(), true);
+};
+$rowOf = function ($coa) use ($db) { foreach ($db->batches['tr_jurnal'] as $line) { if ($line['coa'] === $coa) return $line; } return null; };
+$db->batches = array();
+$res = $saveY();
+expectLegacy($res['status'] === 1 && $rowOf('1102-01-01')['kredit'] === '2574990.00' && $rowOf('1106-01-02')['kredit'] === '0.00', 'Y without pph_actual is exactly the old behaviour: '.json_encode($res));
+$db->batches = array();
+$res = $saveY(array('pph_actual_1'=>'468,180.00'));
+expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['kredit'] === '0.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00', 'Y with p = budget equals the default');
+$db->batches = array();
+$res = $saveY(array('pph_actual_1'=>'268,180.00', 'penerimaan_1'=>'2,774,990.00'));
+expectLegacy($res['status'] === 1, 'Y with a lower PPh saves: '.json_encode($res));
+$dr = 0; $cr = 0; foreach ($db->batches['tr_jurnal'] as $line) { $dr += (float)$line['debit']; $cr += (float)$line['kredit']; }
+expectLegacy($db->batches['tr_jurnal'][0]['debit'] === '2774990.00' && $rowOf('1102-01-01')['kredit'] === '2574990.00' && $rowOf('1106-01-02')['kredit'] === '200000.00' && abs($dr - $cr) < 0.005, 'PPh adjustment is credited and the journal still balances');
+expectLegacy($db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['penerimaan'] === '2774990.00', 'Detail keeps legacy columns, sisa settles to zero');
+foreach (array('p above the budget' => array('pph_actual_1'=>'468,181.00'), 'negative p' => array('pph_actual_1'=>'-1.00'), 'malformed p' => array('pph_actual_1'=>'12abc'),
+    'adjustment larger than the receipt' => array('pph_actual_1'=>'0.00', 'penerimaan_1'=>'100,000.00')) as $label => $override) {
+    $before = $db->batches; $res = $saveY($override);
+    expectLegacy($res['status'] === 0 && !empty($res['message']) && $db->batches === $before, "Y rejects $label without writing");
+}
+$db->batches = array(); $db->historyChoice = 'N'; $db->history = array();
+$res = $saveY(array('pph23_dipotong'=>'N', 'pph_actual_1'=>'1.00', 'penerimaan_1'=>'2,774,990.00'));
+expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['kredit'] === '468180.00', 'N ignores pph_actual and keeps the automatic adjustment');
+$db->historyChoice = 'Y'; $db->history = array(array('id_header'=>'OLD'));
 echo "PASS: MINARTA final receipt and server journals, history validation, partial PPh, overpayment, cents, and legacy Vuca regressions\n";

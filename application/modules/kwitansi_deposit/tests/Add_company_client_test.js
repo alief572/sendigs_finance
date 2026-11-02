@@ -1,5 +1,8 @@
 const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
 const source=fs.readFileSync(path.join(__dirname,'../views/add.php'),'utf8');
+// Jurnal form mengikuti mockup: Tanggal Jurnal, COA, Nama Company, Nama Account, Deskripsi, Debit, Credit.
+const journalHead=[...source.match(/<thead>[\s\S]*?<\/thead>/g).pop().matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map(m=>m[1]);
+assert.deepStrictEqual(journalHead,['Tanggal Jurnal','COA','Nama Company','Nama Account','Deskripsi','Debit','Credit']);
 const start=source.indexOf("$('#select_customer').on('change'");
 const end=source.indexOf("$('#po_customer').on('change'",start);
 const code=source.slice(start,end).replace(/<\?=[\s\S]*?\?>/g,'/endpoint');

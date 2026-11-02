@@ -147,10 +147,10 @@
             <th class="text-center">Penjualan</th>
             <th class="text-center">DPP</th>
             <th class="text-center">PPN</th>
-            <th class="text-center">PPH 23</th>
+            <th class="text-center">PPH 23<?= $pph23_dipotong === 'Y' ? '<br><small class="text-muted">default 2% DPP, bisa diedit</small>' : '' ?></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">(Penjualan + PPN)</small></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">- PPH</small></th>
-            <th class="text-center">Piutang Dagang<br><small class="text-muted">(Penjualan + PPN)</small></th>
+            <th class="text-center">Piutang Dagang<br><small class="text-muted">(neto PPh)</small></th>
             <th class="text-center">Alokasi Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
             <th class="text-center">Lebih Bayar</th>
@@ -183,7 +183,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan + PPN)</td>
+            <td colspan="8" class="text-right text-muted">Total Piutang Dagang (neto PPh)</td>
             <td>
                 <input type="text" id="footer_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang_dagang ?>" readonly>
                 <input type="text" name="grand_total" id="grand_total" class="autonum" style="display:none" readonly>
@@ -209,7 +209,7 @@
             <td>
                 <input type="text" name="kontrol" class="form-control form-control-sm autonum text-right" id="kontrol" readonly>
             </td>
-            <td colspan="4" class="text-muted small">(Alokasi Penerimaan + Lebih Bayar) &minus; Uang Masuk</td>
+            <td colspan="4" class="text-muted small">(Alokasi Penerimaan + Lebih Bayar) &minus; Uang Masuk, ditambah selisih Sisa Piutang bila belum sesuai</td>
         </tr>
     </tbody>
 </table>
@@ -298,6 +298,48 @@
         return s.join(dec);
     }
 
+    // PPh yang disesuaikan pada baris i. N: min(sisa batas, penerimaan). Y: sisa batas - PPh yang benar-benar dipotong (kolom PPH 23 editable);
+    // tanpa kolom itu (atau default) penyesuaiannya 0 sehingga hasil sama dengan alur lama.
+    function pphAdjustment(i, remaining_pph, penerimaan, errors) {
+        if ($('input[name="pph23_dipotong"]').val() == 'N') { return Math.min(remaining_pph, penerimaan); }
+        var el = $('input[name="pph_actual_' + i + '"]');
+        if (!el.length) { return 0; }
+        var actual = get_num(el.val());
+        var link = $('.reset-pph-link-' + i);
+        if (link.length) { link.toggle(Math.abs(actual - remaining_pph) > 0.004); }
+        if (actual < 0 || actual > remaining_pph) { errors.push('PPh 23 baris ' + i + ' harus antara 0 dan ' + number_format(remaining_pph) + '.'); return 0; }
+        if (remaining_pph - actual > penerimaan) { errors.push('PPh 23 baris ' + i + ' terlalu kecil: selisihnya melebihi penerimaan.'); return 0; }
+        return Math.round((remaining_pph - actual) * 100) / 100;
+    }
+
+    // Seperti mockup: mengedit PPH 23 tidak mengubah Sisa Piutang. Bila Sisa jadi tidak sesuai, hitungAll() hanya memberi catatan
+    // (Sisa yang seharusnya) dan tombol simpan tetap nonaktif sampai pengguna menyesuaikan Sisa/Penerimaan.
+    var holdSisa = 0;
+    function pphEdited(i) { holdSisa = i; hitungAll(); holdSisa = 0; }
+
+    function resetPph(i) {
+        var el = $('input[name="pph_actual_' + i + '"]');
+        el.autoNumeric('set', el.attr('data-default'));
+        hitungAll();
+    }
+
+    // Sisa Piutang diketik: Penerimaan menyesuaikan (penerimaan = piutang - sisa - admin + penyesuaian PPh). Server tetap menghitung ulang sisa.
+    function sisaEdited(i) {
+        var piutang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
+        var admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
+        var sisa = get_num($('input[name="sisa_piutang_' + i + '"]').val());
+        var remaining = get_num2($('input[name="remaining_pph_' + i + '"]').val());
+        var current = get_num($('input[name="penerimaan_' + i + '"]').val());
+        var x = Math.round((piutang - sisa - admin) * 100) / 100, pen;
+        if ($('input[name="pph23_dipotong"]').val() == 'N') {
+            pen = x > 0 ? x + remaining : Math.min(current, remaining);
+        } else {
+            pen = x + pphAdjustment(i, remaining, Math.max(current, x + remaining), []);
+        }
+        $('input[name="penerimaan_' + i + '"]').autoNumeric('set', Math.max(0, Math.round(pen * 100) / 100));
+        hitungAll();
+    }
+
     function hitungAll() {
         var no = '<?= $no_inv ?>';
 
@@ -317,6 +359,8 @@
         var ttl_biaya_admin = 0;
         var ttl_sisa_piutang = 0;
         var ttl_pph23 = 0;
+        var inputErrors = [];
+        var sisaGap = 0, sisaHint = [];
         for (i = 1; i <= no; i++) {
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
@@ -324,7 +368,7 @@
             ttl_lebih += lebihEligible ? Math.max(0, get_num($('input[name="lebih_bayar_' + i + '"]').val())) : 0;
             // Use the remaining PPh from history, never the previous rendered credit.
             var remaining_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
-            var pph23_inv = pph23_dipotong == 'N' ? Math.min(remaining_pph, penerimaan) : 0;
+            var pph23_inv = pphAdjustment(i, remaining_pph, penerimaan, inputErrors);
             $.each(['1106-01-02', '1106-01-05'], function(index, coa) {
                 var cell = $('.td_kredit_' + coa + '_' + i);
                 if (cell.length) {
@@ -332,29 +376,28 @@
                 }
             });
 
-            var sisa_piutang;
-            if (pph23_dipotong == 'Y') {
-                // Potong PPh (client bayar net): Piutang Dagang - Penerimaan - Biaya Admin
-                sisa_piutang = Math.round((piutang_dagang - penerimaan - biaya_admin) * 100) / 100;
-            } else {
-                // Tidak Potong PPh (client bayar full): Piutang Dagang - (Penerimaan - PPh 23) - Biaya Admin
-                sisa_piutang = Math.round((piutang_dagang - (penerimaan - pph23_inv) - biaya_admin) * 100) / 100;
-            }
+            // Satu rumus untuk Y dan N: reduction = penerimaan + biaya admin - penyesuaian PPh; sisa = piutang - reduction.
+            var sisa_piutang = Math.round((piutang_dagang - (penerimaan - pph23_inv) - biaya_admin) * 100) / 100;
+            if (sisa_piutang < 0) { inputErrors.push('Penerimaan melebihi piutang dagang pada baris ' + i + '.'); }
 
-            $('input[name="sisa_piutang_' + i + '"]').autoNumeric('set', sisa_piutang);
+            // Jangan menimpa kolom Sisa yang sedang diketik pengguna (caret akan melompat).
+            var sisaEl = $('input[name="sisa_piutang_' + i + '"]');
+            var sisa_dipakai = sisa_piutang;
+            if (holdSisa === i) {
+                // Seperti mockup: Sisa yang tampil tidak berubah; selisihnya masuk ke Kontrol.
+                sisa_dipakai = get_num(sisaEl.val());
+                var gap = Math.round((sisa_piutang - sisa_dipakai) * 100) / 100;
+                if (Math.abs(gap) > 0.004) { sisaGap += gap; sisaHint.push('baris ' + i + ' seharusnya ' + number_format(sisa_piutang)); }
+            } else if (!(typeof document !== 'undefined' && sisaEl[0] && document.activeElement === sisaEl[0])) {
+                sisaEl.autoNumeric('set', sisa_piutang);
+            }
 
             var coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02', '1106-01-05'];
             $.each(coa_jurnal, function(index, value) {
                 index = index + 1;
                 if (value == '1102-01-01') {
-                    var kredit_piutang_dagang;
-                    if (pph23_dipotong == 'Y') {
-                        // Dipotong PPh: kredit piutang dagang = penerimaan + biaya admin (total yang mengurangi piutang)
-                        kredit_piutang_dagang = penerimaan + biaya_admin;
-                    } else {
-                        // Tidak dipotong PPh: kredit piutang dagang = penerimaan + biaya admin - pph23
-                        kredit_piutang_dagang = penerimaan + biaya_admin - pph23_inv;
-                    }
+                    // Dipotong maupun tidak: kredit piutang dagang = penerimaan + biaya admin - penyesuaian PPh (0 pada Dipotong default).
+                    var kredit_piutang_dagang = penerimaan + biaya_admin - pph23_inv;
                     kredit_piutang_dagang = Math.round(kredit_piutang_dagang * 100) / 100;
                     var resp_piutang = number_format(kredit_piutang_dagang);
                     resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
@@ -379,17 +422,23 @@
             ttl_piutang_dagang += piutang_dagang;
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
-            ttl_sisa_piutang += sisa_piutang;
+            ttl_sisa_piutang += sisa_dipakai;
             ttl_pph23 += get_num2($('input[name="kredit_1106-01-02_' + i + '"]').val()) + get_num2($('input[name="kredit_1106-01-05_' + i + '"]').val());
 
         }
 
         var grand_total = Math.round(ttl_penerimaan * 100) / 100;
         // Lebih Bayar ikut sisi bank: uang masuk = penerimaan + lebih bayar.
-        var kontrol = Math.round((grand_total + ttl_lebih - uang_masuk) * 100) / 100;
+        var kontrol = Math.round((grand_total + ttl_lebih - uang_masuk + sisaGap) * 100) / 100;
         // Catatan kontrol (mengikuti mockup): merah bila kontrol belum 0, biru bila 0. Lebih Bayar hanya tersedia bila semua invoice satu company pemilik jurnal.
         var kontrolTitle, kontrolMsg;
-        if (kontrol < 0) {
+        if (inputErrors.length) {
+            kontrolTitle = 'Catatan: ada isian yang belum valid.';
+            kontrolMsg = inputErrors.join(' ');
+        } else if (Math.abs(sisaGap) > 0.004) {
+            kontrolTitle = 'Catatan: kontrol belum 0.';
+            kontrolMsg = 'Sisa Piutang belum sesuai dengan Penerimaan dan PPh 23 (' + sisaHint.join('; ') + '). Ubah Sisa Piutang atau Penerimaan.';
+        } else if (kontrol < 0) {
             kontrolTitle = 'Catatan: kontrol belum 0.';
             kontrolMsg = lebihEligible
                 ? 'Uang masuk lebih besar ' + number_format(-kontrol) + '. Isi Lebih Bayar pada invoice untuk kelebihan ini (masuk ke saldo deposit customer), atau tambah invoice yang dibayar.'
@@ -403,7 +452,7 @@
         }
         $('#kontrol_title').text(kontrolTitle);
         $('#kontrol_hint').text(kontrolMsg);
-        $('#kontrol_alert').removeClass('alert-danger alert-info').addClass(kontrol === 0 ? 'alert-info' : 'alert-danger').show();
+        $('#kontrol_alert').removeClass('alert-danger alert-info').addClass(kontrol === 0 && !inputErrors.length ? 'alert-info' : 'alert-danger').show();
         $('.tr_jurnal_lebih').toggle(ttl_lebih > 0);
         $('.td_kredit_lebih').html(number_format(ttl_lebih) + '<input type="hidden" name="kredit_lebih" value="' + ttl_lebih + '">');
         ttl_kredit_jurnal += ttl_lebih;
@@ -474,7 +523,7 @@
         $('.td_total_kredit_jurnal').html(resp_ttl_kredit_jurnal);
 
         // Tombol simpan di footer modal (add.php) aktif hanya bila Kontrol 0, ada uang bank yang dialokasikan, dan jurnal seimbang.
-        $('#dialog-popup button[type="submit"]').prop('disabled', !(kontrol === 0 && bank_masuk > 0 && Math.abs(ttl_debit_jurnal - ttl_kredit_jurnal) < 0.01));
+        $('#dialog-popup button[type="submit"]').prop('disabled', !(kontrol === 0 && inputErrors.length === 0 && bank_masuk > 0 && Math.abs(ttl_debit_jurnal - ttl_kredit_jurnal) < 0.01));
 
         // Seperti mockup: baris jurnal bernilai nol disembunyikan (inputnya tetap ada di form).
         $('.tr_jurnal_row').each(function () {

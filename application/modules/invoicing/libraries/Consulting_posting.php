@@ -59,6 +59,48 @@ class Consulting_posting
         return array('save'=>$r['status'])+$r;
     }
 
+    public function kwitansi($journalId)
+    {
+        $s=$this->service;
+        return $s->mutate('post_kwitansi_deposit',function()use($s,$journalId){
+            if(!has_permission('Jurnal_Invoicing.Manage') && !has_permission('Jurnal_All.Manage')) throw new RuntimeException('Tidak memiliki izin posting kwitansi.');
+            $s->transactional(array('tr_jurnal','tr_kwitansi_deposit','tr_invoicing','tr_kartu_piutang'));
+            $anchor=$s->one("SELECT * FROM tr_jurnal WHERE id=? AND jenis_transaksi='Kwitansi Deposit' FOR UPDATE",array($journalId));
+            if(!$anchor) throw new RuntimeException('Jurnal kwitansi tidak ditemukan.');
+            $kw=$s->one('SELECT * FROM tr_kwitansi_deposit WHERE no_kwitansi=? FOR UPDATE',array($anchor['no_transaksi']));
+            $invoices=$s->rows("SELECT * FROM tr_invoicing WHERE no_invoice=? AND tax_treatment='DEP' FOR UPDATE",array($anchor['no_transaksi']));
+            if(!$kw || empty($kw['spk_snapshot']) || count($invoices)!==1) throw new RuntimeException('Histori kwitansi belum lengkap; perlu rekonsiliasi.');
+            $invoice=$invoices[0]; $snapshot=Invoice_consulting::snapshot($invoice); $owner=$snapshot['owner'];
+            if((string)$kw['id_company']!==(string)$owner['id'] || (string)$kw['id_customer']!==(string)$invoice['id_customer']
+                || $kw['id_spk_penawaran']!==($snapshot['id_spk_penawaran']??null)) throw new RuntimeException('Snapshot kwitansi tidak konsisten.');
+            $rows=$s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Kwitansi Deposit' ORDER BY id FOR UPDATE",array($kw['no_kwitansi']));
+            if(count($rows)!==2) throw new RuntimeException('Jurnal kwitansi tidak lengkap.');
+            $amount=Invoice_calculation::cents($kw['nilai_kwitansi']);
+            $master=array();foreach($s->master($owner['id']) as $a)$master[$a['no_perkiraan']][]=$a['nama'];
+            foreach(array('receivable','deposit') as $i=>$role){
+                $a=$snapshot['accounts'][$role];$row=$rows[$i];
+                $desc=$a['name'].' - '.$kw['no_kwitansi'].' - '.$snapshot['spk'];
+                if(!isset($master[$a['code']]) || count($master[$a['code']])!==1 || !in_array((string)$row['sts'],array('0','9'),true)
+                    || (string)$row['id_company']!==(string)$owner['id'] || $row['nm_company']!==$owner['nm_company']
+                    || $row['coa']!==$a['code'] || $row['nm_coa']!==$a['name'] || $row['keterangan']!==$desc || $row['tgl_jurnal']!==$kw['tanggal_kwitansi']
+                    || Invoice_calculation::cents($row['debit'])!==($i===0?$amount:0) || Invoice_calculation::cents($row['kredit'])!==($i===1?$amount:0)) throw new RuntimeException('Jurnal kwitansi sudah diposting atau berbeda dari snapshot.');
+            }
+            $gl=$this->ledger($owner['id'],array('javh','jurnal','pastibisa_tb_cabang'));
+            if($s->one('SELECT nomor FROM '.$gl.'javh WHERE keterangan=? LIMIT 1',array($kw['no_kwitansi']))) throw new RuntimeException('Posting kwitansi sudah ada pada accounting tujuan.');
+            $branch=$s->one('SELECT subcab,nomorJC FROM '.$gl.'pastibisa_tb_cabang WHERE nocab=? FOR UPDATE',array('101'));
+            if(!$branch) throw new RuntimeException('Cabang accounting 101 belum tersedia.');
+            $date=$kw['tanggal_kwitansi'];$number='101-'.$branch['subcab'].'JV'.date('y',strtotime($date)).str_pad((int)$branch['nomorJC']+1,5,'0',STR_PAD_LEFT);
+            $s->checked($s->db->insert($gl.'javh',array('nomor'=>$number,'tgl'=>$date,'jml'=>Invoice_calculation::decimal($amount),'koreksi_no'=>'-','kdcab'=>'101','jenis'=>'JV','keterangan'=>$kw['no_kwitansi'],
+                'bulan'=>substr($date,5,2),'tahun'=>substr($date,0,4),'user_id'=>$s->ci->auth->user_id(),'memo'=>'','tgl_jvkoreksi'=>$date,'ho_valid'=>'')));
+            foreach($rows as $row)$s->checked($s->db->insert($gl.'jurnal',array('tipe'=>'JV','nomor'=>$number,'tanggal'=>$date,'no_perkiraan'=>$row['coa'],'keterangan'=>$row['keterangan'],'no_reff'=>$kw['no_kwitansi'],'debet'=>$row['debit'],'kredit'=>$row['kredit'],'stspos'=>1)));
+            $s->checked($s->db->query('UPDATE '.$gl.'pastibisa_tb_cabang SET nomorJC=nomorJC+1 WHERE nocab=?',array('101')));
+            $s->checked($s->db->insert('tr_kartu_piutang',array('tipe'=>'JV','nomor'=>$number,'tanggal'=>$date,'no_perkiraan'=>$snapshot['accounts']['receivable']['code'],'keterangan'=>$kw['no_kwitansi'],'no_reff'=>$invoice['id'],
+                'debet'=>Invoice_calculation::decimal($amount),'kredit'=>0,'id_supplier'=>$kw['id_customer'],'nama_supplier'=>$kw['nm_customer'],'id_company'=>$owner['id'],'nm_company'=>$owner['nm_company'])));
+            $s->checked($s->db->update('tr_jurnal',array('sts'=>'1'),array('no_transaksi'=>$kw['no_kwitansi'],'jenis_transaksi'=>'Kwitansi Deposit')));
+            return array('accounting_numbers'=>array(array('company'=>(string)$owner['id'],'number'=>$number)));
+        },'kwitansi_deposit');
+    }
+
     public function receipt($journalId)
     {
         $s=$this->service;

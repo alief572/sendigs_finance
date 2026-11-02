@@ -42,6 +42,7 @@ foreach(array('Penerimaan Kwitansi Deposit','Lebih Bayar (Penerimaan Invoice)','
  assertIndex(strpos($detail,$needle)!==false,'Detail content: '.$needle);
 }
 assertIndex(strpos($detail,'Daftar Voucher')===false,'Detail has no voucher section');
+assertIndex(preg_match('~<a href="[^"]*penerimaan_uang/view_surat\?no=[^"]+">~',$detail)===1,'No Penerimaan links to the receipt page (mockup refLink)');
 assertIndex(strpos($detail,'&lt;unsafe&gt;')!==false&&strpos($detail,'<unsafe>')===false,'Detail customer text escaped');
 $px=new DOMDocument;libxml_use_internal_errors(true);$px->loadHTML($detail);libxml_clear_errors();$xp=new DOMXPath($px);
 assertIndex($xp->query('//table/thead/tr/th')->length===8,'Detail ledger has eight columns');

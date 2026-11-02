@@ -158,7 +158,7 @@ class Alokasi_model extends BF_Model
 
     public function get_transaction_for_split($id)
     {
-        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, id_header, sts');
+        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, id_header, sts, tipe_bank, jenis_bank');
         $this->db->from('tr_alokasi_detail');
         $this->db->where('id', $id);
         $query = $this->db->get();

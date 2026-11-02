@@ -46,7 +46,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
 <div class="box box-primary">
     <div class="box-header with-border">
         <h3 class="box-title" style="font-weight: 700; color: #2c3e50;">
-            <i class="fa fa-pencil-square-o"></i> <?= $isDeposit ? 'Proses Penerimaan Piutang Kwitansi Deposit' : 'Proses Penerimaan Piutang Invoice' ?>
+            <i class="fa fa-pencil-square-o"></i> Penerimaan Piutang
         </h3>
         <div class="box-tools pull-right">
             <span class="label <?= $isDeposit ? 'label-info' : 'label-primary' ?>" style="font-size: 12px;">
@@ -55,6 +55,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         </div>
     </div>
     <div class="box-body">
+        <div class="text-muted" style="font-size: 12px; margin-bottom: 14px;"><a href="<?= base_url('penerimaan_uang') . ($isDeposit ? '#tab_kwitansi' : '') ?>"><?= $isDeposit ? 'Penerimaan Piutang Kwitansi Deposit' : 'Penerimaan Piutang Invoice' ?></a> / Proses</div>
         <form action="" method="post" id="form_data">
             <input type="hidden" name="receipt_kind" value="<?= htmlspecialchars($results['receipt_kind'] ?? 'invoice', ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="id_alokasi" value="<?= $results['id_alokasi'] ?>">
@@ -89,6 +90,12 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     <?php endif; ?>
                 </div>
                 <div class="col-md-6">
+                    <?php if ($isDeposit): ?>
+                        <div class="form-group">
+                            <label>Tanggal &amp; Bank</label>
+                            <input type="text" class="form-control form-control-sm" readonly value="<?= htmlspecialchars($results['tanggal_bank'] ?? '-', ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                    <?php endif; ?>
                     <?php if (!$isDeposit): ?>
                         <div class="form-group">
                             <label for="deposit_choice">Deposit <span class="text-red">*</span></label>
@@ -241,7 +248,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         <div class="modal-content">
             <div class="modal-header" style="background-color: #3c8dbc; color: #fff;">
                 <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.8;"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><i class="fa fa-money"></i>&nbsp; <?= $isDeposit ? 'Konfirmasi & Jurnal Penerimaan Piutang Kwitansi Deposit' : 'Penerimaan Piutang & Jurnal Otomatis' ?></h4>
+                <h4 class="modal-title" id="myModalLabel"><i class="fa fa-money"></i>&nbsp; <?= $isDeposit ? 'Penerimaan Piutang Kwitansi Deposit' : 'Penerimaan Piutang' ?></h4>
             </div>
             <form action="" id="frm_data" enctype="multipart/form-data">
                 <div class="modal-body" id="MyModalBody" style="max-height: 80vh; overflow-y: auto; padding: 15px;">

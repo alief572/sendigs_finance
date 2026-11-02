@@ -30,6 +30,7 @@ for (const match of html.matchAll(/<[^>]+>/g)) {
     if ((attrs.class || '').startsWith('reset-pph-link-')) nodes['.' + attrs.class] = node;
 }
 const submit = {disabled: true};
+const journalSection = {style: {display: ''}};
 const container = nodes['consulting-receipt-container'];
 container.querySelector = selector => {
     const name = selector.match(/\[name="([^"]+)"\]/);
@@ -38,16 +39,18 @@ container.querySelector = selector => {
 container.addEventListener = (name, callback) => { events[name] = callback; };
 const document = {
     getElementById: id => nodes[id],
-    querySelector: () => submit,
+    querySelector: selector => selector === '.journal-section' ? journalSection : submit,
     createElement: () => element()
 };
 function $(node) { return {autoNumeric(action, value) { assert.strictEqual(action, 'set'); node.value = value; }}; }
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 new vm.Script(script).runInNewContext({document, $, ConsultingReceiptMoney: money, setTimeout: cb => cb()});
 assert.strictEqual(submit.disabled, true, 'Initial bank difference requires allocation input');
+assert.strictEqual(journalSection.style.display, 'none', 'Journal stays hidden until Kontrol is 0 (mockup)');
 names.biaya_admin_1.value = '2,500.00';
 events.change({target: names.biaya_admin_1});
 assert.strictEqual(submit.disabled, false, nodes['error-text'].textContent);
+assert.strictEqual(journalSection.style.display, '', 'Journal appears once Kontrol is 0');
 assert.strictEqual(nodes.input_kontrol.value, '0.00');
 assert.strictEqual(nodes.tot_jurnal_debit.textContent, '222,000,000.00');
 assert.strictEqual(nodes.tot_jurnal_kredit.textContent, '222,000,000.00');

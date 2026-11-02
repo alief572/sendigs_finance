@@ -56,21 +56,18 @@ class Deposit_customer extends Admin_Controller
             $id_customer = $this->input->get('id_customer');
         }
 
+        require_once APPPATH . 'libraries/Xlsx_export.php';
         if (!empty($id_customer)) {
             $data = $this->customer_ledger_data($id_customer);
             if ($data === null) {
                 redirect('deposit_customer');
                 return;
             }
-            $data['is_customer_ledger'] = true;
+            $spec = Xlsx_export::deposit_ledger_spec($data['nm_customer'], $data['mutasi'], array('Deposit_customer_model', 'source_label'));
         } else {
-            $data = array(
-                'customers' => $this->Deposit_customer_model->get_customer_summary(),
-                'is_customer_ledger' => false
-            );
+            $spec = Xlsx_export::deposit_index_spec($this->Deposit_customer_model->get_customer_summary());
         }
-
-        $this->load->view('export_excel', $data);
+        Xlsx_export::download($spec, $spec['filename']);
     }
 
     /** Ledger satu customer (semua company) + ringkasan 6 field mockup; null bila customer belum punya deposit. */

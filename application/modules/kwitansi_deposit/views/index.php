@@ -54,9 +54,6 @@
             <a href="<?= site_url('kwitansi_deposit/add') ?>" class="btn btn-sm btn-primary">
                 <i class="fa fa-plus"></i> Buat Kwitansi Deposit
             </a>
-            <a href="<?= site_url('kwitansi_deposit/export_excel?' . http_build_query($results['filters'])) ?>" class="btn btn-sm btn-success">
-                <i class="fa fa-file-excel-o"></i> Export Excel
-            </a>
         </div>
     </div>
     <div class="box-body">
@@ -84,13 +81,14 @@
                         <option value="LUNAS" <?= ($results['filters']['status'] === 'LUNAS') ? 'selected' : '' ?>>Lunas</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label>Pencarian</label>
-                    <input type="text" name="search" class="form-control input-sm" placeholder="No Kwitansi / No SPK / Customer..." value="<?= htmlspecialchars($results['filters']['search'] ?? '') ?>">
+                <div class="col-md-3" style="padding-top: 24px;">
+                    <button type="submit" class="btn btn-sm btn-info btn-filter"><i class="fa fa-search"></i> Search</button>
+                    <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-sm btn-danger" title="Hapus semua filter"><i class="fa fa-refresh"></i> Reset</a>
                 </div>
-                <div class="col-md-2" style="padding-top: 24px;">
-                    <button type="submit" class="btn btn-sm btn-info btn-filter" style="width: 58%;"><i class="fa fa-filter"></i> Filter</button>
-                    <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-sm btn-danger" style="width: 38%;" title="Hapus semua filter"><i class="fa fa-refresh"></i> Reset</a>
+                <div class="col-md-3 text-right" style="padding-top: 24px;">
+                    <a id="btn_export_kw" href="<?= site_url('kwitansi_deposit/export_excel?' . http_build_query($results['filters'])) ?>" class="btn btn-sm btn-success">
+                        <i class="fa fa-file-excel-o"></i> Export to Excel
+                    </a>
                 </div>
             </div>
         </form>
@@ -135,7 +133,7 @@
                                 </td>
                                 <td class="text-center nowrap font-tabular">
                                     <?php if (!empty($row['no_penerimaan'])): ?>
-                                        <?= htmlspecialchars($row['no_penerimaan']) ?>
+                                        <a href="<?= site_url('penerimaan_uang/view_surat?no=' . urlencode($row['no_penerimaan'])) ?>"><?= htmlspecialchars($row['no_penerimaan']) ?></a>
                                         <?php if (!empty($row['tanggal_bayar']) && $row['tanggal_bayar'] !== '0000-00-00'): ?>
                                             <small class="text-muted">· <?= date('d-M-Y', strtotime($row['tanggal_bayar'])) ?></small>
                                         <?php endif; ?>
@@ -274,13 +272,18 @@
         if ($.fn.DataTable.isDataTable('#table_kwitansi')) {
             $('#table_kwitansi').DataTable().destroy();
         }
-        $('#table_kwitansi').DataTable({
+        var tableKw = $('#table_kwitansi').DataTable({
             order: [[1, 'desc']],
             pageLength: 25,
             responsive: true,
             language: {
                 emptyTable: "Belum ada tagihan kwitansi deposit."
             }
+        });
+        // Export mengikuti kotak Search tabel (mockup: Export memakai baris yang tersaring).
+        var exportBase = $('#btn_export_kw').attr('href');
+        tableKw.on('search.dt', function() {
+            $('#btn_export_kw').attr('href', exportBase + '&search=' + encodeURIComponent(tableKw.search()));
         });
     });
 </script>

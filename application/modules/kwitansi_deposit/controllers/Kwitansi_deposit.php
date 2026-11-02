@@ -249,12 +249,9 @@ class Kwitansi_deposit extends Admin_Controller
 
         $kwitansiList = $this->Kwitansi_deposit_model->get_kwitansi_list($filters);
 
-        $data = array(
-            'kwitansiList' => $kwitansiList,
-            'filters' => $filters
-        );
-
-        $this->load->view('kwitansi_deposit/export_excel', $data);
+        require_once APPPATH . 'libraries/Xlsx_export.php';
+        $spec = Xlsx_export::kwitansi_spec($kwitansiList);
+        Xlsx_export::download($spec, $spec['filename']);
     }
 
     public function post_journal()

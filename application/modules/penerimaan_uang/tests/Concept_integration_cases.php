@@ -190,8 +190,8 @@ $db->update('tr_invoicing',array('total_akhir_jurnal'=>'9999.00'),array('id'=>$c
 $report=$receiptModel->get_report_data('', '', '', $beforeInvoice['no_invoice']);
 verify(count($report)===1 && $report[0]['nominal_penerimaan_bank']==='10.00','Export bank receipt counted once');
 verify($report[0]['details'][0]['penerimaan']==='11.50' && $report[0]['details'][0]['total_akhir_jurnal']===Invoice_calculation::decimal($receiptSnapshot['balance']),'Export uses historical snapshot despite invoice change');
-$html=$renderer->render(dirname(__DIR__).'/views/export_excel.php',array('report_data'=>$report,'filter_info'=>'Concept test'));
-verify(strpos($html,'11.5')!==false && strpos($html,$beforeInvoice['no_invoice'])!==false,'Actual export HTML rendered');
+require_once dirname(__DIR__,3).'/libraries/Xlsx_export.php';$xlsxSpec=Xlsx_export::report_spec($report,'','','');
+verify($xlsxSpec['rows'][0][12]===11.5 && $xlsxSpec['rows'][0][5]===$beforeInvoice['no_invoice'] && $xlsxSpec['total'][10]===10.0,'Actual export rows built from report data');
 $page=$receiptModel->get_report_penerimaan_serverside('', '', '', $beforeInvoice['no_invoice'],0,10,1,'desc');
 verify($page['recordsFiltered']===1 && count($page['receipts'][0]['details'])===1,'Actual paginated report query');
 verify($page['receipts'][0]['details'][0]['total_akhir_jurnal']===Invoice_calculation::decimal($receiptSnapshot['balance']),'Paged report preserves historical balance');

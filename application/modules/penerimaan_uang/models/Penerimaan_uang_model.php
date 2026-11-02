@@ -212,6 +212,40 @@ class Penerimaan_uang_model extends BF_Model
         return $choice === 'Y' ? 0 : $total - $used;
     }
 
+    /**
+     * Anggaran PPh invoice lama pada penerimaan "Dipotong" (Y): PPh invoice dikurangi kredit PPh 23 Disetor dari penerimaan Y sebelumnya.
+     * Riwayat Y selama ini tidak pernah diparse (tidak ada kredit PPh), jadi jurnal yang kosong/ambigu dianggap 0 dan tidak melempar.
+     * Pilihan Y/N riwayat tetap harus sama dengan pilihan sekarang.
+     */
+    public function deducted_pph_budget($invoice)
+    {
+        $total = Penerimaan_calculation::cents($invoice['pph_jurnal']);
+        if ($total === 0) { return 0; }
+        $coa = (string)$invoice['tipe_invoice'] === '1' ? '1106-01-05' : '1106-01-02';
+        $used = 0; $seen = array();
+        foreach ($this->db->get_where('tr_penerimaan_piutang_detail', array('id_inv'=>$invoice['id']))->result_array() as $receipt) {
+            $number = $receipt['id_header'];
+            if (isset($seen[$number])) { throw new InvalidArgumentException('Riwayat penerimaan invoice ambigu; perlu rekonsiliasi.'); }
+            $seen[$number] = true;
+            $headers = $this->db->get_where('tr_penerimaan_piutang', array('no_surat'=>$number))->result_array();
+            if (count($headers) !== 1 || $headers[0]['pph23_dipotong'] !== 'Y') {
+                throw new InvalidArgumentException('Pilihan PPh harus sama dengan riwayat penerimaan invoice.');
+            }
+            $matches = array();
+            foreach ($this->db->get_where('tr_jurnal', array('no_transaksi'=>$number))->result_array() as $journal) {
+                if ($journal['jenis_transaksi'] === 'Penerimaan Piutang' && $journal['coa'] === $coa
+                    && $journal['keterangan'] === $journal['nm_coa'] . ' - ' . $invoice['no_invoice']) {
+                    $matches[] = $journal;
+                }
+            }
+            if (count($matches) === 1) {
+                $credit = Penerimaan_calculation::cents($matches[0]['kredit']) - Penerimaan_calculation::cents($matches[0]['debit']);
+                if ($credit > 0) { $used += $credit; }
+            }
+        }
+        return max(0, $total - $used);
+    }
+
     /** Prove prior adjustments from the full chain of saved receipt balances. */
     private function receipt_snapshot_pph($invoice, $history)
     {
@@ -529,7 +563,7 @@ class Penerimaan_uang_model extends BF_Model
 
         if (!empty($suratList)) {
             $this->db->select('d.id_header, d.id_inv, d.penerimaan, d.biaya_admin, d.sisa_piutang, d.pph23, d.consulting_snapshot, ' .
-                'i.no_invoice, i.tax_treatment, i.total_akhir_jurnal, i.total_nominal_jurnal, i.ppn_jurnal');
+                'i.no_invoice, i.id_spk_penawaran, i.tax_treatment, i.total_akhir_jurnal, i.total_nominal_jurnal, i.ppn_jurnal');
             $this->db->from('tr_penerimaan_piutang_detail d');
             $this->db->join('tr_invoicing i', 'i.id = d.id_inv', 'left');
             $this->db->where_in('d.id_header', $suratList);

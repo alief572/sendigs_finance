@@ -129,4 +129,18 @@ check($C::stored_tax_code(array('type' => 'DEP'), '') === 'DEP', 'Snapshot type 
 check($C::stored_tax_code(array('type' => 'DEP'), 'PKP') === 'PKP', 'Invoice column wins over snapshot type');
 check($C::stored_tax_code(null, '') === '' && $C::stored_tax_code(false, null) === '' && $C::stored_tax_code(array('ppn' => 5000), '') === '', 'No stored tax code returns empty, never PKP/WAPU');
 
+// Dipotong (Y) dengan PPh 23 yang bisa diedit: p = PPh yang benar-benar dipotong, anggaran d = sisa batas; penyesuaian = d - p.
+$d = 46818000;
+check($C::calculate(257499000, $d, 'Y', 257499000, 0) === array('adjustment'=>0,'reduction'=>257499000,'remaining'=>0), 'Y without actual PPh is unchanged');
+check($C::calculate(257499000, $d, 'Y', 257499000, 0, $d) === array('adjustment'=>0,'reduction'=>257499000,'remaining'=>0), 'Y with p = budget equals the default');
+$partial = $C::calculate(257499000, $d, 'Y', 277499000, 0, 26818000);
+check($partial === array('adjustment'=>20000000,'reduction'=>257499000,'remaining'=>0), 'Y with lower p reverses the difference: '.json_encode($partial));
+check($C::calculate(257499000, $d, 'Y', 277498750, 250, 26818000)['reduction'] === 257499000, 'Admin is added before the PPh adjustment');
+foreach (array('p above budget'=>array($d + 1), 'negative p'=>array(-1), 'adjustment above receipt'=>array(0, 100000)) as $label => $args) {
+    $thrown = false;
+    try { $C::calculate(257499000, $d, 'Y', $args[1] ?? 257499000, 0, $args[0]); } catch (InvalidArgumentException $e) { $thrown = true; }
+    check($thrown, 'Y rejects '.$label);
+}
+check($C::calculate(257499000, $d, 'N', 257499000, 0, 0)['adjustment'] === $d, 'N ignores the actual PPh argument');
+
 echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";

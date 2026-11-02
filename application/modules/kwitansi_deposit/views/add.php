@@ -106,34 +106,37 @@
                     <div class="preview-journal">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1e293b;">
-                                <i class="fa fa-book"></i> Preview Draft Jurnal Akrual Kwitansi Deposit
+                                <i class="fa fa-book"></i> Jurnal Kwitansi Deposit
                             </h4>
                             <span class="badge-balanced"><i class="fa fa-check"></i> Balanced (Debit = Kredit)</span>
                         </div>
                         <table class="table table-bordered table-condensed" style="margin-bottom: 0; background: #fff;">
                             <thead>
                                 <tr>
-                                    <th width="120">No. Akun (COA)</th>
-                                    <th width="180">Nama Akun</th>
-                                    <th width="180">Company</th>
-                                    <th>Keterangan</th>
-                                    <th width="150" class="text-right">Debit (Rp)</th>
-                                    <th width="150" class="text-right">Kredit (Rp)</th>
+                                    <th width="120">Tanggal Jurnal</th>
+                                    <th width="120">COA</th>
+                                    <th width="160">Nama Company</th>
+                                    <th width="180">Nama Account</th>
+                                    <th>Deskripsi</th>
+                                    <th width="140" class="text-right">Debit</th>
+                                    <th width="140" class="text-right">Credit</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
+                                    <td class="jurnal_tgl">-</td>
                                     <td><code>1102-01-01</code></td>
-                                    <td><strong>Piutang Dagang Usaha</strong></td>
                                     <td id="jurnal_comp_1" class="text-muted">-</td>
+                                    <td>Piutang Dagang Usaha</td>
                                     <td id="jurnal_ket_1" class="text-muted">Piutang Dagang Usaha</td>
                                     <td class="text-right" id="jurnal_debit_val" style="font-weight: 700; color: #047857;">0,00</td>
                                     <td class="text-right" style="color: #94a3b8;">0,00</td>
                                 </tr>
                                 <tr>
+                                    <td class="jurnal_tgl">-</td>
                                     <td><code>2102-01-02</code></td>
-                                    <td><strong>Deposit Customer</strong></td>
                                     <td id="jurnal_comp_2" class="text-muted">-</td>
+                                    <td>Deposit Customer</td>
                                     <td id="jurnal_ket_2" class="text-muted">Deposit Customer</td>
                                     <td class="text-right" style="color: #94a3b8;">0,00</td>
                                     <td class="text-right" id="jurnal_kredit_val" style="font-weight: 700; color: #047857;">0,00</td>
@@ -190,6 +193,9 @@
             var spkNo = spkOpt.data('spk-no') || spkOpt.val() || '';
             var compName = $('#display_company').val() || '-';
 
+            var tglKw = $('#tanggal_kwitansi').val();
+            var tglText = tglKw ? new Date(tglKw + 'T00:00:00').toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-') : '-';
+            $('.jurnal_tgl').text(tglText);
             $('#jurnal_comp_1').text(compName);
             $('#jurnal_comp_2').text(compName);
 
@@ -223,6 +229,7 @@
         }).on('blur', updateJournalPreview);
 
         $('#tanggal_kwitansi').on('change', function() {
+            updateJournalPreview();
             var tgl = $(this).val();
             if (!tgl) return;
             $.ajax({

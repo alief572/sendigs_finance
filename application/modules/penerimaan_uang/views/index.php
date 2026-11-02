@@ -252,23 +252,6 @@
     </div>
 </div>
 
-<!-- Modal Detail -->
-<div class="modal fade" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" style="width: 95% !important; max-width: 1400px;">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color: #3c8dbc; color: #fff;">
-                <button type="button" class="close" data-dismiss="modal" style="color: #fff;"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><i class="fa fa-file-text-o"></i> Detail Penerimaan Piutang & Jurnal</h4>
-            </div>
-            <div class="modal-body" id="MyModalBody" style="max-height: 80vh; overflow-y: auto; padding: 18px;">
-            </div>
-            <div class="modal-footer" style="background-color: #f8fafc;">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
@@ -425,32 +408,6 @@
         if (['#tab_penerimaan', '#tab_kwitansi', '#tab_report'].indexOf(window.location.hash) !== -1) {
             $('#penerimaan_tabs a[href="' + window.location.hash + '"]').tab('show');
         }
-
-        // Detail Modal Click
-        $(document).on('click', '.detail', function() {
-            var id = $(this).data('id');
-            $('#MyModalBody').html('<div class="text-center" style="padding: 40px;"><i class="fa fa-spinner fa-spin fa-2x text-primary"></i><p style="margin-top: 10px;">Memuat detail penerimaan...</p></div>');
-            $('#dialog-popup').modal('show');
-
-            $.ajax({
-                type: 'POST',
-                url: siteurl + active_controller + 'detail',
-                data: { id_alokasi: id },
-                success: function(result) {
-                    $('#MyModalBody').html(result);
-                    // Input total/kontrol di modal detail memakai class autonum; tanpa init nominalnya tampil tanpa pemisah ribuan.
-                    $('#MyModalBody .autonum').autoNumeric('init', {
-                        vMin: '-9999999999999.99',
-                        vMax: '9999999999999.99',
-                        aSep: ',',
-                        aDec: '.'
-                    });
-                },
-                error: function() {
-                    $('#MyModalBody').html('<div class="alert alert-danger">Gagal memuat rincian data penerimaan.</div>');
-                }
-            });
-        });
 
         // Rollback Click
         $(document).on('click', '.rollback', function() {

@@ -71,6 +71,11 @@ class LegacyModel {
         $model->db = $this->db;
         return $model->remaining_receipt_pph($invoice, $choice);
     }
+    function deducted_pph_budget($invoice) {
+        $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
+        $model->db = $this->db;
+        return $model->deducted_pph_budget($invoice);
+    }
     function resolve_alokasi($id) { return array('is_legacy'=>false,'split'=>array('nominal'=>15000000,'id_alokasi_detail'=>1),'detail'=>array('tipe_bank'=>'1','tanggal_transaksi'=>'2026-09-07')); }
     function generate_no_invoice($company, $type) { return 'NEW/VSB/2026'; }
     function generate_id() { return 'NEW'; }

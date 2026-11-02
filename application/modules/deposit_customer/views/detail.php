@@ -92,7 +92,7 @@ $rp = function ($v) { return 'Rp ' . number_format((float)$v, 2, ',', '.'); };
                             <tr>
                                 <td class="text-center"><?= $no++ ?></td>
                                 <td class="text-center"><?= date('d-M-Y', strtotime($m['tanggal'])) ?></td>
-                                <td class="font-bold"><?= htmlspecialchars($m['no_transaksi'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td class="font-bold"><a href="<?= base_url('penerimaan_uang/view_surat?no=' . urlencode((string)$m['no_transaksi'])) ?>"><?= htmlspecialchars($m['no_transaksi'], ENT_QUOTES, 'UTF-8') ?></a></td>
                                 <td><?= htmlspecialchars(Deposit_customer_model::source_label($m), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars($m['keterangan'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
                                 <td class="text-right num <?= $isMasuk ? 'font-bold text-success' : 'text-muted' ?>"><?= $isMasuk ? $rp($nom) : '-' ?></td>

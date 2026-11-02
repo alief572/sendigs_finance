@@ -20,5 +20,9 @@ foreach(array(1=>'invoice',8=>'deposit')as $allocationKind=>$receiptKind){
  $data=$c->template->viewData['results']??null;
  if(!$data||$data['receipt_kind']!==$receiptKind||$data['id_alokasi']!==2269||$data['nominal_penerimaan_bank']!=150)throw new RuntimeException('Add view payload contract mismatch');
  if(strpos($c->template->html,'value="C1"')===false||strpos($c->template->html,'name="receipt_kind" value="'.$receiptKind.'"')===false)throw new RuntimeException('Form lost customer or receipt kind');
+ // Mockup: hanya form Kwitansi Deposit yang punya kolom readonly "Tanggal & Bank"; form invoice tidak.
+ $hasBank=strpos($c->template->html,'Tanggal &amp; Bank')!==false;
+ if($hasBank!==($receiptKind==='deposit'))throw new RuntimeException('Tanggal & Bank must appear only on the Kwitansi Deposit form');
+ if(strpos($c->template->html,'<a href="/penerimaan_uang"')===false&&strpos($c->template->html,'Penerimaan Piutang '.($receiptKind==='deposit'?'Kwitansi Deposit':'Invoice').'</a> / Proses')===false)throw new RuntimeException('Missing crumb');
 }
 echo "PASS: native Template::set contract and rendered receipt add for Invoice and Kwitansi Deposit\n";

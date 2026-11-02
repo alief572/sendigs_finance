@@ -23,15 +23,13 @@ foreach(array(
  spkCheck($list[0]['no_spk']===$case[1]&&$header['no_spk']===$case[1],'List/detail source agreement');
  spkCheck(in_array('k.id_spk_penawaran',$db->searchColumns,true),'Search includes stored SPK identity');
  spkCheck($db->rows===$before,'No stored data modified');
- foreach(array('index','detail','export_excel')as $view){
+ foreach(array('index','detail')as $view){
   $results=array('kwitansiList'=>$list,'header'=>$header,'journals'=>array(),'customers'=>array(),'filters'=>array('status'=>'','id_customer'=>'','search'=>''));$kwitansiList=$list;
   ob_start();include dirname(__DIR__).'/views/'.$view.'.php';$html=ob_get_clean();
   spkCheck(strpos($html,htmlspecialchars($case[1]))!==false,'SPK visible in '.$view);
   spkCheck(strpos($html,'<snapshot>')===false,'SPK escaped in '.$view);
-  if($view==='export_excel'){
-   $previous=libxml_use_internal_errors(true);$dom=new DOMDocument;$dom->loadHTML($html);libxml_clear_errors();libxml_use_internal_errors($previous);$x=new DOMXPath($dom);
-   spkCheck($x->query('//thead/tr/th')->length===9 && $x->query('//tbody/tr[1]/td')->length===9,'Export uses the nine mockup columns including SPK and Company');
-  }
  }
+ require_once dirname(__DIR__,3).'/libraries/Xlsx_export.php';$spec=Xlsx_export::kwitansi_spec($list);
+ spkCheck(count($spec['head'])===9 && count($spec['rows'][0])===9 && $spec['rows'][0][4]===$case[1],'Export uses the nine mockup columns with SPK');
 }
 echo "PASS: SPK snapshot/identity/legacy sources, search, list/detail/export, escaping and nine-column export\n";
