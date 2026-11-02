@@ -53,7 +53,7 @@
                     </tr>
                     <tr>
                         <th>Tanggal Terbit</th>
-                        <td><?= date('d F Y', strtotime($results['header']['tanggal_kwitansi'])) ?></td>
+                        <td><?= htmlspecialchars(mk_fdate($results['header']['tanggal_kwitansi'])) ?></td>
                     </tr>
                     <tr>
                         <th>Customer</th>
@@ -76,7 +76,7 @@
                 <table class="table table-bordered info-table">
                     <tr>
                         <th>Nilai Kwitansi</th>
-                        <td><strong style="font-size: 16px; color: #0284c7;">Rp <?= number_format((float)$results['header']['nilai_kwitansi'], 2) ?></strong></td>
+                        <td><strong style="font-size: 16px;"><?= mk_en($results['header']['nilai_kwitansi']) ?></strong></td>
                     </tr>
                     <tr>
                         <th>Status Tagihan</th>
@@ -91,7 +91,7 @@
                     <tr>
                         <th>No Penerimaan Bank</th>
                         <td>
-                            <?= !empty($results['header']['no_penerimaan']) ? htmlspecialchars($results['header']['no_penerimaan']) : '<span class="text-muted">Belum ada pelunasan bank</span>' ?>
+                            <?= !empty($results['header']['no_penerimaan']) ? '<a href="' . site_url('penerimaan_uang/view_surat?no=' . urlencode($results['header']['no_penerimaan'])) . '">' . htmlspecialchars($results['header']['no_penerimaan']) . '</a>' : '<span class="text-muted">Belum ada pelunasan bank</span>' ?>
                         </td>
                     </tr>
                     <tr>
@@ -103,50 +103,49 @@
         </div>
 
         <h4 style="font-weight: 700; margin-top: 25px; margin-bottom: 15px; color: #1e293b;">
-            <i class="fa fa-book"></i> Jurnal Akrual Kwitansi Deposit
+            Jurnal Kwitansi Deposit
         </h4>
         <div class="table-responsive">
-            <table class="table table-bordered table-striped">
+            <table class="table">
                 <thead>
-                    <tr style="background: #f8fafc;">
-                        <th width="150">No Jurnal</th>
-                        <th width="120">Tanggal</th>
-                        <th width="120">No Akun (COA)</th>
-                        <th>Nama Akun</th>
-                        <th>Keterangan</th>
-                        <th width="150" class="text-right">Debit (Rp)</th>
-                        <th width="150" class="text-right">Kredit (Rp)</th>
+                    <tr>
+                        <th>Tanggal Jurnal</th>
+                        <th>COA</th>
+                        <th>Nama Company</th>
+                        <th>Nama Account</th>
+                        <th>Deskripsi</th>
+                        <th class="text-right">Debit</th>
+                        <th class="text-right">Credit</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
+                    <?php
                     $totDebit = 0; $totKredit = 0;
-                    if (!empty($results['journals'])): 
-                    ?>
-                        <?php foreach ($results['journals'] as $j): 
+                    if (!empty($results['journals'])):
+                        foreach ($results['journals'] as $j):
                             $totDebit += (float)$j['debit'];
                             $totKredit += (float)$j['kredit'];
-                        ?>
+                    ?>
                             <tr>
-                                <td><code><?= htmlspecialchars($j['no_jurnal']) ?></code></td>
-                                <td><?= date('d-M-Y', strtotime($j['tgl_jurnal'])) ?></td>
-                                <td><code><?= htmlspecialchars($j['coa']) ?></code></td>
-                                <td><strong><?= htmlspecialchars($j['nm_coa']) ?></strong></td>
+                                <td style="white-space: nowrap;"><?= htmlspecialchars(mk_fdate($j['tgl_jurnal'])) ?></td>
+                                <td><?= htmlspecialchars($j['coa']) ?></td>
+                                <td><?= htmlspecialchars($j['nm_company'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($j['nm_coa']) ?></td>
                                 <td><?= htmlspecialchars($j['keterangan']) ?></td>
-                                <td class="text-right font-tabular"><?= number_format((float)$j['debit'], 2) ?></td>
-                                <td class="text-right font-tabular"><?= number_format((float)$j['kredit'], 2) ?></td>
+                                <td class="text-right"><?= mk_en($j['debit']) ?></td>
+                                <td class="text-right"><?= mk_en($j['kredit']) ?></td>
                             </tr>
-                        <?php endforeach; ?>
-                        <tr style="background: #f1f5f9; font-weight: 700;">
-                            <td colspan="5" class="text-right">TOTAL:</td>
-                            <td class="text-right font-tabular"><?= number_format($totDebit, 2) ?></td>
-                            <td class="text-right font-tabular"><?= number_format($totKredit, 2) ?></td>
-                        </tr>
+                    <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted" style="padding: 16px;">Tidak ada jurnal akrual yang tercatat.</td>
+                            <td colspan="7" class="text-center text-muted" style="padding: 16px;">Tidak ada jurnal yang tercatat.</td>
                         </tr>
                     <?php endif; ?>
+                    <tr>
+                        <td colspan="5" style="text-align: center;"><b>Balancing</b></td>
+                        <td class="text-right"><b><?= mk_en($totDebit) ?></b></td>
+                        <td class="text-right"><b><?= mk_en($totKredit) ?></b></td>
+                    </tr>
                 </tbody>
             </table>
         </div>

@@ -10,6 +10,7 @@ class Kwitansi_deposit extends Admin_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->helper('mockup_format');
         $this->load->model('kwitansi_deposit/Kwitansi_deposit_model');
         require_once dirname(__DIR__, 2) . '/invoicing/libraries/Invoice_calculation.php';
         require_once dirname(__DIR__, 2) . '/penerimaan_uang/libraries/Penerimaan_calculation.php';
@@ -32,34 +33,14 @@ class Kwitansi_deposit extends Admin_Controller
         $kwitansiList = $this->Kwitansi_deposit_model->get_kwitansi_list($filters);
         $customers = $this->Kwitansi_deposit_model->get_kwitansi_customer_list();
 
-        $totMenunggu = 0;
-        $totLunas = 0;
-        $countMenunggu = 0;
-        foreach ($kwitansiList as $row) {
-            $val = (float)$row['nilai_kwitansi'];
-            if ($row['status'] === 'MENUNGGU_PEMBAYARAN') {
-                $totMenunggu += $val;
-                $countMenunggu++;
-            } elseif ($row['status'] === 'LUNAS') {
-                $totLunas += $val;
-            }
-        }
-
         $data = array(
             'kwitansiList' => $kwitansiList,
             'customers' => $customers,
-            'filters' => $filters,
-            'summary' => array(
-                'total_menunggu' => $totMenunggu,
-                'total_lunas' => $totLunas,
-                'total_all' => $totMenunggu + $totLunas,
-                'count_all' => count($kwitansiList),
-                'count_menunggu' => $countMenunggu
-            )
+            'filters' => $filters
         );
 
         $this->template->set('results', $data);
-        $this->template->title('Kwitansi Deposit Customer');
+        $this->template->title('Kwitansi Deposit');
         $this->template->render('index');
     }
 
@@ -228,7 +209,7 @@ class Kwitansi_deposit extends Admin_Controller
                     'nm_company' => $company,
                     'status' => $header['status'],
                     'no_penerimaan' => $header['no_penerimaan'] ?? null
-                ),
+                ) + $this->Kwitansi_deposit_model->get_payment_info($header['no_kwitansi'], $header['no_penerimaan'] ?? null),
                 'journals' => $journals
             )));
     }

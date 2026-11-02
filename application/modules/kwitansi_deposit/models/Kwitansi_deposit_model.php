@@ -211,15 +211,28 @@ class Kwitansi_deposit_model extends BF_Model
             $this->db->where('k.tanggal_kwitansi <=', $filters['end_date']);
         }
         if (!empty($filters['search'])) {
-            $this->db->group_start();
-            $this->db->like('k.no_kwitansi', $filters['search']);
-            $this->db->or_like('k.nm_customer', $filters['search']);
-            $this->db->or_like('k.po_customer', $filters['search']);
-            $this->db->or_like('k.id_spk_penawaran', $filters['search']);
-            $this->db->group_end();
+            // Seperti mockup (hayOf/matchQ): setiap kata harus cocok di tanggal, no, customer, SPK, company, nominal, status, atau no penerimaan.
+            $statusMap = array('menunggu' => 'MENUNGGU_PEMBAYARAN', 'pembayaran' => 'MENUNGGU_PEMBAYARAN', 'belum' => 'MENUNGGU_PEMBAYARAN', 'lunas' => 'LUNAS');
+            foreach (preg_split('/\s+/', trim((string)$filters['search'])) as $word) {
+                if ($word === '') continue;
+                $digits = preg_replace('/[.,]/', '', $word);
+                $this->db->group_start();
+                $this->db->like('k.no_kwitansi', $word);
+                $this->db->or_like('k.nm_customer', $word);
+                $this->db->or_like('k.po_customer', $word);
+                $this->db->or_like('k.id_spk_penawaran', $word);
+                $this->db->or_like('k.no_penerimaan', $word);
+                $this->db->or_like('k.tanggal_kwitansi', $word);
+                $this->db->or_like("DATE_FORMAT(k.tanggal_kwitansi, '%d-%M-%Y')", $word, 'both', false);
+                $this->db->or_like("REPLACE(CAST(k.nilai_kwitansi AS CHAR), '.00', '')", $digits);
+                if (isset($statusMap[strtolower($word)])) $this->db->or_where('k.status', $statusMap[strtolower($word)]);
+                $this->db->group_end();
+            }
         }
 
-        $this->db->order_by('k.id', 'DESC');
+        // Urutan mockup (kwRows): tanggal naik, lalu nomor naik.
+        $this->db->order_by('k.tanggal_kwitansi', 'ASC');
+        $this->db->order_by('k.no_kwitansi', 'ASC');
         $list = $this->db->get()->result_array();
         foreach ($list as &$row) {
             $row['no_spk'] = self::spk_number($row);
@@ -247,6 +260,19 @@ class Kwitansi_deposit_model extends BF_Model
         $row = $this->db->get()->row_array();
         if ($row) $row['no_spk'] = self::spk_number($row);
         return $row;
+    }
+
+    /** Info pembayaran kwitansi lunas untuk modal jurnal: tanggal bayar dan nominal bank penerimaan. */
+    public function get_payment_info($noKwitansi, $noPenerimaan)
+    {
+        $info = array('tanggal_bayar' => '', 'nominal_bank' => 0);
+        $dep = $this->db->select('tanggal_aktif')->get_where('tr_customer_deposit', array('no_referensi' => $noKwitansi, 'tipe_sumber' => 'KWITANSI_DEPOSIT'))->row_array();
+        if (!empty($dep['tanggal_aktif'])) $info['tanggal_bayar'] = $dep['tanggal_aktif'];
+        if ($noPenerimaan) {
+            $pp = $this->db->select('nominal_penerimaan_bank')->get_where('tr_penerimaan_piutang', array('no_surat' => $noPenerimaan))->row_array();
+            if ($pp) $info['nominal_bank'] = (float)$pp['nominal_penerimaan_bank'];
+        }
+        return $info;
     }
 
     public function get_kwitansi_journal($noKwitansi)

@@ -1,42 +1,20 @@
 <link rel="stylesheet" href="<?= base_url('assets/dist/sweetalert2.min.css') ?>">
 <style>
-    .form-group label {
-        font-weight: 600;
-        color: #334155;
-        font-size: 13px;
-    }
-    .preview-journal {
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 16px;
-        margin-top: 15px;
-    }
-    .preview-journal th {
-        background: #e2e8f0;
-        font-size: 12px;
-        color: #1e293b;
-    }
-    .preview-journal td {
-        font-size: 13px;
-        font-variant-numeric: tabular-nums;
-    }
-    .badge-balanced {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-weight: 700;
-    }
+    .kd-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+    .kd-fg { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .kd-fg > label { font-weight: 700; font-size: 13px; margin: 0; }
+    .kd-hint { font-size: 12px; color: #777; }
+    .kd-req { color: #dd4b39; }
+    .kd-inline { display: flex; gap: 8px; align-items: center; }
+    .kd-journal th { font-weight: 700; white-space: nowrap; }
+    .kd-journal .r { text-align: right; }
+    @media (max-width: 900px) { .kd-grid2 { grid-template-columns: 1fr; } }
 </style>
 
+<h1 style="font-size: 24px; margin: 0 0 14px;">Kwitansi Deposit</h1>
+<div style="font-size: 12px; color: #777; margin: -8px 0 14px;"><a href="<?= site_url('kwitansi_deposit') ?>">Kwitansi Deposit</a> / Tambah</div>
+
 <div class="box box-primary">
-    <div class="box-header with-border">
-        <h3 class="box-title" style="font-weight: 700; color: #1e293b;">
-            <i class="fa fa-plus-circle"></i> Buat Tagihan Kwitansi Deposit Customer
-        </h3>
-    </div>
     <div class="box-body">
         <form id="form_kwitansi" method="post" action="<?= site_url('kwitansi_deposit/save') ?>">
             <input type="hidden" name="id_company" id="id_company" value="">
@@ -44,117 +22,100 @@
             <input type="hidden" name="id_customer" id="id_customer" value="">
             <input type="hidden" name="nm_customer" id="nm_customer" value="">
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="tanggal_kwitansi">Tanggal Kwitansi <span class="text-danger">*</span></label>
-                                <input type="date" name="tanggal_kwitansi" id="tanggal_kwitansi" class="form-control input-sm" value="<?= $results['today'] ?>" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="preview_no_kwitansi">No. Kwitansi (Auto Preview)</label>
-                                <input type="text" id="preview_no_kwitansi" class="form-control input-sm" style="font-family: monospace; font-weight: 700; background: #f1f5f9; color: #1e293b;" value="<?= $results['no_kwitansi_preview'] ?>" readonly>
-                            </div>
-                        </div>
+            <div class="kd-grid2">
+                <div>
+                    <div class="kd-fg">
+                        <label for="preview_no_kwitansi">No Kwitansi</label>
+                        <input type="text" id="preview_no_kwitansi" class="form-control" value="<?= htmlspecialchars($results['no_kwitansi_preview']) ?>" readonly>
+                        <span class="kd-hint">Otomatis sistem</span>
                     </div>
-
-                    <div class="form-group">
-                        <label for="select_customer">Customer <span class="text-danger">*</span></label>
-                        <select id="select_customer" class="form-control input-sm select2" required style="width: 100%;">
-                            <option value="">-- Pilih Customer --</option>
+                    <div class="kd-fg">
+                        <label for="tanggal_kwitansi">Tanggal Kwitansi <span class="kd-req">*</span></label>
+                        <input type="date" name="tanggal_kwitansi" id="tanggal_kwitansi" class="form-control" value="<?= htmlspecialchars($results['today']) ?>" required>
+                    </div>
+                    <div class="kd-fg">
+                        <label for="select_customer">Nama Customer <span class="kd-req">*</span></label>
+                        <select id="select_customer" class="form-control select2" required style="width: 100%;">
+                            <option value="">- Pilih Customer -</option>
                             <?php foreach ($results['customers'] as $c): ?>
                                 <option value="<?= htmlspecialchars($c['id_customer']) ?>" data-name="<?= htmlspecialchars($c['nm_customer']) ?>">
-                                    <?= htmlspecialchars($c['nm_customer']) ?> (<?= htmlspecialchars($c['id_customer']) ?>)
+                                    <?= htmlspecialchars($c['nm_customer']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="po_customer">SPK Customer <span class="text-danger">*</span></label>
-                        <select name="id_spk_penawaran" id="po_customer" class="form-control input-sm select2" required style="width: 100%;">
-                            <option value="" disabled selected>Pilih customer terlebih dahulu</option>
+                <div>
+                    <div class="kd-fg">
+                        <label for="po_customer">No SPK <span class="kd-req">*</span></label>
+                        <select name="id_spk_penawaran" id="po_customer" class="form-control select2" required disabled style="width: 100%;">
+                            <option value="" selected>- Pilih SPK -</option>
                         </select>
-                        <small class="text-muted">Pilih satu SPK. Company dan penomoran otomatis diselaraskan dari data SPK.</small>
+                        <span class="kd-hint" id="spk_hint">Pilih customer dulu untuk lihat SPK</span>
                     </div>
-
-                    <div class="form-group">
-                        <label for="display_company">Company Penerbit</label>
-                        <input type="text" id="display_company" class="form-control input-sm" style="font-weight: 600; background: #f8fafc; color: #0369a1;" placeholder="Otomatis terisi setelah SPK dipilih..." readonly>
+                    <div class="kd-fg">
+                        <label for="display_company">Company</label>
+                        <input type="text" id="display_company" class="form-control" placeholder="Otomatis dari SPK" readonly>
+                        <span class="kd-hint">Mengikuti company SPK (masuk ke jurnal).</span>
                     </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="nilai_kwitansi">Nilai Kwitansi Deposit (Rp) <span class="text-danger">*</span></label>
-                        <input type="text" name="nilai_kwitansi" id="nilai_kwitansi" inputmode="decimal" class="form-control text-right" style="font-size: 18px; font-weight: 700; color: #0284c7;" placeholder="0,00" required>
-                        <small class="text-muted">Nominal tagihan deposit yang akan diterbitkan ke customer.</small>
+                    <div class="kd-fg">
+                        <label for="nilai_kwitansi">Nilai Deposit <span class="kd-req">*</span></label>
+                        <input type="text" name="nilai_kwitansi" id="nilai_kwitansi" inputmode="decimal" class="form-control text-right" placeholder="0" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="keterangan">Keterangan / Catatan</label>
-                        <textarea name="keterangan" id="keterangan" rows="5" class="form-control input-sm" placeholder="Catatan tambahan kwitansi deposit..."></textarea>
+                    <div class="kd-fg">
+                        <label for="keterangan">Keterangan</label>
+                        <textarea name="keterangan" id="keterangan" rows="2" class="form-control" placeholder="Catatan tambahan kwitansi deposit..."></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="preview-journal">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1e293b;">
-                                <i class="fa fa-book"></i> Jurnal Kwitansi Deposit
-                            </h4>
-                            <span class="badge-balanced"><i class="fa fa-check"></i> Balanced (Debit = Kredit)</span>
-                        </div>
-                        <table class="table table-bordered table-condensed" style="margin-bottom: 0; background: #fff;">
-                            <thead>
-                                <tr>
-                                    <th width="120">Tanggal Jurnal</th>
-                                    <th width="120">COA</th>
-                                    <th width="160">Nama Company</th>
-                                    <th width="180">Nama Account</th>
-                                    <th>Deskripsi</th>
-                                    <th width="140" class="text-right">Debit</th>
-                                    <th width="140" class="text-right">Credit</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="jurnal_tgl">-</td>
-                                    <td><code>1102-01-01</code></td>
-                                    <td id="jurnal_comp_1" class="text-muted">-</td>
-                                    <td>Piutang Dagang Usaha</td>
-                                    <td id="jurnal_ket_1" class="text-muted">Piutang Dagang Usaha</td>
-                                    <td class="text-right" id="jurnal_debit_val" style="font-weight: 700; color: #047857;">0,00</td>
-                                    <td class="text-right" style="color: #94a3b8;">0,00</td>
-                                </tr>
-                                <tr>
-                                    <td class="jurnal_tgl">-</td>
-                                    <td><code>2102-01-02</code></td>
-                                    <td id="jurnal_comp_2" class="text-muted">-</td>
-                                    <td>Deposit Customer</td>
-                                    <td id="jurnal_ket_2" class="text-muted">Deposit Customer</td>
-                                    <td class="text-right" style="color: #94a3b8;">0,00</td>
-                                    <td class="text-right" id="jurnal_kredit_val" style="font-weight: 700; color: #047857;">0,00</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <small class="text-muted" style="display: block; margin-top: 8px;">
-                            * Jurnal akrual ini otomatis dicatat saat kwitansi diterbitkan. Pelunasan uang masuk rekening koran diproses di modul <strong>Penerimaan Piutang</strong>.
-                        </small>
-                    </div>
-                </div>
+            <div style="font-weight: 700; margin: 12px 0 8px;">Jurnal Kwitansi Deposit</div>
+            <div class="table-responsive">
+                <table class="table kd-journal">
+                    <thead>
+                        <tr>
+                            <th>Tanggal Jurnal</th>
+                            <th>COA</th>
+                            <th>Nama Company</th>
+                            <th>Nama Account</th>
+                            <th>Deskripsi</th>
+                            <th class="r">Debit</th>
+                            <th class="r">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="jurnal_tgl" style="white-space: nowrap;">-</td>
+                            <td>1102-01-01</td>
+                            <td class="jurnal_comp">-</td>
+                            <td>Piutang Dagang Usaha</td>
+                            <td id="jurnal_ket_1">Piutang Dagang Usaha</td>
+                            <td class="r jurnal_val">0</td>
+                            <td class="r">0</td>
+                        </tr>
+                        <tr>
+                            <td class="jurnal_tgl" style="white-space: nowrap;">-</td>
+                            <td>2102-01-02</td>
+                            <td class="jurnal_comp">-</td>
+                            <td>Deposit Customer</td>
+                            <td id="jurnal_ket_2">Deposit Customer</td>
+                            <td class="r">0</td>
+                            <td class="r jurnal_val">0</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5" style="text-align: center;"><b>Balancing</b></td>
+                            <td class="r"><b id="jurnal_tot_d">0</b></td>
+                            <td class="r"><b id="jurnal_tot_k">0</b></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
-            <div class="box-footer" style="margin-top: 20px; padding: 15px 0 0 0; background: transparent; border-top: 1px solid #e2e8f0;">
-                <button type="submit" id="btn_submit" class="btn btn-primary btn-sm">
-                    <i class="fa fa-save"></i> Simpan Kwitansi
-                </button>
-                <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-danger btn-sm"><i class="fa fa-arrow-left"></i> Kembali</a>
+            <div class="kd-inline" style="margin-top: 12px;">
+                <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-danger">Batal</a>
+                <button type="submit" id="btn_submit" class="btn btn-success" disabled>Simpan Kwitansi</button>
+                <span class="kd-hint" id="save_hint">Lengkapi tanggal, customer, SPK, dan nilai deposit.</span>
             </div>
         </form>
     </div>
@@ -163,15 +124,18 @@
 <script src="<?= base_url('assets/dist/sweetalert2.min.js') ?>"></script>
 <script>
     $(document).ready(function() {
+        var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
         $('#select_customer').select2({
             width: '100%',
             minimumResultsForSearch: 0,
-            placeholder: 'Cari nama atau kode customer',
+            placeholder: '- Pilih Customer -',
             allowClear: true
         });
 
-        function formatNumber(n) {
-            return parseFloat(n).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // en() mockup: bulat, pemisah koma, tanpa Rp.
+        function en(n) {
+            return Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         }
 
         function parseCurrency(str) {
@@ -181,31 +145,33 @@
             return isNaN(val) ? 0 : val;
         }
 
+        function isComplete() {
+            return !!($('#tanggal_kwitansi').val() && $('#id_customer').val() && $('#po_customer').val() && parseCurrency($('#nilai_kwitansi').val()) > 0);
+        }
+
         function updateJournalPreview() {
-            var raw = $('#nilai_kwitansi').val();
-            var val = parseCurrency(raw);
-            var formatted = val > 0 ? formatNumber(val) : '0,00';
-            $('#jurnal_debit_val').text(formatted);
-            $('#jurnal_kredit_val').text(formatted);
+            var val = parseCurrency($('#nilai_kwitansi').val());
+            $('.jurnal_val').text(en(val));
+            $('#jurnal_tot_d, #jurnal_tot_k').text(en(val));
 
             var noKw = $('#preview_no_kwitansi').val() || 'KD/...';
             var spkOpt = $('#po_customer').find(':selected');
             var spkNo = spkOpt.data('spk-no') || spkOpt.val() || '';
-            var compName = $('#display_company').val() || '-';
+            var compName = $('#display_company').val() || '';
 
             var tglKw = $('#tanggal_kwitansi').val();
-            var tglText = tglKw ? new Date(tglKw + 'T00:00:00').toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-') : '-';
+            var d = tglKw ? new Date(tglKw + 'T00:00:00') : null;
+            var tglText = d && !isNaN(d.getTime()) ? ('0' + d.getDate()).slice(-2) + '-' + MONTHS[d.getMonth()] + '-' + d.getFullYear() : '-';
             $('.jurnal_tgl').text(tglText);
-            $('#jurnal_comp_1').text(compName);
-            $('#jurnal_comp_2').text(compName);
+            $('.jurnal_comp').text(compName || '-');
 
-            if (spkNo) {
-                $('#jurnal_ket_1').text('Piutang Dagang Usaha - ' + noKw + ' - ' + spkNo);
-                $('#jurnal_ket_2').text('Deposit Customer - ' + noKw + ' - ' + spkNo);
-            } else {
-                $('#jurnal_ket_1').text('Piutang Dagang Usaha - ' + noKw);
-                $('#jurnal_ket_2').text('Deposit Customer - ' + noKw);
-            }
+            var sfx = ' - ' + noKw + (spkNo ? ' - ' + spkNo : '');
+            $('#jurnal_ket_1').text('Piutang Dagang Usaha' + sfx);
+            $('#jurnal_ket_2').text('Deposit Customer' + sfx);
+
+            var ok = isComplete();
+            $('#btn_submit').prop('disabled', !ok);
+            $('#save_hint').text(ok ? 'Jurnal seimbang.' : 'Lengkapi tanggal, customer, SPK, dan nilai deposit.');
         }
 
         function formatCurrencyInput(input) {
@@ -246,6 +212,11 @@
             });
         });
 
+        function resetSpk(hint) {
+            $('#po_customer').empty().append('<option value="" selected>- Pilih SPK -</option>').prop('disabled', true);
+            $('#spk_hint').text(hint);
+        }
+
         $('#select_customer').on('change', function() {
             var custId = $(this).val();
             var custName = $(this).find(':selected').data('name') || '';
@@ -255,13 +226,12 @@
             $('#nm_company').val('');
             $('#display_company').val('');
 
-            $('#po_customer').empty().append('<option value="" disabled selected>Memuat daftar SPK...</option>');
-
             if (!custId) {
-                $('#po_customer').empty().append('<option value="" disabled selected>Pilih customer terlebih dahulu</option>');
+                resetSpk('Pilih customer dulu untuk lihat SPK');
                 updateJournalPreview();
                 return;
             }
+            resetSpk('Memuat daftar SPK...');
 
             $.ajax({
                 url: '<?= site_url("kwitansi_deposit/get_spk_by_customer") ?>',
@@ -269,7 +239,7 @@
                 data: { id_customer: custId, nm_customer: custName },
                 dataType: 'json',
                 success: function(resp) {
-                    $('#po_customer').empty().append($('<option>', {value: '', text: '-- Pilih SPK --', disabled: true, selected: true}));
+                    $('#po_customer').empty().append($('<option>', {value: '', text: '- Pilih SPK -', selected: true}));
                     if (resp.status === 1 && resp.data && resp.data.length > 0) {
                         $.each(resp.data, function(idx, item) {
                             var spkNo = item.no_spk ? item.no_spk : item.id_spk_penawaran;
@@ -287,13 +257,15 @@
                             opt.attr('data-spk-no', spkNo);
                             $('#po_customer').append(opt);
                         });
+                        $('#po_customer').prop('disabled', false);
+                        $('#spk_hint').text('SPK diambil dari data SPK customer');
                     } else {
-                        $('#po_customer').append('<option value="" disabled selected>Tidak ada SPK untuk customer ini</option>');
+                        $('#spk_hint').text('Customer ini belum punya SPK terdaftar.');
                     }
                     updateJournalPreview();
                 },
                 error: function() {
-                    $('#po_customer').empty().append('<option value="" disabled selected>Gagal memuat data SPK</option>');
+                    $('#spk_hint').text('Gagal memuat data SPK');
                     updateJournalPreview();
                 }
             });
@@ -313,41 +285,25 @@
         var savingKwitansi = false;
         function resetSaveButton() {
             savingKwitansi = false;
-            $('#btn_submit').prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Kwitansi');
+            $('#btn_submit').prop('disabled', !isComplete()).text('Simpan Kwitansi');
         }
 
         $('#form_kwitansi').on('submit', async function(e) {
             e.preventDefault();
-            if (savingKwitansi) return;
-
-            var cust = $('#id_customer').val();
-            var spk = $('#po_customer').val();
-            var val = parseCurrency($('#nilai_kwitansi').val());
-
-            if (!cust) {
-                Swal.fire({icon: 'warning', title: 'Customer belum dipilih', text: 'Silakan pilih customer terlebih dahulu.'});
-                return false;
-            }
-            if (!spk) {
-                Swal.fire({icon: 'warning', title: 'SPK belum dipilih', text: 'Silakan pilih SPK customer terlebih dahulu.'});
-                return false;
-            }
-            if (val <= 0) {
-                Swal.fire({icon: 'warning', title: 'Nominal belum valid', text: 'Nilai kwitansi deposit harus lebih besar dari 0.'});
-                return false;
-            }
+            if (savingKwitansi || !isComplete()) return;
 
             savingKwitansi = true;
             $('#btn_submit').prop('disabled', true);
+            var noKw = $('#preview_no_kwitansi').val();
             try {
+                // confirmBox mockup: judul "Konfirmasi", tombol Batal / Ya, Simpan.
                 var confirmation = await Swal.fire({
-                    icon: 'question',
-                    title: 'Simpan kwitansi deposit?',
-                    text: 'Pastikan customer, SPK, dan nominal kwitansi sudah sesuai.',
+                    icon: 'warning',
+                    title: 'Konfirmasi',
+                    text: 'Simpan Kwitansi Deposit ' + noKw + '?',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, simpan',
+                    confirmButtonText: 'Ya, Simpan',
                     cancelButtonText: 'Batal',
-                    focusCancel: true,
                     reverseButtons: true
                 });
                 if (!confirmation.isConfirmed) {
@@ -358,7 +314,7 @@
                 resetSaveButton();
                 return;
             }
-            $('#btn_submit').html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+            $('#btn_submit').text('Menyimpan...');
 
             var payload = $(this).serializeArray();
             $.each(payload, function(index, field) {
@@ -374,7 +330,8 @@
                 dataType: 'json',
                 success: function(resp) {
                     if (resp.status === 1) {
-                        Swal.fire({icon: 'success', title: 'Kwitansi tersimpan', text: resp.msg || 'Kwitansi deposit berhasil disimpan.'}).then(function() {
+                        var done = resp.no_kwitansi || noKw;
+                        Swal.fire({icon: 'success', title: 'Kwitansi Deposit ' + done + ' tersimpan.', timer: 1800, showConfirmButton: false}).then(function() {
                             window.location.href = '<?= site_url("kwitansi_deposit") ?>';
                         });
                     } else {
@@ -388,5 +345,7 @@
                 }
             });
         });
+
+        updateJournalPreview();
     });
 </script>

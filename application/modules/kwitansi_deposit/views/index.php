@@ -16,149 +16,130 @@
         background: #00a65a;
     }
     .table_list th {
-        background-color: #f8fafc;
         font-weight: 700;
-        font-size: 12px;
-        color: #334155;
-        border-bottom: 2px solid #e2e8f0 !important;
         white-space: nowrap;
     }
     .table_list td {
         vertical-align: middle !important;
+    }
+    .kd-filters {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    #modalJurnalKwitansi .kd-kv {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px 16px;
         font-size: 13px;
+        margin-bottom: 10px;
     }
-    .font-tabular {
-        font-variant-numeric: tabular-nums;
-    }
-    .kwitansi-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .kwitansi-actions .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        min-height: 30px;
-        padding: 5px 10px;
+    #modalJurnalKwitansi .kd-kv > div > span:first-child {
+        display: block;
+        color: #777;
+        font-size: 12px;
     }
 </style>
 
+<h1 style="font-size: 24px; margin: 0 0 12px;">Kwitansi Deposit</h1>
+
 <div class="box box-primary">
-    <div class="box-header with-border">
-        <h3 class="box-title" style="font-weight: 700; color: #1e293b;">
-            <i class="fa fa-list"></i> Daftar Tagihan Kwitansi Deposit Customer
-        </h3>
-        <div class="box-tools pull-right">
-            <a href="<?= site_url('kwitansi_deposit/add') ?>" class="btn btn-sm btn-primary">
-                <i class="fa fa-plus"></i> Buat Kwitansi Deposit
-            </a>
-        </div>
-    </div>
     <div class="box-body">
-        <div class="alert alert-info" style="font-size: 12px; padding: 10px 14px;">
-            Kwitansi Deposit dibuat di sini (terikat ke SPK). Pembayarannya <strong>tidak diproses di halaman ini</strong>: transfer dari rekening koran dialokasikan dengan jenis <strong>Deposit</strong> di <a href="<?= site_url('alokasi') ?>">Alokasi</a> (pilih kwitansinya), lalu diproses di <a href="<?= site_url('penerimaan_uang') ?>#tab_kwitansi">Penerimaan Piutang › Penerimaan Piutang Kwitansi Deposit</a>. Status kwitansi dan <a href="<?= site_url('deposit_customer') ?>">Monitoring Deposit</a> ikut berubah otomatis. Saat ini ada <strong><?= (int)($results['summary']['count_menunggu'] ?? 0) ?></strong> kwitansi belum lunas pada daftar ini.
+        <div style="margin-bottom: 12px;">
+            <a href="<?= site_url('kwitansi_deposit/add') ?>" class="btn btn-primary">+ Buat Kwitansi Deposit</a>
         </div>
-        <form method="get" action="<?= site_url('kwitansi_deposit') ?>" class="well well-sm">
-            <div class="row">
-                <div class="col-md-3">
-                    <label>Customer</label>
-                    <select name="id_customer" class="form-control input-sm select2">
-                        <option value="">-- Semua Customer --</option>
-                        <?php foreach ($results['customers'] as $c): ?>
-                            <option value="<?= htmlspecialchars($c['id_customer']) ?>" <?= ($results['filters']['id_customer'] === $c['id_customer']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($c['nm_customer']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label>Status</label>
-                    <select name="status" class="form-control input-sm">
-                        <option value="">-- Semua Status --</option>
-                        <option value="MENUNGGU_PEMBAYARAN" <?= ($results['filters']['status'] === 'MENUNGGU_PEMBAYARAN') ? 'selected' : '' ?>>Menunggu Pembayaran</option>
-                        <option value="LUNAS" <?= ($results['filters']['status'] === 'LUNAS') ? 'selected' : '' ?>>Lunas</option>
-                    </select>
-                </div>
-                <div class="col-md-3" style="padding-top: 24px;">
-                    <button type="submit" class="btn btn-sm btn-info btn-filter"><i class="fa fa-search"></i> Search</button>
-                    <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-sm btn-danger" title="Hapus semua filter"><i class="fa fa-refresh"></i> Reset</a>
-                </div>
-                <div class="col-md-3 text-right" style="padding-top: 24px;">
-                    <a id="btn_export_kw" href="<?= site_url('kwitansi_deposit/export_excel?' . http_build_query($results['filters'])) ?>" class="btn btn-sm btn-success">
-                        <i class="fa fa-file-excel-o"></i> Export to Excel
-                    </a>
-                </div>
+        <form method="get" action="<?= site_url('kwitansi_deposit') ?>" class="kd-filters">
+            <div style="min-width: 240px; flex: 0 1 360px;">
+                <select name="id_customer" class="form-control input-sm select2" aria-label="Customer">
+                    <option value="">- Semua Customer -</option>
+                    <?php foreach ($results['customers'] as $c): ?>
+                        <option value="<?= htmlspecialchars($c['id_customer']) ?>" <?= ($results['filters']['id_customer'] === $c['id_customer']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($c['nm_customer']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div style="min-width: 200px; flex: 0 1 240px;">
+                <select name="status" class="form-control input-sm" aria-label="Status">
+                    <option value="">- Semua Status -</option>
+                    <option value="MENUNGGU_PEMBAYARAN" <?= ($results['filters']['status'] === 'MENUNGGU_PEMBAYARAN') ? 'selected' : '' ?>>Menunggu Pembayaran</option>
+                    <option value="LUNAS" <?= ($results['filters']['status'] === 'LUNAS') ? 'selected' : '' ?>>Lunas</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-filter">Search</button>
+                <a href="<?= site_url('kwitansi_deposit') ?>" class="btn btn-danger">Reset</a>
+            </div>
+            <div style="margin-left: auto;">
+                <?php if (!empty($results['kwitansiList'])): ?>
+                    <a id="btn_export_kw" href="<?= site_url('kwitansi_deposit/export_excel?' . http_build_query($results['filters'])) ?>" class="btn btn-success">Export to Excel</a>
+                <?php else: ?>
+                    <button type="button" class="btn btn-success" disabled>Export to Excel</button>
+                <?php endif; ?>
             </div>
         </form>
 
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped table_list" id="table_kwitansi">
+        <div class="table-responsive" style="margin-top: 12px;">
+            <table class="table table-bordered table_list" id="table_kwitansi">
                 <thead>
                     <tr>
-                        <th class="text-center" width="40">No</th>
-                        <th class="text-center">Tanggal</th>
-                        <th class="text-center">No Kwitansi</th>
+                        <th>No.</th>
+                        <th>Tanggal</th>
+                        <th>No Kwitansi</th>
                         <th>Customer</th>
                         <th>No SPK</th>
                         <th>Company</th>
                         <th class="text-right">Nilai Kwitansi</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center">No Penerimaan</th>
-                        <th class="text-center" width="260">Action</th>
+                        <th>Status</th>
+                        <th>No Penerimaan</th>
+                        <th class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (!empty($results['kwitansiList'])): ?>
-                        <?php $no = 1; foreach ($results['kwitansiList'] as $row): ?>
-                            <tr>
-                                <td class="text-center"><?= $no++ ?></td>
-                                <td class="text-center nowrap"><?= date('d-M-Y', strtotime($row['tanggal_kwitansi'])) ?></td>
-                                <td class="text-center font-bold" style="font-family: monospace; font-size: 13px;">
-                                    <?= htmlspecialchars($row['no_kwitansi']) ?>
-                                </td>
-                                <td><strong><?= htmlspecialchars($row['nm_customer']) ?></strong></td>
-                                <td><?= htmlspecialchars($row['no_spk'] ?? $row['id_spk_penawaran'] ?? $row['po_customer'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($row['nm_company'] ?? '-') ?></td>
-                                <td class="text-right font-tabular font-bold">
-                                    Rp <?= number_format((float)$row['nilai_kwitansi'], 2) ?>
-                                </td>
-                                <td class="text-center">
-                                    <?php if ($row['status'] === 'MENUNGGU_PEMBAYARAN'): ?>
-                                        <span class="badge-status badge-menunggu">Menunggu Pembayaran</span>
-                                    <?php else: ?>
-                                        <span class="badge-status badge-lunas">Lunas</span>
+                    <?php foreach ($results['kwitansiList'] as $row): ?>
+                        <?php
+                        // Teks pencarian tambahan (mockup hayOf): tanggal dalam beberapa format, nominal dengan/tanpa pemisah, status.
+                        $searchHay = implode(' ', array(
+                            $row['tanggal_kwitansi'], mk_fdate($row['tanggal_kwitansi']), date('d/m/Y', strtotime($row['tanggal_kwitansi'])),
+                            preg_replace('/\.00$/', '', (string)$row['nilai_kwitansi']), mk_en($row['nilai_kwitansi']), mk_idn($row['nilai_kwitansi']),
+                            $row['status'] === 'MENUNGGU_PEMBAYARAN' ? 'Menunggu Pembayaran Belum Dibayar' : 'Lunas'
+                        ));
+                        ?>
+                        <tr>
+                            <td class="kd-no"></td>
+                            <td style="white-space: nowrap;" data-search="<?= htmlspecialchars($searchHay) ?>"><?= htmlspecialchars(mk_fdate($row['tanggal_kwitansi'])) ?></td>
+                            <td style="white-space: nowrap;"><?= htmlspecialchars($row['no_kwitansi']) ?></td>
+                            <td style="min-width: 160px;"><?= htmlspecialchars($row['nm_customer']) ?></td>
+                            <td style="white-space: nowrap;"><?= htmlspecialchars($row['no_spk'] ?? $row['id_spk_penawaran'] ?? $row['po_customer'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($row['nm_company'] ?? '-') ?></td>
+                            <td class="text-right"><?= mk_en($row['nilai_kwitansi']) ?></td>
+                            <td>
+                                <?php if ($row['status'] === 'MENUNGGU_PEMBAYARAN'): ?>
+                                    <span class="badge-status badge-menunggu">Menunggu Pembayaran</span>
+                                <?php else: ?>
+                                    <span class="badge-status badge-lunas">Lunas</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <?php if (!empty($row['no_penerimaan'])): ?>
+                                    <a href="<?= site_url('penerimaan_uang/view_surat?no=' . urlencode($row['no_penerimaan'])) ?>"><?= htmlspecialchars($row['no_penerimaan']) ?></a>
+                                    <?php if (!empty($row['tanggal_bayar']) && $row['tanggal_bayar'] !== '0000-00-00'): ?>
+                                        <span class="text-muted">· <?= htmlspecialchars(mk_fdate($row['tanggal_bayar'])) ?></span>
                                     <?php endif; ?>
-                                </td>
-                                <td class="text-center nowrap font-tabular">
-                                    <?php if (!empty($row['no_penerimaan'])): ?>
-                                        <a href="<?= site_url('penerimaan_uang/view_surat?no=' . urlencode($row['no_penerimaan'])) ?>"><?= htmlspecialchars($row['no_penerimaan']) ?></a>
-                                        <?php if (!empty($row['tanggal_bayar']) && $row['tanggal_bayar'] !== '0000-00-00'): ?>
-                                            <small class="text-muted">· <?= date('d-M-Y', strtotime($row['tanggal_bayar'])) ?></small>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-center nowrap">
-                                    <div class="kwitansi-actions">
-                                    <a href="<?= site_url('kwitansi_deposit/detail/' . $row['id']) ?>" class="btn btn-sm btn-info" title="Lihat detail kwitansi">
-                                        <i class="fa fa-eye"></i> Detail
-                                    </a>
-                                    <?php if ($row['status'] === 'MENUNGGU_PEMBAYARAN' && !empty($row['draft_split_id'])): ?>
-                                        <a href="<?= site_url('penerimaan_uang/add_penerimaan_uang/' . (int)$row['draft_split_id']) ?>" class="btn btn-sm btn-primary" title="Proses draft penerimaan untuk kwitansi ini">
-                                            <i class="fa fa-bank"></i> Proses Penerimaan
-                                        </a>
-                                    <?php endif; ?>
-                                    <button type="button" class="btn btn-sm btn-default btn-kwitansi-jurnal" data-id="<?= (int)$row['id'] ?>" title="Lihat jurnal kwitansi">
-                                        <i class="fa fa-book"></i> Jurnal
-                                    </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center" style="white-space: nowrap;">
+                                <?php if ($row['status'] === 'MENUNGGU_PEMBAYARAN' && !empty($row['draft_split_id'])): ?>
+                                    <a href="<?= site_url('penerimaan_uang/add_penerimaan_uang/' . (int)$row['draft_split_id']) ?>" class="btn btn-primary btn-xs">Proses Penerimaan</a>
+                                <?php endif; ?>
+                                <button type="button" class="btn btn-info btn-xs btn-kwitansi-jurnal" data-id="<?= (int)$row['id'] ?>">Jurnal</button>
+                                <a href="<?= site_url('kwitansi_deposit/detail/' . $row['id']) ?>" class="btn btn-default btn-xs">Detail</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
@@ -166,7 +147,7 @@
 </div>
 
 <div class="modal fade" id="modalJurnalKwitansi" tabindex="-1" role="dialog" aria-labelledby="modalJurnalKwitansiTitle">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog" role="document" style="width: min(640px, 100%);">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
@@ -176,14 +157,12 @@
                 <div id="jurnal_kw_loading" class="text-muted">Memuat jurnal...</div>
                 <div id="jurnal_kw_error" class="alert alert-danger" style="display: none;"></div>
                 <div id="jurnal_kw_content" style="display: none;">
-                    <div class="row" style="margin-bottom: 10px;">
-                        <div class="col-md-4"><small class="text-muted">No Kwitansi</small><div id="jurnal_kw_no"></div></div>
-                        <div class="col-md-4"><small class="text-muted">Tanggal</small><div id="jurnal_kw_tgl"></div></div>
-                        <div class="col-md-4"><small class="text-muted">Customer</small><div id="jurnal_kw_cust"></div></div>
-                    </div>
-                    <div class="row" style="margin-bottom: 10px;">
-                        <div class="col-md-4"><small class="text-muted">No SPK</small><div id="jurnal_kw_spk"></div></div>
-                        <div class="col-md-4"><small class="text-muted">Company</small><div id="jurnal_kw_company"></div></div>
+                    <div class="kd-kv">
+                        <div><span>No Kwitansi</span><span id="jurnal_kw_no"></span></div>
+                        <div><span>Tanggal</span><span id="jurnal_kw_tgl"></span></div>
+                        <div><span>Customer</span><span id="jurnal_kw_cust"></span></div>
+                        <div><span>No SPK</span><span id="jurnal_kw_spk"></span></div>
+                        <div><span>Company</span><span id="jurnal_kw_company"></span></div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table_list">
@@ -201,7 +180,7 @@
                             <tbody id="jurnal_kw_body"></tbody>
                         </table>
                     </div>
-                    <p class="text-muted" id="jurnal_kw_note" style="margin-top: 8px;"></p>
+                    <div class="text-muted" id="jurnal_kw_note" style="margin-top: 8px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -214,16 +193,19 @@
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script>
     $(document).ready(function() {
+        var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         function esc(value) {
             return $('<div>').text(value === null || value === undefined ? '' : String(value)).html();
         }
+        // en() mockup: bulat, pemisah koma, tanpa Rp.
         function money(value) {
-            return Number(value || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            return Number(value || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         }
+        // fdate() mockup: dd-FullMonth-yyyy.
         function tgl(value) {
             var d = new Date(String(value).replace(' ', 'T'));
             if (isNaN(d.getTime())) return esc(value);
-            return ('0' + d.getDate()).slice(-2) + '-' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + '-' + d.getFullYear();
+            return ('0' + d.getDate()).slice(-2) + '-' + MONTHS[d.getMonth()] + '-' + d.getFullYear();
         }
         function renderJurnal(res) {
             var h = res.header, debit = 0, kredit = 0, rows = '';
@@ -235,16 +217,19 @@
             $.each(res.journals, function(i, j) {
                 debit += Number(j.debit);
                 kredit += Number(j.kredit);
-                rows += '<tr><td class="nowrap">' + tgl(j.tgl_jurnal) + '</td><td>' + esc(j.coa) + '</td><td>' + esc(j.nm_company) + '</td><td>' + esc(j.nm_coa) + '</td><td>' + esc(j.keterangan) + '</td><td class="text-right">' + money(j.debit) + '</td><td class="text-right">' + money(j.kredit) + '</td></tr>';
+                rows += '<tr><td style="white-space:nowrap">' + tgl(j.tgl_jurnal) + '</td><td>' + esc(j.coa) + '</td><td>' + esc(j.nm_company) + '</td><td>' + esc(j.nm_coa) + '</td><td>' + esc(j.keterangan) + '</td><td class="text-right">' + money(j.debit) + '</td><td class="text-right">' + money(j.kredit) + '</td></tr>';
             });
             if (!rows) {
                 rows = '<tr><td colspan="7" class="text-center text-muted">Tidak ada jurnal yang tercatat.</td></tr>';
             }
-            rows += '<tr style="background: #f1f5f9; font-weight: 700;"><td colspan="5" class="text-center">Balancing</td><td class="text-right">' + money(debit) + '</td><td class="text-right">' + money(kredit) + '</td></tr>';
+            rows += '<tr><th colspan="5" class="text-center">Balancing</th><td class="text-right"><b>' + money(debit) + '</b></td><td class="text-right"><b>' + money(kredit) + '</b></td></tr>';
             $('#jurnal_kw_body').html(rows);
-            $('#jurnal_kw_note').text(h.status === 'LUNAS' && h.no_penerimaan
-                ? 'Dibayar lewat ' + h.no_penerimaan + '. Jurnal penerimaannya ada di halaman penerimaan tersebut.'
-                : 'Belum dibayar. Saat transfer masuk, alokasikan dengan jenis Deposit di Alokasi, lalu proses di Penerimaan Piutang.');
+            if (h.status === 'LUNAS' && h.no_penerimaan) {
+                var link = '<a href="<?= site_url('penerimaan_uang/view_surat?no=') ?>' + encodeURIComponent(h.no_penerimaan) + '">' + esc(h.no_penerimaan) + '</a>';
+                $('#jurnal_kw_note').html('Dibayar lewat ' + link + (h.tanggal_bayar ? ' &middot; ' + tgl(h.tanggal_bayar) : '') + ' &middot; Bank ' + money(h.nominal_bank) + '. Jurnal penerimaannya ada di halaman penerimaan tersebut.');
+            } else {
+                $('#jurnal_kw_note').text('Belum dibayar. Saat transfer masuk, alokasikan dengan jenis Deposit di Alokasi, lalu proses di Penerimaan Piutang › Penerimaan Piutang Kwitansi Deposit.');
+            }
             $('#jurnal_kw_content').show();
         }
         $('#table_kwitansi').on('click', '.btn-kwitansi-jurnal', function() {
@@ -265,6 +250,9 @@
                     $('#jurnal_kw_error').text('Jurnal tidak dapat dimuat.').show();
                 });
         });
+        $('#jurnal_kw_note').on('click', 'a', function() {
+            $('#modalJurnalKwitansi').modal('hide');
+        });
         $('select[name="id_customer"]').select2({
             width: '100%',
             minimumResultsForSearch: 0
@@ -272,12 +260,25 @@
         if ($.fn.DataTable.isDataTable('#table_kwitansi')) {
             $('#table_kwitansi').DataTable().destroy();
         }
+        // Urutan mockup: tanggal naik lalu nomor (diurutkan server); No. dihitung 1..n sesudah urut.
         var tableKw = $('#table_kwitansi').DataTable({
-            order: [[1, 'desc']],
+            ordering: false,
             pageLength: 25,
-            responsive: true,
+            lengthMenu: [10, 25, 50, 100],
             language: {
-                emptyTable: "Belum ada tagihan kwitansi deposit."
+                emptyTable: "Tidak ada kwitansi deposit yang cocok.",
+                zeroRecords: "Tidak ada kwitansi deposit yang cocok.",
+                lengthMenu: "_MENU_ entries per page",
+                search: "Search:",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: ""
+            },
+            drawCallback: function() {
+                var start = this.api().page.info().start;
+                this.api().rows({page: 'current'}).nodes().each(function(tr, i) {
+                    $(tr).find('.kd-no').text(start + i + 1);
+                });
             }
         });
         // Export mengikuti kotak Search tabel (mockup: Export memakai baris yang tersaring).
