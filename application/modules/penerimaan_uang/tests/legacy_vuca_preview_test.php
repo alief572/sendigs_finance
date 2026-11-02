@@ -185,6 +185,13 @@ expectLegacy($saved['status'] === 1, 'Receipt with Lebih Bayar saves (browser fo
 $jr = $db->batches['tr_jurnal']; $dr = 0; $cr = 0; foreach ($jr as $line) { $dr += (float)$line['debit']; $cr += (float)$line['kredit']; }
 expectLegacy($jr[0]['debit'] === '15000000.00', 'Bank debit = receipt + Lebih Bayar');
 expectLegacy(end($jr)['coa'] === '2102-01-02' && end($jr)['kredit'] === '12425010.00' && abs($dr - $cr) < 0.005, 'Deposit Customer credit balances the journal');
+// Deposit invoice lama: total dep_N harus sama dengan nominal form; tidak boleh bersamaan dengan Lebih Bayar; (penolakan invoice berhistori ada di server, tapi jalur histori fixture ini sudah ditolak lebih dulu oleh validasi PPh).
+$depPost = array('deposit_choice'=>'Y','deposit_amount'=>'1,000.00','dep_1'=>'500.00','lebih_bayar_1'=>'','penerimaan_1'=>'3,043,170.00');
+$savedHistory = $db->history; $savedBatches = $db->batches; $savedInserts = $db->inserts; $db->history = array(); $db->batches = array(); $db->inserts = array(); $before = array($db->batches, $db->inserts);
+$r = $saveLebih($depPost); expectLegacy($r['status'] === 0 && strpos($r['msg'], 'harus sama dengan Nominal Deposit') !== false && array($db->batches, $db->inserts) === $before, 'Deposit total mismatch rejected: '.json_encode($r));
+$r2 = $saveLebih(array('deposit_amount'=>'500.00','lebih_bayar_1'=>'12,425,010.00') + $depPost);
+expectLegacy($r2['status'] === 0 && strpos($r2['msg'], 'tidak boleh terisi bersamaan') !== false, 'Deposit with Lebih Bayar rejected: '.json_encode($r2));
+$db->history = $savedHistory; $db->batches = $savedBatches; $db->inserts = $savedInserts;
 $detailRow = $db->batches['tr_penerimaan_piutang_detail'][0]; $snap = json_decode($detailRow['consulting_snapshot'], true);
 expectLegacy($snap['legacy'] === true && $snap['lebih'] === 1242501000 && $snap['cash'] === 257499000 && (string)$snap['owner']['id'] === '7' && $detailRow['id_customer'] === 'C-ID', 'Detail snapshot is complete and uses the invoice customer');
 expectLegacy($detailRow['sisa_piutang'] === '0.00' && $detailRow['penerimaan'] === '2574990.00', 'Receipt columns keep legacy semantics');

@@ -185,7 +185,7 @@ class Consulting_receipt
         }
         $depositAmount = $depositChoice === 'Y' ? Penerimaan_calculation::cents($rawDep) : 0;
         $custDeposit = 0; $depositError = null;
-        try { $custDeposit = $this->get_customer_active_deposit($customer, $company); }
+        try { $custDeposit = $this->get_customer_active_deposit($customer); }
         catch (RuntimeException $error) { $depositError = $error->getMessage(); if ($depositChoice === 'Y') throw $error; }
 
         return array(
@@ -203,24 +203,12 @@ class Consulting_receipt
         );
     }
 
-    /**
-     * Form menampilkan saldo per customer, tetapi deposit hanya boleh menutup invoice dari company voucher yang sama.
-     * Dipanggil saat Process (setelah preview) agar pengguna mendapat pesan jelas sebelum modal alokasi tampil.
-     */
-    public function assert_deposit_within_company($preview)
+    /** Saldo deposit aktif per customer (mockup: tanpa batas company voucher). */
+    public function get_customer_active_deposit($customerId)
     {
-        if (($preview['deposit_choice'] ?? 'N') !== 'Y') return;
-        $amount = (int)$preview['deposit_amount']; $available = (int)$preview['customer_deposit'];
-        if ($amount <= $available) return;
-        $total = $this->get_customer_active_deposit_by_company((string)$preview['rows'][0]['invoice']['id_customer'])['total'];
-        throw new InvalidArgumentException('Deposit dipakai (' . Penerimaan_calculation::decimal($amount) . ') melebihi saldo deposit yang bisa dipakai untuk company invoice ini (' . Penerimaan_calculation::decimal($available) . '). Total saldo deposit customer di semua company: ' . Penerimaan_calculation::decimal($total) . '.');
-    }
-
-    public function get_customer_active_deposit($customerId, $companyId)
-    {
-        if (!is_scalar($customerId) || !is_scalar($companyId) || trim((string)$customerId) === '' || trim((string)$companyId) === '') throw new InvalidArgumentException('Pilih customer dan company deposit.');
+        if (!is_scalar($customerId) || trim((string)$customerId) === '') throw new InvalidArgumentException('Pilih customer deposit.');
         $total = 0;
-        foreach ($this->active_deposits($customerId, $companyId) as $voucher) $total += Penerimaan_calculation::cents($voucher['sisa_saldo']);
+        foreach ($this->active_deposits($customerId) as $voucher) $total += Penerimaan_calculation::cents($voucher['sisa_saldo']);
         return $total;
     }
 
@@ -238,7 +226,7 @@ class Consulting_receipt
         foreach ($companies as $company) {
             $companyId = (string)$company['id_company'];
             if ($companyId === '') continue;
-            $saldo = $this->get_customer_active_deposit($customerId, $companyId);
+            $saldo = $this->get_customer_active_deposit_in_company($customerId, $companyId);
             if ($saldo === 0) continue;
             $total += $saldo;
             $name = array('7'=>'STM', '3'=>'SUSTAIN', '4'=>'VUCA')[$companyId] ?? $companyId;
@@ -247,10 +235,18 @@ class Consulting_receipt
         return array('total'=>$total, 'by_company'=>$byCompany);
     }
 
-    private function active_deposits($customerId, $companyId, $lock = false)
+    private function get_customer_active_deposit_in_company($customerId, $companyId)
+    {
+        $total = 0;
+        foreach ($this->active_deposits($customerId, $companyId) as $voucher) $total += Penerimaan_calculation::cents($voucher['sisa_saldo']);
+        return $total;
+    }
+
+    /** $companyId null = semua company (FIFO lintas company per customer); diisi = hanya untuk rincian per company asal voucher. */
+    private function active_deposits($customerId, $companyId = null, $lock = false)
     {
         if (!$this->s->db->field_exists('tanggal_aktif', 'tr_customer_deposit')) throw new RuntimeException('Terapkan migration 003_deposit_contract.');
-        $rows = $this->s->rows("SELECT * FROM tr_customer_deposit WHERE id_customer=? AND id_company=? AND (status IN ('AKTIF', 'TERPAKAI_SEBAGIAN') OR (status='LUNAS_TERPAKAI' AND sisa_saldo<>0)) ORDER BY tanggal_aktif ASC, id ASC" . ($lock ? ' FOR UPDATE' : ''), array($customerId, $companyId));
+        $rows = $this->s->rows("SELECT * FROM tr_customer_deposit WHERE id_customer=?" . ($companyId === null ? '' : ' AND id_company=?') . " AND (status IN ('AKTIF', 'TERPAKAI_SEBAGIAN') OR (status='LUNAS_TERPAKAI' AND sisa_saldo<>0)) ORDER BY tanggal_aktif ASC, id ASC" . ($lock ? ' FOR UPDATE' : ''), $companyId === null ? array($customerId) : array($customerId, $companyId));
         foreach ($rows as $row) {
             try { $this->validate_deposit($row); }
             catch (InvalidArgumentException $e) { throw new RuntimeException('Nominal histori deposit tidak valid; perlu rekonsiliasi.'); }
@@ -310,29 +306,31 @@ class Consulting_receipt
         $headers = $this->s->rows('SELECT * FROM tr_penerimaan_piutang WHERE no_surat=?', array($number));
         $details = $this->s->rows('SELECT * FROM tr_penerimaan_piutang_detail WHERE id_header=?', array($number));
         $valid = count($headers) === 1 && (string)$headers[0]['id_customer'] === (string)$voucher['id_customer'] && $details;
-        $total = 0; $cash = 0; $legacyLebih = false;
+        $total = 0; $cash = 0; $legacyLebih = false; $legLebih = 0; $legDep = 0;
         foreach ($details as $detail) {
             $snapshot = json_decode($detail['consulting_snapshot'] ?? '', true);
             if (is_array($snapshot) && !empty($snapshot['legacy'])) {
                 // Penerimaan invoice lama: semantik legacy (penerimaan = kas), jadi persamaan snapshot versi baru tidak berlaku.
                 // Yang diverifikasi: owner/customer, bilangan bulat tak negatif, kesamaan dengan kolom detail, dan kas + lebih bayar = uang bank header.
                 $legacyLebih = true;
-                if ($field !== 'lebih' || (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company'] || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
+                if (!in_array($field, array('lebih', 'dep'), true) || ($field !== 'dep' && (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company']) || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
                 foreach (array('cash','admin','pph','lebih','balance','sisa') as $money) {
                     if (!isset($snapshot[$money]) || !is_int($snapshot[$money]) || $snapshot[$money] < 0) $valid = false;
                 }
+                $legacyDep = $snapshot['dep'] ?? 0; // Deposit dipakai invoice lama (opsional; tidak ada pada snapshot lama).
+                if (!is_int($legacyDep) || $legacyDep < 0) $valid = false;
                 // Basis bruto (mockup): kolom penerimaan = Alokasi (alokasi + sisa = piutang bruto); kas bank ada di snapshot (piutang - PPh - admin - sisa).
                 $grossBasis = !empty($snapshot['gross_basis']);
-                if ($valid && $grossBasis && ($snapshot['balance'] - $snapshot['pph'] - $snapshot['admin'] - $snapshot['sisa'] !== $snapshot['cash']
+                if ($valid && $grossBasis && ($snapshot['balance'] - $snapshot['pph'] - $snapshot['admin'] - $snapshot['sisa'] - $legacyDep !== $snapshot['cash']
                     || Penerimaan_calculation::cents($detail['penerimaan']) + $snapshot['sisa'] !== $snapshot['balance'])) $valid = false;
                 if ($valid && (($grossBasis ? false : Penerimaan_calculation::cents($detail['penerimaan']) !== $snapshot['cash'])
                     || Penerimaan_calculation::cents($detail['biaya_admin']) !== $snapshot['admin']
                     || Penerimaan_calculation::cents($detail['pph23']) !== $snapshot['pph']
                     || Penerimaan_calculation::cents($detail['sisa_piutang']) !== $snapshot['sisa'])) $valid = false;
-                if ($valid) { $cash += $snapshot['cash'] + $snapshot['lebih']; $total += $snapshot['lebih']; }
+                if ($valid) { $cash += $snapshot['cash'] + $snapshot['lebih']; $legLebih += $snapshot['lebih']; $legDep += $legacyDep; $total += $field === 'dep' ? $legacyDep : $snapshot['lebih']; }
                 continue;
             }
-            if (!$snapshot || (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company'] || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
+            if (!$snapshot || ($field !== 'dep' && (string)($snapshot['owner']['id'] ?? '') !== (string)$voucher['id_company']) || (string)$detail['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
             foreach (array('cash','admin','pph','dep','lebih','balance','sisa','reduction') as $money) {
                 if (!isset($snapshot[$money]) || !is_int($snapshot[$money]) || $snapshot[$money] < 0) $valid = false;
             }
@@ -348,17 +346,19 @@ class Consulting_receipt
             if ($invoiceId === null || (string)$detail['id_inv'] === (string)$invoiceId) $total += (int)($snapshot[$field] ?? 0);
         }
         if ($legacyLebih) {
-            // Jurnal penerimaan lama harus mencatat kredit Deposit Customer sebesar lebih bayar (Dr bank sudah mencakup kas + lebih bayar).
-            $credit = 0;
-            foreach ($this->s->rows("SELECT kredit FROM tr_jurnal WHERE no_transaksi=? AND coa='2102-01-02' AND jenis_transaksi='Penerimaan Piutang'", array($number)) as $line) $credit += Penerimaan_calculation::cents($line['kredit']);
-            if ($credit !== $total) $valid = false;
+            // Jurnal penerimaan lama: kredit Deposit Customer = lebih bayar, debit Deposit Customer = deposit dipakai (Dr bank = kas + lebih bayar).
+            $credit = 0; $debit = 0;
+            foreach ($this->s->rows("SELECT debit, kredit FROM tr_jurnal WHERE no_transaksi=? AND coa='2102-01-02' AND jenis_transaksi='Penerimaan Piutang'", array($number)) as $line) {
+                $credit += Penerimaan_calculation::cents($line['kredit']); $debit += Penerimaan_calculation::cents($line['debit']);
+            }
+            if ($credit !== $legLebih || $debit !== $legDep) $valid = false;
         }
         if ($field === 'dep') {
             $mutations = $this->s->rows("SELECT m.*, d.id_customer AS deposit_customer, d.id_company AS deposit_company FROM tr_customer_deposit_mutasi m LEFT JOIN tr_customer_deposit d ON d.id=m.id_deposit WHERE m.no_transaksi=? AND m.jenis_mutasi='OUT' ORDER BY m.id", array($number));
             $recorded = 0;
             foreach ($mutations as $mutation) {
-                if ((string)$mutation['deposit_customer'] !== (string)$voucher['id_customer'] || (string)$mutation['id_customer'] !== (string)$voucher['id_customer']
-                    || (string)$mutation['deposit_company'] !== (string)$voucher['id_company']) $valid = false;
+                // Deposit per customer (mockup): satu penerimaan boleh memotong voucher beberapa company; hanya customer yang harus cocok.
+                if ((string)$mutation['deposit_customer'] !== (string)$voucher['id_customer'] || (string)$mutation['id_customer'] !== (string)$voucher['id_customer']) $valid = false;
                 $recorded += Penerimaan_calculation::cents($mutation['nominal']);
             }
             if ($recorded !== $total) $valid = false;
@@ -422,6 +422,74 @@ class Consulting_receipt
         )));
     }
 
+    /** FIFO: potong deposit aktif customer/company sebesar $cents dan catat mutasi OUT. Panggil di dalam transaksi pemanggil. */
+    public function consume_deposit($customerId, $cents, $number, $date, $invNosStr)
+    {
+        $s = $this->s;
+        $activeDeposits = $this->active_deposits($customerId, null, true);
+        $remainingToConsume = $cents;
+        foreach ($activeDeposits as $ad) {
+            if ($remainingToConsume <= 0) break;
+            $adSaldo = Penerimaan_calculation::cents($ad['sisa_saldo']);
+            $adTerpakai = Penerimaan_calculation::cents($ad['nominal_terpakai']);
+            $take = min($remainingToConsume, $adSaldo);
+            $newSaldo = $adSaldo - $take;
+            $newTerpakai = $adTerpakai + $take;
+            $newStatus = ($newSaldo === 0) ? 'LUNAS_TERPAKAI' : 'TERPAKAI_SEBAGIAN';
+
+            $s->checked($s->db->update('tr_customer_deposit', array(
+                'sisa_saldo' => Invoice_calculation::decimal($newSaldo),
+                'nominal_terpakai' => Invoice_calculation::decimal($newTerpakai),
+                'status' => $newStatus,
+                'updated_by' => $s->ci->auth->user_id(),
+                'updated_date' => date('Y-m-d H:i:s')
+            ), array('id' => $ad['id'])));
+
+            $s->checked($s->db->insert('tr_customer_deposit_mutasi', array(
+                'id_deposit' => $ad['id'],
+                'id_customer' => $customerId,
+                'no_transaksi' => $number,
+                'tanggal' => $date,
+                'jenis_mutasi' => 'OUT',
+                'nominal' => Invoice_calculation::decimal($take),
+                'saldo_sebelum' => Invoice_calculation::decimal($adSaldo),
+                'saldo_sesudah' => Invoice_calculation::decimal($newSaldo),
+                'keterangan' => 'Dipakai untuk penerimaan ' . $invNosStr,
+                'created_by' => $s->ci->auth->user_id(),
+                'created_date' => date('Y-m-d H:i:s')
+            )));
+            $remainingToConsume -= $take;
+        }
+        if ($remainingToConsume > 0) throw new RuntimeException('Saldo deposit customer tidak mencukupi untuk pemotongan FIFO.');
+    }
+
+    /** Kembalikan semua pemakaian deposit (mutasi OUT) dari penerimaan $noSurat. Panggil di dalam transaksi pemanggil. */
+    public function restore_consumed_deposit($noSurat)
+    {
+        $s = $this->s;
+        $consumedMutasi = $s->rows("SELECT * FROM tr_customer_deposit_mutasi WHERE no_transaksi=? AND jenis_mutasi='OUT' FOR UPDATE", array($noSurat));
+        foreach ($consumedMutasi as $cm) {
+            $depRow = $s->one("SELECT * FROM tr_customer_deposit WHERE id=? FOR UPDATE", array($cm['id_deposit']));
+            if ($depRow) {
+                $nom = Penerimaan_calculation::cents($cm['nominal']);
+                $curSaldo = Penerimaan_calculation::cents($depRow['sisa_saldo']);
+                $curTerpakai = Penerimaan_calculation::cents($depRow['nominal_terpakai']);
+                $awal = Penerimaan_calculation::cents($depRow['nominal_awal']);
+                $restoredSaldo = $curSaldo + $nom;
+                $restoredTerpakai = max(0, $curTerpakai - $nom);
+                $restoredSts = ($restoredSaldo >= $awal) ? 'AKTIF' : 'TERPAKAI_SEBAGIAN';
+                $s->checked($s->db->update('tr_customer_deposit', array(
+                    'sisa_saldo' => Invoice_calculation::decimal($restoredSaldo),
+                    'nominal_terpakai' => Invoice_calculation::decimal($restoredTerpakai),
+                    'status' => $restoredSts,
+                    'updated_by' => $s->ci->auth->user_id(),
+                    'updated_date' => date('Y-m-d H:i:s')
+                ), array('id' => $depRow['id'])));
+            }
+            $s->checked($s->db->delete('tr_customer_deposit_mutasi', array('id' => $cm['id'])));
+        }
+    }
+
     public function save($post)
     {
         $s = $this->s;
@@ -475,7 +543,7 @@ class Consulting_receipt
 
             $customerId = (string)$preview['rows'][0]['invoice']['id_customer'];
             $companyId = (string)$preview['rows'][0]['owner']['id'];
-            $activeDeposit = $depositChoice === 'Y' ? $this->get_customer_active_deposit($customerId, $companyId) : 0;
+            $activeDeposit = $depositChoice === 'Y' ? $this->get_customer_active_deposit($customerId) : 0;
             if ($depositChoice === 'Y') {
                 if ($depositAmount <= 0) throw new InvalidArgumentException('Nominal deposit dipakai harus lebih besar dari 0.');
                 if ($depositAmount > $activeDeposit) throw new InvalidArgumentException('Deposit dipakai (' . Penerimaan_calculation::decimal($depositAmount) . ') melebihi saldo deposit customer (' . Penerimaan_calculation::decimal($activeDeposit) . ').');
@@ -630,41 +698,7 @@ class Consulting_receipt
             $invNosStr = implode(', ', $invNosList);
 
             if ($totDep > 0) {
-                $activeDeposits = $this->active_deposits($customerId, $companyId, true);
-                $remainingToConsume = $totDep;
-                foreach ($activeDeposits as $ad) {
-                    if ($remainingToConsume <= 0) break;
-                    $adSaldo = Penerimaan_calculation::cents($ad['sisa_saldo']);
-                    $adTerpakai = Penerimaan_calculation::cents($ad['nominal_terpakai']);
-                    $take = min($remainingToConsume, $adSaldo);
-                    $newSaldo = $adSaldo - $take;
-                    $newTerpakai = $adTerpakai + $take;
-                    $newStatus = ($newSaldo === 0) ? 'LUNAS_TERPAKAI' : 'TERPAKAI_SEBAGIAN';
-
-                    $s->checked($s->db->update('tr_customer_deposit', array(
-                        'sisa_saldo' => Invoice_calculation::decimal($newSaldo),
-                        'nominal_terpakai' => Invoice_calculation::decimal($newTerpakai),
-                        'status' => $newStatus,
-                        'updated_by' => $s->ci->auth->user_id(),
-                        'updated_date' => date('Y-m-d H:i:s')
-                    ), array('id' => $ad['id'])));
-
-                    $s->checked($s->db->insert('tr_customer_deposit_mutasi', array(
-                        'id_deposit' => $ad['id'],
-                        'id_customer' => $customerId,
-                        'no_transaksi' => $number,
-                        'tanggal' => $allocation['detail']['tanggal_transaksi'],
-                        'jenis_mutasi' => 'OUT',
-                        'nominal' => Invoice_calculation::decimal($take),
-                        'saldo_sebelum' => Invoice_calculation::decimal($adSaldo),
-                        'saldo_sesudah' => Invoice_calculation::decimal($newSaldo),
-                        'keterangan' => 'Dipakai untuk penerimaan ' . $invNosStr,
-                        'created_by' => $s->ci->auth->user_id(),
-                        'created_date' => date('Y-m-d H:i:s')
-                    )));
-                    $remainingToConsume -= $take;
-                }
-                if ($remainingToConsume > 0) throw new RuntimeException('Saldo deposit customer tidak mencukupi untuk pemotongan FIFO.');
+                $this->consume_deposit($customerId, $totDep, $number, $allocation['detail']['tanggal_transaksi'], $invNosStr);
             }
 
             if ($totLebih > 0) {
@@ -765,27 +799,7 @@ class Consulting_receipt
             }
 
             // Restore consumed deposits (mutasi OUT)
-            $consumedMutasi = $s->rows("SELECT * FROM tr_customer_deposit_mutasi WHERE no_transaksi=? AND jenis_mutasi='OUT' FOR UPDATE", array($header['no_surat']));
-            foreach ($consumedMutasi as $cm) {
-                $depRow = $s->one("SELECT * FROM tr_customer_deposit WHERE id=? FOR UPDATE", array($cm['id_deposit']));
-                if ($depRow) {
-                    $nom = Penerimaan_calculation::cents($cm['nominal']);
-                    $curSaldo = Penerimaan_calculation::cents($depRow['sisa_saldo']);
-                    $curTerpakai = Penerimaan_calculation::cents($depRow['nominal_terpakai']);
-                    $awal = Penerimaan_calculation::cents($depRow['nominal_awal']);
-                    $restoredSaldo = $curSaldo + $nom;
-                    $restoredTerpakai = max(0, $curTerpakai - $nom);
-                    $restoredSts = ($restoredSaldo >= $awal) ? 'AKTIF' : 'TERPAKAI_SEBAGIAN';
-                    $s->checked($s->db->update('tr_customer_deposit', array(
-                        'sisa_saldo' => Invoice_calculation::decimal($restoredSaldo),
-                        'nominal_terpakai' => Invoice_calculation::decimal($restoredTerpakai),
-                        'status' => $restoredSts,
-                        'updated_by' => $s->ci->auth->user_id(),
-                        'updated_date' => date('Y-m-d H:i:s')
-                    ), array('id' => $depRow['id'])));
-                }
-                $s->checked($s->db->delete('tr_customer_deposit_mutasi', array('id' => $cm['id'])));
-            }
+            $this->restore_consumed_deposit($header['no_surat']);
 
             // Revert settled Kwitansi Deposit
             if ($s->db->table_exists('tr_kwitansi_deposit')) {

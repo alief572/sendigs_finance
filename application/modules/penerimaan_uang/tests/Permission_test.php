@@ -28,6 +28,7 @@ function callEndpoint($c, $method) {
 $endpoints = array(
     'get_report_penerimaan' => array('Penerimaan_Uang.View', true),
     'get_alokasi_penerimaan' => array('Penerimaan_Uang.View', true),
+    'draft_rows' => array('Penerimaan_Uang.View', true),
     'detail' => array('Penerimaan_Uang.View', false),
     'process_alokasi' => array('Penerimaan_Uang.Add', false),
     'process_kwitansi_deposit' => array('Penerimaan_Uang.Add', false),
@@ -64,4 +65,4 @@ $c = makeController();
 callEndpoint($c, 'export_excel');
 permCheck($c->auth->restricted === array('Penerimaan_Uang.View'), 'export_excel meminta izin View lewat auth->restrict');
 
-echo "PASS: 7 endpoint AJAX menolak tanpa/izin salah sebelum akses data dan lolos dengan izin yang benar; export_excel meminta izin View\n";
+echo "PASS: 8 endpoint AJAX menolak tanpa/izin salah sebelum akses data dan lolos dengan izin yang benar; export_excel meminta izin View\n";

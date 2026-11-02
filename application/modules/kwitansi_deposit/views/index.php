@@ -20,9 +20,8 @@ foreach ($results['kwitansiList'] as $row) {
 $custJson = array();
 foreach ($results['customers'] as $c) $custJson[] = array('id' => (string)$c['id_customer'], 'name' => (string)$c['nm_customer']);
 ?>
-<?= mk_ui_assets() ?>
+<?= mk_ui_assets() ?><?= mk_select2_assets() ?>
 <div class="mk">
-<h1>Kwitansi Deposit</h1>
 <div class="box primary" id="kw_box"></div>
 </div>
 
@@ -44,7 +43,7 @@ foreach ($results['customers'] as $c) $custJson[] = array('id' => (string)$c['id
     function refLink(ref) { return '<a href="' + URL_REF + encodeURIComponent(ref) + '">' + esc(ref) + '</a>'; }
 
     function rows() {
-        return ROWS.slice().sort(function (a, b) { return a.tgl < b.tgl ? -1 : a.tgl > b.tgl ? 1 : (a.no < b.no ? -1 : 1); }).filter(function (x) {
+        return ROWS.slice().sort(function (a, b) { return a.tgl > b.tgl ? -1 : a.tgl < b.tgl ? 1 : (a.no > b.no ? -1 : 1); }).filter(function (x) {
             if (TF.cust && x.custId !== TF.cust) return false;
             if (TF.st && statusOf(x) !== TF.st) return false;
             if (TF.q && !U.matchQ(TF.q, U.hayOf([x.tgl, x.no, x.cust, x.spk, x.company, x.nominal, statusOf(x), x.ref]))) return false;
@@ -74,6 +73,8 @@ foreach ($results['customers'] as $c) $custJson[] = array('id' => (string)$c['id
             '</tbody></table></div>' +
             '<div class="tbl-bar"><div class="muted">Showing ' + (list.length ? from + 1 : 0) + ' to ' + (from + slice.length) + ' of ' + list.length + ' entries</div><div class="pager">' + U.pager(TF.page, pages) + '</div></div>';
 
+        // Filter customer/status bisa dicari (Select2); DOM dibangun ulang tiap draw(), jadi diinisialisasi ulang di sini.
+        if (window.jQuery && jQuery.fn.select2) jQuery('#tfc, #tfst').select2({width: '100%'});
         document.getElementById('tfs').onclick = function () { TF.cust = document.getElementById('tfc').value; TF.st = document.getElementById('tfst').value; TF.page = 1; draw(); };
         document.getElementById('tfr').onclick = function () { TF = {cust: '', st: '', q: '', per: TF.per, page: 1}; draw(); };
         document.getElementById('tfp').onchange = function () { TF.per = +this.value; TF.page = 1; draw(); };

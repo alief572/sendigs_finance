@@ -25,7 +25,7 @@
 
     function openModal(html, size) {
         var wrap = document.createElement('div');
-        wrap.className = 'mk-modal-bg';
+        wrap.className = 'mk-modal-bg' + (size === 'xs' ? ' mk-center' : '');
         wrap.innerHTML = '<div class="mk-modal ' + (size || '') + '" role="dialog" aria-modal="true">' + html + '</div>';
         document.body.appendChild(wrap);
         wrap.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(wrap); });

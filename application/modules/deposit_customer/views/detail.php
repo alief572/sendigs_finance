@@ -4,7 +4,6 @@ $e = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 ?>
 <?= mk_ui_assets() ?>
 <div class="mk">
-<h1>Monitoring Deposit</h1>
 
 <?php if (!empty($results['not_found'])) : ?>
     <div class="box">Customer tidak ditemukan. <a href="<?= base_url('deposit_customer') ?>">Kembali</a></div>

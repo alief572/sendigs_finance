@@ -63,3 +63,6 @@ Dokumen perencanaan teknis ini disusun untuk menyelaraskan jalur posting transak
 - Seluruh perubahan pada `Payment_reference.php`, `Jurnal_all_model.php`, `Jurnal_payment_nomor_model.php`, `Jurnal_payment.php`, `Payment_reference_test.php`, dan `Legacy_posting_test.php` telah diimplementasikan secara komprehensif.
 - Seluruh 15 test suite unit dan regresi telah dijalankan via container Docker `sendigs_ss` dengan status 100% PASS tanpa error.
 - Checkpoint dan dokumentasi kemajuan pekerjaan telah dicatat di `docs/task-progress.md`.
+
+## Deposit untuk invoice lama (2 November 2026)
+Invoice lama tanpa histori penerimaan boleh memakai deposit customer (company pemilik jurnal, FIFO, jurnal debit 2102-01-02, snapshot `dep`, rollback memulihkan). Rencana lengkap dan pemetaan file: lihat `docs/task-progress.md` (bagian "Deposit untuk invoice lama") dan rencana sesi.

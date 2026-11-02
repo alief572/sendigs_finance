@@ -75,7 +75,6 @@ if ($showKartu) {
 // Pesan singkat setelah simpan (mockup toast), dikirim dari form lewat sessionStorage.
 try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionStorage.removeItem('pu_flash'); document.addEventListener('DOMContentLoaded', function () { var t = document.createElement('div'); t.textContent = puFlash; t.style.cssText = 'position:fixed;right:16px;bottom:16px;background:#333;color:#fff;padding:10px 14px;border-radius:3px;z-index:2000;font-size:13px;max-width:340px'; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600); }); } } catch (e) {}
 </script>
-<h1>Penerimaan Piutang</h1>
 <div class="crumb"><a href="<?= site_url('penerimaan_uang') ?>#tab_report">Report Penerimaan</a> / Detail</div>
 <div class="box primary">
     <div>

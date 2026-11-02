@@ -15,7 +15,6 @@ foreach ($customers as $c) {
 ?>
 <?= mk_ui_assets() ?>
 <div class="mk">
-<h1>Monitoring Deposit</h1>
 
 <div class="gate">
     <div><span>Total Sisa Saldo Deposit</span><b>Rp <?= mk_idn($kpi['total_saldo'] ?? 0) ?></b></div>

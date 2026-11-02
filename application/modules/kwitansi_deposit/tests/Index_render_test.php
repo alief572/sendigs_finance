@@ -15,7 +15,7 @@ class KwitansiIndexTemplate {
 }
 $c=(new ReflectionClass('Kwitansi_deposit'))->newInstanceWithoutConstructor();$c->input=new KwitansiIndexInput;$c->Kwitansi_deposit_model=new KwitansiIndexModel;$c->template=new KwitansiIndexTemplate;
 $c->index();$empty=$c->template->html;
-checkIndex(strpos($empty,'<h1>Kwitansi Deposit</h1>')!==false&&strpos($empty,'id="kw_box"')!==false,'Mockup heading and box');
+checkIndex(strpos($empty,'<h1>')===false&&strpos($empty,'id="kw_box"')!==false,'Mockup heading and box');
 $pending=array('id'=>'1','tanggal_kwitansi'=>'2026-10-30','no_kwitansi'=>'KD/2026/10/0001','id_customer'=>'C1','nm_customer'=>'Customer <unsafe>','po_customer'=>'SPK-1','nm_company'=>'STM','nilai_kwitansi'=>'100.00','saldo_piutang'=>'100.00','status'=>'MENUNGGU_PEMBAYARAN','no_penerimaan'=>null,'draft_split_id'=>'7');
 $c->Kwitansi_deposit_model->rows=array($pending,array_merge($pending,array('id'=>'2','no_kwitansi'=>'KD/2026/10/0002','nilai_kwitansi'=>'200.00','saldo_piutang'=>'0.00','status'=>'LUNAS','no_penerimaan'=>'RECEIPT-2','tanggal_bayar'=>'2026-10-29')));
 $c->index();$html=$c->template->html;

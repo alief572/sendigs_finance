@@ -45,6 +45,7 @@ class Penerimaan_calculation
         if (is_array($snapshot) && !empty($snapshot['legacy'])) {
             // Invoice lama dengan Lebih Bayar: kolom legacy tetap dipakai apa adanya, hanya lebih bayar yang ditambahkan dari snapshot.
             $row['lebih'] = isset($snapshot['lebih']) && is_int($snapshot['lebih']) && $snapshot['lebih'] >= 0 ? self::decimal($snapshot['lebih']) : '0.00';
+            $row['dep'] = isset($snapshot['dep']) && is_int($snapshot['dep']) && $snapshot['dep'] >= 0 ? self::decimal($snapshot['dep']) : '0.00';
             return $row;
         }
         if ((int)($snapshot['calculation_version'] ?? 0) !== 4) return $row;
@@ -120,9 +121,9 @@ class Penerimaan_calculation
      * Perhitungan mockup per invoice (sen): kas bank = Piutang bruto - PPh - Admin - Sisa; saldo baru = Sisa.
      * PPh hanya untuk pilihan Y (0..anggaran); N selalu 0. Alokasi tidak ikut hitungan (hanya tampilan: Alokasi + Sisa = Piutang).
      */
-    public static function settle($balance, $budgetPph, $choice, $pphActual, $admin, $sisa)
+    public static function settle($balance, $budgetPph, $choice, $pphActual, $admin, $sisa, $dep = 0)
     {
-        if (!in_array($choice, array('Y', 'N'), true) || min($balance, $budgetPph, $admin, $sisa) < 0) {
+        if (!in_array($choice, array('Y', 'N'), true) || min($balance, $budgetPph, $admin, $sisa, $dep) < 0) {
             throw new InvalidArgumentException('Pilihan PPh atau nominal tidak valid.');
         }
         $pph = $choice === 'Y' ? $pphActual : 0;
@@ -132,11 +133,11 @@ class Penerimaan_calculation
         if ($sisa > $balance) {
             throw new InvalidArgumentException('Sisa piutang melebihi piutang dagang invoice.');
         }
-        $cash = $balance - $pph - $admin - $sisa;
+        $cash = $balance - $pph - $admin - $sisa - $dep;
         if ($cash < 0) {
             throw new InvalidArgumentException('Penerimaan bank tidak boleh minus: PPh 23, biaya admin, dan sisa melebihi piutang dagang.');
         }
-        return array('cash' => $cash, 'remaining' => $sisa, 'pph' => $pph);
+        return array('cash' => $cash, 'remaining' => $sisa, 'pph' => $pph, 'dep' => $dep);
     }
 
     /**

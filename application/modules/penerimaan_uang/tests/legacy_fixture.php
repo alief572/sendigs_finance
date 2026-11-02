@@ -36,6 +36,7 @@ class LegacyDb {
     function select($s) { return $this; }
     function from($s) { $this->table = $s; return $this; }
     function where($a, $b) { return $this; }
+    function count_all_results($table) { return count($this->history ?: array()); }
     function set($a, $b = null, $c = null) { return $this; }
     function group_by($a) { return $this; }
     function order_by($a, $b) { return $this; }
@@ -76,6 +77,11 @@ class LegacyModel {
         $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
         $model->db = $this->db;
         return $model->remaining_receipt_pph($invoice, $choice);
+    }
+    function default_pph($invoice, $budgetCents) {
+        $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
+        $model->db = $this->db;
+        return $model->default_pph($invoice, $budgetCents);
     }
     function deducted_pph_budget($invoice) {
         $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();

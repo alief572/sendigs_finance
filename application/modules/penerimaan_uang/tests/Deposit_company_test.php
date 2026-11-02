@@ -15,7 +15,7 @@ $property->setAccessible(true);
 $property->setValue($engine, new CustomService($ci));
 $post = array('choose_inv'=>array(801), 'id_alokasi'=>100, 'pph23_dipotong'=>'N', 'deposit_choice'=>'N');
 $preview = $engine->preview($post);
-checkAssert($preview['customer_deposit'] === 10000, 'Only deposits belonging to invoice company are available');
+checkAssert($preview['customer_deposit'] === 40000, 'Deposit balance is per customer across companies (mockup)');
 $other = makeInvoice(802, 'INV-802', 'KB', 100000, 91667, 0, 0, 100000, 100000);
 $snapshot = json_decode($other['consulting_snapshot'], true);
 $snapshot['owner']['id'] = '2';
@@ -34,21 +34,23 @@ try { $engine->preview($post); } catch (RuntimeException $e) { $rejected = strpo
 checkAssert($rejected, 'Mixed invoice and kwitansi batches must be rejected');
 
 $db->invoices = array($db->invoices[0]);
-$db->alloc_splits[0]['nominal'] = '900.00';
-$db->alloc_details[0]['nominal_debit'] = '900.00';
+$db->alloc_splits[0]['nominal'] = '650.00';
+$db->alloc_details[0]['nominal_debit'] = '650.00';
 foreach ($db->customer_deposits as &$deposit) {
     $deposit['nominal_awal'] = $deposit['sisa_saldo'];
     $deposit['nominal_terpakai'] = '0.00';
 }
 unset($deposit);
-$post = array('choose_inv'=>array(801), 'id_alokasi'=>100, 'pph23_dipotong'=>'N', 'deposit_choice'=>'Y', 'deposit_amount'=>'100.00');
+$post = array('choose_inv'=>array(801), 'id_alokasi'=>100, 'pph23_dipotong'=>'N', 'deposit_choice'=>'Y', 'deposit_amount'=>'350.00');
 $preview = $engine->preview($post);
 $save = array('no_inv'=>'1', 'id_inv_1'=>801, 'id_alokasi'=>100,
     'allocation_fingerprint'=>$preview['allocation_fingerprint'], 'receipt_fingerprint_1'=>$preview['rows'][0]['fingerprint'],
-    'pph23_dipotong'=>'N', 'deposit_choice'=>'Y', 'deposit_amount'=>'100.00', 'pph_actual_1'=>'0.00',
-    'penerimaan_1'=>'1000.00', 'biaya_admin_1'=>'0.00', 'sisa_piutang_1'=>'0.00', 'dep_1'=>'100.00', 'lebih_bayar_1'=>'0.00');
+    'pph23_dipotong'=>'N', 'deposit_choice'=>'Y', 'deposit_amount'=>'350.00', 'pph_actual_1'=>'0.00',
+    'penerimaan_1'=>'1000.00', 'biaya_admin_1'=>'0.00', 'sisa_piutang_1'=>'0.00', 'dep_1'=>'350.00', 'lebih_bayar_1'=>'0.00');
 $result = $engine->save($save);
-checkAssert($result['status'] === 1, 'Valid company deposit can be consumed');
-checkAssert($db->customer_deposits[0]['sisa_saldo'] === '0.00', 'Matching company deposit consumed');
-checkAssert($db->customer_deposits[1]['sisa_saldo'] === '300.00', 'Earlier deposit of another company remains untouched');
-echo "Deposit company isolation tests passed\n";
+checkAssert($result['status'] === 1, 'Deposit can be consumed across companies for one customer');
+checkAssert($db->customer_deposits[1]['sisa_saldo'] === '0.00', 'Earliest voucher (company 2) consumed first (FIFO)');
+checkAssert($db->customer_deposits[0]['sisa_saldo'] === '50.00', 'Remaining 50 taken from the next voucher (company 1)');
+// Histori voucher company lain yang dipakai penerimaan company berbeda tetap lolos validasi (validate_deposit) dan saldo terbaca per customer.
+checkAssert($engine->get_customer_active_deposit('CUST-001') === 5000, 'Remaining per-customer balance validates after cross-company consumption');
+echo "Deposit per-customer FIFO tests passed\n";

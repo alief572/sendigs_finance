@@ -233,9 +233,9 @@ class Kwitansi_deposit_model extends BF_Model
             }
         }
 
-        // Urutan mockup (kwRows): tanggal naik, lalu nomor naik.
-        $this->db->order_by('k.tanggal_kwitansi', 'ASC');
-        $this->db->order_by('k.no_kwitansi', 'ASC');
+        // Terbaru dulu: tanggal turun, lalu nomor turun (permintaan pengguna; mockup aslinya naik).
+        $this->db->order_by('k.tanggal_kwitansi', 'DESC');
+        $this->db->order_by('k.no_kwitansi', 'DESC');
         $list = $this->db->get()->result_array();
         foreach ($list as &$row) {
             $row['no_spk'] = self::spk_number($row);

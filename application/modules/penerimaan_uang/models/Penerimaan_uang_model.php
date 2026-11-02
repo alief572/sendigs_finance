@@ -161,31 +161,44 @@ class Penerimaan_uang_model extends BF_Model
     }
 
     /** Daftar draft untuk tab (mockup viewPenerimaanList): seluruh baris belum diproses, filter/pencarian/paging dikerjakan di browser. */
-    public function get_draft_rows($kind)
+    /** Draft penerimaan (alokasi yang belum diproses) untuk DataTables server-side. $kind: 'invoice' | 'deposit'. */
+    public function get_draft_serverside($kind, $bank, $search, $start, $length, $orderCol, $orderDir)
     {
-        $this->db->select('s.id AS id, s.nominal AS nominal, a.tanggal_transaksi AS tgl, a.keterangan AS ket, b.nama AS bank_acc, b.rekening, b.id AS bank_id, c.nama_bank');
-        $this->db->from('tr_alokasi_split s');
-        $this->db->join('tr_alokasi_detail a', 'a.id = s.id_alokasi_detail');
-        $this->db->join('ms_bank b', 'b.id = a.tipe_bank', 'left');
-        $this->db->join('list_bank c', 'c.id = a.jenis_bank', 'left');
-        $this->db->where('s.jenis_alokasi', $kind === 'deposit' ? 8 : 1);
-        $this->db->where('YEAR(a.tanggal_transaksi) >=', 2025);
-        $this->db->where('NOT EXISTS (SELECT 1 FROM tr_penerimaan_piutang p WHERE p.id_alokasi = s.id)', null, false);
-        $this->db->group_by('s.id');
-        $this->db->order_by('a.tanggal_transaksi', 'ASC');
-        $this->db->order_by('s.id', 'ASC');
+        $from = ' FROM tr_alokasi_split s JOIN tr_alokasi_detail a ON a.id = s.id_alokasi_detail
+                  LEFT JOIN ms_bank b ON b.id = a.tipe_bank LEFT JOIN list_bank c ON c.id = a.jenis_bank
+                  WHERE s.jenis_alokasi = ? AND YEAR(a.tanggal_transaksi) >= 2025
+                  AND NOT EXISTS (SELECT 1 FROM tr_penerimaan_piutang p WHERE p.id_alokasi = s.id)';
+        $params = array($kind === 'deposit' ? 8 : 1);
+        $total = (int)$this->db->query('SELECT COUNT(*) AS n' . $from, $params)->row()->n;
+
+        $filter = '';
+        if ($bank !== '') { $filter .= ' AND b.id = ?'; $params[] = $bank; }
+        if ($search !== '') {
+            // shortcut: nominal dicari sebagai angka mentah (11305350), bukan teks berpemisah ribuan; ubah bila staf mengetik "11,305,350".
+            $filter .= ' AND (a.keterangan LIKE ? OR b.nama LIKE ? OR b.rekening LIKE ? OR c.nama_bank LIKE ? OR a.tanggal_transaksi LIKE ? OR CAST(s.nominal AS CHAR) LIKE ?)';
+            $like = '%' . $search . '%';
+            for ($i = 0; $i < 6; $i++) $params[] = $like;
+        }
+        $filtered = (int)$this->db->query('SELECT COUNT(*) AS n' . $from . $filter, $params)->row()->n;
+
+        $columns = array(1 => 'a.tanggal_transaksi', 2 => 'c.nama_bank', 3 => 'a.keterangan', 4 => 's.nominal');
+        $orderBy = ($columns[$orderCol] ?? 'a.tanggal_transaksi') . (strtolower($orderDir) === 'desc' ? ' DESC' : ' ASC');
+        $page = $this->db->query(
+            'SELECT s.id, s.nominal, a.tanggal_transaksi AS tgl, a.keterangan AS ket, b.nama AS bank_acc, b.rekening, c.nama_bank' . $from . $filter . " ORDER BY $orderBy, s.id ASC LIMIT ?, ?",
+            array_merge($params, array((int)$start, (int)$length))
+        )->result_array();
+
         $rows = array();
-        foreach ($this->db->get()->result_array() as $r) {
+        foreach ($page as $r) {
             $rows[] = array(
                 'id' => (int)$r['id'],
                 'tgl' => !empty($r['tgl']) && $r['tgl'] !== '0000-00-00' ? substr((string)$r['tgl'], 0, 10) : '',
-                'bankId' => (string)$r['bank_id'],
                 'bank' => trim(($r['nama_bank'] ?? '') . ' - ' . ($r['rekening'] ?? '') . ' - ' . ($r['bank_acc'] ?? ''), ' -'),
                 'ket' => (string)$r['ket'],
                 'nominal' => (float)$r['nominal']
             );
         }
-        return $rows;
+        return array('rows' => $rows, 'recordsTotal' => $total, 'recordsFiltered' => $filtered);
     }
 
     /** Angka pada tab (mockup tabs()): draft invoice, draft kwitansi deposit, dan penerimaan yang sudah diproses; tidak terpengaruh filter. */
@@ -267,6 +280,14 @@ class Penerimaan_uang_model extends BF_Model
         }
         if ($used > $total) { throw new InvalidArgumentException('PPh riwayat melebihi PPh invoice; perlu rekonsiliasi.'); }
         return $choice === 'Y' ? 0 : $total - $used;
+    }
+
+    /** PPh 23 default mockup = max(0, 2% x DPP - PPh yang sudah terpakai), DPP = penjualan x 11/12; dibatasi anggaran PPh invoice (sen). */
+    public function default_pph($invoice, $budgetCents)
+    {
+        $dpp = Invoice_calculation::ratio(Penerimaan_calculation::cents($invoice['total_nominal_jurnal']), 11, 12);
+        $used = max(0, Penerimaan_calculation::cents($invoice['pph_jurnal']) - (int)$budgetCents);
+        return min((int)$budgetCents, max(0, Invoice_calculation::ratio($dpp, 2, 100) - $used));
     }
 
     /** Invoice lama sudah ber-basis bruto (mockup) bila ada penerimaannya yang bertanda gross_basis; saldo_piutang tidak lagi ditambah anggaran PPh. */
@@ -636,7 +657,7 @@ class Penerimaan_uang_model extends BF_Model
                     LEFT JOIN list_bank c ON c.id = a.jenis_bank
                     $whereSql
                     GROUP BY p.id
-                    ORDER BY $orderBy $dir, p.id ASC
+                    ORDER BY $orderBy $dir, p.id $dir
                     LIMIT ? OFFSET ?";
 
         $resPage = $this->db->query($sqlPage, $pageParams)->result_array();

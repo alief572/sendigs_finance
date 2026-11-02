@@ -1,6 +1,5 @@
-<?= mk_ui_assets() ?>
+<?= mk_ui_assets() ?><?= mk_select2_assets() ?>
 <div class="mk">
-<h1>Kwitansi Deposit</h1>
 <div class="crumb"><a href="<?= site_url('kwitansi_deposit') ?>">Kwitansi Deposit</a> / Tambah</div>
 
 <div class="box primary">
@@ -100,12 +99,15 @@
         post(URL_PREVIEW, {tanggal_kwitansi: this.value}, function (r) { if (r && r.status === 1 && r.no_kwitansi) { $f('preview_no_kwitansi').value = r.no_kwitansi; refresh(); } });
     };
 
+    // Dropdown customer & SPK bisa dicari; onchange native tetap terpanggil karena Select2 memicu event change lewat jQuery.
+    if (window.jQuery && jQuery.fn.select2) jQuery('#select_customer, #po_customer').select2({width: '100%'});
     $f('select_customer').onchange = function () {
         var opt = this.options[this.selectedIndex];
         $f('id_customer').value = this.value; $f('nm_customer').value = opt ? (opt.getAttribute('data-name') || '') : '';
         $f('id_company').value = $f('nm_company').value = $f('display_company').value = '';
         var sel = $f('po_customer');
         sel.innerHTML = '<option value="">- Pilih SPK -</option>'; sel.disabled = true;
+        if (window.jQuery && jQuery.fn.select2) jQuery(sel).trigger('change.select2');
         if (!this.value) { $f('spk_hint').textContent = 'Pilih customer dulu untuk lihat SPK'; refresh(); return; }
         post(URL_SPK, {id_customer: this.value, nm_customer: $f('nm_customer').value}, function (r) {
             var list = r && r.status === 1 && r.data ? r.data : [];
@@ -118,6 +120,7 @@
                 sel.appendChild(o);
             });
             sel.disabled = !list.length;
+            if (window.jQuery && jQuery.fn.select2) jQuery(sel).trigger('change.select2');
             $f('spk_hint').textContent = list.length ? 'SPK diambil dari data SPK customer' : 'Customer ini belum punya SPK terdaftar.';
             refresh();
         });

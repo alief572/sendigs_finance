@@ -58,19 +58,19 @@ $('#customer').val('C');handlers['change #customer']();const activeBalance=reque
 activeBalance.success({status:1,saldo:'100.00',formatted:'Rp 100,00',by_company:[{id:'7',name:'STM',saldo:'60.00',formatted:'Rp 60,00'},{id:'3',name:'SUSTAIN',saldo:'40.00',formatted:'Rp 40,00'}]});
 assert.strictEqual(nodes['#lbl_cust_deposit'].content,'Rp 100,00','Saldo total per customer');
 assert.strictEqual(nodes['#deposit_choice'].props.disabled,false);
-assert.ok(/STM Rp 60,00/.test(nodes['#deposit_context_message'].content)&&/SUSTAIN Rp 40,00/.test(nodes['#deposit_context_message'].content),'Rincian per company tampil sebelum invoice dipilih');
+assert.strictEqual(nodes['#deposit_context_message'].content,'','Saldo deposit per customer: tidak ada rincian/batas per company');
 boxes=[box('7','STM',true),box('3','SUSTAIN',false),box('legacy','Invoice lama',false)];
 const onCheck=handlers['change '+CHECKBOXES];assert.ok(onCheck,'Handler pembatas satu company terpasang');
 onCheck();
 assert.strictEqual(boxes[1].disabled,true,'Dokumen company lain dikunci');assert.ok(boxes[1].title.includes('STM'));
 assert.strictEqual(boxes[0].disabled,false);
-assert.strictEqual(nodes['#deposit_context_message'].content,'Bisa dipakai untuk STM: Rp 60,00');
+assert.strictEqual(nodes['#deposit_context_message'].content,'','Memilih dokumen satu company tidak membatasi saldo deposit');
 boxes[0].checked=false;onCheck();
 assert.ok(boxes.every(b=>!b.disabled),'Semua dokumen terbuka lagi bila tidak ada yang dicentang');
 
-// 4. Dokumen invoice lama menonaktifkan pemakaian deposit.
+// 4. Dokumen invoice lama tetap boleh memakai deposit (validasi histori/company ada di server).
 boxes[2].checked=true;onCheck();
-assert.strictEqual(nodes['#deposit_choice'].props.disabled,true,'Invoice lama tidak dapat memakai deposit');
+assert.strictEqual(nodes['#deposit_choice'].props.disabled,false,'Invoice lama dapat memakai deposit');
 
 // 5. Kartu deposit per customer (tanpa company); respons lama diabaikan.
 handlers['click #btn_view_kartu_deposit']();const ledger=requests.pop();assert.strictEqual(ledger.data.id_customer,'C');assert.strictEqual(ledger.data.id_company,undefined);

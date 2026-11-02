@@ -21,7 +21,7 @@ function scenario({balance, receipt, pph, choice = 'N', admin = '0', coa = '1106
             text: text => { values[name] = text; },
             toggle: shown => { values[name + '_shown'] = shown; },
             prop: (key, value) => { values[name + '_' + key] = value; },
-            each: () => {}, show: () => { values[name + '_visible'] = true; },
+            closest: () => ({length: 0}), each: () => {}, show: () => { values[name + '_visible'] = true; },
             removeClass: () => api(), addClass: cls => { values[name + '_class'] = cls; return api(); },
             html: html => {
                 const input = html.match(/name="([^"]+)" value="([^"]+)"/);

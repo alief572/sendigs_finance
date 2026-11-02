@@ -11,7 +11,6 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
     .pu-toast-host { display: none; }
 </style>
 <div class="mk">
-<h1>Penerimaan Piutang</h1>
 <?php if ($isDeposit): ?>
     <div class="crumb"><a href="<?= base_url('penerimaan_uang') ?>#tab_kwitansi">Penerimaan Piutang Kwitansi Deposit</a> / Proses</div>
 <?php endif; ?>
@@ -154,9 +153,11 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
     </div>
 </div>
 
+<?php if (!isset($GLOBALS['pu_s2'])) : $GLOBALS['pu_s2'] = 1; ?><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css"><script>window.jQuery && !jQuery.fn.select2 && document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"><\/script>');</script><?php endif; ?>
 <script src="<?= base_url('assets/js/autoNumeric.js') ?>"></script>
 <script src="<?= base_url('assets/js/penerimaan_uang/consulting.js') ?>"></script>
 <script>
+    if (typeof jQuery !== 'undefined' && jQuery.fn.select2) jQuery(function ($) { $('.mk select').select2({width: '100%'}); });
     var custDepositBalance = 0;
     var depositByCompany = [];
     var depositRequestVersion = 0;
@@ -260,17 +261,9 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         }
     }
 
-    // Deposit hanya boleh menutup invoice dari company yang sama dengan voucher; tampilkan angka yang bisa dipakai.
+    // Deposit per customer (mockup): tidak ada pembatasan company; saldo yang dipakai = saldo total customer.
     function updateDepositHint() {
-        var group = selectedGroup();
-        var hint = '';
-        if (group && group.id !== 'legacy' && depositByCompany.length) {
-            var match = depositByCompany.filter(function(row) { return String(row.id) === String(group.id); })[0];
-            hint = 'Bisa dipakai untuk ' + group.name + ': ' + (match ? match.formatted : 'Rp 0,00');
-        } else if (depositByCompany.length > 1) {
-            hint = 'Saldo per company: ' + depositByCompany.map(function(row) { return row.name + ' ' + row.formatted; }).join(', ');
-        }
-        $('#deposit_context_message').text(hint);
+        $('#deposit_context_message').text('');
     }
 
     function selectedGroup() {
@@ -287,9 +280,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
             $(this).prop('disabled', !!other).attr('title', other ? 'Satu penerimaan hanya untuk satu company (' + group.name + ')' : '');
         });
         if (!isDepositKind) {
-            var legacy = !!group && group.id === 'legacy';
-            if (legacy) { $('#deposit_choice').val('N'); $('#wrap_deposit_amount').hide(); $('#deposit_amount').val(''); }
-            $('#deposit_choice').prop('disabled', legacy || custDepositBalance <= 0);
+            $('#deposit_choice').prop('disabled', custDepositBalance <= 0);
             updateDepositHint();
         }
     });

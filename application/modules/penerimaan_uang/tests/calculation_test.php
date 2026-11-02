@@ -159,6 +159,10 @@ check($s['cash'] === 2007990000 - 36180000 - 250000 && $s['remaining'] === 0 && 
 $s = $C::settle(2007990000, 0, 'N', 0, 0, 500000000);
 check($s['cash'] === 1507990000 && $s['remaining'] === 500000000 && $s['pph'] === 0, 'settle N partial with sisa');
 check($C::settle(2007990000, 36180000, 'N', 36180000, 0, 0)['pph'] === 0, 'settle N ignores PPh input');
+// Deposit dipakai mengurangi kas bank: 20.079.900 - PPh 361.800 - deposit 5.000.000 = 14.718.100.
+$s = $C::settle(2007990000, 36180000, 'Y', 36180000, 0, 0, 500000000);
+check($s['cash'] === 1471810000 && $s['dep'] === 500000000, 'settle with deposit reduces cash');
+try { $C::settle(100, 0, 'N', 0, 0, 0, 101); throw new RuntimeException('settle accepted deposit above balance'); } catch (InvalidArgumentException $expected) {}
 foreach (array(array(100, 10, 'Y', 11, 0, 0), array(100, 0, 'N', 0, 0, 101), array(100, 10, 'Y', 10, 95, 0), array(100, 0, 'X', 0, 0, 0)) as $bad) {
     try { call_user_func_array(array($C, 'settle'), $bad); throw new RuntimeException('settle accepted invalid input'); } catch (InvalidArgumentException $expected) {}
 }

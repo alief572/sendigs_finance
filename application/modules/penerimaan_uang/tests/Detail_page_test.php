@@ -21,7 +21,7 @@ $base = array('header'=>$header, 'detail'=>array($row), 'alokasi'=>$alokasi, 'li
 
 // 1) Penerimaan invoice (alur lama): judul, crumb, Back, ringkasan, tabel, jurnal; tanpa kartu deposit.
 $html = renderPage($base); $text = textOf($html);
-detailCheck(strpos($html, '>Penerimaan Piutang</h1>') !== false && strpos($html, 'Report Penerimaan</a> / Detail') !== false, 'Title and crumb');
+detailCheck(strpos($html, '<h1>') === false && strpos($html, 'Report Penerimaan</a> / Detail') !== false, 'Crumb tanpa judul ganda (judul dari layout)');
 detailCheck(preg_match('~<a class="btn btn-danger" href="/penerimaan_uang#tab_report">Back</a>~', $html) === 1, 'Back button');
 foreach (array('Customer PT Contoh', 'Tanggal rekening koran 30-October-2026', 'Bank Bank BCA', 'Status Used', 'PPh 23 Dipotong', 'Uang masuk Rp 1.000.000,00', 'Total PPh 23', 'Deposit dipakai', 'Lebih bayar', 'Kontrol 0,00') as $needle) detailCheck(strpos($text, $needle) !== false, "Summary shows: $needle");
 detailCheck(strpos($text, 'Nomor Invoice TAX Code PPH 23 Piutang Dagang Alokasi Penerimaan Deposit Dipakai Biaya Admin Lebih Bayar Sisa Piutang Status Invoice') !== false, 'Invoice table columns follow the mockup');

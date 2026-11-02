@@ -1,13 +1,16 @@
 <?php
 $tabCounts = $tab_counts ?? array('invoice' => 0, 'deposit' => 0, 'report' => 0);
-$banksJson = array();
-foreach ($list_bank as $b) $banksJson[] = array('id' => (string)$b['id'], 'name' => trim($b['nama_bank'] . ' - ' . $b['rekening'] . ' - ' . $b['nama'], ' -'));
+$bankOptions = '';
+foreach ($list_bank as $b) {
+    $bankOptions .= '<option value="' . htmlspecialchars((string)$b['id'], ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars(trim($b['nama_bank'] . ' - ' . $b['rekening'] . ' - ' . $b['nama'], ' -'), ENT_QUOTES, 'UTF-8') . '</option>';
+}
 $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember');
 ?>
 <?= mk_ui_assets() ?>
+<link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css">
+<?php if (!isset($GLOBALS['pu_s2'])) : $GLOBALS['pu_s2'] = 1; ?><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css"><script>window.jQuery && !jQuery.fn.select2 && document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"><\/script>');</script><?php endif; ?>
 <div class="mk">
-<h1>Penerimaan Piutang</h1>
-
 <div class="tabs" role="tablist" id="pu_tabs">
     <a role="tab" href="#tab_penerimaan" data-tab="invoice" class="on">Penerimaan Piutang Invoice <span class="cnt" id="cnt_invoice"><?= (int)$tabCounts['invoice'] ?></span></a>
     <a role="tab" href="#tab_kwitansi" data-tab="deposit">Penerimaan Piutang Kwitansi Deposit <span class="cnt" id="cnt_deposit"><?= (int)$tabCounts['deposit'] ?></span></a>
@@ -15,8 +18,19 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
 </div>
 
 <div class="box primary">
-    <!-- Tab 1/2: daftar draft (dirender di browser) -->
-    <div id="pane_draft"></div>
+    <!-- Tab 1/2: daftar draft, masing-masing DataTables server-side -->
+    <?php foreach (array('invoice', 'deposit') as $kind) : ?>
+    <div id="pane_<?= $kind ?>" style="display:none">
+        <div class="filters">
+            <div class="f" style="min-width:260px;flex:0 1 420px"><select id="pb_<?= $kind ?>" style="width:100%" aria-label="Bank"><option value="">- Pilih Bank -</option><?= $bankOptions ?></select></div>
+        </div>
+        <div class="scroll" style="margin-top:12px">
+            <table id="table_<?= $kind ?>" class="display" style="width:100%">
+                <thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="r">Nominal</th><th>Status</th><th class="c">Action</th></tr></thead>
+            </table>
+        </div>
+    </div>
+    <?php endforeach; ?>
 
     <!-- Tab 3: report -->
     <div id="pane_report" style="display:none">
@@ -29,33 +43,31 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
                 <select id="rep_company"><option value="">Semua</option><?php foreach ($list_companies as $cmp) : ?><option><?= $cmp ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_kind">Jenis</label>
                 <select id="rep_kind"><option value="">Semua</option><option value="invoice">Penerimaan Piutang Invoice</option><option value="deposit">Penerimaan Piutang Kwitansi Deposit</option></select></div>
-            <div class="f"><label for="rep_search">Search</label><input type="search" id="rep_search" placeholder="Cari apa saja: teks, angka, tanggal"></div>
             <div class="f" style="margin-left:auto"><button class="btn btn-success" id="btn_export_excel" disabled>Export to Excel</button></div>
         </div>
         <div class="scroll" style="margin-top:12px">
-            <table id="table_report">
+            <table id="table_report" class="display" style="width:100%">
                 <thead><tr><th>No.</th><th>Tanggal Penerimaan</th><th>Bank</th><th>Detail Penerimaan Bank</th><th>Customer</th><th>Nomor Invoice / Kwitansi</th><th>Company</th><th>TAX Code &amp; PPh 23</th><th class="r">Penerimaan Bank</th><th class="c">Action</th></tr></thead>
-                <tbody id="report_body"></tbody>
             </table>
         </div>
-        <div class="hint" style="margin-top:8px">Tanggal penerimaan mengikuti tanggal rekening koran yang diupload di Alokasi. Satu transfer yang membayar beberapa invoice tampil sebagai satu grup.</div>
+        <div class="hint" id="report_summary" style="margin-top:8px"></div>
+        <div class="hint" style="margin-top:4px">Tanggal penerimaan mengikuti tanggal rekening koran yang diupload di Alokasi. Satu transfer yang membayar beberapa invoice tampil sebagai satu baris dengan invoice bertumpuk.</div>
     </div>
 </div>
 </div>
 
+<script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script>
 (function () {
-    var U = MockupUI, esc = U.esc, en = U.en, fdate = U.fdate;
-    var BANKS = <?= json_encode($banksJson, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    var U = MockupUI, esc = U.esc, en = U.en, fdate = U.fdate, jq = window.jQuery;
+    if (jq.fn.select2) jq('.mk select').not('[name="table_report_length"]').select2({width: 'resolve'});
     var URL_ADD = <?= json_encode(base_url('penerimaan_uang/add_penerimaan_uang/')) ?>;
     var URL_DRAFT = <?= json_encode(site_url('penerimaan_uang/draft_rows')) ?>;
     var URL_REPORT = <?= json_encode(site_url('penerimaan_uang/get_report_penerimaan')) ?>;
     var URL_EXPORT = <?= json_encode(site_url('penerimaan_uang/export_excel')) ?>;
     var URL_ROLLBACK = <?= json_encode(site_url('penerimaan_uang/rollback_penerimaan')) ?>;
     var tab = 'invoice';
-    var DATA = {invoice: null, deposit: null};
-    var PF = {bank: '', q: '', per: 25, page: 1, kind: 'invoice'};
-    var reportReq = null, exportUrl = '';
+    var TABLES = {};
 
     function $(id) { return document.getElementById(id); }
     function xhr(method, url, data, cb) {
@@ -73,58 +85,65 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
         $('cnt_invoice').textContent = c.invoice; $('cnt_deposit').textContent = c.deposit; $('cnt_report').textContent = c.report;
     }
 
-    // ---- daftar draft (viewPenerimaanList) ----
-    function bankOpts(sel) { return '<option value="">- Pilih Bank -</option>' + BANKS.map(function (b) { return '<option value="' + esc(b.id) + '"' + (sel === b.id ? ' selected' : '') + '>' + esc(b.name) + '</option>'; }).join(''); }
-    function drawDraft() {
-        var all = DATA[tab] || [];
-        var rows = all.filter(function (p) {
-            if (PF.bank && p.bankId !== PF.bank) return false;
-            if (PF.q && !U.matchQ(PF.q, U.hayOf([p.tgl, p.ket, p.bank, p.nominal, 'Draft']))) return false;
-            return true;
+    // ---- daftar draft (tab 1 dan 2): satu DataTable server-side per tab ----
+    function initDraft(kind) {
+        jq('#table_' + kind).on('xhr.dt', function (e, settings, json) { if (json) setCounts(json.counts); });
+        TABLES[kind] = jq('#table_' + kind).DataTable({
+            processing: true, serverSide: true, pageLength: 25, lengthMenu: [10, 25, 50, 100], order: [[1, 'asc']],
+            ajax: {url: URL_DRAFT, type: 'POST', data: function (d) { d.receipt_kind = kind; d.bank = $('pb_' + kind).value; }},
+            columns: [
+                {data: 'no', orderable: false},
+                {data: 'tgl', className: 'nowrap', render: function (v) { return v ? fdate(v) : 'PEND'; }},
+                {data: 'bank', render: function (v) { return esc(v); }},
+                {data: 'ket', render: function (v) { return esc(v); }},
+                {data: 'nominal', className: 'r', render: function (v) { return en(v); }},
+                {data: null, orderable: false, defaultContent: '<span class="lbl draft">Draft</span>'},
+                {data: 'id', className: 'c', orderable: false, render: function (id) { return '<a class="btn btn-primary btn-xs" href="' + URL_ADD + id + '">Proses</a>'; }}
+            ],
+            language: {emptyTable: 'Tidak ada penerimaan yang menunggu proses. Yang sudah diproses ada di tab Report Penerimaan.'}
         });
-        var pages = Math.max(1, Math.ceil(rows.length / PF.per)); if (PF.page > pages) PF.page = pages;
-        var from = (PF.page - 1) * PF.per, slice = rows.slice(from, from + PF.per);
-        $('pane_draft').innerHTML =
-            '<div class="filters"><div class="f" style="min-width:260px;flex:0 1 420px"><select id="pb" style="width:100%" aria-label="Bank">' + bankOpts(PF.bank) + '</select></div><button class="btn btn-primary" id="psearch">Search</button></div>' +
-            '<div class="tbl-bar"><div class="f"><select id="pper">' + [10, 25, 50, 100].map(function (n) { return '<option' + (PF.per === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select> entries per page</div><div class="f"><label for="pq">Search:</label><input type="search" id="pq" value="' + esc(PF.q) + '"></div></div>' +
-            '<div class="scroll"><table><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="r">Nominal</th><th>Status</th><th class="c">Action</th></tr></thead><tbody>' +
-            (slice.length ? slice.map(function (p, i) {
-                return '<tr><td>' + (from + i + 1) + '</td><td class="nowrap">' + (p.tgl ? fdate(p.tgl) : 'PEND') + '</td><td style="min-width:200px">' + esc(p.bank) + '</td><td style="min-width:260px">' + esc(p.ket) + '</td><td class="r">' + en(p.nominal) + '</td><td><span class="lbl draft">Draft</span></td><td class="c"><a class="btn btn-primary btn-xs" href="' + URL_ADD + p.id + '">Proses</a></td></tr>';
-            }).join('') : '<tr><td colspan="7" class="empty">Tidak ada penerimaan yang menunggu proses. Yang sudah diproses ada di tab Report Penerimaan.</td></tr>') +
-            '</tbody></table></div>' +
-            '<div class="tbl-bar"><div class="muted">Showing ' + (rows.length ? from + 1 : 0) + ' to ' + (from + slice.length) + ' of ' + rows.length + ' entries</div><div class="pager">' + U.pager(PF.page, pages) + '</div></div>';
-        $('psearch').onclick = function () { PF.bank = $('pb').value; PF.page = 1; drawDraft(); };
-        $('pper').onchange = function () { PF.per = +this.value; PF.page = 1; drawDraft(); };
-        $('pq').oninput = function () { PF.q = this.value; PF.page = 1; var pos = this.selectionStart; drawDraft(); var q = $('pq'); q.focus(); q.setSelectionRange(pos, pos); };
-        Array.prototype.forEach.call(document.querySelectorAll('#pane_draft [data-page]'), function (b) { b.onclick = function () { PF.page = +b.getAttribute('data-page'); drawDraft(); }; });
-    }
-    function loadDraft(kind, done) {
-        xhr('POST', URL_DRAFT, {receipt_kind: kind}, function (res) {
-            if (res && res.rows) { DATA[kind] = res.rows; setCounts(res.counts); }
-            if (done) done();
-        });
+        $('pb_' + kind).onchange = function () { TABLES[kind].ajax.reload(); };
     }
 
-    // ---- report ----
-    function loadReport() {
-        if (reportReq) reportReq.abort();
-        reportReq = xhr('POST', URL_REPORT, {year: $('rep_year').value, month: $('rep_month').value, company: $('rep_company').value, receipt_kind: $('rep_kind').value, id_customer: '', custom_search: $('rep_search').value}, function (res) {
-            if (!res) return;
-            var body = res.html || '';
-            $('report_body').innerHTML = body
-                ? body + '<tr class="sum"><td colspan="8" class="k"><b>Total (' + res.count_receipts + ' penerimaan, ' + res.count_invoices + ' invoice/kwitansi)</b></td><td class="r"><b>' + res.total_nominal + '</b></td><td></td></tr>'
-                : '<tr><td colspan="10" class="empty">Tidak ada penerimaan yang sudah diproses untuk filter ini.</td></tr>';
-            exportUrl = URL_EXPORT + '?year=' + encodeURIComponent($('rep_year').value) + '&month=' + encodeURIComponent($('rep_month').value) + '&company=' + encodeURIComponent($('rep_company').value) +
-                '&search=' + encodeURIComponent($('rep_search').value) + '&receipt_kind=' + encodeURIComponent($('rep_kind').value) + '&id_customer=';
-            $('btn_export_excel').disabled = !body;
+    // ---- report (tab 3) ----
+    function initReport() {
+        jq('#table_report').on('xhr.dt', function (e, settings, json) {
+            if (!json) return;
+            setCounts(json.counts);
+            $('report_summary').innerHTML = '<b>Total (' + json.recordsFiltered + ' penerimaan, ' + json.count_invoices + ' invoice/kwitansi): ' + esc(json.total_nominal) + '</b>';
+            $('btn_export_excel').disabled = !json.recordsFiltered;
         });
+        TABLES.report = jq('#table_report').DataTable({
+            processing: true, serverSide: true, pageLength: 25, lengthMenu: [10, 25, 50, 100], order: [[1, 'desc']],
+            ajax: {url: URL_REPORT, type: 'POST', data: function (d) {
+                d.year = $('rep_year').value; d.month = $('rep_month').value; d.company = $('rep_company').value; d.receipt_kind = $('rep_kind').value; d.id_customer = '';
+            }},
+            columns: [
+                {data: 'no', orderable: false},
+                {data: 'tanggal', className: 'nowrap'},
+                {data: 'bank'},
+                {data: 'detail_bank'},
+                {data: 'customer'},
+                {data: 'no_invoice', orderable: false},
+                {data: 'company', orderable: false},
+                {data: 'tax_pph', orderable: false},
+                {data: 'penerimaan_bank', className: 'r', orderData: 8},
+                {data: 'action', className: 'c', orderable: false}
+            ],
+            language: {emptyTable: 'Tidak ada penerimaan yang sudah diproses untuk filter ini.'}
+        });
+        ['rep_year', 'rep_month', 'rep_company', 'rep_kind'].forEach(function (id) { $(id).onchange = function () { TABLES.report.ajax.reload(); }; });
+    }
+    function exportUrl() {
+        return URL_EXPORT + '?year=' + encodeURIComponent($('rep_year').value) + '&month=' + encodeURIComponent($('rep_month').value) + '&company=' + encodeURIComponent($('rep_company').value) +
+            '&search=' + encodeURIComponent(TABLES.report.search()) + '&receipt_kind=' + encodeURIComponent($('rep_kind').value) + '&id_customer=';
     }
     // Export (M:651): "Menyiapkan…" saat unduh, toast sesudahnya.
     $('btn_export_excel').onclick = function () {
         var btn = this, label = 'Export to Excel';
         btn.disabled = true; btn.textContent = 'Menyiapkan…';
         var done = function (msg) { btn.disabled = false; btn.textContent = label; if (msg) U.toast(msg); };
-        fetch(exportUrl, {credentials: 'same-origin'}).then(function (r) {
+        fetch(exportUrl(), {credentials: 'same-origin'}).then(function (r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             var cd = r.headers.get('Content-Disposition') || '', m = /filename="?([^";]+)"?/.exec(cd);
             return r.blob().then(function (b) { return {blob: b, name: m ? m[1] : 'Report_Penerimaan.xlsx'}; });
@@ -134,28 +153,21 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
             done('File Excel diunduh.');
         }).catch(function (e) { done('Export gagal: ' + e.message); });
     };
-    var timer = null;
-    $('rep_search').oninput = function () { clearTimeout(timer); timer = setTimeout(loadReport, 200); };
-    ['rep_year', 'rep_month', 'rep_company', 'rep_kind'].forEach(function (id) { $(id).onchange = loadReport; });
 
     // ---- tab ----
     function show(next) {
         tab = next;
         Array.prototype.forEach.call(document.querySelectorAll('#pu_tabs a'), function (a) { a.className = a.getAttribute('data-tab') === tab ? 'on' : ''; });
-        var isReport = tab === 'report';
-        $('pane_draft').style.display = isReport ? 'none' : '';
-        $('pane_report').style.display = isReport ? '' : 'none';
-        if (isReport) { loadReport(); return; }
-        if (PF.kind !== tab) PF = {bank: '', q: '', per: PF.per, page: 1, kind: tab};
-        if (DATA[tab]) { drawDraft(); return; }
-        $('pane_draft').innerHTML = '';
-        loadDraft(tab, drawDraft);
+        ['invoice', 'deposit', 'report'].forEach(function (k) { $('pane_' + k).style.display = k === tab ? '' : 'none'; });
+        // DataTable dibuat saat tab pertama kali dibuka (lebar kolom tidak bisa dihitung di panel tersembunyi).
+        if (!TABLES[tab]) { tab === 'report' ? initReport() : initDraft(tab); }
+        else TABLES[tab].columns.adjust();
     }
     Array.prototype.forEach.call(document.querySelectorAll('#pu_tabs a'), function (a) {
         a.onclick = function (e) { e.preventDefault(); history.replaceState(null, '', a.getAttribute('href')); show(a.getAttribute('data-tab')); };
     });
 
-    // Rollback (fitur tambahan aplikasi): konfirmasi mockup, lalu muat ulang daftar dan angka tab.
+    // Rollback (fitur tambahan aplikasi): konfirmasi mockup, lalu muat ulang semua tabel yang sudah dibuka (angka tab ikut diperbarui).
     document.addEventListener('click', function (e) {
         var btn = e.target.closest ? e.target.closest('.rollback') : null;
         if (!btn) return;
@@ -164,8 +176,7 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
             xhr('POST', URL_ROLLBACK, {id_penerimaan: id}, function (res) {
                 if (res && String(res.status) === '1') {
                     U.toast(res.msg || 'Penerimaan berhasil di-rollback.');
-                    DATA.invoice = DATA.deposit = null;
-                    loadDraft('invoice'); loadDraft('deposit'); loadReport();
+                    Object.keys(TABLES).forEach(function (k) { TABLES[k].ajax.reload(null, false); });
                 } else {
                     U.toast((res && (res.msg || res.message)) || 'Tidak dapat melakukan rollback.');
                 }

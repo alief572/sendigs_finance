@@ -1,7 +1,6 @@
 <?php $h = $results['header']; $e = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }; ?>
 <?= mk_ui_assets() ?>
 <div class="mk">
-<h1>Kwitansi Deposit</h1>
 <div class="crumb"><a href="<?= site_url('kwitansi_deposit') ?>">Kwitansi Deposit</a> / Detail</div>
 
 <div class="box primary">

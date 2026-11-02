@@ -62,6 +62,15 @@ if (!function_exists('mk_ui_assets')) {
     }
 }
 
+if (!function_exists('mk_select2_assets')) {
+    /** Select2 (dropdown bisa dicari) dari cdnjs; dimuat sekali dan hanya bila layout belum menyediakannya. */
+    function mk_select2_assets()
+    {
+        return '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">'
+            . "<script>window.jQuery && !jQuery.fn.select2 && document.write('<script src=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js\"><\/script>');</script>";
+    }
+}
+
 if (!function_exists('mk_tax_badge_css')) {
     /** Kompatibilitas: gaya badge sudah ada di mockup_ui.css. */
     function mk_tax_badge_css() { return ''; }
