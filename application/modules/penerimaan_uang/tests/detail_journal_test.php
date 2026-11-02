@@ -2,6 +2,7 @@
 if (!function_exists('has_permission')) { function has_permission($permission) { return true; } }
 // Controller + rendered view regression; no database writes or browser.
 define('BASEPATH', __DIR__);
+require dirname(__DIR__,3).'/helpers/mockup_format_helper.php';
 class Admin_Controller {}
 require dirname(__DIR__) . '/controllers/Penerimaan_uang.php';
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });

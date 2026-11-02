@@ -64,8 +64,14 @@ class LegacyDb {
 }
 class LegacyInput { public $values; function post($key = null) { return $key === null ? $this->values : ($this->values[$key] ?? null); } }
 class LegacyTemplate { public $data; function set($data) { $this->data = $data; } function render($name) {} }
+require_once dirname(__DIR__, 3) . '/helpers/mockup_format_helper.php';
 class LegacyModel {
     public $db;
+    function legacy_gross_base($invoice) {
+        $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
+        $model->db = $this->db;
+        return $model->legacy_gross_base($invoice);
+    }
     function remaining_receipt_pph($invoice, $choice) {
         $model = (new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();
         $model->db = $this->db;

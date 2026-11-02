@@ -50,6 +50,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+        $this->load->helper('mockup_format');
         $this->load->model(array('Penerimaan_uang/Penerimaan_uang_model'));
 
 
@@ -71,6 +72,7 @@ class Penerimaan_uang extends Admin_Controller
         $list_companies = array('STM', 'VUCA', 'SUSTAIN');
 
         $data = [
+            'tab_counts' => $this->Penerimaan_uang_model->get_tab_counts(),
             'list_bank' => $list_bank,
             'list_years' => $list_years,
             'list_companies' => $list_companies
@@ -84,11 +86,6 @@ class Penerimaan_uang extends Admin_Controller
     public function get_report_penerimaan()
     {
         if ($this->deny_without($this->viewPermission)) return;
-        $draw = (int)$this->input->post('draw');
-        $start = (int)$this->input->post('start');
-        $length = (int)$this->input->post('length');
-        if ($length <= 0) $length = 10;
-
         $year = $this->input->post('year');
         $month = $this->input->post('month');
         $company = $this->input->post('company');
@@ -103,87 +100,68 @@ class Penerimaan_uang extends Admin_Controller
             $searchVal = trim((string)$this->input->post('search'));
         }
 
-        $order = $this->input->post('order');
-        $orderCol = 1;
-        $orderDir = 'desc';
-        if (is_array($order) && isset($order[0]['column'])) {
-            $orderCol = (int)$order[0]['column'];
-            $orderDir = $order[0]['dir'] ?? 'desc';
-        }
-
+        // Seperti mockup (reportData): urut tanggal naik, tanpa paging, satu baris per invoice dengan kolom penerimaan di-rowspan.
         $result = $this->Penerimaan_uang_model->get_report_penerimaan_serverside(
-            $year, $month, $company, $searchVal, $start, $length, $orderCol, $orderDir, $this->input->post('receipt_kind'), $this->input->post('id_customer')
+            $year, $month, $company, $searchVal, 0, 1000000, 1, 'asc', $this->input->post('receipt_kind'), $this->input->post('id_customer')
         );
 
-        $dataRows = array();
-        $no = $start;
+        $e = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+        $html = '';
+        $no = 0;
         foreach ($result['receipts'] as $r) {
             $no++;
-            $tgl = !empty($r['tanggal_transaksi']) ? date('d-M-Y', strtotime($r['tanggal_transaksi'])) : '-';
+            $tgl = !empty($r['tanggal_transaksi']) ? mk_fdate($r['tanggal_transaksi']) : '-';
             $bankName = trim(($r['nm_bank'] ?? '') . ' ' . ($r['nama_bank_acc'] ?? 'Bank'));
-            if (empty($bankName)) $bankName = 'Bank';
+            $bankShort = !empty($r['nm_bank']) ? $r['nm_bank'] : ($bankName !== '' ? $bankName : 'Bank');
 
             $bankUpper = strtoupper($bankName);
             if (strpos($bankUpper, 'VUCA') !== false) $coName = 'VUCA';
             elseif (strpos($bankUpper, 'SUSTAIN') !== false) $coName = 'SUSTAIN';
             else $coName = 'STM';
             if (!empty($r['company_main'])) $coName = $r['company_main'];
-            $coBadge = '<span class="label label-primary">' . htmlspecialchars($coName, ENT_QUOTES, 'UTF-8') . '</span>';
 
-            $invHtmlArr = array();
-            $taxHtmlArr = array();
             $pphText = ($r['pph23_dipotong'] === 'Y') ? 'Potong PPh 23' : 'Tidak potong PPh 23';
-
-            if (!empty($r['details'])) {
-                foreach ($r['details'] as $d) {
+            $details = !empty($r['details']) ? array_values($r['details']) : array(null);
+            $rs = count($details);
+            foreach ($details as $j => $d) {
+                $first = $j === 0;
+                $taxCode = '';
+                $invNo = '-';
+                $spkHint = '';
+                if ($d !== null) {
                     $snap = json_decode($d['consulting_snapshot'] ?? '', true);
                     // Hanya perlakuan PPN yang benar-benar tersimpan di Invoicing; invoice lama tanpa data itu tampil "-" (tidak ditebak dari nilai PPN).
                     $taxCode = Penerimaan_calculation::stored_tax_code($snap, $d['tax_treatment'] ?? '');
                     $invNo = $d['no_invoice'] ?: '-';
-
-                    $spkHint = !empty($d['id_spk_penawaran']) ? '<div style="font-size: 11px; color: #777;">SPK ' . htmlspecialchars((string)$d['id_spk_penawaran'], ENT_QUOTES, 'UTF-8') . '</div>' : '';
-                    $invHtmlArr[] = '<div style="padding: 2px 0;">' . htmlspecialchars($invNo, ENT_QUOTES, 'UTF-8') . $spkHint . '</div>';
-                    $isDepositReceipt = ($taxCode === 'DEP');
-                    $taxLabel = $isDepositReceipt ? 'Deposit' : $taxCode;
-                    $taxBadge = $taxCode === ''
-                        ? '<span class="text-muted" title="Perlakuan PPN belum tercatat di Invoicing">-</span>'
-                        : '<span class="tax-badge tax-' . htmlspecialchars($taxCode, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($taxLabel, ENT_QUOTES, 'UTF-8') . '</span>';
-                    $subLabel = $isDepositReceipt ? 'Kwitansi Deposit' : $pphText;
-                    $taxHtmlArr[] = '<div style="padding: 2px 0;">' . $taxBadge . '<div style="font-size: 11px; color: #777; margin-top: 1px;">' . $subLabel . '</div></div>';
+                    $spkHint = !empty($d['id_spk_penawaran']) ? '<div class="pu-hint">SPK ' . $e($d['id_spk_penawaran']) . '</div>' : '';
                 }
-                $invHtml = implode('', $invHtmlArr);
-                $taxHtml = implode('', $taxHtmlArr);
-            } else {
-                $invHtml = '-';
-                $taxHtml = '-';
+                $sub = $taxCode === 'DEP' ? 'Kwitansi Deposit' : $pphText;
+                $row = '<tr>';
+                if ($first) {
+                    $row .= '<td rowspan="' . $rs . '">' . $no . '</td>'
+                        . '<td rowspan="' . $rs . '" style="white-space:nowrap">' . $e($tgl) . '</td>'
+                        . '<td rowspan="' . $rs . '" style="min-width:140px">' . $e($bankShort) . '</td>'
+                        . '<td rowspan="' . $rs . '" style="min-width:200px">' . $e($r['keterangan'] ?: '-') . '</td>'
+                        . '<td rowspan="' . $rs . '" style="min-width:160px">' . $e($r['nm_customer']) . '</td>';
+                }
+                $row .= '<td style="white-space:nowrap">' . $e($invNo) . $spkHint . '</td>';
+                if ($first) $row .= '<td rowspan="' . $rs . '"><span class="pu-lbl">' . $e($coName) . '</span></td>';
+                $row .= '<td>' . ($taxCode === '' ? '-' : mk_tax_badge($taxCode)) . '<div style="font-size:12px;margin-top:2px;white-space:nowrap">' . $e($sub) . '</div></td>';
+                if ($first) {
+                    $row .= '<td rowspan="' . $rs . '" class="r">' . mk_en($r['nominal_penerimaan_bank']) . '</td>'
+                        . '<td rowspan="' . $rs . '" class="c"><a class="btn btn-info btn-xs" href="' . base_url('penerimaan_uang/view/' . (int)$r['id']) . '">Lihat</a>'
+                        . (!$r['is_posted'] ? ' <button type="button" class="btn btn-danger btn-xs rollback" data-id="' . (int)$r['id'] . '">Rollback</button>' : '')
+                        . '</td>';
+                }
+                $html .= $row . '</tr>';
             }
-
-            $action = '<a href="' . base_url('penerimaan_uang/view/' . (int)$r['id']) . '" class="btn btn-xs btn-info" title="Lihat Detail"><i class="fa fa-eye"></i> Lihat</a>';
-            if (!$r['is_posted']) {
-                $action .= ' <button type="button" class="btn btn-xs btn-danger rollback" title="Rollback Penerimaan" data-id="' . $r['id'] . '"><i class="fa fa-undo"></i> Rollback</button>';
-            }
-
-            $dataRows[] = array(
-                'no' => $no,
-                'tanggal' => $tgl,
-                'bank' => htmlspecialchars($bankName, ENT_QUOTES, 'UTF-8'),
-                'detail_bank' => htmlspecialchars($r['keterangan'] ?: '-', ENT_QUOTES, 'UTF-8'),
-                'customer' => htmlspecialchars($r['nm_customer'], ENT_QUOTES, 'UTF-8'),
-                'no_invoice' => $invHtml,
-                'company' => $coBadge,
-                'tax_pph' => $taxHtml,
-                'penerimaan_bank' => 'Rp. ' . number_format((float)$r['nominal_penerimaan_bank'], 2),
-                'action' => $action
-            );
         }
 
         echo json_encode(array(
-            'draw' => $draw,
-            'recordsTotal' => $result['recordsTotal'],
-            'recordsFiltered' => $result['recordsFiltered'],
-            'data' => $dataRows,
-            'total_nominal' => 'Rp. ' . number_format($result['total_nominal'], 2),
-            'count_invoices' => $result['total_invoices']
+            'html' => $html,
+            'count_receipts' => (int)$result['recordsFiltered'],
+            'count_invoices' => (int)$result['total_invoices'],
+            'total_nominal' => mk_en($result['total_nominal'])
         ));
     }
 
@@ -401,16 +379,18 @@ class Penerimaan_uang extends Admin_Controller
             $running += ($in - $out);
 
             $rows[] = array(
-                'tanggal' => date('d-M-Y', strtotime($m['tanggal'])),
+                // Kartu deposit mockup (depTable): Tanggal full month, Referensi, Keterangan, Masuk, Keluar, Saldo (en()).
+                'tanggal' => mk_fdate($m['tanggal']),
                 'tipe' => $m['jenis_mutasi'],
                 'sumber' => $m['tipe_sumber'] ?? $m['jenis_mutasi'],
                 'no_dokumen' => $m['no_deposit'] ?? '-',
                 'no_transaksi' => $m['no_transaksi'] ?? '-',
+                'referensi' => $m['no_transaksi'] ?? '-',
                 'company' => $m['id_company'] ?? '-',
                 'keterangan' => $m['keterangan'] ?? '-',
-                'masuk' => number_format($in/100, 2, ',', '.'),
-                'keluar' => number_format($out/100, 2, ',', '.'),
-                'saldo' => number_format($running/100, 2, ',', '.')
+                'masuk' => mk_en($in/100),
+                'keluar' => mk_en($out/100),
+                'saldo' => mk_en($running/100)
             );
         }
 
@@ -477,7 +457,7 @@ class Penerimaan_uang extends Admin_Controller
                     $groupName = (string)($ownerSnapshot['owner']['nm_company'] ?? $group);
                 }
                 $groupAttr = ' data-group="' . htmlspecialchars($group, ENT_QUOTES, 'UTF-8') . '" data-group-name="' . htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') . '"';
-                $groupLabel = '<br><small class="text-muted">' . htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') . '</small>';
+                $groupLabel = '';
 
 
                 // Label memakai kode pajak yang tersimpan; invoice lama tanpa data itu tampil "-".
@@ -485,25 +465,12 @@ class Penerimaan_uang extends Admin_Controller
                 // Hitungan angka invoice lama tetap memakai perkiraan dari PPN supaya Total Tagihan tidak berubah; hanya label yang tidak menebak.
                 $taxTreatment = $taxStored !== '' ? $taxStored : ((float)$item['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU');
 
-                if ($item['non_kons'] == '1') {
-
-                    $taxBadge = '<span class="label label-warning">Non Kons</span>';
-
-                } elseif ($taxStored === '') {
+                if ($taxStored === '') {
                     $taxBadge = '<span class="text-muted" title="Perlakuan PPN belum tercatat di Invoicing">-</span>';
-                } elseif ($taxTreatment === 'DEP') {
-
-                    $taxBadge = '<span class="tax-badge tax-DEP">Kwitansi Deposit</span>';
-
                 } else {
-
-                    $taxBadge = '<span class="tax-badge tax-' . htmlspecialchars($taxTreatment, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($taxTreatment, ENT_QUOTES, 'UTF-8') . '</span>';
-
+                    $taxBadge = mk_tax_badge($taxStored);
                 }
-
-
-
-                $decimals = $isNew ? 2 : 0;
+                $decimals = 0;
 
                 $sales = (float)$item['total_nominal_jurnal'];
 
@@ -540,18 +507,26 @@ class Penerimaan_uang extends Admin_Controller
                     }
                 }
 
+                $saldoShow = (float)$item['saldo_piutang'];
+                if (!$isNew) {
+                    $legacyInv = $item; $legacyInv['id'] = $item['no_inv'];
+                    try {
+                        $budgetCents = $pph23_dipotong === 'Y'
+                            ? $this->Penerimaan_uang_model->deducted_pph_budget($legacyInv)
+                            : $this->Penerimaan_uang_model->remaining_receipt_pph($legacyInv, $pph23_dipotong);
+                        $pphDefault = $budgetCents / 100;
+                        if (!$this->Penerimaan_uang_model->legacy_gross_base($legacyInv)) $saldoShow += $budgetCents / 100;
+                    } catch (InvalidArgumentException $error) {
+                        $receiptBlocked = true;
+                    }
+                }
                 $pphVal = ($pph23_dipotong === 'Y') ? $pphDefault : 0;
-
                 $tagihan = ($taxTreatment === 'PKP') ? ($sales + $ppn) : $sales;
-
                 $tagihanMinPph = $tagihan - $pphVal;
 
                 $invoiceDate = $item['tanggal_invoice'] ?? '';
                 $invoiceTimestamp = $invoiceDate !== '' && $invoiceDate !== '0000-00-00' ? strtotime($invoiceDate) : false;
-                $tgl = $invoiceTimestamp !== false ? date('d-M-Y', $invoiceTimestamp) : '-';
-
-
-
+                $tgl = $invoiceTimestamp !== false ? mk_fdate($invoiceDate) : '-';
                 $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
                 if ($isDepositKind) {
                     $snapshot = json_decode($item['consulting_snapshot'] ?? '', true);
@@ -559,28 +534,28 @@ class Penerimaan_uang extends Admin_Controller
                     $nmCompany = $snapshot['owner']['nm_company'] ?? 'STM';
 
                     $hasil .= '<tr>';
-                    $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
-                    $hasil .= '<td class="text-center font-bold" style="font-family: monospace;">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
-                    $hasil .= '<td class="text-center">' . htmlspecialchars($noSpk, ENT_QUOTES, 'UTF-8') . '</td>';
-                    $hasil .= '<td class="text-center"><span class="label label-info">' . htmlspecialchars($nmCompany, ENT_QUOTES, 'UTF-8') . '</span></td>';
-                    $hasil .= '<td class="text-right font-bold">Rp ' . number_format((float)$item['total_nominal_jurnal'], 2) . '</td>';
-                    $hasil .= '<td class="text-right font-bold text-danger">Rp ' . number_format((float)$item['saldo_piutang'], 2) . '</td>';
+                    $hasil .= '<td class="nowrap">' . $tgl . '</td>';
+                    $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="nowrap">' . htmlspecialchars($noSpk, ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td>' . htmlspecialchars($nmCompany, ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($item['total_nominal_jurnal']) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($item['saldo_piutang']) . '</td>';
                     $hasil .= '<td class="text-center">';
                     $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ' style="cursor:pointer; width:16px; height:16px;">';
                     $hasil .= '</td>';
                     $hasil .= '</tr>';
                 } else {
                     $hasil .= '<tr>';
-                    $hasil .= '<td class="text-center nowrap">' . $tgl . '</td>';
-                    $hasil .= '<td class="text-center font-bold">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . $groupLabel . '</td>';
-                    $hasil .= '<td class="text-center">' . $taxBadge . '</td>';
-                    $hasil .= '<td class="text-right">' . number_format($sales, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right">' . number_format($dppLain, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right">' . number_format($ppn, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right">' . number_format($pphVal, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right font-bold">' . number_format($tagihan, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right">' . number_format($tagihanMinPph, $decimals) . '</td>';
-                    $hasil .= '<td class="text-right font-bold">' . number_format((float)$item['saldo_piutang'], $decimals) . '</td>';
+                    $hasil .= '<td class="nowrap">' . $tgl . '</td>';
+                    $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td>' . $taxBadge . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($sales) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($dppLain) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($ppn) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($pphVal) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($tagihan) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($tagihanMinPph) . '</td>';
+                    $hasil .= '<td class="text-right">' . mk_en($saldoShow) . '</td>';
                     $hasil .= '<td class="text-center">';
                     $hasil .= '<input type="checkbox" name="choose_inv[]" value="' . htmlspecialchars($item['no_inv'], ENT_QUOTES, 'UTF-8') . '"' . $groupAttr . ($receiptBlocked ? ' disabled' : '') . ' style="cursor:pointer; width:16px; height:16px;">';
                     if ($receiptBlocked) $hasil .= '<small class="text-danger">Riwayat PPh perlu rekonsiliasi.</small>';
@@ -591,13 +566,13 @@ class Penerimaan_uang extends Admin_Controller
         } else {
             $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
             $colSpan = $isDepositKind ? '7' : '11';
-            $msg = $isDepositKind ? 'Belum ada tagihan Kwitansi Deposit terbuka untuk customer ini' : 'Tidak ada tagihan invoice terbuka';
+            $msg = $isDepositKind ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found';
             $hasil = '<tr><td colspan="' . $colSpan . '" class="text-center text-muted" style="padding: 16px;">' . $msg . '</td></tr>';
         }
 
 
 
-        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center">Tidak ada dokumen terbuka untuk customer ini.</td></tr>';
+        if ($hasil === '') $hasil = '<tr><td colspan="11" class="text-center text-muted">' . (($this->input->post('receipt_kind') === 'deposit') ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found') . '</td></tr>';
         echo $hasil;
 
     }
@@ -773,8 +748,8 @@ class Penerimaan_uang extends Admin_Controller
 
             // Keep the actual outstanding balance, including previous installments.
 
-            // Tidak dipotong (mockup): Piutang Dagang bruto = saldo (neto PPh) + sisa anggaran PPh yang belum gugur.
-            $saldo_piutang = (Penerimaan_calculation::cents($get_inv['saldo_piutang']) + ($pph23_dipotong === 'N' ? $remaining_pph : 0)) / 100;
+            // Mockup: Piutang Dagang bruto = saldo (neto PPh, penerimaan pertama) + anggaran PPh lama; setelahnya saldo sudah bruto.
+            $saldo_piutang = (Penerimaan_calculation::cents($get_inv['saldo_piutang']) + ($this->Penerimaan_uang_model->legacy_gross_base($get_inv) ? 0 : $remaining_pph)) / 100;
 
             // Old Vuca invoices stored zero gross despite having a valid DPP.
 
@@ -787,7 +762,7 @@ class Penerimaan_uang extends Admin_Controller
             $legacyTax = Penerimaan_calculation::stored_tax_code(json_decode($get_inv['consulting_snapshot'] ?? '', true), $get_inv['tax_treatment'] ?? '');
             $hasil .= '<td class="text-center nowrap">' . htmlspecialchars((string)$get_inv['no_invoice'], ENT_QUOTES, 'UTF-8');
             $hasil .= '<input type="hidden" name="id_inv_' . $no . '" value="' . $item . '">';
-            $hasil .= '<input type="hidden" name="remaining_pph_' . $no . '" value="' . Penerimaan_calculation::decimal($remaining_pph) . '">';
+            $hasil .= '<input type="hidden" name="remaining_pph_' . $no . '" value="' . Penerimaan_calculation::decimal($pph23_dipotong === 'Y' ? $remaining_pph : 0) . '">';
             $hasil .= '</td>';
             $hasil .= '<td class="text-center">' . ($legacyTax !== '' ? '<span class="tax-badge tax-' . htmlspecialchars($legacyTax, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($legacyTax, ENT_QUOTES, 'UTF-8') . '</span>' : '-') . '</td>';
 
@@ -802,13 +777,13 @@ class Penerimaan_uang extends Admin_Controller
                 $hasil .= '<td class="text-right"><input type="text" class="form-control form-control-sm text-right autonum" name="pph_actual_' . $no . '" data-default="' . $pphDefault . '" value="' . $pphDefault . '" onkeyup="pphEdited(' . $no . ')">'
                     . '<div class="reset-pph-link-' . $no . '" style="display:none; font-size: 11px; margin-top: 2px;"><a href="javascript:void(0)" onclick="resetPph(' . $no . ')">&#8634; Default (Rp ' . number_format($remaining_pph / 100) . ')</a></div></td>';
             } else {
-                $hasil .= '<td class="text-right">0</td>';
+                $hasil .= '<td class="text-right"><input type="text" class="form-control form-control-sm text-right" readonly value="0,00"></td>';
             }
 
             $hasil .= '<td class="text-right">' . number_format($tagihan_ppn) . '</td>';
 
-            // Tidak dipotong: tidak ada PPh yang dikurangkan dari tagihan.
-            $hasil .= '<td class="text-right">' . number_format($pph23_dipotong === 'N' ? $tagihan_ppn : $get_inv['total_akhir_jurnal']) . '</td>';
+            // Total Tagihan - PPH: dihitung ulang di browser saat PPh diubah; awalnya tagihan dikurangi anggaran PPh (Potong) atau tagihan penuh (Tidak potong).
+            $hasil .= '<td class="text-right" id="tagihan_net_' . $no . '" data-tagihan="' . $tagihan_ppn . '">' . number_format($pph23_dipotong === 'Y' ? $tagihan_ppn - $remaining_pph / 100 : $tagihan_ppn) . '</td>';
 
             $hasil .= '<td>';
 
@@ -818,7 +793,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<td class="text-left">';
 
-            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" value="' . $saldo_piutang . '" onkeyup="hitungAll()">';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="penerimaan_' . $no . '" value="' . $saldo_piutang . '" onkeyup="penEdited(' . $no . ')">';
 
             $hasil .= '</td>';
 
@@ -837,7 +812,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $hasil .= '<td class="text-left">';
 
-            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="sisa_piutang_' . $no . '" onkeyup="sisaEdited(' . $no . ')">';
+            $hasil .= '<input type="text" class="form-control form-control-sm text-right autonum" name="sisa_piutang_' . $no . '" value="0" onkeyup="sisaEdited(' . $no . ')">';
 
             $hasil .= '</td>';
 
@@ -1475,20 +1450,25 @@ class Penerimaan_uang extends Admin_Controller
 
             try {
 
+                // Basis mockup (bruto): saldo tersimpan neto PPh pada penerimaan pertama => G = saldo + anggaran PPh lama; sesudahnya saldo sudah bruto.
                 $remaining_pph = $post['pph23_dipotong'] === 'Y'
                     ? $this->Penerimaan_uang_model->deducted_pph_budget($get_inv)
                     : $this->Penerimaan_uang_model->remaining_receipt_pph($get_inv, $post['pph23_dipotong']);
-                // Y: PPh yang benar-benar dipotong (default seluruh anggaran => tanpa penyesuaian); selain Y diabaikan.
-                $pph_actual = ($post['pph23_dipotong'] === 'Y' && isset($post['pph_actual_' . $i]) && trim((string)$post['pph_actual_' . $i]) !== '') ? $this->legacy_cents($post['pph_actual_' . $i]) : null;
-
+                $gross_base = $this->Penerimaan_uang_model->legacy_gross_base($get_inv);
+                $balance_cents = Penerimaan_calculation::cents($saldo_piutang) + ($gross_base ? 0 : $remaining_pph);
+                $pph_budget = $post['pph23_dipotong'] === 'Y' ? $remaining_pph : 0;
+                $pph_actual = $post['pph23_dipotong'] === 'Y' ? ((isset($post['pph_actual_' . $i]) && trim((string)$post['pph_actual_' . $i]) !== '') ? $this->legacy_cents($post['pph_actual_' . $i]) : $pph_budget) : 0;
                 $receipt_cents = $this->legacy_cents($post['penerimaan_' . $i]);
-
                 $admin_cents = $this->legacy_cents($post['biaya_admin_' . $i]);
-
-                // N: saldo bruto = saldo tersimpan + sisa anggaran PPh (yang gugur setelah penerimaan ini).
-                $pph_extinguished = $post['pph23_dipotong'] === 'N' ? $remaining_pph : 0;
-                $balance_cents = Penerimaan_calculation::cents($saldo_piutang) + $pph_extinguished;
-                $calculation = Penerimaan_calculation::calculate($balance_cents, $remaining_pph, $post['pph23_dipotong'], $receipt_cents, $admin_cents, $pph_actual);
+                $sisa_cents = $this->legacy_cents($post['sisa_piutang_' . $i] ?? '');
+                $admin_total_cents = ($admin_total_cents ?? 0) + $admin_cents;
+                if ($admin_total_cents > Penerimaan_calculation::MAX_ADMIN_CENTS) {
+                    throw new InvalidArgumentException('Total biaya admin melebihi ' . number_format(Penerimaan_calculation::MAX_ADMIN_CENTS / 100) . '.');
+                }
+                $calculation = Penerimaan_calculation::settle($balance_cents, $pph_budget, $post['pph23_dipotong'], $pph_actual, $admin_cents, $sisa_cents);
+                if ($receipt_cents < 0 || $receipt_cents + $sisa_cents !== $balance_cents) {
+                    throw new InvalidArgumentException('Alokasi penerimaan + sisa piutang harus sama dengan piutang dagang invoice ' . ($get_inv['no_invoice'] ?? '') . '.');
+                }
 
             } catch (InvalidArgumentException $e) {
 
@@ -1505,11 +1485,11 @@ class Penerimaan_uang extends Admin_Controller
                 $this->legacy_fail($e->getMessage());
                 return;
             }
+            $cash_cents = $calculation['cash'];
             $penerimaan = Penerimaan_calculation::decimal($receipt_cents);
-
             $biaya_admin = Penerimaan_calculation::decimal($admin_cents);
-
             $sisa_piutang = Penerimaan_calculation::decimal($calculation['remaining']);
+            $pph = Penerimaan_calculation::decimal($pph_actual);
 
 
 
@@ -1553,10 +1533,9 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-            if ($pph_extinguished > 0) {
-                // Penanda PPh di muka gugur (dibaca remaining_receipt_pph() dan rollback); tanpa kolom baru.
-                $arr_insert_detail[count($arr_insert_detail) - 1]['consulting_snapshot'] = json_encode(array('pph_extinguished' => $pph_extinguished));
-            }
+            // Penanda basis bruto (dibaca legacy_gross_base(), deducted_pph_budget() dan rollback); tanpa kolom baru.
+            $gross_mark = array('gross_basis' => 1, 'prev_saldo' => Penerimaan_calculation::cents($saldo_piutang), 'pph_used' => $pph_actual);
+            $arr_insert_detail[count($arr_insert_detail) - 1]['consulting_snapshot'] = json_encode($gross_mark);
             $arr_update_inv[] = [
 
                 'id' => $post['id_inv_' . $i],
@@ -1567,11 +1546,11 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-            $lebihRows[] = array('detail' => count($arr_insert_detail) - 1, 'cash' => $receipt_cents, 'admin' => $admin_cents,
-                'pph' => Penerimaan_calculation::cents($pph), 'lebih' => $lebih_cents, 'balance' => $balance_cents, 'pph_ext' => $pph_extinguished,
+            $lebihRows[] = array('detail' => count($arr_insert_detail) - 1, 'cash' => $cash_cents, 'admin' => $admin_cents, 'mark' => $gross_mark,
+                'pph' => $pph_actual, 'lebih' => $lebih_cents, 'balance' => $balance_cents,
                 'sisa' => $calculation['remaining'], 'company' => $this->legacy_owner_id($id_company), 'legacy_company' => (string)$id_company, 'nm_company' => (string)$nm_company,
                 'customer' => (string)($get_inv['id_customer'] ?? ''), 'nm_customer' => (string)($get_inv['nm_customer'] ?? ''), 'no_invoice' => (string)($get_inv['no_invoice'] ?? ''));
-            $total_penerimaan_cents += $receipt_cents;
+            $total_penerimaan_cents += $cash_cents;
 
 
 
@@ -1607,27 +1586,11 @@ class Penerimaan_uang extends Admin_Controller
 
                 $no_jurnal++;
 
-                $value_debit = $item_jurnal['no_perkiraan'] === '7201-01-04' ? $biaya_admin : '0.00';
-
-                $value_kredit = $item_jurnal['no_perkiraan'] === '1102-01-01'
-
-                    ? Penerimaan_calculation::decimal($calculation['reduction'])
-
-                    : ($item_jurnal['no_perkiraan'] === $coa_pph ? Penerimaan_calculation::decimal($calculation['adjustment']) : '0.00');
-
-                $pph_a = $post['pph23_dipotong'] === 'Y' ? $remaining_pph - $calculation['adjustment'] : 0;
-                if ($pph_a > 0) {
-                    // Mockup: Debit PPh 23 Disetor = PPh dipotong, Kredit Piutang bruto (alokasi + admin + PPh). PPh 0 memakai bentuk lama di atas.
-                    if ($item_jurnal['no_perkiraan'] === $coa_pph) {
-                        $value_debit = Penerimaan_calculation::decimal($pph_a);
-                        $value_kredit = '0.00';
-                    } elseif ($item_jurnal['no_perkiraan'] === '1102-01-01') {
-                        $value_kredit = Penerimaan_calculation::decimal($receipt_cents + $admin_cents + $pph_a);
-                    }
-                }
-
-
-
+                // Jurnal mockup: Debit PPh 23 Disetor = PPh dipotong, Debit Admin, Kredit Piutang bruto, Debit Piutang = sisa; Bank = kas (di akhir).
+                $value_debit = $item_jurnal['no_perkiraan'] === '7201-01-04' ? $biaya_admin
+                    : ($item_jurnal['no_perkiraan'] === $coa_pph ? $pph
+                    : ($item_jurnal['no_perkiraan'] === '1102-01-01' ? $sisa_piutang : '0.00'));
+                $value_kredit = $item_jurnal['no_perkiraan'] === '1102-01-01' ? Penerimaan_calculation::decimal($balance_cents) : '0.00';
                 $get_no_invoice = $this->db->select('a.no_invoice')
 
                     ->from('tr_invoicing a')
@@ -1789,8 +1752,8 @@ class Penerimaan_uang extends Admin_Controller
                 $arr_insert_detail[$lr['detail']]['consulting_snapshot'] = json_encode(array(
                     'legacy' => true, 'owner' => array('id' => $lr['company'], 'nm_company' => $lr['nm_company']),
                     'cash' => $lr['cash'], 'admin' => $lr['admin'], 'pph' => $lr['pph'], 'lebih' => $lr['lebih'],
-                    'balance' => $lr['balance'], 'sisa' => $lr['sisa'], 'pph_extinguished' => $lr['pph_ext']
-                ));
+                    'balance' => $lr['balance'], 'sisa' => $lr['sisa']
+                ) + $lr['mark']);
             }
             $arr_insert_header['id_customer'] = $lebihCustomerIds[0];
             $no_jurnal++;
@@ -1963,13 +1926,10 @@ class Penerimaan_uang extends Admin_Controller
 
 
         $response = [
-
             'status' => $valid,
-
             'msg' => $msg,
-
-            'message' => $msg
-
+            'message' => $msg,
+            'no_surat' => isset($id) ? (string)$id : ''
         ];
 
 
@@ -2275,9 +2235,7 @@ class Penerimaan_uang extends Admin_Controller
                 if ($get_penerimaan['pph23_dipotong'] == 'N') {
 
                     $amount_to_add = $penerimaan - $pph23 + $biaya_admin;
-                    // Penerimaan N bruto: saldo kembali neto karena anggaran PPh di muka kembali berlaku setelah detail dihapus.
-                    $snapN = json_decode($detail['consulting_snapshot'] ?? '', true);
-                    if (!empty($snapN['pph_extinguished'])) { $amount_to_add -= $snapN['pph_extinguished'] / 100; }
+
 
                 } else {
 
@@ -2290,8 +2248,13 @@ class Penerimaan_uang extends Admin_Controller
 
 
             // Update saldo_piutang
-
-            $this->db->set('saldo_piutang', 'saldo_piutang + ' . $amount_to_add, FALSE);
+            $snapRb = json_decode($detail['consulting_snapshot'] ?? '', true);
+            if (is_array($snapRb) && isset($snapRb['prev_saldo'])) {
+                // Penerimaan basis bruto: kembalikan saldo ke nilai sebelum penerimaan (sen -> rupiah).
+                $this->db->set('saldo_piutang', Penerimaan_calculation::decimal((int)$snapRb['prev_saldo']));
+            } else {
+                $this->db->set('saldo_piutang', 'saldo_piutang + ' . $amount_to_add, FALSE);
+            }
 
             $this->db->where('id', $id_inv);
 

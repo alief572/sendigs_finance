@@ -81,18 +81,6 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
     <input type="hidden" name="total_debit_jurnal" id="input_total_debit_jurnal" value="0">
     <input type="hidden" name="total_kredit_jurnal" id="input_total_kredit_jurnal" value="0">
 
-    <?php if (!$isDeposit && ($deposit_choice ?? 'N') === 'Y' && ($deposit_amount ?? 0) > 0) : ?>
-        <div class="alert alert-info" style="margin-bottom: 15px; padding: 10px 15px; border-radius: 4px;">
-            <i class="fa fa-info-circle"></i> <strong>Deposit Diterapkan:</strong> Rp <?= number_format($deposit_amount / 100, 2, ',', '.') ?>
-            (dari saldo Rp <?= number_format(($customer_deposit ?? 0) / 100, 2, ',', '.') ?> &mdash; estimasi sisa saldo: Rp <?= number_format((($customer_deposit ?? 0) - ($deposit_amount ?? 0)) / 100, 2, ',', '.') ?>).
-            <span class="pull-right">
-                <a href="javascript:void(0)" id="btn_redistribute_dep" class="text-white" style="text-decoration: underline; font-weight: 700;">
-                    <i class="fa fa-refresh"></i> Distribusi Ulang FIFO
-                </a>
-            </span>
-        </div>
-    <?php endif; ?>
-
     <div class="table-responsive">
         <?php if ($isDeposit) : ?>
             <!-- TABEL KHUSUS KWITANSI DEPOSIT (7 Kolom Ringkas) -->
@@ -105,7 +93,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <th class="text-right" style="width: 130px;">Nilai Kwitansi</th>
                         <th class="text-right" style="width: 130px;">Piutang Dagang</th>
                         <th class="text-right" style="width: 140px;">Alokasi Penerimaan</th>
-                        <th class="text-right" style="width: 130px;">Biaya Admin<br><small class="text-muted font-normal">(maks 10rb)</small></th>
+                        <th class="text-right" style="width: 130px;">Biaya Admin</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -156,17 +144,17 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                     </tr>
                     <tr>
                         <td colspan="4" class="text-right text-muted">Uang Masuk</td>
-                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong></td>
+                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>"><?= mk_idn($availableDecimal) ?></strong></td>
                         <td colspan="2"></td>
                     </tr>
                     <tr>
                         <td colspan="4" class="text-right text-muted">Kontrol</td>
-                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span></td>
+                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">0,00</span></td>
                         <td colspan="2" class="text-muted small">(Piutang &minus; biaya admin) &minus; uang masuk</td>
                     </tr>
                 </tfoot>
             </table>
-            <p class="text-muted" style="margin-top: 8px; font-size: 12px;">Saldo deposit customer bertambah sebesar nilai kwitansi (<strong id="card_tot_piutang">Rp. 0,00</strong>). Biaya admin bank menjadi beban perusahaan, tidak mengurangi deposit.</p>
+            <p class="text-muted" style="margin-top: 8px; font-size: 12px;">Saldo deposit customer bertambah sebesar nilai kwitansi (<strong id="card_tot_piutang">0,00</strong>). Biaya admin bank menjadi beban perusahaan, tidak mengurangi deposit.</p>
         <?php else : ?>
             <!-- TABEL LENGKAP PENERIMAAN INVOICE -->
             <table class="table table-bordered table-hover tbl-alokasi" style="margin-bottom: 0;">
@@ -183,14 +171,14 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                 <br><small class="text-muted font-normal">default 2% DPP, bisa diedit</small>
                             <?php endif; ?>
                         </th>
-                        <th class="text-right" style="width: 115px;">Total Tagihan<br><small class="text-muted font-normal">(Penjualan+PPN)</small></th>
-                        <th class="text-right" style="width: 115px;">Total Tagihan<br><small class="text-muted font-normal">- PPH</small></th>
-                        <th class="text-right" style="width: 115px;">Piutang Dagang</th>
+                        <th class="text-right" style="width: 115px;">Total Tagihan<br>(Penjualan + PPN)</th>
+                        <th class="text-right" style="width: 115px;">Total Tagihan<br>- PPH</th>
+                        <th class="text-right" style="width: 115px;">Piutang Dagang<br>(Penjualan + PPN)</th>
                         <th class="text-right" style="width: 120px;">Alokasi Penerimaan</th>
                         <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
                             <th class="text-right" style="width: 115px;">Deposit Dipakai</th>
                         <?php endif; ?>
-                        <th class="text-right" style="width: 110px;">Biaya Admin<br><small class="text-muted font-normal">(maks 10rb)</small></th>
+                        <th class="text-right" style="width: 110px;">Biaya Admin</th>
                         <th class="text-right" style="width: 115px;">Lebih Bayar</th>
                         <th class="text-right" style="width: 115px;">Sisa Piutang</th>
                     </tr>
@@ -226,37 +214,33 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                 <?= $escape($inv['no_invoice']) ?>
                                 <input type="hidden" name="id_inv_<?= $n ?>" value="<?= $escape($inv['id']) ?>">
                                 <input type="hidden" name="receipt_fingerprint_<?= $n ?>" value="<?= $escape($context['fingerprint']) ?>">
-                                <?php if (!empty($context['spk'])) : ?>
-                                    <br><small class="text-muted"><?= $escape($context['spk']) ?></small>
-                                <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <span class="tax-badge tax-<?= $escape($taxCode) ?>"><?= $escape($taxCode) ?></span>
+                                <?= mk_tax_badge($taxCode) ?>
                             </td>
-                            <td class="text-right"><?= number_format($tax['sales'] / 100, 2) ?></td>
-                            <td class="text-right"><?= number_format($tax['dpp_lain'] / 100, 2) ?></td>
-                            <td class="text-right"><?= number_format($tax['ppn'] / 100, 2) ?></td>
+                            <td class="text-right"><?= mk_en($tax['sales'] / 100) ?></td>
+                            <td class="text-right"><?= mk_en($tax['dpp_lain'] / 100) ?></td>
+                            <td class="text-right"><?= mk_en($tax['ppn'] / 100) ?></td>
                             <td class="text-right">
                                 <?php if ($choice === 'Y') : ?>
                                     <input type="text" class="form-control input-sm text-right autonum input-pph"
                                         name="pph_actual_<?= $n ?>" id="pph_actual_<?= $n ?>" data-row="<?= $n ?>"
                                         value="<?= number_format($defPph, 2) ?>" data-default="<?= $defPph ?>">
-                                    <div class="reset-pph-link-<?= $n ?>" style="display:none; font-size: 11px; margin-top: 2px;">
-                                        <a href="javascript:void(0)" class="btn-reset-pph text-info" data-row="<?= $n ?>" data-default="<?= $defPph ?>">
-                                            ↺ 2% (Rp <?= number_format($defPph, 2) ?>)
-                                        </a>
+                                    <div class="reset-pph-link-<?= $n ?>" style="display:none; font-size: 12px; margin-top: 2px; white-space: nowrap; color: #777;">
+                                        Default <?= mk_en($defPph) ?> &middot;
+                                        <a href="javascript:void(0)" class="btn-reset-pph text-info" data-row="<?= $n ?>" data-default="<?= $defPph ?>">Kembalikan</a>
                                     </div>
                                 <?php else : ?>
                                     <input type="text" class="form-control input-sm text-right" readonly value="0.00">
                                     <input type="hidden" name="pph_actual_<?= $n ?>" value="0.00">
                                 <?php endif; ?>
                             </td>
-                            <td class="text-right font-bold"><?= number_format($tax['tagihan'] / 100, 2) ?></td>
+                            <td class="text-right"><?= mk_en($tax['tagihan'] / 100) ?></td>
                             <td class="text-right text-tagihan-net" id="text_tagihan_net_<?= $n ?>">
-                                <?= number_format(($tax['tagihan'] - ($choice === 'Y' ? $context['default_pph'] : 0)) / 100, 2) ?>
+                                <?= mk_en(($tax['tagihan'] - ($choice === 'Y' ? $context['default_pph'] : 0)) / 100) ?>
                             </td>
                             <td class="text-right font-bold bg-gray-light" id="cell_piutang_<?= $n ?>" data-piutang="<?= Penerimaan_calculation::cents($inv['saldo_piutang']) ?>">
-                                <?= number_format($saldo, 2) ?>
+                                <?= mk_en($saldo) ?>
                             </td>
                             <td class="text-right">
                                 <input type="text" class="form-control input-sm text-right autonum input-alok"
@@ -292,7 +276,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                 </tbody>
                 <tfoot>
                     <tr class="bg-gray-light font-bold">
-                        <td colspan="5" class="text-right">Total:</td>
+                        <td colspan="5" class="text-right text-muted">Total</td>
                         <td class="text-right" id="foot_tot_pph">0.00</td>
                         <td colspan="2"></td>
                         <td class="text-right" id="foot_tot_piutang">0.00</td>
@@ -306,36 +290,39 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                     </tr>
                     <?php $restCols = (($deposit_choice ?? 'N') === 'Y') ? 5 : 4; ?>
                     <tr>
-                        <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan+PPN)</td>
-                        <td class="text-right"><strong id="card_tot_piutang">Rp. 0,00</strong></td>
+                        <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan + PPN)</td>
+                        <td class="text-right"><strong id="card_tot_piutang">0,00</strong></td>
                         <td colspan="<?= $restCols ?>"></td>
                     </tr>
                     <tr>
                         <td colspan="8" class="text-right text-muted">Uang Masuk</td>
-                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>">Rp. <?= number_format($availableDecimal, 2) ?></strong></td>
+                        <td class="text-right"><strong id="card_uang_masuk" data-masuk="<?= $availableCents ?>"><?= mk_idn($availableDecimal) ?></strong></td>
                         <td colspan="<?= $restCols ?>"></td>
                     </tr>
                     <?php if (($deposit_choice ?? 'N') === 'Y') : ?>
                         <tr>
                             <td colspan="8" class="text-right text-muted">Deposit Dipakai</td>
-                            <td class="text-right"><strong id="card_tot_dep" class="text-primary">Rp. 0,00</strong></td>
-                            <td colspan="<?= $restCols ?>" class="text-muted small">Total per invoice harus sama dengan Nominal Deposit Dipakai di form</td>
+                            <td class="text-right"><strong id="card_tot_dep" class="text-primary">0,00</strong></td>
+                            <td colspan="<?= $restCols ?>" class="text-muted small">Nominal di form <?= mk_idn(($deposit_amount ?? 0) / 100) ?> &middot; saldo deposit <?= mk_idn(($customer_deposit ?? 0) / 100) ?> &middot; sisa setelah dipakai <?= mk_idn((($customer_deposit ?? 0) - ($deposit_amount ?? 0)) / 100) ?></td>
                         </tr>
                     <?php endif; ?>
                     <tr>
                         <td colspan="8" class="text-right text-muted">Lebih Bayar</td>
-                        <td class="text-right"><strong id="card_tot_lebih" class="text-success">Rp. 0,00</strong></td>
-                        <td colspan="<?= $restCols ?>" class="text-muted small">Masuk ke saldo deposit customer</td>
+                        <td class="text-right"><strong id="card_tot_lebih" class="text-success">0,00</strong></td>
+                        <td colspan="<?= $restCols ?>" class="text-muted small" id="lebih_note" style="display:none">Masuk ke saldo deposit customer</td>
                     </tr>
                     <tr>
                         <td colspan="8" class="text-right text-muted">Kontrol</td>
-                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">Rp. 0,00</span></td>
+                        <td class="text-right"><span id="badge_kontrol" class="kontrol-badge kontrol-bad">0,00</span></td>
                         <td colspan="<?= $restCols ?>" class="text-muted small">((Piutang &minus; PPH 23 &minus; biaya admin &minus; sisa piutang) &minus; uang masuk &minus; deposit dipakai) + lebih bayar</td>
                     </tr>
                 </tfoot>
             </table>
         <?php endif; ?>
     </div>
+    <?php if (!$isDeposit && ($deposit_choice ?? 'N') === 'Y' && ($deposit_amount ?? 0) > 0) : ?>
+        <div class="text-muted" style="margin-top: 8px; font-size: 12px;">Deposit Dipakai Rp <?= mk_idn($deposit_amount / 100) ?> (dari form) dibagi ke invoice urut tanggal. Pembagian per invoice bisa diedit selama totalnya tetap sama. <a href="javascript:void(0)" id="btn_redistribute_dep">Bagi ulang</a></div>
+    <?php endif; ?>
 
     <!-- Summary & Kontrol Bar -->
     <div class="row" style="margin-top: 15px;">
@@ -344,16 +331,14 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                 <i class="fa fa-exclamation-circle"></i> <span id="error-text"></span>
             </div>
             <div id="box-ok-message" class="alert alert-info" style="display: none; padding: 10px 14px; margin-bottom: 0;">
-                <i class="fa fa-check-circle"></i> <strong>Kontrol 0.</strong> Periksa jurnal di bawah, lalu klik Simpan Penerimaan &amp; Bentuk Jurnal.
+                <i class="fa fa-check-circle"></i> <strong>Kontrol 0.</strong> Periksa jurnal di bawah, lalu klik Proses untuk menyimpan.
             </div>
         </div>
     </div>
 
     <!-- Preview Jurnal Penerimaan -->
     <div class="journal-section">
-        <h4 style="margin-top: 0; font-weight: 700; color: #2c3e50;">
-            <i class="fa fa-book"></i> Jurnal Penerimaan Piutang
-        </h4>
+
         <div class="table-responsive">
             <table class="table table-bordered table-striped" style="font-size: 12px; margin-bottom: 0;">
                 <thead>
@@ -409,12 +394,23 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
         return ConsultingReceiptMoney.cents(el.value);
     }
 
+    // idn() mockup: 1.234.567,89 (total, kontrol, pesan); en() mockup: bulat dengan koma (jurnal).
     function fmtMoney(cents) {
-        return (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (cents / 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function fmtIdn(cents) {
-        return 'Rp. ' + (cents / 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return fmtMoney(cents);
+    }
+
+    function fmtEn(cents) {
+        return (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    function fdate(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        return m ? m[3] + '-' + MONTH_NAMES[parseInt(m[2], 10) - 1] + '-' + m[1] : String(iso || '');
     }
 
     function recalc() {
@@ -458,13 +454,16 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
             var lebih = (!isDepositMode && inpLebih) ? parseVal(inpLebih) : 0;
 
             if (pph < 0 || alok < 0 || admin < 0 || sisa < 0 || dep < 0 || lebih < 0) {
-                errors.push('Nilai tidak boleh bernilai minus pada ' + meta.invoice + '.');
+                errors.push('Nilai minus tidak diperbolehkan di ' + meta.invoice + '.');
             }
             if (dep > 0 && lebih > 0) {
                 errors.push('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan pada ' + meta.invoice + '.');
             }
-            if (pph > meta.remaining_pph || pph > alok) {
-                errors.push('PPh 23 melebihi sisa batas 2% DPP atau alokasi invoice ' + meta.invoice + '.');
+            if (pph > meta.remaining_pph) {
+                errors.push('PPh 23 melebihi sisa batas 2% DPP invoice ' + meta.invoice + '.');
+            }
+            if (pph > piutang) {
+                errors.push('PPh 23 ' + meta.invoice + ' melebihi piutang dagang invoice.');
             }
             if (sisa > piutang) {
                 errors.push('Sisa piutang melebihi piutang dagang invoice ' + meta.invoice + '.');
@@ -563,7 +562,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
 
         // Admin max check (Rp 10.000)
         if (totAdmin > 1000000) {
-            errors.push('Total biaya admin (' + fmtMoney(totAdmin) + ') melebihi batas maksimal Rp 10.000,00.');
+            errors.push('Total biaya admin melebihi 10,000.');
         }
 
         // Kontrol calculation:
@@ -577,14 +576,21 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
             throw new Error('Total nominal terlalu besar.');
         }
 
-        if (kontrol !== 0) {
+        if (kontrol !== 0 && isDepositMode) {
+            // Pesan khusus Kwitansi Deposit (mockup 961-962): tidak ada Lebih Bayar.
+            errors.push(kontrol > 0
+                ? 'Masih ada selisih kurang ' + fmtMoney(kontrol) + '. Isi Biaya Admin sesuai potongan bank.'
+                : 'Uang masuk melebihi nilai kwitansi sebesar ' + fmtMoney(-kontrol) + '. Kwitansi deposit tidak punya Lebih Bayar: periksa kwitansi yang dicentang, atau pecah transfernya di Alokasi.');
+        } else if (kontrol !== 0) {
             if (kontrol > 0) {
-                errors.push('Masih ada selisih kurang ' + fmtMoney(kontrol) + '. Sesuaikan alokasi atau biaya admin.');
+                errors.push('Masih ada selisih kurang ' + fmtMoney(kontrol) + '. Alokasikan ke PPh 23, Biaya Admin, atau Sisa Piutang pada invoice yang sesuai' + (depositChoice === 'Y' ? ', atau ubah Nominal Deposit Dipakai di form (klik Batal)' : '') + '.');
             } else {
-                errors.push('Uang masuk lebih besar ' + fmtMoney(-kontrol) + ' dari piutang yang dialokasikan.');
+                errors.push('Ada kelebihan ' + fmtMoney(-kontrol) + '. Alokasikan ke Lebih Bayar (masuk ke saldo deposit customer).');
             }
         }
 
+        var lebihNote = document.getElementById('lebih_note');
+        if (lebihNote) lebihNote.style.display = totLebih > 0 ? '' : 'none';
         // Update footer totals
         var footPph = document.getElementById('foot_tot_pph');
         if (footPph) footPph.textContent = fmtMoney(totPph);
@@ -624,7 +630,14 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
         var errText = document.getElementById('error-text');
 
         if (errors.length > 0) {
-            errText.textContent = errors.join(' ');
+            // Judul + daftar berpoin seperti mockup (844).
+            errText.innerHTML = '';
+            var title = document.createElement('b');
+            title.textContent = kontrol !== 0 ? 'Catatan: kontrol belum 0, belum bisa disimpan.' : 'Catatan: data belum valid.';
+            var list = document.createElement('ul');
+            list.style.margin = '6px 0 0 18px'; list.style.padding = '0';
+            errors.forEach(function(text) { var li = document.createElement('li'); li.textContent = text; list.appendChild(li); });
+            errText.appendChild(title); errText.appendChild(list);
             boxErr.style.display = 'block';
             boxOk.style.display = 'none';
         } else {
@@ -639,10 +652,10 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
 
         journals.forEach(function(j) {
             var tr = document.createElement('tr');
-            [j.d, j.coa, j.co, j.acc, j.desc, j.dr > 0 ? fmtMoney(j.dr) : '-', j.cr > 0 ? fmtMoney(j.cr) : '-'].forEach(function(value, index) {
+            [fdate(j.d), j.coa, j.co, j.acc, j.desc, fmtEn(j.dr), fmtEn(j.cr)].forEach(function(value, index) {
                 var cell = document.createElement('td');
                 cell.textContent = value;
-                if (index >= 5) cell.className = 'text-right font-bold';
+                if (index >= 5) cell.className = 'text-right';
                 tr.appendChild(cell);
             });
             tbodyJurnal.appendChild(tr);
@@ -650,8 +663,8 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
             totJurnalCr += j.cr;
         });
 
-        document.getElementById('tot_jurnal_debit').textContent = fmtMoney(totJurnalDr);
-        document.getElementById('tot_jurnal_kredit').textContent = fmtMoney(totJurnalCr);
+        document.getElementById('tot_jurnal_debit').textContent = fmtEn(totJurnalDr);
+        document.getElementById('tot_jurnal_kredit').textContent = fmtEn(totJurnalCr);
 
         document.getElementById('input_total_debit_jurnal').value = ConsultingReceiptMoney.decimal(totJurnalDr);
         document.getElementById('input_total_kredit_jurnal').value = ConsultingReceiptMoney.decimal(totJurnalCr);

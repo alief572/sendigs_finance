@@ -1,5 +1,6 @@
 <?php
 ob_start(); require __DIR__ . '/concept_fixture.php'; ob_end_clean();
+require_once dirname(__DIR__, 3) . '/helpers/mockup_format_helper.php';
 if (($argv[1] ?? '') === '--add') {
     function base_url($path='') { return '/'.$path; }
     $results=array('receipt_kind'=>$argv[2]??'invoice','id_alokasi'=>100,'nominal_penerimaan_bank'=>'100.00', 'list_customer'=>array(array('id_customer'=>'C-ID','nm_customer'=>'Same Name')));

@@ -3,7 +3,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 // Halaman detail penerimaan (mockup "viewPenerimaanResult"): header ringkas, tabel, jurnal, kartu deposit. Fragmen AJAX lama tetap di detail.php.
 $e = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
 $idn = function ($v) { return number_format((float)$v, 2, ',', '.'); };
-$en = function ($v) { return number_format((float)$v, 2); };
+$en = function ($v) { return number_format((float)$v, 0); }; // en() mockup: bulat, tanpa Rp
 $fdate = function ($d) { return $d ? date('d-F-Y', strtotime($d)) : '-'; };
 
 $customer = !empty($header['nm_customer']) ? $header['nm_customer'] : (!empty($detail[0]['nm_customer']) ? $detail[0]['nm_customer'] : '-');
@@ -79,10 +79,13 @@ if ($showKartu) {
     .tax-PKP { color: #2e6da4; border-color: #2e6da4; } .tax-WAPU { color: #8a5a00; border-color: #c28a00; } .tax-KB { color: #5b4a9e; border-color: #7d6cc0; } .tax-DEP { color: #0369a1; border-color: #0369a1; }
     @media (max-width: 900px) { .rcp-kv { grid-template-columns: 1fr 1fr; } }
 </style>
+<?= mk_tax_badge_css() ?>
+<script>
+// Pesan singkat setelah simpan (mockup toast), dikirim dari form lewat sessionStorage.
+try { var puFlash = sessionStorage.getItem('pu_flash'); if (puFlash) { sessionStorage.removeItem('pu_flash'); document.addEventListener('DOMContentLoaded', function () { var t = document.createElement('div'); t.textContent = puFlash; t.style.cssText = 'position:fixed;right:16px;bottom:16px;background:#333;color:#fff;padding:10px 14px;border-radius:3px;z-index:2000;font-size:13px;max-width:340px'; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600); }); } } catch (e) {}
+</script>
+<h1 style="font-size: 24px; margin: 0 0 14px;">Penerimaan Piutang</h1>
 <div class="box box-primary">
-    <div class="box-header with-border">
-        <h3 class="box-title" style="font-weight: 700;">Penerimaan Piutang</h3>
-    </div>
     <div class="box-body">
         <div class="text-muted" style="font-size: 12px; margin-bottom: 14px;"><a href="<?= site_url('penerimaan_uang') ?>#tab_report">Report Penerimaan</a> / Detail</div>
 
@@ -93,7 +96,7 @@ if ($showKartu) {
             <div><span>Bank</span><?= $e($bankName) ?></div>
             <div><span>Status</span><span class="label label-success">Used</span></div>
             <?php if ($isDeposit) : ?>
-                <div><span>Jenis</span><span class="label label-info">Kwitansi Deposit</span></div>
+                <div><span>Jenis</span><span class="label label-success">Kwitansi Deposit</span></div>
                 <div><span>Uang masuk</span>Rp <?= $idn($uangMasuk) ?></div>
                 <div><span>Masuk ke deposit customer</span>Rp <?= $idn($tot['piutang']) ?></div>
             <?php else : ?>
@@ -123,7 +126,7 @@ if ($showKartu) {
                         <?php foreach ($rows as $r) : ?>
                             <tr>
                                 <td><?= $e($r['no']) ?></td>
-                                <td><?= $r['tax'] !== '' ? '<span class="tax-badge tax-' . $e($r['tax']) . '">' . $e($r['tax']) . '</span>' : '<span class="text-muted">-</span>' ?></td>
+                                <td><?= $r['tax'] !== '' ? mk_tax_badge($r['tax']) : '<span class="text-muted">-</span>' ?></td>
                                 <td class="text-right"><?= $en($r['pph']) ?></td>
                                 <td class="text-right"><?= $en($r['piutang']) ?></td>
                                 <td class="text-right"><?= $en($r['alok']) ?></td>

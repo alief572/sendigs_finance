@@ -321,7 +321,11 @@ class Consulting_receipt
                 foreach (array('cash','admin','pph','lebih','balance','sisa') as $money) {
                     if (!isset($snapshot[$money]) || !is_int($snapshot[$money]) || $snapshot[$money] < 0) $valid = false;
                 }
-                if ($valid && (Penerimaan_calculation::cents($detail['penerimaan']) !== $snapshot['cash']
+                // Basis bruto (mockup): kolom penerimaan = Alokasi (alokasi + sisa = piutang bruto); kas bank ada di snapshot (piutang - PPh - admin - sisa).
+                $grossBasis = !empty($snapshot['gross_basis']);
+                if ($valid && $grossBasis && ($snapshot['balance'] - $snapshot['pph'] - $snapshot['admin'] - $snapshot['sisa'] !== $snapshot['cash']
+                    || Penerimaan_calculation::cents($detail['penerimaan']) + $snapshot['sisa'] !== $snapshot['balance'])) $valid = false;
+                if ($valid && (($grossBasis ? false : Penerimaan_calculation::cents($detail['penerimaan']) !== $snapshot['cash'])
                     || Penerimaan_calculation::cents($detail['biaya_admin']) !== $snapshot['admin']
                     || Penerimaan_calculation::cents($detail['pph23']) !== $snapshot['pph']
                     || Penerimaan_calculation::cents($detail['sisa_piutang']) !== $snapshot['sisa'])) $valid = false;
@@ -697,7 +701,7 @@ class Consulting_receipt
                                 'nominal' => $custDep['nominal_awal'],
                                 'saldo_sebelum' => '0.00',
                                 'saldo_sesudah' => $custDep['nominal_awal'],
-                                'keterangan' => 'Pelunasan Kwitansi Deposit ' . $kw['no_kwitansi'],
+                                'keterangan' => 'Penerimaan deposit — Kwitansi ' . $kw['no_kwitansi'] . (!empty($kw['id_spk_penawaran']) ? ' (SPK ' . $kw['id_spk_penawaran'] . ')' : ''), // teks kartu deposit mockup (993)
                                 'created_by' => $s->ci->auth->user_id(),
                                 'created_date' => date('Y-m-d H:i:s')
                             )));

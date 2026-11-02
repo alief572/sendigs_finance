@@ -153,4 +153,14 @@ $gN = 1971810000 + 36180000;
 check($C::calculate($gN, 36180000, 'N', $gN, 0)['remaining'] === 0, 'N gross settles fully');
 check($C::calculate($gN, 36180000, 'N', 1000000000, 5000)['remaining'] === $gN - 1000005000, 'N gross partial');
 
+// settle(): perhitungan mockup. 174/STM/2026: G 20.079.900, PPh 361.800.
+$s = $C::settle(2007990000, 36180000, 'Y', 36180000, 250000, 0);
+check($s['cash'] === 2007990000 - 36180000 - 250000 && $s['remaining'] === 0 && $s['pph'] === 36180000, 'settle Y with admin');
+$s = $C::settle(2007990000, 0, 'N', 0, 0, 500000000);
+check($s['cash'] === 1507990000 && $s['remaining'] === 500000000 && $s['pph'] === 0, 'settle N partial with sisa');
+check($C::settle(2007990000, 36180000, 'N', 36180000, 0, 0)['pph'] === 0, 'settle N ignores PPh input');
+foreach (array(array(100, 10, 'Y', 11, 0, 0), array(100, 0, 'N', 0, 0, 101), array(100, 10, 'Y', 10, 95, 0), array(100, 0, 'X', 0, 0, 0)) as $bad) {
+    try { call_user_func_array(array($C, 'settle'), $bad); throw new RuntimeException('settle accepted invalid input'); } catch (InvalidArgumentException $expected) {}
+}
+
 echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";

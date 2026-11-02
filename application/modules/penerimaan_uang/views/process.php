@@ -150,7 +150,7 @@
             <th class="text-center">PPH 23<?= $pph23_dipotong === 'Y' ? '<br><small class="text-muted">default 2% DPP, bisa diedit</small>' : '' ?></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">(Penjualan + PPN)</small></th>
             <th class="text-center">Total Tagihan<br><small class="text-muted">- PPH</small></th>
-            <th class="text-center">Piutang Dagang<br><small class="text-muted"><?= $pph23_dipotong === 'N' ? '(Penjualan + PPN)' : '(neto PPh)' ?></small></th>
+            <th class="text-center">Piutang Dagang<br><small class="text-muted">(Penjualan + PPN)</small></th>
             <th class="text-center">Alokasi Penerimaan</th>
             <th class="text-center">Biaya Admin</th>
             <th class="text-center">Lebih Bayar</th>
@@ -162,10 +162,12 @@
     </tbody>
     <tbody>
         <tr>
-            <td colspan="6" class="text-right">Total</td>
-            <td colspan="2">
-                <input type="text" name="total_piutang" id="total_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang ?>" readonly>
+            <td colspan="5" class="text-right text-muted">Total</td>
+            <td>
+                <input type="text" name="total_pph_row" id="total_pph_row" class="form-control form-control-sm autonum text-right" readonly>
+                <input type="hidden" name="total_piutang" id="total_piutang" value="<?= $total_piutang ?>">
             </td>
+            <td colspan="2"></td>
             <td>
                 <input type="text" name="total_piutang_dagang" id="total_piutang_dagang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang_dagang ?>" readonly>
             </td>
@@ -183,7 +185,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="8" class="text-right text-muted">Total Piutang Dagang <?= $pph23_dipotong === 'N' ? '(Penjualan + PPN)' : '(neto PPh)' ?></td>
+            <td colspan="8" class="text-right text-muted">Total Piutang (Penjualan + PPN)</td>
             <td>
                 <input type="text" id="footer_piutang" class="form-control form-control-sm autonum text-right" value="<?= $total_piutang_dagang ?>" readonly>
                 <input type="text" name="grand_total" id="grand_total" class="autonum" style="display:none" readonly>
@@ -202,20 +204,21 @@
             <td>
                 <input type="text" id="footer_lebih" class="form-control form-control-sm autonum text-right" readonly>
             </td>
-            <td colspan="4" class="text-muted small">Masuk ke saldo deposit customer</td>
+            <td colspan="4" class="text-muted small" id="lebih_note" style="display:none">Masuk ke saldo deposit customer</td>
         </tr>
         <tr>
             <td colspan="8" class="text-right text-muted">Kontrol</td>
             <td>
                 <input type="text" name="kontrol" class="form-control form-control-sm autonum text-right" id="kontrol" readonly>
             </td>
-            <td colspan="4" class="text-muted small">(Alokasi Penerimaan + Lebih Bayar) &minus; Uang Masuk, ditambah selisih Sisa Piutang bila belum sesuai</td>
+            <td colspan="4" class="text-muted small">((Piutang &minus; PPH 23 &minus; Biaya Admin &minus; Sisa Piutang) &minus; Uang Masuk) + Lebih Bayar</td>
         </tr>
     </tbody>
 </table>
 
-<div id="kontrol_alert" class="alert alert-danger" role="alert" style="display:none; font-size: 13px;"><b id="kontrol_title"></b><div id="kontrol_hint"></div></div>
+<div id="kontrol_alert" class="alert alert-danger" role="alert" style="display:none; font-size: 13px;"><b id="kontrol_title"></b><ul id="kontrol_hint" style="margin: 6px 0 0 18px; padding: 0;"></ul></div>
 
+<div id="jurnal_box">
 <div class="section-t" style="font-weight:700; margin: 14px 0 8px;">Jurnal Penerimaan Piutang</div>
 <table class="table table-striped">
     <thead>
@@ -246,6 +249,7 @@
         </tr>
     </tbody>
 </table>
+</div>
 
 <script>
     function get_num(nilai = null) {
@@ -298,24 +302,19 @@
         return s.join(dec);
     }
 
-    // PPh yang disesuaikan pada baris i. N: 0 (tidak dipotong). Y: sisa batas - PPh yang benar-benar dipotong (kolom PPH 23 editable);
-    // tanpa kolom itu (atau default) penyesuaiannya 0 sehingga hasil sama dengan alur lama.
-    function pphAdjustment(i, remaining_pph, penerimaan, errors) {
+    // PPh yang dipotong pada baris i (mockup): Y = kolom PPH 23 (default sisa anggaran, 0..anggaran, bisa diedit); N = 0.
+    function pphValue(i, budget, errors) {
         if ($('input[name="pph23_dipotong"]').val() == 'N') { return 0; }
         var el = $('input[name="pph_actual_' + i + '"]');
-        if (!el.length) { return 0; }
+        if (!el.length) { return budget; }
         var actual = get_num(el.val());
         var link = $('.reset-pph-link-' + i);
-        if (link.length) { link.toggle(Math.abs(actual - remaining_pph) > 0.004); }
-        if (actual < 0 || actual > remaining_pph) { errors.push('PPh 23 baris ' + i + ' harus antara 0 dan ' + number_format(remaining_pph) + '.'); return 0; }
-        if (remaining_pph - actual > penerimaan) { errors.push('PPh 23 baris ' + i + ' terlalu kecil: selisihnya melebihi penerimaan.'); return 0; }
-        return Math.round((remaining_pph - actual) * 100) / 100;
+        if (link.length) { link.toggle(Math.abs(actual - budget) > 0.004); }
+        if (actual < 0 || actual > budget) { errors.push('PPh 23 baris ' + i + ' harus antara 0 dan ' + number_format(budget) + '.'); return 0; }
+        return actual;
     }
 
-    // Seperti mockup: mengedit PPH 23 tidak mengubah Sisa Piutang. Bila Sisa jadi tidak sesuai, hitungAll() hanya memberi catatan
-    // (Sisa yang seharusnya) dan tombol simpan tetap nonaktif sampai pengguna menyesuaikan Sisa/Penerimaan.
-    var holdSisa = 0;
-    function pphEdited(i) { holdSisa = i; hitungAll(); holdSisa = 0; }
+    function pphEdited(i) { hitungAll(); }
 
     function resetPph(i) {
         var el = $('input[name="pph_actual_' + i + '"]');
@@ -323,20 +322,15 @@
         hitungAll();
     }
 
-    // Sisa Piutang diketik: Penerimaan menyesuaikan (penerimaan = piutang - sisa - admin + penyesuaian PPh). Server tetap menghitung ulang sisa.
+    // Seperti mockup: Alokasi (tampilan) = Piutang - Sisa selama Alokasi belum diedit manual; Sisa tidak dihitung otomatis dari Alokasi/Admin.
+    var penManual = {};
+    function penEdited(i) { penManual[i] = true; hitungAll(); }
     function sisaEdited(i) {
-        var piutang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
-        var admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
-        var sisa = get_num($('input[name="sisa_piutang_' + i + '"]').val());
-        var remaining = get_num2($('input[name="remaining_pph_' + i + '"]').val());
-        var current = get_num($('input[name="penerimaan_' + i + '"]').val());
-        var x = Math.round((piutang - sisa - admin) * 100) / 100, pen;
-        if ($('input[name="pph23_dipotong"]').val() == 'N') {
-            pen = x > 0 ? x : 0;
-        } else {
-            pen = x + pphAdjustment(i, remaining, Math.max(current, x + remaining), []);
+        if (!penManual[i]) {
+            var piutang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
+            var sisa = get_num($('input[name="sisa_piutang_' + i + '"]').val());
+            $('input[name="penerimaan_' + i + '"]').autoNumeric('set', Math.max(0, Math.round((piutang - sisa) * 100) / 100));
         }
-        $('input[name="penerimaan_' + i + '"]').autoNumeric('set', Math.max(0, Math.round(pen * 100) / 100));
         hitungAll();
     }
 
@@ -359,107 +353,82 @@
         var ttl_biaya_admin = 0;
         var ttl_sisa_piutang = 0;
         var ttl_pph23 = 0;
+        var ttl_kas = 0;
         var inputErrors = [];
-        var sisaGap = 0, sisaHint = [];
         for (i = 1; i <= no; i++) {
             var piutang_dagang = get_num($('input[name="piutang_dagang_' + i + '"]').val());
             var penerimaan = get_num($('input[name="penerimaan_' + i + '"]').val());
             var biaya_admin = get_num($('input[name="biaya_admin_' + i + '"]').val());
-            ttl_lebih += lebihEligible ? Math.max(0, get_num($('input[name="lebih_bayar_' + i + '"]').val())) : 0;
-            // Use the remaining PPh from history, never the previous rendered credit.
-            var remaining_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
-            var pph23_inv = pphAdjustment(i, remaining_pph, penerimaan, inputErrors);
-            // Dipotong (mockup): PPh 23 Disetor didebit sebesar PPh yang dipotong, Piutang dikredit bruto (alokasi + admin + PPh).
-            // PPh 0: tidak ada debit, pakai bentuk lama (kredit PPh = penyesuaian) supaya sisa anggaran PPh tetap tercatat.
-            var pph_debit = (pph23_dipotong == 'Y') ? Math.round((remaining_pph - pph23_inv) * 100) / 100 : 0;
-            var pph_kredit = pph_debit > 0 ? 0 : pph23_inv;
+            var sisa_piutang = get_num($('input[name="sisa_piutang_' + i + '"]').val());
+            var lebih_inv = lebihEligible ? Math.max(0, get_num($('input[name="lebih_bayar_' + i + '"]').val())) : 0;
+            ttl_lebih += lebih_inv;
+            // Anggaran PPh dari riwayat (Y); N = 0.
+            var budget_pph = get_num2($('input[name="remaining_pph_' + i + '"]').val());
+            var pph23_inv = pphValue(i, budget_pph, inputErrors);
+
+            // Total Tagihan - PPH dihitung ulang langsung saat PPh diubah (mockup 832).
+            var tagihanCell = $('#tagihan_net_' + i);
+            if (tagihanCell.length) { tagihanCell.text(number_format(parseFloat(tagihanCell.attr('data-tagihan')) - pph23_inv)); }
+            if (penerimaan < 0 || biaya_admin < 0 || sisa_piutang < 0) { inputErrors.push('Nilai minus tidak diperbolehkan di baris ' + i + '.'); }
+            if (sisa_piutang > piutang_dagang) { inputErrors.push('Sisa piutang melebihi piutang dagang pada baris ' + i + '.'); }
+            if (Math.abs(penerimaan + sisa_piutang - piutang_dagang) > 0.004) { inputErrors.push('Alokasi penerimaan + sisa piutang harus sama dengan piutang dagang pada baris ' + i + '.'); }
+            // Kas bank invoice ini (mockup): Piutang - PPh 23 - Biaya Admin - Sisa.
+            var kas = Math.round((piutang_dagang - pph23_inv - biaya_admin - sisa_piutang) * 100) / 100;
+            if (kas < 0) { inputErrors.push('Penerimaan bank tidak boleh minus pada baris ' + i + '.'); }
+            ttl_kas += kas;
+
+            // Jurnal (mockup): Debit PPh 23 Disetor, Debit Admin, Kredit Piutang bruto, Debit Piutang = sisa.
             $.each(['1106-01-02', '1106-01-05'], function(index, coa) {
                 var cellK = $('.td_kredit_' + coa + '_' + i);
-                if (cellK.length) {
-                    cellK.html(number_format(pph_kredit) + '<input type="hidden" name="kredit_' + coa + '_' + i + '" value="' + pph_kredit + '">');
-                }
+                if (cellK.length) { cellK.html(number_format(0) + '<input type="hidden" name="kredit_' + coa + '_' + i + '" value="0">'); }
                 var cellD = $('.td_debit_' + coa + '_' + i);
-                if (cellD.length) {
-                    cellD.html(number_format(pph_debit) + '<input type="hidden" name="debit_' + coa + '_' + i + '" value="' + pph_debit + '">');
-                }
+                if (cellD.length) { cellD.html(number_format(pph23_inv) + '<input type="hidden" name="debit_' + coa + '_' + i + '" value="' + pph23_inv + '">'); }
             });
+            $('.td_kredit_1102-01-01_' + i).html(number_format(piutang_dagang) + '<input type="hidden" name="kredit_1102-01-01_' + i + '" value="' + piutang_dagang + '">');
+            $('.td_debit_1102-01-01_' + i).html(number_format(sisa_piutang) + '<input type="hidden" name="debit_1102-01-01_' + i + '" value="' + sisa_piutang + '">');
+            $('.td_debit_7201-01-04_' + i).html(number_format(biaya_admin) + '<input type="hidden" name="debit_7201-01-04_' + i + '" value="' + biaya_admin + '">');
 
-            // Satu rumus untuk Y dan N: reduction = penerimaan + biaya admin - penyesuaian PPh; sisa = piutang - reduction.
-            var sisa_piutang = Math.round((piutang_dagang - (penerimaan - pph23_inv) - biaya_admin) * 100) / 100;
-            if (sisa_piutang < 0) { inputErrors.push('Penerimaan melebihi piutang dagang pada baris ' + i + '.'); }
-
-            // Jangan menimpa kolom Sisa yang sedang diketik pengguna (caret akan melompat).
-            var sisaEl = $('input[name="sisa_piutang_' + i + '"]');
-            var sisa_dipakai = sisa_piutang;
-            if (holdSisa === i) {
-                // Seperti mockup: Sisa yang tampil tidak berubah; selisihnya masuk ke Kontrol.
-                sisa_dipakai = get_num(sisaEl.val());
-                var gap = Math.round((sisa_piutang - sisa_dipakai) * 100) / 100;
-                if (Math.abs(gap) > 0.004) { sisaGap += gap; sisaHint.push('baris ' + i + ' seharusnya ' + number_format(sisa_piutang)); }
-            } else if (!(typeof document !== 'undefined' && sisaEl[0] && document.activeElement === sisaEl[0])) {
-                sisaEl.autoNumeric('set', sisa_piutang);
-            }
-
-            var coa_jurnal = ['1102-01-01', '7201-01-04', '1106-01-02', '1106-01-05'];
-            $.each(coa_jurnal, function(index, value) {
-                index = index + 1;
-                if (value == '1102-01-01') {
-                    // Dipotong maupun tidak: kredit piutang dagang = penerimaan + biaya admin - penyesuaian PPh (0 pada Dipotong default).
-                    var kredit_piutang_dagang = pph_debit > 0 ? penerimaan + biaya_admin + pph_debit : penerimaan + biaya_admin - pph23_inv;
-                    kredit_piutang_dagang = Math.round(kredit_piutang_dagang * 100) / 100;
-                    var resp_piutang = number_format(kredit_piutang_dagang);
-                    resp_piutang += '<input type="hidden" name="kredit_' + value + '_' + i + '" value="' + kredit_piutang_dagang + '">';
-
-                    $('.td_kredit_' + value + '_' + i).html(resp_piutang);
-                }
-                if (value == '7201-01-04') {
-                    var resp_admin = number_format(biaya_admin);
-                    resp_admin += '<input type="hidden" name="debit_' + value + '_' + i + '" value="' + biaya_admin + '">';
-
-                    $('.td_debit_' + value + '_' + i).html(resp_admin);
-                }
-                if (value == '1106-01-02') {
-                    var pph23 = $('input[name="kredit_' + value + '_' + i + '"]').val();
-                }
-
+            $.each(['1102-01-01', '7201-01-04', '1106-01-02', '1106-01-05'], function(index, value) {
                 ttl_debit_jurnal += get_num2($('input[name="debit_' + value + '_' + i + '"]').val());
                 ttl_kredit_jurnal += get_num2($('input[name="kredit_' + value + '_' + i + '"]').val());
             });
 
-
             ttl_piutang_dagang += piutang_dagang;
             ttl_penerimaan += penerimaan;
             ttl_biaya_admin += biaya_admin;
-            ttl_sisa_piutang += sisa_dipakai;
+            ttl_sisa_piutang += sisa_piutang;
             ttl_pph23 += pph23_inv;
-
         }
 
         var grand_total = Math.round(ttl_penerimaan * 100) / 100;
         // Lebih Bayar ikut sisi bank: uang masuk = penerimaan + lebih bayar.
-        var kontrol = Math.round((grand_total + ttl_lebih - uang_masuk + sisaGap) * 100) / 100;
-        // Catatan kontrol (mengikuti mockup): merah bila kontrol belum 0, biru bila 0. Lebih Bayar hanya tersedia bila semua invoice satu company pemilik jurnal.
+        if (ttl_biaya_admin > 10000) { inputErrors.push('Total biaya admin melebihi ' + number_format(10000) + '.'); }
+        // Kontrol (mockup): ((Piutang - PPh 23 - Biaya Admin - Sisa) - Uang Masuk) + Lebih Bayar.
+        var kontrol = Math.round((ttl_kas + ttl_lebih - uang_masuk) * 100) / 100;
         var kontrolTitle, kontrolMsg;
         if (inputErrors.length) {
-            kontrolTitle = 'Catatan: ada isian yang belum valid.';
+            kontrolTitle = kontrol !== 0 ? 'Catatan: kontrol belum 0, belum bisa disimpan.' : 'Catatan: data belum valid.';
             kontrolMsg = inputErrors.join(' ');
-        } else if (Math.abs(sisaGap) > 0.004) {
-            kontrolTitle = 'Catatan: kontrol belum 0.';
-            kontrolMsg = 'Sisa Piutang belum sesuai dengan Penerimaan dan PPh 23 (' + sisaHint.join('; ') + '). Ubah Sisa Piutang atau Penerimaan.';
-        } else if (kontrol < 0) {
-            kontrolTitle = 'Catatan: kontrol belum 0.';
-            kontrolMsg = lebihEligible
-                ? 'Uang masuk lebih besar ' + number_format(-kontrol) + '. Isi Lebih Bayar pada invoice untuk kelebihan ini (masuk ke saldo deposit customer), atau tambah invoice yang dibayar.'
-                : 'Uang masuk lebih besar ' + number_format(-kontrol) + ' dari penerimaan. Lebih Bayar tidak tersedia untuk invoice ini (company belum terpetakan atau campuran): tambah invoice yang dibayar, atau kembalikan ke Alokasi untuk dialokasikan ulang.';
         } else if (kontrol > 0) {
-            kontrolTitle = 'Catatan: kontrol belum 0.';
-            kontrolMsg = 'Penerimaan + Lebih Bayar melebihi uang masuk ' + number_format(kontrol) + '. Kurangi nilai Alokasi Penerimaan atau Lebih Bayar.';
+            kontrolTitle = 'Catatan: kontrol belum 0, belum bisa disimpan.';
+            kontrolMsg = 'Masih ada selisih kurang ' + number_format(kontrol) + '. Alokasikan ke PPh 23, Biaya Admin, atau Sisa Piutang pada invoice yang sesuai.';
+        } else if (kontrol < 0) {
+            kontrolTitle = 'Catatan: kontrol belum 0, belum bisa disimpan.';
+            kontrolMsg = lebihEligible
+                ? 'Ada kelebihan ' + number_format(-kontrol) + '. Alokasikan ke Lebih Bayar (masuk ke saldo deposit customer).'
+                : 'Ada kelebihan ' + number_format(-kontrol) + '. Lebih Bayar tidak tersedia untuk invoice ini (company belum terpetakan atau campuran): sesuaikan PPh 23, Biaya Admin, atau Sisa Piutang.';
         } else {
             kontrolTitle = 'Kontrol 0.';
             kontrolMsg = 'Periksa jurnal di bawah, lalu klik Simpan Penerimaan & Bentuk Jurnal.';
         }
         $('#kontrol_title').text(kontrolTitle);
-        $('#kontrol_hint').text(kontrolMsg);
+        // Catatan sebagai daftar berpoin (mockup errlist).
+        var hintItems = inputErrors.length ? inputErrors : [kontrolMsg];
+        $('#kontrol_hint').empty();
+        $.each(hintItems, function(idx, text) { $('#kontrol_hint').append($('<li>').text(text)); });
+        $('#kontrol').css('background', kontrol === 0 ? '#dff0d8' : '#f2dede');
+        $('#lebih_note').toggle(ttl_lebih > 0);
+        $('#total_pph_row').autoNumeric('init', {vMin: '-9999999999999.99', vMax: '9999999999999.99', aSep: '.', aDec: ','}).autoNumeric('set', ttl_pph23);
         $('#kontrol_alert').removeClass('alert-danger alert-info').addClass(kontrol === 0 && !inputErrors.length ? 'alert-info' : 'alert-danger').show();
         $('.tr_jurnal_lebih').toggle(ttl_lebih > 0);
         $('.td_kredit_lebih').html(number_format(ttl_lebih) + '<input type="hidden" name="kredit_lebih" value="' + ttl_lebih + '">');
@@ -515,7 +484,7 @@
         $('#footer_lebih').autoNumeric('set', ttl_lebih);
 
         // Update nilai Bank Debit dengan total penerimaan yang diketik user
-        var bank_masuk = ttl_penerimaan + ttl_lebih;
+        var bank_masuk = ttl_kas + ttl_lebih;
         var resp_debit_bank_debit = number_format(bank_masuk);
         resp_debit_bank_debit += '<input type="hidden" name="debit_bank_debit" value="' + bank_masuk + '">';
         $('.td_debit_bank_debit').html(resp_debit_bank_debit);
@@ -529,6 +498,9 @@
 
         $('.td_total_debit_jurnal').html(resp_ttl_debit_jurnal);
         $('.td_total_kredit_jurnal').html(resp_ttl_kredit_jurnal);
+
+        // Seperti mockup: jurnal hanya tampil bila Kontrol 0 dan isian valid.
+        $('#jurnal_box').toggle(kontrol === 0 && inputErrors.length === 0);
 
         // Tombol simpan di footer modal (add.php) aktif hanya bila Kontrol 0, ada uang bank yang dialokasikan, dan jurnal seimbang.
         $('#dialog-popup button[type="submit"]').prop('disabled', !(kontrol === 0 && inputErrors.length === 0 && bank_masuk > 0 && Math.abs(ttl_debit_jurnal - ttl_kredit_jurnal) < 0.01));

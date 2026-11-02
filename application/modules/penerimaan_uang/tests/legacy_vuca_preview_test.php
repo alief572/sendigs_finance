@@ -21,7 +21,7 @@ expectLegacy(($c->template->data['nm_customer'] ?? null) === 'Customer', 'Legacy
 // Save must ignore stale/tampered hidden saldo and journal values.
 $db->invoice['created_date'] = '2026-08-20';
 $c->auth = new LegacyAuth; $c->session = new LegacySession;
-$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'N','nominal_penerimaan_bank'=>'999','no_inv'=>1,'id_inv_1'=>'189','penerimaan_1'=>'2.574.990,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'468.180,00','kredit_1106-01-02_1'=>'468180','kredit_1102-01-01_1'=>'2106810','debit_bank_debit'=>'999');
+$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'N','nominal_penerimaan_bank'=>'999','no_inv'=>1,'id_inv_1'=>'189','penerimaan_1'=>'2.574.990,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0','kredit_1106-01-02_1'=>'468180','kredit_1102-01-01_1'=>'2106810','debit_bank_debit'=>'999');
 ob_start(); $c->save_penerimaan_piutang(); $saved = json_decode(ob_get_clean(), true);
 expectLegacy($saved['status'] === 1, 'Final installment saves');
 expectLegacy($db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00', 'Server computes settlement ignoring stale saldo');
@@ -61,7 +61,7 @@ expectLegacy($c->Penerimaan_uang_model->remaining_receipt_pph($db->invoice, 'N')
 $c->input->values = array('choose_inv'=>array('189'),'id_alokasi'=>5102,'pph23_dipotong'=>'N','ppn_dipotong'=>'Y','customer'=>'Customer','nominal_penerimaan_bank'=>'2,574,990');
 ob_start(); $c->process_alokasi(); $error = ob_get_clean();
 expectLegacy($error === '' && strpos($c->template->data['hasil'], 'name="remaining_pph_1" value="0.00"') !== false, 'Actual legacy preview opens');
-$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'N','nominal_penerimaan_bank'=>'2.574.990,00','no_inv'=>1,'id_inv_1'=>'189','penerimaan_1'=>'2.574.990,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'468.180,00');
+$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'N','nominal_penerimaan_bank'=>'2.574.990,00','no_inv'=>1,'id_inv_1'=>'189','penerimaan_1'=>'2.574.990,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
 ob_start(); $c->save_penerimaan_piutang(); $saved = json_decode(ob_get_clean(), true);
 expectLegacy($saved['status'] === 1 && $db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00', 'Actual legacy settlement saves with zero balance');
 $validHistory = $db->history;
@@ -94,9 +94,9 @@ foreach (array('Y','N') as $choice) {
         $db->invoice['saldo_piutang'] = $balance;
         $c->input->values = array('choose_inv'=>array('038'),'id_alokasi'=>5258,'pph23_dipotong'=>$choice,'ppn_dipotong'=>'Y','customer'=>'Customer','nominal_penerimaan_bank'=>'15,000,000');
         $before = $db->invoice; $c->process_alokasi(); $data = $c->template->data;
-        expectLegacy($data['total_piutang_dagang'] == $balance, 'Preview must retain actual balance '.$balance.' choice '.$choice);
+        expectLegacy($data['total_piutang_dagang'] == $balance + 75000, 'Preview shows gross basis (saldo + unused PPh budget) '.$balance.' choice '.$choice);
         expectLegacy(strpos($data['hasil'], '>15,000,000</td>') !== false, 'Legacy gross display');
-        expectLegacy(strpos($data['hasil_jurnal'], 'name="kredit_1102-01-01_1" value="'.(int)$balance.'"') !== false, 'Preview credit matches actual balance');
+        expectLegacy(strpos($data['hasil_jurnal'], 'name="kredit_1102-01-01_1" value="'.((int)$balance + 75000).'"') !== false, 'Preview credit matches gross balance');
         expectLegacy($data['total_piutang'] == ($choice === 'N' ? 15000000 : 14925000), 'Total invoice gross/net');
         expectLegacy($db->invoice === $before, 'Preview must not mutate invoice');
     }
@@ -109,7 +109,7 @@ foreach (array('0','1') as $type) {
     $db->invoice['saldo_piutang'] = '4000000.00';
     $c->input->values = array('choose_inv'=>array('038'),'id_alokasi'=>5258,'pph23_dipotong'=>'N','ppn_dipotong'=>'Y','customer'=>'Customer','nominal_penerimaan_bank'=>'15,000,000');
     $c->process_alokasi();
-    expectLegacy($c->template->data['total_piutang_dagang'] == 4000000, 'Existing installment remains authoritative');
+    expectLegacy($c->template->data['total_piutang_dagang'] == 4075000, 'Existing installment stays authoritative (saldo + unused PPh budget)');
     expectLegacy($c->template->data['total_piutang'] == 16000000, 'Stored nonzero gross retained');
 }
 // Creation must stop producing zero gross for new Vuca invoices.
@@ -154,7 +154,7 @@ $db->invoice['tipe_invoice'] = '1'; $db->invoice['tagihan_ppn_jurnal'] = '0.00';
 $db->invoice['created_date'] = '2026-09-15';
 $c->auth = new LegacyAuth; $c->session = new LegacySession;
 $p = new ReflectionProperty('Penerimaan_uang', 'accounting'); $p->setAccessible(true); $p->setValue($c, new LegacyWriterDb);
-$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5258,'ppn_dipotong'=>'Y','pph23_dipotong'=>'Y','nominal_penerimaan_bank'=>'4.000.000,00','no_inv'=>1,'id_inv_1'=>'038','penerimaan_1'=>'4.000.000,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
+$c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5258,'ppn_dipotong'=>'Y','pph23_dipotong'=>'Y','nominal_penerimaan_bank'=>'4.000.000,00','no_inv'=>1,'id_inv_1'=>'038','penerimaan_1'=>'4.075.000,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
 ob_start(); $c->save_penerimaan_piutang(); $saved = json_decode(ob_get_clean(), true);
 expectLegacy($saved['status'] === 1, 'Receipt fixture saves');
 expectLegacy($db->batches['tr_penerimaan_piutang_detail'][0]['tagihan_ppn'] === '15000000.00', 'Receipt snapshot effective gross');
@@ -214,7 +214,7 @@ foreach (array('6' => '3', '1' => '4', '3' => '3', '4' => '4') as $legacyId => $
 $db->companyId = '7';
 // Tanpa Lebih Bayar: perilaku lama (tanpa snapshot/voucher).
 $db->batches = array(); $db->inserts = array(); $plain = $saveLebih(array('lebih_bayar_1'=>'', 'penerimaan_1'=>'2.574.990,00'));
-expectLegacy($plain['status'] === 1 && !isset($db->inserts['tr_customer_deposit']) && empty($db->batches['tr_penerimaan_piutang_detail'][0]['consulting_snapshot']) && $db->batches['tr_jurnal'][0]['debit'] === '2574990.00', 'Without Lebih Bayar nothing deposit-related is written');
+expectLegacy($plain['status'] === 1 && !isset($db->inserts['tr_customer_deposit']) && empty((json_decode($db->batches['tr_penerimaan_piutang_detail'][0]['consulting_snapshot'], true) ?: array())['legacy']) && $db->batches['tr_jurnal'][0]['debit'] === '2574990.00', 'Without Lebih Bayar nothing deposit-related is written');
 // Rollback invoice lama: voucher Lebih Bayar dihapus bila belum terpakai, ditolak bila sudah terpakai.
 $rollback = function () use ($c) { $c->input->values = array('id_penerimaan'=>'H1'); $m = new ReflectionMethod('Penerimaan_uang', 'rollback_legacy_penerimaan'); $m->setAccessible(true); ob_start(); $m->invoke($c); return json_decode(ob_get_clean(), true); };
 $db->journals = array(); $db->history = array(array('id_inv'=>'189','penerimaan'=>'2574990.00','biaya_admin'=>'0.00','pph23'=>'0.00'));
@@ -257,30 +257,30 @@ $db->historyChoice = 'Y'; $db->history = array(array('id_header'=>'OLD'));
 
 // Simpan Y.
 $yPost = array('nm_customer'=>'Customer','id_alokasi'=>5102,'ppn_dipotong'=>'Y','pph23_dipotong'=>'Y','nominal_penerimaan_bank'=>'999','no_inv'=>1,'id_inv_1'=>'189',
-    'penerimaan_1'=>'2,574,990.00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
+    'penerimaan_1'=>'3,043,170.00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
 $saveY = function ($overrides = array()) use ($c, $yPost) {
     $c->input->values = array_replace($yPost, $overrides); ob_start(); $c->save_penerimaan_piutang(); return json_decode(ob_get_clean(), true);
 };
 $rowOf = function ($coa) use ($db) { foreach ($db->batches['tr_jurnal'] as $line) { if ($line['coa'] === $coa) return $line; } return null; };
 $db->batches = array();
 $res = $saveY();
-expectLegacy($res['status'] === 1 && $rowOf('1102-01-01')['kredit'] === '2574990.00' && $rowOf('1106-01-02')['kredit'] === '0.00', 'Y without pph_actual is exactly the old behaviour: '.json_encode($res));
+expectLegacy($res['status'] === 1 && $rowOf('1102-01-01')['kredit'] === '3043170.00' && $rowOf('1106-01-02')['debit'] === '468180.00' && $db->batches['tr_jurnal'][0]['debit'] === '2574990.00', 'Y without pph_actual books the full budget as PPh and a gross piutang credit (mockup): '.json_encode($res));
 $db->batches = array();
 $res = $saveY(array('pph_actual_1'=>'468,180.00'));
-expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['kredit'] === '0.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00', 'Y with p = budget equals the default');
+expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['debit'] === '468180.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00', 'Y with p = budget equals the default');
 $db->batches = array();
-$res = $saveY(array('pph_actual_1'=>'268,180.00', 'penerimaan_1'=>'2,774,990.00'));
+$res = $saveY(array('pph_actual_1'=>'268,180.00'));
 expectLegacy($res['status'] === 1, 'Y with a lower PPh saves: '.json_encode($res));
 $dr = 0; $cr = 0; foreach ($db->batches['tr_jurnal'] as $line) { $dr += (float)$line['debit']; $cr += (float)$line['kredit']; }
-expectLegacy($db->batches['tr_jurnal'][0]['debit'] === '2774990.00' && $rowOf('1102-01-01')['kredit'] === '2574990.00' && $rowOf('1106-01-02')['kredit'] === '200000.00' && abs($dr - $cr) < 0.005, 'PPh adjustment is credited and the journal still balances');
-expectLegacy($db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['penerimaan'] === '2774990.00', 'Detail keeps legacy columns, sisa settles to zero');
+expectLegacy($db->batches['tr_jurnal'][0]['debit'] === '2774990.00' && $rowOf('1102-01-01')['kredit'] === '3043170.00' && $rowOf('1106-01-02')['debit'] === '268180.00' && abs($dr - $cr) < 0.005, 'Edited PPh is debited, piutang credited gross and the journal still balances');
+expectLegacy($db->batches['tr_penerimaan_piutang_detail'][0]['sisa_piutang'] === '0.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['penerimaan'] === '3043170.00' && $db->batches['tr_penerimaan_piutang_detail'][0]['pph23'] === '268180.00', 'Detail Alokasi = gross piutang, PPh = edited value, sisa settles to zero');
 foreach (array('p above the budget' => array('pph_actual_1'=>'468,181.00'), 'negative p' => array('pph_actual_1'=>'-1.00'), 'malformed p' => array('pph_actual_1'=>'12abc'),
     'adjustment larger than the receipt' => array('pph_actual_1'=>'0.00', 'penerimaan_1'=>'100,000.00')) as $label => $override) {
     $before = $db->batches; $res = $saveY($override);
     expectLegacy($res['status'] === 0 && !empty($res['message']) && $db->batches === $before, "Y rejects $label without writing");
 }
 $db->batches = array(); $db->historyChoice = 'N'; $db->history = array();
-$res = $saveY(array('pph23_dipotong'=>'N', 'pph_actual_1'=>'1.00', 'penerimaan_1'=>'2,774,990.00'));
-expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['kredit'] === '468180.00', 'N ignores pph_actual and keeps the automatic adjustment');
+$res = $saveY(array('pph23_dipotong'=>'N', 'pph_actual_1'=>'1.00'));
+expectLegacy($res['status'] === 1 && $rowOf('1106-01-02')['debit'] === '0.00' && $rowOf('1106-01-02')['kredit'] === '0.00' && $rowOf('1102-01-01')['kredit'] === '3043170.00', 'N ignores pph_actual: no PPh line, piutang credited gross (mockup)');
 $db->historyChoice = 'Y'; $db->history = array(array('id_header'=>'OLD'));
 echo "PASS: MINARTA final receipt and server journals, history validation, partial PPh, overpayment, cents, and legacy Vuca regressions\n";

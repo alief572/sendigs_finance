@@ -50,7 +50,7 @@ new vm.Script(script).runInNewContext({document, $, ConsultingReceiptMoney: mone
 assert.ok(html.includes('readonly'));
 assert.strictEqual(names.pph_actual_1.value,'0.00');assert.strictEqual(names.dep_1.value,'0.00');assert.strictEqual(names.sisa_piutang_1.value,'0.00');
 names.biaya_admin_1.value='5000.00';events.change({target:names.biaya_admin_1});assert.strictEqual(submit.disabled,false,nodes['error-text'].textContent);
-assert.strictEqual(nodes.tot_jurnal_debit.textContent,'20,000.00');assert.strictEqual(nodes.tot_jurnal_kredit.textContent,'20,000.00');
+assert.strictEqual(nodes.tot_jurnal_debit.textContent,'20,000');assert.strictEqual(nodes.tot_jurnal_kredit.textContent,'20,000');
 assert.strictEqual(nodes.tbody_preview_jurnal.children.length,3);
 names.biaya_admin_1.value='10000.01';events.change({target:names.biaya_admin_1});assert.strictEqual(submit.disabled,true);
 console.log('PASS: rendered kwitansi modal, full allocation, zero forbidden fields, admin cap and balanced bank/admin/receivable journal');

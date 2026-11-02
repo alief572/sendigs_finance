@@ -117,6 +117,29 @@ class Penerimaan_calculation
     }
 
     /**
+     * Perhitungan mockup per invoice (sen): kas bank = Piutang bruto - PPh - Admin - Sisa; saldo baru = Sisa.
+     * PPh hanya untuk pilihan Y (0..anggaran); N selalu 0. Alokasi tidak ikut hitungan (hanya tampilan: Alokasi + Sisa = Piutang).
+     */
+    public static function settle($balance, $budgetPph, $choice, $pphActual, $admin, $sisa)
+    {
+        if (!in_array($choice, array('Y', 'N'), true) || min($balance, $budgetPph, $admin, $sisa) < 0) {
+            throw new InvalidArgumentException('Pilihan PPh atau nominal tidak valid.');
+        }
+        $pph = $choice === 'Y' ? $pphActual : 0;
+        if ($pph < 0 || $pph > $budgetPph) {
+            throw new InvalidArgumentException('PPh 23 yang dipotong harus antara 0 dan sisa batas PPh invoice.');
+        }
+        if ($sisa > $balance) {
+            throw new InvalidArgumentException('Sisa piutang melebihi piutang dagang invoice.');
+        }
+        $cash = $balance - $pph - $admin - $sisa;
+        if ($cash < 0) {
+            throw new InvalidArgumentException('Penerimaan bank tidak boleh minus: PPh 23, biaya admin, dan sisa melebihi piutang dagang.');
+        }
+        return array('cash' => $cash, 'remaining' => $sisa, 'pph' => $pph);
+    }
+
+    /**
      * Calculate tax breakdown for consulting invoices based on tax treatment.
      * Tax treatments: 'PKP', 'WAPU', 'KB' (Kawasan Berikat).
      */

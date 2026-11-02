@@ -52,9 +52,9 @@ events.change({target: names.biaya_admin_1});
 assert.strictEqual(submit.disabled, false, nodes['error-text'].textContent);
 assert.strictEqual(journalSection.style.display, '', 'Journal appears once Kontrol is 0');
 assert.strictEqual(nodes.input_kontrol.value, '0.00');
-assert.strictEqual(nodes.tot_jurnal_debit.textContent, '222,000,000.00');
-assert.strictEqual(nodes.tot_jurnal_kredit.textContent, '222,000,000.00');
-assert.ok(nodes.tbody_preview_jurnal.children.every(row => row.children[0].textContent === '2026-10-26'));
+assert.strictEqual(nodes.tot_jurnal_debit.textContent, '222,000,000');
+assert.strictEqual(nodes.tot_jurnal_kredit.textContent, '222,000,000');
+assert.ok(nodes.tbody_preview_jurnal.children.every(row => row.children[0].textContent === '26-October-2026'));
 const fields = money.normalizeFields(inputs.map(({name, node}) => ({name, value: node.value})));
 const saved = runPhp(['--save'], JSON.stringify(Object.fromEntries(fields.map(f => [f.name, f.value]))));
 assert.strictEqual(saved.result.status, 1, JSON.stringify(saved.result));
@@ -63,10 +63,10 @@ assert.strictEqual(saved.details[0].penerimaan, '222000000.00');
 assert.strictEqual(saved.journals.length, nodes.tbody_preview_jurnal.children.length);
 for (const [index, line] of saved.journals.entries()) {
     const cells = nodes.tbody_preview_jurnal.children[index].children;
-    assert.strictEqual(cells[0].textContent, line.tgl_jurnal);
+    assert.strictEqual(cells[0].textContent, new Date(line.tgl_jurnal + 'T00:00:00').toLocaleDateString('en-GB', {day: '2-digit', month: 'long', year: 'numeric'}).replace(/ /g, '-'));
     assert.strictEqual(cells[1].textContent, line.coa);
     assert.strictEqual(cells[4].textContent, line.keterangan);
-    assert.strictEqual(cells[5].textContent, Number(line.debit) > 0 ? Number(line.debit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-');
+    assert.strictEqual(cells[5].textContent, Number(line.debit).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
 }
 names.sisa_piutang_1.value = '1,000,000.00';
 events.change({target: names.sisa_piutang_1});

@@ -1,5 +1,6 @@
 <?php
 define('BASEPATH',dirname(__DIR__,4).'/system/');class Admin_Controller{}
+require dirname(__DIR__,3).'/helpers/mockup_format_helper.php';
 require dirname(__DIR__).'/controllers/Penerimaan_uang.php';require dirname(__DIR__,3).'/libraries/Template.php';
 set_error_handler(function($level,$message,$file,$line){throw new ErrorException($message,0,$level,$file,$line);});
 function base_url($path=''){return '/'.$path;}

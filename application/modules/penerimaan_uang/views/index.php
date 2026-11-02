@@ -1,186 +1,114 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+<?= mk_tax_badge_css() ?>
 <style>
-    .tax-badge {
-        display: inline-block;
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-    }
-    .tax-PKP { background: #e8f4fd; color: #1976d2; border: 1px solid #bbdefb; }
-    .tax-WAPU { background: #fef8e7; color: #b78103; border: 1px solid #ffe082; }
-    .tax-KB { background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
-
-    .nav-tabs-custom > .nav-tabs > li.active {
-        border-top-color: #3c8dbc;
-    }
-    .nav-tabs-custom > .nav-tabs > li > a {
-        font-weight: 600;
-        font-size: 14px;
-    }
-
-    .filter-panel {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 18px;
-    }
-    .filter-panel label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #475569;
-        margin-bottom: 4px;
-    }
-    .form-control-sm {
-        height: 34px;
-        padding: 6px 10px;
-        font-size: 13px;
-        border-radius: 4px;
-    }
-
-    .table-report th {
-        background-color: #f1f5f9;
-        color: #334155;
-        font-weight: 700;
-        font-size: 12px;
-        vertical-align: middle !important;
-        white-space: nowrap;
-    }
-    .table-report td {
-        vertical-align: middle !important;
-        font-size: 13px;
-    }
-    .table-report tbody tr:hover {
-        background-color: #f8fafc;
-    }
-    .nowrap {
-        white-space: nowrap;
-    }
-    .font-bold {
-        font-weight: 700;
-    }
-    #table_report_filter {
-        display: none;
-    }
+    /* Tab & label mengikuti mockup (.tabs, .cnt, .lbl) */
+    .pu-tabs { display: flex; gap: 2px; border-bottom: 1px solid #d2d6de; margin: 0 0 14px; padding: 0; list-style: none; }
+    .pu-tabs > li > a { display: block; padding: 9px 16px; color: #777; border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; margin-bottom: -1px; font-weight: 600; text-decoration: none; }
+    .pu-tabs > li.active > a { background: #fff; color: #333; border-color: #d2d6de; border-top: 3px solid #3c8dbc; }
+    .pu-tabs .cnt { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: #d2d6de; color: #333; font-size: 11px; text-align: center; margin-left: 4px; }
+    .pu-lbl { display: inline-block; padding: 2px 8px; border-radius: 10px; color: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; background: #605ca8; }
+    .pu-lbl-draft { background: #f39c12; }
+    .pu-hint { font-size: 12px; color: #777; }
+    .pu-filters { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .pu-filters label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    #table_report td { vertical-align: top; }
+    #table_report th { white-space: nowrap; }
+    #table_report .r { text-align: right; }
+    #table_report .c { text-align: center; }
+    #table_report tr.sum td { border-top: 1px solid #d2d6de; }
+    #table_report .empty { text-align: center; color: #777; padding: 16px; }
+    #table_list_wrapper .dt-search, #table_kwitansi_wrapper .dt-search { display: block; }
 </style>
 
-<div class="nav-tabs-custom" style="box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px;">
-    <ul class="nav nav-tabs" id="penerimaan_tabs" role="tablist">
-        <li class="active">
-            <a href="#tab_penerimaan" data-toggle="tab" role="tab">
-                <i class="fa fa-hourglass-half text-yellow"></i> Penerimaan Piutang Invoice <span class="badge bg-yellow" id="badge_draft_invoice" style="margin-left: 4px;">0</span>
-            </a>
-        </li>
-        <li>
-            <a href="#tab_kwitansi" data-toggle="tab" role="tab">
-                <i class="fa fa-ticket text-aqua"></i> Penerimaan Piutang Kwitansi Deposit <span class="badge bg-aqua" id="badge_draft_deposit" style="margin-left: 4px;">0</span>
-            </a>
-        </li>
-        <li>
-            <a href="#tab_report" data-toggle="tab" role="tab">
-                <i class="fa fa-check-square-o text-green"></i> Report Penerimaan <span class="badge bg-green" id="badge_report" style="margin-left: 4px;">0</span>
-            </a>
-        </li>
-    </ul>
+<?php $tabCounts = $tab_counts ?? array('invoice' => 0, 'deposit' => 0, 'report' => 0); ?>
+<h1 style="font-size: 24px; margin: 0 0 14px;">Penerimaan Piutang</h1>
 
-    <div class="tab-content" style="padding: 18px;">
-        <!-- TAB 1: PENERIMAAN (DRAFT) -->
-        <div class="tab-pane active" id="tab_penerimaan">
-            <div class="filter-panel">
-                <div class="row">
-                    <div class="col-md-4">
-                        <label for="bank_filter">Filter Bank Penerima</label>
-                        <select name="bank" id="bank_filter" class="form-control form-control-sm bank">
-                            <option value="">- Semua Bank -</option>
+<ul class="pu-tabs" id="penerimaan_tabs" role="tablist">
+    <li class="active"><a href="#tab_penerimaan" data-toggle="tab" role="tab">Penerimaan Piutang Invoice <span class="cnt"><?= (int)$tabCounts['invoice'] ?></span></a></li>
+    <li><a href="#tab_kwitansi" data-toggle="tab" role="tab">Penerimaan Piutang Kwitansi Deposit <span class="cnt"><?= (int)$tabCounts['deposit'] ?></span></a></li>
+    <li><a href="#tab_report" data-toggle="tab" role="tab">Report Penerimaan <span class="cnt"><?= (int)$tabCounts['report'] ?></span></a></li>
+</ul>
+
+<div class="box box-primary">
+    <div class="box-body">
+        <div class="tab-content">
+            <!-- TAB 1: PENERIMAAN INVOICE (DRAFT) -->
+            <div class="tab-pane active" id="tab_penerimaan">
+                <div class="pu-filters" style="margin-bottom: 12px;">
+                    <div style="min-width: 260px; flex: 0 1 420px;">
+                        <select name="bank" id="bank_filter" class="form-control input-sm" aria-label="Bank">
+                            <option value="">- Pilih Bank -</option>
                             <?php foreach ($list_bank as $item_bank) : ?>
                                 <option value="<?= $item_bank['id'] ?>"><?= htmlspecialchars($item_bank['nama_bank'] . ' - ' . $item_bank['rekening'] . ' - ' . $item_bank['nama']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-top: 22px;">
-                        <button type="button" class="btn btn-sm btn-primary search" id="btn_search_draft">
-                            <i class="fa fa-search"></i> Search
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary" id="btn_search_draft">Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="table_list" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Tanggal Transaksi</th>
+                                <th>Bank</th>
+                                <th>Keterangan</th>
+                                <th class="text-right">Nominal</th>
+                                <th>Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped" id="table_list" style="width: 100%;">
-                    <thead>
-                        <tr style="background-color: #f8fafc;">
-                            <th class="text-center" style="width: 50px;">No.</th>
-                            <th class="text-center" style="width: 120px;">Tanggal Transaksi</th>
-                            <th style="min-width: 180px;">Bank</th>
-                            <th style="min-width: 220px;">Keterangan</th>
-                            <th class="text-right" style="width: 130px;">Nominal (Rp)</th>
-                            <th class="text-center" style="width: 90px;">Status</th>
-                            <th class="text-center" style="width: 80px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="tab-pane" id="tab_kwitansi">
-            <div class="filter-panel">
-                <div class="row">
-                    <div class="col-md-4">
-                        <label for="bank_filter_kwitansi">Filter Bank Penerima</label>
-                        <select name="bank" id="bank_filter_kwitansi" class="form-control form-control-sm bank">
-                            <option value="">- Semua Bank -</option>
+            <!-- TAB 2: PENERIMAAN KWITANSI DEPOSIT (DRAFT) -->
+            <div class="tab-pane" id="tab_kwitansi">
+                <div class="pu-filters" style="margin-bottom: 12px;">
+                    <div style="min-width: 260px; flex: 0 1 420px;">
+                        <select name="bank" id="bank_filter_kwitansi" class="form-control input-sm" aria-label="Bank">
+                            <option value="">- Pilih Bank -</option>
                             <?php foreach ($list_bank as $item_bank) : ?>
                                 <option value="<?= $item_bank['id'] ?>"><?= htmlspecialchars($item_bank['nama_bank'] . ' - ' . $item_bank['rekening'] . ' - ' . $item_bank['nama']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-top: 22px;">
-                        <button type="button" class="btn btn-sm btn-primary search" id="btn_search_kwitansi">
-                            <i class="fa fa-search"></i> Search
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary" id="btn_search_kwitansi">Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="table_kwitansi" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Tanggal Transaksi</th>
+                                <th>Bank</th>
+                                <th>Keterangan</th>
+                                <th class="text-right">Nominal</th>
+                                <th>Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped" id="table_kwitansi" style="width: 100%;">
-                    <thead>
-                        <tr style="background-color: #f8fafc;">
-                            <th class="text-center" style="width: 50px;">No.</th>
-                            <th class="text-center" style="width: 120px;">Tanggal Transaksi</th>
-                            <th style="min-width: 180px;">Bank</th>
-                            <th style="min-width: 220px;">Keterangan</th>
-                            <th class="text-right" style="width: 130px;">Nominal (Rp)</th>
-                            <th class="text-center" style="width: 90px;">Status</th>
-                            <th class="text-center" style="width: 80px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- TAB 2: REPORT PENERIMAAN (USED) -->
-        <div class="tab-pane" id="tab_report">
-            <div class="filter-panel">
-                <div class="row">
-                    <div class="col-md-2">
+            <!-- TAB 3: REPORT PENERIMAAN (USED) -->
+            <div class="tab-pane" id="tab_report">
+                <div class="pu-filters">
+                    <div>
                         <label for="rep_year">Tahun</label>
-                        <select id="rep_year" class="form-control form-control-sm">
+                        <select id="rep_year" class="form-control input-sm">
                             <option value="">Semua</option>
                             <?php foreach ($list_years as $yr) : ?>
                                 <option value="<?= $yr ?>"><?= $yr ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div>
                         <label for="rep_month">Bulan</label>
-                        <select id="rep_month" class="form-control form-control-sm">
+                        <select id="rep_month" class="form-control input-sm">
                             <option value="">Semua</option>
                             <?php
                             $months = array(1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember');
@@ -190,213 +118,157 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div>
                         <label for="rep_company">Company</label>
-                        <select id="rep_company" class="form-control form-control-sm">
+                        <select id="rep_company" class="form-control input-sm">
                             <option value="">Semua</option>
                             <?php foreach ($list_companies as $cmp) : ?>
                                 <option value="<?= $cmp ?>"><?= $cmp ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div>
                         <label for="rep_kind">Jenis</label>
-                        <select id="rep_kind" class="form-control form-control-sm">
+                        <select id="rep_kind" class="form-control input-sm">
                             <option value="">Semua</option>
                             <option value="invoice">Penerimaan Piutang Invoice</option>
                             <option value="deposit">Penerimaan Piutang Kwitansi Deposit</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div>
                         <label for="rep_search">Search</label>
-                        <input type="search" id="rep_search" class="form-control form-control-sm" placeholder="Cari apa saja: teks, angka, tanggal">
+                        <input type="search" id="rep_search" class="form-control input-sm" placeholder="Cari apa saja: teks, angka, tanggal">
                     </div>
-                    <div class="col-md-2 text-right" style="margin-top: 22px;">
-                        <a href="javascript:void(0)" class="btn btn-sm btn-success" id="btn_export_excel" title="Download Excel">
-                            <i class="fa fa-file-excel-o"></i> Export to Excel
-                        </a>
+                    <div style="margin-left: auto;">
+                        <a href="javascript:void(0)" class="btn btn-success" id="btn_export_excel">Export to Excel</a>
                     </div>
                 </div>
-            </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-report" id="table_report" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th class="text-center" style="width: 45px;">No.</th>
-                            <th class="text-center" style="width: 115px;">Tanggal Penerimaan</th>
-                            <th style="min-width: 140px;">Bank</th>
-                            <th style="min-width: 180px;">Detail Penerimaan Bank</th>
-                            <th style="min-width: 160px;">Customer</th>
-                            <th class="text-center" style="width: 140px;">Nomor Invoice / Kwitansi</th>
-                            <th class="text-center" style="width: 90px;">Company</th>
-                            <th class="text-center" style="width: 130px;">TAX Code & PPh 23</th>
-                            <th class="text-right" style="width: 140px;">Penerimaan Bank</th>
-                            <th class="text-center" style="width: 130px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                    <tfoot>
-                        <tr class="bg-gray font-bold">
-                            <td colspan="8" class="text-right" id="foot_summary_report">Total Penerimaan:</td>
-                            <td class="text-right" id="foot_tot_nominal_report">Rp. 0,00</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            <div class="text-muted" style="margin-top: 8px; font-size: 12px;">
-                <i class="fa fa-info-circle"></i> Tanggal penerimaan mengikuti tanggal mutasi bank yang dialokasikan. Satu mutasi bank yang membayar beberapa invoice ditampilkan sebagai satu grup transfer.
+                <div class="table-responsive" style="margin-top: 12px;">
+                    <table class="table" id="table_report" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Tanggal Penerimaan</th>
+                                <th>Bank</th>
+                                <th>Detail Penerimaan Bank</th>
+                                <th>Customer</th>
+                                <th>Nomor Invoice / Kwitansi</th>
+                                <th>Company</th>
+                                <th>TAX Code &amp; PPh 23</th>
+                                <th class="r">Penerimaan Bank</th>
+                                <th class="c">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report_body"></tbody>
+                    </table>
+                </div>
+                <div class="pu-hint" style="margin-top: 8px;">Tanggal penerimaan mengikuti tanggal rekening koran yang diupload di Alokasi. Satu transfer yang membayar beberapa invoice tampil sebagai satu grup.</div>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     $(document).ready(function() {
-        // Init DataTables for Tab 1 (Draft)
-        var table = $('#table_list').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: siteurl + active_controller + 'get_alokasi_penerimaan',
-                type: 'POST',
-                data: function(d) {
-                    d.bank = $('#bank_filter').val();
-                    d.tab = 'draft';
+        // DataTables draft list: urut tanggal naik (diurutkan server), tanpa sort kolom; teks sesuai mockup.
+        function draftTable(selector, bankSel, extra) {
+            return $(selector).DataTable({
+                processing: true,
+                serverSide: true,
+                ordering: false,
+                ajax: {
+                    url: siteurl + active_controller + 'get_alokasi_penerimaan',
+                    type: 'POST',
+                    data: function(d) {
+                        d.bank = $(bankSel).val();
+                        d.tab = 'draft';
+                        if (extra) d.receipt_kind = extra;
+                    }
+                },
+                columns: [
+                    { data: 'no' },
+                    { data: 'tgl_transaksi_bank', className: 'nowrap' },
+                    { data: 'bank' },
+                    { data: 'keterangan' },
+                    { data: 'nominal', className: 'text-right' },
+                    { data: 'status' },
+                    { data: 'action', className: 'text-center' }
+                ],
+                pageLength: 25,
+                lengthMenu: [10, 25, 50, 100],
+                language: {
+                    emptyTable: 'Tidak ada penerimaan yang menunggu proses. Yang sudah diproses ada di tab Report Penerimaan.',
+                    zeroRecords: 'Tidak ada penerimaan yang menunggu proses. Yang sudah diproses ada di tab Report Penerimaan.',
+                    lengthMenu: '_MENU_ entries per page',
+                    search: 'Search:',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                    infoEmpty: 'Showing 0 to 0 of 0 entries',
+                    infoFiltered: ''
                 }
-            },
-            columns: [
-                { data: 'no', className: 'text-center' },
-                { data: 'tgl_transaksi_bank', className: 'text-center nowrap' },
-                { data: 'bank' },
-                { data: 'keterangan' },
-                { data: 'nominal', className: 'text-right font-bold' },
-                { data: 'status', className: 'text-center' },
-                { data: 'action', className: 'text-center nowrap' }
-            ],
-            order: [[1, 'desc']],
-            pageLength: 25,
-            drawCallback: function(settings) {
-                var cnt = (settings.json && settings.json.recordsFiltered !== undefined) ? settings.json.recordsFiltered : 0;
-                $('#badge_draft_invoice').text(cnt);
-            }
-        });
+            });
+        }
+        var table = draftTable('#table_list', '#bank_filter', null);
+        var table_kwitansi = draftTable('#table_kwitansi', '#bank_filter_kwitansi', 'deposit');
 
-        $('#btn_search_draft').on('click', function() {
-            table.draw();
-        });
+        $('#btn_search_draft').on('click', function() { table.draw(); });
+        $('#btn_search_kwitansi').on('click', function() { table_kwitansi.draw(); });
 
-        var table_kwitansi = $('#table_kwitansi').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: siteurl + active_controller + 'get_alokasi_penerimaan',
-                type: 'POST',
-                data: function(d) {
-                    d.bank = $('#bank_filter_kwitansi').val();
-                    d.tab = 'draft';
-                    d.receipt_kind = 'deposit';
-                }
-            },
-            columns: [
-                { data: 'no', className: 'text-center' },
-                { data: 'tgl_transaksi_bank', className: 'text-center nowrap' },
-                { data: 'bank' },
-                { data: 'keterangan' },
-                { data: 'nominal', className: 'text-right font-bold' },
-                { data: 'status', className: 'text-center' },
-                { data: 'action', className: 'text-center nowrap' }
-            ],
-            order: [[1, 'desc']],
-            pageLength: 25,
-            drawCallback: function(settings) {
-                var cnt = (settings.json && settings.json.recordsFiltered !== undefined) ? settings.json.recordsFiltered : 0;
-                $('#badge_draft_deposit').text(cnt);
-            }
-        });
-
-        $('#btn_search_kwitansi').on('click', function() {
-            table_kwitansi.draw();
-        });
-
-        // Init DataTables for Tab 2 (Report Penerimaan Server-Side)
-        var table_report = $('#table_report').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
+        // Report: dimuat sebagai HTML (satu baris per invoice, kolom penerimaan di-rowspan) seperti mockup.
+        var reportReq = null;
+        function loadReport() {
+            if (reportReq) reportReq.abort();
+            reportReq = $.ajax({
                 url: siteurl + active_controller + 'get_report_penerimaan',
                 type: 'POST',
-                data: function(d) {
-                    d.year = $('#rep_year').val();
-                    d.month = $('#rep_month').val();
-                    d.company = $('#rep_company').val();
-                    d.receipt_kind = $('#rep_kind').val();
-                    d.id_customer = '';
-                    d.custom_search = $('#rep_search').val();
+                dataType: 'json',
+                data: {
+                    year: $('#rep_year').val(),
+                    month: $('#rep_month').val(),
+                    company: $('#rep_company').val(),
+                    receipt_kind: $('#rep_kind').val(),
+                    id_customer: '',
+                    custom_search: $('#rep_search').val()
                 }
-            },
-            columns: [
-                { data: 'no', className: 'text-center', orderable: false },
-                { data: 'tanggal', className: 'text-center nowrap' },
-                { data: 'bank' },
-                { data: 'detail_bank' },
-                { data: 'customer' },
-                { data: 'no_invoice', className: 'text-center font-bold nowrap', orderable: false },
-                { data: 'company', className: 'text-center', orderable: false },
-                { data: 'tax_pph', className: 'text-center', orderable: false },
-                { data: 'penerimaan_bank', className: 'text-right font-bold nowrap' },
-                { data: 'action', className: 'text-center nowrap', orderable: false }
-            ],
-            order: [[1, 'desc']],
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            drawCallback: function(settings) {
-                var json = settings.json;
-                if (json) {
-                    var countRec = json.recordsFiltered !== undefined ? json.recordsFiltered : 0;
-                    var countInv = json.count_invoices !== undefined ? json.count_invoices : 0;
-                    $('#badge_report').text(countRec);
-                    $('#foot_summary_report').html('<b>Total (' + countRec + ' penerimaan, ' + countInv + ' invoice/kwitansi)</b>');
-                    $('#foot_tot_nominal_report').html('<b>' + (json.total_nominal || 'Rp. 0,00') + '</b>');
+            }).done(function(res) {
+                var body = res.html || '';
+                if (!body) {
+                    body = '<tr><td colspan="10" class="empty">Tidak ada penerimaan yang sudah diproses untuk filter ini.</td></tr>';
+                } else {
+                    body += '<tr class="sum"><td colspan="8" style="text-align:right"><b>Total (' + res.count_receipts + ' penerimaan, ' + res.count_invoices + ' invoice/kwitansi)</b></td><td class="r"><b>' + res.total_nominal + '</b></td><td></td></tr>';
                 }
-                updateExportLink();
+                $('#report_body').html(body);
+                updateExportLink(!res.html);
+            });
+        }
+
+        function updateExportLink(disabled) {
+            var expUrl = siteurl + active_controller + 'export_excel?year=' + encodeURIComponent($('#rep_year').val()) +
+                '&month=' + encodeURIComponent($('#rep_month').val()) +
+                '&company=' + encodeURIComponent($('#rep_company').val()) +
+                '&search=' + encodeURIComponent($('#rep_search').val()) + '&receipt_kind=' + encodeURIComponent($('#rep_kind').val()) + '&id_customer=';
+            var btn = $('#btn_export_excel');
+            if (disabled) {
+                btn.removeAttr('href').addClass('disabled').attr('disabled', 'disabled');
+            } else {
+                btn.attr('href', expUrl).removeClass('disabled').removeAttr('disabled');
             }
-        });
-
-        function updateExportLink() {
-            var year = $('#rep_year').val();
-            var month = $('#rep_month').val();
-            var company = $('#rep_company').val();
-            var search = $('#rep_search').val();
-
-            var expUrl = siteurl + active_controller + 'export_excel?year=' + encodeURIComponent(year) +
-                '&month=' + encodeURIComponent(month) +
-                '&company=' + encodeURIComponent(company) +
-                '&search=' + encodeURIComponent(search) + '&receipt_kind=' + encodeURIComponent($('#rep_kind').val()) + '&id_customer=';
-            $('#btn_export_excel').attr('href', expUrl);
         }
 
         // Filter report berjalan langsung (seperti mockup): select saat berubah, pencarian bebas dengan jeda singkat.
         var searchTimer = null;
         $('#rep_search').on('input', function() {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(function() {
-                table_report.draw();
-            }, 300);
+            searchTimer = setTimeout(loadReport, 300);
         });
-
-        $('#rep_year, #rep_month, #rep_company, #rep_kind').on('change', function() {
-            table_report.draw();
-        });
+        $('#rep_year, #rep_month, #rep_company, #rep_kind').on('change', loadReport);
 
         // Tab switch handler
         $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
             var target = $(e.target).attr('href');
             if (target === '#tab_report') {
-                table_report.columns.adjust().draw();
+                loadReport();
             } else if (target === '#tab_penerimaan') {
                 table.columns.adjust().draw();
             } else if (target === '#tab_kwitansi') {
@@ -409,7 +281,7 @@
             $('#penerimaan_tabs a[href="' + window.location.hash + '"]').tab('show');
         }
 
-        // Rollback Click
+        // Rollback Click (fitur tambahan aplikasi, dipertahankan)
         $(document).on('click', '.rollback', function() {
             var id = $(this).data('id');
 
@@ -437,7 +309,8 @@
                                     timer: 2500
                                 });
                                 table.draw();
-                                table_report.draw();
+                                table_kwitansi.draw();
+                                loadReport();
                             } else {
                                 swal({
                                     type: 'warning',
@@ -460,7 +333,6 @@
             });
         });
 
-        // Trigger initial export link setup
-        updateExportLink();
+        loadReport();
     });
 </script>
