@@ -26,6 +26,7 @@ class Alokasi extends Admin_Controller
         $get_bank = $this->db->get()->result_array();
 
         $data['data_bank'] = $get_bank;
+        $data['is_admin'] = $this->auth->is_admin();
         $this->template->title('Alokasi');
         $this->template->render('index', $data);
     }
@@ -167,6 +168,68 @@ class Alokasi extends Admin_Controller
                 exit;
             }
         }
+    }
+
+    /** Insert 1 baris alokasi manual; hanya admin (dicek di server, bukan hanya disembunyikan di view). */
+    public function save_manual_alokasi()
+    {
+        $this->auth->restrict($this->viewPermission);
+        if (!$this->auth->is_admin()) {
+            echo json_encode(['status' => 0, 'msg' => 'Hanya admin yang dapat menambah alokasi manual.']);
+            return;
+        }
+
+        $post = $this->input->post();
+        $bank = $this->db->get_where('ms_bank', ['id' => $post['bank'] ?? '', 'deleted' => '0'])->row_array();
+        if (empty($bank)) {
+            echo json_encode(['status' => 0, 'msg' => 'Bank tidak ditemukan.']);
+            return;
+        }
+
+        require_once dirname(__DIR__) . '/libraries/Rekening_koran_parser.php';
+        $id_header = $this->Alokasi_model->generate_id();
+        list($row, $errors) = Rekening_koran_parser::manual_row($post, $bank, $id_header, $this->auth->user_id());
+        if ($errors) {
+            echo json_encode(['status' => 0, 'msg' => implode('; ', $errors)]);
+            return;
+        }
+
+        $user = $this->auth->user_id();
+        $now = date('Y-m-d H:i:s');
+        $this->db->trans_begin();
+        $ok = $this->db->insert('tr_alokasi', [
+            'id' => $id_header,
+            'tipe_bank' => $bank['id'],
+            'jenis_bank' => $bank['bank'],
+            'account_no' => $bank['rekening'] ?? '',
+            'tanggal_transaksi_from' => $row['tanggal_transaksi'],
+            'tanggal_transaksi_to' => $row['tanggal_transaksi'],
+            'saldo_awal' => $row['saldo'],
+            'total_debit' => $row['nominal_debit'],
+            'total_credit' => $row['nominal_kredit'],
+            'saldo_akhir' => $row['saldo'],
+            'status_alokasi' => 1,
+            'created_by' => $user,
+            'created_date' => $now
+        ]);
+        $ok = $ok && $this->db->insert('tr_alokasi_detail', $row);
+        $detail_id = $this->db->insert_id();
+        $ok = $ok && $this->db->insert('log_alokasi_history', [
+            'id_alokasi_detail' => $detail_id,
+            'action' => 'MANUAL_INSERT',
+            'deskripsi_log' => 'Alokasi manual oleh admin: ' . $row['keterangan'] . ' (Debit: Rp. ' . number_format((float)$row['nominal_debit'], 2)
+                . ', Kredit: Rp. ' . number_format((float)$row['nominal_kredit'], 2) . ')',
+            'created_by' => $user,
+            'created_date' => $now
+        ]);
+
+        if (!$ok || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => 0, 'msg' => 'Gagal menyimpan alokasi manual.']);
+            return;
+        }
+        $this->db->trans_commit();
+        echo json_encode(['status' => 1, 'msg' => 'Alokasi manual berhasil ditambahkan.', 'id_header' => $id_header]);
     }
 
     public function get_bank_sesuai_alokasi()

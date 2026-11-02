@@ -175,6 +175,39 @@ class Rekening_koran_parser
         ];
     }
 
+    /**
+     * Baris alokasi manual (admin) dari input form. Memakai validate() yang sama dengan upload.
+     * @param array $bank baris ms_bank (id, bank = id jenis bank); jenis_bank selalu dari master, bukan dari POST.
+     * @return array [row, errors]; errors kosong = valid
+     */
+    public static function manual_row(array $post, array $bank, $id_header, $userId)
+    {
+        $num = function ($v) { $v = str_replace(',', '', trim((string)$v)); return $v === '' ? 0 : $v; };
+        $row = [
+            'id_header' => $id_header,
+            'tipe_bank' => $bank['id'],
+            'jenis_bank' => $bank['bank'],
+            'tanggal_transaksi' => trim((string)($post['tanggal_transaksi'] ?? '')),
+            'keterangan' => trim((string)($post['keterangan'] ?? '')),
+            'cabang' => '',
+            'nominal_debit' => $num($post['nominal_debit'] ?? ''),
+            'nominal_kredit' => $num($post['nominal_kredit'] ?? ''),
+            'saldo' => $num($post['saldo'] ?? ''),
+            'reference_no' => trim((string)($post['reference_no'] ?? '')),
+            'cheque_no' => trim((string)($post['cheque_no'] ?? '')),
+            'status_approval' => 'approved',
+            'created_by' => $userId,
+            'created_date' => date('Y-m-d H:i:s')
+        ];
+        $errors = [];
+        // 'PEND' hanya untuk hasil upload mutasi BCA; input manual harus tanggal nyata.
+        if ($row['tanggal_transaksi'] === 'PEND') $errors[] = 'Tanggal tidak valid (PEND)';
+        foreach (self::validate([$row]) as $msg) $errors[] = $msg;
+        if ($row['keterangan'] === '') $errors[] = 'Keterangan wajib diisi';
+        if (!is_numeric($row['saldo'])) $errors[] = 'Saldo bukan angka';
+        return [$row, $errors];
+    }
+
     /** Validasi baris hasil parse; kembalikan [nomor baris (1-based) => pesan]. */
     public static function validate(array $rows)
     {

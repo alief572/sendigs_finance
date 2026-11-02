@@ -158,6 +158,9 @@
             <button type="button" class="btn btn-sm btn-danger clear_data"><i class="fa fa-refresh"></i> Reset</button>
             <!-- <button type="button" class="btn btn-sm btn-warning btn_print"><i class="fa fa-print"></i> Print</button> -->
             <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#dialog-popup"><i class="fa fa-plus"></i> Upload Rekening Koran</button>
+            <?php if (!empty($is_admin)) : ?>
+            <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#dialog-manual"><i class="fa fa-pencil"></i> Tambah Alokasi Manual</button>
+            <?php endif; ?>
         </div>
     </div>
     <div class="box-body">
@@ -181,6 +184,53 @@
         </table>
     </div>
 </div>
+<?php if (!empty($is_admin)) : ?>
+<div class="modal" id="dialog-manual" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title"><span class="fa fa-pencil"></span>&nbsp;Tambah Alokasi Manual (Admin)</h4>
+            </div>
+            <form action="" id="frm_manual">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Bank</label>
+                        <select name="bank" class="form-control form-control-sm" required>
+                            <option value="">- Bank -</option>
+                            <?php foreach ($data_bank as $bank) : ?>
+                                <option value="<?= $bank['id'] ?>"><?= htmlspecialchars($bank['nama_bank'] . ' - ' . $bank['rekening'] . ' - ' . $bank['nama'], ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Transaksi</label>
+                        <input type="date" name="tanggal_transaksi" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Keterangan</label>
+                        <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="255" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>No Referensi</label><input type="text" name="reference_no" class="form-control form-control-sm" maxlength="100"></div>
+                        <div class="col-md-6 form-group"><label>Cheque No</label><input type="text" name="cheque_no" class="form-control form-control-sm" maxlength="100"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group"><label>Debit</label><input type="text" name="nominal_debit" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                        <div class="col-md-4 form-group"><label>Kredit</label><input type="text" name="nominal_kredit" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                        <div class="col-md-4 form-group"><label>Saldo</label><input type="text" name="saldo" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                    </div>
+                    <p class="text-muted" style="font-size:12px">Baris langsung berstatus Open. Debit dan Kredit tidak boleh sama-sama 0.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Simpan</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <div class="modal" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -691,6 +741,34 @@
                         });
                     }
                 })
+            }
+        });
+    });
+
+    // Separator ribuan otomatis (1,234.56); server membuang koma sebelum validasi. Saldo boleh negatif, debit/kredit tidak.
+    $('#frm_manual input[name="nominal_debit"], #frm_manual input[name="nominal_kredit"]').autoNumeric('init', {vMin: '0.00', vMax: '9999999999999.99', aSep: ',', aDec: '.'});
+    $('#frm_manual input[name="saldo"]').autoNumeric('init', {vMin: '-9999999999999.99', vMax: '9999999999999.99', aSep: ',', aDec: '.'});
+
+    // Tambah alokasi manual (admin): angka dikirim dengan pemisah ribuan; server membuangnya dan tetap memvalidasi admin.
+    $(document).on('submit', '#frm_manual', function(e) {
+        e.preventDefault();
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'save_manual_alokasi',
+            data: $('#frm_manual').serialize(),
+            dataType: 'json',
+            success: function(result) {
+                if (result.status == '1') {
+                    $('#dialog-manual').modal('hide');
+                    $('#frm_manual')[0].reset();
+                    swal({type: 'success', title: 'Success !', text: result.msg, timer: 3000});
+                    DataTables();
+                } else {
+                    swal({type: 'warning', title: 'Warning !', text: result.msg});
+                }
+            },
+            error: function() {
+                swal({type: 'error', title: 'Error !', text: 'Please try again later !'});
             }
         });
     });
