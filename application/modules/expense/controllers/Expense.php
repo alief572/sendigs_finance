@@ -7917,7 +7917,7 @@ class Expense extends Admin_Controller
 				'nm_coa'          => $nm_piutang,
 				'debit'           => 0,
 				'kredit'          => $nominal,
-				'keterangan'      => 'Penghapusan Piutang Kelebihan Kasbon - ' . $data->no_doc,
+				'keterangan'      => $nm_piutang . ' - ' . $data->no_doc . (!empty($data->id_kasbon) ? ' (' . $data->id_kasbon . ')' : ''),
 				'sts'             => '0',
 				'no_transaksi'    => $data->no_doc,
 				'jenis_transaksi' => 'Pengembalian Kasbon',

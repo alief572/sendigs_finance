@@ -540,7 +540,7 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 								<td id="pv_comp_2">-</td>
 								<td style="font-weight:500;"><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?></td>
 								<td style="color:#475569;">
-									Pelunasan Piutang Kelebihan Kasbon (<?= htmlspecialchars($no_kasbon) ?>)
+									<?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?> (<?= htmlspecialchars($no_kasbon) ?>)
 								</td>
 								<td class="text-right" style="color:#94a3b8;">0</td>
 								<td id="pv_kredit_2" class="text-right" style="font-weight:700; color:#1e293b;"><?= number_format($harus_kembali) ?></td>

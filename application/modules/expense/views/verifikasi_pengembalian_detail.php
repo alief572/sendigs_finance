@@ -235,7 +235,7 @@ if (!empty($data->bukti_pengembalian)) {
 								<td class="text-center"><?= htmlspecialchars($transfer_tanggal) ?></td>
 								<td class="text-center"><b><?= htmlspecialchars($coa_piutang) ?></b></td>
 								<td><b><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?></b></td>
-								<td>Penghapusan Piutang Kelebihan Kasbon (Pengembalian Selesai)</td>
+								<td><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?> - <?= htmlspecialchars($no_doc_val) ?> (<?= htmlspecialchars($no_kasbon) ?>)</td>
 								<td class="text-right">0</td>
 								<td class="text-right" style="font-weight:bold; color:#2e59d9;"><?= number_format($transfer_jumlah) ?></td>
 							</tr>
