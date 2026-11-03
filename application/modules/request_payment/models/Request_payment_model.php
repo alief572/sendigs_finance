@@ -520,7 +520,7 @@ class Request_payment_model extends BF_Model
         foreach ($query_data as $row) {
             $tgl_pengajuan_fmt = !empty($row->pa_tgl_pengajuan) ? date('d F Y', strtotime($row->pa_tgl_pengajuan)) : '-';
             $tgl_bayar_fmt = !empty($row->tgl_pembayaran_paid) ? date('d F Y', strtotime($row->tgl_pembayaran_paid)) : (!empty($row->pa_tgl_bayar) ? date('d F Y', strtotime($row->pa_tgl_bayar)) : '-');
-            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : '-';
 
             $list_tgl_pengajuan_pembayaran[$row->no_doc] = [
                 'no_payment'     => $no_payment,
@@ -1865,7 +1865,6 @@ class Request_payment_model extends BF_Model
                 doc.no_doc LIKE '%{$escaped_search}%' OR
                 doc.no_kasbon_consultant LIKE '%{$escaped_search}%' OR
                 pa.id_payment LIKE '%{$escaped_search}%' OR
-                pa.id LIKE '%{$escaped_search}%' OR
                 doc.nama LIKE '%{$escaped_search}%' OR
                 doc.keperluan LIKE '%{$escaped_search}%' OR
                 doc.tipe LIKE '%{$escaped_search}%' OR
@@ -1975,7 +1974,7 @@ class Request_payment_model extends BF_Model
             }
 
             // Payment voucher number
-            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : (!empty($row->pa_id) ? $row->pa_id : '-');
+            $no_payment = !empty($row->pa_id_payment) ? $row->pa_id_payment : '-';
 
             // Status Badge
             $is_paid = (!empty($row->pa_tgl_bayar));
