@@ -603,6 +603,9 @@ foreach ($option_coa as $keys => $val) {
 		// terkirim di FormData. Pastikan bank pengembalian yang dipilih tetap
 		// dikirim agar baris jurnal Bank menampilkan rekening yang benar
 		// (bukan fallback default BCA).
+		// Field disabled tidak ikut terkirim; kirim eksplisit agar mode view bisa memuat jurnal tersimpan.
+		formdata.set('no_doc', $('#no_doc').val());
+		formdata.set('stsview', stsview);
 		var bankPengembalianVal = $('#bank_pengembalian').val();
 		if (bankPengembalianVal) {
 			formdata.set('bank_pengembalian', bankPengembalianVal);

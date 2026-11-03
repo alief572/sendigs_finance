@@ -1,4 +1,5 @@
 <?php
+$coa_piutang = isset($coa_piutang) ? $coa_piutang : Expense_company::COA_PIUTANG_KASBON;
 $no_doc_val   = isset($data->no_doc) ? $data->no_doc : '';
 $no_kasbon    = isset($data->id_kasbon) ? $data->id_kasbon : '-';
 $tgl_approval = !empty($data->tgl_approval_direktur) ? $data->tgl_approval_direktur : (!empty($data->created_date) ? $data->created_date : '-');
@@ -535,9 +536,9 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 							<!-- Baris 2: Sisi Kredit Piutang Kelebihan Kasbon -->
 							<tr>
 								<td id="pv_tgl_2" style="color:#64748b;"><?= date('d F Y') ?></td>
-								<td style="font-weight:600; color:#2b6cb0;">1103-01-15</td>
+								<td style="font-weight:600; color:#2b6cb0;"><?= htmlspecialchars($coa_piutang) ?></td>
 								<td id="pv_comp_2">-</td>
-								<td style="font-weight:500;">Piutang Kelebihan Kasbon</td>
+								<td style="font-weight:500;"><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?></td>
 								<td style="color:#475569;">
 									Pelunasan Piutang Kelebihan Kasbon (<?= htmlspecialchars($no_kasbon) ?>)
 								</td>

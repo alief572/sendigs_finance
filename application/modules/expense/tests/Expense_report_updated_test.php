@@ -6,7 +6,7 @@
  * 1. set_jurnal_expense(): Jurnal 1 preview untuk Lebih Kasbon (Debit 1103-01-15), Impas, dan Lebih Expense.
  * 2. approve(): Approval jenjang 1 (Finance: 0 -> 1) dan jenjang 2 (Direktur: 1 -> 3 untuk Lebih Kasbon, 1 -> 2 untuk Impas/Lebih Expense).
  * 3. Segregation of Duties (BR-12): Self-approval hanya untuk admin; self-verifikasi tetap dilarang.
- * 4. verifikasi_pengembalian_approve(): Verifikasi 3-checklist dan posting Jurnal 2 (Debit Bank, Kredit 1103-01-15).
+ * 4. verifikasi_pengembalian_approve(): Verifikasi 3-checklist dan posting Jurnal 2 (Debit Bank, Kredit 1103-01-14).
  * 5. verifikasi_pengembalian_reject(): Tolak verifikasi kembali ke status 3 dengan alasan wajib.
  * 6. _render_expense_status_badge(): Pemetaan badge visual 6-status (0, 1, 2, 3, 4, 9).
  */
@@ -511,10 +511,10 @@ testCheck(count($mockDb->inserted_jurnal) === 2, "Jurnal 2 berhasil dibukukan (2
 $j2_debit_bank = 0; $j2_kredit_piutang = 0;
 foreach ($mockDb->inserted_jurnal as $j) {
     if ($j['coa'] === '1101-02-01') $j2_debit_bank = $j['debit'];
-    if ($j['coa'] === '1103-01-15') $j2_kredit_piutang = $j['kredit'];
+    if ($j['coa'] === '1103-01-14') $j2_kredit_piutang = $j['kredit'];
 }
 testCheck($j2_debit_bank == 250000, "Jurnal 2: Debit Bank BCA (1101-02-01) Rp 250.000");
-testCheck($j2_kredit_piutang == 250000, "Jurnal 2: Kredit Piutang Kelebihan Kasbon (1103-01-15) Rp 250.000");
+testCheck($j2_kredit_piutang == 250000, "Jurnal 2: Kredit Piutang Lain-lain Konsultan (1103-01-14) Rp 250.000");
 
 // -----------------------------------------------------------
 // TEST 4: Penolakan Verifikasi (verifikasi_pengembalian_reject)
@@ -777,6 +777,7 @@ $exp_test9->form_pengembalian(999);
 testCheck($exp_test9->template->rendered_view === 'form_pengembalian', "Method form_pengembalian berhasil merender view 'form_pengembalian'");
 testCheck(isset($exp_test9->template->vars['data']), "Variable 'data' terdefinisi dalam template");
 testCheck(isset($exp_test9->template->vars['bank_options']), "Variable 'bank_options' terdefinisi dalam template");
+testCheck(($exp_test9->template->vars['coa_piutang'] ?? '') === '1103-01-14', "Variable 'coa_piutang' = 1103-01-14 untuk pengembalian baru");
 
 // 9.2: Evaluasi rendering template HTML form_pengembalian.php
 $data = $mock_expense_9;
@@ -798,7 +799,7 @@ testCheck(strpos($html_out, 'multi_file_input') !== false, "Input upload bukti m
 testCheck(strpos($html_out, 'file_chips_wrapper') !== false, "Container akumulator chip file_chips_wrapper tersedia");
 testCheck(strpos($html_out, 'Daftar Jurnal Pengembalian Kasbon') !== false, "Card Daftar Jurnal Pengembalian Kasbon ter-render");
 testCheck(strpos($html_out, 'Draft: jurnal diposting setelah verifikasi Finance') !== false, "Badge draft jurnal Finance terpasang");
-testCheck(strpos($html_out, '1103-01-15') !== false, "Akun Piutang Kelebihan Kasbon (1103-01-15) tercantum di draft jurnal");
+testCheck(strpos($html_out, '1103-01-14') !== false, "Akun Piutang Lain-lain Konsultan (1103-01-14) tercantum di draft jurnal pengembalian");
 testCheck(strpos($html_out, 'TOTAL BALANCING') !== false, "Tabel draft jurnal memuat baris TOTAL BALANCING");
 testCheck(strpos($html_out, 'Catatan mockup:') !== false, "Kotak catatan mockup alur verifikasi tampil di bawah tabel");
 testCheck(strpos($html_out, 'btn_submit_kirim_pengembalian') !== false, "Tombol submit 'Kirim Bukti Transfer' tersedia");

@@ -63,4 +63,6 @@ $db->insert('tr_expense',['id'=>4,'no_doc'=>'ER-NONPROJECT','id_kasbon'=>'KS-NON
 $db->insert('tr_kasbon',['no_doc'=>'KS-NONPROJECT','project'=>null]);
 $nonProjectRows=[['id_company'=>'1','nm_company'=>'STM-Vuca','no_transaksi'=>'ER-NONPROJECT','jenis_transaksi'=>'Expense Report']];
 company_check($service->validateJournal($nonProjectRows)['id']==='1','non-project kasbon journal falls back to validated master company');
+company_check(Expense_company::piutangCoa([['coa'=>'1103-01-15','debit'=>0,'kredit'=>5]])==='1103-01-15','issued old return journal keeps old piutang COA');
+company_check(Expense_company::piutangCoa([])==='1103-01-14','new return journal uses Piutang Lain-lain Konsultan');
 echo 'PASS Expense company: '.$checks." assertions\n";

@@ -3,8 +3,26 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Expense_company
 {
+    // Jurnal PENGEMBALIAN kasbon: kredit ke Piutang Lain-lain Konsultan. Jurnal realisasi expense tetap 1103-01-15; pengembalian lama yang sudah terbit juga 1103-01-15.
+    const COA_PIUTANG_KASBON = '1103-01-14';
+    const COA_PIUTANG_KASBON_LAMA = '1103-01-15';
+
     private $db;
     private $consultant;
+
+    public static function piutangCoa($returnRows)
+    {
+        foreach ($returnRows as $row) {
+            $row = (array)$row;
+            if ((float)($row['kredit'] ?? 0) > 0 && in_array($row['coa'] ?? '', [self::COA_PIUTANG_KASBON, self::COA_PIUTANG_KASBON_LAMA], true)) return $row['coa'];
+        }
+        return self::COA_PIUTANG_KASBON;
+    }
+
+    public static function piutangName($coa)
+    {
+        return $coa === self::COA_PIUTANG_KASBON_LAMA ? 'Piutang Kelebihan Kasbon' : 'Piutang Lain-lain Konsultan';
+    }
 
     public function __construct($db, $consultant)
     {
@@ -211,7 +229,7 @@ class Expense_company
                 $this->validateReturnRealization($first['no_transaksi'], $source);
                 foreach ($rows as $line) {
                     $line = (array)$line;
-                    if (((float)$line['debit'] > 0 && $line['coa'] !== $source['bank_coa']) || ((float)$line['kredit'] > 0 && $line['coa'] !== '1103-01-15')) throw new DomainException('COA jurnal pengembalian tidak sesuai bank tersimpan/piutang kasbon.');
+                    if (((float)$line['debit'] > 0 && $line['coa'] !== $source['bank_coa']) || ((float)$line['kredit'] > 0 && !in_array($line['coa'], [self::COA_PIUTANG_KASBON, self::COA_PIUTANG_KASBON_LAMA], true))) throw new DomainException('COA jurnal pengembalian tidak sesuai bank tersimpan/piutang kasbon.');
                 }
                 return $source;
             }
