@@ -4,7 +4,7 @@ require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 
 class Jurnal_expense_model extends BF_Model
 {
-    const TYPES = ['Expense Report', 'Expense Report Consultant', 'Pengembalian Kasbon'];
+    const TYPES = ['Expense Report', 'Expense Report Consultant', 'Pengembalian Kasbon', 'Pengembalian Expense Project'];
 
     public function validate_company($rows, $lock = false)
     {

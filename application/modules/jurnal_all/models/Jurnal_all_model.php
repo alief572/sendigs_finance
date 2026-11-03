@@ -916,7 +916,7 @@ class Jurnal_all_model extends BF_Model
             }
             if ($row['source']==='EXP') {
                 // shortcut: jenis tanpa relasi khusus (Pengembalian Expense Project) hanya tampil apa adanya, tambah resolver bila perlu referensi
-                $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']] ?? ['reference'=>'-','description'=>$row['jenis_transaksi'].' - '.$row['no_transaksi']];
+                $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']] ?? ['reference'=>'-','description'=>'Pengembalian Kasbon Project - '.$row['no_transaksi']];
                 $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
                 if (empty($row['nm_divisi']) && !empty($expense['departement'])) {
                     $row['nm_divisi'] = $expense['departement'];

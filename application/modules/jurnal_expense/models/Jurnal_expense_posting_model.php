@@ -46,6 +46,8 @@ class Jurnal_expense_posting_model extends BF_Model
                     $reference = $matches[1];
                     $description = trim(str_replace($matches[0], '', $description));
                 }
+                // Harus sama persis dengan keterangan di tampilan Jurnal All (Jurnal_all_model::expenseMap fallback).
+                if ($row->jenis_transaksi === 'Pengembalian Expense Project') { $description = 'Pengembalian Kasbon Project - '.$row->no_transaksi; }
                 $details[] = ['tipe'=>'JV', 'tanggal'=>$row->tgl_jurnal, 'no_perkiraan'=>$row->coa,
                     'keterangan'=>$description, 'no_reff'=>$reference, 'debet'=>$row->debit, 'kredit'=>$row->kredit, 'stspos'=>1];
             }
@@ -59,7 +61,7 @@ class Jurnal_expense_posting_model extends BF_Model
                 throw new RuntimeException('Nomor jurnal tujuan sudah terpakai. Hubungi administrator.');
             }
             $header = ['nomor'=>$number, 'tgl'=>$first->tgl_jurnal, 'jml'=>$debit / 100, 'koreksi_no'=>'-', 'kdcab'=>'101',
-                'jenis'=>'JV', 'keterangan'=>$first->keterangan, 'bulan'=>substr($first->tgl_jurnal, 5, 2),
+                'jenis'=>'JV', 'keterangan'=>$first->jenis_transaksi === 'Pengembalian Expense Project' ? 'Pengembalian Kasbon Project - '.$first->no_transaksi : $first->keterangan, 'bulan'=>substr($first->tgl_jurnal, 5, 2),
                 'tahun'=>substr($first->tgl_jurnal, 0, 4), 'user_id'=>$userId, 'memo'=>'', 'tgl_jvkoreksi'=>$first->tgl_jurnal, 'ho_valid'=>''];
             $this->write($this->db->insert($schema . '.javh', $header), 'Gagal menyimpan header jurnal.');
             $headerWritten = true;
