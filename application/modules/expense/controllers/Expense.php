@@ -6590,18 +6590,46 @@ class Expense extends Admin_Controller
 		$arr_kasbon = isset($post['kasbon']) ? (array)$post['kasbon'] : [];
 		$arr_tanggal = isset($post['tanggal']) ? (array)$post['tanggal'] : [];
 
-		try {
-			$service = $this->companyService();
-			if ($no_doc !== '' && $this->db->get_where('tr_expense', ['no_doc'=>$no_doc])->num_rows() > 0) {
-				$company = $service->resolve($no_doc);
-			} else {
-				$company = $service->resolveKasbons($arr_id_kasbon);
+		// Tarik Nama Company dari database db_consultant_new (kons_tr_company)
+		$id_company = '';
+		$nm_company = '';
+		$first_kasbon_doc = '';
+		foreach ($arr_id_kasbon as $kb_item) {
+			if (!empty($kb_item)) {
+				$first_kasbon_doc = $kb_item;
+				break;
 			}
-			$id_company = $company['id'];
-			$nm_company = htmlspecialchars($company['name'], ENT_QUOTES, 'UTF-8');
-		} catch (Throwable $error) {
-			echo json_encode(['status'=>0, 'hasil'=>'', 'message'=>$error instanceof DomainException ? $error->getMessage() : 'Validasi company belum dapat dilakukan.']);
-			return;
+		}
+
+		try {
+			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
+				$consultant = $this->load->database('consultant', true);
+				if (!empty($first_kasbon_doc)) {
+					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $first_kasbon_doc])->row();
+					if (!empty($get_kb) && !empty($get_kb->project)) {
+						$consultant->select('a.id, a.nm_company');
+						$consultant->from('kons_tr_company a');
+						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+						$consultant->where('b.id_quotation', $get_kb->project);
+						$get_comp = $consultant->get()->row();
+						if (!empty($get_comp)) {
+							$id_company = $get_comp->id;
+							$nm_company = $get_comp->nm_company;
+						}
+					}
+				}
+
+				if (empty($nm_company)) {
+					$get_first_comp = $consultant->get('kons_tr_company')->row();
+					if (!empty($get_first_comp)) {
+						$id_company = $get_first_comp->id;
+						$nm_company = $get_first_comp->nm_company;
+					}
+				}
+			}
+		} catch (Throwable $e) {
+			$id_company = '';
+			$nm_company = '';
 		}
 
 		// 1. DEBIT: Setiap baris item Realisasi Expense yang diinput di form
@@ -6612,7 +6640,7 @@ class Expense extends Admin_Controller
 					$no_jurnal++;
 					$coa_code = isset($arr_coa[$idx]) && !empty($arr_coa[$idx]) ? $arr_coa[$idx] : '1304-01-01';
 					$coa_name = 'Peralatan Kantor';
-					$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
+					$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 					if (!empty($q_coa_acc)) {
 						$coa_name = $q_coa_acc->nama;
 					} else {
@@ -6647,7 +6675,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_code = '1304-01-01';
 			$coa_name = 'Peralatan Kantor';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 			if (!empty($q_coa_acc)) $coa_name = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr>';
@@ -6670,7 +6698,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_piutang = '1103-01-15';
 			$nm_piutang = 'Piutang Kelebihan Kasbon';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_piutang])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
 			if (!empty($q_coa_acc)) $nm_piutang = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr style="background:#e8fadf;">';
@@ -6691,7 +6719,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_kasbon = '1103-01-14';
 			$nm_kasbon = 'Piutang Lain-lain Konsultan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_kasbon])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
 			if (!empty($q_coa_acc)) $nm_kasbon = $q_coa_acc->nama;
 
 			$deskripsi_kasbon = 'Pertanggungjawaban Kasbon' . (!empty($arr_id_kasbon) ? ' (' . implode(', ', array_unique(array_filter($arr_id_kasbon))) . ')' : '');
@@ -6717,7 +6745,7 @@ class Expense extends Admin_Controller
 			$no_jurnal++;
 			$coa_hutang = '9999-99-99';
 			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_hutang])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
 			if (!empty($q_coa_acc)) $nm_hutang = $q_coa_acc->nama;
 
 			$hasil_jurnal .= '<tr style="background:#fde8e8;">';
@@ -6806,22 +6834,28 @@ class Expense extends Admin_Controller
 	private function _post_jurnal_expense_report($id)
 	{
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
-		if (empty($data)) throw new DomainException('Data expense tidak tersedia.');
-		$service = $this->companyService();
-		$service->lockSource($data->no_doc);
-		$company = $service->resolve($data->no_doc);
-		$id_company = $company['id'];
-		$nm_company = $company['name'];
+		if (empty($data)) {
+			return;
+		}
+
+		// Pastikan ini adalah Expense Report (memiliki id_kasbon)
+		if (empty($data->id_kasbon)) {
+			return;
+		}
 
 		// Cek apakah sudah pernah di-insert ke tr_jurnal (mencegah duplikasi)
 		$cek_existing = $this->db->get_where('tr_jurnal', [
 			'no_transaksi' => $data->no_doc,
 			'jenis_transaksi' => 'Expense Report'
 		])->num_rows();
-		if ($cek_existing > 0) throw new DomainException('Jurnal realisasi sudah tersedia. Periksa sebelum memproses ulang.');
+		if ($cek_existing > 0) {
+			return;
+		}
 
 		$get_expense_detail = $this->db->get_where('tr_expense_detail', ['no_doc' => $data->no_doc])->result();
-		if (empty($get_expense_detail)) throw new DomainException('Detail expense belum tersedia.');
+		if (empty($get_expense_detail)) {
+			return;
+		}
 
 		$total_expense = 0;
 		$total_kasbon = 0;
@@ -6854,6 +6888,39 @@ class Expense extends Admin_Controller
 		$urutan++;
 		$no_jurnal = sprintf('%05s', $urutan) . '-AJV-' . $month_roman . '-' . $year_short;
 
+		// Tarik info company
+		$id_company = '';
+		$nm_company = '';
+		try {
+			if (isset($this->load) && is_object($this->load) && method_exists($this->load, 'database')) {
+				$consultant = $this->load->database('consultant', true);
+				if (!empty($data->id_kasbon)) {
+					$get_kb = $this->db->get_where('tr_kasbon', ['no_doc' => $data->id_kasbon])->row();
+					if (!empty($get_kb) && !empty($get_kb->project)) {
+						$consultant->select('a.id, a.nm_company');
+						$consultant->from('kons_tr_company a');
+						$consultant->join('kons_tr_penawaran b', 'b.company = a.id', 'left');
+						$consultant->where('b.id_quotation', $get_kb->project);
+						$get_comp = $consultant->get()->row();
+						if (!empty($get_comp)) {
+							$id_company = $get_comp->id;
+							$nm_company = $get_comp->nm_company;
+						}
+					}
+				}
+
+				if (empty($nm_company)) {
+					$get_first_comp = $consultant->get('kons_tr_company')->row();
+					if (!empty($get_first_comp)) {
+						$id_company = $get_first_comp->id;
+						$nm_company = $get_first_comp->nm_company;
+					}
+				}
+			}
+		} catch (Throwable $e) {
+			$id_company = '';
+			$nm_company = '';
+		}
 
 		$id_divisi = !empty($data->departement) ? $data->departement : '';
 		$nm_divisi = !empty($data->departement) ? $data->departement : '';
@@ -6866,7 +6933,7 @@ class Expense extends Admin_Controller
 			if ($exp_num > 0) {
 				$coa_code = !empty($dtl->coa) ? $dtl->coa : '1304-01-01';
 				$coa_name = 'Peralatan Kantor';
-				$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_code])->row();
+				$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_code . "'")->row();
 				if (!empty($q_coa_acc)) {
 					$coa_name = $q_coa_acc->nama;
 				} else {
@@ -6903,7 +6970,7 @@ class Expense extends Admin_Controller
 		if ($selisih > 0) {
 			$coa_piutang = '1103-01-15';
 			$nm_piutang = 'Piutang Kelebihan Kasbon';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_piutang])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_piutang . "'")->row();
 			if (!empty($q_coa_acc)) {
 				$nm_piutang = $q_coa_acc->nama;
 			}
@@ -6934,7 +7001,7 @@ class Expense extends Admin_Controller
 		if ($total_kasbon > 0) {
 			$coa_kasbon = '1103-01-14';
 			$nm_kasbon = 'Piutang Lain-lain Konsultan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_kasbon])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_kasbon . "'")->row();
 			if (!empty($q_coa_acc)) {
 				$nm_kasbon = $q_coa_acc->nama;
 			}
@@ -6966,7 +7033,7 @@ class Expense extends Admin_Controller
 			$kurang_bayar = abs($selisih);
 			$coa_hutang = '9999-99-99';
 			$nm_hutang = 'Hutang Expense / Reimburse Karyawan';
-			$q_coa_acc = $this->db->query("SELECT nama FROM " . Expense_company::schema($company['id']) . ".coa_master WHERE no_perkiraan = ?", [$coa_hutang])->row();
+			$q_coa_acc = $this->db->query("SELECT nama FROM " . DBACC . ".coa_master WHERE no_perkiraan = '" . $coa_hutang . "'")->row();
 			if (!empty($q_coa_acc)) {
 				$nm_hutang = $q_coa_acc->nama;
 			}
@@ -6993,7 +7060,9 @@ class Expense extends Admin_Controller
 			];
 		}
 
-		$this->insertExpenseJournal($arr_insert);
+		if (!empty($arr_insert)) {
+			$this->db->insert_batch('tr_jurnal', $arr_insert);
+		}
 	}
 
 	/**
