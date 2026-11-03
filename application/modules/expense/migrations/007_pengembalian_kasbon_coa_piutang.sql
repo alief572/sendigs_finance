@@ -1,4 +1,4 @@
--- Pindahkan sisi kredit jurnal "Pengembalian Kasbon" yang BELUM POSTING dari 1103-01-15 ke 1103-01-14 (Piutang Lain-lain Konsultan).
+-- Pindahkan sisi kredit jurnal "Pengembalian Kasbon" dan "Pengembalian Expense Project" yang BELUM POSTING dari 1103-01-15 ke 1103-01-14 (Piutang Lain-lain Konsultan).
 -- Idempoten: dijalankan ulang tidak mengubah apa pun. Jurnal yang sudah posting tidak disentuh.
 -- Jalankan di schema utama (yang berisi tr_jurnal). Baca hasil bagian A dulu sebelum bagian B.
 -- Syarat: tabel tr_jurnal_postings ada (migrasi jurnal_all 003).
@@ -8,7 +8,7 @@ DROP TEMPORARY TABLE IF EXISTS tmp_pengembalian_target;
 CREATE TEMPORARY TABLE tmp_pengembalian_target (id INT PRIMARY KEY) AS
 SELECT j.id
 FROM tr_jurnal j
-WHERE j.jenis_transaksi = 'Pengembalian Kasbon'
+WHERE j.jenis_transaksi IN ('Pengembalian Kasbon', 'Pengembalian Expense Project')
   AND j.coa = '1103-01-15' AND j.kredit > 0
   AND (j.sts IS NULL OR j.sts IN ('', '0')) AND j.tgl_posting IS NULL
   AND NOT EXISTS (SELECT 1 FROM tr_jurnal x
@@ -24,7 +24,7 @@ FROM tr_jurnal j JOIN tmp_pengembalian_target t ON t.id = j.id ORDER BY j.no_tra
 -- Baris 1103-01-15 pengembalian yang DILEWATI (sudah posting / ada metadata posting):
 SELECT j.id, j.no_transaksi, j.id_company, j.kredit, j.sts, j.tgl_posting
 FROM tr_jurnal j
-WHERE j.jenis_transaksi = 'Pengembalian Kasbon' AND j.coa = '1103-01-15' AND j.kredit > 0
+WHERE j.jenis_transaksi IN ('Pengembalian Kasbon', 'Pengembalian Expense Project') AND j.coa = '1103-01-15' AND j.kredit > 0
   AND j.id NOT IN (SELECT id FROM tmp_pengembalian_target) ORDER BY j.no_transaksi;
 
 -- ===== B. APPLY =====
@@ -39,7 +39,7 @@ COMMIT;
 -- ===== C. VERIFIKASI =====
 -- Debit harus sama dengan kredit per transaksi; sisa baris belum-posting dengan 1103-01-15 harus 0.
 SELECT no_transaksi, SUM(debit) AS debit, SUM(kredit) AS kredit
-FROM tr_jurnal WHERE jenis_transaksi = 'Pengembalian Kasbon' AND no_transaksi IN
+FROM tr_jurnal WHERE jenis_transaksi IN ('Pengembalian Kasbon', 'Pengembalian Expense Project') AND no_transaksi IN
   (SELECT DISTINCT no_transaksi FROM tr_jurnal_bak_pengembalian_coa_20261103) GROUP BY no_transaksi;
 SELECT COUNT(*) AS sisa_belum_posting_1103_01_15 FROM tr_jurnal j JOIN tmp_pengembalian_target t ON t.id = j.id WHERE j.coa = '1103-01-15';
 
