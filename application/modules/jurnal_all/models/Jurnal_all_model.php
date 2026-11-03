@@ -9,7 +9,7 @@ class Jurnal_all_model extends BF_Model
     const SOURCES = [
         'INV'=>['Invoicing'], 'KWD'=>['Kwitansi Deposit'], 'RCV'=>['Penerimaan Piutang'],
         'PAY'=>['Payment','Transport','Transportasi','Kasbon','Expense'],
-        'EXP'=>['Expense Report','Expense Report Consultant','Pengembalian Kasbon'],
+        'EXP'=>['Expense Report','Expense Report Consultant','Pengembalian Kasbon','Pengembalian Expense Project'],
         'PCS'=>['Petty Cash','Refill Pettycash','Payment Hutang Petty Cash']
     ];
     const TITLES = ['INV'=>'Jurnal Invoicing','RCV'=>'Jurnal Penerimaan','PAY'=>'Jurnal Pembayaran','EXP'=>'Jurnal Expense Report','PCS'=>'Jurnal Pencatatan Petty Cash'];
@@ -915,7 +915,8 @@ class Jurnal_all_model extends BF_Model
                 }
             }
             if ($row['source']==='EXP') {
-                $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']];
+                // shortcut: jenis tanpa relasi khusus (Pengembalian Expense Project) hanya tampil apa adanya, tambah resolver bila perlu referensi
+                $expense=$expenseMap[$row['jenis_transaksi']][$row['no_transaksi']] ?? ['reference'=>'-','description'=>$row['jenis_transaksi'].' - '.$row['no_transaksi']];
                 $row['no_referensi']=$expense['reference']; $row['keterangan']=$expense['description'];
                 if (empty($row['nm_divisi']) && !empty($expense['departement'])) {
                     $row['nm_divisi'] = $expense['departement'];
