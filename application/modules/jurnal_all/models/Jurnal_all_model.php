@@ -1025,15 +1025,20 @@ class Jurnal_all_model extends BF_Model
                     'departement'=>$dept,'division_name'=>$divisionNames[$number] ?? null];
             }
         }
-        foreach (array_chunk(array_unique($numbers['Expense Report Consultant'] ?? []),200) as $chunk) {
-            $refs=[];
-            foreach ($this->read($this->db->select('e.id,k.id AS kasbon')->from(DBCNL.'.kons_tr_expense_report_project_header e')
-                ->join(DBCNL.'.kons_tr_kasbon_project_header k','k.id=e.id_header')->where_in('e.id',$chunk)->get())->result_array() as $row) {
+        foreach (['Expense Report Consultant','Pengembalian Expense Project'] as $type) foreach (array_chunk(array_unique($numbers[$type] ?? []),200) as $chunk) {
+            $refs=[]; $divisions=[];
+            foreach ($this->read($this->db->select('e.id,k.id AS kasbon,s.nm_divisi')->from(DBCNL.'.kons_tr_expense_report_project_header e')
+                ->join(DBCNL.'.kons_tr_kasbon_project_header k','k.id=e.id_header')
+                ->join(DBCNL.'.kons_tr_spk_penawaran s','s.id_spk_penawaran=k.id_spk_penawaran','left')->where_in('e.id',$chunk)->get())->result_array() as $row) {
                 $reference=trim((string)$row['kasbon']); if ($reference!=='') $refs[$row['id']][$reference]=$reference;
+                $division=trim((string)($row['nm_divisi'] ?? '')); if ($division!=='' && !isset($divisions[$row['id']])) $divisions[$row['id']]=$division;
             }
             foreach ($chunk as $number) {
                 $values=array_values($refs[$number] ?? []); sort($values,SORT_NATURAL);
-                $map['Expense Report Consultant'][$number]=['reference'=>$values?implode(', ',$values):'-','description'=>'Expense Report Consultant - '.$number];
+                $map[$type][$number]=['reference'=>$values?implode(', ',$values):'-',
+                    'description'=>$type==='Expense Report Consultant'?'Expense Report Consultant - '.$number:'Pengembalian Kasbon Project - '.$number];
+                // Divisi hanya untuk jenis baru; Expense Report Consultant dibiarkan seperti semula.
+                if ($type==='Pengembalian Expense Project' && isset($divisions[$number])) $map[$type][$number]['division_name']=$divisions[$number];
             }
         }
         return $map;
