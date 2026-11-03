@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/consulting_fixture.php';
 
-function contractFixture($bank = '218330833.33', $tax = 'PKP', $choice = 'Y') {
+function contractFixture($bank = '217997500.00', $tax = 'PKP', $choice = 'Y') {
     $db = createFixtures();
     $db->alloc_details[0]['nominal_debit'] = $bank;
     $db->alloc_splits[0]['nominal'] = $bank;

@@ -37,7 +37,8 @@ $pkp = $C::tax_calc(200000000, 'PKP');
 check($pkp['sales'] === 200000000, 'PKP sales');
 check($pkp['dpp_lain'] === 183333333, 'PKP dpp lain 11/12');
 check($pkp['ppn'] === 22000000, 'PKP ppn 12%');
-check($pkp['pph_default'] === 3666667, 'PKP pph 2%');
+check($pkp['pph_default'] === 4000000, 'PKP pph 2% x penjualan');
+check($C::tax_calc(2400000000, 'PKP')['pph_default'] === 48000000, 'Invoice 24.000.000: PPh 23 = 2% x penjualan = 480.000');
 check($pkp['tagihan'] === 222000000, 'PKP tagihan sales+ppn');
 check($pkp['piutang'] === 222000000, 'PKP piutang');
 
@@ -46,7 +47,7 @@ $wapu = $C::tax_calc(300000000, 'WAPU');
 check($wapu['sales'] === 300000000, 'WAPU sales');
 check($wapu['dpp_lain'] === 275000000, 'WAPU dpp lain');
 check($wapu['ppn'] === 0, 'WAPU ppn 0');
-check($wapu['pph_default'] === 5500000, 'WAPU pph default');
+check($wapu['pph_default'] === 6000000, 'WAPU pph default 2% x penjualan');
 check($wapu['tagihan'] === 300000000, 'WAPU tagihan sales only');
 check($wapu['piutang'] === 300000000, 'WAPU piutang');
 
@@ -55,7 +56,7 @@ $kb = $C::tax_calc(6000000000, 'KB');
 check($kb['sales'] === 6000000000, 'KB sales');
 check($kb['dpp_lain'] === 5500000000, 'KB dpp lain');
 check($kb['ppn'] === 0, 'KB ppn 0');
-check($kb['pph_default'] === 110000000, 'KB pph default');
+check($kb['pph_default'] === 120000000, 'KB pph default 2% x penjualan');
 check($kb['tagihan'] === 6000000000, 'KB tagihan sales only');
 check($kb['piutang'] === 6000000000, 'KB piutang');
 

@@ -282,12 +282,12 @@ class Penerimaan_uang_model extends BF_Model
         return $choice === 'Y' ? 0 : $total - $used;
     }
 
-    /** PPh 23 default mockup = max(0, 2% x DPP - PPh yang sudah terpakai), DPP = penjualan x 11/12; dibatasi anggaran PPh invoice (sen). */
+    /** PPh 23 default mockup = max(0, 2% x Penjualan - PPh yang sudah terpakai); dibatasi anggaran PPh invoice (sen). */
     public function default_pph($invoice, $budgetCents)
     {
-        $dpp = Invoice_calculation::ratio(Penerimaan_calculation::cents($invoice['total_nominal_jurnal']), 11, 12);
+        $sales = Penerimaan_calculation::cents($invoice['total_nominal_jurnal']);
         $used = max(0, Penerimaan_calculation::cents($invoice['pph_jurnal']) - (int)$budgetCents);
-        return min((int)$budgetCents, max(0, Invoice_calculation::ratio($dpp, 2, 100) - $used));
+        return min((int)$budgetCents, max(0, Invoice_calculation::ratio($sales, 2, 100) - $used));
     }
 
     /** Invoice lama sudah ber-basis bruto (mockup) bila ada penerimaannya yang bertanda gross_basis; saldo_piutang tidak lagi ditambah anggaran PPh. */

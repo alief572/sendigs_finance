@@ -27,7 +27,7 @@ $prevPost = array(
 $prevRes = $engine->preview($prevPost);
 checkAssert(count($prevRes['rows']) === 1, 'Preview returns 1 invoice row');
 checkAssert($prevRes['rows'][0]['tax_treatment'] === 'PKP', 'Preview detects PKP');
-checkAssert($prevRes['rows'][0]['default_pph'] === 366666667, 'Preview default PPh 23 matches 2%');
+checkAssert($prevRes['rows'][0]['default_pph'] === 400000000, 'Preview default PPh 23 matches 2% x penjualan');
 // Nomor SPK = id_spk_penawaran (kons_tr_spk_penawaran tidak punya kolom no_spk); fixture melempar bila kolom itu di-query.
 checkAssert($prevRes['rows'][0]['spk'] === 'SPK-001', 'Preview SPK number comes from id_spk_penawaran without querying no_spk');
 

@@ -22,7 +22,7 @@
                 <th class="text-center">Penjualan</th>
                 <th class="text-center">DPP</th>
                 <th class="text-center">PPN</th>
-                <th class="text-center">PPH 23<?= $pph23_dipotong === 'Y' ? '<br><small class="text-muted">default 2% DPP, bisa diedit</small>' : '' ?></th>
+                <th class="text-center">PPH 23<?= $pph23_dipotong === 'Y' ? '<br><small class="text-muted">default 2% Penjualan, bisa diedit</small>' : '' ?></th>
                 <th class="text-center">Total Tagihan<br><small class="text-muted">(Penjualan + PPN)</small></th>
                 <th class="text-center">Total Tagihan<br><small class="text-muted">- PPH</small></th>
                 <th class="text-center">Piutang Dagang<br><small class="text-muted">(Penjualan + PPN)</small></th>

@@ -165,7 +165,7 @@ class Penerimaan_calculation
         }
         $dppLain = Invoice_calculation::ratio($salesCents, 11, 12);
         $ppn = $taxTreatment === 'PKP' ? Invoice_calculation::ratio($dppLain, 12, 100) : 0;
-        $pphDefault = Invoice_calculation::ratio($dppLain, 2, 100);
+        $pphDefault = Invoice_calculation::ratio($salesCents, 2, 100);
         $tagihan = $taxTreatment === 'PKP' ? $salesCents + $ppn : $salesCents;
         $piutang = $tagihan;
 

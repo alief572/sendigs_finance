@@ -133,7 +133,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <th class="r" style="width: 120px;">
                             PPH 23
                             <?php if ($choice === 'Y') : ?>
-                                <br><small class="muted font-normal">default 2% DPP, bisa diedit</small>
+                                <br><small class="muted font-normal">default 2% Penjualan, bisa diedit</small>
                             <?php endif; ?>
                         </th>
                         <th class="r" style="width: 115px;">Total Tagihan<br>(Penjualan + PPN)</th>
@@ -436,7 +436,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                     errors.push('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan pada ' + meta.invoice + '.');
                 }
                 if (pph > meta.remaining_pph) {
-                    errors.push('PPh 23 melebihi sisa batas 2% DPP invoice ' + meta.invoice + '.');
+                    errors.push('PPh 23 melebihi sisa batas 2% Penjualan invoice ' + meta.invoice + '.');
                 }
                 if (pph > piutang) {
                     errors.push('PPh 23 ' + meta.invoice + ' melebihi piutang dagang invoice.');

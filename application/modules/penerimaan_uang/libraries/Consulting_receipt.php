@@ -575,7 +575,7 @@ class Consulting_receipt
                 if ($sisa > $balance) throw new InvalidArgumentException('Sisa piutang melebihi piutang dagang invoice ' . $invoice['no_invoice'] . '.');
 
                 if ($allocated + $sisa !== $balance || $allocated <= 0) throw new InvalidArgumentException('Alokasi penerimaan + sisa piutang harus sama dengan saldo invoice ' . $invoice['no_invoice'] . '.');
-                if ($pph > $context['remaining_pph']) throw new InvalidArgumentException('PPh 23 melebihi sisa batas 2% DPP invoice ' . $invoice['no_invoice'] . '.');
+                if ($pph > $context['remaining_pph']) throw new InvalidArgumentException('PPh 23 melebihi sisa batas 2% Penjualan invoice ' . $invoice['no_invoice'] . '.');
                 $reduction = $allocated;
                 $bankCash = $balance - $pph - $admin - $sisa - $dep + $lebih;
                 if ($bankCash < 0) throw new InvalidArgumentException('Penerimaan bank tidak boleh bernilai minus pada ' . $invoice['no_invoice'] . '.');

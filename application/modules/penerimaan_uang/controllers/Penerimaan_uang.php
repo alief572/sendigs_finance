@@ -480,7 +480,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-                $pphDefault = round($dppLain * 0.02);
+                $pphDefault = round($sales * 0.02);
                 $receiptBlocked = false;
                 if ($isNew) {
                     require_once __DIR__ . '/../libraries/Consulting_receipt.php';
