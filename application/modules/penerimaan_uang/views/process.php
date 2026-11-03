@@ -11,6 +11,8 @@
     <input type="hidden" name="ppn_dipotong" value="<?= $ppn_dipotong ?>">
     <input type="hidden" name="pph23_dipotong" value="<?= $pph23_dipotong ?>">
     <input type="hidden" name="nominal_penerimaan_bank" value="<?= $nominal_penerimaan_bank ?>">
+    <input type="hidden" name="deposit_choice" value="<?= !empty($use_dep) ? 'Y' : 'N' ?>">
+    <input type="hidden" name="deposit_amount" value="<?= number_format((float)($dep_amount ?? 0), 2, '.', '') ?>">
 
     <table>
         <thead>

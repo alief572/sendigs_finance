@@ -48,7 +48,7 @@ foreach ($detail as $d) {
 $allV4 = !empty($rows) && count(array_filter($rows, function ($r) { return $r['v4']; })) === count($rows);
 $kontrol = $allV4
     ? (($tot['piutang'] - $tot['pph'] - $tot['admin'] - $tot['sisa']) - $uangMasuk - $tot['dep']) + $tot['lebih']
-    : ($tot['alok'] + $tot['lebih'] - $uangMasuk);
+    : ($tot['alok'] - $tot['dep'] + $tot['lebih'] - $uangMasuk);
 if ($isDeposit) $kontrol = ($tot['piutang'] - $tot['admin']) - $uangMasuk;
 
 // Jurnal: baris bernilai nol disembunyikan (mockup).
