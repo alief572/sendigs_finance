@@ -208,6 +208,7 @@ class Invoicing extends Admin_Controller
     public function view_invoicing($id_invoicing)
     {
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'view'); }
 
@@ -226,6 +227,9 @@ class Invoicing extends Admin_Controller
         $get_actual_plan_tagih = $this->db->get()->row();
 
         $this->auth->restrict($this->viewPermission);
+
+        // Invoice lama tanpa baris plan tagih: tampilan memakai baris pengganti; perhitungan jurnal di bawah tetap memakai $get_actual_plan_tagih apa adanya.
+        $plan_view = Invoice_calculation::plan_or_invoice($get_actual_plan_tagih, $get_invoicing);
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
@@ -293,9 +297,9 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
-            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
-            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= $plan_view->nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $plan_view->id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $plan_view->nm_company . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
@@ -321,7 +325,7 @@ class Invoicing extends Admin_Controller
 
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'data_actual_plan_tagih' => $plan_view,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit
