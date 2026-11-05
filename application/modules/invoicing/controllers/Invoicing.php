@@ -348,10 +348,12 @@ class Invoicing extends Admin_Controller
 
     public function view_invoicing_vuca($id_invoicing)
     {
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
@@ -371,7 +373,8 @@ class Invoicing extends Admin_Controller
 
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_plan_tagih' => $get_plan_tagih,
+            'data_plan_tagih' => Invoice_calculation::plan_or_invoice($get_plan_tagih, $get_invoicing),
+            'journals' => $journals,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit
