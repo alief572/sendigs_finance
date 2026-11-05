@@ -1,0 +1,649 @@
+<mxfile host="app.diagrams.net" pages="2">
+  <diagram id="erd-invoice-piutang" name="ERD Invoice - Monitoring Piutang">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2040" pageHeight="1260" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;ERD Invoice sampai Monitoring Piutang&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Plan Tagih → Invoicing (konsultasi v3) → Penerimaan Uang → Follow Up Piutang, Monitoring Piutang, Dashboard Plan Bayar. Relasi logis (FK tidak semuanya dipasang constraint, sebagian lintas database). Kolom diambil dari kode modul invoicing, penerimaan_uang, monitoring_piutang, follow_up_piutang dan migrasi; per 2026-11-05.&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=top;fontSize=16;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="8" width="1500" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g_a" value="A. Penjualan Konsultasi &amp;amp; Non Konsultasi  (DB consultant / DBCNL)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="10" y="95" width="340" height="765" as="geometry" />
+        </mxCell>
+        <mxCell id="g_b" value="B. Plan Tagih  (DBERP)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="450" y="95" width="320" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="g_c" value="C. Invoicing  (DBERP)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="850" y="95" width="340" height="960" as="geometry" />
+        </mxCell>
+        <mxCell id="g_j" value="Jurnal (dipakai Invoicing dan Penerimaan)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="95" width="330" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="g_d" value="D. Penerimaan Uang  (DBERP)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="365" width="330" height="790" as="geometry" />
+        </mxCell>
+        <mxCell id="g_e" value="E. Follow Up &amp; Monitoring Piutang  (DBERP, tabel baru)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1650" y="95" width="350" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="mkh" value="kons_master_konsultasi_header" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="130" width="290" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="mkh_0" value="&lt;b&gt;PK&lt;/b&gt; id_konsultasi_h" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="mkh">
+          <mxGeometry y="30" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="mkh_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nm_paket" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="mkh">
+          <mxGeometry y="52" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk" value="kons_tr_spk_penawaran  (SPK)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="290" height="162" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_0" value="&lt;b&gt;PK&lt;/b&gt; id_spk_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="spk">
+          <mxGeometry y="30" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_1" value="&lt;b&gt;FK&lt;/b&gt; id_project" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="spk">
+          <mxGeometry y="52" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_2" value="&lt;b&gt;FK&lt;/b&gt; id_company" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="spk">
+          <mxGeometry y="74" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; id_customer, nm_customer" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="spk">
+          <mxGeometry y="96" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; address" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="spk">
+          <mxGeometry y="118" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="spk_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nm_project_leader, nm_sales" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="spk">
+          <mxGeometry y="140" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pnw" value="kons_tr_penawaran" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="290" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="pnw_0" value="&lt;b&gt;PK&lt;/b&gt; id_quotation" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="pnw">
+          <mxGeometry y="30" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pnw_1" value="&lt;b&gt;FK&lt;/b&gt; company" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pnw">
+          <mxGeometry y="52" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp" value="kons_tr_company" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="630" width="290" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="cmp">
+          <mxGeometry y="30" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nm_company" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="cmp">
+          <mxGeometry y="52" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pth" value="kons_tr_plan_tagih_header" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="460" y="130" width="300" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="pth_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="pth">
+          <mxGeometry y="30" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pth_1" value="&lt;b&gt;FK&lt;/b&gt; id_spk_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pth">
+          <mxGeometry y="52" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pth_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nm_customer" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pth">
+          <mxGeometry y="74" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd" value="kons_tr_plan_tagih_detail  (TOP)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="460" y="270" width="300" height="228" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="ptd">
+          <mxGeometry y="30" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_1" value="&lt;b&gt;FK&lt;/b&gt; id_header" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="52" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_2" value="&lt;b&gt;FK&lt;/b&gt; id_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="74" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; id_spk_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="96" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; term_payment, urutan" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="118" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tgl_aktual_plan_tagih" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="140" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; status_terakhir" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="162" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_7" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; sts_invoice  (1 = invoiced)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="184" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ptd_8" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tgl_invoice" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ptd">
+          <mxGeometry y="206" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt" value="kons_tr_actual_plan_tagih" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="460" y="550" width="300" height="162" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="apt">
+          <mxGeometry y="30" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_1" value="&lt;b&gt;FK&lt;/b&gt; id_detail_plan_tagih" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="apt">
+          <mxGeometry y="52" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nominal_payment  (= penjualan)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="apt">
+          <mxGeometry y="74" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; term_payment, persen_payment" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="apt">
+          <mxGeometry y="96" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; desc_payment" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="apt">
+          <mxGeometry y="118" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="apt_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; sts_invoice" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="apt">
+          <mxGeometry y="140" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv" value="tr_invoicing  (Invoice)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="860" y="130" width="320" height="514" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="inv">
+          <mxGeometry y="30" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; no_invoice" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="52" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tanggal_invoice" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="74" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_3" value="&lt;b&gt;FK&lt;/b&gt; id_detail_plan_tagih" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="96" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_4" value="&lt;b&gt;FK&lt;/b&gt; id_actual_plan_tagih" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="118" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_5" value="&lt;b&gt;FK&lt;/b&gt; id_spk_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="140" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_6" value="&lt;b&gt;FK&lt;/b&gt; id_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="162" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_7" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; id_customer, nm_customer, nm_project" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="184" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_8" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; no_po, no_faktur" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="206" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_9" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tipe_invoice (0 reguler, 1 Vuca), non_kons" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="228" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_10" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_version (3 = v3)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="250" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_11" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tax_treatment  (PKP / WAPU / KB)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="272" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_12" value="&lt;b&gt;FK&lt;/b&gt; consulting_company_id  (owner jurnal)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="294" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_13" value="&lt;b&gt;UK&lt;/b&gt; consulting_top_key" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="316" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_14" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_snapshot  (JSON)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="338" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_15" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; total_nominal, dpp_nilai_lain" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="360" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_16" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; ppn_jurnal, tagihan_ppn_jurnal" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="382" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_17" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; total_akhir_jurnal  (piutang awal)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="404" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_18" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; saldo_piutang  (sisa piutang)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="426" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_19" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; sts_close, close_by, close_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="448" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_20" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; close_reason" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="470" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="inv_21" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; created_by, created_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="inv">
+          <mxGeometry y="492" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="map" value="ms_invoice_coa_mapping" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="860" y="780" width="320" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="map_0" value="&lt;b&gt;PK FK&lt;/b&gt; source_company_id &lt;font color=&quot;#777777&quot;&gt;varchar(20)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="map">
+          <mxGeometry y="30" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="map_1" value="&lt;b&gt;FK&lt;/b&gt; owner_company_id &lt;font color=&quot;#777777&quot;&gt;varchar(20)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="map">
+          <mxGeometry y="52" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="map_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; accounts  (JSON, 9 peran COA) &lt;font color=&quot;#777777&quot;&gt;longtext&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="map">
+          <mxGeometry y="74" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="map_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; updated_by, updated_at" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="map">
+          <mxGeometry y="96" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="seq" value="ms_invoice_sequence" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="860" y="940" width="320" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="seq_0" value="&lt;b&gt;PK&lt;/b&gt; id &lt;font color=&quot;#777777&quot;&gt;int&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="seq">
+          <mxGeometry y="30" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="seq_1" value="&lt;b&gt;UK&lt;/b&gt; kode_entitas + tahun" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="seq">
+          <mxGeometry y="52" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="seq_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; last_sequence &lt;font color=&quot;#777777&quot;&gt;int&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="seq">
+          <mxGeometry y="74" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur" value="tr_jurnal  (jurnal draf / posting)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontColor=#1F3A5F;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="130" width="310" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="jur">
+          <mxGeometry y="30" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; no_jurnal, tgl_jurnal" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="52" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_2" value="&lt;b&gt;FK&lt;/b&gt; no_transaksi  (invoice / penerimaan)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="74" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; jenis_transaksi" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="96" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; coa, nm_coa" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="118" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; id_company, nm_company" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="140" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; debit, kredit, keterangan" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="162" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="jur_7" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; sts  (0 draf, 1 posting)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="jur">
+          <mxGeometry y="184" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd" value="tr_penerimaan_piutang_detail" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="400" width="310" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="ppd">
+          <mxGeometry y="30" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_1" value="&lt;b&gt;FK&lt;/b&gt; id_header  (= no_surat)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="52" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_2" value="&lt;b&gt;FK&lt;/b&gt; id_inv" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="74" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; penerimaan, biaya_admin, pph" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="96" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; sisa_piutang" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="118" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_version" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="140" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_reduction" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="162" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ppd_7" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_snapshot" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ppd">
+          <mxGeometry y="184" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp" value="tr_penerimaan_piutang" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="650" width="310" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="pp">
+          <mxGeometry y="30" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_1" value="&lt;b&gt;UK&lt;/b&gt; no_surat" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="52" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_2" value="&lt;b&gt;FK&lt;/b&gt; id_alokasi  (split / detail lama)" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="74" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; id_customer, nm_customer" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="96" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nominal_penerimaan_bank" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="118" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; ppn_dipotong, pph23_dipotong" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="140" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="pp_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; consulting_batch, created_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="pp">
+          <mxGeometry y="162" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="als" value="tr_alokasi_split" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="890" width="310" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="als_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="als">
+          <mxGeometry y="30" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="als_1" value="&lt;b&gt;FK&lt;/b&gt; id_alokasi_detail" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="als">
+          <mxGeometry y="52" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="als_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nominal, nilai_terpakai" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="als">
+          <mxGeometry y="74" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="als_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; jenis_alokasi" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="als">
+          <mxGeometry y="96" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ald" value="tr_alokasi_detail  (mutasi bank)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="1040" width="310" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="ald_0" value="&lt;b&gt;PK&lt;/b&gt; id" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="ald">
+          <mxGeometry y="30" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ald_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tanggal_transaksi" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ald">
+          <mxGeometry y="52" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ald_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nominal_debit, nilai_terpakai" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ald">
+          <mxGeometry y="74" width="310" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar" value="tr_invoice_ar  (Follow Up Piutang)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontColor=#1E4620;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="130" width="330" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_0" value="&lt;b&gt;PK FK&lt;/b&gt; id_invoice &lt;font color=&quot;#777777&quot;&gt;varchar(100)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="ar">
+          <mxGeometry y="30" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_1" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tgl_kirim, kirim_via, ket_kirim &lt;font color=&quot;#777777&quot;&gt;date, varchar, text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="52" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; no_resi &lt;font color=&quot;#777777&quot;&gt;varchar(100)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="74" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; tgl_terima, ket_terima &lt;font color=&quot;#777777&quot;&gt;date, text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="96" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; fu_pic_nama, fu_pic_telp &lt;font color=&quot;#777777&quot;&gt;varchar&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="118" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; fu1..fu4_plan / _aktual &lt;font color=&quot;#777777&quot;&gt;date&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="140" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; fu1..fu4_ket &lt;font color=&quot;#777777&quot;&gt;text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="162" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_7" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; plan_bayar, ket_plan_bayar &lt;font color=&quot;#777777&quot;&gt;date, text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="184" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_10" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; plan_bayar_nominal &lt;font color=&quot;#777777&quot;&gt;decimal(20,2)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="206" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_8" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; status_from, status_changed_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="228" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="ar_9" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; created_by/date, updated_by/date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="ar">
+          <mxGeometry y="250" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu" value="tr_invoice_ar_fu  (FU 5 dst.)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontColor=#1E4620;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="420" width="330" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_0" value="&lt;b&gt;PK&lt;/b&gt; id &lt;font color=&quot;#777777&quot;&gt;int&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="arfu">
+          <mxGeometry y="30" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_1" value="&lt;b&gt;FK&lt;/b&gt; id_invoice &lt;font color=&quot;#777777&quot;&gt;varchar(100)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="52" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_2" value="&lt;b&gt;UK&lt;/b&gt; id_invoice + ke" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="74" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; ke &lt;font color=&quot;#777777&quot;&gt;smallint&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="96" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; plan, aktual &lt;font color=&quot;#777777&quot;&gt;date&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="118" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_5" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; ket &lt;font color=&quot;#777777&quot;&gt;text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="140" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arfu_6" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; created_by, created_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arfu">
+          <mxGeometry y="162" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog" value="tr_invoice_ar_log  (riwayat)" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontColor=#1E4620;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="640" width="330" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog_0" value="&lt;b&gt;PK&lt;/b&gt; id &lt;font color=&quot;#777777&quot;&gt;int&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="arlog">
+          <mxGeometry y="30" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog_1" value="&lt;b&gt;FK&lt;/b&gt; id_invoice &lt;font color=&quot;#777777&quot;&gt;varchar(100)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arlog">
+          <mxGeometry y="52" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; aksi  (simpan / close) &lt;font color=&quot;#777777&quot;&gt;varchar(20)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arlog">
+          <mxGeometry y="74" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog_3" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; data_json &lt;font color=&quot;#777777&quot;&gt;text&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arlog">
+          <mxGeometry y="96" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="arlog_4" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; created_by, created_date" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="arlog">
+          <mxGeometry y="118" width="330" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="nkp" value="kons_tr_penawaran_non_konsultasi" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;rounded=1;arcSize=4;fontStyle=1;fontSize=12;align=center;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="750" width="290" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="nkp_0" value="&lt;b&gt;PK&lt;/b&gt; id_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;fontStyle=4;" vertex="1" parent="nkp">
+          <mxGeometry y="30" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="nkp_1" value="&lt;b&gt;FK&lt;/b&gt; id_company" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="nkp">
+          <mxGeometry y="52" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="nkp_2" value="&amp;nbsp;&amp;nbsp;&amp;nbsp; nm_customer, keterangan_penawaran" style="text;html=1;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=4;fontSize=11;fontFamily=Courier New;overflow=hidden;" vertex="1" parent="nkp">
+          <mxGeometry y="74" width="290" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="r_mkh_spk" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="mkh_0" target="spk_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="22" y="171" />
+              <mxPoint x="22" y="313" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_cmp_spk" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cmp_0" target="spk_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="14" y="671" />
+              <mxPoint x="14" y="335" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_cmp_pnw" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cmp_0" target="pnw_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="676.5" />
+              <mxPoint x="30" y="553" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_spk_pth" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="spk_0" target="pth_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="356" y="291" />
+              <mxPoint x="356" y="193" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_pnw_ptd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pnw_0" target="ptd_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="531" />
+              <mxPoint x="370" y="355" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_pth_ptd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERoneToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pth_0" target="ptd_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="442" y="171" />
+              <mxPoint x="442" y="333" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_ptd_apt" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ptd_0" target="apt_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="428" y="311" />
+              <mxPoint x="428" y="613" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_ptd_inv" value="1 TOP = 1 invoice" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ptd_0" target="inv_3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="775" y="311" />
+              <mxPoint x="775" y="237" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_apt_inv" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="apt_0" target="inv_4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="790" y="591" />
+              <mxPoint x="790" y="259" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_spk_inv" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="spk_0" target="inv_5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="342" y="286.6" />
+              <mxPoint x="342" y="737" />
+              <mxPoint x="805" y="737" />
+              <mxPoint x="805" y="281" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_pnw_inv" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pnw_0" target="inv_6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="384" y="535.4" />
+              <mxPoint x="384" y="757" />
+              <mxPoint x="820" y="757" />
+              <mxPoint x="820" y="303" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_cmp_nkp" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="cmp" target="nkp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r_nkp_inv" value="non konsultasi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;" edge="1" parent="1" source="nkp_0" target="inv_6">
+          <mxGeometry x="-0.6" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="848" y="791" />
+              <mxPoint x="848" y="310.7" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_cmp_inv" value="owner" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cmp_0" target="inv_12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="398" y="671" />
+              <mxPoint x="398" y="777" />
+              <mxPoint x="835" y="777" />
+              <mxPoint x="835" y="435" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_cmp_map" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cmp_0" target="map_0">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="412" y="676.5" />
+              <mxPoint x="412" y="821" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_inv_jur" value="jenis = &#39;Invoicing&#39;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERoneToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="inv_0" target="jur_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1212" y="173.2" />
+              <mxPoint x="1212" y="215" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_inv_ppd" value="cicilan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="inv_0" target="ppd_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1230" y="178.7" />
+              <mxPoint x="1230" y="485" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_pp_ppd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERoneToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pp_1" target="ppd_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="713" />
+              <mxPoint x="1620" y="463" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_pp_jur" value="jenis = &#39;Penerimaan Piutang&#39;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERoneToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pp_1" target="jur_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1635" y="718.5" />
+              <mxPoint x="1635" y="215" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_als_pp" value="baru" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="als_0" target="pp_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="931" />
+              <mxPoint x="1240" y="735" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_ald_pp" value="data lama" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" source="ald_0" target="pp_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1210" y="1081" />
+              <mxPoint x="1210" y="740.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_ald_als" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ald_0" target="als_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1225" y="1086.5" />
+              <mxPoint x="1225" y="953" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_inv_ar" value="1 invoice = 1 data AR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="inv_0" target="ar_0">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1198" y="167.7" />
+              <mxPoint x="1198" y="84" />
+              <mxPoint x="1592" y="84" />
+              <mxPoint x="1592" y="171" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_inv_log" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="inv_0" target="arlog_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1188" y="162.2" />
+              <mxPoint x="1188" y="72" />
+              <mxPoint x="1580" y="72" />
+              <mxPoint x="1580" y="703" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r_ar_fu" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#555555;labelBackgroundColor=#FFFFFF;jumpStyle=arc;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ar_0" target="arfu_1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1604" y="176.5" />
+              <mxPoint x="1604" y="483" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" value="&lt;b&gt;Legenda&lt;/b&gt;&lt;br&gt;&lt;b&gt;PK&lt;/b&gt; primary key, &lt;b&gt;UK&lt;/b&gt; unique, &lt;b&gt;FK&lt;/b&gt; foreign key (relasi logis).&lt;br&gt;Abu-abu: tabel penjualan di DB consultant (DBCNL). Putih: tabel transaksi finance. Biru: jurnal bersama (invoice dan penerimaan). Hijau: tabel baru Follow Up / Monitoring (migrasi monitoring_piutang 003, 009, 011, 013, 015, 017).&lt;br&gt;Tipe data hanya ditulis untuk tabel yang skemanya ada di migrasi repo.&lt;br&gt;&lt;b&gt;Relasi polimorfik&lt;/b&gt; (ditandai label): tr_jurnal.no_transaksi menunjuk tr_invoicing.id atau tr_penerimaan_piutang.no_surat tergantung jenis_transaksi; tr_penerimaan_piutang.id_alokasi menunjuk tr_alokasi_split.id (data baru) atau tr_alokasi_detail.id (data lama, garis putus-putus); tr_invoicing.id_penawaran menunjuk kons_tr_penawaran.id_quotation (konsultasi) atau kons_tr_penawaran_non_konsultasi.id_penawaran (non konsultasi, garis putus-putus).&lt;br&gt;Kolom created_by / close_by mengacu ke users.id_user (tidak digambar).&lt;br&gt;Monitoring Piutang dan Dashboard Plan Bayar tidak punya tabel sendiri: membaca tr_invoicing + tr_invoice_ar + tr_penerimaan_piutang_detail." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fillColor=#FAFAFA;strokeColor=#CCCCCC;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1650" y="800" width="350" height="420" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="bmptid6IlEgJkHMSouue" name="Page-2">
+    <mxGraphModel dx="1030" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

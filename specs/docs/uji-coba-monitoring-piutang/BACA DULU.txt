@@ -1,0 +1,88 @@
+UJI COBA MOCKUP - INVOICING, MONITORING PIUTANG, FOLLOW UP PIUTANG, DASHBOARD PLAN BAYAR
+=======================================================================================
+
+CARA MEMBUKA
+1. Ekstrak dulu file RAR/ZIP ini ke sebuah folder
+   (klik kanan > Extract Here / Extract All).
+   Jangan membuka index.html langsung dari dalam jendela RAR/ZIP,
+   karena file pendukung di folder "lib" tidak ikut terbaca.
+2. Buka file "index.html" dengan Google Chrome atau Microsoft Edge
+   (klik kanan > Open with > Chrome / Edge).
+3. Tidak perlu internet. Tanpa internet tampilan memakai font bawaan
+   laptop; isinya tetap sama.
+
+PENTING
+- Ini MOCKUP (contoh tampilan), bukan sistem sebenarnya. Data yang tampil
+  adalah data contoh, dan "hari ini" di mockup = 2 November 2026.
+- Perubahan yang diisi tidak tersimpan. Tekan F5 (refresh) atau tombol
+  "Reset data" di kanan atas untuk kembali ke data awal.
+- Garis putus-putus ungu = bagian baru / berubah. Bisa dimatikan lewat
+  centang "Tandai perubahan" di kanan atas.
+- Tombol Download Excel / Export Excel mengunduh file .xlsx sungguhan
+  ke folder Downloads.
+- Di setiap halaman ada bagian "Aturan & skenario uji" (klik untuk membuka)
+  yang menjelaskan aturan halaman itu.
+
+MENU YANG BISA DICOBA (di sidebar kiri)
+1. Invoicing
+2. Monitoring Piutang
+3. Follow Up Piutang
+4. Dashboard Plan Bayar
+
+SKENARIO UJI
+I. Invoicing
+   1. Klik pensil oranye pada SPK 052/STM/MKT-SPK/V/26 (WAPU): form Add
+      Invoicing terbuka untuk termin berikutnya (Penagihan 3).
+   2. Klik Save tanpa isi: Nomor PO, Nomor Faktur, dan COA Penjualan ditandai.
+   3. Isi Nomor PO dan Nomor Faktur, pilih COA Penjualan di tabel jurnal,
+      lalu Save. Nomor invoice tampil di kolom No. Invoice.
+   4. Klik nomor invoice itu: terbuka di Follow Up Piutang (Belum Dikirim).
+      Isi tanggal kirim dan tanggal terima, Simpan, lalu cek Monitoring Piutang.
+   5. SPK case demo: Perlakuan PPN bisa diganti untuk membandingkan jurnal
+      WAPU, PKP, dan Kawasan Berikat.
+
+A. Monitoring Piutang
+   1. Lihat card Total, Lancar (0-60 hari), Potensi Macet (61-90 hari),
+      Macet (> 90 hari). Umur dihitung dari tanggal customer menerima invoice.
+   2. Klik card Macet: daftar invoice tersaring ke Macet. Klik lagi untuk lepas.
+   3. Klik tombol "Download Excel" di card Macet: terunduh Excel berisi
+      invoice Macet saja.
+   4. Pilih filter Company dan Customer: card dan daftar dihitung ulang.
+   5. Klik salah satu invoice: muncul detail, data pengiriman, follow up,
+      dan riwayat penerimaan.
+
+B. Follow Up Piutang
+   1. Coba tab Semua, Belum Dikirim, Dikirim, Diterima Customer,
+      Ada Plan Bayar, FU Lewat Jadwal, Invoice Close. Filter ada di bawah tab.
+   2. Buka invoice 062/SSC/2026 (Belum Dikirim) > Update:
+      isi tanggal kirim dan "dikirim via", lalu tanggal terima.
+      Bagian berikutnya muncul satu per satu.
+   3. Di bagian Follow Up: isi keterangan, lalu tanggal dilakukan
+      (atau klik "Hari ini"). Jadwal FU berikutnya muncul otomatis dan
+      bisa diubah. Klik Simpan.
+      Coba juga mengisi tanggal dilakukan tanpa keterangan: akan ditolak.
+   4. Tab Ada Plan Bayar: coba filter Bulan dan Tahun, lalu Export Excel.
+   5. Close invoice 245/STM/2026 (sudah lunas): isi keterangan close.
+      Invoice pindah ke tab Invoice Close.
+
+C. Dashboard Plan Bayar
+   1. Card All = total setahun. 12 card Januari - Desember berisi:
+      - Plan: total plan bayar per bulan (invoice belum close) dan jumlah invoice;
+      - Realisasi: penerimaan (dari modul Penerimaan Uang) untuk invoice yang
+        punya plan bayar, dihitung di bulan tanggal penerimaannya.
+   2. Klik card Desember: muncul rincian plan bayar Desember. Klik card
+      September / Oktober: tabel Realisasi bayar menampilkan penerimaannya.
+   3. Ganti Company / Tahun.
+   4. Export Excel saat All dipilih (sheet Ringkasan + Rincian + Realisasi)
+      dan saat card bulan dipilih (sheet Rincian + Realisasi bulan itu).
+      Contoh hasil export ada di file "contoh-export-dashboard-plan-bayar.xlsx".
+
+MASUKAN
+Catat masukan per halaman (nama menu, apa yang dicoba, apa yang diharapkan,
+apa yang terjadi). Sertakan screenshot bila ada.
+
+Isi folder:
+- index.html                               : mockup (buka file ini)
+- lib\xlsx.full.min.js                     : library pembuat file Excel (SheetJS, lisensi di lib\LICENSE-SheetJS.txt)
+- contoh-export-dashboard-plan-bayar.xlsx  : contoh hasil Export Excel Dashboard Plan Bayar
+- BACA DULU.txt                            : petunjuk ini

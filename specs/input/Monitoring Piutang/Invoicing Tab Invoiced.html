@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Invoicing</title>
+<style>
+  :root{
+    --hdr:#3b8dbd; --logo:#367fa9; --side:#222d32; --side-sub:#2c3b41; --side-text:#b8c7ce;
+    --bg:#eef1f5; --line:#e3e7ed; --soft:#f4f6f9; --text:#2b3038; --muted:#6b7280;
+    --primary:#2c6f9b; --primary-d:#245c82;
+    --red:#d64545; --green-bg:#dcf3e5; --green:#2f855a; --amber-bg:#fdf0d5; --amber:#b7791f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:"Source Sans Pro","Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:14px;color:var(--text);background:var(--bg);}
+  .hidden{display:none !important;}
+
+  /* ---------- header & sidebar ---------- */
+  .main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--hdr);display:flex;}
+  .logo{width:230px;background:var(--logo);color:#fff;font-size:19px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+  .navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:#fff;}
+  .burger{background:none;border:0;color:#fff;font-size:17px;cursor:pointer;padding:0;}
+  .nav-right{display:flex;align-items:center;gap:26px;font-size:13px;}
+  .avatar{display:inline-block;width:18px;height:18px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;vertical-align:middle;margin-right:6px;}
+  .sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+  .sidebar ul{list-style:none;margin:0;padding:0;}
+  .side-search{margin:8px;border:1px solid #5b6a72;border-radius:4px;padding:9px 10px;color:#b8c7ce;font-size:13px;}
+  .sidebar .item > a{display:flex;align-items:center;gap:10px;padding:11px 15px;color:var(--side-text);text-decoration:none;font-size:13.5px;cursor:pointer;}
+  .sidebar .item > a .chev{margin-left:auto;font-size:11px;}
+  .sidebar .item.open > a{color:#fff;background:#1e282c;border-left:3px solid var(--hdr);padding-left:12px;}
+  .sidebar .ico{width:15px;text-align:center;font-size:12px;opacity:.9;}
+  .sidebar .sub{background:var(--side-sub);padding:4px 0;}
+  .sidebar .sub a{display:block;padding:5px 5px 5px 17px;color:#8aa4af;font-size:12.5px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+  .sidebar .sub a::before{content:"› ";}
+  .sidebar .sub a.active{color:#fff;}
+  body.collapsed .sidebar{display:none;}
+  body.collapsed .content-wrapper, body.collapsed .main-footer{margin-left:0;}
+
+  .content-wrapper{margin-left:230px;margin-top:50px;padding:14px 22px 24px;min-height:calc(100vh - 50px - 48px);}
+  .main-footer{margin-left:230px;background:#fff;border-top:1px solid var(--line);padding:14px 22px;color:#444;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;}
+  .main-footer a{color:var(--primary);font-weight:700;text-decoration:none;}
+  .crumb{font-size:17px;color:#555;margin:0 0 12px;}
+
+  /* ---------- card, buttons, inputs ---------- */
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px 24px 18px;border-bottom:1px solid var(--line);}
+  .card-head h2{margin:0 0 6px;font-size:21px;font-weight:700;}
+  .card-head p{margin:0;color:var(--muted);font-size:13px;}
+  .card-body{padding:0 24px 22px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid transparent;white-space:nowrap;}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-d);}
+  .btn-outline{background:#fff;color:#374151;border-color:#cfd5dd;}
+  .btn-outline:hover{background:var(--soft);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  select,input[type=text],input[type=date]{
+    height:38px;padding:6px 12px;border:1px solid #cfd5dd;border-radius:6px;font-size:14px;font-family:inherit;background:#fff;color:var(--text);width:100%;
+  }
+  select:focus,input:focus{outline:2px solid #b9d3e6;border-color:#8fb7d3;}
+  input[readonly]{background:#eef0f3;color:#555;}
+  label.lbl{display:block;font-size:12.5px;font-weight:700;margin-bottom:6px;}
+  .req{color:var(--red);}
+  .help{font-size:11.5px;color:var(--muted);margin-top:5px;}
+  .is-invalid{border-color:var(--red) !important;}
+  .err-msg{font-size:11.5px;color:var(--red);margin-top:4px;}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:26px;border-bottom:1px solid var(--line);margin:0 0 18px;padding-top:6px;}
+  .tab{padding:14px 2px 12px;cursor:pointer;font-size:14.5px;color:#555;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-top:0;border-left:0;border-right:0;font-family:inherit;}
+  .tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;}
+
+  /* ---------- filter panel & table ---------- */
+  .filter-panel{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:14px 16px 16px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .filter-fields{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;}
+  .filter-fields .f{width:200px;}
+  .dt-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .dt-top select{width:70px;height:32px;padding:2px 8px;display:inline-block;}
+  .dt-top input{width:220px;height:32px;}
+  .tbl-scroll{overflow-x:auto;}
+  table.list{width:100%;border-collapse:collapse;}
+  table.list thead th{background:var(--soft);text-align:left;font-weight:700;font-size:13px;padding:11px 12px;border-bottom:1px solid var(--line);border-top:1px solid var(--line);white-space:nowrap;}
+  table.list tbody td{padding:13px 12px;border-bottom:1px solid #eef0f3;vertical-align:top;line-height:1.45;}
+  table.list td.no{width:50px;}
+  table.list .doc{font-weight:700;}
+  table.list .sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400;}
+  table.list .cust{font-weight:700;}
+  table.list td.empty{text-align:center;color:var(--muted);padding:26px;}
+  .tim{display:grid;gap:6px;}
+  .tl{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:start;}
+  .tk{font-size:10.5px;color:var(--muted);line-height:1.1;}
+  .badge{display:inline-block;padding:4px 9px;border-radius:5px;font-size:11.5px;font-weight:600;white-space:nowrap;}
+  .badge.un{background:var(--amber-bg);color:var(--amber);}
+  .badge.in{background:var(--green-bg);color:var(--green);}
+  .dt-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:13px;flex-wrap:wrap;gap:8px;}
+  .pager{display:flex;gap:4px;}
+  .pager button{padding:5px 11px;border:1px solid #cfd5dd;background:#fff;border-radius:5px;font-size:12.5px;cursor:pointer;font-family:inherit;}
+  .pager button.cur{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .pager button:disabled{opacity:.45;cursor:default;}
+
+  /* aksi dropdown */
+  .menu{position:fixed;z-index:150;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:6px;min-width:170px;}
+  .menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:9px 10px;border-radius:6px;font-size:13.5px;cursor:pointer;font-family:inherit;color:#374151;}
+  .menu button:hover{background:var(--soft);}
+  .menu .mi{color:var(--primary);width:16px;text-align:center;}
+
+  /* ---------- buat invoice ---------- */
+  .sec{padding:22px 24px 6px;}
+  .sec h3{margin:0 0 4px;font-size:15.5px;font-weight:700;}
+  .sec > p{margin:0 0 14px;color:var(--muted);font-size:12.5px;}
+  .cust-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .infobox{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:16px 18px;align-self:start;}
+  .infobox .r{display:grid;grid-template-columns:78px 1fr;gap:6px;padding:4px 0;font-size:12.5px;}
+  .infobox .r .k{color:var(--muted);font-size:11.5px;padding-top:2px;}
+  .infobox .r .v{font-size:13px;}
+  .infobox .r.first .v{font-weight:700;font-size:14.5px;}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 14px;}
+  .fgrid .full{grid-column:1 / -1;}
+  .two-col{display:grid;grid-template-columns:1fr 225px;gap:16px;align-items:start;}
+  table.plain{width:100%;border-collapse:collapse;margin-bottom:6px;}
+  table.plain th{background:var(--soft);text-align:left;font-weight:700;font-size:12.5px;padding:9px 12px;border:1px solid var(--line);}
+  table.plain td{padding:11px 12px;border:1px solid var(--line);}
+  table.plain .r{text-align:right;white-space:nowrap;}
+  table.plain .pct{color:var(--primary);}
+  .summary{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+  .summary .sh{background:var(--soft);padding:11px 14px;font-weight:700;font-size:13.5px;border-bottom:1px solid var(--line);}
+  .summary .sh small{font-weight:400;color:var(--muted);}
+  .summary .sr{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid #eef0f3;align-items:flex-start;}
+  .summary .sr .n{font-size:12.5px;}
+  .summary .sr .f{font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .summary .sr .v{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px;}
+  .summary .sr.total{background:#e9f1f8;}
+  .summary .sr.total .n{font-weight:700;color:var(--primary);font-size:14px;}
+  .summary .sr.last{border-bottom:0;}
+  table.jr{width:100%;border-collapse:collapse;}
+  table.jr th{background:var(--soft);text-align:left;font-weight:700;font-size:12.5px;padding:11px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  table.jr th.r, table.jr td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  table.jr td{padding:10px 12px;border-bottom:1px solid #eef0f3;font-size:13px;vertical-align:top;}
+  table.jr td.empty{text-align:center;color:var(--muted);padding:18px;}
+  table.jr tfoot td{padding:11px 12px;font-weight:700;border-bottom:1px solid var(--line);}
+  .form-actions{display:flex;gap:10px;padding:18px 24px 24px;border-top:1px solid var(--line);margin-top:16px;}
+
+  .toast{position:fixed;right:22px;bottom:22px;background:#2b3038;color:#fff;padding:11px 16px;border-radius:8px;font-size:13px;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.3);max-width:380px;}
+  .toast.error{background:var(--red);}
+
+  @media (max-width:980px){
+    .sidebar{display:none;} .content-wrapper,.main-footer{margin-left:0;} .logo{width:auto;padding:0 14px;}
+    .cust-grid,.two-col{grid-template-columns:1fr;} .nav-right a{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" id="burger" aria-label="Toggle menu">&#9776;</button>
+    <div class="nav-right"><a>Helpdesk</a><a>Manual Book</a><span><span class="avatar"></span>Admin</span></div>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="side-search">&#128269;&#xFE0E; Cari menu...</div>
+  <ul>
+    <li class="item"><a><span class="ico">&#9673;</span>Dashboard</a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Data<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Inventory<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Assets<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9636;</span>PR Dept, Stok, Asset<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9635;</span>Purchase<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9632;</span>Pengeluaran Non Pembelian<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#10003;</span>Approval<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#10003;</span>Approval PR<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Warehouse Stock<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9656;</span>Budget<span class="chev">&#8249;</span></a></li>
+    <li class="item open">
+      <a><span class="ico">&#9656;</span>Finance<span class="chev">&#8249;</span></a>
+      <ul class="sub">
+        <li><a>Plan Tagih</a></li>
+        <li><a>Actual Plan Tagih</a></li>
+        <li><a class="active" id="navInvoicing">Invoicing</a></li>
+        <li><a>Jurnal All</a></li>
+        <li><a>Report Actual Plan Tagih</a></li>
+        <li><a>Report Uninvoiced Dan Piutang Pelanggan</a></li>
+        <li><a>Report Petty Cash</a></li>
+        <li><a>Report Jurnal All</a></li>
+      </ul>
+    </li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+
+<!-- ======================= DAFTAR INVOICE ======================= -->
+<section id="viewList">
+  <h1 class="crumb">Invoicing</h1>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Daftar invoice</h2>
+        <p>Kelola tagihan konsultasi per TOP dan invoice non konsultasi.</p>
+      </div>
+      <button class="btn btn-outline" id="btnCoa">&#9776; Pengaturan COA</button>
+    </div>
+    <div class="card-body">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="kons">Konsultasi</button>
+        <button class="tab" data-tab="non">Non Konsultasi</button>
+        <button class="tab" data-tab="inv">Invoiced</button>
+      </div>
+
+      <!-- tab Konsultasi (hanya yang belum di-invoice) -->
+      <div id="tab-kons">
+        <div class="filter-panel">
+          <div class="filter-fields">
+            <div class="f"><label class="lbl" for="kYear">Tahun</label>
+              <select id="kYear"><option>2026</option><option>2025</option><option>2024</option></select></div>
+            <button class="btn btn-primary" id="kApply">Terapkan filter</button>
+          </div>
+          <button class="btn btn-outline" id="kExport">&#8681; Ekspor Excel</button>
+        </div>
+        <div class="dt-top">
+          <div>Tampilkan <select id="kSize"><option>10</option><option>25</option><option>50</option></select> baris</div>
+          <div>Cari: <input type="text" id="kSearch" placeholder="Nomor, customer, atau project"></div>
+        </div>
+        <div class="tbl-scroll">
+          <table class="list">
+            <thead><tr><th>No.</th><th>Dokumen</th><th>Customer &amp; Project</th><th>Company</th><th>Tim</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="kBody"></tbody>
+          </table>
+        </div>
+        <div class="dt-bottom"><div id="kInfo"></div><div class="pager" id="kPager"></div></div>
+      </div>
+
+      <!-- tab Non Konsultasi -->
+      <div id="tab-non" class="hidden">
+        <div class="filter-panel">
+          <div class="filter-fields">
+            <div class="f"><label class="lbl" for="nYear">Tahun</label>
+              <select id="nYear"><option>2026</option><option>2025</option></select></div>
+            <button class="btn btn-primary" id="nApply">Terapkan filter</button>
+          </div>
+          <button class="btn btn-primary" id="nAdd">+ Buat invoice</button>
+        </div>
+        <div class="dt-top">
+          <div>Tampilkan <select><option>10</option><option>25</option><option>50</option></select> baris</div>
+          <div>Cari: <input type="text" id="nSearch" placeholder="Nomor, customer, atau pic"></div>
+        </div>
+        <div class="tbl-scroll">
+          <table class="list">
+            <thead><tr><th>No.</th><th>No. Invoice</th><th>Kepada</th><th>Company</th><th>No. Penawaran</th><th>Penjualan</th><th>PIC</th><th style="text-align:right;">Revisi</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="nBody"></tbody>
+          </table>
+        </div>
+        <div class="dt-bottom"><div id="nInfo"></div><div class="pager"><button disabled>Sebelumnya</button><button class="cur">1</button><button disabled>Berikutnya</button></div></div>
+      </div>
+
+      <!-- tab Invoiced (baru) -->
+      <div id="tab-inv" class="hidden">
+        <div class="filter-panel">
+          <div class="filter-fields">
+            <div class="f"><label class="lbl" for="iYear">Tahun</label>
+              <select id="iYear"><option>2026</option><option>2025</option><option>2024</option></select></div>
+            <div class="f"><label class="lbl" for="iMonth">Bulan</label>
+              <select id="iMonth"><option value="">Semua bulan</option></select></div>
+            <div class="f"><label class="lbl" for="iCompany">Company</label>
+              <select id="iCompany">
+                <option value="">Semua company</option><option>STM-Vuca</option><option>STM-Sustain</option><option>Sustain</option>
+              </select></div>
+            <button class="btn btn-primary" id="iApply">Terapkan filter</button>
+          </div>
+          <button class="btn btn-outline" id="iExport">&#8681; Ekspor Excel</button>
+        </div>
+        <div class="dt-top">
+          <div>Tampilkan <select id="iSize"><option>10</option><option>25</option><option>50</option></select> baris</div>
+          <div>Cari: <input type="text" id="iSearch" placeholder="Nomor, customer, atau project"></div>
+        </div>
+        <div class="tbl-scroll">
+          <table class="list">
+            <thead><tr><th>No.</th><th>Dokumen</th><th>Tanggal Invoice</th><th>Customer &amp; Project</th><th>Company</th><th>Tim</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="iBody"></tbody>
+          </table>
+        </div>
+        <div class="dt-bottom"><div id="iInfo"></div><div class="pager" id="iPager"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BUAT INVOICE ======================= -->
+<section id="viewAdd" class="hidden">
+  <h1 class="crumb">Invoicing</h1>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Buat invoice</h2>
+        <p id="addSub"></p>
+      </div>
+      <button class="btn btn-outline" id="btnBack2">Kembali ke daftar</button>
+    </div>
+
+    <div class="sec">
+      <h3>Customer &amp; dokumen</h3>
+      <p>Identitas customer mengikuti SPK. Lengkapi dokumen dan perlakuan PPN untuk invoice ini.</p>
+      <div class="cust-grid">
+        <div class="infobox">
+          <div class="r first"><span class="k">Kepada</span><span class="v" id="vKepada"></span></div>
+          <div class="r"><span class="k">Alamat</span><span class="v" id="vAlamat"></span></div>
+          <div class="r"><span class="k">Ditujukan</span><span class="v" id="vDitujukan"></span></div>
+          <div class="r"><span class="k">No. SPK</span><span class="v" id="vSpk"></span></div>
+        </div>
+        <div class="fgrid">
+          <div>
+            <label class="lbl" for="fTanggal">Tanggal invoice <span class="req">*</span></label>
+            <input type="date" id="fTanggal">
+            <div class="help">Tanggal jurnal mengikuti tanggal invoice.</div>
+          </div>
+          <div>
+            <label class="lbl" for="fNomor">Nomor invoice</label>
+            <input type="text" id="fNomor" readonly>
+            <div class="help">Nomor ditetapkan saat invoice disimpan.</div>
+          </div>
+          <div>
+            <label class="lbl" for="fPo">Nomor PO <span class="req">*</span></label>
+            <input type="text" id="fPo" placeholder="Masukkan nomor PO">
+          </div>
+          <div>
+            <label class="lbl" for="fFaktur">Nomor faktur <span class="req">*</span></label>
+            <input type="text" id="fFaktur" placeholder="Masukkan nomor faktur">
+          </div>
+          <div class="full">
+            <label class="lbl" for="fPpn">Perlakuan PPN <span class="req">*</span></label>
+            <select id="fPpn">
+              <option value="">Pilih perlakuan PPN</option>
+              <option value="PKP">PKP</option>
+              <option value="WAPU">WAPU</option>
+              <option value="KB">Kawasan Berikat</option>
+            </select>
+            <div class="help">Piutang PKP mencakup PPN. Piutang WAPU dan Kawasan Berikat sebesar penjualan.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="two-col">
+        <div>
+          <h3>Rincian TOP</h3>
+          <p>Satu TOP untuk satu invoice. Nominal mengikuti plan tagih dan tidak dapat diubah di sini.</p>
+          <div class="tbl-scroll">
+            <table class="plain">
+              <thead><tr><th style="width:50px;">No.</th><th>Term of Payment</th><th>Persentase</th><th class="r" style="text-align:right;">Nominal (Rp)</th><th>Deskripsi</th></tr></thead>
+              <tbody id="topBody"></tbody>
+            </table>
+          </div>
+
+          <h3 style="margin-top:22px;">Akun penjualan</h3>
+          <p>Kategori penjualan menentukan akun pendapatan pada jurnal invoice.</p>
+          <label class="lbl" for="fCoa">COA penjualan <span class="req">*</span></label>
+          <select id="fCoa">
+            <option value="">Pilih COA Penjualan</option>
+            <option>Penjualan Konsultasi</option>
+            <option>Penjualan In House Training</option>
+            <option>Penjualan Public Training &amp; Seminar</option>
+            <option>Penjualan HSE Pengujian</option>
+          </select>
+          <div class="help">PPh dicatat saat penerimaan sesuai bukti yang dipotong. Nilainya tidak mengurangi piutang awal invoice ini.</div>
+        </div>
+
+        <aside class="summary">
+          <div class="sh">Ringkasan tagihan <small>(Rp)</small></div>
+          <div class="sr"><div><div class="n">Penjualan</div><div class="f">Nominal TOP</div></div><div class="v" id="sPenjualan">-</div></div>
+          <div class="sr"><div><div class="n">DPP</div><div class="f">Penjualan × 11/12</div></div><div class="v" id="sDpp">-</div></div>
+          <div class="sr"><div><div class="n">PPN</div><div class="f">DPP × 12%</div></div><div class="v" id="sPpn">-</div></div>
+          <div class="sr total"><div><div class="n">Total tagihan</div><div class="f">Penjualan + PPN</div></div><div class="v" id="sTotal">-</div></div>
+          <div class="sr last"><div class="n">Piutang awal</div><div class="v" id="sPiutang">-</div></div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Jurnal invoice</h3>
+      <p>Periksa akun dan keseimbangan debit/kredit. Jurnal disimpan sebagai draf untuk diposting melalui modul Jurnal.</p>
+      <div class="tbl-scroll">
+        <table class="jr">
+          <thead><tr><th>Tanggal jurnal</th><th>Company</th><th>COA</th><th>Nama COA</th><th>Deskripsi</th><th class="r">Debit (Rp)</th><th class="r">Kredit (Rp)</th></tr></thead>
+          <tbody id="jBody"></tbody>
+          <tfoot><tr><td colspan="5">Total debit / kredit</td><td class="r" id="jDebit">0.00</td><td class="r" id="jCredit">0.00</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btnSave">Simpan invoice</button>
+      <button class="btn btn-outline" id="btnBack">Kembali ke daftar</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="main-footer">
+  <div>Copyright &copy; 2020 <a>SENDIGS SS</a>. All rights reserved.</div>
+  <div>SENDIGS SS - Page rendered in <strong>0.2791</strong> seconds</div>
+</footer>
+
+<div class="menu hidden" id="actMenu"></div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const rp = n => n.toLocaleString("en-US") + ".00";
+const pad = n => String(n).padStart(2,"0");
+const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const fmtDate = iso => { const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
+
+/* ======================================================================
+   DATA MOCKUP
+   Baris "belum di-invoice" = satu TOP per baris. Data bertanda (dummy) adalah karangan.
+   Prefix nomor invoice: company "Sustain" -> SSC, selain itu STM.
+   ====================================================================== */
+let uninvoiced = [
+  {id:"u1", year:2026, spk:"021/STM/MKT-SPK/II/26", customer:"Lihat Lampiran SPK Seminar", project:"Seminar Offline IATF 16949 & Core Tools",
+   company:"STM-Vuca", leader:"Imanuel Iman", sales:"Jeadarisa Mahen Syahrani", ditujukan:"Finance Dept.", alamat:"",
+   top:{nama:"Penagihan 1", pct:100, nominal:17297296, desc:"setelah training selesai"}},
+  {id:"u2", year:2026, spk:"091/STM/MKT-SPK/VII/26", customer:"Lihat Lampiran SPK Webinar", project:"Webinar ISO 19011:2026",
+   company:"STM-Vuca", leader:"Imanuel Iman", sales:"Jeadarisa Mahen Syahrani", ditujukan:"Finance Dept.", alamat:"",
+   top:{nama:"Penagihan 1", pct:100, nominal:12000000, desc:"setelah webinar selesai"}},                       // nominal (dummy)
+  {id:"u3", year:2026, spk:"048/STM/MKT-SPK/V/26", customer:"PT Sekisui Polymatech Indonesia", project:"Pendampingan PROPER",
+   company:"STM-Vuca", leader:"Masika Arinal Simanjuntak", sales:"Masika Arinal Simanjuntak", ditujukan:"Finance Dept.", alamat:"Kawasan MM2100 - Ejip Bridge, Cikarang Barat, Kabupaten Bekasi",
+   top:{nama:"Penagihan 1", pct:50, nominal:45000000, desc:"setelah draft dokumen PROPER diserahkan"}},          // TOP (dummy)
+  {id:"u4", year:2026, spk:"026/STM/MKT-SPK/II/25", customer:"PT Surya Energi Parahita", project:"RKL-RPL Rinci",
+   company:"STM-Sustain", leader:"Cahyadi", sales:"Masika Arinal", ditujukan:"Finance Dept.", alamat:"",
+   top:{nama:"Penagihan 1", pct:100, nominal:25000000, desc:"setelah dokumen RKL-RPL disetujui"}},               // TOP (dummy)
+  // --- case dari sheet Test Case (D1, D2, D3)
+  {id:"u5", year:2026, spk:"052/STM/MKT-SPK/V/26", customer:"PT Pelayaran Nasional Indonesia/PELNI (Persero) SMT", project:"Jasa Konsultasi Pendampingan dan Sertifikasi Sistem Manajemen Terintegrasi (SMT)",
+   company:"STM-Sustain", leader:"Sya'bani Abdullah Amir", sales:"Asri Sinta Lestari", ditujukan:"Bagian Keuangan",
+   alamat:"Kantor Pusat PT Pelayaran Nasional Indonesia (Persero) Jl. Gajah Mada No. 14, Jakarta Pusat",
+   top:{nama:"Penagihan 3", pct:30, nominal:291000000, desc:"setelah tahapan audit eksternal selesai dibuktikan dengan mengirimkan Dokumen Laporan Hasil Audit Eksternal yang telah ditandatangani kedua belah pihak"}},
+  {id:"u6", year:2026, spk:"010/STM/MKT-SPK/I/24", customer:"PT. RNP Technologies Indonesia", project:"Consultation Guidance Quality Management System Impelementation Based on IATF 16949:2016 Standard & iso 9001",
+   company:"Sustain", leader:"Hasiholan Simanjuntak", sales:"Erna Susanti", ditujukan:"Finance Dept",
+   alamat:"Kawasan Industri Jl. Industri No. 12, Cikarang, Kab Bekasi",
+   top:{nama:"Penagihan 4", pct:20, nominal:19581600, desc:"Pada bulan ke-11"}},
+  {id:"u7", year:2026, spk:"021/STM/MKT-SPK/III/26", customer:"PT Mitra Berikat Presisi", project:"Pendampingan Implementasi ISO 9001:2015 dan ISO 14001:2015",
+   company:"STM-Vuca", leader:"Dimas Prakoso", sales:"Masika Arinal Simanjuntak", ditujukan:"Finance Dept",
+   alamat:"Kawasan Industri Jl. Industri Raya No. 8 Cikarang",                                              // seluruh case KB (dummy)
+   top:{nama:"Penagihan 2", pct:40, nominal:60000000, desc:"setelah audit internal dan tinjauan manajemen selesai"}}
+];
+
+// invoice yang sudah disimpan. Tanggal invoice 4 baris pertama (dummy); data selain tanggal dari video.
+let invoiced = [
+  {no:"258/STM/2026", date:"2026-10-12", spk:"117/STM/MKT-SPK/V/26", customer:"PT Astra Visteon Indonesia", project:"Inhouse Training Internal Audit Integrasi Sistem Manajemen Mutu dan Lingkungan Berdasarkan Panduan Audit ISO 19011:2026", company:"STM-Vuca", leader:"Hasiholan Simanjuntak", sales:"Asri Sinta Lestari"},
+  {no:"256/STM/2026", date:"2026-10-05", spk:"112/STM/MKT-SPK/IX/26", customer:"PT Jui Shin Indonesia", project:"Inhouse Training Awareness & Internal Audit ISO 14001:2026", company:"STM-Sustain", leader:"Cahyadi", sales:"Erna Susanti"},
+  {no:"250/STM/2026", date:"2026-09-18", spk:"107/STM/MKT-SPK/IX/26", customer:"PT National Asemblers", project:"Inhouse Training Internal Quality Audit (IQA) Berdasarkan ISO 19011:2026", company:"STM-Vuca", leader:"Angga Yayang Erawan", sales:"Asri Sinta Lestari"},
+  {no:"061/SSC/2026", date:"2026-09-03", spk:"113/STM/MKT-SPK/IX/26", customer:"PT Resonac Materials Indonesia", project:"RKL-RPL Rinci dan Pertek Emisi serta SLO", company:"Sustain", leader:"Cahyadi", sales:"Masika Arinal Simanjuntak"},
+  {no:"112/STM/2025", date:"2025-11-20", spk:"044/STM/MKT-SPK/IV/25", customer:"PT Contoh Manufaktur Jaya", project:"Pendampingan ISO 9001:2015", company:"STM-Vuca", leader:"Imanuel Iman", sales:"Jeadarisa Mahen Syahrani"},  // (dummy)
+  {no:"031/SSC/2025", date:"2025-03-14", spk:"018/STM/MKT-SPK/I/25", customer:"PT Contoh Energi Nusantara", project:"Penyusunan Dokumen UKL-UPL", company:"Sustain", leader:"Cahyadi", sales:"Erna Susanti"}                  // (dummy)
+].map(r => { const [y,m] = r.date.split("-"); return Object.assign({year:+y, month:+m, saved:false}, r); });
+
+const nonKons = [
+  ["253/STM/2026","PT. ASAHI FORGE INDONESIA","P-NON-KONS-001-10-26","Publik Training Core Tools (08 Oktober 2026)","Risa"],
+  ["252/STM/2026","PT. NIPPO MECHATRONICS INDONESIA","P-NON-KONS-001-10-26","Publik Training Core Tools (08 Oktober 2026)","Risa"],
+  ["251/STM/2026","PT. LAPP CABLE WORKS JAKARTA","P-NON-KONS-001-10-26","Publik Training Core Tools (08 Oktober 2026)","Risa"],
+  ["247/STM/2026","PT. AKS PRECISION BALL INDONESIA","P-NON-KONS-008-09-26","Publik Training Kalibrasi Batch September 2026","Jeadarisa Mahen Syahrani"],
+  ["246/STM/2026","PT. MITSUBISHI ELECTRIC AUTOMOTIVE INDONESIA","P-NON-KONS-006-09-26","Publik Training ISO 19011:2026 (22 September 2026)","Risa"],
+  ["245/STM/2026","PT. ASTEMO BEKASI BRAKE SYSTEMS","P-NON-KONS-007-09-26","Publik Training Kalibrasi Batch September 2026","Jeadarisa Mahen Syahrani"],
+  ["244/STM/2026","PT. AKASHI WAHANA INDONESIA","P-NON-KONS-007-09-26","Publik Training Kalibrasi Batch September 2026","Jeadarisa Mahen Syahrani"]
+];
+
+const seq = {STM:263, SSC:62};     // nomor berikutnya (simulasi; di sistem asli di-generate backend)
+const prefixOf = c => c === "Sustain" ? "SSC" : "STM";
+
+/* ---------------- util tabel ---------------- */
+function timHtml(r){
+  return `<div class="tim"><div class="tl"><span class="tk">Project<br>Leader</span><span>${r.leader}</span></div>
+          <div class="tl"><span class="tk">Sales</span><span>${r.sales}</span></div></div>`;
+}
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function match(q, arr){ q = q.trim().toLowerCase(); return !q || arr.join(" ").toLowerCase().includes(q); }
+function pagerRender(el, infoEl, total, page, size, onGo){
+  const pages = Math.max(1, Math.ceil(total/size));
+  const from = total ? (page-1)*size+1 : 0, to = Math.min(total, page*size);
+  infoEl.textContent = `Menampilkan ${from} sampai ${to} dari ${total} data`;
+  el.innerHTML = "";
+  const mk = (t, p, dis, cur) => { const b = document.createElement("button"); b.textContent = t; b.disabled = dis; if(cur) b.className = "cur"; b.onclick = () => onGo(p); el.appendChild(b); };
+  mk("Sebelumnya", page-1, page<=1);
+  for(let p=1;p<=pages;p++) mk(String(p), p, false, p===page);
+  mk("Berikutnya", page+1, page>=pages);
+}
+
+/* ---------------- tab Konsultasi (belum di-invoice) ---------------- */
+let kApplied = {year:2026}, kPage = 1;
+function kRows(){
+  return uninvoiced.filter(r => r.year === kApplied.year &&
+    match($("kSearch").value, [r.spk,r.customer,r.project,r.company,r.leader,r.sales,r.top.nama]));
+}
+function renderKons(){
+  const size = +$("kSize").value, rows = kRows();
+  if((kPage-1)*size >= rows.length) kPage = 1;
+  const slice = rows.slice((kPage-1)*size, kPage*size);
+  const tb = $("kBody"); tb.innerHTML = "";
+  if(!slice.length) tb.innerHTML = `<tr><td class="empty" colspan="7">Tidak ada tagihan yang belum di-invoice.</td></tr>`;
+  slice.forEach((r,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="no">${(kPage-1)*size+i+1}</td>
+      <td><div class="doc">Belum ada invoice</div><div class="sub">SPK: ${r.spk} &middot; ${r.top.nama}</div></td>
+      <td><div class="cust">${esc(r.customer)}</div><div class="sub">Project: ${esc(r.project)}</div></td>
+      <td>${r.company}</td>
+      <td>${timHtml(r)}</td>
+      <td><span class="badge un">Uninvoiced</span></td>
+      <td><button class="btn btn-primary btn-sm" data-id="${r.id}">+ Buat Invoice</button></td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("button[data-id]").forEach(b => b.onclick = () => openAdd(b.dataset.id));
+  pagerRender($("kPager"), $("kInfo"), rows.length, kPage, size, p => { kPage = p; renderKons(); });
+}
+$("kApply").onclick = () => { kApplied = {year:+$("kYear").value}; kPage = 1; renderKons(); };
+$("kSearch").oninput = () => { kPage = 1; renderKons(); };
+$("kSize").onchange = () => { kPage = 1; renderKons(); };
+
+/* ---------------- tab Non Konsultasi (statis) ---------------- */
+function renderNon(){
+  const q = $("nSearch").value;
+  const rows = nonKons.filter(r => match(q, r));
+  const tb = $("nBody"); tb.innerHTML = "";
+  rows.forEach((r,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="no">${i+1}</td><td>${r[0]}</td><td>${r[1]}</td><td>STM</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td>
+      <td style="text-align:right;">0</td><td><span class="badge in">Invoice Created</span></td>
+      <td><button class="btn btn-outline btn-sm aksi" data-no="${r[0]}">Aksi &#9662;</button></td>`;
+    tb.appendChild(tr);
+  });
+  $("nInfo").textContent = `Menampilkan ${rows.length ? 1 : 0} sampai ${rows.length} dari ${rows.length} data`;
+}
+$("nSearch").oninput = renderNon;
+$("nApply").onclick = renderNon;
+$("nAdd").onclick = () => toast("Buat invoice non konsultasi tidak termasuk mockup ini.");
+
+/* ---------------- tab Invoiced (baru) ---------------- */
+MONTHS.forEach((m,i) => { const o = document.createElement("option"); o.value = i+1; o.textContent = m; $("iMonth").appendChild(o); });
+let iApplied = {year:2026, month:"", company:""}, iPage = 1;
+function iRows(){
+  return invoiced.filter(r => r.year === iApplied.year &&
+      (iApplied.month === "" || r.month === +iApplied.month) &&
+      (iApplied.company === "" || r.company === iApplied.company) &&
+      match($("iSearch").value, [r.no,r.spk,r.customer,r.project,r.company,r.leader,r.sales]))
+    .sort((a,b) => b.date.localeCompare(a.date) || b.no.localeCompare(a.no));
+}
+function renderInv(){
+  const size = +$("iSize").value, rows = iRows();
+  if((iPage-1)*size >= rows.length) iPage = 1;
+  const slice = rows.slice((iPage-1)*size, iPage*size);
+  const tb = $("iBody"); tb.innerHTML = "";
+  if(!slice.length) tb.innerHTML = `<tr><td class="empty" colspan="8">Tidak ada invoice untuk filter ini.</td></tr>`;
+  slice.forEach((r,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="no">${(iPage-1)*size+i+1}</td>
+      <td><div class="doc">${r.no}</div><div class="sub">SPK: ${r.spk}</div></td>
+      <td>${fmtDate(r.date)}</td>
+      <td><div class="cust">${esc(r.customer)}</div><div class="sub">Project: ${esc(r.project)}</div></td>
+      <td>${r.company}</td>
+      <td>${timHtml(r)}</td>
+      <td><span class="badge in">Invoiced</span></td>
+      <td><button class="btn btn-outline btn-sm aksi" data-no="${r.no}">Aksi &#9662;</button></td>`;
+    tb.appendChild(tr);
+  });
+  pagerRender($("iPager"), $("iInfo"), rows.length, iPage, size, p => { iPage = p; renderInv(); });
+}
+$("iApply").onclick = () => { iApplied = {year:+$("iYear").value, month:$("iMonth").value, company:$("iCompany").value}; iPage = 1; renderInv(); };
+$("iSearch").oninput = () => { iPage = 1; renderInv(); };
+$("iSize").onchange = () => { iPage = 1; renderInv(); };
+
+/* ---------------- menu Aksi ---------------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest(".aksi"), menu = $("actMenu");
+  if(b){
+    const r = b.getBoundingClientRect();
+    menu.innerHTML = `<button data-a="Lihat invoice"><span class="mi">&#9673;</span>Lihat invoice</button>
+      <button data-a="Cetak invoice"><span class="mi">&#9113;</span>Cetak invoice</button>
+      <button data-a="Cetak kwitansi"><span class="mi">&#9636;</span>Cetak kwitansi</button>`;
+    menu.style.top = (r.bottom + 4) + "px"; menu.style.left = Math.max(8, r.right - 170) + "px";
+    menu.classList.remove("hidden");
+    menu.querySelectorAll("button").forEach(x => x.onclick = ev => { ev.stopPropagation(); menu.classList.add("hidden"); toast(`${x.dataset.a} ${b.dataset.no} (mockup)`); });
+    e.stopPropagation(); return;
+  }
+  menu.classList.add("hidden");
+});
+window.addEventListener("scroll", () => $("actMenu").classList.add("hidden"), true);
+
+/* ---------------- tab switching ---------------- */
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+  ["kons","non","inv"].forEach(k => $("tab-"+k).classList.toggle("hidden", k !== t.dataset.tab));
+});
+
+/* ======================================================================
+   EKSPOR EXCEL (.xlsx sungguhan, dibuat di browser tanpa library)
+   ====================================================================== */
+const CRC_T = (() => { const t=[]; for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320 ^ (c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
+function zipStore(files){            // files: [{name, data(Uint8Array)}]
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const u16 = v => [v&255,(v>>8)&255], u32 = v => [v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  files.forEach(f => {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new Uint8Array([0x50,0x4b,3,4, ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0)]);
+    parts.push(lh, name, f.data);
+    central.push(new Uint8Array([0x50,0x4b,1,2, ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)]), name);
+    offset += lh.length + name.length + size;
+  });
+  const cdSize = central.reduce((a,p) => a + p.length, 0);
+  const end = new Uint8Array([0x50,0x4b,5,6, 0,0, 0,0, ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(offset), 0,0]);
+  return new Blob([...parts, ...central, end], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function xlsxBlob(sheetName, headers, rows, widths){
+  const enc = new TextEncoder();
+  const x = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const col = i => String.fromCharCode(65+i);
+  const cell = (v,ri,ci,style) => typeof v === "number"
+      ? `<c r="${col(ci)}${ri}"${style?` s="${style}"`:""}><v>${v}</v></c>`
+      : `<c r="${col(ci)}${ri}" t="inlineStr"${style?` s="${style}"`:""}><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+  let sd = `<row r="1">${headers.map((h,i) => cell(h,1,i,1)).join("")}</row>`;
+  rows.forEach((r,ri) => { sd += `<row r="${ri+2}">${r.map((v,ci) => cell(v,ri+2,ci,0)).join("")}</row>`; });
+  const cols = `<cols>${widths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`;
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const F = (name, xml) => ({name, data: enc.encode(head + xml)});
+  return zipStore([
+    F("[Content_Types].xml",'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'),
+    F("_rels/.rels",'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'),
+    F("xl/workbook.xml",`<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`),
+    F("xl/_rels/workbook.xml.rels",'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'),
+    F("xl/styles.xml",'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'),
+    F("xl/worksheets/sheet1.xml",`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${sd}</sheetData></worksheet>`)
+  ]);
+}
+function download(blob, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+$("iExport").onclick = () => {
+  const rows = iRows();
+  if(!rows.length){ toast("Tidak ada data untuk diekspor pada filter ini.", true); return; }
+  const data = rows.map((r,i) => [i+1, r.no, fmtDate(r.date), r.spk, r.customer, r.project, r.company, r.leader, r.sales, "Invoiced"]);
+  const bulan = iApplied.month ? MONTHS[iApplied.month-1] : "Semua-bulan";
+  const comp = iApplied.company ? iApplied.company : "Semua-company";
+  download(xlsxBlob("Invoiced", ["No.","No. Invoice","Tanggal Invoice","No. SPK","Customer","Project","Company","Project Leader","Sales","Status"], data, [6,16,16,26,40,60,14,26,26,12]),
+           `Invoiced_${iApplied.year}_${bulan}_${comp}.xlsx`);
+  toast(`${rows.length} invoice diekspor ke Excel.`);
+};
+$("kExport").onclick = () => {
+  const rows = kRows();
+  if(!rows.length){ toast("Tidak ada data untuk diekspor.", true); return; }
+  const data = rows.map((r,i) => [i+1, r.spk, r.customer, r.project, r.company, r.leader, r.sales, r.top.nama, r.top.nominal, "Uninvoiced"]);
+  download(xlsxBlob("Uninvoiced", ["No.","No. SPK","Customer","Project","Company","Project Leader","Sales","Term of Payment","Nominal TOP (Rp)","Status"], data, [6,26,40,60,14,26,26,16,18,12]),
+           `Uninvoiced_${kApplied.year}.xlsx`);
+  toast(`${rows.length} tagihan diekspor ke Excel.`);
+};
+
+/* ======================================================================
+   BUAT INVOICE
+   ====================================================================== */
+let cur = null;
+const COA = {
+  piutang:{no:"1102-01-01", nama:"Piutang Dagang Usaha"},
+  hutangDn:{no:"2104-01-07", nama:"Hutang PPN DN"},
+  umWapu:{no:"1106-01-XX", nama:"Uang Muka PPN WAPU"},       // nomor placeholder
+  hutangWapu:{no:"2104-01-XX", nama:"Hutang PPN WAPU"}        // nomor placeholder
+};
+const SALES_NO = "0000-00-00";                                // nomor COA penjualan sementara
+
+function showView(v){ $("viewList").classList.toggle("hidden", v !== "list"); $("viewAdd").classList.toggle("hidden", v !== "add"); window.scrollTo(0,0); }
+function invoiceNo(){
+  const p = prefixOf(cur.company), y = ($("fTanggal").value || "").slice(0,4) || new Date().getFullYear();
+  return String(seq[p]).padStart(3,"0") + "/" + p + "/" + y;
+}
+function openAdd(id){
+  cur = uninvoiced.find(r => r.id === id);
+  const t = new Date(), iso = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+  $("fTanggal").value = iso; $("fPo").value = ""; $("fFaktur").value = ""; $("fPpn").value = ""; $("fCoa").value = "";
+  document.querySelectorAll(".is-invalid").forEach(e => e.classList.remove("is-invalid"));
+  document.querySelectorAll(".err-msg").forEach(e => e.remove());
+  $("vKepada").textContent = cur.customer; $("vAlamat").textContent = cur.alamat || ""; $("vDitujukan").textContent = cur.ditujukan; $("vSpk").textContent = cur.spk;
+  $("fNomor").value = invoiceNo();
+  $("addSub").textContent = `${$("fNomor").value} · SPK ${cur.spk}`;
+  $("topBody").innerHTML = `<tr><td>1</td><td>${cur.top.nama}</td><td class="pct">${cur.top.pct.toFixed(2)}%</td><td class="r">${rp(cur.top.nominal)}</td><td>${esc(cur.top.desc)}</td></tr>`;
+  recalc(); showView("add");
+}
+function recalc(){
+  const ppn = $("fPpn").value, coa = $("fCoa").value, pen = cur.top.nominal;
+  const dpp = Math.round(pen*11/12), ppnAmt = Math.round(dpp*0.12), total = pen + ppnAmt;
+  $("sPenjualan").textContent = rp(pen);
+  $("sDpp").textContent = ppn ? rp(dpp) : "-";
+  $("sPpn").textContent = ppn ? rp(ppnAmt) : "-";
+  $("sTotal").textContent = ppn ? rp(total) : "-";
+  $("sPiutang").textContent = ppn ? rp(ppn === "PKP" ? total : pen) : "-";
+
+  const tb = $("jBody"); tb.innerHTML = "";
+  let D = 0, K = 0;
+  if(!ppn || !coa){
+    tb.innerHTML = `<tr><td class="empty" colspan="7">Pilih perlakuan PPN dan COA penjualan untuk menampilkan jurnal.</td></tr>`;
+  } else {
+    const tgl = fmtDate($("fTanggal").value), no = $("fNomor").value;
+    const sales = {no:SALES_NO, nama:coa};
+    // Penarikan jurnal per perlakuan PPN (sheet Test Case)
+    let rows;
+    if(ppn === "PKP") rows = [[COA.piutang,total,0],[COA.hutangDn,0,ppnAmt],[sales,0,pen]];
+    else if(ppn === "WAPU") rows = [[COA.umWapu,ppnAmt,0],[COA.piutang,pen,0],[COA.hutangWapu,0,ppnAmt],[sales,0,pen]];
+    else rows = [[COA.piutang,pen,0],[sales,0,pen]];
+    rows.forEach(([a,d,k]) => {
+      D += d; K += k;
+      const desc = [a.nama, no, cur.spk].concat(ppn === "KB" ? ["Kawasan Berikat"] : []).join(" - ");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${tgl}</td><td>${cur.company}</td><td>${a.no}</td><td>${esc(a.nama)}</td><td>${esc(desc)}</td><td class="r">${rp(d)}</td><td class="r">${rp(k)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  $("jDebit").textContent = rp(D); $("jCredit").textContent = rp(K);
+}
+["fTanggal","fPpn","fCoa"].forEach(id => $(id).addEventListener("change", () => {
+  if(id === "fTanggal"){ $("fNomor").value = invoiceNo(); $("addSub").textContent = `${$("fNomor").value} · SPK ${cur.spk}`; }
+  $(id).classList.remove("is-invalid"); const m = $(id).parentElement.querySelector(".err-msg"); if(m) m.remove();
+  recalc();
+}));
+["fPo","fFaktur"].forEach(id => $(id).addEventListener("input", () => { $(id).classList.remove("is-invalid"); const m = $(id).parentElement.querySelector(".err-msg"); if(m) m.remove(); }));
+
+$("btnSave").onclick = () => {
+  let ok = true;
+  document.querySelectorAll(".err-msg").forEach(e => e.remove());
+  [["fTanggal","Tanggal invoice wajib diisi."],["fPo","Nomor PO wajib diisi."],["fFaktur","Nomor faktur wajib diisi."],["fPpn","Perlakuan PPN wajib dipilih."],["fCoa","COA penjualan wajib dipilih."]].forEach(([id,msg]) => {
+    const el = $(id), bad = !el.value.trim();
+    el.classList.toggle("is-invalid", bad);
+    if(bad){ ok = false; const m = document.createElement("div"); m.className = "err-msg"; m.textContent = msg; el.parentElement.appendChild(m); }
+  });
+  if(!ok){ toast("Lengkapi field yang wajib diisi.", true); return; }
+
+  // simpan -> masuk tab Invoiced, hilang dari tab Konsultasi
+  const no = invoiceNo(), date = $("fTanggal").value, [y,m] = date.split("-");
+  const pen = cur.top.nominal, dpp = Math.round(pen*11/12), ppnAmt = Math.round(dpp*0.12), ppn = $("fPpn").value;
+  invoiced.push({no, date, year:+y, month:+m, spk:cur.spk, customer:cur.customer, project:cur.project, company:cur.company,
+    leader:cur.leader, sales:cur.sales, saved:true, ppn, coa:$("fCoa").value, penjualan:pen, ppnAmt, piutang: ppn === "PKP" ? pen + ppnAmt : pen});
+  seq[prefixOf(cur.company)]++;
+  uninvoiced = uninvoiced.filter(r => r.id !== cur.id);
+  renderKons();
+  // arahkan filter tab Invoiced agar invoice baru langsung terlihat
+  iApplied = {year:+y, month:"", company:""};
+  $("iYear").value = y; $("iMonth").value = ""; $("iCompany").value = ""; iPage = 1; renderInv();
+  showView("list");
+  toast(`Invoice ${no} tersimpan dan masuk ke tab Invoiced.`);
+};
+$("btnBack").onclick = $("btnBack2").onclick = () => showView("list");
+$("navInvoicing").onclick = () => showView("list");
+$("burger").onclick = () => document.body.classList.toggle("collapsed");
+$("btnCoa").onclick = () => toast("Pengaturan COA tidak termasuk mockup ini.");
+
+let toastTimer;
+function toast(msg, err){
+  const t = $("toast"); t.textContent = msg; t.className = "toast" + (err ? " error" : "");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add("hidden"), 3500);
+}
+
+renderKons(); renderNon(); renderInv();
+</script>
+</body>
+</html>

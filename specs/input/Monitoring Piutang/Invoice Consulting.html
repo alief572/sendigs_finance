@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Invoicing</title>
+<style>
+  :root{
+    --header:#3c8dbc;
+    --logo:#367fa9;
+    --side:#222d32;
+    --side-sub:#2c3b41;
+    --side-text:#b8c7ce;
+    --bg:#ecf0f5;
+    --border:#f4f4f4;
+    --line:#d2d6de;
+    --text:#333;
+    --link:#3c8dbc;
+    --green:#00a65a;
+    --red:#dd4b39;
+    --orange:#f39c12;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:"Source Sans Pro","Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size:14px;
+    color:var(--text);
+    background:var(--bg);
+  }
+
+  /* ---------- header ---------- */
+  .main-header{
+    position:fixed;top:0;left:0;right:0;height:50px;z-index:100;
+    background:var(--header);display:flex;
+  }
+  .logo{
+    width:230px;background:var(--logo);color:#fff;
+    font-size:20px;font-weight:700;text-align:center;line-height:50px;
+    flex:none;
+  }
+  .navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+  .navbar button.burger{
+    background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;
+  }
+  .nav-right{display:flex;align-items:center;gap:30px;font-size:13px;}
+  .nav-right .user{display:flex;align-items:center;gap:8px;}
+  .avatar{width:20px;height:20px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);
+    overflow-y:auto;z-index:90;
+  }
+  .sidebar ul{list-style:none;margin:0;padding:0;}
+  .sidebar .search-spacer{height:46px;}
+  .sidebar .item > a{
+    display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);
+    text-decoration:none;cursor:pointer;font-size:14px;
+  }
+  .sidebar .item > a .chev{margin-left:auto;font-size:11px;}
+  .sidebar .item.open > a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+  .sidebar .ico{width:16px;text-align:center;font-size:13px;opacity:.9;}
+  .sidebar .sub{background:var(--side-sub);padding:5px 0;}
+  .sidebar .sub a{
+    display:block;padding:5px 5px 5px 15px;color:#8aa4af;font-size:13px;text-decoration:none;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .sidebar .sub a::before{content:"› ";}
+  .sidebar .sub a:hover{color:#fff;}
+  .sidebar .sub a.active{color:#fff;}
+
+  /* ---------- content ---------- */
+  .content-wrapper{
+    margin-left:230px;margin-top:50px;padding:15px;
+    min-height:calc(100vh - 50px - 51px);
+  }
+  body.collapsed .sidebar{display:none;}
+  body.collapsed .content-wrapper,
+  body.collapsed .main-footer{margin-left:0;}
+  body.collapsed .logo{width:50px;font-size:0;}
+  h1.page-title{font-size:20px;font-weight:400;margin:0 0 15px;color:#444;}
+
+  .box{
+    background:#fff;border-top:3px solid var(--line);border-radius:3px;
+    box-shadow:0 1px 1px rgba(0,0,0,.1);margin-bottom:20px;padding:10px;
+  }
+  .box.pad{padding:15px 10px 20px;}
+
+  .main-footer{
+    margin-left:230px;background:#fff;border-top:1px solid var(--line);
+    padding:15px;color:#444;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;
+  }
+  .main-footer a{color:var(--link);text-decoration:none;font-weight:700;}
+
+  .hidden{display:none !important;}
+
+  /* ---------- buttons / labels ---------- */
+  .btn{
+    display:inline-block;padding:5px 10px;font-size:12px;line-height:1.5;border-radius:3px;
+    color:#fff;border:1px solid transparent;cursor:pointer;font-family:inherit;
+  }
+  .btn-success{background:var(--green);border-color:#008d4c;}
+  .btn-danger{background:var(--red);border-color:#d73925;}
+  .btn-primary{background:var(--header);border-color:#367fa9;}
+  .btn-lg{padding:6px 12px;font-size:13px;}
+  .label{
+    display:inline-block;padding:.2em .6em .3em;font-size:75%;font-weight:700;color:#fff;
+    border-radius:.25em;line-height:1;white-space:nowrap;
+  }
+  .label-warning{background:var(--orange);}
+
+  /* ---------- list page ---------- */
+  .filter-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin:5px 5px 18px;}
+  .filter-row label{display:block;font-weight:700;margin-bottom:6px;}
+  .filter-row select{width:255px;}
+  .dt-top{display:flex;justify-content:space-between;align-items:center;margin:0 5px 8px;flex-wrap:wrap;gap:8px;}
+  .dt-top select{width:auto;height:28px;padding:2px 6px;}
+  .dt-top .search{display:flex;align-items:center;gap:6px;font-weight:700;}
+  .dt-top .search input{width:180px;height:28px;padding:2px 8px;}
+  .table-scroll{overflow-x:auto;}
+  table.dt{width:100%;border-collapse:collapse;}
+  table.dt thead th{
+    background:var(--header);color:#fff;text-align:left;font-weight:700;
+    padding:8px 10px;border:1px solid #fff;white-space:nowrap;cursor:pointer;user-select:none;
+  }
+  table.dt thead th .sort{float:right;opacity:.6;font-size:10px;margin-left:8px;}
+  table.dt thead th.asc .sort,table.dt thead th.desc .sort{opacity:1;}
+  table.dt tbody td{padding:8px 10px;border-top:1px solid #ddd;vertical-align:top;line-height:1.4;}
+  table.dt tbody td.no{text-align:right;width:50px;}
+  table.dt tbody td.act{width:60px;}
+  table.dt tbody td.empty{text-align:center;color:#777;padding:18px;}
+  .act-btn{
+    display:block;width:22px;height:22px;border-radius:50%;border:0;color:#fff;
+    font-size:12px;line-height:22px;text-align:center;cursor:pointer;margin:0 auto 5px;padding:0;
+  }
+  .act-btn.o{background:var(--orange);}
+  .act-btn.b{background:var(--header);}
+  .dt-bottom{display:flex;justify-content:space-between;align-items:center;margin:12px 5px 2px;flex-wrap:wrap;gap:8px;color:#444;}
+  .pager{display:flex;gap:4px;}
+  .pager span{
+    padding:4px 10px;border:1px solid var(--line);border-radius:3px;font-size:13px;background:#fff;color:#666;
+  }
+  .pager span.cur{background:var(--header);border-color:var(--header);color:#fff;}
+
+  /* ---------- add invoicing ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:5px 5px 0;}
+  .frow{display:grid;grid-template-columns:280px 1fr;gap:0 4px;align-items:start;padding:5px 0;min-height:44px;}
+  .frow > label{font-weight:700;padding-top:7px;}
+  .frow .val{padding-top:7px;line-height:1.45;}
+  .req{color:var(--red);}
+  .form-control{
+    display:block;width:100%;height:34px;padding:6px 12px;font-size:14px;font-family:inherit;
+    color:#555;background:#fff;border:1px solid var(--line);border-radius:0;
+  }
+  .form-control[readonly],.form-control:disabled{background:#eee;cursor:not-allowed;}
+  .form-control.err{border-color:var(--red);}
+  .form-control::placeholder{color:#999;}
+  .help{font-size:12px;color:#777;margin-top:4px;}
+
+  table.plain{width:100%;border-collapse:collapse;margin:14px 0 14px;}
+  table.plain thead th{
+    text-align:center;font-weight:700;padding:8px;border:1px solid var(--border);
+    border-bottom:2px solid #ddd;
+  }
+  table.plain tbody td{padding:8px;border:1px solid var(--border);vertical-align:top;}
+  table.plain td.c{text-align:center;}
+  table.plain td.r{text-align:right;white-space:nowrap;}
+  table.plain td.link{color:var(--link);}
+  table.plain input[type=checkbox]{width:15px;height:15px;margin:2px 0 0;cursor:pointer;}
+  .top-note{font-size:12px;color:#777;margin:-8px 0 14px;}
+
+  .calc-wrap{margin:0 0 24px;}
+  .calc-card{border:1px solid #e3e6ea;border-radius:6px;overflow:hidden;}
+  .calc-row{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:11px 18px;}
+  .calc-row + .calc-row{border-top:1px solid var(--border);}
+  .calc-t{font-weight:700;}
+  .calc-f{font-size:12px;color:#888;margin-top:2px;}
+  .calc-v{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;}
+  .calc-row.total{background:#eef4fb;border-top:1px solid #cdddee;}
+  .calc-row.total .calc-t{font-size:15px;}
+  .calc-row.total .calc-v{font-weight:700;font-size:17px;color:#1c4d80;}
+  table.plain th.tp, table.plain td.tp{white-space:nowrap;}
+  .dt-top > div:first-child{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+
+  table.jr{width:100%;border-collapse:collapse;margin-bottom:18px;}
+  table.jr thead th{
+    text-align:center;font-weight:700;padding:8px;border-bottom:2px solid #ddd;
+  }
+  table.jr tbody td{padding:8px;text-align:center;border-top:1px solid #ddd;}
+  table.jr tbody tr:nth-child(odd){background:#f9f9f9;}
+  table.jr td.r{text-align:right;padding-right:28px;}
+  table.jr td.desc{text-align:left;}
+  table.jr tbody td:nth-child(1), table.jr tbody td:nth-child(2){white-space:nowrap;}
+  table.jr tbody td.empty{color:#777;padding:16px;}
+  table.jr tfoot td{padding:8px;font-weight:700;border-top:2px solid #ddd;background:#f9f9f9;}
+  table.jr tfoot td.r{text-align:right;padding-right:28px;}
+  table.jr tfoot td.lbl{text-align:center;}
+
+  /* dropdown COA di dalam tabel jurnal (gaya select2) */
+  table.jr td.coa-cell{padding:5px 8px;min-width:300px;}
+  .s2-box{
+    position:relative;height:30px;line-height:28px;padding:0 24px 0 8px;background:#fff;
+    border:1px solid #aaa;border-radius:4px;cursor:pointer;text-align:center;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;color:#444;
+  }
+  .s2-box .ph{color:#999;}
+  .s2.err .s2-box{border-color:var(--red);}
+  .s2-arrow{
+    position:absolute;right:8px;top:12px;border-left:4px solid transparent;border-right:4px solid transparent;
+    border-top:5px solid #888;
+  }
+  .s2-drop{
+    position:fixed;z-index:150;background:#fff;border:1px solid #aaa;border-top:0;
+    border-radius:0 0 4px 4px;box-shadow:0 4px 8px rgba(0,0,0,.15);
+  }
+  .s2-search{
+    display:block;width:calc(100% - 10px);margin:5px;height:28px;padding:2px 6px;
+    border:1px solid #aaa;border-radius:3px;font-family:inherit;font-size:13px;
+  }
+  .s2-drop ul{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto;}
+  .s2-drop li{padding:6px 8px;text-align:left;cursor:pointer;color:#333;}
+  .s2-drop li.sel{background:#ddd;}
+  .s2-drop li:hover{background:#5897fb;color:#fff;}
+  .s2-drop li.nores{color:#888;cursor:default;background:#fff;}
+
+  .actions{display:flex;gap:4px;padding:0 5px;}
+
+  .toast{
+    position:fixed;right:20px;bottom:20px;background:#333;color:#fff;padding:10px 16px;border-radius:3px;
+    font-size:13px;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:360px;
+  }
+  .toast.error{background:var(--red);}
+
+  @media (max-width:900px){
+    .sidebar{display:none;}
+    .content-wrapper,.main-footer{margin-left:0;}
+    .logo{width:auto;padding:0 14px;font-size:17px;}
+    .form-grid{grid-template-columns:1fr;}
+    .frow{grid-template-columns:1fr;}
+    .frow > label{padding-top:0;}
+    .nav-right a{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" id="burger" aria-label="Toggle menu">&#9776;</button>
+    <div class="nav-right">
+      <a>Helpdesk</a><a>Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="search-spacer"></div>
+  <ul>
+    <li class="item"><a><span class="ico">&#9673;</span>Dashboard</a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Data<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Inventory<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Master Assets<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9636;</span>PR Dept, Stok, Asset<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9635;</span>Purchase<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9632;</span>Pengeluaran Non Pembelian<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#10003;</span>Approval<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#10003;</span>Approval PR<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9638;</span>Warehouse Stock<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9656;</span>Budget<span class="chev">&#8249;</span></a></li>
+    <li class="item open">
+      <a><span class="ico">&#9656;</span>Finance<span class="chev">&#8249;</span></a>
+      <ul class="sub">
+        <li><a>Plan Tagih</a></li>
+        <li><a>Actual Plan Tagih</a></li>
+        <li><a class="active" id="navInvoicing">Invoicing</a></li>
+        <li><a>Jurnal</a></li>
+        <li><a>Jurnal Invoicing</a></li>
+        <li><a>Jurnal Penerimaan</a></li>
+        <li><a>Jurnal Payment</a></li>
+        <li><a>Report Jurnal Invoicing</a></li>
+        <li><a>Report Jurnal Penerimaan</a></li>
+        <li><a>Jurnal Payment Petty Cash</a></li>
+        <li><a>Report Actual Plan Tagih</a></li>
+        <li><a>Report Uninvoiced Dan Piutang Pelanggan</a></li>
+        <li><a>Report Petty Cash</a></li>
+        <li><a>Report Jurnal Payment</a></li>
+      </ul>
+    </li>
+    <li class="item"><a><span class="ico">&#9656;</span>Penerimaan<span class="chev">&#8249;</span></a></li>
+    <li class="item"><a><span class="ico">&#9881;</span>Settings<span class="chev">&#8249;</span></a></li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+
+  <!-- =============== LIST =============== -->
+  <section id="viewList">
+    <h1 class="page-title">Invoicing</h1>
+    <div class="box">
+      <div class="filter-row">
+        <div>
+          <label for="fYear">Filter Tahun:</label>
+          <select id="fYear" class="form-control">
+            <option value="">-- Semua --</option><option>2026</option><option>2025</option><option>2024</option>
+          </select>
+        </div>
+        <div>
+          <label for="fStatus">Filter Status:</label>
+          <select id="fStatus" class="form-control">
+            <option value="">-- Semua --</option>
+            <option value="Uninvoiced">Uninvoiced</option>
+            <option value="Invoiced">Invoiced</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:4px;padding-bottom:3px;">
+          <button class="btn btn-primary btn-lg" id="btnFilter">&#128269;&#xFE0E; Filter</button>
+          <button class="btn btn-success btn-lg" id="btnExcel">Excel</button>
+        </div>
+      </div>
+
+      <div class="dt-top">
+        <div><select class="form-control"><option>10</option><option>25</option><option>50</option></select> entries per page</div>
+        <div class="search">Search: <input type="text" id="fSearch" class="form-control"></div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="dt" id="invTable">
+          <thead>
+            <tr>
+              <th data-k="no" style="width:60px;">No.<span class="sort">&#9650;</span></th>
+              <th data-k="noInvoice">No. Invoice<span class="sort">&#8645;</span></th>
+              <th data-k="company">Company<span class="sort">&#8645;</span></th>
+              <th data-k="noSpk">No. SPK<span class="sort">&#8645;</span></th>
+              <th data-k="customer">Customer<span class="sort">&#8645;</span></th>
+              <th data-k="project">Project<span class="sort">&#8645;</span></th>
+              <th data-k="leader">Project Leader<span class="sort">&#8645;</span></th>
+              <th data-k="sales">Sales<span class="sort">&#8645;</span></th>
+              <th data-k="status">Status<span class="sort">&#8645;</span></th>
+              <th style="width:70px;">Action<span class="sort">&#8645;</span></th>
+            </tr>
+          </thead>
+          <tbody id="invBody"></tbody>
+        </table>
+      </div>
+
+      <div class="dt-bottom">
+        <div id="dtInfo"></div>
+        <div class="pager"><span>Previous</span><span class="cur">1</span><span>Next</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== ADD INVOICING =============== -->
+  <section id="viewAdd" class="hidden">
+    <h1 class="page-title">Add Invoicing</h1>
+    <div class="box pad">
+
+      <div class="form-grid">
+        <div>
+          <div class="frow"><label>Kepada</label><div class="val" id="kepadaVal"></div></div>
+          <div class="frow"><label>Alamat</label><div class="val" id="alamatVal"></div></div>
+          <div class="frow"><label>Ditujukan</label><div class="val" id="ditujukanVal"></div></div>
+          <div class="frow">
+            <label for="ppnSelect">Perlakuan PPN</label>
+            <div>
+              <select id="ppnSelect" class="form-control" disabled>
+                <option value="WAPU">WAPU</option>
+                <option value="PKP">PKP</option>
+                <option value="KB">Kawasan Berikat</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frow"><label>Tanggal Invoice</label><input type="text" class="form-control" id="tanggalVal" readonly></div>
+          <div class="frow"><label>Nomor Invoice <span class="req">*</span></label><input type="text" class="form-control" id="nomorInvoiceVal" readonly></div>
+          <div class="frow"><label for="nomorPo">Nomor PO <span class="req">*</span></label><input type="text" class="form-control" id="nomorPo" placeholder="Nomor PO"></div>
+          <div class="frow"><label for="nomorFaktur">Nomor Faktur <span class="req">*</span></label><input type="text" class="form-control" id="nomorFaktur" placeholder="Nomor Faktur"></div>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="plain">
+          <thead>
+            <tr>
+              <th style="width:60px;">No.</th>
+              <th class="tp" style="width:150px;">Term of Payment</th>
+              <th style="width:110px;">Persentase</th>
+              <th style="width:190px;">Nominal</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody id="topBody"></tbody>
+        </table>
+      </div>
+      <div class="top-note" id="topNote"></div>
+
+      <div class="calc-wrap">
+        <div class="calc-card">
+          <div class="calc-row" id="rPenjualan">
+            <div><div class="calc-t">Penjualan</div><div class="calc-f" id="fPenjualan"></div></div>
+            <div class="calc-v" id="vPenjualan"></div>
+          </div>
+          <div class="calc-row" id="rDpp">
+            <div><div class="calc-t">DPP</div><div class="calc-f" id="fDpp"></div></div>
+            <div class="calc-v" id="vDpp"></div>
+          </div>
+          <div class="calc-row" id="rPpn">
+            <div><div class="calc-t">PPN</div><div class="calc-f" id="fPpn"></div></div>
+            <div class="calc-v" id="vPpn"></div>
+          </div>
+          <div class="calc-row total" id="rTotal">
+            <div><div class="calc-t">Total Tagihan</div><div class="calc-f" id="fTotal"></div></div>
+            <div class="calc-v" id="vTotal"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="jr">
+          <thead>
+            <tr>
+              <th>Tanggal Jurnal</th><th>Nama Company</th><th>COA</th><th>Nama COA</th>
+              <th>Deskripsi</th><th>Debit</th><th>Credit</th>
+            </tr>
+          </thead>
+          <tbody id="journalBody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="lbl">Balancing</td>
+              <td class="r" id="jFootDebit"></td>
+              <td class="r" id="jFootCredit"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-success" id="btnSave">Save</button>
+        <button class="btn btn-danger" id="btnBack">Back</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="main-footer">
+  <div>Copyright &copy; 2020 <a>SENDIGS SS</a>. All rights reserved.</div>
+  <div>SENDIGS SS - Page rendered in <strong>0.2846</strong> seconds</div>
+</footer>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => "Rp. " + n.toLocaleString("en-US") + ".00";
+const num = n => n.toLocaleString("en-US");
+const pad = n => String(n).padStart(2, "0");
+const MONTH_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+/* ------------------------------------------------------------------
+   Data mockup.
+   - ppn   : perlakuan PPN dari master customer (WAPU | PKP | KB)
+   - doneIdx: termin yang sudah ditagih (simulasi; di sistem asli dari status invoice)
+   Data bertanda (dummy) adalah karangan untuk mockup.
+------------------------------------------------------------------- */
+const SPKS = [
+  {
+    id:"wapu", year:2026, company:"STM-Sustain", status:"Uninvoiced", noInvoice:"260/STM/2026",
+    noSpk:"052/STM/MKT-SPK/V/26",
+    customer:"PT Pelayaran Nasional Indonesia/PELNI (Persero) SMT",
+    project:"Jasa Konsultasi Pendampingan dan Sertifikasi Sistem Manajemen Terintegrasi (SMT)",
+    leader:"Sya'bani Abdullah Amir", sales:"Asri Sinta Lestari",
+    ppn:"WAPU",
+    kepada:"PT Pelayaran Nasional Indonesia/PELNI (Persero) SMT",
+    alamat:"Kantor Pusat PT Pelayaran Nasional Indonesia (Persero) Jl. Gajah Mada No. 14, Jakarta Pusat", // (dummy)
+    ditujukan:"Bagian Keuangan",                                                                         // (dummy)
+    doneIdx:[0,1],
+    top:[
+      {nama:"Penagihan 1", pct:35, nominal:339500000, desc:"setelah tahapan persiapan infrastruktur selesai"},
+      {nama:"Penagihan 2", pct:30, nominal:291000000, desc:"setelah tahapan audit internal dan tinjauan manajemen yang telah ditandatangani kedua belah pihak"},
+      {nama:"Penagihan 3", pct:30, nominal:291000000, desc:"setelah tahapan audit eksternal selesai dibuktikan dengan mengirimkan Dokumen Laporan Hasil Audit Eksternal yang telah ditandatangani kedua belah pihak"},
+      {nama:"Penagihan 4", pct:5,  nominal:48500000,  desc:"setelah tahapan sertifikasi selesai dibuktikan dengan penyerahan Dokumen Sertifikat ISO 9001:2015 Sistem Manajemen Mutu (SMM), ISO 45001:2018, Sistem Manajemen Keselamatan dan Kesehatan Kerja (SMK3), ISO 14001:2015 SIstem Manajemen Lingkungan (SML), ISO 37001:2025 SIstem Manajemen Anti Penyuapan (SMAP), ISO 37301:2021 SIstem Manajemen Kepatuhan (SMK), ISO 55001:2024 SIstem Manajemen Aset (SMA)"}
+    ]
+  },
+  {
+    id:"pkp", year:2024, company:"STM-Sustain", status:"Uninvoiced", noInvoice:"062/SSC/2026",
+    noSpk:"010/STM/MKT-SPK/I/24",
+    customer:"PT. RNP Technologies Indonesia",
+    project:"Consultation Guidance Quality Management System Impelementation Based on IATF 16949:2016 Standard & iso 9001",
+    leader:"Hasiholan Simanjuntak", sales:"Erna Susanti",                                              // sales (dummy)
+    ppn:"PKP",
+    kepada:"PT. RNP Technologies Indonesia",
+    alamat:"Kawasan Industri Jl. Industri No. 12, Cikarang, Kab Bekasi",
+    ditujukan:"Finance Dept",
+    doneIdx:[0,1,2],
+    top:[
+      {nama:"Penagihan 1", pct:30, nominal:29372400, desc:"Setelah program dimulai"},
+      {nama:"Penagihan 2", pct:20, nominal:19581600, desc:"Pada bulan ke-4"},
+      {nama:"Penagihan 3", pct:20, nominal:19581600, desc:"Pada bulan ke-7"},
+      {nama:"Penagihan 4", pct:20, nominal:19581600, desc:"Pada bulan ke-11"},
+      {nama:"Penagihan 5", pct:10, nominal:9790800,  desc:"setelah dinyatakan lulus oleh IATF 16949:2016"}
+    ]
+  },
+  {
+    id:"kb", year:2026, company:"STM-Vuca", status:"Uninvoiced", noInvoice:"100/STM/2026",              // case KB (dummy)
+    noSpk:"021/STM/MKT-SPK/III/26",
+    customer:"PT Mitra Berikat Presisi",
+    project:"Pendampingan Implementasi ISO 9001:2015 dan ISO 14001:2015",
+    leader:"Dimas Prakoso", sales:"Masika Arinal Simanjuntak",
+    ppn:"KB",
+    kepada:"PT Mitra Berikat Presisi",
+    alamat:"Kawasan Industri Jl. Industri Raya No. 8 Cikarang",
+    ditujukan:"Finance Dept.",
+    doneIdx:[0],
+    top:[
+      {nama:"Penagihan 1", pct:40, nominal:60000000, desc:"setelah kick-off dan gap analysis selesai"},
+      {nama:"Penagihan 2", pct:40, nominal:60000000, desc:"setelah audit internal dan tinjauan manajemen selesai"},
+      {nama:"Penagihan 3", pct:20, nominal:30000000, desc:"setelah sertifikasi dinyatakan lulus"}
+    ]
+  },
+  {
+    // case demo: Perlakuan PPN bisa dipilih manual untuk membandingkan jurnal (khusus mockup)
+    id:"demo", year:2026, company:"STM-Sustain", status:"Uninvoiced", noInvoice:"101/STM/2026", ppnEditable:true,
+    noSpk:"099/STM/MKT-SPK/X/26",
+    customer:"PT Demo Perlakuan PPN (case demo)",
+    project:"Case demo untuk membandingkan jurnal WAPU, PKP, dan Kawasan Berikat",
+    leader:"Dimas Prakoso", sales:"Asri Sinta Lestari",
+    ppn:"PKP",
+    kepada:"PT Demo Perlakuan PPN (case demo)",
+    alamat:"Jl. Contoh No. 1, Jakarta",
+    ditujukan:"Finance Dept.",
+    doneIdx:[],
+    top:[
+      {nama:"Penagihan 1", pct:50, nominal:120000000, desc:"setelah kick-off selesai"},
+      {nama:"Penagihan 2", pct:30, nominal:72000000,  desc:"setelah laporan progress disetujui"},
+      {nama:"Penagihan 3", pct:20, nominal:48000000,  desc:"setelah project selesai"}
+    ]
+  }
+];
+
+/* ---------------- list page ---------------- */
+let applied = {year:"", status:""};
+let sortState = {k:"no", dir:1};
+let cur = null;           // SPK yang sedang dibuka di Add Invoicing
+let salesPick = "";         // nama COA Penjualan yang dipilih user di tabel jurnal
+let coaErr = false;
+let curPpn = "PKP";       // perlakuan PPN yang berlaku di form (default dari master, bisa diubah di case demo)
+let selected = new Set(); // index termin yang dicentang
+let visibleIdx = [];      // index termin yang tampil (belum ditagih)
+let tanggalJurnal = "", currentInvoiceNo = "";
+
+function renderList(){
+  const q = $("fSearch").value.trim().toLowerCase();
+  let rows = SPKS.filter(s =>
+    (applied.year === "" || s.year === applied.year) &&
+    (applied.status === "" || s.status === applied.status) &&
+    (!q || [s.company,s.noSpk,s.customer,s.project,s.leader,s.sales,s.status].join(" ").toLowerCase().includes(q))
+  );
+  if(sortState.k !== "no"){
+    rows = rows.slice().sort((a,b) => String(a[sortState.k]||"").localeCompare(String(b[sortState.k]||"")) * sortState.dir);
+  } else if(sortState.dir < 0){
+    rows = rows.slice().reverse();
+  }
+
+  const tb = $("invBody");
+  tb.innerHTML = "";
+  if(!rows.length){
+    tb.innerHTML = `<tr><td class="empty" colspan="10">No matching records found</td></tr>`;
+    $("dtInfo").textContent = "Showing 0 to 0 of 0 entries";
+    return;
+  }
+  rows.forEach((s, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="no">${i+1}</td>
+      <td></td>
+      <td>${s.company}</td>
+      <td>${s.noSpk}</td>
+      <td>${s.customer}</td>
+      <td>${s.project}</td>
+      <td>${s.leader}</td>
+      <td>${s.sales}</td>
+      <td><span class="label label-warning">${s.status}</span></td>
+      <td class="act">
+        <button class="act-btn o" title="Add Invoicing" data-id="${s.id}">&#9998;</button>
+        <button class="act-btn b" title="View Plan Tagih">&#9998;</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll(".act-btn.o").forEach(b => b.addEventListener("click", () => openAdd(b.dataset.id)));
+  $("dtInfo").textContent = `Showing 1 to ${rows.length} of ${rows.length} entries`;
+}
+
+document.querySelectorAll("#invTable thead th[data-k]").forEach(th => {
+  th.addEventListener("click", () => {
+    const k = th.dataset.k;
+    sortState = {k, dir: sortState.k === k ? -sortState.dir : 1};
+    document.querySelectorAll("#invTable thead th").forEach(h => h.classList.remove("asc","desc"));
+    th.classList.add(sortState.dir > 0 ? "asc" : "desc");
+    renderList();
+  });
+});
+$("btnFilter").addEventListener("click", () => {
+  applied = {year: $("fYear").value === "" ? "" : +$("fYear").value, status: $("fStatus").value};
+  renderList();
+});
+$("fSearch").addEventListener("input", renderList);
+
+/* ---------------- COA Penjualan (select di tabel jurnal) ---------------- */
+// Nomor COA sementara 0000-00-00 untuk keempat akun.
+const SALES_COAS = [
+  {no:"0000-00-00", name:"Penjualan Konsultasi"},
+  {no:"0000-00-00", name:"Penjualan In House Training"},
+  {no:"0000-00-00", name:"Penjualan Public Training & Seminar"},
+  {no:"0000-00-00", name:"Penjualan HSE Pengujian"}
+];
+const esc = t => t.replace(/&/g, "&amp;");
+
+function s2Html(){
+  const cur = SALES_COAS.find(c => c.name === salesPick);
+  const label = cur ? `${cur.no} - ${esc(cur.name)}` : "-- Pilih COA Penjualan --";
+  const items = SALES_COAS.map(c =>
+    `<li data-name="${esc(c.name)}" class="${c.name === salesPick ? "sel" : ""}">${c.no} - ${esc(c.name)}</li>`).join("");
+  return `<div class="s2${coaErr ? " err" : ""}">
+    <div class="s2-box" id="s2Box"><span class="${cur ? "" : "ph"}">${label}</span><i class="s2-arrow"></i></div>
+    <div class="s2-drop hidden" id="s2Drop"><input type="text" class="s2-search" id="s2Search" autocomplete="off"><ul id="s2List">${items}<li class="nores hidden">No results found</li></ul></div>
+  </div>`;
+}
+let s2OpenedAt = 0;
+function closeS2(){ const d = $("s2Drop"); if(d) d.classList.add("hidden"); }
+function filterS2(q){
+  q = q.trim().toLowerCase();
+  let any = false;
+  document.querySelectorAll("#s2List li[data-name]").forEach(li => {
+    const ok = li.textContent.toLowerCase().includes(q);
+    li.classList.toggle("hidden", !ok);
+    if(ok) any = true;
+  });
+  const nr = document.querySelector("#s2List li.nores");
+  if(nr) nr.classList.toggle("hidden", any);
+}
+document.addEventListener("click", e => {
+  const box = e.target.closest("#s2Box");
+  const item = e.target.closest("#s2List li[data-name]");
+  if(box){
+    const d = $("s2Drop");
+    if(d.classList.contains("hidden")){
+      const r = box.getBoundingClientRect();
+      d.style.left = r.left + "px"; d.style.top = r.bottom + "px"; d.style.width = r.width + "px";
+      d.classList.remove("hidden"); s2OpenedAt = Date.now();
+      $("s2Search").value = ""; filterS2("");
+      $("s2Search").focus();
+    } else d.classList.add("hidden");
+    return;
+  }
+  if(item){ salesPick = item.dataset.name; coaErr = false; recalc(); return; }
+  if(e.target.closest("#s2Drop")) return;
+  closeS2();
+});
+document.addEventListener("input", e => { if(e.target.id === "s2Search") filterS2(e.target.value); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeS2(); });
+window.addEventListener("scroll", e => {
+  if(Date.now() - s2OpenedAt < 400) return; // abaikan scroll otomatis saat kotak baru dibuka
+  if(!(e.target.closest && e.target.closest("#s2Drop"))) closeS2();
+}, true);
+
+/* ---------------- add invoicing ---------------- */
+function showView(name){
+  $("viewList").classList.toggle("hidden", name !== "list");
+  $("viewAdd").classList.toggle("hidden", name !== "add");
+  window.scrollTo(0,0);
+}
+
+function openAdd(id){
+  cur = SPKS.find(s => s.id === id);
+
+  const today = new Date();
+  $("tanggalVal").value = pad(today.getDate()) + "/" + pad(today.getMonth()+1) + "/" + today.getFullYear();
+  tanggalJurnal = pad(today.getDate()) + "-" + MONTH_EN[today.getMonth()] + "-" + today.getFullYear();
+
+  // Nomor invoice di-generate sistem (running number per tahun); di mockup diambil dari data test case.
+  currentInvoiceNo = cur.noInvoice;
+  $("nomorInvoiceVal").value = currentInvoiceNo;
+
+  $("kepadaVal").textContent = cur.kepada;
+  $("alamatVal").textContent = cur.alamat;
+  $("ditujukanVal").textContent = cur.ditujukan;
+  curPpn = cur.ppn;
+  $("ppnSelect").value = curPpn;
+  $("ppnSelect").disabled = !cur.ppnEditable;
+  $("nomorPo").value = ""; $("nomorFaktur").value = "";
+  salesPick = ""; coaErr = false;
+  $("nomorPo").classList.remove("err"); $("nomorFaktur").classList.remove("err");
+
+  // satu invoice = satu termin: yang ditagih adalah termin berikutnya yang belum ditagih
+  const next = cur.top.findIndex((_, i) => !cur.doneIdx.includes(i));
+  visibleIdx = next >= 0 ? [next] : [];
+  selected = new Set(visibleIdx);
+
+  renderTop();
+  recalc();
+  showView("add");
+}
+
+function renderTop(){
+  const tb = $("topBody");
+  tb.innerHTML = "";
+  visibleIdx.forEach((ti, n) => {
+    const t = cur.top[ti];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="c link">${n+1}</td>
+      <td class="tp">${t.nama}</td>
+      <td class="c">${t.pct.toFixed(2)}%</td>
+      <td class="r">${fmt(t.nominal)}</td>
+      <td>${t.desc}</td>`;
+    tb.appendChild(tr);
+  });
+  const done = cur.doneIdx.map(i => cur.top[i].nama).join(", ");
+  $("topNote").textContent = done ? `Termin yang sudah ditagih: ${done}.` : "";
+}
+
+function recalc(){
+  const type = curPpn;
+  let dpp = 0;
+  selected.forEach(i => dpp += cur.top[i].nominal);
+
+  // DPP Nilai Lain 11/12; PPN 12% dari DPP Nilai Lain.
+  // Pembulatan ke rupiah di tiap tahap (aturan pembulatan perlu dikonfirmasi ke tim pajak).
+  const dppLain = Math.round(dpp * 11 / 12);
+  const ppn     = Math.round(dppLain * 0.12);
+
+  // Tabel perhitungan SAMA untuk WAPU, PKP, dan Kawasan Berikat:
+  // Penjualan (nominal TOP) -> DPP (x 11/12) -> PPN (x 12%) -> Total Tagihan (Penjualan + PPN).
+  // Di kode jurnal: `dpp` = Penjualan, `dppLain` = DPP, `ppn` = PPN.
+  const penjualan = dpp, dppNilaiLain = dppLain, totalTagihan = dpp + ppn;
+  $("vPenjualan").textContent = fmt(penjualan);
+  $("fPenjualan").textContent = "Nominal TOP";
+  $("vDpp").textContent = fmt(dppNilaiLain);
+  $("fDpp").textContent = "Penjualan × 11/12";
+  $("vPpn").textContent = fmt(ppn);
+  $("fPpn").textContent = "DPP × 12%";
+  $("vTotal").textContent = fmt(totalTagihan);
+  $("fTotal").textContent = "Penjualan + PPN";
+
+  const salesAcc = salesPick || "-";
+  // Penarikan jurnal per perlakuan PPN (sheet Test Case):
+  //  PKP  : D Piutang = Total Tagihan | K Hutang PPN DN = PPN | K Penjualan = Penjualan
+  //  WAPU : D Uang Muka PPN WAPU = PPN | D Piutang = Penjualan | K Hutang PPN WAPU = PPN | K Penjualan = Penjualan
+  //  KB   : D Piutang = Penjualan | K Penjualan = Penjualan
+  let rows;
+  if(type === "PKP"){
+    rows = [
+      {coa:"1102-01-01", acc:"Piutang Dagang Usaha", d: totalTagihan, c: 0},
+      {coa:"2104-01-07", acc:"Hutang PPN DN",        d: 0,            c: ppn},
+      {sales:true, coa:"", acc:salesAcc,               d: 0,            c: penjualan},
+    ];
+  } else if(type === "WAPU"){
+    rows = [
+      {coa:"1106-01-XX", acc:"Uang Muka PPN WAPU",   d: ppn,       c: 0},
+      {coa:"1102-01-01", acc:"Piutang Dagang Usaha", d: penjualan, c: 0},
+      {coa:"2104-01-XX", acc:"Hutang PPN WAPU",      d: 0,         c: ppn},
+      {sales:true, coa:"", acc:salesAcc,               d: 0,         c: penjualan},
+    ];
+  } else { // KB
+    rows = [
+      {coa:"1102-01-01", acc:"Piutang Dagang Usaha", d: penjualan, c: 0},
+      {sales:true, coa:"", acc:salesAcc,               d: 0,         c: penjualan},
+    ];
+  }
+
+  const tb = $("journalBody");
+  tb.innerHTML = "";
+  let dT = 0, cT = 0;
+  if(dpp === 0){
+    tb.innerHTML = `<tr><td class="empty" colspan="7">Tidak ada termin yang bisa ditagih.</td></tr>`;
+  } else {
+    rows.filter(r => r.d || r.c).forEach(r => {
+      dT += r.d; cT += r.c;
+      // Deskripsi: "nama account - no invoice - no SPK", ditambah "- Kawasan Berikat" untuk perlakuan KB
+      const desc = (r.sales && !salesPick) ? "-"
+        : [r.acc, currentInvoiceNo, cur.noSpk].concat(type === "KB" ? ["Kawasan Berikat"] : []).join(" - ");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${tanggalJurnal}</td>
+        <td>${cur.company}</td>
+        <td class="coa-cell">${r.sales ? s2Html() : r.coa}</td>
+        <td>${r.acc}</td>
+        <td class="desc">${desc}</td>
+        <td class="r">${num(r.d)}</td>
+        <td class="r">${num(r.c)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  $("jFootDebit").textContent = num(dT);
+  $("jFootCredit").textContent = num(cT);
+}
+
+/* ---------------- actions ---------------- */
+let toastTimer;
+function toast(msg, isErr){
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast" + (isErr ? " error" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add("hidden"), 3200);
+}
+$("btnSave").addEventListener("click", () => {
+  const po = $("nomorPo"), fk = $("nomorFaktur");
+  po.classList.toggle("err", !po.value.trim());
+  fk.classList.toggle("err", !fk.value.trim());
+  if(!selected.size){ toast("Tidak ada termin yang bisa ditagih.", true); return; }
+  coaErr = !salesPick;
+  recalc();
+  if(!po.value.trim() || !fk.value.trim()){ toast("Nomor PO dan Nomor Faktur wajib diisi.", true); return; }
+  if(!salesPick){ toast("COA Penjualan wajib dipilih di tabel jurnal.", true); return; }
+  toast("Invoice " + currentInvoiceNo + " tersimpan (mockup, belum tersambung backend).");
+});
+$("ppnSelect").addEventListener("change", e => { curPpn = e.target.value; recalc(); });
+$("btnBack").addEventListener("click", () => showView("list"));
+$("navInvoicing").addEventListener("click", () => showView("list"));
+$("burger").addEventListener("click", () => document.body.classList.toggle("collapsed"));
+$("btnExcel").addEventListener("click", () => toast("Export Excel belum tersambung (mockup)."));
+
+renderList();
+</script>
+
+</body>
+</html>
