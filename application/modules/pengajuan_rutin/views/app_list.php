@@ -1,79 +1,87 @@
 <?php
-$ENABLE_ADD     = has_permission('Approval_Pengajuan_Pembayaran_Rutin.Add');
-$ENABLE_MANAGE  = has_permission('Approval_Pengajuan_Pembayaran_Rutin.Manage');
-$ENABLE_VIEW    = has_permission('Approval_Pengajuan_Pembayaran_Rutin.View');
-$ENABLE_DELETE  = has_permission('Approval_Pengajuan_Pembayaran_Rutin.Delete');
-?>
-<div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
-<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
-<div class="box">
-	<div class="box-header">
-	</div>
-	<!-- /.box-header -->
-	<div class="box-body">
-		<div class="table-responsive col-md-12">
-			<table id="mytabledata" class="table table-bordered table-striped">
-				<thead>
-					<tr>
-						<th width="5">#</th>
-						<th>Departement</th>
-						<th>Nomor</th>
-						<th>Tanggal</th>
-						<th width="150">
-							Action
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					if (!empty($results)) {
-						$numb = 0;
-						foreach ($results as $record) {
-							$numb++;
+/* Approval Pengajuan Periodik: tab Menunggu approval / Record approval (pApprList di specs/input/Periodik.html).
+   Variabel: $batches, $names, $can_decide. */
+$e   = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); };
+$fmt = function ($n) { return number_format((float) $n, 0, ',', '.'); };
+$IL  = array('W' => 'Waiting Approval', 'A' => 'Approved', 'R' => 'Rejected');
+$dname = function ($b) use ($names) { return isset($names[$b['dept']]) ? $names[$b['dept']] : $b['dept']; };
 
-							$nm_department = (isset($arr_dept[$record->departement])) ? $arr_dept[$record->departement] : '';
-
-					?>
-							<tr>
-								<td><?= $numb; ?></td>
-								<td><?= strtoupper($nm_department) ?></td>
-								<td><?= $record->no_doc ?></td>
-								<td><?= $record->tanggal_doc ?></td>
-								<td>
-									<?php if ($ENABLE_VIEW) : ?>
-										<a class="btn btn-warning btn-sm view" href="javascript:void(0)" title="View" onclick="data_view('<?= $record->id ?>')"><i class="fa fa-eye"></i></a>
-										<?php endif;
-									if ($record->status == 0) {
-										if ($ENABLE_MANAGE) : ?>
-											<a class="btn btn-success btn-sm app" href="javascript:void(0)" title="Approve" onclick="data_approve('<?= $record->id ?>')"><i class="fa fa-check"></i></a>
-									<?php endif;
-									} ?>
-								</td>
-							</tr>
-					<?php
-						}
-					}  ?>
-				</tbody>
-			</table>
-		</div>
-	</div>
-	<!-- /.box-body -->
-</div>
-<div id="form-data"></div>
-<!-- DataTables -->
-<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
-<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
-<!-- page script -->
-<script type="text/javascript">
-	var url_add = "";
-	var url_view = siteurl + 'pengajuan_rutin/view/';
-
-	function data_approve(id) {
-		if (id != "") {
-			$(".box").hide();
-			$("#form-data").show();
-			$("#form-data").load(url_view + id + '/app');
-		}
+$pend = $rec = array();
+foreach ($batches as $b) {
+	if (in_array('W', array_column($b['items'], 'status'), true)) { $pend[] = $b; }
+	foreach ($b['items'] as $i) {
+		if ($i['status'] !== 'W') { $rec[] = array($b, $i); }
 	}
+}
+usort($rec, function ($x, $y) { return strcmp((string) $y[1]['at'], (string) $x[1]['at']); });
+?>
+<link rel="stylesheet" href="<?= base_url('assets/css/periodik_ui.css') ?>">
+<div class="pjx">
+<div class="panel hl">
+	<div class="tabs" role="tablist">
+		<button type="button" role="tab" class="on" data-atab="wait">Menunggu approval (<?= count($pend) ?>)</button>
+		<button type="button" role="tab" data-atab="rec">Record approval</button>
+	</div>
+	<div class="scroll" data-apane="wait">
+		<?php if (!$pend) : ?><p>Tidak ada pengajuan yang menunggu approval. Pengajuan baru muncul di sini setelah disimpan dari menu Pengajuan Pembayaran Periodik.</p><?php else : ?>
+		<table>
+			<thead><tr><th>#</th><th>Departement</th><th>Nomor</th><th class="num">Jumlah item</th><th class="num">Nominal</th><th>Tanggal</th><th>Action</th></tr></thead>
+			<tbody>
+			<?php foreach ($pend as $ix => $b) : ?>
+				<tr>
+					<td><?= $ix + 1 ?></td>
+					<td><?= $e($dname($b)) ?></td>
+					<td class="no"><?= $e($b['no']) ?></td>
+					<td class="num"><?= count($b['items']) ?></td>
+					<td class="num mono"><?= $fmt(array_sum(array_column($b['items'], 'nominal'))) ?></td>
+					<td style="white-space:nowrap"><?= $e(substr((string) $b['date'], 0, 10)) ?></td>
+					<td style="white-space:nowrap">
+						<button type="button" class="btn c sm" data-view="<?= (int) $b['id'] ?>">Lihat</button>
+						<?php if ($can_decide) : ?><a class="btn sm" href="<?= base_url('pengajuan_rutin/proses/' . (int) $b['id']) ?>" style="text-decoration:none">Proses approval</a><?php endif; ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php endif; ?>
+	</div>
+	<div class="scroll" data-apane="rec" hidden>
+		<?php if (!$rec) : ?><p>Belum ada keputusan approval.</p><?php else : ?>
+		<table>
+			<thead><tr><th>Diputuskan</th><th>No. Item</th><th>No. Batch</th><th>Deskripsi</th><th class="num">Nominal</th><th>Keputusan</th><th>Keterangan reject</th></tr></thead>
+			<tbody>
+			<?php foreach ($rec as $pair) : list($b, $i) = $pair; ?>
+				<tr>
+					<td style="white-space:nowrap"><?= $e(substr((string) $i['at'], 0, 16)) ?><span class="sub"><?= $e($i['by']) ?></span></td>
+					<td class="no"><?= $e($i['no_item']) ?></td>
+					<td style="white-space:nowrap"><?= $e($b['no']) ?></td>
+					<td><?= $e($i['desc']) ?></td>
+					<td class="num mono"><?= $fmt($i['nominal']) ?></td>
+					<td><span class="pill <?= $e($i['status']) ?>"><?= $e($IL[$i['status']]) ?></span></td>
+					<td><?= $i['note'] !== '' ? '<span class="note">' . $e($i['note']) . '</span>' : '' ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php endif; ?>
+	</div>
+</div>
+</div>
+
+<script src="<?= base_url('assets/js/periodik_ui.js') ?>"></script>
+<script>
+(function () {
+	var root = document.querySelector('.pjx');
+	root.addEventListener('click', function (e) {
+		var t = e.target.closest('button'); if (!t) return;
+		if (t.dataset.atab) {
+			root.querySelectorAll('[data-atab]').forEach(function (b) { b.classList.toggle('on', b === t); });
+			root.querySelectorAll('[data-apane]').forEach(function (p) { p.hidden = p.dataset.apane !== t.dataset.atab; });
+		} else if (t.dataset.view) {
+			$.get(siteurl + 'pengajuan_rutin/view/' + t.dataset.view + '/app').done(function (html) { PJ.openModal(html); })
+				.fail(function () { PJ.toast('Terjadi kesalahan. Silakan coba lagi.'); });
+		} else if (t.hasAttribute('data-close')) { PJ.closeModal(); }
+	});
+	try { var msg = sessionStorage.getItem('pjToast'); if (msg) { sessionStorage.removeItem('pjToast'); PJ.toast(msg); } } catch (x) {}
+})();
 </script>
-<script src="<?= base_url('assets/js/basic.js') ?>"></script>

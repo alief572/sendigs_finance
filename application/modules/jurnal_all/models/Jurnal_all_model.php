@@ -1160,9 +1160,10 @@ class Jurnal_all_model extends BF_Model
         if(!$docs || !$this->db->table_exists('tr_pengajuan_rutin_detail') || !$this->db->table_exists('ms_budget_rutin'))return [];
         $rows=[];$codes=[];
         foreach(array_chunk(array_unique($docs),200) as $chunk) {
-            $found=$this->read($this->db->select('d.no_doc,d.coa,d.nama,d.nilai,b.departement')->from('tr_pengajuan_rutin_detail d')
-                ->join('ms_budget_rutin b','b.id=d.id_budget')->where_in('d.no_doc',$chunk)->get())->result_array();
-            foreach($found as $r) {$rows[]=$r;$codes[]=$r['departement'];}
+            $found=$this->read($this->db->select('d.no_doc,d.no_item,d.coa,d.nama,d.nilai,b.departement')->from('tr_pengajuan_rutin_detail d')
+                ->join('ms_budget_rutin b','b.id=d.id_budget')->group_start()->where_in('d.no_doc',$chunk)->or_where_in('d.no_item',$chunk)->group_end()->get())->result_array();
+            // Dokumen payment bernomor item (PI-...) dipetakan per no_item; batch lama per no_doc.
+            foreach($found as $r) {$r['no_doc']=(!empty($r['no_item'])&&in_array($r['no_item'],$chunk,true))?$r['no_item']:$r['no_doc'];$rows[]=$r;$codes[]=$r['departement'];}
         }
         $departments=$this->invoiceDepartmentMap($codes);$map=[];
         foreach($rows as $r) if(!empty($departments[$r['departement']])) {

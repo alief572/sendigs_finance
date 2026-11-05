@@ -37,7 +37,7 @@ class Batch4Result {
             'approved_date' => '2026-10-11', 'tgl_bayar' => '2026-10-11', 'pa_tgl_pengajuan' => '2026-10-11',
             'pa_tgl_bayar' => '2026-10-11', 'tgl_pembayaran_paid' => '2026-10-11', 'pa_id' => 'PAY-1',
             'pa_id_payment' => 'PAY-1', 'pa_diajukan_oleh' => 'PRIVATE', 'dibayar_oleh_nama' => 'PRIVATE',
-            'keperluan' => 'PRIVATE', 'informasi' => 'PRIVATE', 'deskripsi' => 'PRIVATE',
+            'keperluan' => 'PRIVATE', 'informasi' => 'PRIVATE', 'deskripsi' => 'PRIVATE', 'detail_id' => 1, 'detail_keterangan' => 'PRIVATE',
             'deskripsi_keperluan' => 'PRIVATE', 'keterangan' => 'PRIVATE', 'project_name' => 'PRIVATE',
             'nm_barang' => 'PRIVATE', 'jenis_pr' => $scenario['jenis_pr'] ?? 'pr departemen',
             'tipe_pr' => $scenario['tipe_pr'] ?? 'pr departemen', 'id_pr' => 'PR-TEST',
@@ -419,6 +419,17 @@ foreach ($addedTypes as $type => $sourceTable) {
         check($failed['status'] === 0 && json_decode($failedOut, true)['status'] === 0 && !$failedCi->db->committed, 'save_request_payment missing source ' . $sourceTable);
     }
 }
+// Periodik per item: nomor PI-YYYY-NNNNN memproses satu detail (item_status), bukan seluruh batch.
+$itemDocs = array((object) array('no_doc' => 'PI-2026-00001', 'tipe' => 'periodik'));
+$itemPost = array('tanggal_pembayaran_PI-2026-00001' => array('11/10/2026'), 'kategori_PI-2026-00001' => array('periodik'), 'nilai_pengajuan_PI-2026-00001' => array('100.000'));
+list($event, $output, $controller) = run_batch4('save_request_payment', array('added_items' => $itemDocs), $itemPost);
+check($event['status'] === 1 && json_decode($output, true)['status'] === 1 && $controller->db->committed, 'save_request_payment periodik item');
+for ($write = 1; $write <= $controller->db->writeNumber; $write++) {
+    list($failed, $failedOut, $failedCi) = run_batch4('save_request_payment', array('added_items' => $itemDocs, 'fail_write' => $write, 'status_does_not_fail' => true), $itemPost);
+    check($failed['status'] === 0 && !$failedCi->db->committed, 'save_request_payment periodik item write failure #' . $write);
+}
+list($failed, , $failedCi) = run_batch4('save_request_payment', array('added_items' => $itemDocs, 'missing_table' => 'tr_pengajuan_rutin'), $itemPost);
+check($failed['status'] === 0 && !$failedCi->db->committed, 'save_request_payment periodik item missing source');
 foreach (array(
     array((object) array('no_doc' => '', 'tipe' => 'kasbon')),
     array((object) array('no_doc' => 'DOC-TEST', 'tipe' => 'unknown_type')),

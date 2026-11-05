@@ -66,3 +66,24 @@ Dokumen perencanaan teknis ini disusun untuk menyelaraskan jalur posting transak
 
 ## Deposit untuk invoice lama (2 November 2026)
 Invoice lama tanpa histori penerimaan boleh memakai deposit customer (company pemilik jurnal, FIFO, jurnal debit 2102-01-02, snapshot `dep`, rollback memulihkan). Rencana lengkap dan pemetaan file: lihat `docs/task-progress.md` (bagian "Deposit untuk invoice lama") dan rencana sesi.
+
+---
+
+# Implementation Plan: Pembayaran Periodik per Item (mengikuti `specs/input/Periodik.html`) — 5 November 2026
+
+Acuan UI: `specs/input/Periodik.html` (persis mockup). Requirement: `specs/docs/fr-nfr.md` (FR-01..12, NFR-01..06). Rencana lengkap disetujui pengguna; ringkasannya:
+
+Keputusan pengguna: (1) 4 fase berurutan; (2) prefix item tetap `PI-YYYY-NNNNN`, lookup lama diperbaiki; (3) "Tidak diajukan ulang": dialog tetap terbuka bila alasan kosong dan item ditutup hilang dari form periode itu; (4) Alokasi COA dan tombol Proses `budget_periodik` dipertahankan tanpa perubahan.
+
+Temuan teknis yang memengaruhi desain:
+- `PI-` sudah dipakai invoice PO (`PI-YYYY-MM-NNNNNN`, `purchase_order_payment/models/Pr_model.php`). Nomor item periodik berbentuk `PI-YYYY-NNNNN` (5 digit setelah tahun), jadi dibedakan lewat pola `PI-____-__-%` (invoice) vs `^PI-\d{4}-\d{5}$` (item). Filter `%PI-%` di `Pembayaran_material_model.php` harus dipersempit ke pola invoice.
+- `ms_budget_rutin.id` dipakai `pengajuan_rutin`, `pembayaran_rutin`, `jurnal_all`: persetujuan BG wajib update/insert berdasarkan id.
+- Modul hilir (request_payment, approval/record RP, jurnal_all, audit_jurnal_payment, pembayaran_material) mengaitkan dokumen periodik lewat `no_doc` header. Dibuat helper tunggal `application/helpers/periodik_helper.php` untuk menerjemahkan `no_dokumen` (nomor item `PI-...` atau nomor batch lama) ke baris detail/header.
+
+## Fase
+1. **Fondasi**: migrasi (`pengajuan_rutin/migrations/002_*`, `budget_periodik/migrations/001_*`), penomoran atomik BP/BG/PI (tabel `ms_periodik_counter`, library `Periodik_numbering`), `periodik_helper`, adaptasi pembaca hilir. Kriteria: kedua cabang (item baru vs batch lama `no_item NULL`) terbaca di semua modul hilir; tes penomoran lulus.
+2. **Pengajuan + Approval Pengajuan per item** (`p-list`, `p-form`, `p-appr`, stepper, revisi, tutup item).
+3. **Budget Pembayaran Periodik** (`m-list`, `m-master`, Masa berlaku, tanpa baseline, perubahan lewat BG).
+4. **Approval Perubahan Budget** (modul baru `approval_perubahan_budget`, menu + permission).
+
+Migrasi SQL dijalankan manual oleh pengguna (DB dev remote); kode tidak mengasumsikan akses DB hidup.

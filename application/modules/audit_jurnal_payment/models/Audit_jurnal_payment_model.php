@@ -668,7 +668,7 @@ class Audit_jurnal_payment_model extends BF_Model
                 ];
             }
         } elseif ($item_payment->tipe == 'periodik') {
-            $get_rutin = $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $item_payment->no_doc])->row();
+            $get_rutin = $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => periodik_batch_no($this->db, $item_payment->no_doc)])->row();
 
             $id_divisi = '';
             $nm_divisi = '';
@@ -714,7 +714,7 @@ class Audit_jurnal_payment_model extends BF_Model
             }
 
             // 1. Details Debit
-            $get_rutin_detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item_payment->no_doc])->result();
+            $get_rutin_detail = $this->db->get_where('tr_pengajuan_rutin_detail', [periodik_doc_key($item_payment->no_doc)['col'] => $item_payment->no_doc])->result();
 
             if (!empty($get_rutin_detail)) {
                 foreach ($get_rutin_detail as $item_detail) {

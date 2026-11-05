@@ -1465,7 +1465,7 @@ class Pembayaran_material_model extends BF_Model
 					$ttl_kredit_refill += $jumlah;
 				}
 			} else if ($item_payment->tipe == 'periodik') {
-				$get_rutin = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $item_payment->no_doc]), $this->db)->row();
+				$get_rutin = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin', ['no_doc' => periodik_batch_no($this->db, $item_payment->no_doc)]), $this->db)->row();
 				if (!$get_rutin) { $auditSummary['source_missing'] = true; }
 
 				$id_divisi = '';
@@ -1514,7 +1514,7 @@ class Pembayaran_material_model extends BF_Model
 					$nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
 				}
 
-				$get_rutin_detail = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $item_payment->no_doc]), $this->db)->result();
+				$get_rutin_detail = $this->auditTrackQuery($this->db->get_where('tr_pengajuan_rutin_detail', [periodik_doc_key($item_payment->no_doc)['col'] => $item_payment->no_doc]), $this->db)->result();
 
 				if (!empty($get_rutin_detail)) {
 					$coas_to_load = [];
@@ -2054,7 +2054,7 @@ class Pembayaran_material_model extends BF_Model
 				GROUP_CONCAT(DISTINCT a.link_doc SEPARATOR ',') as link_docs
 			FROM payment_approve a
 			LEFT JOIN tr_expense b ON b.no_doc = a.no_doc
-			WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-%' AND a.id_payment IS NOT NULL
+			WHERE a.status = 2 AND a.no_doc NOT LIKE '%INV-%' AND a.no_doc NOT LIKE '%PI-____-__-%' AND a.id_payment IS NOT NULL
 			GROUP BY COALESCE(NULLIF(a.id_payment, ''), a.id)
 		";
 

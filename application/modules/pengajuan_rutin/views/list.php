@@ -1,276 +1,210 @@
 <?php
-$ENABLE_ADD     = has_permission('Pengajuan_Pembayaran_Rutin.Add');
-$ENABLE_MANAGE  = has_permission('Pengajuan_Pembayaran_Rutin.Manage');
-$ENABLE_VIEW    = has_permission('Pengajuan_Pembayaran_Rutin.View');
-$ENABLE_DELETE  = has_permission('Pengajuan_Pembayaran_Rutin.Delete');
+/* Daftar Pengajuan Pembayaran Periodik: tab Menunggu approval / Sudah diputuskan, tampilan Per Batch / Per Item.
+   Mengikuti pList() di specs/input/Periodik.html. Data: $batches, $rp, $names, $dd_items, $can_add, $can_manage, $can_delete. */
+$e   = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); };
+$fmt = function ($n) { return number_format((float) $n, 0, ',', '.'); };
+$pill = function ($k, $t) use ($e) { return '<span class="pill ' . $e($k) . '">' . $e($t) . '</span>'; };
+$hist = function ($i, $withResub = true) use ($e) {
+	return ($i['ref'] !== '' ? '<span class="ref" style="display:block">Revisi dari ' . $e($i['ref']) . '</span>' : '')
+		. ($withResub && $i['resub'] !== '' ? '<span class="ref" style="display:block">Diajukan ulang di ' . $e($i['resub']) . '</span>' : '');
+};
+$total = function ($b) { return array_sum(array_column($b['items'], 'nominal')); };
+$dname = function ($b) use ($names) { return isset($names[$b['dept']]) ? $names[$b['dept']] : $b['dept']; };
 
-$is_admin       = isset($is_admin) ? $is_admin : $this->auth->is_admin();
-$user_dept      = isset($user_dept) ? $user_dept : '';
+$wait = $done = array();
+foreach ($batches as $b) {
+	if (in_array('W', array_column($b['items'], 'status'), true)) { $wait[] = $b; } else { $done[] = $b; }
+}
+$rpOf = function ($i) use ($rp) { return isset($rp[$i['no_item']]) ? $rp[$i['no_item']] : null; };
+$canEdit = $can_add || $can_manage;
 ?>
-<div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
-<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
-<div class="box">
-	<div class="box-header">
-		<?php if ($ENABLE_ADD) : ?>
-			<?php if ($is_admin) : ?>
-				<div class="dropdown">
-					<button class="btn btn-success dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-						<i class="fa fa-plus">&nbsp;</i> New
-					</button>
-					<ul class="dropdown-menu dept-dropdown-menu" aria-labelledby="dropdownMenu1">
-						<li class="dept-search-wrap">
-							<span class="dept-search-icon"><i class="fa fa-search"></i></span>
-							<input type="text" id="dept_search" class="dept-search-input" placeholder="Cari department..." autocomplete="off">
-						</li>
-						<li class="dept-header">
-							<i class="fa fa-university"></i>&nbsp; DEPARTEMEN
-						</li>
-						<div id="dept_list">
-							<?php foreach ($datdept as $key => $val) : ?>
-								<li class="dept-item"><a href="javascript:void(0)" onclick="new_data('<?= $key ?>')"><i class="fa fa-university"></i>&nbsp; <?= $val ?></a></li>
-							<?php endforeach; ?>
-							<li class="dept-no-result" style="display:none;">
-								<span><i class="fa fa-info-circle"></i>&nbsp; Tidak ada hasil</span>
-							</li>
-						</div>
-					</ul>
-				</div>
-			<?php else : ?>
-				<?php if (!empty($user_dept)) : ?>
-					<button class="btn btn-success" type="button" onclick="new_data('<?= $user_dept ?>')">
-						<i class="fa fa-plus">&nbsp;</i> New
-					</button>
-				<?php else : ?>
-					<button class="btn btn-success" type="button" onclick="swal('Peringatan', 'Departemen belum disetting pada akun Anda. Silakan hubungi Administrator.', 'warning');">
-						<i class="fa fa-plus">&nbsp;</i> New
-					</button>
-				<?php endif; ?>
-			<?php endif; ?>
+<link rel="stylesheet" href="<?= base_url('assets/css/periodik_ui.css') ?>">
+<div class="pjx">
+<div class="panel hl">
+	<div class="bar">
+		<?php if ($can_add) : ?>
+			<span class="dd"><button type="button" class="btn" id="pjNew" aria-haspopup="true" aria-expanded="false">+ New</button></span>
 		<?php endif; ?>
 	</div>
-	<!-- /.box-header -->
-	<div class="box-body">
-		<div class="table-responsive col-md-12">
-			<table id="mytabledata" class="table table-bordered table-striped">
-				<thead>
-					<tr>
-						<th width="5">#</th>
-						<th>Departement</th>
-						<th>Nomor</th>
-						<th>Keterangan</th>
-						<th>Nominal</th>
-						<th>Tanggal</th>
-						<th>Status</th>
-						<th>Keterangan Reject</th>
-						<th width="150">
-							Action
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-
-				</tbody>
-			</table>
+	<div class="tabs" role="tablist">
+		<button type="button" role="tab" class="on" data-pview="wait">Menunggu approval (<?= count($wait) ?>)</button>
+		<button type="button" role="tab" data-pview="rec">Sudah diputuskan (<?= count($done) ?>)</button>
+	</div>
+	<div class="bar">
+		<div class="seg" role="group" aria-label="Tampilan">
+			<button type="button" class="on A" data-ptab="batch" aria-pressed="true">Per Batch</button>
+			<button type="button" data-ptab="item" aria-pressed="false">Per Item</button>
+		</div>
+		<span class="sp" style="flex:1"></span>
+		<div class="filters" id="pjFilter" hidden>
+			<label for="pf" class="sub" style="display:inline" id="pfLabel">Status batch</label>
+			<select id="pf"></select>
 		</div>
 	</div>
-	<!-- /.box-body -->
+
+	<!-- Menunggu approval, Per Batch -->
+	<div class="scroll" data-pane="wait-batch">
+		<?php if (!$wait) : ?><p>Tidak ada batch yang menunggu approval. Klik + New untuk membuat pengajuan.</p><?php else : ?>
+		<table>
+			<thead><tr><th>#</th><th>Departemen</th><th>No. Batch</th><th>Item</th><th class="num">Nominal</th><th>Tanggal</th><th>Status batch</th><th>Action</th></tr></thead>
+			<tbody>
+			<?php foreach ($wait as $ix => $b) :
+				list($k, $t) = Periodik_logic::batch_status(array_column($b['items'], 'status')); ?>
+				<tr data-batch="<?= $e($b['no']) ?>">
+					<td><?= $ix + 1 ?></td>
+					<td><?= $e($dname($b)) ?></td>
+					<td class="no"><?= $e($b['no']) ?></td>
+					<td><ol class="items"><?php foreach ($b['items'] as $i) : ?><li><?= $e($i['desc']) ?></li><?php endforeach; ?></ol></td>
+					<td class="num mono"><?= $fmt($total($b)) ?></td>
+					<td style="white-space:nowrap"><?= $e(Periodik_logic::fdate($b['date'])) ?></td>
+					<td><?= $pill($k, $t) ?></td>
+					<td style="white-space:nowrap">
+						<button type="button" class="btn c sm" data-view="<?= (int) $b['id'] ?>">Lihat</button>
+						<?php if ($canEdit) : ?><a class="btn o sm" href="<?= base_url('pengajuan_rutin/edit/' . (int) $b['id']) ?>" style="text-decoration:none">Edit</a><?php endif; ?>
+						<?php if ($can_delete) : ?><button type="button" class="btn r sm" data-del="<?= $e($b['no']) ?>" data-count="<?= count($b['items']) ?>">Hapus</button><?php endif; ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php endif; ?>
+	</div>
+
+	<!-- Menunggu approval, Per Item -->
+	<div class="scroll" data-pane="wait-item" hidden>
+		<?php $waitItems = array(); foreach ($wait as $b) { foreach ($b['items'] as $i) { $waitItems[] = array($b, $i); } } ?>
+		<?php if (!$waitItems) : ?><p>Tidak ada item yang menunggu approval.</p><?php else : ?>
+		<table>
+			<thead><tr><th>No. Item</th><th>No. Batch</th><th>Departemen</th><th>Deskripsi</th><th class="num">Nominal</th><th>Keterangan</th><th>Progres</th></tr></thead>
+			<tbody>
+			<?php foreach ($waitItems as $pair) : list($b, $i) = $pair; ?>
+				<tr data-batch="<?= $e($b['no']) ?>">
+					<td class="no"><?= $e($i['no_item']) ?><?= $hist($i) ?></td>
+					<td style="white-space:nowrap"><?= $e($b['no']) ?></td>
+					<td style="white-space:nowrap"><?= $e($dname($b)) ?></td>
+					<td><?= $e($i['desc']) ?></td>
+					<td class="num mono"><?= $fmt($i['nominal']) ?></td>
+					<td><?= $e($i['ket']) ?></td>
+					<td><?= Periodik_logic::steps_html($i, $rpOf($i)) ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php endif; ?>
+	</div>
+
+	<!-- Sudah diputuskan, Per Batch -->
+	<div class="scroll" data-pane="rec-batch" hidden>
+		<?php if (!$done) : ?><p>Tidak ada batch dengan status ini. Pilih status lain di filter.</p><?php else : ?>
+		<table>
+			<thead><tr><th>#</th><th>Departemen</th><th>No. Batch</th><th>Item</th><th class="num">Nominal</th><th>Tanggal</th><th>Status batch</th><th>Action</th></tr></thead>
+			<tbody>
+			<?php foreach ($done as $ix => $b) :
+				$letters = array_column($b['items'], 'status');
+				list($k, $t) = Periodik_logic::batch_status($letters);
+				$counts = array_count_values($letters); ?>
+				<tr data-k="<?= $e($k) ?>">
+					<td><?= $ix + 1 ?></td>
+					<td><?= $e($dname($b)) ?></td>
+					<td class="no"><?= $e($b['no']) ?></td>
+					<td><ol class="items"><?php foreach ($b['items'] as $i) : ?><li><?= $e($i['desc']) ?></li><?php endforeach; ?></ol></td>
+					<td class="num mono"><?= $fmt($total($b)) ?></td>
+					<td style="white-space:nowrap"><?= $e(Periodik_logic::fdate($b['date'])) ?></td>
+					<td><?= $pill($k, $t) ?><?php if ($k === 'P' || $k === 'R') : ?><span class="sub"><?= (int) ($counts['A'] ?? 0) ?> approved, <?= (int) ($counts['R'] ?? 0) ?> rejected</span><?php endif; ?></td>
+					<td style="white-space:nowrap"><button type="button" class="btn c sm" data-view="<?= (int) $b['id'] ?>">Lihat</button></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p class="hint" data-empty="rec-batch" hidden>Tidak ada batch dengan status ini. Pilih status lain di filter.</p>
+		<?php endif; ?>
+	</div>
+
+	<!-- Sudah diputuskan, Per Item -->
+	<div class="scroll" data-pane="rec-item" hidden>
+		<?php $doneItems = array(); foreach ($done as $b) { foreach ($b['items'] as $i) { $doneItems[] = array($b, $i); } } ?>
+		<?php if (!$doneItems) : ?><p>Tidak ada item untuk filter ini.</p><?php else : ?>
+		<table>
+			<thead><tr><th>No. Item</th><th>No. Batch</th><th>Departemen</th><th>Deskripsi</th><th class="num">Nominal</th><th>Progres</th></tr></thead>
+			<tbody>
+			<?php foreach ($doneItems as $pair) : list($b, $i) = $pair; ?>
+				<tr data-st="<?= $e($i['status']) ?>">
+					<td class="no"><?= $e($i['no_item']) ?><?= $hist($i, false) ?></td>
+					<td style="white-space:nowrap"><?= $e($b['no']) ?></td>
+					<td style="white-space:nowrap"><?= $e($dname($b)) ?></td>
+					<td><?= $e($i['desc']) ?></td>
+					<td class="num mono"><?= $fmt($i['nominal']) ?></td>
+					<td><?= Periodik_logic::steps_html($i, $rpOf($i)) ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p class="hint" data-empty="rec-item" hidden>Tidak ada item untuk filter ini.</p>
+		<?php endif; ?>
+	</div>
 </div>
-<div id="form-data"></div>
-<!-- DataTables -->
-<script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
-<script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+</div>
 
-<!-- page script -->
-<script type="text/javascript">
-	var url_add = "";
-	var url_add_def = siteurl + 'pengajuan_rutin/create/';
-	var url_edit = siteurl + 'pengajuan_rutin/edit/';
-	var url_delete = siteurl + 'pengajuan_rutin/hapus_data/';
-	var url_view = siteurl + 'pengajuan_rutin/view/';
-
-	$(document).ready(function() {
-		datatables();
-	})
-
-	function new_data(key) {
-		url_add = url_add_def + key;
-		data_add();
-	}
-	// $("#mytabledata2").DataTable({
-	// 	dom: "<'row'<'col-sm-2'B><'col-sm-4'l><'col-sm-6'f>>rtip",
-	// 	buttons: [
-	// 		'excel'
-	// 	]
-	// });
-
-	function datatables() {
-		var datatables = $('#mytabledata').dataTable({
-			serverSide: true,
-			processing: true,
-			paging: true,
-			destroy: true,
-			stateSave: true,
-			ajax: {
-				type: 'post',
-				url: siteurl + active_controller + 'get_pengajuan_periodik',
-				cache: false,
-				dataType: 'json'
-			},
-			columns: [{
-					data: 'no'
-				},
-				{
-					data: 'department'
-				},
-				{
-					data: 'nomor'
-				},
-				{
-					data: 'keterangan'
-				},
-				{
-					data: 'nominal'
-				},
-				{
-					data: 'tanggal'
-				},
-				{
-					data: 'status'
-				},
-				{
-					data: 'keterangan_reject'
-				},
-				{
-					data: 'action'
-				}
-			]
-		});
-	}
-</script>
-<style>
-	.ket-box {
-		max-height: 78px;
-		overflow-y: auto;
-		padding-right: 4px;
-		line-height: 1.35;
-		font-size: 12.5px;
-	}
-	.ket-box.ket-single {
-		white-space: normal;
-		word-break: break-word;
-	}
-	.ket-list {
-		margin: 0;
-		padding-left: 18px;
-	}
-	.ket-list li {
-		margin-bottom: 3px;
-		word-break: break-word;
-	}
-	.ket-list li:last-child { margin-bottom: 0; }
-	.ket-box::-webkit-scrollbar { width: 5px; }
-	.ket-box::-webkit-scrollbar-track { background: #f1f1f1; }
-	.ket-box::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-	#mytabledata td { vertical-align: top; }
-	.dept-dropdown-menu {
-		padding: 0;
-		min-width: 360px;
-		border-radius: 4px;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-		overflow: hidden;
-	}
-	.dept-search-wrap {
-		display: flex;
-		align-items: center;
-		padding: 8px 10px;
-		background: #f8f9fa;
-		border-bottom: 1px solid #e0e0e0;
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-	.dept-search-icon {
-		color: #aaa;
-		margin-right: 8px;
-		font-size: 13px;
-	}
-	.dept-search-input {
-		border: 1px solid #ddd;
-		border-radius: 3px;
-		padding: 5px 10px;
-		font-size: 13px;
-		width: 100%;
-		outline: none;
-		background: #fff;
-	}
-	.dept-search-input:focus {
-		border-color: #5cb85c;
-		box-shadow: 0 0 0 2px rgba(92, 184, 92, 0.15);
-	}
-	.dept-header {
-		padding: 7px 14px;
-		font-size: 11px;
-		font-weight: 700;
-		color: #888;
-		letter-spacing: 0.5px;
-		text-transform: uppercase;
-		background: #f0f0f0;
-		border-bottom: 1px solid #e0e0e0;
-		cursor: default;
-	}
-	#dept_list {
-		max-height: 280px;
-		overflow-y: auto;
-	}
-	#dept_list::-webkit-scrollbar { width: 5px; }
-	#dept_list::-webkit-scrollbar-track { background: #f1f1f1; }
-	#dept_list::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-	.dept-item > a {
-		display: block;
-		padding: 8px 16px;
-		font-size: 13px;
-		color: #333;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		transition: background 0.15s;
-	}
-	.dept-item > a:hover {
-		background: #eaf6ea;
-		color: #3c763d;
-		text-decoration: none;
-	}
-	.dept-item > a i { color: #5cb85c; margin-right: 4px; }
-	.dept-no-result span {
-		display: block;
-		padding: 10px 16px;
-		color: #999;
-		font-size: 13px;
-	}
-</style>
-<script src="<?= base_url('assets/js/basic.js') ?>"></script>
+<script src="<?= base_url('assets/js/periodik_ui.js') ?>"></script>
 <script>
-	$(document).on('keyup', '#dept_search', function() {
-		var keyword = $(this).val().toLowerCase();
-		var found = 0;
-		$('#dept_list .dept-item').each(function() {
-			var text = $(this).text().toLowerCase();
-			if (text.indexOf(keyword) > -1) { $(this).show(); found++; }
-			else { $(this).hide(); }
+(function () {
+	var ddItems = <?= $dd_items ?>;
+	var view = 'wait', tab = 'batch';
+	var FILTERS = {batch: [['all', 'Semua'], ['A', 'Approved'], ['P', 'Partially Approved'], ['R', 'Rejected']], item: [['all', 'Semua'], ['A', 'Approved'], ['R', 'Rejected']]};
+	var root = document.querySelector('.pjx');
+
+	function render() {
+		root.querySelectorAll('[data-pview]').forEach(function (b) { var on = b.dataset.pview === view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+		root.querySelectorAll('[data-ptab]').forEach(function (b) {
+			var on = b.dataset.ptab === tab; b.className = on ? 'on A' : ''; b.setAttribute('aria-pressed', on);
 		});
-		$('.dept-no-result').toggle(found === 0);
+		root.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.dataset.pane !== view + '-' + tab; });
+		var fl = document.getElementById('pjFilter'), sel = document.getElementById('pf');
+		fl.hidden = view !== 'rec';
+		if (view === 'rec') {
+			document.getElementById('pfLabel').textContent = tab === 'item' ? 'Status item' : 'Status batch';
+			sel.innerHTML = FILTERS[tab].map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+			applyFilter();
+		}
+	}
+	function applyFilter() {
+		var v = document.getElementById('pf').value || 'all', pane = view + '-' + tab, shown = 0;
+		root.querySelectorAll('[data-pane="' + pane + '"] tbody tr').forEach(function (tr) {
+			var key = tab === 'item' ? tr.dataset.st : tr.dataset.k, ok = v === 'all' || key === v;
+			tr.hidden = !ok; shown += ok ? 1 : 0;
+		});
+		var empty = root.querySelector('[data-empty="' + pane + '"]'); if (empty) empty.hidden = shown > 0;
+	}
+	root.addEventListener('click', function (e) {
+		var t = e.target.closest('button'); if (!t) return;
+		if (t.dataset.pview) { view = t.dataset.pview; render(); }
+		else if (t.dataset.ptab) { tab = t.dataset.ptab; render(); }
+		else if (t.dataset.view) {
+			$.get(siteurl + 'pengajuan_rutin/view/' + t.dataset.view).done(function (html) { PJ.openModal(html); }).fail(function () { PJ.toast('Terjadi kesalahan. Silakan coba lagi.'); });
+		}
+		else if (t.hasAttribute('data-close')) { PJ.closeModal(); }
+		else if (t.dataset.del) { confirmDelete(t.dataset.del, t.dataset.count); }
 	});
-	$(document).on('click', '#dept_search', function(e) { e.stopPropagation(); });
-	$(document).on('hidden.bs.dropdown', '.dropdown', function() {
-		$('#dept_search').val('');
-		$('#dept_list .dept-item').show();
-		$('.dept-no-result').hide();
-	});
-	$(document).on('shown.bs.dropdown', '.dropdown', function() { $('#dept_search').focus(); });
+	document.getElementById('pf').addEventListener('change', applyFilter);
+
+	function confirmDelete(no, count) {
+		PJ.ask({title: 'Hapus ' + no + '?', body: '<p class="hint">' + PJ.esc(count) + ' item akan dihapus. Item yang diajukan ulang di batch ini kembali bisa diajukan dari form New.</p>',
+			ok: 'Hapus batch', okCls: 'r', onOk: function () {
+				$.post(siteurl + 'pengajuan_rutin/hapus_data/' + encodeURIComponent(no), {}, null, 'json').done(function (r) {
+					if (r && r.delete) { try { sessionStorage.setItem('pjToast', no + ' dihapus.'); } catch (x) {} location.reload(); }
+					else { PJ.toast((r && r.msg) || 'Terjadi kesalahan. Silakan coba lagi.'); }
+				}).fail(function () { PJ.toast('Terjadi kesalahan. Silakan coba lagi.'); });
+			}});
+	}
+
+	var btn = document.getElementById('pjNew');
+	if (btn) PJ.dropdown(btn, ddItems, function (id) { location.href = siteurl + 'pengajuan_rutin/create/' + encodeURIComponent(id); });
+
+	try {
+		var msg = sessionStorage.getItem('pjToast'); if (msg) { sessionStorage.removeItem('pjToast'); PJ.toast(msg); }
+		var flash = sessionStorage.getItem('pjFlash');
+		if (flash) { sessionStorage.removeItem('pjFlash'); var row = root.querySelector('tr[data-batch="' + flash + '"]'); if (row) row.classList.add('flash'); }
+	} catch (x) {}
+	render();
+})();
 </script>
