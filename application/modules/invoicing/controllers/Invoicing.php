@@ -205,6 +205,15 @@ class Invoicing extends Admin_Controller
         $this->template->render('add_invoice_vuca');
     }
 
+    /** Isi nama/alamat customer invoice lama dari SPK-nya (lihat Invoice_calculation::fill_customer). */
+    private function with_customer($invoice)
+    {
+        if (!$invoice || empty($invoice->id_spk_penawaran)) { return $invoice; }
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
+        $spk = $this->db->select('nm_customer, address')->get_where(DBCNL . '.kons_tr_spk_penawaran', array('id_spk_penawaran' => $invoice->id_spk_penawaran))->row();
+        return Invoice_calculation::fill_customer($invoice, $spk);
+    }
+
     public function view_invoicing($id_invoicing)
     {
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
@@ -216,6 +225,7 @@ class Invoicing extends Admin_Controller
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_actual_plan_tagih a');
@@ -549,6 +559,7 @@ class Invoicing extends Admin_Controller
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
@@ -614,6 +625,7 @@ class Invoicing extends Admin_Controller
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
