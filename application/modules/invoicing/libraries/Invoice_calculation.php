@@ -15,12 +15,14 @@ class Invoice_calculation
         return (int) $parts[0] * 100 + (int) str_pad($parts[1] ?? '', 2, '0');
     }
     /**
-     * Baris plan tagih untuk cetak. Invoice lama hasil impor (id_actual_plan_tagih 'v' atau '0') tidak punya baris di
+     * Baris plan tagih untuk cetak dan tampilan. Invoice lama hasil impor (id_actual_plan_tagih 'v' atau '0') tidak punya baris di
      * kons_tr_actual_plan_tagih; nominalnya diambil dari invoice itu sendiri, pemetaan yang sama dengan consulting_print.php.
+     * Field yang tidak diketahui untuk invoice lama (termin, persen, deskripsi, company) berisi penanda kosong, bukan angka karangan.
      */
     public static function plan_or_invoice($plan, $invoice)
     {
-        return $plan ?: (object) array('nominal_payment' => $invoice->total_nominal);
+        return $plan ?: (object) array('nominal_payment' => $invoice->total_nominal, 'term_payment' => '-', 'persen_payment' => null,
+            'desc_payment' => '-', 'id_company' => '', 'nm_company' => '-');
     }
     public static function decimal($value)
     {

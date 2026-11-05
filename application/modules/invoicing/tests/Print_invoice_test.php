@@ -65,6 +65,19 @@ verifyUi(substr_count($html,'3,000,000')>=3,'Imported invoice nominal appears on
 // regresi: tanpa fallback (pra-perbaikan) nominal tercetak 0, dengan fallback tidak
 $noFallback=$renderer->render('print_invoice',['data_invoice'=>$imported,'data_actual_plan_tagih'=>(object)['nominal_payment'=>null],'id_company'=>'4']);
 verifyUi(strpos($noFallback,'3,000,000')===false,'Control: without the fallback the nominal would not be printed');
+// halaman View invoice lama (view_invoicing): baris plan tagih pengganti, tanpa notice
+$importedView=(object)array_merge((array)$imported,['no_faktur'=>'','total_nominal_jurnal'=>null,'ppn_jurnal'=>null,'pph_jurnal'=>null,'total_akhir_jurnal'=>null]);
+$viewData=['data_invoice'=>$importedView,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$importedView),'hasil_jurnal'=>'','total_debit'=>0,'total_kredit'=>0];
+$html=$renderer->render('view_invoice',$viewData);
+verifyUi(strpos($html,'Notice')===false && strpos($html,'non-object')===false,'View of an imported invoice renders without PHP notices');
+verifyUi(strpos($html,'Rp. 3,000,000.00')!==false,'View shows the imported invoice nominal');
+verifyUi(strpos($html,'<td class="text-center">-</td>')!==false && strpos($html,'<td class="text-center">0.00%</td>')===false,'View shows a dash, not 0.00%, for the unknown payment percent');
+$plan=Invoice_calculation::plan_or_invoice(null,$importedView);
+verifyUi($plan->nm_company==='-' && $plan->id_company==='' && $plan->term_payment==='-' && $plan->desc_payment==='-' && $plan->persen_payment===null,'Fallback row carries neutral markers for unknown fields');
+$realRow=(object)['nominal_payment'=>'2000000','persen_payment'=>'30','term_payment'=>'TOP 1','desc_payment'=>'Termin pertama','nm_company'=>'PT A','id_company'=>'7'];
+$viewData['data_actual_plan_tagih']=$realRow;
+$html=$renderer->render('view_invoice',$viewData);
+verifyUi(strpos($html,'30.00%')!==false && strpos($html,'TOP 1')!==false && strpos($html,'Rp. 2,000,000.00')!==false,'View of an invoice with a real plan row is unchanged');
 // pemilihan layout cetak di daftar: Vuca (print_invoicing_vuca) atau konsultasi (print_invoicing)
 $tipeVuca=['tipe_invoice'=>'1','consulting_version'=>null];
 $legacyVuca=['tipe_invoice'=>'0','consulting_version'=>null,'non_kons'=>'0','id_actual_plan_tagih'=>'v'];
