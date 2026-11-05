@@ -7,32 +7,23 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 <!-- <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>"> -->
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
 
-<style>
-    .btn {
-        border-radius: 10px;
-    }
-
-    .dropdown-menu {
-        top: 100%;
-        position: absolute;
-        overflow: auto;
-    }
-</style>
+<link rel="stylesheet" href="<?= base_url('assets/css/invoicing.css?v='.filemtime(FCPATH.'assets/css/invoicing.css')) ?>">
 <div id="alert_edit" class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
-<div class="box">
-    <div class="box-header">
-
+<div class="box invoice-workspace" id="invoicing-workspace">
+    <div class="invoice-heading">
+        <div><h2>Daftar invoice</h2><p>Kelola tagihan konsultasi per TOP dan invoice non konsultasi.</p></div>
+        <div class="invoice-heading-actions"><?php if ($this->auth->is_admin() && has_permission('Invoicing.Configure')): ?><a href="<?= base_url('invoicing/coa_settings') ?>" class="btn btn-default"><i class="fa fa-sliders" aria-hidden="true"></i> Pengaturan COA</a><?php endif; ?></div>
     </div>
     <!-- /.box-header -->
     <div class="box-body">
-        <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="tab_pin tab_1 active" data-no="1"><a href="javascript:void(0);">Konsultasi</a></li>
-            <li role="presentation" class="tab_pin tab_2" data-no="2"><a href="javascript:void(0);">Non Konsultasi</a></li>
+        <ul class="invoice-tabs" role="tablist" aria-label="Jenis invoice">
+            <li role="presentation" class="tab_pin tab_1 active" data-no="1"><button type="button" id="invoice-tab-consulting" role="tab" aria-selected="true" aria-controls="invoice-panel-consulting">Konsultasi</button></li>
+            <li role="presentation" class="tab_pin tab_2" data-no="2"><button type="button" id="invoice-tab-other" role="tab" aria-selected="false" aria-controls="invoice-panel-other" tabindex="-1">Non Konsultasi</button></li>
         </ul>
-        <div class="col_1">
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="col-md-2">
-                    <label for="filter_tahun">Filter Tahun:</label>
+        <div class="col_1" id="invoice-panel-consulting" role="tabpanel" aria-labelledby="invoice-tab-consulting">
+            <div class="invoice-toolbar">
+                <div class="invoice-filter">
+                    <label for="filter_tahun">Tahun</label>
                     <select name="filter_tahun" id="filter_tahun" class="form-control form-control-sm">
                         <?php
                         $tahun_sekarang = date('Y');
@@ -42,40 +33,40 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <?php endfor; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="filter_status">Filter Status:</label>
+                <div class="invoice-filter">
+                    <label for="filter_status">Status tagihan</label>
                     <select name="filter_status" id="filter_status" class="form-control form-control-sm">
-                        <option value="">-- Semua --</option>
-                        <option value="uninvoiced">Uninvoiced</option>
-                        <option value="invoiced">Invoiced</option>
+                        <option value="">Semua status</option>
+                        <option value="uninvoiced">Belum ditagihkan</option>
+                        <option value="invoiced">Sudah ditagihkan</option>
                     </select>
                 </div>
-                <div class="col-md-2" style="padding-top: 25px;">
-                    <button type="button" class="btn btn-sm btn-primary btn_filter"><i class="fa fa-search"></i> Filter</button>
-                    <a href="<?= base_url('invoicing/download_excel') ?>" class="btn btn-sm btn-success btn_download_excel" title="Download Excel"><i class="fa fa-file-excel-o"></i> Excel</a>
+                <div class="invoice-toolbar-actions">
+                    <button type="button" class="btn btn-primary btn_filter">Terapkan filter</button>
                 </div>
+                <div class="invoice-toolbar-actions invoice-toolbar-end"><a href="<?= base_url('invoicing/download_excel') ?>" class="btn btn-default btn_download_excel"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Ekspor Excel</a></div>
             </div>
-            <table id="table_penawaran" class="table table-bordered table-striped">
-                <thead class="bg-primary">
+            <p class="invoice-table-status" id="invoice-list-status" role="status" aria-live="polite"></p>
+            <div class="invoice-table-scroll" role="region" aria-label="Daftar tagihan konsultasi, geser untuk melihat seluruh kolom" tabindex="0">
+            <table id="table_penawaran" class="table table-striped invoice-list-table invoice-consulting-table">
+                <thead>
                     <tr>
-                        <th class="text-center" width="5%">No.</th>
-                        <th class="text-center" width="15%">No. Invoice</th>
-                        <th class="text-center" width="15%">Company</th>
-                        <th class="text-center" width="15%">No. SPK</th>
-                        <th class="text-center" width="20%">Customer</th>
-                        <th class="text-center" width="15%">Project</th>
-                        <th class="text-center" width="15%">Project Leader</th>
-                        <th class="text-center" width="15%">Sales</th>
-                        <th class="text-center" width="10%">Status</th>
-                        <th class="text-center" width="15%">Action</th>
+                        <th scope="col" width="4%">No.</th>
+                        <th scope="col" width="21%">Dokumen</th>
+                        <th scope="col" width="32%">Customer &amp; Project</th>
+                        <th scope="col" width="10%">Company</th>
+                        <th scope="col" width="17%">Tim</th>
+                        <th scope="col" width="9%">Status</th>
+                        <th scope="col" width="7%" class="text-center">Aksi</th>
                     </tr>
                 </thead>
             </table>
+            </div>
         </div>
-        <div class="col_2" style="display: none;">
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="col-md-2">
-                    <label for="filter_tahun_non_kons">Filter Tahun:</label>
+        <div class="col_2" id="invoice-panel-other" role="tabpanel" aria-labelledby="invoice-tab-other" style="display: none;">
+            <div class="invoice-toolbar">
+                <div class="invoice-filter">
+                    <label for="filter_tahun_non_kons">Tahun</label>
                     <select name="filter_tahun_non_kons" id="filter_tahun_non_kons" class="form-control form-control-sm">
                         <?php
                         for ($y = $tahun_sekarang; $y >= 2020; $y--) :
@@ -84,14 +75,15 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <?php endfor; ?>
                     </select>
                 </div>
-                <div class="col-md-2" style="padding-top: 25px;">
-                    <button type="button" class="btn btn-sm btn-primary btn_filter_non_kons"><i class="fa fa-search"></i> Filter</button>
+                <div class="invoice-toolbar-actions">
+                    <button type="button" class="btn btn-primary btn_filter_non_kons">Terapkan filter</button>
                 </div>
+                <div class="invoice-toolbar-actions invoice-toolbar-end"><?php if ($ENABLE_ADD): ?><a href="<?= base_url('invoicing/list_penawaran_non_kons') ?>" class="btn btn-primary"><i class="fa fa-plus" aria-hidden="true"></i> Buat invoice</a><?php endif; ?></div>
             </div>
-            <a href="<?= base_url('invoicing/list_penawaran_non_kons') ?>" class="btn btn-sm btn-success" title="Add Invoice"><i class="fa fa-plus"></i> Add Invoice</a>
-            <br><br>
-            <table id="table_penawaran_non_konsultasi" class="table table-bordered table-striped">
-                <thead class="bg-primary">
+            <p class="invoice-table-status" id="invoice-other-status" role="status" aria-live="polite"></p>
+            <div class="invoice-table-scroll" role="region" aria-label="Daftar invoice non konsultasi, geser untuk melihat seluruh kolom" tabindex="0">
+            <table id="table_penawaran_non_konsultasi" class="table table-striped invoice-list-table">
+                <thead>
                     <tr>
                         <th class="text-center">No.</th>
                         <th class="text-center">No. Invoice</th>
@@ -102,11 +94,12 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         <th class="text-center">PIC</th>
                         <th class="text-center">Revisi</th>
                         <th class="text-center">Status</th>
-                        <th class="text-center">Action</th>
+                        <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
     </div>
     <!-- /.box-body -->
@@ -292,9 +285,32 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/invoicing/action-menu.js?v='.filemtime(FCPATH.'assets/js/invoicing/action-menu.js')) ?>"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
+        [['#table_penawaran', '#invoice-list-status'], ['#table_penawaran_non_konsultasi', '#invoice-other-status']].forEach(function(pair) {
+            $(pair[0]).on('preXhr.dt', function() {
+                $(pair[1]).attr('data-state', 'loading').text('Memuat daftar invoice…');
+                $(this).attr('aria-busy', 'true');
+            }).on('xhr.dt', function(event, settings, json) {
+                $(this).attr('aria-busy', 'false');
+                if (json === null) {
+                    $(pair[1]).attr('data-state', 'error').text('Daftar invoice gagal dimuat. Tekan Terapkan filter untuk mencoba lagi.');
+                    return true;
+                }
+                $(pair[1]).removeAttr('data-state').text('');
+            });
+        });
+        $('.invoice-tabs [role="tab"]').on('keydown', function(event) {
+            var tabs = $('.invoice-tabs [role="tab"]'), index = tabs.index(this), next;
+            if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+            else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = tabs.length - 1;
+            else return;
+            event.preventDefault(); tabs.eq(next).trigger('click').trigger('focus');
+        });
         DataTables();
     });
 
@@ -530,6 +546,8 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
         $('.tab_1').addClass('active');
         $('.tab_2').removeClass('active');
+        $('#invoice-tab-consulting').attr({'aria-selected': 'true', 'tabindex': '0'});
+        $('#invoice-tab-other').attr({'aria-selected': 'false', 'tabindex': '-1'});
         DataTables();
     });
 
@@ -539,6 +557,8 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
         $('.tab_1').removeClass('active');
         $('.tab_2').addClass('active');
+        $('#invoice-tab-consulting').attr({'aria-selected': 'false', 'tabindex': '-1'});
+        $('#invoice-tab-other').attr({'aria-selected': 'true', 'tabindex': '0'});
         DataTablesNonKonsultasi();
     });
 
@@ -627,6 +647,54 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         });
     });
 
+    function invoiceTableLanguage() {
+        return {
+            search: 'Cari:', searchPlaceholder: 'Nomor, customer, atau project',
+            lengthMenu: 'Tampilkan _MENU_ baris',
+            info: '_START_–_END_ dari _TOTAL_ baris', infoEmpty: 'Belum ada baris ditampilkan',
+            infoFiltered: '(disaring dari _MAX_ baris)',
+            emptyTable: 'Belum ada tagihan pada tahun ini. Pilih tahun lain atau periksa plan tagih.',
+            zeroRecords: 'Tidak ada invoice yang sesuai. Ubah kata pencarian atau filter.',
+            processing: 'Memuat daftar invoice…', loadingRecords: 'Memuat daftar invoice…',
+            paginate: {first: 'Pertama', previous: 'Sebelumnya', next: 'Berikutnya', last: 'Terakhir'}
+        };
+    }
+
+    function invoiceActionLabels(cell) {
+        $(cell).find('a[title],button[title]').each(function() {
+            var title = $(this).attr('title');
+            $(this).attr('aria-label', title).find('i').attr('aria-hidden', 'true');
+        });
+        if (window.InvoiceActionMenu) window.InvoiceActionMenu.enhance(cell);
+    }
+
+    function invoiceCellText(value) {
+        if (value === null || value === undefined || String(value).trim() === '') return '-';
+        return String(value).replace(/[&<>"']/g, function(character) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+        });
+    }
+
+    function invoiceDocumentCell(data, type, row) {
+        if (type !== 'display') return [row.no_invoice || '', row.no_spk || ''].join(' ');
+        var number = row.no_invoice ? invoiceCellText(row.no_invoice) : 'Belum ada invoice';
+        return '<div class="invoice-cell-primary">' + number + '</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ' + invoiceCellText(row.no_spk) + '</div>';
+    }
+
+    function invoiceCustomerCell(data, type, row) {
+        if (type !== 'display') return [row.customer || '', row.project || ''].join(' ');
+        return '<div class="invoice-cell-primary">' + invoiceCellText(row.customer) + '</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ' + invoiceCellText(row.project) + '</div>';
+    }
+
+    function invoiceTeamCell(data, type, row) {
+        if (type !== 'display') return [row.project_leader || '', row.sales || ''].join(' ');
+        return '<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>' + invoiceCellText(row.project_leader) + '</dd><dt>Sales</dt><dd>' + invoiceCellText(row.sales) + '</dd></dl>';
+    }
+
+    $(document).on('preDraw.dt', '#table_penawaran, #table_penawaran_non_konsultasi', function() {
+        if (window.InvoiceActionMenu) window.InvoiceActionMenu.close();
+    });
+
     function DataTables() {
         // var dataTables = $('#table_penawaran').dataTable();
         // dataTables.destroy();
@@ -645,34 +713,29 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'no',
                 },
                 {
-                    data: 'no_invoice'
+                    data: null, render: invoiceDocumentCell
                 },
                 {
-                    data: 'company'
+                    data: null, render: invoiceCustomerCell
                 },
                 {
-                    data: 'no_spk'
+                    data: 'company', render: function(value, type) { return type === 'display' ? invoiceCellText(value) : value; }
                 },
                 {
-                    data: 'customer'
-                },
-                {
-                    data: 'project'
-                },
-                {
-                    data: 'project_leader'
-                },
-                {
-                    data: 'sales'
+                    data: null, render: invoiceTeamCell
                 },
                 {
                     data: 'status'
                 },
                 {
-                    data: 'option'
+                    data: 'option', createdCell: invoiceActionLabels
                 }
             ],
-            responsive: true,
+            language: invoiceTableLanguage(),
+            ordering: false,
+            autoWidth: false,
+            stateLoadParams: function(settings, state) { if (!state.columns || state.columns.length !== 7) return false; },
+            responsive: false,
             processing: true,
             serverSide: true,
             stateSave: true,
@@ -719,10 +782,11 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     data: 'status'
                 },
                 {
-                    data: 'action'
+                    data: 'action', createdCell: invoiceActionLabels
                 }
             ],
-            responsive: true,
+            language: $.extend({}, invoiceTableLanguage(), {emptyTable: 'Belum ada invoice non konsultasi pada tahun ini. Pilih tahun lain atau buat invoice dari penawaran.'}),
+            responsive: false,
             processing: true,
             serverSide: true,
             stateSave: true,

@@ -32,18 +32,6 @@
         text-align: center;
     }
 
-    .table_list_barang .invoice-item td {
-        box-sizing: border-box;
-        padding: 5px;
-        line-height: 1.3;
-        overflow-wrap: anywhere;
-    }
-
-    .table_list_barang .invoice-item {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
     @media print {
         .table_list_barang thead {
             -webkit-print-color-adjust: exact;
@@ -162,17 +150,24 @@
                 $no_item++;
 
                 echo '
-                    <tr class="invoice-item">
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
-                        <td style="text-align: center; vertical-align: top; border-right: 1px solid black;"></td>
-                        <td style="text-align: right; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
+                    <tr>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
+                        <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
+                        <td style="text-align: right; height: 200px; vertical-align: top; border-right: 1px solid black;">' . number_format($item->total) . '</td>
                         
                     </tr>
                 ';
             }
         ?>
+            <tr>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+                <td style="min-height: 200px; border-right: 1px solid black;"></td>
+            </tr>
             <!-- <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
@@ -366,7 +361,7 @@
                 $no_item++;
 
                 echo '
-                    <tr class="invoice-item">
+                    <tr>
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . $item->nm_item . '</td>
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->qty) . '</td>
                         <td style="text-align: center; vertical-align: top; border-right: 1px solid black;">' . number_format($item->harga) . '</td>
@@ -376,6 +371,13 @@
                 ';
             }
         ?>
+            <tr>
+                <td style="height: 165px; border-right: 1px solid black;"></td>
+                <td style="height: 165px; border-right: 1px solid black;"></td>
+                <td style="height: 165px; border-right: 1px solid black;"></td>
+                <td style="height: 165px; border-right: 1px solid black;"></td>
+                <td style="height: 165px; border-right: 1px solid black;"></td>
+            </tr>
             <!-- <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
@@ -516,37 +518,5 @@
 
 
 <script>
-    function fitInvoiceDetails() {
-        var rows = Array.from(document.querySelectorAll('.table_list_barang > tbody > .invoice-item'));
-        if (!rows.length) {
-            return;
-        }
-
-        rows.forEach(function (row) {
-            Array.from(row.cells).forEach(function (cell) {
-                cell.style.height = '';
-            });
-        });
-
-        var totalHeight = rows.reduce(function (total, row) {
-            return total + row.getBoundingClientRect().height;
-        }, 0);
-        var lastRow = rows[rows.length - 1];
-        var lastHeight = Math.ceil(lastRow.getBoundingClientRect().height + Math.max(0, 200 - totalHeight));
-        Array.from(lastRow.cells).forEach(function (cell) {
-            cell.style.height = lastHeight + 'px';
-        });
-    }
-
-    function printInvoice() {
-        fitInvoiceDetails();
-        window.print();
-    }
-
-    window.addEventListener('beforeprint', fitInvoiceDetails);
-    if (document.readyState === 'complete') {
-        printInvoice();
-    } else {
-        window.addEventListener('load', printInvoice, { once: true });
-    }
+    window.print();
 </script>

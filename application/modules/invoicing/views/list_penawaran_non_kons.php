@@ -1,85 +1,153 @@
-<div class="box">
+<?php
+$ENABLE_ADD     = has_permission('Invoicing.Add');
+$ENABLE_MANAGE  = has_permission('Invoicing.Manage');
+$ENABLE_VIEW    = has_permission('Invoicing.View');
+$ENABLE_DELETE  = has_permission('Invoicing.Delete');
+?>
+<link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="<?= base_url('assets/css/invoicing.css?v=' . (file_exists(FCPATH . 'assets/css/invoicing.css') ? filemtime(FCPATH . 'assets/css/invoicing.css') : '1')) ?>">
+
+<div class="box invoice-workspace" id="invoicing-workspace">
+    <div class="invoice-heading">
+        <div>
+            <h2>List Penawaran Non Konsultasi</h2>
+            <p>Pilih penawaran non konsultasi untuk diterbitkan invoice atau kelola status penawaran.</p>
+        </div>
+        <div class="invoice-heading-actions">
+            <a href="<?= base_url('invoicing') ?>" class="btn btn-default"><i class="fa fa-arrow-left" aria-hidden="true"></i> Kembali ke Invoice</a>
+        </div>
+    </div>
     <div class="box-body">
-        <table class="table table-bordered table-striped" width="100%">
-            <thead class="bg-primary">
-                <tr>
-                    <th class="text-center">No.</th>
-                    <th class="text-center">Company</th>
-                    <th class="text-center">No. Penawaran</th>
-                    <th class="text-center">Penjualan</th>
-                    <th class="text-center">PIC</th>
-                    <th class="text-center">Invoice Created</th>
-                    <th class="text-center">Status</th>
-                    <th class="text-center">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $no = 0;
-                foreach ($list_penawaran_non_kons as $item) {
-                    $no++;
+        <div class="invoice-table-scroll" role="region" aria-label="Daftar penawaran non konsultasi, geser untuk melihat seluruh kolom" tabindex="0">
+            <table id="table_list_penawaran_non_kons" class="table table-striped invoice-list-table">
+                <thead>
+                    <tr>
+                        <th scope="col" width="4%" class="text-center">No.</th>
+                        <th scope="col" width="12%">Company</th>
+                        <th scope="col" width="22%">No. Penawaran</th>
+                        <th scope="col" width="16%" class="text-right">Penjualan</th>
+                        <th scope="col" width="16%">PIC</th>
+                        <th scope="col" width="10%" class="text-center">Invoice Created</th>
+                        <th scope="col" width="10%" class="text-center">Status</th>
+                        <th scope="col" width="10%" class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $no = 0;
+                    if (!empty($list_penawaran_non_kons)) {
+                        foreach ($list_penawaran_non_kons as $item) {
+                            $no++;
 
-                    $sts = '<div class="badge bg-yellow">Draft</div>';
+                            // Count of invoice created (from pre-aggregated controller field or fallback)
+                            $jum_invoice = isset($item->total_invoice) ? (int) $item->total_invoice : 0;
+                            if (!isset($item->total_invoice) && isset($this->db)) {
+                                $jum_invoice = (int) $this->db->get_where('tr_invoicing', ['id_penawaran' => $item->id_penawaran])->num_rows();
+                            }
 
-                    $btn_create = '<a href="' . base_url('invoicing/create_invoice_non_konsultasi/' . $item->id_penawaran) . '" class="btn btn-sm btn-success" title="Select Quotation"><i class="fa fa-plus"></i></a>';
+                            $has_invoice = ($jum_invoice > 0);
 
-                    $btn_close = '';
+                            if ($has_invoice) {
+                                $status_badge = '<span class="badge bg-green">Invoice Created</span>';
+                            } else {
+                                $status_badge = '<span class="badge bg-yellow">Draft</span>';
+                            }
 
-                    $this->db->select('a.id');
-                    $this->db->from('tr_invoicing a');
-                    $this->db->where('a.id_penawaran', $item->id_penawaran);
-                    $check_invoice = $this->db->get()->num_rows();
+                            $buttons = [];
+                            if ($ENABLE_ADD) {
+                                $buttons[] = '<a href="' . base_url('invoicing/create_invoice_non_konsultasi/' . html_escape($item->id_penawaran)) . '" class="btn btn-sm btn-primary" title="Buat Invoice"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice</a>';
+                            }
+                            if ($ENABLE_MANAGE && $has_invoice) {
+                                $buttons[] = '<button type="button" class="btn btn-sm btn-danger close_penawaran" data-id_penawaran="' . html_escape($item->id_penawaran) . '" title="Close Penawaran"><i class="fa fa-times-circle" aria-hidden="true"></i> Tutup Penawaran</button>';
+                            }
 
-                    if ($check_invoice > 0) {
-                        $btn_close = '<button type="button" class="btn btn-sm btn-danger close_penawaran" data-id_penawaran="' . $item->id_penawaran . '" title="Close Penawaran"><i class="fa fa-close"></i></button>';
-
-                        $sts = '<div class="badge bg-green">Invoice Created</div>';
+                            $action_html = !empty($buttons) ? implode(' ', $buttons) : '-';
+                            ?>
+                            <tr>
+                                <td class="text-center"><?= $no ?></td>
+                                <td class="text-left"><span class="invoice-cell-primary"><?= html_escape($item->nm_company ?: '-') ?></span></td>
+                                <td class="text-left"><span class="invoice-cell-primary"><?= html_escape($item->id_penawaran ?: '-') ?></span></td>
+                                <td class="text-right" data-total><?= number_format((float) ($item->grand_total ?? 0)) ?></td>
+                                <td class="text-left"><?= html_escape($item->pic ?: '-') ?></td>
+                                <td class="text-center font-weight-bold" data-total><?= $jum_invoice ?></td>
+                                <td class="text-center"><?= $status_badge ?></td>
+                                <td class="text-center"><?= $action_html ?></td>
+                            </tr>
+                        <?php
+                        }
                     }
-
-                    $buttons = $btn_create . ' ' . $btn_close;
-
-                    $get_jum_invoice = $this->db->get_where('tr_invoicing', ['id_penawaran' => $item->id_penawaran, 'non_kons' => '1'])->num_rows();
-
-                    $jum_invoice = $get_jum_invoice ?? 0;
-
-                    echo '
-                        <tr>
-                            <td class="text-center">' . $no . '</td>
-                            <td class="text-left">' . $item->nm_company . '</td>
-                            <td class="text-center">' . $item->id_penawaran . '</td>
-                            <td class="text-right">' . number_format($item->grand_total) . '</td>
-                            <td class="text-center">' . $item->pic . '</td>
-                            <td class="text-center">' . $jum_invoice . '</td>
-                            <td class="text-center">' . $sts . '</td>
-                            <td class="text-center">' . $buttons . '</td>
-                        </tr>
-                    ';
-                }
-                ?>
-            </tbody>
-        </table>
-        <br>
-        <a href="<?= base_url('invoicing') ?>" class="btn btn-sm btn-danger"><i class="fa fa-arrow-left"></i> Back</a>
+                    ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
+<script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/invoicing/action-menu.js?v=' . (file_exists(FCPATH . 'assets/js/invoicing/action-menu.js') ? filemtime(FCPATH . 'assets/js/invoicing/action-menu.js') : '1')) ?>"></script>
 <script>
+    $(document).ready(function() {
+        function enhanceActionCells() {
+            $('#table_list_penawaran_non_kons tbody td:last-child').each(function() {
+                $(this).find('a[title],button[title]').each(function() {
+                    var title = $(this).attr('title');
+                    $(this).attr('aria-label', title).find('i').attr('aria-hidden', 'true');
+                });
+                if (window.InvoiceActionMenu) {
+                    window.InvoiceActionMenu.enhance(this);
+                }
+            });
+        }
+
+        var table = $('#table_list_penawaran_non_kons').DataTable({
+            language: {
+                search: 'Cari:',
+                searchPlaceholder: 'Nomor, company, atau PIC',
+                lengthMenu: 'Tampilkan _MENU_ baris',
+                info: '_START_–_END_ dari _TOTAL_ baris',
+                infoEmpty: 'Belum ada baris ditampilkan',
+                infoFiltered: '(disaring dari _MAX_ baris)',
+                emptyTable: 'Belum ada penawaran non konsultasi yang tersedia.',
+                zeroRecords: 'Tidak ada penawaran yang sesuai dengan pencarian.',
+                paginate: {
+                    first: 'Pertama',
+                    previous: 'Sebelumnya',
+                    next: 'Berikutnya',
+                    last: 'Terakhir'
+                }
+            },
+            order: [],
+            autoWidth: false,
+            paging: true,
+            pageLength: 10,
+            drawCallback: function() {
+                enhanceActionCells();
+            }
+        });
+
+        $(document).on('preDraw.dt', '#table_list_penawaran_non_kons', function() {
+            if (window.InvoiceActionMenu) window.InvoiceActionMenu.close();
+        });
+
+        enhanceActionCells();
+    });
+
     $(document).on('click', '.close_penawaran', function() {
         var id_penawaran = $(this).data('id_penawaran');
 
         Swal.fire({
             title: 'Konfirmasi Penutupan',
-            text: 'Penawaran ini akan ditutup secara permanen dan tidak dapat membuat Invoice kembali. Lanjutkan?',
+            text: 'Penawaran ini akan ditutup secara permanen dan tidak dapat membuat invoice kembali. Lanjutkan?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Tutup Invoice!',
+            confirmButtonColor: '#2876a3',
+            cancelButtonColor: '#9c2d2d',
+            confirmButtonText: 'Ya, Tutup Penawaran!',
             cancelButtonText: 'Batal',
             allowOutsideClick: false
-        }).then((next) => {
-            if (next.isConfirmed) {
+        }).then((result) => {
+            if (result.isConfirmed) {
                 Swal.fire({
                     title: 'Sedang memproses...',
                     allowOutsideClick: false,
@@ -108,10 +176,10 @@
                         });
                     },
                     error: function(xhr) {
-                        let errorMsg = 'Terjadi kesalahan sistem.';
+                        var errorMsg = 'Terjadi kesalahan sistem.';
                         try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMsg = response.msg;
+                            var response = JSON.parse(xhr.responseText);
+                            errorMsg = response.msg || errorMsg;
                         } catch (e) {
                             errorMsg = 'Gagal memproses permintaan (Error: ' + xhr.status + ')';
                         }
@@ -123,8 +191,8 @@
                             confirmButtonText: 'Tutup'
                         });
                     }
-                })
+                });
             }
         });
-    })
+    });
 </script>

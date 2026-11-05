@@ -1,5 +1,7 @@
 <?php 
-    $pajak = ($data_invoice->dpp_nilai_lain * 12 / 100);
+    $pajak = $invoice_print_totals['vat'] ?? ($data_invoice->dpp_nilai_lain * 12 / 100);
+    $total_tagihan = $invoice_print_totals['gross'] ?? ($data_actual_plan_tagih->nominal_payment + $pajak);
+    $print_decimals = $invoice_print_decimals ?? 0;
 ?>
 <style>
     body {
@@ -152,9 +154,9 @@
             <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="3"></td>
@@ -164,7 +166,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
+                                <?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -178,7 +180,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
+                                <?= number_format($data_invoice->dpp_nilai_lain, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -192,7 +194,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($pajak) ?>
+                                <?= number_format($pajak, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -206,7 +208,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment + $pajak) ?>
+                                <?= number_format($total_tagihan, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -214,7 +216,7 @@
             </tr>
             <tr>
                 <td colspan="5" style="height: 50px; vertical-align: middle">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $pajak)) . ' Rupiah' ?>
+                    <?= terbilang($total_tagihan) . ' Rupiah' ?>
                 </td>
             </tr>
             <tr>
@@ -301,9 +303,9 @@
             <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment) ?></td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="3"></td>
@@ -313,7 +315,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment) ?>
+                                <?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -327,7 +329,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($data_invoice->dpp_nilai_lain) ?>
+                                <?= number_format($data_invoice->dpp_nilai_lain, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -341,7 +343,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($pajak) ?>
+                                <?= number_format($pajak, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -355,7 +357,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment + $pajak) ?>
+                                <?= number_format($total_tagihan, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -363,7 +365,7 @@
             </tr>
             <tr>
                 <td colspan="3" style="height: 50px; vertical-align: middle; padding:8px;">
-                    <?= terbilang(($data_actual_plan_tagih->nominal_payment + $pajak)) . ' Rupiah' ?>
+                    <?= terbilang($total_tagihan) . ' Rupiah' ?>
                 </td>
                 <td colspan="2"></td>
             </tr>

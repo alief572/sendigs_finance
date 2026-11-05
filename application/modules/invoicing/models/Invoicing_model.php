@@ -58,7 +58,7 @@ class Invoicing_model extends BF_Model
             $filter_tahun = date('Y');
         }
 
-        $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
@@ -114,9 +114,14 @@ class Invoicing_model extends BF_Model
 
             $option = '';
             if ($item->sts_invoice != '1') {
-                $option = '<a href="' . base_url('invoicing/add_invoice/' . $item->id) . '" class="btn btn-sm btn-warning" title="Create Invoice"><i class="fa fa-pencil"></i></a>';
+                $isVuca = ((string)($item->id_company ?? '') === '4' || trim((string)($item->company_name ?? '')) === 'Vuca');
+                if ($isVuca) {
+                    $option = '<a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-success" title="Buat Invoice Vuca"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice Vuca</a>';
+                } else {
+                    $option = '<a href="' . base_url('invoicing/add_invoice/' . $item->id) . '" class="btn btn-sm btn-primary" title="Buat Invoice"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice</a>';
+                }
 
-                $option .= ' <a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-primary" title="Create Invoice Vuca"><i class="fa fa-pencil"></i></a>';
+
             } else {
                 $get_invoicing = $this->db->get_where('tr_invoicing', ['id_detail_plan_tagih' => $item->id])->row();
 
@@ -468,35 +473,19 @@ class Invoicing_model extends BF_Model
         $table_exists = $this->db->query("SHOW TABLES LIKE 'ms_invoice_sequence'")->num_rows() > 0;
 
         if ($table_exists) {
-            // Cek tabel sequence
-            $seq_row = $this->db->get_where('ms_invoice_sequence', [
-                'kode_entitas' => $kode_entitas,
-                'tahun' => $tahun
-            ])->row();
-
-            if ($seq_row) {
-                // Ada di tabel sequence → increment
-                $sequence = (int)$seq_row->last_sequence + 1;
-                $this->db->where('id', $seq_row->id);
-                $this->db->update('ms_invoice_sequence', [
-                    'last_sequence' => $sequence,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'updated_by' => $this->auth->user_id()
-                ]);
-            } else {
-                // Belum ada row untuk entitas+tahun ini → fallback ke MAX lalu insert
-                $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
-
-                $this->db->insert('ms_invoice_sequence', [
-                    'kode_entitas' => $kode_entitas,
-                    'tahun' => $tahun,
-                    'last_sequence' => $sequence,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'updated_by' => $this->auth->user_id()
-                ]);
+            // Atomic allocation also covers legacy Vuca/nonconsulting callers.
+            $minimum = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
+            if ($this->db->query('INSERT IGNORE INTO ms_invoice_sequence (kode_entitas,tahun,last_sequence,updated_at,updated_by) VALUES (?,?,?,?,?)',
+                [$kode_entitas,$tahun,$minimum-1,date('Y-m-d H:i:s'),$this->auth->user_id()]) === false) {
+                throw new RuntimeException('Gagal menyiapkan nomor invoice.');
             }
+            if ($this->db->query('UPDATE ms_invoice_sequence SET last_sequence=LAST_INSERT_ID(GREATEST(last_sequence+1,?)),updated_at=?,updated_by=? WHERE kode_entitas=? AND tahun=?',
+                [$minimum,date('Y-m-d H:i:s'),$this->auth->user_id(),$kode_entitas,$tahun]) === false) {
+                throw new RuntimeException('Gagal mengalokasikan nomor invoice.');
+            }
+            $allocated = $this->db->query('SELECT LAST_INSERT_ID() AS sequence')->row();
+            $sequence = (int)$allocated->sequence;
         } else {
-            // Tabel belum ada → fallback ke logic lama (MAX dari tr_invoicing)
             $sequence = $this->_get_max_sequence_from_invoicing($kode_entitas, $tahun);
         }
 

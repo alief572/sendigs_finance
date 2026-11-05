@@ -13,7 +13,7 @@ header("Content-Disposition: attachment; filename=Data Invoicing.xls");
             <th>Project</th>
             <th>Project Leader</th>
             <th>Sales</th>
-            <th>Status</th>
+            <th>Status</th><th>Perlakuan PPN</th><th>Penjualan</th><th>DPP</th><th>PPN</th><th>Total Tagihan</th><th>Piutang Awal</th><th>Saldo Piutang</th>
         </tr>
     </thead>
     <tbody>
@@ -34,6 +34,8 @@ header("Content-Disposition: attachment; filename=Data Invoicing.xls");
                 <td><?= $item->nm_project_leader ?></td>
                 <td><?= $item->nm_sales ?></td>
                 <td><?= $status ?></td>
+                <td><?= htmlspecialchars((string)($item->tax_treatment??''),ENT_QUOTES,'UTF-8') ?></td>
+                <?php foreach(array('total_nominal','dpp_nilai_lain','ppn_jurnal','tagihan_ppn_jurnal','total_akhir_jurnal','saldo_piutang') as $moneyField): ?><td><?= (int)($item->consulting_version??0)===3?number_format((float)$item->$moneyField,2,'.',''):'' ?></td><?php endforeach; ?>
             </tr>
         <?php endforeach; ?>
     </tbody>

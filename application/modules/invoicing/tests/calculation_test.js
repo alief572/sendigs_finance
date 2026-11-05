@@ -1,7 +1,8 @@
 'use strict';
 const assert=require('assert'), fs=require('fs'), path=require('path'), vm=require('vm'), cp=require('child_process');
 const C=require('../../../../assets/js/invoicing/calculation.js');
-const php=process.env.INVOICE_TEST_PHP || 'C:/xampp74/php/php.exe';
+const defaultPhp = path.resolve(__dirname, '../../../../scratch/runtime/php74/php.exe');
+const php = process.env.INVOICE_TEST_PHP || (fs.existsSync(defaultPhp) ? defaultPhp : (fs.existsSync('C:/xampp74/php/php.exe') ? 'C:/xampp74/php/php.exe' : 'php'));
 const cases=JSON.parse(cp.execFileSync(php,[path.join(__dirname,'calculation_test.php'),'--json'],{encoding:'utf8'}));
 for(let n=0;n<cases.length;n++) {
     const expected=cases[n], vuca=n===cases.length-1, actual=C.totals(expected.dpp,expected.rate,vuca);
