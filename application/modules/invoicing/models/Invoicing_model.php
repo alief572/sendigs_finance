@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../libraries/Invoice_consulting.php';
 
 class Invoicing_model extends BF_Model
 {
@@ -113,8 +114,8 @@ class Invoicing_model extends BF_Model
             }
 
             $option = '';
+            $isVuca = ((string)($item->id_company ?? '') === '4' || trim((string)($item->company_name ?? '')) === 'Vuca');
             if ($item->sts_invoice != '1') {
-                $isVuca = ((string)($item->id_company ?? '') === '4' || trim((string)($item->company_name ?? '')) === 'Vuca');
                 if ($isVuca) {
                     $option = '<a href="' . base_url('invoicing/add_invoice_vuca/' . $item->id) . '" class="btn btn-sm btn-success" title="Buat Invoice Vuca"><i class="fa fa-plus" aria-hidden="true"></i> Buat Invoice Vuca</a>';
                 } else {
@@ -150,11 +151,15 @@ class Invoicing_model extends BF_Model
                         }
                     }
 
-                    if ($get_invoicing->tipe_invoice == '1') {
+                    // Cetak invoice: layout Vuca untuk invoice Vuca dan invoice lama milik company Vuca. Kwitansi tetap mengikuti tipe_invoice.
+                    if (Invoice_consulting::print_as_vuca($get_invoicing, $isVuca)) {
                         $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv_vuca" title="Print Invoice" data-toggle="modal" data-target="#modal_print_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
-                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi_vuca" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-file-pdf-o"></i></a>';
                     } else {
                         $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-info pilih_print_inv" title="Print Invoice" data-toggle="modal" data-target="#modal_print" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-print"></i></a>';
+                    }
+                    if ($get_invoicing->tipe_invoice == '1') {
+                        $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi_vuca" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi_vuca" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-file-pdf-o"></i></a>';
+                    } else {
                         $option .= ' <a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi" data-id_inv="' . $get_invoicing->id . '"><i class="fa fa-file-pdf-o"></i></a>';
                     }
                 }

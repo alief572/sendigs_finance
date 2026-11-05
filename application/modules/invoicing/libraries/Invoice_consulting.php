@@ -25,6 +25,16 @@ class Invoice_consulting
             && (string)($invoice['tipe_invoice'] ?? '0') !== '1' && (string)($invoice['non_kons'] ?? '0') !== '1';
     }
 
+    /**
+     * Cetak memakai layout Vuca (print_invoicing_vuca): invoice Vuca (tipe_invoice 1), atau invoice lama milik company Vuca.
+     * Invoice alur konsultasi v3 tetap memakai layout konsultasi dengan kop pemiliknya, termasuk bila pemiliknya Vuca.
+     */
+    public static function print_as_vuca($invoice, $companyIsVuca)
+    {
+        $invoice = (array)$invoice;
+        return (string)($invoice['tipe_invoice'] ?? '0') === '1' || ($companyIsVuca && !self::is_new($invoice));
+    }
+
     public static function totals($amount, $type)
     {
         if (!is_string($type) || !in_array($type, array('PKP','WAPU','KB'), true)) throw new InvalidArgumentException('Perlakuan PPN wajib dipilih.');
