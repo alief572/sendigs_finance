@@ -70,14 +70,56 @@ $importedView=(object)array_merge((array)$imported,['no_faktur'=>'','total_nomin
 $viewData=['data_invoice'=>$importedView,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$importedView),'hasil_jurnal'=>'','total_debit'=>0,'total_kredit'=>0];
 $html=$renderer->render('view_invoice',$viewData);
 verifyUi(strpos($html,'Notice')===false && strpos($html,'non-object')===false,'View of an imported invoice renders without PHP notices');
-verifyUi(strpos($html,'Rp. 3,000,000.00')!==false,'View shows the imported invoice nominal');
+verifyUi(strpos($html,'<td class="text-right">3,000,000.00</td>')!==false && strpos($html,'data-total="sales">3,000,000.00')!==false,'View shows the imported invoice nominal in the TOP table and the summary');
 verifyUi(strpos($html,'<td class="text-center">-</td>')!==false && strpos($html,'<td class="text-center">0.00%</td>')===false,'View shows a dash, not 0.00%, for the unknown payment percent');
 $plan=Invoice_calculation::plan_or_invoice(null,$importedView);
 verifyUi($plan->nm_company==='-' && $plan->id_company==='' && $plan->term_payment==='-' && $plan->desc_payment==='-' && $plan->persen_payment===null,'Fallback row carries neutral markers for unknown fields');
 $realRow=(object)['nominal_payment'=>'2000000','persen_payment'=>'30','term_payment'=>'TOP 1','desc_payment'=>'Termin pertama','nm_company'=>'PT A','id_company'=>'7'];
 $viewData['data_actual_plan_tagih']=$realRow;
 $html=$renderer->render('view_invoice',$viewData);
-verifyUi(strpos($html,'30.00%')!==false && strpos($html,'TOP 1')!==false && strpos($html,'Rp. 2,000,000.00')!==false,'View of an invoice with a real plan row is unchanged');
+verifyUi(strpos($html,'30.00%')!==false && strpos($html,'TOP 1')!==false && strpos($html,'<td class="text-right">2,000,000.00</td>')!==false && strpos($html,'Termin pertama')!==false,'View of an invoice with a real plan row shows its term, percent, nominal and description');
+// customer invoice lama kosong di tr_invoicing: diisi dari SPK, nilai yang sudah ada tidak ditimpa
+$spkRow=(object)['nm_customer'=>'PT Waterco Indonesia','address'=>'Ruko Plaza Kelapa Gading'];
+$blank=(object)['id'=>'00328-INV-XII-25','nm_customer'=>null,'address'=>null];
+$filled=Invoice_calculation::fill_customer($blank,$spkRow);
+verifyUi($filled->nm_customer==='PT Waterco Indonesia' && $filled->address==='Ruko Plaza Kelapa Gading','Empty customer name and address are filled from the SPK');
+$keep=Invoice_calculation::fill_customer((object)['nm_customer'=>'PT Tersimpan','address'=>''],$spkRow);
+verifyUi($keep->nm_customer==='PT Tersimpan' && $keep->address==='Ruko Plaza Kelapa Gading','A stored name is never overwritten; only the empty field is filled');
+verifyUi(Invoice_calculation::fill_customer((object)['nm_customer'=>'  ','address'=>null],$spkRow)->nm_customer==='PT Waterco Indonesia','Whitespace-only counts as empty');
+verifyUi(Invoice_calculation::fill_customer($blank,null)===$blank && Invoice_calculation::fill_customer(null,$spkRow)===null,'Missing SPK or invoice is returned unchanged');
+$spkEmpty=Invoice_calculation::fill_customer((object)['nm_customer'=>null,'address'=>null],(object)['nm_customer'=>'','address'=>null]);
+verifyUi($spkEmpty->nm_customer===null && $spkEmpty->address===null,'An empty SPK value does not replace anything');
+$filledImported=(object)array_merge((array)$importedView,['nm_customer'=>$filled->nm_customer,'address'=>$filled->address]);
+foreach(['view_invoice'=>['data_invoice'=>$filledImported,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$filledImported),'hasil_jurnal'=>'','total_debit'=>0,'total_kredit'=>0],
+         'print_invoice'=>['data_invoice'=>$filledImported,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$filledImported),'id_company'=>'4'],
+         'print_invoice_vuca'=>['data_invoice'=>$filledImported,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$filledImported),'id_company'=>'4']] as $view=>$vars) {
+    $html=$renderer->render($view,$vars);
+    verifyUi(strpos($html,'PT Waterco Indonesia')!==false && strpos($html,'Ruko Plaza Kelapa Gading')!==false,$view.' shows the customer name and address from the SPK');
+}
+$noCustomer=(object)array_merge((array)$importedView,['nm_customer'=>null,'address'=>null]);
+$html=$renderer->render('view_invoice',['data_invoice'=>$noCustomer,'data_actual_plan_tagih'=>Invoice_calculation::plan_or_invoice(null,$noCustomer),'hasil_jurnal'=>'','total_debit'=>0,'total_kredit'=>0]);
+verifyUi(strpos($html,'invoice-customer-name"></dd>')!==false,'Control: without the fallback the customer name is blank');
+// tata letak sama seperti halaman Buat Invoice (consulting_invoice.php), hanya baca
+$full=(object)array_merge((array)$importedView,['nm_customer'=>'PT Contoh <script>alert(1)</script>','address'=>"Jl. A
+Jakarta",'no_po'=>'PO-77','no_faktur'=>'FP-88','total_nominal'=>'1000.00',
+    'dpp_nilai_lain'=>'917.17','ppn_jurnal'=>'110.06','pph_jurnal'=>'20.00','ppn_persen'=>'12.00']);
+$rows='<tr><td class="text-center">10 Okt 2025</td><td class="text-center">1102-01-01</td><td class="text-center">PT Vuca</td><td class="text-center">Piutang</td><td class="text-right">1,090</td><td class="text-right">0</td></tr>';
+$html=$renderer->render('view_invoice',['data_invoice'=>$full,'data_actual_plan_tagih'=>$realRow,'hasil_jurnal'=>$rows,'total_debit'=>1090,'total_kredit'=>1090]);
+$xp=htmlQuery($html);
+verifyUi($xp->query('//div[contains(@class,"invoice-workspace") and contains(@class,"consulting-invoice")]')->length===1 && strpos($html,'assets/css/invoicing.css')!==false,'View uses the invoice workspace layout and stylesheet of the add page');
+foreach(['Detail invoice konsultasi','Customer &amp; dokumen','Rincian TOP','Ringkasan tagihan','Jurnal invoice','Kembali ke daftar'] as $label) { verifyUi(strpos($html,$label)!==false,'View section: '.$label); }
+verifyUi($xp->query('//section[contains(@class,"invoice-summary")]')->length===1 && $xp->query('//div[contains(@class,"invoice-document-grid")]')->length===1 && $xp->query('//table[contains(@class,"invoice-journal-table")]')->length===1 && $xp->query('//table[contains(@class,"invoice-top-table")]')->length===1,'View has the same section structure as the add page');
+verifyUi(strpos($html,'<script>alert(1)</script>')===false && strpos($html,'PT Contoh &lt;script&gt;')!==false,'View escapes customer data');
+verifyUi(strpos($html,'Jl. A<br />')!==false || strpos($html,"Jl. A<br />
+Jakarta")!==false || strpos($html,'Jl. A<br')!==false,'Address keeps its line breaks');
+$cell=function($key) use ($xp){ $n=$xp->query('//*[@data-total="'.$key.'"]')->item(0); return $n?trim($n->textContent):null; };
+verifyUi($cell('sales')==='1,000.00' && $cell('other')==='917.17' && $cell('ppn')==='110.06' && $cell('gross')==='1,110.06' && $cell('pph')==='- 20.00' && $cell('net')==='1,090.06','Summary numbers keep the existing calculation (total + PPN - PPh)');
+verifyUi(strpos($html,'PPN 12.00%')!==false && strpos($html,'value="PO-77"')!==false && strpos($html,'value="FP-88"')!==false && strpos($html,'value="12.00%"')!==false,'Document fields shown read-only');
+verifyUi(strpos($html,'PT Vuca')!==false && strpos($html,'1,090')!==false && $xp->query('//th[contains(@class,"th_total_debit")]')->item(0)->textContent==='1,090','Journal rows and balancing totals are shown');
+verifyUi(strpos($html,'invoice-empty')===false,'No empty-state row when journal rows exist');
+$html=$renderer->render('view_invoice',['data_invoice'=>$full,'data_actual_plan_tagih'=>$realRow,'hasil_jurnal'=>'','total_debit'=>0,'total_kredit'=>0]);
+verifyUi(strpos($html,'Rincian jurnal belum tersedia.')!==false,'Empty journal shows the empty-state row');
+verifyUi(strpos($html,'<form')===false && strpos($html,'type="submit"')===false,'View has no form or submit button');
 // pemilihan layout cetak di daftar: Vuca (print_invoicing_vuca) atau konsultasi (print_invoicing)
 $tipeVuca=['tipe_invoice'=>'1','consulting_version'=>null];
 $legacyVuca=['tipe_invoice'=>'0','consulting_version'=>null,'non_kons'=>'0','id_actual_plan_tagih'=>'v'];
