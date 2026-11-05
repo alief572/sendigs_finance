@@ -28,12 +28,11 @@ mCheck(strpos(implode(';', $e), 'negatif') !== false, 'Negative amount rejected'
 list(, $e) = Rekening_koran_parser::manual_row(array('tanggal_transaksi' => 'PEND') + $ok, $bank, 'H1', 7);
 mCheck($e !== array(), 'PEND date not allowed for manual rows');
 
-// Guard admin: dicek di server sebelum penulisan apa pun, dan tombol/modal hanya di blok is_admin.
+// Guard admin: dicek di server sebelum penulisan apa pun, dan tombol/modal manual dilepas dari view di branch main.
 $ctl = file_get_contents(dirname(__DIR__) . '/controllers/Alokasi.php');
 $start = strpos($ctl, 'function save_manual_alokasi');
 $body = substr($ctl, $start, strpos($ctl, 'function get_bank_sesuai_alokasi') - $start);
 mCheck(strpos($body, 'is_admin()') !== false && strpos($body, 'is_admin()') < strpos($body, '->insert('), 'Controller checks is_admin before any insert');
 $view = file_get_contents(dirname(__DIR__) . '/views/index.php');
-mCheck(preg_match('~<\?php if \(!empty\(\$is_admin\)\) : \?>\s*<button[^>]*dialog-manual~', $view) === 1, 'Manual button only inside is_admin block');
-mCheck(preg_match('~<\?php if \(!empty\(\$is_admin\)\) : \?>\s*<div class="modal" id="dialog-manual"~', $view) === 1, 'Manual modal only inside is_admin block');
-echo "PASS: Alokasi manual insert (row builder validation, admin-only guard in controller and view)\n";
+mCheck(strpos($view, 'dialog-manual') === false && strpos($view, 'save_manual_alokasi') === false, 'Branch main: manual button, modal, and JS removed from view');
+echo "PASS: Alokasi manual insert (row builder validation, admin-only guard in controller; UI removed in view)\n";
