@@ -209,7 +209,9 @@ class Penerimaan_uang extends Admin_Controller
         $receiptKind = (string)$result['jenis_alokasi'] === '8' ? 'deposit' : 'invoice';
 
         // Get customers filtered by receipt kind
-        $this->db->select('a.id_customer, MAX(a.nm_customer) AS nm_customer');
+        // Invoice non-konsultasi tidak punya id_customer: dikelompokkan per nama dengan nilai 'nm:<nama>'.
+        $custKey = "COALESCE(NULLIF(a.id_customer,''), CONCAT('nm:', a.nm_customer))";
+        $this->db->select($custKey . ' AS id_customer, MAX(a.nm_customer) AS nm_customer', false);
         $this->db->from('tr_invoicing a');
         $this->db->where('a.nm_customer !=', '');
         $this->db->where('a.nm_customer IS NOT NULL', null, false);
@@ -219,8 +221,8 @@ class Penerimaan_uang extends Admin_Controller
         } else {
             $this->db->where('(a.tax_treatment IS NULL OR a.tax_treatment <> "DEP")', null, false);
         }
-        $this->db->group_by('a.id_customer');
-        $this->db->order_by('a.nm_customer', 'ASC');
+        $this->db->group_by($custKey, false);
+        $this->db->order_by('nm_customer', 'ASC');
         $get_customer = $this->db->get()->result_array();
 
         // Saran kwitansi dari pilihan di Alokasi (opsional): preselect customer dan kwitansi di form
@@ -314,8 +316,12 @@ class Penerimaan_uang extends Admin_Controller
                 require_once __DIR__.'/../libraries/Consulting_receipt.php';
                 $customer = (string)$this->input->post('id_customer');
                 $consultingReceipt = new Consulting_receipt($this);
-                $summary = $consultingReceipt->get_customer_active_deposit_by_company($customer);
-                $summary['total'] = $consultingReceipt->get_customer_active_deposit($customer); // saldo pakai = per customer (mockup)
+                if (strpos($customer, 'nm:') === 0) { // customer non-kons tanpa id_customer: tidak punya deposit
+                    $summary = array('total'=>0, 'by_company'=>array());
+                } else {
+                    $summary = $consultingReceipt->get_customer_active_deposit_by_company($customer);
+                    $summary['total'] = $consultingReceipt->get_customer_active_deposit($customer); // saldo pakai = per customer (mockup)
+                }
                 $result = array('status'=>1, 'saldo'=>Penerimaan_calculation::decimal($summary['total']), 'formatted'=>'Rp '.number_format($summary['total']/100,2,',','.'),
                     'id_customer'=>$customer, 'id_company'=>null, 'id_invoice'=>null, 'error'=>null, 'by_company'=>array());
                 foreach ($summary['by_company'] as $row) {
@@ -410,7 +416,10 @@ class Penerimaan_uang extends Admin_Controller
 
         $customerId = $this->input->post('id_customer');
         if ($customerId !== null && !is_scalar($customerId)) { echo '<tr><td colspan="11">Identitas customer tidak valid.</td></tr>'; return; }
-        if (is_scalar($customerId) && trim((string)$customerId) !== '') {
+        if (is_scalar($customerId) && strpos((string)$customerId, 'nm:') === 0) {
+            $this->db->where('a.nm_customer', substr((string)$customerId, 3));
+            $this->db->where("(a.id_customer IS NULL OR a.id_customer = '')", null, false);
+        } elseif (is_scalar($customerId) && trim((string)$customerId) !== '') {
             $this->db->where('a.id_customer', $customerId);
         } else {
             $this->db->where('a.nm_customer', is_scalar($nm_customer) ? $nm_customer : '');
@@ -535,7 +544,7 @@ class Penerimaan_uang extends Admin_Controller
                 } else {
                     $hasil .= '<tr>';
                     $hasil .= '<td class="nowrap">' . $tgl . '</td>';
-                    $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . '</td>';
+                    $hasil .= '<td class="nowrap">' . htmlspecialchars($item['no_invoice'], ENT_QUOTES, 'UTF-8') . (($item['non_kons'] ?? '0') == '1' ? ' <span class="label label-warning">Non Kons</span>' : '') . '</td>';
                     $hasil .= '<td>' . $taxBadge . '</td>';
                     $hasil .= '<td class="r">' . mk_en($sales) . '</td>';
                     $hasil .= '<td class="r">' . mk_en($dppLain) . '</td>';
