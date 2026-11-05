@@ -537,6 +537,7 @@ class Invoicing extends Admin_Controller
     public function print_invoicing($id_invoicing, $id_company = 1)
     {
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'print'); }
 
@@ -548,7 +549,7 @@ class Invoicing extends Admin_Controller
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
-        $get_actual_plan_tagih = $this->db->get()->row();
+        $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
         $this->auth->restrict($this->viewPermission);
 
@@ -604,6 +605,7 @@ class Invoicing extends Admin_Controller
 
     public function print_invoicing_vuca($id_invoicing, $id_company = 1)
     {
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -612,7 +614,7 @@ class Invoicing extends Admin_Controller
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
-        $get_actual_plan_tagih = $this->db->get()->row();
+        $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
         $this->auth->restrict($this->viewPermission);
 

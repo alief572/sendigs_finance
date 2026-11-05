@@ -14,6 +14,14 @@ class Invoice_calculation
         if (strlen($parts[0]) > 13) { throw new InvalidArgumentException('Nominal terlalu besar.'); }
         return (int) $parts[0] * 100 + (int) str_pad($parts[1] ?? '', 2, '0');
     }
+    /**
+     * Baris plan tagih untuk cetak. Invoice lama hasil impor (id_actual_plan_tagih 'v' atau '0') tidak punya baris di
+     * kons_tr_actual_plan_tagih; nominalnya diambil dari invoice itu sendiri, pemetaan yang sama dengan consulting_print.php.
+     */
+    public static function plan_or_invoice($plan, $invoice)
+    {
+        return $plan ?: (object) array('nominal_payment' => $invoice->total_nominal);
+    }
     public static function decimal($value)
     {
         return ($value < 0 ? '-' : '') . intdiv(abs($value), 100) . '.' . str_pad(abs($value) % 100, 2, '0', STR_PAD_LEFT);
