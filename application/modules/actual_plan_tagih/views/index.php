@@ -171,6 +171,16 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
+        try {
+            var saved = sessionStorage.getItem('apt_bulan');
+            var $tab = saved ? $('.tab_pin[data-no="' + saved + '"]') : $();
+            if ($tab.length) {
+                $('.tab_pin').removeClass('active');
+                $tab.addClass('active');
+                $('#bulan').val(saved);
+            }
+        } catch (e) {}
+
         var bulan = $('#bulan').val();
         var tahun = $('.inp_tahun').val();
         var status = $('#status').val();
@@ -186,6 +196,9 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         $('.tab_pin').removeClass('active');
         $('.tab_' + bulan).addClass('active');
         $('#bulan').val(bulan);
+        try {
+            sessionStorage.setItem('apt_bulan', bulan);
+        } catch (e) {}
         DataTables(bulan, tahun, status);
     });
 
@@ -344,7 +357,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             }).then(() => {
                                 Swal.close();
                                 $('#dialog-popup').modal('hide');
-                                DataTables();
+                                DataTables($('#bulan').val(), $('.inp_tahun').val(), $('#status').val());
                             });
 
                         } else {
@@ -412,7 +425,8 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                                 title: 'Success !',
                                 text: result.msg
                             }).then(() => {
-                                location.reload();
+                                $('#dialog-popup-macet').modal('hide');
+                                DataTables($('#bulan').val(), $('.inp_tahun').val(), $('#status').val());
                             });
                         } else {
                             Swal.fire({
@@ -626,7 +640,6 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             responsive: true,
             processing: true,
             serverSide: true,
-            stateSave: true,
             destroy: true,
             paging: true
         });
