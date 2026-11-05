@@ -46,6 +46,7 @@ class Alokasi_model extends BF_Model
         $this->db->from('tr_alokasi_detail a');
         $this->db->join('list_bank b', 'b.id = a.jenis_bank', 'left');
         $this->db->join('ms_bank c', 'c.id = a.tipe_bank', 'left');
+        $this->db->where('a.status_approval', 'approved');
         if (!empty($startDate)) {
             $this->db->where('a.tanggal_transaksi >=', $startDate);
         }
@@ -96,7 +97,8 @@ class Alokasi_model extends BF_Model
                     '4' => 'Mutasi',
                     '5' => 'Transaksi Bank',
                     '6' => 'Pembayaran',
-                    '7' => 'Alokasi Kalibrasi'
+                    '7' => 'Alokasi Kalibrasi',
+            '8' => 'Deposit'
                 ];
                 $badges = '';
                 foreach ($split_data as $split) {
@@ -156,7 +158,7 @@ class Alokasi_model extends BF_Model
 
     public function get_transaction_for_split($id)
     {
-        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, id_header, sts');
+        $this->db->select('id, tanggal_transaksi, keterangan, nominal_kredit, nominal_debit, saldo, reference_no, id_header, sts, tipe_bank, jenis_bank');
         $this->db->from('tr_alokasi_detail');
         $this->db->where('id', $id);
         $query = $this->db->get();
@@ -209,6 +211,9 @@ class Alokasi_model extends BF_Model
                 'created_by'        => $user_id,
                 'created_date'      => date('Y-m-d H:i:s')
             ];
+            if (!empty($split['no_kwitansi']) && $this->db->field_exists('no_kwitansi', 'tr_alokasi_split')) {
+                $data['no_kwitansi'] = $split['no_kwitansi'];
+            }
             $this->db->insert('tr_alokasi_split', $data);
         }
 
@@ -223,7 +228,8 @@ class Alokasi_model extends BF_Model
             '4' => 'Mutasi',
             '5' => 'Transaksi Bank',
             '6' => 'Pembayaran',
-            '7' => 'Alokasi Kalibrasi'
+            '7' => 'Alokasi Kalibrasi',
+            '8' => 'Deposit'
         ];
         $split_details = [];
         foreach ($splits as $split) {

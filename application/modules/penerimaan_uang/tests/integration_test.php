@@ -64,7 +64,7 @@ try {
         expect(value($db,"SELECT saldo_piutang FROM tr_invoicing WHERE id='".$vid."'")==='0.00','Vuca zero '.$choice);
         expect(value($db,"SELECT tagihan_ppn FROM tr_penerimaan_piutang_detail WHERE id_inv='".$vid."'")==='15000000.00','Vuca detail effective gross');
         expect(value($db,"SELECT SUM(kredit) FROM tr_jurnal WHERE coa='1102-01-01' AND keterangan LIKE '% - 036/VSB/2026-".$choice."'")==='14925000.00','Vuca receivable credit');
-        expect(value($db,"SELECT SUM(kredit) FROM tr_jurnal WHERE coa='1106-01-05' AND keterangan LIKE '% - 036/VSB/2026-".$choice."'")===($choice==='N'?'75000.00':'0.00'),'Vuca PPh credit');
+        expect(value($db,"SELECT SUM(kredit) FROM tr_jurnal WHERE coa='1106-01-05' AND keterangan LIKE '% - 036/VSB/2026-".$choice."'")==='0.00','Vuca PPh credit');
     }
     // Keep the existing regression fixtures independent of these additional receipts.
     foreach (array('tr_jurnal','tr_penerimaan_piutang_detail','tr_penerimaan_piutang','tr_alokasi_split','tr_alokasi_detail','tr_invoicing') as $table) $db->query('DELETE FROM '.$table);

@@ -158,6 +158,9 @@
             <button type="button" class="btn btn-sm btn-danger clear_data"><i class="fa fa-refresh"></i> Reset</button>
             <!-- <button type="button" class="btn btn-sm btn-warning btn_print"><i class="fa fa-print"></i> Print</button> -->
             <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#dialog-popup"><i class="fa fa-plus"></i> Upload Rekening Koran</button>
+            <?php if (!empty($is_admin)) : ?>
+            <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#dialog-manual"><i class="fa fa-pencil"></i> Tambah Alokasi Manual</button>
+            <?php endif; ?>
         </div>
     </div>
     <div class="box-body">
@@ -181,6 +184,53 @@
         </table>
     </div>
 </div>
+<?php if (!empty($is_admin)) : ?>
+<div class="modal" id="dialog-manual" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title"><span class="fa fa-pencil"></span>&nbsp;Tambah Alokasi Manual (Admin)</h4>
+            </div>
+            <form action="" id="frm_manual">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Bank</label>
+                        <select name="bank" class="form-control form-control-sm" required>
+                            <option value="">- Bank -</option>
+                            <?php foreach ($data_bank as $bank) : ?>
+                                <option value="<?= $bank['id'] ?>"><?= htmlspecialchars($bank['nama_bank'] . ' - ' . $bank['rekening'] . ' - ' . $bank['nama'], ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Transaksi</label>
+                        <input type="date" name="tanggal_transaksi" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Keterangan</label>
+                        <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="255" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>No Referensi</label><input type="text" name="reference_no" class="form-control form-control-sm" maxlength="100"></div>
+                        <div class="col-md-6 form-group"><label>Cheque No</label><input type="text" name="cheque_no" class="form-control form-control-sm" maxlength="100"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group"><label>Debit</label><input type="text" name="nominal_debit" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                        <div class="col-md-4 form-group"><label>Kredit</label><input type="text" name="nominal_kredit" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                        <div class="col-md-4 form-group"><label>Saldo</label><input type="text" name="saldo" class="form-control form-control-sm text-right manual-num" placeholder="0.00" autocomplete="off"></div>
+                    </div>
+                    <p class="text-muted" style="font-size:12px">Baris langsung berstatus Open. Debit dan Kredit tidak boleh sama-sama 0.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Simpan</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <div class="modal" id="dialog-popup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -264,7 +314,28 @@
                             <span style="color: #68d391; font-weight: bold;">31/07/2026</span>,TRANSFER MASUK BI FAST,...,100000000,0,165650551
                         </div>
                     </div>
-                    <br><br>
+                    <!-- Preview isi file sebelum disimpan -->
+                    <div id="upload_preview" style="display:none; margin-top: 12px;">
+                        <div id="upload_preview_summary" style="font-weight: bold; margin-bottom: 6px;"></div>
+                        <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                            <table class="table table-bordered table-condensed" style="font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center" width="40">No</th>
+                                        <th class="text-center">Tanggal</th>
+                                        <th class="text-center">Reference No</th>
+                                        <th class="text-center">Description</th>
+                                        <th class="text-center">Debit</th>
+                                        <th class="text-center">Credit</th>
+                                        <th class="text-center">Saldo</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upload_preview_body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <br>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -282,7 +353,7 @@
                     </table>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Proses</button>
+                    <button type="submit" class="btn btn-success" id="btn-proses-upload" disabled><i class="fa fa-check"></i> Proses</button>
                     <button type="button" class="btn btn-danger" data-dismiss="modal">
                         <span class="glyphicon glyphicon-remove"></span> Batal</button>
                 </div>
@@ -308,9 +379,9 @@
                                 <th class="text-center">Tanggal Transaksi</th>
                                 <th class="text-center">Reference No</th>
                                 <th class="text-center">Description</th>
-                                <th class="text-center">Credit</th>
-                                <th class="text-center">Debit</th>
-                                <th class="text-center">Balance</th>
+                                <th class="text-center">Total Debit</th>
+                                <th class="text-center">Total Credit</th>
+                                <th class="text-center">Bank</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -318,9 +389,9 @@
                                 <td class="text-center" id="split_tanggal" style="font-size: 12px;">-</td>
                                 <td class="text-center" id="split_reference_no" style="font-size: 12px;">-</td>
                                 <td class="text-center" id="split_deskripsi" style="font-size: 12px;">-</td>
-                                <td class="text-right" id="split_credit" style="font-size: 12px;">Rp. 0.00</td>
                                 <td class="text-right" id="split_debit" style="font-size: 12px;">Rp. 0.00</td>
-                                <td class="text-right" id="split_balance" style="font-size: 12px;">Rp. 0.00</td>
+                                <td class="text-right" id="split_credit" style="font-size: 12px;">Rp. 0.00</td>
+                                <td class="text-center" id="split_bank" style="font-size: 12px;">-</td>
                             </tr>
                         </tbody>
                     </table>
@@ -386,7 +457,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title"><span class="fa fa-eye"></span>&nbsp;Detail Alokasi Split</h4>
+                <h4 class="modal-title"><span class="fa fa-eye"></span>&nbsp;Detail Alokasi</h4>
             </div>
             <div class="modal-body">
                 <!-- Transaction Detail Table -->
@@ -397,9 +468,9 @@
                                 <th class="text-center">Tanggal Transaksi</th>
                                 <th class="text-center">Reference No</th>
                                 <th class="text-center">Description</th>
-                                <th class="text-center">Credit</th>
-                                <th class="text-center">Debit</th>
-                                <th class="text-center">Balance</th>
+                                <th class="text-center">Total Debit</th>
+                                <th class="text-center">Total Credit</th>
+                                <th class="text-center">Bank</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -407,16 +478,16 @@
                                 <td class="text-center" id="view_tanggal" style="font-size: 12px;">-</td>
                                 <td class="text-center" id="view_reference_no" style="font-size: 12px;">-</td>
                                 <td class="text-center" id="view_deskripsi" style="font-size: 12px;">-</td>
-                                <td class="text-right" id="view_credit" style="font-size: 12px;">Rp. 0.00</td>
                                 <td class="text-right" id="view_debit" style="font-size: 12px;">Rp. 0.00</td>
-                                <td class="text-right" id="view_balance" style="font-size: 12px;">Rp. 0.00</td>
+                                <td class="text-right" id="view_credit" style="font-size: 12px;">Rp. 0.00</td>
+                                <td class="text-center" id="view_bank" style="font-size: 12px;">-</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <hr>
-                <h5><strong>Detail Split Alokasi:</strong></h5>
+                <h5><strong>Detail Alokasi:</strong></h5>
 
                 <!-- Split Detail Table -->
                 <div class="table-responsive">
@@ -426,6 +497,7 @@
                                 <th class="text-center" width="50">No</th>
                                 <th class="text-center">Jenis Alokasi</th>
                                 <th class="text-center">Nominal</th>
+                                <th class="text-center">Penerimaan Piutang</th>
                             </tr>
                         </thead>
                         <tbody id="view-split-body">
@@ -434,6 +506,7 @@
                             <tr>
                                 <th colspan="2" class="text-right">Total:</th>
                                 <th class="text-right" id="view_split_total">Rp. 0.00</th>
+                                <th></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -456,6 +529,7 @@
     <option value="5">Transaksi Bank</option>
     <option value="6">Pembayaran</option>
     <option value="7">Alokasi Kalibrasi</option>
+    <option value="8">Deposit</option>
 </script>
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -477,6 +551,10 @@
         });
 
         // Ensure body scroll is restored and backdrops are cleaned when modals close
+        $('#dialog-popup').on('hidden.bs.modal', function() {
+            resetUploadPreview();
+        });
+
         $('#dialog-popup-alokasi, #dialog-view-split, #dialog-popup').on('hidden.bs.modal', function() {
             $('body').removeClass('modal-open').css('overflow', '');
             $('.modal-backdrop').remove();
@@ -489,6 +567,14 @@
         var id = $(this).data('id');
         viewSplitAlokasi(id);
     });
+
+    // Penerimaan Piutang dari split: Used + tautan Buka bila sudah diproses, Draft bila belum; '-' untuk jenis tanpa penerimaan.
+    function receiptCell(split) {
+        if (!split.receipt_applicable) return '-';
+        if (!split.id_penerimaan) return '<span class="label label-default">Draft</span>';
+        var href = siteurl + 'penerimaan_uang/view/' + encodeURIComponent(split.id_penerimaan);
+        return '<span class="label label-success">Used</span> <a href="' + href + '">Buka</a>';
+    }
 
     /**
      * View split allocation detail in a read-only modal.
@@ -510,7 +596,7 @@
                     $('#view_deskripsi').text(result.keterangan);
                     $('#view_credit').text('Rp. ' + number_format(result.nominal_kredit, 2));
                     $('#view_debit').text('Rp. ' + number_format(result.nominal_debit, 2));
-                    $('#view_balance').text('Rp. ' + number_format(result.saldo, 2));
+                    $('#view_bank').text(result.bank || '-');
 
                     // Populate split detail table
                     var rows = '';
@@ -519,8 +605,9 @@
                         total += split.nominal;
                         rows += '<tr>';
                         rows += '<td class="text-center">' + (index + 1) + '</td>';
-                        rows += '<td>' + split.jenis_alokasi + '</td>';
+                        rows += '<td>' + $('<div>').text(split.jenis_alokasi + (split.no_kwitansi ? ' - ' + split.no_kwitansi : '')).html() + '</td>';
                         rows += '<td class="text-right">Rp. ' + number_format(split.nominal, 2) + '</td>';
+                        rows += '<td class="text-center">' + receiptCell(split) + '</td>';
                         rows += '</tr>';
                     });
                     $('#view-split-body').html(rows);
@@ -546,12 +633,73 @@
         });
     }
 
+    // Preview isi rekening koran (parser bank yang sama dengan simpan) tanpa menyimpan apa pun.
+    function resetUploadPreview() {
+        $('#upload_preview').hide();
+        $('#upload_preview_body').empty();
+        $('#btn-proses-upload').prop('disabled', true);
+    }
+
+    function renderUploadPreview(result) {
+        var rows = result.rows || [];
+        var errors = result.errors || {};
+        var errCount = Object.keys(errors).length;
+        var $body = $('#upload_preview_body').empty();
+        rows.forEach(function(r, i) {
+            var msg = errors[i + 1];
+            var $tr = $('<tr>').toggleClass('danger', !!msg);
+            $tr.append($('<td class="text-center">').text(i + 1));
+            $tr.append($('<td>').text(r.tanggal));
+            $tr.append($('<td>').text(r.reference_no || '-'));
+            $tr.append($('<td>').text(r.keterangan));
+            $tr.append($('<td class="text-right">').text(number_format(r.debit, 2)));
+            $tr.append($('<td class="text-right">').text(number_format(r.kredit, 2)));
+            $tr.append($('<td class="text-right">').text(number_format(r.saldo, 2)));
+            $tr.append($('<td>').text(msg || 'OK').css('color', msg ? '#c53030' : '#2f855a'));
+            $body.append($tr);
+        });
+        var $sum = $('#upload_preview_summary');
+        if (rows.length === 0) {
+            $sum.text('Tidak ada baris transaksi yang terbaca. Periksa bank dan file CSV.').css('color', '#c53030');
+        } else if (errCount > 0) {
+            $sum.text(rows.length + ' baris terbaca, ' + errCount + ' baris error. Perbaiki file lalu pilih ulang; tidak ada baris yang disimpan sebelum semuanya valid.').css('color', '#c53030');
+        } else {
+            $sum.text(rows.length + ' baris valid. Klik Proses untuk menyimpan sebagai transaksi Open.').css('color', '#2f855a');
+        }
+        $('#upload_preview').show();
+        $('#btn-proses-upload').prop('disabled', rows.length === 0 || errCount > 0);
+    }
+
+    function previewUpload() {
+        var file = $('#frm_data input[name="upload_csv"]')[0].files[0];
+        resetUploadPreview();
+        if (!file || !$('#frm_data select.bank').val() || !$('#frm_data input[name="jenis_bank"]').val()) return;
+        var fd = new FormData($('#frm_data')[0]);
+        fd.append('preview', '1');
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'upload_rekening_koran',
+            data: fd,
+            dataType: 'json',
+            contentType: false,
+            processData: false,
+            cache: false,
+            success: renderUploadPreview,
+            error: function() {
+                $('#upload_preview_summary').text('File tidak dapat dibaca. Pastikan bank dan format CSV sesuai.').css('color', '#c53030');
+                $('#upload_preview').show();
+            }
+        });
+    }
+
+    $(document).on('change', '#frm_data input[name="upload_csv"]', previewUpload);
+
     $(document).on('submit', '#frm_data', function(e) {
         e.preventDefault();
         swal({
             type: 'warning',
             title: 'Warning !',
-            text: 'File rekening akan di upload !',
+            text: 'Seluruh baris pada preview akan disimpan sebagai transaksi Open.',
             showCancelButton: true
         }, function(next) {
             if (next) {
@@ -567,14 +715,16 @@
                     cache: false,
                     success: function(result) {
                         if (result.status == '1') {
+                            $('#dialog-popup').modal('hide');
+                            $('#frm_data')[0].reset();
+                            resetUploadPreview();
                             swal({
                                 type: 'success',
                                 title: 'Success !',
                                 text: result.msg,
                                 timer: 3000
-                            }, function(lanjut) {
-                                location.reload();
                             });
+                            DataTables();
                         } else {
                             swal({
                                 type: 'warning',
@@ -591,6 +741,34 @@
                         });
                     }
                 })
+            }
+        });
+    });
+
+    // Separator ribuan otomatis (1,234.56); server membuang koma sebelum validasi. Saldo boleh negatif, debit/kredit tidak.
+    $('#frm_manual input[name="nominal_debit"], #frm_manual input[name="nominal_kredit"]').autoNumeric('init', {vMin: '0.00', vMax: '9999999999999.99', aSep: ',', aDec: '.'});
+    $('#frm_manual input[name="saldo"]').autoNumeric('init', {vMin: '-9999999999999.99', vMax: '9999999999999.99', aSep: ',', aDec: '.'});
+
+    // Tambah alokasi manual (admin): angka dikirim dengan pemisah ribuan; server membuangnya dan tetap memvalidasi admin.
+    $(document).on('submit', '#frm_manual', function(e) {
+        e.preventDefault();
+        $.ajax({
+            type: 'post',
+            url: siteurl + active_controller + 'save_manual_alokasi',
+            data: $('#frm_manual').serialize(),
+            dataType: 'json',
+            success: function(result) {
+                if (result.status == '1') {
+                    $('#dialog-manual').modal('hide');
+                    $('#frm_manual')[0].reset();
+                    swal({type: 'success', title: 'Success !', text: result.msg, timer: 3000});
+                    DataTables();
+                } else {
+                    swal({type: 'warning', title: 'Warning !', text: result.msg});
+                }
+            },
+            error: function() {
+                swal({type: 'error', title: 'Error !', text: 'Please try again later !'});
             }
         });
     });
@@ -629,6 +807,7 @@
             cache: false,
             success: function(result) {
                 $('input[name="jenis_bank"]').val(result.jenis_bank);
+                previewUpload();
             }
         });
     });
@@ -757,6 +936,47 @@
      * initializes autoNumeric, shows delete buttons on all rows,
      * and recalculates the total.
      */
+    var openKwitansiList = null;
+
+    function kwitansiPickerHtml() {
+        return '<div class="split-kwitansi-wrap" style="display:none; margin-top:6px;">' +
+            '<select class="form-control split-kwitansi"><option value="">-- Kwitansi Deposit (opsional) --</option></select></div>';
+    }
+
+    function fillKwitansiPicker($select) {
+        var render = function(list) {
+            var current = $select.val();
+            var html = '<option value="">-- Kwitansi Deposit (opsional) --</option>';
+            list.forEach(function(k) {
+                html += '<option value="' + $('<div>').text(k.no_kwitansi).html() + '">' +
+                    $('<div>').text(k.no_kwitansi + ' - ' + k.nm_customer + ' - ' + k.no_spk + ' - Rp. ' + number_format(k.nilai_kwitansi, 2)).html() + '</option>';
+            });
+            $select.html(html).val(current || '');
+        };
+        if (openKwitansiList !== null) {
+            render(openKwitansiList);
+            return;
+        }
+        $.getJSON(siteurl + active_controller + 'get_open_kwitansi_deposit', function(res) {
+            openKwitansiList = (res && res.status == 1) ? res.data : [];
+            render(openKwitansiList);
+            if (!openKwitansiList.length) {
+                $('.split-kwitansi-wrap').hide();
+            }
+        });
+    }
+
+    $(document).on('change', '#split-table-body .split-jenis-alokasi', function() {
+        var $wrap = $(this).closest('td').find('.split-kwitansi-wrap');
+        if ($(this).val() === '8') {
+            $wrap.show();
+            fillKwitansiPicker($wrap.find('.split-kwitansi'));
+        } else {
+            $wrap.hide().find('.split-kwitansi').val('');
+        }
+        recalculateTotal();
+    });
+
     function addSplitRow() {
         var rowCount = $('#split-table-body tr.split-row').length;
         var newRowNum = rowCount + 1;
@@ -764,7 +984,7 @@
 
         var row = '<tr class="split-row">';
         row += '<td class="text-center">' + newRowNum + '</td>';
-        row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select></td>';
+        row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select>' + kwitansiPickerHtml() + '</td>';
         row += '<td><input type="text" class="form-control split-nominal text-right" value=""></td>';
         row += '<td class="text-center"><button type="button" class="btn btn-xs btn-danger btn-remove-split" onclick="removeSplitRow(this)"><i class="fa fa-trash"></i></button></td>';
         row += '</tr>';
@@ -834,11 +1054,20 @@
         $('#split_sisa').text(formatRupiah(sisa));
 
         // Update status indicator
-        if (Math.abs(sum - total) < 0.01) {
+        var jenisBelum = false;
+        $('#split-table-body .split-jenis-alokasi').each(function() {
+            if (!$(this).val()) jenisBelum = true;
+        });
+        var sesuai = !jenisBelum && Math.abs(sum - total) < 0.01;
+        if (sesuai) {
             $('#split_status').text('Sesuai \u2713').css('color', 'green');
+        } else if (jenisBelum) {
+            $('#split_status').text('Jenis alokasi belum dipilih').css('color', 'red');
         } else {
-            $('#split_status').text('Tidak Sesuai (selisih: ' + formatRupiah(Math.abs(sisa)) + ')').css('color', 'red');
+            $('#split_status').text('Nominal belum sama dengan transaksi').css('color', 'red');
         }
+        // Simpan hanya aktif bila jenis lengkap dan total nominal = transaksi
+        if (!$('#btn-save-split').data('saving')) $('#btn-save-split').prop('disabled', !sesuai);
     }
 
     /**
@@ -923,7 +1152,8 @@
             var nominal = $(this).find('.split-nominal').autoNumeric('get');
             splits.push({
                 jenis_alokasi: jenisAlokasi,
-                nominal: nominal
+                nominal: nominal,
+                no_kwitansi: jenisAlokasi === '8' ? ($(this).find('.split-kwitansi').val() || '') : ''
             });
         });
 
@@ -932,7 +1162,7 @@
 
         // 3. Disable submit button to prevent double submission
         var $btn = $('#btn-save-split');
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+        $btn.data('saving', true).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
 
         // 4. AJAX POST to save directly without intermediate confirmation prompt
         $.ajax({
@@ -945,7 +1175,7 @@
             dataType: 'json',
             cache: false,
             success: function(result) {
-                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
+                $btn.data('saving', false).prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
                 if (result.status == '1') {
                     // Close modal immediately and clean up body scroll locks
                     $('#dialog-popup-alokasi').modal('hide');
@@ -969,7 +1199,7 @@
                 }
             },
             error: function(result) {
-                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
+                $btn.data('saving', false).prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
                 swal({
                     type: 'error',
                     title: 'Error !',
@@ -986,7 +1216,7 @@
      */
     function openSplitModal(id) {
         // Reset save button state
-        $('#btn-save-split').prop('disabled', false).html('<i class="fa fa-check"></i> Simpan');
+        $('#btn-save-split').data('saving', false).prop('disabled', true).html('<i class="fa fa-check"></i> Simpan');
         $.ajax({
             type: 'post',
             url: siteurl + active_controller + 'get_alokasi_split_detail',
@@ -1006,7 +1236,7 @@
                     $('#split_deskripsi').text(result.keterangan);
                     $('#split_credit').text('Rp. ' + number_format(result.nominal_kredit, 2));
                     $('#split_debit').text('Rp. ' + number_format(result.nominal_debit, 2));
-                    $('#split_balance').text('Rp. ' + number_format(result.saldo, 2));
+                    $('#split_bank').text(result.bank || '-');
 
                     // Determine total (use kredit, fallback to debit if kredit is 0)
                     var total = parseFloat(result.nominal_kredit) || 0;
@@ -1025,7 +1255,7 @@
                     var optionsHtml = $('#template-jenis-alokasi').html();
                     var row = '<tr class="split-row">';
                     row += '<td class="text-center">' + rowNum + '</td>';
-                    row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select></td>';
+                    row += '<td><select class="form-control split-jenis-alokasi">' + optionsHtml + '</select>' + kwitansiPickerHtml() + '</td>';
                     row += '<td><input type="text" class="form-control split-nominal text-right" value=""></td>';
                     row += '<td class="text-center"><button type="button" class="btn btn-xs btn-danger btn-remove-split" onclick="removeSplitRow(this)" style="display:none;"><i class="fa fa-trash"></i></button></td>';
                     row += '</tr>';
