@@ -148,7 +148,13 @@ class Penerimaan_pph_23_model extends BF_Model
             $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, $penawaran_non_kons_ids);
         }
 
-        $apply_filters = function ($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company) {
+        $penawaran_ids_other_company = [];
+        if (!empty($filter_company)) {
+            $other_rows = $this->consultant->select('id_quotation')->where('company <>', $filter_company)->get('kons_tr_penawaran')->result_array();
+            $penawaran_ids_other_company = array_column($other_rows, 'id_quotation');
+        }
+
+        $apply_filters = function ($db) use ($filter_company, $filter_year, $filter_status, $spk_ids_for_company, $penawaran_ids_for_company, $penawaran_ids_other_company) {
             // Filter: Hanya memunculkan data untuk tahun 2025 ke atas (2024 ke bawah tidak dimunculkan)
             $db->where('YEAR(b.tanggal_invoice) >=', 2025);
 
@@ -161,17 +167,22 @@ class Penerimaan_pph_23_model extends BF_Model
                 $db->where("NOT EXISTS (SELECT 1 FROM tr_penerimaan_pph_23 pph WHERE pph.id_detail_penerimaan = a.id)", null, false);
             }
             if (!empty($filter_company)) {
-                $db->group_start();
-                if (!empty($spk_ids_for_company)) {
-                    $db->or_where_in('b.id_spk_penawaran', $spk_ids_for_company);
-                }
+                $esc = function ($ids) use ($db) {
+                    return implode(',', array_map([$db, 'escape'], array_values($ids)));
+                };
+                $conds = [];
                 if (!empty($penawaran_ids_for_company)) {
-                    $db->or_where_in('b.id_penawaran', $penawaran_ids_for_company);
+                    $conds[] = 'b.id_penawaran IN (' . $esc($penawaran_ids_for_company) . ')';
                 }
-                if (empty($spk_ids_for_company) && empty($penawaran_ids_for_company)) {
-                    $db->or_where('1=0');
+                if (!empty($spk_ids_for_company)) {
+                    // Sama dengan kolom Company: id_penawaran milik company lain didahulukan atas SPK.
+                    $spk_cond = 'b.id_spk_penawaran IN (' . $esc($spk_ids_for_company) . ')';
+                    if (!empty($penawaran_ids_other_company)) {
+                        $spk_cond .= ' AND (b.id_penawaran IS NULL OR b.id_penawaran NOT IN (' . $esc($penawaran_ids_other_company) . '))';
+                    }
+                    $conds[] = '(' . $spk_cond . ')';
                 }
-                $db->group_end();
+                $db->where('(' . (empty($conds) ? '1=0' : implode(' OR ', $conds)) . ')', null, false);
             }
         };
 
