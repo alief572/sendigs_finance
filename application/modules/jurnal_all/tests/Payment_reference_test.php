@@ -235,7 +235,7 @@ try {
     rejects(function()use($patch,$manifestPath){$patch->run($manifestPath);},'tidak lengkap');
 } finally {foreach([$manifestPath,$manifestPath.'.journal'] as $file)if(is_file($file))unlink($file);}
 
-foreach(['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=>'accounting_stm','3'=>'accounting_sustain'] as $company=>$name){
+foreach(['4'=>'accounting_vuca','1'=>'accounting_vuca','6'=>'accounting_sustain','7'=>'accounting_stm','3'=>'accounting_sustain'] as $company=>$name){
     $ci=fixture((string)$company);$result=(new Payment_posting($ci))->execute(1);$acc=$ci->load->dbs[$name];
     check($result['save']===1&&$result['accounting_numbers'][0]['company']===(string)$company,'posting returns committed target '.$company);
     check($acc->get_where('jurnal',['no_reff'=>'BK--1026-0004'])->num_rows()===2,'detail actual voucher '.$company);

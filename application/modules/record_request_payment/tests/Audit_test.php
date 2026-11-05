@@ -1,6 +1,7 @@
 <?php
 // Real Record_request_payment controller + real model + real Module_audit_recorder; in-memory DB + PHPExcel fixture.
 define('BASEPATH', __DIR__);
+require_once __DIR__ . '/../../../helpers/periodik_helper.php';
 define('APPPATH', dirname(__DIR__, 3) . '/');
 
 $events = array();

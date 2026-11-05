@@ -33,4 +33,22 @@ foreach(['invoicing','dashboard'] as $module)foreach([true,false]as $allowed){
     verifySidebar(strpos($footer,'assets/adminlte/dist/js/app.min.js')<strpos($footer,'assets/js/sidebar-search.js'),'Search loads after AdminLTE');
     verifySidebar(strpos($header.$footer,'executive-navigation.css')===false && strpos($header.$footer,'navigation-shell.js')===false,'No unrelated shell redesign enabled');
 }
+define('BASEPATH',FCPATH.'system/');
+function check_class($route,$exact=false){return '';}
+require FCPATH.'application/libraries/Menu_generator.php';
+class DashboardMenuRender extends Menu_generator {
+    public function __construct(){
+        $this->user_id=1;
+        $this->ci=(object)['db'=>new class {
+            public function __call($name,$arguments){return $this;}
+            public function result(){return [];}
+        }];
+    }
+    protected function get_auth_permission($user_id=0){return [];}
+}
+$menu=(new DashboardMenuRender())->build_menus();
+$dom=new DOMDocument;@$dom->loadHTML($menu);$query=new DOMXPath($dom);
+verifySidebar($query->query('//i[contains(@class,"fa-dashboard")]')->length===1,'Dashboard has exactly one icon');
+verifySidebar($query->query('//a[@href="/"]/i[contains(@class,"fa-dashboard")]')->length===1,'Dashboard icon belongs to its clickable link');
+verifySidebar($query->query('//li/i')->length===0,'No standalone icon above the dashboard link');
 echo 'Sidebar search render PASS: '.$checks." checks\n";

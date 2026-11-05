@@ -1,4 +1,5 @@
 <?php
+$coa_piutang = isset($coa_piutang) ? $coa_piutang : Expense_company::COA_PIUTANG_KASBON;
 $no_doc_val = isset($data->no_doc) ? $data->no_doc : '';
 $no_kasbon = isset($data->id_kasbon) ? $data->id_kasbon : '-';
 $tgl_doc = isset($data->tgl_doc) ? $data->tgl_doc : '-';
@@ -232,9 +233,9 @@ if (!empty($data->bukti_pengembalian)) {
 							</tr>
 							<tr style="background:#e8fadf;">
 								<td class="text-center"><?= htmlspecialchars($transfer_tanggal) ?></td>
-								<td class="text-center"><b>1103-01-15</b></td>
-								<td><b>Piutang Kelebihan Kasbon</b></td>
-								<td>Penghapusan Piutang Kelebihan Kasbon (Pengembalian Selesai)</td>
+								<td class="text-center"><b><?= htmlspecialchars($coa_piutang) ?></b></td>
+								<td><b><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?></b></td>
+								<td><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?> - <?= htmlspecialchars($no_doc_val) ?> (<?= htmlspecialchars($no_kasbon) ?>)</td>
 								<td class="text-right">0</td>
 								<td class="text-right" style="font-weight:bold; color:#2e59d9;"><?= number_format($transfer_jumlah) ?></td>
 							</tr>

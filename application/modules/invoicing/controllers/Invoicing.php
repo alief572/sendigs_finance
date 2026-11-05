@@ -205,9 +205,19 @@ class Invoicing extends Admin_Controller
         $this->template->render('add_invoice_vuca');
     }
 
+    /** Isi nama/alamat customer invoice lama dari SPK-nya (lihat Invoice_calculation::fill_customer). */
+    private function with_customer($invoice)
+    {
+        if (!$invoice || empty($invoice->id_spk_penawaran)) { return $invoice; }
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
+        $spk = $this->db->select('nm_customer, address')->get_where(DBCNL . '.kons_tr_spk_penawaran', array('id_spk_penawaran' => $invoice->id_spk_penawaran))->row();
+        return Invoice_calculation::fill_customer($invoice, $spk);
+    }
+
     public function view_invoicing($id_invoicing)
     {
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'view'); }
 
@@ -215,6 +225,7 @@ class Invoicing extends Admin_Controller
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*, c.nm_customer, c.address, COALESCE(d.id, e.id) as id_company, COALESCE(d.nm_company, e.nm_company) as nm_company');
         $this->db->from('kons_tr_actual_plan_tagih a');
@@ -226,6 +237,9 @@ class Invoicing extends Admin_Controller
         $get_actual_plan_tagih = $this->db->get()->row();
 
         $this->auth->restrict($this->viewPermission);
+
+        // Invoice lama tanpa baris plan tagih: tampilan memakai baris pengganti; perhitungan jurnal di bawah tetap memakai $get_actual_plan_tagih apa adanya.
+        $plan_view = Invoice_calculation::plan_or_invoice($get_actual_plan_tagih, $get_invoicing);
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
@@ -293,9 +307,9 @@ class Invoicing extends Admin_Controller
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
-            $hasil_jurnal .= $get_actual_plan_tagih->nm_company;
-            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->id_company . '">';
-            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $get_actual_plan_tagih->nm_company . '">';
+            $hasil_jurnal .= $plan_view->nm_company;
+            $hasil_jurnal .= '<input type="hidden" name="id_company_' . $no_coa_jurnal . '" value="' . $plan_view->id_company . '">';
+            $hasil_jurnal .= '<input type="hidden" name="nm_company_' . $no_coa_jurnal . '" value="' . $plan_view->nm_company . '">';
             $hasil_jurnal .= '</td>';
 
             $hasil_jurnal .= '<td class="text-center">';
@@ -321,7 +335,7 @@ class Invoicing extends Admin_Controller
 
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_actual_plan_tagih' => $get_actual_plan_tagih,
+            'data_actual_plan_tagih' => $plan_view,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit
@@ -334,10 +348,12 @@ class Invoicing extends Admin_Controller
 
     public function view_invoicing_vuca($id_invoicing)
     {
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*, c.nm_customer, c.address, d.id as id_company, d.nm_company');
         $this->db->from('kons_tr_plan_tagih_detail a');
@@ -357,7 +373,8 @@ class Invoicing extends Admin_Controller
 
         $data = [
             'data_invoice' => $get_invoicing,
-            'data_plan_tagih' => $get_plan_tagih,
+            'data_plan_tagih' => Invoice_calculation::plan_or_invoice($get_plan_tagih, $get_invoicing),
+            'journals' => $journals,
             'hasil_jurnal' => $hasil_jurnal,
             'total_debit' => $total_debit,
             'total_kredit' => $total_kredit
@@ -537,6 +554,7 @@ class Invoicing extends Admin_Controller
     public function print_invoicing($id_invoicing, $id_company = 1)
     {
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'print'); }
 
@@ -544,11 +562,12 @@ class Invoicing extends Admin_Controller
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
-        $get_actual_plan_tagih = $this->db->get()->row();
+        $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
         $this->auth->restrict($this->viewPermission);
 
@@ -604,15 +623,17 @@ class Invoicing extends Admin_Controller
 
     public function print_invoicing_vuca($id_invoicing, $id_company = 1)
     {
+        require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
         $get_invoicing = $this->db->get()->row();
+        $get_invoicing = $this->with_customer($get_invoicing);
 
         $this->db->select('a.*');
         $this->db->from('kons_tr_actual_plan_tagih a');
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
-        $get_actual_plan_tagih = $this->db->get()->row();
+        $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
         $this->auth->restrict($this->viewPermission);
 

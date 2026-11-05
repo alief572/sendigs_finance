@@ -3789,12 +3789,15 @@ class Request_payment extends Admin_Controller
 				}
 
 				if ($tipe_lower == 'periodik') {
-					$this->db->select('a.*, SUM(b.nilai) as nilai_pengajuan, b.bank_id, b.accnumber, b.accname, c.nm_lengkap as nama');
+					// Nomor item (PI-YYYY-NNNNN) = satu detail; nomor batch lama = seluruh batch.
+					$periodikKey = periodik_doc_key($item->no_doc);
+					$periodikIsItem = $periodikKey['col'] === 'no_item';
+					$this->db->select('a.*, SUM(b.nilai) as nilai_pengajuan, b.bank_id, b.accnumber, b.accname, b.id as detail_id, b.keterangan as detail_keterangan, c.nm_lengkap as nama');
 					$this->db->from('tr_pengajuan_rutin a');
 					$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc');
 					$this->db->join('users c', 'c.id_user = a.created_by');
-					$this->db->where('a.no_doc', $item->no_doc);
-					$this->db->group_by('a.no_doc');
+					$this->db->where('b.' . $periodikKey['col'], $item->no_doc);
+					$this->db->group_by($periodikIsItem ? 'b.id' : 'a.no_doc');
 					$get_periodik = $this->db->get()->row();
 					if ($this->auditReadStatus() !== 1 || empty($get_periodik)) {
 						$this->db->trans_rollback();
@@ -3807,7 +3810,7 @@ class Request_payment extends Admin_Controller
 						'no_doc'     => (string)$item->no_doc,
 						'nama'       => (string)$get_periodik->nama,
 						'tgl_doc'    => (string)$get_periodik->tanggal_doc,
-						'keperluan'  => (string)$get_periodik->keterangan,
+						'keperluan'  => (string)($periodikIsItem ? $get_periodik->detail_keterangan : $get_periodik->keterangan),
 						'tipe'       => 'periodik',
 						'jumlah'     => (float)$nilai_pengajuan,
 						'status'     => 0,
@@ -3817,13 +3820,16 @@ class Request_payment extends Admin_Controller
 						'bank_id'    => $get_periodik->bank_id,
 						'accnumber'  => $get_periodik->accnumber,
 						'accname'    => $get_periodik->accname,
-						'ids'        => $get_periodik->id,
+						'ids'        => $periodikIsItem ? $get_periodik->detail_id : $get_periodik->id,
 						'currency'   => 'IDR',
 						'admin_bank' => 0,
 						'total_pph'  => 0
 					];
 
-					$writeOk = (bool) $this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc]) && $writeOk;
+					// Item: status item menjadi 2 (diproses finance). Batch lama: status header menjadi 2.
+					$writeOk = (bool) ($periodikIsItem
+						? $this->db->update('tr_pengajuan_rutin_detail', ['item_status' => 2], ['no_item' => $item->no_doc])
+						: $this->db->update('tr_pengajuan_rutin', ['status' => 2], ['no_doc' => $item->no_doc])) && $writeOk;
 					$processedCount++;
 				}
 
@@ -4163,7 +4169,11 @@ class Request_payment extends Admin_Controller
 					}
 					$rejectedCount++;
 				} elseif ($tipeItem == 'Periodik') {
-					$srcRow = $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $docNo])->row();
+					// Nomor item (PI-YYYY-NNNNN): hanya item itu yang ditolak Finance. Batch lama: seluruh header.
+					$periodikIsItem = periodik_is_item_no($docNo);
+					$srcRow = $periodikIsItem
+						? $this->db->get_where('tr_pengajuan_rutin_detail', ['no_item' => $docNo])->row()
+						: $this->db->get_where('tr_pengajuan_rutin', ['no_doc' => $docNo])->row();
 					if ($this->auditReadStatus() === 0 || empty($srcRow)) {
 						$writeOk = false;
 						$failureReason = $this->auditReadStatus() === 0 ? 'query_failure' : 'missing_source_document';
@@ -4175,7 +4185,9 @@ class Request_payment extends Admin_Controller
 						'reject_ket' => $reject_reason
 					];
 
-					$update_reject_periodik = $this->db->update('tr_pengajuan_rutin', $data_reject, ['no_doc' => $docNo]);
+					$update_reject_periodik = $periodikIsItem
+						? $this->db->update('tr_pengajuan_rutin_detail', ['item_status' => 9, 'item_reject_ket' => $reject_reason], ['no_item' => $docNo])
+						: $this->db->update('tr_pengajuan_rutin', $data_reject, ['no_doc' => $docNo]);
 					if (!$update_reject_periodik) {
 						$writeOk = false;
 						$failureReason = 'update_reject_failure';
@@ -4510,7 +4522,9 @@ class Request_payment extends Admin_Controller
 				}
 				break;
 			case 'Periodik':
-				$row = $this->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
+				$row = periodik_is_item_no($item->no_dokumen)
+						? $this->db->select('item_approved_date as approved_date')->get_where('tr_pengajuan_rutin_detail', ['no_item' => $item->no_dokumen])->row()
+						: $this->db->select('approved_date')->get_where('tr_pengajuan_rutin', ['no_doc' => $item->no_dokumen])->row();
 				if ($row && !empty($row->approved_date)) {
 					$tgl_approve = $row->approved_date;
 				}

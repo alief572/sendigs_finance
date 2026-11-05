@@ -20,6 +20,8 @@ class Pengajuan_rutin extends Admin_Controller
 	protected $addPermission  	= 'Pengajuan_Pembayaran_Rutin.Add';
 	protected $managePermission = 'Pengajuan_Pembayaran_Rutin.Manage';
 	protected $deletePermission = 'Pengajuan_Pembayaran_Rutin.Delete';
+	protected $approvalViewPermission   = 'Approval_Pengajuan_Pembayaran_Rutin.View';
+	protected $approvalManagePermission = 'Approval_Pengajuan_Pembayaran_Rutin.Manage';
 
 	protected $hris;
 	protected $waktu;
@@ -36,681 +38,764 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->hris = $this->load->database('hris', true);
 	}
 
+	private $auditQueriesOk = true;
+
+	private function beginAudit($method, $data = array(), $keys = array())
+	{
+		$this->auditQueriesOk = true;
+		$this->load->library('Module_audit_recorder');
+		return $this->module_audit_recorder->begin('pengajuan_rutin', $method,
+			array('data' => $this->auditSafeData($data)),
+			array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+	}
+
+	private function completeAudit($message, $status, $data = array())
+	{
+		return $this->module_audit_recorder->complete($message, $status,
+			array('data' => $this->auditSafeData($data), 'sql' => null));
+	}
+
+	private function auditSafeData($data)
+	{
+		$safe = array();
+		foreach ($data as $key => $value) {
+			if (in_array($key, array('amount', 'total_amount'), true) && (!is_scalar($value) || !is_numeric($value))) { continue; }
+			if (in_array($key, array('department_id', 'id'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string) $value))) { continue; }
+			if ($key === 'no_doc' && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9\/_.-]{1,100}$/', (string) $value))) { continue; }
+			if (is_scalar($value) || $value === null) {
+				$safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+			}
+		}
+		return $safe;
+	}
+
+	private function auditObserve($result, $connection = null)
+	{
+		$connection = $connection ?: $this->db;
+		$error = method_exists($connection, 'error') ? $connection->error() : array('code' => 0);
+		if ($result === false || !empty($error['code'])) {
+			$this->auditQueriesOk = false;
+		}
+		return $result;
+	}
+
 	public function get_user_department()
 	{
-		$user_id = $this->auth->user_id();
-		$user = $this->db->select('users.department_id as user_dept, emp.department_id as emp_dept')
+		$startedAudit = $this->beginAudit(__FUNCTION__, array(), array('department_id', 'outcome'));
+		$user_id = method_exists($this->auth, 'user_id') ? $this->auth->user_id() : 1;
+		$query = $this->db->select('users.department_id as user_dept, emp.department_id as emp_dept')
 			->from('users')
 			->join(HRIS . '.employees emp', 'emp.id = users.employee_id', 'left')
 			->where('users.id_user', $user_id)
-			->get()->row();
+			->get();
+		$this->auditObserve($query);
+		$user = $query ? $query->row() : null;
 
+		$dept = null;
 		if ($user) {
-			return !empty($user->user_dept) ? $user->user_dept : (!empty($user->emp_dept) ? $user->emp_dept : null);
+			$dept = !empty($user->user_dept) ? $user->user_dept : (!empty($user->emp_dept) ? $user->emp_dept : null);
 		}
-		return null;
+
+		if ($startedAudit) {
+			$this->completeAudit('Membaca departemen user', $this->auditQueriesOk ? 1 : 0, array(
+				'department_id' => $dept,
+				'outcome'       => ($dept !== null && $this->auditQueriesOk) ? 'resolved' : 'unresolved'
+			));
+		}
+
+		return $dept;
+	}
+
+
+	/* ------------------------------------------------------------------
+	 * Pembayaran Periodik per item (mengikuti specs/input/Periodik.html)
+	 * ------------------------------------------------------------------ */
+
+	private function currentUserName()
+	{
+		return method_exists($this->auth, 'user_name') ? (string) $this->auth->user_name() : '';
+	}
+
+	/** Menyimpan/mengubah batch: izin Add atau Manage (sebelumnya Manage boleh mengedit). */
+	private function requireWrite()
+	{
+		if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
+			$this->auth->restrict($this->addPermission);
+		}
+	}
+
+	private function isAdmin()
+	{
+		return method_exists($this->auth, 'is_admin') ? (bool) $this->auth->is_admin() : false;
+	}
+
+	/** Departemen yang boleh dilihat user: admin semua, selain itu hanya departemennya sendiri. */
+	private function allowedDept()
+	{
+		return $this->isAdmin() ? null : (string) $this->get_user_department();
+	}
+
+	private function deptNames()
+	{
+		$names = $this->All_model->GetDeptCombo();
+		return is_array($names) ? $names : array();
+	}
+
+	/** Periode yang bisa dipilih di form: bulan ini dan dua bulan berikutnya. */
+	private function periodOptions()
+	{
+		$out = array();
+		for ($i = 0; $i < 3; $i++) {
+			$t = strtotime(date('Y-m-01') . " +$i month");
+			$out[date('Y-m', $t)] = $this->monthLabel(date('Y-m', $t));
+		}
+		return $out;
+	}
+
+	private function monthLabel($ym)
+	{
+		$bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember');
+		return $bulan[(int) substr($ym, 5, 2) - 1] . ' ' . substr($ym, 0, 4);
+	}
+
+	private function validPeriode($p)
+	{
+		return is_string($p) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $p) === 1;
+	}
+
+	/** Baris form per master budget untuk satu departemen dan periode. */
+	private function buildFormRows($dept, $periode, $batch = null)
+	{
+		$masters = $this->Pengajuan_rutin_model->GetMasterWithItems($dept, $batch ? $batch['no'] : null);
+		$this->auditObserve($masters);
+		$masters = is_array($masters) ? $masters : array(); // pembacaan gagal: form kosong, galat tercatat di audit
+		$mine = array();
+		if ($batch) {
+			foreach ($batch['items'] as $it) {
+				$mine[$it['id_budget']] = $it;
+			}
+		}
+		$rows = array();
+		$hidden = array();
+		usort($masters, function ($a, $b) { return strcmp((string) $a['nama'], (string) $b['nama']); });
+		foreach ($masters as $m) {
+			$st = Periodik_logic::state($m, $m['items'], $periode);
+			$m['nm'] = $m['nama'];
+			$row = array('m' => $m, 'st' => $st, 'tag' => Periodik_logic::masa_tag($st), 'mine' => isset($mine[$m['id']]) ? $mine[$m['id']] : null);
+			if (in_array($st['state'], array('off', 'done', 'closed'), true) && !$row['mine']) {
+				$hidden[] = $row;
+			} else {
+				$rows[] = $row;
+			}
+		}
+		return array($rows, $hidden);
 	}
 
 	public function index()
 	{
-		//        $this->auth->restrict($this->viewPermission);
-		$is_admin = $this->auth->is_admin();
+		$this->beginAudit(__FUNCTION__, array(), array('department_id', 'outcome'));
 		$user_dept = $this->get_user_department();
+		$dept = $this->allowedDept();
+		$batches = $this->Pengajuan_rutin_model->GetBatchesWithItems($dept);
+		$this->auditObserve($batches);
+		$batches = is_array($batches) ? $batches : array();
 
-		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
-		$this->hris->from('departments a');
-		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-		if (!$is_admin && !empty($user_dept)) {
-			$this->hris->where('a.id', $user_dept);
+		$noItems = array();
+		foreach ($batches as $b) {
+			foreach ($b['items'] as $i) {
+				$noItems[] = $i['no_item'];
+			}
 		}
-		$get_departments = $this->hris->get()->result();
-
-		$arr_dept = [];
-		foreach ($get_departments as $item) {
-			$arr_dept[$item->id] = [
-				'id' => $item->id,
-				'nm_dept' => $item->nm_dept,
-				'nm_comp' => $item->nm_comp
-			];
-		}
-
-		$datdept  = $this->All_model->GetDeptCombo($is_admin ? '' : ($user_dept ? $user_dept : 'none'));
-
-		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinAll();
-		$this->template->set('is_admin', $is_admin);
+		$this->template->set('batches', $batches);
+		$this->template->set('rp', $this->Pengajuan_rutin_model->GetRpStates($noItems));
+		$this->template->set('names', $this->deptNames());
+		$this->template->set('dd_items', json_encode($this->departmentChoices($dept), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT));
+		$this->template->set('can_add', has_permission($this->addPermission));
+		$this->template->set('can_manage', has_permission($this->managePermission));
+		$this->template->set('can_delete', has_permission($this->deletePermission));
+		$this->template->set('is_admin', $this->isAdmin());
 		$this->template->set('user_dept', $user_dept);
-		$this->template->set('datdept', $datdept);
-		// $this->template->set('results', $data);
-		$this->template->set('dept', $arr_dept);
-		$this->template->set('data_detail', $data_detail);
 		$this->template->title('Pengajuan Pembayaran Periodik');
 		$this->template->render('list');
+		$this->completeAudit('Membuka halaman pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'department_id' => $user_dept,
+			'outcome'       => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
-	public function app_list()
+	/** Pilihan departemen pada tombol + New: hanya departemen yang punya budget yang bisa dipilih. */
+	private function departmentChoices($onlyDept)
 	{
-		$departemen = '';
-		//		$datauser=$this->All_model->GetInfoUser($this->auth->user_id());
-		//		if($datauser) $departemen=$datauser->departemen;
-		$data = $this->Pengajuan_rutin_model->GetPengajuanRutin(array('a.status' => 0, 'a.sts_reject' => null));
-		$datdept  = $this->All_model->GetDeptCombo();
-
-		$arr_dept = [];
-
-		$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
-		$this->hris->from('departments a');
-		$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-		$get_dept = $this->hris->get()->result();
-
-		foreach ($get_dept as $item_dept) {
-			$arr_dept[$item_dept->id] = $item_dept->nm_dept . ' - ' . $item_dept->nm_comp;
+		$names = $this->deptNames();
+		$periode = date('Y-m');
+		$label = $this->monthLabel($periode);
+		$q = $this->db->distinct()->select('departement')->get('ms_budget_rutin');
+		$this->auditObserve($q);
+		$withBudget = array();
+		foreach ($q ? $q->result() : array() as $r) {
+			$withBudget[(string) $r->departement] = true;
 		}
-
-		$this->template->set('arr_dept', $arr_dept);
-		$this->template->set('datdept', $datdept);
-		$this->template->set('results', $data);
-		$this->template->title('Pengajuan Pembayaran Periodik');
-		$this->template->render('app_list');
+		$out = array();
+		foreach ($names as $id => $name) {
+			if ($id === '' || ($onlyDept !== null && (string) $id !== (string) $onlyDept)) {
+				continue;
+			}
+			if (empty($withBudget[(string) $id])) {
+				$out[] = array('id' => (string) $id, 'name' => $name, 'sub' => 'Belum ada budget aktif. Buat dulu di Budget Pembayaran Periodik', 'disabled' => true);
+				continue;
+			}
+			list($rows) = $this->buildFormRows($id, $periode);
+			$open = 0;
+			foreach ($rows as $r) {
+				$open += in_array($r['st']['state'], array('free', 'back'), true) ? 1 : 0;
+			}
+			$out[] = array('id' => (string) $id, 'name' => $name, 'disabled' => false,
+				'sub' => $open > 0 ? $open . ' item bisa diajukan untuk ' . $label : 'Semua item sudah diajukan untuk ' . $label);
+		}
+		return $out;
 	}
 
 	public function create($key = '')
 	{
 		$this->auth->restrict($this->addPermission);
-		$is_admin = $this->auth->is_admin();
+		$this->beginAudit(__FUNCTION__, array('department_id' => $key), array('department_id', 'outcome'));
 		$user_dept = $this->get_user_department();
 
-		if (!$is_admin) {
+		if (!$this->isAdmin()) {
 			if (empty($user_dept)) {
 				$this->template->set_message("Departemen akun Anda belum disetting. Silakan hubungi Administrator.", 'error');
+				$this->completeAudit('Membuka form input pengajuan rutin', 0, array(
+					'department_id' => null,
+					'outcome'       => 'dept_unconfigured',
+					'reason'        => 'Departemen akun belum disetting'
+				));
 				redirect('pengajuan_rutin');
 				return;
 			}
 			$key = $user_dept;
 		}
+		$periode = $this->input->get('periode');
+		$periodOptions = $this->periodOptions();
+		$periode = isset($periodOptions[$periode]) ? $periode : key($periodOptions);
 
-		$datdept  = $this->All_model->GetDeptCombo($key);
-		$this->template->set('datdept', $datdept);
-		$this->template->title('Input Pengajuan Pembayaran Periodik');
+		list($rows, $hidden) = $this->buildFormRows($key, $periode);
+		$names = $this->deptNames();
 		$this->template->set('type', 'add');
-		$this->template->set('app', '');
+		$this->template->set('dept', $key);
+		$this->template->set('dept_name', isset($names[$key]) ? $names[$key] : $key);
+		$this->template->set('periode', $periode);
+		$this->template->set('period_options', $periodOptions);
+		$this->template->set('rows', $rows);
+		$this->template->set('hidden', $hidden);
+		$this->template->set('batch', null);
+		$this->template->set('next_item', null);
+		$this->template->title('Input Pengajuan Pembayaran Periodik');
 		$this->template->render('input_form');
+		$this->completeAudit('Membuka form input pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'department_id' => $key,
+			'outcome'       => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
 	public function edit($id)
 	{
-		$data	= $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+		$this->requireWrite();
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'department_id', 'outcome'));
+		$data = $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+		$this->auditObserve($data);
 		if (!$data) {
 			$this->template->set_message("Invalid Data", 'error');
+			$this->completeAudit('Membuka form edit pengajuan rutin', 0, array('id' => $id, 'outcome' => 'not_found', 'reason' => 'Invalid Data'));
 			redirect('pengajuan_rutin');
+			return;
 		}
-
-		$is_admin = $this->auth->is_admin();
-		$user_dept = $this->get_user_department();
-		if (!$is_admin && $data->departement != $user_dept) {
+		if (!$this->isAdmin() && (string) $data->departement !== (string) $this->get_user_department()) {
 			$this->template->set_message("Anda tidak memiliki akses ke data departemen ini.", 'error');
+			$this->completeAudit('Membuka form edit pengajuan rutin', 0, array(
+				'id' => $id, 'no_doc' => $data->no_doc ?? null, 'department_id' => $data->departement ?? null,
+				'outcome' => 'unauthorized', 'reason' => 'Akses ditolak ke departemen lain'
+			));
 			redirect('pengajuan_rutin');
+			return;
 		}
-
-		$datdept  = $this->All_model->GetDeptCombo($data->departement);
-		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinDetail($data->no_doc);
-		$this->template->set('type', 'edit');
-		$this->template->set('datdept', $datdept);
-		$this->template->set('data', $data);
-		$this->template->set('app', '');
-		$this->template->set('data_detail', $data_detail);
-		$this->template->title('Edit Pengajuan Pembayaran Rutin');
-		$this->template->render('input_form');
-	}
-
-	public function view($id, $app = '')
-	{
-		$data	= $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
-		if (!$data) {
-			$this->template->set_message("Invalid Data", 'error');
+		$all = $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $data->no_doc);
+		$this->auditObserve($all);
+		$batch = is_array($all) && isset($all[$data->no_doc]) ? $all[$data->no_doc] : null;
+		$letters = $batch ? array_column($batch['items'], 'status') : array();
+		if (!$batch || array_unique($letters) !== array('W')) {
+			$this->template->set_message("Batch sudah diputuskan dan tidak bisa diubah.", 'error');
+			$this->completeAudit('Membuka form edit pengajuan rutin', 0, array(
+				'id' => $id, 'no_doc' => $data->no_doc ?? null, 'department_id' => $data->departement ?? null,
+				'outcome' => $this->auditQueriesOk ? 'already_decided' : 'query_error', 'reason' => 'Batch sudah diputuskan'
+			));
 			redirect('pengajuan_rutin');
-		}
-
-		$is_admin = $this->auth->is_admin();
-		$user_dept = $this->get_user_department();
-		if ($app != 'app' && !$is_admin && $data->departement != $user_dept) {
-			$this->template->set_message("Anda tidak memiliki akses ke data departemen ini.", 'error');
-			redirect('pengajuan_rutin');
-		}
-
-		$datdept  = $this->All_model->GetDeptCombo($data->departement);
-		$data_detail = $this->Pengajuan_rutin_model->GetDataPengajuanRutinDetail($data->no_doc);
-		$this->template->set('type', 'view');
-		$this->template->set('datdept', $datdept);
-		$this->template->set('data', $data);
-		$this->template->set('app', $app);
-		$this->template->set('data_detail', $data_detail);
-		$this->template->title('View Pengajuan Pembayaran Rutin');
-		$this->template->render('input_form');
-	}
-
-	public function get_data()
-	{
-		$allbudget		= $this->input->post("allbudget");
-		$dept       	= $this->input->post("dept");
-		$tanggal        = $this->input->post("tanggal");
-		$no_doc         = $this->input->post("no_doc");
-		$data = $this->Pengajuan_rutin_model->GetDataBudgetRutin($dept, $tanggal, $allbudget, $no_doc);
-		$param = array(
-			'save' => 1,
-			'data' => $data,
-			'tahun' => date("Y", strtotime($tanggal)),
-			'bulan' => date("m", strtotime($tanggal)),
-		);
-		echo json_encode($param);
-	}
-
-	public function save_data()
-	{
-
-		$departement	= $this->input->post("departement");
-		$id				= $this->input->post("id");
-		$no_doc			= $this->input->post("no_doc");
-		$tanggal_doc	= $this->input->post("tanggal_doc");
-		// $tanggal_doc    = str_replace('/','-',$tanggal_doc);
-		$tanggal_doc    = date('Y-m-d', strtotime($tanggal_doc));
-		// print_r($tanggal_doc);
-		// exit;
-
-		$detail_id		= $this->input->post("detail_id");
-		$id_budget		= $this->input->post("id_budget");
-		$coa       		= $this->input->post("coa");
-		$nama           = $this->input->post("nama");
-		$tanggal		= $this->input->post("tanggal");
-		$tipe  			= 'rutin';
-		$details		= $this->input->post("details");
-		$budget			= $this->input->post("budget");
-		$nilai			= $this->input->post("nilai");
-		$keterangan		= $this->input->post("keterangan");
-		$bank_id		= $this->input->post("bank_id");
-		$accnumber		= $this->input->post("accnumber");
-		$accname		= $this->input->post("accname");
-		$metode_pembelian		= $this->input->post("metode_pembelian");
-
-		// Validasi apakah terdapat item yang sudah pernah diajukan pada periode ini
-		$already_submitted_errors = [];
-		if (is_array($id_budget)) {
-			for ($i = 0; $i < count($id_budget); $i++) {
-				$val_nilai = isset($nilai[$i]) ? floatval(str_replace(',', '', $nilai[$i])) : 0;
-				if ($val_nilai > 0 && !empty($id_budget[$i])) {
-					$check = $this->Pengajuan_rutin_model->CheckSubmittedBudget($id_budget[$i], $tanggal_doc, $no_doc);
-					if ($check) {
-						$periode_label = ($check->tipe == 'tahun') ? "tahun " . date('Y', strtotime($tanggal_doc)) : "bulan " . date('m/Y', strtotime($tanggal_doc));
-						$item_nama = !empty($nama[$i]) ? $nama[$i] : $check->nama;
-						$already_submitted_errors[] = "Item '" . $item_nama . "' sudah pernah diajukan untuk " . $periode_label . " pada dokumen " . $check->no_doc . ".";
-					}
-				}
-			}
-		}
-
-		if (!empty($already_submitted_errors)) {
-			echo json_encode([
-				'save' => 0,
-				'msg'  => implode("\n", $already_submitted_errors)
-			]);
 			return;
 		}
 
-		$this->db->trans_begin();
-
-		try {
-			if ($no_doc == '') {
-				$no_doc = $this->All_model->GetAutoGenerate('format_nonpo');
-				$dataheader =  array(
-					'tipe' => $tipe,
-					'no_doc' => $no_doc,
-					'tanggal_doc' => $tanggal_doc,
-					'departement' => $departement,
-					'status' => 0
-					// 'nilai'=>0,
-				);
-				$this->Pengajuan_rutin_model->insert($dataheader);
-			} else {
-				$dataheader =  array(
-					array(
-						'id' => $id,
-						'tanggal_doc' => $tanggal_doc,
-						'sts_reject' => null,
-						'status' => 0,
-						'reject_ket' => null
-					)
-				);
-				$this->Pengajuan_rutin_model->update_batch($dataheader, 'id');
-				if (is_array($detail_id)) {
-					$delid = implode("','", $detail_id);
-					$this->All_model->dataDelete('tr_pengajuan_rutin_detail', " id not in ('" . $delid . "') and no_doc='" . $no_doc . "'");
-				} else {
-					$this->All_model->dataDelete('tr_pengajuan_rutin_detail', "no_doc='" . $no_doc . "'");
-				}
-			}
-			for ($x = 0; $x < count($detail_id); $x++) {
-				$idf = $details[$x];
-				if ($detail_id[$x] != '') {
-					if ($nilai[$x] > 0) {
-						$data = array(
-							'id_budget' => $id_budget[$x],
-							'coa' => $coa[$x],
-							'nama' => $nama[$x],
-							'tanggal' => $tanggal[$x],
-							'budget' => $budget[$x],
-							'nilai' => $nilai[$x],
-							'keterangan' => $keterangan[$x],
-							'bank_id' => $bank_id[$x],
-							'accnumber' => $accnumber[$x],
-							'accname' => $accname[$x],
-							'metode_pembelian' => '1',
-							'created_by' => $this->auth->user_id(),
-							'created_on' => date("Y-m-d h:i:s"),
-						);
-						if (!empty($_FILES['doc_file_' . $idf]['name'])) {
-							$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
-							$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
-							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
-							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
-							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
-							
-							if (!is_dir('./assets/bayar_rutin/')) {
-								mkdir('./assets/bayar_rutin/', 0755, TRUE);
-							}
-							
-							$config['upload_path'] = './assets/bayar_rutin/';
-							$config['allowed_types'] = '*';
-							$config['remove_spaces'] = TRUE;
-							$config['encrypt_name'] = TRUE;
-
-							$this->upload->initialize($config);
-							if ($this->upload->do_upload('file')) {
-								$uploadData = $this->upload->data();
-								$filename = $uploadData['file_name'];
-								$data['doc_file'] = $filename;
-							} else {
-								print_r($this->upload->display_errors());
-								exit;
-							}
-						}
-						$this->db->update('tr_pengajuan_rutin_detail', $data, array('id' => $detail_id[$x]));
-					}
-				} else {
-					if ($nilai[$x] > 0) {
-						$data =  array(
-							'no_doc' => $no_doc,
-							'id_budget' => $id_budget[$x],
-							'coa' => $coa[$x],
-							'nama' => $nama[$x],
-							'tanggal' => $tanggal[$x],
-							'budget' => $budget[$x],
-							'nilai' => $nilai[$x],
-							'keterangan' => $keterangan[$x],
-							'bank_id' => $bank_id[$x],
-							'accnumber' => $accnumber[$x],
-							'accname' => $accname[$x],
-							'metode_pembelian' => '1',
-							'created_by' => $this->auth->user_id(),
-							'created_on' => date("Y-m-d h:i:s"),
-							'modified_by' => $this->auth->user_id(),
-							'modified_on' => date("Y-m-d h:i:s"),
-						);
-						if (!empty($_FILES['doc_file_' . $idf]['name'])) {
-							$_FILES['file']['name'] = $_FILES['doc_file_' . $idf]['name'];
-							$_FILES['file']['type'] = $_FILES['doc_file_' . $idf]['type'];
-							$_FILES['file']['tmp_name'] = $_FILES['doc_file_' . $idf]['tmp_name'];
-							$_FILES['file']['error'] = $_FILES['doc_file_' . $idf]['error'];
-							$_FILES['file']['size'] = $_FILES['doc_file_' . $idf]['size'];
-
-							if (!is_dir('./assets/bayar_rutin/')) {
-								mkdir('./assets/bayar_rutin/', 0755, TRUE);
-							}
-
-							$config['upload_path'] = './assets/bayar_rutin/';
-							$config['allowed_types'] = '*';
-							$config['remove_spaces'] = TRUE;
-							$config['encrypt_name'] = TRUE;
-
-							$this->upload->initialize($config);
-							if ($this->upload->do_upload('file')) {
-								$uploadData = $this->upload->data();
-								$filename = $uploadData['file_name'];
-								$data['doc_file'] = $filename;
-							} else {
-								print_r($this->upload->display_errors());
-								exit;
-							}
-						}
-						$this->db->insert('tr_pengajuan_rutin_detail', $data);
-					}
-				}
-			}
-
-			$this->db->trans_commit();
-
-			$this->output->set_status_header(200);
-			echo json_encode([
-				'save' => TRUE
-			]);
-		} catch (Exception $e) {
-			$this->db->trans_rollback();
-
-			$this->output->set_status_header(500);
-			echo json_encode([
-				'msg' => $e->getMessage()
-			]);
-		}
-
-		// if ($this->db->trans_status()) {
-		// 	$keterangan     = "SUKSES, tambah data ";
-		// 	$status         = 1;
-		// 	$nm_hak_akses   = $this->addPermission;
-		// 	$kode_universal = 'NewData';
-		// 	$jumlah         = $x;
-		// 	$sql            = $this->db->last_query();
-		// 	$result         = TRUE;
-		// } else {
-		// 	$keterangan     = "GAGAL, tambah data ";
-		// 	$status         = 0;
-		// 	$nm_hak_akses   = $this->addPermission;
-		// 	$kode_universal = 'NewData';
-		// 	$jumlah         = $x;
-		// 	$sql            = $this->db->last_query();
-		// 	$result = FALSE;
-		// }
-		// simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
-		// $this->db->trans_complete();
-		// $param = array(
-		// 	'save' => $result
-		// );
-		// echo json_encode($param);
+		list($rows, $hidden) = $this->buildFormRows($data->departement, $batch['periode'], $batch);
+		$names = $this->deptNames();
+		$this->template->set('type', 'edit');
+		$this->template->set('dept', $data->departement);
+		$this->template->set('dept_name', isset($names[$data->departement]) ? $names[$data->departement] : $data->departement);
+		$this->template->set('periode', $batch['periode']);
+		$this->template->set('period_options', array($batch['periode'] => $this->monthLabel($batch['periode'])));
+		$this->template->set('rows', $rows);
+		$this->template->set('hidden', $hidden);
+		$this->template->set('batch', $batch);
+		$this->template->title('Edit Pengajuan Pembayaran Periodik');
+		$this->template->render('input_form');
+		$this->completeAudit('Membuka form edit pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'id' => $id, 'no_doc' => $data->no_doc ?? null, 'department_id' => $data->departement ?? null,
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
 	}
 
-	function hapus_data($id)
+	/** Modal "Lihat" satu batch. $from = 'app' menampilkan tombol Proses approval bila masih ada item menunggu. */
+	public function view($id, $from = '')
+	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id, 'app' => $from), array('id', 'no_doc', 'app', 'outcome'));
+		$data = $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+		$this->auditObserve($data);
+		if (!$data) {
+			$this->completeAudit('Melihat detail pengajuan rutin', 0, array('id' => $id, 'outcome' => 'not_found', 'reason' => 'Invalid Data'));
+			echo '<p class="hint">Data tidak ditemukan.</p>';
+			return;
+		}
+		if ($from !== 'app' && !$this->isAdmin() && (string) $data->departement !== (string) $this->get_user_department()) {
+			$this->completeAudit('Melihat detail pengajuan rutin', 0, array('id' => $id, 'no_doc' => $data->no_doc, 'outcome' => 'unauthorized', 'reason' => 'Akses ditolak ke departemen lain'));
+			echo '<p class="hint">Anda tidak memiliki akses ke data departemen ini.</p>';
+			return;
+		}
+		$all = $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $data->no_doc);
+		$this->auditObserve($all);
+		$batch = is_array($all) && isset($all[$data->no_doc]) ? $all[$data->no_doc] : null;
+		$names = $this->deptNames();
+		$chain = array();
+		foreach ($batch ? $batch['items'] : array() as $it) {
+			if ($it['ref'] !== '') {
+				$chain[$it['no_item']] = $this->revisionChain($it['ref']);
+			}
+		}
+		$this->load->view('batch_detail', array(
+			'chain' => $chain,
+			'batch' => $batch,
+			'dept_name' => isset($names[$data->departement]) ? $names[$data->departement] : $data->departement,
+			'rp' => $this->Pengajuan_rutin_model->GetRpStates($batch ? array_column($batch['items'], 'no_item') : array()),
+			'from' => $from,
+			'can_decide' => $from === 'app' && has_permission($this->approvalManagePermission),
+		));
+		$this->completeAudit('Melihat detail pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'id' => $id, 'no_doc' => $data->no_doc, 'app' => $from, 'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
+	}
+
+	private function jsonOut($payload)
+	{
+		$this->output->set_content_type('application/json');
+		echo json_encode($payload);
+	}
+
+	private function uploadDoc($field)
+	{
+		if (empty($_FILES[$field]['name'])) {
+			return array(true, null);
+		}
+		if (!is_dir('./assets/bayar_rutin/')) {
+			mkdir('./assets/bayar_rutin/', 0755, true);
+		}
+		$this->load->library('upload');
+		$this->upload->initialize(array('upload_path' => './assets/bayar_rutin/', 'allowed_types' => 'pdf|jpg|jpeg|png', 'remove_spaces' => true, 'encrypt_name' => true));
+		if (!$this->upload->do_upload($field)) {
+			return array(false, strip_tags($this->upload->display_errors('', '')));
+		}
+		$up = $this->upload->data();
+		return array(true, $up['file_name']);
+	}
+
+	/**
+	 * Simpan batch baru atau perubahan batch (hanya bila semua item masih menunggu).
+	 * POST: departement, periode, id (batch, kosong untuk baru), biaya[id_budget], ket[id_budget], file doc_<id_budget>.
+	 */
+	public function save_data()
+	{
+		$this->requireWrite();
+		$departement = (string) $this->input->post('departement');
+		$periode     = (string) $this->input->post('periode');
+		$id          = (string) $this->input->post('id');
+		$this->beginAudit(__FUNCTION__, array('department_id' => $departement), array('no_doc', 'department_id', 'amount', 'item_count', 'outcome'));
+
+		$fail = function ($msg, $outcome) use ($departement) {
+			$this->completeAudit('Menyimpan data pengajuan rutin', 0, array('department_id' => $departement, 'outcome' => $outcome, 'reason' => $msg));
+			$this->jsonOut(array('save' => 0, 'msg' => $msg));
+		};
+
+		if (!$this->isAdmin() && (string) $this->get_user_department() !== $departement) {
+			return $fail('Anda tidak memiliki akses ke data departemen ini.', 'unauthorized');
+		}
+		if (!$this->validPeriode($periode)) {
+			return $fail('Periode pembayaran tidak valid.', 'invalid_period');
+		}
+
+		$batch = null;
+		if ($id !== '') {
+			$header = $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+			$all = $header ? $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $header->no_doc) : false;
+			$batch = is_array($all) && $header && isset($all[$header->no_doc]) ? $all[$header->no_doc] : null;
+			if (!$batch || (string) $batch['dept'] !== $departement) {
+				return $fail('Batch tidak ditemukan.', 'not_found');
+			}
+			if (array_unique(array_column($batch['items'], 'status')) !== array('W')) {
+				return $fail('Batch sudah diputuskan dan tidak bisa diubah.', 'already_decided');
+			}
+			$periode = $batch['periode']; // periode batch tidak bisa diubah
+		}
+
+		list($rows) = $this->buildFormRows($departement, $periode, $batch);
+		if (!$this->auditQueriesOk) {
+			return $fail('Data budget tidak dapat dibaca. Silakan coba lagi.', 'query_error');
+		}
+		$biaya = (array) $this->input->post('biaya');
+		$ket   = (array) $this->input->post('ket');
+
+		$plan = array();
+		$errors = array();
+		foreach ($rows as $r) {
+			$mid = (string) $r['m']['id'];
+			$val = isset($biaya[$mid]) && is_numeric($biaya[$mid]) ? (float) $biaya[$mid] : 0;
+			if ($val <= 0) {
+				continue;
+			}
+			$editable = $r['mine'] || in_array($r['st']['state'], array('free', 'back'), true);
+			if (!$editable) {
+				$errors[] = 'Item "' . $r['m']['nama'] . '" tidak bisa diajukan untuk periode ini.';
+				continue;
+			}
+			$plan[] = array('row' => $r, 'nilai' => $val, 'ket' => trim((string) ($ket[$mid] ?? '')));
+		}
+		if ($errors) {
+			return $fail(implode("\n", $errors), 'not_editable');
+		}
+		if (!$plan) {
+			return $fail($batch ? 'Minimal satu item harus diisi. Untuk membatalkan seluruh batch, pakai tombol Hapus di daftar.' : 'Isi perkiraan biaya minimal satu item sebelum menyimpan.', 'empty');
+		}
+
+		if ($this->db->trans_begin() === false) {
+			return $fail('Please try again later !', 'trans_begin_failure');
+		}
+		$userId = method_exists($this->auth, 'user_id') ? $this->auth->user_id() : 1;
+		$now = date('Y-m-d H:i:s');
+		$kept = array();
+		$created = array();
+		$ok = true;
+		$msg = '';
+		try {
+		do {
+			if ($batch) {
+				$noDoc = $batch['no'];
+			} else {
+				$noDoc = periodik_next_number($this->db, 'BP');
+				if ($noDoc === '') { $ok = false; $msg = 'Nomor batch gagal dibuat.'; break; }
+				$ok = (bool) $this->db->insert('tr_pengajuan_rutin', array('tipe' => 'rutin', 'no_doc' => $noDoc, 'tanggal_doc' => date('Y-m-d'),
+					'periode' => $periode, 'departement' => $departement, 'status' => 0, 'created_by' => $userId, 'created_on' => $now));
+				if (!$ok) { break; }
+			}
+			foreach ($plan as $p) {
+				$m = $p['row']['m'];
+				$mine = $p['row']['mine'];
+				$st = $p['row']['st'];
+				$ketText = implode(' - ', array_filter(array(Periodik_logic::ket_prefix($st), $p['ket']), 'strlen'));
+				list($upOk, $file) = $this->uploadDoc('doc_' . $m['id']);
+				if (!$upOk) { $ok = false; $msg = $file; break 2; }
+				$data = array('id_budget' => $m['id'], 'coa' => $m['coa'], 'nama' => $m['nama'], 'tanggal' => $m['tanggal'], 'budget' => $m['nilai'],
+					'nilai' => $p['nilai'], 'keterangan' => $ketText, 'metode_pembelian' => '1', 'modified_by' => $userId, 'modified_on' => $now);
+				if ($file !== null) { $data['doc_file'] = $file; }
+				if ($mine) {
+					$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', $data, array('id' => $mine['id']));
+					$kept[] = $mine['id'];
+				} else {
+					$bank = $this->Pengajuan_rutin_model->GetLastBank($m['id']);
+					$data += array('no_doc' => $noDoc, 'no_item' => periodik_next_number($this->db, 'PI'), 'item_status' => 0,
+						'bank_id' => $bank ? $bank->bank_id : null, 'accnumber' => $bank ? $bank->accnumber : null, 'accname' => $bank ? $bank->accname : null,
+						'created_by' => $userId, 'created_on' => $now);
+					if ($data['no_item'] === '') { $ok = false; $msg = 'Nomor item gagal dibuat.'; break 2; }
+					if ($st['state'] === 'back') {
+						$data['revisi_dari'] = $st['back']['no_item'];
+					}
+					$ok = (bool) $this->db->insert('tr_pengajuan_rutin_detail', $data);
+					$newId = $this->db->insert_id();
+					$kept[] = $newId;
+					$created[] = $data['no_item'];
+					if ($ok && $st['state'] === 'back') {
+						$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', array('diajukan_ulang_sebagai' => $data['no_item']), array('no_item' => $st['back']['no_item']));
+					}
+				}
+				if (!$ok) { break 2; }
+			}
+			if ($batch) {
+				// item yang biayanya dikosongkan dikeluarkan dari batch; tautan "diajukan ulang" item asal dilepas
+				foreach ($batch['items'] as $it) {
+					if (in_array($it['id'], $kept, true)) { continue; }
+					if ($it['ref'] !== '') {
+						$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', array('diajukan_ulang_sebagai' => null), array('no_item' => $it['ref'])) && $ok;
+					}
+					$ok = (bool) $this->db->delete('tr_pengajuan_rutin_detail', array('id' => $it['id'])) && $ok;
+				}
+			}
+		} while (false);
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			return $fail('Please try again later !', 'exception');
+		}
+
+		if (!$ok || $this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return $fail($msg !== '' ? $msg : 'Please try again later !', 'write_failed');
+		}
+		if ($this->db->trans_commit() === false) {
+			return $fail('Please try again later !', 'commit_failed');
+		}
+		$total = array_sum(array_column($plan, 'nilai'));
+		$this->completeAudit('Menyimpan data pengajuan rutin', 1, array('no_doc' => $noDoc, 'department_id' => $departement, 'amount' => $total, 'item_count' => count($plan), 'outcome' => 'saved'));
+		$this->jsonOut(array('save' => 1, 'no_doc' => $noDoc, 'edit' => $batch ? 1 : 0, 'count' => count($plan),
+			'first' => $created ? $created[0] : '', 'last' => $created ? end($created) : '', 'periode' => $this->monthLabel($periode)));
+	}
+
+	/** Hapus batch: hanya bila semua item masih menunggu approval. $id = nomor batch. */
+	public function hapus_data($id)
 	{
 		$this->auth->restrict($this->deletePermission);
-		if ($id != '') {
-			$is_admin = $this->auth->is_admin();
-			$user_dept = $this->get_user_department();
-			if (!$is_admin) {
-				$check = $this->db->get_where('tr_pengajuan_rutin', array('no_doc' => $id))->row();
-				if (!$check || $check->departement != $user_dept) {
-					echo json_encode(array('delete' => 0, 'idx' => $id, 'msg' => 'Akses ditolak'));
-					return;
+		$this->beginAudit(__FUNCTION__, array('no_doc' => $id), array('no_doc', 'outcome'));
+		$fail = function ($msg, $outcome) use ($id) {
+			$this->completeAudit('Hapus data pengajuan rutin', 0, array('no_doc' => $id, 'outcome' => $outcome));
+			$this->jsonOut(array('delete' => 0, 'idx' => $id, 'msg' => $msg));
+		};
+		$all = $id !== '' ? $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $id) : false;
+		$batch = is_array($all) && isset($all[$id]) ? $all[$id] : null;
+		if (!$batch) {
+			return $fail('Batch tidak ditemukan.', 'not_found');
+		}
+		if (!$this->isAdmin() && (string) $batch['dept'] !== (string) $this->get_user_department()) {
+			return $fail('Akses ditolak', 'unauthorized');
+		}
+		if (array_unique(array_column($batch['items'], 'status')) !== array('W')) {
+			return $fail('Batch sudah diputuskan dan tidak bisa dihapus.', 'already_decided');
+		}
+		$this->db->trans_begin();
+		$ok = true;
+		try {
+			foreach ($batch['items'] as $it) {
+				if ($it['ref'] !== '') {
+					$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', array('diajukan_ulang_sebagai' => null), array('no_item' => $it['ref'])) && $ok;
 				}
 			}
-
-			$this->db->trans_begin();
-			$this->All_model->dataDelete('tr_pengajuan_rutin', array('no_doc' => $id));
-			$this->All_model->dataDelete('tr_pengajuan_rutin_detail', array('no_doc' => $id));
-			$result = $this->db->trans_status();
-			$this->db->trans_complete();
-			$keterangan     = "SUKSES, Delete data  ";
-			$status         = 1;
-			$nm_hak_akses   = $this->deletePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
-		} else {
-			$result = 0;
-			$keterangan     = "GAGAL, Delete data  ";
-			$status         = 0;
-			$nm_hak_akses   = $this->deletePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
+			$ok = (bool) $this->db->delete('tr_pengajuan_rutin_detail', array('no_doc' => $id)) && $ok;
+			$ok = (bool) $this->db->delete('tr_pengajuan_rutin', array('no_doc' => $id)) && $ok;
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			return $fail('Please try again later !', 'exception');
 		}
-		simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
-		$param = array(
-			'delete' => $result,
-			'idx' => $id
-		);
-		echo json_encode($param);
+		if (!$ok || $this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return $fail('Please try again later !', 'write_failed');
+		}
+		if ($this->db->trans_commit() === false) {
+			return $fail('Please try again later !', 'commit_failed');
+		}
+		$this->completeAudit('Hapus data pengajuan rutin', 1, array('no_doc' => $id, 'outcome' => 'deleted'));
+		$this->jsonOut(array('delete' => 1, 'idx' => $id));
 	}
 
-	// approve
-	public function approve($id = '')
+	/** Tutup item yang ditolak tanpa mengajukan ulang. POST: no_item, note (wajib). */
+	public function close_item()
 	{
-		$result = false;
-		if ($id != "") {
-			$data = array(
-				array(
-					'id' => $id,
-					'status' => 1,
-					'approved_by' => $this->auth->user_id(),
-					'approved_date' => date('Y-m-d H:i:s'),
-					'reject_by' => null,
-					'reject_date' => null
-				)
-			);
-			$result = $this->Pengajuan_rutin_model->update_batch($data, 'id');
-			$keterangan     = "SUKSES, Approve data " . $id;
-			$status         = 1;
-			$nm_hak_akses   = $this->managePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+		$this->requireWrite();
+		$no   = (string) $this->input->post('no_item');
+		$note = trim((string) $this->input->post('note'));
+		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
+		$fail = function ($msg, $outcome) {
+			$this->completeAudit('Menutup item pengajuan rutin', 0, array('outcome' => $outcome));
+			$this->jsonOut(array('save' => 0, 'msg' => $msg));
+		};
+		if ($note === '') {
+			return $fail('Alasan wajib diisi untuk menutup item.', 'empty_note');
 		}
-		$param = array(
-			'save' => $result,
-			'id' => $id
-		);
-		echo json_encode($param);
-	}
-	public function reject($id = '')
-	{
-		$result = false;
-		if ($id != "") {
-			$data = array(
-				array(
-					'id' => $id,
-					'sts_reject' => 1,
-					'reject_ket' => $this->input->post('reject_reason'),
-					'reject_by' => $this->auth->user_id(),
-					'reject_date' => date('Y-m-d H:i:s')
-				)
-			);
-			$result = $this->Pengajuan_rutin_model->update_batch($data, 'id');
-			$keterangan     = "SUKSES, Reject data " . $id;
-			$status         = 1;
-			$nm_hak_akses   = $this->managePermission;
-			$kode_universal = $id;
-			$jumlah = 1;
-			$sql            = $this->db->last_query();
-			simpan_aktifitas($nm_hak_akses, $kode_universal, $keterangan, $jumlah, $sql, $status);
+		$item = periodik_is_item_no($no) ? $this->db->get_where('tr_pengajuan_rutin_detail', array('no_item' => $no))->row() : null;
+		$head = $item ? $this->db->get_where('tr_pengajuan_rutin', array('no_doc' => $item->no_doc))->row() : null;
+		if (!$item || !$head) {
+			return $fail('Item tidak ditemukan.', 'not_found');
 		}
-		$param = array(
-			'save' => $result,
-			'id' => $id
-		);
-		echo json_encode($param);
+		if (!$this->isAdmin() && (string) $head->departement !== (string) $this->get_user_department()) {
+			return $fail('Anda tidak memiliki akses ke data departemen ini.', 'unauthorized');
+		}
+		if ((int) $item->item_status !== 8 || !empty($item->diajukan_ulang_sebagai) || !empty($item->closed_at)) {
+			return $fail('Hanya item yang ditolak dan belum diajukan ulang yang bisa ditutup.', 'not_closable');
+		}
+		try {
+			$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail',
+				array('closed_note' => $note, 'closed_by' => $this->currentUserName(), 'closed_at' => date('Y-m-d H:i:s')), array('no_item' => $no));
+		} catch (Throwable $e) {
+			$ok = false;
+		}
+		if (!$ok) {
+			return $fail('Please try again later !', 'write_failed');
+		}
+		$this->completeAudit('Menutup item pengajuan rutin', 1, array('outcome' => 'closed'));
+		$this->jsonOut(array('save' => 1, 'no_item' => $no));
 	}
 
-	public function get_pengajuan_periodik()
+	/* ------------------------------ Approval ------------------------------ */
+
+	public function app_list()
 	{
-		$post = $this->input->post();
+		$this->auth->restrict($this->approvalViewPermission);
+		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
+		$batches = $this->Pengajuan_rutin_model->GetBatchesWithItems(null);
+		$this->auditObserve($batches);
+		$batches = is_array($batches) ? $batches : array();
+		$this->template->set('batches', $batches);
+		$this->template->set('names', $this->deptNames());
+		$this->template->set('can_decide', has_permission($this->approvalManagePermission));
+		$this->template->title('Approval Pengajuan Periodik');
+		$this->template->render('app_list');
+		$this->completeAudit('Membuka halaman approval pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
+	}
 
-		$draw = intval($post['draw']);
-		$length = $post['length'];
-		$start = $post['start'];
-		$search = $post['search']['value'];
-
-		$is_admin = $this->auth->is_admin();
-		$user_dept = $this->get_user_department();
-
-		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
-		$this->db->from('tr_pengajuan_rutin a');
-		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		if (!$is_admin) {
-			if (!empty($user_dept)) {
-				$this->db->where('a.departement', $user_dept);
-			} else {
-				$this->db->where('1 = 0');
+	/** Form keputusan satu batch (per item). $id = id header. */
+	public function proses($id = '')
+	{
+		$this->auth->restrict($this->approvalManagePermission);
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
+		$data = $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+		$this->auditObserve($data);
+		$all = $data ? $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $data->no_doc) : false;
+		$this->auditObserve($all);
+		$batch = is_array($all) && $data && isset($all[$data->no_doc]) ? $all[$data->no_doc] : null;
+		if (!$batch || !in_array('W', array_column($batch['items'], 'status'), true)) {
+			$this->template->set_message($batch ? 'Semua item batch ini sudah diputuskan.' : 'Invalid Data', 'error');
+			$this->completeAudit('Membuka form approval pengajuan rutin', 0, array('id' => $id, 'outcome' => !$data ? 'not_found' : (!$this->auditQueriesOk ? 'query_error' : ($batch ? 'already_decided' : 'not_found'))));
+			redirect('pengajuan_rutin/app_list');
+			return;
+		}
+		$names = $this->deptNames();
+		$chain = array();
+		foreach ($batch['items'] as $it) {
+			if ($it['ref'] !== '') {
+				$chain[$it['no_item']] = $this->revisionChain($it['ref']);
 			}
 		}
-		$this->db->group_by('a.no_doc');
-		$count_all = $this->db->get()->num_rows();
+		$this->template->set('batch', $batch);
+		$this->template->set('dept_name', isset($names[$batch['dept']]) ? $names[$batch['dept']] : $batch['dept']);
+		$this->template->set('chain', $chain);
+		$this->template->title('Approval Pengajuan Periodik');
+		$this->template->render('approval_form');
+		$this->completeAudit('Membuka form approval pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'id' => $id, 'no_doc' => $batch['no'], 'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
+	}
 
-		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
-		$this->db->from('tr_pengajuan_rutin a');
-		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		if (!$is_admin) {
-			if (!empty($user_dept)) {
-				$this->db->where('a.departement', $user_dept);
-			} else {
-				$this->db->where('1 = 0');
+	/** Rantai revisi ke belakang: [{no, note}] dari penolakan terdekat. Maksimal 10 tingkat. */
+	private function revisionChain($no)
+	{
+		$out = array();
+		for ($g = 0; $no !== '' && $g < 10; $g++) {
+			$row = $this->db->get_where('tr_pengajuan_rutin_detail', array('no_item' => $no))->row();
+			if (!$row) {
+				break;
 			}
+			$out[] = array('no' => $no, 'note' => (string) $row->item_reject_ket);
+			$no = (string) $row->revisi_dari;
+		}
+		return $out;
+	}
+
+	/**
+	 * Simpan keputusan per item. POST: id (batch), decision[no_item]=A|R, note[no_item], general_note.
+	 * Keputusan bersifat final: item yang sudah diputuskan tidak diubah, batch tanpa item menunggu ditolak.
+	 */
+	public function save_decision()
+	{
+		$this->auth->restrict($this->approvalManagePermission);
+		$id = (string) $this->input->post('id');
+		$decision = (array) $this->input->post('decision');
+		$note = (array) $this->input->post('note');
+		$general = trim((string) $this->input->post('general_note'));
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'approved_count', 'rejected_count', 'outcome'));
+		$fail = function ($msg, $outcome) use ($id) {
+			$this->completeAudit('Menyimpan keputusan approval pengajuan rutin', 0, array('id' => $id, 'outcome' => $outcome));
+			$this->jsonOut(array('save' => 0, 'msg' => $msg));
+		};
+
+		$header = $this->Pengajuan_rutin_model->GetDataPengajuanRutin($id);
+		$all = $header ? $this->Pengajuan_rutin_model->GetBatchesWithItems(null, $header->no_doc) : false;
+		$batch = is_array($all) && $header && isset($all[$header->no_doc]) ? $all[$header->no_doc] : null;
+		if (!$batch) {
+			return $fail('Batch tidak ditemukan.', 'not_found');
+		}
+		$waiting = array_filter($batch['items'], function ($i) { return $i['status'] === 'W'; });
+		if (!$waiting) {
+			return $fail('Keputusan batch ini sudah disimpan dan tidak bisa diubah.', 'already_decided');
 		}
 
-		if (!empty($search)) {
-			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.nilai_total', $search, 'both');
-			$this->db->or_like('a.tanggal_doc', $search, 'both');
-			$this->db->or_like('b.keterangan', $search, 'both');
-			$this->db->group_end();
+		$plan = array();
+		$missing = array();
+		foreach ($waiting as $it) {
+			$key = $it['no_item'];
+			$dec = isset($decision[$key]) && $decision[$key] === 'R' ? 'R' : 'A';
+			$text = trim((string) ($note[$key] ?? ''));
+			if ($dec === 'R' && $text === '' && $general === '') {
+				$missing[] = $key;
+			}
+			$plan[] = array('it' => $it, 'dec' => $dec, 'note' => $text !== '' ? $text : $general);
+		}
+		if ($missing) {
+			return $fail('Ada item yang di-reject tanpa alasan. Isi alasan per item atau alasan reject umum.', 'missing_reason');
 		}
 
-		$this->db->group_by('a.no_doc');
-		$count_filter = $this->db->get()->num_rows();
-
-		$this->db->select('a.*, IF(SUM(b.nilai) IS NULL, 0, SUM(b.nilai)) as nilai_total');
-		$this->db->from('tr_pengajuan_rutin a');
-		$this->db->join('tr_pengajuan_rutin_detail b', 'b.no_doc = a.no_doc', 'left');
-		if (!$is_admin) {
-			if (!empty($user_dept)) {
-				$this->db->where('a.departement', $user_dept);
-			} else {
-				$this->db->where('1 = 0');
-			}
+		$by = $this->currentUserName();
+		$byId = method_exists($this->auth, 'user_id') ? (string) $this->auth->user_id() : ''; // kolom header varchar(10) berisi id user, seperti data yang sudah ada
+		$now = date('Y-m-d H:i:s');
+		if ($this->db->trans_begin() === false) {
+			return $fail('Please try again later !', 'trans_begin_failure');
 		}
-
-		if (!empty($search)) {
-			$this->db->group_start();
-			$this->db->like('a.no_doc', $search, 'both');
-			$this->db->or_like('a.nilai_total', $search, 'both');
-			$this->db->or_like('a.tanggal_doc', $search, 'both');
-			$this->db->or_like('b.keterangan', $search, 'both');
-			$this->db->group_end();
+		$ok = true;
+		$approved = $rejected = 0;
+		try {
+		foreach ($plan as $p) {
+			$upd = array('item_status' => $p['dec'] === 'A' ? 1 : 8, 'item_approved_by' => $by, 'item_approved_date' => $now,
+				'item_reject_ket' => $p['dec'] === 'R' ? $p['note'] : null);
+			if ($p['it']['no_item'] === $p['it']['no_batch']) { // batch lama: nomor item baru dibuat saat diputuskan
+				$upd['no_item'] = periodik_next_number($this->db, 'PI');
+				if ($upd['no_item'] === '') { $ok = false; break; }
+			}
+			$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', $upd, array('id' => $p['it']['id'], 'item_status' => 0)) && $ok;
+			$ok = $ok && $this->db->affected_rows() === 1;
+			$p['dec'] === 'A' ? $approved++ : $rejected++;
+			if (!$ok) { break; }
 		}
-
-		$this->db->group_by('a.no_doc');
-		$this->db->order_by('a.created_on', 'desc');
-		$this->db->limit($length, $start);
-
-		$get_data = $this->db->get()->result();
-
-		$no = (0 + $start);
-		$hasil = [];
-
-		foreach ($get_data as $item) {
-
-			$no++;
-
-			$this->hris->select('a.id, a.name as nm_dept, b.name as nm_comp');
-			$this->hris->from('departments a');
-			$this->hris->join('companies b', 'b.id = a.company_id', 'left');
-			$this->hris->where('a.id', $item->departement);
-			$get_departments = $this->hris->get()->row();
-
-			$nm_dept = (!empty($get_departments->nm_dept)) ? $get_departments->nm_dept : '';
-
-			$nm_comp = (!empty($get_departments->nm_comp)) ? $get_departments->nm_comp : '';
-
-			$status = '';
-
-			if ($item->sts_reject == '1') {
-				$status = '<div class="badge bg-red">Reject</div>';
-			} else {
-				if ($item->status == '1') {
-					$status = '<div class="badge bg-green">Approved</div>';
-				} else {
-					if ($item->status == '2') {
-						$status = '<div class="badge bg-blue">Diproses Finance</div>';
-
-						$this->db->select('a.id');
-						$this->db->from('payment_approve a');
-						$this->db->where('a.no_doc', $item->no_doc);
-						$count_payment_periodik = $this->db->get()->num_rows();
-
-						if ($count_payment_periodik > 0) {
-							$status = '<div class="badge bg-green">Paid</div>';
-						}
-					} else {
-						$status = '<div class="badge bg-yellow">Waiting Approval</div>';
-					}
-				}
-			}
-
-			$btn_view = '';
-			$btn_edit = '';
-			$btn_delete = '';
-
-			if (has_permission($this->viewPermission)) {
-				$btn_view = '<a class="btn btn-info btn-sm view" href="javascript:void(0)" title="View" onclick="data_view(' . $item->id . ')"><i class="fa fa-eye"></i></a>';
-			}
-
-			if ($item->status == 0) {
-				if (has_permission($this->managePermission)) {
-					$btn_edit = '<a href="javascript:void(0);" class="btn btn-sm btn-warning btn_edit" title="Edit" onclick="data_edit(' . $item->id . ')"><i class="fa fa-edit"></i></a>';
-				}
-				if (has_permission($this->deletePermission)) {
-					$no_doc_delete = str_replace($item->no_doc, "'" . $item->no_doc . "'", $item->no_doc);
-					$btn_delete = '<a class="btn btn-danger btn-sm delete" href="javascript:void(0);" title="hapus" onclick="data_delete(' . $no_doc_delete . ')"><i class="fa fa-trash"></i</a>';
-				}
-			}
-
-			$keterangan_reject = '';
-			if ($item->status < 1 && $item->sts_reject == 1) {
-				$keterangan_reject = $item->reject_ket;
-			}
-
-			// Ambil semua keterangan detail dokumen ini
-			$this->db->select('keterangan');
-			$this->db->from('tr_pengajuan_rutin_detail');
-			$this->db->where('no_doc', $item->no_doc);
-			$this->db->where("TRIM(IFNULL(keterangan, '')) <>", '');
-			$this->db->order_by('id', 'asc');
-			$rows_ket = $this->db->get()->result();
-
-			$list_ket = [];
-			foreach ($rows_ket as $rk) {
-				$list_ket[] = trim($rk->keterangan);
-			}
-
-			$keterangan_html = '<span class="text-muted">-</span>';
-			if (count($list_ket) == 1) {
-				$keterangan_html = '<div class="ket-box ket-single">' . htmlspecialchars($list_ket[0], ENT_QUOTES) . '</div>';
-			} elseif (count($list_ket) > 1) {
-				$items = '';
-				foreach ($list_ket as $k) {
-					$items .= '<li>' . htmlspecialchars($k, ENT_QUOTES) . '</li>';
-				}
-				$keterangan_html = '<div class="ket-box"><ol class="ket-list">' . $items . '</ol></div>';
-			}
-
-			$action = $btn_view . ' ' . $btn_edit . ' ' . $btn_delete;
-
-			$hasil[] = [
-				'no' => $no,
-				'department' => strtoupper($nm_dept . ' - ' . $nm_comp),
-				'nomor' => $item->no_doc,
-				'nominal' => number_format($item->nilai_total),
-				'tanggal' => date('d F Y', strtotime($item->tanggal_doc)),
-				'keterangan' => $keterangan_html,
-				'status' => $status,
-				'keterangan_reject' => $keterangan_reject,
-				'action' => $action
-			];
+		if ($ok) {
+			// header: status 1 bila ada item disetujui; seluruhnya ditolak -> sts_reject
+			$anyApproved = $approved > 0 || in_array('A', array_column($batch['items'], 'status'), true);
+			$ok = (bool) $this->db->update('tr_pengajuan_rutin', $anyApproved
+				? array('status' => 1, 'sts_reject' => null, 'approved_by' => $byId, 'approved_date' => $now)
+				: array('status' => 0, 'sts_reject' => 1, 'reject_ket' => $general !== '' ? $general : 'Seluruh item ditolak', 'reject_by' => $byId, 'reject_date' => $now),
+				array('no_doc' => $batch['no']));
 		}
-
-		$response = [
-			'draw' => $draw,
-			'recordsTotal' => $count_all,
-			'recordsFiltered' => $count_filter,
-			'data' => $hasil
-		];
-
-		echo json_encode($response);
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			return $fail('Please try again later !', 'exception');
+		}
+		if (!$ok || $this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return $fail('Please try again later !', 'write_failed');
+		}
+		if ($this->db->trans_commit() === false) {
+			return $fail('Please try again later !', 'commit_failed');
+		}
+		$letters = array_merge(array_column($plan, 'dec'), array_column(array_filter($batch['items'], function ($i) { return $i['status'] !== 'W'; }), 'status'));
+		list($code, $label) = Periodik_logic::batch_status($letters);
+		$this->completeAudit('Menyimpan keputusan approval pengajuan rutin', 1, array('id' => $id, 'no_doc' => $batch['no'], 'approved_count' => $approved, 'rejected_count' => $rejected, 'outcome' => 'decided'));
+		$this->jsonOut(array('save' => 1, 'no_doc' => $batch['no'], 'status' => $label, 'approved' => $approved, 'rejected' => $rejected));
 	}
 }

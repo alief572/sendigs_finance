@@ -10,18 +10,18 @@ $vuca = array('tipe_invoice'=>1,'tagihan_ppn_jurnal'=>'0.00','total_nominal_jurn
 check($C::invoice_gross($vuca) === 1500000000 && $vuca['saldo_piutang'] === '14925000.00', 'Legacy Vuca gross without balance mutation');
 $vuca['tipe_invoice']=0;
 check($C::invoice_gross($vuca) === 0, 'Fallback limited to Vuca');
-$settled=$C::calculate(1492500000,7500000,'N',1500000000,0);
-check($settled === array('adjustment'=>7500000,'reduction'=>1492500000,'remaining'=>0), '036 Vuca non deducted');
+$settled=$C::calculate(1492500000,7500000,'N',1492500000,0);
+check($settled === array('adjustment'=>0,'reduction'=>1492500000,'remaining'=>0), '036 Vuca non deducted');
 check($C::calculate(1492500000,7500000,'Y',1492500000,0)['remaining'] === 0, '036 Vuca deducted');
 try { $C::calculate(1492500000,7500000,'Y',1500000000,0); throw new RuntimeException('Vuca overpayment accepted'); } catch (InvalidArgumentException $expected) {}
 check($C::cents('2.574.990,50', true) === 257499050, 'Indonesian decimals');
 check($C::decimal(-101) === '-1.01', 'Decimal output');
 $first = $C::calculate(2551581000, 46818000, 'N', 2340900000, 0);
-check($first['remaining'] === 257499000 && $first['adjustment'] === 46818000, 'First installment');
-$last = $C::calculate($first['remaining'], 0, 'N', 257499000, 0);
-check($last['remaining'] === 0 && $last['reduction'] === 257499000 && $last['adjustment'] === 0, 'MINARTA settlement');
+check($first['remaining'] === 210681000 && $first['adjustment'] === 0, 'First installment');
+$last = $C::calculate($first['remaining'], 0, 'N', 210681000, 0);
+check($last['remaining'] === 0 && $last['reduction'] === 210681000 && $last['adjustment'] === 0, 'MINARTA settlement');
 $tiny = $C::calculate(100000, 20000, 'N', 10000, 0);
-check($tiny['adjustment'] === 10000 && $tiny['reduction'] === 0, 'Adjustment limited to receipt');
+check($tiny['adjustment'] === 0 && $tiny['reduction'] === 10000, 'N never adjusts PPh');
 check($C::calculate(10050, 500, 'Y', 10000, 50)['remaining'] === 0, 'Deducted with admin and cents');
 check($C::calculate(10050, 0, 'N', 10050, 0)['remaining'] === 0, 'No PPh');
 foreach (array('1,234.56', 'NaN', '1,234', array(), '99999999999999') as $bad) {
@@ -37,7 +37,8 @@ $pkp = $C::tax_calc(200000000, 'PKP');
 check($pkp['sales'] === 200000000, 'PKP sales');
 check($pkp['dpp_lain'] === 183333333, 'PKP dpp lain 11/12');
 check($pkp['ppn'] === 22000000, 'PKP ppn 12%');
-check($pkp['pph_default'] === 3666667, 'PKP pph 2%');
+check($pkp['pph_default'] === 4000000, 'PKP pph 2% x penjualan');
+check($C::tax_calc(2400000000, 'PKP')['pph_default'] === 48000000, 'Invoice 24.000.000: PPh 23 = 2% x penjualan = 480.000');
 check($pkp['tagihan'] === 222000000, 'PKP tagihan sales+ppn');
 check($pkp['piutang'] === 222000000, 'PKP piutang');
 
@@ -46,7 +47,7 @@ $wapu = $C::tax_calc(300000000, 'WAPU');
 check($wapu['sales'] === 300000000, 'WAPU sales');
 check($wapu['dpp_lain'] === 275000000, 'WAPU dpp lain');
 check($wapu['ppn'] === 0, 'WAPU ppn 0');
-check($wapu['pph_default'] === 5500000, 'WAPU pph default');
+check($wapu['pph_default'] === 6000000, 'WAPU pph default 2% x penjualan');
 check($wapu['tagihan'] === 300000000, 'WAPU tagihan sales only');
 check($wapu['piutang'] === 300000000, 'WAPU piutang');
 
@@ -55,7 +56,7 @@ $kb = $C::tax_calc(6000000000, 'KB');
 check($kb['sales'] === 6000000000, 'KB sales');
 check($kb['dpp_lain'] === 5500000000, 'KB dpp lain');
 check($kb['ppn'] === 0, 'KB ppn 0');
-check($kb['pph_default'] === 110000000, 'KB pph default');
+check($kb['pph_default'] === 120000000, 'KB pph default 2% x penjualan');
 check($kb['tagihan'] === 6000000000, 'KB tagihan sales only');
 check($kb['piutang'] === 6000000000, 'KB piutang');
 
@@ -89,4 +90,82 @@ $negVal = array(
 $resNeg = $C::validate_batch($negVal, 222000001, 'Y');
 check($resNeg['valid'] === false && strpos($resNeg['errors'][0], 'negatif') !== false, 'Negative value rejected');
 
-echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, and batch validation\n";
+// 6. Deposit & Lebih Bayar Kontrol & Batch Validation
+// Kontrol formula: ((Piutang - PPh - Admin - Sisa) - Uang Masuk - Deposit) + Lebih Bayar = 0
+// Case A: Pakai Deposit (Piutang 100jt, PPh 0, Admin 0, Sisa 0, Uang Masuk 70jt, Deposit 30jt, Lebih 0) -> Kontrol 0
+$kDep = $C::kontrol(100000000, 0, 0, 0, 70000000, 30000000, 0);
+check($kDep === 0, 'Kontrol zero with deposit usage');
+check($C::kontrol_v2(100000000, 0, 0, 0, 70000000, 30000000, 0) === 0, 'kontrol_v2 alias matches kontrol');
+
+// Case B: Lebih Bayar (Piutang 100jt, PPh 0, Admin 0, Sisa 0, Uang Masuk 120jt, Deposit 0, Lebih Bayar 20jt) -> Kontrol 0
+$kLebih = $C::kontrol(100000000, 0, 0, 0, 120000000, 0, 20000000);
+check($kLebih === 0, 'Kontrol zero with overpayment (lebih bayar)');
+
+// Batch with deposit:
+$batchDep = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>100000000, 'pph'=>0, 'admin'=>0, 'sisa'=>0, 'dep'=>30000000, 'lebih'=>0)
+);
+$resDepValid = $C::validate_batch($batchDep, 70000000, 'N', 'Y', 30000000, 50000000);
+check($resDepValid['valid'] === true && $resDepValid['kontrol'] === 0, 'Valid batch with deposit passes');
+
+// Batch with deposit exceeding customer active balance:
+try {
+    $C::validate_batch($batchDep, 70000000, 'N', 'Y', 30000000, 20000000);
+    check(false, 'Should throw if deposit exceeds active customer deposit');
+} catch (InvalidArgumentException $e) {
+    check(strpos($e->getMessage(), 'melebihi saldo deposit') !== false, 'Excess deposit exception message correct');
+}
+
+// Batch with both deposit and lebih bayar (forbidden):
+$batchBoth = array(
+    array('no_invoice'=>'INV-001', 'piutang'=>100000000, 'pph'=>0, 'admin'=>0, 'sisa'=>0, 'dep'=>10000000, 'lebih'=>5000000)
+);
+$resBoth = $C::validate_batch($batchBoth, 95000000, 'N', 'Y', 10000000, 50000000);
+check($resBoth['valid'] === false && strpos($resBoth['errors'][0], 'bersamaan') !== false, 'Simultaneous deposit and lebih bayar rejected');
+
+// Kode pajak tersimpan: snapshot menang atas kolom, kolom menang atas snapshot type, kosong bila tidak ada (tidak menebak dari PPN).
+check($C::stored_tax_code(array('tax_treatment' => 'WAPU'), 'PKP') === 'WAPU', 'Snapshot tax_treatment wins over invoice column');
+check($C::stored_tax_code(null, 'KB') === 'KB', 'Invoice column used without snapshot');
+check($C::stored_tax_code(array('type' => 'DEP'), '') === 'DEP', 'Snapshot type is the last stored source');
+check($C::stored_tax_code(array('type' => 'DEP'), 'PKP') === 'PKP', 'Invoice column wins over snapshot type');
+check($C::stored_tax_code(null, '') === '' && $C::stored_tax_code(false, null) === '' && $C::stored_tax_code(array('ppn' => 5000), '') === '', 'No stored tax code returns empty, never PKP/WAPU');
+
+// Dipotong (Y) dengan PPh 23 yang bisa diedit: p = PPh yang benar-benar dipotong, anggaran d = sisa batas; penyesuaian = d - p.
+$d = 46818000;
+check($C::calculate(257499000, $d, 'Y', 257499000, 0) === array('adjustment'=>0,'reduction'=>257499000,'remaining'=>0), 'Y without actual PPh is unchanged');
+check($C::calculate(257499000, $d, 'Y', 257499000, 0, $d) === array('adjustment'=>0,'reduction'=>257499000,'remaining'=>0), 'Y with p = budget equals the default');
+$partial = $C::calculate(257499000, $d, 'Y', 277499000, 0, 26818000);
+check($partial === array('adjustment'=>20000000,'reduction'=>257499000,'remaining'=>0), 'Y with lower p reverses the difference: '.json_encode($partial));
+check($C::calculate(257499000, $d, 'Y', 277498750, 250, 26818000)['reduction'] === 257499000, 'Admin is added before the PPh adjustment');
+foreach (array('p above budget'=>array($d + 1), 'negative p'=>array(-1), 'adjustment above receipt'=>array(0, 100000)) as $label => $args) {
+    $thrown = false;
+    try { $C::calculate(257499000, $d, 'Y', $args[1] ?? 257499000, 0, $args[0]); } catch (InvalidArgumentException $e) { $thrown = true; }
+    check($thrown, 'Y rejects '.$label);
+}
+check($C::calculate(257499000, $d, 'N', 257499000, 0, 0)['adjustment'] === 0, 'N ignores the actual PPh argument');
+
+// Jurnal Y bergaya mockup (a > 0): Dr Bank + Admin + PPh = Cr Piutang bruto (alokasi + admin + PPh).
+$r = 36180000; $a = 30000000; $cash = 19718100; $adm = 5000;
+$calc = $C::calculate(2007990000, $r, 'Y', $cash, $adm, $a);
+check($r - $calc['adjustment'] === $a && $cash + $adm + $a === $cash + $adm + ($r - $calc['adjustment']), 'Y mockup journal balances');
+
+// N bruto: saldo neto + sisa anggaran PPh dilunasi penuh = 0; sebagian = saldo bruto - kas - admin.
+$gN = 1971810000 + 36180000;
+check($C::calculate($gN, 36180000, 'N', $gN, 0)['remaining'] === 0, 'N gross settles fully');
+check($C::calculate($gN, 36180000, 'N', 1000000000, 5000)['remaining'] === $gN - 1000005000, 'N gross partial');
+
+// settle(): perhitungan mockup. 174/STM/2026: G 20.079.900, PPh 361.800.
+$s = $C::settle(2007990000, 36180000, 'Y', 36180000, 250000, 0);
+check($s['cash'] === 2007990000 - 36180000 - 250000 && $s['remaining'] === 0 && $s['pph'] === 36180000, 'settle Y with admin');
+$s = $C::settle(2007990000, 0, 'N', 0, 0, 500000000);
+check($s['cash'] === 1507990000 && $s['remaining'] === 500000000 && $s['pph'] === 0, 'settle N partial with sisa');
+check($C::settle(2007990000, 36180000, 'N', 36180000, 0, 0)['pph'] === 0, 'settle N ignores PPh input');
+// Deposit dipakai mengurangi kas bank: 20.079.900 - PPh 361.800 - deposit 5.000.000 = 14.718.100.
+$s = $C::settle(2007990000, 36180000, 'Y', 36180000, 0, 0, 500000000);
+check($s['cash'] === 1471810000 && $s['dep'] === 500000000, 'settle with deposit reduces cash');
+try { $C::settle(100, 0, 'N', 0, 0, 0, 101); throw new RuntimeException('settle accepted deposit above balance'); } catch (InvalidArgumentException $expected) {}
+foreach (array(array(100, 10, 'Y', 11, 0, 0), array(100, 0, 'N', 0, 0, 101), array(100, 10, 'Y', 10, 95, 0), array(100, 0, 'X', 0, 0, 0)) as $bad) {
+    try { call_user_func_array(array($C, 'settle'), $bad); throw new RuntimeException('settle accepted invalid input'); } catch (InvalidArgumentException $expected) {}
+}
+
+echo "PASS: money parsing, MINARTA, partial PPh, admin, decimals, To-Be tax calculation, kontrol zero balance, deposit, batch validation and stored tax code\n";

@@ -1,4 +1,5 @@
 <?php
+$coa_piutang = isset($coa_piutang) ? $coa_piutang : Expense_company::COA_PIUTANG_KASBON;
 $no_doc_val   = isset($data->no_doc) ? $data->no_doc : '';
 $no_kasbon    = isset($data->id_kasbon) ? $data->id_kasbon : '-';
 $tgl_approval = !empty($data->tgl_approval_direktur) ? $data->tgl_approval_direktur : (!empty($data->created_date) ? $data->created_date : '-');
@@ -419,22 +420,14 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 					</label>
 					<select name="id_bank_pengembalian" id="id_bank_pengembalian" class="sendigs-form-control" <?= ($is_readonly ? 'disabled' : 'required') ?>>
 						<option value="">- Pilih Bank -</option>
+						<?php $selected_bank_id = Expense_company::selectedReturnBank($data, $bank_options); ?>
 						<?php foreach ($bank_options as $bk): ?>
 							<?php
 								$bank_title = !empty($bk->nama_bank) ? $bk->nama_bank : 'Bank';
-								$bank_company = 'STM';
-								if (stripos($bk->nama, 'VUCA') !== false) {
-									$bank_company = 'VUCA';
-								} else if (stripos($bk->nama, 'SUSTAIN') !== false) {
-									$bank_company = 'SUSTAIN';
-								}
+								try { $bank_company = ['7'=>'STM','4'=>'VUCA','3'=>'SUSTAIN'][Expense_company::bankCompanyId($bk)]; }
+								catch (DomainException $error) { $bank_company = '-'; }
 								$bank_label = $bank_title . ' - ' . $bk->rekening . ' (a.n ' . $bk->nama . ')';
-								$is_selected = false;
-								if (!empty($data->id_bank_pengembalian) && $data->id_bank_pengembalian == $bk->id) {
-									$is_selected = true;
-								} else if (!empty($data->transfer_coa_bank) && $data->transfer_coa_bank == $bk->coa_bank) {
-									$is_selected = true;
-								}
+								$is_selected = (string)$bk->id === $selected_bank_id;
 							?>
 							<option value="<?= htmlspecialchars($bk->id) ?>" 
 									data-coa="<?= htmlspecialchars($bk->coa_bank) ?>" 
@@ -505,7 +498,7 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 			<div class="card-sendigs-header">
 				<span><i class="fa fa-table"></i> Daftar Jurnal Pengembalian Kasbon</span>
 				<?php if ((string)$data->status === '2'): ?>
-					<span class="badge" style="background:#00a65a; color:#fff; font-size:11px; padding:3px 8px;">Posted: Terverifikasi oleh Finance</span>
+					<span class="badge" style="background:#00a65a; color:#fff; font-size:11px; padding:3px 8px;">Terverifikasi oleh Finance</span>
 				<?php elseif ((string)$data->status === '4'): ?>
 					<span class="badge-draft-jurnal">Draft: Menunggu Verifikasi Finance</span>
 				<?php else: ?>
@@ -531,7 +524,7 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 							<tr style="background: #f0fdf4;">
 								<td id="pv_tgl_1" style="color:#64748b;"><?= date('d F Y') ?></td>
 								<td id="pv_coa_1" style="font-weight:600; color:#2b6cb0;">—</td>
-								<td id="pv_comp_1">STM</td>
+								<td id="pv_comp_1">-</td>
 								<td id="pv_acc_1" style="color:#64748b; font-style:italic;">(pilih bank)</td>
 								<td style="color:#15803d; font-weight:500;">
 									<i class="fa fa-reply" style="font-size:11px;"></i> 
@@ -543,11 +536,11 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 							<!-- Baris 2: Sisi Kredit Piutang Kelebihan Kasbon -->
 							<tr>
 								<td id="pv_tgl_2" style="color:#64748b;"><?= date('d F Y') ?></td>
-								<td style="font-weight:600; color:#2b6cb0;">1103-01-15</td>
-								<td id="pv_comp_2">STM</td>
-								<td style="font-weight:500;">Piutang Kelebihan Kasbon</td>
+								<td style="font-weight:600; color:#2b6cb0;"><?= htmlspecialchars($coa_piutang) ?></td>
+								<td id="pv_comp_2">-</td>
+								<td style="font-weight:500;"><?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?></td>
 								<td style="color:#475569;">
-									Pelunasan Piutang Kelebihan Kasbon (<?= htmlspecialchars($no_kasbon) ?>)
+									<?= htmlspecialchars(Expense_company::piutangName($coa_piutang)) ?> (<?= htmlspecialchars($no_kasbon) ?>)
 								</td>
 								<td class="text-right" style="color:#94a3b8;">0</td>
 								<td id="pv_kredit_2" class="text-right" style="font-weight:700; color:#1e293b;"><?= number_format($harus_kembali) ?></td>
@@ -611,7 +604,7 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 		var opt = $(this).find(':selected');
 		var coa = opt.data('coa') || '';
 		var bankName = opt.data('bank-name') || '';
-		var company = opt.data('company') || 'STM';
+		var company = opt.data('company') || '-';
 
 		$('#transfer_coa_bank_val').val(coa);
 		update_journal_preview();
@@ -626,7 +619,7 @@ $existing_files = !empty($data->bukti_pengembalian) ? explode(';', $data->bukti_
 		var opt = $('#id_bank_pengembalian').find(':selected');
 		var coa = opt.data('coa') || '—';
 		var bankName = opt.data('bank-name') || '(pilih bank)';
-		var company = opt.data('company') || 'STM';
+		var company = opt.data('company') || '-';
 		var tglVal = $('#transfer_tanggal_input').val();
 
 		// Format tanggal display

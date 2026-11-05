@@ -173,7 +173,7 @@ class Batch5Result {
             );
         }
         return (object) array(
-            'id' => 1, 'ids' => 1, 'no_doc' => 'DOC-TEST', 'no_dokumen' => 'DOC-TEST', 'no_req' => 'DOC-TEST',
+            'id' => 1, 'ids' => 1, 'no_doc' => $scenario['row_no'] ?? 'DOC-TEST', 'no_dokumen' => $scenario['row_no'] ?? 'DOC-TEST', 'no_req' => $scenario['row_no'] ?? 'DOC-TEST',
             'no_non_po' => 'DOC-TEST', 'no_pr' => 'PR-01', 'id_pr' => 'PR-01', 'tipe_pr' => $scenario['tipe_pr'] ?? 'pr departemen',
             'no_kasbon_consultant' => !empty($scenario['consultant_kasbon']) ? 'KNS-01' : '',
             'no_expense_consultant' => !empty($scenario['consultant_expense']) ? 'EXP-KNS-01' : '',
@@ -452,6 +452,12 @@ foreach (array('Kasbon', 'Transport', 'Expense', 'Periodik', 'Direct Payment') a
         list($event, $output, $controller) = run_batch5('reject_req_payment', array('row_tipe' => $tipe, $fKey => true));
         check($event['status'] === 0 && json_decode($output, true)['status'] === 0 && !$controller->db->committed, 'reject_req_payment ' . $tipe . ' ' . $fKey);
     }
+}
+// Periodik per item: nomor PI-YYYY-NNNNN menolak satu item (detail), bukan seluruh batch.
+foreach (array(array(), array('update_failure' => true), array('trans_commit_failure' => true)) as $iOpt) {
+    list($event, $output, $controller) = run_batch5('reject_req_payment', array_merge(array('row_tipe' => 'Periodik', 'row_no' => 'PI-2026-00001'), $iOpt));
+    $ok = $event['status'] === 1 && $controller->db->committed;
+    check($iOpt ? ($event['status'] === 0 && !$controller->db->committed) : $ok, 'reject_req_payment periodik item ' . json_encode($iOpt));
 }
 foreach (array(
     array((object) array('no_doc' => '', 'tipe' => 'Kasbon')),

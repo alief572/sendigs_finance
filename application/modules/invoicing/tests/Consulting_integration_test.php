@@ -18,12 +18,16 @@ if(!function_exists('mb_strlen')){function mb_strlen($s,$enc=null){return strlen
 class Admin_Controller {} class BF_Model {}
 require BASEPATH.'database/DB.php';
 require APPPATH.'libraries/Module_audit_recorder.php';
+require APPPATH.'helpers/json_helper.php';
 require dirname(__DIR__).'/controllers/Invoicing.php';
 require dirname(__DIR__).'/models/Invoicing_model.php';
 require dirname(__DIR__).'/libraries/Invoice_consulting_service.php';
 require dirname(__DIR__,2).'/penerimaan_uang/controllers/Penerimaan_uang.php';
 require dirname(__DIR__,2).'/penerimaan_uang/models/Penerimaan_uang_model.php';
 require dirname(__DIR__,2).'/penerimaan_uang/libraries/Consulting_receipt.php';
+require dirname(__DIR__,2).'/kwitansi_deposit/models/Kwitansi_deposit_model.php';
+require dirname(__DIR__,2).'/kwitansi_deposit/libraries/Kwitansi_deposit_service.php';
+require dirname(__DIR__,2).'/deposit_customer/models/Deposit_customer_model.php';
 require dirname(__DIR__).'/libraries/Consulting_posting.php';
 require dirname(__DIR__,2).'/jurnal_invoicing/models/Jurnal_invoicing_model.php';
 require dirname(__DIR__,2).'/report_piutang_per_invoice/models/Report_piutang_per_invoice_model.php';
@@ -34,6 +38,11 @@ class ConsultingAuth { function user_id(){return '7';} function user_name(){retu
 class ConsultingInput {public $values=array();function post($key=null){return $key===null?$this->values:($this->values[$key]??null);} function get($key){return $this->values[$key]??null;} }
 class ConsultingLoader {
     public $ci;
+    function model($name){
+        $class=basename($name);
+        if ($class !== 'Deposit_customer_model') throw new RuntimeException('Unregistered fixture model '.$name);
+        $model=(new ReflectionClass($class))->newInstanceWithoutConstructor(); $model->db=$this->ci->db; $this->ci->$class=$model;
+    }
     function library($name){$this->ci->module_audit_recorder=new Module_audit_recorder;}
     function database($group,$return){return $this->ci->db;}
     public $viewData; public $viewName;
@@ -67,6 +76,17 @@ if($mode==='--worker'){
     $ci=(new ReflectionClass('Invoicing'))->newInstanceWithoutConstructor();$ci->db=$db;$ci->auth=new ConsultingAuth;$ci->input=new ConsultingInput;$ci->load=new ConsultingLoader;$ci->load->ci=$ci;$GLOBALS['test_ci']=$ci;
     $model=(new ReflectionClass('Invoicing_model'))->newInstanceWithoutConstructor();$model->db=$db;$model->auth=$ci->auth;$ci->Invoicing_model=$model;
     if($payload['operation']==='allocate')echo json_encode(array('number'=>$model->generate_no_invoice('1','0')));
+    elseif(in_array($payload['operation'],array('receipt','deposit_receipt'),true)){
+        $receipt=(new ReflectionClass('Penerimaan_uang'))->newInstanceWithoutConstructor();
+        $receipt->db=$db;$receipt->auth=$ci->auth;$receipt->input=$ci->input;$receipt->load=new ConsultingLoader;$receipt->load->ci=$receipt;
+        $receiptModel=(new ReflectionClass('Penerimaan_uang_model'))->newInstanceWithoutConstructor();$receiptModel->db=$db;$receipt->Penerimaan_uang_model=$receiptModel;
+        $GLOBALS['test_ci']=$receipt;
+        echo json_encode(controllerCall($receipt,$payload['operation']==='deposit_receipt'?'save_kwitansi_deposit':'save_penerimaan_piutang',$payload['post']));
+    }
+    elseif($payload['operation']==='create_kwitansi'){
+        $kw=(new ReflectionClass('Kwitansi_deposit_model'))->newInstanceWithoutConstructor();$kw->db=$db;
+        echo json_encode((new Kwitansi_deposit_service($ci))->create($payload['post'],$kw));
+    }
     elseif($payload['operation']==='post'){ $posting=new Consulting_posting($ci);echo json_encode($posting->invoice($payload['journal_id'])); }
     else echo json_encode(controllerCall($ci,$payload['operation']==='edit'?'update_invoice':'save_invoice',$payload['post']));
     exit;
@@ -102,13 +122,16 @@ $database='codex_consulting_'.bin2hex(random_bytes(5));$admin->query('CREATE DAT
 $native=DB(array('hostname'=>'127.0.0.1','port'=>33319,'username'=>'root','password'=>'consulting_test_local','database'=>$database,'dbdriver'=>'mysqli','pconnect'=>false,'db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci'),true);
 class ConsultingFaultDb extends CI_DB_mysqli_driver {
     public $fault='';
+    public $kwWrites=array();
     public function query($sql,$binds=false,$return_override=null){
+        if($this->fault==='kw_deposit_number' && strpos($sql,'deposit_number_candidates')!==false){$this->fault='';return false;}
+        if($this->fault==='kw_number' && strpos($sql,'kwitansi_number_candidates')!==false){$this->fault='';return false;}
         if($this->fault==='sequence' && strpos($sql,'UPDATE ms_invoice_sequence')===0){$this->fault='';return false;}
         return parent::query($sql,$binds,$return_override);
     }
-    public function insert($table='', $set=null, $escape=null){if($this->fault==='header' && $table==='tr_invoicing'){$this->fault='';return false;}return parent::insert($table,$set,$escape);}
-    public function insert_batch($table,$set=null,$escape=null,$batch_size=100){if($this->fault==='journal' && $table==='tr_jurnal'){$this->fault='';return false;}return parent::insert_batch($table,$set,$escape,$batch_size);}
-    public function update($table='', $set=null, $where=null, $limit=null){if(($this->fault==='top' && $table==='kons_tr_plan_tagih_detail') || ($this->fault==='invoice_update' && $table==='tr_invoicing')){$this->fault='';return false;}return parent::update($table,$set,$where,$limit);}
+    public function insert($table='', $set=null, $escape=null){$this->kwWrites[]=$table;if(($this->fault==='kw_header' && $table==='tr_kwitansi_deposit') || ($this->fault==='kw_invoice' && $table==='tr_invoicing')){$this->fault='';return false;}if(($this->fault==='deposit_insert' && $table==='tr_customer_deposit') || ($this->fault==='mutation_insert' && $table==='tr_customer_deposit_mutasi')){$this->fault='';return false;}if(($this->fault==='header' && $table==='tr_invoicing') || ($this->fault==='receipt_header' && $table==='tr_penerimaan_piutang')){$this->fault='';return false;}return parent::insert($table,$set,$escape);}
+    public function insert_batch($table,$set=null,$escape=null,$batch_size=100){$this->kwWrites[]=$table;if(($this->fault==='journal' && $table==='tr_jurnal') || ($this->fault==='receipt_detail' && $table==='tr_penerimaan_piutang_detail')){$this->fault='';return false;}return parent::insert_batch($table,$set,$escape,$batch_size);}
+    public function update($table='', $set=null, $where=null, $limit=null){if(($this->fault==='deposit_update' && $table==='tr_customer_deposit') || ($this->fault==='kw_update' && $table==='tr_kwitansi_deposit')){$this->fault='';return false;}if(($this->fault==='top' && $table==='kons_tr_plan_tagih_detail') || ($this->fault==='invoice_update' && $table==='tr_invoicing') || ($this->fault==='receipt_allocation' && $table==='tr_alokasi_split')){$this->fault='';return false;}return parent::update($table,$set,$where,$limit);}
     public function delete($table='', $where='', $limit=null, $reset_data=true){if($this->fault==='delete_journal' && $table==='tr_jurnal'){$this->fault='';return false;}return parent::delete($table,$where,$limit,$reset_data);}
     public function trans_commit(){if($this->fault==='commit'){$this->fault='';return false;}return parent::trans_commit();}
 }
@@ -125,6 +148,10 @@ try {
     $migration=dirname(__DIR__).'/migrations/003_consulting_v3.sql';migrateSql($db,$migration);migrateSql($db,$migration);
     verify($service->one("SELECT COUNT(*) n FROM permissions WHERE nm_permission='Invoicing.Configure'")['n']==1,'Idempotent permission');
     verify($service->one('SELECT id_user FROM user_permissions')['id_user']==7,'Admin only grant');
+    $depositMigration=dirname(__DIR__,2).'/penerimaan_uang/migrations/003_deposit_contract.sql';
+    migrateSql($db,$depositMigration); migrateSql($db,$depositMigration);
+    verify($db->field_exists('id_spk_penawaran','tr_kwitansi_deposit') && $db->field_exists('tanggal_aktif','tr_customer_deposit') && $db->field_exists('jenis_penerimaan','tr_penerimaan_piutang'),'Deposit contract fields available');
+    verify((int)$service->one("SELECT COUNT(*) n FROM permissions WHERE nm_permission IN ('Kwitansi_Deposit.Add','Kwitansi_Deposit.Export','Deposit_Customer.Export')")['n']===3,'Deposit permissions idempotent');
     $codes=array();$i=1;foreach(Invoice_consulting::roles()as $role=>$label){$code=sprintf('4101-01-%02d',$i++);$codes[$role]=$code;$db->insert('coa_master',array('no_perkiraan'=>$code,'nama'=>$label));}
     $settings=array('source_company_id'=>'1','owner_company_id'=>'7','accounts'=>$codes,'mapping_fingerprint'=>Invoice_calculation::fingerprint(array()));
     $GLOBALS['denied']=array('Invoicing.Configure');verify(controllerCall($ci,'save_coa_mapping',$settings)['status']===0,'Configuration permission');$GLOBALS['denied']=array();
@@ -168,11 +195,11 @@ try {
     foreach(array(
         "CREATE TABLE tr_alokasi_split(id INT PRIMARY KEY,id_alokasi_detail INT,nominal DECIMAL(20,2),nilai_terpakai DECIMAL(20,2),jenis_alokasi INT) ENGINE=InnoDB",
         "CREATE TABLE ms_bank(id INT PRIMARY KEY,coa_bank VARCHAR(30)) ENGINE=InnoDB",
-        "INSERT INTO coa_master VALUES ('1101-01-01','Bank'),('7201-01-04','Admin'),('1102-01-01','Piutang lama'),('1106-01-02','PPh lama'),('1106-01-05','PPh Vuca')",
+        "INSERT INTO coa_master VALUES ('1101-01-01','Bank'),('7201-01-04','Admin'),('1102-01-01','Piutang lama'),('1106-01-02','PPh lama'),('1106-01-05','PPh Vuca'),('2102-01-02','Deposit Customer')",
         "INSERT INTO ms_bank VALUES (1,'1101-01-01')",
         "INSERT INTO tr_alokasi_detail(id,tipe_bank,tanggal_transaksi,nominal_debit,nilai_terpakai) VALUES (100,1,'2026-10-18',100000,0)",
         "INSERT INTO tr_alokasi_split VALUES (200,100,100000,0,1)",
-        "ALTER TABLE kons_tr_spk_penawaran ADD id_penawaran VARCHAR(100)",
+        "ALTER TABLE kons_tr_spk_penawaran ADD id_penawaran VARCHAR(100), ADD no_spk VARCHAR(100)",
         "UPDATE kons_tr_spk_penawaran SET id_penawaran='Q2'",
         "CREATE TABLE javh(nomor VARCHAR(50) PRIMARY KEY,tgl DATE,jml DECIMAL(20,2),koreksi_no VARCHAR(100),kdcab VARCHAR(10),jenis VARCHAR(10),keterangan TEXT,bulan VARCHAR(10),tahun VARCHAR(10),user_id VARCHAR(100),memo TEXT,tgl_jvkoreksi DATE,ho_valid VARCHAR(10)) ENGINE=InnoDB",
         "CREATE TABLE jarh(nomor VARCHAR(50) PRIMARY KEY,tgl DATE,jml DECIMAL(20,2),kdcab VARCHAR(10),jenis_reff VARCHAR(10),no_reff VARCHAR(100),customer VARCHAR(100),terima_dari VARCHAR(100),jenis_ar VARCHAR(10),note TEXT,user_id VARCHAR(100),tgl_invoice DATE) ENGINE=InnoDB",
@@ -187,10 +214,19 @@ try {
     $receiptService=new Consulting_receipt($receiptCi);
     newSource($db,40);$r=controllerCall($ci,'save_invoice',invoiceRequest($service,40));verify($r['status']===1,'Receipt invoice created');$receiptId=$r['id'];
     $original=$service->one('SELECT * FROM tr_invoicing WHERE id=?',array($receiptId));
-    $receiptPost=function($ids,$cash,$admins,$taxes)use($receiptService){
-        $preview=$receiptService->preview(array('choose_inv'=>$ids,'id_alokasi'=>'200','pph23_dipotong'=>'N','ppn_dipotong'=>'Y'));
-        $post=array('no_inv'=>(string)count($ids),'id_alokasi'=>'200','pph23_dipotong'=>'N','ppn_dipotong'=>'Y','allocation_fingerprint'=>$preview['allocation_fingerprint']);
-        foreach($preview['rows']as $i=>$row){$n=$i+1;$post['id_inv_'.$n]=$row['invoice']['id'];$post['receipt_fingerprint_'.$n]=$row['fingerprint'];$post['penerimaan_'.$n]=$cash[$i];$post['biaya_admin_'.$n]=$admins[$i];$post['pph_actual_'.$n]=$taxes[$i];}
+    $receiptPost=function($ids,$cash,$admins,$taxes)use($receiptService,$db){
+        $totalCash=0;foreach($cash as $amount)$totalCash+=Invoice_calculation::cents($amount);
+        $used=$receiptService->preview(array('choose_inv'=>array($ids[0]),'id_alokasi'=>'200','pph23_dipotong'=>'Y'))['allocation']['used'];
+        $db->update('tr_alokasi_split',array('nominal'=>Invoice_calculation::decimal($used+$totalCash)),array('id'=>200));
+        $preview=$receiptService->preview(array('choose_inv'=>$ids,'id_alokasi'=>'200','pph23_dipotong'=>'Y','ppn_dipotong'=>'N'));
+        $post=array('no_inv'=>(string)count($ids),'id_alokasi'=>'200','pph23_dipotong'=>'Y','ppn_dipotong'=>'N','allocation_fingerprint'=>$preview['allocation_fingerprint']);
+        foreach($preview['rows']as $i=>$row){
+            $n=$i+1;$post['id_inv_'.$n]=$row['invoice']['id'];$post['receipt_fingerprint_'.$n]=$row['fingerprint'];
+            $allocated=Invoice_calculation::cents($cash[$i])+Invoice_calculation::cents($admins[$i])+Invoice_calculation::cents($taxes[$i]);
+            $post['penerimaan_'.$n]=Invoice_calculation::decimal($allocated);
+            $post['sisa_piutang_'.$n]=Invoice_calculation::decimal(Invoice_calculation::cents($row['invoice']['saldo_piutang'])-$allocated);
+            $post['biaya_admin_'.$n]=$admins[$i];$post['pph_actual_'.$n]=$taxes[$i];
+        }
         return $post;
     };
     $GLOBALS['test_ci']=$receiptCi;
@@ -212,10 +248,14 @@ try {
     verify($service->one('SELECT COUNT(*) n FROM tr_alokasi_split')['n']==1,'Rollback preserves split');
     $post=$receiptPost(array($receiptId),array('99999.00'),array('0'),array('0'));verify(controllerCall($receiptCi,'save_penerimaan_piutang',$post)['status']===0,'Overpayment rejected');
     $legacy=array('id'=>'LEGACY','id_actual_plan_tagih'=>'0','id_detail_plan_tagih'=>0,'no_invoice'=>'L/2026','id_penawaran'=>'N1','id_customer'=>'C1','nm_customer'=>'Customer','tanggal_invoice'=>'2026-10-18','tipe_invoice'=>'0','non_kons'=>'1','saldo_piutang'=>'98.00','total_akhir_jurnal'=>'98.00','total_nominal_jurnal'=>'100.00','dpp_lain_lain_jurnal'=>'91.67','ppn_jurnal'=>'0.00','tagihan_ppn_jurnal'=>'100.00','pph_jurnal'=>'2.00');verify($db->insert('tr_invoicing',$legacy)!==false,'Legacy fixture insert');
-    $post=$receiptPost(array($receiptId,'LEGACY'),array('50','10'),array('0','0'),array('1','0'));
-    $r=controllerCall($receiptCi,'save_penerimaan_piutang',$post);verify($r['status']===1,'Mixed new/legacy receipt: '.$r['msg']);
-    verify($service->one("SELECT saldo_piutang FROM tr_invoicing WHERE id='LEGACY'")['saldo_piutang']==='90.00','Legacy N reduction remains cash minus PPh');
-    $j=$service->one('SELECT SUM(debit) d,SUM(kredit) c FROM tr_jurnal WHERE no_transaksi=?',array($r['no_surat']));verify($j['d']===$j['c'],'Mixed journal balanced');
+    try {$receiptService->preview(array('choose_inv'=>array($receiptId,'LEGACY'),'id_alokasi'=>'200','pph23_dipotong'=>'Y'));verify(false,'Mixed preview must reject');}
+    catch(InvalidArgumentException $error){verify(strpos($error->getMessage(),'terpisah')!==false,'Mixed preview rejected clearly');}
+    $post=$receiptPost(array($receiptId),array('50'),array('0'),array('1'));
+    $mixed=$post;$mixed['no_inv']='2';$mixed['id_inv_2']='LEGACY';
+    verify(controllerCall($receiptCi,'save_penerimaan_piutang',$mixed)['status']===0,'Mixed direct save rejected');
+    verify($service->one("SELECT saldo_piutang FROM tr_invoicing WHERE id='LEGACY'")['saldo_piutang']==='98.00','Legacy balance untouched');
+    $r=controllerCall($receiptCi,'save_penerimaan_piutang',$post);verify($r['status']===1,'Separate new receipt saves: '.$r['msg']);
+    $j=$service->one('SELECT SUM(debit) d,SUM(kredit) c FROM tr_jurnal WHERE no_transaksi=?',array($r['no_surat']));verify($j['d']===$j['c'],'Concept journal balanced');
     $anchor=$service->one("SELECT id FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Penerimaan Piutang' ORDER BY id LIMIT 1",array($r['no_surat']));
     $posting=new Consulting_posting($receiptCi);$posted=$posting->receipt($anchor['id']);verify($posted['status']===1,'Receipt GL atomic posting: '.$posted['msg']);
     verify($posting->receipt($anchor['id'])['status']===0,'Duplicate receipt posting rejected');
@@ -258,7 +298,7 @@ try {
     verify(strpos($html,'<script>alert(1)</script>')===false && strpos($html,'&lt;script&gt;')!==false,'Escaped invoice view');
     $html=$renderer->render(dirname(__DIR__).'/views/consulting_invoice.php',array('invoice'=>$viewInvoice,'snapshot'=>$savedSnapshot,'mode'=>'add','journals'=>array(),'source_fingerprint'=>'x','invoice_fingerprint'=>'x','error'=>null));
     verify(strpos($html,'name="sales_role"')!==false && strpos($html,'name="tax_treatment"')!==false,'New invoice required fields rendered');
-    $preview=$receiptService->preview(array('choose_inv'=>array($receiptId,'LEGACY'),'id_alokasi'=>'200','pph23_dipotong'=>'N','ppn_dipotong'=>'Y'));
+    $preview=$receiptService->preview(array('choose_inv'=>array($receiptId),'id_alokasi'=>'200','pph23_dipotong'=>'Y','ppn_dipotong'=>'N'));
     $html=$renderer->render(dirname(__DIR__,2).'/penerimaan_uang/views/consulting_process.php',$preview);
     verify(preg_match_all('/<input[^>]+name="pph_actual_[0-9]+"/',$html)===1,'Actual PPh input only for new invoice');
     $html=$renderer->render(dirname(__DIR__).'/views/consulting_settings.php',array('companies'=>array(array('id'=>1,'nm_company'=>'STM')),'source_id'=>1,'owner_id'=>7,'journal_owners'=>array(array('id'=>7,'nm_company'=>'STM'),array('id'=>3,'nm_company'=>'Sustain'),array('id'=>4,'nm_company'=>'Vuca')),'mapping'=>null,'master'=>$service->master(1),'roles'=>Invoice_consulting::roles(),'mapping_fingerprint'=>'x','error'=>null));
@@ -319,6 +359,9 @@ try {
     $invalid['accounts']['vat_wapu_prepaid']='9999-99-99';verify(controllerCall($ci,'save_coa_mapping',$invalid)['status']===0,'Missing COA rejected');
     $db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=MyISAM');verify(controllerCall($ci,'save_invoice',invoiceRequest($service,60))['status']===0,'Nontransactional prerequisite rejected');$db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=InnoDB');
     $db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN consulting_snapshot TO missing_snapshot');verify(controllerCall($ci,'save_invoice',array())['status']===0,'Incomplete migration rejected');$db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN missing_snapshot TO consulting_snapshot');
+    require dirname(__DIR__,2).'/penerimaan_uang/tests/Concept_integration_cases.php';
+    require dirname(__DIR__,2).'/penerimaan_uang/tests/Deposit_closure_cases.php';
+    require dirname(__DIR__,2).'/kwitansi_deposit/tests/Save_integrity_cases.php';
     require __DIR__.'/Vuca_integration_cases.php';
     echo 'PASS: '.$GLOBALS['checks']." consulting and Vuca integration checks against disposable MariaDB\n";
 } finally {

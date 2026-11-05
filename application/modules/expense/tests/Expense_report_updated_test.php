@@ -6,7 +6,7 @@
  * 1. set_jurnal_expense(): Jurnal 1 preview untuk Lebih Kasbon (Debit 1103-01-15), Impas, dan Lebih Expense.
  * 2. approve(): Approval jenjang 1 (Finance: 0 -> 1) dan jenjang 2 (Direktur: 1 -> 3 untuk Lebih Kasbon, 1 -> 2 untuk Impas/Lebih Expense).
  * 3. Segregation of Duties (BR-12): Self-approval hanya untuk admin; self-verifikasi tetap dilarang.
- * 4. verifikasi_pengembalian_approve(): Verifikasi 3-checklist dan posting Jurnal 2 (Debit Bank, Kredit 1103-01-15).
+ * 4. verifikasi_pengembalian_approve(): Verifikasi 3-checklist dan posting Jurnal 2 (Debit Bank, Kredit 1103-01-14).
  * 5. verifikasi_pengembalian_reject(): Tolak verifikasi kembali ke status 3 dengan alasan wajib.
  * 6. _render_expense_status_badge(): Pemetaan badge visual 6-status (0, 1, 2, 3, 4, 9).
  */
@@ -48,6 +48,7 @@ if (!function_exists('int_to_roman')) {
     }
 }
 
+foreach (['DBACC_VUCA','DBACC_STM','DBACC_SUST'] as $constant) if (!defined($constant)) define($constant, 'db_accounting_test');
 require_once dirname(__DIR__) . '/controllers/Expense.php';
 
 class MockDbResult {
@@ -83,9 +84,23 @@ class MockDb {
     public $updated_data = [];
     public $wheres = [];
     public $not_likes = [];
+    public $fail = '';
+    public $backup;
+    public $fromTable = '';
+    public function __construct() {
+        $this->tables['tr_kasbon'] = [
+            'KB-001'=>['no_doc'=>'KB-001','project'=>'Q-1','jumlah_kasbon'=>1000000],
+            'KB-002'=>['no_doc'=>'KB-002','project'=>'Q-1','jumlah_kasbon'=>500000],
+            'KB-003'=>['no_doc'=>'KB-003','project'=>'Q-1','jumlah_kasbon'=>500000],
+            'KS-2026-00050'=>['no_doc'=>'KS-2026-00050','project'=>'Q-1','jumlah_kasbon'=>1000000]
+        ];
+        $this->tables['kons_tr_penawaran'] = [['id_quotation'=>'Q-1','company'=>'1']];
+        $this->tables['kons_tr_company'] = [['id'=>'1','nm_company'=>'STM-Vuca'],['id'=>'4','nm_company'=>'Vuca'],['id'=>'7','nm_company'=>'STM']];
+        $this->tables['ms_bank'] = [['id'=>'20','nama'=>'PT. VUCA STRATEGI BISNIS','rekening'=>'fixture-vuca','coa_bank'=>'1101-02-01','deleted'=>'0']];
+    }
 
     public function select($fields) { return $this; }
-    public function from($table) { return $this; }
+    public function from($table) { $this->fromTable=$table; return $this; }
     public function join($table, $cond, $type = '') { return $this; }
     public function where($k, $v = null, $escape = true) {
         $this->wheres[] = [$k, $v];
@@ -110,38 +125,27 @@ class MockDb {
     public function count_all_results($table = '', $reset = true) { return 0; }
 
     public function get($table = '', $limit = null, $offset = null) {
-        if (isset($this->tables['ms_bank'])) {
+        if (($table === 'ms_bank' || strpos($this->fromTable,'ms_bank') === 0) && isset($this->tables['ms_bank'])) {
             return new MockDbResult($this->tables['ms_bank']);
         }
         return new MockDbResult([]);
     }
 
     public function get_where($table, $where) {
-        if ($table === 'tr_expense') {
-            $id = isset($where['id']) ? $where['id'] : null;
-            if (isset($this->tables['tr_expense'][$id])) {
-                return new MockDbResult([$this->tables['tr_expense'][$id]]);
-            }
-        }
-        if ($table === 'tr_kasbon') {
-            $no_doc = isset($where['no_doc']) ? $where['no_doc'] : null;
-            if (isset($this->tables['tr_kasbon'][$no_doc])) {
-                return new MockDbResult([$this->tables['tr_kasbon'][$no_doc]]);
-            }
-        }
-        if ($table === 'tr_expense_detail') {
-            $no_doc = isset($where['no_doc']) ? $where['no_doc'] : null;
-            if (isset($this->tables['tr_expense_detail'][$no_doc])) {
-                return new MockDbResult($this->tables['tr_expense_detail'][$no_doc]);
-            }
-        }
-        if ($table === 'tr_jurnal') {
-            return new MockDbResult([]);
-        }
-        return new MockDbResult([]);
+        $records = $this->tables[$table] ?? [];
+        if ($table === 'tr_expense_detail') $records = array_merge([], ...array_values($records ?: [[]]));
+        if ($table === 'tr_jurnal') $records = array_merge($records, $this->inserted_jurnal);
+        return new MockDbResult(array_values(array_filter($records, function($row)use($where){
+            $row = (array)$row;
+            foreach ($where as $key=>$value) if ((string)($row[$key] ?? '') !== (string)$value) return false;
+            return true;
+        })));
     }
 
-    public function query($sql) {
+    public function query($sql, $values = []) {
+        if (strpos($sql,'GET_LOCK') !== false) return new MockDbResult([['acquired'=>$this->fail === 'lock' ? 0 : 1]]);
+        if (strpos($sql,'SELECT * FROM tr_expense WHERE id') !== false) return $this->get_where('tr_expense', ['id'=>$values[0]]);
+        if (preg_match('/SELECT \* FROM (\w+) WHERE (\w+) = \? FOR UPDATE/', $sql, $match)) return $this->get_where($match[1],[$match[2]=>$values[0]]);
         $this->last_query = $sql;
         if (strpos($sql, 'MAX(no_jurnal)') !== false) {
             return new MockDbResult([['maxP' => '00005-AJV-X-26']]);
@@ -185,6 +189,7 @@ class MockDb {
                 }
             }
         }
+        if ($this->fail === 'update') return false;
         $this->updated_data[$table][] = ['data' => $data, 'where' => $where];
         if ($table === 'tr_expense' && isset($where['id'])) {
             $id = $where['id'];
@@ -200,6 +205,7 @@ class MockDb {
     }
 
     public function insert_batch($table, $data) {
+        if ($this->fail === 'insert') return false;
         if ($table === 'tr_jurnal') {
             $this->inserted_jurnal = array_merge($this->inserted_jurnal, $data);
         }
@@ -210,12 +216,19 @@ class MockDb {
         return "'" . addslashes((string)$val) . "'";
     }
 
-    public function trans_begin() { return true; }
-    public function trans_status() { return true; }
-    public function trans_commit() { return true; }
-    public function trans_rollback() { return true; }
+    public function trans_begin() { $this->backup=[$this->tables,$this->inserted_jurnal,$this->updated_data]; return $this->fail !== 'begin'; }
+    public function trans_status() { return $this->fail !== 'transaction'; }
+    public function trans_commit() { return $this->fail !== 'commit'; }
+    public function trans_rollback() { [$this->tables,$this->inserted_jurnal,$this->updated_data]=$this->backup; return true; }
     public function error() { return ['code' => 0, 'message' => '']; }
     public function last_query() { return $this->last_query ?: 'SELECT 1'; }
+}
+
+class CompanyFlowLoader {
+    private $owner;
+    public function __construct($owner) { $this->owner=$owner; }
+    public function database($group,$return=true) { return $this->owner->db; }
+    public function library($name) {}
 }
 
 class MockAuth {
@@ -279,6 +292,7 @@ echo "--- TEST 1: Preview Jurnal 1 (set_jurnal_expense) ---\n";
 
 // Case 1A: Lebih Kasbon (Kasbon 1.000.000, Realisasi 750.000 -> Sisa 250.000)
 $exp = (new ReflectionClass('Expense'))->newInstanceWithoutConstructor();
+$exp->load = new CompanyFlowLoader($exp);
 $exp->db = new MockDb();
 $exp->auth = new MockAuth();
 $exp->input = new MockInput();
@@ -343,6 +357,7 @@ echo "\n--- TEST 2: Approval Berjenjang & Segregation of Duties (approve) ---\n"
 
 // Case 2A: BR-12 Pelapor mencoba approve laporannya sendiri
 $exp = (new ReflectionClass('Expense'))->newInstanceWithoutConstructor();
+$exp->load = new CompanyFlowLoader($exp);
 $mockDb = new MockDb();
 $mockDb->tables['tr_expense'][10] = [
     'id' => 10,
@@ -416,6 +431,7 @@ testCheck($j1_debit_piutang == 200000, "Jurnal 1: Debit Piutang Kelebihan Kasbon
 testCheck($j1_kredit_kasbon == 1000000, "Jurnal 1: Kredit Piutang Kasbon Konsultan (1103-01-14) Rp 1.000.000");
 
 $adminExpense = (new ReflectionClass('Expense'))->newInstanceWithoutConstructor();
+$adminExpense->load = new CompanyFlowLoader($adminExpense);
 $adminExpense->db = new MockDb();
 $adminExpense->db->tables = $mockDb->tables;
 $adminExpense->db->tables['tr_expense'][10]['status'] = '0';
@@ -458,6 +474,7 @@ $mockDb->tables['tr_expense'][20] = [
     'bukti_pengembalian' => 'assets/expense_bukti_pengembalian/transfer_bca_250k.jpg'
 ];
 
+$mockDb->tables['tr_jurnal'][] = ['no_transaksi'=>$mockDb->tables['tr_expense'][20]['no_doc'], 'jenis_transaksi'=>'Expense Report', 'id_company'=>'1', 'nm_company'=>'STM-Vuca'];
 $exp->auth->username = 'febry_pelapor';
 $exp->input->posts = ['id' => 20, 'chk_bukti' => 1, 'chk_mutasi' => 1, 'chk_nominal' => 1];
 
@@ -494,10 +511,10 @@ testCheck(count($mockDb->inserted_jurnal) === 2, "Jurnal 2 berhasil dibukukan (2
 $j2_debit_bank = 0; $j2_kredit_piutang = 0;
 foreach ($mockDb->inserted_jurnal as $j) {
     if ($j['coa'] === '1101-02-01') $j2_debit_bank = $j['debit'];
-    if ($j['coa'] === '1103-01-15') $j2_kredit_piutang = $j['kredit'];
+    if ($j['coa'] === '1103-01-14') $j2_kredit_piutang = $j['kredit'];
 }
 testCheck($j2_debit_bank == 250000, "Jurnal 2: Debit Bank BCA (1101-02-01) Rp 250.000");
-testCheck($j2_kredit_piutang == 250000, "Jurnal 2: Kredit Piutang Kelebihan Kasbon (1103-01-15) Rp 250.000");
+testCheck($j2_kredit_piutang == 250000, "Jurnal 2: Kredit Piutang Lain-lain Konsultan (1103-01-14) Rp 250.000");
 
 // -----------------------------------------------------------
 // TEST 4: Penolakan Verifikasi (verifikasi_pengembalian_reject)
@@ -760,6 +777,7 @@ $exp_test9->form_pengembalian(999);
 testCheck($exp_test9->template->rendered_view === 'form_pengembalian', "Method form_pengembalian berhasil merender view 'form_pengembalian'");
 testCheck(isset($exp_test9->template->vars['data']), "Variable 'data' terdefinisi dalam template");
 testCheck(isset($exp_test9->template->vars['bank_options']), "Variable 'bank_options' terdefinisi dalam template");
+testCheck(($exp_test9->template->vars['coa_piutang'] ?? '') === '1103-01-14', "Variable 'coa_piutang' = 1103-01-14 untuk pengembalian baru");
 
 // 9.2: Evaluasi rendering template HTML form_pengembalian.php
 $data = $mock_expense_9;
@@ -781,7 +799,7 @@ testCheck(strpos($html_out, 'multi_file_input') !== false, "Input upload bukti m
 testCheck(strpos($html_out, 'file_chips_wrapper') !== false, "Container akumulator chip file_chips_wrapper tersedia");
 testCheck(strpos($html_out, 'Daftar Jurnal Pengembalian Kasbon') !== false, "Card Daftar Jurnal Pengembalian Kasbon ter-render");
 testCheck(strpos($html_out, 'Draft: jurnal diposting setelah verifikasi Finance') !== false, "Badge draft jurnal Finance terpasang");
-testCheck(strpos($html_out, '1103-01-15') !== false, "Akun Piutang Kelebihan Kasbon (1103-01-15) tercantum di draft jurnal");
+testCheck(strpos($html_out, '1103-01-14') !== false, "Akun Piutang Lain-lain Konsultan (1103-01-14) tercantum di draft jurnal pengembalian");
 testCheck(strpos($html_out, 'TOTAL BALANCING') !== false, "Tabel draft jurnal memuat baris TOTAL BALANCING");
 testCheck(strpos($html_out, 'Catatan mockup:') !== false, "Kotak catatan mockup alur verifikasi tampil di bawah tabel");
 testCheck(strpos($html_out, 'btn_submit_kirim_pengembalian') !== false, "Tombol submit 'Kirim Bukti Transfer' tersedia");

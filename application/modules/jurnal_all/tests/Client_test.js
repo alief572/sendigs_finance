@@ -192,5 +192,15 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     };
     api.mount(workspace); await flush();
     check(node('#ja-table tbody').innerHTML.includes('Posting sebagian &lt;img src=x&gt;') && !node('#ja-table tbody').innerHTML.includes('<script>debt'), 'debt status and description remain escaped');
+    workspace.dataset.posted = '0'; workspace.dataset.tab = 'EXP';
+    global.fetch = async (url, options) => {
+        const result = await nativeFetch(url, options);
+        if (!url.endsWith('get_data_jurnal')) return result;
+        const page = await result.json();
+        Object.assign(page.data[0], { source: 'EXP', can_post: false, post_block_reason: 'Company <img src=x> belum tersedia' });
+        return { ok: true, json: async () => page };
+    };
+    api.mount(workspace); await flush();
+    check(node('#ja-table tbody').innerHTML.includes('Company &lt;img src=x&gt; belum tersedia') && !node('#ja-table tbody').innerHTML.includes('+ Post'), 'blocked Expense remains readable with escaped reason and no Post label');
     console.log('PASS Jurnal All client: ' + checks + ' assertions');
 })().catch(error => { console.error(error); process.exitCode = 1; });

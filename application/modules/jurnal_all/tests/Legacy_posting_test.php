@@ -60,8 +60,14 @@ function fixture($class,$company='7',$type='Payment'){
 }
 function invoke($c){ob_start();$c->save_posting_jurnal();$value=json_decode(ob_get_clean(),true);$GLOBALS['last_native_response']=$value;check(is_array($value),'native JSON response');return $value['save']??$value['status'];}
 // Exact Payment now uses Payment_reference_test.php; Transport exercises the preserved legacy payment branch.
-foreach(['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=>'accounting_stm','3'=>'accounting_sustain'] as $company=>$target){
-    foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Transport'] as $class=>$type){
+$targetMap = [
+    'Jurnal_invoicing_model' => ['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=>'accounting_stm','3'=>'accounting_sustain'],
+    'Jurnal_penerimaan'      => ['4'=>'accounting_vuca','1'=>'accounting_stm','6'=>'accounting_stm','7'=>'accounting_stm','3'=>'accounting_sustain'],
+    'Jurnal_payment'         => ['4'=>'accounting_vuca','1'=>'accounting_vuca','6'=>'accounting_sustain','7'=>'accounting_stm','3'=>'accounting_sustain'],
+];
+foreach(['Jurnal_invoicing_model'=>'Invoicing','Jurnal_penerimaan'=>'Penerimaan Piutang','Jurnal_payment'=>'Transport'] as $class=>$type){
+    foreach(['4','1','6','7','3'] as $company){
+        $target = $targetMap[$class][$company];
         $c=fixture($class,(string)$company,$type);check(invoke($c)===1,'native success '.$class.'/'.$company);
         $writes=$c->load->dbs[$target]->writes;check(count($writes)>0,'native routing '.$class.'/'.$target);
         foreach($c->load->dbs as $key=>$db)if($key!==$target)check(!$db->writes,'no other company '.$class.'/'.$key);

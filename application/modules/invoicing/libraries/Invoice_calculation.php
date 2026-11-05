@@ -14,6 +14,28 @@ class Invoice_calculation
         if (strlen($parts[0]) > 13) { throw new InvalidArgumentException('Nominal terlalu besar.'); }
         return (int) $parts[0] * 100 + (int) str_pad($parts[1] ?? '', 2, '0');
     }
+    /**
+     * Baris plan tagih untuk cetak dan tampilan. Invoice lama hasil impor (id_actual_plan_tagih 'v' atau '0') tidak punya baris di
+     * kons_tr_actual_plan_tagih; nominalnya diambil dari invoice itu sendiri, pemetaan yang sama dengan consulting_print.php.
+     * Field yang tidak diketahui untuk invoice lama (termin, persen, deskripsi, company) berisi penanda kosong, bukan angka karangan.
+     */
+    public static function plan_or_invoice($plan, $invoice)
+    {
+        return $plan ?: (object) array('nominal_payment' => $invoice->total_nominal, 'term_payment' => '-', 'persen_payment' => null,
+            'desc_payment' => '-', 'id_company' => '', 'nm_company' => '-');
+    }
+    /**
+     * Invoice lama hasil impor tidak menyimpan nama/alamat customer di tr_invoicing; bila kosong diisi dari SPK-nya
+     * (kons_tr_spk_penawaran). Nilai yang sudah ada tidak pernah ditimpa.
+     */
+    public static function fill_customer($invoice, $spk)
+    {
+        if (!$invoice || !$spk) { return $invoice; }
+        foreach (array('nm_customer', 'address') as $field) {
+            if (trim((string) ($invoice->$field ?? '')) === '' && trim((string) ($spk->$field ?? '')) !== '') { $invoice->$field = $spk->$field; }
+        }
+        return $invoice;
+    }
     public static function decimal($value)
     {
         return ($value < 0 ? '-' : '') . intdiv(abs($value), 100) . '.' . str_pad(abs($value) % 100, 2, '0', STR_PAD_LEFT);

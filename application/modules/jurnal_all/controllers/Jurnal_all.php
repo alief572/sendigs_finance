@@ -86,7 +86,7 @@ class Jurnal_all extends Admin_Controller
             if ($detail['header']['source'] === 'PCS' && $detail['header']['jenis_transaksi'] === 'Petty Cash') $detail['company_sections'] = $this->Jurnal_all_model->company_sections($detail['rows']);
             $html = $this->load->view('jurnal_all/preview', ['detail' => $detail, 'posted' => $this->posted], true);
             $canPost=$canManage && $detail['is_balance'] && !$blocked && ($detail['can_post'] ?? true) && (empty($detail['header']['debt_group']) || $this->Jurnal_all_model->debt_posting_ready());
-            $postReason=$detail['header']['payment_reference_error'] ?? '';
+            $postReason=($detail['header']['company_error'] ?? '') ?: ($detail['header']['payment_reference_error'] ?? '');
             if (!$postReason && !$canPost && $canManage) $postReason=!$detail['is_balance']?'Jurnal belum balance; posting diblokir.':($blocked?'COA belum final dikonfirmasi Finance; posting diblokir.':'Periksa peringatan detail jurnal sebelum posting.');
             return [
                 'status' => 1,

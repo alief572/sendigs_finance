@@ -46,7 +46,6 @@ class Menu_generator
 			$html = "<ul class='sidebar-menu'>
 							<li class='header'></li>
 	                        <li class='".check_class('dashboard', TRUE)."'>
-								<i class='fa fa-dashboard'></i>
 	                            <a href='".site_url()."'>
 	                                <i class='fa fa-dashboard'></i> 
 									<span>Dashboard</span>

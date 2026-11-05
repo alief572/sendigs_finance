@@ -100,7 +100,8 @@
                 if (!field) return '<td>' + (filter.start + index + 1) + '</td>';
                 if (field === 'action') {
                     if (!posted && !canManage && row.source === 'EXP') return '<td>—</td>';
-                    return '<td><button type="button" class="btn btn-sm btn-primary" data-id="' + Number(row.id) + '" data-source="' + escape(row.source) + '">' + (posted || !canManage ? 'Detail' : '+ Post') + '</button></td>';
+                    const blocked = !posted && row.can_post === false;
+                    return '<td><button type="button" class="btn btn-sm btn-primary" data-id="' + Number(row.id) + '" data-source="' + escape(row.source) + '">' + (posted || !canManage || blocked ? 'Detail' : '+ Post') + '</button>' + (blocked ? '<small class="text-danger">' + escape(row.post_block_reason) + '</small>' : '') + '</td>';
                 }
                 const value = field === 'display_no_transaksi' ? (row.display_no_transaksi ?? row.no_transaksi) : row[field];
                 if (field === 'keterangan' && row.debt_group) return '<td class="ja-description">' + escape(value || '') + '<br><small>' + escape(row.group_status || '') + (row.relation_warning ? ' — ' + escape(row.relation_warning) : '') + '</small></td>';

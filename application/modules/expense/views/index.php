@@ -424,6 +424,7 @@ $bank_options     = isset($bank_options) && is_array($bank_options) ? $bank_opti
 					pageLength: 10,
 					lengthMenu: [10, 25, 50, 100],
 					ordering: true,
+					order: [[2, 'desc'], [1, 'desc']], // terbaru dulu: Tanggal, lalu No. Kasbon
 					searching: true
 				});
 				$('#modalKasbon').modal('show');

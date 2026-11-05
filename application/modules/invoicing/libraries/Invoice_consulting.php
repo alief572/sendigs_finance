@@ -25,6 +25,16 @@ class Invoice_consulting
             && (string)($invoice['tipe_invoice'] ?? '0') !== '1' && (string)($invoice['non_kons'] ?? '0') !== '1';
     }
 
+    /**
+     * Cetak memakai layout Vuca (print_invoicing_vuca): invoice Vuca (tipe_invoice 1), atau invoice lama milik company Vuca.
+     * Invoice alur konsultasi v3 tetap memakai layout konsultasi dengan kop pemiliknya, termasuk bila pemiliknya Vuca.
+     */
+    public static function print_as_vuca($invoice, $companyIsVuca)
+    {
+        $invoice = (array)$invoice;
+        return (string)($invoice['tipe_invoice'] ?? '0') === '1' || ($companyIsVuca && !self::is_new($invoice));
+    }
+
     public static function totals($amount, $type)
     {
         if (!is_string($type) || !in_array($type, array('PKP','WAPU','KB'), true)) throw new InvalidArgumentException('Perlakuan PPN wajib dipilih.');
@@ -84,15 +94,35 @@ class Invoice_consulting
 
     public static function receipt_journal($snapshot)
     {
-        if(!is_array($snapshot) || empty($snapshot['owner']['id']) || empty($snapshot['owner']['nm_company']) || !isset($snapshot['cash'],$snapshot['admin'],$snapshot['pph'],$snapshot['adjustment'],$snapshot['reduction'],$snapshot['date'],$snapshot['invoice_no']))
+        $concept = (int)($snapshot['calculation_version'] ?? 0) === 4;
+        if(!is_array($snapshot) || empty($snapshot['owner']['id']) || empty($snapshot['owner']['nm_company']) || !isset($snapshot['cash'],$snapshot['admin'],$snapshot['pph'],$snapshot['reduction'],$snapshot['date'],$snapshot['invoice_no'])
+            || (!$concept && !isset($snapshot['adjustment'])))
             throw new RuntimeException('Snapshot jurnal penerimaan tidak lengkap.');
+        if ($concept) {
+            $dep = (int)($snapshot['dep'] ?? 0);
+            $lebih = (int)($snapshot['lebih'] ?? 0);
+            if (!isset($snapshot['balance'], $snapshot['sisa']) || $snapshot['balance'] - $snapshot['sisa'] !== $snapshot['reduction']
+                || $snapshot['cash'] + $snapshot['pph'] + $snapshot['admin'] + $dep !== $snapshot['reduction'] + $lebih) throw new RuntimeException('Snapshot pelunasan piutang tidak konsisten.');
+            $entries = array(
+                array('bank', max(0, $snapshot['cash']), max(0, -$snapshot['cash'])),
+                array('pph', $snapshot['pph'], 0),
+                array('admin', $snapshot['admin'], 0),
+                array('deposit', $dep, $lebih),
+                array('receivable', 0, $snapshot['balance']),
+                array('receivable', $snapshot['sisa'], 0)
+            );
+        } else {
+            $entries = array(array('bank',$snapshot['cash'],0),array('admin',$snapshot['admin'],0),array('pph',$snapshot['pph'],$snapshot['adjustment']),array('receivable',0,$snapshot['reduction']));
+        }
+        $suffix = ' - ' . $snapshot['invoice_no'];
+        if ($concept) $suffix .= (!empty($snapshot['spk']) ? ' - ' . $snapshot['spk'] : '') . (($snapshot['tax_treatment'] ?? '') === 'KB' ? ' - Kawasan Berikat' : '');
         $lines=array();
-        foreach(array(array('bank',$snapshot['cash'],0),array('admin',$snapshot['admin'],0),array('pph',$snapshot['pph'],$snapshot['adjustment']),array('receivable',0,$snapshot['reduction']))as $line){
+        foreach($entries as $line){
             if(!$line[1]&&!$line[2])continue;
             $account=$snapshot['accounts'][$line[0]]??null;
             if(!$account || empty($account['code']) || empty($account['name']) || min($line[1],$line[2])<0)throw new RuntimeException('Snapshot akun penerimaan tidak lengkap.');
             $lines[]=array('date'=>$snapshot['date'],'owner'=>(string)$snapshot['owner']['id'],'company'=>$snapshot['owner']['nm_company'],
-                'coa'=>$account['code'],'name'=>$account['name'],'debit'=>$line[1],'credit'=>$line[2],'description'=>$account['name'].' - '.$snapshot['invoice_no']);
+                'coa'=>$account['code'],'name'=>$account['name'],'debit'=>$line[1],'credit'=>$line[2],'description'=>$account['name'].$suffix);
         }
         if(array_sum(array_column($lines,'debit'))!==array_sum(array_column($lines,'credit')))throw new RuntimeException('Snapshot jurnal penerimaan tidak seimbang.');
         return $lines;

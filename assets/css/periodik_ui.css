@@ -1,0 +1,212 @@
+/* Pembayaran Periodik: gaya mengikuti specs/input/Periodik.html, di-scope ke .pjx agar tidak bentrok dengan AdminLTE/Bootstrap. */
+.pjx{--bg:#ecf0f5; --panel:#ffffff; --text:#333a40; --muted:#6c757d; --line:#dfe3e8; --row:#f7f9fb; --top:#3f8bba; --side:#222d32; --side-2:#2c3b41; --side-text:#b8c7ce; --side-active:#ffffff; --green:#00a65a; --orange:#f39c12; --red:#dd4b39; --blue:#2f7fb8; --cyan:#00c0ef; --lock:#eef0f2; --chg:#8e44ad; --input:#ffffff; --pill-text:#ffffff; --stp-off:#d3d9df; --stp-done:#2b7a4b; --stp-cur:#a8660b; --stp-cur-bg:#fdf0d5; --stp-cur-t:#9a5b06; --stp-done-bg:#e1f3ea; --stp-done-t:#1e6b40; --stp-bad-bg:#fbe3e0; --stp-bad-t:#a8321f;color:var(--text);font:14px/1.45 "Source Sans 3","Source Sans Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+.pjx *,.pjx *::before,.pjx *::after{box-sizing:border-box}
+.pjx button,
+.pjx input,
+.pjx select,
+.pjx textarea{font:inherit;color:inherit}
+.pjx button:focus-visible,
+.pjx input:focus-visible,
+.pjx textarea:focus-visible,
+.pjx select:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+.pjx .panel{background:var(--panel);border-top:3px solid var(--line);border-radius:3px;padding:14px;margin-bottom:16px}
+.pjx .panel.hl{border-top-color:var(--top)}
+.pjx .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.pjx .btn{border:0;border-radius:3px;padding:6px 12px;cursor:pointer;color:#fff;background:var(--green);font-weight:600;font-size:13px}
+.pjx .btn.o{background:var(--orange)}
+.pjx .btn.r{background:var(--red)}
+.pjx .btn.c{background:var(--cyan)}
+.pjx .btn.g{background:transparent;color:var(--text);border:1px solid var(--line)}
+.pjx .btn.sm{padding:3px 8px;font-size:12px}
+.pjx .btn[disabled]{opacity:.45;cursor:not-allowed}
+.pjx .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.pjx .tabs button{border:1px solid transparent;border-bottom:0;background:none;padding:7px 14px;cursor:pointer;color:var(--muted);border-radius:3px 3px 0 0}
+.pjx .tabs button.on{border-color:var(--line);background:var(--panel);color:var(--text);font-weight:600;margin-bottom:-1px}
+.pjx .scroll{overflow-x:auto}
+.pjx table{border-collapse:collapse;width:100%;min-width:760px}
+.pjx th,
+.pjx td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.pjx th{font-weight:700;font-size:13px;white-space:nowrap}
+.pjx tbody tr:nth-child(odd){background:var(--row)}
+.pjx td.num,
+.pjx th.num{text-align:right;white-space:nowrap}
+.pjx .mono{font-variant-numeric:tabular-nums}
+.pjx .no{white-space:nowrap;font-weight:600}
+.pjx .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.pjx .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:700;color:var(--pill-text);white-space:nowrap}
+.pjx .pill.W{background:var(--orange)}
+.pjx .pill.A{background:var(--green)}
+.pjx .pill.R{background:var(--red)}
+.pjx .pill.P{background:var(--blue)}
+.pjx ol.items{margin:0;padding-left:18px}
+.pjx .note{color:var(--red);font-size:12.5px}
+.pjx .ref{font-size:12px;color:var(--blue)}
+.pjx .kpi{display:flex;flex-wrap:wrap;gap:20px;margin:4px 0 12px;font-size:13px}
+.pjx .kpi b{font-size:16px;display:block}
+.pjx .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 24px;margin-bottom:12px;font-size:13px}
+.pjx .grid2 span{color:var(--muted);display:block;font-size:12px}
+.pjx input[type=text],
+.pjx input[type=number],
+.pjx textarea,
+.pjx select{background:var(--input);border:1px solid var(--line);border-radius:3px;padding:5px 7px;width:100%}
+.pjx textarea{min-height:52px;resize:vertical}
+.pjx .lockrow td{background:var(--lock);color:var(--muted)}
+.pjx .lockrow input,
+.pjx .lockrow textarea{background:var(--lock)}
+.pjx .tag{display:table;margin-top:4px;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:3px;color:#fff;background:var(--red)}
+.pjx .tag.back{background:var(--orange)}
+.pjx .seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.pjx .seg button{border:0;background:none;padding:4px 10px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.pjx .seg button.on.A{background:var(--green);color:#fff;font-weight:700}
+.pjx .seg button.on.R{background:var(--red);color:#fff;font-weight:700}
+.pjx .err{color:var(--red);font-size:12px;margin-top:3px}
+.pjx .dsum{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin-top:12px}
+.pjx .dsum .sp{flex:1}
+.pjx .toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--side);color:#fff;padding:10px 14px;border-radius:3px;max-width:360px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:20}
+.pjx .toast.show{opacity:1;transform:none}
+.pjx .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pjx .mhead h2{font-size:17px;margin:0;font-weight:600}
+.pjx .hint{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+@media (prefers-reduced-motion:reduce){.pjx .toast{transition:none}}
+.pjx .warn{border:1px solid var(--orange);background:rgba(243,156,18,.10);border-radius:3px;padding:8px 10px;font-size:13px;margin-top:10px}
+.pjx .flag{display:block;font-size:11.5px;color:var(--orange);font-weight:700}
+.pjx .jalur{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:3px;border:1px solid var(--line);white-space:nowrap}
+.pjx .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pjx .filters select,
+.pjx .filters input{width:auto;min-width:170px}
+.pjx .mini{width:90px!important}
+.pjx .grid2 .jalur{display:inline-block}
+.pjx .ro{background:var(--lock);border:1px solid var(--line);border-radius:2px;padding:5px 8px;min-height:30px;font-size:13px;color:var(--text);margin-bottom:2px;word-break:break-word}
+.pjx .ro.r{text-align:right;font-variant-numeric:tabular-nums}
+.pjx .ro.tall{min-height:52px}
+.pjx .apphead{align-items:end}
+.pjx .apptbl td{vertical-align:top}
+.pjx .apptbl tr.rej td{background:rgba(221,75,57,.07)}
+.pjx .apptbl tr.totrow td{background:var(--row);border-top:2px solid var(--line)}
+.pjx .genwrap{margin-top:14px;max-width:520px}
+.pjx .genwrap textarea{margin-top:6px;min-height:96px}
+.pjx .appbtns{margin-top:12px}
+.pjx .btn.bl{background:var(--blue)}
+.pjx .btn.ic{min-width:30px;padding:3px 8px}
+.pjx .doclink{color:var(--blue);font-size:12.5px}
+.pjx .apptbl tr.decrow td{border-top:0;padding-top:0}
+.pjx .decbox{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 14px;padding:4px 0 6px}
+.pjx .declbl{font-size:12px;color:var(--muted);font-weight:700;padding-top:5px}
+.pjx .decnote{flex:1;min-width:260px;max-width:620px}
+.pjx .apptbl tbody tr:nth-child(odd){background:transparent}
+.pjx .apptbl tbody tr:not(.decrow) td{border-bottom:0}
+.pjx .tag.cic{background:var(--blue)}
+.pjx .hiddennote{margin-top:10px;font-size:13px;padding:8px 10px;border:1px dashed var(--line);border-radius:3px;color:var(--muted)}
+.pjx .hiddennote a{color:var(--blue)}
+.pjx .masa{display:flex;align-items:center;gap:6px}
+.pjx .masa select{width:auto}
+.pjx .prog{height:6px;background:var(--line);border-radius:3px;margin:4px 0;overflow:hidden}
+.pjx .prog i{display:block;height:100%;background:var(--blue)}
+.pjx .mtbl td{vertical-align:top}
+.pjx .masainfo{margin-top:6px;font-size:12.5px}
+.pjx .masainfo .pill{margin-left:4px}
+.pjx .back{background:none;border:0;padding:0;color:var(--blue);cursor:pointer;font-weight:600;font-size:13px;margin:-6px 0 10px;display:inline-flex;gap:6px;align-items:center}
+.pjx .back:hover{text-decoration:underline}
+.pjx .actbar{position:sticky;bottom:0;z-index:3;background:var(--panel);border-top:1px solid var(--line);padding:10px 0;margin:14px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 -8px 10px -10px rgba(0,0,0,.35)}
+.pjx .actbar .sp{flex:1}
+.pjx .actbar .dsum{border:0;padding:0;margin:0}
+.pjx .btn{transition:filter .12s}
+.pjx .btn:hover:not([disabled]){filter:brightness(.93)}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}}
+.pjx tr.flash td{animation:flash 2.6s ease-out}
+@keyframes flash{from{background:rgba(0,166,90,.28)}}
+.pjx .cfm table{min-width:0}
+.pjx .cfm .bar{justify-content:flex-end;margin:14px 0 0}
+.pjx fieldset.plain{border:0;padding:0;margin:0;min-width:0}
+@media (prefers-reduced-motion:reduce){}
+.pjx .dd{position:relative;display:inline-block}
+.pjx .ddmenu{position:absolute;left:0;top:calc(100% + 4px);z-index:8;background:var(--panel);border:1px solid var(--line);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.18);width:380px;max-width:calc(100vw - 32px);overflow:hidden}
+.pjx .ddmenu .ddsearch{padding:8px 10px;background:var(--row);border-bottom:1px solid var(--line)}
+.pjx .ddmenu .ddsearch input{width:100%;border:1px solid var(--line);border-radius:3px;padding:5px 10px;background:var(--input)}
+.pjx .ddmenu .ddhead{padding:7px 14px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;background:var(--row);border-bottom:1px solid var(--line)}
+.pjx .ddmenu .ddlist{max-height:300px;overflow-y:auto}
+.pjx .ddmenu .ddlist button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)}
+.pjx .ddmenu .ddlist button:hover:not([disabled]),
+.pjx .ddmenu .ddlist button:focus-visible{background:var(--row)}
+.pjx .ddmenu .ddlist button[disabled]{cursor:not-allowed;opacity:.55}
+.pjx .ddmenu .ddlist .sub{margin-top:1px}
+.pjx .ddmenu .ddnone{padding:10px 14px;color:var(--muted);font-size:13px}
+.pjx .rpv{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.pjx .steps{margin:0 0 12px;padding-left:20px}
+.pjx .steps li{margin:3px 0}
+.pjx .pstp{min-width:250px;max-width:380px;white-space:normal}
+.pjx .pstp .track{display:flex;align-items:center;margin:3px 6px 8px}
+.pjx .pstp .track i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--stp-off)}
+.pjx .pstp .track i.done{background:var(--stp-done)}
+.pjx .pstp .track i.cur{background:var(--stp-cur);box-shadow:0 0 0 4px var(--stp-cur-bg)}
+.pjx .pstp .track i.rej{background:var(--red);box-shadow:0 0 0 4px var(--stp-bad-bg)}
+.pjx .pstp .track b{flex:1;height:2px;background:var(--stp-off)}
+.pjx .pstp .track b.on{background:var(--stp-done)}
+.pjx .pstp .ttl{font-weight:700;font-size:13px;line-height:1.3}
+.pjx .pstp .bdg{display:inline-block;margin:5px 0 4px;padding:2px 9px;border-radius:3px;font-size:12px;font-weight:600;background:var(--stp-cur-bg);color:var(--stp-cur-t)}
+.pjx .pstp .bdg.done{background:var(--stp-done-bg);color:var(--stp-done-t)}
+.pjx .pstp .bdg.rej{background:var(--stp-bad-bg);color:var(--stp-bad-t)}
+.pjx .pstp .meta{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.pjx .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Dialog dan dropdown departemen (mockup: .modal, .mhead, .dd/.ddmenu). Kelas dialog diganti .pjm agar tidak bentrok dengan Bootstrap .modal. */
+.pjx .pjm{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;justify-content:center;padding:20px 12px;z-index:1060;overflow:auto}
+.pjx .pjm.show{display:flex}
+.pjx .pjm .panel{width:min(960px,100%);margin:auto;animation:enter .15s ease-out}
+/* margin:auto memusatkan dialog secara vertikal; bila isinya lebih tinggi dari layar, dialog menempel di atas dan bisa digulir */
+.pjx .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pjx .mhead h2{font-size:17px;margin:0;font-weight:600}
+.pjx .warn a{color:var(--blue);font-weight:600;cursor:pointer}
+.pjx .page-title{font-size:22px;font-weight:400;margin:0 0 14px}
+.pjx .page-title small{font-size:14px;color:var(--muted);margin-left:8px}
+.pjx .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.pjx .tabs button{font-size:14px}
+.pjx table th,.pjx table td{line-height:1.45}
+@media (prefers-reduced-motion:reduce){.pjx .pjm .panel{animation:none}}
+.pjx [hidden]{display:none!important}
+/* DataTables di dalam .pjx: kontrol bawaan tidak ikut melebar seperti input/select form */
+.pjx .dataTables_wrapper select,.pjx .dataTables_wrapper input{width:auto;display:inline-block}
+.pjx .dataTables_wrapper .dataTables_filter input{margin-left:6px}
+/* Badge status baris: chip lembut dengan titik penanda. .tag.back (Ditolak di ...) sebelumnya tertimpa gaya tombol .back, dipulihkan di sini. */
+.pjx .tag.back{display:table;margin:4px 0 0;color:#fff;font-weight:700;font-size:11.5px}
+.pjx .tag.chip{display:flex;width:fit-content;max-width:100%;align-items:center;gap:6px;margin:6px 0 0;padding:3px 10px 3px 8px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.3;border:1px solid transparent}
+.pjx .tag.chip::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:currentColor}
+.pjx .tag.chip.mod{background:var(--stp-cur-bg);color:var(--stp-cur-t);border-color:#f1d49a}
+.pjx .tag.chip.new{background:#e3f0fa;color:#1f5f8b;border-color:#b9d7ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pjx .tag.chip.new{background:rgba(47,127,184,.2);color:#8cc4ea;border-color:rgba(47,127,184,.45)}}
+/* Jadwal pembayaran: input tanggal yang konsisten + ringkasan bahasa biasa di bawahnya */
+.pjx .sched{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.pjx .sched .fld{display:flex;align-items:center;gap:8px}
+.pjx .sched .pre{font-size:12px;color:var(--muted);white-space:nowrap}
+.pjx .sched input[type=number]{width:76px;text-align:center;font-variant-numeric:tabular-nums}
+.pjx .sched input[type=date]{width:100%;min-width:158px;font-variant-numeric:tabular-nums;cursor:pointer}
+.pjx .sched input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65}
+.pjx .sched input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+.pjx .sched input:hover{border-color:#b8c2cc}
+.pjx .sched input:focus{border-color:var(--top);box-shadow:0 0 0 3px rgba(63,139,186,.2);outline:0}
+.pjx .sched .when{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:2px 10px 2px 8px;border-radius:999px;background:var(--row);border:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--text);line-height:1.35}
+.pjx .sched .when i{color:var(--top)}
+.pjx .sched .when.warn{background:var(--stp-cur-bg);border-color:#f1d49a;color:var(--stp-cur-t)}
+.pjx .sched .when.warn i{color:inherit}
+/* Pill status lembut: teks gelap di atas warna muda (kontras terbaca), titik penanda di depan. Menimpa gaya pill solid dan aturan .grid2 span. */
+.pjx .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;line-height:1.35;border:1px solid transparent;color:inherit}
+.pjx .pill::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:currentColor}
+.pjx .pill.W{background:#fdf0d5;color:#8a5200;border-color:#f1d49a}
+.pjx .pill.A{background:#e1f3ea;color:#1e6b40;border-color:#b6e0c9}
+.pjx .pill.R{background:#fbe3e0;color:#a8321f;border-color:#f3beb7}
+.pjx .pill.P{background:#e3f0fa;color:#1f5f8b;border-color:#b9d7ee}
+.pjx .grid2 .pill{display:inline-flex;font-size:11.5px;margin-top:2px}
+/* Dialog: kartu dengan bayangan, ringkasan dalam kotak, judul kolom kecil */
+.pjx .pjm .panel{border-radius:6px;padding:18px 22px 20px;box-shadow:0 16px 48px rgba(0,0,0,.3)}
+.pjx .pjm .mhead{padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.pjx .pjm .grid2{background:var(--row);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin-bottom:14px}
+.pjx .pjm .grid2 span:not(.pill){font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.pjx .pjm table th{font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted)}
+/* Sebelum / sesudah per field: sebelum merah muda, sesudah hijau muda */
+.pjx .diff{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px}
+.pjx .diff .f{display:flex;flex-direction:column;gap:2px}
+.pjx .diff .f small{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.pjx .diff .v,.pjx .v.none{display:inline-block;width:fit-content;max-width:100%;padding:2px 9px;border-radius:4px;font-size:13px;font-weight:600;line-height:1.4}
+.pjx .v.old{background:#fbe9e7;color:#a8321f}
+.pjx .v.new{background:#e5f4ec;color:#1e6b40}
+.pjx .v.none{background:var(--row);color:var(--muted)}

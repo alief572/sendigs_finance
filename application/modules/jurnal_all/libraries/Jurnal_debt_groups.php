@@ -97,6 +97,27 @@ class Jurnal_debt_groups
                 if($attempt['status']==='posted'){$detail['header']['posted_at']=$attempt['updated_at'];$detail['header']['posted_by']=$attempt['actor_name'];$detail['header']['posted_by_id']=$attempt['actor_id'];}
             }unset($detail);
         }
+        $divisionMap=$this->model->pettyPaymentDivisionMap($approvals);
+        $docDivisions=[];
+        foreach($approvals as $p) foreach(($divisionMap[$p['id']] ?? []) as $name) $docDivisions[$p['no_doc']][$name]=true;
+        foreach($this->details as &$detail) {
+            $names=[];
+            foreach(explode(', ',$detail['header']['no_referensi']) as $doc) $names+=($docDivisions[$doc] ?? []);
+            $names=array_keys($names);sort($names,SORT_NATURAL|SORT_FLAG_CASE);
+            if(empty($detail['header']['nm_divisi']))$detail['header']['nm_divisi']=implode(', ',$names);
+            $byId=[];
+            foreach($detail['company_sections'] as &$section) {
+                $names=[];
+                foreach(explode(', ',$section['no_referensi']) as $doc) $names+=($docDivisions[$doc] ?? []);
+                $names=array_keys($names);sort($names,SORT_NATURAL|SORT_FLAG_CASE);
+                foreach($section['rows'] as &$line) {
+                    if(empty($line['nm_divisi']))$line['nm_divisi']=implode(', ',$names);
+                    $byId[$line['id']]=$line['nm_divisi'];
+                }unset($line);
+            }unset($section);
+            foreach($detail['rows'] as &$line) if(isset($byId[$line['id']]))$line['nm_divisi']=$byId[$line['id']];
+            unset($line);
+        }unset($detail);
         foreach($this->details as $index=>$detail)foreach($detail['rows'] as $row)$this->byId[(string)$row['id']]=$index;
         return $this->details;
     }
