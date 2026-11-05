@@ -26,6 +26,7 @@ class Payment_reference_cli extends CI_Controller
     private function execute($mode,$path,$normalization)
     {
         try {
+            $path=getenv('PAYMENT_MANIFEST') ?: $path; // CI memecah argumen pada '/', jadi path penuh dikirim lewat env
             if (!in_array($mode,$normalization?['dry-run','apply','rollback','verify']:['dry-run','apply','rollback'],true)) throw new DomainException('Mode CLI tidak valid.');
             if (!$path || !is_string($path) || strtolower(pathinfo($path,PATHINFO_EXTENSION))!=='json') throw new DomainException('Sertakan path manifest .json di luar document root.');
             $parent=realpath(dirname($path));

@@ -154,7 +154,7 @@ class Jurnal_payment_model extends BF_Model
                 ->from('payment_approve b')
                 ->join('tr_kasbon k', 'k.no_doc = b.no_doc', 'left')
                 ->join('tr_expense e', 'e.no_doc = b.no_doc', 'left')
-                ->where_in('b.id', $arr_no_transaksi)
+                ->group_start()->where_in('b.id', $arr_no_transaksi)->or_where_in('b.id_payment', $arr_no_transaksi)->group_end()
                 ->get()
                 ->result_array();
 
@@ -257,7 +257,7 @@ class Jurnal_payment_model extends BF_Model
                 ->from('payment_approve b')
                 ->join('tr_kasbon k', 'k.no_doc = b.no_doc', 'left')
                 ->join('tr_expense e', 'e.no_doc = b.no_doc', 'left')
-                ->where_in('b.id', $arr_no_transaksi)
+                ->group_start()->where_in('b.id', $arr_no_transaksi)->or_where_in('b.id_payment', $arr_no_transaksi)->group_end()
                 ->get()
                 ->result_array();
 
