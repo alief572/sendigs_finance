@@ -27,9 +27,10 @@ class Kwitansi_deposit_service
             $companySource = Kwitansi_company::resolve($s->db, $spk, true);
             $mapping = $s->mapping($companySource['company']['id'], true);
             $depositAccounts = array_values(array_filter($s->master($mapping['owner']['id']), function ($account) { return $account['no_perkiraan'] === '2102-01-02'; }));
-            if (count($depositAccounts) !== 1) throw new RuntimeException('COA deposit tidak tersedia atau ambigu pada company tujuan.');
+            if (count($depositAccounts) > 1) throw new RuntimeException('COA deposit ambigu pada company tujuan.');
             $accounts = $mapping['accounts'];
-            $accounts['deposit'] = array('code'=>'2102-01-02', 'name'=>$depositAccounts[0]['nama']);
+            // COA belum ada di master: tetap simpan jurnal dengan kode & nama bawaan.
+            $accounts['deposit'] = array('code'=>'2102-01-02', 'name'=>$depositAccounts ? $depositAccounts[0]['nama'] : 'Deposit Customer');
             $amount = Penerimaan_calculation::cents($s->required($post, 'nilai_kwitansi', 32));
             if ($amount <= 0) throw new InvalidArgumentException('Nilai kwitansi harus lebih besar dari 0.');
             $trusted = array('id_customer'=>$spk['id_customer'], 'nm_customer'=>$spk['nm_customer'],
