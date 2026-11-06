@@ -196,19 +196,9 @@ class Pengajuan_rutin extends Admin_Controller
 		$this->beginAudit(__FUNCTION__, array(), array('department_id', 'outcome'));
 		$user_dept = $this->get_user_department();
 		$dept = $this->allowedDept();
-		$batches = $this->Pengajuan_rutin_model->GetBatchesWithItems($dept);
-		$this->auditObserve($batches);
-		$batches = is_array($batches) ? $batches : array();
-
-		$noItems = array();
-		foreach ($batches as $b) {
-			foreach ($b['items'] as $i) {
-				$noItems[] = $i['no_item'];
-			}
-		}
-		$this->template->set('batches', $batches);
-		$this->template->set('rp', $this->Pengajuan_rutin_model->GetRpStates($noItems));
-		$this->template->set('names', $this->deptNames());
+		$counts = $this->Pengajuan_rutin_model->CountBatchViews($dept);
+		$this->auditObserve($counts);
+		$this->template->set('counts', is_array($counts) ? $counts : array('wait' => 0, 'rec' => 0));
 		$this->template->set('dd_items', json_encode($this->departmentChoices($dept), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT));
 		$this->template->set('can_add', has_permission($this->addPermission));
 		$this->template->set('can_manage', has_permission($this->managePermission));
@@ -221,6 +211,97 @@ class Pengajuan_rutin extends Admin_Controller
 			'department_id' => $user_dept,
 			'outcome'       => $this->auditQueriesOk ? 'rendered' : 'query_error'
 		));
+	}
+
+	/** Sumber data DataTables serverside halaman index: view wait|rec, mode batch|item. */
+	public function data_list()
+	{
+		$this->beginAudit(__FUNCTION__, array(), array('department_id', 'outcome'));
+		$in = $this->input->post();
+		$view = ($in['view'] ?? '') === 'rec' ? 'rec' : 'wait';
+		$mode = ($in['mode'] ?? '') === 'item' ? 'item' : 'batch';
+		$filter = (string) ($in['filter'] ?? 'all');
+		$search = trim((string) ($in['search']['value'] ?? ''));
+		$start = (int) ($in['start'] ?? 0);
+		$res = $this->Pengajuan_rutin_model->ListPage($this->allowedDept(), $view, $mode, $filter, $search, $start, (int) ($in['length'] ?? 10));
+		$this->auditObserve($res);
+		$out = array('draw' => (int) ($in['draw'] ?? 0), 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => array());
+		if (is_array($res)) {
+			$out['recordsTotal'] = $res[0];
+			$out['recordsFiltered'] = $res[1];
+			$out['data'] = $mode === 'item' ? $this->itemRows($res[2], $view) : $this->batchRows($res[2], $view, $start);
+		} else {
+			$out['error'] = 'Terjadi kesalahan. Silakan coba lagi.';
+		}
+		$this->jsonOut($out);
+		$this->completeAudit('Memuat daftar pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
+	}
+
+	private function esc($v)
+	{
+		return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+	}
+
+	private function batchRows(array $batches, $view, $start)
+	{
+		$names = $this->deptNames();
+		$canEdit = has_permission($this->addPermission) || has_permission($this->managePermission);
+		$canDelete = has_permission($this->deletePermission);
+		$rows = array();
+		foreach ($batches as $ix => $b) {
+			$letters = array_column($b['items'], 'status');
+			list($k, $t) = Periodik_logic::batch_status($letters);
+			$status = '<span class="pill ' . $this->esc($k) . '">' . $this->esc($t) . '</span>';
+			$actions = '<button type="button" class="btn c sm" data-view="' . (int) $b['id'] . '">Lihat</button>';
+			if ($view === 'wait') {
+				if ($canEdit) { $actions .= ' <a class="btn o sm" href="' . base_url('pengajuan_rutin/edit/' . (int) $b['id']) . '" style="text-decoration:none">Edit</a>'; }
+				if ($canDelete) { $actions .= ' <button type="button" class="btn r sm" data-del="' . $this->esc($b['no']) . '" data-count="' . count($b['items']) . '">Hapus</button>'; }
+			} elseif ($k === 'P' || $k === 'R') {
+				$c = array_count_values($letters);
+				$status .= '<span class="sub">' . (int) ($c['A'] ?? 0) . ' approved, ' . (int) ($c['R'] ?? 0) . ' rejected</span>';
+			}
+			$list = '<ol class="items">';
+			foreach ($b['items'] as $i) { $list .= '<li>' . $this->esc($i['desc']) . '</li>'; }
+			$rows[] = array(
+				'DT_RowAttr' => array('data-batch' => $b['no']),
+				$start + $ix + 1,
+				$this->esc(isset($names[$b['dept']]) ? $names[$b['dept']] : $b['dept']),
+				$this->esc($b['no']),
+				$list . '</ol>',
+				number_format((float) array_sum(array_column($b['items'], 'nominal')), 0, ',', '.'),
+				'<span style="white-space:nowrap">' . $this->esc(Periodik_logic::fdate($b['date'])) . '</span>',
+				$status,
+				'<span style="white-space:nowrap">' . $actions . '</span>',
+			);
+		}
+		return $rows;
+	}
+
+	private function itemRows(array $pairs, $view)
+	{
+		$names = $this->deptNames();
+		$rp = $this->Pengajuan_rutin_model->GetRpStates(array_column(array_column($pairs, 'item'), 'no_item'));
+		$rows = array();
+		foreach ($pairs as $p) {
+			$b = $p['batch'];
+			$i = $p['item'];
+			$no = $this->esc($i['no_item']) . ($i['ref'] !== '' ? '<span class="ref" style="display:block">Revisi dari ' . $this->esc($i['ref']) . '</span>' : '')
+				. ($view === 'wait' && $i['resub'] !== '' ? '<span class="ref" style="display:block">Diajukan ulang di ' . $this->esc($i['resub']) . '</span>' : '');
+			$row = array(
+				'DT_RowAttr' => array('data-batch' => $b['no']),
+				$no,
+				'<span style="white-space:nowrap">' . $this->esc($b['no']) . '</span>',
+				'<span style="white-space:nowrap">' . $this->esc(isset($names[$b['dept']]) ? $names[$b['dept']] : $b['dept']) . '</span>',
+				$this->esc($i['desc']),
+				number_format((float) $i['nominal'], 0, ',', '.'),
+			);
+			if ($view === 'wait') { $row[] = $this->esc($i['ket']); }
+			$row[] = Periodik_logic::steps_html($i, isset($rp[$i['no_item']]) ? $rp[$i['no_item']] : null);
+			$rows[] = $row;
+		}
+		return $rows;
 	}
 
 	/** Pilihan departemen pada tombol + New: hanya departemen yang punya budget yang bisa dipilih. */
@@ -741,7 +822,7 @@ class Pengajuan_rutin extends Admin_Controller
 		$plan = array();
 		$missing = array();
 		foreach ($waiting as $it) {
-			$key = $it['no_item'];
+			$key = $it['id'];
 			$dec = isset($decision[$key]) && $decision[$key] === 'R' ? 'R' : 'A';
 			$text = trim((string) ($note[$key] ?? ''));
 			if ($dec === 'R' && $text === '' && $general === '') {

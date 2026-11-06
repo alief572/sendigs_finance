@@ -3963,3 +3963,8 @@ Catatan awal: working tree membawa perubahan belum di-commit milik pekerjaan lai
 - Smoke test pasca-migrasi (model asli ke DB, hanya baca): GetBatchesWithItems 199 batch / 250 item terlihat (1 detail yatim `PERIODIK-2025-00003` tanpa header, sudah ada sebelumnya dan tidak pernah tampil), GetMasters 162, GetMasterWithItems, GetRpStates, GetBgs berjalan. Penomoran BP/PI/BG diuji di MySQL asli di dalam transaksi lalu di-rollback; `ms_periodik_counter` tetap kosong.
 - Perbaikan menyertai: kolom header `approved_by`/`reject_by` (varchar(10)) kini diisi id user seperti data yang sudah ada (bukan nama).
 - Belum ada pengguna yang menyimpan data lewat layar baru; seluruh data lama tetap terbaca lewat cabang batch lama.
+
+## Pengajuan Rutin: index memakai DataTables serverside (2026-11-06)
+- Selesai: `Pengajuan_rutin_model::ListPage/CountBatchViews` (paging, filter status, pencarian di SQL), endpoint `Pengajuan_rutin::data_list` (POST, terkunci ke departemen user bila bukan admin, diaudit), `views/list.php` memakai 4 tabel serverside yang diinisialisasi saat tab dibuka.
+- Keputusan: `index()` hanya mengirim jumlah tab, tidak lagi memuat seluruh batch. Pencarian mencakup no batch, no item, deskripsi, keterangan (bukan nama departemen, karena nama berasal dari lookup di luar query).
+- Tes lulus (php74): Views_test 53, Model_query_test 42, Batch1_audit_test 70 skenario, Batch2_audit_test 40, Periodik_logic_test, Periodik_helper_test. Belum diuji di browser.

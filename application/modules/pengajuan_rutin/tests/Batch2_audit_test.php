@@ -5,7 +5,7 @@ require __DIR__ . '/Batch1_audit_test.php';
 
 $child = $argv[1] ?? '';
 if ($child === '--pengajuan2-abort') {
-    pengajuan_run('save_decision', array('abort_query' => 1), array('id' => '1', 'decision' => array('PI-2026-00001' => 'A')));
+    pengajuan_run('save_decision', array('abort_query' => 1), array('id' => '1', 'decision' => array(1 => 'A')));
     exit;
 }
 
@@ -99,8 +99,8 @@ foreach (array('writer_failure', 'writer_exception') as $writer) {
 // ==========================================
 // 4. save_decision
 // ==========================================
-$A = array('id' => '1', 'decision' => array('PI-2026-00001' => 'A'), 'note' => array(), 'general_note' => '');
-$R = array('id' => '1', 'decision' => array('PI-2026-00001' => 'R'), 'note' => array('PI-2026-00001' => 'Nominal salah'), 'general_note' => '');
+$A = array('id' => '1', 'decision' => array(1 => 'A'), 'note' => array(), 'general_note' => '');
+$R = array('id' => '1', 'decision' => array(1 => 'R'), 'note' => array(1 => 'Nominal salah'), 'general_note' => '');
 
 // A. Batch tidak ada / sudah diputuskan
 list($event, $output) = b2_run('save_decision', array('missing_record' => true), $A);
@@ -109,9 +109,9 @@ list($event, $output, $ctrl) = b2_run('save_decision', array('item_letter' => 'A
 check($event['status'] === 0 && $event['context']['data']['outcome'] === 'already_decided' && !b2_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail'), 'save_decision: decision is final');
 
 // B. Reject tanpa alasan (per item maupun umum)
-list($event, $output, $ctrl) = b2_run('save_decision', array(), array('id' => '1', 'decision' => array('PI-2026-00001' => 'R'), 'note' => array('PI-2026-00001' => ' '), 'general_note' => ''));
+list($event, $output, $ctrl) = b2_run('save_decision', array(), array('id' => '1', 'decision' => array(1 => 'R'), 'note' => array(1 => ' '), 'general_note' => ''));
 check($event['status'] === 0 && $event['context']['data']['outcome'] === 'missing_reason' && !$ctrl->db->writes, 'save_decision: reject without reason blocked, nothing written');
-list($event, $output, $ctrl) = b2_run('save_decision', array(), array('id' => '1', 'decision' => array('PI-2026-00001' => 'R'), 'note' => array(), 'general_note' => 'Dokumen tidak lengkap'));
+list($event, $output, $ctrl) = b2_run('save_decision', array(), array('id' => '1', 'decision' => array(1 => 'R'), 'note' => array(), 'general_note' => 'Dokumen tidak lengkap'));
 check($event['status'] === 1, 'save_decision: general reason covers an item without its own reason');
 $upd = b2_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail')[0][1][1];
 check($upd['item_status'] === 8 && $upd['item_reject_ket'] === 'Dokumen tidak lengkap', 'save_decision: general reason stored on the item');
@@ -137,8 +137,8 @@ check($hdr[1]['status'] === 0 && $hdr[1]['sts_reject'] === 1 && $hdr[1]['reject_
 
 // E. Sebagian: status batch Partially Approved, alasan per item
 list($event, $output, $ctrl) = b2_run('save_decision', array('two_items' => true), array(
-    'id' => '1', 'decision' => array('PI-2026-00001' => 'A', 'PI-2026-00002' => 'R'),
-    'note' => array('PI-2026-00002' => 'Biaya terlalu tinggi'), 'general_note' => ''));
+    'id' => '1', 'decision' => array(1 => 'A', 2 => 'R'),
+    'note' => array(2 => 'Biaya terlalu tinggi'), 'general_note' => ''));
 $decoded = json_decode($output, true);
 check($event['status'] === 1 && $decoded['status'] === 'Partially Approved' && $decoded['approved'] === 1 && $decoded['rejected'] === 1, 'save_decision (partial): Partially Approved');
 $ups = b2_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail');
@@ -150,7 +150,7 @@ list($event, $output) = b2_run('save_decision', array(), array('id' => '1', 'dec
 check($event['status'] === 1 && json_decode($output, true)['status'] === 'Approved', 'save_decision: missing decision defaults to approve');
 
 // G. Batch lama: nomor item dibuat saat diputuskan
-list($event, , $ctrl) = b2_run('save_decision', array('legacy_item' => true), array('id' => '1', 'decision' => array('BP-2611-001' => 'A'), 'note' => array(), 'general_note' => ''));
+list($event, , $ctrl) = b2_run('save_decision', array('legacy_item' => true), array('id' => '1', 'decision' => array(1 => 'A'), 'note' => array(), 'general_note' => ''));
 $upd = b2_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail')[0][1][1];
 check($event['status'] === 1 && preg_match('/^PI-\d{4}-00001$/', $upd['no_item']) === 1, 'save_decision (legacy batch): item number assigned at decision');
 

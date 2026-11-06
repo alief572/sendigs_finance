@@ -26,6 +26,9 @@ if (!function_exists('simpan_aktifitas')) {
     }
 }
 
+if (!function_exists('base_url')) {
+    function base_url($path = '') { return '/base/' . $path; }
+}
 if (!function_exists('has_permission')) {
     function has_permission($perm = '') {
         return true;
@@ -384,6 +387,29 @@ class RutinModel extends Pengajuan_rutin_model {
         return array();
     }
 
+    public function CountBatchViews($dept = null) {
+        $this->db->get('tr_pengajuan_rutin');
+        return !empty($GLOBALS['scenario']['query_error_detail']) ? false : array('wait' => 1, 'rec' => 0);
+    }
+
+    /** Satu halaman daftar: batch (mode batch) atau pasangan batch+item (mode item). */
+    public function ListPage($dept, $view, $mode, $filter, $search, $start, $length) {
+        $all = $this->GetBatchesWithItems($dept);
+        if ($all === false) {
+            return false;
+        }
+        $rows = array();
+        foreach ($all as $b) {
+            if ($mode === 'item') {
+                foreach ($b['items'] as $i) { $rows[] = array('batch' => $b, 'item' => $i); }
+            } else {
+                $rows[] = $b;
+            }
+        }
+        $GLOBALS['rutinListArgs'] = array($dept, $view, $mode, $filter, $search, $start, $length);
+        return array(count($rows), count($rows), $rows);
+    }
+
     public function GetLastBank($idBudget) {
         return (object) array('bank_id' => 'BCA', 'accnumber' => '123', 'accname' => 'Vendor');
     }
@@ -575,7 +601,7 @@ list($event, , $ctrl) = pengajuan_run('index', array('is_admin' => true));
 check($event['status'] === 1, 'index (admin): status 1');
 check($event['context']['data']['outcome'] === 'rendered', 'index (admin): outcome rendered');
 check($ctrl->template->view === 'list', 'index (admin): renders list');
-check(isset($ctrl->template->data['batches']['BP-2611-001']) && count($ctrl->template->data['batches']['BP-2611-001']['items']) === 1, 'index (admin): batch with item passed to view');
+check($ctrl->template->data['counts'] === array('wait' => 1, 'rec' => 0), 'index (admin): tab counts passed to view');
 $dd = json_decode($ctrl->template->data['dd_items'], true);
 check(count($dd) === 2 && $dd[0]['id'] === 'DEP-1' && $dd[0]['disabled'] === false && strpos($dd[0]['sub'], '1 item bisa diajukan') === 0, 'index (admin): department choices carry open item count');
 
@@ -597,6 +623,23 @@ foreach (array('writer_failure', 'writer_exception') as $writer) {
     list($event) = pengajuan_run('index', array($writer => true));
     check($event['status'] === 1, 'index: writer resilience');
 }
+
+// E. data_list (DataTables serverside)
+list($event, $output, $ctrl) = pengajuan_run('data_list', array('is_admin' => false), array('draw' => '3', 'view' => 'wait', 'mode' => 'batch', 'start' => '0', 'length' => '10', 'search' => array('value' => ' sewa ')));
+$dt = json_decode($output, true);
+check($event['status'] === 1 && $event['context']['data']['outcome'] === 'rendered', 'data_list: audited as rendered');
+check($dt['draw'] === 3 && $dt['recordsTotal'] === 1 && $dt['recordsFiltered'] === 1 && count($dt['data']) === 1, 'data_list: DataTables envelope');
+check($GLOBALS['rutinListArgs'] === array('DEP-1', 'wait', 'batch', 'all', 'sewa', 0, 10), 'data_list: non-admin locked to own department, search trimmed');
+check($dt['data'][0][0] === 1 && $dt['data'][0][2] === 'BP-2611-001' && $dt['data'][0]['DT_RowAttr']['data-batch'] === 'BP-2611-001', 'data_list: batch row number, batch no, row attribute');
+check(strpos($dt['data'][0][7], 'data-view="1"') !== false, 'data_list: Lihat action present');
+list($event, $output) = pengajuan_run('data_list', array('is_admin' => true), array('view' => 'rec', 'mode' => 'item', 'filter' => 'R', 'start' => '20', 'length' => '10', 'draw' => '1'));
+$dt = json_decode($output, true);
+check($GLOBALS['rutinListArgs'] === array(null, 'rec', 'item', 'R', '', 20, 10), 'data_list: admin sees all departments, filter and paging forwarded');
+check(count($dt['data'][0]) === 7 && $dt['data'][0][1] === '<span style="white-space:nowrap">BP-2611-001</span>', 'data_list: rec item row has no Keterangan column');
+list($event, $output) = pengajuan_run('data_list', array('is_admin' => true), array('view' => 'wait', 'mode' => 'item'));
+check(count(json_decode($output, true)['data'][0]) === 8, 'data_list: wait item row carries Keterangan column');
+list($event, $output) = pengajuan_run('data_list', array('query_error_detail' => true), array('view' => 'wait', 'mode' => 'batch'));
+check($event['status'] === 0 && isset(json_decode($output, true)['error']) && json_decode($output, true)['data'] === array(), 'data_list: query error reported and audited');
 
 // ==========================================
 // 3. create

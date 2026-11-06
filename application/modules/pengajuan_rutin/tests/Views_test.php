@@ -43,24 +43,13 @@ $batches = [
 	'BP-2610-004' => batch('BP-2610-004', 4, [item('R', ['id' => 4, 'no_item' => 'PI-2026-00004', 'closed_at' => '2026-11-05 10:00:00', 'closed_note' => 'Tagihan batal'])], '2026-10-04'),
 ];
 $rp = ['PI-2026-00001' => ['state' => 'pending', 'no' => 'PGJ-0007']];
-$html = render('list', ['batches' => $batches, 'rp' => $rp, 'names' => $names, 'dd_items' => '[]', 'can_add' => true, 'can_manage' => true, 'can_delete' => true]);
-check(strpos($html, 'Menunggu approval (1)') !== false && strpos($html, 'Sudah diputuskan (2)') !== false, 'list: tab counts split by batches with a waiting item');
-check(strpos($html, 'Sewa <b>Kantor</b>') === false && strpos($html, 'Sewa &lt;b&gt;Kantor&lt;/b&gt;') !== false, 'list: item description is escaped');
-check(strpos($html, 'Catatan &quot;khusus&quot;') !== false, 'list: note is escaped');
-check(strpos($html, '<script>x</script>') === false, 'list: reject reason cannot inject script');
-check(strpos($html, 'Partially Approved') !== false && strpos($html, '1 approved, 1 rejected') !== false, 'list: partial batch status with counts');
-check(strpos($html, '>Rejected</span><span class="sub">0 approved, 1 rejected') !== false, 'list: rejected batch status with counts');
-check(strpos($html, 'Diajukan ulang sebagai PI-2026-00009') !== false, 'list: resubmitted item shows its replacement in the stepper');
-check(strpos($html, 'Diajukan ulang di PI-2026-00009') === false, 'list: decided Per Item view shows only Revisi dari (as in the mockup)');
-check(strpos($html, 'Menunggu Approval Request Payment') !== false && strpos($html, 'PGJ-0007') !== false, 'list: stepper reflects Request Payment state');
-check(strpos($html, 'Ditutup, tidak diajukan ulang (Tagihan batal)') !== false, 'list: closed item stepper');
-check(strpos($html, 'data-del="BP-2611-002"') !== false && strpos($html, 'data-del="BP-2611-001"') === false, 'list: Hapus only for waiting batches');
-check(strpos($html, 'href="/base/pengajuan_rutin/edit/2"') !== false && strpos($html, 'edit/1"') === false, 'list: Edit only for waiting batches');
-check(strpos($html, '04 Okt 2026') !== false || strpos($html, '04 Oct 2026') === false, 'list: Indonesian date format');
+$html = render('list', ['counts' => ['wait' => 1, 'rec' => 2], 'dd_items' => '[]', 'can_add' => true]);
+check(strpos($html, 'Menunggu approval (1)') !== false && strpos($html, 'Sudah diputuskan (2)') !== false, 'list: tab counts');
+foreach (['wait-batch', 'wait-item', 'rec-batch', 'rec-item'] as $pane) { check(strpos($html, 'data-dt="' . $pane . '"') !== false, "list: serverside table $pane"); }
+check(strpos($html, 'serverSide: true') !== false && strpos($html, 'pengajuan_rutin/data_list') !== false, 'list: DataTables serverside wired to data_list');
 foreach (['No. Item', 'No. Batch', 'Departemen', 'Deskripsi', 'Nominal', 'Keterangan', 'Progres', 'Status batch', 'Action'] as $col) { check(strpos($html, '>' . $col . '<') !== false, "list: column $col"); }
-check(strpos($html, '1.500.000') !== false, 'list: Indonesian number format');
 js_syntax($html, 'list');
-$noAdd = render('list', ['batches' => [], 'rp' => [], 'names' => $names, 'dd_items' => '[]', 'can_add' => false, 'can_manage' => false, 'can_delete' => false]);
+$noAdd = render('list', ['counts' => ['wait' => 0, 'rec' => 0], 'dd_items' => '[]', 'can_add' => false]);
 check(strpos($noAdd, 'id="pjNew"') === false && strpos($noAdd, 'Tidak ada batch yang menunggu approval. Klik + New untuk membuat pengajuan.') !== false, 'list: no New button without Add permission, empty-state text');
 
 // ---- batch_detail.php
@@ -125,6 +114,8 @@ check(strpos($appr, 'Ditolak sebelumnya: PI-2026-00000: Salah &lt;b&gt;x&lt;/b&g
 check(strpos($appr, '15 Mar 2026') !== false && strpos($appr, 'Tgl 25') !== false, 'approval: schedule by budget type');
 check(strpos($appr, 'BCA') !== false && strpos($appr, 'Vendor') !== false, 'approval: bank details shown');
 check(strpos($appr, 'Simpan keputusan') !== false && strpos($appr, 'Alasan reject umum') !== false && strpos($appr, 'Approve semua') !== false, 'approval: actions');
+$legacy = render('approval_form', ['batch' => batch('PERIODIK-2026-00201', 9, [item('W', ['id' => 5, 'no_item' => 'PERIODIK-2026-00201']), item('W', ['id' => 6, 'no_item' => 'PERIODIK-2026-00201'])]), 'dept_name' => 'FA', 'chain' => []]);
+check(strpos($legacy, 'data-dec="5" data-v="R"') !== false && strpos($legacy, 'data-dec="6" data-v="R"') !== false && strpos($legacy, 'data-dec="PERIODIK') === false, 'approval: items sharing a legacy item number are keyed by their own row id');
 js_syntax($appr, 'approval_form');
 $decided = render('approval_form', ['batch' => batch('BP-2611-009', 9, [item('A')]), 'dept_name' => 'FA', 'chain' => []]);
 check(strpos($decided, 'data-v="A"') === false && strpos($decided, '>Approved</span>') !== false, 'approval: decided items show their result instead of a toggle');

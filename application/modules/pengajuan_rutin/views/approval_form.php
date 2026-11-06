@@ -19,7 +19,7 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 		<thead><tr><th>#</th><th>No. Item</th><th>Deskripsi</th><th>Jadwal Pembayaran</th><th class="num">Budget</th><th class="num">Perkiraan Biaya</th><th>Keterangan</th><th>Dokumen</th><th>Bank / No Rek / Nama</th></tr></thead>
 		<tbody>
 		<?php foreach ($batch['items'] as $ix => $i) : $ch = isset($chain[$i['no_item']]) ? $chain[$i['no_item']] : array(); $open = $i['status'] === 'W'; ?>
-			<tr data-row="<?= $e($i['no_item']) ?>">
+			<tr data-row="<?= (int) $i['id'] ?>">
 				<td><?= $ix + 1 ?></td>
 				<td class="no"><?= $e($i['no_item']) ?><?php if ($i['ref'] !== '') : ?><span class="ref" style="display:block">Revisi dari <?= $e($i['ref']) ?></span><?php endif; ?></td>
 				<td style="min-width:170px"><?= $ro($i['desc']) ?>
@@ -33,17 +33,17 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 				<?php else : ?><span class="sub">Tidak ada file</span><?php endif; ?></td>
 				<td style="min-width:150px"><?= $ro($i['bank_id']) ?><?= $ro($i['accnumber']) ?><?= $ro($i['accname']) ?></td>
 			</tr>
-			<tr class="decrow" data-dec-row="<?= $e($i['no_item']) ?>">
+			<tr class="decrow" data-dec-row="<?= (int) $i['id'] ?>">
 				<td></td>
 				<td colspan="8">
 				<?php if ($open) : ?>
 					<div class="decbox"><span class="declbl">Keputusan</span>
 						<div class="seg" role="group" aria-label="Keputusan <?= $e($i['no_item']) ?>">
-							<button type="button" class="on A" data-dec="<?= $e($i['no_item']) ?>" data-v="A" aria-pressed="true">Approve</button>
-							<button type="button" data-dec="<?= $e($i['no_item']) ?>" data-v="R" aria-pressed="false">Reject</button>
+							<button type="button" class="on A" data-dec="<?= (int) $i['id'] ?>" data-v="A" aria-pressed="true">Approve</button>
+							<button type="button" data-dec="<?= (int) $i['id'] ?>" data-v="R" aria-pressed="false">Reject</button>
 						</div>
-						<div class="decnote" data-notebox="<?= $e($i['no_item']) ?>" hidden>
-							<textarea rows="2" data-note="<?= $e($i['no_item']) ?>" placeholder="Wajib diisi"></textarea>
+						<div class="decnote" data-notebox="<?= (int) $i['id'] ?>" hidden>
+							<textarea rows="2" data-note="<?= (int) $i['id'] ?>" placeholder="Wajib diisi"></textarea>
 							<div class="err" hidden>Isi alasan untuk item ini, atau isi alasan reject umum.</div>
 						</div>
 					</div>
@@ -79,7 +79,7 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 <script>
 (function () {
 	var batchId = <?= (int) $batch['id'] ?>, batchNo = <?= json_encode($batch['no'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-	var items = <?= json_encode(array_values(array_map(function ($i) { return array('no' => $i['no_item'], 'nominal' => (float) $i['nominal'], 'open' => $i['status'] === 'W', 'status' => $i['status']); }, $batch['items'])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+	var items = <?= json_encode(array_values(array_map(function ($i) { return array('no' => (int) $i['id'], 'nominal' => (float) $i['nominal'], 'open' => $i['status'] === 'W', 'status' => $i['status']); }, $batch['items'])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 	var dec = {}, tried = false, saving = false, root = document.querySelector('.pjx');
 	items.forEach(function (i) { if (i.open) dec[i.no] = 'A'; });
 	var listUrl = siteurl + 'pengajuan_rutin/app_list';

@@ -61,6 +61,37 @@ $one = $model->GetBatchesWithItems(null, 'BP-2610-003');
 check(array_keys($one) === ['BP-2610-003'] && count($one['BP-2610-003']['items']) === 3, 'single batch filter');
 check($model->GetBatchesWithItems(null, 'TIDAK-ADA') === [], 'unknown batch gives empty list');
 
+// CountBatchViews + ListPage (serverside)
+check($model->CountBatchViews(null) === ['wait' => 1, 'rec' => 2] && $model->CountBatchViews('DEP-2') === ['wait' => 0, 'rec' => 1], 'tab counts, department scoped');
+list($tot, $fil, $rows) = $model->ListPage(null, 'wait', 'batch', 'all', '', 0, 10);
+check($tot === 1 && $fil === 1 && array_column($rows, 'no') === ['BP-2611-001'] && count($rows[0]['items']) === 2, 'wait batches: one batch with all its items');
+list($tot, $fil, $rows) = $model->ListPage(null, 'rec', 'batch', 'all', '', 0, 1);
+check($tot === 2 && $fil === 2 && array_column($rows, 'no') === ['PERIODIK-2026-00150'], 'rec batches: paging limits rows, total stays');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'batch', 'all', '', 1, 10);
+check(array_column($rows, 'no') === ['BP-2610-003'], 'rec batches: offset');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'batch', 'P', '', 0, 10);
+check(array_column($rows, 'no') === ['BP-2610-003'], 'rec batch filter P: mixed approved + rejected');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'batch', 'A', '', 0, 10);
+check(array_column($rows, 'no') === ['PERIODIK-2026-00150'], 'rec batch filter A: all approved');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'batch', 'R', '', 0, 10);
+check($fil === 0 && $rows === [], 'rec batch filter R: none fully rejected');
+list($tot, $fil, $rows) = $model->ListPage(null, 'rec', 'item', 'R', '', 0, 10);
+check($tot === 4 && $fil === 1 && $rows[0]['item']['no_item'] === 'PI-2026-00005' && $rows[0]['batch']['no'] === 'BP-2610-003', 'rec item filter R');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'item', 'A', '', 0, 10);
+check($fil === 3, 'rec item filter A');
+list(, $fil, $rows) = $model->ListPage(null, 'wait', 'item', 'R', '', 0, 10);
+check($fil === 2, 'wait view ignores the status filter');
+list(, $fil, $rows) = $model->ListPage('DEP-1', 'rec', 'item', 'all', '', 0, 10);
+check($fil === 3 && $rows[0]['batch']['no'] === 'BP-2610-003', 'department lock applies to items');
+list(, $fil, $rows) = $model->ListPage(null, 'wait', 'batch', 'all', 'PI-2026-00002', 0, 10);
+check(array_column($rows, 'no') === ['BP-2611-001'], 'batch search matches an item number');
+list(, $fil, $rows) = $model->ListPage(null, 'wait', 'batch', 'all', 'tidak-ada', 0, 10);
+check($fil === 0 && $rows === [], 'batch search without match');
+list(, $fil, $rows) = $model->ListPage(null, 'rec', 'item', 'all', 'PI-2026-00003', 0, 10);
+check($fil === 1 && $rows[0]['item']['no_item'] === 'PI-2026-00003', 'item search by item number');
+list(, $fil) = $model->ListPage(null, 'rec', 'item', 'all', "x%' OR 1=1 --", 0, 10);
+check($fil === 0, 'search text is escaped (no injection, % is literal)');
+
 // GetMasterWithItems + Periodik_logic::state, end to end
 $masters = $model->GetMasterWithItems('DEP-1');
 check(array_column($masters, 'nama') === ['Sewa Kantor', 'Pajak Reklame', 'Cicilan Laptop'], 'masters of the department only');

@@ -12,6 +12,8 @@ class Pengajuan_rutin_model extends BF_Model
 	/**
 	 * @var string  User Table Name
 	 */
+	const ITEM_COLS = 'h.id, h.no_doc, h.tanggal_doc, h.periode, h.departement, h.created_by, d.id as did, d.no_item, d.id_budget, d.nama, d.nilai, d.keterangan, d.doc_file, d.item_status, d.item_reject_ket, d.item_approved_by, d.item_approved_date, d.revisi_dari, d.diajukan_ulang_sebagai, d.closed_note, d.closed_at, d.tanggal, d.budget, d.coa, d.bank_id, d.accnumber, d.accname, mb.tipe as m_tipe';
+
 	protected $table_name = 'tr_pengajuan_rutin';
 	protected $key        = 'id';
 
@@ -233,14 +235,16 @@ class Pengajuan_rutin_model extends BF_Model
 	 */
 	public function GetBatchesWithItems($dept = null, $noDoc = null)
 	{
-		$this->db->select('h.id, h.no_doc, h.tanggal_doc, h.periode, h.departement, h.created_by, d.id as did, d.no_item, d.id_budget, d.nama, d.nilai, d.keterangan, d.doc_file, d.item_status, d.item_reject_ket, d.item_approved_by, d.item_approved_date, d.revisi_dari, d.diajukan_ulang_sebagai, d.closed_note, d.closed_at, d.tanggal, d.budget, d.coa, d.bank_id, d.accnumber, d.accname, mb.tipe as m_tipe');
+		$this->db->select(self::ITEM_COLS);
 		$this->db->from('tr_pengajuan_rutin h');
 		$this->db->join('tr_pengajuan_rutin_detail d', 'd.no_doc = h.no_doc');
 		$this->db->join('ms_budget_rutin mb', 'mb.id = d.id_budget', 'left');
 		if ($dept !== null && $dept !== '') {
 			$this->db->where('h.departement', $dept);
 		}
-		if ($noDoc !== null) {
+		if (is_array($noDoc)) {
+			$this->db->where_in('h.no_doc', $noDoc ?: array(''));
+		} elseif ($noDoc !== null) {
 			$this->db->where('h.no_doc', $noDoc);
 		}
 		$this->db->order_by('h.no_doc', 'desc');
@@ -258,6 +262,100 @@ class Pengajuan_rutin_model extends BF_Model
 			$out[$r->no_doc]['items'][] = $this->ItemRow($r);
 		}
 		return $out;
+	}
+
+	/**
+	 * Syarat daftar serverside. $view wait = batch yang masih punya item menunggu, rec = semua item sudah diputuskan.
+	 * $narrow=false hanya departemen + view (untuk total tab). Mode item membutuhkan join detail d.
+	 */
+	private function listWhere($dept, $view, $mode, $filter, $search, $narrow)
+	{
+		$db = $this->db;
+		if ($dept !== null && $dept !== '') {
+			$db->where('h.departement', $dept);
+		}
+		$ex = function ($cond) { return "EXISTS (SELECT 1 FROM tr_pengajuan_rutin_detail f WHERE f.no_doc = h.no_doc AND $cond)"; };
+		$db->where(($view === 'wait' ? '' : 'NOT ') . $ex('f.item_status = 0'), null, false);
+		if (!$narrow) {
+			return;
+		}
+		if ($view === 'rec' && in_array($filter, array('A', 'P', 'R'), true)) {
+			if ($mode === 'item') {
+				$db->where($filter === 'A' ? 'd.item_status NOT IN (0, 8)' : 'd.item_status = 8', null, false);
+			} elseif ($filter === 'A') {
+				$db->where('NOT ' . $ex('f.item_status = 8'), null, false);
+			} elseif ($filter === 'R') {
+				$db->where('NOT ' . $ex('f.item_status <> 8'), null, false);
+			} else {
+				$db->where($ex('f.item_status = 8') . ' AND ' . $ex('f.item_status <> 8'), null, false);
+			}
+		}
+		if ($search !== '') {
+			$like = $db->escape('%' . $db->escape_like_str($search) . '%') . " ESCAPE '!'";
+			$cols = $mode === 'item' ? array('d.no_item', 'd.nama', 'd.keterangan') : array();
+			$sub = $ex("(f.nama LIKE $like OR f.no_item LIKE $like OR f.keterangan LIKE $like)");
+			$db->where('(h.no_doc LIKE ' . $like . ($cols ? ' OR ' . implode(" LIKE $like OR ", $cols) . " LIKE $like" : ' OR ' . $sub) . ')', null, false);
+		}
+	}
+
+	/** Jumlah batch per tab: array(wait, rec). */
+	public function CountBatchViews($dept = null)
+	{
+		$out = array();
+		foreach (array('wait', 'rec') as $view) {
+			$this->db->from('tr_pengajuan_rutin h');
+			$this->listWhere($dept, $view, 'batch', 'all', '', false);
+			$out[$view] = (int) $this->db->count_all_results();
+		}
+		return $out;
+	}
+
+	/**
+	 * Satu halaman daftar untuk DataTables serverside. $mode batch|item.
+	 * Return array(total, filtered, rows) atau false bila query gagal.
+	 * rows batch: array(batch...); rows item: array(array('batch' => header, 'item' => item)).
+	 */
+	public function ListPage($dept, $view, $mode, $filter, $search, $start, $length)
+	{
+		$item = $mode === 'item';
+		$from = function () use ($item) {
+			$this->db->from('tr_pengajuan_rutin h');
+			if ($item) {
+				$this->db->join('tr_pengajuan_rutin_detail d', 'd.no_doc = h.no_doc');
+			}
+		};
+		$from();
+		$this->listWhere($dept, $view, $mode, 'all', '', false);
+		$total = $this->db->count_all_results();
+		$from();
+		$this->listWhere($dept, $view, $mode, $filter, $search, true);
+		$filtered = $this->db->count_all_results();
+		$start = max(0, (int) $start);
+		$length = min(100, max(1, (int) $length));
+		if ($item) {
+			$from();
+			$this->db->select(self::ITEM_COLS)->join('ms_budget_rutin mb', 'mb.id = d.id_budget', 'left');
+			$this->listWhere($dept, $view, $mode, $filter, $search, true);
+			$q = $this->db->order_by('h.no_doc', 'desc')->order_by('d.id', 'asc')->limit($length, $start)->get();
+			if (!$q) {
+				return false;
+			}
+			$rows = array();
+			foreach ($q->result() as $r) {
+				$rows[] = array('batch' => array('id' => (int) $r->id, 'no' => $r->no_doc, 'dept' => $r->departement, 'date' => $r->tanggal_doc), 'item' => $this->ItemRow($r));
+			}
+			return array((int) $total, (int) $filtered, $rows);
+		}
+		$this->db->select('h.no_doc');
+		$from();
+		$this->listWhere($dept, $view, $mode, $filter, $search, true);
+		$q = $this->db->order_by('h.no_doc', 'desc')->limit($length, $start)->get();
+		if (!$q) {
+			return false;
+		}
+		$nos = array_column($q->result_array(), 'no_doc');
+		$batches = $nos ? $this->GetBatchesWithItems(null, $nos) : array();
+		return $batches === false ? false : array((int) $total, (int) $filtered, array_values($batches));
 	}
 
 	/**
