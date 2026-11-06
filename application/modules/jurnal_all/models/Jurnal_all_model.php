@@ -3,6 +3,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 require_once dirname(__DIR__).'/libraries/Jurnal_debt_groups.php';
 require_once dirname(__DIR__).'/libraries/Payment_reference.php';
+require_once dirname(__DIR__, 2).'/invoicing/libraries/Invoice_consulting_service.php';
 
 class Jurnal_all_model extends BF_Model
 {
@@ -240,6 +241,12 @@ class Jurnal_all_model extends BF_Model
                 $anchor['company_error'] = $error instanceof DomainException ? $error->getMessage() : 'Validasi sumber company belum dapat dilakukan; posting diblokir.';
             }
         }
+        if (!$posted && in_array($anchor['source'], ['INV', 'KWD'], true)) {
+            try { $this->validate_invoice_coa($anchor, $rows); $anchor['company_error'] = ''; }
+            catch (Throwable $error) {
+                $anchor['company_error'] = $error instanceof DomainException ? $error->getMessage() : 'Validasi COA tujuan belum dapat dilakukan; posting diblokir.';
+            }
+        }
         $lineDivs = [];
         foreach ($rows as &$r) {
             $r=$this->periodicLineDivision($anchor,$r);
@@ -261,6 +268,37 @@ class Jurnal_all_model extends BF_Model
             }
         }
         return ['header'=>$anchor,'rows'=>$rows,'is_balance'=>$validAmounts && $debit>0 && $debit===$credit,'can_post'=>empty($anchor['payment_reference_error']) && empty($anchor['company_error'])];
+    }
+
+    // Invoice versi lama (legacy) diposting lewat alur terpisah dan sengaja tidak dicek.
+    public function validate_invoice_coa($header, $rows)
+    {
+        if ($header['jenis_transaksi'] === 'Invoicing') {
+            $invoice = $this->read($this->db->get_where('tr_invoicing', ['id'=>$header['no_transaksi']]))->row_array();
+            if (!$invoice || !Invoice_consulting::is_new($invoice)) return;
+        }
+        $codes = [];
+        foreach ($rows as $row) if ($this->cents($row['debit']) > 0 || $this->cents($row['kredit']) > 0) $codes[(string)$row['coa']] = true;
+        $owner = (string)$rows[0]['id_company'];
+        if (!$codes || !Invoice_consulting_service::is_journal_owner($owner)) throw new DomainException('Company pemilik jurnal tidak valid; posting diblokir.');
+        $group = Invoice_consulting_service::accounting_group($owner);
+        if (!isset($this->glDbs[$group])) {
+            if (!function_exists('get_instance')) throw new RuntimeException('Koneksi accounting tidak tersedia.');
+            $ci = &get_instance();
+            $this->glDbs[$group] = $ci->load->database($group, true);
+        }
+        $db = $this->glDbs[$group]; $old = $db->db_debug; $db->db_debug = false;
+        try {
+            $result = $db->distinct()->select('no_perkiraan,nama')->where_in('no_perkiraan', array_keys($codes))->get('coa_master');
+            if (!$result) throw new RuntimeException('Master COA tujuan tidak dapat dibaca.');
+            $found = array_count_values(array_column($result->result_array(), 'no_perkiraan'));
+        } finally { $db->db_debug = $old; }
+        $missing = []; $ambiguous = [];
+        foreach (array_keys($codes) as $code) {
+            if (empty($found[$code])) $missing[] = $code; elseif ($found[$code] > 1) $ambiguous[] = $code;
+        }
+        if ($missing) throw new DomainException('COA '.implode(', ', $missing).' tidak ditemukan di coa_master '.strtoupper(substr($group, 11)).'. Tambahkan COA terlebih dahulu; jurnal belum dapat diposting.');
+        if ($ambiguous) throw new DomainException('COA '.implode(', ', $ambiguous).' ganda di coa_master tujuan; jurnal belum dapat diposting.');
     }
 
     public function validate_expense_company($rows)
