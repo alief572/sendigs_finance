@@ -80,7 +80,8 @@ class Consulting_posting
             foreach(array('receivable','deposit') as $i=>$role){
                 $a=$snapshot['accounts'][$role];$row=$rows[$i];
                 $desc=$a['name'].' - '.$kw['no_kwitansi'].' - '.$snapshot['spk'];
-                if(!isset($master[$a['code']]) || count($master[$a['code']])!==1 || !in_array((string)$row['sts'],array('0','9'),true)
+                if(!isset($master[$a['code']])) throw new RuntimeException('COA '.$a['code'].' belum ada di coa_master tujuan; tambahkan COA terlebih dahulu.');
+                if(count($master[$a['code']])!==1 || !in_array((string)$row['sts'],array('0','9'),true)
                     || (string)$row['id_company']!==(string)$owner['id'] || $row['nm_company']!==$owner['nm_company']
                     || $row['coa']!==$a['code'] || $row['nm_coa']!==$a['name'] || $row['keterangan']!==$desc || $row['tgl_jurnal']!==$kw['tanggal_kwitansi']
                     || Invoice_calculation::cents($row['debit'])!==($i===0?$amount:0) || Invoice_calculation::cents($row['kredit'])!==($i===1?$amount:0)) throw new RuntimeException('Jurnal kwitansi sudah diposting atau berbeda dari snapshot.');
