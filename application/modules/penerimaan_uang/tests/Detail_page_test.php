@@ -41,6 +41,14 @@ $nRow = array_replace($row, array('total_akhir_jurnal'=>'15843150.00','penerimaa
 $html = renderPage(array_replace($base, array('header'=>array_replace($header, array('pph23_dipotong'=>'N','nominal_penerimaan_bank'=>'15843150.00')), 'detail'=>array($nRow))));
 detailCheck(kontrolOf($html) === '0,00' && strpos(textOf($html), 'PPh 23 Tidak dipotong') !== false && strpos($html, 'Sisa piutang') !== false, 'N receipt keeps Kontrol 0 and shows the Sisa piutang status');
 
+// 3b) Invoice lama dengan PPh 23 + admin: Kontrol = (alokasi - PPh - admin - deposit) + lebih - uang masuk, sama dengan modal proses.
+$pphRow = array_replace($row, array('pph23'=>'40000.00','total_akhir_jurnal'=>'2220000.00','penerimaan'=>'2220000.00'));
+$html = renderPage(array_replace($base, array('header'=>array_replace($header, array('nominal_penerimaan_bank'=>'2180000.00')), 'detail'=>array($pphRow))));
+detailCheck(kontrolOf($html) === '0,00', 'Legacy PPh receipt has Kontrol 0, got '.kontrolOf($html));
+$adminRow = array_replace($pphRow, array('biaya_admin'=>'6500.00'));
+$html = renderPage(array_replace($base, array('header'=>array_replace($header, array('nominal_penerimaan_bank'=>'2173500.00')), 'detail'=>array($adminRow))));
+detailCheck(kontrolOf($html) === '0,00', 'Legacy PPh + admin receipt has Kontrol 0, got '.kontrolOf($html));
+
 // 4) Baris snapshot baru memakai rumus snapshot: ((piutang - pph - admin - sisa) - uang masuk - deposit) + lebih.
 $snap = json_encode(array('calculation_version'=>4,'tax_treatment'=>'PKP','date'=>'2026-10-31','balance'=>100000000,'pph'=>0,'admin'=>0,'sisa'=>0,'dep'=>0,'lebih'=>0,'cash'=>100000000));
 $v4 = array_replace($row, array('consulting_snapshot'=>$snap,'tax_treatment'=>'PKP'));

@@ -43,12 +43,13 @@ foreach ($detail as $d) {
     foreach (array('piutang','pph','alok','dep','admin','lebih','sisa') as $k) $tot[$k] += $r[$k];
     $rows[] = $r;
 }
-// Kontrol: baris baru memakai rumus snapshot; invoice lama = uang kas + lebih bayar - uang masuk (sama dengan Kontrol saat modal proses),
-// karena Piutang/PPh invoice lama tidak bisa dipakai langsung (neto PPh, cicilan, penyesuaian PPh).
+// Kontrol: baris baru memakai rumus snapshot; invoice lama = kas + lebih bayar - uang masuk, sama dengan modal proses
+// (process.php: kas = Piutang - PPh - Admin - Sisa - Deposit, dan server mewajibkan Alokasi + Sisa = Piutang, jadi kas = Alokasi - PPh - Admin - Deposit).
+// Piutang invoice lama tidak dipakai langsung (neto PPh, cicilan, penyesuaian PPh).
 $allV4 = !empty($rows) && count(array_filter($rows, function ($r) { return $r['v4']; })) === count($rows);
 $kontrol = $allV4
     ? (($tot['piutang'] - $tot['pph'] - $tot['admin'] - $tot['sisa']) - $uangMasuk - $tot['dep']) + $tot['lebih']
-    : ($tot['alok'] - $tot['dep'] + $tot['lebih'] - $uangMasuk);
+    : ($tot['alok'] - $tot['pph'] - $tot['admin'] - $tot['dep'] + $tot['lebih'] - $uangMasuk);
 if ($isDeposit) $kontrol = ($tot['piutang'] - $tot['admin']) - $uangMasuk;
 
 // Jurnal: baris bernilai nol disembunyikan (mockup).
