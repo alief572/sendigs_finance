@@ -182,6 +182,9 @@ class Pengajuan_rutin extends Admin_Controller
 			$st = Periodik_logic::state($m, $m['items'], $periode);
 			$m['nm'] = $m['nama'];
 			$row = array('m' => $m, 'st' => $st, 'tag' => Periodik_logic::masa_tag($st), 'mine' => isset($mine[$m['id']]) ? $mine[$m['id']] : null);
+			$lastBank = $row['mine'] ? null : $this->Pengajuan_rutin_model->GetLastBank($m['id']);
+			$row['bank'] = $row['mine'] ? array('bank_id' => $row['mine']['bank_id'], 'accnumber' => $row['mine']['accnumber'], 'accname' => $row['mine']['accname'])
+				: array('bank_id' => $lastBank ? $lastBank->bank_id : '', 'accnumber' => $lastBank ? $lastBank->accnumber : '', 'accname' => $lastBank ? $lastBank->accname : '');
 			if (in_array($st['state'], array('off', 'done', 'closed'), true) && !$row['mine']) {
 				$hidden[] = $row;
 			} else {
@@ -537,6 +540,10 @@ class Pengajuan_rutin extends Admin_Controller
 		}
 		$biaya = (array) $this->input->post('biaya');
 		$ket   = (array) $this->input->post('ket');
+		$bankIn = array();
+		foreach (array('bank_id', 'accnumber', 'accname') as $f) {
+			$bankIn[$f] = (array) $this->input->post($f);
+		}
 
 		$plan = array();
 		$errors = array();
@@ -557,7 +564,11 @@ class Pengajuan_rutin extends Admin_Controller
 				$overBudget = true;
 				continue;
 			}
-			$plan[] = array('row' => $r, 'nilai' => $val, 'ket' => trim((string) ($ket[$mid] ?? '')));
+			$bank = array('bank_id' => trim((string) ($bankIn['bank_id'][$mid] ?? '')), 'accnumber' => trim((string) ($bankIn['accnumber'][$mid] ?? '')), 'accname' => trim((string) ($bankIn['accname'][$mid] ?? '')));
+			if (!$r['mine'] && implode('', $bank) === '') {
+				$bank = $r['bank']; // dikosongkan di form: item baru memakai bank terakhir
+			}
+			$plan[] = array('row' => $r, 'nilai' => $val, 'ket' => trim((string) ($ket[$mid] ?? '')), 'bank' => $bank);
 		}
 		if ($errors) {
 			return $fail(implode("\n", $errors), $overBudget ? 'over_budget' : 'not_editable');
@@ -594,15 +605,13 @@ class Pengajuan_rutin extends Admin_Controller
 				list($upOk, $file) = $this->uploadDoc('doc_' . $m['id']);
 				if (!$upOk) { $ok = false; $msg = $file; break 2; }
 				$data = array('id_budget' => $m['id'], 'coa' => $m['coa'], 'nama' => $m['nama'], 'tanggal' => $m['tanggal'], 'budget' => $m['nilai'],
-					'nilai' => $p['nilai'], 'keterangan' => $ketText, 'metode_pembelian' => '1', 'modified_by' => $userId, 'modified_on' => $now);
+					'nilai' => $p['nilai'], 'keterangan' => $ketText, 'metode_pembelian' => '1', 'modified_by' => $userId, 'modified_on' => $now) + $p['bank'];
 				if ($file !== null) { $data['doc_file'] = $file; }
 				if ($mine) {
 					$ok = (bool) $this->db->update('tr_pengajuan_rutin_detail', $data, array('id' => $mine['id']));
 					$kept[] = $mine['id'];
 				} else {
-					$bank = $this->Pengajuan_rutin_model->GetLastBank($m['id']);
 					$data += array('no_doc' => $noDoc, 'no_item' => periodik_next_number($this->db, 'PI'), 'item_status' => 0,
-						'bank_id' => $bank ? $bank->bank_id : null, 'accnumber' => $bank ? $bank->accnumber : null, 'accname' => $bank ? $bank->accname : null,
 						'created_by' => $userId, 'created_on' => $now);
 					if ($data['no_item'] === '') { $ok = false; $msg = 'Nomor item gagal dibuat.'; break 2; }
 					if ($st['state'] === 'back') {

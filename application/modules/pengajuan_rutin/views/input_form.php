@@ -28,9 +28,9 @@ $isEdit = $type === 'edit' && $batch;
 	<input type="hidden" name="periode" value="<?= $e($periode) ?>">
 	<input type="hidden" name="id" value="<?= $isEdit ? (int) $batch['id'] : '' ?>">
 	<div class="scroll"><table>
-		<thead><tr><th>#</th><th>No. Item</th><th>Deskripsi</th><th>Jadwal</th><th class="num">Budget</th><th>Perkiraan biaya</th><th>Keterangan</th><th>Dokumen</th></tr></thead>
+		<thead><tr><th>#</th><th>No. Item</th><th>Deskripsi</th><th>Jadwal</th><th class="num">Budget</th><th>Perkiraan biaya</th><th>Keterangan</th><th>Dokumen</th><th>Bank / No Rek / Nama</th></tr></thead>
 		<tbody>
-		<?php if (!$rows) : ?><tr><td colspan="8">Tidak ada item aktif untuk departemen ini.</td></tr><?php endif; ?>
+		<?php if (!$rows) : ?><tr><td colspan="9">Tidak ada item aktif untuk departemen ini.</td></tr><?php endif; ?>
 		<?php foreach ($rows as $ix => $r) :
 			$m = $r['m']; $st = $r['st']; $mine = $r['mine'];
 			$lock = $st['state'] === 'lock' && !$mine;
@@ -60,6 +60,11 @@ $isEdit = $type === 'edit' && $batch;
 					<input type="file" name="doc_<?= $mid ?>" data-docin="<?= $mid ?>" accept=".pdf,.jpg,.jpeg,.png" aria-label="Dokumen <?= $e($m['nama']) ?>">
 					<span class="rpv" data-docname="<?= $mid ?>"><?= $mine && $mine['doc_file'] !== '' ? 'File: ' . $e($mine['doc_file']) : 'Belum ada file' ?></span>
 				<?php endif; ?></td>
+				<td style="min-width:170px">
+					<?php foreach (array('bank_id' => 'Nama bank', 'accnumber' => 'No rekening', 'accname' => 'Nama pemilik') as $f => $ph) : ?>
+						<input type="text" name="<?= $f ?>[<?= $mid ?>]" data-bank value="<?= $e($r['bank'][$f]) ?>" placeholder="<?= $ph ?>" <?= $lock ? 'disabled' : '' ?> aria-label="<?= $ph ?> <?= $e($m['nama']) ?>" style="margin-bottom:3px">
+					<?php endforeach; ?>
+				</td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody>
@@ -96,7 +101,7 @@ $isEdit = $type === 'edit' && $batch;
 
 	function snap() {
 		var s = [];
-		form.querySelectorAll('[data-biaya]:not([disabled]),[data-ket]:not([disabled])').forEach(function (el) { s.push(el.value); });
+		form.querySelectorAll('[data-biaya]:not([disabled]),[data-ket]:not([disabled]),[data-bank]:not([disabled])').forEach(function (el) { s.push(el.value); });
 		form.querySelectorAll('[data-docin]').forEach(function (el) { s.push(el.files.length ? el.files[0].name : ''); });
 		return s.join('\u0001');
 	}
