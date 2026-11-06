@@ -794,8 +794,12 @@ class Metode_pembelian_model extends BF_Model
 			if ($category == 'departemen') {
 				$get_departemen = $this->db->get_where('rutin_non_planning_header', array('no_pr' => $row['no_pr']))->row();
 
-				if (file_exists('./assets/pr/' . $get_departemen->document)) {
-					$doc_link = '<a href="' . base_url('assets/pr/' . $get_departemen->document) . '" class="btn btn-sm btn-primary" title="Download Document" download><i class="fa fa-download"></i></a>';
+				// Non_rutin menyimpan document sebagai JSON array nama file; data lama berupa string tunggal.
+				$doc_raw = isset($get_departemen->document) ? $get_departemen->document : '';
+				$docs = json_decode($doc_raw, true);
+				$docs = is_array($docs) ? $docs : (empty($doc_raw) ? [] : [$doc_raw]);
+				foreach ($docs as $i => $doc_file) {
+					$doc_link .= '<a href="' . base_url('assets/pr/' . rawurlencode($doc_file)) . '" class="btn btn-sm btn-primary" style="margin:1px;" title="' . htmlspecialchars($doc_file) . '" target="_blank"><i class="fa fa-download"></i> ' . ($i + 1) . '</a>';
 				}
 			}
 			$nestedData[]	= $doc_link;
