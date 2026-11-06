@@ -54,7 +54,7 @@ $isEdit = $type === 'edit' && $batch;
 				</td>
 				<td style="white-space:nowrap"><?= $e(periodik_schedule_text($m['tipe'], $m['tanggal'])) ?></td>
 				<td class="num mono"><?= $fmt($m['nilai']) ?></td>
-				<td style="min-width:130px"><input type="text" inputmode="numeric" autocomplete="off" name="biaya[<?= $mid ?>]" data-biaya="<?= $mid ?>" value="<?= $e(number_format((float) $value, 0, ',', '.')) ?>" <?= $lock ? 'disabled' : '' ?> aria-label="Perkiraan biaya <?= $e($m['nama']) ?>"></td>
+				<td style="min-width:130px"><input type="text" inputmode="numeric" autocomplete="off" name="biaya[<?= $mid ?>]" data-biaya="<?= $mid ?>" data-max="<?= (float) $m['nilai'] ?>" value="<?= $e(number_format((float) $value, 0, ',', '.')) ?>" <?= $lock ? 'disabled' : '' ?> aria-label="Perkiraan biaya <?= $e($m['nama']) ?>"></td>
 				<td style="min-width:180px"><textarea name="ket[<?= $mid ?>]" data-ket="<?= $mid ?>" <?= $lock ? 'disabled placeholder="Terkunci"' : '' ?>><?= $e($userKet) ?></textarea></td>
 				<td style="min-width:190px"><?php if ($lock) : ?><span class="sub">-</span><?php else : ?>
 					<input type="file" name="doc_<?= $mid ?>" data-docin="<?= $mid ?>" accept=".pdf,.jpg,.jpeg,.png" aria-label="Dokumen <?= $e($m['nama']) ?>">
@@ -125,7 +125,11 @@ $isEdit = $type === 'edit' && $batch;
 		document.getElementById('pcount').textContent = c;
 		submitBtn.disabled = !c;
 	}
-	form.addEventListener('input', function (e) { if (e.target.matches('[data-biaya]')) PJ.maskMoney(e.target); total(); });
+	function over(inp) { return PJ.moneyValue(inp.value) > parseFloat(inp.dataset.max); }
+	form.addEventListener('input', function (e) {
+		if (e.target.matches('[data-biaya]')) { PJ.maskMoney(e.target); e.target.style.borderColor = over(e.target) ? '#d9534f' : ''; e.target.title = over(e.target) ? 'Melebihi budget' : ''; }
+		total();
+	});
 	form.addEventListener('change', function (e) {
 		var f = e.target.closest('[data-docin]');
 		if (f) { root.querySelector('[data-docname="' + f.dataset.docin + '"]').textContent = f.files.length ? 'File: ' + f.files[0].name : 'Belum ada file'; }
@@ -168,6 +172,8 @@ $isEdit = $type === 'edit' && $batch;
 
 	submitBtn.onclick = function () {
 		var picked = rows().filter(function (r) { return r.v > 0; });
+		var bad = Array.prototype.filter.call(form.querySelectorAll('[data-biaya]:not([disabled])'), over);
+		if (bad.length) { bad[0].focus(); PJ.toast('Perkiraan biaya tidak boleh melebihi budget (' + bad.length + ' item melebihi).'); return; }
 		if (!picked.length) { PJ.toast(isEdit ? 'Minimal satu item harus diisi. Untuk membatalkan seluruh batch, pakai tombol Hapus di daftar.' : 'Isi perkiraan biaya minimal satu item sebelum menyimpan.'); return; }
 		var out = rows().filter(function (r) { return r.v <= 0 && r.keep; });
 		var sum = picked.reduce(function (s, r) { return s + r.v; }, 0);

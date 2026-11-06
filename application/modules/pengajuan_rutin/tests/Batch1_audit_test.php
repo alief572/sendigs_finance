@@ -847,10 +847,12 @@ $decoded = json_decode($output, true);
 check($decoded['count'] === 2 && preg_match('/-00001$/', $decoded['first']) === 1 && preg_match('/-00002$/', $decoded['last']) === 1, 'save_data: two items numbered sequentially');
 
 // K. Berhasil: edit mempertahankan nomor item, tidak membuat nomor baru
-list($event, $output, $ctrl) = pengajuan_run('save_data', array('is_admin' => true), array('id' => '1', 'biaya' => array('10' => '250')));
+list($event, $output, $ctrl) = pengajuan_run('save_data', array('is_admin' => true), array('biaya' => array('10' => '100.01')));
+check($event['status'] === 0 && $event['context']['data']['outcome'] === 'over_budget' && strpos(json_decode($output, true)['msg'], 'tidak boleh melebihi budget') !== false && !$ctrl->db->writes, 'save_data: biaya above budget rejected, nothing written');
+list($event, $output, $ctrl) = pengajuan_run('save_data', array('is_admin' => true), array('id' => '1', 'biaya' => array('10' => '90')));
 $decoded = json_decode($output, true);
 check($event['status'] === 1 && $decoded['save'] === 1 && $decoded['edit'] === 1 && $decoded['no_doc'] === 'BP-2611-001' && $decoded['first'] === '', 'save_data (edit): saved keeps batch and creates no new item number');
-check(!item_writes($ctrl, 'insert', 'tr_pengajuan_rutin_detail') && item_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail')[0][1][1]['nilai'] === 250.0, 'save_data (edit): existing item updated');
+check(!item_writes($ctrl, 'insert', 'tr_pengajuan_rutin_detail') && item_writes($ctrl, 'update', 'tr_pengajuan_rutin_detail')[0][1][1]['nilai'] === 90.0, 'save_data (edit): existing item updated');
 check($ctrl->db->committed === true, 'save_data (edit): committed');
 
 // L. Edit: item yang biayanya dikosongkan dikeluarkan dari batch

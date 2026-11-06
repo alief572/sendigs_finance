@@ -540,6 +540,7 @@ class Pengajuan_rutin extends Admin_Controller
 
 		$plan = array();
 		$errors = array();
+		$overBudget = false;
 		foreach ($rows as $r) {
 			$mid = (string) $r['m']['id'];
 			$val = isset($biaya[$mid]) && is_numeric($biaya[$mid]) ? (float) $biaya[$mid] : 0;
@@ -551,10 +552,15 @@ class Pengajuan_rutin extends Admin_Controller
 				$errors[] = 'Item "' . $r['m']['nama'] . '" tidak bisa diajukan untuk periode ini.';
 				continue;
 			}
+			if ($val > (float) $r['m']['nilai']) {
+				$errors[] = 'Perkiraan biaya "' . $r['m']['nama'] . '" tidak boleh melebihi budget (' . number_format((float) $r['m']['nilai'], 0, ',', '.') . ').';
+				$overBudget = true;
+				continue;
+			}
 			$plan[] = array('row' => $r, 'nilai' => $val, 'ket' => trim((string) ($ket[$mid] ?? '')));
 		}
 		if ($errors) {
-			return $fail(implode("\n", $errors), 'not_editable');
+			return $fail(implode("\n", $errors), $overBudget ? 'over_budget' : 'not_editable');
 		}
 		if (!$plan) {
 			return $fail($batch ? 'Minimal satu item harus diisi. Untuk membatalkan seluruh batch, pakai tombol Hapus di daftar.' : 'Isi perkiraan biaya minimal satu item sebelum menyimpan.', 'empty');

@@ -85,13 +85,14 @@ check(preg_match('/data-mid="12"[^>]*>.*?PI-2026-00020.*?Sudah diajukan \(PI-202
 check(strpos($form, 'Ditolak di PI-2026-00021') !== false && strpos($form, 'data-closeitem="PI-2026-00021"') !== false && strpos($form, 'value="777"') !== false, 'form: rejected row reopens with its amount and the close button');
 check(strpos($form, '1 item tidak ditampilkan:') !== false && strpos($form, 'Mati (dinonaktifkan)') !== false, 'form: hidden items note');
 check(strpos($form, 'name="biaya[10]"') !== false && strpos($form, 'name="doc_10"') !== false && strpos($form, 'name="biaya[12]"') !== false, 'form: field names carry the budget id');
-check(strpos($form, 'name="biaya[12]" data-biaya="12" value="0" disabled') !== false, 'form: locked amount is disabled so it is never posted');
+check(strpos($form, 'name="biaya[12]" data-biaya="12" data-max="1500000" value="0" disabled') !== false, 'form: locked amount is disabled so it is never posted');
 check(strpos($form, 'type="number"') === false && substr_count($form, 'inputmode="numeric"') === 4, 'form: every cost input is a masked text field (no type=number)');
 check(strpos($form, 'fd.set(inp.name, PJ.moneyValue(inp.value))') !== false && strpos($form, 'PJ.maskMoney(e.target)') !== false, 'form: masks while typing and posts plain numbers (FormData rewritten before send)');
+check(strpos($form, 'data-biaya="10" data-max="1500000"') !== false && strpos($form, 'Perkiraan biaya tidak boleh melebihi budget') !== false, 'form: budget ceiling carried to the input and enforced before submit');
 js_syntax($form, 'input_form');
 $edit = render('input_form', ['type' => 'edit', 'dept' => 'DEP-1', 'dept_name' => 'FA', 'periode' => '2026-11', 'period_options' => ['2026-11' => 'November 2026'],
 	'rows' => [$mkRow($m, '2026-11', [], item('W', ['ket' => 'Pembayaran ke-1 dari 3 - bayar tunai', 'nominal' => 1500000.0, 'doc_file' => 'file.pdf']))], 'hidden' => [], 'batch' => $batches['BP-2611-001']]);
-check(strpos($edit, 'name="biaya[10]" data-biaya="10" value="1.500.000"') !== false, 'form (edit): existing amount shown with thousand separators');
+check(strpos($edit, 'name="biaya[10]" data-biaya="10" data-max="1500000" value="1.500.000"') !== false, 'form (edit): existing amount shown with thousand separators');
 check(strpos($edit, 'Edit BP-2611-001') !== false && strpos($edit, 'name="id" value="1"') !== false && strpos($edit, 'id="perSel" disabled') !== false, 'form (edit): heading, batch id, period locked');
 check(strpos($edit, 'data-keep="PI-2026-00001"') !== false && strpos($edit, '>bayar tunai</textarea>') !== false && strpos($edit, 'File: file.pdf') !== false && strpos($edit, 'Simpan perubahan') !== false, 'form (edit): keeps item number, strips auto prefix from note, shows file');
 check(strpos(render('input_form', ['type' => 'add', 'dept' => 'DEP-1', 'dept_name' => 'FA', 'periode' => '2026-11', 'period_options' => ['2026-11' => 'N'], 'rows' => [], 'hidden' => [], 'batch' => null]), 'Tidak ada item aktif untuk departemen ini.') !== false, 'form: empty department text');
