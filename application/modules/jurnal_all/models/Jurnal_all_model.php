@@ -805,10 +805,11 @@ class Jurnal_all_model extends BF_Model
         if (!$posted) {
             if ($this->paymentReference===null) $this->paymentReference=new Payment_reference((object)['db'=>$this->db], true);
         }
-        $invoices=[]; $receipts=[]; $paymentKeys=[]; $pettyNumbers=[]; $expenseNumbers=[];
+        $invoices=[]; $receipts=[]; $paymentKeys=[]; $pettyNumbers=[]; $expenseNumbers=[]; $kwitansiNumbers=[];
         foreach ($rows as $row) {
             $source=$this->source($row['jenis_transaksi']);
             if ($source==='INV') $invoices[]=$row['no_transaksi'];
+            if ($source==='KWD') $kwitansiNumbers[]=$row['no_transaksi'];
             if ($source==='EXP') $expenseNumbers[$row['jenis_transaksi']][]=$row['no_transaksi'];
             if ($source==='PCS'&&$row['jenis_transaksi']==='Petty Cash') $pettyNumbers[]=$row['no_transaksi'];
             if ($source==='RCV') $receipts[]=$row['no_transaksi'];
@@ -822,6 +823,8 @@ class Jurnal_all_model extends BF_Model
             $receiptMap[$r['id_header']]=$r['id_inv']; $invoices[]=$r['id_inv'];
         }
         $invoiceMap=$this->invoiceMap(array_unique($invoices));
+        $kwitansiInvoiceIds=$this->kwitansiInvoiceIds(array_unique($kwitansiNumbers));
+        $kwitansiMap=$this->invoiceMap(array_values($kwitansiInvoiceIds));
         $pettyReports=$this->pettyReportMap(array_unique($pettyNumbers));
         $pettyDivisions=$this->pettyDivisionMap(array_unique($pettyNumbers));
         $expenseMap=$this->expenseMap($expenseNumbers);
@@ -847,6 +850,11 @@ class Jurnal_all_model extends BF_Model
             $row['posted_by_id']=!empty($row['db_posted_by']) ? (string)$row['db_posted_by'] : (!empty($row['posted_by']) ? (string)$row['posted_by'] : null);
             $row['invoice_available']=false; $row['payment_available']=false;
             $row['companies']=[['id'=>(string)$row['id_company'],'name'=>(string)$row['nm_company']]];
+            if ($row['source']==='KWD' && empty($row['nm_divisi'])) {
+                // Kwitansi deposit tidak menyimpan divisi di jurnal; ambil dari SPK pada invoice DEP-nya (hanya tampilan).
+                $kw=$kwitansiMap[$kwitansiInvoiceIds[$row['no_transaksi']] ?? ''] ?? null;
+                if ($kw && !empty($kw['division_code'])) $row['nm_divisi']=$kw['division_code'];
+            }
             if (in_array($row['source'],['INV','RCV'],true)) {
                 $invoice=$invoiceMap[$row['source']==='INV'?$row['no_transaksi']:($receiptMap[$row['no_transaksi']] ?? '')] ?? null;
                 if ($invoice) {
@@ -1351,6 +1359,16 @@ class Jurnal_all_model extends BF_Model
         }
         foreach ($map as &$reports) { $reports=array_values($reports); sort($reports,SORT_NATURAL); }
         unset($reports);
+        return $map;
+    }
+
+    // no_kwitansi => id tr_invoicing (KD-...). Hanya untuk tampilan: gagal baca = divisi kosong, bukan error.
+    private function kwitansiInvoiceIds($numbers)
+    {
+        if (!$numbers) return [];
+        $result=$this->db->select('id,no_invoice')->where('tax_treatment','DEP')->where_in('no_invoice',array_values($numbers))->get('tr_invoicing');
+        if (!$result) return [];
+        $map=[]; foreach ($result->result_array() as $r) $map[$r['no_invoice']]=$r['id'];
         return $map;
     }
 
