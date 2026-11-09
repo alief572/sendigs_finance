@@ -1,3 +1,9 @@
+# Export Excel tidak bisa dibuka (9 Nov 2026)
+
+- **Penyebab**: file xlsx diawali teks notice PHP (`Trying to access array offset on value of type null`) dari PHPExcel lama di PHP 7.4 (`Excel2007/Worksheet.php:1118` per sel rumus, `Calculation.php:3391` saat hitung ulang rumus); `display_errors=1` mencetaknya ke `php://output` sebelum byte zip. Isi zip utuh.
+- **Perbaikan**: `monitoring_piutang/libraries/Piutang_export.php::send()` menyembunyikan `E_NOTICE|E_DEPRECATED` selama penulisan dan `setPreCalculateFormulas(false)`. Berlaku untuk Monitoring, Follow Up, dan Dashboard Plan Bayar (satu library).
+- **Pengujian**: reproduksi di container (display_errors=1): sebelum FAIL (awal `Notice:`), sesudah PASS (awal `PK`, zip valid 13 file); `Piutang_export_test` 15 PASS, `Piutang_aging_test` 153 PASS. Belum dibuka di Excel sungguhan; belum di-commit.
+
 # Urutan menu sidebar piutang (9 Nov 2026)
 
 - Permintaan: urutan Monitoring Piutang, Follow Up Piutang, Dashboard Plan Bayar, tepat setelah Report Jurnal All (menu Finance, `parent_id` 447).

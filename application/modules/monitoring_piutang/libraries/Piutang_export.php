@@ -121,7 +121,11 @@ class Piutang_export
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9_.\-]/', '_', $filename) . '"');
         header('Cache-Control: max-age=0');
-        PHPExcel_IOFactory::createWriter($xl, 'Excel2007')->save('php://output');
+        // PHPExcel lama + PHP 7.4 memuntahkan notice per sel rumus; bila tampil (display_errors) notice masuk ke byte awal xlsx dan file tidak bisa dibuka.
+        error_reporting(error_reporting() & ~(E_NOTICE | E_DEPRECATED));
+        $writer = PHPExcel_IOFactory::createWriter($xl, 'Excel2007');
+        $writer->setPreCalculateFormulas(false);
+        $writer->save('php://output');
         exit;
     }
 }
