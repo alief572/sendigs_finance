@@ -21,6 +21,22 @@ class Menu_generator
 		$this->is_admin = $this->ci->auth->is_admin();
 	}
 
+	/** Link aktif bila ada di URL, kecuali saudara dengan link lebih panjang juga cocok (mis. follow_up_piutang vs follow_up_piutang/plan_bayar). */
+	protected function link_active($link, $siblings)
+	{
+		if(strpos($this->uri, '/'.$link.'/')===FALSE)
+		{
+			return FALSE;
+		}
+		foreach ($siblings as $s) {
+			if(strlen($s->link) > strlen($link) && strpos($this->uri, '/'.$s->link.'/')!==FALSE)
+			{
+				return FALSE;
+			}
+		}
+		return TRUE;
+	}
+
 	public function build_menus($type=1)
 	{
 		$auth = $this->get_auth_permission($this->user_id);
@@ -167,7 +183,7 @@ class Menu_generator
 									goto end_for_sub;
 								}
 								$active = "";
-								if(strpos($this->uri, '/'.$sublink.'/')!==FALSE)
+								if($this->link_active($sublink, $submenu))
 								{
 									$active = "active";
 								}

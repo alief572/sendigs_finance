@@ -1,3 +1,133 @@
+# Urutan menu sidebar piutang (9 Nov 2026)
+
+- Permintaan: urutan Monitoring Piutang, Follow Up Piutang, Dashboard Plan Bayar, tepat setelah Report Jurnal All (menu Finance, `parent_id` 447).
+- Menu disimpan di tabel `menus` DB dev remote (aplikasi lokal memakainya; DB Docker lokal tidak punya baris menu ini). Migrasi baru `monitoring_piutang/migrations/029_reorder_menu_piutang.sql` (+ rollback `030`) menyetel `order` ke maks saudara lain + 1/2/3; dijalankan di remote: Report Jurnal All 17, Monitoring 18, Follow Up 19, Dashboard Plan Bayar 20 (sebelumnya 12, 13, 14). Belum dilihat di browser.
+
+# Koreksi saldo "Bayar sebagian" untuk invoice berpenerimaan (9 Nov 2026)
+
+- **Analisis**: 91 invoice belum close bersaldo ≠ 0 (53 dengan penerimaan nyata). Kelompok: C sisa = biaya admin (15), D sisa 2.500,10 (2), E saldo tidak turun (4 + 024), B negatif (10), F kurang bayar tercatat (17), G lain, A INJECT (41).
+- **Aturan lunas** (bruto = `tagihan_ppn_jurnal`): cash = bruto, cash + PPh23 = bruto, atau cash + PPh23 + admin = bruto; plus aturan D (sisa <= 5000, admin 0, detail sisa 0). Diuji sebagai SELECT: 32 invoice.
+- **File baru**: `monitoring_piutang/migrations/028a_dryrun_fix_saldo_lunas.sql`, `028_fix_saldo_lunas.sql` (rollback tetap `026`), `docs/rekonsiliasi-bayar-sebagian-2026-11-09.md` (F, 184, INJECT: tidak diubah).
+- **Status**: 028 **dijalankan di DB dev lokal** (saldo ≠ 0 dengan penerimaan nyata 53 -> 21, negatif 43 -> 1 yaitu 184/STM/2025, log 68 baris); rollback 026 diuji (kembali 89/43, log 0) lalu 025+027+028 diterapkan ulang. **Remote** (`db_sendigs_ss_dev`): dry-run 32 baris sama dengan lokal; **028 sudah dijalankan setelah konfirmasi pengguna**: saldo ≠ 0 dengan penerimaan nyata 57 -> 25, negatif 11 -> 1 (184/STM/2025), log 68 baris, dry-run sesudahnya 0 baris. Remote menyisakan 25 vs 21 di lokal; 4 invoice selisih belum diselidiki.
+- **Belum**: jurnal akuntansi tidak diperiksa selain sampel 035/STM/2026; kode Invoicing tidak diubah (edit invoice setelah penerimaan masih bisa me-reset saldo); belum dicek di browser.
+
+# Koreksi saldo_piutang minus (9 Nov 2026)
+
+- **Gejala**: Dashboard Plan Bayar menampilkan Sisa Tagihan negatif (002/STM/2026: -300.000). DB dev punya 43 invoice `saldo_piutang < 0` (-105,46 juta).
+- **Akar masalah**: `saldo_piutang` berbasis neto (`total_akhir_jurnal` = tagihan - PPh). Penerimaan lama dengan PPh 23 **tidak dipotong (N)** dibayar bruto dan menurunkan saldo neto dengan uang bruto, jadi saldo = -PPh; detail penerimaan mencatat sisa 0 (tidak sinkron). Semua penerimaan itu dibuat sebelum alur basis bruto 2026-11-02 (commit 17c2dcfb/03e44944), yang seharusnya sudah menghasilkan 0.
+- **Klasifikasi**: 14 N-bruto + 18 sisa -1,00 (pembulatan) = 32 dikoreksi; 3 PPh Y dibayar bruto (035/106/036 STM/2026), 184/STM/2025 (-1.962.000), 020/STM/2025 (-93.979.800 = -nilai) dan 6 VSB/2026 (saldo = 4x PPh invoice) hanya dilaporkan.
+- **File baru**: `monitoring_piutang/migrations/027a_dryrun_fix_saldo_negatif.sql`, `027_fix_saldo_negatif.sql`. Rollback memakai `026_rollback_fix_saldo_desimal.sql` (generik, tabel log `tr_invoice_saldo_fix`).
+- **Status**: dijalankan di **DB dev lokal** (negatif 43 -> 11, log 36 baris). Rollback 026 diuji di lokal: 43 negatif kembali, log kosong; lalu 025 + 027 diterapkan ulang. **DB dev remote**: dry-run = 32 baris (sama dengan lokal), **027 sudah dijalankan di remote (`db_sendigs_ss_dev`) setelah konfirmasi pengguna**: negatif 43 -> 11 (-98.991.891), log 36 baris, dry-run sesudahnya 0 baris.
+- **Pengujian**: `penerimaan_uang/tests/calculation_test.php` PASS di container `sendigs_ss`; `integration_test.php` tidak bisa jalan (database uji sekali-pakai tidak tersedia). Belum diverifikasi bahwa penerimaan N baru menghasilkan saldo 0 secara end-to-end.
+
+# Koreksi saldo_piutang sisa desimal (9 Nov 2026)
+
+- **Temuan** (DB dev, baca-saja): 4 invoice dibayar penuh tetapi saldo > 0 dengan selisih < Rp 1: 334/335/336 STM/2025 (saldo tidak turun) dan 061/STM/2026 (sisa 0,02). Gejala "Bayar sebagian" di Dashboard Plan Bayar dan Close terblokir (syarat saldo tepat 0).
+- **Akar masalah (kuat, belum 100% terbukti)**: `Invoicing::legacy_update_invoice_non_konsultasi` (baris ~1583-1659) menyetel `saldo_piutang = total_tagihan_all` saat edit, sedangkan penjaga `legacy_consulting_boundary` (baris 27-42) hanya memblokir bila detail penerimaan punya `consulting_reduction`. Penerimaan legacy tidak punya itu, jadi edit setelah penerimaan menghapus pengurangan saldo. Bukti: ketiga invoice non_kons=1 dengan `no_revisi` 2-3; 112/STM/2026 dan 020/STM/2026 (non_kons, revisi 1) punya pola sama tetapi di luar cakupan desimal.
+- **File baru**: `monitoring_piutang/migrations/025a_dryrun_fix_saldo_desimal.sql` (SELECT), `025_fix_saldo_desimal.sql` (UPDATE + catatan di `tr_invoice_saldo_fix`), `026_rollback_fix_saldo_desimal.sql`.
+- **Status**: dry-run dijalankan di DB dev dan mengembalikan tepat 4 invoice. **025 SUDAH dijalankan di DB dev (9 Nov 2026)**: 4 invoice saldo jadi 0,00, saldo lama tercatat di `tr_invoice_saldo_fix`; dry-run sesudahnya 0 baris. Rollback (026) belum dicoba. **Juga dijalankan di DB dev remote** (`db_sendigs_ss_dev`, host dari `config/development/database.php`): dry-run sebelumnya identik (4 invoice yang sama), sesudahnya 0 baris. Hanya `saldo_piutang` diubah; kolom `_tanpa_ppn/_tanpa_pph` tetap (invoice lunas lain juga begitu).
+- **Dilaporkan, tidak diubah**: Grup 2 (324/325 STM/2025 saldo penuh meski dibayar, 020 dan 112 STM/2026, 017/STM/2025), Grup 3 (17 invoice sisa bulat Rp 1.000-2.900), Grup 4 (38 baris INJECT, Rp 1,489 miliar).
+- **Usulan terpisah (belum dikerjakan)**: tolak/koreksi edit invoice legacy bila sudah ada penerimaan, supaya saldo tidak ter-reset lagi.
+
+# Review UX & flow 3 modul piutang terhadap specs (9 Nov 2026)
+
+- Selesai: laporan `docs/review-ux-flow-piutang.md` (Monitoring, Follow Up, Plan Bayar vs `specs/docs/review-monitoring-piutang`). Kode aplikasi tidak diubah.
+- Temuan utama: upload bukti terima wajib dan no resi wajib JNE tidak ada di spec (kemungkinan permintaan 6 Nov, perlu konfirmasi dan sinkron spec); filter Customer Monitoring `readonly`; tanpa sort kolom; tanpa loading/`.fail`; export Plan Bayar abaikan pencarian.
+- Pengujian: hanya baca kode, tidak diuji di browser/DB.
+- Gap sedang (UX) sudah diperbaiki, rincian di bagian "Perbaikan gap sedang" laporan. File: `monitoring_piutang/views/index.php`, `follow_up_piutang/views/index.php`, `views/plan_bayar.php`, `controllers/Follow_up_piutang.php`, `controllers/Plan_bayar.php`. Validasi: `node --check` JS inline lulus; PHP tidak di-lint (php tidak ada di PATH); belum diuji di browser.
+- Langkah berikutnya: keputusan bukti terima/no resi wajib; uji manual perbaikan di browser.
+
+# Follow Up Piutang — tabel jadi DataTables serverside (6 Nov 2026)
+
+- **Permintaan**: tabel di modul follow_up_piutang memakai DataTables serverside.
+- **File diubah**: `follow_up_piutang/controllers/Follow_up_piutang.php` (`data()` memakai protokol DataTables: `draw`, `start`, `length`, `search[value]` → `recordsTotal`, `recordsFiltered`, `data`, plus `counts` dan `companies`; `filtered()` ikut menghitung `recordsTotal` = isi tab tanpa filter; `filters()` membaca `search[value]` sebagai "cari"), `follow_up_piutang/views/index.php` (`#fu-table` + `DataTable({serverSide:true})`, pageLength 100, lengthMenu 25/50/100/250, kotak cari bawaan menggantikan input cari lama, jumlah per tab dan daftar company dibaca dari event `xhr.dt`).
+- **Keputusan**: filter dan urutan tetap dihitung `Piutang_aging` (satu sumber dengan Excel), server hanya memotong per halaman; **ordering kolom dimatikan** karena urutan ditentukan aturan (label "Baru" paling atas); ganti halaman/filter → halaman 1, setelah simpan/close → tetap di halaman aktif; `length` dibatasi maks 500; filter tidak valid mengembalikan `error` DataTables (bukan HTTP 400); Export Excel tidak berubah, `cari` diambil dari `table.search()`.
+- **Pengujian**: `php -l` bersih, sintaks JS OK, 11 `<th>` = 11 kolom; suite aging 151 / export 15 / surat 27 PASS. Dengan **data nyata DB dev** lewat library yang sama dengan endpoint: 759 baris terbaca tanpa gagal parse, tab all (go-live 2026-01-01) 405 baris → halaman 100/100/…/5, id unik, filter cari 'vuca' 212. Tidak teruji: render DataTables di browser dan panggilan HTTP endpoint (butuh web).
+- **Catatan**: rendering sisi klien dan sorting visual tidak bisa diuji tanpa browser.
+
+---
+
+# Monitoring Piutang — Perbaikan error "Unknown column i.close_date" (6 Nov 2026)
+
+- **Gejala**: membuka `monitoring_piutang` error. Log `application/logs/log-2026-11-06.php`: `Query error: Unknown column 'i.close_date'`.
+- **Akar masalah**: `tr_invoicing` di DB dev hanya punya `sts_close`; `close_by`, `close_date`, `close_reason` (didefinisikan di `md/invoicing/Design_Invoicing.md`, dipakai spec dan `Invoicing::save_close_invoice`) tidak ada. Berarti tombol Close di menu Invoicing juga error di dev sebelum perbaikan ini. 759 invoice, tidak ada yang pernah di-close.
+- **Perbaikan**: migrasi aditif **023_add_invoice_close_columns.sql** (+024 rollback) menambah 3 kolom nullable, idempotent; dijalankan di DB dev 2x tanpa error, 0 baris terisi. Kode tidak diubah.
+- **Verifikasi**: SQL asli yang dihasilkan model (`get_rows` x3, `get_row`, `get_receipts`, `get_realisasi`, `get_log`) ditangkap dengan DB palsu lalu di-EXPLAIN ke DB dev → 7/7 valid. Dieksekusi: `get_rows(false)` 759 baris (14 tanpa company, 177 bersisa), `get_realisasi(2026)` 328 penerimaan, 0 tanpa tanggal, total Rp 7.271.954.654.
+- **Catatan**: 14 invoice tanpa company = 6 record Kwitansi Deposit (`KD-…`) + 8 lainnya (belum diselidiki). DB dev bisa tertinggal dari yang diasumsikan kode; semua kolom lain yang dipakai query sudah diperiksa ada. Belum teruji: `save_ar`, `close_invoice` (butuh tulis ke DB), upload.
+
+---
+
+# Monitoring Piutang — Upload bukti terima (6 Nov 2026)
+
+- **Status**: SELESAI (kode + test tanpa DB; alur upload di browser belum dicoba).
+- **Permintaan**: step 2 Diterima Customer punya 1 input file bukti terima, **wajib**; file yang sudah diupload bisa dilihat lagi. Keputusan user: PDF/JPG/JPEG/PNG maks 5 MB; file boleh diganti sampai FU 1 disimpan lalu terkunci (file lama tidak dihapus dari disk); tampil di form Update dan detail Monitoring; dokumen `specs/` tidak diubah (nanti).
+- **File baru**: `monitoring_piutang/migrations/021_add_bukti_terima.sql` (+022 rollback). **021 sudah dijalankan di DB dev** (kolom `bukti_terima`, `bukti_terima_nama` di `tr_invoice_ar`; idempotent, dijalankan 2x tanpa error). Wajib dijalankan sebelum kode dipakai: query dasar model memilih kolom ini.
+- **File diubah**: `Piutang_aging.php` (`validate_ar` wajib bukti saat tanggal terima terisi; `lock_saved` mengunci bukti+nama bersama step terima, bisa diganti sebelum FU 1, tidak bisa dikosongkan, nama tidak bisa diubah tanpa file baru), `Monitoring_piutang_model.php` (kolom di `AR_FIELDS`/`base_sql`, `save_ar` mengembalikan `saved`), `Follow_up_piutang.php::save()` (+`upload_bukti`; path dari POST dibuang, hanya dari hasil upload; file baru dihapus bila simpan gagal/step terkunci), `follow_up_piutang/views/index.php` (input file, link, FormData, cek ukuran/tipe klien), `monitoring_piutang/views/index.php` (link di detail), `tests/Piutang_aging_test.php` (151, +9).
+- **Folder upload**: `uploads/bukti_terima_invoice/` (dibuat otomatis; `uploads/*` di-gitignore). Di Linux harus bisa ditulis proses PHP.
+- **Pengujian**: aging 151 PASS, export 15 PASS, surat 27 PASS; `php -l` dan sintaks JS bersih; query dasar model dijalankan baca-saja ke DB dev (LIMIT 3): kolom baru, join company, dan TOP bekerja.
+- **Tidak teruji otomatis**: upload via controller (library Upload CI) dan FormData di browser. Cek manual: tanggal terima tanpa file ditolak; upload PDF lalu buka ulang form (link ada); ganti file sebelum FU 1; setelah FU 1 terkunci; file >5 MB atau .exe ditolak.
+- **TEMUAN, butuh keputusan**: Kwitansi Deposit disimpan di `tr_invoicing` (`tax_treatment='DEP'`, id `KD-…`, company NULL). Di dev ada 6 record, 3 bersisa total Rp 15.654.833. Record ini ikut tampil di Follow Up dan masuk Total Piutang/Belum Diterima di Monitoring, padahal bukan invoice customer. Belum diubah.
+
+---
+
+# Monitoring Piutang — Migrasi dijalankan di DB dev (6 Nov 2026)
+
+- **Target**: `db_sendigs_ss_dev` @ 206.84.97.107 (config development; sama dengan `DBERP`). Pre-check baca-saja: menu induk id 469 ada, menu/tabel baru belum ada.
+- **Dijalankan berurutan, sukses**: 001, 003, 005, 007, 009, 011, 013, 015, **019 (baru)**, 017. Sempat gagal di 017 (error 1267) dan diperbaiki; lihat di bawah.
+- **Temuan penting**: 003/015 mengunci `id_invoice` ke `utf8mb4_general_ci`, sedangkan `tr_invoicing.id` di server ini `utf8mb4_0900_ai_ci` → setiap join `tr_invoice_ar.id_invoice = tr_invoicing.id` gagal (juga di `base_sql` model). Tabel AR masih kosong saat diperbaiki. Solusi: migrasi **019_align_id_invoice_collation.sql** (menyamakan collation 3 tabel AR dengan `tr_invoicing.id` secara dinamis, idempotent) + **020** rollback. Migrasi lama tidak diedit. Prosedur sementara 017 sempat tertinggal dan sudah terhapus setelah dijalankan ulang.
+- **Hasil verifikasi**: join `tr_invoicing LEFT JOIN tr_invoice_ar` jalan (759 invoice); kolom `plan_bayar_nominal` ada; menu id 492 Monitoring Piutang, 493 Follow Up Piutang, 494 Dashboard Plan Bayar (parent 447, status 1); permission View diberikan ke 5 user, `Follow_Up_Piutang.Manage` ke 1 user (admin).
+- **Belum**: tidak ada baris `tr_invoice_ar` (migrasi 017 backfill tidak punya data); SQL model lain (`get_rows` penuh, `get_realisasi`, `save_ar`) belum dieksekusi dari aplikasi; tanggal go-live belum diisi.
+
+---
+
+# Monitoring Piutang — Fase 4 / status akhir (6 Nov 2026)
+
+- **Status**: SEMUA FASE (0-4) SELESAI di sisi kode + test tanpa DB. Belum diverifikasi di DB/web (lihat Risiko).
+- **File baru Fase 4**: `monitoring_piutang/libraries/Surat_konfirmasi.php`, `tests/Surat_konfirmasi_test.php` (27), `monitoring_piutang/README.md`.
+- **File diubah Fase 4**: `Monitoring_piutang.php` (+`surat($id)`, `can_surat` di list), `views/index.php` (kolom Aksi + tombol Surat Konfirmasi, buka tab baru), `models/Monitoring_piutang_model.php` (+`top_ke` dari `kons_tr_plan_tagih_detail.urutan`).
+- **Keputusan**: format surat diambil dari mockup (`mockup/index.html`) karena `Format Surat Konfirmasi.pdf` tidak ada di `specs/input/`; profil STM dikunci ke company id 7 (STM), company lain memakai kop teks nama company; nomor surat berisi placeholder `…/STM-Fnc/SK/XI/26` yang diisi di toolbar sebelum print (aturan penomoran belum ditetapkan); endpoint menolak (422) selain Potensi Macet/Macet belum close dan bersisa; semua nilai di-escape (diuji dengan nama customer berisi `<script>`).
+- **Regresi akhir**: monitoring_piutang aging 142 / export 15 / surat 27 PASS; invoicing calculation_test, Consulting_calculation_test (99), Ui_render_test (269) PASS; `php -l` semua file baru/diubah bersih; sintaks JS 3 view OK; `git diff --check` bersih (hanya peringatan CRLF).
+- **Test gagal, BUKAN dari pekerjaan ini**: `invoicing/tests/Ui_list_client_test.js` ("Consulting tab always requests uninvoiced only": view mengirim `filter_status: ''`). Hanya `Invoicing.php` yang diubah; view dan test tidak tersentuh. Konsisten dengan temuan bahwa tab Invoiced (INV-FR-01/02) belum ada. Tidak diperbaiki (di luar cakupan).
+- **Risiko / TODO yang tersisa**: (1) jalankan migrasi 001-017 di DB dev lalu uji SQL `get_rows`, `get_receipts`, `get_realisasi`, `save_ar`, `close_invoice`; (2) buka ketiga menu di browser dan unduh semua Excel; (3) cocokkan export Dashboard dengan `contoh-export-dashboard-plan-bayar.xlsx` dan Total keseluruhan dengan buku besar; (4) isi tanggal go-live di `config/piutang.php`; (5) beri `Follow_Up_Piutang.Manage` ke user finance AR; (6) `Consulting_integration_test --isolated-local-db` belum dijalankan setelah perubahan `save_close_invoice`; (7) tab Invoiced di Invoicing belum ada; (8) tombol hapus FU tambahan, riwayat perubahan (masih alert), dan tautan langsung ke invoice di Follow Up belum ada; (9) nilai rumus Ringkasan Dashboard belum ter-cache di file.
+
+---
+
+# Monitoring Piutang — Fase 3 (6 Nov 2026)
+
+- **Status**: Fase 3 SELESAI (kode + test tanpa DB; belum dicoba di web/DB).
+- **File baru**: `follow_up_piutang/controllers/Plan_bayar.php` (index, data, export; permission `Dashboard_Plan_Bayar.View`), `follow_up_piutang/views/plan_bayar.php` (card All + 12 bulan, rincian plan, rincian realisasi, filter Tahun/Company).
+- **File diubah**: `libraries/Piutang_aging.php` (+`posisi`, `ketepatan`, `plan_rows`, `realisasi_rows`, `dashboard_summary`, `by_month`, `BULAN`), `libraries/Piutang_export.php` (+`plan_summary_sheet`; kolom numerik kosong tetap kosong, bukan 0), `models/Monitoring_piutang_model.php` (+`get_realisasi($year)`), tests (aging 142, export 15).
+- **Keputusan**: plan memakai semua invoice termasuk close (`get_rows(true)`), nilai = `plan_nominal`; realisasi = semua baris penerimaan per tanggal transaksi bank, tanpa syarat punya plan; "Lewat" = bulan sudah lewat dan masih ada invoice belum close; Ringkasan Excel berisi rumus COUNTIF/SUMIF ke sheet Rincian (kolom K) dan Realisasi (kolom K), export bulan hanya Rincian + Realisasi.
+- **Pengujian**: aging 142 PASS (29 baru: ketepatan, posisi, plan/realisasi, penanda Lewat/Bulan ini, by_month), export 15 PASS (rumus Ringkasan diverifikasi sel per sel dengan PHPExcel), `php -l` dan sintaks JS OK. Tidak dijalankan: SQL `get_realisasi`, tampilan browser, unduhan dari server, perbandingan dengan `contoh-export-dashboard-plan-bayar.xlsx` (belum dibuka).
+- **Gap**: nilai rumus Ringkasan belum ter-cache di file (Excel menghitung saat dibuka; viewer tanpa kalkulasi bisa menampilkan kosong). Kolom `consulting_reduction` diasumsikan ada (migrasi invoicing v3).
+
+---
+
+# Monitoring Piutang — Fase 2 (6 Nov 2026)
+
+- **Status**: Fase 2 SELESAI (kode + test tanpa DB; belum dicoba di web/DB).
+- **File baru**: `monitoring_piutang/controllers/Monitoring_piutang.php` (index, data, detail, export), `views/index.php` (card Total/Lancar/Potensi/Macet/Belum Diterima, total keseluruhan, list, rekap, detail modal, Download Excel per card), `tests/Piutang_export_test.php` (8).
+- **File diubah**: `libraries/Piutang_aging.php` (+`monitoring_base`, `aged_list`, `rekap_customer`; tie-break nama customer di rekap), `libraries/Piutang_export.php` (+hook `after` untuk baris Belum diterima dan Total keseluruhan pakai rumus), `tests/Piutang_aging_test.php` (113).
+- **Keputusan**: card, list, rekap, dan Excel semua mulai dari satu `monitoring_base` (filter Company/Customer/Cari) sehingga layar = Excel; filter kategori hanya memengaruhi list/Excel, bukan card. Customer difilter persis lewat klik Rekap.
+- **Pengujian**: Piutang_aging_test 113 PASS, Piutang_export_test 8 PASS (PHPExcel nyata: rumus SUM, teks no invoice, kosong tanpa rumus); `php -l` + cek sintaks JS kedua view OK. Tidak dijalankan: SQL model, rendering view di web, unduhan Excel dari server.
+- **Gap**: tombol Surat Konfirmasi di list menunggu Fase 4. "Buka di Follow Up Piutang" mengarah ke menu, belum membuka invoice tertentu.
+
+---
+
+# Monitoring Piutang — Fase 0 dan Fase 1 (6 Nov 2026)
+
+- **Status**: Fase 0 SELESAI. Fase 1 SELESAI (kode + test tanpa DB; belum dicoba di web/DB).
+- **Rencana**: `docs/implementation-plan.md` bagian "Modul Monitoring Piutang"; spec: `specs/docs/review-monitoring-piutang/`.
+- **File baru**: `application/config/piutang.php` (go-live kosong; folder config di-`.gitignore`, perlu `git add -f`), `monitoring_piutang/libraries/Piutang_aging.php` (satu sumber aturan), `libraries/Piutang_export.php` (PHPExcel .xlsx bersama), `models/Monitoring_piutang_model.php`, `tests/Piutang_aging_test.php`, `follow_up_piutang/controllers/Follow_up_piutang.php`, `follow_up_piutang/views/index.php`.
+- **File diubah**: `invoicing/controllers/Invoicing.php::save_close_invoice` (tolak bila saldo ≠ 0, dicek ulang di UPDATE; INV-FR-10).
+- **Keputusan**: library murni PHP tanpa CI agar dites tanpa DB; kolom form yang tidak terkirim (input nonaktif) memakai nilai tersimpan, bukan NULL; `company` = id, tampilan `company_name`; filter dihitung di PHP (bukan SQL) supaya layar = Excel.
+- **Skema**: migrasi 003-017 cocok dengan spec, tidak ada migrasi baru.
+- **Pengujian**: `Piutang_aging_test.php` PASS 100 assertion; `invoicing` calculation_test, Consulting_calculation_test (99), Ui_render_test (269) PASS; `php -l` semua file baru bersih. Tidak dijalankan: Consulting_integration_test (butuh DB uji terisolasi), semua jalur SQL model/controller/view (belum ada DB/web).
+- **Gap/masalah**: Invoicing belum punya tab Invoiced terpisah (INV-FR-02), di luar cakupan. Form belum punya tombol hapus FU tambahan yang belum dilakukan (server sudah mendukung). Riwayat perubahan sementara ditampilkan lewat alert.
+- **Langkah berikutnya**: Fase 2 (controller `Monitoring_piutang` + view + Excel per card).
+
+---
+
 # Align Receipt Modal UI to Mockup — Task 5: Keputusan Req 7.7 (#kontrol_alert) & Catatan Verifikasi
 
 - **Status**: Task 5 SELESAI (dokumentasi). Keputusan Requirement 7.7 dan catatan verifikasi direkam di sini dan pada implementation notes `design.md`. Ini task dokumentasi; tidak ada perubahan kode view/JS.
@@ -3968,3 +4098,40 @@ Catatan awal: working tree membawa perubahan belum di-commit milik pekerjaan lai
 - Selesai: `Pengajuan_rutin_model::ListPage/CountBatchViews` (paging, filter status, pencarian di SQL), endpoint `Pengajuan_rutin::data_list` (POST, terkunci ke departemen user bila bukan admin, diaudit), `views/list.php` memakai 4 tabel serverside yang diinisialisasi saat tab dibuka.
 - Keputusan: `index()` hanya mengirim jumlah tab, tidak lagi memuat seluruh batch. Pencarian mencakup no batch, no item, deskripsi, keterangan (bukan nama departemen, karena nama berasal dari lookup di luar query).
 - Tes lulus (php74): Views_test 53, Model_query_test 42, Batch1_audit_test 70 skenario, Batch2_audit_test 40, Periodik_logic_test, Periodik_helper_test. Belum diuji di browser.
+
+## Kwitansi Deposit dikeluarkan dari modul piutang
+- `Monitoring_piutang_model::get_rows` menambah filter `tax_treatment <> 'DEP' AND id NOT LIKE 'KD-%'`. Satu titik ini dipakai Monitoring, Follow Up, dan Dashboard Plan Bayar (realisasi ikut hilang karena hanya menghitung invoice yang ada di daftar).
+- Verifikasi di DB dev: 6 record KD, kedua kriteria identik (0 selisih). `php -l` bersih. Belum dicek di browser.
+- `get_row($id)` (akses langsung by id) tidak difilter; KD tidak muncul di daftar sehingga tidak terjangkau dari UI.
+
+## Follow Up Piutang — No resi pindah ke step 1, wajib bila via JNE
+- Form: input No resi sekarang di step "1. Pengiriman" (di atas "2. Diterima Customer"); label menampilkan "(wajib bila via JNE)" dan ikut berubah saat pilihan via diganti. Kunci resi tidak berubah (terkunci bila terisi dan FU 1 tersimpan).
+- `Piutang_aging::validate_ar`: via JNE + tgl_kirim terisi + no_resi kosong → "No resi wajib diisi bila dikirim via JNE." (server). Driver tetap tanpa resi.
+- Tes: Piutang_aging 153, Export 15, Surat 27 lulus; sintaks JS OK. Belum dicek di browser.
+- Dampak: spec lama "no resi bisa diisi belakangan" tidak berlaku untuk JNE; invoice JNE lama tanpa resi akan diminta resi saat disimpan ulang.
+
+## Kwitansi Deposit — COA deposit belum ada + blokir posting Jurnal All (6 Nov 2026)
+- `Kwitansi_deposit_service`: akun `2102-01-02` tidak ada di master → tetap simpan, pakai kode `2102-01-02` / nama `Deposit Customer`; ganda (>1) tetap ditolak. COA diinput manual tim finance.
+- `Jurnal_all_model::detail()` (non-posted, source `INV`/`KWD`): `validate_invoice_coa()` cek kode COA jurnal ke `coa_master` DB accounting owner (`Invoice_consulting_service::accounting_group`). Hilang/ganda/master tak terbaca → `company_error` → `can_post=false` + alert-warning di preview (view tidak diubah). Invoice legacy (bukan `Invoice_consulting::is_new`) tidak dicek. Catatan: `source` Kwitansi Deposit = `KWD` (tab-nya `INV`).
+- `Consulting_posting::kwitansi`: COA tidak ada kini berpesan jelas, bukan "berbeda dari snapshot".
+- Tes baru `jurnal_all/tests/Invoice_coa_test.php`. BELUM dijalankan: PHP tidak ada di mesin ini (php -l dan seluruh suite jurnal_all/kwitansi_deposit belum jalan).
+- Belum: daftar tab tidak menandai baris COA hilang (hanya preview); `Consulting_posting::invoice` belum cek master sendiri (diblokir lewat preview/dispatcher).
+
+## follow_up_piutang: perbaikan UI antislop (6 Nov 2026)
+- Mode AFTER; audit `anti-slop/audit-001-2026-11-06.md`, laporan `anti-slop/audit-001-followup-2026-11-06.md`. Nomor 1-6 dan 8 dikerjakan di `views/index.php` dan `views/plan_bayar.php`: kontras warna, label terhubung, tab/kartu semantik, banner error/empty/loading, target sentuh 44px, emoji diganti ikon.
+- Keputusan: tidak ada `alert()` untuk kegagalan (banner inline); `prompt()` close dan `alert()` riwayat dibiarkan (nomor 7, belum disetujui).
+- Verifikasi: php -l kedua view lulus; node --check JS lulus. Belum dicoba di browser (tidak ada klik-through).
+- Belum: nomor 7, 9-16; catatan form modal menghapus isian FU saat tanggal diubah (belum diverifikasi).
+
+## follow_up_piutang: UI disesuaikan dengan mockup (6 Nov 2026)
+- Acuan: `specs/docs/review-monitoring-piutang/mockup/index.html`. `views/index.php` dan `views/plan_bayar.php` ditulis ulang: tab dengan hitungan (FU Terlambat merah), petunjuk tab, filter berlabel + kotak Cari di kanan sejajar Export, tabel per mockup (SPK/TOP, resi, Umur + kategori, kolom FU hilang di tab 4, kolom Close di tab Close), modal Close (menggantikan `prompt()`), riwayat inline (menggantikan `alert()`), form bertahap dengan FU yang bisa dibuka-tutup, kartu All + 12 bulan dan tabel Realisasi dengan "Janji vs Bayar".
+- Data: `Monitoring_piutang_model::base_sql` menambah `i.id_spk_penawaran AS no_spk`; `Piutang_aging::haystack` ikut mencari no SPK (kotak Cari). Kontrak endpoint dan nama field form tidak berubah.
+- Keputusan: warna pill memakai varian lebih gelap dari mockup agar teks putih >= 4.5:1; target sentuh 44px hanya pada layar sentuh (`pointer: coarse`); filter Customer tetap input teks (server mencocokkan nama persis); font mengikuti shell aplikasi.
+- Verifikasi: php -l semua file; node --check JS; Piutang_aging_test 153 dan Piutang_export_test 15 lulus. Belum dicoba di browser.
+- Belum: kotak usulan jadwal FU berikutnya yang muncul dinamis (mockup) tidak ditiru; teks petunjuknya statis. Pesan "Invoice pindah ke tab ..." setelah simpan belum ada (server tidak mengembalikan status baru).
+
+## follow_up_piutang/plan_bayar: tabel Plan dan Realisasi jadi DataTables serverside (6 Nov 2026)
+- `Plan_bayar::plan_data` / `real_data` (draw/start/length/search[value], plus tahun, company, bulan). Filter bulan lewat `Piutang_aging::by_month`, cari multi-kata (semua kata harus cocok, tanggal d-m-Y / d/m/Y / Y-m-d), urutan tetap dari server, `agg` (total, tepat/telat) mengikuti hasil filter. `data()` kini hanya ringkasan kartu + company (tanpa baris plan/real).
+- `views/plan_bayar.php`: dua DataTable serverside, header bertingkat Realisasi dipertahankan, total di tfoot dan ringkasan tepat waktu/telat diisi dari `agg`, error ajax jadi banner.
+- Verifikasi: php -l controller dan view, node --check JS, harness `matches()` 8 kasus lulus (di luar repo). Belum dicoba di browser; header bertingkat DataTables belum dilihat.
+- Catatan: tiap permintaan tabel memanggil `load_data()` (hitung ulang satu tahun); cukup untuk volume sekarang, perlu cache bila data besar.
