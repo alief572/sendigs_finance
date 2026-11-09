@@ -92,6 +92,23 @@ check($fil === 1 && $rows[0]['item']['no_item'] === 'PI-2026-00003', 'item searc
 list(, $fil) = $model->ListPage(null, 'rec', 'item', 'all', "x%' OR 1=1 --", 0, 10);
 check($fil === 0, 'search text is escaped (no injection, % is literal)');
 
+// ListDecidedItems (Record approval)
+list($tot, $fil, $rows) = $model->ListDecidedItems('', 0, 10);
+check($tot === 4 && $fil === 4 && array_column(array_column($rows, 'item'), 'no_item') === ['PI-2026-00003', 'PERIODIK-2026-00150', 'PI-2026-00005', 'PI-2026-00004'], 'decided items: waiting ones excluded, newest decision first (undated last, then by id desc)');
+check($rows[0]['item']['by'] === 'Direktur' && $rows[2]['item']['status'] === 'R' && $rows[2]['item']['note'] === 'Dokumen kurang' && $rows[0]['batch']['no'] === 'BP-2610-003', 'decided items: approver, reject reason and batch header carried');
+list($tot, $fil, $rows) = $model->ListDecidedItems('', 1, 2);
+check($tot === 4 && $fil === 4 && count($rows) === 2 && $rows[0]['item']['no_item'] === 'PERIODIK-2026-00150', 'decided items: offset and limit page the rows, totals stay');
+list($tot, $fil, $rows) = $model->ListDecidedItems('Dokumen kurang', 0, 10);
+check($tot === 4 && $fil === 1 && $rows[0]['item']['no_item'] === 'PI-2026-00005', 'decided items: search matches the reject reason');
+list(, $fil, $rows) = $model->ListDecidedItems('BP-2610', 0, 10);
+check($fil === 3, 'decided items: search matches the batch number');
+list(, $fil) = $model->ListDecidedItems("x%' OR 1=1 --", 0, 10);
+check($fil === 0, 'decided items: search text is escaped');
+detail($db, 7, 'BP-2611-001', 'PI-2026-00007', 3, 1, ['item_approved_by' => 'Direktur', 'item_approved_date' => '2026-11-05 10:00:00']);
+list(, $fil, $rows) = $model->ListDecidedItems('', 0, 10);
+check($fil === 5 && $rows[0]['item']['no_item'] === 'PI-2026-00007' && $rows[0]['batch']['no'] === 'BP-2611-001', 'decided items: item decided inside a batch that still has waiting items is listed');
+$db->query('DELETE FROM tr_pengajuan_rutin_detail WHERE id = 7');
+
 // GetMasterWithItems + Periodik_logic::state, end to end
 $masters = $model->GetMasterWithItems('DEP-1');
 check(array_column($masters, 'nama') === ['Sewa Kantor', 'Pajak Reklame', 'Cicilan Laptop'], 'masters of the department only');

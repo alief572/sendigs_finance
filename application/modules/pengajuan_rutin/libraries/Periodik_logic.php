@@ -36,6 +36,16 @@ class Periodik_logic
 		return $tipe === 'tahun' ? substr((string) $periode, 0, 4) : (string) $periode;
 	}
 
+	/**
+	 * Pengajuan terakhir item budget ini (item terakhir di $items, urut id naik, semua periode) bila ditolak, selain itu null.
+	 * Pengajuan yang lebih baru (menunggu, disetujui, atau pengajuan ulang) menggantikan penolakan lama.
+	 */
+	public static function last_reject(array $items)
+	{
+		$last = end($items);
+		return $last && $last['status'] === 'R' ? $last : null;
+	}
+
 	/** used = sudah dibayar sebelum sistem + item disetujui; pend = item menunggu approval. */
 	public static function usage(array $master, array $items)
 	{

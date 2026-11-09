@@ -47,6 +47,10 @@ $isEdit = $type === 'edit' && $batch;
 					<?php if ($r['tag'] !== '') : ?><span class="tag cic"><?= $e($r['tag']) ?></span><?php endif; ?>
 					<?php if ($lock && $lockItem && empty($st['last'])) : ?><span class="tag" <?= $lockItem['status'] === 'A' ? 'style="background:var(--green)"' : '' ?>><?= $lockItem['status'] === 'A' ? 'Sudah disetujui' : 'Sudah diajukan' ?> (<?= $e($lockItem['no_item']) ?>)</span><?php endif; ?>
 					<?php if ($lock && $lockItem && !empty($st['last'])) : ?><span class="tag">Menunggu approval (<?= $e($lockItem['no_item']) ?>)</span><?php endif; ?>
+					<?php $lastRej = !$lock && !$mine && !$back ? Periodik_logic::last_reject($m['items'] ?? array()) : null; // penolakan di periode lain: alasan tetap terlihat sebelum mengajukan lagi ?>
+					<?php if ($lastRej) : ?>
+						<span class="tag back">Pengajuan terakhir ditolak (<?= $e($lastRej['no_item']) ?><?= $lastRej['at'] !== '' ? ' &middot; ' . $e(substr($lastRej['at'], 0, 10)) : '' ?><?= !empty($lastRej['closed_at']) ? ' &middot; tidak diajukan ulang' : '' ?>)</span><?php if ($lastRej['note'] !== '') : ?><div class="note"><?= $e($lastRej['note']) ?></div><?php endif; ?>
+					<?php endif; ?>
 					<?php if ($back) : ?>
 						<span class="tag back">Ditolak di <?= $e($back['no_item']) ?></span><div class="note"><?= $e($back['note']) ?></div>
 						<button type="button" class="btn g sm" style="margin-top:4px" data-closeitem="<?= $e($back['no_item']) ?>">Tidak diajukan ulang</button>

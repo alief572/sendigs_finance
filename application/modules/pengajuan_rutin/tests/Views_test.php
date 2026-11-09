@@ -66,14 +66,16 @@ $m = ['id' => 10, 'nama' => 'Sewa <Kantor>', 'tipe' => 'bulan', 'tanggal' => '25
 $mAnnual = array_merge($m, ['id' => 11, 'nama' => 'Pajak', 'tipe' => 'tahun', 'tanggal' => '03/15/2026', 'masa_berlaku' => 0]);
 $mkRow = function ($master, $periode, $items = [], $mine = null) {
 	$st = Periodik_logic::state($master, $items, $periode);
-	return ['m' => $master, 'st' => $st, 'tag' => Periodik_logic::masa_tag($st), 'mine' => $mine];
+	return ['m' => $master, 'st' => $st, 'tag' => Periodik_logic::masa_tag($st), 'mine' => $mine, 'bank' => ['bank_id' => '', 'accnumber' => '', 'accname' => '']];
 };
 $locked = array_merge($m, ['id' => 12, 'nama' => 'Terkunci']);
 $rows = [
 	$mkRow($m, '2026-11'),
 	$mkRow($mAnnual, '2026-11'),
 	$mkRow($locked, '2026-11', [item('W', ['id_budget' => 12, 'no_item' => 'PI-2026-00020'])]),
-	$mkRow(array_merge($m, ['id' => 13, 'nama' => 'Ditolak', 'masa_berlaku' => 0]), '2026-11', [item('R', ['id_budget' => 13, 'no_item' => 'PI-2026-00021', 'nominal' => 777.0])]),
+	$mkRow(array_merge($m, ['id' => 13, 'nama' => 'Ditolak', 'masa_berlaku' => 0, 'items' => [item('R', ['id_budget' => 13, 'no_item' => 'PI-2026-00021', 'nominal' => 777.0])]]), '2026-11', [item('R', ['id_budget' => 13, 'no_item' => 'PI-2026-00021', 'nominal' => 777.0])]),
+	// penolakan terakhir di periode lain: item bebas diajukan, alasan tetap terlihat
+	$mkRow(array_merge($m, ['id' => 15, 'nama' => 'Ditolak Bulan Lalu', 'masa_berlaku' => 0, 'items' => [item('A', ['id_budget' => 15, 'periode' => '2026-09']), item('R', ['id_budget' => 15, 'no_item' => 'PI-2026-00030', 'periode' => '2026-10', 'note' => 'Tagihan <salah>', 'at' => '2026-10-21 09:00:00'])]]), '2026-11', [item('A', ['id_budget' => 15, 'periode' => '2026-09']), item('R', ['id_budget' => 15, 'no_item' => 'PI-2026-00030', 'periode' => '2026-10'])]),
 ];
 $hidden = [$mkRow(array_merge($m, ['id' => 14, 'nama' => 'Mati', 'aktif' => 0]), '2026-11')];
 $form = render('input_form', ['type' => 'add', 'dept' => 'DEP-1', 'dept_name' => 'Finance & Accounting', 'periode' => '2026-11', 'period_options' => ['2026-11' => 'November 2026', '2026-12' => 'Desember 2026'], 'rows' => $rows, 'hidden' => $hidden, 'batch' => null]);
@@ -83,10 +85,11 @@ check(strpos($form, 'Pembayaran ke-1 dari 3') !== false, 'form: masa berlaku tag
 check(strpos($form, 'Tgl 25') !== false && strpos($form, '15 Mar 2026') !== false && strpos($form, '(tahunan)') !== false, 'form: schedule shown for monthly and annual');
 check(preg_match('/data-mid="12"[^>]*>.*?PI-2026-00020.*?Sudah diajukan \(PI-2026-00020\)/s', $form) === 1 && strpos($form, 'placeholder="Terkunci"') !== false, 'form: locked row shows its item number and is disabled');
 check(strpos($form, 'Ditolak di PI-2026-00021') !== false && strpos($form, 'data-closeitem="PI-2026-00021"') !== false && strpos($form, 'value="777"') !== false, 'form: rejected row reopens with its amount and the close button');
+check(preg_match('/data-mid="15"[^>]*>.*?Pengajuan terakhir ditolak \(PI-2026-00030 &middot; 2026-10-21\).*?<div class="note">Tagihan &lt;salah&gt;<\/div>/s', $form) === 1 && substr_count($form, 'Pengajuan terakhir ditolak (') === 1, 'form: last rejection from another period shows its item, date and escaped reason; none for locked, same-period rejected, or clean rows');
 check(strpos($form, '1 item tidak ditampilkan:') !== false && strpos($form, 'Mati (dinonaktifkan)') !== false, 'form: hidden items note');
 check(strpos($form, 'name="biaya[10]"') !== false && strpos($form, 'name="doc_10"') !== false && strpos($form, 'name="biaya[12]"') !== false, 'form: field names carry the budget id');
 check(strpos($form, 'name="biaya[12]" data-biaya="12" data-max="1500000" value="0" disabled') !== false, 'form: locked amount is disabled so it is never posted');
-check(strpos($form, 'type="number"') === false && substr_count($form, 'inputmode="numeric"') === 4, 'form: every cost input is a masked text field (no type=number)');
+check(strpos($form, 'type="number"') === false && substr_count($form, 'inputmode="numeric"') === 5, 'form: every cost input is a masked text field (no type=number)');
 check(strpos($form, 'fd.set(inp.name, PJ.moneyValue(inp.value))') !== false && strpos($form, 'PJ.maskMoney(e.target)') !== false, 'form: masks while typing and posts plain numbers (FormData rewritten before send)');
 check(strpos($form, 'data-biaya="10" data-max="1500000"') !== false && strpos($form, 'Perkiraan biaya tidak boleh melebihi budget') !== false, 'form: budget ceiling carried to the input and enforced before submit');
 js_syntax($form, 'input_form');
@@ -98,12 +101,12 @@ check(strpos($edit, 'data-keep="PI-2026-00001"') !== false && strpos($edit, '>ba
 check(strpos(render('input_form', ['type' => 'add', 'dept' => 'DEP-1', 'dept_name' => 'FA', 'periode' => '2026-11', 'period_options' => ['2026-11' => 'N'], 'rows' => [], 'hidden' => [], 'batch' => null]), 'Tidak ada item aktif untuk departemen ini.') !== false, 'form: empty department text');
 
 // ---- app_list.php
-$apps = render('app_list', ['batches' => $batches, 'names' => $names, 'can_decide' => true]);
-check(strpos($apps, 'Menunggu approval (1)') !== false && strpos($apps, 'href="/base/pengajuan_rutin/proses/2"') !== false && strpos($apps, 'proses/1"') === false, 'app_list: only waiting batches have a decide action');
-check(strpos($apps, 'Direktur') !== false && strpos($apps, 'Approved') !== false && strpos($apps, 'Rejected') !== false, 'app_list: record tab lists decisions');
-check(strpos($apps, '2026-11-04 09:30') !== false, 'app_list: decision time');
-check(strpos(render('app_list', ['batches' => $batches, 'names' => $names, 'can_decide' => false]), 'Proses approval') === false, 'app_list: no decide link without Manage permission');
-check(strpos(render('app_list', ['batches' => [], 'names' => $names, 'can_decide' => true]), 'Belum ada keputusan approval.') !== false, 'app_list: empty record text');
+// baris tabel dibuat server (Pengajuan_rutin::app_data, diuji di Batch2_audit_test); view hanya kerangka + konfigurasi DataTables
+$apps = render('app_list', ['wait_count' => 3, 'can_decide' => true]);
+check(strpos($apps, 'Menunggu approval (3)') !== false && strpos($apps, 'Record approval') !== false, 'app_list: tab labels, waiting count from server');
+check(strpos($apps, 'serverSide: true') !== false && strpos($apps, "'pengajuan_rutin/app_data'") !== false && strpos($apps, 'jquery.dataTables.min.js') !== false, 'app_list: DataTables configured for server-side processing');
+check(strpos($apps, 'data-dt="wait"') !== false && strpos($apps, 'data-dt="rec"') !== false && strpos($apps, '<tbody>') === false, 'app_list: empty table skeletons for both tabs');
+foreach (['Departement', 'Jumlah item', 'Nominal', 'Action', 'Diputuskan', 'No. Item', 'Keputusan', 'Keterangan reject'] as $col) { check(strpos($apps, '>' . $col . '<') !== false, "app_list: column $col"); }
 js_syntax($apps, 'app_list');
 
 // ---- approval_form.php

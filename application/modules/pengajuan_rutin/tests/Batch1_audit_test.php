@@ -31,7 +31,7 @@ if (!function_exists('base_url')) {
 }
 if (!function_exists('has_permission')) {
     function has_permission($perm = '') {
-        return true;
+        return empty($GLOBALS['scenario']['no_manage']) || strpos($perm, 'Manage') === false;
     }
 }
 
@@ -410,6 +410,22 @@ class RutinModel extends Pengajuan_rutin_model {
         return array(count($rows), count($rows), $rows);
     }
 
+    /** Item yang sudah diputuskan (huruf status bukan W) sebagai pasangan batch+item. */
+    public function ListDecidedItems($search, $start, $length) {
+        $all = $this->GetBatchesWithItems(null);
+        if ($all === false) {
+            return false;
+        }
+        $rows = array();
+        foreach ($all as $b) {
+            foreach ($b['items'] as $i) {
+                if ($i['status'] !== 'W') { $rows[] = array('batch' => $b, 'item' => $i); }
+            }
+        }
+        $GLOBALS['rutinDecidedArgs'] = array($search, $start, $length);
+        return array(count($rows), count($rows), $rows);
+    }
+
     public function GetLastBank($idBudget) {
         return (object) array('bank_id' => 'BCA', 'accnumber' => '123', 'accname' => 'Vendor');
     }
@@ -437,7 +453,7 @@ class RutinModel extends Pengajuan_rutin_model {
         }
         $out = array($master);
         if (!empty($scenario['two_items'])) {
-            $out[] = array_merge($master, array('id' => 11, 'nama' => 'Budget 2', 'nilai' => 50));
+            $out[] = array_merge($master, array('id' => 11, 'nama' => 'Budget 2', 'nilai' => 50, 'items' => array())); // tanpa riwayat: tetap bebas walau master 10 terkunci
         }
         return $out;
     }
@@ -666,6 +682,8 @@ check($ctrl->template->data['dept'] === 'DEP-1', 'create (non-admin): department
 // D. Status baris: terkunci, ditolak, ditutup, nonaktif
 list(, , $ctrl) = pengajuan_run('create', array('is_admin' => true, 'locked_master' => true), array(), array('DEP-1'));
 check($ctrl->template->data['rows'][0]['st']['state'] === 'lock' && $ctrl->template->data['rows'][0]['st']['lock']['no_item'] === 'PI-2026-00007', 'create: sudah diajukan -> lock dengan nomor item');
+list(, , $ctrl) = pengajuan_run('create', array('is_admin' => true, 'locked_master' => true, 'two_items' => true), array(), array('DEP-1'));
+check(array_column(array_column($ctrl->template->data['rows'], 'm'), 'id') === array(11, 10) && $ctrl->template->data['rows'][1]['st']['state'] === 'lock', 'create: item yang bisa diajukan tampil dulu, item terkunci di paling bawah');
 list(, , $ctrl) = pengajuan_run('create', array('is_admin' => true, 'rejected_master' => true), array(), array('DEP-1'));
 check($ctrl->template->data['rows'][0]['st']['state'] === 'back' && $ctrl->template->data['rows'][0]['st']['back']['no_item'] === 'PI-2026-00005', 'create: ditolak -> back');
 list(, , $ctrl) = pengajuan_run('create', array('is_admin' => true, 'closed_master' => true), array(), array('DEP-1'));

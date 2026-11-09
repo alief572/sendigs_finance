@@ -17,6 +17,13 @@ check(Periodik_logic::batch_status(array('W', 'W')) === array('W', 'Waiting Appr
 check(Periodik_logic::batch_status(array('A', 'R')) === array('P', 'Partially Approved'), 'batch P');
 check(Periodik_logic::batch_status(array('R')) === array('R', 'Rejected'), 'batch R');
 
+// last_reject: hanya pengajuan paling akhir (semua periode) yang ditolak
+check(Periodik_logic::last_reject(array()) === null, 'last_reject: tanpa riwayat');
+check(Periodik_logic::last_reject(array(item('A', '2026-09'), item('R', '2026-10', array('no_item' => 'PI-2026-00007'))))['no_item'] === 'PI-2026-00007', 'last_reject: terakhir ditolak di periode lain');
+check(Periodik_logic::last_reject(array(item('R', '2026-10'), item('W', '2026-11'))) === null && Periodik_logic::last_reject(array(item('R', '2026-10'), item('A', '2026-11'))) === null, 'last_reject: diganti pengajuan yang lebih baru (menunggu/disetujui)');
+check(Periodik_logic::last_reject(array(item('R', '2026-10', array('resub' => 'PI-2026-00009')), item('W', '2026-10', array('no_item' => 'PI-2026-00009'))) ) === null, 'last_reject: sudah diajukan ulang');
+check(Periodik_logic::last_reject(array(item('R', '2026-10', array('closed_at' => '2026-10-25 08:00:00'))))['closed_at'] !== null, 'last_reject: ditolak lalu ditutup tetap terisi');
+
 // state: bebas, nonaktif, masa habis
 check(Periodik_logic::state($bulanan, array(), '2026-11')['state'] === 'free', 'free tanpa riwayat');
 check(Periodik_logic::state(array('aktif' => 0) + $bulanan, array(), '2026-11')['state'] === 'off', 'off');

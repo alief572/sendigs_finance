@@ -70,12 +70,35 @@ foreach (array('writer_failure', 'writer_exception') as $writer) {
 // ==========================================
 list($event, , $ctrl) = b2_run('app_list', array('is_admin' => true));
 check($event['status'] === 1 && $event['context']['data']['outcome'] === 'rendered' && $ctrl->template->view === 'app_list', 'app_list: rendered');
-check(isset($ctrl->template->data['batches']['BP-2611-001']) && $ctrl->template->data['can_decide'] === true, 'app_list: batches and decide flag passed to view');
-list($event) = b2_run('app_list', array('query_error_detail' => true));
-check($event['status'] === 0 && $event['context']['data']['outcome'] === 'query_error', 'app_list: query error');
+check($ctrl->template->data['wait_count'] === 1 && $ctrl->template->data['can_decide'] === true && !isset($ctrl->template->data['batches']), 'app_list: waiting count and decide flag passed to view (rows come from app_data)');
+list($event, , $ctrl) = b2_run('app_list', array('query_error_detail' => true));
+check($event['status'] === 0 && $event['context']['data']['outcome'] === 'query_error' && $ctrl->template->data['wait_count'] === 0, 'app_list: query error');
 foreach (array('writer_failure', 'writer_exception') as $writer) {
     list($event) = b2_run('app_list', array($writer => true));
     check($event['status'] === 1, 'app_list: writer resilience');
+}
+
+// 2b. app_data (DataTables serverside halaman approval)
+list($event, $output) = b2_run('app_data', array('is_admin' => true), array('draw' => '4', 'view' => 'wait', 'start' => '20', 'length' => '10', 'search' => array('value' => ' sewa ')));
+$dt = json_decode($output, true);
+check($event['status'] === 1 && $event['context']['data']['outcome'] === 'rendered' && $dt['draw'] === 4 && $dt['recordsTotal'] === 1 && $dt['recordsFiltered'] === 1, 'app_data wait: audited, DataTables envelope');
+check($GLOBALS['rutinListArgs'] === array(null, 'wait', 'batch', 'all', 'sewa', 20, 10), 'app_data wait: all departments, search trimmed, paging forwarded');
+check($dt['data'][0][0] === 21 && $dt['data'][0][2] === 'BP-2611-001' && $dt['data'][0][3] === 1 && $dt['data'][0][4] === '100' &&$dt['data'][0][5] === '<span style="white-space:nowrap">2026-11-03</span>' && $dt['data'][0]['DT_RowAttr']['data-batch'] === 'BP-2611-001', 'app_data wait: row number continues from start, item count, nominal, date');
+check(strpos($dt['data'][0][6], 'data-view="1"') !== false && strpos($dt['data'][0][6], 'href="/base/pengajuan_rutin/proses/1"') !== false, 'app_data wait: Lihat and Proses approval for a decider');
+list(, $output) = b2_run('app_data', array('is_admin' => true, 'no_manage' => true), array('view' => 'wait'));
+check(strpos(json_decode($output, true)['data'][0][6], 'Proses approval') === false && strpos(json_decode($output, true)['data'][0][6], 'data-view="1"') !== false, 'app_data wait: no decide link without Manage permission');
+list($event, $output) = b2_run('app_data', array('is_admin' => true, 'item_letter' => 'R'), array('draw' => '5', 'view' => 'rec', 'start' => '0', 'length' => '25', 'search' => array('value' => 'sewa')));
+$dt = json_decode($output, true);
+check($GLOBALS['rutinDecidedArgs'] === array('sewa', 0, 25) && $dt['recordsTotal'] === 1 && count($dt['data'][0]) === 8, 'app_data rec: decided items query, 7 columns + row attribute');
+check(strpos($dt['data'][0][0], '2026-11-04 09:30') !== false && strpos($dt['data'][0][0], 'Direktur') !== false && $dt['data'][0][1] === 'PI-2026-00001' && strpos($dt['data'][0][5], 'pill R') !== false && strpos($dt['data'][0][5], 'Rejected') !== false, 'app_data rec: decision time, approver, item number, keputusan pill');
+check(strpos($dt['data'][0][6], 'class="note">Salah nominal<') !== false, 'app_data rec: reject note shown');
+list(, $output) = b2_run('app_data', array('is_admin' => true), array('view' => 'rec'));
+check(json_decode($output, true)['recordsTotal'] === 0 && json_decode($output, true)['data'] === array(), 'app_data rec: waiting items are not records');
+list($event, $output) = b2_run('app_data', array('query_error_detail' => true), array('view' => 'rec'));
+check($event['status'] === 0 && $event['context']['data']['outcome'] === 'query_error' && isset(json_decode($output, true)['error']) && json_decode($output, true)['data'] === array(), 'app_data: query error reported and audited');
+foreach (array('writer_failure', 'writer_exception') as $writer) {
+    list($event) = b2_run('app_data', array($writer => true), array('view' => 'wait'));
+    check($event['status'] === 1, 'app_data: writer resilience');
 }
 
 // ==========================================

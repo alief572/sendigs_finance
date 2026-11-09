@@ -176,7 +176,7 @@ class Pengajuan_rutin extends Admin_Controller
 			}
 		}
 		$rows = array();
-		$hidden = array();
+		$hidden = $locked = array();
 		usort($masters, function ($a, $b) { return strcmp((string) $a['nama'], (string) $b['nama']); });
 		foreach ($masters as $m) {
 			$st = Periodik_logic::state($m, $m['items'], $periode);
@@ -187,11 +187,13 @@ class Pengajuan_rutin extends Admin_Controller
 				: array('bank_id' => $lastBank ? $lastBank->bank_id : '', 'accnumber' => $lastBank ? $lastBank->accnumber : '', 'accname' => $lastBank ? $lastBank->accname : '');
 			if (in_array($st['state'], array('off', 'done', 'closed'), true) && !$row['mine']) {
 				$hidden[] = $row;
+			} elseif ($st['state'] === 'lock' && !$row['mine']) {
+				$locked[] = $row; // sudah diajukan di periode ini: ditaruh di bawah supaya item yang bisa diajukan tampil dulu
 			} else {
 				$rows[] = $row;
 			}
 		}
-		return array($rows, $hidden);
+		return array(array_merge($rows, $locked), $hidden);
 	}
 
 	public function index()
@@ -745,17 +747,85 @@ class Pengajuan_rutin extends Admin_Controller
 	{
 		$this->auth->restrict($this->approvalViewPermission);
 		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
-		$batches = $this->Pengajuan_rutin_model->GetBatchesWithItems(null);
-		$this->auditObserve($batches);
-		$batches = is_array($batches) ? $batches : array();
-		$this->template->set('batches', $batches);
-		$this->template->set('names', $this->deptNames());
+		$counts = $this->Pengajuan_rutin_model->CountBatchViews(null);
+		$this->auditObserve($counts);
+		$this->template->set('wait_count', is_array($counts) ? (int) $counts['wait'] : 0);
 		$this->template->set('can_decide', has_permission($this->approvalManagePermission));
 		$this->template->title('Approval Pengajuan Periodik');
 		$this->template->render('app_list');
 		$this->completeAudit('Membuka halaman approval pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
 			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
 		));
+	}
+
+	/** Sumber data DataTables serverside halaman approval: view wait (batch menunggu) atau rec (item yang sudah diputuskan). */
+	public function app_data()
+	{
+		$this->auth->restrict($this->approvalViewPermission);
+		$this->beginAudit(__FUNCTION__, array(), array('outcome'));
+		$in = $this->input->post();
+		$view = ($in['view'] ?? '') === 'rec' ? 'rec' : 'wait';
+		$search = trim((string) ($in['search']['value'] ?? ''));
+		$start = (int) ($in['start'] ?? 0);
+		$length = (int) ($in['length'] ?? 10);
+		$res = $view === 'wait'
+			? $this->Pengajuan_rutin_model->ListPage(null, 'wait', 'batch', 'all', $search, $start, $length)
+			: $this->Pengajuan_rutin_model->ListDecidedItems($search, $start, $length);
+		$this->auditObserve($res);
+		$out = array('draw' => (int) ($in['draw'] ?? 0), 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => array());
+		if (is_array($res)) {
+			$out['recordsTotal'] = $res[0];
+			$out['recordsFiltered'] = $res[1];
+			$out['data'] = $view === 'wait' ? $this->appWaitRows($res[2], $start) : $this->appRecRows($res[2]);
+		} else {
+			$out['error'] = 'Terjadi kesalahan. Silakan coba lagi.';
+		}
+		$this->jsonOut($out);
+		$this->completeAudit('Memuat daftar approval pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array(
+			'outcome' => $this->auditQueriesOk ? 'rendered' : 'query_error'
+		));
+	}
+
+	private function appWaitRows(array $batches, $start)
+	{
+		$names = $this->deptNames();
+		$canDecide = has_permission($this->approvalManagePermission);
+		$rows = array();
+		foreach ($batches as $ix => $b) {
+			$rows[] = array(
+				'DT_RowAttr' => array('data-batch' => $b['no']),
+				$start + $ix + 1,
+				$this->esc(isset($names[$b['dept']]) ? $names[$b['dept']] : $b['dept']),
+				$this->esc($b['no']),
+				count($b['items']),
+				number_format((float) array_sum(array_column($b['items'], 'nominal')), 0, ',', '.'),
+				'<span style="white-space:nowrap">' . $this->esc(substr((string) $b['date'], 0, 10)) . '</span>',
+				'<span style="white-space:nowrap"><button type="button" class="btn c sm" data-view="' . (int) $b['id'] . '">Lihat</button>'
+					. ($canDecide ? ' <a class="btn sm" href="' . base_url('pengajuan_rutin/proses/' . (int) $b['id']) . '" style="text-decoration:none">Proses approval</a>' : '') . '</span>',
+			);
+		}
+		return $rows;
+	}
+
+	private function appRecRows(array $pairs)
+	{
+		$label = array('A' => 'Approved', 'R' => 'Rejected');
+		$rows = array();
+		foreach ($pairs as $p) {
+			$b = $p['batch'];
+			$i = $p['item'];
+			$rows[] = array(
+				'DT_RowAttr' => array('data-batch' => $b['no']),
+				'<span style="white-space:nowrap">' . $this->esc(substr($i['at'], 0, 16)) . '</span><span class="sub">' . $this->esc($i['by']) . '</span>',
+				$this->esc($i['no_item']),
+				'<span style="white-space:nowrap">' . $this->esc($b['no']) . '</span>',
+				$this->esc($i['desc']),
+				number_format((float) $i['nominal'], 0, ',', '.'),
+				'<span class="pill ' . $this->esc($i['status']) . '">' . $this->esc($label[$i['status']] ?? $i['status']) . '</span>',
+				$i['note'] !== '' ? '<span class="note">' . $this->esc($i['note']) . '</span>' : '',
+			);
+		}
+		return $rows;
 	}
 
 	/** Form keputusan satu batch (per item). $id = id header. */

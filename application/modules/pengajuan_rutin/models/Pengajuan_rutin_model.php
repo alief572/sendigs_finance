@@ -359,6 +359,38 @@ class Pengajuan_rutin_model extends BF_Model
 	}
 
 	/**
+	 * Record approval (DataTables serverside): semua item yang sudah diputuskan, di batch mana pun (termasuk batch yang
+	 * sebagian itemnya masih menunggu), keputusan terbaru dulu. Return array(total, filtered, rows) atau false bila query gagal;
+	 * rows: array(array('batch' => header, 'item' => item)).
+	 */
+	public function ListDecidedItems($search, $start, $length)
+	{
+		$from = function ($search) {
+			$this->db->from('tr_pengajuan_rutin h')->join('tr_pengajuan_rutin_detail d', 'd.no_doc = h.no_doc')->where('d.item_status <>', 0);
+			if ($search !== '') {
+				$like = $this->db->escape('%' . $this->db->escape_like_str($search) . '%') . " ESCAPE '!'";
+				$this->db->where("(d.no_item LIKE $like OR h.no_doc LIKE $like OR d.nama LIKE $like OR d.item_reject_ket LIKE $like)", null, false);
+			}
+		};
+		$from('');
+		$total = $this->db->count_all_results();
+		$from($search);
+		$filtered = $this->db->count_all_results();
+		$from($search);
+		$q = $this->db->select(self::ITEM_COLS)->join('ms_budget_rutin mb', 'mb.id = d.id_budget', 'left')
+			->order_by('d.item_approved_date', 'desc')->order_by('d.id', 'desc')
+			->limit(min(100, max(1, (int) $length)), max(0, (int) $start))->get();
+		if (!$q) {
+			return false;
+		}
+		$rows = array();
+		foreach ($q->result() as $r) {
+			$rows[] = array('batch' => array('id' => (int) $r->id, 'no' => $r->no_doc, 'dept' => $r->departement, 'date' => $r->tanggal_doc), 'item' => $this->ItemRow($r));
+		}
+		return array((int) $total, (int) $filtered, $rows);
+	}
+
+	/**
 	 * Status Request Payment per nomor item: state belum|pending|done, no pengajuan Finance, alasan reject.
 	 * Sumber: tr_rp_pengajuan_d/h (batch pengajuan Finance) dan tr_rp_reject_log.
 	 */
