@@ -46,6 +46,28 @@ class Budget_periodik extends Admin_Controller
 		return $map;
 	}
 
+	/**
+	 * Master + usulan BG pending (nilai `after`) supaya ringkasan di daftar juga menghitung yang belum disetujui.
+	 * Baris usulan memakai id master (in_sys tetap terbaca); item baru tanpa id.
+	 */
+	private function withPending(array $list, $bg)
+	{
+		if (!$bg) {
+			return $list;
+		}
+		$byBudget = array();
+		foreach ($bg['lines'] as $l) {
+			if ($l['id_budget'] !== null) { $byBudget[$l['id_budget']] = $l['after']; }
+		}
+		foreach ($list as $i => $m) {
+			if (isset($byBudget[(int) $m['id']])) { $list[$i] = array_merge($m, $byBudget[(int) $m['id']], array('id' => $m['id'])); }
+		}
+		foreach ($bg['lines'] as $l) {
+			if ($l['kind'] === 'new') { $list[] = $l['after']; }
+		}
+		return $list;
+	}
+
 	/** Ringkasan per departemen (baris daftar) + peta budget dan BG pending per departemen. */
 	private function overview()
 	{
@@ -67,8 +89,9 @@ class Budget_periodik extends Admin_Controller
 		$rows = array();
 		foreach (array_unique(array_merge(array_keys($byDept), array_keys($pending))) as $d) {
 			$list = isset($byDept[$d]) ? $byDept[$d] : array();
+			$eff = $this->withPending($list, isset($pending[$d]) ? $pending[$d] : null);
 			$rows[] = array('dept' => $d, 'name' => isset($names[$d]) ? $names[$d] : $d,
-				'sum' => Budget_logic::summary($list, $this->inSysMap($list)),
+				'sum' => Budget_logic::summary($eff, $this->inSysMap($list)),
 				'pending' => isset($pending[$d]) ? $pending[$d] : null, 'last' => isset($lastDone[$d]) ? $lastDone[$d] : null);
 		}
 		return array($rows, $byDept, $pending, $names);
@@ -146,7 +169,7 @@ class Budget_periodik extends Admin_Controller
 				'tahun' => $fmt($s['thn']),
 				'status' => $status,
 				'action' => '<button type="button" class="btn c sm" data-view="' . $e($r['dept']) . '">Lihat</button>'
-					. ($canAdd ? ' <a class="btn o sm" href="' . $e(base_url('budget_periodik/edit/' . rawurlencode($r['dept']))) . '" style="text-decoration:none">Edit</a>' : ''),
+					. ($canAdd && !$p ? ' <a class="btn o sm" href="' . $e(base_url('budget_periodik/edit/' . rawurlencode($r['dept']))) . '" style="text-decoration:none">Edit</a>' : ''),
 			);
 		}
 		$this->jsonOut(array('draw' => (int) $this->input->post('draw'), 'recordsTotal' => $total, 'recordsFiltered' => $filtered, 'data' => $data));
@@ -180,6 +203,7 @@ class Budget_periodik extends Admin_Controller
 			$n = Budget_logic::normalize($m);
 			$n['in_sys'] = (int) $m['in_sys'];
 			$n['pend'] = (int) $m['pend'];
+			$n['rej'] = Budget_logic::last_reject($m);
 			$rows[] = $n;
 		}
 		$pending = null;

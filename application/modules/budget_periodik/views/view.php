@@ -9,7 +9,7 @@ foreach ($bgs as $bg) { if ($bg['status'] === 'pending') { $pending = $bg; break
 <div class="mhead">
 	<h2>Budget <?= $e($dept_name) ?></h2>
 	<div class="bar" style="margin:0">
-		<?php if ($can_edit) : ?><a class="btn o sm" href="<?= base_url('budget_periodik/edit/' . rawurlencode($dept)) ?>" style="text-decoration:none">Edit</a><?php endif; ?>
+		<?php if ($can_edit && !$pending) : ?><a class="btn o sm" href="<?= base_url('budget_periodik/edit/' . rawurlencode($dept)) ?>" style="text-decoration:none">Edit</a><?php endif; ?>
 		<button type="button" class="btn g sm" data-close>Tutup</button>
 	</div>
 </div>
@@ -21,13 +21,13 @@ foreach ($bgs as $bg) { if ($bg['status'] === 'pending') { $pending = $bg; break
 </div>
 <div class="scroll">
 	<table>
-		<thead><tr><th>#</th><th>Post Pengeluaran</th><th>Nama Barang / Jasa</th><th>Bulanan / Tahunan</th><th>Jadwal</th><th class="num">Perkiraan Biaya</th><th>Masa berlaku</th><th>Status</th></tr></thead>
+		<thead><tr><th>#</th><th>Post Pengeluaran</th><th>Nama Barang / Jasa</th><th>Bulanan / Tahunan</th><th>Jadwal</th><th class="num">Perkiraan Biaya</th><th>Masa berlaku</th><th>Status</th><th>Pengajuan terakhir</th></tr></thead>
 		<tbody>
-		<?php if (!$masters) : ?><tr><td colspan="8">Belum ada item yang berlaku. Item baru menunggu approval.</td></tr><?php endif; ?>
+		<?php if (!$masters) : ?><tr><td colspan="9">Belum ada item yang berlaku. Item baru menunggu approval.</td></tr><?php endif; ?>
 		<?php foreach ($masters as $ix => $m) :
 			$n = Budget_logic::normalize($m);
 			$used = Budget_logic::used($m, $m['in_sys']);
-			$done = $n['masa_berlaku'] > 0 && $used >= $n['masa_berlaku']; ?>
+			$done = $n['masa_berlaku'] > 0 && $used >= $n['masa_berlaku']; $rej = Budget_logic::last_reject($m); ?>
 			<tr class="<?= $n['aktif'] ? '' : 'lockrow' ?>">
 				<td><?= $ix + 1 ?></td>
 				<td><?= $e($n['coa']) ?></td>
@@ -37,6 +37,9 @@ foreach ($bgs as $bg) { if ($bg['status'] === 'pending') { $pending = $bg; break
 				<td class="num mono"><?= $fmt($n['nilai']) ?></td>
 				<td><?= $n['masa_berlaku'] > 0 ? $used . ' / ' . $n['masa_berlaku'] . ' kali' : 'Selalu' ?></td>
 				<td><?= !$n['aktif'] ? '<span class="pill R">Nonaktif</span>' : ($done ? '<span class="pill P">Selesai</span>' : '<span class="pill A">Aktif</span>') ?></td>
+				<td style="min-width:170px"><?php if ($rej) : ?><span class="pill R">Ditolak</span>
+					<span class="sub"><?= $e($rej['no']) ?><?= $rej['at'] !== '' ? ' · ' . $e($rej['at']) : '' ?><?= $rej['closed'] ? ' · tidak diajukan ulang' : '' ?></span>
+					<?php if ($rej['note'] !== '') : ?><span class="sub"><?= $e($rej['note']) ?></span><?php endif; ?><?php else : ?><span class="sub">-</span><?php endif; ?></td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody>

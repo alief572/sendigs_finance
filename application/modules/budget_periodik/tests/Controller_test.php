@@ -36,7 +36,7 @@ $real = DB(['dbdriver' => 'pdo', 'subdriver' => 'sqlite', 'dsn' => 'sqlite::memo
 $db = new MysqlishDb($real);
 $real->query('CREATE TABLE ms_periodik_counter (kode TEXT, periode TEXT, last_no INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (kode, periode))');
 $real->query('CREATE TABLE ms_budget_rutin (id INTEGER PRIMARY KEY AUTOINCREMENT, departement TEXT, coa TEXT, nama TEXT, tipe TEXT, tanggal TEXT, nilai REAL, keterangan TEXT, kode_id TEXT, masa_berlaku INTEGER DEFAULT 0, masa_awal INTEGER DEFAULT 0, aktif INTEGER DEFAULT 1)');
-$real->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, id_budget INTEGER, item_status INTEGER)');
+$real->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, id_budget INTEGER, item_status INTEGER, no_doc TEXT, no_item TEXT, item_reject_ket TEXT, item_approved_date TEXT, closed_at TEXT)');
 $real->query('CREATE TABLE tr_budget_bg (id INTEGER PRIMARY KEY AUTOINCREMENT, no_bg TEXT UNIQUE, departement TEXT, status TEXT, created_by TEXT, created_on TEXT, decided_on TEXT)');
 $real->query('CREATE TABLE tr_budget_bg_line (id INTEGER PRIMARY KEY AUTOINCREMENT, no_bg TEXT, kind TEXT NOT NULL, id_budget INTEGER, before_json TEXT, after_json TEXT, fields TEXT, decision TEXT, note TEXT, decided_by TEXT, decided_at TEXT)');
 function master($real, $dept, $nama, $nilai, $extra = []) {
@@ -48,6 +48,7 @@ $cicilan = master($real, 'DEP-1', 'Cicilan Laptop', 800000, ['masa_berlaku' => 5
 $mati = master($real, 'DEP-1', 'Langganan Lama', 100000, ['aktif' => 0]);
 $listrik = master($real, 'DEP-2', 'Listrik', 300000);
 $real->insert('tr_pengajuan_rutin_detail', ['id_budget' => $cicilan, 'item_status' => 1]);
+$real->insert('tr_pengajuan_rutin_detail', ['id_budget' => $sewa, 'item_status' => 8, 'no_doc' => 'BP-2611-002', 'no_item' => 'PI-2026-00011', 'item_reject_ket' => 'Dokumen <kurang>', 'item_approved_date' => '2026-11-05 10:00:00']);
 
 function ctrl() {
 	global $db;
@@ -115,6 +116,7 @@ check($c->template->view === 'input_form' && $st['dept'] === 'DEP-1' && count($s
 $byName = array_column($st['rows'], null, 'nama');
 check($byName['Cicilan Laptop']['in_sys'] === 1 && $byName['Cicilan Laptop']['masa_awal'] === 1 && $byName['Cicilan Laptop']['masa_berlaku'] === 5 && !array_key_exists('keterangan', $byName['Sewa Kantor']), 'edit: usage included, Baseline column not exposed');
 check($st['coa']['6101'] === '6101 - Beban Sewa', 'edit: COA options');
+check($byName['Sewa Kantor']['rej'] === ['no' => 'PI-2026-00011', 'note' => 'Dokumen <kurang>', 'at' => '2026-11-05', 'closed' => false] && $byName['Cicilan Laptop']['rej'] === null, 'edit: last payment rejection per item passed to the form (none for an item whose last submission was approved)');
 $c = ctrl();
 $c->create('DEP-3');
 check($c->template->data['is_new_dept'] === true && json_decode($c->template->data['state'], true)['rows'] === [], 'create: department without budget starts empty');
@@ -161,6 +163,10 @@ $c = ctrl();
 $c->edit('DEP-1');
 $st = json_decode($c->template->data['state'], true);
 check($st['pending']['no'] === $bg['no'] && count($st['pending']['lines']) === 3 && $st['pending']['lines'][2]['nama'] === 'Canva', 'edit: pending BG passed to the form (locks it)');
+$act = array_column(dt($c, [])['data'], 'action', 'department')['Finance - STM'];
+check(strpos($act, 'Edit') === false && strpos($act, 'data-view="DEP-1"') !== false, 'get_data: Edit hidden (Lihat kept) while BG is pending');
+$pr = array_column(dt($c, [])['data'], null, 'department')['Finance - STM'];
+check($pr['aktif'] === '4' && $pr['bulan'] === '2.650.000' && $pr['tahun'] === '450.000', 'get_data: pending BG counted (edit uses proposed value, "on" item and new item included)');
 $ids = array_column($bg['lines'], 'id');
 $c->Budget_periodik_model->DecideBg($bg['no'], [$ids[0] => ['R', 'Belum ada kontrak'], $ids[1] => ['A', ''], $ids[2] => ['A', '']], 'direktur');
 $c = ctrl();
@@ -168,6 +174,7 @@ $c->edit('DEP-1');
 $st = json_decode($c->template->data['state'], true);
 check($st['pending'] === null && $st['rejected'][(string) $sewa]['note'] === 'Belum ada kontrak' && $st['rejected'][(string) $sewa]['no'] === $bg['no'], 'edit: last rejection shown on the item');
 check(!isset($st['rejected'][(string) $mati]) && count($st['rows']) === 4, 'edit: approved changes applied (inactive item re-enabled, new item present)');
+check(strpos(array_column(dt($c, [])['data'], 'action', 'department')['Finance - STM'], 'Edit') !== false, 'get_data: Edit shown again once BG is decided');
 
 // ---- view (modal)
 $c = ctrl();
@@ -197,9 +204,12 @@ check(strpos($noAdd, 'id="pjNew"') === false && strpos($noAdd, 'id="pjProses"') 
 $detail = render('view', $GLOBALS['viewCalled'][1]);
 check(strpos($detail, 'Budget Finance - STM') !== false && strpos($detail, 'Riwayat perubahan') !== false && strpos($detail, 'Selalu') !== false && strpos($detail, '2 / 5 kali') !== false, 'view: heading, history and masa berlaku usage (1 before system + 1 approved = 2 of 5)');
 check(strpos($detail, 'Rejected') !== false && strpos($detail, 'Approved') !== false && strpos($detail, 'Item baru') !== false, 'view: history shows each line outcome');
+check(strpos($detail, '<th>Status</th><th>Pengajuan terakhir</th>') !== false && preg_match('#<span class="pill R">Ditolak</span>\s*<span class="sub">PI-2026-00011 · 2026-11-05</span>\s*<span class="sub">Dokumen &lt;kurang&gt;</span>#', $detail) === 1 && substr_count($detail, '>Ditolak<') === 1, 'view: last payment rejection in its own column, once, on its item, escaped');
+check(strpos($detail, 'class="note"') === false, 'view: the item Status cell stays free of the rejection text');
 $c = ctrl(); $c->edit('DEP-1');
 $form = render('input_form', $c->template->data);
 check(strpos($form, 'tag chip mod">Diubah, belum disimpan') !== false && strpos($form, 'tag chip new">Item baru, belum disimpan') !== false && strpos($form, 'tag back">') === false, 'form: row badges use the dedicated chip classes, not the colliding .back');
+check(strpos($form, 'function payReject(') !== false && strpos($form, '<th>Status</th><th>Pengajuan terakhir</th><th>Aksi</th>') !== false && strpos($form, '"rej":{"no":"PI-2026-00011"') !== false && strpos($form, '<td colspan="10">') !== false, 'form: payment rejection column (header, data, empty-row colspan)');
 $css = file_get_contents(APPPATH . '../assets/css/periodik_ui.css');
 check(strpos($css, '.pjx .tag.chip.mod') !== false && strpos($css, '.pjx .tag.chip.new') !== false && strpos($css, '.pjx .tag.back{display:table') !== false, 'css: chip styles and the .tag.back collision fix exist');
 check(strpos($form, 'Edit budget') !== false && strpos($form, 'Baseline') === false && strpos($form, 'Masa berlaku') !== false && strpos($form, 'Ajukan perubahan') !== false, 'form: edit heading, Masa berlaku column, no Baseline column');

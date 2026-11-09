@@ -1,3 +1,67 @@
+# Koreksi PPN WAPU invoice 146, 151, 197/STM/2026 (9 Nov 2026)
+
+- **Status**: alat + latihan selesai dan **sudah di-apply ke DB live atas perintah user** (JV GL 101-AJV2603785/86/87, counter 3787); verifikasi live lulus (lihat laporan). Persetujuan tertulis finance atas periode Closed Juli/September dan pembalikan PPh tidak dikonfirmasi. Detail, angka JV, risiko: `docs/invoice-wapu-repair-2026-11-09.md`.
+- **Temuan live (read-only)**: ketiganya PKP lama, jurnal terposting (tr_jurnal sts=1, GL `db_sendigs_ss_stm`), tanpa penerimaan/PPh 23. 239 invoice lama lain WAPU lewat PPN 0%; akun WAPU belum pernah dipakai. Keputusan user: akun WAPU + konversi ke versi baru + PPh dibalik + jurnal bertanggal asli.
+- **File baru**: `invoicing/libraries/Invoice_wapu_repair.php`, `invoicing/tools/repair_wapu.php`, `invoicing/tests/Wapu_repair_test.php`, `docs/invoice-wapu-repair-review.json` (template belum disetujui), `docs/invoice-wapu-repair-2026-11-09.md`. Kode aplikasi lain tidak diubah.
+- **Keputusan teknis**: JV koreksi netto 5 baris (jurnal asli tidak disentuh); hash review tidak memuat counter JV (counter dicek di bawah LOCK TABLES saat apply); urutan tulis GL+kartu (kompensasi berbasis nomor JV) lalu transaksi InnoDB terakhir; apply wajib review + backup + `--confirm-host`.
+- **Pengujian**: `Wapu_repair_test.php` 53 lulus (container PHP 7.4, MySQL lokal, schema acak). Latihan pada salinan data nyata (schema `wapu_reh_*`, MySQL lokal): 3 invoice ter-apply, mutasi bersih sesuai hitungan, JV seimbang, saldo = kartu piutang, apply ulang ditolak. Dry-run live read-only: preflight lulus.
+- **Lanjutan (9 Nov 2026)**: `tr_jurnal` ketiga invoice dinormalisasi dari 9 baris (4 asli + 5 koreksi, tampil seperti jurnal ganda di layar Jurnal invoice) menjadi 4 baris jurnal WAPU standar; mode baru `repair_wapu.php --normalize` + `Invoice_wapu_repair::normalizePlan/normalize`. Tes `Wapu_repair_test.php` kini 86 lulus; latihan di salinan live terkini lalu apply live per invoice (151, 146, 197), backup `scratch/wapu-normalize-<id>.json`; saldo bersih per akun identik, GL/kartu/counter (3787) tidak berubah.
+- **Lanjutan 2 (9 Nov 2026)**: GL (`jurnal`/`javh`/`tr_kartu_piutang`) disamakan persis dengan `tr_jurnal`: JV asli ditulis ulang jadi 4 baris WAPU, JV koreksi 3785-3787 dan kredit kartu koreksi dihapus (mode `--normalize-gl`, `normalizeGlPlan/normalizeGl` dengan snapshot + pemulihan persis saat gagal). Tes `Wapu_repair_test.php` 119 lulus; latihan di salinan live; apply live 151, 146, 197 (backup `scratch/wapu-normalize-gl-<id>.json`); verifikasi live GL = tr_jurnal, JV seimbang, saldo = kartu. Counter 3787 tidak diubah. Jejak koreksi kini hanya di backup/dokumen.
+- **Belum**: persetujuan finance, ~~apply live~~ (selesai), `Consulting_receipt::preview/save` end-to-end pada invoice hasil konversi, cetak invoice 146 (layout Vuca -> konsultasi), pencocokan `Invoice_audit` (menandai WAPU versi baru, pra-ada).
+
+# Form pengajuan periodik: alasan reject pengajuan terakhir per item (9 Nov 2026)
+
+- **Permintaan**: di `pengajuan_rutin/create`, user bisa melihat kenapa pengajuan terakhir item itu ditolak. Sebelumnya hanya penolakan di periode yang sama (`state = back`) yang tampil; penolakan di periode lain (mis. Oktober saat form November) tidak.
+- **Perubahan**: `Periodik_logic::last_reject($items)` (item terakhir dari riwayat semua periode, bila `status = R`; pengajuan lebih baru/pengajuan ulang menggantikannya, aturan sama dengan `MAX(id)` di budget_periodik) dan `views/input_form.php` (sel Deskripsi: tag "Pengajuan terakhir ditolak (no · tanggal[ · tidak diajukan ulang])" + alasan; tidak tampil untuk baris terkunci, item batch yang diedit, atau baris `back` agar tidak dobel). Data sudah ada di `GetMasterWithItems`; model/controller/JS tidak berubah.
+- **Tes** (PHP 7.4 `scratch/runtime/php74`): `Periodik_logic_test` (5 asersi `last_reject` baru), `Views_test` 62 (baris periode lain, tidak dobel pada baris `back`, escape; hitungan input numerik 4 → 5 karena baris fixture baru), `Batch1_audit_test` 72, `Batch2_audit_test` 47 lulus.
+- **Belum**: tampilan di browser belum dicoba (baris yang punya catatan jadi lebih tinggi).
+
+# budget_periodik: alasan reject pengajuan periodik terakhir per item (9 Nov 2026)
+
+- **Permintaan**: tampilkan alasan reject dari pengajuan periodik (pengajuan_rutin) terakhir di modul budget_periodik. Beda dari catatan penolakan perubahan budget (BG) yang sudah ada di form edit.
+- **Keputusan**: per item budget (bukan per departemen). "Terakhir" = baris `tr_pengajuan_rutin_detail` ber-`id` terbesar per `id_budget`; tampil hanya bila itu `item_status = 8`, jadi pengajuan ulang (baris lebih baru) menghilangkannya otomatis. Item yang ditolak lalu ditutup tetap tampil dengan label "tidak diajukan ulang". Tabel index (tingkat departemen) tidak diubah.
+- **Perubahan**: `Budget_periodik_model::GetMasters` (LEFT JOIN subquery MAX(id), kolom `rej_no/rej_note/rej_at/rej_closed`; `no_item` NULL pada batch lama memakai `no_doc`); `Budget_logic::last_reject()` (bentuk data untuk UI); `Budget_periodik::renderForm` (`rej` per baris state form); `views/view.php` (catatan di sel Status modal Lihat); `views/input_form.php` (`payReject()` dipanggil `stat()`, tampil bersama catatan BG).
+- **Revisi tampilan (9 Nov 2026)**: catatan merah di bawah pil Status terbaca seperti item "Aktif" sekaligus ditolak, jadi dipindah ke kolom terpisah "Pengajuan terakhir" (sebelah Status) di modal Lihat dan form edit: pil "Ditolak" + nomor item/tanggal (+ "tidak diajukan ulang") + alasan dengan teks `.sub` abu-abu; "-" bila tidak ada. `colspan` baris kosong: view 9, form 10. `stat()`/`note()` kembali tanpa teks penolakan.
+- **Tes** (PHP 7.4 `scratch/runtime/php74`): `Budget_logic_test` lulus; `Model_bg_test` 40 asersi lulus (7 baru: tanpa nomor, terisi, batch lama, ditutup, diganti pengajuan baru, satu baris per master); `Controller_test` lulus sampai baris 265 (asersi baru untuk state form, modal Lihat, dan renderer form lulus), lalu berhenti di regex `whenText` karena CRLF (sudah ada sebelumnya, tidak terkait). Fixture tabel detail di kedua tes diperluas kolomnya.
+- **Belum**: tampilan di browser belum dicoba; semantik MAX(id) belum dicocokkan dengan data nyata; indeks `id_budget` pada `tr_pengajuan_rutin_detail` bila tabel membesar.
+
+# pengajuan_rutin/app_list: tabel pakai DataTables serverside (9 Nov 2026)
+
+- **Permintaan**: index Approval Pengajuan Periodik (`pengajuan_rutin/app_list`) memuat semua batch/item sekaligus; diganti DataTables serverside seperti `pengajuan_rutin` index.
+- **Perubahan**:
+  - `Pengajuan_rutin_model::ListDecidedItems($search, $start, $length)` (baru): item `item_status <> 0` di batch mana pun, urut `item_approved_date` desc lalu `d.id` desc; cari di no_item, no_doc, nama, alasan reject; LIKE di-escape seperti `listWhere`. Tab Menunggu memakai `ListPage(null, 'wait', 'batch', ...)` yang sudah ada.
+  - `Pengajuan_rutin::app_list` hanya mengirim `wait_count` (dari `CountBatchViews`) dan `can_decide`; endpoint baru `app_data` (permission `approvalViewPermission`, audit seperti `data_list`) dengan `appWaitRows`/`appRecRows`. Approver tetap melihat semua departemen (tanpa kunci departemen, sama seperti sebelumnya).
+  - `views/app_list.php`: kerangka dua tabel (`data-dt="wait|rec"`), DataTable dibuat saat tab pertama kali dibuka.
+- **Perilaku**: tab Menunggu menampilkan batch yang masih punya item menunggu dengan jumlah item dan nominal seluruh item batch (sama seperti sebelumnya); Record approval menampilkan item yang sudah diputuskan, termasuk dari batch yang sebagian itemnya masih menunggu (sama seperti sebelumnya, bukan definisi tab "Sudah diputuskan" di index).
+- **Tes** (PHP 7.4 `scratch/runtime/php74`): `Model_query_test` 49, `Batch1_audit_test` 72 skenario, `Batch2_audit_test` 47 skenario (asersi app_list diubah, app_data baru), `Views_test` 61, `Periodik_logic_test`, `Periodik_helper_test` lulus. `Views_test` yang tadinya gagal (`Undefined index: bank`) diperbaiki dengan key `bank` di fixture `mkRow`. Fixture `has_permission` di Batch1 kini bisa menolak permission `Manage` lewat `scenario['no_manage']`.
+- **Belum**: tampilan di browser belum dicoba (lebar kolom, tab Record approval).
+
+# Form budget_periodik: select Post pengeluaran (COA) bisa dicari (9 Nov 2026)
+
+- **Perubahan**: `budget_periodik/views/input_form.php`: fungsi `coaPick(scope)` memasang Select2 (sudah dimuat tema: jQuery di header, select2 di footer) pada `select[data-mf="coa"]`. Dipanggil di `render()`, di `refresh(full)` untuk baris yang dirender ulang, dan sekali saat `window load` (select2 baru tersedia setelah skrip view). Pilihan Select2 diteruskan sebagai event `input` native supaya handler delegasi di `tbody` tetap mengisi draft; saat ada BG pending (`#pjFields` disabled) Select2 dipasang `disabled` karena fieldset disabled tidak terbaca Select2. Tanpa dependensi baru. Pencarian cocok ke kode maupun nama akun (teks opsi).
+- **Pengujian**: `node --check` pada JS inline form lulus. `Controller_test` tetap berhenti di baris 260 (regex CRLF, lihat entri di bawah). Perilaku Select2 di browser belum dicoba.
+
+# Form pengajuan periodik: item yang sudah diajukan di paling bawah (9 Nov 2026)
+
+- **Permintaan**: di `/pengajuan_rutin/create/<dept>`, item yang bisa diajukan tampil paling atas; item yang sudah diajukan (terkunci) di paling bawah.
+- **Perubahan**: `pengajuan_rutin/controllers/Pengajuan_rutin.php::buildFormRows` memisahkan baris `state === 'lock' && !mine` ke `$locked` dan menggabungkannya di akhir (`array_merge($rows, $locked)`); urutan nama tetap di tiap kelompok. Item `free`, `back` (ditolak), dan milik batch yang diedit tetap di atas. View/JS tidak berubah (JS memakai `data-mid`, nomor `#` mengikuti urutan baru). `tests/Batch1_audit_test.php`: 1 asersi baru (master 10 terkunci + master 11 bebas, urutan 11 lalu 10); fixture `two_items` kini memberi master 11 `items => array()` (sebelumnya mewarisi riwayat master 10, tidak pernah dipakai bersama `locked_master`).
+- **Pengujian** (PHP 7.4 `scratch/runtime/php74`): `php -l` bersih; `Batch1_audit_test` (72 skenario), `Batch2_audit_test` (40), `Periodik_logic_test`, `Periodik_helper_test`, `Model_query_test` (42) lulus. `Views_test` gagal di `input_form.php:65` (`Undefined index: bank`): fixture baris di tes tidak punya key `bank` sejak input bank per item dikembalikan (commit 867f0d4f); tidak terkait perubahan ini dan belum diperbaiki.
+- **Belum**: `Views_test` perlu key `bank` di `mkRow`; tampilan belum dicoba di browser.
+
+# Index budget_periodik menghitung perubahan yang menunggu approval (9 Nov 2026)
+
+- **Permintaan**: kolom Item aktif, Budget/bulan, Budget/tahun di index tampil 0 untuk departemen yang semua itemnya masih BG pending. Semua nilai harus dihitung, baik yang sudah aktif maupun yang menunggu approval.
+- **Keputusan**: item yang diedit memakai nilai usulan (`after`), `on`/`off` mengikuti status usulan, item baru ikut dihitung. Tanpa penanda tambahan; kolom Status sudah menunjukkan "Menunggu approval". Hanya index (`get_data`) yang berubah; modal Lihat, form edit, approval, dan model tidak disentuh.
+- **Perubahan**: `budget_periodik/controllers/Budget_periodik.php` (helper private `withPending`, dipanggil di `overview()` sebelum `Budget_logic::summary`; `in_sys` tetap dari master). `tests/Controller_test.php`: 1 asersi baru (BG pending berisi edit nilai, item `on`, item baru: aktif 4, bulan 2.650.000, tahun 450.000).
+- **Pengujian** (PHP 7.4 `scratch/runtime/php74`): `Budget_logic_test` lulus. `Controller_test` lulus sampai baris 259 (asersi baru lolos); berhenti di baris 260 dengan `Undefined offset: 1` karena regex `whenText` mencari `\n\t}\n` sedangkan `input_form.php` berakhir baris CRLF di checkout Windows ini. Tidak terkait perubahan ini; tes JS form (baris 260 ke bawah) belum terverifikasi di lingkungan ini.
+- **Risiko**: angka index bisa berbeda dari kondisi berlaku sampai BG disetujui; bila ditolak, angka kembali ke nilai master.
+
+# Sembunyikan tombol Edit budget_periodik saat menunggu approval (9 Nov 2026)
+
+- **Permintaan**: di Master Pembayaran Periodik, departemen berstatus "Menunggu approval" tidak boleh menampilkan tombol Edit agar data budget tidak berubah selama approval.
+- **Perubahan**: `budget_periodik/controllers/Budget_periodik.php::get_data` (Edit hanya bila `$canAdd && !$p`) dan `budget_periodik/views/view.php` (modal Lihat: Edit hanya bila `$can_edit && !$pending`). Server sudah menolak simpan saat ada BG pending (`save_data`) dan form terkunci, jadi ini perubahan tampilan; URL `edit/` langsung tetap bisa dibuka (form terkunci).
+- **Pengujian** (container `sendigs_ss`): `php -l` 3 file bersih. `Controller_test.php`: tambah 2 asersi (Edit hilang & Lihat tetap saat BG pending; Edit muncul lagi setelah diputuskan), lolos. Container tidak punya `node`, jadi tes berhenti di cek sintaks JS (baris 188); dengan stub `node` semua cek sampai baris 236 lolos, baris 237 (tes JS form berbasis node) tidak bisa dijalankan di container. Tidak terkait perubahan ini.
+
 # Tombol Detail di Aksi Monitoring Piutang (9 Nov 2026)
 
 - **Gap vs mockup** (`index.html:669,731`): Aksi hanya berisi Surat Konfirmasi (bila Potensi/Macet) sehingga kosong untuk invoice Lancar; detail hanya lewat klik nomor invoice. Modal detail juga belum punya tombol Print Surat.

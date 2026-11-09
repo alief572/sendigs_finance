@@ -87,13 +87,20 @@ class Budget_periodik_model extends BF_Model
 	}
 	/**
 	 * Master budget (ms_budget_rutin) beserta pemakaiannya: in_sys = pembayaran yang sudah disetujui
-	 * (item_status 1, 2, 9), pend = item yang masih menunggu approval. $dept null = semua departemen.
+	 * (item_status 1, 2, 9), pend = item yang masih menunggu approval. rej_* = pengajuan terakhir item ini bila ditolak
+	 * (item_status 8; pengajuan yang lebih baru, termasuk pengajuan ulang, menggantikannya). $dept null = semua departemen.
 	 */
 	public function GetMasters($dept = null)
 	{
-		$sql = "SELECT a.*, COALESCE(u.appr, 0) AS in_sys, COALESCE(u.pend, 0) AS pend FROM ms_budget_rutin a
+		$sql = "SELECT a.*, COALESCE(u.appr, 0) AS in_sys, COALESCE(u.pend, 0) AS pend,
+				r.no_item AS rej_no, r.item_reject_ket AS rej_note, r.item_approved_date AS rej_at, r.closed_at AS rej_closed
+			FROM ms_budget_rutin a
 			LEFT JOIN (SELECT id_budget, SUM(CASE WHEN item_status IN (1, 2, 9) THEN 1 ELSE 0 END) AS appr, SUM(CASE WHEN item_status = 0 THEN 1 ELSE 0 END) AS pend
-				FROM tr_pengajuan_rutin_detail GROUP BY id_budget) u ON u.id_budget = a.id";
+				FROM tr_pengajuan_rutin_detail GROUP BY id_budget) u ON u.id_budget = a.id
+			LEFT JOIN (SELECT d.id_budget, COALESCE(d.no_item, d.no_doc) AS no_item, d.item_reject_ket, d.item_approved_date, d.closed_at
+				FROM tr_pengajuan_rutin_detail d
+				JOIN (SELECT id_budget, MAX(id) AS mid FROM tr_pengajuan_rutin_detail GROUP BY id_budget) l ON l.mid = d.id
+				WHERE d.item_status = 8) r ON r.id_budget = a.id";
 		$binds = array();
 		if ($dept !== null && $dept !== '') {
 			$sql .= ' WHERE a.departement = ?';

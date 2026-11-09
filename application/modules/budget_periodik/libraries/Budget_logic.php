@@ -52,6 +52,15 @@ class Budget_logic
 		return $n['aktif'] === 1 && !($n['masa_berlaku'] > 0 && self::used($r, $inSys) >= $n['masa_berlaku']);
 	}
 
+	/** Penolakan pengajuan pembayaran terakhir item ini (kolom rej_* dari GetMasters), atau null bila tidak ada. */
+	public static function last_reject(array $m)
+	{
+		if (!isset($m['rej_no']) || $m['rej_no'] === null || $m['rej_no'] === '') {
+			return null;
+		}
+		return array('no' => (string) $m['rej_no'], 'note' => trim((string) ($m['rej_note'] ?? '')), 'at' => substr((string) ($m['rej_at'] ?? ''), 0, 10), 'closed' => !empty($m['rej_closed']));
+	}
+
 	/** mSum: jumlah item, item berlaku, total per bulan dan per tahun (hanya yang berlaku). */
 	public static function summary(array $rows, array $inSysById)
 	{

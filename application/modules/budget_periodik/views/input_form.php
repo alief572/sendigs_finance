@@ -17,7 +17,7 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 	<?php if ($is_new_dept) : ?><p class="hint" id="pjNewHint">Departemen ini belum punya budget. Isi item pertama di baris yang sudah disiapkan, lalu klik <b>+ Tambah item</b> untuk item berikutnya.</p><?php endif; ?>
 	<fieldset class="plain" id="pjFields">
 		<div class="scroll"><table class="mtbl">
-			<thead><tr><th>#</th><th>Post Pengeluaran</th><th>Nama Barang / Jasa</th><th>Bulanan / Tahunan</th><th>Jadwal Pembayaran</th><th class="num">Perkiraan Biaya</th><th style="min-width:230px">Masa berlaku</th><th>Status</th><th>Aksi</th></tr></thead>
+			<thead><tr><th>#</th><th>Post Pengeluaran</th><th>Nama Barang / Jasa</th><th>Bulanan / Tahunan</th><th>Jadwal Pembayaran</th><th class="num">Perkiraan Biaya</th><th style="min-width:230px">Masa berlaku</th><th>Status</th><th>Pengajuan terakhir</th><th>Aksi</th></tr></thead>
 			<tbody id="pjRows"></tbody>
 		</table></div>
 		<datalist id="masaList"><option value="3"><option value="6"><option value="12"><option value="24"><option value="36"></datalist>
@@ -110,6 +110,13 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 		if (rej) return '<span class="note" style="display:block;margin-top:4px">Perubahan ditolak di ' + PJ.esc(rej.no) + ': ' + PJ.esc(rej.note) + '</span>';
 		return '';
 	}
+	// penolakan pengajuan pembayaran terakhir tiap item (dari pengajuan_rutin), bukan penolakan perubahan budget (BG)
+	var payRej = {};
+	S.rows.forEach(function (r) { if (r.rej) payRej[r.id] = r.rej; });
+	function payReject(r) {
+		var j = payRej[r.id]; if (!j) return '<span class="sub">-</span>';
+		return '<span class="pill R">Ditolak</span><span class="sub">' + PJ.esc(j.no) + (j.at ? ' · ' + PJ.esc(j.at) : '') + (j.closed ? ' · tidak diajukan ulang' : '') + '</span>' + (j.note ? '<span class="sub">' + PJ.esc(j.note) + '</span>' : '');
+	}
 	function stat(r) {
 		var u = use(r), n = norm(r), done = n.masa_berlaku > 0 && u.used >= n.masa_berlaku;
 		var st = !n.aktif ? ['R', 'Nonaktif'] : done ? ['P', 'Selesai'] : ['A', 'Aktif'];
@@ -127,6 +134,14 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 		Object.keys(S.coa).forEach(function (k) { o += '<option value="' + PJ.esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + PJ.esc(S.coa[k]) + '</option>'; });
 		if (sel && !S.coa[sel]) o += '<option value="' + PJ.esc(sel) + '" selected>' + PJ.esc(sel) + '</option>';
 		return o;
+	}
+	// Select2 dimuat di footer tema, setelah skrip ini: pemasangan awal lewat window load, sesudahnya tiap baris dirender ulang.
+	// Pilihan diteruskan sebagai event input native supaya handler delegasi di tbody tetap yang mengisi draft.
+	function coaPick(scope) {
+		if (!window.jQuery || !jQuery.fn.select2) return;
+		jQuery(scope).find('select[data-mf="coa"]').not('.select2-hidden-accessible')
+			.select2({width: '100%', dropdownAutoWidth: true, disabled: !!S.pending})
+			.on('change', function () { this.dispatchEvent(new Event('input', {bubbles: true})); });
 	}
 	function schedInput(r, ix) {
 		var when = '<span class="when' + (whenText(r) ? '' : ' warn') + '" data-mwhen="' + ix + '">' + whenHtml(r) + '</span>';
@@ -148,6 +163,7 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 			(u.isNew && masa > 0 ? '<div class="masa" style="margin-top:4px"><span class="sub" style="display:inline">Sudah dibayar sebelumnya</span><input type="number" min="0" class="mini" data-mf="masa_awal" data-ix="' + ix + '" value="' + (Number(r.masa_awal) || 0) + '"></div>' : '') +
 			'<div data-minfo="' + ix + '">' + info(r) + '</div></td>' +
 			'<td style="min-width:150px" data-mnote="' + ix + '">' + stat(r) + '</td>' +
+			'<td style="min-width:170px">' + (u.isNew ? '' : payReject(r)) + '</td>' +
 			'<td style="white-space:nowrap">' + (u.isNew ? '<button type="button" class="btn r sm" data-mdel="' + ix + '">Hapus</button>'
 				: '<button type="button" class="btn ' + (Number(r.aktif) ? 'r' : '') + ' sm" data-mtog="' + ix + '" style="min-width:96px">' + (Number(r.aktif) ? 'Nonaktifkan' : 'Aktifkan') + '</button>') + '</td></tr>';
 	}
@@ -165,16 +181,16 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 		document.getElementById('pjCancel').disabled = !n;
 	}
 	function render() {
-		tbody.innerHTML = draft.length ? draft.map(row).join('') : '<tr><td colspan="9">' + (S.pending ? 'Belum ada item yang berlaku. Item baru di atas masih menunggu approval.' : 'Belum ada item. Klik + Tambah item.') + '</td></tr>';
+		tbody.innerHTML = draft.length ? draft.map(row).join('') : '<tr><td colspan="10">' + (S.pending ? 'Belum ada item yang berlaku. Item baru di atas masih menunggu approval.' : 'Belum ada item. Klik + Tambah item.') + '</td></tr>';
 		document.getElementById('pjFields').disabled = !!S.pending;
 		document.getElementById('pjNo').innerHTML = PJ.esc(S.pending ? S.pending.no : 'Auto (' + S.nextBg + ')');
 		document.getElementById('pjFootNote').textContent = S.pending ? 'Terkunci sampai ' + S.pending.no + ' diputuskan.' : 'Perubahan berlaku setelah disetujui di Approval Perubahan Budget.';
 		var hint = document.getElementById('pjNewHint'); if (hint && S.pending) hint.hidden = true;
-		banner(); bar();
+		coaPick(tbody); banner(); bar();
 	}
 	function refresh(ix, full) {
 		var r = draft[ix];
-		if (full) { var tr = tbody.querySelector('tr[data-mrow="' + ix + '"]'); tr.outerHTML = row(r, ix); }
+		if (full) { var tr = tbody.querySelector('tr[data-mrow="' + ix + '"]'); tr.outerHTML = row(r, ix); coaPick(tbody.querySelector('tr[data-mrow="' + ix + '"]')); }
 		else {
 			tbody.querySelector('[data-minfo="' + ix + '"]').innerHTML = info(r); tbody.querySelector('[data-mnote="' + ix + '"]').innerHTML = stat(r);
 			var rp = tbody.querySelector('[data-mrpv="' + ix + '"]'); if (rp) rp.textContent = 'Rp ' + PJ.fmt(r.nilai);
@@ -262,5 +278,6 @@ $e = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); 
 		var a = e.target.closest('#pjGoAppr'); if (!a) return; e.preventDefault(); PJ.leave(a.href);
 	});
 	render();
+	window.addEventListener('load', function () { coaPick(tbody); });
 })();
 </script>

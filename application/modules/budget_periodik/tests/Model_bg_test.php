@@ -25,7 +25,7 @@ class MysqlishDb {
 $db = new MysqlishDb($real);
 $real->query('CREATE TABLE ms_periodik_counter (kode TEXT, periode TEXT, last_no INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (kode, periode))');
 $real->query('CREATE TABLE ms_budget_rutin (id INTEGER PRIMARY KEY AUTOINCREMENT, departement TEXT, coa TEXT, nama TEXT, tipe TEXT, tanggal TEXT, nilai REAL, keterangan TEXT, kode_id TEXT, masa_berlaku INTEGER DEFAULT 0, masa_awal INTEGER DEFAULT 0, aktif INTEGER DEFAULT 1)');
-$real->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, id_budget INTEGER, item_status INTEGER)');
+$real->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, id_budget INTEGER, item_status INTEGER, no_doc TEXT, no_item TEXT, item_reject_ket TEXT, item_approved_date TEXT, closed_at TEXT)');
 $real->query('CREATE TABLE tr_budget_bg (id INTEGER PRIMARY KEY AUTOINCREMENT, no_bg TEXT UNIQUE, departement TEXT, status TEXT, created_by TEXT, created_on TEXT, decided_on TEXT)');
 $real->query('CREATE TABLE tr_budget_bg_line (id INTEGER PRIMARY KEY AUTOINCREMENT, no_bg TEXT, kind TEXT NOT NULL, id_budget INTEGER, before_json TEXT, after_json TEXT, fields TEXT, decision TEXT, note TEXT, decided_by TEXT, decided_at TEXT)');
 
@@ -49,6 +49,22 @@ $by = array_column($m, null, 'nama');
 check((int) $by['Cicilan Laptop']['in_sys'] === 3 && (int) $by['Cicilan Laptop']['pend'] === 1, 'usage: approved = status 1, 2, 9; waiting = status 0; rejected (8) counts for neither');
 check((int) $by['Sewa Kantor']['in_sys'] === 1 && (int) $by['Sewa Kantor']['pend'] === 0, 'usage of an item with one approved payment');
 check(count($model->GetMasters()) === 3 && count($model->GetMasters('DEP-9')) === 0, 'all departments / unknown department');
+
+// rej_*: pengajuan terakhir item ditolak (row 5 = status 8 terbaru milik Cicilan Laptop)
+check($by['Cicilan Laptop']['rej_no'] === null && $by['Sewa Kantor']['rej_no'] === null, 'last rejection: none while the rejected row has no number, none for an item whose last submission was approved');
+$real->update('tr_pengajuan_rutin_detail', ['no_doc' => 'BP-2611-001', 'no_item' => 'PI-2026-00005', 'item_reject_ket' => 'Dokumen kurang', 'item_approved_date' => '2026-11-05 10:00:00'], ['id' => 5]);
+$c1 = array_column($model->GetMasters('DEP-1'), null, 'nama')['Cicilan Laptop'];
+check($c1['rej_no'] === 'PI-2026-00005' && $c1['rej_note'] === 'Dokumen kurang' && $c1['rej_at'] === '2026-11-05 10:00:00' && (int) $c1['in_sys'] === 3 && (int) $c1['pend'] === 1 && count($model->GetMasters('DEP-1')) === 2, 'last rejection: number, reason, time; one row per master, usage counts unchanged');
+check(Budget_logic::last_reject($c1) === ['no' => 'PI-2026-00005', 'note' => 'Dokumen kurang', 'at' => '2026-11-05', 'closed' => false], 'last_reject: shaped for the UI (date only, not closed)');
+$real->update('tr_pengajuan_rutin_detail', ['no_item' => null], ['id' => 5]);
+check(array_column($model->GetMasters('DEP-1'), null, 'nama')['Cicilan Laptop']['rej_no'] === 'BP-2611-001', 'last rejection: legacy batch without item number falls back to the batch number');
+$real->update('tr_pengajuan_rutin_detail', ['no_item' => 'PI-2026-00005', 'closed_at' => '2026-11-06 08:00:00'], ['id' => 5]);
+check(Budget_logic::last_reject(array_column($model->GetMasters('DEP-1'), null, 'nama')['Cicilan Laptop'])['closed'] === true, 'last rejection: closed item is flagged as not resubmitted');
+$real->insert('tr_pengajuan_rutin_detail', ['id_budget' => $cicilan, 'item_status' => 0]);
+$newerId = $real->insert_id();
+check(array_column($model->GetMasters('DEP-1'), null, 'nama')['Cicilan Laptop']['rej_no'] === null && Budget_logic::last_reject(array_column($model->GetMasters('DEP-1'), null, 'nama')['Cicilan Laptop']) === null, 'last rejection: a newer submission (resubmitted) replaces it');
+$real->delete('tr_pengajuan_rutin_detail', ['id' => $newerId]);
+$real->update('tr_pengajuan_rutin_detail', ['no_doc' => null, 'no_item' => null, 'item_reject_ket' => null, 'item_approved_date' => null, 'closed_at' => null], ['id' => 5]);
 
 // CreateBg: nomor, header, baris
 $lines = Budget_logic::diff($m, [array_merge($by['Sewa Kantor'], ['nilai' => 1750000]), ['id' => '', 'coa' => '6102', 'nama' => 'Canva', 'tipe' => 'tahun', 'tanggal' => '11/15/2026', 'nilai' => 450000, 'masa_berlaku' => 3, 'masa_awal' => 0, 'aktif' => 1]]);
