@@ -837,7 +837,7 @@ foreach (array('writer_failure', 'writer_exception') as $writer) {
 // -------------------------------------------------------------
 // 11. Uninstrumented Batch 8 endpoint protection
 // -------------------------------------------------------------
-foreach (array('get_data_transport_req_all', 'get_coa_name', 'kasbon_fin_manage', 'get_dat_list_kasbon', 'get_dat_kasbon_list') as $pendingMethod) {
+foreach (array() as $pendingMethod) {
     if (method_exists($ci, $pendingMethod)) {
         $refM = new ReflectionMethod($ci, $pendingMethod);
         $dummyArgs = array();

@@ -356,11 +356,11 @@ class Expense_petty_cash_model extends BF_Model
             }
         }
 
-        // Complete transaction
-        $this->db->trans_complete();
+        // Complete transaction (trans_complete mengembalikan false bila commit/rollback gagal; trans_status saja tidak cukup di CI3)
+        $completed = $this->db->trans_complete();
 
         // Check transaction status
-        if ($this->db->trans_status() === false) {
+        if ($completed === false || $this->db->trans_status() === false) {
             return false;
         }
 
@@ -387,12 +387,12 @@ class Expense_petty_cash_model extends BF_Model
         $pencatatan = $this->db->get()->row();
 
         if (!$pencatatan) {
-            return ['status' => 0, 'msg' => 'Data pencatatan tidak ditemukan.'];
+            return ['status' => 0, 'msg' => 'Data pencatatan tidak ditemukan.', 'reason' => 'not_found'];
         }
 
         // Step 2: Validate status must be 'draft' or 'reject'
         if (!in_array($pencatatan->status, ['draft', 'reject'])) {
-            return ['status' => 0, 'msg' => 'Pencatatan dengan status "' . $pencatatan->status . '" tidak dapat dihapus.'];
+            return ['status' => 0, 'msg' => 'Pencatatan dengan status "' . $pencatatan->status . '" tidak dapat dihapus.', 'reason' => 'status_not_deletable'];
         }
 
         // Step 3: Check if pencatatan is linked to any active pelaporan
@@ -404,7 +404,7 @@ class Expense_petty_cash_model extends BF_Model
         $pelaporan_check = $this->db->get()->row();
 
         if ($pelaporan_check) {
-            return ['status' => 0, 'msg' => 'Pencatatan tidak dapat dihapus karena sudah masuk dalam pelaporan.'];
+            return ['status' => 0, 'msg' => 'Pencatatan tidak dapat dihapus karena sudah masuk dalam pelaporan.', 'reason' => 'already_reported'];
         }
 
         // Step 4: Collect evidence files before deletion (for physical file cleanup)
@@ -446,12 +446,10 @@ class Expense_petty_cash_model extends BF_Model
         $this->db->delete($this->table_name);
 
         // Step 6: Check transaction status
-        if ($this->db->trans_status() === false) {
+        if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
             $this->db->trans_rollback();
-            return ['status' => 0, 'msg' => 'Gagal menghapus data. Silakan coba lagi.'];
+            return ['status' => 0, 'msg' => 'Gagal menghapus data. Silakan coba lagi.', 'reason' => 'transaction_failed'];
         }
-
-        $this->db->trans_commit();
 
         // Step 7: Delete physical evidence files AFTER successful DB commit
         if (!empty($evidence_files)) {

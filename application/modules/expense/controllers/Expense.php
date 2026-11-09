@@ -5343,22 +5343,27 @@ class Expense extends Admin_Controller
 
 	public function get_data_transport_req_all()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'transport_req_all'), array('page', 'row_count', 'outcome'));
 		$this->Expense_model->get_data_transport_req_all();
+		$this->completeAudit('Data transport req all berhasil diambil', 1, array('page' => 'transport_req_all', 'outcome' => 'rendered'));
 	}
 
 	public function get_coa_name()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'coa_name'), array('page', 'row_count', 'outcome'));
 		$no_coa = $this->input->post('no_coa');
 
 		$get_coa_detail = $this->Expense_model->getCoaDetail($no_coa);
 
 		echo json_encode([
-			'nm_coa' => $get_coa_detail->nama
+			'nm_coa' => $get_coa_detail ? $get_coa_detail->nama : null
 		]);
+		$this->completeAudit('Nama COA expense berhasil dicari', 1, array('page' => 'coa_name', 'outcome' => ($get_coa_detail ? 'found' : 'not_found')));
 	}
 
 	public function kasbon_fin_manage()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'kasbon_fin_manage'), array('page', 'row_count', 'outcome'));
 		// $datawhere = ("a.status = 0");
 		// $data = $this->Expense_model->GetListDataKasbon($datawhere);
 		$this->template->set('status', $this->status);
@@ -5367,10 +5372,12 @@ class Expense extends Admin_Controller
 		$this->template->title('Kasbon Approval by Management');
 		$this->template->page_icon('fa fa-list');
 		$this->template->render('kasbon_list_fin_manage');
+		$this->completeAudit('Membuka halaman approval kasbon management', 1, array('page' => 'kasbon_fin_manage', 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_list_kasbon()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'list_kasbon'), array('page', 'row_count', 'outcome'));
 		$post   = $this->input->post();
 		$draw   = intval($post['draw']);
 		$length = isset($post['length']) ? $post['length'] : 10;
@@ -5466,6 +5473,7 @@ class Expense extends Admin_Controller
 			->set_content_type('application/json')
 			->set_status_header(200)
 			->set_output(json_encode($response));
+		$this->completeAudit('Data list kasbon berhasil diambil', 1, array('page' => 'list_kasbon', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	// --- Helper Badge Status ---
@@ -5574,6 +5582,7 @@ class Expense extends Admin_Controller
 
 	public function get_dat_kasbon_list()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'kasbon_list'), array('page', 'row_count', 'outcome'));
 		$is_admin = $this->auth->is_admin();
 		$post = $this->input->post();
 		$draw = intval($post['draw']);
@@ -5632,10 +5641,12 @@ class Expense extends Admin_Controller
 			'recordsFiltered' => $count_filter,
 			'data'            => $hasil
 		]));
+		$this->completeAudit('Data kasbon list berhasil diambil', 1, array('page' => 'kasbon_list', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_app_kasbon()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'app_kasbon'), array('page', 'row_count', 'outcome'));
 		$post = $this->input->post();
 
 		$draw = intval($post['draw']);
@@ -5788,10 +5799,12 @@ class Expense extends Admin_Controller
 		$this->output->set_content_type('application/json')->set_status_header(200);
 
 		echo json_encode($response);
+		$this->completeAudit('Data approval kasbon berhasil diambil', 1, array('page' => 'app_kasbon', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_app_kasbon_manage()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'app_kasbon_manage'), array('page', 'row_count', 'outcome'));
 		$post = $this->input->post();
 
 		$draw = intval($post['draw']);
@@ -5944,10 +5957,12 @@ class Expense extends Admin_Controller
 		$this->output->set_content_type('application/json')->set_status_header(200);
 
 		echo json_encode($response);
+		$this->completeAudit('Data approval kasbon management berhasil diambil', 1, array('page' => 'app_kasbon_manage', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_expense_data()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'expense_data'), array('page', 'row_count', 'outcome'));
 		$post = $this->input->post();
 		// Lookup role memakai Query Builder yang sama; selesaikan sebelum menyusun query daftar.
 		$canViewAll = $this->canViewAllExpenses();
@@ -6099,10 +6114,12 @@ class Expense extends Admin_Controller
 		];
 
 		echo json_encode($response);
+		$this->completeAudit('Data expense berhasil diambil', 1, array('page' => 'expense_data', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_expense_pc()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'expense_pc'), array('page', 'row_count', 'outcome'));
 		$post = $this->input->post();
 
 		$draw = intval($post['draw']);
@@ -6209,10 +6226,12 @@ class Expense extends Admin_Controller
 		];
 
 		echo json_encode($response);
+		$this->completeAudit('Data expense petty cash berhasil diambil', 1, array('page' => 'expense_pc', 'row_count' => count($hasil), 'outcome' => 'rendered'));
 	}
 
 	public function get_dat_approval_expense()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'approval_expense'), array('page', 'row_count', 'outcome'));
 		$post = $this->input->post();
 
 		$draw = intval($post['draw']);
@@ -6310,10 +6329,12 @@ class Expense extends Admin_Controller
 		$this->db->limit($length, $start);
 
 		$get_data = $this->db->get()->result();
+		$this->completeAudit('Query data approval expense dijalankan tanpa output', 1, array('page' => 'approval_expense', 'outcome' => 'no_output'));
 	}
 
 	public function get_dat_approval_expense_manage()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'approval_expense_manage'), array('page', 'row_count', 'outcome'));
 		$post   = $this->input->post();
 		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
@@ -6440,6 +6461,7 @@ class Expense extends Admin_Controller
 			);
 		}
 
+		$this->completeAudit('Data approval expense management berhasil diambil', 1, array('page' => 'approval_expense_manage', 'row_count' => count($data), 'outcome' => 'rendered'));
 		echo json_encode(array(
 			'draw'            => $draw,
 			'recordsTotal'    => $count_all,
@@ -6450,6 +6472,7 @@ class Expense extends Admin_Controller
 
 	public function get_expense_app_finance()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'expense_app_finance'), array('page', 'row_count', 'outcome'));
 		$draw    = (int) $this->input->get('draw', true);
 		$length  = (int) $this->input->get('length', true);
 		$start   = (int) $this->input->get('start', true);
@@ -6549,6 +6572,7 @@ class Expense extends Admin_Controller
 			);
 		}
 
+		$this->completeAudit('Data approval expense finance berhasil diambil', 1, array('page' => 'expense_app_finance', 'row_count' => count($data), 'outcome' => 'rendered'));
 		echo json_encode(array(
 			'draw'            => $draw,
 			'recordsTotal'    => $count_all,
@@ -6559,6 +6583,7 @@ class Expense extends Admin_Controller
 
 	public function set_jurnal_expense()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('no_doc', 'row_count', 'outcome'));
 		$post = $this->input->post();
 		$tgl_doc = !empty($post['tgl_doc']) ? date('d F Y', strtotime($post['tgl_doc'])) : date('d F Y');
 		$tgl_jurnal_val = !empty($post['tgl_doc']) ? date('Y-m-d', strtotime($post['tgl_doc'])) : date('Y-m-d');
@@ -6577,6 +6602,7 @@ class Expense extends Admin_Controller
 					$sum_kredit += (float) $r->kredit;
 				}
 				echo json_encode(['status' => 1, 'hasil' => $html, 'ttl_debit' => number_format($sum_debit), 'ttl_kredit' => number_format($sum_kredit)]);
+				$this->completeAudit('Preview jurnal expense dari jurnal tersimpan', 1, array('no_doc' => $no_doc, 'row_count' => count($stored), 'outcome' => 'stored_view'));
 				return;
 			}
 		}
@@ -6599,6 +6625,7 @@ class Expense extends Admin_Controller
 				'ttl_debit' => '0',
 				'ttl_kredit' => '0'
 			]);
+			$this->completeAudit('Preview jurnal expense kosong (tanpa kasbon dan expense)', 1, array('no_doc' => $no_doc, 'row_count' => 0, 'outcome' => 'empty'));
 			return;
 		}
 
@@ -6780,6 +6807,7 @@ class Expense extends Admin_Controller
 			$ttl_kredit += $kurang_bayar;
 		}
 
+		$this->completeAudit('Preview jurnal expense dihitung dari form', 1, array('no_doc' => $no_doc, 'row_count' => $no_jurnal, 'outcome' => 'generated'));
 		echo json_encode([
 			'status' => 1,
 			'hasil' => $hasil_jurnal,
@@ -7048,6 +7076,7 @@ class Expense extends Admin_Controller
 	 */
 	public function get_dat_pengembalian_kasbon()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'pengembalian_kasbon'), array('page', 'row_count', 'outcome'));
 		$post   = $this->input->post();
 		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
@@ -7207,6 +7236,7 @@ class Expense extends Admin_Controller
 			];
 		}
 
+		$this->completeAudit('Data pengembalian kasbon berhasil diambil', 1, array('page' => 'pengembalian_kasbon', 'row_count' => count($data), 'outcome' => 'rendered'));
 		echo json_encode([
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
@@ -7234,10 +7264,12 @@ class Expense extends Admin_Controller
 
 	public function form_pengembalian($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'is_readonly', 'outcome'));
 		$is_readonly = (isset($this->input) && method_exists($this->input, 'get')) ? ((string)$this->input->get('readonly') === '1') : false;
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($data)) {
 			echo '<div class="alert alert-danger" style="margin:20px;">Data expense tidak ditemukan.</div>';
+			$this->completeAudit('Form pengembalian: data expense tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
 			return;
 		}
 
@@ -7265,6 +7297,7 @@ class Expense extends Admin_Controller
 		$this->template->set('bank_options', $bank_options);
 		$this->template->set('is_readonly', $is_readonly);
 		$this->template->render('form_pengembalian');
+		$this->completeAudit('Membuka form pengembalian kasbon', 1, array('id' => $id, 'is_readonly' => $is_readonly ? 1 : 0, 'outcome' => 'rendered'));
 	}
 
 	/**
@@ -7389,6 +7422,7 @@ class Expense extends Admin_Controller
 	 */
 	public function get_dat_lebih_expense()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'lebih_expense'), array('page', 'row_count', 'outcome'));
 		$post   = $this->input->post();
 		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
@@ -7574,6 +7608,7 @@ class Expense extends Admin_Controller
 			];
 		}
 
+		$this->completeAudit('Data lebih expense berhasil diambil', 1, array('page' => 'lebih_expense', 'row_count' => count($data), 'outcome' => 'rendered'));
 		echo json_encode([
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
@@ -7608,6 +7643,7 @@ class Expense extends Admin_Controller
 	 */
 	public function get_dat_verifikasi_pengembalian()
 	{
+		$this->beginAudit(__FUNCTION__, array('page' => 'verifikasi_pengembalian'), array('page', 'row_count', 'outcome'));
 		$post   = $this->input->post();
 		$draw   = isset($post['draw'])   ? (int) $post['draw']   : 1;
 		$length = isset($post['length']) ? (int) $post['length'] : 10;
@@ -7713,6 +7749,7 @@ class Expense extends Admin_Controller
 			];
 		}
 
+		$this->completeAudit('Data verifikasi pengembalian berhasil diambil', 1, array('page' => 'verifikasi_pengembalian', 'row_count' => count($data), 'outcome' => 'rendered'));
 		echo json_encode([
 			'draw' => $draw,
 			'recordsTotal' => $count_all,
@@ -7726,9 +7763,11 @@ class Expense extends Admin_Controller
 	 */
 	public function verifikasi_pengembalian_detail($id)
 	{
+		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
 		$data = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($data)) {
 			echo '<div class="alert alert-danger">Data expense tidak ditemukan.</div>';
+			$this->completeAudit('Detail verifikasi pengembalian: data expense tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
 			return;
 		}
 
@@ -7763,6 +7802,7 @@ class Expense extends Admin_Controller
 		$this->template->set('coa_piutang', $this->piutangCoaFor($data->no_doc));
 		$this->template->set('bank_name', $bank_name);
 		$this->template->render('verifikasi_pengembalian_detail');
+		$this->completeAudit('Membuka detail verifikasi pengembalian kasbon', 1, array('id' => $id, 'outcome' => 'rendered'));
 	}
 
 	/**
@@ -7812,22 +7852,26 @@ class Expense extends Admin_Controller
 	 */
 	public function verifikasi_pengembalian_reject()
 	{
+		$this->beginAudit(__FUNCTION__, array(), array('id', 'outcome'));
 		$id = $this->input->post('id');
 		$reason = trim((string)$this->input->post('reason'));
 
 		if (empty($id)) {
 			echo json_encode(['save' => false, 'message' => 'ID Expense tidak ditemukan.']);
+			$this->completeAudit('Tolak verifikasi pengembalian gagal validasi', 0, array('reason' => 'id_required', 'outcome' => 'validation_failed'));
 			return;
 		}
 
 		if (empty($reason)) {
 			echo json_encode(['save' => false, 'message' => 'Alasan penolakan verifikasi wajib diisi!']);
+			$this->completeAudit('Tolak verifikasi pengembalian gagal validasi', 0, array('id' => $id, 'reason' => 'reason_required', 'outcome' => 'validation_failed'));
 			return;
 		}
 
 		$expense = $this->db->get_where('tr_expense', ['id' => $id])->row();
 		if (empty($expense)) {
 			echo json_encode(['save' => false, 'message' => 'Data expense tidak ditemukan.']);
+			$this->completeAudit('Tolak verifikasi pengembalian: data expense tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
 			return;
 		}
 
@@ -7841,6 +7885,7 @@ class Expense extends Admin_Controller
 		if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
 			$this->db->trans_rollback();
 			echo json_encode(['save' => false, 'message' => 'Gagal menolak verifikasi pengembalian kasbon.']);
+			$this->completeAudit('Gagal menolak verifikasi pengembalian kasbon', 0, array('id' => $id, 'outcome' => 'transaction_failed'));
 			return;
 		}
 
@@ -7848,6 +7893,7 @@ class Expense extends Admin_Controller
 			'save' => true,
 			'message' => 'Pengembalian kasbon ditolak. Dokumen telah dikembalikan ke antrian pelapor untuk perbaikan.'
 		]);
+		$this->completeAudit('Verifikasi pengembalian kasbon ditolak', 1, array('id' => $id, 'outcome' => 'rejected'));
 	}
 
 	/**

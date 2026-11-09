@@ -4212,3 +4212,75 @@ Catatan awal: working tree membawa perubahan belum di-commit milik pekerjaan lai
 - `views/plan_bayar.php`: dua DataTable serverside, header bertingkat Realisasi dipertahankan, total di tfoot dan ringkasan tepat waktu/telat diisi dari `agg`, error ajax jadi banner.
 - Verifikasi: php -l controller dan view, node --check JS, harness `matches()` 8 kasus lulus (di luar repo). Belum dicoba di browser; header bertingkat DataTables belum dilihat.
 - Catatan: tiap permintaan tabel memanggil `load_data()` (hitung ulang satu tahun); cukup untuk volume sekarang, perlu cache bila data besar.
+
+## Fase 3 Audit Trail — Batch 0 re-baseline selesai (2026-11-09)
+- Rencana: `C:\Users\Febry\.claude\plans\tolong-buatkan-plan-untuk-logical-moore.md` (Batch 8–13 lalu penutupan Fase 3; sisa 51 endpoint: expense 13, expense_petty_cash 25, petty_cash_master 7, petty_cash_vuca_sustain 6).
+- Temuan: `Expense.php` sudah berubah sejak batch 7 (6625 -> 7935 baris, SHA `c2a028ed...`, dari commit non-audit: sub-tab badge, jurnal kasbon). Manifest SHA batch 7 tidak lagi berlaku; SHA baru dicatat saat batch 8.
+- Perbaikan: `Batch2_audit_test.php` gagal pada `index()` karena fixture belum punya `escape()` dan kolom `cnt_*` untuk query badge baru. Fixture ditambah; kode produksi tidak diubah.
+- Validasi: `Batch1`–`Batch7_audit_test.php` Expense semua PASS (36/54/59/51/57/50/48 skenario). Suite Fase 0/1/2 belum dijalankan ulang di Batch 0.
+- Langkah berikutnya: Expense batch 8 (10 endpoint pertama dari daftar pending di manifest).
+
+## Fase 3 Audit Trail — Batch 7a sinkron manifest selesai (2026-11-09)
+- Manifest `docs/audits/active-menu-audit-2026-10-10.json` modul expense: +9 endpoint baru di luar manifest lama (`form_pengembalian`, `get_dat_pengembalian_kasbon`, `get_dat_lebih_expense`, `get_dat_verifikasi_pengembalian`, `verifikasi_pengembalian`, `verifikasi_pengembalian_detail` -> batch 9; `save_pengembalian_dana`, `verifikasi_pengembalian_approve`, `verifikasi_pengembalian_reject` -> batch 10), nomor baris semua endpoint diperbarui, SHA controller direfresh (`C2A028ED...`, 7935 baris), `endpoint_count` 92. Tidak ada kode produksi diubah.
+- Koreksi: `cekbudget`/`getcoabudget` masih ada (tanpa kata `public`), bukan removed. Total Fase 3 = 130 endpoint; 70 selesai, 60 sisa (Expense 22, expense_petty_cash 25, petty_cash_master 7, petty_cash_vuca_sustain 6).
+- Keputusan: grounding memakai nama method, bukan nomor baris; `possible_write` manifest tidak dipercaya, tiap endpoint dibaca manual.
+- Validasi: JSON valid; format asli (indent 4, CRLF) dipertahankan. Tes tidak dijalankan (manifest saja).
+- Langkah berikutnya: Batch 8 (10 endpoint Expense read/DataTables) sesuai `C:\Users\Febry\.claude\plans\tolong-buatkan-plan-untuk-logical-moore.md`.
+
+## Fase 3 Audit Trail — Expense batch 8 selesai (2026-11-09)
+- Selesai: 10 endpoint Expense (read/DataTables) diinstrumentasi; Expense 80/92, Fase 3 80/130. Laporan: `docs/audits/phase-3-expense-batch-8.md`; manifest diperbarui (status, baris, SHA `B744BAED...`, 7956 baris).
+- Keputusan: `get_dat_approval_expense` tidak mengeluarkan respons apa pun (kode lama); dipertahankan, dicatat `no_output`. `get_coa_name` kini `nm_coa: null` tanpa notice saat COA tidak ada (satu-satunya perubahan perilaku).
+- Validasi: Batch8 35 skenario PASS (RED terkonfirmasi), Batch1–7 PASS dengan daftar pending dipersempit, suite audit_trail utama + Kasbon_attachments PASS. Gagal sebelum batch (cek HEAD): audit_trail/Integration_test, expense/Query_state_test, expense/Visibility_test.
+- Belum: menu/DB live, browser, commit. Keputusan terbuka: nasib endpoint `get_dat_approval_expense` (tanpa output).
+- Langkah berikutnya: Batch 9 (9 endpoint Expense: `get_dat_approval_expense_manage`, `get_expense_app_finance`, `set_jurnal_expense`, `form_pengembalian`, `get_dat_pengembalian_kasbon`, `get_dat_lebih_expense`, `get_dat_verifikasi_pengembalian`, `verifikasi_pengembalian`, `verifikasi_pengembalian_detail`).
+
+## Fase 3 Audit Trail — Expense batch 9 selesai (2026-11-09)
+- Selesai: Expense 89/92, Fase 3 89/130. 8 endpoint baru diinstrumentasi (5 DataTables, `form_pengembalian`, `verifikasi_pengembalian_detail`, `set_jurnal_expense`) + `verifikasi_pengembalian` diverifikasi (sudah ada recorder). Laporan: `docs/audits/phase-3-expense-batch-9.md`; manifest diperbarui (SHA `244CB441...`, 7976 baris).
+- Koreksi cakupan: `save_pengembalian_dana` (instrumentasi di helper privat `saveReturnEvidenceWithFiles`), `verifikasi_pengembalian_approve` dan `verifikasi_pengembalian` sudah punya recorder dari commit `dc2681ba` di luar rollout. Hanya `verifikasi_pengembalian_reject` yang belum. Deteksi awal salah (pencarian huruf kecil dan tidak mengikuti helper privat); endpoint lain yang "uninstrumented" di manifest (`kasbon_save`, `save`, `transport_*_save`) memang diinstrumentasi lewat helper serupa.
+- Keputusan: `set_jurnal_expense` read-only (preview HTML), bukan penulis jurnal; tiga outcome `stored_view`/`empty`/`generated`.
+- Validasi: Batch9 48 skenario PASS (RED terkonfirmasi), Batch1–8 PASS, suite audit_trail utama + Kasbon_attachments + Management_actions + Reject PASS. Gagal sebelum batch: Integration_test, Query_state_test, Visibility_test.
+- Belum: menu/DB live, browser, commit.
+- Langkah berikutnya: Batch 10 = `verifikasi_pengembalian_reject` (instrumentasi), tes verifikasi `save_pengembalian_dana` dan `verifikasi_pengembalian_approve`, plus `petty_cash_master` 7 endpoint (tes baru `petty_cash_master/tests/Batch1_audit_test.php`).
+
+## Fase 3 Audit Trail — Batch 10 selesai: Expense 92/92 dan petty_cash_master 7/7 (2026-11-09)
+- Selesai: Expense tuntas (92/92) dan `petty_cash_master` 7/7; Fase 3 98/130. Laporan: `docs/audits/phase-3-expense-batch-10.md`; manifest diperbarui (Expense SHA `C25CE18B...`, 7981 baris).
+- Dikerjakan: instrumentasi `verifikasi_pengembalian_reject` (alasan penolakan tidak masuk audit); tes verifikasi cabang validasi `save_pengembalian_dana` dan `verifikasi_pengembalian_approve` (recorder sudah ada dari commit lain); instrumentasi 7 endpoint `Petty_cash_master` dengan `auditRestrict` (event `denied` sebelum `restrict()` exit).
+- Keputusan: model `Petty_cash_master_model` kini menentukan sukses setelah `trans_commit()` (satu-satunya perubahan perilaku). `save()` dan `get_data()` tanpa pemeriksaan izin dipertahankan, dicatat sebagai temuan untuk pemilik modul.
+- Validasi: Expense Batch10 17 skenario + Petty Master Batch1 41 skenario PASS (RED terkonfirmasi); Batch1–9 Expense PASS; suite audit_trail utama + Kasbon_attachments + Management_actions + Reject PASS. Gagal sebelum batch: Integration_test, Query_state_test, Visibility_test.
+- Keterbatasan: jalur sukses `save_pengembalian_dana`/`verifikasi_pengembalian_approve` belum diuji; menu/DB live, browser, commit belum.
+- Langkah berikutnya: Batch 11 `expense_petty_cash` A (10 endpoint: index, get_data_pencatatan, create, edit, view, pelaporan, get_data_pelaporan, create_pelaporan, view_pelaporan, confirm_pelaporan); tes baru di `application/modules/expense_petty_cash/tests/`.
+
+## Fase 3 Audit Trail — Batch 11 selesai: expense_petty_cash 10/25 (2026-11-09)
+- Selesai: 10 endpoint `Expense_petty_cash` (index, get_data_pencatatan, create, edit, view, pelaporan, get_data_pelaporan, create_pelaporan, view_pelaporan, confirm_pelaporan); Fase 3 109/130 (koreksi 2026-11-09: sebelumnya tertulis 108/130). Laporan: `docs/audits/phase-3-expense-petty-cash-batch-11.md`; manifest diperbarui (batch manifest lama 1–3 diganti 11/12/13).
+- Keputusan: `completeAudit` sebelum `redirect()` (redirect = exit); `auditRestrict` mencatat `denied` sebelum `restrict()`. Model `create_pelaporan` kini juga memeriksa nilai balik `trans_complete()` (kegagalan commit di CI3 tidak mengubah `trans_status`).
+- Validasi: Batch1 expense_petty_cash 64 skenario PASS (RED terkonfirmasi untuk controller dan model), suite audit_trail utama + petty_cash_master 41 + Expense Batch10 17 PASS. Gagal sebelum batch: Integration_test, Query_state_test, Visibility_test.
+- Belum: menu/DB live, browser, commit. Model lain (submit_pelaporan, approve/reject, save) dengan pola `trans_complete` yang sama belum diperiksa commit-nya; dikerjakan di batch 12–13.
+- Langkah berikutnya: Batch 12 (10 endpoint: submit_pelaporan, approval, get_data_approval, view_approval, approve, reject, print_pelaporan, get_budget_info, get_coa_list, get_petty_cash_list); tambahkan ke `expense_petty_cash/tests/Batch2_audit_test.php`.
+
+## Fase 3 Audit Trail — Batch 12 selesai: expense_petty_cash 20/25 (2026-11-09)
+- Selesai: 10 endpoint (submit_pelaporan, approval, get_data_approval, view_approval, approve, reject, print_pelaporan, get_budget_info, get_coa_list, get_petty_cash_list); Fase 3 119/130. Laporan: `docs/audits/phase-3-expense-petty-cash-batch-12.md`. Koreksi angka: batch 11 menulis sisa 22/108; yang benar sisa 21/109.
+- Keputusan: model `submit/approve/reject_pelaporan` memeriksa nilai balik `trans_complete()`; `approve_pelaporan` menandai `request_payment_ok`, dicatat sebagai `integration` di audit; alasan reject tidak diaudit.
+- Temuan di luar cakupan: `approve_pelaporan`/`reject_pelaporan` tidak memeriksa `approver_id` (pesan error menyiratkan sebaliknya); hanya `view_approval` memeriksa. Tidak diubah, perlu tinjauan pemilik modul.
+- Validasi: Batch2 73 skenario PASS (RED terkonfirmasi), Batch1 64, petty_cash_master 41, suite audit_trail utama PASS.
+- Langkah berikutnya: Batch 13 (save, delete, retry_journal, upload_evidence, delete_evidence) lalu Batch 14 (petty_cash_vuca_sustain), lalu penutupan Fase 3.
+
+## Fase 3 Audit Trail — Batch 13 selesai: expense_petty_cash 25/25 (2026-11-09)
+- Selesai: save, delete, retry_journal, upload_evidence, delete_evidence; Fase 3 124/130. Laporan: `docs/audits/phase-3-expense-petty-cash-batch-13.md`.
+- Keputusan: `save` dengan jurnal gagal = `saved` + `journal: failed`; model `save_pencatatan`/`delete_pencatatan` memeriksa commit; file evidence hanya dihapus setelah commit sukses; `delete_pencatatan` menambah kunci `reason`. Model jurnal tidak diubah.
+- Temuan di luar cakupan: `delete_evidence` tanpa pemeriksaan kepemilikan evidence dan tanpa cek hasil delete DB. Tidak diubah.
+- Validasi: Batch3 48 skenario PASS (RED terkonfirmasi), Batch1 64, Batch2 73, petty_cash_master 41, suite audit_trail utama PASS.
+- Langkah berikutnya: Batch 14 `petty_cash_vuca_sustain` (6 endpoint), lalu penutupan Fase 3.
+
+## Fase 3 Audit Trail — Batch 14 selesai: petty_cash_vuca_sustain 6/6, semua 130 endpoint terinstrumentasi (2026-11-09)
+- Selesai: index, get_data, view, print_pdf, confirm_payment, payment_hutang. Laporan: `docs/audits/phase-3-petty-cash-vuca-sustain-batch-14.md`.
+- Keputusan: model `process_payment_hutang` kini memeriksa hasil `trans_commit()`.
+- Validasi: Batch1 vuca_sustain 35 skenario PASS (RED terkonfirmasi untuk controller+model dan model saja). `paid_status_test.php` gagal identik di HEAD (loader mock tanpa `library()`; akibat instrumentasi Fase 2 `Pembayaran_material`), bukan akibat batch ini.
+- Langkah berikutnya: penutupan Fase 3 (skrip drift 130 endpoint, seluruh suite Fase 0–3 + PR Stok, dokumentasi akhir).
+
+## Fase 3 Audit Trail — SELESAI dan terverifikasi (2026-11-09)
+- Status akhir: 130/130 endpoint (`expense` 92, `expense_petty_cash` 25, `petty_cash_master` 7, `petty_cash_vuca_sustain` 6). Manifest: phase 3 `selesai`, `current_phase` 4. Laporan penutupan: `docs/audits/phase-3-completion.md`.
+- Verifikasi: skrip drift kode 130/130; seluruh suite Fase 0–3 dan PR Stok PASS segar kecuali 4 baseline (Integration_test butuh MySQL lokal, Query_state_test, Visibility_test, paid_status_test) yang gagal sejak sebelum rollout/identik di HEAD.
+- Perubahan perilaku: sukses tulis mengikuti hasil commit pada 9 method model (lihat laporan penutupan); `get_coa_name` null tanpa notice; `request_payment_ok` pada approve.
+- Temuan di luar cakupan untuk pemilik modul: save/get_data petty_cash_master tanpa restrict; approve/reject pelaporan tanpa cek approver_id; delete_evidence tanpa cek kepemilikan; get_dat_approval_expense tanpa output.
+- Belum: menu/DB live, browser, commit; jalur sukses save_pengembalian_dana/verifikasi_pengembalian_approve; pembaruan 3 fixture tes usang + Integration_test.
+- Langkah berikutnya: Fase 4 hanya jika diminta; pembaruan fixture tes usang sebagai pekerjaan terpisah.

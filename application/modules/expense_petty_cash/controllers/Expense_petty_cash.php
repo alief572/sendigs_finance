@@ -36,6 +36,54 @@ class Expense_petty_cash extends Admin_Controller
     }
 
     // =========================================================================
+    // AUDIT TRAIL
+    // =========================================================================
+
+    private function beginAudit($method, $data = array(), $keys = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('expense_petty_cash', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData($data), 'sql' => null));
+        }
+        return false;
+    }
+
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            if (in_array($key, array('id', 'petty_cash_id', 'pelaporan_id'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string) $value))) { continue; }
+            if (in_array($key, array('password', 'secret', 'token'), true)) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (!has_permission($permission)) {
+            $this->completeAudit('Akses expense petty cash ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
+    // =========================================================================
     // PENCATATAN
     // =========================================================================
 
@@ -49,7 +97,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $data = [
             'has_add'    => has_permission($this->addPermission),
@@ -60,6 +109,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Pencatatan Petty Cash');
         $this->template->render('pencatatan/index');
+        $this->completeAudit('Membuka daftar pencatatan petty cash', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -72,11 +122,13 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_data_pencatatan()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $result = $this->Expense_petty_cash_model->get_server_side_data($this->input->post());
 
         echo json_encode($result);
+        $this->completeAudit('Data pencatatan petty cash berhasil diambil', 1, array('row_count' => isset($result['data']) && is_array($result['data']) ? count($result['data']) : 0, 'outcome' => 'rendered'));
     }
 
     /**
@@ -93,10 +145,12 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function create($petty_cash_id = null)
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__, array('petty_cash_id' => $petty_cash_id), array('petty_cash_id', 'outcome'));
+        $this->auditRestrict($this->addPermission);
 
         // If no petty_cash_id provided, redirect back to index
         if (empty($petty_cash_id)) {
+            $this->completeAudit('Tambah pencatatan petty cash tanpa master dipilih', 0, array('reason' => 'petty_cash_required', 'outcome' => 'redirected'));
             redirect('expense_petty_cash');
             return;
         }
@@ -106,6 +160,7 @@ class Expense_petty_cash extends Admin_Controller
         // Get budget info
         $budget_info = $this->Expense_petty_cash_model->get_budget_info($petty_cash_id);
         if (!$budget_info) {
+            $this->completeAudit('Tambah pencatatan petty cash: budget tidak ditemukan', 0, array('petty_cash_id' => $petty_cash_id, 'reason' => 'budget_not_found', 'outcome' => 'redirected'));
             redirect('expense_petty_cash');
             return;
         }
@@ -123,6 +178,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Tambah Pencatatan Petty Cash');
         $this->template->render('pencatatan/form');
+        $this->completeAudit('Membuka form tambah pencatatan petty cash', 1, array('petty_cash_id' => $petty_cash_id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -136,13 +192,15 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function edit($id)
     {
-        $this->auth->restrict($this->managePermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'current_status', 'outcome'));
+        $this->auditRestrict($this->managePermission);
 
         // Get pencatatan data
         $pencatatan = $this->Expense_petty_cash_model->get_pencatatan($id);
 
         if (!$pencatatan) {
             Template::set_message('Data pencatatan tidak ditemukan.', 'error');
+            $this->completeAudit('Edit pencatatan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash');
             return;
         }
@@ -150,6 +208,7 @@ class Expense_petty_cash extends Admin_Controller
         // Validate status must be 'draft' or 'reject'
         if (!in_array($pencatatan->header->status, ['draft', 'reject'])) {
             Template::set_message('Pencatatan dengan status "' . $pencatatan->header->status . '" tidak dapat diedit.', 'error');
+            $this->completeAudit('Edit pencatatan petty cash ditolak: status tidak dapat diedit', 0, array('id' => $id, 'current_status' => $pencatatan->header->status, 'reason' => 'status_not_editable', 'outcome' => 'redirected'));
             redirect('expense_petty_cash');
             return;
         }
@@ -177,6 +236,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Edit Pencatatan Petty Cash');
         $this->template->render('pencatatan/form');
+        $this->completeAudit('Membuka form edit pencatatan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -189,13 +249,15 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function view($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         // Get pencatatan data
         $pencatatan = $this->Expense_petty_cash_model->get_pencatatan($id);
 
         if (!$pencatatan) {
             Template::set_message('Data pencatatan tidak ditemukan.', 'error');
+            $this->completeAudit('Lihat pencatatan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash');
             return;
         }
@@ -223,6 +285,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Detail Pencatatan Petty Cash');
         $this->template->render('pencatatan/view');
+        $this->completeAudit('Melihat pencatatan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     // =========================================================================
@@ -240,7 +303,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function pelaporan()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $data = [
             'has_add'    => has_permission($this->addPermission),
@@ -250,6 +314,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Pelaporan Petty Cash');
         $this->template->render('pelaporan/index');
+        $this->completeAudit('Membuka daftar pelaporan petty cash', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -262,7 +327,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_data_pelaporan()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $filters = [
             'company' => $this->input->post('company'),
@@ -272,6 +338,7 @@ class Expense_petty_cash extends Admin_Controller
         $result = $this->Expense_petty_cash_pelaporan_model->get_server_side_data($this->input->post(), $filters);
 
         echo json_encode($result);
+        $this->completeAudit('Data pelaporan petty cash berhasil diambil', 1, array('row_count' => isset($result['data']) && is_array($result['data']) ? count($result['data']) : 0, 'outcome' => 'rendered'));
     }
 
     /**
@@ -289,12 +356,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function create_pelaporan()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('pelaporan_id', 'item_count', 'outcome'));
         // Check permission
         if (!has_permission($this->addPermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk membuat pelaporan'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -307,6 +376,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Minimal satu pencatatan harus dipilih untuk membuat pelaporan'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'ids_required', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -321,6 +391,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'ID pencatatan tidak valid'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'ids_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -338,6 +409,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Beberapa pencatatan tidak ditemukan'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('item_count' => count($pencatatan_ids), 'reason' => 'records_not_found', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -354,6 +426,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Pencatatan dengan status selain "draft" tidak dapat dimasukkan ke pelaporan'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'not_draft', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -376,6 +449,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Pencatatan berikut sudah masuk dalam pelaporan aktif: ' . implode(', ', $existing_ids)
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'already_reported', 'item_count' => count($pencatatan_ids), 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -391,6 +465,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Pelaporan hanya dapat berisi pencatatan dari satu company yang sama'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'company_mismatch', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -404,6 +479,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Pelaporan hanya dapat berisi pencatatan dari minggu yang sama'
             ]);
+            $this->completeAudit('Buat pelaporan petty cash gagal', 0, array('reason' => 'week_mismatch', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -429,6 +505,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Gagal membuat pelaporan. Silakan coba lagi.'
             ]);
+            $this->completeAudit('Gagal membuat pelaporan petty cash', 0, array('item_count' => count($pencatatan_ids), 'outcome' => 'create_failed'));
             return;
         }
 
@@ -438,6 +515,7 @@ class Expense_petty_cash extends Admin_Controller
             'message'     => 'Pelaporan berhasil dibuat',
             'redirect_url' => site_url('expense_petty_cash/view_pelaporan/' . $pelaporan_id),
         ]);
+        $this->completeAudit('Pelaporan petty cash berhasil dibuat', 1, array('pelaporan_id' => $pelaporan_id, 'item_count' => count($pencatatan_ids), 'outcome' => 'created'));
     }
 
     /**
@@ -450,13 +528,15 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function view_pelaporan($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         // Get pelaporan data with linked pencatatan
         $pelaporan = $this->Expense_petty_cash_pelaporan_model->get_pelaporan($id);
 
         if (!$pelaporan) {
             Template::set_message('Data pelaporan tidak ditemukan.', 'error');
+            $this->completeAudit('Lihat pelaporan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash/pelaporan');
             return;
         }
@@ -494,6 +574,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Detail Pelaporan Petty Cash');
         $this->template->render('pelaporan/view');
+        $this->completeAudit('Melihat pelaporan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -507,13 +588,15 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function confirm_pelaporan($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'current_status', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         // Get pelaporan data with linked pencatatan
         $pelaporan = $this->Expense_petty_cash_pelaporan_model->get_pelaporan($id);
 
         if (!$pelaporan) {
             Template::set_message('Data pelaporan tidak ditemukan.', 'error');
+            $this->completeAudit('Konfirmasi pelaporan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash/pelaporan');
             return;
         }
@@ -521,6 +604,7 @@ class Expense_petty_cash extends Admin_Controller
         // Only draft pelaporan can be confirmed/submitted
         if ($pelaporan->header->status !== 'draft') {
             Template::set_message('Hanya pelaporan berstatus "draft" yang dapat diajukan.', 'error');
+            $this->completeAudit('Konfirmasi pelaporan petty cash ditolak: bukan draft', 0, array('id' => $id, 'current_status' => $pelaporan->header->status, 'reason' => 'not_draft', 'outcome' => 'redirected'));
             redirect('expense_petty_cash/pelaporan');
             return;
         }
@@ -560,6 +644,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Konfirmasi Pelaporan Petty Cash');
         $this->template->render('pelaporan/confirm');
+        $this->completeAudit('Membuka konfirmasi pelaporan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -573,12 +658,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function submit_pelaporan($id)
     {
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'current_status', 'reason', 'outcome'));
         // Check permission (add or manage)
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk mengajukan pelaporan'
             ]);
+            $this->completeAudit('Ajukan pelaporan petty cash ditolak', 0, array('id' => $id, 'reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -588,6 +675,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'ID pelaporan tidak valid'
             ]);
+            $this->completeAudit('Ajukan pelaporan petty cash gagal validasi', 0, array('reason' => 'id_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -602,6 +690,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Data pelaporan tidak ditemukan'
             ]);
+            $this->completeAudit('Ajukan pelaporan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             return;
         }
 
@@ -610,6 +699,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Hanya pelaporan berstatus "draft" yang dapat diajukan'
             ]);
+            $this->completeAudit('Ajukan pelaporan petty cash ditolak: bukan draft', 0, array('id' => $id, 'current_status' => $pelaporan->status, 'reason' => 'not_draft', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -621,6 +711,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Gagal mengajukan pelaporan. Silakan coba lagi.'
             ]);
+            $this->completeAudit('Gagal mengajukan pelaporan petty cash', 0, array('id' => $id, 'outcome' => 'submit_failed'));
             return;
         }
 
@@ -628,6 +719,7 @@ class Expense_petty_cash extends Admin_Controller
             'status'  => true,
             'message' => 'Pelaporan berhasil diajukan untuk approval'
         ]);
+        $this->completeAudit('Pelaporan petty cash berhasil diajukan', 1, array('id' => $id, 'outcome' => 'submitted'));
     }
 
     // =========================================================================
@@ -644,10 +736,12 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function approval()
     {
-        $this->auth->restrict($this->approvePermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->approvePermission);
 
         $this->template->title('Approval Pelaporan Petty Cash');
         $this->template->render('approval/index');
+        $this->completeAudit('Membuka daftar approval pelaporan petty cash', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -660,7 +754,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_data_approval()
     {
-        $this->auth->restrict($this->approvePermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
+        $this->auditRestrict($this->approvePermission);
 
         $current_user_id = $this->auth->user_id();
 
@@ -731,6 +826,7 @@ class Expense_petty_cash extends Admin_Controller
             'recordsFiltered' => $records_filtered,
             'data'            => $data,
         ]);
+        $this->completeAudit('Data approval pelaporan petty cash berhasil diambil', 1, array('row_count' => count($data), 'outcome' => 'rendered'));
     }
 
     /**
@@ -745,7 +841,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function view_approval($id)
     {
-        $this->auth->restrict($this->approvePermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'reason', 'outcome'));
+        $this->auditRestrict($this->approvePermission);
 
         $current_user_id = $this->auth->user_id();
 
@@ -754,6 +851,7 @@ class Expense_petty_cash extends Admin_Controller
 
         if (!$pelaporan) {
             Template::set_message('Data pelaporan tidak ditemukan.', 'error');
+            $this->completeAudit('Review approval pelaporan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash/approval');
             return;
         }
@@ -761,6 +859,7 @@ class Expense_petty_cash extends Admin_Controller
         // Validate current user is the designated approver (or approver is unassigned)
         if (!empty($pelaporan->header->approver_id) && (int) $pelaporan->header->approver_id !== (int) $current_user_id) {
             Template::set_message('Anda tidak memiliki akses untuk mereview pelaporan ini.', 'error');
+            $this->completeAudit('Review approval pelaporan petty cash ditolak: bukan approver', 0, array('id' => $id, 'reason' => 'not_assigned_approver', 'outcome' => 'forbidden'));
             redirect('expense_petty_cash/approval');
             return;
         }
@@ -804,6 +903,7 @@ class Expense_petty_cash extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Review Approval Pelaporan');
         $this->template->render('approval/view');
+        $this->completeAudit('Membuka review approval pelaporan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -818,12 +918,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function approve($id)
     {
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'integration', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->approvePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk melakukan approval'
             ]);
+            $this->completeAudit('Approval pelaporan petty cash ditolak', 0, array('id' => $id, 'reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -833,6 +935,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'ID pelaporan tidak valid'
             ]);
+            $this->completeAudit('Approval pelaporan petty cash gagal validasi', 0, array('reason' => 'id_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -846,6 +949,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Gagal melakukan approval. Pastikan pelaporan berstatus waiting dan Anda adalah approver yang ditunjuk.'
             ]);
+            $this->completeAudit('Gagal approve pelaporan petty cash', 0, array('id' => $id, 'outcome' => 'approve_failed'));
             return;
         }
 
@@ -853,6 +957,7 @@ class Expense_petty_cash extends Admin_Controller
             'status'  => true,
             'message' => 'Pelaporan berhasil diapprove'
         ]);
+        $this->completeAudit('Pelaporan petty cash berhasil diapprove', 1, array('id' => $id, 'integration' => $this->Expense_petty_cash_pelaporan_model->request_payment_ok ? 'request_payment_ok' : 'request_payment_failed', 'outcome' => 'approved'));
     }
 
     /**
@@ -866,12 +971,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function reject($id)
     {
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->approvePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk melakukan reject'
             ]);
+            $this->completeAudit('Reject pelaporan petty cash ditolak', 0, array('id' => $id, 'reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -881,6 +988,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'ID pelaporan tidak valid'
             ]);
+            $this->completeAudit('Reject pelaporan petty cash gagal validasi', 0, array('reason' => 'id_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -893,6 +1001,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Alasan reject wajib diisi'
             ]);
+            $this->completeAudit('Reject pelaporan petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'alasan_required', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -904,6 +1013,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Alasan reject wajib diisi minimal 10 karakter'
             ]);
+            $this->completeAudit('Reject pelaporan petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'alasan_too_short', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -912,6 +1022,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Alasan reject maksimal 500 karakter'
             ]);
+            $this->completeAudit('Reject pelaporan petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'alasan_too_long', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -925,6 +1036,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Gagal melakukan reject. Pastikan pelaporan berstatus waiting dan Anda adalah approver yang ditunjuk.'
             ]);
+            $this->completeAudit('Gagal reject pelaporan petty cash', 0, array('id' => $id, 'outcome' => 'reject_failed'));
             return;
         }
 
@@ -932,6 +1044,7 @@ class Expense_petty_cash extends Admin_Controller
             'status'  => true,
             'message' => 'Pelaporan berhasil direject'
         ]);
+        $this->completeAudit('Pelaporan petty cash berhasil direject', 1, array('id' => $id, 'outcome' => 'rejected'));
     }
 
     /**
@@ -945,13 +1058,15 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function print_pelaporan($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         // Get pelaporan data with linked pencatatan
         $pelaporan = $this->Expense_petty_cash_pelaporan_model->get_pelaporan($id);
 
         if (!$pelaporan) {
             Template::set_message('Data pelaporan tidak ditemukan.', 'error');
+            $this->completeAudit('Cetak pelaporan petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             redirect('expense_petty_cash/pelaporan');
             return;
         }
@@ -989,6 +1104,7 @@ class Expense_petty_cash extends Admin_Controller
 
         // Load view directly without template wrapper (standalone HTML page)
         $this->load->view('pelaporan/print', $data);
+        $this->completeAudit('Mencetak pelaporan petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     // =========================================================================
@@ -1005,7 +1121,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_budget_info()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('petty_cash_id', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $petty_cash_id = $this->input->get_post('petty_cash_id');
 
@@ -1014,6 +1131,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status' => 'error',
                 'message' => 'Parameter petty_cash_id diperlukan'
             ]);
+            $this->completeAudit('Info budget petty cash gagal validasi', 0, array('reason' => 'petty_cash_required', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1024,6 +1142,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status' => 'error',
                 'message' => 'Data budget tidak ditemukan'
             ]);
+            $this->completeAudit('Info budget petty cash: data tidak ditemukan', 0, array('petty_cash_id' => $petty_cash_id, 'outcome' => 'not_found'));
             return;
         }
 
@@ -1035,6 +1154,7 @@ class Expense_petty_cash extends Admin_Controller
                 'sisa_budget'    => $budget_info->sisa_budget,
             ]
         ]);
+        $this->completeAudit('Info budget petty cash berhasil diambil', 1, array('petty_cash_id' => $petty_cash_id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -1047,18 +1167,21 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_coa_list()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('petty_cash_id', 'row_count', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $petty_cash_id = $this->input->get_post('petty_cash_id');
 
         if (empty($petty_cash_id)) {
             echo json_encode([]);
+            $this->completeAudit('Daftar COA petty cash kosong: master tidak dipilih', 1, array('row_count' => 0, 'reason' => 'petty_cash_required', 'outcome' => 'empty'));
             return;
         }
 
         $coa_list = $this->_get_coa_list((int) $petty_cash_id);
 
         echo json_encode($coa_list);
+        $this->completeAudit('Daftar COA petty cash berhasil diambil', 1, array('petty_cash_id' => $petty_cash_id, 'row_count' => count($coa_list), 'outcome' => 'rendered'));
     }
 
     /**
@@ -1070,7 +1193,8 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function get_petty_cash_list()
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
+        $this->auditRestrict($this->addPermission);
 
         $this->db->select('id, nama, keterangan, total_budget');
         $this->db->from('ms_petty_cash');
@@ -1089,6 +1213,7 @@ class Expense_petty_cash extends Admin_Controller
         }
 
         echo json_encode(['status' => 1, 'data' => $data]);
+        $this->completeAudit('Daftar master petty cash berhasil diambil', 1, array('row_count' => count($data), 'outcome' => 'rendered'));
     }
 
     // =========================================================================
@@ -1150,12 +1275,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function upload_evidence()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('file_type', 'file_size', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk upload file'
             ]);
+            $this->completeAudit('Upload evidence petty cash ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -1165,6 +1292,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Tidak ada file yang diupload'
             ]);
+            $this->completeAudit('Upload evidence petty cash gagal validasi', 0, array('reason' => 'file_required', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1180,6 +1308,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Format file tidak valid. Hanya diizinkan: png, jpg, pdf, xlsx, xls'
             ]);
+            $this->completeAudit('Upload evidence petty cash gagal validasi', 0, array('file_type' => $extension, 'reason' => 'file_type_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1189,6 +1318,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Ukuran file melebihi batas maksimal 5 MB'
             ]);
+            $this->completeAudit('Upload evidence petty cash gagal validasi', 0, array('file_type' => $extension, 'file_size' => (int) $file_size, 'reason' => 'file_too_large', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1218,6 +1348,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => $this->upload->display_errors('', '')
             ]);
+            $this->completeAudit('Upload evidence petty cash gagal disimpan', 0, array('file_type' => $extension, 'file_size' => (int) $file_size, 'outcome' => 'upload_failed'));
             return;
         }
 
@@ -1231,6 +1362,7 @@ class Expense_petty_cash extends Admin_Controller
                 'file_size'      => $file_size
             ]
         ]);
+        $this->completeAudit('Evidence petty cash berhasil diupload', 1, array('file_type' => $extension, 'file_size' => (int) $file_size, 'outcome' => 'uploaded'));
     }
 
     /**
@@ -1244,15 +1376,18 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function delete($id = null)
     {
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->deletePermission)) {
             echo json_encode(['status' => 0, 'msg' => 'Anda tidak memiliki akses untuk menghapus data.']);
+            $this->completeAudit('Hapus pencatatan petty cash ditolak', 0, array('id' => $id, 'reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
         // Validate ID is provided
         if (empty($id)) {
             echo json_encode(['status' => 0, 'msg' => 'ID pencatatan tidak valid.']);
+            $this->completeAudit('Hapus pencatatan petty cash gagal validasi', 0, array('reason' => 'id_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1260,6 +1395,12 @@ class Expense_petty_cash extends Admin_Controller
         $result = $this->Expense_petty_cash_model->delete_pencatatan($id);
 
         echo json_encode($result);
+        if (!empty($result['status'])) {
+            $this->completeAudit('Pencatatan petty cash berhasil dihapus', 1, array('id' => $id, 'outcome' => 'deleted'));
+        } else {
+            $reason = isset($result['reason']) ? $result['reason'] : null;
+            $this->completeAudit('Pencatatan petty cash tidak dihapus', 0, array('id' => $id, 'reason' => $reason, 'outcome' => $reason === 'transaction_failed' ? 'delete_failed' : 'delete_rejected'));
+        }
     }
 
     /**
@@ -1273,12 +1414,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function save()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'operation', 'detail_count', 'error_count', 'journal', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk menyimpan data'
             ]);
+            $this->completeAudit('Simpan pencatatan petty cash ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -1341,6 +1484,7 @@ class Expense_petty_cash extends Admin_Controller
                 'message' => 'Validasi gagal. Silakan periksa kembali data Anda.',
                 'errors'  => $errors
             ]);
+            $this->completeAudit('Simpan pencatatan petty cash gagal validasi', 0, array('id' => $id, 'error_count' => count($errors), 'reason' => 'validation_errors', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -1356,6 +1500,7 @@ class Expense_petty_cash extends Admin_Controller
                     'status'  => false,
                     'message' => 'Kapasitas nomor urut tahun ini telah habis (maks 9999). Tidak dapat menyimpan data baru.'
                 ]);
+                $this->completeAudit('Simpan pencatatan petty cash gagal: nomor urut habis', 0, array('reason' => 'number_exhausted', 'outcome' => 'save_failed'));
                 return;
             }
         }
@@ -1421,6 +1566,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'Gagal menyimpan data. Silakan coba lagi.'
             ]);
+            $this->completeAudit('Gagal menyimpan pencatatan petty cash', 0, array('id' => $id, 'operation' => empty($id) ? 'create' : 'update', 'detail_count' => count($details), 'outcome' => 'save_failed'));
             return;
         }
 
@@ -1447,6 +1593,7 @@ class Expense_petty_cash extends Admin_Controller
         }
 
         echo json_encode($response);
+        $this->completeAudit('Pencatatan petty cash berhasil disimpan', 1, array('id' => $pencatatan_id, 'operation' => $is_edit ? 'update' : 'create', 'detail_count' => count($details), 'journal' => $journal_result['success'] ? 'synced' : 'failed', 'outcome' => 'saved'));
     }
 
     /**
@@ -1460,12 +1607,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function retry_journal($id = null)
     {
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->managePermission)) {
             echo json_encode([
                 'status'  => '0',
                 'message' => 'Anda tidak memiliki akses untuk melakukan retry jurnal'
             ]);
+            $this->completeAudit('Retry jurnal petty cash ditolak', 0, array('id' => $id, 'reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -1475,12 +1624,14 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => '0',
                 'message' => 'ID pencatatan tidak valid'
             ]);
+            $this->completeAudit('Retry jurnal petty cash gagal validasi', 0, array('reason' => 'id_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
         // Call model to retry journal
         $result = $this->Expense_petty_cash_model->retry_journal((int) $id);
 
+        $this->completeAudit($result ? 'Jurnal petty cash berhasil disinkronisasi' : 'Retry jurnal petty cash gagal', $result ? 1 : 0, array('id' => $id, 'outcome' => $result ? 'retried' : 'retry_failed'));
         if ($result) {
             echo json_encode([
                 'status'  => '1',
@@ -1506,12 +1657,14 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function delete_evidence($id = null)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'source', 'file_removed', 'reason', 'outcome'));
         // Check permission
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
             echo json_encode([
                 'status'  => false,
                 'message' => 'Anda tidak memiliki akses untuk menghapus file'
             ]);
+            $this->completeAudit('Hapus evidence petty cash ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -1529,6 +1682,7 @@ class Expense_petty_cash extends Admin_Controller
         }
 
         $evidence = null;
+        $file_removed = false;
         if (!empty($id) && is_numeric($id)) {
             $evidence = $this->db->get_where('tr_expense_petty_cash_evidence', ['id' => (int) $id])->row();
             if ($evidence) {
@@ -1542,7 +1696,7 @@ class Expense_petty_cash extends Admin_Controller
             $safe_name = basename($encrypted_name);
             $file_path = FCPATH . 'assets/expense_petty_cash/' . $safe_name;
             if (file_exists($file_path)) {
-                unlink($file_path);
+                $file_removed = unlink($file_path);
             }
 
             // Bersihkan juga dari DB jika ada record dengan encrypted_name ini
@@ -1555,6 +1709,7 @@ class Expense_petty_cash extends Admin_Controller
                 'status'  => false,
                 'message' => 'File tidak ditemukan'
             ]);
+            $this->completeAudit('Hapus evidence petty cash: file tidak ditemukan', 0, array('outcome' => 'not_found'));
             return;
         }
 
@@ -1562,6 +1717,7 @@ class Expense_petty_cash extends Admin_Controller
             'status'  => true,
             'message' => 'File berhasil dihapus'
         ]);
+        $this->completeAudit('Evidence petty cash berhasil dihapus', 1, array('id' => $evidence ? $evidence->id : null, 'source' => $evidence ? 'id' : 'name', 'file_removed' => $file_removed ? 1 : 0, 'outcome' => 'deleted'));
     }
 }
 /* End of file Expense_petty_cash.php */

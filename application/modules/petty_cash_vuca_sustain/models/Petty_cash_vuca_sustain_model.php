@@ -276,14 +276,13 @@ class Petty_cash_vuca_sustain_model extends BF_Model
                 'modified_by' => $user_id,
             ]);
 
-            // 4. Check transaction status
-            if ($this->db->trans_status() === false) {
+            // 4. Check transaction status dan hasil commit (commit gagal tidak mengubah trans_status di CI3)
+            if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
                 $this->db->trans_rollback();
                 log_message('error', 'process_payment_hutang: Transaction failed for record id=' . $id);
                 return false;
             }
 
-            $this->db->trans_commit();
             log_message('info', 'process_payment_hutang: Successfully processed payment hutang id=' . $id . ' no_doc=' . $record->no_payment_hutang);
             return true;
         } catch (Exception $e) {

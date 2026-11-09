@@ -27,16 +27,61 @@ class Petty_cash_master extends Admin_Controller
         date_default_timezone_set('Asia/Bangkok');
     }
 
+    private function beginAudit($method, $data = array(), $keys = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('petty_cash_master', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData($data), 'sql' => null));
+        }
+        return false;
+    }
+
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            if ($key === 'id' && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string) $value))) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (!has_permission($permission)) {
+            $this->completeAudit('Akses master petty cash ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
     /**
      * Display index page with server-side DataTable shell
      * @return void
      */
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $this->template->set('addPermission', has_permission($this->addPermission));
         $this->template->render('index');
+        $this->completeAudit('Membuka daftar master petty cash', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -45,13 +90,15 @@ class Petty_cash_master extends Admin_Controller
      */
     public function create()
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->addPermission);
 
         $data['coa_list']   = $this->Petty_cash_master_model->get_coa_list();
         $data['users_list'] = $this->Petty_cash_master_model->get_active_users();
         $data['mode']       = 'create';
 
         $this->load->view('form', $data);
+        $this->completeAudit('Membuka form tambah master petty cash', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -61,13 +108,15 @@ class Petty_cash_master extends Admin_Controller
      */
     public function edit($id)
     {
-        $this->auth->restrict($this->managePermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->managePermission);
 
         $header = $this->Petty_cash_master_model->get_header($id);
         if (!$header) {
             $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode(['status' => 0, 'msg' => 'Data tidak ditemukan']));
+            $this->completeAudit('Edit master petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             return;
         }
 
@@ -78,6 +127,7 @@ class Petty_cash_master extends Admin_Controller
         $data['mode']       = 'edit';
 
         $this->load->view('form', $data);
+        $this->completeAudit('Membuka form edit master petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -87,13 +137,15 @@ class Petty_cash_master extends Admin_Controller
      */
     public function view($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $header = $this->Petty_cash_master_model->get_header($id);
         if (!$header) {
             $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode(['status' => 0, 'msg' => 'Data tidak ditemukan']));
+            $this->completeAudit('Lihat master petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             return;
         }
 
@@ -104,6 +156,7 @@ class Petty_cash_master extends Admin_Controller
         $data['mode']       = 'view';
 
         $this->load->view('view', $data);
+        $this->completeAudit('Melihat master petty cash', 1, array('id' => $id, 'outcome' => 'rendered'));
     }
 
     /**
@@ -112,6 +165,7 @@ class Petty_cash_master extends Admin_Controller
      */
     public function get_data()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
         $dt_params = $this->input->post();
         $result    = $this->Petty_cash_master_model->get_server_side_data($dt_params);
 
@@ -138,6 +192,7 @@ class Petty_cash_master extends Admin_Controller
         }
 
         echo json_encode($result);
+        $this->completeAudit('Data master petty cash berhasil diambil', 1, array('row_count' => count($result['data']), 'outcome' => 'rendered'));
     }
 
     /**
@@ -147,6 +202,7 @@ class Petty_cash_master extends Admin_Controller
      */
     public function save()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'operation', 'detail_count', 'outcome'));
         // Get POST data
         $id         = $this->input->post('id');
         $nama       = trim($this->input->post('nama'));
@@ -156,16 +212,19 @@ class Petty_cash_master extends Admin_Controller
         // Validate required fields
         if (empty($nama)) {
             echo json_encode(['status' => 0, 'msg' => 'Field nama harus diisi']);
+            $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'nama_required', 'outcome' => 'validation_failed'));
             return;
         }
         if (empty($keterangan)) {
             echo json_encode(['status' => 0, 'msg' => 'Field keterangan harus diisi']);
+            $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'keterangan_required', 'outcome' => 'validation_failed'));
             return;
         }
 
         // Validate detail rows exist
         if (empty($detail) || !is_array($detail) || count($detail) < 1) {
             echo json_encode(['status' => 0, 'msg' => 'Detail COA harus diisi minimal 1 baris']);
+            $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'detail_required', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -183,6 +242,7 @@ class Petty_cash_master extends Admin_Controller
             // Validate nominal is numeric and greater than 0
             if (!is_numeric($nominal_clean) || intval($nominal_clean) <= 0) {
                 echo json_encode(['status' => 0, 'msg' => 'Nominal harus berupa angka lebih besar dari 0']);
+                $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'nominal_invalid', 'outcome' => 'validation_failed'));
                 return;
             }
 
@@ -203,6 +263,13 @@ class Petty_cash_master extends Admin_Controller
         $result = $this->Petty_cash_master_model->save_with_details($header, $details, $id);
 
         echo json_encode($result);
+        $saved = !empty($result['status']);
+        $this->completeAudit($saved ? 'Master petty cash berhasil disimpan' : 'Master petty cash gagal disimpan', $saved ? 1 : 0, array(
+            'id' => $saved && isset($result['id']) ? $result['id'] : $id,
+            'operation' => empty($id) ? 'create' : 'update',
+            'detail_count' => count($details),
+            'outcome' => $saved ? 'saved' : 'save_failed'
+        ));
     }
 
     /**
@@ -213,12 +280,14 @@ class Petty_cash_master extends Admin_Controller
      */
     public function delete($id)
     {
-        $this->auth->restrict($this->deletePermission);
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'outcome'));
+        $this->auditRestrict($this->deletePermission);
 
         // Check if record exists
         $record = $this->Petty_cash_master_model->get_header($id);
         if (!$record) {
             echo json_encode(['status' => 0, 'msg' => 'Data tidak ditemukan']);
+            $this->completeAudit('Hapus master petty cash: data tidak ditemukan', 0, array('id' => $id, 'outcome' => 'not_found'));
             return;
         }
 
@@ -226,5 +295,7 @@ class Petty_cash_master extends Admin_Controller
         $result = $this->Petty_cash_master_model->delete_with_details($id);
 
         echo json_encode($result);
+        $deleted = !empty($result['status']);
+        $this->completeAudit($deleted ? 'Master petty cash berhasil dihapus' : 'Master petty cash gagal dihapus', $deleted ? 1 : 0, array('id' => $id, 'outcome' => $deleted ? 'deleted' : 'delete_failed'));
     }
 }

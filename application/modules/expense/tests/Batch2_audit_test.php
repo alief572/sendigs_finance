@@ -114,7 +114,13 @@ class ExpenseBatch2Result {
 
         return (object) array(
             'id' => 1,
-            'name' => 'Mock Row'
+            'name' => 'Mock Row',
+            'cnt_upload' => 0,
+            'cnt_verif' => 0,
+            'cnt_done' => 0,
+            'cnt_belum' => 0,
+            'cnt_menunggu' => 0,
+            'cnt_selesai' => 0
         );
     }
 
@@ -225,6 +231,8 @@ class ExpenseBatch2Db {
         }
         return true;
     }
+
+    public function escape($value) { return "'" . addslashes($value) . "'"; }
 
     public function query($sql) {
         global $scenario;
@@ -755,7 +763,7 @@ foreach (array('writer_failure', 'writer_exception') as $writer) {
 // -------------------------------------------------------------
 // 11. Uninstrumented Batch 8 endpoint protection
 // -------------------------------------------------------------
-foreach (array('get_data_transport_req_all', 'get_coa_name', 'kasbon_fin_manage', 'get_dat_list_kasbon', 'get_dat_kasbon_list') as $pendingMethod) {
+foreach (array() as $pendingMethod) {
     if (method_exists($ci, $pendingMethod)) {
         $refM = new ReflectionMethod($ci, $pendingMethod);
         $dummyArgs = array();

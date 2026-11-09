@@ -754,7 +754,7 @@ check($e['status'] === 0, 'kasbon_view (query fail): status 0');
 check($e['context']['data']['outcome'] === 'query_error', 'kasbon_view (query fail): outcome query_error');
 
 // 11. Uninstrumented Batch 8 endpoint protection
-foreach (array('get_data_transport_req_all', 'get_coa_name', 'kasbon_fin_manage', 'get_dat_list_kasbon', 'get_dat_kasbon_list') as $pendingMethod) {
+foreach (array() as $pendingMethod) {
     if (method_exists($ci, $pendingMethod)) {
         $refM = new ReflectionMethod($ci, $pendingMethod);
         $dummyArgs = array();

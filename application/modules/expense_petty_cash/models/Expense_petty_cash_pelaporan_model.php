@@ -50,6 +50,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
     /**
      * Constructor
      */
+    /** @var bool Hasil integrasi request_payment pada approve_pelaporan terakhir (dibaca controller untuk audit). */
+    public $request_payment_ok = true;
+
     public function __construct()
     {
         parent::__construct();
@@ -297,10 +300,10 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
             ]);
         }
 
-        // Complete transaction
-        $this->db->trans_complete();
+        // Complete transaction (trans_complete mengembalikan false bila commit/rollback gagal)
+        $completed = $this->db->trans_complete();
 
-        if ($this->db->trans_status() === false) {
+        if ($completed === false || $this->db->trans_status() === false) {
             return false;
         }
 
@@ -340,9 +343,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         }
 
         // Complete transaction
-        $this->db->trans_complete();
+        $completed = $this->db->trans_complete();
 
-        return $this->db->trans_status() !== false;
+        return $completed !== false && $this->db->trans_status() !== false;
     }
 
     // =========================================================================
@@ -402,17 +405,19 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
             $this->db->update('tr_expense_petty_cash', ['status' => 'approved']);
         }
 
-        // Complete transaction
-        $this->db->trans_complete();
+        // Complete transaction (trans_complete mengembalikan false bila commit/rollback gagal)
+        $completed = $this->db->trans_complete();
 
-        if ($this->db->trans_status() === false) {
+        if ($completed === false || $this->db->trans_status() === false) {
             return false;
         }
 
         // Request Payment integration (optional - don't fail approval if this fails)
+        $this->request_payment_ok = true;
         try {
             $this->create_request_payment($pelaporan);
         } catch (Exception $e) {
+            $this->request_payment_ok = false;
             log_message('error', 'Request Payment integration failed for pelaporan #' . $id . ': ' . $e->getMessage());
         }
 
@@ -480,9 +485,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         }
 
         // Complete transaction
-        $this->db->trans_complete();
+        $completed = $this->db->trans_complete();
 
-        return $this->db->trans_status() !== false;
+        return $completed !== false && $this->db->trans_status() !== false;
     }
 
     // =========================================================================

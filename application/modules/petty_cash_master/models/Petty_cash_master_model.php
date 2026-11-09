@@ -214,12 +214,11 @@ class Petty_cash_master_model extends BF_Model
             $this->db->insert($this->detail_table, $detail_data);
         }
 
-        if ($this->db->trans_status() === false) {
+        if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
             $this->db->trans_rollback();
             return ['status' => 0, 'msg' => 'Gagal menyimpan data. Silakan coba lagi.'];
         }
 
-        $this->db->trans_commit();
         return ['status' => 1, 'msg' => 'Data berhasil disimpan', 'id' => $id];
     }
 
@@ -241,12 +240,11 @@ class Petty_cash_master_model extends BF_Model
         $this->db->where('id', $id);
         $this->db->delete($this->table_name);
 
-        if ($this->db->trans_status() === false) {
+        if ($this->db->trans_status() === false || $this->db->trans_commit() === false) {
             $this->db->trans_rollback();
             return ['status' => 0, 'msg' => 'Gagal menghapus data. Silakan coba lagi.'];
         }
 
-        $this->db->trans_commit();
         return ['status' => 1, 'msg' => 'Data berhasil dihapus'];
     }
 
