@@ -1,3 +1,10 @@
+# Tombol Detail di Aksi Monitoring Piutang (9 Nov 2026)
+
+- **Gap vs mockup** (`index.html:669,731`): Aksi hanya berisi Surat Konfirmasi (bila Potensi/Macet) sehingga kosong untuk invoice Lancar; detail hanya lewat klik nomor invoice. Modal detail juga belum punya tombol Print Surat.
+- **Perubahan** (`monitoring_piutang/views/index.php`): tombol "Detail" (`data-id`, memakai handler klik yang ada) di tiap baris; tombol "Print Surat Konfirmasi Tagihan" di footer modal, tampil bila `row.can_surat`.
+- **Pengujian**: `php -l` dan `node --check` JS inline bersih; belum dilihat di browser; belum di-commit.
+- **Lanjutan**: UI modal detail dirapikan mengikuti mockup `openDetail` (`index.html:705-737`): grid info (Customer, Company, Tanggal Invoice, Program/Project, No SPK, TOP, Umur + label kategori), strip KPI (Nilai, Terbayar, Sisa merah), seksi Pengiriman & Follow Up (Dikirim, No Resi, Diterima + bukti, PIC, Plan bayar), tabel FU (Plan/Aktual ✓/Keterangan, "Belum dilakukan" merah bila lewat jadwal), tabel Riwayat Penerimaan. CSS ber-awalan `.mpd-*` di view yang sama; tanpa perubahan controller. Belum dilihat di browser.
+
 # Export Excel tidak bisa dibuka (9 Nov 2026)
 
 - **Penyebab**: file xlsx diawali teks notice PHP (`Trying to access array offset on value of type null`) dari PHPExcel lama di PHP 7.4 (`Excel2007/Worksheet.php:1118` per sel rumus, `Calculation.php:3391` saat hitung ulang rumus); `display_errors=1` mencetaknya ke `php://output` sebelum byte zip. Isi zip utuh.

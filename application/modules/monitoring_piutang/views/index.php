@@ -1,5 +1,14 @@
 <?php $base = site_url('monitoring_piutang'); ?>
 <style>
+    .mpd { font-size: 13px; } .mpd .k { display: block; color: #777; font-size: 12px; font-weight: normal; }
+    .mpd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 24px; margin-bottom: 12px; }
+    .mpd-kpi { display: flex; flex-wrap: wrap; gap: 28px; margin: 4px 0 14px; padding: 10px 14px; background: #f7f7f7; border: 1px solid #eee; border-radius: 3px; }
+    .mpd-kpi b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .mpd-h { font-size: 14px; font-weight: bold; margin: 14px 0 8px; padding-top: 10px; border-top: 1px solid #eee; }
+    .mpd-tbl { width: 100%; border-collapse: collapse; } .mpd-tbl th, .mpd-tbl td { padding: 5px 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    .mpd-tbl th { white-space: nowrap; font-weight: bold; } .mpd-r { text-align: right !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .mpd-red { color: #dd4b39; } .mpd-muted { color: #777; } .mpd-umur { font-variant-numeric: tabular-nums; }
+    .mpd-lancar { color: #00a65a; } .mpd-potensi { color: #f39c12; } .mpd-macet { color: #dd4b39; }
     .mp-sort { cursor: pointer; white-space: nowrap; } .mp-sort:hover { text-decoration: underline; }
     .mp-card { border: 2px solid #ddd; border-radius: 3px; padding: 10px 12px; margin-bottom: 12px; cursor: pointer; background: #fff; }
     .mp-card.active { box-shadow: 0 0 0 2px #3c8dbc; }
@@ -45,7 +54,7 @@
 <div class="modal fade" id="mp-modal" tabindex="-1" role="dialog" aria-labelledby="mp-modal-title"><div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title" id="mp-modal-title"></h4></div>
     <div class="modal-body" id="mp-modal-body"></div>
-    <div class="modal-footer"><a class="btn btn-default pull-left" id="mp-open-fu" href="#">Buka di Follow Up Piutang</a><button class="btn btn-default" data-dismiss="modal">Tutup</button></div>
+    <div class="modal-footer"><a class="btn btn-default pull-left" id="mp-open-fu" href="#">Buka di Follow Up Piutang</a><a class="btn btn-warning pull-left" id="mp-print-surat" target="_blank" href="#" style="display:none;margin-left:5px">Print Surat Konfirmasi Tagihan</a><button class="btn btn-default" data-dismiss="modal">Tutup</button></div>
 </div></div></div>
 
 <script>
@@ -107,6 +116,7 @@
                     '<td>' + esc(x.customer) + '<br><small>' + esc(x.project) + '</small></td><td>' + esc(x.company_name) + '</td><td class="mp-num">' + nf(x.nilai) + '</td><td class="mp-num">' + nf(x.terbayar) +
                     '</td><td class="mp-num">' + nf(x.saldo) + '</td><td class="mp-num">' + x.umur + ' hari</td><td><span class="label lbl-' + x.kategori + '">' + NAMA[x.kategori] + '</span></td><td' +
                     (x.fu_late ? ' style="color:#dd4b39;font-weight:bold"' : '') + '>' + esc(x.fu_text) + '</td><td>' +
+                    '<a href="#" class="btn btn-info btn-xs" data-id="' + esc(x.id) + '">Detail</a> ' +
                     (x.can_surat ? '<a class="btn btn-warning btn-xs" target="_blank" href="' + BASE + '/surat/' + encodeURIComponent(x.id) + '">Surat Konfirmasi</a>' : '') + '</td></tr>';
         });
         if (list.length) { h += '<tr><th colspan="4">TOTAL</th><th class="mp-num">' + nf(t.n) + '</th><th class="mp-num">' + nf(t.b) + '</th><th class="mp-num">' + nf(t.s) + '</th><th colspan="4"></th></tr>'; }
@@ -134,16 +144,32 @@
     $('#mp-body').on('click', '[data-id]', function (e) {
         e.preventDefault();
         $.getJSON(BASE + '/detail/' + encodeURIComponent($(this).data('id'))).done(function (d) {
-            var r = d.row, h = '<table class="table table-condensed"><tr><th>Customer</th><td>' + esc(r.customer) + '</td><th>Project</th><td>' + esc(r.project) + '</td></tr>' +
-                '<tr><th>Nilai / Sisa</th><td>' + nf(r.nilai) + ' / ' + nf(r.saldo) + '</td><th>Umur</th><td>' + (r.umur == null ? '-' : r.umur + ' hari') + '</td></tr>' +
-                '<tr><th>Kirim</th><td>' + dmy(r.tgl_kirim) + ' · ' + esc(r.kirim_via) + ' ' + esc(r.ket_kirim) + '</td><th>No resi</th><td>' + esc(r.no_resi) + '</td></tr>' +
-                '<tr><th>Terima</th><td>' + dmy(r.tgl_terima) + ' ' + esc(r.ket_terima) +
-                (r.bukti_terima ? '<br><i class="fa fa-paperclip"></i> <a href="' + esc('<?= base_url() ?>' + r.bukti_terima) + '" target="_blank" rel="noopener">Bukti terima: ' + esc(r.bukti_terima_nama || 'file') + '</a>' : '') + '</td><th>PIC</th><td>' + esc(r.fu_pic_nama) + ' ' + esc(r.fu_pic_telp) + '</td></tr>' +
-                '<tr><th>Plan bayar</th><td colspan="3">' + dmy(r.plan_bayar) + ' ' + esc(r.ket_plan_bayar) + '</td></tr></table><b>Follow Up</b><ul>';
-            d.fu.forEach(function (x) { if (x.plan || x.aktual) { h += '<li>FU ' + x.ke + ': jadwal ' + dmy(x.plan) + ', dilakukan ' + (dmy(x.aktual) || '-') + (x.ket ? ' — ' + esc(x.ket) : '') + '</li>'; } });
-            h += '</ul><b>Riwayat penerimaan</b><ul>';
-            d.receipts.forEach(function (x) { h += '<li>' + dmy(x.tanggal) + ' · ' + esc(x.no_penerimaan) + ' · ' + nf(x.nominal) + '</li>'; });
-            $('#mp-modal-title').text(r.no_invoice); $('#mp-modal-body').html(h + '</ul>'); $('#mp-open-fu').attr('href', FU); $('#mp-modal').modal('show');
+            var r = d.row, today = '<?= date('Y-m-d') ?>';
+            function dv(v) { return v ? dmy(v) : '–'; }
+            function kv(k, v) { return '<div><span class="k">' + k + '</span>' + v + '</div>'; }
+            var umur = r.kategori ? '<b class="mpd-umur mpd-' + r.kategori + '">' + r.umur + ' hari</b> <span class="label lbl-' + r.kategori + '">' + NAMA[r.kategori] + '</span>' : '<span class="mpd-muted">Belum diterima customer</span>';
+            var h = '<div class="mpd"><div class="mpd-grid">' +
+                kv('Customer', '<b>' + esc(r.customer) + '</b>') + kv('Company', esc(r.company_name) || '–') + kv('Tanggal Invoice', dv(r.tgl_invoice)) +
+                kv('Program / Project', esc(r.project) || '–') + kv('No SPK', esc(r.no_spk) || '–') + kv('Term of Payment', r.top_ke ? 'TOP ke-' + esc(r.top_ke) : '–') + kv('Umur Piutang', umur) + '</div>' +
+                '<div class="mpd-kpi"><div>Nilai Invoice<b>' + nf(r.nilai) + '</b></div><div>Terbayar<b>' + nf(r.terbayar) + '</b></div><div>Sisa Piutang<b class="mpd-red">' + nf(r.saldo) + '</b></div></div>' +
+                '<h5 class="mpd-h">Pengiriman &amp; Follow Up</h5><div class="mpd-grid">' +
+                kv('Dikirim', dv(r.tgl_kirim) + (r.kirim_via ? ' via ' + esc(r.kirim_via) : '') + (r.ket_kirim ? '<span class="k">' + esc(r.ket_kirim) + '</span>' : '')) +
+                kv('No Resi', esc(r.no_resi) || '–') +
+                kv('Diterima customer', dv(r.tgl_terima) + (r.ket_terima ? '<span class="k">' + esc(r.ket_terima) + '</span>' : '') +
+                    (r.bukti_terima ? '<span class="k"><i class="fa fa-paperclip"></i> <a href="' + esc('<?= base_url() ?>' + r.bukti_terima) + '" target="_blank" rel="noopener">Bukti terima: ' + esc(r.bukti_terima_nama || 'file') + '</a></span>' : '')) +
+                kv('PIC penerima FU', r.fu_pic_nama ? esc(r.fu_pic_nama) + (r.fu_pic_telp ? ' · ' + esc(r.fu_pic_telp) : '') : '–') +
+                kv('Plan bayar', dv(r.plan_bayar) + (r.ket_plan_bayar ? '<span class="k">' + esc(r.ket_plan_bayar) + '</span>' : '')) + '</div>';
+            h += '<div class="table-responsive"><table class="mpd-tbl"><thead><tr><th></th><th>Plan</th><th>Aktual</th><th>Keterangan</th></tr></thead><tbody>';
+            d.fu.forEach(function (x) {
+                var akt = x.aktual ? '✓ ' + dmy(x.aktual) : (!x.plan ? '<span class="mpd-muted">Belum dijadwalkan</span>' : '<span class="' + (x.plan < today ? 'mpd-red' : 'mpd-muted') + '">Belum dilakukan</span>');
+                h += '<tr><td><b>FU ' + x.ke + '</b>' + (x.ke > 4 ? '<span class="k">tambahan</span>' : '') + '</td><td>' + dv(x.plan) + '</td><td>' + akt + '</td><td>' + esc(x.ket) + '</td></tr>';
+            });
+            h += '</tbody></table></div><h5 class="mpd-h">Riwayat Penerimaan</h5>';
+            h += d.receipts.length ? '<div class="table-responsive"><table class="mpd-tbl"><thead><tr><th>Tanggal</th><th>No Penerimaan</th><th class="mpd-r">Nominal</th></tr></thead><tbody>' +
+                d.receipts.map(function (x) { return '<tr><td>' + dv(x.tanggal) + '</td><td>' + esc(x.no_penerimaan) + '</td><td class="mpd-r">' + nf(x.nominal) + '</td></tr>'; }).join('') + '</tbody></table></div>'
+                : '<p class="mpd-muted">Belum ada penerimaan untuk invoice ini.</p>';
+            $('#mp-modal-title').text('Detail Invoice ' + r.no_invoice); $('#mp-modal-body').html(h + '</div>'); $('#mp-open-fu').attr('href', FU);
+            $('#mp-print-surat').attr('href', BASE + '/surat/' + encodeURIComponent(r.id)).toggle(!!r.can_surat); $('#mp-modal').modal('show');
         });
     });
     load();
