@@ -62,7 +62,7 @@ class Plan_bayar extends Admin_Controller
         }
         // Baris rincian diambil tabel serverside lewat plan_data / real_data; di sini hanya ringkasan kartu.
         return $this->json(['status' => 'success', 'year' => $year, 'summary' => $summary,
-            'companies' => $this->db->query('SELECT id, nm_company FROM ' . DBCNL . '.kons_tr_company ORDER BY nm_company')->result_array()]);
+            'companies' => Piutang_aging::company_options()]);
     }
 
     /** Beberapa kata = semua kata harus ada di salah satu kolom (huruf besar/kecil diabaikan); tanggal dicari dalam d-m-Y, d/m/Y, dan Y-m-d. */
