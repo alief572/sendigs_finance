@@ -1312,16 +1312,21 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $filter_status = $this->input->get('filter_status');
+        $filter_tahun = $this->input->get('filter_tahun');
+        $filter_bulan = $this->input->get('filter_bulan');
+        $filter_company = $this->input->get('filter_company');
 
         if ($this->db->field_exists('consulting_version','tr_invoicing')) {
             $this->db->select('f.consulting_version,f.tax_treatment,f.total_nominal,f.dpp_nilai_lain,f.ppn_jurnal,f.tagihan_ppn_jurnal,f.total_akhir_jurnal,f.saldo_piutang');
         }
-        $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        // Company mengikuti daftar: kons_tr_penawaran.company, cadangan kons_tr_spk_penawaran.id_company.
+        $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
 
@@ -1329,6 +1334,16 @@ class Invoicing extends Admin_Controller
             $this->db->where('a.sts_invoice !=', '1');
         } elseif ($filter_status == 'invoiced') {
             $this->db->where('a.sts_invoice', '1');
+        }
+        // Filter opsional (UI selalu mengirim tahun); tanpa filter, ekspor lama tidak berubah. Nilai tidak valid diabaikan.
+        if (is_scalar($filter_tahun) && preg_match('/^\d{4}$/', (string)$filter_tahun)) {
+            $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) = " . (int)$filter_tahun . ")", null, false);
+        }
+        if (is_scalar($filter_bulan) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$filter_bulan)) {
+            $this->db->where('MONTH(f.tanggal_invoice) =', (int)$filter_bulan, false);
+        }
+        if (is_scalar($filter_company) && preg_match('/^\d{1,10}$/', (string)$filter_company)) {
+            $this->db->where('COALESCE(e.id, g.id) =', (int)$filter_company, false);
         }
 
         $this->db->group_by('a.id');

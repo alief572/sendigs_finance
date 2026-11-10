@@ -1,3 +1,13 @@
+## Invoicing: tab Invoiced (INV-R-01, INV-FR-01/02) — 10 November 2026
+
+Mengikuti `specs/input/Monitoring Piutang/Invoicing Tab Invoiced.html`. Daftar invoicing kini 3 tab: **Konsultasi** (hanya tagihan belum di-invoice, dropdown "Status tagihan" dihapus), **Non Konsultasi** (tetap), **Invoiced** (baru: filter Tahun, Bulan, Company; kolom Tanggal Invoice; ekspor Excel mengikuti filter; terbaru dulu).
+
+- Fase 1, tampilan: `views/index.php` (tab, panel, `DataTablesInvoiced()`, ekspor), CSS tab membungkus di layar sempit.
+- Fase 2, backend: `Invoicing_model::get_data_spk` (filter bulan dan company, kolom tanggal, urutan), `Invoicing::download_excel` (filter tahun/bulan/company, company mengikuti fallback daftar, kolom Tanggal Invoice).
+- Fase 3, tes: `Ui_list_client_test.js` (acuan, tidak diubah), `Ui_render_test.php` (kontrak 3 tab), `List_filter_test.php` (baru), `Batch1_audit_test.php` (+2 skenario).
+
+Detail, bukti uji, dan keterbatasan: `docs/task-progress.md`. Tidak ada migrasi.
+
 ## Rollout Audit Trail — Fase 4 selesai, cakupan direvisi — 9 November 2026
 
 Fase 4 (Penagihan dan invoice) selesai: 60/60 endpoint, bukan 58 seperti baseline manifest 10 Oktober; `invoicing` bertambah `coa_settings` dan `save_coa_mapping`. Urutan eksekusi: `plan_tagih` → `actual_plan_tagih` → `approval_invoice_so` → `invoicing` (urutan manifest lama menaruh `approval_invoice_so` terakhir). Detail, bukti uji, perubahan perilaku (sukses tulis mengikuti hasil commit), temuan di luar cakupan, dan baseline gagal: `docs/audits/phase-4-completion.md`. Manifest: `docs/audits/active-menu-audit-2026-10-10.json`. Fase 5 belum dikerjakan; mulai hanya jika diminta.

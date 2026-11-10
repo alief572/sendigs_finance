@@ -19,6 +19,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         <ul class="invoice-tabs" role="tablist" aria-label="Jenis invoice">
             <li role="presentation" class="tab_pin tab_1 active" data-no="1"><button type="button" id="invoice-tab-consulting" role="tab" aria-selected="true" aria-controls="invoice-panel-consulting">Konsultasi</button></li>
             <li role="presentation" class="tab_pin tab_2" data-no="2"><button type="button" id="invoice-tab-other" role="tab" aria-selected="false" aria-controls="invoice-panel-other" tabindex="-1">Non Konsultasi</button></li>
+            <li role="presentation" class="tab_pin tab_3" data-no="3"><button type="button" id="invoice-tab-invoiced" role="tab" aria-selected="false" aria-controls="invoice-panel-invoiced" tabindex="-1">Invoiced</button></li>
         </ul>
         <div class="col_1" id="invoice-panel-consulting" role="tabpanel" aria-labelledby="invoice-tab-consulting">
             <div class="invoice-toolbar">
@@ -31,14 +32,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                         ?>
                             <option value="<?= $y ?>" <?= ($y == $tahun_sekarang) ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
-                    </select>
-                </div>
-                <div class="invoice-filter">
-                    <label for="filter_status">Status tagihan</label>
-                    <select name="filter_status" id="filter_status" class="form-control form-control-sm">
-                        <option value="">Semua status</option>
-                        <option value="uninvoiced">Belum ditagihkan</option>
-                        <option value="invoiced">Sudah ditagihkan</option>
                     </select>
                 </div>
                 <div class="invoice-toolbar-actions">
@@ -98,6 +91,57 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     </tr>
                 </thead>
                 <tbody></tbody>
+            </table>
+            </div>
+        </div>
+        <div class="col_3" id="invoice-panel-invoiced" role="tabpanel" aria-labelledby="invoice-tab-invoiced" style="display: none;">
+            <div class="invoice-toolbar">
+                <div class="invoice-filter">
+                    <label for="filter_tahun_inv">Tahun</label>
+                    <select name="filter_tahun_inv" id="filter_tahun_inv" class="form-control form-control-sm">
+                        <?php for ($y = $tahun_sekarang; $y >= 2020; $y--) : ?>
+                            <option value="<?= $y ?>" <?= ($y == $tahun_sekarang) ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="invoice-filter">
+                    <label for="filter_bulan_inv">Bulan</label>
+                    <select name="filter_bulan_inv" id="filter_bulan_inv" class="form-control form-control-sm">
+                        <option value="">Semua bulan</option>
+                        <?php foreach (array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember') as $i => $namaBulan) : ?>
+                            <option value="<?= $i + 1 ?>"><?= $namaBulan ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="invoice-filter">
+                    <label for="filter_company_inv">Company</label>
+                    <select name="filter_company_inv" id="filter_company_inv" class="form-control form-control-sm">
+                        <option value="">Semua company</option>
+                        <?php foreach ($data_company as $item) : ?>
+                            <option value="<?= htmlspecialchars((string) $item->id, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $item->nm_company, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="invoice-toolbar-actions">
+                    <button type="button" class="btn btn-primary btn_filter_invoiced">Terapkan filter</button>
+                </div>
+                <div class="invoice-toolbar-actions invoice-toolbar-end"><a href="<?= base_url('invoicing/download_excel') ?>" class="btn btn-default btn_download_excel_invoiced"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Ekspor Excel</a></div>
+            </div>
+            <p class="invoice-table-status" id="invoice-invoiced-status" role="status" aria-live="polite"></p>
+            <div class="invoice-table-scroll" role="region" aria-label="Daftar invoice konsultasi yang sudah terbit, geser untuk melihat seluruh kolom" tabindex="0">
+            <table id="table_invoiced" class="table table-striped invoice-list-table invoice-consulting-table">
+                <thead>
+                    <tr>
+                        <th scope="col" width="4%">No.</th>
+                        <th scope="col" width="17%">Dokumen</th>
+                        <th scope="col" width="9%">Tanggal Invoice</th>
+                        <th scope="col" width="27%">Customer &amp; Project</th>
+                        <th scope="col" width="9%">Company</th>
+                        <th scope="col" width="15%">Tim</th>
+                        <th scope="col" width="9%">Status</th>
+                        <th scope="col" width="7%" class="text-center">Aksi</th>
+                    </tr>
+                </thead>
             </table>
             </div>
         </div>
@@ -289,7 +333,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
-        [['#table_penawaran', '#invoice-list-status'], ['#table_penawaran_non_konsultasi', '#invoice-other-status']].forEach(function(pair) {
+        [['#table_penawaran', '#invoice-list-status'], ['#table_penawaran_non_konsultasi', '#invoice-other-status'], ['#table_invoiced', '#invoice-invoiced-status']].forEach(function(pair) {
             $(pair[0]).on('preXhr.dt', function() {
                 $(pair[1]).attr('data-state', 'loading').text('Memuat daftar invoice…');
                 $(this).attr('aria-busy', 'true');
@@ -532,34 +576,49 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         DataTablesNonKonsultasi();
     });
 
+    $(document).on('click', '.btn_filter_invoiced', function() {
+        DataTablesInvoiced();
+    });
+
+    // Tab Konsultasi hanya berisi tagihan yang belum di-invoice (INV-FR-01).
     $(document).on('click', '.btn_download_excel', function(e) {
         e.preventDefault();
-        var filter_status = $('#filter_status').val();
         var filter_tahun = $('#filter_tahun').val();
-        var url = siteurl + active_controller + 'download_excel?filter_status=' + filter_status + '&filter_tahun=' + filter_tahun;
+        var url = siteurl + active_controller + 'download_excel?filter_status=uninvoiced&filter_tahun=' + filter_tahun;
         window.open(url, '_blank');
     });
 
-    $(document).on('click', '.tab_1', function() {
-        $('.col_1').show();
-        $('.col_2').hide();
+    // Ekspor tab Invoiced mengikuti ketiga filter (INV-FR-02).
+    $(document).on('click', '.btn_download_excel_invoiced', function(e) {
+        e.preventDefault();
+        var url = siteurl + active_controller + 'download_excel?filter_status=invoiced&filter_tahun=' + $('#filter_tahun_inv').val()
+            + '&filter_bulan=' + $('#filter_bulan_inv').val() + '&filter_company=' + $('#filter_company_inv').val();
+        window.open(url, '_blank');
+    });
 
-        $('.tab_1').addClass('active');
-        $('.tab_2').removeClass('active');
-        $('#invoice-tab-consulting').attr({'aria-selected': 'true', 'tabindex': '0'});
-        $('#invoice-tab-other').attr({'aria-selected': 'false', 'tabindex': '-1'});
+    function invoiceShowTab(active) {
+        var tabs = {1: '#invoice-tab-consulting', 2: '#invoice-tab-other', 3: '#invoice-tab-invoiced'};
+        [1, 2, 3].forEach(function(no) {
+            var on = no === active;
+            if (on) { $('.col_' + no).show(); $('.tab_' + no).addClass('active'); }
+            else { $('.col_' + no).hide(); $('.tab_' + no).removeClass('active'); }
+            $(tabs[no]).attr({'aria-selected': on ? 'true' : 'false', 'tabindex': on ? '0' : '-1'});
+        });
+    }
+
+    $(document).on('click', '.tab_1', function() {
+        invoiceShowTab(1);
         DataTables();
     });
 
     $(document).on('click', '.tab_2', function() {
-        $('.col_1').hide();
-        $('.col_2').show();
-
-        $('.tab_1').removeClass('active');
-        $('.tab_2').addClass('active');
-        $('#invoice-tab-consulting').attr({'aria-selected': 'false', 'tabindex': '-1'});
-        $('#invoice-tab-other').attr({'aria-selected': 'true', 'tabindex': '0'});
+        invoiceShowTab(2);
         DataTablesNonKonsultasi();
+    });
+
+    $(document).on('click', '.tab_3', function() {
+        invoiceShowTab(3);
+        DataTablesInvoiced();
     });
 
     $(document).on('click', '.close_invoice_non_kons', function() {
@@ -691,7 +750,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         return '<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>' + invoiceCellText(row.project_leader) + '</dd><dt>Sales</dt><dd>' + invoiceCellText(row.sales) + '</dd></dl>';
     }
 
-    $(document).on('preDraw.dt', '#table_penawaran, #table_penawaran_non_konsultasi', function() {
+    $(document).on('preDraw.dt', '#table_penawaran, #table_penawaran_non_konsultasi, #table_invoiced', function() {
         if (window.InvoiceActionMenu) window.InvoiceActionMenu.close();
     });
 
@@ -705,7 +764,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {
-                    d.filter_status = $('#filter_status').val();
+                    d.filter_status = 'uninvoiced';
                     d.filter_tahun = $('#filter_tahun').val();
                 }
             },
@@ -735,6 +794,46 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             ordering: false,
             autoWidth: false,
             stateLoadParams: function(settings, state) { if (!state.columns || state.columns.length !== 7) return false; },
+            responsive: false,
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            destroy: true,
+            paging: true
+        });
+    }
+
+    function invoiceDateCell(data, type) {
+        return type === 'display' ? invoiceCellText(data) : data;
+    }
+
+    function DataTablesInvoiced() {
+        $('#table_invoiced').dataTable({
+            ajax: {
+                url: siteurl + active_controller + 'get_data_spk',
+                type: "POST",
+                dataType: "JSON",
+                data: function(d) {
+                    d.filter_status = 'invoiced';
+                    d.filter_tahun = $('#filter_tahun_inv').val();
+                    d.filter_bulan = $('#filter_bulan_inv').val();
+                    d.filter_company = $('#filter_company_inv').val();
+                }
+            },
+            columns: [
+                {data: 'no'},
+                {data: null, render: invoiceDocumentCell},
+                {data: 'tanggal_invoice', render: invoiceDateCell},
+                {data: null, render: invoiceCustomerCell},
+                {data: 'company', render: function(value, type) { return type === 'display' ? invoiceCellText(value) : value; }},
+                {data: null, render: invoiceTeamCell},
+                {data: 'status'},
+                {data: 'option', createdCell: invoiceActionLabels}
+            ],
+            language: $.extend({}, invoiceTableLanguage(), {emptyTable: 'Belum ada invoice pada periode ini. Ubah tahun, bulan, atau company.'}),
+            ordering: false,
+            autoWidth: false,
+            stateLoadParams: function(settings, state) { if (!state.columns || state.columns.length !== 8) return false; },
             responsive: false,
             processing: true,
             serverSide: true,

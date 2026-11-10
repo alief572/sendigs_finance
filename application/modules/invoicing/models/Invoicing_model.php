@@ -53,13 +53,15 @@ class Invoicing_model extends BF_Model
         $search = $this->input->post('search');
         $filter_status = $this->input->post('filter_status');
         $filter_tahun = $this->input->post('filter_tahun');
+        $filter_bulan = $this->input->post('filter_bulan');
+        $filter_company = $this->input->post('filter_company');
 
         // Default tahun sekarang jika kosong
         if (empty($filter_tahun)) {
             $filter_tahun = date('Y');
         }
 
-        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice as tgl_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
@@ -75,6 +77,14 @@ class Invoicing_model extends BF_Model
             $this->db->where('a.sts_invoice !=', '1');
         } elseif ($filter_status == 'invoiced') {
             $this->db->where('a.sts_invoice', '1');
+        }
+
+        // Filter tab Invoiced (INV-FR-02): bulan tanggal invoice dan company; nilai tidak valid diabaikan.
+        if (is_scalar($filter_bulan) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$filter_bulan)) {
+            $this->db->where('MONTH(f.tanggal_invoice) =', (int)$filter_bulan, false);
+        }
+        if (is_scalar($filter_company) && preg_match('/^\d{1,10}$/', (string)$filter_company)) {
+            $this->db->where('COALESCE(e.id, g.id) =', (int)$filter_company, false);
         }
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -95,7 +105,12 @@ class Invoicing_model extends BF_Model
         $count_all = $db_clone->count_all_results();
 
         $this->db->group_by('a.id');
-        $this->db->order_by('a.sts_invoice', 'asc');
+        if ($filter_status == 'invoiced') {
+            // Tab Invoiced: tanggal invoice terbaru dulu.
+            $this->db->order_by('f.tanggal_invoice', 'desc');
+        } else {
+            $this->db->order_by('a.sts_invoice', 'asc');
+        }
         $this->db->order_by('a.id', 'desc');
         $this->db->limit($length, $start);
 
@@ -173,6 +188,7 @@ class Invoicing_model extends BF_Model
             $hasil[] = [
                 'no' => $no,
                 'no_invoice' => $item->no_invoice,
+                'tanggal_invoice' => (!empty($item->tgl_invoice) && strpos((string)$item->tgl_invoice, '0000-00-00') !== 0) ? date('d/m/Y', strtotime($item->tgl_invoice)) : '-',
                 'company' => $item->company_name,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,

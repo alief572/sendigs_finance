@@ -120,6 +120,7 @@
     .invoice-workspace .invoice-heading { flex-direction: column; padding: 20px 16px; gap: 14px; }
     .invoice-workspace .invoice-heading h2 { font-size: 21px; }
     .invoice-workspace .box-body { padding: 18px 16px; }
+    .invoice-workspace .invoice-tabs { flex-wrap: wrap; gap: 4px 20px; }
     .invoice-workspace .invoice-toolbar { padding: 14px; gap: 14px; }
     .invoice-workspace .invoice-filter { flex: 1 1 140px; }
     .invoice-workspace .invoice-toolbar-actions, .invoice-workspace .invoice-toolbar .invoice-toolbar-end { margin-left: 0; width: 100%; }

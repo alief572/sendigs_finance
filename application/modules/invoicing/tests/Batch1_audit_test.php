@@ -383,6 +383,11 @@ list($e, $out) = iv_run('get_data_spk');
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'rendered' && iv_json($out)['draw'] === 1, 'get_data_spk: rendered');
 list($e, $out, , $c) = iv_run('download_excel', array(), array(), array(), array('filter_status' => 'invoiced'));
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'generated' && iv_data($e)['filter_status'] === 'invoiced' && strpos($out, 'view download_excel') !== false, 'download_excel: generated');
+// Filter tab Invoiced (INV-FR-02): tahun, bulan, company ikut menyaring; nilai tidak wajar diabaikan, bukan disisipkan ke SQL.
+list($e, $out, , $c) = iv_run('download_excel', array(), array(), array(), array('filter_status' => 'invoiced', 'filter_tahun' => '2026', 'filter_bulan' => '10', 'filter_company' => '4'));
+check($e['status'] === 1 && iv_data($e)['filter_status'] === 'invoiced' && strpos($out, 'view download_excel') !== false, 'download_excel: filter tahun/bulan/company tetap satu event, file utuh');
+list($e) = iv_run('download_excel', array(), array(), array(), array('filter_status' => 'invoiced', 'filter_tahun' => '2026; DROP', 'filter_bulan' => '13', 'filter_company' => '4 OR 1=1'));
+check($e['status'] === 1 && iv_data($e)['outcome'] === 'generated', 'download_excel: filter tidak wajar diabaikan tanpa error');
 list($e) = iv_run('download_excel', array(), array(), array(), array('filter_status' => 'x; DROP'));
 check(!isset(iv_data($e)['filter_status']), 'download_excel: filter tidak wajar tidak masuk metadata');
 iv_writers('download_excel', array(), array(), function ($e, $out, $w) { check(strpos($out, 'view download_excel') !== false, "download_excel: file utuh saat $w"); });

@@ -77,12 +77,21 @@ verifyUi($xpath->query('//*[@id="consulting-settings"]')->length===0,'Unloaded c
 verifyUi(strpos($html,'lalu tekan Muat COA')!==false,'Company empty state actionable');
 foreach(['consulting_invoice','consulting_settings']as $view){$html=$renderer->render($view,['error'=>'Error <script>alert(1)</script>']);verifyUi(strpos($html,'role="alert"')!==false&&strpos($html,'<script>alert(1)</script>')===false,'Error escaped '.$view);}
 $GLOBALS['denied']=[];$html=$renderer->render('index',['data_company'=>[]]);$xpath=htmlQuery($html);
-verifyUi($xpath->query('//*[@role="tab"]')->length===2,'Two accessible tabs');
-verifyUi($xpath->query('//*[@role="tabpanel"]')->length===2,'Two tab panels');
+verifyUi($xpath->query('//*[@role="tab"]')->length===3,'Three accessible tabs (Konsultasi, Non Konsultasi, Invoiced)');
+verifyUi($xpath->query('//*[@role="tabpanel"]')->length===3,'Three tab panels');
 verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"]')->length===1,'One selected tab');
+verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"][@id="invoice-tab-consulting"]')->length===1,'Konsultasi is the default tab');
 verifyUi($xpath->query('//*[@id="table_penawaran"]//th')->length===7,'Consulting grouped into seven columns');
 verifyUi($xpath->query('//*[@id="table_penawaran_non_konsultasi"]//th')->length===10,'Other columns preserved');
+verifyUi($xpath->query('//*[@id="table_invoiced"]//th')->length===8,'Invoiced table has eight columns');
+verifyUi($xpath->query('//*[@id="table_invoiced"]//th[normalize-space()="Tanggal Invoice"]')->length===1,'Invoiced table shows the invoice date column');
+verifyUi($xpath->query('//*[@id="filter_status"]')->length===0,'Consulting tab has no status filter (uninvoiced only)');
+verifyUi($xpath->query('//select[@id="filter_tahun_inv"]')->length===1&&$xpath->query('//select[@id="filter_bulan_inv"]/option')->length===13&&$xpath->query('//select[@id="filter_company_inv"]')->length===1,'Invoiced filters: year, month (all + 12), company');
+verifyUi($xpath->query('//*[contains(@class,"btn_download_excel_invoiced")]')->length===1,'Invoiced tab has its own Excel export');
 verifyUi(strpos($html,'invoicing/coa_settings')!==false,'Configure navigation visible with permission');
+$companyHtml=$renderer->render('index',['data_company'=>[(object)['id'=>4,'nm_company'=>'Vuca <b>x</b>']]]);$companyXpath=htmlQuery($companyHtml);
+$companyOption=$companyXpath->query('//select[@id="filter_company_inv"]/option[@value="4"]');
+verifyUi($companyOption->length===1&&$companyOption->item(0)->textContent==='Vuca <b>x</b>'&&$companyXpath->query('//select[@id="filter_company_inv"]//b')->length===0,'Invoiced company options come from kons_tr_company and are escaped (no markup injected)');
 $renderer->auth->admin=false;
 $nonAdminHtml=$renderer->render('index',['data_company'=>[]]);
 verifyUi(strpos($nonAdminHtml,'invoicing/coa_settings')===false,'Non-admin cannot see COA settings even with Configure permission');
