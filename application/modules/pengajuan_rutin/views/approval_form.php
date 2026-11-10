@@ -57,8 +57,9 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 		</tbody>
 	</table></div>
 	<div class="genwrap" id="genWrap" hidden>
-		<label for="genNote"><b>Alasan reject umum</b></label><span class="sub">Dipakai untuk item yang di-reject tapi kolom alasan per itemnya kosong.</span>
+		<label for="genNote"><b>Alasan reject umum</b></label><span class="sub">Satu alasan untuk semua item yang di-reject. Di mode per item, dipakai bila kolom alasan item kosong.</span>
 		<textarea id="genNote" rows="4"></textarea>
+		<div class="err" id="genErr" hidden>Isi alasan reject umum.</div>
 	</div>
 	<div class="actbar">
 		<div class="dsum">
@@ -80,7 +81,7 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 (function () {
 	var batchId = <?= (int) $batch['id'] ?>, batchNo = <?= json_encode($batch['no'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 	var items = <?= json_encode(array_values(array_map(function ($i) { return array('no' => (int) $i['id'], 'nominal' => (float) $i['nominal'], 'open' => $i['status'] === 'W', 'status' => $i['status']); }, $batch['items'])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-	var dec = {}, tried = false, saving = false, root = document.querySelector('.pjx');
+	var dec = {}, tried = false, saving = false, bulk = false, root = document.querySelector('.pjx');
 	items.forEach(function (i) { if (i.open) dec[i.no] = 'A'; });
 	var listUrl = siteurl + 'pengajuan_rutin/app_list';
 
@@ -98,12 +99,13 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 			if (d === 'A') { a++; va += i.nominal; } else { r++; vr += i.nominal; }
 			if (!i.open) return;
 			root.querySelectorAll('[data-dec="' + i.no + '"]').forEach(function (b) { var on = b.dataset.v === d; b.className = on ? 'on ' + d : ''; b.setAttribute('aria-pressed', on); });
-			var box = root.querySelector('[data-notebox="' + i.no + '"]'), ta = box.querySelector('textarea'), bad = tried && d === 'R' && !ta.value.trim() && !g;
-			box.hidden = d !== 'R'; ta.placeholder = g ? 'Kosongkan untuk pakai alasan umum' : 'Wajib diisi'; box.querySelector('.err').hidden = !bad;
+			var box = root.querySelector('[data-notebox="' + i.no + '"]'), ta = box.querySelector('textarea'), bad = tried && !bulk && d === 'R' && !ta.value.trim() && !g;
+			box.hidden = d !== 'R' || bulk; ta.placeholder = 'Opsional bila alasan reject umum diisi'; box.querySelector('.err').hidden = !bad;
 			root.querySelectorAll('[data-row="' + i.no + '"],[data-dec-row="' + i.no + '"]').forEach(function (tr) { tr.classList.toggle('rej', d === 'R'); });
 		});
 		var anyRej = items.some(function (i) { return i.open ? dec[i.no] === 'R' : false; });
 		document.getElementById('genWrap').hidden = !anyRej;
+		document.getElementById('genErr').hidden = !(tried && bulk && anyRej && !g);
 		document.getElementById('sumA').textContent = a + ' item'; document.getElementById('sumAv').textContent = '(' + PJ.fmt(va) + ')';
 		document.getElementById('sumR').textContent = r + ' item'; document.getElementById('sumRv').textContent = '(' + PJ.fmt(vr) + ')';
 		var st = r === 0 ? ['A', 'Approved'] : a === 0 ? ['R', 'Rejected'] : ['P', 'Partially Approved'], el = document.getElementById('sumStat');
@@ -112,19 +114,21 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 		document.getElementById('allR').disabled = !items.some(function (i) { return i.open && dec[i.no] === 'A'; });
 	}
 	root.addEventListener('click', function (e) {
-		var b = e.target.closest('[data-dec]'); if (b) { dec[b.dataset.dec] = b.dataset.v; render(); }
+		var b = e.target.closest('[data-dec]'); if (b) { dec[b.dataset.dec] = b.dataset.v; bulk = false; render(); }
 	});
 	root.addEventListener('input', function (e) { if (e.target.matches('[data-note],#genNote')) render(); });
-	document.getElementById('allA').onclick = function () { Object.keys(dec).forEach(function (k) { dec[k] = 'A'; }); render(); };
-	document.getElementById('allR').onclick = function () { Object.keys(dec).forEach(function (k) { dec[k] = 'R'; }); render(); };
+	document.getElementById('allA').onclick = function () { Object.keys(dec).forEach(function (k) { dec[k] = 'A'; }); bulk = false; render(); };
+	document.getElementById('allR').onclick = function () { Object.keys(dec).forEach(function (k) { dec[k] = 'R'; }); bulk = true; render();
+			var gn = document.getElementById('genNote'); gn.focus(); if (gn.scrollIntoView) gn.scrollIntoView({block: 'center'});
+		};
 	document.getElementById('pjBack').onclick = document.getElementById('pjCancel').onclick = function () { PJ.leave(listUrl); };
 
 	document.getElementById('pjSave').onclick = function () {
 		tried = true;
-		var miss = items.filter(function (i) { return i.open && dec[i.no] === 'R' && !note(i.no) && !gen(); });
+		var miss = items.filter(function (i) { return i.open && dec[i.no] === 'R' && !gen() && (bulk || !note(i.no)); });
 		if (miss.length) {
-			render(); var el = root.querySelector('[data-note="' + miss[0].no + '"]'); if (el) { el.focus(); if (el.scrollIntoView) el.scrollIntoView({block: 'center'}); }
-			PJ.toast('Ada item yang di-reject tanpa alasan. Isi alasan per item atau alasan reject umum.'); return;
+			render(); var el = bulk ? document.getElementById('genNote') : root.querySelector('[data-note="' + miss[0].no + '"]'); if (el) { el.focus(); if (el.scrollIntoView) el.scrollIntoView({block: 'center'}); }
+			PJ.toast(bulk ? 'Isi alasan reject umum.' : 'Ada item yang di-reject tanpa alasan. Isi alasan per item atau alasan reject umum.'); return;
 		}
 		var nA = items.filter(function (i) { return i.open && dec[i.no] === 'A'; }), nR = items.filter(function (i) { return i.open && dec[i.no] === 'R'; });
 		PJ.ask({title: 'Simpan keputusan ' + batchNo + '?', ok: 'Simpan keputusan',
@@ -134,7 +138,7 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 	};
 	function commit() {
 		var data = {id: batchId, general_note: gen()};
-		items.forEach(function (i) { if (i.open) { data['decision[' + i.no + ']'] = dec[i.no]; data['note[' + i.no + ']'] = dec[i.no] === 'R' ? note(i.no) : ''; } });
+		items.forEach(function (i) { if (i.open) { data['decision[' + i.no + ']'] = dec[i.no]; data['note[' + i.no + ']'] = dec[i.no] === 'R' && !bulk ? note(i.no) : ''; } });
 		PJ.post(siteurl + 'pengajuan_rutin/save_decision', data).then(function (r) {
 			if (!r.save) { PJ.toast(r.msg || 'Terjadi kesalahan. Silakan coba lagi.'); return; }
 			saving = true;
