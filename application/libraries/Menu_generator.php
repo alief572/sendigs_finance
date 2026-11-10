@@ -21,15 +21,25 @@ class Menu_generator
 		$this->is_admin = $this->ci->auth->is_admin();
 	}
 
-	/** Link aktif bila ada di URL, kecuali saudara dengan link lebih panjang juga cocok (mis. follow_up_piutang vs follow_up_piutang/plan_bayar). */
-	protected function link_active($link, $siblings)
+	protected $all_links; // link semua menu aktif, di-cache per request
+
+	/** Link aktif bila ada di URL, kecuali menu mana pun (beda parent pun) dengan link lebih panjang juga cocok
+	 *  (mis. pengajuan_rutin vs pengajuan_rutin/app_list, follow_up_piutang vs follow_up_piutang/plan_bayar). */
+	protected function link_active($link)
 	{
 		if(strpos($this->uri, '/'.$link.'/')===FALSE)
 		{
 			return FALSE;
 		}
-		foreach ($siblings as $s) {
-			if(strlen($s->link) > strlen($link) && strpos($this->uri, '/'.$s->link.'/')!==FALSE)
+		if($this->all_links === NULL)
+		{
+			$this->all_links = array();
+			foreach ($this->ci->db->select('link')->from("{$this->x}menus")->where('status',1)->get()->result() as $m) {
+				$this->all_links[] = (string) $m->link;
+			}
+		}
+		foreach ($this->all_links as $l) {
+			if(strlen($l) > strlen($link) && strpos($this->uri, '/'.$l.'/')!==FALSE)
 			{
 				return FALSE;
 			}
@@ -117,7 +127,7 @@ class Menu_generator
 								goto end_for;
 							}
 							$active = "";
-							if(strpos($this->uri, '/'.$link.'/')!==FALSE)
+							if($this->link_active($link))
 							{
 								$active = "active";
 							}
@@ -128,7 +138,7 @@ class Menu_generator
 
 					$active = "";
 					foreach ($submenu as $sub) {
-						if(strpos($this->uri, '/'.$sub->link.'/')!==FALSE)
+						if($this->link_active($sub->link))
 						{
 							$active = "active";
 							break;
@@ -183,7 +193,7 @@ class Menu_generator
 									goto end_for_sub;
 								}
 								$active = "";
-								if($this->link_active($sublink, $submenu))
+								if($this->link_active($sublink))
 								{
 									$active = "active";
 								}
@@ -198,7 +208,7 @@ class Menu_generator
 						}
 						$active = "";
 						foreach ($submenusub as $subsub) {
-							if(strpos($this->uri, '/'.$subsub->link.'/')!==FALSE)
+							if($this->link_active($subsub->link))
 							{
 								$active = "active";
 								break;
@@ -227,7 +237,7 @@ class Menu_generator
 								$subtargetsub = "target='_blank'";
 							}
 							//Check current link
-							if(strpos($this->uri, '/'.$sublinksub.'/')!==FALSE)
+							if($this->link_active($sublinksub))
 							{
 								$active = "active";
 							}
