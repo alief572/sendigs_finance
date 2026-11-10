@@ -10,13 +10,11 @@ Satu dokumen untuk seluruh alur piutang, dari invoice sampai dashboard:
 
 Terakhir diperbarui: **2026-11-05**. Semua baris sudah dicocokkan dengan kode per tanggal ini. Dokumen ini **menggantikan** `fr-nfr-invoice-sampai-monitoring-piutang.md` (digabung ke sini, INV-R-10) dan versi 2026-11-02 dokumen ini.
 
-> Salinan untuk review dari `docs/fr-nfr-monitoring-piutang.md`. Perubahan dibuat di file sumber lalu disalin ulang ke sini.
-
 **Dokumen pendamping**
-- Alur proses: [`flow-invoice-sampai-monitoring-piutang.drawio`](flow-process.drawio).
-- ERD: [`erd-invoice-sampai-monitoring-piutang.drawio`](erd.drawio).
-- Mockup: [`mockup-monitoring-piutang.html`](mockup/index.html) (Invoicing, Follow Up, Monitoring, Dashboard).
-- Use case dan paket review: [`review-monitoring-piutang/`](README.md).
+- Alur proses: [`flow-invoice-sampai-monitoring-piutang.drawio`](flow-invoice-sampai-monitoring-piutang.drawio).
+- ERD: [`erd-invoice-sampai-monitoring-piutang.drawio`](erd-invoice-sampai-monitoring-piutang.drawio).
+- Mockup: [`mockup-monitoring-piutang.html`](mockup-monitoring-piutang.html) (Invoicing, Follow Up, Monitoring, Dashboard).
+- Use case dan paket review: [`review-monitoring-piutang/`](review-monitoring-piutang/README.md).
 - Contoh hasil export Dashboard: [`contoh-export-dashboard-plan-bayar.xlsx`](contoh-export-dashboard-plan-bayar.xlsx).
 
 **Sumber**

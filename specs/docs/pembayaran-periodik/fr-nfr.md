@@ -5,7 +5,7 @@ Cakupan: Budget Pembayaran Periodik, Approval Perubahan Budget, Pengajuan Pembay
 Terakhir diperbarui: 2026-10-29.
 
 **Sumber**
-- Permintaan user R-01 s/d R-09 di [`requests.md`](requests.md).
+- Permintaan user R-01 s/d R-09 di [`requests.md`](../requests.md).
 - Mockup yang sudah disetujui user: [`mockup-periodik-per-item.html`](mockup-periodik-per-item.html), mengikuti revisi user di `input/Periodik.html`.
 - Alur proses: [`flow-pengajuan-periodik.drawio`](flow-pengajuan-periodik.drawio).
 - Bahan dari klien: `input/Modul Budget Periodik + Pengajuan Periodik + Approval Periodik.html` dan `input/Contoh Stepper.png`.

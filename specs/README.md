@@ -41,7 +41,7 @@ their keep.
 | `context/lint.py` | Consistency checks for the context layer: stale `AGENTS.md`, dangling paths, the decisions index, the learning buffer, uncredited skills. |
 | `context/files/` | Published third-party specs the conventions are distilled from (OMG BPMN, UML). |
 | `input/` | Raw client source material, one folder per intake event. Append-only. |
-| `docs/` | Client deliverables: `workbook.xlsx`, `requests.md`, `fr-nfr.md`, `statuses.md`, `rbac-entities.csv`. |
+| `docs/` | Client deliverables. Root: `workbook.xlsx`, `requests.md` (semua permintaan), `statuses.md`, `rbac-entities.csv`. Satu folder per fitur berisi FR & NFR, ERD, flow, mockup: `pembayaran-periodik/`, `monitoring-piutang/`, `mockup-invoicing/` (Invoicing + Penerimaan UMKM Non-PKP). |
 | `pm/` | Work state: `tracker.yaml` (open only), `archive.yaml` (closed), `issues/{slug}/` (the capsule of anything open), `log.md`, `todo.md`, `active.json`. |
 | `THIRD_PARTY.md` | Credits and licences for vendored files, what is deliberately not vendored, and recommended skills |
 | `.claude/agents/` | Specialist subagents for the error-prone artifacts, plus the distill agent and `coder`. |

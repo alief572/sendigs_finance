@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Penerimaan Piutang</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+/* ===== Shell AdminLTE seperti aplikasi SENDIGS SS (sama dengan mockup-invoicing) ===== */
+:root{--header:#3c8dbc;--logo:#367fa9;--side:#222d32;--side-sub:#2c3b41;--side-text:#b8c7ce;--bg:#ecf0f5;--chg:#8e44ad;}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:"Source Sans Pro","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;color:#333;background:var(--bg);}
+.main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--header);display:flex;}
+.logo{width:230px;background:var(--logo);color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+.navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+.navbar .burger{background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;}
+.nav-right{display:flex;align-items:center;gap:26px;font-size:14px;}
+.nav-right a{color:#fff;text-decoration:none;}
+.nav-right .user{display:flex;align-items:center;gap:8px;}
+.avatar{width:22px;height:22px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+.chg-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;}
+.sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+.sidebar .menu-search{padding:12px 10px 22px;}
+.sidebar .menu-search div{display:flex;align-items:center;gap:8px;border:1px solid #4b5a61;border-radius:4px;padding:10px;color:#b8c7ce;font-size:13px;}
+.sidebar ul{list-style:none;margin:0;padding:0;}
+.sidebar .item>a{display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);text-decoration:none;cursor:pointer;}
+.sidebar .item>a .fa{width:16px;text-align:center;}
+.sidebar .item>a .chev{margin-left:auto;font-size:11px;}
+.sidebar .item.open>a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+.sidebar .sub{background:var(--side-sub);padding:5px 0;}
+.sidebar .sub a{display:block;padding:7px 5px 7px 22px;color:#8aa4af;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar .sub a::before{content:"\203A  ";}
+.sidebar .sub a.active{color:#fff;font-weight:600;}
+.content-wrapper{margin-left:230px;margin-top:50px;padding:15px;min-height:calc(100vh - 50px);}
+.content-wrapper>h1{font-size:24px;font-weight:400;margin:4px 0 16px;color:#333;}
+body.collapsed .sidebar{display:none;}
+body.collapsed .content-wrapper{margin-left:0;}
+.hidden{display:none !important;}
+.text-right{text-align:right !important;}
+@media (max-width:900px){
+  .sidebar{display:none;}
+  .content-wrapper{margin-left:0;padding:12px 16px;}
+  .logo{width:auto;padding:0 14px;font-size:17px;}
+  .nav-right a{display:none;}
+}
+
+/* ===== assets/css/mockup_ui.css (disalin dari aplikasi, dipakai modul penerimaan_uang) ===== */
+.mk{--panel:#fff;--text:#333;--muted:#777;--line:#e3e6ea;--row:#f9f9f9;--primary:#3c8dbc;--success:#00a65a;--danger:#dd4b39;--warn:#f39c12;--purple:#605ca8;--info:#00c0ef;--input:#fff;--readonly:#eee;--ok-bg:#e9f7ef;--bad-bg:#fdecea;color:var(--text);font-size:14px;line-height:1.45;}
+.mk,.mk *{box-sizing:border-box;}
+.mk .crumb{font-size:12px;color:var(--muted);margin:-8px 0 14px;}
+.mk .box{background:var(--panel);border-top:3px solid var(--line);border-radius:3px;box-shadow:0 1px 1px rgba(0,0,0,.08);padding:14px;margin-bottom:16px;}
+.mk .box.primary{border-top-color:var(--primary);}
+.mk a{color:var(--primary);}
+.mk input[type=text],.mk select{background:var(--input);border:1px solid #c9ced3;border-radius:2px;padding:6px 8px;min-height:32px;font:inherit;color:inherit;height:auto;box-shadow:none;}
+.mk input[readonly]{background:var(--readonly);}
+.mk select:disabled{background:var(--readonly);}
+.mk input.num{text-align:right;font-variant-numeric:tabular-nums;}
+.mk .btn{border:1px solid transparent;border-radius:3px;padding:6px 12px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;color:#fff;line-height:1.3;text-decoration:none;font-family:inherit;}
+.mk .btn:disabled{opacity:.5;cursor:not-allowed;}
+.mk .btn-success{background:var(--success);border-color:#008d4c;}
+.mk .btn-danger{background:var(--danger);border-color:#d73925;}
+.mk .btn-default{background:var(--readonly);color:var(--text);border-color:var(--line);}
+.mk .btn-xs{padding:3px 9px;font-size:12px;}
+.mk .btn-link{background:none;border:0;color:var(--primary);cursor:pointer;padding:0;font-size:12px;text-decoration:underline;font-family:inherit;}
+.mk .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;}
+.mk .fg{display:flex;flex-direction:column;gap:4px;margin-bottom:6px;}
+.mk .fg>label{font-weight:700;font-size:13px;margin:0;}
+.mk .req{color:var(--danger);}
+.mk .hint{font-size:12px;color:var(--muted);}
+.mk .inline{display:flex;gap:8px;align-items:center;}
+.mk .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.mk table{border-collapse:collapse;width:100%;font-size:13px;background:transparent;margin:0;}
+.mk th{font-weight:700;text-align:left;padding:8px;border:0;border-bottom:2px solid var(--line);white-space:nowrap;}
+.mk td{padding:7px 8px;border:0;border-top:1px solid var(--line);vertical-align:top;}
+.mk tbody tr:nth-child(odd) td{background:var(--row);}
+.mk .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.mk .c{text-align:center;}
+.mk .nowrap{white-space:nowrap;}
+.mk .muted{color:var(--muted);}
+.mk .small{font-size:12px;}
+.mk .empty{text-align:center;color:var(--muted);padding:18px;}
+.mk .sum td{background:transparent !important;border-top:1px solid var(--line);}
+.mk .sum .k{text-align:right;color:var(--muted);}
+.mk .state-bad{color:var(--danger);font-weight:700;}
+.mk .cell-in{width:104px;}
+.mk .alert{border:1px solid;border-radius:3px;padding:10px 12px;font-size:13px;margin:10px 0;background:transparent;}
+.mk .alert.red{border-color:#f1b0a8;background:var(--bad-bg);}
+.mk .alert.blue{border-color:#9fd6ea;background:rgba(0,192,239,.08);}
+.mk .alert.warn{border-color:#f5c77e;background:#fff7e6;}
+.mk .tax{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:3px;border:1px solid;white-space:nowrap;}
+.mk .tax.PKP{color:#2e6da4;border-color:#2e6da4;} .mk .tax.WAPU{color:#8a5a00;border-color:#c28a00;} .mk .tax.KB{color:#5b4a9e;border-color:#7d6cc0;} .mk .tax.UMKM{color:#9a4a2b;border-color:#c06a45;}
+.mk .text-primary{color:var(--primary);} .mk .text-success{color:var(--success);}
+.mk .text-info{color:#00a7d0;}
+@media (max-width:900px){.mk .grid2{grid-template-columns:1fr;}}
+
+/* consulting_process.php (view-scoped) */
+.mk #badge_kontrol{display:inline-block;font-weight:700;}
+.mk #badge_kontrol.kontrol-ok{color:var(--success);}
+.mk #badge_kontrol.kontrol-bad{color:var(--danger);}
+.mk .journal-section{margin-top:20px;border-top:1px solid var(--line);padding-top:15px;}
+.mk .row-note{font-size:12px;margin-top:2px;white-space:normal;color:#777;}
+
+/* Modal #dialog-popup (add.php): lebar 98%, maks 1440px, header biru */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto;z-index:2500;}
+.modal{background:#fff;border-radius:4px;width:min(1440px,98%);box-shadow:0 8px 30px rgba(0,0,0,.35);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#3c8dbc;color:#fff;border-radius:4px 4px 0 0;}
+.modal-header h4{margin:0;font-size:18px;font-weight:400;}
+.modal-header button{background:none;border:0;color:#fff;opacity:.8;font-size:22px;cursor:pointer;}
+.modal-body{max-height:80vh;overflow-y:auto;padding:15px;}
+.modal-footer{padding:12px 16px;border-top:1px solid #e3e6ea;background:#f8fafc;display:flex;justify-content:flex-end;gap:8px;border-radius:0 0 4px 4px;}
+
+/* ===== tambahan mockup ===== */
+.toast{position:fixed;right:20px;bottom:20px;background:#172b40;color:#fff;padding:12px 16px;border-radius:5px;font-size:13px;z-index:3000;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:420px;line-height:1.5;}
+.toast.success{background:#186145;}
+body.show-chg .chg{outline:2px dashed var(--chg);outline-offset:2px;}
+.legend{display:none;font-size:12.5px;color:var(--chg);margin:0 0 10px;}
+body.show-chg .legend{display:block;}
+details.cases{border:1px solid #d2d6de;border-left:3px solid var(--chg);border-radius:3px;padding:8px 12px;margin-bottom:14px;background:#fff;}
+details.cases summary{cursor:pointer;font-weight:600;}
+details.cases p{margin:8px 0 4px;font-size:13px;}
+.case-table{border-collapse:collapse;font-size:13px;margin:6px 0 4px;}
+.case-table th,.case-table td{border:1px solid #e3e6ea;padding:5px 8px;text-align:left;}
+.case-table td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.case-table button{font:inherit;font-size:12px;padding:2px 8px;border:1px solid #b6cedf;background:#edf5fb;color:#205f84;border-radius:3px;cursor:pointer;}
+</style>
+</head>
+<body class="show-chg">
+
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" id="burger" aria-label="Buka/tutup menu"><i class="fa fa-bars"></i></button>
+    <div class="nav-right">
+      <label class="chg-toggle"><input type="checkbox" id="chgToggle" checked> Tandai perubahan</label>
+      <a>Helpdesk</a><a>Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="menu-search"><div><i class="fa fa-search"></i> Cari menu...</div></div>
+  <ul>
+    <li class="item"><a><i class="fa fa-dashboard"></i>Dashboard</a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Data<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-cubes"></i>Purchase<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-check"></i>Approval<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-angle-right"></i>Budget<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item open">
+      <a><i class="fa fa-angle-right"></i>Finance<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a href="index.html" id="navInvoicing">Invoicing</a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-angle-right"></i>Penerimaan<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a>Alokasi Penerimaan Bank</a></li>
+        <li><a class="active" id="navReceipt">Penerimaan Piutang</a></li>
+        <li><a>Kwitansi Deposit</a></li>
+        <li><a>Deposit Customer</a></li>
+        <li><a>Penerimaan PPh 23</a></li>
+      </ul>
+    </li>
+    <li class="item"><a><i class="fa fa-cog"></i>Settings<i class="fa fa-angle-left chev"></i></a></li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+  <h1>Penerimaan Piutang</h1>
+  <p class="legend">Garis putus-putus ungu = bagian yang baru/berubah untuk invoice <b>UMKM Non-PKP</b> (PPh Final 0,5%). Matikan "Tandai perubahan" di header untuk melihat tampilan bersih.</p>
+
+  <details class="cases" open><summary>Skenario uji mockup (sheet "Jurnal Penerimaan", Prosedur Jurnal Invoicing &amp; Penerimaan.xlsx)</summary>
+    <p>Klik <b>Muat</b> untuk mengisi form, membuka popup Penerimaan Piutang, dan mengisi Biaya Admin / Lebih Bayar / Sisa Piutang sesuai Excel. Kontrol harus 0 dan jurnal sama dengan Excel. Semua kasus memakai admin bank 2.500.</p>
+    <table class="case-table">
+      <thead><tr><th>Kasus</th><th>Invoice</th><th>PPh Final dipotong customer (Y)<br>Bank masuk</th><th>Tidak dipotong / setor sendiri (N)<br>Bank masuk</th></tr></thead>
+      <tbody id="caseBody"></tbody>
+    </table>
+    <p>Kasus 6 (bukan dari Excel): satu batch berisi invoice UMKM dan PKP. Invoice PKP tetap memakai PPh 23 2%, invoice UMKM memakai PPh Final 0,5%.</p>
+  </details>
+
+  <div class="mk">
+    <div class="box primary">
+      <form id="formData" autocomplete="off">
+        <div class="grid2">
+          <div>
+            <div class="fg">
+              <label for="customer">Nama Customer <span class="req">*</span></label>
+              <select id="customer"><option value="">- Pilih Customer -</option></select>
+            </div>
+            <div class="fg">
+              <label for="pph23_dipotong" class="chg">PPh 23/PPh Final Disetor <span class="req">*</span></label>
+              <select id="pph23_dipotong">
+                <option value="" selected>- Pilih -</option>
+                <option value="Y">Dipotong PPh</option>
+                <option value="N">Tidak Dipotong PPh</option>
+              </select>
+              <span class="hint chg">PKP/WAPU/KB = <b>PPh 23 2%</b>, UMKM Non-PKP = <b>PPh Final 0,5%</b>. "Tidak Dipotong" pada invoice UMKM = PPh Final disetor sendiri.</span>
+            </div>
+          </div>
+          <div>
+            <div class="fg">
+              <label for="deposit_choice">Deposit <span class="req">*</span></label>
+              <select id="deposit_choice" disabled>
+                <option value="N" selected>Tidak Pakai Deposit</option>
+                <option value="Y">Pakai Deposit</option>
+              </select>
+              <span class="hint hidden" id="depWrap">Saldo deposit: <span id="lblDeposit">Rp 0,00</span></span>
+            </div>
+            <div class="fg hidden" id="wrapDepAmount">
+              <label for="deposit_amount">Nominal Deposit Dipakai <span class="req">*</span></label>
+              <input type="text" id="deposit_amount" class="num" placeholder="0,00" inputmode="decimal">
+              <span class="hint">Diisi sendiri, maksimal saldo deposit. Saat Process, nominal ini dibagi ke invoice yang dicentang.</span>
+            </div>
+            <div class="fg">
+              <label for="nominal_bank">Nominal Penerimaan Bank <span class="req">*</span></label>
+              <input type="text" id="nominal_bank" class="num" value="0.00" inputmode="decimal">
+              <span class="hint">Di aplikasi terisi otomatis dari Alokasi Penerimaan Bank (readonly). Di mockup bisa diubah.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll" style="margin-top:12px;">
+          <table>
+            <thead><tr><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="r">Penjualan</th><th class="r">DPP</th><th class="r">PPN</th>
+              <th class="r"><span class="chg">PPH 23 / PPh Final</span></th><th class="r">Total Tagihan<br>(Penjualan + PPN)</th><th class="r">Total Tagihan<br>- PPH</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr></thead>
+            <tbody id="invList"><tr><td colspan="11" class="empty">No Data Found</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="inline" style="margin-top:12px;">
+          <button type="button" class="btn btn-danger" data-toast="Kembali ke daftar Penerimaan Piutang (mockup).">Back</button>
+          <button type="submit" class="btn btn-success" id="btnProcess">Process</button>
+          <span class="hint" id="fmsg"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Penerimaan Piutang (isi = views/consulting_process.php) -->
+<div class="modal-bg hidden" id="dialog">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="modal-header"><h4 id="dlgTitle">Penerimaan Piutang</h4><button type="button" data-close aria-label="Tutup">&times;</button></div>
+    <div class="modal-body mk" id="dlgBody"></div>
+    <div class="modal-footer mk">
+      <button type="button" class="btn btn-success" id="btnProses" disabled>Proses</button>
+      <button type="button" class="btn btn-danger" data-close>Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Uang dalam sen (integer) seperti Penerimaan_calculation.
+const cents = v => { const s = String(v == null ? '' : v).replace(/,/g, '').trim(); if (s === '') return 0; if (!/^-?\d+(\.\d{1,2})?$/.test(s)) return NaN; const neg = s[0] === '-', p = s.replace('-', '').split('.'); const n = Number(p[0]) * 100 + Number(((p[1] || '') + '00').slice(0, 2)); return neg ? -n : n; };
+const money = c => (c / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const whole = c => (c / 100).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+const ratio = (n, a, b) => Math.floor(n / b) * a + Math.floor(((n % b) * a + Math.floor(b / 2)) / b);
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const fdate = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso); return m ? m[3] + '-' + MONTHS[+m[2] - 1] + '-' + m[1] : iso; };
+
+// Penerimaan_calculation::tax_calc
+function taxCalc(sales, t){
+  const umkm = t === 'UMKM';
+  const dpp = ratio(sales, 11, 12), ppn = (t === 'PKP') ? ratio(dpp, 12, 100) : 0;
+  const tagihan = t === 'PKP' ? sales + ppn : sales;
+  return {sales, dpp, ppn: umkm ? 0 : ratio(dpp, 12, 100), tagihan, pph: umkm ? ratio(sales, 5, 1000) : ratio(sales, 2, 100)};
+}
+const pphLabel = t => t === 'UMKM' ? 'PPh Final 0,5%' : 'PPh 23';
+
+const OWNER = 'STM', TRANS_DATE = '2026-11-10';
+// Akun dari master (Consulting_receipt::account). COA PPh Final belum ada: dikosongkan (Consulting_receipt::PPH_FINAL_*_COA = '').
+const ACC = {
+  bank: {code: '1101-02-01', name: 'Bank Mandiri STM'},
+  admin: {code: '7201-01-04', name: 'Biaya Admin Bank'},
+  deposit: {code: '2102-01-02', name: 'Deposit Customer'},
+  receivable: {code: '1102-01-01', name: 'Piutang Dagang Usaha'},
+  pph: {code: '1105-01-02', name: 'PPh 23 Disetor'},
+  pph_final_expense: {code: '', name: 'Beban PPh Final'},
+  pph_final_payable: {code: '', name: 'Hutang PPh Final'}
+};
+const CUSTOMERS = [
+  {id: 'C1', name: 'CV Kreasi Mandiri', deposit: 150000000},
+  {id: 'C2', name: 'PT JTEKT Indonesia', deposit: 0}
+];
+let INVOICES = [
+  {id: 'I1', cust: 'C1', no: '261/STM/2026', date: '2026-10-05', spk: '034/STM/MKT-SPK/IV/26', tax: 'UMKM', sales: 61500000, saldo: 61500000},
+  {id: 'I2', cust: 'C1', no: '262/STM/2026', date: '2026-10-20', spk: '034/STM/MKT-SPK/IV/26', tax: 'UMKM', sales: 200000000, saldo: 200000000},
+  {id: 'I3', cust: 'C1', no: '255/STM/2026', date: '2026-09-12', spk: '029/STM/MKT-SPK/III/26', tax: 'PKP', sales: 200000000, saldo: 222000000},
+  {id: 'I4', cust: 'C2', no: '248/STM/2026', date: '2026-09-01', spk: '021/STM/MKT-SPK/II/26', tax: 'PKP', sales: 1000000000, saldo: 1110000000}
+];
+
+/* ---------- Form Process (add.php) ---------- */
+function fillCustomers(){ $('customer').insertAdjacentHTML('beforeend', CUSTOMERS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')); }
+function renderList(keep){
+  const cust = CUSTOMERS.find(c => c.id === $('customer').value), choice = $('pph23_dipotong').value;
+  const checked = keep ? [...document.querySelectorAll('#invList input:checked')].map(i => i.value) : [];
+  $('deposit_choice').disabled = !cust || cust.deposit <= 0;
+  if ($('deposit_choice').disabled){ $('deposit_choice').value = 'N'; $('wrapDepAmount').classList.add('hidden'); }
+  $('depWrap').classList.toggle('hidden', !cust || cust.deposit <= 0);
+  $('lblDeposit').textContent = 'Rp ' + (cust ? money(cust.deposit) : '0.00');
+  const rows = cust ? INVOICES.filter(i => i.cust === cust.id && i.saldo > 0) : [];
+  if (!rows.length){ $('invList').innerHTML = `<tr><td colspan="11" class="empty">No Data Found</td></tr>`; return; }
+  $('invList').innerHTML = rows.map(i => {
+    const t = taxCalc(i.sales, i.tax), pph = choice === 'Y' ? t.pph : 0, u = i.tax === 'UMKM' ? ' chg' : '';
+    return `<tr><td class="nowrap">${fdate(i.date)}</td><td class="nowrap">${esc(i.no)}</td><td><span class="tax ${i.tax}${u}">${i.tax}</span></td>
+      <td class="r">${money(t.sales)}</td><td class="r${u}">${money(t.dpp)}</td><td class="r${u}">${money(t.ppn)}</td>
+      <td class="r${u}" title="${pphLabel(i.tax)}">${money(pph)}</td><td class="r">${money(t.tagihan)}</td><td class="r">${money(t.tagihan - pph)}</td>
+      <td class="r">${money(i.saldo)}</td><td class="c"><input type="checkbox" value="${i.id}"${checked.includes(i.id) ? ' checked' : ''} aria-label="Pilih ${esc(i.no)}"></td></tr>`;
+  }).join('');
+}
+function fmsg(t){ $('fmsg').innerHTML = t ? `<span class="state-bad">${esc(t)}</span>` : ''; }
+
+/* ---------- Popup Penerimaan Piutang (consulting_process.php) ---------- */
+let batch = null;
+function openProcess(){
+  fmsg('');
+  const cust = CUSTOMERS.find(c => c.id === $('customer').value);
+  const ids = [...document.querySelectorAll('#invList input:checked')].map(i => i.value);
+  const choice = $('pph23_dipotong').value, depChoice = $('deposit_choice').value;
+  if (!cust) return fmsg('Pilih customer terlebih dahulu.');
+  if (!ids.length) return fmsg('Centang minimal satu invoice.');
+  if (!choice) return fmsg('Pilih PPh 23/PPh Final Disetor: Dipotong atau Tidak Dipotong.');
+  const depAmount = depChoice === 'Y' ? cents($('deposit_amount').value) : 0;
+  if (depChoice === 'Y' && !(depAmount > 0)) return fmsg('Isi Nominal Deposit Dipakai.');
+  if (depAmount > cust.deposit) return fmsg('Nominal deposit melebihi saldo deposit aktif customer (Rp ' + money(cust.deposit) + ').');
+  const bank = cents($('nominal_bank').value);
+  if (isNaN(bank)) return fmsg('Nominal Penerimaan Bank tidak valid.');
+  const rows = INVOICES.filter(i => ids.includes(i.id)).sort((a, b) => a.date.localeCompare(b.date)).map(i => {
+    const t = taxCalc(i.sales, i.tax), remaining = i.paidPph ? 0 : t.pph;
+    return {inv: i, t, umkm: i.tax === 'UMKM', defPph: choice === 'Y' ? remaining : 0, remaining,
+      // Consulting_receipt::invoice_context: PPh Final setor sendiri = sisa batas PPh Final bila pilihan N.
+      self: (i.tax === 'UMKM' && choice === 'N') ? remaining : 0};
+  });
+  // Pembagian deposit urut tanggal (piutang - PPh default).
+  let left = depAmount; rows.forEach(r => { r.dep0 = Math.min(left, Math.max(0, r.inv.saldo - r.defPph)); left -= r.dep0; });
+  batch = {cust, rows, choice, depChoice, depAmount, bank};
+  const hasUmkm = rows.some(r => r.umkm), dep = depChoice === 'Y', rest = dep ? 5 : 4;
+  $('dlgBody').innerHTML = `
+  <div class="scroll"><table>
+    <thead><tr><th class="c">Nomor Invoice</th><th class="c">TAX Code</th><th class="r">Penjualan</th><th class="r">DPP</th><th class="r">PPN</th>
+      <th class="r${hasUmkm ? ' chg' : ''}">PPH 23${hasUmkm ? ' / PPh Final' : ''}${choice === 'Y' ? `<br><small class="muted" style="font-weight:400">default 2% Penjualan${hasUmkm ? ' (UMKM 0,5%)' : ''}, bisa diedit</small>` : ''}</th>
+      <th class="r">Total Tagihan<br>(Penjualan + PPN)</th><th class="r">Total Tagihan<br>- PPH</th><th class="r">Piutang Dagang<br>(Penjualan + PPN)</th><th class="r">Alokasi Penerimaan</th>
+      ${dep ? '<th class="r">Deposit Dipakai</th>' : ''}<th class="r">Biaya Admin</th><th class="r">Lebih Bayar</th><th class="r">Sisa Piutang</th></tr></thead>
+    <tbody>${rows.map((r, k) => { const n = k + 1, u = r.umkm ? ' chg' : ''; return `<tr>
+      <td class="c">${esc(r.inv.no)}</td><td class="c"><span class="tax ${r.inv.tax}${u}">${r.inv.tax}</span></td>
+      <td class="r">${money(r.t.sales)}</td><td class="r${u}">${money(r.t.dpp)}</td><td class="r${u}">${money(r.t.ppn)}</td>
+      <td class="r">${choice === 'Y'
+        ? `<input type="text" class="num cell-in${u}" id="pph_${n}" value="${money(r.defPph)}"><div class="row-note hidden" id="reset_${n}">Default ${whole(r.defPph)} &middot; <a href="javascript:void(0)" data-reset="${n}" class="text-info">Kembalikan</a></div>`
+        : `<input type="text" class="num cell-in" readonly value="0.00">`}
+        ${r.umkm ? `<div class="row-note chg">${choice === 'Y' ? 'PPh Final 0,5% dipotong customer' : 'PPh Final 0,5% setor sendiri: ' + whole(r.self)}</div>` : ''}</td>
+      <td class="r">${money(r.t.tagihan)}</td><td class="r" id="net_${n}">${money(r.t.tagihan - r.defPph)}</td>
+      <td class="r">${money(r.inv.saldo)}</td>
+      <td class="r"><input type="text" class="num cell-in" id="alok_${n}" data-pair="sisa_${n}" value="${money(r.inv.saldo)}"></td>
+      ${dep ? `<td class="r"><input type="text" class="num cell-in" id="dep_${n}" value="${money(r.dep0)}"></td>` : ''}
+      <td class="r"><input type="text" class="num cell-in" id="admin_${n}" value="0.00"></td>
+      <td class="r"><input type="text" class="num cell-in" id="lebih_${n}" value="0.00"></td>
+      <td class="r"><input type="text" class="num cell-in" id="sisa_${n}" data-pair="alok_${n}" value="0.00"></td></tr>`; }).join('')}</tbody>
+    <tfoot>
+      <tr class="sum"><td colspan="5" class="k">Total</td><td class="r" id="fPph">0.00</td><td colspan="2"></td><td class="r" id="fPiutang">0.00</td><td class="r" id="fAlok">0.00</td>${dep ? '<td class="r" id="fDep">0.00</td>' : ''}<td class="r" id="fAdmin">0.00</td><td class="r" id="fLebih">0.00</td><td class="r" id="fSisa">0.00</td></tr>
+      <tr class="sum"><td colspan="8" class="k">Total Piutang (Penjualan + PPN)</td><td class="r"><strong id="cPiutang">0.00</strong></td><td colspan="${rest}"></td></tr>
+      <tr class="sum"><td colspan="8" class="k">Uang Masuk</td><td class="r"><strong>${money(bank)}</strong></td><td colspan="${rest}"></td></tr>
+      ${dep ? `<tr class="sum"><td colspan="8" class="k">Deposit Dipakai</td><td class="r"><strong id="cDep" class="text-primary">0.00</strong></td><td colspan="${rest}" class="muted small">Nominal di form ${money(depAmount)} &middot; saldo deposit ${money(batch.cust.deposit)} &middot; sisa setelah dipakai ${money(batch.cust.deposit - depAmount)}</td></tr>` : ''}
+      <tr class="sum"><td colspan="8" class="k">Lebih Bayar</td><td class="r"><strong id="cLebih" class="text-success">0.00</strong></td><td colspan="${rest}" class="muted small hidden" id="lebihNote">Masuk ke saldo deposit customer</td></tr>
+      <tr class="sum"><td colspan="8" class="k">Kontrol</td><td class="r"><span id="badge_kontrol" class="kontrol-bad">0.00</span></td><td colspan="${rest}" class="muted small">((Piutang &minus; PPH 23${hasUmkm ? ' / PPh Final' : ''} &minus; biaya admin &minus; sisa piutang) &minus; uang masuk &minus; deposit dipakai) + lebih bayar</td></tr>
+    </tfoot></table></div>
+  <div id="boxErr" class="alert red hidden"><i class="fa fa-exclamation-circle"></i> <span id="errText"></span></div>
+  <div id="boxOk" class="alert blue hidden"><i class="fa fa-check-circle"></i> <strong>Kontrol 0.</strong> Periksa jurnal di bawah, lalu klik Proses untuk menyimpan.</div>
+  <div class="journal-section hidden" id="journalSection">
+    <div class="scroll"><table style="font-size:12px">
+      <thead><tr><th>Tanggal Jurnal</th><th>COA</th><th>Nama Company</th><th>Nama Account</th><th>Deskripsi</th><th class="r">Debit</th><th class="r">Credit</th></tr></thead>
+      <tbody id="journalBody"></tbody>
+      <tfoot><tr class="sum"><td colspan="5" class="c">Balancing</td><td class="r" id="jDr">0</td><td class="r" id="jCr">0</td></tr></tfoot>
+    </table></div>
+    <div class="alert warn chg hidden" id="coaNote"><i class="fa fa-info-circle"></i> COA <b>Beban PPh Final</b> / <b>Hutang PPh Final</b> belum ada di master accounting, jadi dikosongkan. Penerimaan tetap bisa disimpan, tetapi <b>posting ke accounting ditolak</b> sampai COA-nya dilengkapi.</div>
+  </div>`;
+  $('dialog').classList.remove('hidden');
+  recalc();
+}
+const val = id => { const el = $(id); return el ? cents(el.value) : 0; };
+function recalc(){
+  const {rows, choice, depChoice, depAmount, bank} = batch;
+  const errors = [], lines = [];
+  let tP = 0, tPph = 0, tA = 0, tAd = 0, tS = 0, tD = 0, tL = 0;
+  rows.forEach((r, k) => {
+    const n = k + 1, inv = r.inv, piutang = inv.saldo;
+    const pph = choice === 'Y' ? val('pph_' + n) : 0, alok = val('alok_' + n), admin = val('admin_' + n), sisa = val('sisa_' + n);
+    const dep = depChoice === 'Y' ? val('dep_' + n) : 0, lebih = val('lebih_' + n);
+    if ([pph, alok, admin, sisa, dep, lebih].some(isNaN)) { errors.push('Nominal tidak valid di ' + inv.no + '.'); return; }
+    if (Math.min(pph, alok, admin, sisa, dep, lebih) < 0) errors.push('Nilai minus tidak diperbolehkan di ' + inv.no + '.');
+    if (dep > 0 && lebih > 0) errors.push('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan pada ' + inv.no + '.');
+    const label = pphLabel(inv.tax);
+    if (pph > r.remaining) errors.push(label + ' melebihi sisa ' + (r.umkm ? 'batas PPh Final 0,5% Penjualan' : 'batas 2% Penjualan') + ' invoice ' + inv.no + '.');
+    if (pph > piutang) errors.push(label + ' ' + inv.no + ' melebihi piutang dagang invoice.');
+    if (sisa > piutang) errors.push('Sisa piutang melebihi piutang dagang invoice ' + inv.no + '.');
+    if (alok <= 0 || alok + sisa !== piutang) errors.push('Alokasi penerimaan + sisa harus sama dengan saldo piutang ' + inv.no + '.');
+    $('net_' + n).textContent = money(r.t.tagihan - pph);
+    if ($('reset_' + n)) $('reset_' + n).classList.toggle('hidden', pph === r.defPph);
+    tP += piutang; tPph += pph; tA += alok; tAd += admin; tS += sisa; tD += dep; tL += lebih;
+    const cash = alok - pph - admin - dep + lebih;
+    if (cash < 0) errors.push('Penerimaan bank tidak boleh minus pada ' + inv.no + '.');
+    const sfx = ' - ' + inv.no + ' - ' + inv.spk + (inv.tax === 'KB' ? ' - Kawasan Berikat' : (r.umkm ? ' - UMKM Non-PKP' : ''));
+    const add = (a, dr, cr, mark) => lines.push({coa: a.code, acc: a.name, desc: a.name + sfx, dr, cr, umkm: r.umkm, mark});
+    // Urutan = Invoice_consulting::receipt_journal
+    if (cash > 0) add(ACC.bank, cash, 0);
+    if (pph > 0 && !r.umkm) add(ACC.pph, pph, 0);
+    if (admin > 0) add(ACC.admin, admin, 0);
+    if (dep > 0) add(ACC.deposit, dep, 0);
+    if (piutang > 0) add(ACC.receivable, 0, piutang);
+    if (sisa > 0) add(ACC.receivable, sisa, 0);
+    if (lebih > 0) add(ACC.deposit, 0, lebih);
+    // UMKM: Beban PPh Final (D) = dipotong + setor sendiri; Hutang PPh Final (K) = setor sendiri.
+    if (r.umkm && pph + r.self > 0) add(ACC.pph_final_expense, pph + r.self, 0, true);
+    if (r.umkm && r.self > 0) add(ACC.pph_final_payable, 0, r.self, true);
+  });
+  if (depChoice === 'Y' && tD !== depAmount) errors.push('Total Deposit Dipakai per invoice (' + money(tD) + ') harus sama dengan Nominal Deposit Dipakai di form (' + money(depAmount) + ').');
+  if (tAd > 1000000) errors.push('Total biaya admin melebihi 10,000.');
+  const kontrol = ((tP - tPph - tAd - tS) - bank - tD) + tL;
+  if (kontrol > 0) errors.push('Masih ada selisih kurang ' + money(kontrol) + '. Alokasikan ke PPh 23 / PPh Final, Biaya Admin, atau Sisa Piutang pada invoice yang sesuai.');
+  if (kontrol < 0) errors.push('Ada kelebihan ' + money(-kontrol) + '. Alokasikan ke Lebih Bayar (masuk ke saldo deposit customer).');
+  const set = (id, c) => { if ($(id)) $(id).textContent = money(c); };
+  set('fPph', tPph); set('fPiutang', tP); set('fAlok', tA); set('fDep', tD); set('fAdmin', tAd); set('fLebih', tL); set('fSisa', tS);
+  set('cPiutang', tP); set('cDep', tD); set('cLebih', tL);
+  $('lebihNote').classList.toggle('hidden', tL <= 0);
+  $('badge_kontrol').textContent = money(kontrol); $('badge_kontrol').className = kontrol === 0 ? 'kontrol-ok' : 'kontrol-bad';
+  const dr = lines.reduce((s, l) => s + l.dr, 0), cr = lines.reduce((s, l) => s + l.cr, 0);
+  const isOk = !errors.length && dr === cr;
+  $('errText').innerHTML = errors.length ? `<b>${kontrol !== 0 ? 'Catatan: kontrol belum 0, belum bisa disimpan.' : 'Catatan: data belum valid.'}</b><ul style="margin:6px 0 0 18px;padding:0">${errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '';
+  $('boxErr').classList.toggle('hidden', !errors.length); $('boxOk').classList.toggle('hidden', !!errors.length);
+  $('journalBody').innerHTML = lines.map(l => `<tr${l.mark ? ' class="chg"' : ''}><td>${fdate(TRANS_DATE)}</td><td title="${l.coa ? '' : 'COA belum ada (dikosongkan)'}">${esc(l.coa)}</td><td>${OWNER}</td><td>${esc(l.acc)}</td><td>${esc(l.desc)}</td><td class="text-right">${whole(l.dr)}</td><td class="text-right">${whole(l.cr)}</td></tr>`).join('');
+  $('jDr').textContent = whole(dr); $('jCr').textContent = whole(cr);
+  $('coaNote').classList.toggle('hidden', !lines.some(l => l.coa === ''));
+  $('journalSection').classList.toggle('hidden', !isOk);
+  $('btnProses').disabled = !isOk;
+  batch.lines = lines; batch.totals = {tD, tL};
+  batch.result = rows.map((r, k) => ({r, sisa: val('sisa_' + (k + 1))}));
+}
+function closeDialog(){ $('dialog').classList.add('hidden'); }
+function proses(){
+  const {cust, result, totals} = batch;
+  result.forEach(({r, sisa}) => { r.inv.saldo = sisa; r.inv.paidPph = true; });
+  cust.deposit += totals.tL - totals.tD;
+  closeDialog();
+  toast('Penerimaan tersimpan (mockup). Jurnal ' + batch.lines.length + ' baris dibuat' + (batch.lines.some(l => l.coa === '') ? '; posting ke accounting menunggu COA PPh Final.' : '.'), 'success');
+  renderList(false);
+}
+
+/* ---------- Skenario Excel ---------- */
+const CASES = [
+  {name: '1. Penerimaan Piutang DP', inv: ['I1'], Y: 60942500, N: 61250000},
+  {name: '2. Penerimaan Piutang Progress', inv: ['I2'], Y: 198750000, N: 199750000},
+  {name: '3. Lebih Bayar 1.000.000', inv: ['I2'], Y: 298750000, N: 299750000, lebih: 100000000},
+  {name: '4. Kurang Bayar 1.000.000', inv: ['I2'], Y: 98750000, N: 99750000, sisa: 100000000},
+  {name: '5. Bank + Deposit 500.000', inv: ['I2'], Y: 148750000, N: 149750000, dep: 50000000},
+  {name: '6. Campuran UMKM + PKP', inv: ['I2', 'I3'], Y: 416750000, N: 421750000}
+];
+function resetData(){
+  INVOICES.forEach(i => { i.saldo = i.tax === 'PKP' ? taxCalc(i.sales, 'PKP').tagihan : i.sales; delete i.paidPph; });
+  CUSTOMERS[0].deposit = 150000000;
+}
+function loadCase(k, choice){
+  const c = CASES[k];
+  resetData(); closeDialog();
+  $('customer').value = 'C1'; $('pph23_dipotong').value = choice; renderList(false);
+  document.querySelectorAll('#invList input[type=checkbox]').forEach(i => { i.checked = c.inv.includes(i.value); });
+  $('deposit_choice').value = c.dep ? 'Y' : 'N'; $('wrapDepAmount').classList.toggle('hidden', !c.dep);
+  $('deposit_amount').value = c.dep ? money(c.dep) : '';
+  $('nominal_bank').value = money(c[choice]);
+  openProcess();
+  const setIn = (id, v) => { if ($(id)) $(id).value = money(v); };
+  setIn('admin_1', 250000);
+  if (c.lebih) setIn('lebih_1', c.lebih);
+  if (c.sisa) { setIn('sisa_1', c.sisa); setIn('alok_1', batch.rows[0].inv.saldo - c.sisa); }
+  recalc();
+}
+$('caseBody').innerHTML = CASES.map((c, k) => `<tr><td>${esc(c.name)}</td><td>${c.inv.map(id => INVOICES.find(i => i.id === id).no).join(' + ')}</td>
+  <td class="r">${money(c.Y)} <button type="button" data-case="${k}" data-choice="Y">Muat</button></td>
+  <td class="r">${money(c.N)} <button type="button" data-case="${k}" data-choice="N">Muat</button></td></tr>`).join('');
+
+let toastTimer;
+function toast(msg, kind){ const t = $('toast'); t.textContent = msg; t.className = 'toast' + (kind ? ' ' + kind : ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 4500); }
+
+/* ---------- event ---------- */
+$('customer').addEventListener('change', () => { $('pph23_dipotong').value = ''; fmsg(''); renderList(false); });
+$('pph23_dipotong').addEventListener('change', () => renderList(true));
+$('deposit_choice').addEventListener('change', e => { $('wrapDepAmount').classList.toggle('hidden', e.target.value !== 'Y'); if (e.target.value !== 'Y') $('deposit_amount').value = ''; });
+$('formData').addEventListener('submit', e => { e.preventDefault(); openProcess(); });
+$('dlgBody').addEventListener('input', e => {
+  const pair = e.target.dataset.pair;
+  if (pair){ const n = e.target.id.split('_')[1], rest = batch.rows[n - 1].inv.saldo - cents(e.target.value); if (!isNaN(rest)) $(pair).value = money(rest); }
+  recalc();
+});
+document.addEventListener('click', e => {
+  const cs = e.target.closest('[data-case]'); if (cs) return loadCase(+cs.dataset.case, cs.dataset.choice);
+  const rs = e.target.closest('[data-reset]'); if (rs){ const n = +rs.dataset.reset; $('pph_' + n).value = money(batch.rows[n - 1].defPph); return recalc(); }
+  if (e.target.closest('[data-close]')) return closeDialog();
+  const tt = e.target.closest('[data-toast]'); if (tt) return toast(tt.dataset.toast);
+});
+$('btnProses').addEventListener('click', proses);
+$('navReceipt').addEventListener('click', () => { closeDialog(); resetData(); $('customer').value = ''; renderList(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDialog(); });
+$('burger').addEventListener('click', () => document.body.classList.toggle('collapsed'));
+$('chgToggle').addEventListener('change', e => document.body.classList.toggle('show-chg', e.target.checked));
+
+fillCustomers();
+renderList(false);
+</script>
+</body>
+</html>

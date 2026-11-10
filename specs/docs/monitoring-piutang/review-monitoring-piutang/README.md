@@ -19,11 +19,11 @@ Versi 5 November 2026. Semua isi folder ini dicocokkan dengan kode per tanggal i
 
 | Salinan | Sumber |
 |---|---|
-| `mockup/` | `docs/uji-coba-monitoring-piutang/` (versi kerja: `docs/mockup-monitoring-piutang.html`) |
-| `flow-process.drawio` | `docs/flow-invoice-sampai-monitoring-piutang.drawio` |
-| `erd.drawio` | `docs/erd-invoice-sampai-monitoring-piutang.drawio` |
-| `fr-nfr.md` | `docs/fr-nfr-monitoring-piutang.md` (link di dalamnya diarahkan ke file di folder ini) |
-| `contoh-export-dashboard-plan-bayar.xlsx` | `docs/contoh-export-dashboard-plan-bayar.xlsx` |
+| `mockup/` | `docs/monitoring-piutang/uji-coba-monitoring-piutang/` (versi kerja: `docs/monitoring-piutang/mockup-monitoring-piutang.html`) |
+| `flow-process.drawio` | `docs/monitoring-piutang/flow-invoice-sampai-monitoring-piutang.drawio` |
+| `erd.drawio` | `docs/monitoring-piutang/erd-invoice-sampai-monitoring-piutang.drawio` |
+| `fr-nfr.md` | `docs/monitoring-piutang/fr-nfr-monitoring-piutang.md` (link di dalamnya diarahkan ke file di folder ini) |
+| `contoh-export-dashboard-plan-bayar.xlsx` | `docs/monitoring-piutang/contoh-export-dashboard-plan-bayar.xlsx` |
 | `use-case.md` | Diturunkan dari `fr-nfr.md` |
 
 **Hal yang masih menunggu keputusan** (rinciannya di `fr-nfr.md` bagian "Catatan / masih terbuka"):

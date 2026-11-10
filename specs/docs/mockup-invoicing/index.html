@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Invoicing</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+/* ===== Shell AdminLTE (header, sidebar, konten) seperti aplikasi SENDIGS SS ===== */
+:root{--header:#3c8dbc;--logo:#367fa9;--side:#222d32;--side-sub:#2c3b41;--side-text:#b8c7ce;--bg:#ecf0f5;--chg:#8e44ad;}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:"Source Sans Pro","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;color:#333;background:var(--bg);}
+.main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--header);display:flex;}
+.logo{width:230px;background:var(--logo);color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+.navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+.navbar .burger{background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;}
+.nav-right{display:flex;align-items:center;gap:26px;font-size:14px;}
+.nav-right a{color:#fff;text-decoration:none;}
+.nav-right .user{display:flex;align-items:center;gap:8px;}
+.avatar{width:22px;height:22px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+.chg-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;}
+.sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+.sidebar .menu-search{padding:12px 10px 22px;}
+.sidebar .menu-search div{display:flex;align-items:center;gap:8px;border:1px solid #4b5a61;border-radius:4px;padding:10px;color:#b8c7ce;font-size:13px;}
+.sidebar ul{list-style:none;margin:0;padding:0;}
+.sidebar .item>a{display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);text-decoration:none;cursor:pointer;}
+.sidebar .item>a .fa{width:16px;text-align:center;}
+.sidebar .item>a .chev{margin-left:auto;font-size:11px;}
+.sidebar .item.open>a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+.sidebar .sub{background:var(--side-sub);padding:5px 0;}
+.sidebar .sub a{display:block;padding:7px 5px 7px 22px;color:#8aa4af;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar .sub a::before{content:"\203A  ";}
+.sidebar .sub a.active{color:#fff;font-weight:600;}
+.content-wrapper{margin-left:230px;margin-top:50px;padding:15px;min-height:calc(100vh - 50px);}
+.content-wrapper>h1{font-size:24px;font-weight:400;margin:4px 0 16px;color:#333;}
+body.collapsed .sidebar{display:none;}
+body.collapsed .content-wrapper{margin-left:0;}
+.hidden{display:none !important;}
+.box{position:relative;background:#fff;margin-bottom:20px;}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;cursor:pointer;font-family:inherit;text-decoration:none;}
+.form-control{display:block;width:100%;padding:6px 12px;border:1px solid #ccc;background:#fff;font-family:inherit;}
+.table{width:100%;border-collapse:collapse;margin-bottom:0;}
+.table th,.table td{border-top:1px solid #e5ebf1;text-align:left;}
+.table-bordered th,.table-bordered td{border:1px solid #e5ebf1;}
+.text-right{text-align:right !important;}
+.text-center{text-align:center !important;}
+dd{margin:0;}
+@media (max-width:900px){
+  .sidebar{display:none;}
+  .content-wrapper{margin-left:0;padding:12px 16px;}
+  .logo{width:auto;padding:0 14px;font-size:17px;}
+  .nav-right a{display:none;}
+}
+
+/* ===== assets/css/invoicing.css (disalin dari aplikasi) ===== */
+.invoice-workspace{--invoice-ink:#172b40;--invoice-muted:#526477;--invoice-line:#dce4ed;--invoice-blue:#2876a3;color:var(--invoice-ink);font-size:14px;}
+.invoice-workspace.box{border:1px solid var(--invoice-line);border-radius:8px;box-shadow:none;}
+.invoice-workspace .box-body{padding:24px;}
+.invoice-workspace .invoice-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px;border-bottom:1px solid var(--invoice-line);}
+.invoice-workspace .invoice-heading h2{margin:0 0 7px;font-size:24px;font-weight:600;line-height:1.3;letter-spacing:-.4px;}
+.invoice-workspace .invoice-heading p,.invoice-workspace .invoice-section-heading p{margin:0;color:var(--invoice-muted);line-height:1.6;}
+.invoice-workspace .invoice-heading-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.invoice-workspace .btn{border-radius:5px;min-height:40px;padding:9px 14px;font-weight:600;font-size:13px;white-space:normal;}
+.invoice-workspace .btn-primary:not(.btn-sm),.invoice-workspace .btn-success:not(.btn-sm){background:var(--invoice-blue);border-color:var(--invoice-blue);color:#fff;}
+.invoice-workspace .btn-primary:not(.btn-sm):hover{background:#205f84;border-color:#205f84;}
+.invoice-workspace .btn-default:not(.btn-sm){background:#fff;color:#314b63;border-color:#bdcbd9;}
+.invoice-workspace .btn-default:not(.btn-sm):hover{background:#f1f5f9;}
+.invoice-workspace :is(a,button,input,select,textarea,[tabindex="0"]):focus-visible{outline:3px solid #2876a3;outline-offset:3px;}
+.invoice-workspace label{display:inline-block;font-size:13px;font-weight:600;margin-bottom:8px;}
+.invoice-workspace .form-control{min-height:42px;border-radius:5px;border-color:#bdcbd9;box-shadow:none;color:var(--invoice-ink);font-size:14px;}
+.invoice-workspace .form-control:focus{border-color:var(--invoice-blue);box-shadow:0 0 0 2px #e5f0f8;outline:0;}
+.invoice-workspace .form-control[readonly],.invoice-workspace .form-control:disabled{background:#f3f6f9;color:#43576b;}
+.invoice-workspace .form-control.is-invalid{border-color:#ad3333;}
+.invoice-workspace .form-group{margin-bottom:20px;}
+.invoice-workspace .invoice-tabs{display:flex;gap:24px;margin:0 0 24px;padding:0;list-style:none;border-bottom:1px solid var(--invoice-line);}
+.invoice-workspace .invoice-tabs button{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--invoice-muted);min-height:44px;padding:0 0 13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:inline-flex;align-items:flex-end;gap:7px;}
+.invoice-workspace .invoice-tabs .active button{color:#205f84;border-bottom-color:var(--invoice-blue);}
+.invoice-tab-count{display:inline-block;min-width:22px;padding:1px 7px;border-radius:10px;background:#edf3f8;color:#344d64;font-size:12px;line-height:1.6;text-align:center;}
+.invoice-workspace .invoice-toolbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:16px;margin:0 0 24px;padding:18px;background:#f3f6f9;border-radius:6px;}
+.invoice-workspace .invoice-filter{flex:0 1 190px;}
+.invoice-workspace .invoice-filter label{display:block;}
+.invoice-workspace .invoice-toolbar-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.invoice-workspace .invoice-toolbar .invoice-toolbar-end{margin-left:auto;}
+.invoice-workspace .invoice-table-scroll{width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+.invoice-workspace .invoice-list-table{min-width:1200px;width:100% !important;}
+.invoice-workspace .invoice-list-table.invoice-consulting-table{min-width:980px;table-layout:fixed;}
+.invoice-workspace .invoice-consulting-table td{padding:10px;vertical-align:top;overflow-wrap:break-word;}
+.invoice-workspace .invoice-consulting-table td:first-child,.invoice-workspace .invoice-consulting-table td:last-child{text-align:center;}
+.invoice-workspace .invoice-list-table td:last-child .btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.invoice-workspace .invoice-cell-primary{font-weight:600;line-height:1.5;}
+.invoice-workspace .invoice-cell-secondary{margin-top:5px;color:#526477;line-height:1.5;}
+.invoice-workspace .invoice-cell-label{font-size:12px;color:#526477;}
+.invoice-workspace .invoice-cell-team{display:grid;grid-template-columns:64px minmax(0,1fr);gap:4px 8px;margin:0;}
+.invoice-workspace .invoice-cell-team dt{color:#526477;font-weight:400;font-size:11px;}
+.invoice-workspace .invoice-cell-team dd{margin:0;line-height:1.4;}
+.invoice-workspace table{font-size:13px;}
+.invoice-workspace table th{font-weight:600;}
+.invoice-workspace table thead th{background:#edf3f8;color:#344d64;border-bottom:1px solid #bdcbd9;vertical-align:middle;padding:13px 12px;text-align:left;}
+.invoice-workspace table td{padding:13px 12px;vertical-align:middle;border-color:#e5ebf1;line-height:1.55;overflow-wrap:anywhere;}
+.invoice-workspace table.table-striped>tbody>tr:nth-of-type(odd){background:#fff;}
+.invoice-workspace table.table-striped>tbody>tr:nth-of-type(even){background:#f8fafc;}
+.invoice-workspace table tbody tr:hover{background:#f0f6fb;}
+.invoice-workspace .text-right,.invoice-workspace [data-total]{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.invoice-workspace .invoice-list-table .btn{min-height:30px;padding:5px 10px;margin:0;border-radius:10px;font-size:12px;font-weight:400;line-height:1.5;}
+.invoice-workspace .invoice-list-table .btn.btn-primary{background:#3c8dbc;border-color:#367fa9;color:#fff;}
+.invoice-workspace .badge{display:inline-block;padding:5px 8px;margin:2px;border-radius:4px;line-height:1.4;font-weight:600;font-size:12px;}
+.invoice-workspace .bg-green{color:#186145 !important;background:#e6f4ed !important;}
+.invoice-workspace .bg-yellow{color:#785512 !important;background:#fff3d8 !important;}
+.invoice-workspace .bg-blue{color:#205f84 !important;background:#eaf3fa !important;}
+.invoice-workspace .bg-purple{color:#5b2d78 !important;background:#f2e9f8 !important;}
+.invoice-workspace .bg-grey{color:#344d64 !important;background:#edf3f8 !important;}
+.invoice-workspace .invoice-section{margin-bottom:30px;}
+.invoice-workspace .invoice-section-heading{margin-bottom:18px;}
+.invoice-workspace .invoice-section-heading h3{margin:0 0 6px;color:var(--invoice-ink);font-size:17px;font-weight:600;}
+.invoice-workspace .invoice-document-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;}
+.invoice-workspace .invoice-customer{padding:22px;border:1px solid var(--invoice-line);border-radius:6px;background:#f8fafc;}
+.invoice-workspace .invoice-customer dl{margin:0;}
+.invoice-workspace .invoice-customer dt{font-size:12px;font-weight:600;color:var(--invoice-muted);margin:18px 0 5px;}
+.invoice-workspace .invoice-customer dt:first-child{margin-top:0;}
+.invoice-workspace .invoice-customer dd{line-height:1.65;overflow-wrap:anywhere;}
+.invoice-workspace .invoice-customer .invoice-customer-name{font-size:18px;font-weight:600;line-height:1.5;}
+.invoice-workspace .invoice-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;}
+.invoice-workspace .invoice-fields .invoice-field-wide{grid-column:1 / -1;}
+.invoice-workspace .invoice-help{font-size:12px;line-height:1.6;color:var(--invoice-muted);margin:7px 0 0;}
+.invoice-workspace .invoice-required{color:#ad3333;}
+.invoice-workspace .invoice-financial-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.8fr);gap:36px;align-items:start;margin-bottom:32px;}
+.invoice-workspace .invoice-summary{border:1px solid var(--invoice-line);border-radius:6px;overflow:hidden;}
+.invoice-workspace .invoice-summary h3{font-size:16px;margin:0;padding:18px;background:#f3f6f9;font-weight:600;}
+.invoice-workspace .invoice-summary table{margin:0;width:100%;border-collapse:collapse;}
+.invoice-workspace .invoice-summary th{padding:13px 18px;font-weight:500;border-top:1px solid #e5ebf1;text-align:left;}
+.invoice-workspace .invoice-summary td{padding:13px 18px;border-top:1px solid #e5ebf1;}
+.invoice-workspace .invoice-summary small{display:block;margin-top:3px;color:var(--invoice-muted);font-size:11px;font-weight:400;}
+.invoice-workspace .invoice-summary .invoice-grand-total{background:#eaf3fa;color:#205f84;font-size:16px;}
+.invoice-workspace .invoice-summary .invoice-grand-total th,.invoice-workspace .invoice-summary .invoice-grand-total td{font-weight:700;}
+.invoice-workspace .invoice-receivable{border-top:1px solid var(--invoice-line);padding:14px 18px;display:flex;justify-content:space-between;gap:20px;font-size:13px;}
+.invoice-workspace .invoice-summary .invoice-vat-note{margin:0;padding:0 18px 14px;}
+.invoice-workspace .invoice-summary .invoice-vat-note[hidden]{display:none;}
+.invoice-workspace .invoice-journal-table{min-width:1000px;}
+.invoice-workspace .invoice-top-table{min-width:720px;}
+.invoice-workspace .invoice-journal-table tfoot th{background:#edf3f8;border-top:2px solid #bdcbd9;padding:14px 12px;text-align:left;}
+.invoice-workspace .invoice-empty{text-align:center !important;padding:28px !important;color:var(--invoice-muted);background:#f8fafc;}
+.invoice-workspace .invoice-feedback:empty{display:none;}
+.invoice-workspace .invoice-feedback{margin:16px 0;padding:12px 16px;background:#f3f6f9;border:1px solid var(--invoice-line);border-radius:5px;line-height:1.6;}
+.invoice-workspace .invoice-feedback[data-state="error"]{color:#9c2d2d;background:#fff3f3;border-color:#eacaca;}
+.invoice-workspace .invoice-actions{display:flex;align-items:center;gap:10px;padding-top:22px;border-top:1px solid var(--invoice-line);}
+.invoice-workspace .invoice-table-status{margin:0 0 12px;color:var(--invoice-muted);font-size:13px;}
+.invoice-workspace .invoice-list-table .invoice-action-toggle{min-height:34px;padding:6px 8px;border-radius:5px;white-space:nowrap;font-weight:600;color:#205f84;background:#edf5fb;border-color:#b6cedf;}
+.invoice-workspace .invoice-list-table .invoice-action-toggle[aria-expanded="true"]{color:#174b6b;background:#dcecf7;border-color:#8bb5cf;}
+.invoice-action-toggle::after{content:'';display:inline-block;margin-left:7px;vertical-align:middle;border:4px solid transparent;border-bottom:0;border-top-color:currentColor;}
+.invoice-action-menu{position:fixed;z-index:1060;width:220px;max-width:calc(100vw - 16px);padding:5px;background:#fff;border:1px solid #dce4ed;border-radius:6px;box-shadow:0 6px 18px rgba(23,43,64,.16);font-size:14px;}
+.invoice-action-menu[hidden]{display:none;}
+.invoice-action-menu>button{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:9px 12px;border:0;border-radius:4px;background:transparent;color:#172b40;text-align:left;font-family:inherit;font-size:14px;cursor:pointer;}
+.invoice-action-menu>[data-action-tone="blue"]{--action-accent:#205f84;--action-tint:#eaf3fa;}
+.invoice-action-menu>[data-action-tone="green"]{--action-accent:#186145;--action-tint:#e6f4ed;}
+.invoice-action-menu .invoice-action-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 28px;height:28px;border-radius:5px;color:var(--action-accent);background:var(--action-tint);font-size:14px;}
+.invoice-action-menu>button:hover{color:var(--action-accent);background:var(--action-tint);}
+/* mode tambah (invoice-compact) */
+.invoice-workspace.invoice-compact .invoice-heading{padding:16px 20px;}
+.invoice-workspace.invoice-compact .box-body{padding:18px 20px;}
+.invoice-workspace.invoice-compact .invoice-section{margin-bottom:20px;}
+.invoice-workspace.invoice-compact .invoice-section-heading{margin-bottom:12px;}
+.invoice-workspace.invoice-compact .invoice-document-grid{align-items:start;gap:24px;}
+.invoice-workspace.invoice-compact .invoice-customer{padding:14px 16px;}
+.invoice-workspace.invoice-compact .invoice-customer dl{display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px 12px;align-items:baseline;}
+.invoice-workspace.invoice-compact .invoice-customer dt{margin:0;}
+.invoice-workspace.invoice-compact .invoice-customer dd{margin:0;line-height:1.5;}
+.invoice-workspace.invoice-compact .invoice-customer .invoice-customer-name{font-size:16px;}
+.invoice-workspace.invoice-compact .invoice-fields{align-content:start;gap:12px 18px;}
+.invoice-workspace.invoice-compact .form-group{margin-bottom:0;}
+.invoice-workspace.invoice-compact label{margin-bottom:5px;}
+.invoice-workspace.invoice-compact .invoice-help{margin-top:4px;}
+.invoice-workspace.invoice-compact .invoice-financial-grid{grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:24px;margin-bottom:20px;}
+.invoice-workspace.invoice-compact .invoice-billing-main{min-width:0;}
+.invoice-workspace.invoice-compact .invoice-top-table{min-width:560px;margin-bottom:0;}
+.invoice-workspace.invoice-compact table thead th,.invoice-workspace.invoice-compact table td{padding:10px 12px;}
+.invoice-workspace.invoice-compact .invoice-summary h3{padding:12px 14px;}
+.invoice-workspace.invoice-compact .invoice-summary th,.invoice-workspace.invoice-compact .invoice-summary td{padding:9px 14px;}
+.invoice-workspace.invoice-compact .invoice-receivable{padding:10px 14px;}
+.invoice-workspace.invoice-compact .invoice-journal-table tfoot th{padding:10px 12px;}
+.invoice-workspace.invoice-compact .invoice-actions{padding-top:14px;}
+@media (max-width:1000px){
+  .invoice-workspace .invoice-document-grid,.invoice-workspace .invoice-financial-grid,
+  .invoice-workspace.invoice-compact .invoice-document-grid,.invoice-workspace.invoice-compact .invoice-financial-grid{grid-template-columns:minmax(0,1fr);gap:18px;}
+}
+@media (max-width:767px){
+  .invoice-workspace .invoice-heading{flex-direction:column;padding:16px;gap:14px;}
+  .invoice-workspace .invoice-heading h2{font-size:21px;}
+  .invoice-workspace .box-body{padding:16px;}
+  .invoice-workspace .invoice-toolbar{padding:14px;gap:14px;}
+  .invoice-workspace .invoice-filter{flex:1 1 140px;}
+  .invoice-workspace .invoice-toolbar-actions,.invoice-workspace .invoice-toolbar .invoice-toolbar-end{margin-left:0;width:100%;}
+  .invoice-workspace .invoice-fields{grid-template-columns:minmax(0,1fr);gap:12px;}
+  .invoice-workspace .invoice-tabs{gap:16px;overflow-x:auto;}
+  .invoice-workspace .invoice-tabs button{white-space:nowrap;}
+}
+
+/* ===== tambahan mockup: toolbar tabel, toast, penanda perubahan ===== */
+.dt-top,.dt-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 16px;}
+.dt-bottom{margin:16px 0 0;color:#526477;font-size:13px;}
+.dt-top .dt-length{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;}
+.dt-top .dt-length select{width:auto;min-height:38px;}
+.dt-top .dt-search{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+.dt-top .dt-search label{margin:0;}
+.dt-top .dt-search input{width:240px;min-height:38px;}
+.dt-pager{display:flex;gap:4px;}
+.dt-pager span{border:1px solid #dce4ed;border-radius:4px;padding:4px 10px;}
+.dt-pager span.current{background:#e5f0f8;border-color:#b6cedf;color:#205f84;}
+.money-stack{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-variant-numeric:tabular-nums;}
+.money-stack dt{color:#526477;font-size:11px;}
+.money-stack dd{text-align:right;white-space:nowrap;}
+.money-stack dd.strong{font-weight:700;}
+.toast{position:fixed;right:20px;bottom:20px;background:#172b40;color:#fff;padding:12px 16px;border-radius:5px;font-size:13px;z-index:2000;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:380px;line-height:1.5;}
+.toast.error{background:#9c2d2d;}
+.toast.success{background:#186145;}
+body.show-chg .chg{outline:2px dashed var(--chg);outline-offset:3px;}
+.legend{display:none;font-size:12.5px;color:var(--chg);margin:0 0 10px;}
+body.show-chg .legend{display:block;}
+.invoiced-cards{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px;}
+.invoiced-card{border:1px solid #dce4ed;border-radius:6px;padding:14px 16px;background:#fff;min-width:0;}
+.invoiced-card-main{background:#eaf3fa;border-color:#b6cedf;}
+.invoiced-card-label{font-size:12px;font-weight:600;color:#526477;text-transform:uppercase;letter-spacing:.3px;}
+.invoiced-card-value{font-size:20px;font-weight:700;color:#172b40;font-variant-numeric:tabular-nums;margin:4px 0 2px;overflow-wrap:anywhere;}
+.invoiced-card-main .invoiced-card-value{font-size:24px;color:#205f84;}
+.invoiced-card-sub{font-size:12px;color:#526477;line-height:1.5;}
+@media (max-width:900px){.invoiced-cards{grid-template-columns:1fr 1fr;}.invoiced-card-main{grid-column:1 / -1;}}
+details.cases{border:1px solid #d2d6de;border-left:3px solid var(--chg);border-radius:3px;padding:8px 12px;margin-bottom:14px;background:#fff;}
+details.cases summary{cursor:pointer;font-weight:600;}
+details.cases ol{margin:8px 0 2px;padding-left:20px;}
+details.cases li{margin:3px 0;line-height:1.5;}
+</style>
+</head>
+<body class="show-chg">
+
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" id="burger" aria-label="Buka/tutup menu"><i class="fa fa-bars"></i></button>
+    <div class="nav-right">
+      <label class="chg-toggle"><input type="checkbox" id="chgToggle" checked> Tandai perubahan</label>
+      <a>Helpdesk</a><a>Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="menu-search"><div><i class="fa fa-search"></i> Cari menu...</div></div>
+  <ul>
+    <li class="item"><a><i class="fa fa-dashboard"></i>Dashboard</a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Data<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Inventory<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Assets<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-bar-chart"></i>PR Dept, Stok, Asset<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-cubes"></i>Purchase<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-bank"></i>Pengeluaran Non Pembelian<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-check"></i>Approval<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-check"></i>Approval PR<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-archive"></i>Warehouse Stock<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-angle-right"></i>Budget<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item open">
+      <a><i class="fa fa-angle-right"></i>Finance<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a>Plan Tagih</a></li>
+        <li><a>Actual Plan Tagih</a></li>
+        <li><a class="active" id="navInvoicing">Invoicing</a></li>
+        <li><a>Jurnal All</a></li>
+        <li><a>Report Actual Plan Tagih</a></li>
+        <li><a>Report Uninvoiced Dan Piutang Pelanggan</a></li>
+        <li><a>Report Petty Cash</a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-angle-right"></i>Penerimaan<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a href="penerimaan-piutang.html" id="navReceipt">Penerimaan Piutang</a></li>
+      </ul>
+    </li>
+    <li class="item"><a><i class="fa fa-cog"></i>Settings<i class="fa fa-angle-left chev"></i></a></li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+  <h1>Invoicing</h1>
+  <p class="legend">Garis putus-putus ungu = bagian yang baru/berubah: perlakuan PPN <b>UMKM Non-PKP</b> dan tab <b>Invoiced</b>. Matikan "Tandai perubahan" di header untuk melihat tampilan bersih.</p>
+
+  <!-- ================= DAFTAR INVOICE ================= -->
+  <section id="viewList">
+    <details class="cases" open><summary>Skenario uji mockup</summary><ol>
+      <li>Tab <b>Konsultasi</b> berisi TOP yang <b>belum ditagihkan</b>. Klik <b>Buat Invoice</b> pada <b>PT Karya Mandiri Sejahtera</b>.</li>
+      <li>Pilih Perlakuan PPN <b>UMKM Non-PKP</b> lalu COA penjualan. Ringkasan: DPP tetap dihitung, PPN <b>0</b>, Total tagihan = Piutang awal = Penjualan (PPN tidak ditagihkan). Jurnal hanya <b>Piutang Dagang Usaha (D)</b> dan <b>Penjualan (K)</b>, tanpa baris PPN, deskripsi berakhiran <b>"- UMKM Non-PKP"</b>.</li>
+      <li>Coba ganti ke PKP / WAPU / Kawasan Berikat untuk membandingkan jurnal.</li>
+      <li>Isi Nomor PO dan Nomor faktur, klik <b>Simpan invoice</b>. Baris pindah dari tab Konsultasi ke tab <b>Invoiced</b>.</li>
+      <li>Di tab <b>Invoiced</b>, filter Perlakuan PPN = UMKM Non-PKP, lalu buka <b>Aksi → Lihat invoice</b> untuk melihat detail dan jurnal yang tersimpan.</li>
+      <li>Di tab <b>Invoiced</b>, card <b>Total Invoiced</b> di paling atas mengikuti filter <b>Tahun</b>, <b>Bulan invoice</b>, <b>Company</b>, dan <b>Perlakuan PPN</b> (klik <b>Terapkan filter</b>) serta pencarian. Klik <b>Ekspor Excel</b> untuk mengunduh file <b>.xlsx</b> berisi invoice yang tampil, dengan baris Total (butuh internet untuk memuat library Excel).</li>
+      <li>Lanjut ke penerimaan: menu <a href="penerimaan-piutang.html"><b>Penerimaan › Penerimaan Piutang</b></a> berisi skenario jurnal penerimaan invoice UMKM (PPh Final 0,5%) dari Excel.</li>
+    </ol></details>
+
+    <div class="box invoice-workspace">
+      <div class="invoice-heading">
+        <div><h2>Daftar invoice</h2><p>Kelola tagihan konsultasi per TOP dan invoice non konsultasi.</p></div>
+        <div class="invoice-heading-actions"><button type="button" class="btn btn-default" data-toast="Pengaturan COA tidak termasuk mockup ini."><i class="fa fa-sliders"></i> Pengaturan COA</button></div>
+      </div>
+      <div class="box-body">
+        <ul class="invoice-tabs" role="tablist" aria-label="Jenis invoice">
+          <li role="presentation" class="active"><button type="button" role="tab" data-tab="consulting" aria-selected="true">Konsultasi <span class="invoice-tab-count" id="countConsulting"></span></button></li>
+          <li role="presentation"><button type="button" role="tab" data-tab="other" aria-selected="false">Non Konsultasi</button></li>
+          <li role="presentation" class="chg"><button type="button" role="tab" data-tab="invoiced" aria-selected="false">Invoiced <span class="invoice-tab-count" id="countInvoiced"></span></button></li>
+        </ul>
+
+        <!-- Tab Konsultasi: TOP belum ditagihkan -->
+        <div id="panelConsulting" role="tabpanel">
+          <div class="invoice-toolbar">
+            <div class="invoice-filter"><label for="fYearC">Tahun</label>
+              <select id="fYearC" class="form-control"><option>2026</option><option>2025</option><option>2024</option></select></div>
+            <div class="invoice-toolbar-actions"><button type="button" class="btn btn-primary" id="btnFilterC">Terapkan filter</button></div>
+            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-default" data-toast="Ekspor Excel belum tersambung (mockup)."><i class="fa fa-file-excel-o"></i> Ekspor Excel</button></div>
+          </div>
+          <p class="invoice-table-status chg">Tab ini hanya menampilkan TOP yang <b>belum ditagihkan</b>. Invoice yang sudah terbit ada di tab <b>Invoiced</b>.</p>
+          <div class="dt-top">
+            <div class="dt-length">Tampilkan <select class="form-control"><option>10</option><option>25</option><option>50</option></select> baris</div>
+            <div class="dt-search"><label for="qC">Cari:</label><input id="qC" class="form-control" placeholder="Nomor, customer, atau project"></div>
+          </div>
+          <div class="invoice-table-scroll" tabindex="0" role="region" aria-label="Daftar tagihan konsultasi">
+            <table class="table table-striped invoice-list-table invoice-consulting-table">
+              <thead><tr><th style="width:4%">No.</th><th style="width:20%">Dokumen</th><th style="width:30%">Customer &amp; Project</th><th style="width:9%">Company</th><th style="width:17%">Tim</th><th style="width:9%">Status</th><th style="width:11%" class="text-center">Aksi</th></tr></thead>
+              <tbody id="bodyConsulting"></tbody>
+            </table>
+          </div>
+          <div class="dt-bottom"><span id="infoConsulting"></span><span class="dt-pager"><span>Sebelumnya</span><span class="current">1</span><span>Berikutnya</span></span></div>
+        </div>
+
+        <!-- Tab Non Konsultasi: tidak berubah -->
+        <div id="panelOther" role="tabpanel" class="hidden">
+          <div class="invoice-toolbar">
+            <div class="invoice-filter"><label for="fYearO">Tahun</label>
+              <select id="fYearO" class="form-control"><option>2026</option><option>2025</option></select></div>
+            <div class="invoice-toolbar-actions"><button type="button" class="btn btn-primary">Terapkan filter</button></div>
+            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-primary" data-toast="Invoice non konsultasi tidak berubah dan tidak termasuk mockup ini."><i class="fa fa-plus"></i> Buat invoice</button></div>
+          </div>
+          <div class="invoice-table-scroll">
+            <table class="table table-striped invoice-list-table">
+              <thead><tr><th>No.</th><th>No. Invoice</th><th>Kepada</th><th>Company</th><th>No. Penawaran</th><th>Penjualan</th><th>PIC</th><th>Revisi</th><th>Status</th><th>Aksi</th></tr></thead>
+              <tbody><tr><td colspan="10" class="invoice-empty">Tab Non Konsultasi tidak berubah. Tidak ada data contoh di mockup ini.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab Invoiced (BARU): record invoice yang sudah terbit -->
+        <div id="panelInvoiced" role="tabpanel" class="hidden">
+          <section class="invoiced-cards chg" aria-label="Total invoiced sesuai filter">
+            <div class="invoiced-card invoiced-card-main">
+              <div class="invoiced-card-label">Total Invoiced</div>
+              <div class="invoiced-card-value" id="cardTotal">0.00</div>
+              <div class="invoiced-card-sub"><b id="cardCount">0</b> invoice &middot; <span id="cardScope"></span></div>
+            </div>
+            <div class="invoiced-card"><div class="invoiced-card-label">Penjualan</div><div class="invoiced-card-value" id="cardSales">0.00</div><div class="invoiced-card-sub">Nilai sebelum PPN</div></div>
+            <div class="invoiced-card"><div class="invoiced-card-label">PPN</div><div class="invoiced-card-value" id="cardPpn">0.00</div><div class="invoiced-card-sub">UMKM Non-PKP = 0</div></div>
+            <div class="invoiced-card"><div class="invoiced-card-label">Saldo piutang</div><div class="invoiced-card-value" id="cardReceivable">0.00</div><div class="invoiced-card-sub">Sisa yang belum dibayar customer</div></div>
+          </section>
+          <div class="invoice-toolbar chg">
+            <div class="invoice-filter"><label for="fYearI">Tahun</label>
+              <select id="fYearI" class="form-control"><option value="2026">2026</option><option value="2025">2025</option><option value="">Semua tahun</option></select></div>
+            <div class="invoice-filter"><label for="fMonthI">Bulan invoice</label>
+              <select id="fMonthI" class="form-control"><option value="">Semua bulan</option></select></div>
+            <div class="invoice-filter"><label for="fCompanyI">Company</label>
+              <select id="fCompanyI" class="form-control"><option value="">Semua company</option></select></div>
+            <div class="invoice-filter"><label for="fTaxI">Perlakuan PPN</label>
+              <select id="fTaxI" class="form-control"><option value="">Semua perlakuan</option></select></div>
+            <div class="invoice-toolbar-actions"><button type="button" class="btn btn-primary" id="btnFilterI">Terapkan filter</button></div>
+            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-default" id="btnExportI"><i class="fa fa-file-excel-o"></i> Ekspor Excel</button></div>
+          </div>
+          <div class="dt-top">
+            <div class="dt-length">Tampilkan <select class="form-control"><option>10</option><option>25</option><option>50</option></select> baris</div>
+            <div class="dt-search"><label for="qI">Cari:</label><input id="qI" class="form-control" placeholder="No. invoice, SPK, customer, atau PO"></div>
+          </div>
+          <div class="invoice-table-scroll chg" tabindex="0" role="region" aria-label="Daftar invoice yang sudah terbit">
+            <table class="table table-striped invoice-list-table invoice-consulting-table" style="min-width:1080px">
+              <thead><tr><th style="width:4%">No.</th><th style="width:16%">Dokumen</th><th style="width:23%">Customer &amp; Project</th><th style="width:8%">Company</th><th style="width:11%">Perlakuan PPN</th><th style="width:19%">Nilai (Rp)</th><th style="width:9%">Status</th><th style="width:10%" class="text-center">Aksi</th></tr></thead>
+              <tbody id="bodyInvoiced"></tbody>
+            </table>
+          </div>
+          <div class="dt-bottom"><span id="infoInvoiced"></span><span class="dt-pager"><span>Sebelumnya</span><span class="current">1</span><span>Berikutnya</span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BUAT / DETAIL INVOICE KONSULTASI ================= -->
+  <section id="viewForm" class="hidden">
+    <div class="box invoice-workspace consulting-invoice" id="formBox">
+      <div class="invoice-heading">
+        <div><h2 id="formTitle">Buat invoice konsultasi</h2><p id="formSub"></p></div>
+        <div class="invoice-heading-actions"><button type="button" class="btn btn-default" data-back>Kembali ke daftar</button></div>
+      </div>
+      <div class="box-body">
+        <section class="invoice-section">
+          <div class="invoice-section-heading"><h3>Customer &amp; dokumen</h3><p id="docHint"></p></div>
+          <div class="invoice-document-grid">
+            <div class="invoice-customer"><dl>
+              <dt>Kepada</dt><dd class="invoice-customer-name" id="cKepada"></dd>
+              <dt>Alamat</dt><dd id="cAlamat"></dd>
+              <dt>Ditujukan</dt><dd>Finance Dept.</dd>
+              <dt>No. SPK</dt><dd id="cSpk"></dd>
+            </dl></div>
+            <div class="invoice-fields">
+              <div class="form-group"><label for="fDate">Tanggal invoice <span class="invoice-required">*</span></label><input id="fDate" type="date" class="form-control"><p class="invoice-help">Tanggal jurnal mengikuti tanggal invoice.</p></div>
+              <div class="form-group"><label for="fNumber">Nomor invoice</label><input id="fNumber" class="form-control" readonly><p class="invoice-help" id="numberHint"></p></div>
+              <div class="form-group"><label for="fPo">Nomor PO <span class="invoice-required">*</span></label><input id="fPo" class="form-control" maxlength="100" placeholder="Masukkan nomor PO"></div>
+              <div class="form-group"><label for="fFaktur">Nomor faktur <span class="invoice-required">*</span></label><input id="fFaktur" class="form-control" maxlength="100" placeholder="Masukkan nomor faktur"></div>
+              <div class="form-group invoice-field-wide"><label for="fTax">Perlakuan PPN <span class="invoice-required">*</span></label>
+                <select id="fTax" class="form-control chg"><option value="">Pilih perlakuan PPN</option></select>
+                <p class="invoice-help" id="taxHelp"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="invoice-financial-grid">
+          <div class="invoice-billing-main">
+            <section class="invoice-section">
+              <div class="invoice-section-heading"><h3>Rincian TOP</h3><p>Satu TOP untuk satu invoice. Nominal mengikuti plan tagih dan tidak dapat diubah di sini.</p></div>
+              <div class="invoice-table-scroll"><table class="table table-bordered invoice-top-table"><thead><tr><th>No.</th><th>Term of Payment</th><th>Persentase</th><th class="text-right">Nominal (Rp)</th><th>Deskripsi</th></tr></thead><tbody id="topBody"></tbody></table></div>
+            </section>
+            <section>
+              <div class="invoice-section-heading"><h3>Akun penjualan</h3><p>Kategori penjualan menentukan akun pendapatan pada jurnal invoice.</p></div>
+              <div class="form-group" id="salesWrap"><label for="fSales">COA penjualan <span class="invoice-required">*</span></label><select id="fSales" class="form-control"><option value="">Pilih COA Penjualan</option></select></div>
+              <div class="invoice-customer hidden" id="salesView"></div>
+              <p class="invoice-help">PPh dicatat saat penerimaan sesuai bukti yang diinput. Nilainya tidak mengurangi piutang awal invoice ini.</p>
+            </section>
+          </div>
+          <section class="invoice-summary" aria-labelledby="sumTitle">
+            <h3 id="sumTitle">Ringkasan tagihan <span class="invoice-help">(Rp)</span></h3>
+            <table><tbody>
+              <tr><th scope="row">Penjualan<small>Nominal TOP</small></th><td class="text-right" data-total="sales"></td></tr>
+              <tr><th scope="row">DPP<small>Penjualan × 11/12</small></th><td class="text-right" data-total="other"></td></tr>
+              <tr><th scope="row">PPN<small>DPP × 12%</small></th><td class="text-right" data-total="ppn"></td></tr>
+              <tr class="invoice-grand-total"><th scope="row">Total tagihan<small>Penjualan + PPN</small></th><td class="text-right" data-total="gross"></td></tr>
+            </tbody></table>
+            <div class="invoice-receivable" id="receivableRow"><span>Piutang awal</span><strong data-total="receivable"></strong></div>
+            <p class="invoice-help invoice-vat-note chg" id="vatNote" hidden>UMKM Non-PKP tidak memungut PPN: DPP tetap dihitung, PPN 0, total tagihan sama dengan penjualan.</p>
+          </section>
+        </div>
+
+        <section class="invoice-section">
+          <div class="invoice-section-heading"><h3>Jurnal invoice</h3><p id="journalHint"></p></div>
+          <div class="invoice-table-scroll"><table class="table table-striped invoice-journal-table">
+            <thead><tr><th>Tanggal jurnal</th><th>Company</th><th>COA</th><th>Nama COA</th><th>Deskripsi</th><th class="text-right">Debit (Rp)</th><th class="text-right">Kredit (Rp)</th></tr></thead>
+            <tbody id="journalBody"></tbody>
+            <tfoot><tr><th colspan="5" scope="row">Total debit / kredit</th><th class="text-right" id="jDebit">0.00</th><th class="text-right" id="jCredit">0.00</th></tr></tfoot>
+          </table></div>
+        </section>
+        <p class="invoice-feedback" id="formMsg" role="status" aria-live="polite"></p>
+        <div class="invoice-actions"><button type="button" class="btn btn-primary" id="btnSave">Simpan invoice</button><button type="button" class="btn btn-default" data-back>Kembali ke daftar</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="invoice-action-menu" id="actionMenu" role="menu" hidden></div>
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+<!-- SheetJS: membuat file .xlsx di browser untuk Ekspor Excel tab Invoiced (butuh internet saat halaman dibuka) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- perhitungan: sama dengan assets/js/invoicing/consulting.js (dalam sen) ---------- */
+const TAX = {PKP:'PKP', WAPU:'WAPU', KB:'Kawasan Berikat', UMKM:'UMKM Non-PKP'};
+const TAX_BADGE = {PKP:'bg-blue', WAPU:'bg-yellow', KB:'bg-grey', UMKM:'bg-purple'};
+const TAX_HELP_DEFAULT = 'Piutang PKP mencakup PPN. Piutang WAPU, Kawasan Berikat, dan UMKM Non-PKP sebesar penjualan.';
+const TAX_HELP_UMKM = 'UMKM Non-PKP (omzet ≤ Rp4,8 M, PPh Final 0,5%) tidak memungut PPN: piutang sebesar penjualan dan jurnal tanpa baris PPN.';
+const TAX_SUFFIX = {KB:' - Kawasan Berikat', UMKM:' - UMKM Non-PKP'};
+function ratio(n, a, b){ return Math.floor(n / b) * a + Math.floor(((n % b) * a + Math.floor(b / 2)) / b); }
+function totals(sales, type){
+  // UMKM Non-PKP tidak memungut PPN: DPP tetap dihitung (11/12), PPN 0, total tagihan = penjualan.
+  const noVat = type === 'UMKM';
+  const other = ratio(sales, 11, 12), ppn = noVat ? 0 : ratio(other, 12, 100);
+  return {sales, other, ppn, gross: sales + ppn, receivable: type === 'PKP' ? sales + ppn : sales, type};
+}
+const money = c => (c / 100).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+/* ---------- mapping COA (Pengaturan COA) ---------- */
+const ACC = {
+  receivable:       {code:'1102-01-01', name:'Piutang Dagang Usaha'},
+  vat_domestic:     {code:'2104-01-07', name:'Hutang PPN DN'},
+  vat_wapu_prepaid: {code:'1106-01-XX', name:'Uang Muka PPN WAPU'},   // nomor contoh
+  vat_wapu_payable: {code:'2104-01-XX', name:'Hutang PPN WAPU'},      // nomor contoh
+  sales_consulting: {code:'4101-01-01', name:'Penjualan Konsultasi'},
+  sales_inhouse:    {code:'4101-01-02', name:'Penjualan In House Training'},
+  sales_public:     {code:'4101-01-03', name:'Penjualan Public Training & Seminar'},
+  sales_hse:        {code:'4101-01-05', name:'Penjualan HSE Pengujian'}
+};
+const SALES_ROLES = ['sales_consulting','sales_inhouse','sales_public','sales_hse'];
+function journal(t, role, number, spk){
+  const lines = [];
+  if (t.type === 'WAPU') lines.push(['vat_wapu_prepaid', t.ppn, 0]);
+  lines.push(['receivable', t.receivable, 0]);
+  if (t.type === 'PKP') lines.push(['vat_domestic', 0, t.ppn]);
+  if (t.type === 'WAPU') lines.push(['vat_wapu_payable', 0, t.ppn]);
+  lines.push([role, 0, t.sales]);   // KB dan UMKM: hanya Piutang (D) dan Penjualan (K)
+  return lines.map(l => ({coa: ACC[l[0]].code, name: ACC[l[0]].name, debit: l[1], credit: l[2],
+    desc: ACC[l[0]].name + ' - ' + number + ' - ' + spk + (TAX_SUFFIX[t.type] || '')}));
+}
+
+/* ---------- data contoh ----------
+   TOPS     = TOP plan tagih yang belum ditagihkan (tab Konsultasi).
+   INVOICES = invoice yang sudah terbit (tab Invoiced).
+   PT JTEKT diambil dari video aplikasi; data lain (dummy). Nominal dalam sen. */
+const SPK = {
+  jtekt:   {customer:'PT JTEKT Indonesia Sales', alamat:'Kawasan Industri MM2100, Ruko Kawasan Vasanta Innopark Unit Kosai K63, K65, K66, Jl. Kalimantan Kavling CB 2, Gandamekar, Kec. Cikarang Bar., Kabupaten Bekasi, Jawa Barat 17530', spk:'114/STM/MKT-SPK/IX/26', project:'ISO 9001:2026 Quality Management System Development, Implementation and Certification Assistance', company:'STM', leader:'Imanuel Iman', sales:'Puspita Novia Ningrum'},
+  resonac: {customer:'PT Resonac Materials Indonesia', alamat:'Jl. Industri Selatan 5 Blok GG No. 1, Kawasan Industri Jababeka II, Cikarang', spk:'113/STM/MKT-SPK/IX/26', project:'RKL-RPL Rinci dan Pertek Emisi serta SLO', company:'Sustain', leader:'Cahyadi', sales:'Masika Arinal Simanjuntak'},
+  softpren:{customer:'PT Softpren Industries Indonesia', alamat:'Jl. Jababeka XII Blok W No. 20, Cikarang', spk:'108/STM/MKT-SPK/IX/26', project:'IATF 16949', company:'STM', leader:'Hasiholan Simanjuntak', sales:'Erna Susanti'},
+  umkm:    {customer:'PT Karya Mandiri Sejahtera', alamat:'Jl. Raya Bogor Km. 27 No. 5, Jakarta Timur', spk:'034/STM/MKT-SPK/IV/26', project:'Pendampingan Implementasi ISO 9001:2015 untuk UMKM', company:'Sustain', leader:'Hasiholan Simanjuntak', sales:'Erna Susanti'},
+  pelni:   {customer:'PT Pelayaran Nasional Indonesia (Persero)', alamat:'Jl. Gajah Mada No. 14, Jakarta Pusat', spk:'052/STM/MKT-SPK/V/26', project:'Jasa Konsultasi Pendampingan dan Sertifikasi Sistem Manajemen Terintegrasi (SMT)', company:'STM', leader:"Sya'bani Abdullah Amir", sales:'Asri Sinta Lestari'},
+  rnp:     {customer:'PT RNP Technologies Indonesia', alamat:'Kawasan Industri Jl. Industri No. 12, Cikarang, Kab. Bekasi', spk:'010/STM/MKT-SPK/I/24', project:'Consultation Guidance Quality Management System Implementation Based on IATF 16949:2016', company:'STM', leader:'Hasiholan Simanjuntak', sales:'Erna Susanti'},
+  berikat: {customer:'PT Mitra Berikat Presisi', alamat:'Kawasan Industri Jl. Industri Raya No. 8, Cikarang', spk:'021/STM/MKT-SPK/III/26', project:'Pendampingan Implementasi ISO 9001:2015 dan ISO 14001:2015', company:'Sustain', leader:'Dimas Prakoso', sales:'Masika Arinal Simanjuntak'}
+};
+let TOPS = [
+  {id:'t1', spk:'jtekt',    term:'Penagihan 2', pct:50,    sales:5090000002, desc:'dibulan ke 2'},
+  {id:'t2', spk:'umkm',     term:'Penagihan 2', pct:48.60, sales:200000000,  desc:'setelah progress pendampingan selesai'},
+  {id:'t3', spk:'resonac',  term:'Penagihan 1', pct:40,    sales:4200000000, desc:'setelah dokumen RKL-RPL diserahkan'},
+  {id:'t4', spk:'softpren', term:'Penagihan 1', pct:30,    sales:2937240000, desc:'setelah program dimulai'}
+];
+let INVOICES = [
+  {no:'262/STM/2026', date:'2026-11-05', spk:'jtekt',   term:'Penagihan 1', pct:50,    sales:5090000002,  desc:'setelah kick-off',                 tax:'PKP',  role:'sales_inhouse',    po:'PO-JTK-2611', faktur:'010.000-26.00012345'},
+  {no:'261/STM/2026', date:'2026-11-03', spk:'umkm',    term:'Penagihan 1', pct:14.95, sales:61500000,    desc:'setelah SPK ditandatangani',       tax:'UMKM', role:'sales_consulting', po:'PO-KMS-001',  faktur:'-'},
+  {no:'260/STM/2026', date:'2026-10-20', spk:'berikat', term:'Penagihan 1', pct:40,    sales:6000000000,  desc:'setelah kick-off dan gap analysis', tax:'KB',   role:'sales_consulting', po:'PO-MBP-0420', faktur:'070.000-26.00004567'},
+  {no:'259/STM/2026', date:'2026-10-09', spk:'rnp',     term:'Penagihan 4', pct:20,    sales:1958160000,  desc:'Pada bulan ke-11',                 tax:'PKP',  role:'sales_consulting', po:'PO-RNP-118',  faktur:'010.000-26.00009876'},
+  {no:'258/STM/2026', date:'2026-09-30', spk:'pelni',   term:'Penagihan 2', pct:30,    sales:29100000000, desc:'setelah audit internal dan tinjauan manajemen', tax:'WAPU', role:'sales_consulting', po:'PO-PELNI-77', faktur:'030.000-26.00001111'},
+  {no:'257/STM/2026', date:'2026-09-15', spk:'resonac', term:'Penagihan 1', pct:30,    sales:3150000000,  desc:'setelah kick-off',                 tax:'PKP',  role:'sales_consulting', po:'PO-RMI-0915', faktur:'010.000-26.00008800'},
+  {no:'231/STM/2025', date:'2025-12-15', spk:'softpren',term:'Penagihan 1', pct:30,    sales:2937240000,  desc:'setelah program dimulai',          tax:'PKP',  role:'sales_consulting', po:'PO-SPI-1215', faktur:'010.000-25.00007711'},
+  {no:'198/STM/2025', date:'2025-10-10', spk:'rnp',     term:'Penagihan 3', pct:20,    sales:1958160000,  desc:'Pada bulan ke-8',                  tax:'PKP',  role:'sales_consulting', po:'PO-RNP-101',  faktur:'010.000-25.00005522'}
+];
+let nextNumber = 263;
+
+/* ---------- daftar ---------- */
+let taxFilter = '', monthFilter = '', yearFilter = '2026', companyFilter = '';
+const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+// Company hanya tiga (kons_tr_company): STM, Vuca, Sustain.
+const COMPANIES = ['STM', 'Vuca', 'Sustain'];
+const MONTHS_LONG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function fmtDate(d){ const p = d.split('-'); return `${+p[2]} ${MONTHS[+p[1] - 1]} ${p[0]}`; }
+function teamCell(s){ return `<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>${esc(s.leader)}</dd><dt>Sales</dt><dd>${esc(s.sales)}</dd></dl>`; }
+function renderConsulting(){
+  const q = $('qC').value.trim().toLowerCase();
+  const rows = TOPS.filter(t => { const s = SPK[t.spk]; return !q || [s.spk, s.customer, s.project].join(' ').toLowerCase().includes(q); });
+  $('bodyConsulting').innerHTML = rows.length ? rows.map((t, i) => { const s = SPK[t.spk]; return `<tr>
+    <td>${i + 1}</td>
+    <td><div class="invoice-cell-primary">Belum ada invoice</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ${esc(s.spk)}</div></td>
+    <td><div class="invoice-cell-primary">${esc(s.customer)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ${esc(s.project)}</div></td>
+    <td>${esc(s.company)}</td><td>${teamCell(s)}</td>
+    <td><span class="badge bg-yellow">Uninvoiced</span></td>
+    <td><button type="button" class="btn btn-sm btn-primary" data-add="${t.id}"><i class="fa fa-plus"></i> Buat Invoice</button></td></tr>`; }).join('')
+    : `<tr><td colspan="7" class="invoice-empty">Tidak ada TOP yang belum ditagihkan. Invoice yang sudah terbit ada di tab Invoiced.</td></tr>`;
+  $('infoConsulting').textContent = rows.length ? `1–${rows.length} dari ${rows.length} baris` : 'Belum ada baris ditampilkan';
+  $('countConsulting').textContent = TOPS.length;
+}
+// Baris tab Invoiced sesuai filter (Tahun, Bulan, Company, Perlakuan PPN) dan pencarian. Dipakai tabel, card, dan Ekspor Excel.
+function invoicedRows(){
+  const q = $('qI').value.trim().toLowerCase();
+  return INVOICES.filter(v => { const s = SPK[v.spk];
+    return (!yearFilter || v.date.slice(0, 4) === yearFilter) && (!monthFilter || v.date.slice(5, 7) === monthFilter)
+      && (!companyFilter || s.company === companyFilter) && (!taxFilter || v.tax === taxFilter)
+      && (!q || [v.no, s.spk, s.customer, s.project, v.po].join(' ').toLowerCase().includes(q)); })
+    .sort((a, b) => b.date.localeCompare(a.date) || b.no.localeCompare(a.no));
+}
+function invoicedScope(){
+  return [yearFilter ? 'Tahun ' + yearFilter : 'Semua tahun', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua bulan',
+    companyFilter || 'Semua company', taxFilter ? TAX[taxFilter] : 'Semua perlakuan PPN'];
+}
+function renderCards(rows){
+  const sum = k => rows.reduce((n, v) => n + totals(v.sales, v.tax)[k], 0);
+  $('cardTotal').textContent = money(sum('gross'));
+  $('cardCount').textContent = rows.length;
+  $('cardScope').textContent = invoicedScope().join(' · ') + ($('qI').value.trim() ? ' · cari "' + $('qI').value.trim() + '"' : '');
+  $('cardSales').textContent = money(sum('sales'));
+  $('cardPpn').textContent = money(sum('ppn'));
+  $('cardReceivable').textContent = money(sum('receivable'));
+}
+function renderInvoiced(){
+  const rows = invoicedRows();
+  renderCards(rows);
+  $('bodyInvoiced').innerHTML = rows.length ? rows.map((v, i) => { const s = SPK[v.spk], t = totals(v.sales, v.tax); return `<tr>
+    <td>${i + 1}</td>
+    <td><div class="invoice-cell-primary">${esc(v.no)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Tgl:</span> ${fmtDate(v.date)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ${esc(s.spk)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">PO:</span> ${esc(v.po)}</div></td>
+    <td><div class="invoice-cell-primary">${esc(s.customer)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ${esc(s.project)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">TOP:</span> ${esc(v.term)} (${v.pct.toFixed(2)}%)</div></td>
+    <td>${esc(s.company)}</td>
+    <td><span class="badge ${TAX_BADGE[v.tax]}${v.tax === 'UMKM' ? ' chg' : ''}">${TAX[v.tax]}</span></td>
+    <td><dl class="money-stack"><dt>Penjualan</dt><dd>${money(t.sales)}</dd><dt>PPN</dt><dd>${money(t.ppn)}</dd><dt>Total tagihan</dt><dd>${money(t.gross)}</dd><dt>Saldo piutang</dt><dd class="strong">${money(t.receivable)}</dd></dl></td>
+    <td><span class="badge bg-green">Invoiced</span></td>
+    <td><button type="button" class="btn btn-default invoice-action-toggle" aria-haspopup="menu" aria-expanded="false" data-menu="${esc(v.no)}">Aksi</button></td></tr>`; }).join('')
+    : `<tr><td colspan="8" class="invoice-empty">Tidak ada invoice yang sesuai. Ubah kata pencarian atau filter.</td></tr>`;
+  $('infoInvoiced').textContent = rows.length ? `1–${rows.length} dari ${rows.length} baris` : 'Belum ada baris ditampilkan';
+  $('countInvoiced').textContent = INVOICES.length;
+}
+
+/* ---------- Ekspor Excel tab Invoiced: isi = baris yang tampil (filter + pencarian) ---------- */
+function exportInvoiced(){
+  const rows = invoicedRows();
+  if (!rows.length) return toast('Tidak ada invoice untuk diekspor. Ubah filter atau pencarian.', 'error');
+  const XLSX = window.XLSX;
+  if (!XLSX) return toast('Library Excel belum termuat. Buka mockup dengan koneksi internet lalu coba lagi.', 'error');
+  const head = ['No', 'No. Invoice', 'Tanggal Invoice', 'No. SPK', 'No. PO', 'No. Faktur', 'Customer', 'Project', 'Company', 'TOP', 'Persen TOP', 'Perlakuan PPN', 'Penjualan', 'DPP Lain-lain', 'PPN', 'Total Tagihan', 'Saldo Piutang', 'Status'];
+  const scope = invoicedScope(), q = $('qI').value.trim();
+  const aoa = [['Daftar Invoice (Invoiced)'], ['Filter: ' + scope.join(', ') + (q ? ', cari "' + q + '"' : '')], [], head];
+  rows.forEach((v, i) => { const s = SPK[v.spk], t = totals(v.sales, v.tax), p = v.date.split('-');
+    aoa.push([i + 1, v.no, p[2] + '-' + p[1] + '-' + p[0], s.spk, v.po, v.faktur, s.customer, s.project, s.company, v.term, v.pct / 100, TAX[v.tax],
+      t.sales / 100, t.other / 100, t.ppn / 100, t.gross / 100, t.receivable / 100, 'Invoiced']); });
+  const first = 5, last = first + rows.length - 1, total = ['Total', '', '', '', '', '', '', '', '', '', '', rows.length + ' invoice'];
+  aoa.push(total);
+  const ws = XLSX.utils.aoa_to_sheet(aoa), totalRow = last + 1;
+  ['M', 'N', 'O', 'P', 'Q'].forEach(col => {
+    ws[col + totalRow] = {t: 'n', f: `SUM(${col}${first}:${col}${last})`, v: rows.reduce((n, v) => n + totals(v.sales, v.tax)[{M:'sales', N:'other', O:'ppn', P:'gross', Q:'receivable'}[col]], 0) / 100, z: '#,##0.00'};
+    for (let r = first; r <= last; r++) if (ws[col + r]) ws[col + r].z = '#,##0.00';
+  });
+  for (let r = first; r <= last; r++) { if (ws['K' + r]) ws['K' + r].z = '0.00%'; ws['B' + r].t = 's'; }
+  ws['!ref'] = 'A1:R' + totalRow;
+  ws['!cols'] = [6, 16, 14, 24, 14, 22, 34, 44, 14, 14, 10, 16, 18, 18, 16, 18, 18, 10].map(w => ({wch: w}));
+  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 17}}, {s: {r: 1, c: 0}, e: {r: 1, c: 17}}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Invoiced');
+  const file = 'Invoiced_' + [yearFilter || 'Semua-tahun', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua-bulan', (companyFilter || 'Semua-company').replace(/[^A-Za-z0-9]+/g, '-'), taxFilter || 'Semua-PPN'].join('_') + '.xlsx';
+  XLSX.writeFile(wb, file);
+  toast(`Ekspor ${rows.length} invoice ke ${file}.`, 'success');
+}
+function showTab(tab){
+  document.querySelectorAll('.invoice-tabs [data-tab]').forEach(b => { const on = b.dataset.tab === tab; b.parentNode.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  $('panelConsulting').classList.toggle('hidden', tab !== 'consulting');
+  $('panelOther').classList.toggle('hidden', tab !== 'other');
+  $('panelInvoiced').classList.toggle('hidden', tab !== 'invoiced');
+  closeMenu();
+}
+
+/* ---------- menu Aksi (gaya assets/js/invoicing/action-menu.js) ---------- */
+let menuFor = null;
+function closeMenu(){ const m = $('actionMenu'); m.hidden = true; if (menuFor) menuFor.setAttribute('aria-expanded', 'false'); menuFor = null; }
+function openMenu(btn){
+  closeMenu();
+  const m = $('actionMenu'), no = btn.dataset.menu;
+  m.innerHTML = [['view','fa-eye','blue','Lihat invoice'],['print','fa-print','blue','Cetak invoice'],['kwitansi','fa-file-pdf-o','green','Cetak kwitansi']]
+    .map(a => `<button type="button" role="menuitem" data-act="${a[0]}" data-no="${esc(no)}" data-action-tone="${a[2]}"><i class="fa ${a[1]} invoice-action-icon"></i><span>${a[3]}</span></button>`).join('');
+  m.hidden = false; menuFor = btn; btn.setAttribute('aria-expanded', 'true');
+  const r = btn.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 8)) + 'px';
+  let top = r.bottom + 4; if (top + m.offsetHeight > window.innerHeight - 8) top = r.top - m.offsetHeight - 4;
+  m.style.top = Math.max(8, top) + 'px';
+}
+
+/* ---------- form buat / detail invoice konsultasi ---------- */
+let form = null;
+function fillSelects(){
+  const taxOpts = Object.keys(TAX).map(k => `<option value="${k}">${TAX[k]}</option>`).join('');
+  $('fTax').innerHTML = '<option value="">Pilih perlakuan PPN</option>' + taxOpts;
+  $('fTaxI').innerHTML = '<option value="">Semua perlakuan</option>' + taxOpts;
+  $('fMonthI').innerHTML = '<option value="">Semua bulan</option>' + MONTHS_LONG.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}">${m}</option>`).join('');
+  $('fCompanyI').innerHTML = '<option value="">Semua company</option>' + COMPANIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('fSales').innerHTML = '<option value="">Pilih COA Penjualan</option>' + SALES_ROLES.map(r => `<option value="${r}">${ACC[r].code} - ${esc(ACC[r].name)}</option>`).join('');
+}
+function openForm(mode, rec){
+  const s = SPK[rec.spk], editable = mode === 'add';
+  form = {mode, rec, number: editable ? `${nextNumber}/STM/2026` : rec.no};
+  $('formBox').classList.toggle('invoice-compact', editable);
+  $('formTitle').textContent = editable ? 'Buat invoice konsultasi' : 'Detail invoice konsultasi';
+  $('formSub').textContent = `${form.number} · SPK ${s.spk}`;
+  $('docHint').textContent = editable ? 'Identitas customer mengikuti SPK. Lengkapi dokumen dan perlakuan PPN untuk invoice ini.' : 'Identitas customer dan dokumen invoice mengikuti data yang tersimpan.';
+  $('cKepada').textContent = s.customer; $('cAlamat').textContent = s.alamat; $('cSpk').textContent = s.spk;
+  $('fDate').value = editable ? '2026-11-10' : rec.date;
+  $('fNumber').value = form.number;
+  $('numberHint').textContent = editable ? 'Nomor ditetapkan saat invoice disimpan.' : 'Nomor invoice mengikuti dokumen tersimpan.';
+  $('fPo').value = editable ? '' : rec.po;
+  $('fFaktur').value = editable ? '' : rec.faktur;
+  $('fTax').value = editable ? '' : rec.tax;
+  $('fSales').value = editable ? '' : rec.role;
+  ['fDate','fPo','fFaktur','fTax','fSales'].forEach(id => $(id).classList.remove('is-invalid'));
+  ['fDate','fPo','fFaktur'].forEach(id => { $(id).readOnly = !editable; });
+  $('fTax').disabled = !editable;
+  $('salesWrap').classList.toggle('hidden', !editable);
+  $('salesView').classList.toggle('hidden', editable);
+  if (!editable) $('salesView').textContent = ACC[rec.role].code + ' - ' + ACC[rec.role].name;
+  $('btnSave').classList.toggle('hidden', !editable);
+  $('journalHint').textContent = editable ? 'Periksa akun dan keseimbangan debit/kredit. Jurnal disimpan sebagai draf untuk diposting melalui modul Jurnal.' : 'Rincian jurnal invoice sesuai data yang tersimpan.';
+  $('topBody').innerHTML = `<tr><td>1</td><td>${esc(rec.term)}</td><td>${rec.pct.toFixed(2)}%</td><td class="text-right">${money(rec.sales)}</td><td>${esc(rec.desc)}</td></tr>`;
+  $('formMsg').textContent = ''; $('formMsg').removeAttribute('data-state');
+  render();
+  $('viewList').classList.add('hidden'); $('viewForm').classList.remove('hidden');
+  closeMenu(); window.scrollTo(0, 0);
+}
+function backToList(){ $('viewForm').classList.add('hidden'); $('viewList').classList.remove('hidden'); renderConsulting(); renderInvoiced(); window.scrollTo(0, 0); }
+
+function render(){
+  const type = $('fTax').value, role = $('fSales').value, rec = form.rec;
+  const t = type ? totals(rec.sales, type) : null;
+  document.querySelectorAll('#formBox [data-total]').forEach(el => {
+    const k = el.dataset.total;
+    el.textContent = t ? money(t[k]) : (k === 'sales' ? money(rec.sales) : '-');
+  });
+  $('receivableRow').classList.toggle('chg', type === 'UMKM');
+  $('vatNote').hidden = type !== 'UMKM';
+  document.querySelectorAll('#formBox [data-total="other"], #formBox [data-total="ppn"], #formBox [data-total="gross"]')
+    .forEach(el => el.classList.toggle('chg', type === 'UMKM'));
+  $('taxHelp').textContent = type === 'UMKM' ? TAX_HELP_UMKM : TAX_HELP_DEFAULT;
+  $('taxHelp').classList.toggle('chg', type === 'UMKM');
+  let d = 0, c = 0;
+  if (!type) $('journalBody').innerHTML = `<tr><td colspan="7" class="invoice-empty">Pilih perlakuan PPN dan COA penjualan untuk menampilkan jurnal.</td></tr>`;
+  else if (!role) $('journalBody').innerHTML = `<tr><td colspan="7" class="invoice-empty">Pilih COA penjualan untuk melengkapi jurnal invoice.</td></tr>`;
+  else {
+    const date = $('fDate').value || '-';
+    $('journalBody').innerHTML = journal(t, role, form.number, SPK[rec.spk].spk).map(l => { d += l.debit; c += l.credit; return `<tr>
+      <td>${esc(date)}</td><td>STM</td><td>${esc(l.coa)}</td><td>${esc(l.name)}</td>
+      <td class="${type === 'UMKM' ? 'chg' : ''}">${esc(l.desc)}</td><td class="text-right">${money(l.debit)}</td><td class="text-right">${money(l.credit)}</td></tr>`; }).join('');
+  }
+  $('jDebit').textContent = money(d); $('jCredit').textContent = money(c);
+}
+
+function save(){
+  const missing = [];
+  [['fPo','Nomor PO'],['fFaktur','Nomor faktur'],['fTax','Perlakuan PPN'],['fSales','COA penjualan']].forEach(([id, label]) => {
+    const bad = !$(id).value.trim(); $(id).classList.toggle('is-invalid', bad); if (bad) missing.push(label);
+  });
+  if (missing.length){
+    $('formMsg').dataset.state = 'error';
+    $('formMsg').textContent = 'Lengkapi dulu: ' + missing.join(', ') + '.';
+    return;
+  }
+  const r = form.rec, saved = form.number;
+  INVOICES.unshift({no: saved, date: $('fDate').value, spk: r.spk, term: r.term, pct: r.pct, sales: r.sales, desc: r.desc,
+    tax: $('fTax').value, role: $('fSales').value, po: $('fPo').value.trim(), faktur: $('fFaktur').value.trim()});
+  TOPS = TOPS.filter(x => x.id !== r.id);
+  nextNumber++;
+  backToList(); showTab('invoiced');
+  toast(`Invoice ${saved} tersimpan dan masuk ke tab Invoiced (mockup).`, 'success');
+}
+
+let toastTimer;
+function toast(msg, kind){ const t = $('toast'); t.textContent = msg; t.className = 'toast' + (kind ? ' ' + kind : ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500); }
+
+/* ---------- event ---------- */
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]'); if (tab) return showTab(tab.dataset.tab);
+  const add = e.target.closest('[data-add]'); if (add) return openForm('add', TOPS.find(t => t.id === add.dataset.add));
+  const tog = e.target.closest('[data-menu]'); if (tog) return menuFor === tog ? closeMenu() : openMenu(tog);
+  const act = e.target.closest('[data-act]');
+  if (act){
+    const inv = INVOICES.find(v => v.no === act.dataset.no);
+    closeMenu();
+    if (act.dataset.act === 'view') return openForm('view', inv);
+    return toast((act.dataset.act === 'print' ? 'Cetak invoice ' : 'Cetak kwitansi ') + inv.no + ' (mockup, tidak membuka PDF).');
+  }
+  if (e.target.closest('[data-back]')) return backToList();
+  const tt = e.target.closest('[data-toast]'); if (tt) return toast(tt.dataset.toast);
+  if (!e.target.closest('#actionMenu')) closeMenu();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+window.addEventListener('scroll', closeMenu, true);
+window.addEventListener('resize', closeMenu);
+$('fTax').addEventListener('change', render);
+$('fSales').addEventListener('change', render);
+$('fDate').addEventListener('change', render);
+$('btnSave').addEventListener('click', save);
+$('qC').addEventListener('input', renderConsulting);
+$('qI').addEventListener('input', renderInvoiced);
+$('btnFilterC').addEventListener('click', renderConsulting);
+$('btnFilterI').addEventListener('click', () => { yearFilter = $('fYearI').value; monthFilter = $('fMonthI').value; companyFilter = $('fCompanyI').value; taxFilter = $('fTaxI').value; renderInvoiced(); });
+$('btnExportI').addEventListener('click', exportInvoiced);
+$('navInvoicing').addEventListener('click', backToList);
+$('burger').addEventListener('click', () => document.body.classList.toggle('collapsed'));
+$('chgToggle').addEventListener('change', e => document.body.classList.toggle('show-chg', e.target.checked));
+
+fillSelects();
+renderConsulting();
+renderInvoiced();
+</script>
+</body>
+</html>
