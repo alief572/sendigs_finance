@@ -34,7 +34,7 @@
 	$('#pjTable').DataTable({
 		serverSide: true,
 		processing: true,
-		order: [[1, 'asc']],
+		order: [[5, 'asc']],
 		ajax: {type: 'post', url: siteurl + 'budget_periodik/get_data', cache: false, dataType: 'json'},
 		columns: [
 			{data: 'no', orderable: false},

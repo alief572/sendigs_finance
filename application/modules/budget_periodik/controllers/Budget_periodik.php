@@ -141,8 +141,14 @@ class Budget_periodik extends Admin_Controller
 		$order = (array) $this->input->post('order');
 		$col = isset($order[0]['column']) ? (int) $order[0]['column'] : 1;
 		$desc = isset($order[0]['dir']) && $order[0]['dir'] === 'desc';
+		// Status: menunggu approval dulu (pengajuan terbaru di atas), lalu yang lain dari keputusan BG terbaru; tanpa BG paling bawah.
+		$ts = function ($t) { return (int) strtotime((string) $t); };
 		$key = array(1 => function ($r) { return mb_strtolower($r['name']); }, 2 => function ($r) { return $r['sum']['act']; },
-			3 => function ($r) { return $r['sum']['bln']; }, 4 => function ($r) { return $r['sum']['thn']; }, 5 => function ($r) { return $r['pending'] ? 0 : 1; });
+			3 => function ($r) { return $r['sum']['bln']; }, 4 => function ($r) { return $r['sum']['thn']; },
+			5 => function ($r) use ($ts) {
+				if ($r['pending']) { return array(0, -$ts($r['pending']['at'])); }
+				return $r['last'] ? array(1, -$ts($r['last']['decided_on'] ?: $r['last']['at'])) : array(2, 0);
+			});
 		$key = isset($key[$col]) ? $key[$col] : $key[1];
 		usort($rows, function ($a, $b) use ($key, $desc) {
 			$cmp = $key($a) <=> $key($b);

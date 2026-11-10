@@ -104,6 +104,19 @@ $r2 = dt($c, ['start' => 1, 'length' => 1]);
 check($r2['recordsFiltered'] === 2 && count($r2['data']) === 1 && $r2['data'][0]['no'] === 2 && $r2['data'][0]['department'] === 'GA - STM', 'get_data: paging (start 1, length 1) keeps numbering');
 $r2 = dt($c, ['length' => 100000]);
 check(count($r2['data']) === 2, 'get_data: oversized page length is capped, not trusted');
+// urutan Status: pending dulu, lalu keputusan BG terbaru, tanpa BG paling bawah (BG sementara, dihapus lagi)
+$late = master($real, 'DEP-3', 'Internet', 200000);
+foreach ([['BG-T1', 'DEP-1', 'done', '2026-11-01 08:00:00', '2026-11-02 09:00:00'], ['BG-T2', 'DEP-2', 'pending', '2026-11-08 08:00:00', null], ['BG-T3', 'DEP-3', 'done', '2026-11-03 08:00:00', '2026-11-09 09:00:00']] as $b) {
+	$real->insert('tr_budget_bg', ['no_bg' => $b[0], 'departement' => $b[1], 'status' => $b[2], 'created_by' => 'x', 'created_on' => $b[3], 'decided_on' => $b[4]]);
+}
+$r2 = dt($c, ['order' => [['column' => 5, 'dir' => 'asc']]]);
+check(array_column($r2['data'], 'department') === ['GA - STM', 'Marketing - STM', 'Finance - STM'], 'get_data: status order = pending first, then latest decision first');
+$r2 = dt($c, ['order' => [['column' => 5, 'dir' => 'desc']]]);
+check(array_column($r2['data'], 'department') === ['Finance - STM', 'Marketing - STM', 'GA - STM'], 'get_data: status order descending reverses');
+$real->query("DELETE FROM tr_budget_bg WHERE no_bg LIKE 'BG-T%'");
+$real->query('DELETE FROM ms_budget_rutin WHERE id = ' . (int) $late);
+$r2 = dt($c, ['order' => [['column' => 5, 'dir' => 'asc']]]);
+check(array_column($r2['data'], 'department') === ['Finance - STM', 'GA - STM'], 'get_data: status order without any BG falls back to name');
 $GLOBALS['deny'] = ['Pembayaran_Periodik.View' => true];
 try { dt($c, []); check(false, 'get_data requires View'); } catch (RuntimeException $e) { check(strpos($e->getMessage(), 'denied') === 0, 'get_data requires View'); }
 $GLOBALS['deny'] = [];
