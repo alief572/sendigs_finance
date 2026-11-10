@@ -98,12 +98,23 @@ $old = row(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'ket_kirim' => 'r
     'fu_pic_nama' => 'B', 'fu_pic_telp' => '08123456789']);
 $m = $A::lock_saved(['tgl_kirim' => '2026-09-01', 'kirim_via' => 'Driver', 'ket_kirim' => 'x'] + $old, $old);
 same($m['tgl_kirim'], '2026-10-01', 'kirim terkunci setelah terima'); same($m['kirim_via'], 'JNE', 'via terkunci');
-$m = $A::lock_saved(['tgl_terima' => '2026-10-04'] + $old, $old); same($m['tgl_terima'], '2026-10-04', 'terima masih bisa dikoreksi sebelum FU1');
+$m = $A::lock_saved(['tgl_terima' => '2026-10-04', 'ket_terima' => 'Ani'] + $old, $old);
+same([$m['tgl_terima'], $m['ket_terima']], ['2026-10-02', 'Budi'], 'terima dan keterangan terkunci begitu tanggal terima tersimpan (tanpa menunggu FU1)');
+$m = $A::lock_saved(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'tgl_terima' => '2026-10-04'] + $old, ['tgl_terima' => null] + $old);
+same($m['tgl_terima'], '2026-10-04', 'tanggal terima pertama kali masih bisa diisi');
+$m = $A::lock_saved(['tgl_terima' => '2026-10-02'] + $old, $old); same($m['tgl_terima'], '2026-10-02', 'simpan ulang dengan nilai sama tetap utuh');
 $m = $A::lock_saved(['tgl_terima' => '', 'fu_pic_nama' => ''] + $old, $old); same($m['tgl_terima'], '2026-10-02', 'terima tidak dikosongkan'); same($m['fu_pic_nama'], 'B', 'PIC tidak dikosongkan');
-// bukti terima: boleh diganti (beserta nama) sebelum FU1, tidak boleh dikosongkan, terkunci setelah FU1
+// bukti terima: terkunci begitu tanggal terima tersimpan; data lama tanpa bukti masih bisa dilengkapi sekali, lalu terkunci
 $oldB = ['bukti_terima' => 'u/lama.pdf', 'bukti_terima_nama' => 'lama.pdf'] + $old;
 $m = $A::lock_saved(['bukti_terima' => 'u/baru.png', 'bukti_terima_nama' => 'baru.png'] + $oldB, $oldB);
-same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/baru.png', 'baru.png'], 'bukti diganti sebelum FU1');
+same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/lama.pdf', 'lama.pdf'], 'bukti terkunci begitu tanggal terima tersimpan (tanpa menunggu FU1)');
+$oldNoB = ['bukti_terima' => null, 'bukti_terima_nama' => null] + $old;
+$m = $A::lock_saved(['bukti_terima' => 'u/susulan.pdf', 'bukti_terima_nama' => 'susulan.pdf', 'tgl_terima' => '2026-10-09', 'ket_terima' => 'X'] + $oldNoB, $oldNoB);
+same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/susulan.pdf', 'susulan.pdf'], 'data lama tanpa bukti: bukti masih bisa dilengkapi');
+same([$m['tgl_terima'], $m['ket_terima']], ['2026-10-02', 'Budi'], 'data lama tanpa bukti: tanggal dan keterangan tetap terkunci');
+$oldDone = ['bukti_terima' => 'u/susulan.pdf', 'bukti_terima_nama' => 'susulan.pdf'] + $old;
+$m = $A::lock_saved(['bukti_terima' => 'u/lagi.pdf', 'bukti_terima_nama' => 'lagi.pdf'] + $oldDone, $oldDone);
+same($m['bukti_terima'], 'u/susulan.pdf', 'setelah bukti susulan terisi, bukti terkunci');
 $m = $A::lock_saved(['bukti_terima' => '', 'bukti_terima_nama' => ''] + $oldB, $oldB);
 same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/lama.pdf', 'lama.pdf'], 'bukti tidak dikosongkan, nama ikut file lama');
 $m = $A::lock_saved(['bukti_terima_nama' => 'ganti-nama-saja.pdf'] + $oldB + ['bukti_terima' => 'u/lama.pdf'], $oldB);
@@ -207,5 +218,46 @@ $closedOnly = $A::dashboard_summary($A::plan_rows([$inv['p1']], 2026, '', '2026-
 same($closedOnly[9]['lewat'], false, 'bulan lewat tapi semua close bukan Lewat');
 same($A::dashboard_summary([], [], 2025, '2026-11-06')[11]['lewat'], false, 'tahun lalu tanpa invoice terbuka');
 same(count($A::by_month($real, 10)), 2, 'by_month'); same(count($A::by_month($real, 'all')), 3, 'by_month all');
+
+// Filter company grup (STM, VUCA, SUSTAIN): STM = id 7, 6 (STM-Sustain), 1 (STM-Vuca); VUCA = 4; SUSTAIN = 3; id di luar grup (5) hanya muncul di "Semua".
+same(array_column($A::company_options(), 'id'), ['STM', 'VUCA', 'SUSTAIN'], 'dropdown hanya 3 pilihan berurutan');
+same(array_column($A::company_options(), 'nm_company'), ['STM', 'VUCA', 'SUSTAIN'], 'label dropdown = nama grup');
+$cg = [];
+foreach (['7' => 'STM', '6' => 'STM-Sustain', '1' => 'STM-Vuca', '4' => 'Vuca', '3' => 'Sustain', '5' => 'Lain'] as $cid => $nm) {
+    $cg[] = row(['id' => 'c' . $cid, 'company' => (string) $cid, 'tgl_terima' => '2026-10-30', 'saldo' => 100, 'plan_bayar' => '2026-11-20', 'no_invoice' => 'I-' . $nm]);
+}
+$cgById = [];
+foreach ($cg as $r) { $cgById[$r['id']] = $r; }
+$grp = function ($company) use ($A, $cg, $cgById, $ids, $today) {
+    $sets = [
+        'ar' => $ids($A::filter_ar_rows($cg, ['tab' => 'all', 'company' => $company], $today)),
+        'monitoring' => $ids($A::monitoring_base($cg, ['company' => $company], $today)),
+        'plan' => $ids($A::plan_rows($cg, 2026, $company, $today)),
+    ];
+    $rec = [];
+    foreach ($cg as $r) { $rec[] = ['id_inv' => $r['id'], 'no_penerimaan' => 'R-' . $r['id'], 'tanggal' => '2026-11-02', 'nominal' => '10']; }
+    $sets['realisasi'] = implode(',', array_map(function ($x) { return substr($x['no_penerimaan'], 2); }, $A::realisasi_rows($rec, $cgById, 2026, $company, $today)));
+    return $sets;
+};
+foreach (['STM' => 'c7,c6,c1', 'VUCA' => 'c4', 'SUSTAIN' => 'c3', '' => 'c7,c6,c1,c4,c3,c5'] as $want => $expect) {
+    foreach ($grp($want) as $fn => $got) {
+        $g = array_filter(explode(',', $got));
+        $e = explode(',', $expect);
+        sort($g);
+        sort($e);
+        same(array_values($g), $e, "company '$want' di $fn");
+    }
+}
+// kompatibel mundur: id numerik tetap cocok persis (Follow Up Piutang dan Plan Bayar masih mengirim id)
+foreach (['7' => 'c7', '6' => 'c6', '1' => 'c1', '4' => 'c4', '3' => 'c3', '5' => 'c5'] as $cid => $only) {
+    same($ids($A::monitoring_base($cg, ['company' => (string) $cid], $today)), $only, "company id $cid tetap persis");
+}
+same($ids($A::monitoring_base($cg, ['company' => '99'], $today)), '', 'id tak dikenal tidak cocok apa pun');
+same($A::company_match('4', ' '), true, 'filter hanya spasi = semua');
+same($A::company_match(null, 'STM'), false, 'company null tidak masuk grup');
+same($A::company_match('7', 'stm'), false, 'kunci grup peka huruf besar (dropdown selalu mengirim huruf besar)');
+// nama company asli tetap tampil di baris (filter tidak mengubah isi baris)
+$stm = $A::monitoring_base($cg, ['company' => 'STM'], $today);
+same(array_column($stm, 'company'), ['7', '6', '1'], 'baris hasil filter tidak diubah');
 
 echo "PASS: $n assertions\n";

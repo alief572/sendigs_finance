@@ -19,6 +19,8 @@ class Piutang_aging
     const FU_EXTRA_OFFSET = 14;
     const TABS = ['all', '1', '2', '3', '4', 'late', 'close'];
     const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai'];
+    // Filter company grup: id kons_tr_company (STM 7, STM-Sustain 6, STM-Vuca 1, Vuca 4, Sustain 3; sama dengan modul Request Payment/Jurnal).
+    const COMPANY_GROUPS = ['STM' => ['7', '6', '1'], 'VUCA' => ['4'], 'SUSTAIN' => ['3']];
 
     public static function today()
     {
@@ -52,6 +54,29 @@ class Piutang_aging
     private static function filled($v)
     {
         return $v !== null && trim((string) $v) !== '';
+    }
+
+    /** Pilihan dropdown filter company: hanya STM, VUCA, SUSTAIN. */
+    public static function company_options()
+    {
+        $out = [];
+        foreach (array_keys(self::COMPANY_GROUPS) as $g) {
+            $out[] = ['id' => $g, 'nm_company' => $g];
+        }
+        return $out;
+    }
+
+    /** Cocok bila $wanted kosong, kunci grup (STM/VUCA/SUSTAIN) berisi id $actual, atau id company sama persis (kompatibel mundur untuk pemakai lain). */
+    public static function company_match($actual, $wanted)
+    {
+        if (!self::filled($wanted)) {
+            return true;
+        }
+        $wanted = (string) $wanted;
+        if (isset(self::COMPANY_GROUPS[$wanted])) {
+            return in_array((string) $actual, self::COMPANY_GROUPS[$wanted], true);
+        }
+        return (string) $actual === $wanted;
     }
 
     public static function cents($v)
@@ -396,11 +421,18 @@ class Piutang_aging
         } else {
             $noEmpty(['tgl_kirim']);
         }
-        // 2. Diterima customer terkunci setelah FU1 tersimpan; no resi terkunci bila terisi dan FU1 tersimpan
-        if ($fu1Done) {
-            $keep(['tgl_terima', 'ket_terima', 'bukti_terima', 'bukti_terima_nama']);
-            if (self::filled($old['no_resi'] ?? null)) {
-                $keep(['no_resi']);
+        // 2. Diterima customer terkunci begitu tanggal terima tersimpan (invoice masuk tahap Follow Up), tanpa menunggu FU1.
+        //    Pengecualian: data lama tanpa bukti terima boleh melengkapi bukti sekali (validate_ar mewajibkannya); setelah terisi terkunci.
+        //    No resi terkunci bila terisi dan FU1 tersimpan.
+        if (self::filled($old['tgl_terima'] ?? null)) {
+            $keep(['tgl_terima', 'ket_terima']);
+            if (self::filled($old['bukti_terima'] ?? null)) {
+                $keep(['bukti_terima', 'bukti_terima_nama']);
+            } else {
+                $noEmpty(['bukti_terima']);
+                if (!self::filled($r['bukti_terima'] ?? null)) {
+                    $r['bukti_terima_nama'] = $old['bukti_terima_nama'] ?? null;
+                }
             }
         } else {
             $noEmpty(['tgl_terima', 'bukti_terima']);
@@ -408,6 +440,9 @@ class Piutang_aging
             if (!self::filled($r['bukti_terima'] ?? null) || $r['bukti_terima'] === ($old['bukti_terima'] ?? null)) {
                 $r['bukti_terima_nama'] = $old['bukti_terima_nama'] ?? null;
             }
+        }
+        if ($fu1Done && self::filled($old['no_resi'] ?? null)) {
+            $keep(['no_resi']);
         }
         // PIC bisa dikoreksi tapi tidak dikosongkan
         $noEmpty(['fu_pic_nama', 'fu_pic_telp']);
@@ -536,7 +571,7 @@ class Piutang_aging
                     continue;
                 }
             }
-            if (self::filled($f['company'] ?? null) && (string) $r['company'] !== (string) $f['company']) {
+            if (!self::company_match($r['company'] ?? null, $f['company'] ?? null)) {
                 continue;
             }
             if (self::filled($f['customer'] ?? null) && (string) ($r['customer'] ?? '') !== (string) $f['customer']) {
@@ -599,7 +634,7 @@ class Piutang_aging
             if (self::is_closed($r) || self::cents($r['saldo'] ?? 0) <= 0) {
                 continue;
             }
-            if (self::filled($f['company'] ?? null) && (string) $r['company'] !== (string) $f['company']) {
+            if (!self::company_match($r['company'] ?? null, $f['company'] ?? null)) {
                 continue;
             }
             if (self::filled($f['customer'] ?? null) && (string) ($r['customer'] ?? '') !== (string) $f['customer']) {
@@ -686,7 +721,7 @@ class Piutang_aging
             if (!self::filled($r['plan_bayar'] ?? null) || (int) substr($r['plan_bayar'], 0, 4) !== (int) $year) {
                 continue;
             }
-            if (self::filled($company) && (string) $r['company'] !== (string) $company) {
+            if (!self::company_match($r['company'] ?? null, $company)) {
                 continue;
             }
             $d = self::decorate($r, $today);
@@ -714,7 +749,7 @@ class Piutang_aging
             if ($inv === null || !self::is_date($tgl) || (int) substr($tgl, 0, 4) !== (int) $year) {
                 continue;
             }
-            if (self::filled($company) && (string) $inv['company'] !== (string) $company) {
+            if (!self::company_match($inv['company'] ?? null, $company)) {
                 continue;
             }
             $k = self::ketepatan($tgl, $inv['plan_bayar'] ?? null);

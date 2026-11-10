@@ -126,7 +126,7 @@ class Follow_up_piutang extends Admin_Controller
         foreach ($fu as $x) {
             $done[$x['ke']] = !empty($x['aktual']);
         }
-        $locks = ['all' => in_array($d['status'], ['plan_bayar', 'close'], true), 'kirim' => !empty($row['tgl_terima']), 'terima' => !empty($done[1]),
+        $locks = ['all' => in_array($d['status'], ['plan_bayar', 'close'], true), 'kirim' => !empty($row['tgl_terima']), 'terima' => !empty($row['tgl_terima']),
             'resi' => !empty($row['no_resi']) && !empty($done[1]), 'fu' => []];
         foreach ($fu as $x) {
             $locks['fu'][$x['ke']] = !empty($done[$x['ke'] + 1]);

@@ -76,7 +76,7 @@ class Monitoring_piutang extends Admin_Controller
         }
         return $this->json(['status' => 'success', 'summary' => Piutang_aging::summary($base, $today), 'rows' => $rows,
             'rekap' => Piutang_aging::rekap_customer($base, $today),
-            'companies' => $this->db->query('SELECT id, nm_company FROM ' . DBCNL . '.kons_tr_company ORDER BY nm_company')->result_array()]);
+            'companies' => Piutang_aging::company_options()]);
     }
 
     public function detail($id = '')
