@@ -1,3 +1,7 @@
+## Rollout Audit Trail — Fase 4 selesai, cakupan direvisi — 9 November 2026
+
+Fase 4 (Penagihan dan invoice) selesai: 60/60 endpoint, bukan 58 seperti baseline manifest 10 Oktober; `invoicing` bertambah `coa_settings` dan `save_coa_mapping`. Urutan eksekusi: `plan_tagih` → `actual_plan_tagih` → `approval_invoice_so` → `invoicing` (urutan manifest lama menaruh `approval_invoice_so` terakhir). Detail, bukti uji, perubahan perilaku (sukses tulis mengikuti hasil commit), temuan di luar cakupan, dan baseline gagal: `docs/audits/phase-4-completion.md`. Manifest: `docs/audits/active-menu-audit-2026-10-10.json`. Fase 5 belum dikerjakan; mulai hanya jika diminta.
+
 ## Penyelarasan Penerimaan Piutang, Kwitansi Deposit, dan Monitoring Deposit ke mockup to-be — 30 Oktober 2026
 
 Acuan: mockup `Penerimaan Piutang + Deposit Consultant.html` (UI/alur) dan `Deposit - SSC.xlsx` (jurnal Kwitansi Deposit: Piutang Dagang Usaha D / Deposit Customer K). Keputusan pengguna: saldo Monitoring Deposit = total masuk - total keluar per customer tanpa dimensi company; Kwitansi tetap terikat 1 SPK.

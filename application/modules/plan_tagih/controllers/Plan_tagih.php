@@ -24,16 +24,68 @@ class Plan_tagih extends Admin_Controller
         $this->consultant = $this->load->database('consultant', true);
     }
 
+    // =========================================================================
+    // AUDIT TRAIL
+    // =========================================================================
+
+    private function beginAudit($method, $data = array(), $keys = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('plan_tagih', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData($data), 'sql' => null));
+        }
+        return false;
+    }
+
+    // Hanya scalar; ID dokumen/SPK dibuang bila bentuknya tidak wajar.
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            // ID asli berformat 0001/PLN-TGH/XI/26, jadi '/' harus lolos.
+            if (in_array($key, array('id', 'id_header', 'id_spk_penawaran'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9\/_.-]{1,100}$/', (string) $value))) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (!has_permission($permission)) {
+            $this->completeAudit('Akses plan tagih ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $this->template->title('Plan Tagih');
         $this->template->render('index');
+        $this->completeAudit('Membuka daftar plan tagih', 1, array('outcome' => 'rendered'));
     }
 
     public function add_plan_tagih($id_spk)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_spk_penawaran', 'outcome'));
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
@@ -56,10 +108,12 @@ class Plan_tagih extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Add Plan Tagih');
         $this->template->render('add_plan_tagih');
+        $this->completeAudit('Membuka form tambah plan tagih', empty($get_spk_penawaran) ? 0 : 1, array('id_spk_penawaran' => $id_spk, 'outcome' => empty($get_spk_penawaran) ? 'not_found' : 'rendered'));
     }
 
     public function view_plan_tagih($id_spk)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_spk_penawaran', 'outcome'));
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
@@ -102,10 +156,12 @@ class Plan_tagih extends Admin_Controller
         $this->template->set($data);
         $this->template->title('View Plan Tagih');
         $this->template->render('view_plan_tagih');
+        $this->completeAudit('Melihat plan tagih', empty($get_spk_penawaran) ? 0 : 1, array('id_spk_penawaran' => $id_spk, 'outcome' => empty($get_spk_penawaran) ? 'not_found' : 'rendered'));
     }
 
     public function edit_plan_tagih($id_spk)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_spk_penawaran', 'outcome'));
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
@@ -149,10 +205,12 @@ class Plan_tagih extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Revisi Plan Tagih');
         $this->template->render('revisi_plan_tagih');
+        $this->completeAudit('Membuka form revisi plan tagih', empty($get_spk_penawaran) ? 0 : 1, array('id_spk_penawaran' => $id_spk, 'outcome' => empty($get_spk_penawaran) ? 'not_found' : 'rendered'));
     }
 
     public function save_plan_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'id_spk_penawaran', 'detail_count', 'outcome'));
         $post = $this->input->post();
 
         // Validasi: cek apakah SPK sudah punya plan tagih (mencegah duplikasi)
@@ -162,6 +220,7 @@ class Plan_tagih extends Admin_Controller
                 'status' => 0,
                 'msg' => 'Plan Tagih untuk SPK ini sudah ada! Gunakan fitur Revisi jika ingin mengubah.'
             ]);
+            $this->completeAudit('Simpan plan tagih ditolak: sudah ada', 0, array('id_spk_penawaran' => $post['id_spk_penawaran'], 'reason' => 'duplicate', 'outcome' => 'duplicate'));
             return;
         }
 
@@ -194,6 +253,7 @@ class Plan_tagih extends Admin_Controller
                     'status' => 0,
                     'msg' => 'Data Term of Payment tidak ditemukan untuk item ke-' . $no_detail
                 ]);
+                $this->completeAudit('Simpan plan tagih gagal: TOP tidak ditemukan', 0, array('id_spk_penawaran' => $post['id_spk_penawaran'], 'reason' => 'top_not_found', 'outcome' => 'top_not_found'));
                 return;
             }
 
@@ -214,31 +274,41 @@ class Plan_tagih extends Admin_Controller
         }
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             $insert_header = $this->db->insert('kons_tr_plan_tagih_header', $arr_header);
             if (!$insert_header) {
                 // throw new Exception('Gagal menyimpan header plan tagih.');
 
+                // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+                $this->completeAudit('Menyimpan plan tagih baru gagal', 0, array('id_spk_penawaran' => $post['id_spk_penawaran'], 'reason' => 'header_failed', 'outcome' => 'failed'));
                 print_r($this->db->error($insert_header));
                 exit;
             }
 
             $insert_detail = $this->db->insert_batch('kons_tr_plan_tagih_detail', $arr_detail);
             if (!$insert_detail) {
+                $auditReason = 'detail_failed';
                 throw new Exception('Gagal menyimpan detail plan tagih.');
             }
 
             if ($this->db->trans_status() === false) {
+                $auditReason = 'transaction_failed';
                 throw new Exception('Transaksi gagal, silakan coba lagi.');
             }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Transaksi gagal, silakan coba lagi.');
+            }
 
             echo json_encode([
                 'status' => 1,
                 'msg' => 'New Plan Tagih has been saved !'
             ]);
+            $this->completeAudit('Menyimpan plan tagih baru', 1, array('id' => $id, 'id_spk_penawaran' => $post['id_spk_penawaran'], 'detail_count' => count($arr_detail), 'outcome' => 'saved'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -246,11 +316,13 @@ class Plan_tagih extends Admin_Controller
                 'status' => 0,
                 'msg' => $e->getMessage()
             ]);
+            $this->completeAudit('Menyimpan plan tagih baru gagal', 0, array('id_spk_penawaran' => $post['id_spk_penawaran'], 'reason' => $auditReason, 'outcome' => 'failed'));
         }
     }
 
     public function revisi_plan_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_header', 'detail_count', 'outcome'));
         $post = $this->input->post();
 
         $id_header = $post['id_header'];
@@ -277,6 +349,8 @@ class Plan_tagih extends Admin_Controller
         if (!$update_header) {
             $this->db->trans_rollback();
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Merevisi plan tagih gagal', 0, array('id_header' => $id_header, 'reason' => 'header_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
             exit;
         }
@@ -285,18 +359,26 @@ class Plan_tagih extends Admin_Controller
         if (!$update_detail) {
             $this->db->trans_rollback();
 
+            $this->completeAudit('Merevisi plan tagih gagal', 0, array('id_header' => $id_header, 'reason' => 'detail_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
             exit;
         }
 
+        $auditReason = null;
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
+            $auditReason = 'transaction_failed';
+            $valid = 0;
+            $msg = 'Please, try again later !';
+        } elseif ($this->db->trans_commit() === false) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+
+            $auditReason = 'commit_failed';
             $valid = 0;
             $msg = 'Please, try again later !';
         } else {
-            $this->db->trans_commit();
-
             $valid = 1;
             $msg = 'New Plan Tagih has been updated !';
         }
@@ -305,10 +387,14 @@ class Plan_tagih extends Admin_Controller
             'status' => $valid,
             'msg' => $msg
         ]);
+        $this->completeAudit($valid ? 'Merevisi plan tagih' : 'Merevisi plan tagih gagal', $valid,
+            $valid ? array('id_header' => $id_header, 'detail_count' => count($arr_update_detail), 'outcome' => 'revised')
+                   : array('id_header' => $id_header, 'reason' => $auditReason, 'outcome' => 'failed'));
     }
 
     public function updateee()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('processed_count', 'outcome'));
         $this->db->trans_begin();
 
         try {
@@ -332,18 +418,29 @@ class Plan_tagih extends Admin_Controller
                 }
             }
 
-            $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update, 'id');
+            // update_batch dengan array kosong mengembalikan FALSE di CI3; tidak ada yang disinkronkan bukan kegagalan.
+            if (!empty($arr_update) && $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update, 'id') === false) {
+                throw new RuntimeException('update_failed');
+            }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            if ($this->db->trans_commit() === false) {
+                throw new RuntimeException('commit_failed');
+            }
             http_response_code(200);
+            $this->completeAudit('Sinkron status plan tagih', 1, array('processed_count' => count($arr_update), 'outcome' => 'synced'));
         } catch (\Throwable $th) {
             $this->db->trans_rollback();
             http_response_code(500);
+            $reason = in_array($th->getMessage(), array('update_failed', 'commit_failed'), true) ? $th->getMessage() : 'exception';
+            $this->completeAudit('Sinkron status plan tagih gagal', 0, array('reason' => $reason, 'outcome' => 'failed'));
         }
     }
 
     public function get_data_spk()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
         $this->Plan_tagih_model->get_data_spk();
+        $this->completeAudit('Data SPK plan tagih diambil', 1, array('outcome' => 'rendered'));
     }
 }

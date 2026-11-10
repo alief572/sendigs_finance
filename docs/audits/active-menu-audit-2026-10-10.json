@@ -1265,90 +1265,90 @@
             "endpoints": [
                 {
                     "name": "index",
-                    "line": 29,
+                    "line": 78,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "add_plan_tagih",
-                    "line": 37,
+                    "line": 88,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "aktual_tagihan_get",
-                    "line": 63,
+                    "line": 116,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "aktual_tagihan_macet_get",
-                    "line": 91,
+                    "line": 146,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "save_actual_plan_tagih",
-                    "line": 105,
+                    "line": 162,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "save_actual_plan_tagih_macet",
-                    "line": 254,
+                    "line": 352,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "download_excel",
-                    "line": 313,
+                    "line": 425,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "update_actual_plan_tagih",
-                    "line": 323,
+                    "line": 438,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "get_actual_plan_tagih",
-                    "line": 368,
+                    "line": 489,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "batch_process_tagih",
-                    "line": 379,
+                    "line": 502,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "view_last_input",
-                    "line": 658,
+                    "line": 801,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 }
             ],
@@ -1376,12 +1376,12 @@
             "classification": "none",
             "rollout": {
                 "phase": 4,
-                "status": "belum dikerjakan",
-                "controller_sha256_at_checkpoint": "669b630ea7b74ca31967cf4b843826dece8fc6106bdd0abdcbc7a8e039db8360",
+                "status": "selesai (11/11)",
+                "controller_sha256_at_checkpoint": "AA9A45653D215F795C51E6527903A654BB6B299F990E7A25D025A59255D4C66C",
                 "batches": [
                     {
                         "batch": 1,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
                             "index",
                             "add_plan_tagih",
@@ -1394,20 +1394,28 @@
                             "get_actual_plan_tagih",
                             "batch_process_tagih"
                         ],
-                        "checks": [],
-                        "changed_files": []
+                        "checks": [
+                            "actual_plan_tagih/tests/Batch1_audit_test.php PASS 66 skenario (RED terkonfirmasi terhadap HEAD: 0 event)",
+                            "save_actual_plan_tagih/save_actual_plan_tagih_macet/batch_process_tagih: sukses mengikuti nilai balik trans_commit; hasil update yang sebelumnya diabaikan kini diperiksa"
+                        ],
+                        "changed_files": [
+                            "application/modules/actual_plan_tagih/controllers/Actual_plan_tagih.php",
+                            "application/modules/actual_plan_tagih/tests/Batch1_audit_test.php"
+                        ],
+                        "report": "docs/audits/phase-4-actual-plan-tagih-batch-1-2.md"
                     },
                     {
                         "batch": 2,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
                             "view_last_input"
                         ],
                         "checks": [],
-                        "changed_files": []
+                        "changed_files": [],
+                        "report": "docs/audits/phase-4-actual-plan-tagih-batch-1-2.md"
                     }
                 ],
-                "note": "Baseline hook presence is not completed instrumentation."
+                "note": "Instrumentasi Fase 4 selesai 2026-11-09; lihat docs/audits/phase-4-completion.md."
             }
         },
         {
@@ -2026,26 +2034,26 @@
             "endpoints": [
                 {
                     "name": "index",
-                    "line": 25,
+                    "line": 64,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "approve_invoice",
-                    "line": 40,
+                    "line": 81,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "reject_invoice",
-                    "line": 72,
+                    "line": 126,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 }
             ],
@@ -2063,22 +2071,29 @@
             "classification": "none",
             "rollout": {
                 "phase": 4,
-                "status": "belum dikerjakan",
-                "controller_sha256_at_checkpoint": "909fba42c128a4afc9f950b1ff102f40699fbc1d5f6cd6ac0dba3cedc8fc6a45",
+                "status": "selesai (3/3)",
+                "controller_sha256_at_checkpoint": "FF45039A60B04AB22CEC8AE3857575128CE0366642BCF500898198A01BB9BAE5",
                 "batches": [
                     {
                         "batch": 1,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
                             "index",
                             "approve_invoice",
                             "reject_invoice"
                         ],
-                        "checks": [],
-                        "changed_files": []
+                        "checks": [
+                            "approval_invoice_so/tests/Batch1_audit_test.php PASS 21 skenario (RED terkonfirmasi terhadap HEAD: 0 event)",
+                            "approve_invoice/reject_invoice: sukses kini mengikuti nilai balik trans_commit"
+                        ],
+                        "changed_files": [
+                            "application/modules/approval_invoice_so/controllers/Approval_invoice_so.php",
+                            "application/modules/approval_invoice_so/tests/Batch1_audit_test.php"
+                        ],
+                        "report": "docs/audits/phase-4-approval-invoice-so-batch-1.md"
                     }
                 ],
-                "note": "Baseline hook presence is not completed instrumentation."
+                "note": "Instrumentasi Fase 4 selesai 2026-11-09; lihat docs/audits/phase-4-completion.md."
             }
         },
         {
@@ -6423,297 +6438,315 @@
             "models": [],
             "endpoints": [
                 {
-                    "name": "index",
-                    "line": 27,
+                    "name": "coa_settings",
+                    "line": 172,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
+                    "rollout_batch": 1
+                },
+                {
+                    "name": "save_coa_mapping",
+                    "line": 214,
+                    "hooks": [],
+                    "possible_write": true,
+                    "rollout_status": "selesai",
+                    "rollout_batch": 1
+                },
+                {
+                    "name": "index",
+                    "line": 225,
+                    "hooks": [],
+                    "possible_write": false,
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "add_invoice",
-                    "line": 40,
+                    "line": 240,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "add_invoice_non_konsultasi",
-                    "line": 173,
+                    "line": 246,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "add_invoice_vuca",
-                    "line": 184,
+                    "line": 259,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "view_invoicing",
-                    "line": 305,
+                    "line": 318,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "view_invoicing_vuca",
-                    "line": 428,
+                    "line": 452,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "edit_invoicing",
-                    "line": 537,
+                    "line": 493,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "edit_invoicing_vuca",
-                    "line": 661,
+                    "line": 623,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "print_invoicing",
-                    "line": 772,
+                    "line": 663,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 1
+                    "rollout_status": "selesai",
+                    "rollout_batch": 2
                 },
                 {
                     "name": "print_invoice_non_kons",
-                    "line": 801,
+                    "line": 700,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 1
+                    "rollout_status": "selesai",
+                    "rollout_batch": 2
                 },
                 {
                     "name": "print_invoicing_vuca",
-                    "line": 836,
+                    "line": 737,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "print_kwitansi",
-                    "line": 860,
+                    "line": 765,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "print_kwitansi_vuca",
-                    "line": 877,
+                    "line": 784,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "save_invoice",
-                    "line": 894,
+                    "line": 803,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "save_invoice_vuca",
-                    "line": 1031,
+                    "line": 814,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "update_invoice",
-                    "line": 1155,
+                    "line": 848,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "update_invoice_vuca",
-                    "line": 1273,
+                    "line": 1003,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "save_keterangan_print",
-                    "line": 1391,
+                    "line": 1010,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 2
                 },
                 {
                     "name": "save_keterangan_print_vuca",
-                    "line": 1448,
+                    "line": 1083,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 2
+                    "rollout_status": "selesai",
+                    "rollout_batch": 3
                 },
                 {
                     "name": "save_keterangan_print_non_kons",
-                    "line": 1480,
+                    "line": 1127,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 2
+                    "rollout_status": "selesai",
+                    "rollout_batch": 3
                 },
                 {
                     "name": "save_keterangan_print_kwitansi",
-                    "line": 1537,
+                    "line": 1200,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "save_keterangan_print_kwitansi_vuca",
-                    "line": 1581,
+                    "line": 1260,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "get_data_spk",
-                    "line": 1613,
+                    "line": 1304,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "download_excel",
-                    "line": 1618,
+                    "line": 1311,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "get_data_quotation_non_konsultasi",
-                    "line": 1708,
+                    "line": 1407,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "create_invoice_non_konsultasi",
-                    "line": 1793,
+                    "line": 1494,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "edit_invoice_non_kons",
-                    "line": 1826,
+                    "line": 1530,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "view_invoicing_non_kons",
-                    "line": 1856,
+                    "line": 1564,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 3
                 },
                 {
                     "name": "save_invoice_non_konsultasi",
-                    "line": 1889,
+                    "line": 1600,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 3
+                    "rollout_status": "selesai",
+                    "rollout_batch": 4
                 },
                 {
                     "name": "update_invoice_non_konsultasi",
-                    "line": 2105,
+                    "line": 1834,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
-                    "rollout_batch": 3
+                    "rollout_status": "selesai",
+                    "rollout_batch": 4
                 },
                 {
                     "name": "list_penawaran_non_kons",
-                    "line": 2307,
+                    "line": 2053,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 },
                 {
                     "name": "hitung_jurnal",
-                    "line": 2319,
+                    "line": 2101,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 },
                 {
                     "name": "change_jurnal_invoice",
-                    "line": 2474,
+                    "line": 2258,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 },
                 {
                     "name": "view_invoice_non_kons",
-                    "line": 2509,
+                    "line": 2296,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 },
                 {
                     "name": "save_close_invoice",
-                    "line": 2543,
+                    "line": 2334,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 },
                 {
                     "name": "close_penawaran_non_kons",
-                    "line": 2589,
+                    "line": 2400,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 4
                 }
             ],
-            "endpoint_count": 36,
+            "endpoint_count": 38,
             "hook_endpoint_count": 0,
             "no_hook_endpoints": [
+                "coa_settings",
+                "save_coa_mapping",
                 "index",
                 "add_invoice",
                 "add_invoice_non_konsultasi",
@@ -6752,6 +6785,7 @@
                 "close_penawaran_non_kons"
             ],
             "no_hook_write_endpoints": [
+                "save_coa_mapping",
                 "save_invoice",
                 "save_invoice_vuca",
                 "update_invoice",
@@ -6769,13 +6803,15 @@
             "classification": "none",
             "rollout": {
                 "phase": 4,
-                "status": "belum dikerjakan",
-                "controller_sha256_at_checkpoint": "6f3b949f89b3cc0493722b91bb4cb99a556571e1e1d1728b0bead94ef96d3048",
+                "status": "selesai (38/38)",
+                "controller_sha256_at_checkpoint": "789D9F48F703A66BF3CABB69E1D343B39AD0EE691B1AD5C95488F9AC77D3DA2B",
                 "batches": [
                     {
                         "batch": 1,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
+                            "coa_settings",
+                            "save_coa_mapping",
                             "index",
                             "add_invoice",
                             "add_invoice_non_konsultasi",
@@ -6783,17 +6819,24 @@
                             "view_invoicing",
                             "view_invoicing_vuca",
                             "edit_invoicing",
-                            "edit_invoicing_vuca",
-                            "print_invoicing",
-                            "print_invoice_non_kons"
+                            "edit_invoicing_vuca"
                         ],
-                        "checks": [],
-                        "changed_files": []
+                        "checks": [
+                            "invoicing/tests/Batch1_audit_test.php PASS 155 skenario, 38 endpoint (RED terkonfirmasi terhadap controller sebelum instrumentasi: 0 event)",
+                            "legacy_update_invoice, save_keterangan_print*, legacy_save/update_invoice_non_konsultasi, save_close_invoice, close_penawaran_non_kons: sukses mengikuti nilai balik trans_commit"
+                        ],
+                        "changed_files": [
+                            "application/modules/invoicing/controllers/Invoicing.php",
+                            "application/modules/invoicing/tests/Batch1_audit_test.php"
+                        ],
+                        "report": "docs/audits/phase-4-invoicing-batch-1-4.md"
                     },
                     {
                         "batch": 2,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
+                            "print_invoicing",
+                            "print_invoice_non_kons",
                             "print_invoicing_vuca",
                             "print_kwitansi",
                             "print_kwitansi_vuca",
@@ -6801,17 +6844,18 @@
                             "save_invoice_vuca",
                             "update_invoice",
                             "update_invoice_vuca",
-                            "save_keterangan_print",
-                            "save_keterangan_print_vuca",
-                            "save_keterangan_print_non_kons"
+                            "save_keterangan_print"
                         ],
                         "checks": [],
-                        "changed_files": []
+                        "changed_files": [],
+                        "report": "docs/audits/phase-4-invoicing-batch-1-4.md"
                     },
                     {
                         "batch": 3,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
+                            "save_keterangan_print_vuca",
+                            "save_keterangan_print_non_kons",
                             "save_keterangan_print_kwitansi",
                             "save_keterangan_print_kwitansi_vuca",
                             "get_data_spk",
@@ -6819,17 +6863,18 @@
                             "get_data_quotation_non_konsultasi",
                             "create_invoice_non_konsultasi",
                             "edit_invoice_non_kons",
-                            "view_invoicing_non_kons",
-                            "save_invoice_non_konsultasi",
-                            "update_invoice_non_konsultasi"
+                            "view_invoicing_non_kons"
                         ],
                         "checks": [],
-                        "changed_files": []
+                        "changed_files": [],
+                        "report": "docs/audits/phase-4-invoicing-batch-1-4.md"
                     },
                     {
                         "batch": 4,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
+                            "save_invoice_non_konsultasi",
+                            "update_invoice_non_konsultasi",
                             "list_penawaran_non_kons",
                             "hitung_jurnal",
                             "change_jurnal_invoice",
@@ -6838,10 +6883,11 @@
                             "close_penawaran_non_kons"
                         ],
                         "checks": [],
-                        "changed_files": []
+                        "changed_files": [],
+                        "report": "docs/audits/phase-4-invoicing-batch-1-4.md"
                     }
                 ],
-                "note": "Baseline hook presence is not completed instrumentation."
+                "note": "Instrumentasi Fase 4 selesai 2026-11-09; lihat docs/audits/phase-4-completion.md."
             }
         },
         {
@@ -10488,66 +10534,66 @@
             "endpoints": [
                 {
                     "name": "index",
-                    "line": 27,
+                    "line": 76,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "add_plan_tagih",
-                    "line": 35,
+                    "line": 86,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "view_plan_tagih",
-                    "line": 61,
+                    "line": 114,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "edit_plan_tagih",
-                    "line": 107,
+                    "line": 162,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "save_plan_tagih",
-                    "line": 154,
+                    "line": 211,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "revisi_plan_tagih",
-                    "line": 252,
+                    "line": 323,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "updateee",
-                    "line": 310,
+                    "line": 395,
                     "hooks": [],
                     "possible_write": true,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 },
                 {
                     "name": "get_data_spk",
-                    "line": 345,
+                    "line": 440,
                     "hooks": [],
                     "possible_write": false,
-                    "rollout_status": "belum dikerjakan",
+                    "rollout_status": "selesai",
                     "rollout_batch": 1
                 }
             ],
@@ -10571,12 +10617,12 @@
             "classification": "none",
             "rollout": {
                 "phase": 4,
-                "status": "belum dikerjakan",
-                "controller_sha256_at_checkpoint": "99f080dec97476e900936e2ab85903ded7a783fdffb036c96bca7b46d3171adc",
+                "status": "selesai (8/8)",
+                "controller_sha256_at_checkpoint": "7F5B93D2B135A4C0B9974A49B1F9F9A6F0EDC2B700D05BA112677EB1A4FFE468",
                 "batches": [
                     {
                         "batch": 1,
-                        "status": "belum dikerjakan",
+                        "status": "selesai",
                         "endpoints": [
                             "index",
                             "add_plan_tagih",
@@ -10587,11 +10633,18 @@
                             "updateee",
                             "get_data_spk"
                         ],
-                        "checks": [],
-                        "changed_files": []
+                        "checks": [
+                            "plan_tagih/tests/Batch1_audit_test.php PASS 41 skenario (RED terkonfirmasi terhadap HEAD: 0 event)",
+                            "save_plan_tagih/revisi_plan_tagih/updateee: sukses kini mengikuti nilai balik trans_commit (diuji dengan commit gagal)"
+                        ],
+                        "changed_files": [
+                            "application/modules/plan_tagih/controllers/Plan_tagih.php",
+                            "application/modules/plan_tagih/tests/Batch1_audit_test.php"
+                        ],
+                        "report": "docs/audits/phase-4-plan-tagih-batch-1.md"
                     }
                 ],
-                "note": "Baseline hook presence is not completed instrumentation."
+                "note": "Instrumentasi Fase 4 selesai 2026-11-09; lihat docs/audits/phase-4-completion.md."
             }
         },
         {
@@ -16238,10 +16291,10 @@
     "rollout": {
         "schema_version": 1,
         "updated_at_wib": "2026-11-09",
-        "current_phase": 4,
+        "current_phase": 5,
         "phase_status": "belum dikerjakan",
-        "next_phase": 4,
-        "next_module": "plan_tagih",
+        "next_phase": 5,
+        "next_module": "penerimaan_uang",
         "next_batch": 1,
         "maximum_endpoints_per_batch": 10,
         "phases": [
@@ -16305,13 +16358,17 @@
             {
                 "phase": 4,
                 "title": "Penagihan dan invoice",
-                "status": "belum dikerjakan",
+                "status": "selesai",
                 "modules": [
                     "plan_tagih",
                     "actual_plan_tagih",
                     "invoicing",
                     "approval_invoice_so"
-                ]
+                ],
+                "completed_endpoints": 60,
+                "total_endpoints": 60,
+                "remaining_endpoints": 0,
+                "note": "Total aktual 60 endpoint (baseline manifest 58 + coa_settings dan save_coa_mapping pada invoicing yang ditambahkan setelah 10 Oktober 2026)."
             },
             {
                 "phase": 5,
@@ -16876,6 +16933,40 @@
                 "Upload CI dimock"
             ],
             "report": "docs/audits/phase-3-completion.md"
+        },
+        "phase_4_completion_verification": {
+            "date_wib": "2026-11-09",
+            "completed_phase_endpoints": 60,
+            "total_phase_endpoints": 60,
+            "pending_phase_endpoints": 0,
+            "modules": {
+                "plan_tagih": "8/8",
+                "actual_plan_tagih": "11/11",
+                "approval_invoice_so": "3/3",
+                "invoicing": "38/38"
+            },
+            "drift_check": "Skrip drift terhadap kode: method publik empat controller == manifest (8/11/3/38) dan seluruh 60 endpoint memiliki beginAudit dan completeAudit/helper setara; save_invoice_vuca dan update_invoice_vuca lewat write_vuca() yang memanggil beginAudit.",
+            "suites_pass": "Fase 4 (plan_tagih 41, actual_plan_tagih 66, approval_invoice_so 21, invoicing 155 skenario); regresi Fase 0 audit_trail (7), PR Stok, Fase 1 (Request Payment Audit + Batch2-5, Approval, Record), Fase 2 (pembayaran_material Batch1-2, request_mutasi Batch1-3, pengajuan_rutin Batch1-2), Fase 3 (Expense Batch1-10, expense_petty_cash Batch1-3, petty_cash_master, petty_cash_vuca_sustain); tes invoicing Print_invoice, Vuca_accounts, Vuca_render, Ui_render, calculation, Consulting_calculation (PHP) dan Action_menu, Consulting_calculation, Save_feedback_client, Ui_client, Vuca_client, calculation (Node)",
+            "baseline_failures_not_caused_by_phase_4": {
+                "audit_trail/Integration_test": "butuh server MySQL lokal (baseline Fase 3)",
+                "expense/Query_state_test": "fixture usang (baseline Fase 3)",
+                "expense/Visibility_test": "fixture usang (baseline Fase 3)",
+                "petty_cash_vuca_sustain/paid_status_test": "loader mock tanpa library() (baseline Fase 3)",
+                "invoicing/tests/Ui_list_client_test.js": "mengharapkan filter_status uninvoiced pada tab Consulting; views/index.php tidak berubah dari HEAD dan tidak disentuh Fase 4",
+                "invoicing/tests/Wapu_repair_test.php": "butuh WAPU_TEST_DB_HOST (lingkungan DB); pekerjaan WAPU di luar Fase 4"
+            },
+            "sha256": {
+                "actual_plan_tagih": "AA9A45653D215F795C51E6527903A654BB6B299F990E7A25D025A59255D4C66C",
+                "approval_invoice_so": "FF45039A60B04AB22CEC8AE3857575128CE0366642BCF500898198A01BB9BAE5",
+                "invoicing": "789D9F48F703A66BF3CABB69E1D343B39AD0EE691B1AD5C95488F9AC77D3DA2B",
+                "plan_tagih": "7F5B93D2B135A4C0B9974A49B1F9F9A6F0EDC2B700D05BA112677EB1A4FFE468"
+            },
+            "limits": [
+                "Menu/DB live dan browser tidak diperiksa",
+                "Service Invoice_consulting_service dan Invoice_writer dijalankan sebagai kelas asli di atas fixture DB; transaksi internalnya memakai suite tersendiri (Consulting_integration_test, integration_test) yang butuh MariaDB dan tidak dijalankan",
+                "Jalur sukses save_invoice, save_coa_mapping dan write_vuca tidak diuji end-to-end; yang diuji adalah penolakan, hasil status, dan pencatatan"
+            ],
+            "report": "docs/audits/phase-4-completion.md"
         }
     }
 }

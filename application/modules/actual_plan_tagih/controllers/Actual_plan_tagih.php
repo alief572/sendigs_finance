@@ -26,16 +26,68 @@ class Actual_plan_tagih extends Admin_Controller
         $this->consultant = $this->load->database('consultant', true);
     }
 
+    // =========================================================================
+    // AUDIT TRAIL
+    // =========================================================================
+
+    private function beginAudit($method, $data = array(), $keys = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('actual_plan_tagih', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData($data), 'sql' => null));
+        }
+        return false;
+    }
+
+    // Hanya scalar; ID dan filter URL dibuang bila bentuknya tidak wajar. ID asli berformat 00001/ACT-TGH/XI/26.
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            if (in_array($key, array('id', 'id_detail_plan_tagih', 'id_spk_penawaran'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9\/_.-]{1,100}$/', (string) $value))) { continue; }
+            if (in_array($key, array('tahun', 'status_filter'), true) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9]{1,20}$/', (string) $value))) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (!has_permission($permission)) {
+            $this->completeAudit('Akses actual plan tagih ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $this->template->title('Actual Plan Tagih');
         $this->template->render('index');
+        $this->completeAudit('Membuka daftar actual plan tagih', 1, array('outcome' => 'rendered'));
     }
 
     public function add_plan_tagih($id_spk)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_spk_penawaran', 'outcome'));
         $id_spk = urldecode($id_spk);
         $id_spk = str_replace('|', '/', $id_spk);
 
@@ -58,10 +110,12 @@ class Actual_plan_tagih extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Add Plan Tagih');
         $this->template->render('add_plan_tagih');
+        $this->completeAudit('Membuka form actual plan tagih', empty($get_spk_penawaran) ? 0 : 1, array('id_spk_penawaran' => $id_spk, 'outcome' => empty($get_spk_penawaran) ? 'not_found' : 'rendered'));
     }
 
     public function aktual_tagihan_get()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_detail_plan_tagih', 'outcome'));
         $id = $this->input->post('id');
 
         $get_plan_tagih_detail  = $this->db->get_where('kons_tr_plan_tagih_detail', array('id' => $id))->row();
@@ -86,10 +140,12 @@ class Actual_plan_tagih extends Admin_Controller
         $this->template->set('tgl_actual_tagih_last', $tgl_actual_plan_tagih_last);
         $this->template->set('macet', $macet);
         $this->template->render('form_actual_plan_tagih');
+        $this->completeAudit('Membuka form aktual tagihan', empty($get_plan_tagih_detail) ? 0 : 1, array('id_detail_plan_tagih' => $id, 'outcome' => empty($get_plan_tagih_detail) ? 'not_found' : 'rendered'));
     }
 
     public function aktual_tagihan_macet_get()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_detail_plan_tagih', 'outcome'));
         $id = $this->input->post('id');
 
         $get_plan_tagih_detail  = $this->db->get_where('kons_tr_plan_tagih_detail', array('id' => $id))->row();
@@ -100,11 +156,15 @@ class Actual_plan_tagih extends Admin_Controller
         $this->template->set('data_plan_tagih_detail', $get_plan_tagih_detail);
         $this->template->set('macet', $macet);
         $this->template->render('form_actual_plan_tagih_macet');
+        $this->completeAudit('Membuka form aktual tagihan macet', empty($get_plan_tagih_detail) ? 0 : 1, array('id_detail_plan_tagih' => $id, 'outcome' => empty($get_plan_tagih_detail) ? 'not_found' : 'rendered'));
     }
 
     public function save_actual_plan_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'id_detail_plan_tagih', 'macet', 'tagih_mundur', 'upload_failed_count', 'outcome'));
         $post = $this->input->post();
+        $auditUploadFailed = 0;
+        $auditReason = 'failed';
 
         $file_surat_mundur = '';
         if (!empty($_FILES['upload_surat_mundur'])) {
@@ -120,6 +180,8 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_surat_mundur')) {
                 $uploadData = $this->upload->data();
                 $file_surat_mundur = 'uploads/surat_mundur/' . $uploadData['file_name'];
+            } else {
+                $auditUploadFailed++;
             }
             // else {
             //     print_r('surat_mundur - ' . $this->upload->display_errors());
@@ -141,6 +203,8 @@ class Actual_plan_tagih extends Admin_Controller
             if ($this->upload->do_upload('upload_laporan_progress')) {
                 $uploadData2 = $this->upload->data();
                 $file_laporan_progress = 'uploads/laporan_progress/' . $uploadData2['file_name'];
+            } else {
+                $auditUploadFailed++;
             }
             // else {
             //     print_r('laporan progress - ' . $this->upload->display_errors());
@@ -167,6 +231,11 @@ class Actual_plan_tagih extends Admin_Controller
                     'status_terakhir' => $post['tagih_mundur']
                 ];
                 $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, ['id' => $post['id_detail_plan_tagih']]);
+                // Hasil update sebelumnya diabaikan sehingga kegagalan tetap dianggap sukses.
+                if ($update_actual_plan_tagih === false || $update_plan_tagih_detail === false) {
+                    $auditReason = 'update_failed';
+                    throw new Exception('Maaf, data gagal di proses !');
+                }
             } else {
                 $id = $this->Actual_plan_tagih_model->generate_id();
 
@@ -174,6 +243,7 @@ class Actual_plan_tagih extends Admin_Controller
                     $tanggal_actual = $post['tanggal_actual'];
                 } else {
                     if (empty($post['tanggal_actual'])) {
+                        $auditReason = 'validation_failed';
                         throw new Exception('Mohon pilih tanggal rencana penagihan untuk status "Mundur"!');
                     }
                     $tanggal_actual = $post['tanggal_actual'];
@@ -202,6 +272,7 @@ class Actual_plan_tagih extends Admin_Controller
 
                 $insert_actual_plan = $this->db->insert('kons_tr_actual_plan_tagih', $arr_insert);
                 if (!$insert_actual_plan) {
+                    $auditReason = 'insert_failed';
                     throw new Exception('Maaf, data gagal di proses !');
                 }
 
@@ -210,12 +281,25 @@ class Actual_plan_tagih extends Admin_Controller
                     'status_terakhir' => $post['tagih_mundur']
                 ];
                 $update_plan_tagih_detail = $this->db->update('kons_tr_plan_tagih_detail', $arr_update_plan_tagih, ['id' => $post['id_detail_plan_tagih']]);
+                if ($update_plan_tagih_detail === false) {
+                    $auditReason = 'update_failed';
+                    throw new Exception('Maaf, data gagal di proses !');
+                }
 
                 // print_r($this->db->last_query());
                 // exit;
             }
 
-            $this->db->trans_commit();
+            if ($this->db->trans_status() === false) {
+                $auditReason = 'transaction_failed';
+                throw new Exception('Maaf, data gagal di proses !');
+            }
+
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Maaf, data gagal di proses !');
+            }
 
             $this->output->set_status_header(200);
             $response = [
@@ -224,6 +308,14 @@ class Actual_plan_tagih extends Admin_Controller
             ];
 
             echo json_encode($response);
+            $this->completeAudit('Menyimpan actual plan tagih', 1, array(
+                'id' => isset($id) ? $id : null,
+                'id_detail_plan_tagih' => $post['id_detail_plan_tagih'],
+                'macet' => $post['macet'],
+                'tagih_mundur' => $post['tagih_mundur'],
+                'upload_failed_count' => $auditUploadFailed,
+                'outcome' => $post['macet'] == '1' ? 'macet_updated' : 'saved'
+            ));
         } catch (Exception $e) {
             $this->db->trans_rollback();
             $this->output->set_status_header(500);
@@ -231,6 +323,12 @@ class Actual_plan_tagih extends Admin_Controller
             echo json_encode([
                 'msg' => $e->getMessage()
             ]);
+            $this->completeAudit('Menyimpan actual plan tagih gagal', 0, array(
+                'id_detail_plan_tagih' => isset($post['id_detail_plan_tagih']) ? $post['id_detail_plan_tagih'] : null,
+                'upload_failed_count' => $auditUploadFailed,
+                'reason' => $auditReason,
+                'outcome' => 'failed'
+            ));
         }
 
         // if ($this->db->trans_status() === false) {
@@ -253,6 +351,7 @@ class Actual_plan_tagih extends Admin_Controller
 
     public function save_actual_plan_tagih_macet()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_detail_plan_tagih', 'tagih_mundur', 'outcome'));
         $post = $this->input->post();
 
         $file_laporan_progress = '';
@@ -270,6 +369,8 @@ class Actual_plan_tagih extends Admin_Controller
                 $uploadData2 = $this->upload->data();
                 $file_laporan_progress = 'uploads/laporan_progress/' . $uploadData2['file_name'];
             } else {
+                // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+                $this->completeAudit('Menyimpan actual plan tagih macet gagal', 0, array('id_detail_plan_tagih' => $post['id_detail_plan_tagih'], 'reason' => 'upload_failed', 'outcome' => 'failed'));
                 print_r('laporan progress - ' . $this->upload->display_errors());
                 exit;
             }
@@ -288,18 +389,26 @@ class Actual_plan_tagih extends Admin_Controller
         if (!$update_actual_plan_tagih) {
             $this->db->trans_rollback();
 
+            $this->completeAudit('Menyimpan actual plan tagih macet gagal', 0, array('id_detail_plan_tagih' => $post['id_detail_plan_tagih'], 'reason' => 'update_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
             exit;
         }
 
+        $auditReason = null;
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
+            $auditReason = 'transaction_failed';
+            $valid = 0;
+            $msg = 'Please try again later !';
+        } elseif ($this->db->trans_commit() === false) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+
+            $auditReason = 'commit_failed';
             $valid = 0;
             $msg = 'Please try again later !';
         } else {
-            $this->db->trans_commit();
-
             $valid = 1;
             $msg = 'Data saved succesfully !';
         }
@@ -308,20 +417,27 @@ class Actual_plan_tagih extends Admin_Controller
             'status' => $valid,
             'msg' => $msg
         ]);
+        $this->completeAudit($valid ? 'Menyimpan actual plan tagih macet' : 'Menyimpan actual plan tagih macet gagal', $valid,
+            $valid ? array('id_detail_plan_tagih' => $post['id_detail_plan_tagih'], 'tagih_mundur' => $post['tagih_mundur'], 'outcome' => 'saved')
+                   : array('id_detail_plan_tagih' => $post['id_detail_plan_tagih'], 'reason' => $auditReason, 'outcome' => 'failed'));
     }
 
     public function download_excel($tahun = null, $status = null)
     {
+        $this->beginAudit(__FUNCTION__, array(), array('tahun', 'status_filter', 'row_count', 'outcome'));
         $data = [
             'list_data' => $this->Actual_plan_tagih_model->dataDownloadExcel($tahun, $status),
             'tahun' => $tahun
         ];
 
+        // Dicatat sebelum view karena view langsung mengirim header dan isi file.
+        $this->completeAudit('Mengunduh excel actual plan tagih', 1, array('tahun' => $tahun, 'status_filter' => $status, 'row_count' => is_array($data['list_data']) ? count($data['list_data']) : 0, 'outcome' => 'generated'));
         $this->load->view('download_excel', $data);
     }
 
     public function update_actual_plan_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('processed_count', 'outcome'));
         $this->db->select('a.*');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->where('a.status_terakhir', '1');
@@ -360,14 +476,21 @@ class Actual_plan_tagih extends Admin_Controller
             }
         }
 
+        // Tanpa transaksi (perilaku lama); sukses mengikuti hasil update_batch.
+        $auditUpdated = true;
         if (!empty($arr_update_actual)) {
-            $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update_actual, 'id');
+            $auditUpdated = $this->db->update_batch('kons_tr_plan_tagih_detail', $arr_update_actual, 'id') !== false;
         }
+        $this->completeAudit($auditUpdated ? 'Sinkron tanggal actual plan tagih' : 'Sinkron tanggal actual plan tagih gagal', $auditUpdated ? 1 : 0,
+            $auditUpdated ? array('processed_count' => count($arr_update_actual), 'outcome' => 'synced')
+                          : array('reason' => 'update_failed', 'outcome' => 'failed'));
     }
 
     public function get_actual_plan_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
         $this->Actual_plan_tagih_model->get_actual_plan_tagih();
+        $this->completeAudit('Data actual plan tagih diambil', 1, array('outcome' => 'rendered'));
     }
 
     /**
@@ -378,6 +501,7 @@ class Actual_plan_tagih extends Admin_Controller
      */
     public function batch_process_tagih()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('total_found', 'processed_count', 'failed_count', 'macet_excluded', 'outcome'));
         $start_time = microtime(true);
 
         // Permission check for AJAX request — return 403 JSON if denied
@@ -387,6 +511,7 @@ class Actual_plan_tagih extends Admin_Controller
                 'status' => 'error',
                 'message' => 'Access denied. Actual_Plan_Tagih.Manage permission required.'
             ]));
+            $this->completeAudit('Batch process tagih ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             return;
         }
 
@@ -409,6 +534,7 @@ class Actual_plan_tagih extends Admin_Controller
                     'duration_seconds' => round(microtime(true) - $start_time, 2),
                     'message' => 'No qualifying records found for batch processing.'
                 ]));
+                $this->completeAudit('Batch process tagih: tidak ada data', 1, array('total_found' => 0, 'processed_count' => 0, 'failed_count' => 0, 'outcome' => 'no_records'));
                 return;
             }
 
@@ -618,7 +744,10 @@ class Actual_plan_tagih extends Admin_Controller
                         throw new Exception('Transaction failed');
                     }
 
-                    $this->db->trans_commit();
+                    // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya diabaikan.
+                    if ($this->db->trans_commit() === false) {
+                        throw new Exception('Transaction commit failed');
+                    }
                     $success_count++;
                 } catch (Exception $e) {
                     $this->db->trans_rollback();
@@ -645,6 +774,14 @@ class Actual_plan_tagih extends Admin_Controller
                 'failed_records' => $failed_records,
                 'duration_seconds' => round(microtime(true) - $start_time, 2)
             ]));
+            // Sebagian berhasil tetap sukses (data sudah commit per record); semua gagal = gagal.
+            $this->completeAudit('Batch process tagih', ($failed_count === 0 || $success_count > 0) ? 1 : 0, array(
+                'total_found' => $total_found,
+                'processed_count' => $success_count,
+                'failed_count' => $failed_count,
+                'macet_excluded' => $macet_excluded,
+                'outcome' => $failed_count === 0 ? 'processed' : ($success_count > 0 ? 'partial_failure' : 'all_failed')
+            ));
         } catch (Exception $e) {
             log_message('error', 'Batch Process Tagih system error: ' . $e->getMessage());
             $this->output->set_status_header(500);
@@ -652,10 +789,17 @@ class Actual_plan_tagih extends Admin_Controller
                 'status' => 'error',
                 'message' => 'System error: ' . $e->getMessage()
             ]));
+            $this->completeAudit('Batch process tagih gagal', 0, array(
+                'processed_count' => isset($success_count) ? $success_count : 0,
+                'failed_count' => isset($failed_count) ? $failed_count : 0,
+                'reason' => 'system_error',
+                'outcome' => 'failed'
+            ));
         }
     }
 
     public function view_last_input() {
+        $this->beginAudit(__FUNCTION__, array(), array('id', 'id_detail_plan_tagih', 'outcome'));
         $id = $this->input->post('id', true);
         $id_detail_plan_tagih = $this->input->post('id_detail_plan_tagih', true);
 
@@ -687,5 +831,6 @@ class Actual_plan_tagih extends Admin_Controller
         ];
 
         $this->load->view('view_actual_plan_tagih', $data);
+        $this->completeAudit('Melihat input terakhir actual plan tagih', empty($get_actual_plan_tagih) ? 0 : 1, array('id' => $id, 'id_detail_plan_tagih' => $id_detail_plan_tagih, 'outcome' => empty($get_actual_plan_tagih) ? 'not_found' : 'rendered'));
     }
 }

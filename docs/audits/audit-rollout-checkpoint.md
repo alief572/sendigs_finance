@@ -1,5 +1,13 @@
 # Checkpoint rollout Audit Trail
 
+## Terbaru — Fase 4 SELESAI (60/60 endpoint), 9 November 2026
+
+Fase 0–4 selesai. Fase 4: `plan_tagih` 8/8, `actual_plan_tagih` 11/11, `approval_invoice_so` 3/3, `invoicing` 38/38 (baseline 58; `invoicing` +2). Berikutnya Fase 5 (`penerimaan_uang` batch 1) hanya jika diminta.
+
+Verifikasi: skrip drift terhadap kode 60/60; RED terkonfirmasi untuk keempat modul; seluruh suite Fase 0–3 dan PR Stok PASS segar; baseline gagal tidak bertambah di luar dua tes `invoicing` yang tidak terkait (`Ui_list_client_test.js`, `Wapu_repair_test.php`). Menu/DB live dan browser tidak diperiksa. Tidak ada commit.
+
+[Laporan penutupan](C:/web_dev/sendigs_finance/docs/audits/phase-4-completion.md). Checkpoint di bawah bersifat historis; acuan utama `docs/task-progress.md`.
+
 ## Terbaru — Fase 3 SELESAI (130/130 endpoint), 9 November 2026
 
 Fase 0, 1, 2, dan 3 selesai. Fase 3: `expense` 92/92, `petty_cash_master` 7/7, `expense_petty_cash` 25/25, `petty_cash_vuca_sustain` 6/6. Berikutnya Fase 4 (Penagihan dan invoice, modul pertama `plan_tagih`) hanya jika diminta.
