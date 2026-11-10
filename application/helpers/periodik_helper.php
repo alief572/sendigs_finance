@@ -135,3 +135,17 @@ if (!function_exists('periodik_batch_status')) {
 		return count($groups) === 1 ? key($groups) : 'P';
 	}
 }
+
+if (!function_exists('periodik_doc_url')) {
+	/**
+	 * URL dokumen lampiran pengajuan periodik. Selalu lewat Pengajuan_rutin::download_doc (cek login dan permission),
+	 * jangan menautkan assets/bayar_rutin/ langsung.
+	 *
+	 * @param string $file     nilai tr_pengajuan_rutin_detail.doc_file
+	 * @param bool   $download true memaksa unduh (attachment), false ditampilkan di browser (inline)
+	 */
+	function periodik_doc_url($file, $download = false)
+	{
+		return base_url('pengajuan_rutin/download_doc/' . rawurlencode((string) $file)) . ($download ? '?dl=1' : '');
+	}
+}

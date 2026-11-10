@@ -475,6 +475,63 @@ class Pengajuan_rutin extends Admin_Controller
 		));
 	}
 
+	/** Permission yang boleh membuka lampiran: modul pengajuan/approval sendiri dan modul lain yang menampilkan lampiran yang sama. */
+	protected $docPermissions = array(
+		'Pengajuan_Pembayaran_Rutin.View', 'Approval_Pengajuan_Pembayaran_Rutin.View', 'Request_Payment.View',
+		'Approval_Request_Payment.View', 'Record_Request_Payment.View', 'Expense.View', 'Pembayaran_Periodik.View',
+	);
+
+	/**
+	 * Kirim lampiran pengajuan periodik. Pengganti URL langsung assets/bayar_rutin/ supaya hanya user yang login
+	 * dan punya akses terkait yang bisa membuka dokumen. Hanya file yang tercatat di tr_pengajuan_rutin_detail.doc_file.
+	 * GET: ?dl=1 memaksa unduh, selain itu inline (cetak Expense memuat PDF/gambar dari sini).
+	 */
+	public function download_doc($file = '')
+	{
+		$file = rawurldecode((string) $file);
+		$this->beginAudit(__FUNCTION__, array('file' => $file), array('file', 'outcome'));
+		$allowed = false;
+		foreach ($this->docPermissions as $perm) {
+			if (has_permission($perm)) { $allowed = true; break; }
+		}
+		if (!$allowed) {
+			$this->completeAudit('Mengunduh lampiran pengajuan rutin', 0, array('outcome' => 'unauthorized', 'reason' => 'Tidak punya akses lampiran'));
+			$this->auth->restrict($this->viewPermission); // login dibutuhkan; tanpa akses, user diarahkan seperti halaman lain
+			return show_404();
+		}
+		$types = array('pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png');
+		$path = './assets/bayar_rutin/' . $file;
+		$valid = (bool) preg_match('/^[a-f0-9]{32}\.(pdf|jpe?g|png)$/', $file);
+		$row = null;
+		if ($valid) {
+			$q = $this->auditObserve($this->db->get_where('tr_pengajuan_rutin_detail', array('doc_file' => $file), 1));
+			$row = $q ? $q->row() : null;
+		}
+		if (!$valid || !$row || !is_file($path)) {
+			$this->completeAudit('Mengunduh lampiran pengajuan rutin', 0, array('outcome' => 'not_found', 'reason' => 'Lampiran tidak ditemukan'));
+			return show_404();
+		}
+		$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+		$disposition = $this->input->get('dl') === '1' ? 'attachment' : 'inline';
+		$this->completeAudit('Mengunduh lampiran pengajuan rutin', $this->auditQueriesOk ? 1 : 0, array('file' => $file, 'outcome' => $this->auditQueriesOk ? 'sent' : 'query_error'));
+		$this->sendDoc($path, array(
+			'Content-Type: ' . $types[$ext],
+			'Content-Disposition: ' . $disposition . '; filename="' . $file . '"',
+			'Content-Length: ' . filesize($path),
+			'X-Content-Type-Options: nosniff',
+			'Cache-Control: private, max-age=0, must-revalidate',
+		));
+	}
+
+	/** Kirim header + isi file lalu akhiri request. Dipisah supaya tes bisa memeriksa header tanpa mengirimnya. */
+	protected function sendDoc($path, array $headers)
+	{
+		while (ob_get_level() > 0) { ob_end_clean(); }
+		foreach ($headers as $h) { header($h); }
+		readfile($path);
+		exit;
+	}
+
 	private function jsonOut($payload)
 	{
 		$this->output->set_content_type('application/json');

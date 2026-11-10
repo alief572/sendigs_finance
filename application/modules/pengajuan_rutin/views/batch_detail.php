@@ -40,7 +40,7 @@ $label = array('W' => 'Waiting Approval', 'A' => 'Approved', 'R' => 'Rejected');
 				<td class="num mono"><?= $fmt($i['nominal']) ?></td>
 				<td><?= $e($i['ket']) ?></td>
 				<td><?php if ($i['doc_file'] !== '') : ?>
-					<a class="doclink" target="_blank" rel="noopener" href="<?= $e(base_url('assets/bayar_rutin/' . rawurlencode($i['doc_file']))) ?>"><?= $e($i['doc_file']) ?></a>
+					<a class="doclink" target="_blank" rel="noopener" href="<?= $e(periodik_doc_url($i['doc_file'])) ?>"><?= $e($i['doc_file']) ?></a>
 				<?php else : ?><span class="sub">Tidak ada file</span><?php endif; ?></td>
 				<td><?= Periodik_logic::steps_html($i, isset($rp[$i['no_item']]) ? $rp[$i['no_item']] : null) ?></td>
 			</tr>

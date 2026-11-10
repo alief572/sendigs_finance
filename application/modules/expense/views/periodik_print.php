@@ -303,12 +303,12 @@ function formatDate($date)
 		<div class="attachment-separator"></div>
 		<?php foreach ($attachments as $doc_file) : ?>
 			<?php if (strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)) == 'pdf') : ?>
-				<div class="periodik-pdf-attachment" data-pdf-url="<?= htmlspecialchars(base_url('assets/bayar_rutin/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>">
+				<div class="periodik-pdf-attachment" data-pdf-url="<?= htmlspecialchars(periodik_doc_url($doc_file), ENT_QUOTES, 'UTF-8') ?>">
 					<p class="periodik-pdf-notice">Memproses lampiran PDF...</p>
 				</div>
 			<?php elseif (in_array(strtolower(pathinfo($doc_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif'])) : ?>
 				<div class="periodik-image-attachment">
-					<img src="<?= htmlspecialchars(base_url('assets/bayar_rutin/' . $doc_file), ENT_QUOTES, 'UTF-8') ?>" class="attachment-img" alt="Lampiran Pengajuan Periodik">
+					<img src="<?= htmlspecialchars(periodik_doc_url($doc_file), ENT_QUOTES, 'UTF-8') ?>" class="attachment-img" alt="Lampiran Pengajuan Periodik">
 				</div>
 			<?php endif; ?>
 		<?php endforeach; ?>

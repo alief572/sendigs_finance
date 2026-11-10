@@ -57,7 +57,7 @@
 							<td><input type="text" class="form-control divide" name="nilai[]" id="nilai_<?=$idd;?>" value="<?=($record->nilai);?>" readonly tabindex="-1"></td>
 							<td><input type="text" class="form-control" name="keterangan[]" id="keterangan_<?=$idd;?>" value="<?=$record->keterangan;?>" readonly tabindex="-1">
 							</td>
-							<td width=5><?=($record->doc_file!=''?'<a href="'.base_url('assets/bayar_rutin/'.$record->doc_file).'" download target="_blank"><i class="fa fa-download"></i></a>':'')?></td>
+							<td width=5><?=($record->doc_file!=''?'<a href="'.periodik_doc_url($record->doc_file, true).'" download target="_blank"><i class="fa fa-download"></i></a>':'')?></td>
 							<td>
 							<input type="text" class="form-control" name="bank_id[]" id="bank_id_<?=$idd;?>" value="<?=$record->bank_id;?>" readonly>
 							<input type="text" class="form-control" name="accnumber[]" id="accnumber_<?=$idd;?>" value="<?=$record->accnumber;?>" readonly>

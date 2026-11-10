@@ -4284,3 +4284,31 @@ Catatan awal: working tree membawa perubahan belum di-commit milik pekerjaan lai
 - Temuan di luar cakupan untuk pemilik modul: save/get_data petty_cash_master tanpa restrict; approve/reject pelaporan tanpa cek approver_id; delete_evidence tanpa cek kepemilikan; get_dat_approval_expense tanpa output.
 - Belum: menu/DB live, browser, commit; jalur sukses save_pengembalian_dana/verifikasi_pengembalian_approve; pembaruan 3 fixture tes usang + Integration_test.
 - Langkah berikutnya: Fase 4 hanya jika diminta; pembaruan fixture tes usang sebagai pekerjaan terpisah.
+
+## Pengajuan Periodik: alasan reject umum (2026-11-10)
+- File: `application/modules/pengajuan_rutin/views/approval_form.php` (JS inline + `#genErr`). Backend tidak diubah.
+- Keputusan: flag `bulk` aktif saat "Reject semua"; textarea per-item disembunyikan, hanya `#genNote` wajib dan difokuskan; `note[...]` dikirim kosong sehingga `save_decision` memakai `general_note`. Klik Approve/Reject per item atau "Approve semua" mengembalikan mode per item (placeholder "Opsional bila alasan reject umum diisi").
+- Verifikasi: sintaks JS inline `node --check` OK. PHP tidak terpasang di host: `Views_test.php`/`Batch2_audit_test.php` belum dijalankan (string 'Alasan reject umum' dan fallback `general_note` tidak diubah). Browser belum diuji.
+- Langkah berikutnya: jalankan kedua tes PHP di lingkungan ber-PHP/Docker; cek manual alur Reject semua.
+
+## Sidebar: dua menu aktif di `pengajuan_rutin/app_list` (2026-11-10)
+- Penyebab: menu 284 "Pengajuan Pembayaran Periodik" (link `pengajuan_rutin`) cocok sebagai substring URL `/pengajuan_rutin/app_list/`, sama dengan menu 273 "Approval Pengajuan Pembayaran Rutin" (link `pengajuan_rutin/app_list`). Beda parent, jadi pengecualian "saudara berlink lebih panjang" di `link_active` tidak berlaku; parent juga memakai `strpos` mentah sehingga dua grup ikut terbuka.
+- File: `application/libraries/Menu_generator.php` (`build_menus`): `link_active($link)` kini membandingkan dengan seluruh link menu aktif (cache per request) dan dipakai di semua level; `build_menus_OLD` tidak diubah.
+- Verifikasi: `php -l` OK (container `sendigs_ss`); 5 kasus link_active via refleksi PASS (app_list, proses/229, follow_up_piutang/plan_bayar). Browser belum diuji; belum commit.
+- Catatan: `/pengajuan_rutin/proses/*` tetap menyalakan menu "Pengajuan Pembayaran Periodik" (tidak ada menu dengan link itu); di luar cakupan.
+
+## budget_periodik: urutan default daftar (2026-11-10)
+- Permintaan: prioritas 1) menunggu approval, 2) lainnya dari yang terbaru. Keputusan user: "terbaru" = `decided_on` BG terakhir (fallback `created_on`); klik header kolom tetap urut manual.
+- File: `budget_periodik/controllers/Budget_periodik.php` (`get_data`, key kolom 5 = array prioritas: pending 0 urut `at` terbaru, done 1 urut `decided_on` terbaru, tanpa BG 2; tiebreak nama), `views/list.php` (default `order: [[5,'asc']]`), `tests/Controller_test.php` (3 kasus: asc, desc, tanpa BG).
+- Verifikasi (container `sendigs_ss`): `php -l` OK; `Budget_logic_test` PASS; `Model_bg_test` PASS (40); kasus urutan baru di `Controller_test` PASS. Sisa `Controller_test` berhenti di cek yang butuh `node` (tidak ada di container; juga gagal identik pada kode sebelum perubahan). Sintaks JS `list.php` dicek `node --check` di host: OK. Browser belum diuji; belum commit.
+
+## Approval periodik: link dokumen jadi tombol Download (2026-11-10)
+- File: `pengajuan_rutin/views/approval_form.php` (kolom Dokumen): `<a class="doclink">nama-file</a>` diganti `<a class="btn bl sm" download>Download</a>` (href sama, nama file di `title`). `batch_detail.php` tidak diubah (tidak diminta).
+- Verifikasi (container `sendigs_ss`): `php -l` OK; `Views_test` (tanpa cek `node`) lolos sampai baris 129 yang butuh `node`, tidak ada kasus approval yang gagal. Browser belum diuji; belum commit.
+
+## Lampiran periodik lewat controller `download_doc` (2026-11-10)
+- Tujuan: dokumen `assets/bayar_rutin/` tidak lagi ditautkan langsung; hanya user login + ber-permission yang bisa membuka.
+- File: `pengajuan_rutin/controllers/Pengajuan_rutin.php` (`download_doc`, `sendDoc`, `$docPermissions`: 7 permission View modul terkait), `helpers/periodik_helper.php` (`periodik_doc_url`, helper di-autoload), view yang diganti ke helper: `pengajuan_rutin/approval_form.php` (attachment) dan `batch_detail.php`, `request_payment` + `request_payment_backup` (`detail_approve`, `detail_approve_checker`), `pembayaran_rutin/input_form.php`, `expense/periodik_print.php` (inline untuk PDF.js/img). Tes: baru `pengajuan_rutin/tests/Download_doc_test.php` (34), ekspektasi diperbarui di `Views_test.php` baris 59 dan `expense/tests/Periodik_print_js_test.js` baris 93-94.
+- Keputusan: nama file wajib `^[a-f0-9]{32}\.(pdf|jpe?g|png)$` dan terdaftar di `tr_pengajuan_rutin_detail.doc_file` (3 `.xlsx` dan 22 file yatim di folder tidak bisa dibuka lewat endpoint; 22 file yatim tidak dipakai tabel lain yang diperiksa). Tanpa permission: audit `unauthorized` lalu `restrict()`/404. Satu event audit per panggilan, tanpa isi file.
+- BELUM: `.htaccess` penutup folder ditunda atas permintaan user. URL langsung lama MASIH terbuka (curl: 200). Tujuan keamanan baru penuh setelah `assets/bayar_rutin/.htaccess` (`Require all denied`) dipasang; folder di-gitignore sehingga dibuat manual di server atau dari `uploadDoc()`.
+- Verifikasi (container `sendigs_ss`): `php -l` semua file diubah OK; `Download_doc_test` PASS 34; `Batch1_audit_test` 72, `Batch2_audit_test` 47, `Periodik_helper_test`, `Periodik_logic_test`, `Model_query_test` 49 PASS; `Periodik_print_js_test.js` PASS (host); `Views_test` lolos sampai baris 129 yang butuh `node` (kegagalan lama). curl tanpa login ke endpoint baru: 307 ke `/login`. Belum diuji di browser dengan sesi login dan PDF.js cetak Expense; belum commit.

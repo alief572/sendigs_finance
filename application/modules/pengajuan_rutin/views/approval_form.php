@@ -29,7 +29,7 @@ $ro = function ($v, $cls = '') use ($e) { return '<div class="ro ' . $cls . '">'
 				<td class="num"><?= $ro($fmt($i['nominal']), 'r') ?></td>
 				<td style="min-width:140px"><?= $ro($i['ket'], 'tall') ?></td>
 				<td style="white-space:nowrap"><?php if ($i['doc_file'] !== '') : ?>
-					<a class="doclink" target="_blank" rel="noopener" href="<?= $e(base_url('assets/bayar_rutin/' . rawurlencode($i['doc_file']))) ?>"><?= $e($i['doc_file']) ?></a>
+					<a class="btn bl sm" download style="text-decoration:none;display:inline-block" href="<?= $e(periodik_doc_url($i['doc_file'], true)) ?>" title="<?= $e($i['doc_file']) ?>"><i class="fa fa-file-o" aria-hidden="true"></i> Download</a>
 				<?php else : ?><span class="sub">Tidak ada file</span><?php endif; ?></td>
 				<td style="min-width:150px"><?= $ro($i['bank_id']) ?><?= $ro($i['accnumber']) ?><?= $ro($i['accname']) ?></td>
 			</tr>

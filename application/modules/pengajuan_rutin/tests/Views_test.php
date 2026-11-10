@@ -56,7 +56,7 @@ check(strpos($noAdd, 'id="pjNew"') === false && strpos($noAdd, 'Tidak ada batch 
 $detail = render('batch_detail', ['batch' => $batches['BP-2611-001'], 'dept_name' => 'Finance & Accounting - STM', 'rp' => $rp, 'chain' => ['PI-2026-00001' => [['no' => 'PI-2026-00000', 'note' => 'Salah <i>x</i>']]], 'from' => 'app', 'can_decide' => false]);
 check(strpos($detail, 'Proses approval') === false, 'detail: no decide button for a decided batch');
 check(strpos($detail, 'Riwayat revisi: PI-2026-00000 (Salah &lt;i&gt;x&lt;/i&gt;)') !== false, 'detail: revision history escaped');
-check(strpos($detail, 'href="/base/assets/bayar_rutin/abc123.pdf"') !== false, 'detail: attachment link');
+check(strpos($detail, 'href="/base/pengajuan_rutin/download_doc/abc123.pdf"') !== false && strpos($detail, 'assets/bayar_rutin') === false, 'detail: attachment link goes through the controller');
 $detail = render('batch_detail', ['batch' => $batches['BP-2611-002'], 'dept_name' => 'X', 'rp' => [], 'chain' => [], 'from' => 'app', 'can_decide' => true]);
 check(strpos($detail, 'href="/base/pengajuan_rutin/proses/2"') !== false, 'detail: decide button for approver on waiting batch');
 check(strpos(render('batch_detail', ['batch' => null, 'dept_name' => '', 'rp' => [], 'chain' => [], 'from' => '', 'can_decide' => false]), 'Data tidak ditemukan') !== false, 'detail: missing batch message');
