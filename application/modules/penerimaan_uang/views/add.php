@@ -38,7 +38,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     <input type="hidden" name="deposit_amount" id="deposit_amount" value="0.00">
                 <?php else: ?>
                     <div class="fg">
-                        <label for="pph23_dipotong">PPH23 Dipotong <span class="req">*</span></label>
+                        <label for="pph23_dipotong">PPh 23/PPh Final Disetor <span class="req">*</span></label>
                         <select name="pph23_dipotong" id="pph23_dipotong">
                             <option value="" selected>- Pilih -</option>
                             <option value="Y">Dipotong PPh</option>
@@ -78,7 +78,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
                     <?php if ($isDeposit): ?>
                         <tr><th>Tgl Kwitansi</th><th>No Kwitansi</th><th>No SPK</th><th>Company</th><th class="r">Nilai Kwitansi</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr>
                     <?php else: ?>
-                        <tr><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="r">Penjualan</th><th class="r">DPP</th><th class="r">PPN</th><th class="r">PPH 23</th><th class="r">Total Tagihan<br>(Penjualan + PPN)</th><th class="r">Total Tagihan<br>- PPH</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr>
+                        <tr><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="r">Penjualan</th><th class="r">DPP</th><th class="r">PPN</th><th class="r">PPH 23 / PPh Final</th><th class="r">Total Tagihan<br>(Penjualan + PPN)</th><th class="r">Total Tagihan<br>- PPH</th><th class="r">Saldo Piutang</th><th class="c">Action</th></tr>
                     <?php endif; ?>
                 </thead>
                 <tbody class="tbody_list">
@@ -382,7 +382,7 @@ $isDeposit = (($results['receipt_kind'] ?? 'invoice') === 'deposit');
         formMsg('');
         if (customer === '') { formMsg('Pilih customer terlebih dahulu.'); return false; }
         if (check_data < 1) { formMsg(isDepositKind ? 'Centang minimal satu kwitansi deposit.' : 'Centang minimal satu invoice.'); return false; }
-        if (!isDepositKind && pph23_dipotong === '') { formMsg('Pilih PPH23 Dipotong atau Tidak Dipotong.'); return false; }
+        if (!isDepositKind && pph23_dipotong === '') { formMsg('Pilih PPh 23/PPh Final Disetor: Dipotong atau Tidak Dipotong.'); return false; }
         if (!isDepositKind && depositChoice === 'Y') {
             var depVal = parseFloat($('#deposit_amount').autoNumeric('get')) || 0;
             if (depVal <= 0) { formMsg('Isi Nominal Deposit Dipakai.'); return false; }

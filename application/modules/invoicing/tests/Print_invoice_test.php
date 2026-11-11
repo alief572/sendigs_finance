@@ -7,11 +7,11 @@ $printInvoice=$invoice+[
     'consulting_version'=>3,'print_keterangan'=>''
 ];
 foreach (['7'=>'logo_sentral.png','3'=>'sentral_sustain.png','4'=>'logo_vuca.png'] as $owner=>$logo) {
-    foreach (['PKP','WAPU','KB'] as $tax) {
+    foreach (['PKP','WAPU','KB','UMKM'] as $tax) {
         $data=$base;
         $data['invoice']=$printInvoice;
         $data['invoice']['tax_treatment']=$tax;
-        if ($tax==='KB') {
+        if ($tax==='KB' || $tax==='UMKM') {
             $data['invoice']['ppn_jurnal']='0.00';
             $data['invoice']['tagihan_ppn_jurnal']='1000.55';
         }

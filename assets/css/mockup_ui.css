@@ -63,7 +63,7 @@
 .mk .gate b { font-variant-numeric: tabular-nums; }
 .mk .section-t { font-weight: 700; margin: 4px 0 8px; }
 .mk .tax { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 3px; border: 1px solid; white-space: nowrap; }
-.mk .tax.PKP { color: #2e6da4; border-color: #2e6da4; } .mk .tax.WAPU { color: #8a5a00; border-color: #c28a00; } .mk .tax.KB { color: #5b4a9e; border-color: #7d6cc0; } .mk .tax.DEP { color: #2b7a4b; border-color: #3c9a62; }
+.mk .tax.PKP { color: #2e6da4; border-color: #2e6da4; } .mk .tax.WAPU { color: #8a5a00; border-color: #c28a00; } .mk .tax.KB { color: #5b4a9e; border-color: #7d6cc0; } .mk .tax.DEP { color: #2b7a4b; border-color: #3c9a62; } .mk .tax.UMKM { color: #a03a6b; border-color: #c25c8d; }
 .mk .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 0 14px; }
 .mk .tabs a { padding: 9px 16px; text-decoration: none; color: var(--muted); border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; margin-bottom: -1px; font-weight: 600; }
 .mk .tabs a.on { background: var(--panel); color: var(--text); border-color: var(--line); border-top: 3px solid var(--primary); }

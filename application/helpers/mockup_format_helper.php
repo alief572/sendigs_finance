@@ -38,7 +38,7 @@ if (!function_exists('mk_tax_label')) {
     /** Label TAX mockup (TAX[t]); kode tak dikenal dikembalikan apa adanya. */
     function mk_tax_label($code)
     {
-        $map = array('PKP' => 'PKP', 'WAPU' => 'WAPU', 'KB' => 'Kawasan Berikat', 'DEP' => 'Deposit');
+        $map = array('PKP' => 'PKP', 'WAPU' => 'WAPU', 'KB' => 'Kawasan Berikat', 'UMKM' => 'UMKM Non-PKP', 'DEP' => 'Deposit');
         $code = strtoupper(trim((string)$code));
         return isset($map[$code]) ? $map[$code] : $code;
     }

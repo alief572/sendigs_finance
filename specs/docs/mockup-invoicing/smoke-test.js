@@ -100,7 +100,7 @@ const cardsMatch = () => Math.abs(num($('cardTotal').textContent) - tableSum('To
 const applyI = (y, m, c, t) => { change($('fYearI'), y); change($('fMonthI'), m); change($('fCompanyI'), c); change($('fTaxI'), t); click($('btnFilterI')); };
 applyI('2026', '', '', '');
 ok(qa('#bodyInvoiced tr').length === 7 && $('cardCount').textContent === '7' && cardsMatch(), 'Card default: tahun 2026 (7 invoice), sama dengan tabel');
-ok(/Tahun 2026 · Semua bulan · Semua company/.test($('cardScope').textContent), 'Card menyebut filter aktif');
+ok(/^2026 · Semua bulan · Semua company · Semua perlakuan$/.test($('cardScope').textContent), 'Card menyebut filter aktif');
 ok(qa('#fMonthI option').length === 13 && qa('#fCompanyI option').map(o => o.value).join() === ',STM,Vuca,Sustain', 'Pilihan bulan 12 dan company: STM, Vuca, Sustain');
 applyI('2025', '', '', '');
 ok(qa('#bodyInvoiced tr').length === 2 && cardsMatch() && $('cardSales').textContent === '48,954,000.00', 'Filter tahun 2025');
@@ -121,16 +121,40 @@ ok(XLSX_CALLS.length === 0 && /Tidak ada invoice untuk diekspor/.test($('toast')
 applyI('2026', '', 'Sustain', '');
 click($('btnExportI'));
 const exp = XLSX_CALLS[XLSX_CALLS.length - 1], ws = exp.wb.sheets[0].ws, aoa = ws.__aoa;
-ok(exp.file === 'Invoiced_2026_Semua-bulan_Sustain_Semua-PPN.xlsx' && exp.wb.sheets[0].name === 'Invoiced', 'Nama file mengikuti filter');
+ok(exp.file === 'Invoiced_2026_Semua_SUSTAIN_Semua.xlsx' && exp.wb.sheets[0].name === 'Invoiced', 'Nama file mengikuti filter');
 const dataRows = aoa.slice(4, -1);
-ok(aoa[3][1] === 'No. Invoice' && aoa[3][15] === 'Total Tagihan' && dataRows.length === qa('#bodyInvoiced tr').length, 'Header dan jumlah baris Excel = tabel');
+ok(aoa[3][1] === 'No. Invoice' && aoa[3][17] === 'Total Tagihan' && aoa[3][8] === 'Project Leader' && aoa[3][9] === 'Sales' && dataRows.length === qa('#bodyInvoiced tr').length, 'Header dan jumlah baris Excel = tabel');
 ok(dataRows.map(r => r[1]).join() === qa('#bodyInvoiced tr').map(tr => tr.querySelector('.invoice-cell-primary').textContent).join(), 'Urutan invoice Excel = tabel');
 const last = 4 + dataRows.length, totalRow = last + 1;
-ok(ws['P' + totalRow].f === `SUM(P5:P${last})` && Math.abs(ws['P' + totalRow].v - num($('cardTotal').textContent)) < 0.005, 'Baris Total memakai rumus dan sama dengan card');
-const umkmRow = dataRows.find(r => r[11] === 'UMKM Non-PKP');
-ok(umkmRow && umkmRow[13] > 0 && umkmRow[14] === 0 && umkmRow[15] === umkmRow[12], 'Excel: UMKM DPP dihitung, PPN 0, total = penjualan');
-ok(/Filter: Tahun 2026, Semua bulan, Sustain/.test(aoa[1][0]) && /Ekspor 4 invoice/.test($('toast').textContent), 'Excel menulis filter; toast jumlah');
+ok(ws['R' + totalRow].f === `SUM(R5:R${last})` && Math.abs(ws['R' + totalRow].v - num($('cardTotal').textContent)) < 0.005, 'Baris Total memakai rumus dan sama dengan card');
+const umkmRow = dataRows.find(r => r[13] === 'UMKM Non-PKP');
+ok(umkmRow && umkmRow[15] > 0 && umkmRow[16] === 0 && umkmRow[17] === umkmRow[14], 'Excel: UMKM DPP dihitung, PPN 0, total = penjualan');
+ok(/^Tahun: 2026 \| Bulan: Semua bulan \| Company: SUSTAIN \| Perlakuan PPN: Semua$/.test(aoa[1][0]) && /Ekspor 4 invoice/.test($('toast').textContent), 'Excel menulis filter; toast jumlah');
 applyI('2026', '', '', '');
+
+// Tabel Invoiced sama dengan aplikasi: 10 kolom (Tanggal Invoice dan Tim terpisah), badge Journaled, Tahun Konsultasi berfungsi
+ok(qa('#panelInvoiced thead th').length === 10 && qa('#panelInvoiced thead th').map(th => th.textContent).slice(0, 3).join() === 'No.,Dokumen,Tanggal Invoice', 'Tabel Invoiced 10 kolom dengan Tanggal Invoice');
+ok(qa('#panelInvoiced thead th').some(th => th.textContent === 'Tim') && rowOf('bodyInvoiced', '262/STM/2026').querySelector('.invoice-cell-team'), 'Kolom Tim ada di tab Invoiced');
+ok(/05\/11\/2026/.test(rowOf('bodyInvoiced', '262/STM/2026').textContent), 'Tanggal invoice dd/mm/yyyy');
+applyI('', '', '', '');
+ok(rowOf('bodyInvoiced', '259/STM/2026').querySelector('.badge.bg-red') && /Journaled/.test(rowOf('bodyInvoiced', '259/STM/2026').textContent), 'Badge Journaled pada invoice yang sudah dijurnal');
+ok(!rowOf('bodyInvoiced', '262/STM/2026').querySelector('.badge.bg-red'), 'Invoice belum dijurnal tanpa badge Journaled');
+applyI('2026', '', '', '');
+change($('fYearC'), '2025'); click($('btnFilterC'));
+ok(qa('#bodyConsulting tr').length === 1 && /Belum ada tagihan pada tahun ini/.test($('bodyConsulting').textContent), 'Tahun Konsultasi menyaring TOP (2025 kosong)');
+change($('fYearC'), '2026'); click($('btnFilterC'));
+ok(qa('#bodyConsulting tr').length === 3, 'Tahun Konsultasi 2026 menampilkan sisa TOP contoh (3, satu sudah di-invoice)');
+ok($('qI').placeholder === 'Nomor, customer, atau project' && $('qC').placeholder === $('qI').placeholder, 'Placeholder pencarian sama dengan aplikasi');
+change($('fYearI'), ''); click($('btnFilterI'));
+ok(/Semua tahun/.test($('cardScope').textContent) && $('cardCount').textContent === '9', 'Semua tahun: seluruh invoice, card menyebut Semua tahun');
+applyI('2026', '', '', '');
+$('qI').value = 'PO-RNP-118'; $('qI').dispatchEvent(new window.Event('input'));
+ok(qa('#bodyInvoiced tr').length === 1 && $('cardCount').textContent === '1', 'Pencarian Invoiced mencakup No. PO dan card mengikutinya');
+$('qI').value = '010.000-26.00009876'; $('qI').dispatchEvent(new window.Event('input'));
+ok(qa('#bodyInvoiced tr').length === 1, 'Pencarian Invoiced mencakup No. Faktur');
+$('qI').value = 'Imanuel'; $('qI').dispatchEvent(new window.Event('input'));
+ok($('cardCount').textContent === '0', 'Pencarian Invoiced tidak mencakup Project Leader (sama dengan aplikasi)');
+$('qI').value = ''; $('qI').dispatchEvent(new window.Event('input'));
 
 // Aksi -> Lihat invoice (detail)
 click(rowOf('bodyInvoiced', '261/STM/2026').querySelector('[data-menu]'));
@@ -139,7 +163,7 @@ click(q('#actionMenu [data-act="view"]'));
 ok($('formTitle').textContent === 'Detail invoice konsultasi' && $('fTax').disabled && $('fPo').readOnly, 'Detail invoice read-only');
 ok($('btnSave').classList.contains('hidden') && !$('salesView').classList.contains('hidden'), 'Detail tanpa tombol simpan');
 j = journal();
-ok(j.length === 2 && j[0][5] === '615,000.00' && j[0][1] === 'STM', 'Detail menampilkan jurnal tersimpan UMKM');
+ok(j.length === 2 && j[0][5] === '615,000.00' && j[0][1] === 'Sustain', 'Detail menampilkan jurnal tersimpan UMKM dengan Company dari SPK (Sustain)');
 click(q('[data-back]'));
 
 // Cetak (toast) dan toggle penanda perubahan

@@ -1,3 +1,11 @@
+# Perlakuan PPN UMKM Non-PKP dan tab Invoiced — 10 November 2026
+
+- Perlakuan PPN keempat `UMKM` ("UMKM Non-PKP", Omzet <= Rp4,8 M): `Invoice_consulting::tax_treatments()` dan `tax_suffix()`. `totals()` UMKM: DPP = penjualan x 11/12 tetap dihitung, PPN 0, total tagihan = piutang awal = penjualan. Jurnal hanya Piutang Dagang Usaha (D) dan COA Penjualan (K), deskripsi berakhiran ` - UMKM Non-PKP`. Parity PHP = JS: `assets/js/invoicing/consulting.js`. Tanpa migrasi (`tr_invoicing.tax_treatment` VARCHAR(8) sudah ada).
+- `Consulting_posting::receipt` menolak posting jurnal penerimaan yang punya baris tanpa nomor COA (COA Beban/Hutang PPh Final UMKM belum ada di master).
+- Tab Invoiced: card Total Invoiced (Total tagihan, Penjualan, PPN, Saldo piutang) di atas filter Tahun (+ Semua tahun), Bulan invoice, Company (hanya STM, VUCA, SUSTAIN), Perlakuan PPN. Endpoint baru `invoiced_summary` (card) dan `download_invoiced` (.xlsx, baris Total memakai rumus SUM, ditolak bila 0 baris). Card dan ekspor memakai satu query `Invoicing_model::invoiced_rows`, jadi jumlahnya sama. Ekspor tab Konsultasi tetap `.xls` lama (`download_excel`).
+- Uji: `tests/Consulting_calculation_test.php` dan `.js`, `Ui_render_test.php`, `Ui_client_test.js`, `Ui_list_client_test.js`, `Print_invoice_test.php`, `List_filter_test.php`, `Invoiced_export_test.php`, `Posting_coa_guard_test.php`, `Batch1_audit_test.php` (40 endpoint). Spec, FR/NFR, dan serah terima: `specs/docs/mockup-invoicing/`.
+- Belum diuji terhadap MySQL dan browser: SQL `invoiced_rows`, `Consulting_integration_test.php --isolated-local-db` (butuh DB uji terisolasi).
+
 # Invoice konsultasi reguler versi 3 — 18 Oktober 2026
 
 Endpoint reguler baru sekarang memakai Invoice_consulting_service untuk PKP/WAPU/Kawasan Berikat, snapshot mapping/owner, transaksi dan jurnal tanpa PPh saat invoice. Invoice lama, Vuca dan Non Konsultasi mempertahankan formula lama; mutex dan allocator nomor bersama melindungi interaksi antarjalur. Invoice_writer yang disebut dalam bagian historis di bawah bukan entrypoint aktif untuk semua enam endpoint.

@@ -30,7 +30,7 @@ foreach(Invoice_consulting::roles() as $role=>$name)$accounts[$role]=['code'=>'4
 $snapshot=['top'=>['term_payment'=>'TOP uji','persen_payment'=>30,'desc_payment'=>'Deskripsi uji <script>alert(1)</script>'],'sales_role'=>'sales_consulting','accounts'=>$accounts,'owner'=>['id'=>'7','nm_company'=>'STM']];
 $invoice=['id'=>'TEST-UI','id_detail_plan_tagih'=>'TOP-UI','no_invoice'=>'001/STM/2026','id_spk_penawaran'=>'SPK-UI','tanggal_invoice'=>'2026-10-18','no_po'=>'PO-UI','no_faktur'=>'FP-UI','nm_customer'=>'Customer uji <script>alert(1)</script>','address'=>'Alamat uji','total_nominal'=>'1000.55','tax_treatment'=>'WAPU'];
 $base=['invoice'=>$invoice,'snapshot'=>$snapshot,'mode'=>'add','journals'=>[],'source_fingerprint'=>'source-ui','invoice_fingerprint'=>'invoice-ui','error'=>null];
-foreach(['add','edit','view'] as $mode)foreach(['PKP','WAPU','KB'] as $tax) {
+foreach(['add','edit','view'] as $mode)foreach(['PKP','WAPU','KB','UMKM'] as $tax) {
     $data=$base;$data['mode']=$mode;$data['invoice']['tax_treatment']=$tax;
     $html=$renderer->render('consulting_invoice',$data);$xpath=htmlQuery($html);
     verifyUi(strpos($html,'<script>alert(1)</script>')===false,'Invoice escaping');
@@ -45,6 +45,9 @@ foreach(['add','edit','view'] as $mode)foreach(['PKP','WAPU','KB'] as $tax) {
     verifyUi($xpath->query('//*[@id="consulting-tax"]/@disabled')->length===($mode==='view'?1:0),'Tax disabled on view');
     verifyUi($xpath->query('//*[@id="consulting-po"]/@readonly')->length===($mode==='view'?1:0),'PO read-only on view');
     verifyUi($xpath->query('//*[@id="consulting-journals"]//td[@colspan="7"]')->length===1,'Preview empty state spans columns');
+    verifyUi($xpath->query('//*[@id="consulting-tax"]/option[@value="UMKM"]')->length===1,'UMKM option offered');
+    verifyUi($xpath->query('//*[@data-umkm-note]')->length===1,'UMKM note present');
+    verifyUi(($xpath->query('//*[@data-umkm-note]/@hidden')->length===1)===($tax!=='UMKM'),'UMKM note visible only for UMKM '.$tax);
 }
 $data=$base;$data['invoice']['tax_treatment']='';$data['snapshot']['sales_role']='';
 $html=$renderer->render('consulting_invoice',$data);$xpath=htmlQuery($html);
@@ -83,15 +86,20 @@ verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"]')->length===1
 verifyUi($xpath->query('//*[@role="tab" and @aria-selected="true"][@id="invoice-tab-consulting"]')->length===1,'Konsultasi is the default tab');
 verifyUi($xpath->query('//*[@id="table_penawaran"]//th')->length===7,'Consulting grouped into seven columns');
 verifyUi($xpath->query('//*[@id="table_penawaran_non_konsultasi"]//th')->length===10,'Other columns preserved');
-verifyUi($xpath->query('//*[@id="table_invoiced"]//th')->length===8,'Invoiced table has eight columns');
+verifyUi($xpath->query('//*[@id="table_invoiced"]//th')->length===10,'Invoiced table has ten columns (adds Perlakuan PPN and Nilai)');
+verifyUi($xpath->query('//*[@id="table_invoiced"]//th[normalize-space()="Perlakuan PPN"]')->length===1&&$xpath->query('//*[@id="table_invoiced"]//th[starts-with(normalize-space(),"Nilai")]')->length===1,'Invoiced table shows Perlakuan PPN and Nilai columns');
+verifyUi($xpath->query('//*[@id="invoiced-summary"]//*[@data-sum="gross"]')->length===1&&$xpath->query('//*[@id="invoiced-summary"]//*[@data-sum]')->length===6,'Total Invoiced card: gross, count, filter text, sales, ppn, saldo');
+verifyUi($xpath->query('//select[@id="filter_tahun_inv"]/option[@value="all"]')->length===1,'Invoiced year filter offers Semua tahun');
+verifyUi($xpath->query('//select[@id="filter_ppn_inv"]/option')->length===5&&$xpath->query('//select[@id="filter_ppn_inv"]/option[@value="UMKM"]')->length===1,'Invoiced Perlakuan PPN filter: all + four treatments');
+verifyUi($xpath->query('//label[@for="filter_bulan_inv"][normalize-space()="Bulan invoice"]')->length===1,'Month filter labelled Bulan invoice');
 verifyUi($xpath->query('//*[@id="table_invoiced"]//th[normalize-space()="Tanggal Invoice"]')->length===1,'Invoiced table shows the invoice date column');
 verifyUi($xpath->query('//*[@id="filter_status"]')->length===0,'Consulting tab has no status filter (uninvoiced only)');
 verifyUi($xpath->query('//select[@id="filter_tahun_inv"]')->length===1&&$xpath->query('//select[@id="filter_bulan_inv"]/option')->length===13&&$xpath->query('//select[@id="filter_company_inv"]')->length===1,'Invoiced filters: year, month (all + 12), company');
 verifyUi($xpath->query('//*[contains(@class,"btn_download_excel_invoiced")]')->length===1,'Invoiced tab has its own Excel export');
 verifyUi(strpos($html,'invoicing/coa_settings')!==false,'Configure navigation visible with permission');
 $companyHtml=$renderer->render('index',['data_company'=>[(object)['id'=>4,'nm_company'=>'Vuca <b>x</b>']]]);$companyXpath=htmlQuery($companyHtml);
-$companyOption=$companyXpath->query('//select[@id="filter_company_inv"]/option[@value="4"]');
-verifyUi($companyOption->length===1&&$companyOption->item(0)->textContent==='Vuca <b>x</b>'&&$companyXpath->query('//select[@id="filter_company_inv"]//b')->length===0,'Invoiced company options come from kons_tr_company and are escaped (no markup injected)');
+$companyValues=[];foreach($companyXpath->query('//select[@id="filter_company_inv"]/option') as $option)$companyValues[]=$option->getAttribute('value');
+verifyUi($companyValues===['','STM','VUCA','SUSTAIN']&&$companyXpath->query('//select[@id="filter_company_inv"]//b')->length===0,'Invoiced company filter is fixed to STM, VUCA, SUSTAIN (INV-R-23), not the kons_tr_company rows');
 $renderer->auth->admin=false;
 $nonAdminHtml=$renderer->render('index',['data_company'=>[]]);
 verifyUi(strpos($nonAdminHtml,'invoicing/coa_settings')===false,'Non-admin cannot see COA settings even with Configure permission');

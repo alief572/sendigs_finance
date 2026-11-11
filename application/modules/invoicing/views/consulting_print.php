@@ -12,7 +12,7 @@ foreach (array('nm_customer', 'address', 'no_invoice', 'no_po') as $field) {
 }
 $description = trim((string)($invoice['print_keterangan'] ?? ''));
 if ($description === '') $description = $snapshot['top']['desc_payment'] ?? '';
-if (($invoice['tax_treatment'] ?? '') === 'KB') $description .= "\nKawasan Berikat";
+if (in_array($invoice['tax_treatment'] ?? '', array('KB','UMKM'), true)) $description .= "\n" . Invoice_consulting::tax_treatments()[$invoice['tax_treatment']];
 $data_invoice->print_keterangan = nl2br($escape($description));
 $data_actual_plan_tagih = (object)array('nominal_payment' => $invoice['total_nominal']);
 $id_company = (string)$snapshot['owner']['id'];

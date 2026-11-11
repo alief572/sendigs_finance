@@ -13,6 +13,7 @@
         var tax = form.querySelector('#consulting-tax'), sales = form.querySelector('#consulting-sales');
         var date = form.querySelector('#consulting-date'), body = form.querySelector('#consulting-journals');
         var message = form.querySelector('#consulting-message'), button = form.querySelector('#consulting-save');
+        var umkmNote = form.querySelector('[data-umkm-note]');
         function feedback(text, state) {
             message.textContent = text;
             message.setAttribute('data-state', state || 'info');
@@ -23,6 +24,7 @@
             row.appendChild(cell); body.appendChild(row);
         }
         function render() {
+            if (umkmNote) umkmNote.hidden = tax.value !== 'UMKM';
             body.textContent = '';
             if (!button.disabled) feedback('');
             form.querySelector('#consulting-debit').textContent = money(0);

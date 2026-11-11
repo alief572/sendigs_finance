@@ -31,6 +31,8 @@ function $(selector) {
     return new Query([typeof selector === 'string' ? element(selector) : selector]);
 }
 $.extend = Object.assign; $.param = obj => new URLSearchParams(obj).toString();
+const ajaxCalls = [];
+$.ajax = options => { ajaxCalls.push(options); const api = {done() { return api; }, fail() { return api; }}; return api; };
 let focused, checks = 0;
 const context = {document, $, siteurl: '/', active_controller: 'invoicing/', window: {}};
 vm.createContext(context); vm.runInContext(script, context); ready.forEach(callback => callback());
@@ -93,17 +95,32 @@ check(element('.col_2').visible, false, 'Other panel hidden when invoiced shown'
 check(element(tabs[2]).attributes['aria-selected'], 'true', 'Invoiced tab selected');
 const invoiced = tableOptions.get('#table_invoiced');
 check(invoiced.ajax.url, '/invoicing/get_data_spk', 'Invoiced tab reuses consulting endpoint');
-check(invoiced.columns.length, 8, 'Invoiced table has eight columns');
+check(invoiced.columns.length, 10, 'Invoiced table has ten columns');
 check(invoiced.columns[2].data, 'tanggal_invoice', 'Invoice date column');
 check(invoiced.columns[2].render('05/10/2026', 'display'), '05/10/2026', 'Invoice date displayed');
 check(invoiced.columns[2].render('<b>x</b>', 'display').includes('<b>'), false, 'Invoice date escaped');
-check(invoiced.stateLoadParams({}, {columns: Array(7)}), false, 'Stale seven-column state rejected for invoiced');
-element('#filter_tahun_inv').value = '2026'; element('#filter_bulan_inv').value = '10'; element('#filter_company_inv').value = '4';
+check(invoiced.stateLoadParams({}, {columns: Array(8)}), false, 'Stale eight-column state rejected for invoiced');
+element('#filter_tahun_inv').value = '2026'; element('#filter_bulan_inv').value = '10'; element('#filter_company_inv').value = 'STM'; element('#filter_ppn_inv').value = 'UMKM';
 const invoicedRequest = {}; invoiced.ajax.data(invoicedRequest);
-check(invoicedRequest, {filter_status: 'invoiced', filter_tahun: '2026', filter_bulan: '10', filter_company: '4'}, 'Invoiced filter request contract');
+check(invoicedRequest, {filter_status: 'invoiced', filter_tahun: '2026', filter_bulan: '10', filter_company: 'STM', filter_ppn: 'UMKM'}, 'Invoiced filter request contract');
+check(invoiced.columns[6].data, 'tax_label', 'Perlakuan PPN column');
+const money = invoiced.columns[7].render(null, 'display', {nilai: {sales: 61500000, ppn: 0, gross: 61500000, saldo: 61500000}});
+check(money.includes('615,000.00') && money.includes('Saldo piutang'), true, 'Nilai cell shows sales, PPN, total tagihan and saldo');
+check(invoiced.columns[7].render(null, 'display', {nilai: null}).includes('-'), true, 'Nilai cell for invoice without v3 numbers shows a dash');
+check(invoiced.columns[7].render(null, 'filter', {nilai: {gross: 61500000}}), '61500000', 'Nilai plain text for non-display use');
+ajaxCalls.length = 0; delegated.get('click .btn_filter_invoiced')({});
+const summaryCall = ajaxCalls.find(call => call.url === '/invoicing/invoiced_summary');
+check(summaryCall && summaryCall.type === 'POST', true, 'Terapkan filter reloads the summary card');
+// Pencarian di kotak tabel menggeser card; paging dengan filter sama tidak memuat ulang.
+ajaxCalls.length = 0; tableEvent('#table_invoiced', 'xhr.dt', {data: []});
+check(ajaxCalls.length, 0, 'Paging with unchanged filters does not reload the card');
+element('#table_invoiced_filter input').value = 'JTEKT'; tableEvent('#table_invoiced', 'xhr.dt', {data: []});
+const searchCall = ajaxCalls.find(call => call.url === '/invoicing/invoiced_summary');
+check(searchCall && searchCall.data.filter_search, 'JTEKT', 'Table search reloads the card with the search term');
+check(JSON.parse(JSON.stringify(summaryCall.data)), {filter_tahun: '2026', filter_bulan: '10', filter_company: 'STM', filter_ppn: 'UMKM', filter_search: ''}, 'Summary card requests the same filters as the table');
 let opened; context.window.open = url => { opened = url; };
 delegated.get('click .btn_download_excel_invoiced')({preventDefault() {}});
-check(opened, '/invoicing/download_excel?filter_status=invoiced&filter_tahun=2026&filter_bulan=10&filter_company=4', 'Invoiced export carries filters');
+check(opened.startsWith('/invoicing/download_invoiced?') && opened.includes('filter_tahun=2026') && opened.includes('filter_bulan=10') && opened.includes('filter_company=STM') && opened.includes('filter_ppn=UMKM'), true, 'Invoiced export is the .xlsx endpoint and carries all filters');
 delegated.get('click .btn_download_excel')({preventDefault() {}});
 check(opened, '/invoicing/download_excel?filter_status=uninvoiced&filter_tahun=2025', 'Consulting export is uninvoiced only');
 check(key(tabs[2], 'ArrowRight'), true, 'Right arrow wraps');

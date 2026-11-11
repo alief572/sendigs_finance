@@ -1,5 +1,5 @@
 <?php
-// Fase 4 / invoicing batch 1-4 (38 endpoint): controller asli + recorder asli; persistensi bisnis = fixture in-memory.
+// Fase 4 / invoicing batch 1-4 (40 endpoint, termasuk invoiced_summary dan download_invoiced untuk tab Invoiced): controller asli + recorder asli; persistensi bisnis = fixture in-memory.
 // Service/writer (Invoice_consulting_service, Invoice_writer) memakai kelas asli di atas fixture DB, kecuali save yang dimock
 // pada level hasil (status) karena transaksi internalnya sudah punya suite sendiri (Consulting_integration_test, integration_test).
 if (!defined('AUDIT_FIXTURE_ONLY')) { define('AUDIT_FIXTURE_ONLY', true); }
@@ -9,6 +9,8 @@ if (!defined('DBCNL')) { define('DBCNL', 'db_cnl'); }
 require dirname(__DIR__, 2) . '/request_payment/tests/Audit_test.php';
 require_once dirname(__DIR__) . '/libraries/Invoice_consulting.php';
 require_once dirname(__DIR__) . '/libraries/Invoice_calculation.php';
+if (!class_exists('BF_Model')) { class BF_Model {} }
+require_once dirname(__DIR__) . '/models/Invoicing_model.php';
 
 if (!function_exists('has_permission')) {
     function has_permission($perm = '') { global $scenario; return empty($scenario['deny_perm']); }
@@ -138,6 +140,11 @@ class IvModel {
     public function get_view_jurnal_invoice_non_kons($id) { return array('hasil_jurnal' => '', 'total_debit' => 0, 'total_kredit' => 0); }
     public function get_list_penawaran_non_kons() { return array((object) array('id_penawaran' => 'PN1'), (object) array('id_penawaran' => 'PN2')); }
     public function get_data_spk() { echo json_encode(array('draw' => 1, 'data' => array())); }
+    public function invoiced_rows(array $f) { global $scenario; return $scenario['invoiced_rows'] ?? array(); }
+    // Logika murni memakai model asli (bukan salinan), supaya card/ekspor yang diuji adalah kode produksi.
+    public function invoiced_totals(array $items) { return Invoicing_model::invoiced_totals($items); }
+    public function money_for($item) { return Invoicing_model::money_for($item); }
+    public function tax_label_for($code) { return Invoicing_model::tax_label_for($code); }
 }
 
 require dirname(__DIR__) . '/controllers/Invoicing.php';
@@ -391,6 +398,20 @@ check($e['status'] === 1 && iv_data($e)['outcome'] === 'generated', 'download_ex
 list($e) = iv_run('download_excel', array(), array(), array(), array('filter_status' => 'x; DROP'));
 check(!isset(iv_data($e)['filter_status']), 'download_excel: filter tidak wajar tidak masuk metadata');
 iv_writers('download_excel', array(), array(), function ($e, $out, $w) { check(strpos($out, 'view download_excel') !== false, "download_excel: file utuh saat $w"); });
+// tab Invoiced: card ringkasan dan ekspor .xlsx (UMKM-FR-07)
+$umkmRow = (object) array('consulting_version' => 3, 'tax_treatment' => 'UMKM', 'total_nominal_jurnal' => '615000.00', 'ppn_jurnal' => '0.00', 'tagihan_ppn_jurnal' => '615000.00', 'saldo_piutang' => '615000.00');
+list($e, $out) = iv_run('invoiced_summary', array('invoiced_rows' => array($umkmRow)), array('filter_tahun' => '2026', 'filter_ppn' => 'UMKM'));
+check($e['status'] === 1 && iv_data($e)['outcome'] === 'rendered' && iv_data($e)['row_count'] === 1, 'invoiced_summary: satu event, rendered');
+check(iv_json($out)['gross'] === 61500000 && iv_json($out)['count'] === 1 && iv_json($out)['ppn'] === 0, 'invoiced_summary: card UMKM (PPN 0, tagihan = penjualan)');
+check(strpos(json_encode($e), 'JTEKT') === false, 'invoiced_summary: filter pencarian tidak masuk metadata audit');
+list($e, , $stopped) = iv_run('invoiced_summary', array('deny_perm' => true));
+check($stopped && iv_data($e)['outcome'] === 'denied', 'invoiced_summary: denied tanpa izin View');
+list($e, $out, , $c) = iv_run('download_invoiced', array('invoiced_rows' => array()), array(), array(), array('filter_tahun' => '2026', 'filter_company' => 'STM'));
+check($e['status'] === 0 && iv_data($e)['reason'] === 'empty' && iv_data($e)['outcome'] === 'rejected' && iv_data($e)['row_count'] === 0, 'download_invoiced: tanpa baris ditolak dan dicatat');
+check(($GLOBALS['show_error_code'] ?? 0) === 404, 'download_invoiced: tanpa baris menjawab 404, tidak menulis file');
+list($e, , $stopped) = iv_run('download_invoiced', array('deny_perm' => true));
+check($stopped && iv_data($e)['outcome'] === 'denied', 'download_invoiced: denied tanpa izin View');
+
 list($e, $out) = iv_run('get_data_quotation_non_konsultasi');
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'rendered' && iv_data($e)['invoice_type'] === 'non_kons' && is_array(iv_json($out)), 'get_data_quotation_non_konsultasi: rendered');
 
@@ -510,7 +531,7 @@ check($stopped && iv_data($e)['outcome'] === 'denied', 'close_penawaran: denied'
 $src = file_get_contents(dirname(__DIR__) . '/controllers/Invoicing.php');
 preg_match_all('/\n    public function (\w+)\(/', $src, $m);
 $public = array_values(array_filter($m[1], function ($n) { return $n[0] !== '_' && $n !== '__construct'; }));
-check(count($public) === 38, 'jumlah endpoint publik 38, dapat ' . count($public));
+check(count($public) === 40, 'jumlah endpoint publik 40, dapat ' . count($public));
 foreach ($public as $name) {
     preg_match('/\n    public function ' . $name . '\(.*?(?=\n    (?:public|private) function )/s', $src, $mm);
     $body = $mm[0] ?? '';

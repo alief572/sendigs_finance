@@ -60,6 +60,18 @@ check($kb['pph_default'] === 120000000, 'KB pph default 2% x penjualan');
 check($kb['tagihan'] === 6000000000, 'KB tagihan sales only');
 check($kb['piutang'] === 6000000000, 'KB piutang');
 
+// 3b. UMKM Non-PKP: DPP tetap dihitung, PPN 0, batas PPh Final 0,5% x penjualan (bukan 2%)
+$umkm = $C::tax_calc(61500000, 'UMKM');
+check($umkm['sales'] === 61500000 && $umkm['dpp_lain'] === 56375000, 'UMKM dpp lain 11/12 tetap dihitung');
+check($umkm['ppn'] === 0, 'UMKM ppn 0');
+check($umkm['pph_default'] === 307500, 'UMKM PPh Final 0,5% x penjualan (615.000 -> 3.075)');
+check($C::tax_calc(200000000, 'UMKM')['pph_default'] === 1000000, 'UMKM Excel kasus 2: 2.000.000 -> PPh Final 10.000');
+check($umkm['tagihan'] === 61500000 && $umkm['piutang'] === 61500000, 'UMKM tagihan = piutang = penjualan');
+check($umkm['tax_treatment'] === 'UMKM', 'UMKM treatment echoed');
+check($C::pph_label('UMKM') === 'PPh Final 0,5%' && $C::pph_label('PKP') === 'PPh 23' && $C::pph_label('KB') === 'PPh 23', 'pph_label per perlakuan');
+check($C::pph_limit_label('UMKM') === 'PPh Final 0,5%' && $C::pph_limit_label('WAPU') === 'PPh 23 2%', 'pph_limit_label per perlakuan');
+try { $C::tax_calc(100, 'umkm'); throw new RuntimeException('lowercase umkm accepted'); } catch (InvalidArgumentException $expected) {}
+
 // 4. Kontrol zero-balance calculation
 // Formula: (Piutang - PPh - Admin - Sisa) - Uang Masuk = 0
 $k1 = $C::kontrol(222000000, 3666667, 250000, 0, 218083333);

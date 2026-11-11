@@ -18,7 +18,7 @@ function deferred() {
     api.reject = () => { callbacks.fail(); callbacks.always(); };
     return api;
 }
-const selectors = ['#consulting-tax', '#consulting-sales', '#consulting-date', '#consulting-journals', '#consulting-message', '#consulting-save', '#consulting-debit', '#consulting-credit'];
+const selectors = ['#consulting-tax', '#consulting-sales', '#consulting-date', '#consulting-journals', '#consulting-message', '#consulting-save', '#consulting-debit', '#consulting-credit', '[data-umkm-note]'];
 ['sales', 'other', 'ppn', 'gross', 'receivable'].forEach(key => selectors.push('[data-total="' + key + '"]'));
 const nodes = Object.fromEntries(selectors.map(selector => [selector, new Element()]));
 const form = new Element();
@@ -58,6 +58,17 @@ change('#consulting-tax', 'KB');
 check(body.children.length, 2, 'Bonded-area journal');
 check(total('receivable'), '1,000.55', 'Bonded-area sales receivable');
 assert.match(body.children[0].children[4].textContent, /Kawasan Berikat/); checks++;
+change('#consulting-tax', 'UMKM');
+check(total('ppn'), '0.00', 'UMKM PPN 0');
+check(total('other'), '917.17', 'UMKM DPP still 11/12');
+check(total('gross'), '1,000.55', 'UMKM gross = sales');
+check(total('receivable'), '1,000.55', 'UMKM receivable = sales');
+check(body.children.length, 2, 'UMKM journal');
+check(nodes['[data-umkm-note]'].hidden, false, 'UMKM note shown');
+change('#consulting-tax', 'KB');
+check(nodes['[data-umkm-note]'].hidden, true, 'UMKM note hidden for KB');
+change('#consulting-tax', 'UMKM');
+assert.match(body.children[0].children[4].textContent, /UMKM Non-PKP/); checks++;
 change('#consulting-date', '2026-10-19');
 check(body.children[0].children[0].textContent, '2026-10-19', 'Date reflected in preview');
 change('#consulting-sales', '');

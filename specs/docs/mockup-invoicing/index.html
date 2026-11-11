@@ -299,7 +299,7 @@ details.cases li{margin:3px 0;line-height:1.5;}
     <div class="box invoice-workspace">
       <div class="invoice-heading">
         <div><h2>Daftar invoice</h2><p>Kelola tagihan konsultasi per TOP dan invoice non konsultasi.</p></div>
-        <div class="invoice-heading-actions"><button type="button" class="btn btn-default" data-toast="Pengaturan COA tidak termasuk mockup ini."><i class="fa fa-sliders"></i> Pengaturan COA</button></div>
+        <div class="invoice-heading-actions"><button type="button" class="btn btn-default" data-toast="Hanya tampil untuk admin dengan izin Invoicing.Configure. Pengaturan COA tidak termasuk mockup ini."><i class="fa fa-sliders"></i> Pengaturan COA</button></div>
       </div>
       <div class="box-body">
         <ul class="invoice-tabs" role="tablist" aria-label="Jenis invoice">
@@ -312,9 +312,9 @@ details.cases li{margin:3px 0;line-height:1.5;}
         <div id="panelConsulting" role="tabpanel">
           <div class="invoice-toolbar">
             <div class="invoice-filter"><label for="fYearC">Tahun</label>
-              <select id="fYearC" class="form-control"><option>2026</option><option>2025</option><option>2024</option></select></div>
+              <select id="fYearC" class="form-control"><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option></select></div>
             <div class="invoice-toolbar-actions"><button type="button" class="btn btn-primary" id="btnFilterC">Terapkan filter</button></div>
-            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-default" data-toast="Ekspor Excel belum tersambung (mockup)."><i class="fa fa-file-excel-o"></i> Ekspor Excel</button></div>
+            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-default" data-toast="Ekspor tab Konsultasi memakai file .xls lama (hanya TOP belum ditagihkan, tahun terpilih); tidak diubah."><i class="fa fa-file-excel-o"></i> Ekspor Excel</button></div>
           </div>
           <p class="invoice-table-status chg">Tab ini hanya menampilkan TOP yang <b>belum ditagihkan</b>. Invoice yang sudah terbit ada di tab <b>Invoiced</b>.</p>
           <div class="dt-top">
@@ -323,7 +323,7 @@ details.cases li{margin:3px 0;line-height:1.5;}
           </div>
           <div class="invoice-table-scroll" tabindex="0" role="region" aria-label="Daftar tagihan konsultasi">
             <table class="table table-striped invoice-list-table invoice-consulting-table">
-              <thead><tr><th style="width:4%">No.</th><th style="width:20%">Dokumen</th><th style="width:30%">Customer &amp; Project</th><th style="width:9%">Company</th><th style="width:17%">Tim</th><th style="width:9%">Status</th><th style="width:11%" class="text-center">Aksi</th></tr></thead>
+              <thead><tr><th style="width:4%">No.</th><th style="width:21%">Dokumen</th><th style="width:32%">Customer &amp; Project</th><th style="width:10%">Company</th><th style="width:17%">Tim</th><th style="width:9%">Status</th><th style="width:7%" class="text-center">Aksi</th></tr></thead>
               <tbody id="bodyConsulting"></tbody>
             </table>
           </div>
@@ -336,7 +336,7 @@ details.cases li{margin:3px 0;line-height:1.5;}
             <div class="invoice-filter"><label for="fYearO">Tahun</label>
               <select id="fYearO" class="form-control"><option>2026</option><option>2025</option></select></div>
             <div class="invoice-toolbar-actions"><button type="button" class="btn btn-primary">Terapkan filter</button></div>
-            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-primary" data-toast="Invoice non konsultasi tidak berubah dan tidak termasuk mockup ini."><i class="fa fa-plus"></i> Buat invoice</button></div>
+            <div class="invoice-toolbar-actions invoice-toolbar-end"><button type="button" class="btn btn-primary" data-toast="Hanya tampil untuk pengguna dengan izin Invoicing.Add. Invoice non konsultasi tidak berubah dan tidak termasuk mockup ini."><i class="fa fa-plus"></i> Buat invoice</button></div>
           </div>
           <div class="invoice-table-scroll">
             <table class="table table-striped invoice-list-table">
@@ -354,13 +354,13 @@ details.cases li{margin:3px 0;line-height:1.5;}
               <div class="invoiced-card-value" id="cardTotal">0.00</div>
               <div class="invoiced-card-sub"><b id="cardCount">0</b> invoice &middot; <span id="cardScope"></span></div>
             </div>
-            <div class="invoiced-card"><div class="invoiced-card-label">Penjualan</div><div class="invoiced-card-value" id="cardSales">0.00</div><div class="invoiced-card-sub">Nilai sebelum PPN</div></div>
-            <div class="invoiced-card"><div class="invoiced-card-label">PPN</div><div class="invoiced-card-value" id="cardPpn">0.00</div><div class="invoiced-card-sub">UMKM Non-PKP = 0</div></div>
-            <div class="invoiced-card"><div class="invoiced-card-label">Saldo piutang</div><div class="invoiced-card-value" id="cardReceivable">0.00</div><div class="invoiced-card-sub">Sisa yang belum dibayar customer</div></div>
+            <div class="invoiced-card"><div class="invoiced-card-label">Penjualan</div><div class="invoiced-card-value" id="cardSales">0.00</div></div>
+            <div class="invoiced-card"><div class="invoiced-card-label">PPN</div><div class="invoiced-card-value" id="cardPpn">0.00</div></div>
+            <div class="invoiced-card"><div class="invoiced-card-label">Saldo piutang</div><div class="invoiced-card-value" id="cardReceivable">0.00</div></div>
           </section>
           <div class="invoice-toolbar chg">
             <div class="invoice-filter"><label for="fYearI">Tahun</label>
-              <select id="fYearI" class="form-control"><option value="2026">2026</option><option value="2025">2025</option><option value="">Semua tahun</option></select></div>
+              <select id="fYearI" class="form-control"><option value="">Semua tahun</option><option value="2026" selected>2026</option><option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option></select></div>
             <div class="invoice-filter"><label for="fMonthI">Bulan invoice</label>
               <select id="fMonthI" class="form-control"><option value="">Semua bulan</option></select></div>
             <div class="invoice-filter"><label for="fCompanyI">Company</label>
@@ -372,11 +372,11 @@ details.cases li{margin:3px 0;line-height:1.5;}
           </div>
           <div class="dt-top">
             <div class="dt-length">Tampilkan <select class="form-control"><option>10</option><option>25</option><option>50</option></select> baris</div>
-            <div class="dt-search"><label for="qI">Cari:</label><input id="qI" class="form-control" placeholder="No. invoice, SPK, customer, atau PO"></div>
+            <div class="dt-search"><label for="qI">Cari:</label><input id="qI" class="form-control" placeholder="Nomor, customer, atau project"></div>
           </div>
           <div class="invoice-table-scroll chg" tabindex="0" role="region" aria-label="Daftar invoice yang sudah terbit">
-            <table class="table table-striped invoice-list-table invoice-consulting-table" style="min-width:1080px">
-              <thead><tr><th style="width:4%">No.</th><th style="width:16%">Dokumen</th><th style="width:23%">Customer &amp; Project</th><th style="width:8%">Company</th><th style="width:11%">Perlakuan PPN</th><th style="width:19%">Nilai (Rp)</th><th style="width:9%">Status</th><th style="width:10%" class="text-center">Aksi</th></tr></thead>
+            <table class="table table-striped invoice-list-table invoice-consulting-table" style="min-width:1180px">
+              <thead><tr><th style="width:3%">No.</th><th style="width:13%">Dokumen</th><th style="width:8%">Tanggal Invoice</th><th style="width:17%">Customer &amp; Project</th><th style="width:7%">Company</th><th style="width:11%">Tim</th><th style="width:8%">Perlakuan PPN</th><th style="width:17%" class="text-right">Nilai (Rp)</th><th style="width:8%">Status</th><th style="width:8%" class="text-center">Aksi</th></tr></thead>
               <tbody id="bodyInvoiced"></tbody>
             </table>
           </div>
@@ -394,6 +394,7 @@ details.cases li{margin:3px 0;line-height:1.5;}
         <div class="invoice-heading-actions"><button type="button" class="btn btn-default" data-back>Kembali ke daftar</button></div>
       </div>
       <div class="box-body">
+       <form id="invoiceForm" novalidate>
         <section class="invoice-section">
           <div class="invoice-section-heading"><h3>Customer &amp; dokumen</h3><p id="docHint"></p></div>
           <div class="invoice-document-grid">
@@ -404,12 +405,12 @@ details.cases li{margin:3px 0;line-height:1.5;}
               <dt>No. SPK</dt><dd id="cSpk"></dd>
             </dl></div>
             <div class="invoice-fields">
-              <div class="form-group"><label for="fDate">Tanggal invoice <span class="invoice-required">*</span></label><input id="fDate" type="date" class="form-control"><p class="invoice-help">Tanggal jurnal mengikuti tanggal invoice.</p></div>
+              <div class="form-group"><label for="fDate">Tanggal invoice <span class="invoice-required" aria-hidden="true">*</span></label><input id="fDate" name="tanggal_invoice" type="date" class="form-control" required><p class="invoice-help">Tanggal jurnal mengikuti tanggal invoice.</p></div>
               <div class="form-group"><label for="fNumber">Nomor invoice</label><input id="fNumber" class="form-control" readonly><p class="invoice-help" id="numberHint"></p></div>
-              <div class="form-group"><label for="fPo">Nomor PO <span class="invoice-required">*</span></label><input id="fPo" class="form-control" maxlength="100" placeholder="Masukkan nomor PO"></div>
-              <div class="form-group"><label for="fFaktur">Nomor faktur <span class="invoice-required">*</span></label><input id="fFaktur" class="form-control" maxlength="100" placeholder="Masukkan nomor faktur"></div>
-              <div class="form-group invoice-field-wide"><label for="fTax">Perlakuan PPN <span class="invoice-required">*</span></label>
-                <select id="fTax" class="form-control chg"><option value="">Pilih perlakuan PPN</option></select>
+              <div class="form-group"><label for="fPo">Nomor PO <span class="invoice-required" aria-hidden="true">*</span></label><input id="fPo" name="nomor_po" class="form-control" maxlength="100" placeholder="Masukkan nomor PO" required></div>
+              <div class="form-group"><label for="fFaktur">Nomor faktur <span class="invoice-required" aria-hidden="true">*</span></label><input id="fFaktur" name="nomor_faktur" class="form-control" maxlength="100" placeholder="Masukkan nomor faktur" required></div>
+              <div class="form-group invoice-field-wide"><label for="fTax">Perlakuan PPN <span class="invoice-required" aria-hidden="true">*</span></label>
+                <select id="fTax" name="tax_treatment" class="form-control chg" aria-describedby="taxHelp" required><option value="">Pilih perlakuan PPN</option></select>
                 <p class="invoice-help" id="taxHelp"></p>
               </div>
             </div>
@@ -420,11 +421,11 @@ details.cases li{margin:3px 0;line-height:1.5;}
           <div class="invoice-billing-main">
             <section class="invoice-section">
               <div class="invoice-section-heading"><h3>Rincian TOP</h3><p>Satu TOP untuk satu invoice. Nominal mengikuti plan tagih dan tidak dapat diubah di sini.</p></div>
-              <div class="invoice-table-scroll"><table class="table table-bordered invoice-top-table"><thead><tr><th>No.</th><th>Term of Payment</th><th>Persentase</th><th class="text-right">Nominal (Rp)</th><th>Deskripsi</th></tr></thead><tbody id="topBody"></tbody></table></div>
+              <div class="invoice-table-scroll" role="region" aria-label="Rincian term of payment" tabindex="0"><table class="table table-bordered invoice-top-table"><thead><tr><th>No.</th><th>Term of Payment</th><th>Persentase</th><th class="text-right">Nominal (Rp)</th><th>Deskripsi</th></tr></thead><tbody id="topBody"></tbody></table></div>
             </section>
             <section>
               <div class="invoice-section-heading"><h3>Akun penjualan</h3><p>Kategori penjualan menentukan akun pendapatan pada jurnal invoice.</p></div>
-              <div class="form-group" id="salesWrap"><label for="fSales">COA penjualan <span class="invoice-required">*</span></label><select id="fSales" class="form-control"><option value="">Pilih COA Penjualan</option></select></div>
+              <div class="form-group" id="salesWrap"><label for="fSales">COA penjualan <span class="invoice-required" aria-hidden="true">*</span></label><select id="fSales" name="sales_role" class="form-control" required><option value="">Pilih COA Penjualan</option></select></div>
               <div class="invoice-customer hidden" id="salesView"></div>
               <p class="invoice-help">PPh dicatat saat penerimaan sesuai bukti yang diinput. Nilainya tidak mengurangi piutang awal invoice ini.</p>
             </section>
@@ -444,14 +445,15 @@ details.cases li{margin:3px 0;line-height:1.5;}
 
         <section class="invoice-section">
           <div class="invoice-section-heading"><h3>Jurnal invoice</h3><p id="journalHint"></p></div>
-          <div class="invoice-table-scroll"><table class="table table-striped invoice-journal-table">
+          <div class="invoice-table-scroll" role="region" aria-label="Jurnal invoice, geser untuk melihat seluruh kolom" tabindex="0"><table class="table table-striped invoice-journal-table">
             <thead><tr><th>Tanggal jurnal</th><th>Company</th><th>COA</th><th>Nama COA</th><th>Deskripsi</th><th class="text-right">Debit (Rp)</th><th class="text-right">Kredit (Rp)</th></tr></thead>
             <tbody id="journalBody"></tbody>
             <tfoot><tr><th colspan="5" scope="row">Total debit / kredit</th><th class="text-right" id="jDebit">0.00</th><th class="text-right" id="jCredit">0.00</th></tr></tfoot>
           </table></div>
         </section>
         <p class="invoice-feedback" id="formMsg" role="status" aria-live="polite"></p>
-        <div class="invoice-actions"><button type="button" class="btn btn-primary" id="btnSave">Simpan invoice</button><button type="button" class="btn btn-default" data-back>Kembali ke daftar</button></div>
+        <div class="invoice-actions"><button type="submit" class="btn btn-primary" id="btnSave">Simpan invoice</button><button type="button" class="btn btn-default" data-back>Kembali ke daftar</button></div>
+       </form>
       </div>
     </div>
   </section>
@@ -519,16 +521,16 @@ const SPK = {
   berikat: {customer:'PT Mitra Berikat Presisi', alamat:'Kawasan Industri Jl. Industri Raya No. 8, Cikarang', spk:'021/STM/MKT-SPK/III/26', project:'Pendampingan Implementasi ISO 9001:2015 dan ISO 14001:2015', company:'Sustain', leader:'Dimas Prakoso', sales:'Masika Arinal Simanjuntak'}
 };
 let TOPS = [
-  {id:'t1', spk:'jtekt',    term:'Penagihan 2', pct:50,    sales:5090000002, desc:'dibulan ke 2'},
-  {id:'t2', spk:'umkm',     term:'Penagihan 2', pct:48.60, sales:200000000,  desc:'setelah progress pendampingan selesai'},
-  {id:'t3', spk:'resonac',  term:'Penagihan 1', pct:40,    sales:4200000000, desc:'setelah dokumen RKL-RPL diserahkan'},
-  {id:'t4', spk:'softpren', term:'Penagihan 1', pct:30,    sales:2937240000, desc:'setelah program dimulai'}
+  {id:'t1', year:'2026', spk:'jtekt',    term:'Penagihan 2', pct:50,    sales:5090000002, desc:'dibulan ke 2'},
+  {id:'t2', year:'2026', spk:'umkm',     term:'Penagihan 2', pct:48.60, sales:200000000,  desc:'setelah progress pendampingan selesai'},
+  {id:'t3', year:'2026', spk:'resonac',  term:'Penagihan 1', pct:40,    sales:4200000000, desc:'setelah dokumen RKL-RPL diserahkan'},
+  {id:'t4', year:'2026', spk:'softpren', term:'Penagihan 1', pct:30,    sales:2937240000, desc:'setelah program dimulai'}
 ];
 let INVOICES = [
   {no:'262/STM/2026', date:'2026-11-05', spk:'jtekt',   term:'Penagihan 1', pct:50,    sales:5090000002,  desc:'setelah kick-off',                 tax:'PKP',  role:'sales_inhouse',    po:'PO-JTK-2611', faktur:'010.000-26.00012345'},
-  {no:'261/STM/2026', date:'2026-11-03', spk:'umkm',    term:'Penagihan 1', pct:14.95, sales:61500000,    desc:'setelah SPK ditandatangani',       tax:'UMKM', role:'sales_consulting', po:'PO-KMS-001',  faktur:'-'},
+  {no:'261/STM/2026', date:'2026-11-03', spk:'umkm',    term:'Penagihan 1', pct:14.95, sales:61500000,    desc:'setelah SPK ditandatangani',       tax:'UMKM', role:'sales_consulting', po:'PO-KMS-001',  faktur:'010.000-26.00011111'},
   {no:'260/STM/2026', date:'2026-10-20', spk:'berikat', term:'Penagihan 1', pct:40,    sales:6000000000,  desc:'setelah kick-off dan gap analysis', tax:'KB',   role:'sales_consulting', po:'PO-MBP-0420', faktur:'070.000-26.00004567'},
-  {no:'259/STM/2026', date:'2026-10-09', spk:'rnp',     term:'Penagihan 4', pct:20,    sales:1958160000,  desc:'Pada bulan ke-11',                 tax:'PKP',  role:'sales_consulting', po:'PO-RNP-118',  faktur:'010.000-26.00009876'},
+  {no:'259/STM/2026', date:'2026-10-09', journaled:true, spk:'rnp',     term:'Penagihan 4', pct:20,    sales:1958160000,  desc:'Pada bulan ke-11',                 tax:'PKP',  role:'sales_consulting', po:'PO-RNP-118',  faktur:'010.000-26.00009876'},
   {no:'258/STM/2026', date:'2026-09-30', spk:'pelni',   term:'Penagihan 2', pct:30,    sales:29100000000, desc:'setelah audit internal dan tinjauan manajemen', tax:'WAPU', role:'sales_consulting', po:'PO-PELNI-77', faktur:'030.000-26.00001111'},
   {no:'257/STM/2026', date:'2026-09-15', spk:'resonac', term:'Penagihan 1', pct:30,    sales:3150000000,  desc:'setelah kick-off',                 tax:'PKP',  role:'sales_consulting', po:'PO-RMI-0915', faktur:'010.000-26.00008800'},
   {no:'231/STM/2025', date:'2025-12-15', spk:'softpren',term:'Penagihan 1', pct:30,    sales:2937240000,  desc:'setelah program dimulai',          tax:'PKP',  role:'sales_consulting', po:'PO-SPI-1215', faktur:'010.000-25.00007711'},
@@ -543,39 +545,41 @@ const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov
 const COMPANIES = ['STM', 'Vuca', 'Sustain'];
 const MONTHS_LONG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function fmtDate(d){ const p = d.split('-'); return `${+p[2]} ${MONTHS[+p[1] - 1]} ${p[0]}`; }
+function fmtDateId(d){ const p = d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }   // dd/mm/yyyy, sama dengan kolom Tanggal Invoice di aplikasi
 function teamCell(s){ return `<dl class="invoice-cell-team"><dt>Project Leader</dt><dd>${esc(s.leader)}</dd><dt>Sales</dt><dd>${esc(s.sales)}</dd></dl>`; }
 function renderConsulting(){
-  const q = $('qC').value.trim().toLowerCase();
-  const rows = TOPS.filter(t => { const s = SPK[t.spk]; return !q || [s.spk, s.customer, s.project].join(' ').toLowerCase().includes(q); });
+  const q = $('qC').value.trim().toLowerCase(), year = $('fYearC').value;
+  const rows = TOPS.filter(t => { const s = SPK[t.spk]; return (!year || t.year === year) && (!q || [s.spk, s.customer, s.project, s.leader, s.sales, s.company].join(' ').toLowerCase().includes(q)); });
   $('bodyConsulting').innerHTML = rows.length ? rows.map((t, i) => { const s = SPK[t.spk]; return `<tr>
     <td>${i + 1}</td>
     <td><div class="invoice-cell-primary">Belum ada invoice</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ${esc(s.spk)}</div></td>
     <td><div class="invoice-cell-primary">${esc(s.customer)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ${esc(s.project)}</div></td>
     <td>${esc(s.company)}</td><td>${teamCell(s)}</td>
     <td><span class="badge bg-yellow">Uninvoiced</span></td>
-    <td><button type="button" class="btn btn-sm btn-primary" data-add="${t.id}"><i class="fa fa-plus"></i> Buat Invoice</button></td></tr>`; }).join('')
-    : `<tr><td colspan="7" class="invoice-empty">Tidak ada TOP yang belum ditagihkan. Invoice yang sudah terbit ada di tab Invoiced.</td></tr>`;
+    <td><button type="button" class="btn btn-sm btn-primary" data-add="${t.id}" title="${s.company === 'Vuca' ? 'Buat Invoice Vuca' : 'Buat Invoice'}"><i class="fa fa-plus"></i> ${s.company === 'Vuca' ? 'Buat Invoice Vuca' : 'Buat Invoice'}</button></td></tr>`; }).join('')
+    : `<tr><td colspan="7" class="invoice-empty">Belum ada tagihan pada tahun ini. Pilih tahun lain atau tunggu plan tagih berikutnya.</td></tr>`;
   $('infoConsulting').textContent = rows.length ? `1–${rows.length} dari ${rows.length} baris` : 'Belum ada baris ditampilkan';
   $('countConsulting').textContent = TOPS.length;
 }
+// Tahun TOP = tahun aktual plan tagih (kons_tr_plan_tagih_detail.tgl_aktual_plan_tagih); data contoh semuanya 2026.
 // Baris tab Invoiced sesuai filter (Tahun, Bulan, Company, Perlakuan PPN) dan pencarian. Dipakai tabel, card, dan Ekspor Excel.
 function invoicedRows(){
   const q = $('qI').value.trim().toLowerCase();
   return INVOICES.filter(v => { const s = SPK[v.spk];
     return (!yearFilter || v.date.slice(0, 4) === yearFilter) && (!monthFilter || v.date.slice(5, 7) === monthFilter)
       && (!companyFilter || s.company === companyFilter) && (!taxFilter || v.tax === taxFilter)
-      && (!q || [v.no, s.spk, s.customer, s.project, v.po].join(' ').toLowerCase().includes(q)); })
+      && (!q || [v.no, s.spk, s.customer, s.project, v.po, v.faktur].join(' ').toLowerCase().includes(q)); })
     .sort((a, b) => b.date.localeCompare(a.date) || b.no.localeCompare(a.no));
 }
 function invoicedScope(){
-  return [yearFilter ? 'Tahun ' + yearFilter : 'Semua tahun', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua bulan',
-    companyFilter || 'Semua company', taxFilter ? TAX[taxFilter] : 'Semua perlakuan PPN'];
+  return [yearFilter || 'Semua tahun', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua bulan',
+    companyFilter ? companyFilter.toUpperCase() : 'Semua company', taxFilter ? TAX[taxFilter] : 'Semua perlakuan'];
 }
 function renderCards(rows){
   const sum = k => rows.reduce((n, v) => n + totals(v.sales, v.tax)[k], 0);
   $('cardTotal').textContent = money(sum('gross'));
   $('cardCount').textContent = rows.length;
-  $('cardScope').textContent = invoicedScope().join(' · ') + ($('qI').value.trim() ? ' · cari "' + $('qI').value.trim() + '"' : '');
+  $('cardScope').textContent = invoicedScope().join(' · ');
   $('cardSales').textContent = money(sum('sales'));
   $('cardPpn').textContent = money(sum('ppn'));
   $('cardReceivable').textContent = money(sum('receivable'));
@@ -585,14 +589,15 @@ function renderInvoiced(){
   renderCards(rows);
   $('bodyInvoiced').innerHTML = rows.length ? rows.map((v, i) => { const s = SPK[v.spk], t = totals(v.sales, v.tax); return `<tr>
     <td>${i + 1}</td>
-    <td><div class="invoice-cell-primary">${esc(v.no)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Tgl:</span> ${fmtDate(v.date)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ${esc(s.spk)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">PO:</span> ${esc(v.po)}</div></td>
-    <td><div class="invoice-cell-primary">${esc(s.customer)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ${esc(s.project)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">TOP:</span> ${esc(v.term)} (${v.pct.toFixed(2)}%)</div></td>
-    <td>${esc(s.company)}</td>
+    <td><div class="invoice-cell-primary">${esc(v.no)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ${esc(s.spk)}</div></td>
+    <td>${fmtDateId(v.date)}</td>
+    <td><div class="invoice-cell-primary">${esc(s.customer)}</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">Project:</span> ${esc(s.project)}</div></td>
+    <td>${esc(s.company)}</td><td>${teamCell(s)}</td>
     <td><span class="badge ${TAX_BADGE[v.tax]}${v.tax === 'UMKM' ? ' chg' : ''}">${TAX[v.tax]}</span></td>
     <td><dl class="money-stack"><dt>Penjualan</dt><dd>${money(t.sales)}</dd><dt>PPN</dt><dd>${money(t.ppn)}</dd><dt>Total tagihan</dt><dd>${money(t.gross)}</dd><dt>Saldo piutang</dt><dd class="strong">${money(t.receivable)}</dd></dl></td>
-    <td><span class="badge bg-green">Invoiced</span></td>
+    <td><span class="badge bg-green">Invoiced</span>${v.journaled ? '<span class="badge bg-red">Journaled</span>' : ''}</td>
     <td><button type="button" class="btn btn-default invoice-action-toggle" aria-haspopup="menu" aria-expanded="false" data-menu="${esc(v.no)}">Aksi</button></td></tr>`; }).join('')
-    : `<tr><td colspan="8" class="invoice-empty">Tidak ada invoice yang sesuai. Ubah kata pencarian atau filter.</td></tr>`;
+    : `<tr><td colspan="10" class="invoice-empty">Tidak ada invoice yang sesuai. Ubah tahun, bulan, company, atau perlakuan PPN.</td></tr>`;
   $('infoInvoiced').textContent = rows.length ? `1–${rows.length} dari ${rows.length} baris` : 'Belum ada baris ditampilkan';
   $('countInvoiced').textContent = INVOICES.length;
 }
@@ -603,26 +608,26 @@ function exportInvoiced(){
   if (!rows.length) return toast('Tidak ada invoice untuk diekspor. Ubah filter atau pencarian.', 'error');
   const XLSX = window.XLSX;
   if (!XLSX) return toast('Library Excel belum termuat. Buka mockup dengan koneksi internet lalu coba lagi.', 'error');
-  const head = ['No', 'No. Invoice', 'Tanggal Invoice', 'No. SPK', 'No. PO', 'No. Faktur', 'Customer', 'Project', 'Company', 'TOP', 'Persen TOP', 'Perlakuan PPN', 'Penjualan', 'DPP Lain-lain', 'PPN', 'Total Tagihan', 'Saldo Piutang', 'Status'];
+  const head = ['No', 'No. Invoice', 'Tanggal Invoice', 'No. SPK', 'No. PO', 'No. Faktur', 'Customer', 'Project', 'Project Leader', 'Sales', 'Company', 'TOP', 'Persen TOP', 'Perlakuan PPN', 'Penjualan', 'DPP Lain-lain', 'PPN', 'Total Tagihan', 'Saldo Piutang', 'Status'];
   const scope = invoicedScope(), q = $('qI').value.trim();
-  const aoa = [['Daftar Invoice (Invoiced)'], ['Filter: ' + scope.join(', ') + (q ? ', cari "' + q + '"' : '')], [], head];
+  const aoa = [['Daftar Invoice (Invoiced)'], ['Tahun: ' + (yearFilter || 'Semua') + ' | Bulan: ' + scope[1] + ' | Company: ' + (companyFilter ? companyFilter.toUpperCase() : 'Semua') + ' | Perlakuan PPN: ' + (taxFilter ? TAX[taxFilter] : 'Semua') + (q ? ' | Cari: ' + q : '')], [], head];
   rows.forEach((v, i) => { const s = SPK[v.spk], t = totals(v.sales, v.tax), p = v.date.split('-');
-    aoa.push([i + 1, v.no, p[2] + '-' + p[1] + '-' + p[0], s.spk, v.po, v.faktur, s.customer, s.project, s.company, v.term, v.pct / 100, TAX[v.tax],
+    aoa.push([i + 1, v.no, p[2] + '-' + p[1] + '-' + p[0], s.spk, v.po, v.faktur, s.customer, s.project, s.leader, s.sales, s.company, v.term, String(v.pct), TAX[v.tax],
       t.sales / 100, t.other / 100, t.ppn / 100, t.gross / 100, t.receivable / 100, 'Invoiced']); });
-  const first = 5, last = first + rows.length - 1, total = ['Total', '', '', '', '', '', '', '', '', '', '', rows.length + ' invoice'];
+  const first = 5, last = first + rows.length - 1, total = ['Total', '', '', '', '', '', '', '', '', '', '', '', '', ''];
   aoa.push(total);
   const ws = XLSX.utils.aoa_to_sheet(aoa), totalRow = last + 1;
-  ['M', 'N', 'O', 'P', 'Q'].forEach(col => {
-    ws[col + totalRow] = {t: 'n', f: `SUM(${col}${first}:${col}${last})`, v: rows.reduce((n, v) => n + totals(v.sales, v.tax)[{M:'sales', N:'other', O:'ppn', P:'gross', Q:'receivable'}[col]], 0) / 100, z: '#,##0.00'};
+  ['O', 'P', 'Q', 'R', 'S'].forEach(col => {
+    ws[col + totalRow] = {t: 'n', f: `SUM(${col}${first}:${col}${last})`, v: rows.reduce((n, v) => n + totals(v.sales, v.tax)[{O:'sales', P:'other', Q:'ppn', R:'gross', S:'receivable'}[col]], 0) / 100, z: '#,##0.00'};
     for (let r = first; r <= last; r++) if (ws[col + r]) ws[col + r].z = '#,##0.00';
   });
-  for (let r = first; r <= last; r++) { if (ws['K' + r]) ws['K' + r].z = '0.00%'; ws['B' + r].t = 's'; }
-  ws['!ref'] = 'A1:R' + totalRow;
-  ws['!cols'] = [6, 16, 14, 24, 14, 22, 34, 44, 14, 14, 10, 16, 18, 18, 16, 18, 18, 10].map(w => ({wch: w}));
-  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 17}}, {s: {r: 1, c: 0}, e: {r: 1, c: 17}}];
+  for (let r = first; r <= last; r++) { if (ws['M' + r]) ws['M' + r].t = 's'; ws['B' + r].t = 's'; }
+  ws['!ref'] = 'A1:T' + totalRow;
+  ws['!cols'] = [6, 16, 14, 24, 14, 22, 34, 44, 22, 22, 14, 14, 10, 16, 18, 18, 16, 18, 18, 10].map(w => ({wch: w}));
+  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 19}}, {s: {r: 1, c: 0}, e: {r: 1, c: 19}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Invoiced');
-  const file = 'Invoiced_' + [yearFilter || 'Semua-tahun', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua-bulan', (companyFilter || 'Semua-company').replace(/[^A-Za-z0-9]+/g, '-'), taxFilter || 'Semua-PPN'].join('_') + '.xlsx';
+  const file = 'Invoiced_' + [yearFilter || 'Semua', monthFilter ? MONTHS_LONG[+monthFilter - 1] : 'Semua', (companyFilter || 'Semua').toUpperCase().replace(/[^A-Z0-9]+/g, ''), taxFilter || 'Semua'].join('_') + '.xlsx';
   XLSX.writeFile(wb, file);
   toast(`Ekspor ${rows.length} invoice ke ${file}.`, 'success');
 }
@@ -656,7 +661,7 @@ function fillSelects(){
   $('fTax').innerHTML = '<option value="">Pilih perlakuan PPN</option>' + taxOpts;
   $('fTaxI').innerHTML = '<option value="">Semua perlakuan</option>' + taxOpts;
   $('fMonthI').innerHTML = '<option value="">Semua bulan</option>' + MONTHS_LONG.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}">${m}</option>`).join('');
-  $('fCompanyI').innerHTML = '<option value="">Semua company</option>' + COMPANIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('fCompanyI').innerHTML = '<option value="">Semua company</option>' + COMPANIES.map(c => `<option value="${esc(c)}">${esc(c.toUpperCase())}</option>`).join('');
   $('fSales').innerHTML = '<option value="">Pilih COA Penjualan</option>' + SALES_ROLES.map(r => `<option value="${r}">${ACC[r].code} - ${esc(ACC[r].name)}</option>`).join('');
 }
 function openForm(mode, rec){
@@ -691,6 +696,7 @@ function openForm(mode, rec){
 function backToList(){ $('viewForm').classList.add('hidden'); $('viewList').classList.remove('hidden'); renderConsulting(); renderInvoiced(); window.scrollTo(0, 0); }
 
 function render(){
+  $('formMsg').textContent = ''; $('formMsg').removeAttribute('data-state');   // pesan lama hilang saat isian berubah (sama dengan consulting-form.js)
   const type = $('fTax').value, role = $('fSales').value, rec = form.rec;
   const t = type ? totals(rec.sales, type) : null;
   document.querySelectorAll('#formBox [data-total]').forEach(el => {
@@ -709,15 +715,16 @@ function render(){
   else {
     const date = $('fDate').value || '-';
     $('journalBody').innerHTML = journal(t, role, form.number, SPK[rec.spk].spk).map(l => { d += l.debit; c += l.credit; return `<tr>
-      <td>${esc(date)}</td><td>STM</td><td>${esc(l.coa)}</td><td>${esc(l.name)}</td>
+      <td>${esc(date)}</td><td>${esc(SPK[rec.spk].company)}</td><td>${esc(l.coa)}</td><td>${esc(l.name)}</td>
       <td class="${type === 'UMKM' ? 'chg' : ''}">${esc(l.desc)}</td><td class="text-right">${money(l.debit)}</td><td class="text-right">${money(l.credit)}</td></tr>`; }).join('');
   }
   $('jDebit').textContent = money(d); $('jCredit').textContent = money(c);
 }
 
-function save(){
+function save(e){
+  if (e) e.preventDefault();
   const missing = [];
-  [['fPo','Nomor PO'],['fFaktur','Nomor faktur'],['fTax','Perlakuan PPN'],['fSales','COA penjualan']].forEach(([id, label]) => {
+  [['fDate','Tanggal invoice'],['fPo','Nomor PO'],['fFaktur','Nomor faktur'],['fTax','Perlakuan PPN'],['fSales','COA penjualan']].forEach(([id, label]) => {
     const bad = !$(id).value.trim(); $(id).classList.toggle('is-invalid', bad); if (bad) missing.push(label);
   });
   if (missing.length){
@@ -759,7 +766,8 @@ window.addEventListener('resize', closeMenu);
 $('fTax').addEventListener('change', render);
 $('fSales').addEventListener('change', render);
 $('fDate').addEventListener('change', render);
-$('btnSave').addEventListener('click', save);
+['fPo', 'fFaktur'].forEach(id => $(id).addEventListener('input', () => { $('formMsg').textContent = ''; $('formMsg').removeAttribute('data-state'); }));
+$('invoiceForm').addEventListener('submit', save);
 $('qC').addEventListener('input', renderConsulting);
 $('qI').addEventListener('input', renderInvoiced);
 $('btnFilterC').addEventListener('click', renderConsulting);

@@ -43,7 +43,7 @@ const accts = {
     vat_wapu_payable: {code: '2104-01-02', name: 'Hutang WAPU'},
     sales_consulting: {code: '4101-01-01', name: 'Penjualan'}
 };
-for (const type of ['PKP', 'WAPU', 'KB']) {
+for (const type of ['PKP', 'WAPU', 'KB', 'UMKM']) {
     const t = calc.totals('1000', type);
     const j = calc.journal(t, accts, 'sales_consulting', 'INV-01', 'SPK-01');
     const debits = j.reduce((sum, r) => sum + r.debit, 0);
@@ -53,6 +53,10 @@ for (const type of ['PKP', 'WAPU', 'KB']) {
     assert.ok(j[j.length - 1].description.includes('INV-01 - SPK-01'), 'Journal contains document numbers'); checks++;
     if (type === 'KB') {
         assert.ok(j[j.length - 1].description.endsWith(' - Kawasan Berikat'), 'KB journal has Kawasan Berikat suffix'); checks++;
+    }
+    if (type === 'UMKM') {
+        assert.ok(j[j.length - 1].description.endsWith(' - UMKM Non-PKP'), 'UMKM journal has UMKM suffix'); checks++;
+        assert.strictEqual(t.ppn, 0, 'UMKM PPN 0'); assert.strictEqual(t.gross, t.sales, 'UMKM gross = sales'); checks += 2;
     }
 }
 assert.throws(() => calc.journal(calc.totals('1000', 'PKP'), {}, 'sales_consulting', 'INV-01', 'SPK-01')); checks++;

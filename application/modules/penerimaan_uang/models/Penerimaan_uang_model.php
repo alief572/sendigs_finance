@@ -478,7 +478,7 @@ class Penerimaan_uang_model extends BF_Model
                     . " OR DATE_FORMAT(COALESCE(a.tanggal_transaksi, p.created_date), '%d/%m/%Y') LIKE " . $this->db->escape($like)
                     . " OR REPLACE(CAST(p.nominal_penerimaan_bank AS CHAR), '.00', '') LIKE " . $this->db->escape($digits)
                     . " OR (CASE p.pph23_dipotong WHEN 'Y' THEN 'Potong PPh 23' ELSE 'Tidak potong PPh 23' END) LIKE " . $this->db->escape($like)
-                    . " OR (CASE i.tax_treatment WHEN 'KB' THEN 'Kawasan Berikat' WHEN 'DEP' THEN 'Deposit' ELSE i.tax_treatment END) LIKE " . $this->db->escape($like) . ")", null, false);
+                    . " OR (CASE i.tax_treatment WHEN 'KB' THEN 'Kawasan Berikat' WHEN 'UMKM' THEN 'UMKM Non-PKP' WHEN 'DEP' THEN 'Deposit' ELSE i.tax_treatment END) LIKE " . $this->db->escape($like) . ")", null, false);
             }
         }
 
@@ -601,7 +601,7 @@ class Penerimaan_uang_model extends BF_Model
                     . " OR DATE_FORMAT(COALESCE(a.tanggal_transaksi, p.created_date), '%d/%m/%Y') LIKE ?"
                     . " OR REPLACE(CAST(p.nominal_penerimaan_bank AS CHAR), '.00', '') LIKE ?"
                     . " OR (CASE p.pph23_dipotong WHEN 'Y' THEN 'Potong PPh 23' ELSE 'Tidak potong PPh 23' END) LIKE ?"
-                    . " OR (CASE i.tax_treatment WHEN 'KB' THEN 'Kawasan Berikat' WHEN 'DEP' THEN 'Deposit' ELSE i.tax_treatment END) LIKE ?)";
+                    . " OR (CASE i.tax_treatment WHEN 'KB' THEN 'Kawasan Berikat' WHEN 'UMKM' THEN 'UMKM Non-PKP' WHEN 'DEP' THEN 'Deposit' ELSE i.tax_treatment END) LIKE ?)";
                 $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
                 $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $digits; $params[] = $like; $params[] = $like;
             }

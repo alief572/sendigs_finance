@@ -142,11 +142,11 @@ class Penerimaan_calculation
 
     /**
      * Calculate tax breakdown for consulting invoices based on tax treatment.
-     * Tax treatments: 'PKP', 'WAPU', 'KB' (Kawasan Berikat).
+     * Tax treatments: 'PKP', 'WAPU', 'KB' (Kawasan Berikat), 'UMKM' (UMKM Non-PKP: PPN 0, PPh Final 0,5%), 'DEP'.
      */
     public static function tax_calc($salesCents, $taxTreatment)
     {
-        if (!in_array($taxTreatment, array('PKP', 'WAPU', 'KB', 'DEP'), true)) {
+        if (!in_array($taxTreatment, array('PKP', 'WAPU', 'KB', 'UMKM', 'DEP'), true)) {
             throw new InvalidArgumentException('Perlakuan pajak tidak valid: ' . $taxTreatment);
         }
         if ($salesCents < 0) {
@@ -165,7 +165,8 @@ class Penerimaan_calculation
         }
         $dppLain = Invoice_calculation::ratio($salesCents, 11, 12);
         $ppn = $taxTreatment === 'PKP' ? Invoice_calculation::ratio($dppLain, 12, 100) : 0;
-        $pphDefault = Invoice_calculation::ratio($salesCents, 2, 100);
+        // UMKM Non-PKP: PPh Final 0,5% x penjualan; perlakuan lain: PPh 23 2% x penjualan.
+        $pphDefault = $taxTreatment === 'UMKM' ? Invoice_calculation::ratio($salesCents, 5, 1000) : Invoice_calculation::ratio($salesCents, 2, 100);
         $tagihan = $taxTreatment === 'PKP' ? $salesCents + $ppn : $salesCents;
         $piutang = $tagihan;
 
@@ -178,6 +179,16 @@ class Penerimaan_calculation
             'piutang' => $piutang,
             'tax_treatment' => $taxTreatment
         );
+    }
+
+    public static function pph_label($taxTreatment)
+    {
+        return $taxTreatment === 'UMKM' ? 'PPh Final 0,5%' : 'PPh 23';
+    }
+
+    public static function pph_limit_label($taxTreatment)
+    {
+        return $taxTreatment === 'UMKM' ? 'PPh Final 0,5%' : 'PPh 23 2%';
     }
 
     /**

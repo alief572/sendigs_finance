@@ -1,6 +1,8 @@
 # Serah Terima ke IT — Perlakuan PPN UMKM Non-PKP
 
-Perlakuan PPN baru **UMKM Non-PKP (Omzet ≤ Rp4,8 M, PPh Final 0,5%)** di menu **Invoicing** (invoice konsultasi v3) dan **Penerimaan Piutang**, plus usulan **card Total Invoiced + Ekspor Excel di tab Invoiced** (bagian 9, belum di kode).
+Perlakuan PPN baru **UMKM Non-PKP (Omzet ≤ Rp4,8 M, PPh Final 0,5%)** di menu **Invoicing** (invoice konsultasi v3) dan **Penerimaan Piutang**, plus **card Total Invoiced + Ekspor Excel `.xlsx` di tab Invoiced** (bagian 9).
+> **Status per 10 Nov 2026**: kode dan test di dokumen ini sudah ada di branch `development`. Sebelumnya dokumen ditulis seolah kode sudah ada padahal belum; daftar file dan hasil test di bawah sudah dicocokkan dengan repo. Belum diuji: jalur simpan, rollback, dan posting terhadap database nyata, serta tampilan di browser.
+
 Tanggal: **2026-11-10** (terakhir diperbarui: DPP UMKM tetap dihitung, INV-R-24). Branch: `development`.
 
 | Dokumen | Isi |
@@ -104,6 +106,10 @@ const PPH_FINAL_PAYABLE_COA = ''; const PPH_FINAL_PAYABLE_NAME = 'Hutang PPh Fin
 | `application/modules/invoicing/libraries/Consulting_posting.php` | Posting penerimaan ditolak bila ada baris jurnal tanpa COA |
 | `application/modules/invoicing/views/consulting_invoice.php` | Dropdown dari `tax_treatments()`, teks bantuan, catatan `[data-umkm-note]` |
 | `application/modules/invoicing/views/consulting_print.php` | Label perlakuan KB/UMKM di cetakan |
+| `application/modules/invoicing/controllers/Invoicing.php` | Tab Invoiced: `invoiced_summary()` (card) dan `download_invoiced()` (ekspor `.xlsx`), filter lewat `invoiced_filters()` |
+| `application/modules/invoicing/models/Invoicing_model.php` | `invoiced_rows()` (satu query untuk tabel, card, ekspor), `invoiced_totals()`, `filter_company_ppn()` (grup STM/VUCA/SUSTAIN + Perlakuan PPN), `money_for()`, `tax_label_for()`; invoice non-v3 tampil `-` di kolom Nilai dan tidak masuk nominal card |
+| `application/modules/invoicing/views/index.php` | Tab Invoiced: 4 card, filter Tahun/Bulan/Company/Perlakuan PPN, kolom Perlakuan PPN dan Nilai (10 kolom) |
+| `application/libraries/Xlsx_export.php` | `invoiced_spec()` (baris Total dengan rumus `SUM`), dukungan sel rumus, label UMKM |
 | `assets/js/invoicing/consulting.js` | Parity JS: UMKM DPP 11/12, PPN 0, suffix |
 | `assets/js/invoicing/consulting-form.js` | Tampil/sembunyi catatan UMKM |
 | `assets/css/invoicing.css` | Gaya `.invoice-vat-note` |
@@ -125,7 +131,7 @@ const PPH_FINAL_PAYABLE_COA = ''; const PPH_FINAL_PAYABLE_NAME = 'Hutang PPh Fin
 
 **Bersama**: `application/libraries/Xlsx_export.php`, `application/helpers/mockup_format_helper.php` (label UMKM), `assets/css/mockup_ui.css` (warna badge UMKM).
 
-**Test**: baru `application/modules/penerimaan_uang/tests/Umkm_receipt_journal_test.php`; diperbarui `invoicing/tests/Consulting_calculation_test.php`, `Consulting_calculation_test.js`, `Print_invoice_test.php`, `Ui_render_test.php`, `Ui_client_test.js`.
+**Test**: baru `application/modules/penerimaan_uang/tests/Umkm_receipt_journal_test.php`, `application/modules/invoicing/tests/Invoiced_export_test.php`, `Posting_coa_guard_test.php`; diperbarui `invoicing/tests/Consulting_calculation_test.php`, `Consulting_calculation_test.js`, `Print_invoice_test.php`, `Ui_render_test.php`, `Ui_client_test.js`.
 
 ## 5. Langkah pemasangan
 
@@ -139,11 +145,13 @@ const PPH_FINAL_PAYABLE_COA = ''; const PPH_FINAL_PAYABLE_NAME = 'Hutang PPh Fin
 
 | Perintah | Hasil 10 Nov | Butuh DB |
 |---|---|---|
-| `php application/modules/penerimaan_uang/tests/Umkm_receipt_journal_test.php` | PASS 49 cek (10 skenario Excel = jurnal sistem) | Tidak |
+| `php application/modules/penerimaan_uang/tests/Umkm_receipt_journal_test.php` | PASS 212 cek (10 skenario Excel = jurnal sistem) | Tidak |
+| `php .../penerimaan_uang/tests/Consulting_receipt_tobe_test.php` (TEST 7), `Umkm_view_test.php` (12), `calculation_test.php`; `php .../invoicing/tests/Posting_coa_guard_test.php` (3) | PASS | Tidak |
+| `php .../invoicing/tests/List_filter_test.php` (62), `Invoiced_export_test.php` (41), `Batch1_audit_test.php` (161); `node .../Ui_list_client_test.js` (77) | PASS | Tidak |
 | `php application/modules/invoicing/tests/Consulting_calculation_test.php` | PASS | Tidak |
 | `node application/modules/invoicing/tests/Consulting_calculation_test.js` | PASS | Tidak |
 | `php application/modules/invoicing/tests/Print_invoice_test.php`, `Ui_render_test.php`; `node .../Ui_client_test.js` | PASS | Tidak |
-| `node specs/docs/mockup-invoicing/smoke-test.js` | PASS (54 + 91 cek) | Tidak (butuh jsdom) |
+| `node specs/docs/mockup-invoicing/smoke-test.js` | PASS (66 + 91 cek) | Tidak (butuh jsdom) |
 | `php application/modules/invoicing/tests/Consulting_integration_test.php --isolated-local-db` | **Belum dijalankan** — laptop pengembang tidak punya DB uji terisolasi | **Ya, hanya DB uji terisolasi** |
 
 Test yang **sudah gagal sebelum perubahan ini** (dicek dengan `git stash`, bukan regresi): `invoicing/tests/Ui_list_client_test.js`, `penerimaan_uang/tests/` `Xlsx_export_test.php`, `detail_journal_test.php`, `consulting_view_test.js`, `consulting_fifo_view_test.js`, `legacy_vuca_preview_test.php`, `installment_view_test.js`, `consulting_kwitansi_view_test.js`, `company_context_test.js`; `Add_template_contract_test.php` gagal karena deprecation dynamic property di PHP lokal.
@@ -174,7 +182,7 @@ Test yang **sudah gagal sebelum perubahan ini** (dicek dengan `git stash`, bukan
 - [ ] Penerimaan PPh 23 (bukti potong) tidak menampilkan PPh Final UMKM.
 - [ ] Label form: "PPh 23/PPh Final Disetor".
 
-## 9. Tab Invoiced: card Total Invoiced + Ekspor Excel (UMKM-FR-07, belum di kode)
+## 9. Tab Invoiced: card Total Invoiced + Ekspor Excel (UMKM-FR-07)
 
 Diminta user (INV-R-21 s.d. INV-R-23) dan sudah ada di mockup (`mockup-invoicing/index.html`, tab Invoiced). Di aplikasi, tab Invoiced belum punya card, filter Perlakuan PPN, dan ekspornya masih format lama `.xls` (`Invoicing::download_excel`).
 

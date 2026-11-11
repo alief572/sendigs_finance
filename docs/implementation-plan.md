@@ -1,3 +1,20 @@
+## UMKM Non-PKP + card/ekspor tab Invoiced (INV-R-12 s.d. INV-R-25) — 10 November 2026
+
+Acuan: `specs/docs/mockup-invoicing/` (FR UMKM-FR-01..07, NFR-01..05, mockup, ERD, serah-terima). Temuan awal: docs menyatakan UMKM-FR-01..06 "Ada", tetapi tidak ada kode UMKM di `development` (tidak ada `tax_treatments()`, `pph_final_self`, `PPH_FINAL_*_COA`, `Umkm_receipt_journal_test.php`; `Invoice_consulting::totals()` menolak selain PKP/WAPU/KB). Angka PKP/WAPU/KB mockup = kode asli (615.000 dicek), tidak ada regresi hitung.
+
+Keputusan default (berlaku sampai user mengubah): COA Beban/Hutang PPh Final dikosongkan dan posting ditolak; setor sendiri + kurang bayar mencatat Hutang PPh Final penuh di penerimaan pertama (Excel kasus 4); Kawasan Berikat tidak berubah; baris PPN 0.00 tetap tampil di cetakan UMKM; faktur UMKM tetap wajib; tanpa migrasi (`tr_invoicing.tax_treatment` VARCHAR(8) sudah ada).
+
+- Fase 0, dokumen kerja: rencana ini, checkpoint, status FR/serah-terima dikoreksi ke "Belum".
+- Fase 1, invoice UMKM: `Invoice_consulting` (`tax_treatments`, `tax_suffix`, `totals`, `journal`), `consulting.js` (parity), `consulting_invoice.php`, `consulting-form.js`, `invoicing.css`, `consulting_print.php`.
+- Fase 2, penerimaan hitung PPh Final 0,5%: `Penerimaan_calculation::tax_calc`, `Consulting_receipt::invoice_context`.
+- Fase 3, jurnal PPh Final: konstanta COA kosong, `pph_final_self` di snapshot v4, `Invoice_consulting::receipt_journal`, `Consulting_posting::receipt` menolak baris tanpa COA, `Umkm_receipt_journal_test.php` (10 skenario Excel).
+- Fase 4, UI/label Penerimaan: `add.php`, `consulting_process.php`, `detail.php`, daftar invoice, helper/CSS badge.
+- Fase 5, tab Invoiced: card agregat, filter Bulan invoice/Perlakuan PPN/Semua tahun, ekspor `.xlsx` via `Xlsx_export`; fitur yang sudah ada (kolom Tanggal/Tim, badge Journaled, aksi Vuca) dipertahankan.
+- Fase 6, mockup disesuaikan ke aplikasi; FR, README, serah-terima diperbarui sesuai hasil test.
+- Fase 7, README modul, suite terdampak, checkpoint akhir.
+
+Urutan ketat: 1 -> 2 -> 3 -> 4; Fase 5 independen dari 2-4. Detail dan bukti uji per fase: `docs/task-progress.md`. Rencana lengkap: `C:\Users\Febry\.claude\plans\sequential-percolating-coral.md`.
+
 ## Invoicing: tab Invoiced (INV-R-01, INV-FR-01/02) — 10 November 2026
 
 Mengikuti `specs/input/Monitoring Piutang/Invoicing Tab Invoiced.html`. Daftar invoicing kini 3 tab: **Konsultasi** (hanya tagihan belum di-invoice, dropdown "Status tagihan" dihapus), **Non Konsultasi** (tetap), **Invoiced** (baru: filter Tahun, Bulan, Company; kolom Tanggal Invoice; ekspor Excel mengikuti filter; terbaru dulu).
@@ -8,9 +25,21 @@ Mengikuti `specs/input/Monitoring Piutang/Invoicing Tab Invoiced.html`. Daftar i
 
 Detail, bukti uji, dan keterbatasan: `docs/task-progress.md`. Tidak ada migrasi.
 
+## Rollout Audit Trail — Fase 5 batch 2 selesai (`penerimaan_uang` 18/18; Fase 5 18/28) — 10 November 2026
+
+Batch 2 (`save_kwitansi_deposit`, `save_penerimaan_piutang`, `rollback_penerimaan`, `detail`, `view`, `view_surat`, `draft_rows`, `get_alokasi_penerimaan`) selesai; sukses simpan dan rollback invoice lama kini mengikuti hasil commit. Detail dan bukti uji: `docs/audits/phase-5-penerimaan-uang-batch-2.md`. Batch 3 (`penerimaan_pph_23`, `unlocated_penerimaan`, `historical_alokasi`) belum dikerjakan; mulai hanya jika diminta.
+
+## Rollout Audit Trail — Fase 5 batch 1 selesai, cakupan direvisi — 10 November 2026
+
+Fase 5 (Penerimaan dan riwayat) kini 28 endpoint, bukan 18 seperti baseline manifest 10 Oktober: `penerimaan_uang` bertambah dari 8 ke 18 (penyelarasan Penerimaan Piutang dan Deposit, 30 Oktober). Pembagian batch: 1 `penerimaan_uang` 10 endpoint baca/preview (selesai), 2 `penerimaan_uang` 8 endpoint termasuk semua jalur tulis, 3 `penerimaan_pph_23` + `unlocated_penerimaan` + `historical_alokasi` (10 endpoint). Detail dan bukti uji: `docs/audits/phase-5-penerimaan-uang-batch-1.md`. Manifest: `docs/audits/active-menu-audit-2026-10-10.json`. Batch 2 belum dikerjakan; mulai hanya jika diminta.
+
 ## Rollout Audit Trail — Fase 4 selesai, cakupan direvisi — 9 November 2026
 
 Fase 4 (Penagihan dan invoice) selesai: 60/60 endpoint, bukan 58 seperti baseline manifest 10 Oktober; `invoicing` bertambah `coa_settings` dan `save_coa_mapping`. Urutan eksekusi: `plan_tagih` → `actual_plan_tagih` → `approval_invoice_so` → `invoicing` (urutan manifest lama menaruh `approval_invoice_so` terakhir). Detail, bukti uji, perubahan perilaku (sukses tulis mengikuti hasil commit), temuan di luar cakupan, dan baseline gagal: `docs/audits/phase-4-completion.md`. Manifest: `docs/audits/active-menu-audit-2026-10-10.json`. Fase 5 belum dikerjakan; mulai hanya jika diminta.
+
+## Rollout Audit Trail — Fase 3 selesai, cakupan direvisi — 9 November 2026
+
+Fase 3 (Expense dan petty cash) selesai: 130/130 endpoint, bukan 121 seperti baseline manifest 10 Oktober; 9 endpoint pengembalian/verifikasi Expense ditemukan belakangan dan ditambahkan. Pembagian batch berubah dari rencana awal (batch 8–9 Expense, petty cash 1–3) menjadi batch 8–14. Detail, bukti uji, perubahan perilaku (sukses tulis mengikuti hasil commit), temuan di luar cakupan, dan 4 kegagalan baseline: `docs/audits/phase-3-completion.md`. Manifest: `docs/audits/active-menu-audit-2026-10-10.json`. Fase 4 belum dikerjakan; mulai hanya jika diminta.
 
 ## Penyelarasan Penerimaan Piutang, Kwitansi Deposit, dan Monitoring Deposit ke mockup to-be — 30 Oktober 2026
 
@@ -101,3 +130,15 @@ Temuan teknis yang memengaruhi desain:
 4. **Approval Perubahan Budget** (modul baru `approval_perubahan_budget`, menu + permission).
 
 Migrasi SQL dijalankan manual oleh pengguna (DB dev remote); kode tidak mengasumsikan akses DB hidup.
+
+# Modul Monitoring Piutang, Follow Up Piutang, Dashboard Plan Bayar — 6 November 2026
+
+Acuan: `specs/docs/review-monitoring-piutang/` (fr-nfr.md, use-case.md, mockup, ERD). Keadaan awal: hanya migrasi `monitoring_piutang/migrations/001-018` yang ada; semua kode PHP dibangun dari nol. Rencana rinci: `C:\Users\Febry\.claude\plans\full-memoized-kurzweil.md`.
+
+1. Fase 0: config `application/config/piutang.php`, cocokkan skema migrasi dengan spec, dokumen checkpoint.
+2. Fase 1: library `Piutang_aging` (satu sumber aturan) + model + menu Follow Up Piutang + cek lunas di `Invoicing::save_close_invoice`.
+3. Fase 2: menu Monitoring Piutang (card, list, rekap, detail, Excel).
+4. Fase 3: Dashboard Plan Bayar (plan vs realisasi, Excel).
+5. Fase 4: Surat Konfirmasi (profil STM), regresi, dokumentasi.
+
+Di luar cakupan: write-off, invoice internal, profil surat non-STM, notifikasi, tab Invoiced di Invoicing (INV-FR-02: saat ini hanya tab Konsultasi + Non Konsultasi dengan filter status).

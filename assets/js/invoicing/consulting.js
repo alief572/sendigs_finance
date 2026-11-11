@@ -14,12 +14,13 @@
     }
     function ratio(n, a, b) { return Math.floor(n / b) * a + Math.floor(((n % b) * a + Math.floor(b / 2)) / b); }
     function totals(amount, type) {
-        if (['PKP', 'WAPU', 'KB'].indexOf(type) < 0) throw new Error('Pilih perlakuan PPN.');
+        if (['PKP', 'WAPU', 'KB', 'UMKM'].indexOf(type) < 0) throw new Error('Pilih perlakuan PPN.');
         var sales = cents(amount);
         if (!sales) throw new Error('Nominal TOP harus positif.');
-        var other = ratio(sales, 11, 12), ppn = ratio(other, 12, 100);
+        var other = ratio(sales, 11, 12), ppn = type === 'UMKM' ? 0 : ratio(other, 12, 100);
         return {sales: sales, other: other, ppn: ppn, gross: sales + ppn, receivable: type === 'PKP' ? sales + ppn : sales, type: type};
     }
+    var suffix = {PKP: '', WAPU: '', KB: ' - Kawasan Berikat', UMKM: ' - UMKM Non-PKP'};
     function journal(t, accounts, role, number, spk) {
         var lines = [];
         if (t.type === 'WAPU') lines.push(['vat_wapu_prepaid', t.ppn, 0]);
@@ -30,7 +31,7 @@
         return lines.map(function (line) {
             var a = accounts[line[0]];
             if (!a) throw new Error('Pilih COA penjualan.');
-            return {coa: a.code, name: a.name, debit: line[1], credit: line[2], description: a.name + ' - ' + number + ' - ' + spk + (t.type === 'KB' ? ' - Kawasan Berikat' : '')};
+            return {coa: a.code, name: a.name, debit: line[1], credit: line[2], description: a.name + ' - ' + number + ' - ' + spk + suffix[t.type]};
         });
     }
     function receipt(balance, cash, admin, pph) {

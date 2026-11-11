@@ -1308,6 +1308,58 @@ class Invoicing extends Admin_Controller
         $this->auditPage('Data SPK invoicing diambil', true);
     }
 
+    private function invoiced_filters($src)
+    {
+        $pick = function ($k) use ($src) { $v = $src($k); return is_scalar($v) ? trim((string)$v) : ''; };
+        return ['tahun' => $pick('filter_tahun'), 'bulan' => $pick('filter_bulan'), 'company' => $pick('filter_company'),
+            'ppn' => $pick('filter_ppn'), 'search' => $pick('filter_search')];
+    }
+
+    /** Card Total Invoiced (UMKM-FR-07): query yang sama dengan ekspor. */
+    public function invoiced_summary()
+    {
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
+        $rows = $this->Invoicing_model->invoiced_rows($this->invoiced_filters(function ($k) { return $this->input->post($k); }));
+        $t = $this->Invoicing_model->invoiced_totals($rows);
+        $this->output->set_content_type('application/json')->set_output(json_encode($t));
+        $this->completeAudit('Ringkasan invoiced diambil', 1, array('row_count' => $t['count'], 'outcome' => 'rendered'));
+    }
+
+    /** Ekspor .xlsx tab Invoiced; baris Total memakai rumus SUM. Tanpa baris -> ditolak. */
+    public function download_invoiced()
+    {
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
+        $f = $this->invoiced_filters(function ($k) { return $this->input->get($k); });
+        $rows = $this->Invoicing_model->invoiced_rows($f);
+        if (!$rows) {
+            $this->completeAudit('Ekspor invoiced ditolak: tidak ada baris', 0, array('row_count' => 0, 'reason' => 'empty', 'outcome' => 'rejected'));
+            show_error('Tidak ada invoice pada filter ini, ekspor dibatalkan.', 404);
+            return;
+        }
+        $out = [];
+        foreach ($rows as $item) {
+            $m = $this->Invoicing_model->money_for($item);
+            $date = (!empty($item->tanggal_invoice) && strpos((string)$item->tanggal_invoice, '0000-00-00') !== 0) ? substr((string)$item->tanggal_invoice, 0, 10) : '';
+            $out[] = ['no_invoice' => (string)$item->no_invoice, 'tanggal' => $date, 'no_spk' => (string)$item->id_spk_penawaran, 'no_po' => (string)$item->no_po,
+                'no_faktur' => (string)$item->no_faktur, 'customer' => (string)$item->nm_customer, 'project' => (string)$item->nm_project, 'leader' => (string)$item->nm_project_leader,
+                'sales_name' => (string)$item->nm_sales, 'company' => (string)$item->company_name, 'top' => (string)$item->term_payment, 'persen_top' => (string)$item->persen_payment,
+                'tax_label' => $this->Invoicing_model->tax_label_for($item->tax_treatment ?? ''), 'sales' => $m['sales'] ?? null, 'dpp' => $m === null ? null : Invoice_calculation::cents(number_format((float)$item->dpp_nilai_lain, 2, '.', '')),
+                'ppn' => $m['ppn'] ?? null, 'gross' => $m['gross'] ?? null, 'saldo' => $m['saldo'] ?? null, 'status' => 'Invoiced'];
+        }
+        $label = function ($v, $all) { return $v === '' ? $all : $v; };
+        $bulanNama = Xlsx_export::MONTHS_ID;
+        $bulan = ($f['bulan'] !== '' && isset($bulanNama[(int)$f['bulan']])) ? $bulanNama[(int)$f['bulan']] : 'Semua bulan';
+        $text = 'Tahun: ' . ($f['tahun'] === 'all' ? 'Semua' : ($f['tahun'] === '' ? date('Y') : $f['tahun'])) . ' | Bulan: ' . $bulan . ' | Company: ' . $label($f['company'], 'Semua')
+            . ' | Perlakuan PPN: ' . ($f['ppn'] === '' ? 'Semua' : $this->Invoicing_model->tax_label_for($f['ppn'])) . ($f['search'] !== '' ? ' | Cari: ' . $f['search'] : '');
+        $slug = function ($v) { return $v === '' ? 'Semua' : preg_replace('/[^A-Za-z0-9]+/', '', $v); };
+        $name = 'Invoiced_' . $slug($f['tahun'] === 'all' ? 'Semua' : $f['tahun']) . '_' . $slug($bulan === 'Semua bulan' ? '' : $bulan) . '_' . $slug($f['company']) . '_' . $slug($f['ppn']) . '.xlsx';
+        $this->completeAudit('Mengunduh excel invoiced', 1, array('row_count' => count($out), 'outcome' => 'generated'));
+        require_once APPPATH . 'libraries/Xlsx_export.php';
+        Xlsx_export::download(Xlsx_export::invoiced_spec($out, $text, $name), $name);
+    }
+
     public function download_excel()
     {
         $this->beginAudit(__FUNCTION__);

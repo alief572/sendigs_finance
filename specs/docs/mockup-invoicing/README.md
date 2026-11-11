@@ -9,11 +9,13 @@ FR & NFR: [`fr-nfr-umkm-non-pkp.md`](fr-nfr-umkm-non-pkp.md). ERD: [`erd-umkm-no
 |---|---|
 | `index.html` | **Invoicing**: Daftar invoice (tab Konsultasi, Non Konsultasi, **Invoiced**) + Buat/Detail invoice konsultasi dengan perlakuan PPN UMKM Non-PKP |
 | `penerimaan-piutang.html` | **Penerimaan Piutang**: form Proses Penerimaan + popup alokasi & jurnal untuk invoice UMKM (PPh Final 0,5%) |
-| `smoke-test.js` | Smoke test Invoicing (jsdom); di akhir ikut menjalankan `smoke-test-penerimaan.js` |
+| `smoke-test.js` | Smoke test Invoicing (jsdom, 66 cek); di akhir ikut menjalankan `smoke-test-penerimaan.js` (91 cek) |
 | `smoke-test-penerimaan.js` | Smoke test Penerimaan Piutang: 5 kasus Excel × dipotong/setor sendiri, batch campuran, validasi, Proses |
 | `fr-nfr-umkm-non-pkp.md` | **FR & NFR** UMKM Non-PKP dan tab Invoiced (UMKM-FR-01 s.d. 07, UMKM-NFR-01 s.d. 05) |
 | `erd-umkm-non-pkp.drawio` | **ERD** tabel yang dipakai invoice dan penerimaan UMKM (buka dengan draw.io / app.diagrams.net) |
 | `serah-terima-umkm-non-pkp.md` | **Serah terima ke IT**: aturan, data, konfigurasi COA, file yang berubah, pemasangan, test, use case, UAT |
+
+> **Status per 10 Nov 2026**: mockup ini sudah disamakan dengan aplikasi (kolom Tanggal Invoice dan Tim, badge Journaled, filter Tahun Konsultasi berfungsi, Company jurnal mengikuti SPK, form memakai `<form>` dan `required`). Kode UMKM dan tab Invoiced sudah ada di `development`; lihat `fr-nfr-umkm-non-pkp.md` untuk status per fitur.
 
 ## Sumber
 
@@ -35,7 +37,7 @@ FR & NFR: [`fr-nfr-umkm-non-pkp.md`](fr-nfr-umkm-non-pkp.md). ERD: [`erd-umkm-no
    - kolom Dokumen (no. invoice, tanggal, SPK, PO), Customer & Project (+ TOP), Company, Perlakuan PPN, Nilai (Penjualan, PPN, Total tagihan, Saldo piutang), Status, Aksi;
    - **card Total Invoiced** di paling atas (Total Invoiced + jumlah invoice, Penjualan, PPN, Saldo piutang) yang mengikuti filter dan pencarian (UMKM-FR-07);
    - filter Tahun, Bulan invoice, **Company** (STM, Vuca, Sustain; Vuca belum punya data contoh), Perlakuan PPN; pencarian;
-   - **Ekspor Excel** mengunduh file `.xlsx` sungguhan berisi invoice yang tampil, dengan baris Total (rumus SUM). Dibuat di browser dengan SheetJS dari cdnjs, jadi butuh internet saat mockup dibuka;
+   - **Ekspor Excel** mengunduh file `.xlsx` sungguhan berisi invoice yang tampil, dengan baris Total (rumus SUM). Format sama dengan aplikasi: Persen TOP teks, baris filter `Tahun: … | Bulan: … | Company: … | Perlakuan PPN: …`, nama file `Invoiced_<tahun>_<bulan>_<COMPANY>_<PPN>.xlsx` (`Semua` bila tidak difilter). Pencarian mencakup no. invoice, SPK, customer, project, no. PO, dan no. faktur; Dibuat di browser dengan SheetJS dari cdnjs, jadi butuh internet saat mockup dibuka;
    - Aksi: Lihat invoice (detail read-only beserta jurnal), Cetak invoice, Cetak kwitansi.
 3. **Tab Konsultasi** hanya menampilkan TOP yang **belum ditagihkan** (filter Status tagihan dihapus).
    Setelah **Simpan invoice**, baris pindah ke tab Invoiced.

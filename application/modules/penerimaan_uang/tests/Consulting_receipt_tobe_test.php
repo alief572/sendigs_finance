@@ -309,4 +309,66 @@ checkAssert(Penerimaan_calculation::cents($db->alloc_details[0]['nilai_terpakai'
 checkAssert(Penerimaan_calculation::cents($db->alloc_splits[0]['nilai_terpakai']) === 0, 'Bank split nilai_terpakai restored to 0');
 echo "PASS: Rollback Verification\n\n";
 
+// =========================================================================
+// TEST 7: UMKM Non-PKP (PPh Final 0,5%): dipotong, setor sendiri, batas, rollback
+// =========================================================================
+echo "=== TEST 7: UMKM Non-PKP ===\n";
+function umkmSave($choice, $bankNominal, $pphActual, $admin, $sisa, $penerimaan) {
+    global $refS;
+    $db = createFixtures();
+    $db->alloc_splits[0]['nominal'] = $bankNominal;
+    $db->alloc_details[0]['nominal_debit'] = $bankNominal;
+    // Penjualan 2.000.000: DPP 1.833.333,33, PPN 0, PPh Final 10.000, tagihan = piutang = 2.000.000
+    $db->invoices = array(makeInvoice(7, 'INV-UMKM', 'UMKM', 200000000, 183333333, 0, 0, 200000000, 200000000));
+    $ci = new MockCi($db);
+    $engine = new Consulting_receipt($ci);
+    $refS->setValue($engine, new CustomService($ci));
+    $prev = $engine->preview(array('choose_inv' => array(7), 'id_alokasi' => 100, 'pph23_dipotong' => $choice, 'ppn_dipotong' => 'N'));
+    $post = array('no_inv' => '1', 'id_alokasi' => 100, 'allocation_fingerprint' => $prev['allocation_fingerprint'], 'pph23_dipotong' => $choice,
+        'ppn_dipotong' => 'N', 'id_inv_1' => 7, 'receipt_fingerprint_1' => $prev['rows'][0]['fingerprint'], 'pph_actual_1' => $pphActual,
+        'biaya_admin_1' => $admin, 'sisa_piutang_1' => $sisa, 'penerimaan_1' => $penerimaan);
+    return array($engine, $prev, $post, $db);
+}
+function umkmLine($db, $name, $side) {
+    $sum = 0;
+    foreach ($db->journals as $j) if ($j['nm_coa'] === $name) $sum += Penerimaan_calculation::cents($j[$side]);
+    return $sum;
+}
+function umkmBank($db) { return umkmLine($db, 'Bank Mandiri Operasional', 'debit'); }
+
+list($engine, $prev, $post, $db) = umkmSave('Y', '1987500.00', '10000.00', '2500.00', '0.00', '2000000.00');
+checkAssert($prev['rows'][0]['tax_treatment'] === 'UMKM' && $prev['rows'][0]['pph_label'] === 'PPh Final 0,5%', 'UMKM preview label PPh Final');
+checkAssert($prev['rows'][0]['default_pph'] === 1000000 && $prev['rows'][0]['tax_calc']['ppn'] === 0, 'UMKM default PPh Final 10.000, PPN 0');
+checkAssert($engine->save($post)['status'] === 1, 'UMKM dipotong: save success');
+checkAssert(umkmBank($db) === 198750000, 'UMKM dipotong: bank 1.987.500');
+checkAssert(umkmLine($db, 'Beban PPh Final', 'debit') === 1000000 && umkmLine($db, 'Hutang PPh Final', 'kredit') === 0, 'UMKM dipotong: Beban PPh Final D saja');
+checkAssert(umkmLine($db, 'PPh 23 Disetor', 'debit') === 0, 'UMKM dipotong: tanpa PPh 23 Disetor');
+checkAssert(Penerimaan_calculation::cents($db->invoices[0]['saldo_piutang']) === 0, 'UMKM dipotong: lunas');
+$snap = json_decode($db->receipt_details[0]['consulting_snapshot'], true);
+checkAssert($snap['pph_final_self'] === 0 && $snap['tax_treatment'] === 'UMKM' && $snap['calculation_version'] === 4, 'UMKM dipotong: snapshot pph_final_self 0');
+checkAssert(Penerimaan_calculation::cents($db->receipt_details[0]['pph23']) === 1000000, 'UMKM dipotong: PPh Final di kolom pph23');
+foreach ($db->journals as $j) if ($j['nm_coa'] === 'Beban PPh Final') checkAssert($j['coa'] === '', 'UMKM: COA Beban PPh Final kosong (draf)');
+
+list($engine, $prev, $post, $db) = umkmSave('N', '1997500.00', '0.00', '2500.00', '0.00', '2000000.00');
+checkAssert($prev['rows'][0]['default_pph'] === 0 && $prev['rows'][0]['remaining_pph'] === 1000000, 'UMKM setor sendiri: PPh default 0, batas tetap 10.000');
+checkAssert($engine->save($post)['status'] === 1, 'UMKM setor sendiri: save success');
+checkAssert(umkmBank($db) === 199750000, 'UMKM setor sendiri: bank 1.997.500 (penuh)');
+checkAssert(umkmLine($db, 'Beban PPh Final', 'debit') === 1000000 && umkmLine($db, 'Hutang PPh Final', 'kredit') === 1000000, 'UMKM setor sendiri: Beban D / Hutang K 10.000');
+checkAssert(Penerimaan_calculation::cents($db->receipt_details[0]['pph23']) === 0, 'UMKM setor sendiri: kolom pph23 0');
+$snap = json_decode($db->receipt_details[0]['consulting_snapshot'], true);
+checkAssert($snap['pph_final_self'] === 1000000, 'UMKM setor sendiri: snapshot pph_final_self 10.000');
+$deb = 0; $cre = 0; foreach ($db->journals as $j) { $deb += Penerimaan_calculation::cents($j['debit']); $cre += Penerimaan_calculation::cents($j['kredit']); }
+checkAssert($deb === $cre, 'UMKM setor sendiri: jurnal seimbang');
+$rb = $engine->rollback($db->receipts[0]['id']);
+checkAssert($rb['status'] === 1 && count($db->journals) === 0 && count($db->receipt_details) === 0, 'UMKM setor sendiri: rollback hapus jurnal dan rincian');
+checkAssert(Penerimaan_calculation::cents($db->invoices[0]['saldo_piutang']) === 200000000, 'UMKM setor sendiri: saldo piutang kembali');
+checkAssert(Penerimaan_calculation::cents($db->alloc_details[0]['nilai_terpakai']) === 0, 'UMKM setor sendiri: alokasi kembali');
+
+// Batas PPh Final 0,5%: 10.000 (bukan 40.000 = 2%).
+list($engine, $prev, $post, $db) = umkmSave('Y', '1950000.00', '40000.00', '10000.00', '0.00', '2000000.00');
+$over = $engine->save($post);
+checkAssert($over['status'] === 0 && strpos($over['msg'], 'PPh Final 0,5% melebihi sisa batas Penjualan') !== false, 'UMKM PPh 40.000 (2%) ditolak: ' . ($over['msg'] ?? ''));
+checkAssert(count($db->journals) === 0 && count($db->receipts) === 0, 'UMKM PPh melebihi batas: tidak ada jurnal/header tersimpan');
+echo "PASS: UMKM Non-PKP\n\n";
+
 echo "ALL CONSULTING TO-BE INTEGRATION TESTS PASSED 100%!\n";

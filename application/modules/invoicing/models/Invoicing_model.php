@@ -45,6 +45,88 @@ class Invoicing_model extends BF_Model
         return $kode_trans;
     }
 
+    /** Pilihan company tab Invoiced: hanya STM, VUCA, SUSTAIN (INV-R-23); kunci grup dipetakan ke id kons_tr_company. */
+    const COMPANY_GROUPS = ['STM' => [7, 6, 1], 'VUCA' => [4], 'SUSTAIN' => [3]];
+
+    /** Filter company (id angka atau kunci grup) dan Perlakuan PPN; nilai tidak valid diabaikan. Dipakai get_data_spk, card, dan ekspor. */
+    public function filter_company_ppn($company, $ppn)
+    {
+        if (is_scalar($company) && isset(self::COMPANY_GROUPS[strtoupper((string)$company)])) {
+            $ids = implode(',', array_map('intval', self::COMPANY_GROUPS[strtoupper((string)$company)]));
+            $this->db->where('COALESCE(e.id, g.id) IN (' . $ids . ')', null, false);
+        } elseif (is_scalar($company) && preg_match('/^\d{1,10}$/', (string)$company)) {
+            $this->db->where('COALESCE(e.id, g.id) =', (int)$company, false);
+        }
+        if (is_scalar($ppn) && in_array((string)$ppn, ['PKP', 'WAPU', 'KB', 'UMKM'], true)) {
+            $this->db->where('f.tax_treatment', (string)$ppn);
+        }
+    }
+
+    /**
+     * Baris tab Invoiced untuk filter tahun/bulan/company/PPN/pencarian. Card dan ekspor memanggil ini, jadi jumlahnya selalu sama.
+     * $f: tahun ('all' = semua), bulan, company, ppn, search.
+     */
+    public function invoiced_rows(array $f)
+    {
+        $year = $f['tahun'] ?? '';
+        $this->db->select('a.id, a.id_spk_penawaran, a.term_payment, a.persen_payment, COALESCE(e.nm_company, g.nm_company) AS company_name, c.nm_customer, d.nm_paket AS nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice, f.no_po, f.no_faktur, f.tax_treatment, f.consulting_version, f.total_nominal_jurnal, f.dpp_nilai_lain, f.ppn_jurnal, f.tagihan_ppn_jurnal, f.saldo_piutang');
+        $this->db->from('kons_tr_plan_tagih_detail a');
+        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
+        $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
+        $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
+        $this->db->where('a.status_terakhir', '1');
+        $this->db->where('a.sts_invoice', '1');
+        if ($year !== 'all') {
+            $this->db->where('YEAR(f.tanggal_invoice) =', (is_scalar($year) && preg_match('/^\d{4}$/', (string)$year)) ? (int)$year : (int)date('Y'), false);
+        }
+        if (is_scalar($f['bulan'] ?? null) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$f['bulan'])) {
+            $this->db->where('MONTH(f.tanggal_invoice) =', (int)$f['bulan'], false);
+        }
+        $this->filter_company_ppn($f['company'] ?? '', $f['ppn'] ?? '');
+        $q = trim((string)($f['search'] ?? ''));
+        if ($q !== '') {
+            $this->db->group_start();
+            foreach (['f.no_invoice', 'a.id_spk_penawaran', 'c.nm_customer', 'd.nm_paket', 'f.no_po', 'f.no_faktur'] as $i => $col) {
+                $i === 0 ? $this->db->like($col, $q, 'both') : $this->db->or_like($col, $q, 'both');
+            }
+            $this->db->group_end();
+        }
+        $this->db->group_by('a.id');
+        $this->db->order_by('f.tanggal_invoice', 'desc');
+        $this->db->order_by('a.id', 'desc');
+        return $this->db->get()->result();
+    }
+
+    /** Jumlah card Total Invoiced (sen). Invoice lama tanpa angka v3 dihitung ke jumlah invoice tetapi tidak ke nominal. */
+    public static function invoiced_totals(array $items)
+    {
+        $t = ['count' => count($items), 'gross' => 0, 'sales' => 0, 'ppn' => 0, 'saldo' => 0];
+        foreach ($items as $item) {
+            $m = self::money_for($item);
+            if ($m === null) continue;
+            foreach (['gross', 'sales', 'ppn', 'saldo'] as $k) $t[$k] += $m[$k];
+        }
+        return $t;
+    }
+
+    public static function tax_label_for($code)
+    {
+        $map = ['PKP' => 'PKP', 'WAPU' => 'WAPU', 'KB' => 'Kawasan Berikat', 'UMKM' => 'UMKM Non-PKP'];
+        $code = strtoupper(trim((string)$code));
+        return $code === '' ? '-' : ($map[$code] ?? $code);
+    }
+
+    /** Nilai invoice dalam sen; hanya invoice konsultasi v3 yang punya angka (null untuk invoice lama). */
+    public static function money_for($item)
+    {
+        if ((int)($item->consulting_version ?? 0) !== 3) return null;
+        $c = function ($v) { return Invoice_calculation::cents(number_format((float)$v, 2, '.', '')); };
+        return ['sales' => $c($item->total_nominal_jurnal), 'ppn' => $c($item->ppn_jurnal), 'gross' => $c($item->tagihan_ppn_jurnal), 'saldo' => $c($item->saldo_piutang)];
+    }
+
     public function get_data_spk()
     {
         $draw = $this->input->post('draw');
@@ -55,13 +137,18 @@ class Invoicing_model extends BF_Model
         $filter_tahun = $this->input->post('filter_tahun');
         $filter_bulan = $this->input->post('filter_bulan');
         $filter_company = $this->input->post('filter_company');
+        $filter_ppn = $this->input->post('filter_ppn');
 
-        // Default tahun sekarang jika kosong
+        // Default tahun sekarang jika kosong; 'all' hanya berlaku untuk tab Invoiced (UMKM-FR-07 "Semua tahun").
+        $allYears = $filter_status == 'invoiced' && $filter_tahun === 'all';
+        if ($filter_tahun === 'all' && !$allYears) {
+            $filter_tahun = date('Y');
+        }
         if (empty($filter_tahun)) {
             $filter_tahun = date('Y');
         }
 
-        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice as tgl_invoice');
+        $this->db->select('a.*, COALESCE(e.id, g.id) as id_company, COALESCE(e.nm_company, g.nm_company) as company_name, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice as tgl_invoice_final, f.tax_treatment, f.consulting_version, f.total_nominal_jurnal, f.ppn_jurnal, f.tagihan_ppn_jurnal, f.total_akhir_jurnal, f.saldo_piutang');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran', 'left');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran', 'left');
@@ -70,7 +157,9 @@ class Invoicing_model extends BF_Model
         $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
-        $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) = " . (int)$filter_tahun . ")");
+        if (!$allYears) {
+            $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) = " . (int)$filter_tahun . ")");
+        }
 
         // Filter status berdasarkan sts_invoice di kons_tr_plan_tagih_detail
         if ($filter_status == 'uninvoiced') {
@@ -83,9 +172,7 @@ class Invoicing_model extends BF_Model
         if (is_scalar($filter_bulan) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$filter_bulan)) {
             $this->db->where('MONTH(f.tanggal_invoice) =', (int)$filter_bulan, false);
         }
-        if (is_scalar($filter_company) && preg_match('/^\d{1,10}$/', (string)$filter_company)) {
-            $this->db->where('COALESCE(e.id, g.id) =', (int)$filter_company, false);
-        }
+        $this->filter_company_ppn($filter_company, $filter_ppn);
         if (!empty($search['value'])) {
             $this->db->group_start();
             $this->db->like('a.id_spk_penawaran', $search['value'], 'both');
@@ -96,6 +183,8 @@ class Invoicing_model extends BF_Model
             $this->db->or_like('e.nm_company', $search['value'], 'both');
             $this->db->or_like('g.nm_company', $search['value'], 'both');
             $this->db->or_like('f.no_invoice', $search['value'], 'both');
+            $this->db->or_like('f.no_po', $search['value'], 'both');
+            $this->db->or_like('f.no_faktur', $search['value'], 'both');
             $this->db->group_end();
         }
 
@@ -188,7 +277,7 @@ class Invoicing_model extends BF_Model
             $hasil[] = [
                 'no' => $no,
                 'no_invoice' => $item->no_invoice,
-                'tanggal_invoice' => (!empty($item->tgl_invoice) && strpos((string)$item->tgl_invoice, '0000-00-00') !== 0) ? date('d/m/Y', strtotime($item->tgl_invoice)) : '-',
+                'tanggal_invoice' => (!empty($item->tgl_invoice_final) && strpos((string)$item->tgl_invoice_final, '0000-00-00') !== 0) ? date('d/m/Y', strtotime($item->tgl_invoice_final)) : '-',
                 'company' => $item->company_name,
                 'no_spk' => $item->id_spk_penawaran,
                 'customer' => $item->nm_customer,
@@ -198,6 +287,12 @@ class Invoicing_model extends BF_Model
                 'status' => $status . $status2,
                 'option' => $option
             ];
+            if ($filter_status == 'invoiced') {
+                $last = &$hasil[count($hasil) - 1];
+                $last['tax_label'] = self::tax_label_for($item->tax_treatment ?? '');
+                $last['nilai'] = self::money_for($item);
+                unset($last);
+            }
         }
 
         echo json_encode([

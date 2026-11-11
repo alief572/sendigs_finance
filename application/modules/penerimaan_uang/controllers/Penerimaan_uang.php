@@ -481,7 +481,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 $ppn = (float)$item['ppn_jurnal'];
 
-                if ($taxTreatment === 'WAPU' || $taxTreatment === 'KB') {
+                if ($taxTreatment === 'WAPU' || $taxTreatment === 'KB' || $taxTreatment === 'UMKM') {
 
                     $ppn = 0;
 
