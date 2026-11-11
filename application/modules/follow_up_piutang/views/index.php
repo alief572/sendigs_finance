@@ -166,7 +166,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', FILES = '<?= base_url() ?>', TODAY = '<?= date('Y-m-d') ?>', MANAGE = <?= $can_manage ? 'true' : 'false' ?>;
+    var BASE = '<?= $base ?>', FILES = '<?= base_url() ?>', TODAY = '<?= date('Y-m-d') ?>', MANAGE = <?= $can_manage ? 'true' : 'false' ?>, INV_MULAI_TAHUN = <?= (int) $inv_mulai_tahun ?>, INV_MULAI_BULAN = <?= (int) $inv_mulai_bulan ?>;
     var HINTS = {
         all: 'Semua invoice yang belum close.',
         '1': 'Isi tanggal kirim dan dikirim via (JNE / Driver).',
@@ -419,6 +419,14 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#fu-tabs button').removeClass('on').attr('aria-selected', 'false');
         $(this).addClass('on').attr('aria-selected', 'true'); f.tab = $(this).data('tab'); load();
     });
+    // Bulan sebelum batas mulai (Jan-Sep 2026) pasti kosong: disembunyikan bila tahun 2026 atau semua tahun dipilih.
+    function syncInvBulan() {
+        var y = $('#f-inv-tahun').val(), $b = $('#f-inv-bulan');
+        $b.find('option[value!=""]').each(function () { $(this).prop('hidden', (y === '' || +y === INV_MULAI_TAHUN) && +this.value < INV_MULAI_BULAN).prop('disabled', (y === '' || +y === INV_MULAI_TAHUN) && +this.value < INV_MULAI_BULAN); });
+        if ($b.val() !== '' && $b.find('option:selected').prop('disabled')) { $b.val(''); }
+    }
+    syncInvBulan();
+    $('#f-inv-tahun').on('change', syncInvBulan);
     $('#f-company, #f-fu, #f-plan-bulan, #f-plan-tahun, #f-close-tahun, #f-inv-tahun, #f-inv-bulan').on('change', function () { load(); });
     $('#f-customer').on('change', function () { load(); }); // nama harus persis: muat ulang saat pilihan dipastikan, bukan tiap ketikan
     $('#fu-search').on('input', function () { var v = this.value; clearTimeout(window.__fuS); window.__fuS = setTimeout(function () { table.search(v).draw(); }, 400); });
