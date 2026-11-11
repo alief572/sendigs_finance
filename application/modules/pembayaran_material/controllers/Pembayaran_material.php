@@ -1849,7 +1849,7 @@ class Pembayaran_material extends Admin_Controller
 						'debit' => $item_jurnal['debit'],
 						'kredit' => $item_jurnal['kredit'],
 						'keterangan' => $ket_jurnal,
-						'no_transaksi' => $post['id_payment'],
+						'no_transaksi' => $id_payment_paid,
 						'jenis_transaksi' => 'Refill Pettycash',
 						'id_divisi' => (isset($item_jurnal['id_divisi']) ? $item_jurnal['id_divisi'] : ''),
 						'nm_divisi' => (isset($item_jurnal['nm_divisi']) ? $item_jurnal['nm_divisi'] : ''),
