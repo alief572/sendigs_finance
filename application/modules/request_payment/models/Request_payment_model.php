@@ -356,6 +356,76 @@ class Request_payment_model extends BF_Model
         }
     }
 
+    /**
+     * Documents with their own source tables that are not in the 6-table UNION of the Payment List:
+     * Refill (RPC-*), Hutang (PHP-*) petty cash and Cash (PCH-*, DPM-* from tr_pr_non_po). Same 12 columns
+     * as the base UNION; used by both the screen list and the Excel export so they never differ.
+     */
+    private function payment_list_extra_union()
+    {
+        return "
+            UNION ALL
+
+            SELECT
+                p.id as ids,
+                p.no_pelaporan as no_doc,
+                u_rpc.nm_lengkap as nama,
+                DATE(p.approved_on) as tgl_doc,
+                CONCAT('Refill Petty Cash ', p.company, ' ', DATE_FORMAT(p.periode_start, '%d/%m/%Y'), ' s/d ', DATE_FORMAT(p.periode_end, '%d/%m/%Y')) as keperluan,
+                'refill_pettycash' as tipe,
+                p.grand_total as jumlah,
+                null as kurang_bayar,
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_pelaporan_petty_cash p
+            LEFT JOIN users u_rpc ON u_rpc.id_user = p.created_by
+            WHERE p.status = 'approved'
+
+            UNION ALL
+
+            SELECT
+                v.id as ids,
+                v.no_payment_hutang as no_doc,
+                v.nama_pembuat as nama,
+                DATE(v.created_on) as tgl_doc,
+                CONCAT('Payment Hutang Petty Cash ', v.company, ' ', DATE_FORMAT(v.periode_start, '%d/%m/%Y'), ' s/d ', DATE_FORMAT(v.periode_end, '%d/%m/%Y')) as keperluan,
+                'petty_cash_hutang' as tipe,
+                v.grand_total as jumlah,
+                null as kurang_bayar,
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_petty_cash_vuca_sustain v
+
+            UNION ALL
+
+            SELECT
+                c.id as ids,
+                c.no_non_po as no_doc,
+                c.nm_pic as nama,
+                COALESCE((SELECT pa2.tgl_doc FROM payment_approve pa2 WHERE pa2.no_doc = c.no_non_po LIMIT 1), DATE(c.created_date)) as tgl_doc,
+                COALESCE((SELECT pa3.keperluan FROM payment_approve pa3 WHERE pa3.no_doc = c.no_non_po LIMIT 1), CONCAT('PR Cash - ', c.no_pr, ' - ', c.jenis_pr)) as keperluan,
+                'cash' as tipe,
+                c.total_pr as jumlah,
+                null as kurang_bayar,
+                null as id_kasbon,
+                null as no_kasbon_consultant,
+                null as id_pr,
+                null as tipe_pr
+            FROM tr_pr_non_po c
+            WHERE c.sts IN ('1', '2')
+        ";
+    }
+
+    public function payment_list_tipe_label($tipe)
+    {
+        $labels = ['refill_pettycash' => 'Refill Petty Cash', 'petty_cash_hutang' => 'Payment Hutang Petty Cash'];
+        return isset($labels[$tipe]) ? $labels[$tipe] : ucfirst($tipe);
+    }
+
     public function excel_payment_list($tgl_from = '', $tgl_to = '', $tipe = '', $status = '', &$auditSummary = null)
     {
         $this->auditQueriesOk = true;
@@ -469,7 +539,7 @@ class Request_payment_model extends BF_Model
                 null as id_pr,
                 null as tipe_pr
             FROM tr_non_po_header np
-        ";
+        " . $this->payment_list_extra_union();
 
         $where_clauses = ["1=1"];
 
@@ -1828,7 +1898,7 @@ class Request_payment_model extends BF_Model
                 null as id_pr,
                 null as tipe_pr
             FROM tr_non_po_header np
-        ";
+        " . $this->payment_list_extra_union();
 
         // Query builder on top of subquery with joins to payment_approve & payment_paid
         $where_clauses = ["1=1"];
@@ -1992,7 +2062,7 @@ class Request_payment_model extends BF_Model
                 'nama'             => $display_nama,
                 'tgl_doc'          => !empty($row->tgl_doc) ? date('d F Y', strtotime($row->tgl_doc)) : '-',
                 'keperluan'        => $row->keperluan,
-                'tipe'             => ucfirst($row->tipe),
+                'tipe'             => $this->payment_list_tipe_label($row->tipe),
                 'nilai_pengajuan'  => number_format($nilai_pengajuan, 2),
                 'diajukan_oleh'    => !empty($row->pa_diajukan_oleh) ? $row->pa_diajukan_oleh : '-',
                 'tgl_pengajuan'    => $tgl_pengajuan_fmt,
