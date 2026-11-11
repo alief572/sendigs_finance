@@ -18,10 +18,10 @@ class Monitoring_piutang_model extends BF_Model
         parent::__construct();
     }
 
-    /** Query dasar: invoice + data AR + company (konsultasi lewat penawaran/SPK, non konsultasi lewat penawaran non konsultasi). */
+    /** Query dasar: invoice + data AR + company (customer/project invoice lama yang kosong diambil dari SPK) (konsultasi lewat penawaran/SPK, non konsultasi lewat penawaran non konsultasi). */
     private function base_sql()
     {
-        return "SELECT i.id, i.no_invoice, i.tanggal_invoice AS tgl_invoice, i.nm_customer AS customer, i.nm_project AS project, i.id_spk_penawaran AS no_spk,
+        return "SELECT i.id, i.no_invoice, i.tanggal_invoice AS tgl_invoice, COALESCE(NULLIF(i.nm_customer, ''), s.nm_customer) AS customer, COALESCE(NULLIF(i.nm_project, ''), mk.nm_paket) AS project, i.id_spk_penawaran AS no_spk,
                     i.total_akhir_jurnal AS nilai, i.saldo_piutang AS saldo, i.sts_close, i.close_date, i.close_reason,
                     c.id AS company, c.nm_company AS company_name,
                     (SELECT d.urutan FROM kons_tr_plan_tagih_detail d WHERE d.id = i.id_detail_plan_tagih LIMIT 1) AS top_ke,
@@ -33,6 +33,7 @@ class Monitoring_piutang_model extends BF_Model
                 LEFT JOIN tr_invoice_ar ar ON ar.id_invoice = i.id
                 LEFT JOIN " . DBCNL . ".kons_tr_penawaran p ON p.id_quotation = i.id_penawaran AND i.non_kons <> '1'
                 LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran s ON s.id_spk_penawaran = i.id_spk_penawaran AND i.non_kons <> '1'
+                LEFT JOIN " . DBCNL . ".kons_master_konsultasi_header mk ON mk.id_konsultasi_h = s.id_project
                 LEFT JOIN " . DBCNL . ".kons_tr_penawaran_non_konsultasi nk ON nk.id_penawaran = i.id_penawaran AND i.non_kons = '1'
                 LEFT JOIN " . DBCNL . ".kons_tr_company c ON c.id = IF(i.non_kons = '1', nk.id_company, COALESCE(p.company, s.id_company))";
     }

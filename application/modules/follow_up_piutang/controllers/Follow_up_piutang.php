@@ -102,13 +102,8 @@ class Follow_up_piutang extends Admin_Controller
         }
         unset($r);
         return $this->json(['draw' => $draw, 'recordsTotal' => $recordsTotal, 'recordsFiltered' => count($rows), 'data' => array_values($slice),
-            'counts' => $counts, 'companies' => $this->companies(),
+            'counts' => $counts, 'companies' => Piutang_aging::company_options(),
             'customers' => array_values(array_unique(array_filter(array_column($rows, 'customer'), 'strlen')))]);
-    }
-
-    private function companies()
-    {
-        return $this->db->query('SELECT id, nm_company FROM ' . DBCNL . '.kons_tr_company ORDER BY nm_company')->result_array();
     }
 
     /** Data form Update: baris + status kunci per step + usulan jadwal FU. */
