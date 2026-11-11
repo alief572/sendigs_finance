@@ -392,6 +392,63 @@ class Jurnal_all_model extends BF_Model
         return $this->userMap ?? [];
     }
 
+    /**
+     * japh headers by no_reff, of the wanted kind only. A Payment and a Refill of the same voucher (or the same cut-off
+     * id list) share one no_reff; Payment headers carry jenis_ap 'V', Refill/Hutang/Petty Cash headers do not (verified on
+     * every header of the STM, VUCA and SUSTAIN ledgers). A header of the other kind is never borrowed, and $seen
+     * receives every no_reff that has any header so the jurnal fallback does not guess for it either.
+     */
+    private function japhByRef($gl, array $keys, $wantPayment, array &$seen)
+    {
+        $result = [];
+        foreach (array_chunk($keys, 200) as $chunk) {
+            $q = $gl->select('nomor, tgl, user_id, no_reff, jenis_ap')->where_in('no_reff', $chunk)->get('japh');
+            if ($q) foreach ($q->result_array() as $h) {
+                $seen[$h['no_reff']] = true;
+                if (((string)$h['jenis_ap'] === 'V') !== (bool)$wantPayment) continue;
+                if (!isset($result[$h['no_reff']])) $result[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+            }
+        }
+        return $result;
+    }
+
+    /** Fill source_numbers/posted_* of Payment rows from one accounting database (japh, then jurnal). */
+    private function fillPaymentNumbers($gl, array &$payRows, array &$allUserIds)
+    {
+        if (!$payRows || !$gl->table_exists('japh')) return;
+        $payMap = []; $cut = [];
+        foreach ($payRows as $idx => $r) {
+            $raw = trim((string)($r['no_transaksi'] ?? ''));
+            if ($raw !== '') {
+                $split = array_unique(array_filter(array_map('trim', explode(',', $raw))));
+                foreach ($split as $part) $payMap[$part][] = $idx;
+                // accounting no_reff is varchar(25): a multi-ID list is stored cut off
+                if (strlen($raw) > 25) { $k = substr($raw, 0, 25); $payMap[$k][] = $idx; $cut[$k] = true; }
+            }
+        }
+        if (!$payMap) return;
+        $keys = array_keys($payMap);
+        $seen = [];
+        $glData = $this->japhByRef($gl, $keys, true, $seen);
+        $unmatched = array_diff($keys, array_keys($glData), array_keys($cut), array_keys($seen));
+        if ($unmatched && $gl->table_exists('jurnal')) {
+            foreach (array_chunk($unmatched, 200) as $chunk) {
+                $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
+                if ($q) foreach ($q->result_array() as $j) {
+                    $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
+                }
+            }
+        }
+        foreach ($glData as $no => $meta) {
+            if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
+            foreach ($payMap[$no] ?? [] as $targetIdx) {
+                $payRows[$targetIdx]['source_numbers'] = $meta['nomor'];
+                if (empty($payRows[$targetIdx]['posted_at'])) $payRows[$targetIdx]['posted_at'] = $meta['tgl'];
+                if (empty($payRows[$targetIdx]['posted_by_id'])) $payRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
+            }
+        }
+    }
+
     private function resolveGlMetadata(&$rows)
     {
         $pending = [];
@@ -403,7 +460,7 @@ class Jurnal_all_model extends BF_Model
         unset($row);
         if (!$pending) return;
 
-        $buckets = [];
+        $buckets = []; $primary = [];
         foreach ($pending as $idx => &$row) {
             $companyId = (string)($row['id_company'] ?? '');
             $src = $row['source'] ?? '';
@@ -416,6 +473,7 @@ class Jurnal_all_model extends BF_Model
                 $dbKey = in_array($companyId, ['1', '6', '7'], true) ? 'accounting_stm' : ($companyId === '4' ? 'accounting_vuca' : 'accounting_sustain');
             }
             $buckets[$dbKey][$idx] = &$row;
+            $primary[$idx] = $dbKey;
         }
         unset($row);
 
@@ -533,51 +591,7 @@ class Jurnal_all_model extends BF_Model
             }
 
             // 3. Payment
-            if ($payRows && $gl->table_exists('japh')) {
-                $payMap = []; $cut = [];
-                foreach ($payRows as $idx => $r) {
-                    $raw = trim((string)($r['no_transaksi'] ?? ''));
-                    if ($raw !== '') {
-                        $split = array_unique(array_filter(array_map('trim', explode(',', $raw))));
-                        foreach ($split as $part) $payMap[$part][] = $idx;
-                        // accounting no_reff is varchar(25): a multi-ID list is stored cut off
-                        if (strlen($raw) > 25) { $k = substr($raw, 0, 25); $payMap[$k][] = $idx; $cut[$k] = true; }
-                    }
-                }
-                if ($payMap) {
-                    $keys = array_keys($payMap);
-                    $glData = [];
-                    foreach (array_chunk($keys, 200) as $chunk) {
-                        $q = $gl->select('nomor, tgl, user_id, no_reff, jenis_ap')->where_in('no_reff', $chunk)->get('japh');
-                        if ($q) foreach ($q->result_array() as $h) {
-                            // a cut-off key is shared with the Refill header of the same list; Payment headers carry jenis_ap 'V'
-                            if (isset($cut[$h['no_reff']]) && (string)$h['jenis_ap'] !== 'V') continue;
-                            $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
-                        }
-                    }
-                    $unmatched = array_diff($keys, array_keys($glData), array_keys($cut));
-                    if ($unmatched && $gl->table_exists('jurnal')) {
-                        foreach (array_chunk($unmatched, 200) as $chunk) {
-                            $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
-                            if ($q) foreach ($q->result_array() as $j) {
-                                $glData[$j['no_reff']] = ['nomor' => $j['nomor'], 'tgl' => $j['created_on'] ?: $j['tanggal'], 'user' => $j['created_by']];
-                            }
-                        }
-                    }
-                    foreach ($glData as $no => $meta) {
-                        if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
-                        foreach ($payMap[$no] ?? [] as $targetIdx) {
-                            $payRows[$targetIdx]['source_numbers'] = $meta['nomor'];
-                            if (empty($payRows[$targetIdx]['posted_at'])) {
-                                $payRows[$targetIdx]['posted_at'] = $meta['tgl'];
-                            }
-                            if (empty($payRows[$targetIdx]['posted_by_id'])) {
-                                $payRows[$targetIdx]['posted_by_id'] = (string)($meta['user'] ?? '');
-                            }
-                        }
-                    }
-                }
-            }
+            $this->fillPaymentNumbers($gl, $payRows, $allUserIds);
 
             // 4. Expense Report
             if ($expRows && ($gl->table_exists('javh') || $gl->table_exists('jurnal'))) {
@@ -638,18 +652,9 @@ class Jurnal_all_model extends BF_Model
                 }
                 if ($pcsMap) {
                     $keys = array_keys($pcsMap);
-                    $glData = [];
-                    if ($gl->table_exists('japh')) {
-                        foreach (array_chunk($keys, 200) as $chunk) {
-                            $q = $gl->select('nomor, tgl, user_id, no_reff, jenis_ap')->where_in('no_reff', $chunk)->get('japh');
-                            if ($q) foreach ($q->result_array() as $h) {
-                                // a cut-off key is shared with the Payment header of the same list; skip Payment ('V')
-                                if (isset($cut[$h['no_reff']]) && (string)$h['jenis_ap'] === 'V') continue;
-                                $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
-                            }
-                        }
-                    }
-                    $unmatched = array_diff($keys, array_keys($glData), array_keys($cut));
+                    $seen = [];
+                    $glData = $gl->table_exists('japh') ? $this->japhByRef($gl, $keys, false, $seen) : [];
+                    $unmatched = array_diff($keys, array_keys($glData), array_keys($cut), array_keys($seen));
                     if ($unmatched && $gl->table_exists('jurnal')) {
                         foreach (array_chunk($unmatched, 200) as $chunk) {
                             $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
@@ -674,6 +679,19 @@ class Jurnal_all_model extends BF_Model
             }
         }
         unset($groupRows);
+
+        // History posted under the older routing (e.g. company 1 into the STM ledger) is not in the ledger the
+        // current rule points at; retry the still-empty Payment rows in the other accounting databases.
+        foreach (['accounting_vuca'=>'4','accounting_stm'=>'7','accounting_sustain'=>'3'] as $dbKey => $companyId) {
+            $retry = [];
+            foreach ($pending as $idx => &$row) {
+                if (($row['source'] ?? '')==='PAY' && empty($row['source_numbers']) && ($primary[$idx] ?? null)!==$dbKey) $retry[$idx] = &$row;
+            }
+            unset($row);
+            if (!$retry) continue;
+            $gl = $this->getGlDb($companyId);
+            if ($gl && method_exists($gl, 'table_exists')) $this->fillPaymentNumbers($gl, $retry, $allUserIds);
+        }
 
         $neededUserIds = $allUserIds;
         foreach ($pending as $r) {

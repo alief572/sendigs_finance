@@ -2,6 +2,7 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Payment_patch.php';
 require_once dirname(__DIR__).'/libraries/Payment_normalization.php';
+require_once dirname(__DIR__).'/libraries/Payment_posted_repair.php';
 
 class Payment_reference_cli extends CI_Controller
 {
@@ -21,6 +22,41 @@ class Payment_reference_cli extends CI_Controller
     public function normalize($mode='dry-run', $path=null)
     {
         $this->execute($mode,$path,true);
+    }
+
+    /** Posted Payment journals still keyed by approval id (whitelist in Payment_posted_repair). */
+    public function repair_posted($mode='dry-run', $path=null)
+    {
+        try {
+            if (!in_array($mode,['dry-run','apply','verify','rollback'],true)) throw new DomainException('Mode CLI tidak valid.');
+            $path=$this->manifestPath(getenv('PAYMENT_MANIFEST') ?: $path);
+            $repair=new Payment_posted_repair($this,null,getenv('PAYMENT_BATCH') ?: 'payment'); // payment | refill_posted | refill_pending
+            if ($mode==='dry-run') $result=$repair->prepare($path);
+            elseif (!is_file($path)) throw new DomainException('Manifest tidak ditemukan.');
+            elseif ($mode==='verify') { echo json_encode(['status'=>1,'verification'=>$repair->verify($path)],JSON_PRETTY_PRINT).PHP_EOL;return; }
+            elseif ($mode==='apply') $result=$repair->run($path);
+            else $result=$repair->rollback($path);
+            $counts=[];
+            foreach ($result['items'] as $item) $counts[$item['status']]=($counts[$item['status']] ?? 0)+1;
+            $skipped=[];
+            foreach ($result['items'] as $item) if ($item['status']==='skipped') $skipped[$item['old']]=$item['reason'] ?? '';
+            echo json_encode(['status'=>1,'counts'=>$counts,'skipped'=>$skipped],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;
+        } catch (Throwable $error) {
+            fwrite(STDERR,'Payment reference: '.$error->getMessage().PHP_EOL);
+            exit(1);
+        }
+    }
+
+    private function manifestPath($path)
+    {
+        if (!$path || !is_string($path) || strtolower(pathinfo($path,PATHINFO_EXTENSION))!=='json') throw new DomainException('Sertakan path manifest .json di luar document root.');
+        $parent=realpath(dirname($path));
+        $web=realpath(FCPATH);
+        if (!$parent || !$web || !is_writable($parent)) throw new DomainException('Folder manifest tidak tersedia.');
+        if (strpos(strtolower(str_replace('\\','/',$parent)).'/',strtolower(str_replace('\\','/',$web)).'/')===0) throw new DomainException('Manifest harus berada di luar document root.');
+        $path=$parent.DIRECTORY_SEPARATOR.basename($path);
+        if (is_link($path)) throw new DomainException('Manifest symlink tidak diizinkan.');
+        return $path;
     }
 
     private function execute($mode,$path,$normalization)
