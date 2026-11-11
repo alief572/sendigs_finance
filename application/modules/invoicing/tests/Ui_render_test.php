@@ -156,10 +156,10 @@ verifyUi(strpos($printHtml, "<script>alert('addr')</script>")===false, 'Consulti
 verifyUi(strpos($printHtml, '&lt;script&gt;')!==false, 'Consulting print customer HTML entities');
 verifyUi(strpos($printHtml, 'STM')!==false, 'Consulting print owner header');
 verifyUi(strpos($printHtml, 'Kawasan Berikat')!==false, 'Consulting print tax treatment label');
-verifyUi(strpos($printHtml, '1,000.55')!==false, 'Consulting print 2-decimal nominal');
-verifyUi(strpos($printHtml, '917.17')!==false, 'Consulting print 2-decimal DPP');
-verifyUi(strpos($printHtml, '110.06')!==false, 'Consulting print 2-decimal PPN');
-verifyUi(strpos($printHtml, '1,110.61')!==false, 'Consulting print 2-decimal gross total');
+verifyUi(strpos($printHtml, '1,001')!==false && strpos($printHtml, '1,000.55')===false, 'Consulting print nominal tanpa desimal');
+verifyUi(strpos($printHtml, '917')!==false && strpos($printHtml, '917.17')===false, 'Consulting print DPP tanpa desimal');
+verifyUi(strpos($printHtml, '110')!==false && strpos($printHtml, '110.06')===false, 'Consulting print PPN tanpa desimal');
+verifyUi(strpos($printHtml, '1,111')!==false && strpos($printHtml, '1,110.61')===false, 'Consulting print total tanpa desimal');
 $printErrorHtml = $renderer->render('consulting_print', ['invoice'=>$printInvoice, 'snapshot'=>$snapshot, 'error'=>'Gagal memuat <script>alert(1)</script>']);
 verifyUi(strpos($printErrorHtml, '<script>alert(1)</script>')===false && strpos($printErrorHtml, 'Gagal memuat')!==false, 'Consulting print error escaping');
 
