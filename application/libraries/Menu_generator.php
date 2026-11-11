@@ -21,6 +21,32 @@ class Menu_generator
 		$this->is_admin = $this->ci->auth->is_admin();
 	}
 
+	protected $all_links; // link semua menu aktif, di-cache per request
+
+	/** Link aktif bila ada di URL, kecuali menu mana pun (beda parent pun) dengan link lebih panjang juga cocok
+	 *  (mis. pengajuan_rutin vs pengajuan_rutin/app_list, follow_up_piutang vs follow_up_piutang/plan_bayar). */
+	protected function link_active($link)
+	{
+		if(strpos($this->uri, '/'.$link.'/')===FALSE)
+		{
+			return FALSE;
+		}
+		if($this->all_links === NULL)
+		{
+			$this->all_links = array();
+			foreach ($this->ci->db->select('link')->from("{$this->x}menus")->where('status',1)->get()->result() as $m) {
+				$this->all_links[] = (string) $m->link;
+			}
+		}
+		foreach ($this->all_links as $l) {
+			if(strlen($l) > strlen($link) && strpos($this->uri, '/'.$l.'/')!==FALSE)
+			{
+				return FALSE;
+			}
+		}
+		return TRUE;
+	}
+
 	public function build_menus($type=1)
 	{
 		$auth = $this->get_auth_permission($this->user_id);
@@ -46,7 +72,6 @@ class Menu_generator
 			$html = "<ul class='sidebar-menu'>
 							<li class='header'></li>
 	                        <li class='".check_class('dashboard', TRUE)."'>
-								<i class='fa fa-dashboard'></i>
 	                            <a href='".site_url()."'>
 	                                <i class='fa fa-dashboard'></i> 
 									<span>Dashboard</span>
@@ -102,7 +127,7 @@ class Menu_generator
 								goto end_for;
 							}
 							$active = "";
-							if(strpos($this->uri, '/'.$link.'/')!==FALSE)
+							if($this->link_active($link))
 							{
 								$active = "active";
 							}
@@ -113,7 +138,7 @@ class Menu_generator
 
 					$active = "";
 					foreach ($submenu as $sub) {
-						if(strpos($this->uri, '/'.$sub->link.'/')!==FALSE)
+						if($this->link_active($sub->link))
 						{
 							$active = "active";
 							break;
@@ -163,12 +188,12 @@ class Menu_generator
 						{
 							if($sublink !="#")
 							{
-								if(!in_array($rw->permission_id, $auth) && $this->is_admin == FALSE)
+								if(!in_array($sub->permission_id, $auth) && $this->is_admin == FALSE)
 								{
 									goto end_for_sub;
 								}
 								$active = "";
-								if(strpos($this->uri, '/'.$sublink.'/')!==FALSE)
+								if($this->link_active($sublink))
 								{
 									$active = "active";
 								}
@@ -183,7 +208,7 @@ class Menu_generator
 						}
 						$active = "";
 						foreach ($submenusub as $subsub) {
-							if(strpos($this->uri, '/'.$subsub->link.'/')!==FALSE)
+							if($this->link_active($subsub->link))
 							{
 								$active = "active";
 								break;
@@ -212,7 +237,7 @@ class Menu_generator
 								$subtargetsub = "target='_blank'";
 							}
 							//Check current link
-							if(strpos($this->uri, '/'.$sublinksub.'/')!==FALSE)
+							if($this->link_active($sublinksub))
 							{
 								$active = "active";
 							}
