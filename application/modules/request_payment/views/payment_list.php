@@ -66,6 +66,9 @@ $ENABLE_VIEW    = has_permission('Payment_List.View');
                             <option value="periodik">Periodik / Rutin</option>
                             <option value="direct_payment">Direct Payment</option>
                             <option value="nonpo">Non PO</option>
+                            <option value="refill_pettycash">Refill Petty Cash</option>
+                            <option value="petty_cash_hutang">Payment Hutang Petty Cash</option>
+                            <option value="cash">Cash</option>
                         </select>
                     </div>
                 </div>
