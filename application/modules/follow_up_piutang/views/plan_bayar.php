@@ -79,8 +79,8 @@
         <p class="pb-hint">Setiap baris = satu pembayaran customer. Bandingkan <b>janji bayar</b> (plan) dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
         <p id="pr-sum" style="margin:0 0 10px"></p>
         <div class="table-responsive"><table id="pb-real-tbl" class="pb-tbl">
-            <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp">Janji vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
-                <tr><th>Janji Bayar<span class="sub">plan bayar</span></th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
+            <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp">Plan vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
+                <tr><th>Plan Bayar<span class="sub">plan bayar</span></th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
             <tbody></tbody>
             <tfoot><tr><td colspan="6" id="pr-label">Total</td><td class="num" id="pr-nominal"></td><td colspan="2"></td></tr></tfoot>
         </table></div>

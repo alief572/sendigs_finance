@@ -190,7 +190,7 @@ class Plan_bayar extends Admin_Controller
             ['h' => 'Kategori', 'k' => 'kategori'], ['h' => 'Status Invoice', 'k' => 'posisi']], 'rows' => $plan, 'sum' => ['nilai', 'nilai_plan', 'saldo']];
         $realisasi = ['title' => 'Realisasi', 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'Bulan Bayar', 'k' => 'bulan_nama'], ['h' => 'No Invoice', 'k' => 'no_invoice'],
             ['h' => 'Tgl Invoice', 'k' => 'tgl_invoice', 't' => 'date'], ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Project', 'k' => 'project'], ['h' => 'Company', 'k' => 'company_name'],
-            ['h' => 'Janji Bayar (Plan)', 'k' => 'plan_bayar', 't' => 'date'], ['h' => 'Tanggal Bayar', 'k' => 'tgl_bayar', 't' => 'date'], ['h' => 'Ketepatan', 'k' => 'ketepatan'],
+            ['h' => 'Plan Bayar', 'k' => 'plan_bayar', 't' => 'date'], ['h' => 'Tanggal Bayar', 'k' => 'tgl_bayar', 't' => 'date'], ['h' => 'Ketepatan', 'k' => 'ketepatan'],
             ['h' => 'Jumlah Dibayar', 'k' => 'nominal', 't' => 'num'], ['h' => 'No Penerimaan', 'k' => 'no_penerimaan'], ['h' => 'Sisa Tagihan Sekarang', 'k' => 'saldo', 't' => 'num'],
             ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'], ['h' => 'Status Invoice', 'k' => 'posisi']], 'rows' => $real, 'sum' => ['nominal', 'saldo', 'nilai']];
         $sheets = [$rincian, $realisasi];
