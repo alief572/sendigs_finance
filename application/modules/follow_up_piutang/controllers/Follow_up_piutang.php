@@ -10,8 +10,6 @@ class Follow_up_piutang extends Admin_Controller
     protected $viewPermission = 'Follow_Up_Piutang.View';
     protected $managePermission = 'Follow_Up_Piutang.Manage';
     const PER_PAGE = 100;
-    /** Batas tegas tanggal invoice: hanya invoice bertanggal >= ini yang tampil di Follow Up (semua tab, jumlah tab, filter, dan Excel). */
-    const TANGGAL_MULAI = '2026-10-01';
     const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun', 'inv_tahun', 'inv_bulan'];
 
     public function __construct()
@@ -28,10 +26,10 @@ class Follow_up_piutang extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
         $this->template->set('can_manage', has_permission($this->managePermission));
         $this->template->set('years', range((int) date('Y') + 1, (int) date('Y') - 5));
-        $mulaiTahun = (int) substr(self::TANGGAL_MULAI, 0, 4);
+        $mulaiTahun = (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 0, 4);
         $this->template->set('inv_years', range(max((int) date('Y'), $mulaiTahun), $mulaiTahun));
         $this->template->set('inv_mulai_tahun', $mulaiTahun);
-        $this->template->set('inv_mulai_bulan', (int) substr(self::TANGGAL_MULAI, 5, 2));
+        $this->template->set('inv_mulai_bulan', (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 5, 2));
         $this->template->render('index');
     }
 
@@ -74,7 +72,7 @@ class Follow_up_piutang extends Admin_Controller
         $golive = $this->golive();
         $all = array_values(array_filter($this->Monitoring_piutang_model->get_rows((int) $f['close_tahun']), function ($r) {
             $tgl = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
-            return Piutang_aging::is_date($tgl) && $tgl >= self::TANGGAL_MULAI;
+            return Piutang_aging::is_date($tgl) && $tgl >= Piutang_aging::TANGGAL_MULAI_FOLLOW_UP;
         }));
         $counts = Piutang_aging::tab_counts($all, $f, $today, $golive);
         // recordsTotal DataTables = isi tab tanpa filter dan pencarian

@@ -158,6 +158,11 @@ same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'cari' => '02/10/2026'], $to
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'cari' => '1.500.000'], $today)), '1', 'cari nominal');
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => 'selesai'], $today)), '4', 'filter FU selesai');
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => '1'], $today)), '3', 'filter FU1');
+// Batas mulai periode (Dashboard Plan Bayar): >= Okt 2026
+same($A::TANGGAL_MULAI_FOLLOW_UP, '2026-10-01', 'tanggal mulai follow up');
+same($A::dari_mulai(2025, 12), false, 'dari_mulai 2025-12'); same($A::dari_mulai(2026, 9), false, 'dari_mulai 2026-09');
+same($A::dari_mulai(2026, 10), true, 'dari_mulai 2026-10'); same($A::dari_mulai('2026', '12'), true, 'dari_mulai string 2026-12');
+same($A::dari_mulai(2027, 1), true, 'dari_mulai 2027-01');
 // Tahun/Bulan invoice (Follow Up Piutang): menyaring tgl_invoice di semua tab, termasuk close dan jumlah tab
 $tg = [row(['id' => 'a', 'tgl_invoice' => '2026-01-15']), row(['id' => 'b', 'tgl_invoice' => '2026-10-01']), row(['id' => 'c', 'tgl_invoice' => '2025-10-20']),
     row(['id' => 'd', 'tgl_invoice' => '2026-10-31', 'sts_close' => '1', 'close_date' => '2026-11-01 10:00:00', 'saldo' => 0])];

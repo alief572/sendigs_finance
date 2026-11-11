@@ -21,7 +21,10 @@ class Plan_bayar extends Admin_Controller
     public function index()
     {
         $this->auth->restrict($this->viewPermission);
-        $this->template->set('years', range((int) date('Y') + 1, (int) date('Y') - 5));
+        $mulaiTahun = (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 0, 4);
+        $this->template->set('years', range(max((int) date('Y'), $mulaiTahun), $mulaiTahun));
+        $this->template->set('mulai_tahun', $mulaiTahun);
+        $this->template->set('mulai_bulan', (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 5, 2));
         $this->template->render('plan_bayar');
     }
 
@@ -49,6 +52,12 @@ class Plan_bayar extends Admin_Controller
         }
         $plan = Piutang_aging::plan_rows($all, $year, $company, $today);
         $real = Piutang_aging::realisasi_rows($this->Monitoring_piutang_model->get_realisasi($year), $byId, $year, $company, $today);
+        // Batas tegas periode: plan dan realisasi hanya dari bulan TANGGAL_MULAI_FOLLOW_UP (satu tempat untuk kartu, tabel, dan Excel).
+        $dariMulai = function ($r) use ($year) {
+            return Piutang_aging::dari_mulai($year, $r['bulan']);
+        };
+        $plan = array_values(array_filter($plan, $dariMulai));
+        $real = array_values(array_filter($real, $dariMulai));
         return [$plan, $real, Piutang_aging::dashboard_summary($plan, $real, $year, $today), $year];
     }
 
