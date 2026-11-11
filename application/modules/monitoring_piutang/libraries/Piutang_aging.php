@@ -543,7 +543,7 @@ class Piutang_aging
         if (!in_array($fu, self::FU_FILTERS, true)) {
             throw new InvalidArgumentException('Filter follow up tidak valid.');
         }
-        foreach (['plan_bulan' => [1, 12], 'plan_tahun' => [2000, 2100], 'close_tahun' => [2000, 2100]] as $k => $range) {
+        foreach (['plan_bulan' => [1, 12], 'plan_tahun' => [2000, 2100], 'close_tahun' => [2000, 2100], 'inv_bulan' => [1, 12], 'inv_tahun' => [2000, 2100]] as $k => $range) {
             if (self::filled($f[$k] ?? null) && (!ctype_digit((string) $f[$k]) || $f[$k] < $range[0] || $f[$k] > $range[1])) {
                 throw new InvalidArgumentException("Filter $k tidak valid.");
             }
@@ -575,6 +575,14 @@ class Piutang_aging
                 continue;
             }
             if (self::filled($f['customer'] ?? null) && (string) ($r['customer'] ?? '') !== (string) $f['customer']) {
+                continue;
+            }
+            // Tahun/Bulan invoice (Follow Up Piutang): menyaring tanggal invoice di semua tab.
+            $tglInv = (string) ($r['tgl_invoice'] ?? '');
+            if (self::filled($f['inv_tahun'] ?? null) && substr($tglInv, 0, 4) !== (string) $f['inv_tahun']) {
+                continue;
+            }
+            if (self::filled($f['inv_bulan'] ?? null) && (int) substr($tglInv, 5, 2) !== (int) $f['inv_bulan']) {
                 continue;
             }
             if ($fu !== '') {

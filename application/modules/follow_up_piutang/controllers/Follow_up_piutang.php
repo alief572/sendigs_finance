@@ -12,7 +12,7 @@ class Follow_up_piutang extends Admin_Controller
     const PER_PAGE = 100;
     /** Hanya invoice bertanggal mulai tahun ini yang tampil di Follow Up (semua tab, filter, dan Excel). */
     const TAHUN_MULAI = 2026;
-    const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun'];
+    const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun', 'inv_tahun', 'inv_bulan'];
 
     public function __construct()
     {
@@ -28,6 +28,7 @@ class Follow_up_piutang extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
         $this->template->set('can_manage', has_permission($this->managePermission));
         $this->template->set('years', range((int) date('Y') + 1, (int) date('Y') - 5));
+        $this->template->set('inv_years', range(max((int) date('Y'), self::TAHUN_MULAI), self::TAHUN_MULAI));
         $this->template->render('index');
     }
 
