@@ -170,7 +170,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     var HINTS = {
         all: 'Semua invoice yang belum close.',
         '1': 'Isi tanggal kirim dan dikirim via (JNE / Driver).',
-        '2': 'Invoice sudah dikirim. Isi tanggal terima setelah customer menerima.',
+        '2': 'Invoice sudah dikirim. Isi no resi (wajib via JNE), tanggal terima, dan bukti terima setelah customer menerima.',
         '3': 'Customer sudah menerima. Lakukan follow up satu per satu sampai customer memberi rencana bayar.',
         '4': 'Rencana bayar sudah ada. Data terkunci; satu-satunya aksi adalah Close setelah lunas.',
         late: 'Follow up berjalan yang jadwalnya sudah lewat dan belum ada rencana bayar. Segera lakukan follow up.',
@@ -317,6 +317,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             '<label>Keterangan / jawaban customer' + inp(N('ket'), x.ket, 'text', lkf) + '</label></div>';
     }
 
+    // Status invoice -> tahap modal (sama dengan tab 1-3; plan_bayar/close hanya dilihat).
+    var STAGE = {belum_kirim: 1, dikirim: 2, diterima: 3, plan_bayar: 3, close: 3};
+
     function buildForm(d) {
         var r = d.row, L = d.locks, all = L.all, ro = all || !MANAGE;
         var h = '<form id="fu-form" class="frm"><input type="hidden" name="id" value="' + esc(r.id) + '">';
@@ -328,32 +331,34 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         } else if (!MANAGE) {
             h += '<div class="okmsg">' + ico('lock') + ' Anda hanya dapat melihat data ini.</div>';
         }
-        if (!ro) { h += '<p class="hint">' + ico('info-circle') + ' Form diisi step by step. Step yang sudah disimpan masih bisa dikoreksi sampai step berikutnya disimpan, setelah itu terkunci supaya data tidak berubah-ubah.</p>'; }
+        // Modal hanya memuat bagian untuk tahap invoice (sama dengan tab tempat invoice berada): 1 kirim, 2 konfirmasi diterima, 3 = follow up + plan bayar.
+        var stage = STAGE[r.status] || 3;
+        d.stage = stage;
+        if (!ro) { h += '<p class="hint">' + ico('info-circle') + ' Isi bagian tahap aktif, lalu klik Simpan. Bagian tahap sebelumnya tampil terkunci (hanya lihat).</p>'; }
+        // Bagian tahap sebelumnya tetap tampil tetapi terkunci (input disabled tidak ikut terkirim, data tersimpan tidak berubah).
+        var done = ico('lock') + ' Sudah diproses, hanya bisa dilihat.';
 
-        // 1 pengiriman
-        var lk = ro || L.kirim;
-        h += '<h3>1. Pengiriman Invoice</h3><div class="frow"><label>Tanggal kirim' + inp('tgl_kirim', r.tgl_kirim, 'date', lk) + '</label>' +
-            '<label>Dikirim via<select name="kirim_via"' + (lk ? ' disabled' : '') + '><option value="">- Pilih -</option>' +
-            VIA.map(function (v) { return '<option' + (r.kirim_via === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') +
-            (r.kirim_via && VIA.indexOf(r.kirim_via) < 0 ? '<option selected>' + esc(r.kirim_via) + '</option>' : '') + '</select></label>' +
-            '<label id="ket-kirim-wrap"' + (r.kirim_via ? '' : ' hidden') + '><span id="ket-kirim-lbl">' + (r.kirim_via === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)') + '</span>' + inp('ket_kirim', r.ket_kirim, 'text', lk) + '</label></div>';
-        if (r.tgl_kirim) {
-            h += (lk ? '<p class="hint" style="margin-top:6px">' + ico('lock') + ' Data pengiriman terkunci karena tanggal terima sudah disimpan.</p>' : (ro ? '' : '<p class="hint" style="margin-top:6px">' + ico('pencil') + ' Data pengiriman sudah tersimpan dan masih bisa dikoreksi sampai tanggal terima disimpan.</p>')) +
-                '<div class="frow" style="margin-top:8px"><label>No resi <span class="req" id="resi-req"' + (r.kirim_via === 'JNE' ? '' : ' hidden') + '>(wajib bila via JNE)</span>' +
-                inp('no_resi', r.no_resi, 'text', ro || L.resi, ' maxlength="100"') + '</label>' +
-                '<p class="hint span2" style="align-self:end">' + (L.resi ? ico('lock') + ' No resi terkunci karena FU 1 sudah disimpan.' : 'No resi bisa diisi belakangan (baru diketahui setelah kirim). Terkunci setelah terisi dan FU 1 disimpan.') + '</p></div>';
+        if (stage >= 1) {
+            var lk = ro || L.kirim || stage > 1;
+            h += '<h3>1. Pengiriman Invoice</h3><div class="frow"><label>Tanggal kirim' + inp('tgl_kirim', r.tgl_kirim, 'date', lk) + '</label>' +
+                '<label>Dikirim via<select name="kirim_via"' + (lk ? ' disabled' : '') + '><option value="">- Pilih -</option>' +
+                VIA.map(function (v) { return '<option' + (r.kirim_via === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') +
+                (r.kirim_via && VIA.indexOf(r.kirim_via) < 0 ? '<option selected>' + esc(r.kirim_via) + '</option>' : '') + '</select></label>' +
+                '<label id="ket-kirim-wrap"' + (r.kirim_via ? '' : ' hidden') + '><span id="ket-kirim-lbl">' + (r.kirim_via === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)') + '</span>' + inp('ket_kirim', r.ket_kirim, 'text', lk) + '</label></div>' +
+                (stage > 1 ? '<p class="hint" style="margin-top:6px">' + done + '</p>' : (ro ? '' : '<p class="hint" style="margin-top:6px">No resi diisi di tahap berikutnya (Konfirmasi Diterima), setelah invoice sampai ke customer.</p>'));
         }
-        // 2 diterima
-        if (r.tgl_kirim) {
-            var lt = ro || L.terima;
-            h += '<h3>2. Diterima Customer</h3><div class="frow"><label>Tanggal terima' + inp('tgl_terima', r.tgl_terima, 'date', lt) + '</label>' +
-                '<label class="span2">Keterangan' + inp('ket_terima', r.ket_terima, 'text', lt, ' placeholder="Nama penerima"') + '</label></div>' +
+        // 2 diterima (termasuk no resi)
+        if (stage >= 2) {
+            var lt = ro || L.terima || stage > 2, jne = r.kirim_via === 'JNE';
+            h += '<h3>2. Diterima Customer</h3><div class="frow"><label>No resi' + (jne && stage === 2 ? ' <span class="req">(wajib via JNE)</span>' : '') +
+                inp('no_resi', r.no_resi, 'text', ro || L.resi || stage > 2, ' maxlength="100"') + '</label>' +
+                '<label>Tanggal terima' + inp('tgl_terima', r.tgl_terima, 'date', lt) + '</label>' +
+                '<label>Keterangan' + inp('ket_terima', r.ket_terima, 'text', lt, ' placeholder="Nama penerima"') + '</label></div>' +
                 '<div class="frow" style="margin-top:8px"><label class="span2" style="grid-column:1/-1">Bukti terima <span class="req">(wajib: PDF / JPG / PNG, maks 5 MB)</span>' + buktiHtml(r, lt) + '</label></div>' +
-                (r.tgl_terima ? note(lt, !ro) : '') +
-                '<p class="hint" style="margin-top:6px">Umur piutang dihitung dari tanggal terima. Tanpa tanggal terima, invoice belum masuk Monitoring Piutang.</p>';
+                (stage > 2 ? '<p class="hint" style="margin-top:6px">' + done + '</p>' : '<p class="hint" style="margin-top:6px">Umur piutang dihitung dari tanggal terima. Tanpa tanggal terima, invoice belum masuk Monitoring Piutang. No resi dan tanggal terima terkunci setelah disimpan.</p>');
         }
         // 3 follow up + 4 plan bayar
-        if (r.tgl_terima) {
+        if (stage === 3) {
             h += '<h3>3. Follow Up</h3><div class="picbox"><div class="frow"><label>Nama PIC penerima follow up <span class="req">*</span>' + inp('fu_pic_nama', r.fu_pic_nama, 'text', ro, ' placeholder="Nama orang yang dihubungi"') + '</label>' +
                 '<label>No WA / Telepon PIC <span class="req">*</span>' + inp('fu_pic_telp', r.fu_pic_telp, 'tel', ro, ' placeholder="0812xxxxxxxx"') + '</label></div>' +
                 '<p class="hint" style="margin:6px 0 0">Diisi sekali untuk invoice ini dan berlaku untuk semua FU. Bisa dikoreksi (tidak bisa dikosongkan) sampai plan bayar disimpan.</p></div>' +
@@ -364,13 +369,13 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 var done = !!x.aktual, isCur = !done && !shownCurrent;
                 if (!done && !isCur) { return; }
                 if (isCur) { shownCurrent = true; }
-                var lkf = ro || !!L.fu[x.ke];
+                var lkf = ro || !!L.fu[x.ke] || done; // FU yang sudah dilakukan langsung terkunci (hanya lihat)
                 var N = function (k) { return x.ke <= 4 ? 'fu' + x.ke + '_' + k : 'extra_fu[' + (x.ke - 5) + '][' + k + ']'; };
                 var extraKe = x.ke > 4 ? '<input type="hidden" name="' + N('ke') + '" value="' + x.ke + '">' : '';
                 if (done) {
-                    var open = i === lastDone && !lkf;
+                    var open = i === lastDone;
                     doneHtml += '<li><button type="button" class="fuhead" data-fuopen aria-expanded="' + open + '">' + ico(open ? 'caret-down' : 'caret-right') + ' ' + ico('check') + ' <b>FU ' + x.ke + '</b> dilakukan ' + dmy(x.aktual) + ' ' +
-                        (lkf ? '<span class="fu-pill st-close">' + ico('lock') + ' terkunci</span>' : '<span class="fu-pill info">bisa dikoreksi</span>') + '</button>' +
+                        '<span class="fu-pill st-close">' + ico('lock') + ' terkunci</span></button>' +
                         '<div class="fubody"' + (open ? '' : ' hidden') + '>' + extraKe + fuFields(x, N, lkf, true) + '</div></li>';
                 } else {
                     activeHtml += '<div class="fuact"><div class="fuact-t">FU ' + x.ke + ' <span class="fu-pill st-diterima">berjalan</span></div>' + extraKe + fuFields(x, N, lkf, false) +
@@ -391,8 +396,6 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             h += '<h3>4. Plan Bayar Customer</h3><div class="frow"><label>Plan tanggal bayar' + inp('plan_bayar', r.plan_bayar, 'date', ro) + '</label>' +
                 '<label class="span2">Keterangan' + inp('ket_plan_bayar', r.ket_plan_bayar, 'text', ro) + '</label></div>' +
                 (ro ? '' : '<p class="hint" style="margin-top:6px">' + ico('exclamation-triangle') + ' Setelah rencana bayar disimpan, follow up berhenti dan data invoice ini tidak bisa diubah lagi. Invoice pindah ke tab <b>4. Tunggu Bayar &amp; Close</b>, tinggal di-Close setelah pembayaran diterima.</p>');
-        } else if (!ro) {
-            h += '<p class="hint" style="margin-top:12px">' + ico('info-circle') + ' ' + (!r.tgl_kirim ? 'Isi tanggal kirim dulu. Bagian "Diterima Customer" muncul setelah tanggal kirim diisi.' : 'Isi tanggal terima setelah customer menerima invoice. Follow up dan plan bayar muncul setelah itu.') + '</p>';
         }
         $('#fu-modal-body').html(h + '</form>');
         $('#btn-save').toggle(!ro);
@@ -441,12 +444,6 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             $('#fu-close-modal').modal('hide'); say(r.msg || 'Invoice di-close.', 'success'); load(true);
         }).fail(function (x) { $('#fu-close-err').text((x.responseJSON || {}).msg || 'Gagal close invoice.'); }).always(function () { $b.prop('disabled', false); });
     });
-    // form bertahap: bagian berikutnya muncul setelah tanggal sebelumnya terisi
-    $('#fu-modal-body').on('change', '[name=tgl_kirim], [name=tgl_terima]', function () {
-        var data = $('#fu-form').serializeArray(), m = {}, keep = this.name; data.forEach(function (x) { m[x.name] = x.value; });
-        cur.row = $.extend(cur.row, m); buildForm(cur);
-        $('#fu-form [name="' + keep + '"]').focus(); // form dibangun ulang: kembalikan fokus keyboard
-    });
     $('#fu-modal-body').on('click', '.fu-today', function () { $('[name="' + $(this).data('name') + '"]').val(TODAY); });
     $('#fu-modal-body').on('click', '[data-fuopen]', function () {
         var $b = $(this), open = $b.attr('aria-expanded') !== 'true';
@@ -462,7 +459,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     });
     $('#fu-modal-body').on('change', '[name=kirim_via]', function () {
         var v = $(this).val();
-        $('#resi-req').prop('hidden', v !== 'JNE'); $('#ket-kirim-wrap').prop('hidden', !v);
+        $('#ket-kirim-wrap').prop('hidden', !v);
         $('#ket-kirim-lbl').text(v === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)');
     });
     $('#fu-modal-body').on('change', '#bukti-file', function () {
@@ -476,6 +473,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#fu-modal-msg').hide();
         // wajib: tanggal terima terisi harus punya file (yang sudah tersimpan atau yang baru dipilih); server memeriksa lagi
         if ($('[name=tgl_terima]').val() && !picked && !cur.row.bukti_terima) { mfail('Bukti terima (file) wajib diunggah.'); return; }
+        if (cur.stage === 2 && cur.row.kirim_via === 'JNE' && $('[name=tgl_terima]').val() && !$.trim($('[name=no_resi]').val())) { mfail('No resi wajib diisi bila dikirim via JNE.'); return; }
         // plan bayar mengunci seluruh data dan tidak bisa diubah: minta konfirmasi saat pertama kali diisi
         if ($('[name=plan_bayar]').val() && !cur.row.plan_bayar && !confirm('Plan bayar akan MENGUNCI seluruh data invoice ini dan tidak bisa diubah. Lanjut simpan?')) { return; }
         var $b = $(this).prop('disabled', true), fd = new FormData($('#fu-form')[0]), no = cur.row.no_invoice;
