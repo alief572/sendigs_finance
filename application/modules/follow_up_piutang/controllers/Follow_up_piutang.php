@@ -10,6 +10,8 @@ class Follow_up_piutang extends Admin_Controller
     protected $viewPermission = 'Follow_Up_Piutang.View';
     protected $managePermission = 'Follow_Up_Piutang.Manage';
     const PER_PAGE = 100;
+    /** Hanya invoice bertanggal mulai tahun ini yang tampil di Follow Up (semua tab, filter, dan Excel). */
+    const TAHUN_MULAI = 2026;
     const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun'];
 
     public function __construct()
@@ -66,7 +68,9 @@ class Follow_up_piutang extends Admin_Controller
     {
         $today = Piutang_aging::today();
         $golive = $this->golive();
-        $all = $this->Monitoring_piutang_model->get_rows((int) $f['close_tahun']);
+        $all = array_values(array_filter($this->Monitoring_piutang_model->get_rows((int) $f['close_tahun']), function ($r) {
+            return Piutang_aging::is_date(substr((string) ($r['tgl_invoice'] ?? ''), 0, 10)) && (int) substr($r['tgl_invoice'], 0, 4) >= self::TAHUN_MULAI;
+        }));
         $counts = Piutang_aging::tab_counts($all, $f, $today, $golive);
         // recordsTotal DataTables = isi tab tanpa filter dan pencarian
         $total = count(Piutang_aging::filter_ar_rows($all, ['tab' => $f['tab'], 'close_tahun' => $f['close_tahun']], $today, $golive));
