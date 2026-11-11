@@ -496,24 +496,28 @@ class Jurnal_all_model extends BF_Model
 
             // 3. Payment
             if ($payRows && $gl->table_exists('japh')) {
-                $payMap = [];
+                $payMap = []; $cut = [];
                 foreach ($payRows as $idx => $r) {
                     $raw = trim((string)($r['no_transaksi'] ?? ''));
                     if ($raw !== '') {
                         $split = array_unique(array_filter(array_map('trim', explode(',', $raw))));
                         foreach ($split as $part) $payMap[$part][] = $idx;
+                        // accounting no_reff is varchar(25): a multi-ID list is stored cut off
+                        if (strlen($raw) > 25) { $k = substr($raw, 0, 25); $payMap[$k][] = $idx; $cut[$k] = true; }
                     }
                 }
                 if ($payMap) {
                     $keys = array_keys($payMap);
                     $glData = [];
                     foreach (array_chunk($keys, 200) as $chunk) {
-                        $q = $gl->select('nomor, tgl, user_id, no_reff')->where_in('no_reff', $chunk)->get('japh');
+                        $q = $gl->select('nomor, tgl, user_id, no_reff, jenis_ap')->where_in('no_reff', $chunk)->get('japh');
                         if ($q) foreach ($q->result_array() as $h) {
+                            // a cut-off key is shared with the Refill header of the same list; Payment headers carry jenis_ap 'V'
+                            if (isset($cut[$h['no_reff']]) && (string)$h['jenis_ap'] !== 'V') continue;
                             $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
                         }
                     }
-                    $unmatched = array_diff($keys, array_keys($glData));
+                    $unmatched = array_diff($keys, array_keys($glData), array_keys($cut));
                     if ($unmatched && $gl->table_exists('jurnal')) {
                         foreach (array_chunk($unmatched, 200) as $chunk) {
                             $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
@@ -581,23 +585,33 @@ class Jurnal_all_model extends BF_Model
 
             // 5. Petty Cash
             if ($pcsRows && ($gl->table_exists('japh') || $gl->table_exists('jurnal'))) {
-                $pcsMap = [];
+                $pcsMap = []; $cut = [];
                 foreach ($pcsRows as $idx => $r) {
                     $no = trim((string)($r['no_transaksi'] ?? ''));
-                    if ($no !== '') $pcsMap[$no][] = $idx;
+                    if ($no === '') continue;
+                    $pcsMap[$no][] = $idx;
+                    if (strlen($no) > 25) { $k = substr($no, 0, 25); $pcsMap[$k][] = $idx; $cut[$k] = true; }
+                    // a single Refill is written to accounting under its RPC document number
+                    if (($r['jenis_transaksi'] ?? '') === 'Refill Pettycash') {
+                        foreach (array_map('trim', explode(',', (string)($r['no_referensi'] ?? ''))) as $doc) {
+                            if (preg_match('/^RPC-/', $doc)) $pcsMap[$doc][] = $idx;
+                        }
+                    }
                 }
                 if ($pcsMap) {
                     $keys = array_keys($pcsMap);
                     $glData = [];
                     if ($gl->table_exists('japh')) {
                         foreach (array_chunk($keys, 200) as $chunk) {
-                            $q = $gl->select('nomor, tgl, user_id, no_reff')->where_in('no_reff', $chunk)->get('japh');
+                            $q = $gl->select('nomor, tgl, user_id, no_reff, jenis_ap')->where_in('no_reff', $chunk)->get('japh');
                             if ($q) foreach ($q->result_array() as $h) {
+                                // a cut-off key is shared with the Payment header of the same list; skip Payment ('V')
+                                if (isset($cut[$h['no_reff']]) && (string)$h['jenis_ap'] === 'V') continue;
                                 $glData[$h['no_reff']] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
                             }
                         }
                     }
-                    $unmatched = array_diff($keys, array_keys($glData));
+                    $unmatched = array_diff($keys, array_keys($glData), array_keys($cut));
                     if ($unmatched && $gl->table_exists('jurnal')) {
                         foreach (array_chunk($unmatched, 200) as $chunk) {
                             $q = $gl->select('nomor, tanggal, created_on, created_by, no_reff')->where_in('no_reff', $chunk)->get('jurnal');
@@ -848,7 +862,7 @@ class Jurnal_all_model extends BF_Model
                 $lookupKey=$this->paymentLookupKey($row,$posted);
                 $matches=[];
                 foreach ($lookupKey===null?[]:array_unique(array_map('trim',explode(',',$lookupKey))) as $key) {
-                    foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? [],$voucherOnly) as $p) $matches[$p['id']]=$p;
+                    foreach ($this->resolvePayments($paymentMap,$key,$row['jenis_transaksi'],$paymentCompanions[$row['no_transaksi']] ?? [],$voucherOnly,$lookupKey===$row['no_transaksi']) as $p) $matches[$p['id']]=$p;
                 }
                 if ($voucherOnly) {
                     $row['display_no_transaksi']='-';
@@ -883,6 +897,12 @@ class Jurnal_all_model extends BF_Model
                 if ($docs) $row['no_referensi']=implode(', ',array_unique($docs));
                 if ($vouchers) {
                     $uniqueVouchers=array_values(array_unique($vouchers));
+                    if ($row['jenis_transaksi']==='Refill Pettycash') {
+                        // Refill journaled by approval id shows that id; journaled by voucher keeps the voucher.
+                        $tokens=array_map('trim',explode(',',(string)$row['no_transaksi'])); $uniqueVouchers=[];
+                        foreach ($matches as $p) $uniqueVouchers[]=in_array((string)$p['id'],$tokens,true)?(string)$p['id']:trim((string)($p['id_payment'] ?? ''));
+                        $uniqueVouchers=array_values(array_unique(array_filter($uniqueVouchers,'strlen')));
+                    }
                     $row['display_no_transaksi']=implode(', ',$uniqueVouchers);
                 }
                 if ($categories) $row['categories']=array_values(array_unique($categories));
@@ -890,7 +910,7 @@ class Jurnal_all_model extends BF_Model
                     $headerCategories=$row['categories'];sort($headerCategories,SORT_NATURAL|SORT_FLAG_CASE);
                     $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.$row['display_no_transaksi'];
                 }
-                $row['extra_search']=implode(' ',array_column($matches,'id'));
+                $row['extra_search']=implode(' ',array_merge(array_column($matches,'id'),$vouchers));
                 $row['payment_available']=(bool)$matches;
                 $row['petty_payment_eligible']=false;
                 foreach ($matches as $p) if (in_array($p['tipe'],['refill_pettycash','petty_cash_hutang'],true)||stripos($p['no_doc'],'RPC')!==false) $row['petty_payment_eligible']=true;
@@ -1395,10 +1415,12 @@ class Jurnal_all_model extends BF_Model
         return $this->paymentCompanions;
     }
 
-    private function resolvePayments($map,$key,$type,$excludedTypes=[],$voucherOnly=false)
+    private function resolvePayments($map,$key,$type,$excludedTypes=[],$voucherOnly=false,$idFallback=false)
     {
         $requiredType=['Payment Hutang Petty Cash'=>'petty_cash_hutang','Refill Pettycash'=>'refill_pettycash'][$type] ?? null;
-        foreach ($voucherOnly?['id_payment']:['id','id_payment','no_doc'] as $field) {
+        // Report PAY: voucher wins; approval id only when the token is no voucher at all and the key is the journal's own (not a mapped history voucher).
+        $fields=$voucherOnly?($idFallback?['id_payment','id']:['id_payment']):['id','id_payment','no_doc'];
+        foreach ($fields as $field) {
             $matches=$map[$field][$key] ?? [];
             if ($requiredType!==null) $matches=array_filter($matches,function($payment)use($requiredType){return $payment['tipe']===$requiredType;});
             if ($type==='Payment' && $excludedTypes) $matches=array_filter($matches,function($payment)use($excludedTypes){return !in_array($payment['tipe'],$excludedTypes,true);});

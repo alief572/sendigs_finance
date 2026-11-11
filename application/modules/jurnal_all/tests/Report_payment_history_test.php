@@ -62,9 +62,20 @@ foreach (['id_company'=>'4','tgl_jurnal'=>'2026-09-06','debit'=>'1.00','kredit'=
 }
 $db->where('id_payment',$voucher)->delete('payment_approve');
 $model=new Jurnal_all_model();$model->db=$db;
-check($model->detail($anchors[$native],true)['header']['no_referensi']==='-','missing history voucher cannot fall back to approval ID');
+check($model->detail($anchors[$native],true)['header']['no_referensi']==='-','missing history voucher cannot fall back to the native approval ID');
 $db->insert('payment_approve',['id'=>'NEW-APP','id_payment'=>'OTHER-VOUCHER','no_doc'=>'NOT-APPROVED','tipe'=>'periodik']);
 $unknown=journal('Payment','1','NEW-APP');
 $model=new Jurnal_all_model();$model->db=$db;
-check($model->detail($unknown,true)['header']['no_referensi']==='-','unlisted history retains strict voucher-only policy');
+$h=$model->detail($unknown,true)['header'];
+check($h['display_no_transaksi']==='OTHER-VOUCHER'&&$h['no_referensi']==='NOT-APPROVED','unlisted approval-id journal resolves to its voucher through id');
+$none=journal('Payment','1','NO-SUCH-TOKEN');
+$model=new Jurnal_all_model();$model->db=$db;
+$h=$model->detail($none,true)['header'];
+check($h['display_no_transaksi']==='-'&&$h['no_referensi']==='-','token matching neither voucher nor id stays empty');
+$db->insert('payment_approve',['id'=>'MIX-ID','id_payment'=>'MIX-VOUCHER','no_doc'=>'MIX-DOC','tipe'=>'periodik']);
+$db->insert('payment_approve',['id'=>'OTHER-ID','id_payment'=>'MIX-ID','no_doc'=>'WINS-DOC','tipe'=>'kasbon']);
+$collide=journal('Payment','1','MIX-ID');
+$model=new Jurnal_all_model();$model->db=$db;
+$h=$model->detail($collide,true)['header'];
+check($h['display_no_transaksi']==='MIX-ID'&&$h['no_referensi']==='WINS-DOC','voucher match still wins over approval id on collision');
 echo 'PASS report payment history: '.($checks-$baseChecks)." assertions\n";

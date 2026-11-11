@@ -34,7 +34,7 @@ $db->query('CREATE TABLE rutin_non_planning_header (no_pr VARCHAR(100),created_b
 $db->query('CREATE TABLE material_planning_base_on_produksi (no_pr VARCHAR(100),created_by INTEGER)');
 $db->query('CREATE TABLE tran_pr_header (no_pr VARCHAR(100),created_by INTEGER)');
 $db->query('CREATE TABLE consultant.kons_tr_expense_report_project_header (id VARCHAR(100),id_header VARCHAR(100))');
-$db->query('CREATE TABLE consultant.kons_tr_kasbon_project_header (id VARCHAR(100))');
+$db->query('CREATE TABLE consultant.kons_tr_kasbon_project_header (id VARCHAR(100),id_spk_penawaran VARCHAR(100))');
 class Invoice_department_fixture_model extends Jurnal_all_model {
     public $departmentDb;
     protected function invoiceDepartmentDatabase() { return $this->departmentDb; }
@@ -144,7 +144,7 @@ $refillApprove=journal('Refill Pettycash','0','201','4','25.00','25.00');
 $model=new Invoice_department_fixture_model();$model->db=$db;
 $payApprove=$model->groups(['tab'=>'PAY','year'=>2026,'q'=>'201']);
 $approvalRows=array_values(array_filter($payApprove,function($row){return $row['no_transaksi']==='201';}));
-check(count($approvalRows)===1&&$approvalRows[0]['display_no_transaksi']==='BATCH-1','payment journal with approval id displays voucher number');
+check(count($approvalRows)===1&&$approvalRows[0]['display_no_transaksi']==='201','refill journal keyed by approval id displays that approval id');
 check(count($payApprove)===2,'selected approval ID search also finds its voucher-key journal');
 check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BATCH-1']))===2,'search by payment voucher number matches both native and approval journals');
 check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'RPC-2026-1']))===2,'search by document number matches');
