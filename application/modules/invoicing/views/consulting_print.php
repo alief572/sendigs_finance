@@ -17,5 +17,5 @@ $data_invoice->print_keterangan = nl2br($escape($description));
 $data_actual_plan_tagih = (object)array('nominal_payment' => $invoice['total_nominal']);
 $id_company = (string)$snapshot['owner']['id'];
 $invoice_print_totals = array('vat' => $invoice['ppn_jurnal'], 'gross' => $invoice['tagihan_ppn_jurnal']);
-$invoice_print_decimals = 2;
+$invoice_print_decimals = 0;
 require __DIR__.'/print_invoice.php';

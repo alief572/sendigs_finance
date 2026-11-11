@@ -25,8 +25,8 @@ foreach (['7'=>'logo_sentral.png','3'=>'sentral_sustain.png','4'=>'logo_vuca.png
         verifyUi(strpos($html,'Deskripsi uji &lt;script&gt;')!==false && strpos($html,'<script>alert(1)</script>')===false,'Snapshot description and customer escaped');
         $total=$xpath->query('//tr[td[normalize-space(.)="TOTAL"]]/td[last()]//td[last()]')->item(0);
         $vat=$xpath->query('//tr[td[normalize-space(.)="Pajak 12%"]]/td[last()]//td[last()]')->item(0);
-        verifyUi($total && trim($total->textContent)===number_format((float)$data['invoice']['tagihan_ppn_jurnal'],2),'Saved gross retained '.$tax);
-        verifyUi($vat && trim($vat->textContent)===number_format((float)$data['invoice']['ppn_jurnal'],2),'Saved VAT retained '.$tax);
+        verifyUi($total && trim($total->textContent)===number_format((float)$data['invoice']['tagihan_ppn_jurnal']),'Saved gross retained '.$tax);
+        verifyUi($vat && trim($vat->textContent)===number_format((float)$data['invoice']['ppn_jurnal']),'Saved VAT retained '.$tax);
     }
 }
 $data=$base;$data['invoice']=$printInvoice;$data['invoice']['print_keterangan']='Keterangan cetak tersimpan';
@@ -43,8 +43,9 @@ $data['invoice']['dpp_nilai_lain']='266750000.00';
 $data['invoice']['ppn_jurnal']='32010000.00';
 $data['invoice']['tagihan_ppn_jurnal']='323010000.00';
 $html=$renderer->render('consulting_print',$data);
-foreach (['291,000,000.00','266,750,000.00','32,010,000.00','323,010,000.00'] as $amount) {
+foreach (['291,000,000','266,750,000','32,010,000','323,010,000'] as $amount) {
     verifyUi(strpos($html,$amount)!==false,'Screenshot invoice amount '.$amount);
+    verifyUi(strpos($html,$amount.'.00')===false,'Cetak invoice tanpa desimal '.$amount);
 }
 // invoice lama hasil impor ('v'): tanpa baris plan tagih, dpp/pajak/total_akhir NULL (kasus 00328-INV-XII-25)
 $imported=(object)['id'=>'00328-INV-XII-25','no_invoice'=>'028/VSB/2025','tanggal_invoice'=>'2025-10-10','nm_customer'=>'PT Contoh','address'=>'Jakarta','no_po'=>'PO-1','print_keterangan'=>'Jasa',
