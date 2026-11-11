@@ -96,6 +96,12 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     <div class="fu-filters">
         <label class="fl">Company<select id="f-company"><option value="">Semua Company</option></select></label>
         <label class="fl">Customer<input type="text" id="f-customer" list="dl-customer" autocomplete="off" placeholder="Pilih dari daftar"></label><datalist id="dl-customer"></datalist>
+        <label class="fl">Tahun Invoice
+            <select id="f-inv-tahun"><option value="">Semua Tahun</option><?php foreach ($inv_years as $y) echo '<option>' . $y . '</option>'; ?></select>
+        </label>
+        <label class="fl">Bulan Invoice
+            <select id="f-inv-bulan"><option value="">Semua Bulan</option><?php foreach ($bulan as $i => $b) echo '<option value="' . ($i + 1) . '">' . $b . '</option>'; ?></select>
+        </label>
         <label class="fl" id="f-fu-wrap">Follow Up
             <select id="f-fu">
                 <option value="">Semua</option><option value="none">Belum ada FU (belum diterima)</option>
@@ -186,7 +192,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     function params() {
         return $.extend({}, f, {
             company: $('#f-company').val(), customer: $('#f-customer').val(), fu: $('#f-fu').val(),
-            plan_bulan: $('#f-plan-bulan').val(), plan_tahun: $('#f-plan-tahun').val(), close_tahun: $('#f-close-tahun').val()
+            plan_bulan: $('#f-plan-bulan').val(), plan_tahun: $('#f-plan-tahun').val(), close_tahun: $('#f-close-tahun').val(),
+            inv_tahun: $('#f-inv-tahun').val(), inv_bulan: $('#f-inv-bulan').val()
         });
     }
 
@@ -412,7 +419,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#fu-tabs button').removeClass('on').attr('aria-selected', 'false');
         $(this).addClass('on').attr('aria-selected', 'true'); f.tab = $(this).data('tab'); load();
     });
-    $('#f-company, #f-fu, #f-plan-bulan, #f-plan-tahun, #f-close-tahun').on('change', function () { load(); });
+    $('#f-company, #f-fu, #f-plan-bulan, #f-plan-tahun, #f-close-tahun, #f-inv-tahun, #f-inv-bulan').on('change', function () { load(); });
     $('#f-customer').on('change', function () { load(); }); // nama harus persis: muat ulang saat pilihan dipastikan, bukan tiap ketikan
     $('#fu-search').on('input', function () { var v = this.value; clearTimeout(window.__fuS); window.__fuS = setTimeout(function () { table.search(v).draw(); }, 400); });
     $('#btn-export').on('click', function () { window.location = BASE + '/export?' + $.param($.extend(params(), {cari: table.search()})); });

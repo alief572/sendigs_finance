@@ -158,7 +158,19 @@ same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'cari' => '02/10/2026'], $to
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'cari' => '1.500.000'], $today)), '1', 'cari nominal');
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => 'selesai'], $today)), '4', 'filter FU selesai');
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => '1'], $today)), '3', 'filter FU1');
-foreach ([['tab' => 'x'], ['fu' => 'x'], ['plan_bulan' => '13']] as $bad) {
+// Tahun/Bulan invoice (Follow Up Piutang): menyaring tgl_invoice di semua tab, termasuk close dan jumlah tab
+$tg = [row(['id' => 'a', 'tgl_invoice' => '2026-01-15']), row(['id' => 'b', 'tgl_invoice' => '2026-10-01']), row(['id' => 'c', 'tgl_invoice' => '2025-10-20']),
+    row(['id' => 'd', 'tgl_invoice' => '2026-10-31', 'sts_close' => '1', 'close_date' => '2026-11-01 10:00:00', 'saldo' => 0])];
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '2026'], $today)), 'a,b', 'inv_tahun 2026');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_bulan' => '10'], $today)), 'b,c', 'inv_bulan 10 lintas tahun');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '2026', 'inv_bulan' => '10'], $today)), 'b', 'inv_tahun + inv_bulan');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '2024'], $today)), '', 'inv_tahun tanpa hasil');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_bulan' => '1'], $today)), 'a', 'inv_bulan 1 (tanpa nol di depan)');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '10'], $today)), 'd', 'inv_bulan berlaku di tab close');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '1'], $today)), '', 'tab close bulan lain');
+same($A::tab_counts($tg, ['inv_tahun' => '2026'], $today)['all'], 2, 'jumlah tab mengikuti inv_tahun');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '', 'inv_bulan' => ''], $today)), 'a,b,c', 'filter kosong = semua');
+foreach ([['tab' => 'x'], ['fu' => 'x'], ['plan_bulan' => '13'], ['inv_bulan' => '13'], ['inv_bulan' => '0'], ['inv_tahun' => 'abc'], ['inv_tahun' => '1999']] as $bad) {
     $threw = false;
     try { $A::filter_ar_rows($set, $bad, $today); } catch (InvalidArgumentException $e) { $threw = true; }
     ok($threw, 'filter tidak valid harus ditolak');
