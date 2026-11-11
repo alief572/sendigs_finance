@@ -12,7 +12,7 @@ Script menyalin posisi dari menu Invoicing/Report Invoicing, menyimpan visibilit
 
 - INV: `Invoicing`, pending 0/kosong/NULL, invoice dan company tersedia, ada detail bernilai positif.
 - RCV: `Penerimaan Piutang`, pending non-NULL selain1, invoice tersedia dan eligibility COA mengikuti source.
-- PAY: Payment/Transport/Transportasi/Kasbon/Expense, pending non-NULL selain1 dan company tersedia. Kategori mengikuti `payment_approve` tanpa menambah nominal dari join.
+- PAY: Payment/Transport/Transportasi/Kasbon/Expense, pending non-NULL selain1 dan company tersedia. Kategori mengikuti `payment_approve` tanpa menambah nominal dari join. Pada Report (posted), token jurnal dicocokkan ke `id_payment` dulu, lalu fallback ke `payment_approve.id`; Refill Petty Cash tampil dengan ID approval-nya.
 - EXP: Expense Report/Expense Report Consultant/Pengembalian Kasbon/Pengembalian Expense Project, pending 0/kosong/NULL, group transaksi/jenis/company. Jenis ini hanya muncul di Expense.
 - PCS: Petty Cash/Refill Pettycash/Payment Hutang Petty Cash, pending0/kosong. Refill/Hutang tampil di Pembayaran tetapi tetap memakai posting PCS. Multi-company satu aksi; filter company tidak memotong sisi lainnya.
 

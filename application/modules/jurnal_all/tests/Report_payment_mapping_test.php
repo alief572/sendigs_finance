@@ -25,7 +25,9 @@ check($header['no_referensi']==='DOC-A, DOC-B','report includes all voucher appr
 check($header['category']==='Periodik, Transport','report categories exclude colliding approval');
 check($header['no_transaksi']==='VOUCHER'&&$header['debit']==='100.25'&&$header['kredit']==='100.25','source identity and totals remain intact');
 check($header['posted_at']===null&&$header['posted_by']===null,'report does not invent posting metadata');
-foreach ([$legacy,$document,$missing] as $anchor) {
+$h=$model->detail($legacy,true)['header'];
+check($h['display_no_transaksi']==='LEGACY-VOUCHER'&&$h['no_referensi']==='LEGACY-DOC'&&$h['category']==='Expense','approval-ID-only journal resolves to its voucher via id');
+foreach ([$document,$missing] as $anchor) {
     $detail=$model->detail($anchor,true);$h=$detail['header'];
     check($h['display_no_transaksi']==='-'&&$h['no_referensi']==='-'&&$h['category']==='-','unmatched report has no approval/document fallback metadata');
     check(!$h['payment_available']&&count($detail['rows'])===2&&$detail['is_balance'],'unmatched journal detail remains available and balanced');
@@ -34,15 +36,16 @@ $filters=['tab'=>'PAY','year'=>2026];
 $list=$model->listing($filters,true);
 check(count($list['data'])===5,'all posted journals remain visible including unmatched history');
 check($list['totals']===['debit'=>'501.25','kredit'=>'501.25'],'voucher approval count does not multiply journal totals');
-foreach (['WRONG-DOC','LEGACY-DOC','LEGACY-VOUCHER'] as $q) check(count($model->groups($filters+['q'=>$q],true))===0,'unselected approval metadata is not searchable: '.$q);
+check(count($model->groups($filters+['q'=>'WRONG-DOC'],true))===0,'unselected approval metadata is not searchable: WRONG-DOC');
+foreach (['LEGACY-DOC','LEGACY-VOUCHER'] as $q) check(count($model->groups($filters+['q'=>$q],true))===1,'id-resolved approval metadata is searchable: '.$q);
 check(count($model->groups($filters+['q'=>'DOC-B'],true))===2,'resolved voucher references are searchable');
 check(count($model->groups($filters+['category'=>'Kasbon'],true))===0,'colliding approval cannot contribute category filters');
-check($model->options($filters,true)['categories']===['-','Periodik','Transport'],'category options reflect resolved vouchers and unavailable metadata');
+check($model->options($filters,true)['categories']===['-','Expense','Periodik','Transport'],'category options reflect resolved vouchers and unavailable metadata');
 $export=$model->export_rows($filters,true);
 check(count($export)===10,'export preserves all source COA lines');
 foreach ($export as $entry) {
     $h=$entry['header'];
-    check($h['no_referensi']===($h['no_transaksi']==='VOUCHER'?'DOC-A, DOC-B':'-'),'Excel metadata matches list and detail');
+    check($h['no_referensi']===(['VOUCHER'=>'DOC-A, DOC-B','LEGACY-ID'=>'LEGACY-DOC'][$h['no_transaksi']] ?? '-'),'Excel metadata matches list and detail');
 }
 $h=$model->detail($typed,true)['header'];
 check($h['display_no_transaksi']==='VOUCHER'&&$h['no_referensi']==='DOC-A, DOC-B','legacy payment type also uses voucher identity');
