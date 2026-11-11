@@ -311,9 +311,10 @@ class Record_request_payment_model extends BF_Model
 		}
 
 		// 4. Periodik (tr_pengajuan_rutin_detail)
-		if ($kat === 'periodik' || strpos($no_dokumen, 'PERIODIK-') === 0) {
+		if ($kat === 'periodik' || strpos($no_dokumen, 'PERIODIK-') === 0 || periodik_is_item_no($no_dokumen)) {
+			$periodikKey = periodik_doc_key($no_dokumen);
 			$row = $this->queryRow($this->db, $this->db->select('nama, bank_id, accnumber, accname')
-							->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $no_dokumen]));
+							->get_where('tr_pengajuan_rutin_detail', [$periodikKey['col'] => $periodikKey['val']]));
 			if ($row) {
 				$res['nama']   = !empty($row->accname) ? trim($row->accname) : trim((string)$row->nama);
 				$res['bank']   = trim((string)$row->bank_id);

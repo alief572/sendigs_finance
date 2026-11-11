@@ -1,666 +1,215 @@
-<?= form_open($this->uri->uri_string(), array('id' => 'frm_data', 'name' => 'frm_data', 'role' => 'form', 'class' => 'form-horizontal', 'enctype' => 'multipart/form-data')); ?>
-<input type="hidden" name="id" id="id" value="<?php echo (isset($data->id) ? $data->id : ''); ?>">
-<div class="tab-content">
-	<div class="tab-pane active">
-		<div class="box box-primary">
-			<div class="box-body">
-				<div class="form-group ">
-					<label for="divisi" class="col-sm-2 control-label">Departement<font size="4" color="red"><B>*</B></font></label>
-					<div class="col-sm-2">
-						<div class="input-group">
-							<?php
-							echo form_dropdown('departement', $datdept, set_value('departement', isset($departement) ? $departement : '0'), array('id' => 'departement', 'class' => 'form-control', 'required' => 'required'));
-							?>
-						</div>
-					</div>
+<?php
+/* Form Pengajuan Pembayaran Periodik (pForm di specs/input/Periodik.html).
+   Variabel: $type (add|edit), $dept, $dept_name, $periode, $period_options, $rows, $hidden, $batch. */
+$e   = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); };
+$fmt = function ($n) { return number_format((float) $n, 0, ',', '.'); };
+$isEdit = $type === 'edit' && $batch;
+?>
+<link rel="stylesheet" href="<?= base_url('assets/css/periodik_ui.css') ?>">
+<div class="pjx">
+<button type="button" class="back" id="pjBack">&#8592; Kembali ke daftar pengajuan</button>
+<h1 class="page-title">Pengajuan Pembayaran Periodik <small><?= $isEdit ? 'Edit ' . $e($batch['no']) : 'Buat batch baru' ?></small></h1>
+<div class="panel hl">
+	<div class="grid2">
+		<div><span>Departemen <b style="color:var(--red)">*</b></span><div class="ro"><?= $e($dept_name) ?></div>
+			<span class="sub"><?= $isEdit ? 'Departemen batch tidak bisa diubah.' : 'Dipilih dari tombol + New di daftar pengajuan.' ?></span></div>
+		<div><span>Periode pembayaran</span>
+			<select id="perSel" <?= $isEdit ? 'disabled' : '' ?>>
+				<?php foreach ($period_options as $v => $t) : ?><option value="<?= $e($v) ?>" <?= $v === $periode ? 'selected' : '' ?>><?= $e($t) ?></option><?php endforeach; ?>
+			</select></div>
+		<div><span>No. Batch</span><input type="text" value="<?= $isEdit ? $e($batch['no']) : 'Auto (BP-' . date('ym') . '-NNN)' ?>" disabled>
+			<span class="sub">No. item dibuat otomatis per item (PI-<?= date('Y') ?>-NNNNN, dst.)</span></div>
+		<div><span>Tanggal</span><input type="text" value="<?= $e($isEdit ? substr($batch['date'], 0, 10) : date('Y-m-d')) ?>" disabled></div>
+	</div>
+	<p class="hint">Setiap item yang diisi biayanya langsung mendapat nomor pengajuan item (PI-YYYY-NNNNN). Nomor final dipastikan saat Simpan. Item yang sudah diajukan di periode ini terkunci dengan nomor itemnya. Item yang ditolak terbuka lagi dan bisa diajukan ulang di batch baru. Item yang masa berlakunya sudah habis atau dinonaktifkan tidak ditampilkan.</p>
 
-					<label for="divisi" class="col-sm-2 control-label">No Dokumen</label>
-					<div class="col-sm-2">
-						<div class="input-group">
-							<input type="text" class="form-control" id="no_doc" name="no_doc" value="<?php echo (isset($data->no_doc) ? $data->no_doc : ''); ?>" placeholder="Auto" required readonly>
-						</div>
-					</div>
+	<form id="pjForm" enctype="multipart/form-data" onsubmit="return false">
+	<input type="hidden" name="departement" value="<?= $e($dept) ?>">
+	<input type="hidden" name="periode" value="<?= $e($periode) ?>">
+	<input type="hidden" name="id" value="<?= $isEdit ? (int) $batch['id'] : '' ?>">
+	<div class="scroll"><table>
+		<thead><tr><th>#</th><th>No. Item</th><th>Deskripsi</th><th>Jadwal</th><th class="num">Budget</th><th>Perkiraan biaya</th><th>Keterangan</th><th>Dokumen</th><th>Bank / No Rek / Nama</th></tr></thead>
+		<tbody>
+		<?php if (!$rows) : ?><tr><td colspan="9">Tidak ada item aktif untuk departemen ini.</td></tr><?php endif; ?>
+		<?php foreach ($rows as $ix => $r) :
+			$m = $r['m']; $st = $r['st']; $mine = $r['mine'];
+			$lock = $st['state'] === 'lock' && !$mine;
+			$lockItem = $lock && !empty($st['lock']) ? $st['lock'] : null;
+			$back = $st['state'] === 'back' && !$mine ? $st['back'] : null;
+			$mid = (int) $m['id'];
+			$value = $mine ? $mine['nominal'] : ($back ? $back['nominal'] : 0);
+			$userKet = $mine ? Periodik_logic::user_ket($mine['ket']) : '';
+			?>
+			<tr class="<?= $lock ? 'lockrow' : '' ?>" data-mid="<?= $mid ?>">
+				<td><?= $ix + 1 ?></td>
+				<td class="no" data-ino="<?= $mid ?>" <?= $mine ? 'data-keep="' . $e($mine['no_item']) . '"' : '' ?> style="min-width:170px"><?= $lockItem ? $e($lockItem['no_item']) : '' ?></td>
+				<td style="min-width:260px"><?= $e($m['nama']) ?><?= $m['tipe'] === 'tahun' ? ' <span class="sub" style="display:inline">(tahunan)</span>' : '' ?>
+					<?php if ($r['tag'] !== '') : ?><span class="tag cic"><?= $e($r['tag']) ?></span><?php endif; ?>
+					<?php if ($lock && $lockItem && empty($st['last'])) : ?><span class="tag" <?= $lockItem['status'] === 'A' ? 'style="background:var(--green)"' : '' ?>><?= $lockItem['status'] === 'A' ? 'Sudah disetujui' : 'Sudah diajukan' ?> (<?= $e($lockItem['no_item']) ?>)</span><?php endif; ?>
+					<?php if ($lock && $lockItem && !empty($st['last'])) : ?><span class="tag">Menunggu approval (<?= $e($lockItem['no_item']) ?>)</span><?php endif; ?>
+					<?php $lastRej = !$lock && !$mine && !$back ? Periodik_logic::last_reject($m['items'] ?? array()) : null; // penolakan di periode lain: alasan tetap terlihat sebelum mengajukan lagi ?>
+					<?php if ($lastRej) : ?>
+						<span class="tag back">Pengajuan terakhir ditolak (<?= $e($lastRej['no_item']) ?><?= $lastRej['at'] !== '' ? ' &middot; ' . $e(substr($lastRej['at'], 0, 10)) : '' ?><?= !empty($lastRej['closed_at']) ? ' &middot; tidak diajukan ulang' : '' ?>)</span><?php if ($lastRej['note'] !== '') : ?><div class="note"><?= $e($lastRej['note']) ?></div><?php endif; ?>
+					<?php endif; ?>
+					<?php if ($back) : ?>
+						<span class="tag back">Ditolak di <?= $e($back['no_item']) ?></span><div class="note"><?= $e($back['note']) ?></div>
+						<button type="button" class="btn g sm" style="margin-top:4px" data-closeitem="<?= $e($back['no_item']) ?>">Tidak diajukan ulang</button>
+					<?php endif; ?>
+				</td>
+				<td style="white-space:nowrap"><?= $e(periodik_schedule_text($m['tipe'], $m['tanggal'])) ?></td>
+				<td class="num mono"><?= $fmt($m['nilai']) ?></td>
+				<td style="min-width:130px"><input type="text" inputmode="numeric" autocomplete="off" name="biaya[<?= $mid ?>]" data-biaya="<?= $mid ?>" data-max="<?= (float) $m['nilai'] ?>" value="<?= $e(number_format((float) $value, 0, ',', '.')) ?>" <?= $lock ? 'disabled' : '' ?> aria-label="Perkiraan biaya <?= $e($m['nama']) ?>"></td>
+				<td style="min-width:180px"><textarea name="ket[<?= $mid ?>]" data-ket="<?= $mid ?>" <?= $lock ? 'disabled placeholder="Terkunci"' : '' ?>><?= $e($userKet) ?></textarea></td>
+				<td style="min-width:190px"><?php if ($lock) : ?><span class="sub">-</span><?php else : ?>
+					<input type="file" name="doc_<?= $mid ?>" data-docin="<?= $mid ?>" accept=".pdf,.jpg,.jpeg,.png" aria-label="Dokumen <?= $e($m['nama']) ?>">
+					<span class="rpv" data-docname="<?= $mid ?>"><?= $mine && $mine['doc_file'] !== '' ? 'File: ' . $e($mine['doc_file']) : 'Belum ada file' ?></span>
+				<?php endif; ?></td>
+				<td style="min-width:170px">
+					<?php foreach (array('bank_id' => 'Nama bank', 'accnumber' => 'No rekening', 'accname' => 'Nama pemilik') as $f => $ph) : ?>
+						<input type="text" name="<?= $f ?>[<?= $mid ?>]" data-bank value="<?= $e($r['bank'][$f]) ?>" placeholder="<?= $ph ?>" <?= $lock ? 'disabled' : '' ?> aria-label="<?= $ph ?> <?= $e($m['nama']) ?>" style="margin-bottom:3px">
+					<?php endforeach; ?>
+				</td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table></div>
+	</form>
 
-					<label for="divisi" class="col-sm-2 control-label">Tanggal<font size="4" color="red"><B>*</B></font></label>
-					<div class="col-sm-2">
-						<div class="input-group">
-							<input type="text" class="form-control tanggal" id="tanggal_doc" name="tanggal_doc" value="<?php echo (isset($data->tanggal_doc) ? $data->tanggal_doc : date("Y-m-d")); ?>" placeholder="Tanggal" required>
-						</div>
-					</div>
+	<?php if ($hidden) : ?>
+		<div class="hiddennote"><b><?= count($hidden) ?> item tidak ditampilkan:</b>
+			<?= implode(', ', array_map(function ($r) use ($e) {
+				$s = $r['st']['state'];
+				$why = $s === 'done' ? 'selesai ' . $r['st']['used'] . '/' . $r['m']['masa_berlaku'] : ($s === 'closed' ? 'ditutup, tidak diajukan ulang' : 'dinonaktifkan');
+				return $e($r['m']['nama']) . ' (' . $why . ')';
+			}, $hidden)) ?>. <a href="#" id="pjGoMaster">Lihat di Budget Pembayaran Periodik</a></div>
+	<?php endif; ?>
 
-				</div>
-				<div id="alert_all_submitted" class="alert alert-warning alert-dismissible" style="display:none; margin: 10px 15px 15px 15px;">
-					<h4><i class="icon fa fa-info-circle"></i> Pemberitahuan</h4>
-					Semua item anggaran rutin untuk departemen ini pada periode tanggal yang dipilih sudah pernah diajukan.
-				</div>
-				<div class="table-responsive">
-					<table class="table table-bordered table-striped">
-						<thead>
-							<tr>
-								<th width="5">#</th>
-								<th>Deskripsi</th>
-								<th>Jadwal Pembayaran</th>
-								<th>Budget</th>
-								<th>Perkiraan Biaya</th>
-								<th>Keterangan</th>
-								<th>Dokumen</th>
-								<th>Bank / No Rek / Nama</th>
-								<th class="hidden">
-									<div class="pull-right"><button class="btn btn-success btn-xs" onclick="add_detail()" id="add-material" type="button"><i class="fa fa-plus"></i> Tambah</button></div>
-								</th>
-							</tr>
-						</thead>
-						<tbody id="detail_body">
-							<?php $total = 0;
-							$idd = 1;
-							$gambar = '';
-							if (!empty($data_detail)) {
-								foreach ($data_detail as $record) { ?>
-									<tr id='tr1_<?= $idd ?>' class='delAll'>
-										<td><input type='hidden' name='details[]' id='details_id_<?= $idd ?>' value='<?= $idd ?>'>
-											<input type="hidden" name="detail_id[]" id="raw_id_<?= $idd ?>" value="<?= $record->id; ?>"><?= $idd; ?>
-											<input type="hidden" name="id_budget[]" id="id_budget_<?= $idd; ?>" value="<?= $record->id_budget ?>" class='budget'>
-											<input type="hidden" name="coa[]" id="coa_<?= $idd; ?>" value="<?= $record->coa ?>">
-										</td>
-										<td><input type="text" class="form-control" name="nama[]" id="nama_<?= $idd; ?>" value="<?= $record->nama; ?>"></td>
-										<td>
-											<input type="text" class="form-control tanggal" name="tanggal[]" id="tanggal_<?= $idd; ?>" value="<?= $record->tanggal; ?>" readonly style="background:#fff;cursor: pointer;">
-										</td>
-										<td><input type="text" class="form-control divide" name="budget[]" id="budget<?= $idd; ?>" value="<?= ($record->budget); ?>" readonly tabindex="-1"></td>
-										<td><input type="text" class="form-control nilai divide" name="nilai[]" id="nilai_<?= $idd; ?>" value="<?= ($record->nilai); ?>"></td>
-										<td><textarea class="form-control" rows="3" name="keterangan[]" id="keterangan_<?= $idd; ?>" style="min-width:200px;resize:vertical;"><?= $record->keterangan; ?></textarea></td>
-										<td><input type="file" name="doc_file_<?= $idd ?>" id="doc_file<?= $idd ?>">
-											<?= ($record->doc_file != '' ? '<a href="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '" download target="_blank"><i class="fa fa-download"></i></a>' : '') ?></td>
-										<td>
-											<input type="text" class="form-control" name="bank_id[]" id="bank_id_<?= $idd; ?>" value="<?= $record->bank_id; ?>">
-											<input type="text" class="form-control" name="accnumber[]" id="accnumber_<?= $idd; ?>" value="<?= $record->accnumber; ?>">
-											<input type="text" class="form-control" name="accname[]" id="accname_<?= $idd; ?>" value="<?= $record->accname; ?>">
-										</td>
-										<td align='center' class="hidden"><button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(<?= $idd ?>)' title='Hapus data'><i class='fa fa-close'></i> Hapus</button></td>
-									</tr>
-							<?php
-									$total = ($total + $record->nilai);
-									if ($record->doc_file != '') {
-										if (strpos($record->doc_file, 'pdf', 0) > 1) {
-											$gambar .= '<div class="col-md-12">
-									<iframe src="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '#toolbar=0&navpanes=0" title="PDF" style="width:600px; height:500px;" frameborder="0">
-											 <a href="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '">Download PDF</a>
-									</iframe>
-									<br />' . $record->no_doc . '</div>';
-										} else {
-											$gambar .= '<div class="col-md-4"><a href="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '" target="_blank"><img src="' . base_url('assets/bayar_rutin/' . $record->doc_file) . '" class="img-responsive"></a><br />' . $record->no_doc . '</div>';
-										}
-									}
-									$idd++;
-								}
-							} ?>
-							<tr>
-								<td colspan=4>TOTAL</td>
-								<td id="total_nilai_biaya"><?= number_format($total) ?></td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-				<div class="row">
-					<?= $gambar ?>
-					<?php
-					if ($app == 'app') {
-						echo '
-								<div class="col-md-4">
-									<div class="form-group">
-										<label for="">Alasan Reject</label>
-										<textarea name="" id="" cols="30" rows="10" class="form-control form-control-sm reject_reason"></textarea>
-									</div>
-								</div>
-							';
-					}
-					?>
-				</div>
-			</div>
-			<div class="box-footer">
-				<div class="form-group">
-					<div class="col-sm-offset-2 col-sm-10">
-						<?php
-						$app_url = '';
-						if (isset($data)) {
-							if ($data->status == 0) {
-								if ($app == 'app') {
-									echo '<a href="#" class="btn btn-primary btn-sm stsview" id="approve" onclick="data_approve(' . (isset($data->id) ? $data->id : '') . ')"><i class="fa fa-check-square-o"></i> Approve</a>';
-									echo '<a href="#" class="btn btn-danger btn-sm" style="margin-left: 0.2vh;" id="reject" onclick="data_reject(' . (isset($data->id) ? $data->id : '') . ')"><i class="fa fa-close"></i> Reject</a>';
-									$app_url = '/app_list';
-								}
-							}
-						}
-						?>
-						<button type="submit" name="save" class="btn btn-success btn-sm" id="submit"><i class="fa fa-save">&nbsp;</i>Simpan</button>
-						<a class="btn btn-warning btn-sm" onclick="location.reload();return false;"><i class="fa fa-reply">&nbsp;</i>Batal</a>
-					</div>
-				</div>
-			</div>
-		</div>
+	<div class="actbar">
+		<span>Total: <b class="mono" id="ptotal">0</b> dari <b id="pcount">0</b> item</span><span class="sp"></span>
+		<button type="button" class="btn o" id="pjCancel">Batal</button>
+		<button type="button" class="btn" id="pjSubmit"><?= $isEdit ? 'Simpan perubahan' : 'Simpan' ?></button>
 	</div>
 </div>
-<div class="modal fade" id="bankModal" tabindex="-1" role="dialog" aria-labelledby="bankModal">
-	<div class="modal-dialog modal-lg" role="document">
-		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-				<h4 class="modal-title" id="myModalLabel">Daftar</h4>
-			</div>
-			<div class="modal-body" id="bankModalBody"></div>
-		</div>
-	</div>
 </div>
-<?= form_close() ?>
-<script src="<?= base_url('assets/js/number-divider.min.js') ?>"></script>
-<script type="text/javascript">
-	var url_save = siteurl + 'pengajuan_rutin/save_data/';
-	var url_approve = siteurl + 'pengajuan_rutin/approve/';
-	var url_reject = siteurl + 'pengajuan_rutin/reject/';
-	var nomor = <?= $idd ?>;
-	<?php
-	if (isset($type)) {
-		if ($type == 'view') {
-			echo "$('#frm_data :input').prop('disabled', true);";
-			echo "$('.reject_reason').prop('disabled', false);";
-		}
-	} ?>
-	$('.divide').divide();
 
-	function list_bank(id) {
-		$.ajax({
-			url: siteurl + 'all/list_bank/' + id,
-			type: 'POST',
-			success: function(msg) {
-				$("#bankModalBody").html(msg);
-				$("#mylistbank").DataTable();
-				$('#bankModal').modal('show');
-			}
+<script src="<?= base_url('assets/js/periodik_ui.js') ?>"></script>
+<script>
+(function () {
+	var isEdit = <?= $isEdit ? 'true' : 'false' ?>;
+	var deptName = <?= json_encode($dept_name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+	var periodLabel = <?= json_encode(isset($period_options[$periode]) ? $period_options[$periode] : $periode, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+	var batchNo = <?= json_encode($isEdit ? $batch['no'] : '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+	var listUrl = siteurl + 'pengajuan_rutin';
+	var form = document.getElementById('pjForm'), root = document.querySelector('.pjx');
+	var submitBtn = document.getElementById('pjSubmit'), saving = false;
+
+	function snap() {
+		var s = [];
+		form.querySelectorAll('[data-biaya]:not([disabled]),[data-ket]:not([disabled]),[data-bank]:not([disabled])').forEach(function (el) { s.push(el.value); });
+		form.querySelectorAll('[data-docin]').forEach(function (el) { s.push(el.files.length ? el.files[0].name : ''); });
+		return s.join('\u0001');
+	}
+	var base = snap();
+	PJ.guard(function () { return !saving && snap() !== base; });
+
+	function rows() {
+		return Array.prototype.map.call(form.querySelectorAll('[data-biaya]:not([disabled])'), function (inp) {
+			var mid = inp.dataset.biaya, tr = inp.closest('tr'), cell = tr.querySelector('[data-ino]');
+			return {mid: mid, tr: tr, cell: cell, keep: cell.dataset.keep || '', v: PJ.moneyValue(inp.value),
+				name: tr.children[2].firstChild.textContent.trim(), ket: tr.querySelector('[data-ket]').value.trim(),
+				doc: (tr.querySelector('[data-docin]').files[0] || {}).name || (tr.querySelector('[data-docname]').textContent.replace(/^File: /, '').replace(/^Belum ada file$/, ''))};
 		});
 	}
-
-	function pilihini(bank_id, accnumber, accname, id) {
-		$("#bank_id_" + id).val(bank_id);
-		$("#accnumber_" + id).val(accnumber);
-		$("#accname_" + id).val(accname);
-		$('#bankModal').modal('hide');
-	}
-
-	function recalculate_total() {
-		var inputed_nilai = 0;
-		$(".nilai").each(function() {
-			var nilai_val = $(this).val();
-			if (nilai_val != "" && nilai_val != null && nilai_val != undefined) {
-				var parsed = parseFloat(nilai_val.split(",").join(""));
-				if (!isNaN(parsed) && parsed > 0) {
-					inputed_nilai += parsed;
-				}
-			}
-		});
-		$("#total_nilai_biaya").text(inputed_nilai.toLocaleString('id-ID'));
-	}
-
-	$(document).on("keyup change", ".nilai", function() {
-		var no = $(this).data('no');
-		var nilai_val = $(this).val();
-		if (nilai_val == "" || nilai_val == null || nilai_val == undefined) {
-			nilai_val = 0;
-		} else {
-			nilai_val = nilai_val.split(",").join("");
-			nilai_val = parseFloat(nilai_val);
-		}
-
-		if (nilai_val > 0) {
-			$("#metode_pembelian_" + no).prop("required", true);
-		} else {
-			$("#metode_pembelian_" + no).prop("required", false);
-		}
-
-		recalculate_total();
-	});
-
-	$('#frm_data').on('submit', function(e) {
-		e.preventDefault();
-
-		var inputed_nilai = 0;
-		$(".nilai").each(function() {
-			var nilai_val = $(this).val();
-			if (nilai_val == "" || nilai_val == null || nilai_val == undefined) {
-				var nilai_val = 0;
+	function total() {
+		var t = 0, c = 0;
+		rows().forEach(function (r) {
+			if (r.v > 0) {
+				r.cell.innerHTML = r.keep ? PJ.esc(r.keep) + '<span class="sub">Nomor tetap</span>' : 'PI-' + new Date().getFullYear() + '-NNNNN<span class="sub">Nomor saat disimpan</span>';
+				t += r.v; c++;
 			} else {
-				var nilai_val = nilai_val.split(",").join("");
-				nilai_val = parseFloat(nilai_val);
-			}
-
-			if (nilai_val > 0) {
-				inputed_nilai += nilai_val;
+				r.cell.innerHTML = r.keep ? '<s>' + PJ.esc(r.keep) + '</s><span class="sub note">Dikeluarkan dari batch</span>' : '<span class="sub">Otomatis saat biaya diisi</span>';
 			}
 		});
-		if (inputed_nilai < 1) {
-			swal({
-				title: "Error !",
-				text: "Maaf, setidaknya isi 1 nilai Perkiraan Biaya !",
-				type: "error"
-			});
-		} else {
-			swal({
-					title: "Anda Yakin?",
-					text: "Data Akan Disimpan!",
-					type: "info",
-					showCancelButton: true,
-					confirmButtonText: "Ya, simpan!",
-					cancelButtonText: "Tidak!",
-					closeOnConfirm: false,
-					closeOnCancel: true
-				},
-				function(isConfirm) {
-					if (isConfirm) {
-						var formdata = new FormData($('#frm_data')[0]);
-						$.ajax({
-							url: url_save,
-							dataType: "json",
-							type: 'POST',
-							data: formdata,
-							processData: false,
-							contentType: false,
-							success: function(msg) {
-								if (msg['save'] == '1') {
-									swal({
-										title: "Sukses!",
-										text: "Data Berhasil Di Simpan",
-										type: "success",
-										timer: 1500,
-										showConfirmButton: false
-									});
-									window.location.reload();
-								} else {
-									swal({
-										title: "Gagal!",
-										text: msg['msg'] ? msg['msg'] : "Data Gagal Di Simpan",
-										type: "error"
-									});
-								}
-								console.log(msg);
-							},
-							error: function(xhr) {
-								var errorMsg = "Ajax Data Gagal Di Proses";
-								if (xhr.responseJSON && xhr.responseJSON.msg) {
-									errorMsg = xhr.responseJSON.msg;
-								}
-								swal({
-									title: "Gagal!",
-									text: errorMsg,
-									type: "error"
-								});
-								console.log(xhr);
-							}
-						});
-					}
-				});
-		}
-		// var errors = "";
-		// if (errors == "") {
-		// 	swal({
-		// 			title: "Anda Yakin?",
-		// 			text: "Data Akan Disimpan!",
-		// 			type: "info",
-		// 			showCancelButton: true,
-		// 			confirmButtonText: "Ya, simpan!",
-		// 			cancelButtonText: "Tidak!",
-		// 			closeOnConfirm: false,
-		// 			closeOnCancel: true
-		// 		},
-		// 		function(isConfirm) {
-		// 			if (isConfirm) {
-		// 				var formdata = new FormData($('#frm_data')[0]);
-		// 				$.ajax({
-		// 					url: url_save,
-		// 					dataType: "json",
-		// 					type: 'POST',
-		// 					data: formdata,
-		// 					processData: false,
-		// 					contentType: false,
-		// 					success: function(msg) {
-		// 						if (msg['save'] == '1') {
-		// 							swal({
-		// 								title: "Sukses!",
-		// 								text: "Data Berhasil Di Simpan",
-		// 								type: "success",
-		// 								timer: 1500,
-		// 								showConfirmButton: false
-		// 							});
-		// 							cancel();
-		// 							window.location.reload();
-		// 						} else {
-		// 							swal({
-		// 								title: "Gagal!",
-		// 								text: "Data Gagal Di Simpan",
-		// 								type: "error",
-		// 								timer: 1500,
-		// 								showConfirmButton: false
-		// 							});
-		// 						};
-		// 						console.log(msg);
-		// 					},
-		// 					error: function(msg) {
-		// 						swal({
-		// 							title: "Gagal!",
-		// 							text: "Ajax Data Gagal Di Proses",
-		// 							type: "error",
-		// 							timer: 1500,
-		// 							showConfirmButton: false
-		// 						});
-		// 						console.log(msg);
-		// 					}
-		// 				});
-		// 			}
-		// 		});
-		// 	//			data_save();
-		// } else {
-		// 	swal(errors);
-		// 	return false;
-		// }
+		document.getElementById('ptotal').textContent = PJ.fmt(t);
+		document.getElementById('pcount').textContent = c;
+		submitBtn.disabled = !c;
+	}
+	function over(inp) { return PJ.moneyValue(inp.value) > parseFloat(inp.dataset.max); }
+	form.addEventListener('input', function (e) {
+		if (e.target.matches('[data-biaya]')) { PJ.maskMoney(e.target); e.target.style.borderColor = over(e.target) ? '#d9534f' : ''; e.target.title = over(e.target) ? 'Melebihi budget' : ''; }
+		total();
+	});
+	form.addEventListener('change', function (e) {
+		var f = e.target.closest('[data-docin]');
+		if (f) { root.querySelector('[data-docname="' + f.dataset.docin + '"]').textContent = f.files.length ? 'File: ' + f.files[0].name : 'Belum ada file'; }
+		total();
+	});
+	total();
+
+	document.getElementById('pjBack').onclick = document.getElementById('pjCancel').onclick = function () { PJ.leave(listUrl); };
+	var go = document.getElementById('pjGoMaster');
+	if (go) go.onclick = function (e) { e.preventDefault(); PJ.leave(siteurl + 'budget_periodik'); };
+
+	var sel = document.getElementById('perSel');
+	sel.addEventListener('change', function () {
+		var target = siteurl + 'pengajuan_rutin/create/<?= $e(rawurlencode($dept)) ?>?periode=' + encodeURIComponent(sel.value);
+		var prev = '<?= $e($periode) ?>';
+		if (snap() === base) { location.href = target; return; }
+		sel.value = prev;
+		PJ.ask({title: 'Ganti periode?', body: '<p class="hint">Isian yang belum disimpan akan hilang.</p>', cancel: 'Tetap di sini', ok: 'Ya, ganti', okCls: 'r',
+			onOk: function () { PJ.clean(); location.href = target; }});
 	});
 
-	var form_type = '<?= isset($type) ? $type : 'add' ?>';
-
-	function reload_detail() {
-		$('#detail_body .delAll').remove();
-		$('#alert_all_submitted').hide();
-		nomor = 1;
-		recalculate_total();
-		add_detail();
-	}
-
-	$(function() {
-		$(".select2").select2();
-		$(".tanggal").datepicker({
-			todayHighlight: true,
-			format: "yyyy-mm-dd",
-			showInputs: true,
-			autoclose: true
-		});
-
-		$("#tanggal_doc").on("change changeDate", function() {
-			if (form_type === 'add') {
-				reload_detail();
-			}
-		});
-
-		$("#departement").on("change", function() {
-			if (form_type === 'add') {
-				reload_detail();
-			}
-		});
+	root.addEventListener('click', function (e) {
+		var b = e.target.closest('[data-closeitem]'); if (!b) return;
+		var no = b.dataset.closeitem;
+		PJ.ask({title: 'Tutup ' + no + '?', ok: 'Tutup item', okCls: 'r',
+			body: '<p class="hint">Item ini tidak akan diajukan ulang untuk periode ini, misalnya tagihannya batal atau sudah dibayar lewat jalur lain. Item hilang dari form untuk periode ini dan statusnya tercatat di riwayat.</p>' +
+				'<label for="closeNote"><b>Alasan</b> <b style="color:var(--red)">*</b></label><textarea id="closeNote" rows="3" style="width:100%"></textarea>' +
+				'<div class="err" id="closeErr" hidden>Alasan wajib diisi untuk menutup item.</div>',
+			onOk: function () {
+				var ta = document.getElementById('closeNote'), note = ta.value.trim();
+				if (!note) { document.getElementById('closeErr').hidden = false; ta.focus(); return false; }
+				PJ.post(siteurl + 'pengajuan_rutin/close_item', {no_item: no, note: note}).then(function (r) {
+					if (!r.save) { PJ.toast(r.msg || 'Terjadi kesalahan. Silakan coba lagi.'); return; }
+					// isian item lain tetap ada: hanya baris ini yang dilepas dari form, tanpa memuat ulang halaman
+					var tr = b.closest('tr'); tr.parentNode.removeChild(tr); base = snap(); total();
+					PJ.toast(no + ' ditutup dan tidak muncul lagi di form periode ini.');
+				}, function (err) { PJ.toast(err.message); });
+			}});
 	});
 
-	function add_detail() {
-		var idbudget = [];
-		var departement = $("#departement").val();
-		var tanggal_doc = $("#tanggal_doc").val();
-		var no_doc = $("#no_doc").val();
-		$('.budget').each(function() {
-			idbudget.push($(this).val());
-		});
-		$.ajax({
-			url: siteurl + "pengajuan_rutin/get_data",
-			dataType: "json",
-			type: 'POST',
-			data: {
-				allbudget: idbudget,
-				dept: departement,
-				tanggal: tanggal_doc,
-				no_doc: no_doc
-			},
-			success: function(msg) {
-				if (msg['save'] == '1') {
-					var total_items = 0;
-					var submitted_items = 0;
-					var detail_items = msg['data'];
-					if (form_type === 'add') {
-						var available_items = [];
-						var already_submitted_items = [];
-						$.each(detail_items, function(index, element) {
-							if (element.is_submitted == 1) {
-								already_submitted_items.push(element);
-							} else {
-								available_items.push(element);
-							}
-						});
-						available_items = available_items.map(function(element, index) {
-							var parts = element.tipe === 'tahun'
-								? String(element.tanggal || '').split('-')
-								: [msg['bulan'], element.tanggal];
-							var month = Number(parts[0]);
-							var day = Number(parts[1]);
-							var schedule = month >= 1 && month <= 12 && day >= 1 && day <= 31
-								? month * 100 + day : Infinity;
-							return {item: element, index: index, schedule: schedule};
-						}).sort(function(a, b) {
-							return a.schedule === b.schedule ? a.index - b.index : a.schedule - b.schedule;
-						}).map(function(entry) {
-							return entry.item;
-						});
-						detail_items = available_items.concat(already_submitted_items);
-					}
+	submitBtn.onclick = function () {
+		var picked = rows().filter(function (r) { return r.v > 0; });
+		var bad = Array.prototype.filter.call(form.querySelectorAll('[data-biaya]:not([disabled])'), over);
+		if (bad.length) { bad[0].focus(); PJ.toast('Perkiraan biaya tidak boleh melebihi budget (' + bad.length + ' item melebihi).'); return; }
+		if (!picked.length) { PJ.toast(isEdit ? 'Minimal satu item harus diisi. Untuk membatalkan seluruh batch, pakai tombol Hapus di daftar.' : 'Isi perkiraan biaya minimal satu item sebelum menyimpan.'); return; }
+		var out = rows().filter(function (r) { return r.v <= 0 && r.keep; });
+		var sum = picked.reduce(function (s, r) { return s + r.v; }, 0);
+		PJ.ask({title: isEdit ? 'Simpan perubahan ' + batchNo + '?' : 'Ajukan ' + picked.length + ' item untuk approval?', ok: isEdit ? 'Simpan perubahan' : 'Ajukan',
+			body: '<p class="hint">' + PJ.esc(deptName) + ' · periode ' + PJ.esc(periodLabel) + (isEdit ? '' : ' · No. Batch BP-<?= date('ym') ?>-NNN') + '</p>' +
+				'<div class="scroll"><table><thead><tr><th>No. Item</th><th>Deskripsi</th><th>Dokumen</th><th class="num">Perkiraan biaya</th></tr></thead><tbody>' +
+				picked.map(function (r) {
+					return '<tr><td class="no">' + (r.keep ? PJ.esc(r.keep) : 'Nomor saat disimpan' + (isEdit ? '<span class="sub">Baru</span>' : '')) + '</td><td>' + PJ.esc(r.name) + (r.ket ? '<span class="sub">' + PJ.esc(r.ket) + '</span>' : '') +
+						'</td><td>' + (r.doc ? PJ.esc(r.doc) : '<span class="sub">Tidak ada file</span>') + '</td><td class="num mono">' + PJ.fmt(r.v) + '</td></tr>';
+				}).join('') + '<tr><td colspan="3"><b>Total</b></td><td class="num mono"><b>' + PJ.fmt(sum) + '</b></td></tr></tbody></table></div>' +
+				(out.length ? '<p class="note">Dikeluarkan dari batch: ' + out.map(function (r) { return PJ.esc(r.keep + ' ' + r.name); }).join(', ') + '</p>' : '') +
+				'<p class="hint" style="margin-top:10px">Setelah disimpan, setiap item menunggu approval di menu Approval Pengajuan Periodik.</p>',
+			onOk: function () { commit(); }});
+	};
 
-					$.each(detail_items, function(index, element) {
-						total_items++;
-						var isSubmitted = (element.is_submitted == 1 || element.is_submitted == '1');
-						if (isSubmitted) {
-							submitted_items++;
-						}
-
-						var Rows = "<tr id='tr1_" + nomor + "' class='delAll" + (isSubmitted ? " bg-gray-light" : "") + "'>";
-						Rows += "<td>";
-						Rows += "<input type='hidden' name='detail_id[]' id='details_id_" + nomor + "' value=''>";
-						Rows += "<input type='hidden' name='details[]' id='raw_id_" + nomor + "' value='" + nomor + "'>";
-						Rows += "<input type='hidden' name='id_budget[]' id='id_budget_" + nomor + "' value='" + element.id + "' class='budget'>";
-						Rows += "<input type='hidden' name='coa[]' id='coa_" + nomor + "' value='" + element.coa + "'>";
-						Rows += nomor;
-						Rows += "</td>";
-						Rows += "<td>";
-						Rows += "<input type='text' class='form-control' name='nama[]' id='nama_" + nomor + "' value='" + element.nama + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
-						if (isSubmitted) {
-							var noDocRaw = element.submitted_no_doc ? String(element.submitted_no_doc) : '';
-							var noDocList = noDocRaw ? noDocRaw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; }) : [];
-							var badgeText = noDocList.length > 1
-								? " (" + noDocList.length + " dokumen)"
-								: (noDocList.length === 1 ? " (" + noDocList[0] + ")" : "");
-							var badgeTitle = noDocList.length ? "Sudah diajukan: " + noDocList.join(', ') : "Item ini sudah diajukan untuk periode ini";
-							Rows += "<div style='margin-top: 4px;'><span class='badge bg-red' title='" + badgeTitle + "' style='font-size: 11px; padding: 3px 7px; white-space: nowrap; cursor: help;'><i class='fa fa-lock'></i> Sudah Diajukan" + badgeText + "</span></div>";
-						}
-						Rows += "</td>";
-
-						var jadwal = '';
-						if (element.tipe == 'tahun') jadwal = msg['tahun'] + '-' + element.tanggal;
-						if (element.tipe == 'bulan') jadwal = msg['tahun'] + '-' + msg['bulan'] + '-' + element.tanggal;
-						Rows += "<td>";
-						Rows += "<input type='text' class='form-control' name='tanggal[]' id='tanggal_" + nomor + "' value='" + jadwal + "' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
-						Rows += "</td>";
-						Rows += "<td>";
-						Rows += "<input type='text' class='form-control divide' name='budget[]' value='" + element.nilai + "' id='budget_" + nomor + "' readonly tabindex='-1' " + (isSubmitted ? "style='background:#eee;'" : "") + " />";
-						Rows += "</td>";
-
-						Rows += "<td>";
-						if (isSubmitted) {
-							Rows += "<input type='text' class='form-control divide' name='nilai[]' value='0' id='nilai_" + nomor + "' readonly tabindex='-1' style='background:#eee; cursor:not-allowed; color:#888;' title='Item sudah diajukan untuk periode ini' />";
-						} else {
-							Rows += "<input type='text' class='form-control nilai divide' name='nilai[]' value='0' data-no='" + nomor + "' id='nilai_" + nomor + "' />";
-						}
-						Rows += "</td>";
-
-						Rows += "<td>";
-						Rows += "<textarea class='form-control' rows='3' name='keterangan[]' id='keterangan_" + nomor + "' style='min-width:200px;resize:vertical;" + (isSubmitted ? "background:#eee;' readonly placeholder='Terkunci (Sudah diajukan)'" : "'") + "></textarea>";
-						Rows += "</td>";
-
-						Rows += "<td>";
-						Rows += "<input type='file' name='doc_file_" + nomor + "' id='doc_file" + nomor + "' " + (isSubmitted ? "disabled style='cursor:not-allowed;'" : "") + ">";
-						Rows += "</td>";
-
-						Rows += "<td>";
-						Rows += "<input type='text' class='form-control' name='bank_id[]' id='bank_id_" + nomor + "' value='' placeholder='- Nama Bank -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
-						Rows += "<input type='text' class='form-control' name='accnumber[]' id='accnumber_" + nomor + "' value='' placeholder='- No Rekening -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
-						Rows += "<input type='text' class='form-control' name='accname[]' id='accname_" + nomor + "' value='' placeholder='- Nama -' " + (isSubmitted ? "readonly style='background:#eee;'" : "") + " />";
-						Rows += "</td>";
-
-						Rows += "<td align='center' class='hidden'>";
-						Rows += "<button type='button' class='btn btn-danger btn-xs' data-toggle='tooltip' onClick='delDetail(" + nomor + ")' title='Hapus data'><i class='fa fa-close'></i> Hapus</button>";
-						Rows += "</td>";
-						Rows += "</tr>";
-						nomor++;
-						$('#detail_body').append(Rows);
-					});
-
-					if (total_items > 0 && total_items === submitted_items) {
-						$("#alert_all_submitted").slideDown();
-					} else {
-						$("#alert_all_submitted").slideUp();
-					}
-
-					$(".divide").divide();
-					recalculate_total();
-				} else {
-					swal({
-						title: "Gagal!",
-						text: "Data gagal diambil",
-						type: "error",
-						timer: 1500,
-						showConfirmButton: false
-					});
-				};
-				console.log(msg);
-			},
-			error: function(msg) {
-				swal({
-					title: "Gagal!",
-					text: "Ajax Data Gagal Di Proses",
-					type: "error",
-					timer: 1500,
-					showConfirmButton: false
-				});
-				console.log(msg);
-			}
-		});
-
+	function commit() {
+		var fd = new FormData(form);
+		form.querySelectorAll('[data-biaya]:not([disabled])').forEach(function (inp) { fd.set(inp.name, PJ.moneyValue(inp.value)); }); // server menerima angka murni, tanpa titik
+		submitBtn.disabled = true;
+		PJ.post(siteurl + 'pengajuan_rutin/save_data', fd).then(function (r) {
+			if (!r.save) { submitBtn.disabled = false; PJ.toast(r.msg || 'Terjadi kesalahan. Silakan coba lagi.'); return; }
+			saving = true;
+			var msg = r.edit ? r.no_doc + ' diperbarui (' + r.count + ' item).' :
+				r.no_doc + ' (periode ' + r.periode + ') tersimpan dengan ' + r.count + ' item (' + r.first + (r.count > 1 && r.last !== r.first ? ' s/d ' + r.last : '') + '), menunggu approval.';
+			try { sessionStorage.setItem('pjToast', msg); sessionStorage.setItem('pjFlash', r.no_doc); } catch (x) {}
+			location.href = listUrl;
+		}, function (err) { submitBtn.disabled = false; PJ.toast(err.message); });
 	}
-
-	function delDetail(row) {
-		$('#tr1_' + row).remove();
-		recalculate_total();
-	}
-
-	function data_approve() {
-		swal({
-				title: "Anda Yakin?",
-				text: "Data Akan Disetujui!",
-				type: "info",
-				showCancelButton: true,
-				confirmButtonText: "Ya, setuju!",
-				cancelButtonText: "Tidak!",
-				closeOnConfirm: false,
-				closeOnCancel: true
-			},
-			function(isConfirm) {
-				if (isConfirm) {
-					id = $("#id").val();
-					$.ajax({
-						url: url_approve + id,
-						dataType: "json",
-						type: 'POST',
-						success: function(msg) {
-							if (msg['save'] == '1') {
-								swal({
-									title: "Sukses!",
-									text: "Data Berhasil Di Setujui",
-									type: "success",
-									timer: 1500,
-									showConfirmButton: false
-								});
-								window.location.reload();
-							} else {
-								swal({
-									title: "Gagal!",
-									text: "Data Gagal Di Setujui",
-									type: "error",
-									timer: 1500,
-									showConfirmButton: false
-								});
-							};
-							console.log(msg);
-						},
-						error: function(msg) {
-							swal({
-								title: "Gagal!",
-								text: "Ajax Data Gagal Di Proses",
-								type: "error",
-								timer: 1500,
-								showConfirmButton: false
-							});
-							console.log(msg);
-						}
-					});
-				}
-			});
-	}
-
-	function data_reject() {
-		swal({
-				title: "Anda Yakin?",
-				text: "Data Akan di Reject!",
-				type: "info",
-				showCancelButton: true,
-				confirmButtonText: "Ya, setuju!",
-				cancelButtonText: "Tidak!",
-				closeOnConfirm: false,
-				closeOnCancel: true
-			},
-			function(isConfirm) {
-				if (isConfirm) {
-					id = $("#id").val();
-					$.ajax({
-						url: url_reject + id,
-						dataType: "json",
-						type: 'POST',
-						data: {
-							'reject_reason': $(".reject_reason").val()
-						},
-						success: function(msg) {
-							if (msg['save'] == '1') {
-								swal({
-									title: "Sukses!",
-									text: "Data Berhasil Di Reject",
-									type: "success",
-									timer: 1500,
-									showConfirmButton: false
-								});
-								window.location.reload();
-							} else {
-								swal({
-									title: "Gagal!",
-									text: "Data Gagal Di Reject",
-									type: "error",
-									timer: 1500,
-									showConfirmButton: false
-								});
-							};
-							console.log(msg);
-						},
-						error: function(msg) {
-							swal({
-								title: "Gagal!",
-								text: "Ajax Data Gagal Di Proses",
-								type: "error",
-								timer: 1500,
-								showConfirmButton: false
-							});
-							console.log(msg);
-						}
-					});
-				}
-			});
-	}
-	<?php
-	if ($type == 'add') echo "add_detail();";
-	?>
+})();
 </script>

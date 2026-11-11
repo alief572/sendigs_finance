@@ -90,7 +90,8 @@ async function settle() {
     assert.match(view, /margin:\s*10mm/);
     assert.match(view, /break-before:\s*page/);
     assert.match(view, /break-inside:\s*avoid/);
-    assert.match(view, /htmlspecialchars\(base_url\('assets\/bayar_rutin\//);
+    assert.match(view, /htmlspecialchars\(periodik_doc_url\(\$doc_file\)/);
+    assert.doesNotMatch(view, /assets\/bayar_rutin/);
     assert.match(view, /assets\/js\/pdfjs\/pdf\.min\.js/);
     assert.match(view, /assets\/js\/periodik-print\.js/);
 

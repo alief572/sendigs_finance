@@ -1,6 +1,7 @@
 <?php
 // Real controller + recorder; all business persistence is an in-memory fixture.
 define('BASEPATH', __DIR__);
+require_once __DIR__ . '/../../../helpers/periodik_helper.php';
 define('APPPATH', dirname(__DIR__, 3) . '/');
 $events = array(); $scenario = array(); $ci = null; $child = $argv[1] ?? null; $scenarioCount = 0;
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
@@ -20,6 +21,7 @@ class FixtureInput {
     public $values = array();
     public function post($key = null) { return $key === null ? $this->values : ($this->values[$key] ?? null); }
     public function get_post($key) { return $this->post($key); }
+    public function get($key = null) { return $key === null ? array() : null; }
 }
 class FixtureSession { public function userdata($key) { return array('username' => 'tester', 'id_user' => 7); } }
 class FixtureAuth {
