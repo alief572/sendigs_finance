@@ -17,6 +17,8 @@ class Piutang_aging
     const BARU_HARI = 3;
     const FU_OFFSET = [1 => 3, 2 => 7, 3 => 14, 4 => 14]; // FU1 dari tgl terima, sisanya dari FU sebelumnya dilakukan
     const FU_EXTRA_OFFSET = 14;
+    /** Batas tegas mulai Follow Up Piutang dan Dashboard Plan Bayar: tanggal invoice (Follow Up) atau bulan plan/bayar (Plan Bayar) >= ini. */
+    const TANGGAL_MULAI_FOLLOW_UP = '2026-10-01';
     const TABS = ['all', '1', '2', '3', '4', 'late', 'close'];
     const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai'];
     // Filter company grup: id kons_tr_company (STM 7, STM-Sustain 6, STM-Vuca 1, Vuca 4, Sustain 3; sama dengan modul Request Payment/Jurnal).
@@ -793,6 +795,12 @@ class Piutang_aging
             $x['lewat'] = $ym + $i < $now && $x['open'] > 0;
         }
         return array_values($m);
+    }
+
+    /** Periode (tahun, bulan) jatuh pada atau setelah TANGGAL_MULAI_FOLLOW_UP. */
+    public static function dari_mulai($year, $bulan)
+    {
+        return (int) $year * 100 + (int) $bulan >= (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 0, 4) * 100 + (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 5, 2);
     }
 
     /** Saring baris plan/realisasi ke satu bulan (1-12); selain itu semua bulan. */

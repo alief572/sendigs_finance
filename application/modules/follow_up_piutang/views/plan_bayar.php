@@ -91,7 +91,7 @@
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', bulan = 'all', D = null, pt = null, rt = null;
+    var BASE = '<?= $base ?>', bulan = 'all', D = null, pt = null, rt = null, MULAI_TAHUN = <?= (int) $mulai_tahun ?>, MULAI_BULAN = <?= (int) $mulai_bulan ?>;
     var NAMA = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     var KAT = {lancar: 'Lancar', potensi: 'Potensi', macet: 'Macet'};
     function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
@@ -101,13 +101,18 @@
     function q() { return {tahun: $('#f-tahun').val(), company: $('#f-company').val()}; }
     function umurCell(x) { return x.kategori && x.umur != null ? '<span class="umur ' + x.kategori + '">' + x.umur + ' hari</span> <span class="pb-pill ' + x.kategori + '">' + (KAT[x.kategori] || x.kategori) + '</span>' : '<span class="sub">–</span>'; }
 
+    // Bulan sebelum batas mulai (Jan-Sep 2026) tidak ada datanya: tidak ditampilkan.
+    function bulanAda(m) { return !(+D.year === MULAI_TAHUN && m < MULAI_BULAN) && +D.year >= MULAI_TAHUN; }
+    function rentang() { return +D.year === MULAI_TAHUN ? NAMA[MULAI_BULAN - 1] + ' – Desember' : 'Januari – Desember'; }
+
     function cards() {
         var tp = {c: 0, n: 0, rc: 0, rn: 0}, h = '';
         D.summary.forEach(function (m) { tp.c += m.plan_count; tp.n += m.plan_cents; tp.rc += m.real_count; tp.rn += m.real_cents; });
         h += '<button type="button" class="pbcard pball' + (bulan === 'all' ? ' on' : '') + '" data-b="all" aria-pressed="' + (bulan === 'all') + '">' +
-            '<span><span class="ct">All · ' + esc(D.year) + '</span><span class="lbl">Plan bayar</span><span class="cv">' + rp(tp.n) + '</span><span class="cm"><b>' + tp.c + '</b> invoice (Januari – Desember)</span></span>' +
+            '<span><span class="ct">All · ' + esc(D.year) + '</span><span class="lbl">Plan bayar</span><span class="cv">' + rp(tp.n) + '</span><span class="cm"><b>' + tp.c + '</b> invoice (' + rentang() + ')</span></span>' +
             '<span><span class="ct">&nbsp;</span><span class="lbl">Realisasi bayar</span><span class="cv rea">' + rp(tp.rn) + '</span><span class="cm"><b>' + tp.rc + '</b> penerimaan</span></span></button>';
         D.summary.forEach(function (m) {
+            if (!bulanAda(m.bulan)) { return; }
             var cls = m.plan_count ? (m.lewat ? 'lewat' : 'has') : '';
             h += '<button type="button" class="pbcard ' + cls + (m.current ? ' now' : '') + (bulan === m.bulan ? ' on' : '') + '" data-b="' + m.bulan + '" aria-pressed="' + (bulan === m.bulan) + '">' +
                 '<span class="ct">' + esc(m.nama) + (m.current ? '<span class="pb-pill C">Bulan ini</span>' : (m.lewat ? '<span class="pb-pill M">Lewat</span>' : '')) + '</span>' +
@@ -119,7 +124,7 @@
 
     // Judul dan label export mengikuti kartu yang dipilih; isi tabel diambil serverside (plan_data / real_data).
     function titles() {
-        var t = bulan === 'all' ? D.year + ' (Januari – Desember)' : NAMA[bulan - 1] + ' ' + D.year;
+        var t = bulan === 'all' ? D.year + ' (' + rentang() + ')' : NAMA[bulan - 1] + ' ' + D.year;
         $('#exp-label').text('(' + (bulan === 'all' ? 'All' : NAMA[bulan - 1]) + ')');
         $('#pb-title-plan').html('Plan bayar ' + esc(t) + (bulan === 'all' ? '' : ' <button type="button" class="linkbtn" id="pb-show-all">tampilkan All</button>'));
         $('#pb-title-real').text('Realisasi bayar ' + t);
