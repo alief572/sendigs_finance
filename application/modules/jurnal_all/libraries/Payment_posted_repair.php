@@ -42,6 +42,7 @@ class Payment_posted_repair
     /** Pending Payment journal keyed by an approval id whose real voucher collides with another group (tr_jurnal only, no accounting). */
     const PENDING_PAYMENT = [
         'BK--0926-0017'=>['BK--0826-0015',null],
+        'BK--0926-0015,BK--0926-0016,BK--0926-0022,BK--0926-0089,BK--0926-0020'=>['BK--0826-0018',null],
     ];
     const SHARED = [
         'BK--1026-0040,BK--1026-0006,BK--1026-0008,BK--1026-0039,BK--1026-0041,BK--1026-0042'=>['BK--1026-0002','accounting_stm'],

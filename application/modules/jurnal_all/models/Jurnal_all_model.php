@@ -226,6 +226,10 @@ class Jurnal_all_model extends BF_Model
             $debit+=$d; $credit+=$c;
         }
         if (!$rows) throw new InvalidArgumentException('Detail jurnal tidak tersedia.');
+        // Daftar memakai MAX(company) kelompok; anchor MIN(id) bisa tanpa company (mis. baris Piutang/bank). Samakan agar detail = daftar.
+        if (trim((string)$anchor['nm_company'])==='') foreach ($rows as $r) {
+            if ((string)$r['nm_company']>(string)$anchor['nm_company']) { $anchor['nm_company']=$r['nm_company']; $anchor['id_company']=$r['id_company']; }
+        }
         $anchor['debit']=$this->fromCents($debit); $anchor['kredit']=$this->fromCents($credit);
         $anchor['source_numbers']=implode(', ',array_unique(array_filter(array_column($rows,'no_jurnal'))));
         $anchor['receipt_lines']=count(array_filter($rows,function($r){return !in_array($r['coa'],['1102-01-01','1106-01-02','7201-01-04','1106-01-05'],true)&&($this->cents($r['debit'])>0||$this->cents($r['kredit'])>0);}));

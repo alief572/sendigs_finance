@@ -426,6 +426,27 @@ try{
     check(snapshot($ci)['tr']===$before['tr'],'pending_payment rollback restores the journals');
 }finally{repairFiles($p);}
 
+// multi-token key of mixed approval types (real shape: BK--0826-0018 = Cash + 3 periodik + kasbon), cross-company rows, one transport approval sharing the voucher's number
+const PM_KEY='BK--0926-0015,BK--0926-0016,BK--0926-0022,BK--0926-0089,BK--0926-0020'; const PM_VOUCHER='BK--0826-0018';
+$p=dirname(__DIR__,4).'/scratch/posted-repair-'.bin2hex(random_bytes(6)).'.json';
+try{
+    $ci=repairFixture();$db=$ci->db;
+    foreach([['BK--0926-0015','Cash'],['BK--0926-0016','periodik'],['BK--0926-0022','kasbon'],['BK--0926-0089','periodik'],['BK--0926-0020','periodik']] as $a)
+        $db->insert('payment_approve',['id'=>$a[0],'id_payment'=>PM_VOUCHER,'no_doc'=>'DOC-'.$a[0],'tipe'=>$a[1]]);
+    $db->insert('payment_approve',['id'=>PM_VOUCHER,'id_payment'=>null,'no_doc'=>'RQ-2026-00107','tipe'=>'transport']);
+    $db->insert('tr_payment_paid',['id'=>PM_VOUCHER]);
+    $n=800;foreach([['',100,0],['7',0,60],['4',0,40]] as $m)$db->insert('tr_jurnal',['id'=>++$n,'no_transaksi'=>PM_KEY,'jenis_transaksi'=>'Payment','sts'=>'0','id_company'=>$m[0],'nm_company'=>$m[0]===''?'':'C','tgl_jurnal'=>'2026-09-25','coa'=>'5101','nm_coa'=>'X','debit'=>$m[1],'kredit'=>$m[2],'keterangan'=>'Payment line']);
+    $m=(new Payment_posted_repair($ci,null,'pending_payment'))->prepare($p);
+    check(statusOf($m,PM_KEY)==='eligible','pending_payment: a multi-token key of mixed approval types is eligible');
+    (new Payment_posted_repair($ci,null,'pending_payment'))->run($p);
+    check(count($db->get_where('tr_jurnal',['no_transaksi'=>PM_VOUCHER,'jenis_transaksi'=>'Payment'])->result_array())===3&&!$db->get_where('tr_jurnal',['no_transaksi'=>PM_KEY])->result_array(),'multi-token key rows now use the voucher');
+    $alias=$db->where('active',1)->get('tr_jurnal_payment_reference_aliases')->result_array();
+    $ids=json_decode($alias[0]['approval_ids'],true);sort($ids);
+    check(count($alias)===3&&$ids===['BK--0926-0015','BK--0926-0016','BK--0926-0020','BK--0926-0022','BK--0926-0089'],'aliases carry the five approvals, not the transport approval that shares the voucher number');
+    $r=(new Payment_reference($ci))->resolve(PM_VOUCHER);$got=array_column($r['approvals'],'id');sort($got);
+    check($r['voucher']===PM_VOUCHER&&$got===['BK--0926-0015','BK--0926-0016','BK--0926-0020','BK--0926-0022','BK--0926-0089'],'resolver maps the voucher to the five approvals');
+}finally{repairFiles($p);}
+
 $ppGuards=[
     'voucher already used by another journal'=>function($ci){$ci->db->insert('tr_jurnal',['id'=>990,'no_transaksi'=>PP_B_VOUCHER,'jenis_transaksi'=>'Payment','sts'=>'0']);},
     'voucher holds an extra approval'=>function($ci){$ci->db->insert('payment_approve',['id'=>'EXTRA','id_payment'=>PP_B_VOUCHER,'no_doc'=>'Z','tipe'=>'Cash']);},
