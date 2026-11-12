@@ -69,7 +69,12 @@ same($A::plan_nominal(row(['saldo' => 5, 'plan_bayar_nominal' => '900.00'])), 90
 // validate_ar
 function errs($r, $old = []) { return Piutang_aging::validate_ar($r, $old); }
 ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'JNE', 'no_resi' => 'JNE123']))) === 0, 'kirim valid');
-ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'JNE']))) > 0, 'JNE tanpa no resi ditolak');
+ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'JNE']))) === 0, 'tahap 1: JNE tanpa no resi boleh disimpan (resi diisi di tahap 2)');
+$jneTerima = row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'JNE', 'tgl_terima' => '2026-10-03', 'bukti_terima' => 'u/a.pdf']);
+ok(in_array('No resi wajib diisi bila dikirim via JNE.', errs($jneTerima)), 'tahap 2: JNE terima tanpa no resi ditolak');
+ok(count(errs($jneTerima + ['no_resi' => 'JNE123'])) === 0 && count(errs(array_merge($jneTerima, ['no_resi' => 'JNE123']))) === 0, 'tahap 2: JNE terima dengan no resi valid');
+ok(count(errs(array_merge($jneTerima, ['kirim_via' => 'Driver']))) === 0, 'tahap 2: Driver terima tanpa resi boleh');
+ok(count(errs($jneTerima, ['tgl_terima' => '2026-10-03'])) === 0, 'data lama sudah terima tanpa resi tidak diblokir saat simpan ulang');
 ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'Driver', 'ket_kirim' => 'Pak Budi']))) === 0, 'Driver tanpa resi boleh');
 ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'Grab']))) > 0, 'via luar pilihan');
 ok(count(errs(row(['tgl_kirim' => '2026-10-02', 'kirim_via' => 'Kurir X']), ['kirim_via' => 'Kurir X'])) === 0, 'via lama tetap boleh');
@@ -126,9 +131,17 @@ $m = $A::lock_saved(['fu_pic_nama' => 'B2'] + $oldB1, $oldB1);
 same($m['bukti_terima'], 'u/lama.pdf', 'simpan tanpa memilih file mempertahankan bukti');
 $old1 = ['fu1_plan' => '2026-10-05', 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'no_resi' => 'R1'] + $old;
 $m = $A::lock_saved(['tgl_terima' => '2026-10-09', 'no_resi' => 'R2', 'fu1_aktual' => '2026-10-06'] + $old1, $old1);
-same($m['tgl_terima'], '2026-10-02', 'terima terkunci setelah FU1'); same($m['no_resi'], 'R1', 'resi terkunci'); same($m['fu1_aktual'], '2026-10-06', 'FU terakhir dikoreksi');
-$m = $A::lock_saved(['fu1_aktual' => ''] + $old1, $old1); same($m['fu1_aktual'], '2026-10-05', 'FU terakhir tidak dikosongkan');
-$m = $A::lock_saved(['no_resi' => 'R9'] + $old, $old); same($m['no_resi'], 'R9', 'resi diisi belakangan');
+same($m['tgl_terima'], '2026-10-02', 'terima terkunci setelah FU1'); same($m['no_resi'], 'R1', 'resi terkunci'); same($m['fu1_aktual'], '2026-10-05', 'FU yang sudah dilakukan langsung terkunci (tidak bisa dikoreksi)');
+$m = $A::lock_saved(['fu1_aktual' => '', 'fu1_ket' => '', 'fu1_plan' => '2026-12-31'] + $old1, $old1);
+same([$m['fu1_aktual'], $m['fu1_ket'], $m['fu1_plan']], ['2026-10-05', 'ok', '2026-10-05'], 'FU yang sudah dilakukan tidak bisa dikosongkan / dijadwal ulang');
+$old1b = ['fu2_plan' => '2026-10-12'] + $old1;
+$m = $A::lock_saved(['fu2_plan' => '2026-10-15', 'fu2_aktual' => '2026-10-14', 'fu2_ket' => 'baru'] + $old1b, $old1b);
+same([$m['fu2_plan'], $m['fu2_aktual'], $m['fu2_ket']], ['2026-10-15', '2026-10-14', 'baru'], 'FU berjalan (belum dilakukan) tetap bisa diisi');
+$m = $A::lock_saved(['no_resi' => 'R9'] + $old, $old); same($m['no_resi'], 'R9', 'data lama terima tanpa resi: resi masih bisa dilengkapi');
+$oldR = ['no_resi' => 'R1'] + $old;
+$m = $A::lock_saved(['no_resi' => 'R2'] + $oldR, $oldR); same($m['no_resi'], 'R1', 'resi terkunci begitu terima + resi tersimpan (tanpa menunggu FU1)');
+$m = $A::lock_saved(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'tgl_terima' => '2026-10-04', 'no_resi' => 'R5'] + $old, ['tgl_terima' => null, 'no_resi' => null] + $old);
+same($m['no_resi'], 'R5', 'resi diisi bersama tanggal terima pertama kali');
 $old2 = ['fu2_plan' => '2026-10-12', 'fu2_aktual' => '2026-10-12', 'fu2_ket' => 'ok2'] + $old1;
 $m = $A::lock_saved(['fu1_aktual' => '2026-10-01', 'fu1_ket' => 'ubah'] + $old2, $old2);
 same($m['fu1_aktual'], '2026-10-05', 'FU1 terkunci setelah FU2'); same($m['fu1_ket'], 'ok', 'ket FU1 terkunci');
@@ -139,6 +152,8 @@ $oldX = ['fu3_aktual' => '2026-10-20', 'fu3_ket' => 'k3', 'fu4_aktual' => '2026-
     'extra_fu' => [['ke' => 5, 'plan' => '2026-11-17', 'aktual' => '2026-11-05', 'ket' => 'k5'], ['ke' => 6, 'plan' => '2026-11-19', 'aktual' => null, 'ket' => null]]] + $old2;
 $m = $A::lock_saved(['extra_fu' => []] + $oldX, $oldX);
 same(count($m['extra_fu']), 1, 'FU5 dilakukan tidak bisa dihapus, FU6 belum dilakukan dihapus'); same($m['extra_fu'][0]['ke'], 5, 'sisa FU5');
+$m = $A::lock_saved(['extra_fu' => [['ke' => 5, 'plan' => '2026-12-01', 'aktual' => '2026-12-02', 'ket' => 'ubah']]] + $oldX, $oldX);
+same([$m['extra_fu'][0]['plan'], $m['extra_fu'][0]['aktual'], $m['extra_fu'][0]['ket']], ['2026-11-17', '2026-11-05', 'k5'], 'FU tambahan dilakukan langsung terkunci');
 
 // filter_ar_rows: tab, cari tanggal/nominal, filter tidak valid
 $set = [row(['id' => '1', 'no_invoice' => 'INV-A', 'saldo' => 1500000]),

@@ -327,7 +327,9 @@ class Piutang_aging
         if (self::filled($r['tgl_kirim'] ?? null) && $via === '') {
             $e[] = 'Dikirim via wajib diisi bila tanggal kirim diisi.';
         }
-        if ($via === 'JNE' && self::filled($r['tgl_kirim'] ?? null) && !self::filled($r['no_resi'] ?? null)) {
+        // No resi diisi di tahap 2 (Konfirmasi Diterima): wajib untuk JNE saat tanggal terima pertama kali disimpan.
+        // Data lama yang sudah diterima tanpa resi tidak diblokir saat disimpan ulang (FU, dll).
+        if ($via === 'JNE' && self::filled($r['tgl_terima'] ?? null) && !self::filled($old['tgl_terima'] ?? null) && !self::filled($r['no_resi'] ?? null)) {
             $e[] = 'No resi wajib diisi bila dikirim via JNE.';
         }
         if (strlen((string) ($r['no_resi'] ?? '')) > 100) {
@@ -425,7 +427,7 @@ class Piutang_aging
         }
         // 2. Diterima customer terkunci begitu tanggal terima tersimpan (invoice masuk tahap Follow Up), tanpa menunggu FU1.
         //    Pengecualian: data lama tanpa bukti terima boleh melengkapi bukti sekali (validate_ar mewajibkannya); setelah terisi terkunci.
-        //    No resi terkunci bila terisi dan FU1 tersimpan.
+        //    No resi (bagian tahap 2) terkunci bila terisi dan tanggal terima tersimpan.
         if (self::filled($old['tgl_terima'] ?? null)) {
             $keep(['tgl_terima', 'ket_terima']);
             if (self::filled($old['bukti_terima'] ?? null)) {
@@ -443,24 +445,19 @@ class Piutang_aging
                 $r['bukti_terima_nama'] = $old['bukti_terima_nama'] ?? null;
             }
         }
-        if ($fu1Done && self::filled($old['no_resi'] ?? null)) {
+        if (self::filled($old['tgl_terima'] ?? null) && self::filled($old['no_resi'] ?? null)) {
             $keep(['no_resi']);
         }
         // PIC bisa dikoreksi tapi tidak dikosongkan
         $noEmpty(['fu_pic_nama', 'fu_pic_telp']);
 
-        // 3. FU n terkunci setelah FU berikutnya dilakukan; FU terakhir yang dilakukan tidak bisa dikosongkan tanggalnya
-        $maxKe = $oldFu ? max(array_keys($oldFu)) : 4;
+        // 3. FU terkunci begitu tanggal dilakukan tersimpan (tidak bisa dikoreksi maupun dikosongkan)
         for ($ke = 1; $ke <= 4; $ke++) {
-            $doneOld = isset($oldFu[$ke]) && self::filled($oldFu[$ke]['aktual']);
-            $nextDone = isset($oldFu[$ke + 1]) && self::filled($oldFu[$ke + 1]['aktual']);
-            if ($nextDone) {
+            if (isset($oldFu[$ke]) && self::filled($oldFu[$ke]['aktual'])) {
                 $keep(["fu{$ke}_plan", "fu{$ke}_aktual", "fu{$ke}_ket"]);
-            } elseif ($doneOld) {
-                $noEmpty(["fu{$ke}_aktual", "fu{$ke}_ket"]);
             }
         }
-        // FU tambahan: yang sudah dilakukan tidak bisa dihapus; terkunci bila berikutnya dilakukan
+        // FU tambahan: yang sudah dilakukan terkunci dan tidak bisa dihapus
         $newExtra = [];
         foreach ($new['extra_fu'] ?? [] as $e) {
             $newExtra[(int) $e['ke']] = $e;
@@ -470,18 +467,8 @@ class Piutang_aging
             if ($ke < 5) {
                 continue;
             }
-            $doneOld = self::filled($f['aktual']);
-            $nextDone = isset($oldFu[$ke + 1]) && self::filled($oldFu[$ke + 1]['aktual']);
-            if ($nextDone) {
+            if (self::filled($f['aktual'])) {
                 $merged[$ke] = $f;
-            } elseif ($doneOld) {
-                $n = $newExtra[$ke] ?? $f;
-                foreach (['aktual', 'ket'] as $k) {
-                    if (!self::filled($n[$k] ?? null)) {
-                        $n[$k] = $f[$k];
-                    }
-                }
-                $merged[$ke] = $n;
             } elseif (isset($newExtra[$ke])) {
                 $merged[$ke] = $newExtra[$ke]; // belum dilakukan: boleh diubah
             }
