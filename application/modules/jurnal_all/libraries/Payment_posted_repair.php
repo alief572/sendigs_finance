@@ -11,6 +11,8 @@ require_once __DIR__.'/Payment_normalization.php';
  *
  * Batches: payment (applied 2026-11-11), refill_posted, refill_pending (tr_jurnal only, no accounting) and shared
  * (one key used by a Payment AND a Refill journal, which then share the voucher; two japh headers, told apart by jenis_ap).
+ * pending_payment: BK--0926-0017 (Cash DPM-2026-00022) is rekeyed to its real voucher BK--0826-0015; its old key equals the
+ * voucher of BK--0926-0123,... and blocked that group's posting (Payment_reference::inspect 'collision').
  * Deliberately excluded (need a human decision): BK--0825-0001 (voucher shared by 5 approvals) and
  * BK--0926-0123,... (key shared with pending Payment journals).
  */
@@ -37,6 +39,10 @@ class Payment_posted_repair
         'BK--0826-0043,BK--0826-0044,BK--0826-0045'=>['BK--0826-0031',null],
         'BK--0826-0042,BK--0826-0049,BK--0926-0106'=>['BK--0826-0032',null],
     ];
+    /** Pending Payment journal keyed by an approval id whose real voucher collides with another group (tr_jurnal only, no accounting). */
+    const PENDING_PAYMENT = [
+        'BK--0926-0017'=>['BK--0826-0015',null],
+    ];
     const SHARED = [
         'BK--1026-0040,BK--1026-0006,BK--1026-0008,BK--1026-0039,BK--1026-0041,BK--1026-0042'=>['BK--1026-0002','accounting_stm'],
     ];
@@ -45,6 +51,7 @@ class Payment_posted_repair
         'refill_posted'=>['jenis'=>['Refill Pettycash'],'sts'=>'1','list'=>self::REFILL_POSTED],
         'refill_pending'=>['jenis'=>['Refill Pettycash'],'sts'=>'0','list'=>self::REFILL_PENDING],
         'shared'=>['jenis'=>['Payment','Refill Pettycash'],'sts'=>'1','list'=>self::SHARED],
+        'pending_payment'=>['jenis'=>['Payment'],'sts'=>'0','list'=>self::PENDING_PAYMENT],
     ];
     const LEDGERS = ['accounting_vuca','accounting_stm','accounting_sustain'];
 

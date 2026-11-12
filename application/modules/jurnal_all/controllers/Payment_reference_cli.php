@@ -30,7 +30,7 @@ class Payment_reference_cli extends CI_Controller
         try {
             if (!in_array($mode,['dry-run','apply','verify','rollback'],true)) throw new DomainException('Mode CLI tidak valid.');
             $path=$this->manifestPath(getenv('PAYMENT_MANIFEST') ?: $path);
-            $repair=new Payment_posted_repair($this,null,getenv('PAYMENT_BATCH') ?: 'payment'); // payment | refill_posted | refill_pending
+            $repair=new Payment_posted_repair($this,null,getenv('PAYMENT_BATCH') ?: 'payment'); // payment | refill_posted | refill_pending | shared | pending_payment
             if ($mode==='dry-run') $result=$repair->prepare($path);
             elseif (!is_file($path)) throw new DomainException('Manifest tidak ditemukan.');
             elseif ($mode==='verify') { echo json_encode(['status'=>1,'verification'=>$repair->verify($path)],JSON_PRETTY_PRINT).PHP_EOL;return; }

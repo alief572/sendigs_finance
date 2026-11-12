@@ -381,4 +381,65 @@ try{
     check($r['voucher']===SH_VOUCHER&&$ids===['BK--1026-0006','BK--1026-0008','BK--1026-0040','BK--1026-0041','BK--1026-0042'],'resolver: the shared voucher resolves the Payment rows to the five non-refill approvals');
 }finally{repairFiles($p);}
 
+// ===== pending_payment batch: group B keyed by an approval id that is the voucher of group A (real shape: BK--0926-0017) =====
+const PP_B_KEY='BK--0926-0017'; const PP_B_VOUCHER='BK--0826-0015';
+const PP_A_KEY='BK--0926-0123,BK--0926-0122,BK--0926-0116,BK--0926-0117';
+function pendingPaymentFixture()
+{
+    $ci=repairFixture();$db=$ci->db;
+    // B: Cash approval BK--0926-0017 paid under voucher BK--0826-0015 (a transport approval carries the voucher's number as its id)
+    $db->insert('payment_approve',['id'=>PP_B_KEY,'id_payment'=>PP_B_VOUCHER,'no_doc'=>'DPM-2026-00022','tipe'=>'Cash']);
+    $db->insert('payment_approve',['id'=>PP_B_VOUCHER,'id_payment'=>null,'no_doc'=>'RQ-2026-00140','tipe'=>'transport']);
+    $db->insert('tr_payment_paid',['id'=>PP_B_VOUCHER]);
+    // A: two kasbon + two refill approvals paid under voucher BK--0926-0017 (the same number as B's approval id)
+    foreach([['BK--0926-0123','refill_pettycash'],['BK--0926-0122','refill_pettycash'],['BK--0926-0116','kasbon'],['BK--0926-0117','kasbon']] as $a)
+        $db->insert('payment_approve',['id'=>$a[0],'id_payment'=>PP_B_KEY,'no_doc'=>'DOC-'.$a[0],'tipe'=>$a[1]]);
+    $db->insert('tr_payment_paid',['id'=>PP_B_KEY]);
+    $n=700;
+    foreach([[PP_B_KEY,'',[[8750,0],[0,218],[0,8532]]],[PP_A_KEY,'3',[[340,0],[0,340]]]] as $g){
+        foreach($g[2] as $m)$db->insert('tr_jurnal',['id'=>++$n,'no_transaksi'=>$g[0],'jenis_transaksi'=>'Payment','sts'=>'0','id_company'=>$g[1],'nm_company'=>$g[1]===''?'':'C','tgl_jurnal'=>'2026-09-24','coa'=>'5101','nm_coa'=>'X','debit'=>$m[0],'kredit'=>$m[1],'keterangan'=>'Payment line']);
+    }
+    return $ci;
+}
+$p=dirname(__DIR__,4).'/scratch/posted-repair-'.bin2hex(random_bytes(6)).'.json';
+try{
+    $ci=pendingPaymentFixture();
+    rejects(function()use($ci){(new Payment_reference($ci))->inspect(PP_A_KEY,true,true);},'bertabrakan');
+    $before=snapshot($ci);
+    $m=(new Payment_posted_repair($ci,null,'pending_payment'))->prepare($p);
+    check(statusOf($m,PP_B_KEY)==='eligible','pending_payment: group B is eligible');
+    check($before===snapshot($ci),'pending_payment dry-run changes nothing');
+    $r=new Payment_posted_repair($ci,null,'pending_payment');$r->run($p);
+    $db=$ci->db;
+    check(count($db->get_where('tr_jurnal',['no_transaksi'=>PP_B_VOUCHER,'jenis_transaksi'=>'Payment'])->result_array())===3&&!$db->get_where('tr_jurnal',['no_transaksi'=>PP_B_KEY])->result_array(),'group B rows now use their real voucher and none keeps the colliding key');
+    check($db->get_where('tr_jurnal',['no_transaksi'=>PP_B_VOUCHER])->row_array()['sts']==='0','group B stays pending');
+    $alias=$db->where('active',1)->get('tr_jurnal_payment_reference_aliases')->result_array();
+    check(count($alias)===3&&$alias[0]['original_no_transaksi']===PP_B_KEY&&$alias[0]['voucher']===PP_B_VOUCHER&&json_decode($alias[0]['approval_ids'],true)===[PP_B_KEY],'aliases point the voucher at the Cash approval, not at the transport approval with the same number');
+    $resolved=(new Payment_reference($ci))->resolve(PP_B_VOUCHER);
+    check($resolved['voucher']===PP_B_VOUCHER&&array_column($resolved['approvals'],'id')===[PP_B_KEY],'resolver maps the voucher to the Cash approval through the alias');
+    $ctx=(new Payment_reference($ci))->inspect(PP_A_KEY,true,true);
+    check($ctx['voucher']===PP_B_KEY&&$ctx['target']==='accounting_sustain','group A is no longer blocked by the collision and still targets its own voucher');
+    $v=$r->verify($p);check($v['groups']===1&&$v['tr_jurnal']===3&&$v['japh']===0&&$v['jurnal']===0,'pending_payment verify matches the backup except no_transaksi');
+    $mid=snapshot($ci);(new Payment_posted_repair($ci,null,'pending_payment'))->run($p);
+    check($mid===snapshot($ci),'pending_payment apply again is a no-op');
+    (new Payment_posted_repair($ci,null,'pending_payment'))->rollback($p);
+    check(snapshot($ci)['tr']===$before['tr'],'pending_payment rollback restores the journals');
+}finally{repairFiles($p);}
+
+$ppGuards=[
+    'voucher already used by another journal'=>function($ci){$ci->db->insert('tr_jurnal',['id'=>990,'no_transaksi'=>PP_B_VOUCHER,'jenis_transaksi'=>'Payment','sts'=>'0']);},
+    'voucher holds an extra approval'=>function($ci){$ci->db->insert('payment_approve',['id'=>'EXTRA','id_payment'=>PP_B_VOUCHER,'no_doc'=>'Z','tipe'=>'Cash']);},
+    'group is already posted'=>function($ci){$ci->db->query("UPDATE tr_jurnal SET sts='1' WHERE no_transaksi='".PP_B_KEY."'");},
+    'accounting already references the key'=>function($ci){$ci->load->dbs['accounting_stm']->insert('japh',['nomor'=>'X9','no_reff'=>PP_B_KEY,'jml'=>'100.00']);},
+    'payment record is missing'=>function($ci){$ci->db->delete('tr_payment_paid',['id'=>PP_B_VOUCHER]);},
+];
+foreach($ppGuards as $name=>$mutate){
+    $p=dirname(__DIR__,4).'/scratch/posted-repair-'.bin2hex(random_bytes(6)).'.json';
+    try{
+        $ci=pendingPaymentFixture();$mutate($ci);
+        $m=(new Payment_posted_repair($ci,null,'pending_payment'))->prepare($p);
+        check(statusOf($m,PP_B_KEY)==='skipped','pending_payment guard: '.$name.' blocks the group');
+    }finally{repairFiles($p);}
+}
+
 echo 'PASS Payment posted repair: '.($checks-$repairBase)." assertions\n";
