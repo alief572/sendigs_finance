@@ -241,7 +241,7 @@ $escape = function($val) { return htmlspecialchars((string)$val, ENT_QUOTES, 'UT
             <p>Bukti pembayaran mohon di email ke : Finance@sentralsistem.com</p>
         </td>
         <td width="45%" class="signature-area">
-            <p>Jakarta, <?= date('d F Y') ?></p>
+            <p>Jakarta, <?= !empty($data_invoice->tanggal_invoice) && strpos((string)$data_invoice->tanggal_invoice, '0000-00-00') !== 0 ? date('d F Y', strtotime($data_invoice->tanggal_invoice)) : date('d F Y') ?></p>
             <?php if ($id_company == '3') { ?>
                 <p><strong>PT. Sentral Sustainability Consulting</strong></p>
                 <p class="digital-sign">Digitally Signned By:<br>Cahyadi<br>PT. Sentral Sustainability Consulting</p>
