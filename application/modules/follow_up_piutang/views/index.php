@@ -63,6 +63,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .frow { display: grid; grid-template-columns: 170px 170px 1fr; gap: 10px; }
     .frow label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 400; margin: 0; }
     .frow .span2 { grid-column: span 2; }
+    .frow .bukti-box { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+    .bukti-picked { display: flex; align-items: center; gap: 8px; margin: 0; padding: 2px 0; font-size: 12.5px; color: inherit; }
+    .bukti-picked button { border: 0; background: none; color: var(--red); cursor: pointer; padding: 0 4px; }
     .req { color: var(--red); }
     .picbox { background: var(--row); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; margin-bottom: 10px; }
     .fudone { list-style: none; padding: 0; margin: 0 0 8px; }
@@ -178,7 +181,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     };
     var KAT = {lancar: 'Lancar', potensi: 'Potensi', macet: 'Macet'};
     var C = {fu: 6, plan: 7, status: 8, close: 9};
-    var f = {tab: 'all'}, cur = null, table = null, VIA = ['JNE', 'Driver'], picked = null, closeRow = null;
+    var f = {tab: 'all'}, cur = null, table = null, VIA = ['JNE', 'Driver'], picked = [], closeRow = null;
 
     function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
     function nf(v) { return Number(v || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
@@ -288,19 +291,50 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         return locked ? '<p class="hint">' + ico('lock') + ' Terkunci</p>' : (canEdit ? '<p class="hint">' + ico('pencil') + ' Masih bisa dikoreksi</p>' : '');
     }
 
-    // Bukti terima: link file yang sudah tersimpan + input file. File dipilih disimpan di `picked` karena form dibangun ulang saat tanggal berubah.
+    // Bukti terima: semua file tersimpan (kolom utama + bukti_extra) + input file multiple + paste Ctrl+V.
+    // File yang dipilih/dipaste disimpan di array `picked` karena form dibangun ulang saat tanggal berubah.
+    var BUKTI_MAKS = 10, BUKTI_BYTES = 5 * 1024 * 1024;
+    function savedBukti(r) {
+        var a = r.bukti_terima ? [{path: r.bukti_terima, nama: r.bukti_terima_nama}] : [];
+        return a.concat(r.bukti_extra || []);
+    }
+    function pickedHtml() {
+        return picked.map(function (f, i) {
+            return '<div class="bukti-picked">' + ico('file-o') + ' <span>' + esc(f.name) + ' (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)</span>' +
+                '<button type="button" class="bukti-del" data-i="' + i + '" title="Buang file ini" aria-label="Buang ' + esc(f.name) + '">' + ico('times') + '</button></div>';
+        }).join('');
+    }
     function buktiHtml(r, locked) {
-        var h = '';
-        if (r.bukti_terima) {
-            h += '<div>' + ico('paperclip') + ' <a href="' + esc(FILES + r.bukti_terima) + '" target="_blank" rel="noopener">Lihat bukti: ' + esc(r.bukti_terima_nama || 'file') + '</a></div>';
-        }
+        var h = '', saved = savedBukti(r);
+        saved.forEach(function (b) {
+            h += '<div>' + ico('paperclip') + ' <a href="' + esc(FILES + b.path) + '" target="_blank" rel="noopener">Lihat bukti: ' + esc(b.nama || 'file') + '</a></div>';
+        });
         if (!locked) {
-            h += '<input type="file" id="bukti-file" accept=".pdf,.jpg,.jpeg,.png">' +
-                '<span class="hint" style="margin:0">' + (picked ? 'File dipilih: ' + esc(picked.name) : (r.bukti_terima ? 'Pilih file baru hanya bila ingin mengganti.' : 'Belum ada file.')) + '</span>';
-        } else if (!r.bukti_terima) {
+            h += '<input type="file" id="bukti-file" accept=".pdf,.jpg,.jpeg,.png" multiple>' +
+                '<div id="bukti-picked">' + pickedHtml() + '</div>' +
+                '<span class="hint" style="margin:0">Bisa pilih beberapa file, atau tekan Ctrl+V untuk menempel gambar dari clipboard (mis. screenshot). File baru ditambahkan ke daftar, bukan mengganti.</span>';
+        } else if (!saved.length) {
             h += '<span class="hint" style="margin:0">Tidak ada file.</span>';
         }
         return h;
+    }
+    // Tambah file ke `picked` setelah validasi tipe, ukuran, dan jumlah. Mengembalikan false bila ada yang ditolak.
+    function addPicked(files) {
+        var ok = true, saved = cur ? savedBukti(cur.row).length : 0;
+        $.each(files, function (_, fl) {
+            if (!/\.(pdf|jpe?g|png)$/i.test(fl.name)) { mfail('"' + fl.name + '" ditolak: bukti terima harus PDF, JPG, atau PNG.'); ok = false; return; }
+            if (fl.size > BUKTI_BYTES) { mfail('"' + fl.name + '" ditolak: ukuran maksimal 5 MB.'); ok = false; return; }
+            if (picked.length >= BUKTI_MAKS) { mfail('Maksimal ' + BUKTI_MAKS + ' file per simpan.'); ok = false; return; }
+            picked.push(fl);
+        });
+        $('#bukti-picked').html(pickedHtml());
+        if (ok) { $('#fu-modal-msg').hide(); }
+        return ok;
+    }
+    function pasteName(fl, n) {
+        // Screenshot dari clipboard bernama generik "image.png": beri nama unik berdasarkan waktu
+        var d = new Date(), p = function (x) { return ('0' + x).slice(-2); }, ext = ((fl.type || '').split('/')[1] || 'png').replace('jpeg', 'jpg');
+        return 'bukti-paste-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '-' + n + '.' + ext;
     }
 
     // Jarak jadwal FU (sama dengan Piutang_aging::FU_OFFSET dan mockup): FU1 = terima + 3, FU2 = FU1 + 7, FU3 = FU2 + 14, FU4 = FU3 + 14, FU tambahan = +14.
@@ -354,7 +388,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 inp('no_resi', r.no_resi, 'text', ro || L.resi || stage > 2, ' maxlength="100"') + '</label>' +
                 '<label>Tanggal terima' + inp('tgl_terima', r.tgl_terima, 'date', lt) + '</label>' +
                 '<label>Keterangan' + inp('ket_terima', r.ket_terima, 'text', lt, ' placeholder="Nama penerima"') + '</label></div>' +
-                '<div class="frow" style="margin-top:8px"><label class="span2" style="grid-column:1/-1">Bukti terima <span class="req">(wajib: PDF / JPG / PNG, maks 5 MB)</span>' + buktiHtml(r, lt) + '</label></div>' +
+                '<div class="frow" style="margin-top:8px"><div class="bukti-box">Bukti terima <span class="req">(wajib minimal 1: PDF / JPG / PNG, maks 5 MB per file)</span>' + buktiHtml(r, lt) + '</div></div>' +
                 (stage > 2 ? '<p class="hint" style="margin-top:6px">' + done + '</p>' : '<p class="hint" style="margin-top:6px">Umur piutang dihitung dari tanggal terima. Tanpa tanggal terima, invoice belum masuk Monitoring Piutang. No resi dan tanggal terima terkunci setelah disimpan.</p>');
         }
         // 3 follow up + 4 plan bayar
@@ -405,7 +439,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#fu-msg').hide();
         $.getJSON(BASE + '/form/' + encodeURIComponent(id)).done(function (d) {
             if (d.status !== 'success') { say(d.msg || 'Form follow up tidak dapat dibuka.', 'danger'); return; }
-            cur = d; picked = null; $('#fu-modal-msg').hide(); $('#fu-log').empty();
+            cur = d; picked = []; $('#fu-modal-msg').hide(); $('#fu-log').empty();
             $('#fu-modal-title').text((d.locks.all || !MANAGE ? 'Follow Up ' : 'Update Follow Up ') + d.row.no_invoice); buildForm(d); $('#fu-modal').modal('show');
         }).fail(function (x) { say((x.responseJSON || {}).msg || 'Form follow up gagal dimuat. Coba lagi; bila terulang, hubungi admin.', 'danger'); });
     }
@@ -463,22 +497,34 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#ket-kirim-lbl').text(v === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)');
     });
     $('#fu-modal-body').on('change', '#bukti-file', function () {
-        var fl = this.files[0];
-        if (!fl) { picked = null; return; }
-        if (!/\.(pdf|jpe?g|png)$/i.test(fl.name)) { mfail('Bukti terima harus PDF, JPG, atau PNG.'); this.value = ''; picked = null; return; }
-        if (fl.size > 5 * 1024 * 1024) { mfail('Ukuran bukti terima maksimal 5 MB.'); this.value = ''; picked = null; return; }
-        $('#fu-modal-msg').hide(); picked = fl; $(this).next('.hint').text('File dipilih: ' + fl.name);
+        addPicked(this.files);
+        this.value = ''; // pilihan berikutnya ditambahkan; daftar ada di `picked`
+    });
+    $('#fu-modal-body').on('click', '.bukti-del', function () {
+        picked.splice(parseInt($(this).data('i'), 10), 1);
+        $('#bukti-picked').html(pickedHtml());
+    });
+    // Ctrl+V: hanya bereaksi bila clipboard berisi file dan input bukti sedang tampil (tahap 2 belum terkunci). Paste teks tidak diganggu.
+    $('#fu-modal').on('paste', function (e) {
+        var cd = (e.originalEvent || e).clipboardData;
+        if (!$('#bukti-file').length || !cd || !cd.files || !cd.files.length) { return; }
+        e.preventDefault();
+        var n = 0, files = $.map(cd.files, function (fl) {
+            n++;
+            return /^image\//.test(fl.type) && /^image\.\w+$/i.test(fl.name) ? new File([fl], pasteName(fl, n), {type: fl.type}) : fl;
+        });
+        addPicked(files);
     });
     $('#btn-save').on('click', function () {
         $('#fu-modal-msg').hide();
         // wajib: tanggal terima terisi harus punya file (yang sudah tersimpan atau yang baru dipilih); server memeriksa lagi
-        if ($('[name=tgl_terima]').val() && !picked && !cur.row.bukti_terima) { mfail('Bukti terima (file) wajib diunggah.'); return; }
+        if ($('[name=tgl_terima]').val() && !picked.length && !savedBukti(cur.row).length) { mfail('Bukti terima (file) wajib diunggah.'); return; }
         if (cur.stage === 2 && cur.row.kirim_via === 'JNE' && $('[name=tgl_terima]').val() && !$.trim($('[name=no_resi]').val())) { mfail('No resi wajib diisi bila dikirim via JNE.'); return; }
         // plan bayar mengunci seluruh data dan tidak bisa diubah: minta konfirmasi saat pertama kali diisi
         if ($('[name=plan_bayar]').val() && !cur.row.plan_bayar && !confirm('Plan bayar akan MENGUNCI seluruh data invoice ini dan tidak bisa diubah. Lanjut simpan?')) { return; }
         var $b = $(this).prop('disabled', true), fd = new FormData($('#fu-form')[0]), no = cur.row.no_invoice;
         fd.delete('bukti_terima');
-        if (picked) { fd.append('bukti_terima', picked); }
+        picked.forEach(function (fl) { fd.append('bukti_terima[]', fl, fl.name); });
         $.ajax({url: BASE + '/save', type: 'POST', data: fd, processData: false, contentType: false, dataType: 'json'})
             .done(function () { $('#fu-modal').modal('hide'); say('Data follow up ' + no + ' tersimpan.', 'success'); load(true); })
             .fail(function (x) { mfail((x.responseJSON || {}).msg || 'Gagal menyimpan. Coba lagi; bila terulang, hubungi admin.'); }).always(function () { $b.prop('disabled', false); });

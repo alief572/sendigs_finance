@@ -156,7 +156,9 @@
                 kv('Dikirim', dv(r.tgl_kirim) + (r.kirim_via ? ' via ' + esc(r.kirim_via) : '') + (r.ket_kirim ? '<span class="k">' + esc(r.ket_kirim) + '</span>' : '')) +
                 kv('No Resi', esc(r.no_resi) || '–') +
                 kv('Diterima customer', dv(r.tgl_terima) + (r.ket_terima ? '<span class="k">' + esc(r.ket_terima) + '</span>' : '') +
-                    (r.bukti_terima ? '<span class="k"><i class="fa fa-paperclip"></i> <a href="' + esc('<?= base_url() ?>' + r.bukti_terima) + '" target="_blank" rel="noopener">Bukti terima: ' + esc(r.bukti_terima_nama || 'file') + '</a></span>' : '')) +
+                    (r.bukti_terima ? [{path: r.bukti_terima, nama: r.bukti_terima_nama}] : []).concat(r.bukti_extra || []).map(function (b) {
+                        return '<span class="k"><i class="fa fa-paperclip"></i> <a href="' + esc('<?= base_url() ?>' + b.path) + '" target="_blank" rel="noopener">Bukti terima: ' + esc(b.nama || 'file') + '</a></span>';
+                    }).join('')) +
                 kv('PIC penerima FU', r.fu_pic_nama ? esc(r.fu_pic_nama) + (r.fu_pic_telp ? ' · ' + esc(r.fu_pic_telp) : '') : '–') +
                 kv('Plan bayar', dv(r.plan_bayar) + (r.ket_plan_bayar ? '<span class="k">' + esc(r.ket_plan_bayar) + '</span>' : '')) + '</div>';
             h += '<div class="table-responsive"><table class="mpd-tbl"><thead><tr><th></th><th>Plan</th><th>Aktual</th><th>Keterangan</th></tr></thead><tbody>';

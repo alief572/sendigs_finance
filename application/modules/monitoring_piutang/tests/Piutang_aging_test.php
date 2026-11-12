@@ -293,4 +293,13 @@ same($A::company_match('7', 'stm'), false, 'kunci grup peka huruf besar (dropdow
 $stm = $A::monitoring_base($cg, ['company' => 'STM'], $today);
 same(array_column($stm, 'company'), ['7', '6', '1'], 'baris hasil filter tidak diubah');
 
+// bukti terima multi-file: bukti_list (kolom utama + tambahan) dan bukti_boleh_ditambah (aturan kunci)
+same($A::bukti_list([]), [], 'bukti_list kosong');
+same($A::bukti_list(['bukti_terima' => 'u/a.pdf', 'bukti_terima_nama' => 'a.pdf', 'bukti_extra' => [['path' => 'u/b.png', 'nama' => 'b.png']]]),
+    [['path' => 'u/a.pdf', 'nama' => 'a.pdf'], ['path' => 'u/b.png', 'nama' => 'b.png']], 'bukti_list urut: utama lalu tambahan');
+same(count($A::bukti_list(['bukti_extra' => [['path' => 'u/x.png', 'nama' => 'x']]])), 1, 'bukti_list tanpa kolom utama');
+same($A::bukti_boleh_ditambah(['tgl_terima' => null, 'bukti_terima' => 'u/a.pdf']), true, 'belum terima: bukti boleh ditambah');
+same($A::bukti_boleh_ditambah(['tgl_terima' => '2026-10-02', 'bukti_terima' => 'u/a.pdf']), false, 'sudah terima + ada bukti: terkunci');
+same($A::bukti_boleh_ditambah(['tgl_terima' => '2026-10-02', 'bukti_terima' => null]), true, 'sudah terima tanpa bukti: boleh melengkapi');
+
 echo "PASS: $n assertions\n";

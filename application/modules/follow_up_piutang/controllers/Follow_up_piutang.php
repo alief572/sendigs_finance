@@ -162,41 +162,73 @@ class Follow_up_piutang extends Admin_Controller
             return $this->json(['status' => 'error', 'msg' => 'Invoice tidak ditemukan.'], 400);
         }
         // Path bukti tidak pernah diterima dari browser; hanya dari hasil upload di bawah.
-        unset($input['bukti_terima'], $input['bukti_terima_nama']);
-        $uploaded = null;
-        if (!empty($_FILES['bukti_terima']['name'])) {
-            $uploaded = $this->upload_bukti($_FILES['bukti_terima']['name'], $err);
-            if ($uploaded === null) {
-                return $this->json(['status' => 'error', 'msg' => $err], 422);
-            }
-            $input['bukti_terima'] = $uploaded[0];
-            $input['bukti_terima_nama'] = $uploaded[1];
+        unset($input['bukti_terima'], $input['bukti_terima_nama'], $input['bukti_baru']);
+        $uploaded = $this->upload_bukti_semua($err);
+        if ($uploaded === null) {
+            return $this->json(['status' => 'error', 'msg' => $err], 422);
         }
+        $input['bukti_baru'] = $uploaded;
         $res = $this->Monitoring_piutang_model->save_ar($id, $input, (string) $this->auth->user_id());
         // File baru yang tidak jadi dipakai (simpan gagal, atau step terkunci) dibersihkan; file lama tidak pernah dihapus.
-        if ($uploaded !== null && (!$res['ok'] || ($res['saved']['bukti_terima'] ?? null) !== $uploaded[0])) {
-            @unlink(FCPATH . $uploaded[0]);
+        $dipakai = $res['ok'] ? ($res['saved']['bukti'] ?? []) : [];
+        foreach ($uploaded as $u) {
+            if (!in_array($u[0], $dipakai, true)) {
+                @unlink(FCPATH . $u[0]);
+            }
         }
         return $this->json($res['ok'] ? ['status' => 'success', 'msg' => 'Data follow up tersimpan.'] : ['status' => 'error', 'msg' => implode("\n", $res['errors'])], $res['ok'] ? 200 : 422);
     }
 
     const BUKTI_DIR = 'uploads/bukti_terima_invoice/';
 
-    /** Simpan file bukti terima. Mengembalikan [path relatif, nama asli] atau null dengan pesan aman (tanpa path server) di $err. */
-    private function upload_bukti($original, &$err)
+    const BUKTI_MAKS_FILE = 10;
+
+    /**
+     * Simpan semua file bukti terima (field bukti_terima[]). Mengembalikan daftar [path relatif, nama asli] (kosong bila tidak ada file)
+     * atau null dengan pesan aman (tanpa path server) di $err. Satu file gagal membatalkan semuanya: yang sudah terunggah dihapus.
+     */
+    private function upload_bukti_semua(&$err)
     {
+        $names = $_FILES['bukti_terima']['name'] ?? [];
+        $names = is_array($names) ? $names : [$names];
+        $idx = [];
+        foreach ($names as $i => $n) {
+            if ((string) $n !== '') {
+                $idx[] = $i;
+            }
+        }
+        if (!$idx) {
+            return [];
+        }
+        if (count($idx) > self::BUKTI_MAKS_FILE) {
+            $err = 'Maksimal ' . self::BUKTI_MAKS_FILE . ' file bukti terima per simpan.';
+            return null;
+        }
         $dir = FCPATH . self::BUKTI_DIR;
         if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
             $err = 'Folder penyimpanan bukti tidak dapat dibuat. Hubungi administrator.';
             return null;
         }
-        $this->upload->initialize(['upload_path' => $dir, 'allowed_types' => 'pdf|jpg|jpeg|png', 'max_size' => 5120, 'encrypt_name' => true, 'remove_spaces' => true]);
-        if (!$this->upload->do_upload('bukti_terima')) {
-            $err = 'Bukti terima gagal diunggah: ' . trim(strip_tags($this->upload->display_errors('', ' ')));
-            return null;
+        $src = $_FILES['bukti_terima'];
+        $out = [];
+        foreach ($idx as $k => $i) {
+            // CI Upload membaca satu entri $_FILES per file: pecah field array jadi bukti_terima_0, _1, ...
+            $key = 'bukti_terima_' . $k;
+            $_FILES[$key] = is_array($src['name'])
+                ? ['name' => $src['name'][$i], 'type' => $src['type'][$i], 'tmp_name' => $src['tmp_name'][$i], 'error' => $src['error'][$i], 'size' => $src['size'][$i]]
+                : $src;
+            $this->upload->initialize(['upload_path' => $dir, 'allowed_types' => 'pdf|jpg|jpeg|png', 'max_size' => 5120, 'encrypt_name' => true, 'remove_spaces' => true]);
+            if (!$this->upload->do_upload($key)) {
+                $err = 'Bukti terima "' . mb_substr(basename((string) $_FILES[$key]['name']), 0, 80) . '" gagal diunggah: ' . trim(strip_tags($this->upload->display_errors('', ' ')));
+                foreach ($out as $u) {
+                    @unlink(FCPATH . $u[0]);
+                }
+                return null;
+            }
+            $data = $this->upload->data();
+            $out[] = [self::BUKTI_DIR . $data['file_name'], mb_substr(basename((string) $_FILES[$key]['name']), 0, 255)];
         }
-        $data = $this->upload->data();
-        return [self::BUKTI_DIR . $data['file_name'], mb_substr(basename((string) $original), 0, 255)];
+        return $out;
     }
 
     public function close()

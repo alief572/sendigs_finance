@@ -46,8 +46,15 @@ class Monitoring_piutang_model extends BF_Model
                 $extra[$e['id_invoice']][] = ['ke' => (int) $e['ke'], 'plan' => $e['plan'], 'aktual' => $e['aktual'], 'ket' => $e['ket']];
             }
         }
+        $bukti = [];
+        if ($rows) {
+            foreach ($this->db->query('SELECT id_invoice, path, nama FROM tr_invoice_ar_bukti ORDER BY id')->result_array() as $b) {
+                $bukti[$b['id_invoice']][] = ['path' => $b['path'], 'nama' => $b['nama']];
+            }
+        }
         foreach ($rows as &$r) {
             $r['extra_fu'] = $extra[$r['id']] ?? [];
+            $r['bukti_extra'] = $bukti[$r['id']] ?? [];
         }
         return $rows;
     }
@@ -152,6 +159,21 @@ class Monitoring_piutang_model extends BF_Model
             foreach (($input['extra_fu'] ?? []) as $e) {
                 $new['extra_fu'][] = ['ke' => (int) ($e['ke'] ?? 0), 'plan' => $this->nullify($e['plan'] ?? null), 'aktual' => $this->nullify($e['aktual'] ?? null), 'ket' => $this->nullify($e['ket'] ?? null)];
             }
+            // File bukti baru ([path, nama] hasil upload controller): hanya bila belum terkunci. File pertama mengisi kolom bukti_terima
+            // bila masih kosong, sisanya jadi bukti tambahan. Yang tidak terpakai dilaporkan lewat 'saved' agar controller menghapusnya.
+            $buktiTambah = [];
+            $buktiPakai = [];
+            $baru = $A::bukti_boleh_ditambah($old) ? array_values(array_filter((array) ($input['bukti_baru'] ?? []), 'is_array')) : [];
+            if ($baru && trim((string) ($old['bukti_terima'] ?? '')) === '') {
+                $first = array_shift($baru);
+                $new['bukti_terima'] = $first[0];
+                $new['bukti_terima_nama'] = $first[1];
+                $buktiPakai[] = $first[0];
+            }
+            foreach ($baru as $b) {
+                $buktiTambah[] = $b;
+                $buktiPakai[] = $b[0];
+            }
             $merged = $A::lock_saved($new + $old, $old);
             $errors = $A::validate_ar($merged, $old);
             if ($errors) {
@@ -186,13 +208,21 @@ class Monitoring_piutang_model extends BF_Model
                     [$id, (int) $e['ke'], $this->nullify($e['plan']), $this->nullify($e['aktual']), $this->nullify($e['ket']), $user]
                 );
             }
-            $this->db->insert('tr_invoice_ar_log', ['id_invoice' => $id, 'aksi' => 'simpan', 'data_json' => json_encode($set + ['extra_fu' => $merged['extra_fu']]),
+            foreach ($buktiTambah as $b) {
+                $this->db->query('INSERT INTO tr_invoice_ar_bukti (id_invoice, path, nama, created_by, created_date) VALUES (?, ?, ?, ?, NOW())', [$id, $b[0], $b[1], $user]);
+            }
+            $log = $set + ['extra_fu' => $merged['extra_fu']];
+            if ($buktiTambah) {
+                $log['bukti_tambahan'] = implode(', ', array_map(function ($b) { return (string) $b[1]; }, $buktiTambah));
+            }
+            $this->db->insert('tr_invoice_ar_log', ['id_invoice' => $id, 'aksi' => 'simpan', 'data_json' => json_encode($log),
                 'created_by' => $user, 'created_date' => date('Y-m-d H:i:s')]);
             if ($this->db->trans_status() === false) {
                 throw new RuntimeException('Gagal menyimpan data.');
             }
             $this->db->trans_commit();
-            return ['ok' => true, 'errors' => [], 'saved' => ['bukti_terima' => $set['bukti_terima']]];
+            // 'bukti' = path file baru yang benar-benar tersimpan; sisanya (terkunci/tidak terpakai) dihapus controller
+            return ['ok' => true, 'errors' => [], 'saved' => ['bukti_terima' => $set['bukti_terima'], 'bukti' => $buktiPakai]];
         } catch (Exception $e) {
             $this->db->trans_rollback();
             return ['ok' => false, 'errors' => [$e->getMessage()]];
