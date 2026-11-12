@@ -91,7 +91,8 @@ ok(count(errs(row(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'no_resi' 
 ok(count(errs($base)) === 0, 'terima + bukti valid');
 ok(count(errs($base + ['fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'])) === 0, 'FU1 valid');
 ok(count(errs($base + ['fu1_aktual' => '2026-10-05'])) > 0, 'FU tanpa keterangan');
-ok(count(errs(['fu_pic_nama' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $base)) > 0, 'FU tanpa PIC');
+ok(count(errs(['fu_pic_nama' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $base)) === 0, 'FU tanpa PIC boleh (opsional)');
+ok(count(errs(['fu_pic_nama' => 'B', 'fu_pic_telp' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $base)) === 0, 'FU dengan nama PIC saja boleh');
 ok(count(errs(['fu_pic_telp' => '1234'] + $base)) > 0, 'telp terlalu pendek');
 ok(count(errs(['fu_pic_telp' => '08ab34567890'] + $base)) > 0, 'telp huruf');
 ok(count(errs($base + ['fu2_aktual' => '2026-10-05', 'fu2_ket' => 'ok'])) > 0, 'FU2 sebelum FU1');

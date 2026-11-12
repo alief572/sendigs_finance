@@ -375,9 +375,6 @@ class Piutang_aging
                 if (!self::filled($f['ket'])) {
                     $e[] = "FU {$f['ke']}: keterangan wajib sebelum tanggal dilakukan diisi.";
                 }
-                if (!$picNama || !$picTelp) {
-                    $e[] = "FU {$f['ke']}: nama dan nomor PIC wajib diisi.";
-                }
                 $prevDone = true;
             } else {
                 $prevDone = false;
