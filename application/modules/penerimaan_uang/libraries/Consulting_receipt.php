@@ -60,10 +60,12 @@ class Consulting_receipt
         return array('split' => $split, 'detail' => $detail, 'capacity' => $capacity, 'used' => $used);
     }
 
-    private function account($owner, $code)
+    // $fallbackName: COA opsional (mis. Deposit Customer, belum ada di master STM/Sustain/Vuca); tetap ditolak bila ambigu.
+    private function account($owner, $code, $fallbackName = null)
     {
         $matches = array_values(array_filter($this->s->master($owner), function ($row) use ($code) { return $row['no_perkiraan'] === $code; }));
-        if (count($matches) !== 1) throw new RuntimeException('COA bank/admin tidak tersedia atau ambigu pada accounting tujuan.');
+        if (!$matches && $fallbackName !== null) return array('code' => $code, 'name' => $fallbackName);
+        if (count($matches) !== 1) throw new RuntimeException('COA ' . $code . ' tidak tersedia atau ambigu pada accounting tujuan.');
         return array('code' => $code, 'name' => $matches[0]['nama']);
     }
 
@@ -184,7 +186,7 @@ class Consulting_receipt
             $company = $invoiceCompany;
             $context['accounts']['bank'] = $this->account($context['owner']['id'], $bank['coa_bank']);
             $context['accounts']['admin'] = $this->account($context['owner']['id'], '7201-01-04');
-            $context['accounts']['deposit'] = $this->account($context['owner']['id'], '2102-01-02');
+            $context['accounts']['deposit'] = $this->account($context['owner']['id'], '2102-01-02', 'Deposit Customer');
             if ($context['tax_treatment'] === 'UMKM') $context['accounts'] += self::pph_final_accounts();
             $context['fingerprint'] = Invoice_calculation::fingerprint(array('invoice' => $invoice, 'history' => $context['history_fingerprint']));
             $rows[] = $context;
