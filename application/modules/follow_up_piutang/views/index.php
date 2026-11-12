@@ -359,8 +359,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         }
         // 3 follow up + 4 plan bayar
         if (stage === 3) {
-            h += '<h3>3. Follow Up</h3><div class="picbox"><div class="frow"><label>Nama PIC penerima follow up <span class="req">*</span>' + inp('fu_pic_nama', r.fu_pic_nama, 'text', ro, ' placeholder="Nama orang yang dihubungi"') + '</label>' +
-                '<label>No WA / Telepon PIC <span class="req">*</span>' + inp('fu_pic_telp', r.fu_pic_telp, 'tel', ro, ' placeholder="0812xxxxxxxx"') + '</label></div>' +
+            h += '<h3>3. Follow Up</h3><div class="picbox"><div class="frow"><label>Nama PIC penerima follow up <span class="hint">(opsional)</span>' + inp('fu_pic_nama', r.fu_pic_nama, 'text', ro, ' placeholder="Nama orang yang dihubungi"') + '</label>' +
+                '<label>No WA / Telepon PIC <span class="hint">(opsional)</span>' + inp('fu_pic_telp', r.fu_pic_telp, 'tel', ro, ' placeholder="0812xxxxxxxx"') + '</label></div>' +
                 '<p class="hint" style="margin:6px 0 0">Diisi sekali untuk invoice ini dan berlaku untuk semua FU. Bisa dikoreksi (tidak bisa dikosongkan) sampai plan bayar disimpan.</p></div>' +
                 '<p class="hint">Follow up berjalan satu per satu. Isi <b>tanggal dilakukan</b> setelah follow up benar-benar dilakukan, lalu FU berikutnya dijadwalkan otomatis.</p>';
             var doneHtml = '', activeHtml = '', shownCurrent = false, lastDone = -1;
