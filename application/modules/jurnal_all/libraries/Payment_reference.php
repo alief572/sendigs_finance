@@ -251,6 +251,23 @@ class Payment_reference
         throw new DomainException('Company Payment tidak dikenali.');
     }
 
+    /**
+     * Id approval kelompok ini yang kebetulan sama dengan voucher kelompok Payment LAIN yang sudah diposting: no_reff accounting-nya
+     * milik kelompok itu, bukan dokumen ini, jadi tidak boleh dianggap "sudah diposting". Hanya dibuang bila ketiganya terbukti:
+     * (a) id approval kelompok ini yang bukan voucher-nya, (b) id_payment approval lain di luar kelompok, (c) jurnal sts=1 pemilik nomor itu
+     * (Payment, atau Refill Pettycash yang berkunci voucher yang sama).
+     */
+    private function foreignVoucherRefs($resolved)
+    {
+        $own = array_map('strval', array_column($resolved['approvals'], 'id'));
+        $candidates = array_values(array_diff($own, [(string)$resolved['voucher']]));
+        if (!$candidates) return [];
+        $db = $this->ci->db;
+        $others = array_column($this->read($db->select('id_payment')->distinct()->where_in('id_payment', $candidates)->where_not_in('id', $own)->get('payment_approve')), 'id_payment');
+        if (!$others) return [];
+        return array_column($this->read($this->ci->db->select('no_transaksi')->distinct()->where_in('jenis_transaksi', ['Payment', 'Refill Pettycash'])->where('sts', '1')->where_in('no_transaksi', $others)->get('tr_jurnal')), 'no_transaksi');
+    }
+
     public function inspect($key, $accounting = true, $targetOnly = false)
     {
         $db = $this->ci->db;
@@ -264,6 +281,7 @@ class Payment_reference
         $metadata = $this->read($db->get_where('tr_jurnal_postings', ['no_transaksi'=>$key, 'jenis_transaksi'=>'Payment']));
         if ($metadata) throw new Payment_reference_issue('posted','Metadata posting Payment sudah ada.');
         $resolved = $this->resolve($key);
+        $resolved['references'] = array_values(array_diff($resolved['references'], $this->foreignVoucherRefs($resolved)));
         $voucher = $resolved['voucher'];
         if (!empty($resolved['source_keys']) && $this->read($db->where('jenis_transaksi','Payment')->where_in('no_transaksi',$resolved['source_keys'])->get('tr_jurnal_postings'))) throw new Payment_reference_issue('posted','Metadata posting nomor sumber alias sudah ada.');
         // The voucher is already established by the source relationship, not a free approval key.
