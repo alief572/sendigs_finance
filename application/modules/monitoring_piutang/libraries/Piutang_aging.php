@@ -193,6 +193,31 @@ class Piutang_aging
         return $out;
     }
 
+    /**
+     * Bukti terima: file pertama di kolom bukti_terima, file ke-2 dst di bukti_extra (tr_invoice_ar_bukti).
+     * Tiap item: path, nama.
+     */
+    public static function bukti_list($r)
+    {
+        $out = [];
+        if (self::filled($r['bukti_terima'] ?? null)) {
+            $out[] = ['path' => $r['bukti_terima'], 'nama' => $r['bukti_terima_nama'] ?? null];
+        }
+        foreach (($r['bukti_extra'] ?? []) as $b) {
+            $out[] = ['path' => $b['path'], 'nama' => $b['nama'] ?? null];
+        }
+        return $out;
+    }
+
+    /**
+     * File bukti baru boleh ditambah selama tanggal terima belum tersimpan. Data lama yang sudah terima tapi belum punya
+     * bukti boleh melengkapi (sama dengan lock_saved); begitu bukti ada, semua bukti terkunci.
+     */
+    public static function bukti_boleh_ditambah($old)
+    {
+        return !self::filled($old['tgl_terima'] ?? null) || !self::filled($old['bukti_terima'] ?? null);
+    }
+
     /** FU yang sedang berjalan (pertama yang belum dilakukan), atau null. FU 1-4 selalu ada; tambahan hanya bila sudah dibuat. */
     public static function fu_current($r)
     {
