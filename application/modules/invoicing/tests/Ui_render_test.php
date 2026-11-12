@@ -112,13 +112,14 @@ if(!function_exists('terbilang')){function terbilang($n){return 'seribu seratus 
 $kwitansiInvoice=(object)[
     'no_invoice'=>'001/STM/2026', 'no_po'=>'PO-KW-01', 'nm_customer'=>'Customer Kwitansi <script>alert(1)</script>',
     'total_nominal'=>'1000.55', 'dpp_nilai_lain'=>'917.17', 'pajak'=>'110.06',
-    'print_keterangan'=>'Pembayaran TOP 1', 'consulting_version'=>3
+    'print_keterangan'=>'Pembayaran TOP 1', 'consulting_version'=>3, 'tanggal_invoice'=>'2026-03-05'
 ];
 $kwitansiHtml=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'7']);
 verifyUi(strpos($kwitansiHtml,'1,000.55')!==false,'Kwitansi v3 2-decimal nominal');
 verifyUi(strpos($kwitansiHtml,'917.17')!==false,'Kwitansi v3 2-decimal DPP');
 verifyUi(strpos($kwitansiHtml,'110.06')!==false,'Kwitansi v3 2-decimal PPN');
 verifyUi(strpos($kwitansiHtml,'1,110.61')!==false,'Kwitansi v3 2-decimal total');
+verifyUi(strpos($kwitansiHtml,'Jakarta, 05 March 2026')!==false,'Kwitansi tanggal ikut tanggal_invoice');
 verifyUi(strpos($kwitansiHtml,'PT. Sentral Tehnologi Managemen')!==false,'Kwitansi STM company footer');
 $kwitansiSustain=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'3']);
 verifyUi(strpos($kwitansiSustain,'PT. Sentral Sustainability Consulting')!==false,'Kwitansi Sustain company footer');
@@ -135,13 +136,14 @@ verifyUi(strpos($kwitansiHtml,'class="body-table""')===false,'Kwitansi valid tab
 $kwitansiVucaInvoice=(object)[
     'no_invoice'=>'001/VUC/2026', 'no_po'=>'PO-VUCA-01', 'nm_customer'=>'Customer Vuca <script>alert(1)</script>',
     'total_nominal'=>'1000', 'dpp_nilai_lain'=>'917', 'pajak'=>'110',
-    'print_keterangan'=>"Pembayaran VUCA TOP 1\n<script>alert('ket')</script>"
+    'print_keterangan'=>"Pembayaran VUCA TOP 1\n<script>alert('ket')</script>", 'tanggal_invoice'=>'2026-03-05'
 ];
 $kwitansiVucaHtml=$renderer->render('print_kwitansi_vuca',['data_invoice'=>$kwitansiVucaInvoice,'id_company'=>'4']);
 verifyUi(strpos($kwitansiVucaHtml,'<script>alert(1)</script>')===false,'Kwitansi Vuca customer escaping');
 verifyUi(strpos($kwitansiVucaHtml,'<script>alert(\'ket\')</script>')===false,'Kwitansi Vuca keterangan escaping');
 verifyUi(strpos($kwitansiVucaHtml,'PT. Vuca Strategi Bisnis')!==false,'Kwitansi Vuca company header');
 verifyUi(strpos($kwitansiVucaHtml,'001/VUC/2026')!==false,'Kwitansi Vuca invoice number');
+verifyUi(strpos($kwitansiVucaHtml,'Jakarta, 05 March 2026')!==false,'Kwitansi Vuca tanggal ikut tanggal_invoice');
 verifyUi(strpos($kwitansiVucaHtml,'PO-VUCA-01')!==false,'Kwitansi Vuca PO number');
 verifyUi(strpos($kwitansiVucaHtml,'Pembayaran VUCA TOP 1<br')!==false,'Kwitansi Vuca multiline keterangan converted');
 $printInvoice = [
