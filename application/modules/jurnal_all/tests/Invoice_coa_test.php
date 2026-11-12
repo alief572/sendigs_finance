@@ -34,6 +34,8 @@ $stub->rows=[];$stub->fail=true;
 check(!$model->detail($kwId,false)['can_post'],'unreadable master fails closed');
 
 $stub->fail=false;
-check($model->detail($inv,false)['can_post'],'legacy Invoicing is not checked against coa_master');
+$db->insert('tr_invoicing',['id'=>'INV-LEG','no_invoice'=>'INV/LEG/1','nm_customer'=>'PT Pelanggan','nm_project'=>'Proyek SPK','id_penawaran'=>'Q1','id_spk_penawaran'=>'SPK-1']);
+$legacy=journal('Invoicing','0','INV-LEG','7','500.00','500.00'); // $inv dari Query_test sudah diubah/diposting; pakai jurnal pending baru
+check($model->detail($legacy,false)['can_post'],'legacy Invoicing is not checked against coa_master');
 
 echo "PASS Jurnal All invoice COA checks\n";
