@@ -124,7 +124,10 @@ class Piutang_aging
 
     public static function summary($rows, $today)
     {
-        $out = ['total' => ['cents' => 0, 'count' => 0, 'oldest' => null], 'belum' => ['cents' => 0, 'count' => 0]];
+        // total = sudah diterima (Lancar+Potensi+Macet); semua = card Total Piutang = diterima + belum diterima + lunas belum close
+        // (jumlah invoice sama dengan tab Semua di Follow Up Piutang); lunas tidak menambah nominal.
+        $out = ['total' => ['cents' => 0, 'count' => 0, 'oldest' => null], 'belum' => ['cents' => 0, 'count' => 0],
+            'semua' => ['cents' => 0, 'count' => 0, 'oldest' => null], 'lunas' => ['count' => 0]];
         foreach (['lancar', 'potensi', 'macet'] as $k) {
             $out[$k] = ['cents' => 0, 'count' => 0, 'oldest' => null, 'pct' => 0.0];
         }
@@ -133,7 +136,7 @@ class Piutang_aging
                 $u = self::umur($r['tgl_terima'], $today);
                 $k = self::kategori($u);
                 $c = self::cents($r['saldo']);
-                foreach ([$k, 'total'] as $key) {
+                foreach ([$k, 'total', 'semua'] as $key) {
                     $out[$key]['cents'] += $c;
                     $out[$key]['count']++;
                     $out[$key]['oldest'] = max((int) $out[$key]['oldest'], $u);
@@ -141,10 +144,15 @@ class Piutang_aging
             } elseif (self::is_unreceived($r)) {
                 $out['belum']['cents'] += self::cents($r['saldo']);
                 $out['belum']['count']++;
+                $out['semua']['cents'] += self::cents($r['saldo']);
+                $out['semua']['count']++;
+            } elseif (!self::is_closed($r)) {
+                $out['lunas']['count']++;
+                $out['semua']['count']++;
             }
         }
         foreach (['lancar', 'potensi', 'macet'] as $k) {
-            $out[$k]['pct'] = $out['total']['cents'] > 0 ? round($out[$k]['cents'] * 100 / $out['total']['cents'], 1) : 0.0;
+            $out[$k]['pct'] = $out['semua']['cents'] > 0 ? round($out[$k]['cents'] * 100 / $out['semua']['cents'], 1) : 0.0;
         }
         $out['grand_cents'] = $out['total']['cents'] + $out['belum']['cents'];
         return $out;
@@ -638,7 +646,9 @@ class Piutang_aging
     const KATEGORI = ['all', 'lancar', 'potensi', 'macet'];
 
     /**
-     * Basis Monitoring: invoice belum close dengan sisa > 0, disaring Company, Customer (persis), Cari.
+     * Basis Monitoring: invoice belum close (termasuk yang sudah lunas, agar jumlah card sama dengan Follow Up Piutang) dan
+     * tanggal invoice >= TANGGAL_MULAI_FOLLOW_UP, disaring Company, Customer (persis), Cari. List, rekap, dan nominal
+     * hanya memakai yang bersisa (is_aged / is_unreceived).
      * Card, list, rekap, dan Excel semuanya mulai dari basis ini. Filter tidak valid melempar InvalidArgumentException.
      */
     public static function monitoring_base($rows, $f, $today)
@@ -650,7 +660,11 @@ class Piutang_aging
         $cari = mb_strtolower(trim((string) ($f['cari'] ?? '')));
         $out = [];
         foreach ($rows as $r) {
-            if (self::is_closed($r) || self::cents($r['saldo'] ?? 0) <= 0) {
+            if (self::is_closed($r)) {
+                continue;
+            }
+            $tglInv = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
+            if (!self::is_date($tglInv) || $tglInv < self::TANGGAL_MULAI_FOLLOW_UP) {
                 continue;
             }
             if (!self::company_match($r['company'] ?? null, $f['company'] ?? null)) {
@@ -684,6 +698,32 @@ class Piutang_aging
             return self::umur($b['tgl_terima'], $today) <=> self::umur($a['tgl_terima'], $today);
         });
         return $out;
+    }
+
+    const PAGE_SORT_KEYS = ['no_invoice', 'customer', 'nilai', 'terbayar', 'saldo', 'umur'];
+    const REKAP_SORT_KEYS = ['customer', 'count', 'lancar', 'potensi', 'macet', 'total'];
+
+    /**
+     * Satu halaman DataTables server-side dari baris list yang sudah jadi. $key di luar PAGE_SORT_KEYS = urutan bawaan
+     * (tidak diurutkan ulang). Urutan stabil. $length < 0 = semua baris.
+     */
+    public static function page_rows(array $rows, $key, $dir, $start, $length, array $allowed = self::PAGE_SORT_KEYS)
+    {
+        if (in_array($key, $allowed, true)) {
+            $mul = $dir === 'desc' ? -1 : 1;
+            $text = in_array($key, ['no_invoice', 'customer'], true);
+            $pos = [];
+            foreach (array_values($rows) as $i => $r) {
+                $pos[] = [$i, $r];
+            }
+            usort($pos, function ($a, $b) use ($key, $mul, $text) {
+                $c = $text ? strnatcasecmp((string) $a[1][$key], (string) $b[1][$key]) : (float) $a[1][$key] <=> (float) $b[1][$key];
+                return $c * $mul ?: $a[0] <=> $b[0];
+            });
+            $rows = array_column($pos, 1);
+        }
+        $length = (int) $length;
+        return array_slice(array_values($rows), max(0, (int) $start), $length < 0 ? null : $length);
     }
 
     /** Sisa piutang ber-umur per customer per kategori (dalam sen), terbesar dulu. */

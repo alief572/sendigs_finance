@@ -26,7 +26,9 @@ $rows = [row(['id' => 'a', 'tgl_terima' => '2026-10-30', 'saldo' => 100]), row([
 $s = $A::summary($rows, $today);
 same($s['lancar']['cents'], 10000, 'lancar'); same($s['potensi']['cents'], 20000, 'potensi'); same($s['macet']['cents'], 30000, 'macet');
 same($s['total']['cents'], 60000, 'total'); same($s['belum']['cents'], 5000, 'belum'); same($s['grand_cents'], 65000, 'grand');
-same($s['macet']['oldest'], 158, 'oldest macet'); same($s['macet']['pct'], 50.0, 'pct');
+same($s['macet']['oldest'], 158, 'oldest macet'); same($s['macet']['pct'], 46.2, 'pct dari card Total Piutang (diterima + belum diterima)');
+same($s['semua']['cents'], 65000, 'card Total Piutang = diterima + belum diterima'); same($s['semua']['count'], 5, 'card Total Piutang: 4 bersisa + 1 lunas belum close (e), close (f) tidak');
+same($s['lunas']['count'], 1, 'lunas belum close dihitung terpisah'); same($s['total']['count'], 3, 'total diterima tetap 3');
 
 // ar_status berurutan
 same($A::ar_status(row()), 'belum_kirim', 's1'); same($A::ar_status(row(['tgl_kirim' => '2026-10-02'])), 'dikirim', 's2');
@@ -208,14 +210,22 @@ $mon = [row(['id' => 'a', 'customer' => 'X', 'company' => '7', 'tgl_terima' => '
     row(['id' => 'e', 'customer' => 'Y', 'company' => '3', 'tgl_terima' => '2026-06-01', 'saldo' => 0]),
     row(['id' => 'f', 'customer' => 'Y', 'company' => '3', 'tgl_terima' => '2026-06-01', 'saldo' => 9, 'sts_close' => '1'])];
 $base = $A::monitoring_base($mon, [], $today);
-same($ids($base), 'a,b,c,d', 'basis: tanpa lunas dan close');
+same($ids($base), 'a,b,c,d,e', 'basis: lunas belum close ikut (jumlah card = Follow Up), close keluar');
 same($ids($A::aged_list($base, 'all', $today)), 'c,b,a', 'aged terlama dulu, belum diterima keluar');
 same($ids($A::aged_list($base, 'potensi', $today)), 'b', 'kategori potensi');
 same($A::summary($base, $today)['grand_cents'], 65000, 'summary dari basis = total keseluruhan');
-$by = $A::monitoring_base($mon, ['company' => '3'], $today); same($ids($by), 'c,d', 'filter company');
+$by = $A::monitoring_base($mon, ['company' => '3'], $today); same($ids($by), 'c,d,e', 'filter company (lunas belum close ikut)');
 same($A::summary($by, $today)['belum']['cents'], 5000, 'card belum diterima ikut filter');
 same($ids($A::monitoring_base($mon, ['customer' => 'X'], $today)), 'a,b', 'filter customer persis');
 same($ids($A::monitoring_base($mon, ['cari' => 'inv-c'], $today)), 'c', 'cari no invoice');
+// batas mulai Follow Up: invoice sebelum 2026-10-01 (atau tanggal kosong/tidak valid) tidak ikut basis, card, maupun summary
+$lama = [row(['id' => 'o1', 'tgl_invoice' => '2026-09-30', 'tgl_terima' => '2026-10-30', 'saldo' => 100]), row(['id' => 'o2', 'tgl_invoice' => '2026-10-01', 'tgl_terima' => '2026-10-30', 'saldo' => 100]),
+    row(['id' => 'o3', 'tgl_invoice' => '2025-01-01', 'saldo' => 700]), row(['id' => 'o4', 'tgl_invoice' => null, 'saldo' => 5]), row(['id' => 'o5', 'tgl_invoice' => '', 'saldo' => 5]),
+    row(['id' => 'o6', 'tgl_invoice' => '2026-10-15 08:00:00', 'saldo' => 50])];
+$bl = $A::monitoring_base($lama, [], $today);
+same($ids($bl), 'o2,o6', 'basis: invoice sebelum 2026-10-01 dan tanpa tanggal keluar, 2026-10-01 masuk');
+same($A::summary($bl, $today)['belum']['cents'], 5000, 'belum diterima tidak memuat invoice lama');
+same($A::summary($bl, $today)['grand_cents'], 15000, 'total keseluruhan hanya invoice sejak batas');
 $rk = $A::rekap_customer($base, $today);
 same($rk[0]['customer'], 'X', 'rekap seri total: nama menentukan'); same($rk[1]['macet'], 30000, 'rekap macet Y'); same($rk[0]['total'], 30000, 'rekap total X'); same($rk[0]['count'], 2, 'rekap count X');
 $threw = false; try { $A::monitoring_base($mon, ['kategori' => 'x'], $today); } catch (InvalidArgumentException $e) { $threw = true; }
@@ -301,5 +311,23 @@ same(count($A::bukti_list(['bukti_extra' => [['path' => 'u/x.png', 'nama' => 'x'
 same($A::bukti_boleh_ditambah(['tgl_terima' => null, 'bukti_terima' => 'u/a.pdf']), true, 'belum terima: bukti boleh ditambah');
 same($A::bukti_boleh_ditambah(['tgl_terima' => '2026-10-02', 'bukti_terima' => 'u/a.pdf']), false, 'sudah terima + ada bukti: terkunci');
 same($A::bukti_boleh_ditambah(['tgl_terima' => '2026-10-02', 'bukti_terima' => null]), true, 'sudah terima tanpa bukti: boleh melengkapi');
+
+// page_rows (DataTables server-side): urut angka/teks natural, stabil, paging, kunci tak dikenal = urutan asli
+$pr = [['no_invoice' => 'INV-10', 'saldo' => 5, 'customer' => 'b'], ['no_invoice' => 'INV-9', 'saldo' => 20, 'customer' => 'A'],
+    ['no_invoice' => 'INV-2', 'saldo' => 5, 'customer' => 'c']];
+same(array_column($A::page_rows($pr, 'saldo', 'desc', 0, 10), 'no_invoice'), ['INV-9', 'INV-10', 'INV-2'], 'desc angka, seri stabil');
+same(array_column($A::page_rows($pr, 'no_invoice', 'asc', 0, 10), 'no_invoice'), ['INV-2', 'INV-9', 'INV-10'], 'no invoice natural');
+same(array_column($A::page_rows($pr, 'customer', 'asc', 0, 10), 'customer'), ['A', 'b', 'c'], 'teks tak peka huruf');
+same(array_column($A::page_rows($pr, 'x; DROP', 'asc', 0, 10), 'no_invoice'), ['INV-10', 'INV-9', 'INV-2'], 'kunci tak dikenal = urutan asli');
+same(array_column($A::page_rows($pr, 'saldo', 'asc', 1, 1), 'no_invoice'), ['INV-2'], 'paging start 1 length 1');
+same(count($A::page_rows($pr, '', 'asc', 0, -1)), 3, 'length -1 = semua');
+same($A::page_rows($pr, '', 'asc', 5, 10), [], 'start melewati data');
+
+// page_rows untuk rekap per customer: kolom urut angka (sen) memakai daftar putih REKAP_SORT_KEYS, kunci list tidak berlaku di sini
+$rkp = [['customer' => 'B', 'count' => 2, 'lancar' => 100, 'potensi' => 0, 'macet' => 0, 'total' => 100], ['customer' => 'A', 'count' => 9, 'lancar' => 0, 'potensi' => 50, 'macet' => 0, 'total' => 50],
+    ['customer' => 'C', 'count' => 1, 'lancar' => 0, 'potensi' => 0, 'macet' => 900, 'total' => 900]];
+same(array_column($A::page_rows($rkp, 'total', 'desc', 0, 10, $A::REKAP_SORT_KEYS), 'customer'), ['C', 'B', 'A'], 'rekap urut total desc');
+same(array_column($A::page_rows($rkp, 'count', 'asc', 0, 2, $A::REKAP_SORT_KEYS), 'customer'), ['C', 'B'], 'rekap urut invoice asc + paging');
+same(array_column($A::page_rows($rkp, 'saldo', 'asc', 0, 10, $A::REKAP_SORT_KEYS), 'customer'), ['B', 'A', 'C'], 'kunci list tidak berlaku di rekap (urutan asli)');
 
 echo "PASS: $n assertions\n";
