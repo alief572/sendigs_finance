@@ -38,9 +38,10 @@ $number = $invoice['no_invoice'];
                         <div class="form-group invoice-field-wide"><label for="consulting-tax">Perlakuan PPN <span class="invoice-required" aria-hidden="true">*</span></label>
                             <select id="consulting-tax" name="tax_treatment" class="form-control" aria-describedby="consulting-tax-help" required <?= $editable?'':'disabled' ?>>
                                 <option value="">Pilih perlakuan PPN</option>
-                                <?php foreach(array('PKP'=>'PKP','WAPU'=>'WAPU','KB'=>'Kawasan Berikat') as $key=>$label): ?><option value="<?= $key ?>" <?= $type===$key?'selected':'' ?>><?= $label ?></option><?php endforeach; ?>
+                                <?php foreach(Invoice_consulting::tax_treatments() as $key=>$label): ?><option value="<?= $key ?>" <?= $type===$key?'selected':'' ?>><?= $label ?></option><?php endforeach; ?>
                             </select>
-                            <p class="invoice-help" id="consulting-tax-help">Piutang PKP mencakup PPN. Piutang WAPU dan Kawasan Berikat sebesar penjualan.</p>
+                            <p class="invoice-help" id="consulting-tax-help">Piutang PKP mencakup PPN. Piutang WAPU, Kawasan Berikat, dan UMKM Non-PKP sebesar penjualan.</p>
+                            <p class="invoice-help invoice-vat-note" data-umkm-note <?= $type==='UMKM'?'':'hidden' ?>>UMKM Non-PKP tidak memungut PPN: DPP tetap dihitung, PPN 0, total tagihan sama dengan penjualan.</p>
                         </div>
                     </div>
                 </div>

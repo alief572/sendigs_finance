@@ -187,7 +187,7 @@ if (!empty($header['jenis_penerimaan']) && $header['jenis_penerimaan'] === 'depo
                         }
 
                         $taxBadge = '';
-                        if (in_array($taxTreatment, array('WAPU', 'KB', 'PKP'), true)) {
+                        if (in_array($taxTreatment, array('WAPU', 'KB', 'PKP', 'UMKM'), true)) {
                             $taxBadge = ' ' . mk_tax_badge($taxTreatment);
                         }
 

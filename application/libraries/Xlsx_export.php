@@ -1,7 +1,7 @@
 <?php
 // Shared .xlsx writer for the Penerimaan / Kwitansi / Deposit exports (bundled PHPExcel).
 // Spec: sheet, title, subtitle (optional), head[], rows[][], total[] (optional), numfmt (default '#,##0').
-// Cell values: int/float -> number, array('date'=>'Y-m-d') -> date, anything else -> explicit string (never a formula).
+// Cell values: int/float -> number, array('date'=>'Y-m-d') -> date, array('formula'=>'=SUM(A1:A2)') -> formula (hanya dari kode, bukan input user), anything else -> explicit string.
 if (!class_exists('PHPExcel')) {
     require_once __DIR__ . '/PHPExcel.php';
 }
@@ -13,7 +13,7 @@ class Xlsx_export
     /** TAX[t] mockup. */
     public static function tax_label($code)
     {
-        $map = array('KB' => 'Kawasan Berikat', 'DEP' => 'Deposit');
+        $map = array('KB' => 'Kawasan Berikat', 'UMKM' => 'UMKM Non-PKP', 'DEP' => 'Deposit');
         $code = strtoupper(trim((string)$code));
         return isset($map[$code]) ? $map[$code] : $code;
     }
@@ -43,6 +43,9 @@ class Xlsx_export
                 $addr = PHPExcel_Cell::stringFromColumnIndex($i) . $row;
                 if (is_int($v) || is_float($v)) {
                     $ws->setCellValueExplicit($addr, $v, PHPExcel_Cell_DataType::TYPE_NUMERIC);
+                    $ws->getStyle($addr)->getNumberFormat()->setFormatCode($numfmt);
+                } elseif (is_array($v) && isset($v['formula'])) {
+                    $ws->setCellValueExplicit($addr, (string)$v['formula'], PHPExcel_Cell_DataType::TYPE_FORMULA);
                     $ws->getStyle($addr)->getNumberFormat()->setFormatCode($numfmt);
                 } elseif (is_array($v) && isset($v['date'])) {
                     if ($plain) { $ws->setCellValueExplicit($addr, substr((string)$v['date'], 0, 10), PHPExcel_Cell_DataType::TYPE_STRING); continue; }
@@ -84,6 +87,34 @@ class Xlsx_export
         header('Cache-Control: max-age=0');
         PHPExcel_IOFactory::createWriter(self::build($spec), 'Excel2007')->save('php://output');
         exit;
+    }
+
+    /**
+     * Ekspor tab Invoiced (UMKM-FR-07). $rows: array asosiatif per invoice (lihat Invoicing::invoiced_export_rows).
+     * Judul r1, baris filter r2, header r4, data mulai r5; baris Total memakai rumus SUM atas kolom angka.
+     * Uang dalam sen (int) supaya jumlah Excel = card (0 selisih); dibagi 100 hanya saat ditulis.
+     */
+    public static function invoiced_spec(array $rows, $filterText, $filename)
+    {
+        $head = array('No', 'No. Invoice', 'Tanggal Invoice', 'No. SPK', 'No. PO', 'No. Faktur', 'Customer', 'Project', 'Project Leader', 'Sales',
+            'Company', 'TOP', 'Persen TOP', 'Perlakuan PPN', 'Penjualan', 'DPP Lain-lain', 'PPN', 'Total Tagihan', 'Saldo Piutang', 'Status');
+        $moneyCols = array('sales', 'dpp', 'ppn', 'gross', 'saldo');
+        $first = 5; $out = array(); $no = 0;
+        foreach ($rows as $r) {
+            $no++;
+            $line = array($no, $r['no_invoice'], $r['tanggal'] === '' ? '' : array('date' => $r['tanggal']), $r['no_spk'], $r['no_po'], $r['no_faktur'],
+                $r['customer'], $r['project'], $r['leader'], $r['sales_name'], $r['company'], $r['top'], $r['persen_top'], $r['tax_label']);
+            foreach ($moneyCols as $k) $line[] = $r[$k] === null ? '' : $r[$k] / 100;
+            $line[] = $r['status'];
+            $out[] = $line;
+        }
+        $last = $first + count($rows) - 1;
+        $total = array('Total');
+        for ($i = 1; $i < 14; $i++) $total[] = '';
+        foreach (array('O', 'P', 'Q', 'R', 'S') as $col) $total[] = array('formula' => '=SUM(' . $col . $first . ':' . $col . $last . ')');
+        $total[] = '';
+        return array('sheet' => 'Invoiced', 'title' => 'Daftar Invoice (Invoiced)', 'subtitle' => $filterText, 'head' => $head, 'rows' => $out,
+            'total' => $total, 'numfmt' => '#,##0.00', 'filename' => $filename);
     }
 
     /** Report Penerimaan: one row per invoice/kwitansi, Penerimaan Bank only on the first row of each receipt. */

@@ -3,13 +3,13 @@ define('BASEPATH', __DIR__);
 require dirname(__DIR__) . '/libraries/Invoice_consulting.php';
 $checks = 0;
 function expectConsulting($condition, $message) { global $checks; $checks++; if (!$condition) throw new RuntimeException($message); }
-$cases = array(array('WAPU', '291000000', '266750000.00', '32010000.00', '291000000.00'), array('PKP', '19581600', '17949800.00', '2153976.00', '21735576.00'), array('KB', '60000000', '55000000.00', '6600000.00', '60000000.00'));
+$cases = array(array('WAPU', '291000000', '266750000.00', '32010000.00', '291000000.00'), array('PKP', '19581600', '17949800.00', '2153976.00', '21735576.00'), array('KB', '60000000', '55000000.00', '6600000.00', '60000000.00'), array('UMKM', '61500000', '56375000.00', '0.00', '61500000.00'));
 $accounts = array();
 foreach (Invoice_consulting::roles() as $role => $label) $accounts[$role] = array('code' => 'TEST-' . $role, 'name' => $label);
 if (($argv[1]??'')==='--json') {
     $parity=array();
     foreach(array('0.01','0.05','0.10','0.55','1.00','1.01','100.00','123.45','999.99','1000.55','19581600','60000000','291000000','10000000.00','9999999999999.99')as $amount)
-        foreach(array('PKP','WAPU','KB')as $type)$parity[]=array('amount'=>$amount,'type'=>$type,'totals'=>Invoice_consulting::totals($amount,$type));
+        foreach(array('PKP','WAPU','KB','UMKM')as $type)$parity[]=array('amount'=>$amount,'type'=>$type,'totals'=>Invoice_consulting::totals($amount,$type));
     echo json_encode($parity);exit;
 }
 foreach ($cases as $case) {
@@ -27,15 +27,24 @@ foreach ($cases as $case) {
     expectConsulting($f['pph_jurnal'] === '0.00' && $f['saldo_piutang'] === $case[4], 'No invoice PPh');
     expectConsulting(Invoice_calculation::cents($f['tagihan_ppn_jurnal']) === $t['gross'], 'Display gross retained');
 }
-foreach (array('0.01','1.01','123.45','9999999999999.99') as $amount) foreach (array('PKP','WAPU','KB') as $type) {
+foreach (array('0.01','1.01','123.45','9999999999999.99') as $amount) foreach (array('PKP','WAPU','KB','UMKM') as $type) {
     $t = Invoice_consulting::totals($amount, $type);
     expectConsulting($t['gross'] === $t['sales'] + $t['ppn'], 'Cents safe');
 }
-foreach (array(array('0','PKP'),array('-1','PKP'),array('1.005','PKP'),array('1','UNKNOWN'),array('1',array())) as $bad) {
+foreach (array(array('0','UMKM'),array('1','umkm'),array('0','PKP'),array('-1','PKP'),array('1.005','PKP'),array('1','UNKNOWN'),array('1',array())) as $bad) {
     try { Invoice_consulting::totals($bad[0], $bad[1]); expectConsulting(false,'Reject input'); } catch (InvalidArgumentException $e) { expectConsulting(true,'Rejected'); }
 }
 try { Invoice_consulting::journal(Invoice_consulting::totals('1000','PKP'), array(), 'sales_consulting', 'INV-01', 'SPK-01'); expectConsulting(false,'Incomplete accounts rejected'); } catch (RuntimeException $e) { expectConsulting(true,'Incomplete accounts rejected'); }
 try { Invoice_consulting::journal(Invoice_consulting::totals('1000','PKP'), $accounts, 'invalid_role', 'INV-01', 'SPK-01'); expectConsulting(false,'Invalid sales role rejected'); } catch (InvalidArgumentException $e) { expectConsulting(true,'Invalid sales role rejected'); }
+$u = Invoice_consulting::totals('615000', 'UMKM');
+expectConsulting($u['sales'] === 61500000 && $u['other'] === 56375000 && $u['ppn'] === 0 && $u['gross'] === 61500000 && $u['receivable'] === 61500000, 'UMKM: DPP 11/12, PPN 0, tagihan = piutang = penjualan');
+$uj = Invoice_consulting::journal($u, $accounts, 'sales_consulting', '001/STM/2026', 'SPK-1');
+expectConsulting(count($uj) === 2 && $uj[0]['debit'] === 61500000 && $uj[1]['credit'] === 61500000, 'UMKM journal: Piutang D / Penjualan K only');
+expectConsulting(substr($uj[1]['description'], -15) === ' - UMKM Non-PKP', 'UMKM journal suffix');
+$uf = Invoice_consulting::fields($u);
+expectConsulting($uf['pajak'] === '0.00' && $uf['ppn_jurnal'] === '0.00' && $uf['dpp_nilai_lain'] === '563750.00' && $uf['total_akhir'] === '615000.00' && $uf['saldo_piutang'] === '615000.00', 'UMKM stored fields');
+expectConsulting(array_keys(Invoice_consulting::tax_treatments()) === array('PKP','WAPU','KB','UMKM'), 'Tax treatment list');
+expectConsulting(Invoice_consulting::tax_suffix('KB') === ' - Kawasan Berikat' && Invoice_consulting::tax_suffix('UMKM') === ' - UMKM Non-PKP' && Invoice_consulting::tax_suffix('PKP') === '', 'Tax suffix');
 $r = Invoice_consulting::receipt(111000, 98000, 1000, 2000);
 expectConsulting($r['reduction'] === 101000 && $r['remaining'] === 10000, 'Actual PPh reduces balance');
 $rExact = Invoice_consulting::receipt(10000, 10000, 0, 0);

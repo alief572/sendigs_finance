@@ -1,3 +1,11 @@
+# Penerimaan invoice UMKM Non-PKP (PPh Final 0,5%) — 10 November 2026
+
+- Invoice `UMKM`: `Penerimaan_calculation::tax_calc` mengembalikan DPP 11/12, PPN 0, batas PPh = 0,5% x penjualan (perlakuan lain tetap 2%); `pph_label()` dan `pph_limit_label()` untuk teks.
+- Dipotong customer (pilihan Y): PPh Final yang diinput (maks. 0,5%) mengurangi piutang dan dijurnal ke **Beban PPh Final (D)**, bukan PPh 23 Disetor. Setor sendiri (N): bank menerima penuh, jurnal ditambah Beban PPh Final (D) / Hutang PPh Final (K) = sisa batas 0,5% invoice, dicatat penuh di penerimaan pertama (juga untuk kurang bayar, sesuai Excel kasus 4) sebagai `pph_final_self` di snapshot `calculation_version` 4. Nilainya tidak ikut kontrol karena tidak mengurangi piutang. Invoice non-UMKM wajib 0.
+- COA Beban/Hutang PPh Final dikosongkan: `Consulting_receipt::PPH_FINAL_EXPENSE_COA` dan `PPH_FINAL_PAYABLE_COA` = `''`. Penerimaan tetap bisa disimpan sebagai draf; popup menampilkan peringatan; `Consulting_posting::receipt` menolak posting sampai kedua konstanta diisi (kode harus ada di master COA owner company). Jurnal draf yang tersimpan sebelum COA diisi tetap tanpa COA.
+- UI: label "PPh 23/PPh Final Disetor" (`views/add.php`), kolom "PPH 23 / PPh Final" dan keterangan baris UMKM (`views/consulting_process.php`), badge "UMKM Non-PKP" (`mk_tax_label`, `Xlsx_export::tax_label`, CSS `.tax.UMKM`). Label "PPh 23" lain di daftar dan detail sengaja belum diganti (menunggu keputusan user).
+- Uji: `tests/Umkm_receipt_journal_test.php` (10 skenario Excel = jurnal sistem, 212 cek), `Umkm_view_test.php`, `Consulting_receipt_tobe_test.php` (TEST 7: simpan, rollback, batas PPh Final), `calculation_test.php`. Gagal sejak sebelum perubahan ini (dicek di salinan HEAD): `Lookup_bootstrap_test.php`, `Xlsx_export_test.php`, `consulting_view_test.js`, `company_context_test.js`, `installment_view_test.js`. Jalur DB nyata (`integration_test.php`) belum dijalankan.
+
 # Penyelarasan konsep penerimaan Consultant — 26 Oktober 2026
 
 Implementasi workspace mengikuti keputusan pengguna: deposit customer ditambahkan pada 30 Oktober 2026 (lihat bagian "Deposit Customer" di bawah); invoice legacy tetap jalur historis; batch baru/legacy ditolak; PPh kumulatif maksimal sisa 2% DPP; dua desimal, pembulatan half-up dan kontrol tepat nol.

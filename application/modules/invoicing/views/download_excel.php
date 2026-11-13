@@ -9,6 +9,7 @@ header("Content-Disposition: attachment; filename=Data Invoicing.xls");
             <th>No. Invoice</th>
             <th>Company</th>
             <th>No. SPK</th>
+            <th>Tanggal Invoice</th>
             <th>Customer</th>
             <th>Project</th>
             <th>Project Leader</th>
@@ -29,6 +30,7 @@ header("Content-Disposition: attachment; filename=Data Invoicing.xls");
                 <td><?= $item->no_invoice ?></td>
                 <td><?= $item->nm_company ?></td>
                 <td><?= $item->id_spk_penawaran ?></td>
+                <td><?= (!empty($item->tanggal_invoice) && strpos((string)$item->tanggal_invoice, '0000-00-00') !== 0) ? date('d/m/Y', strtotime($item->tanggal_invoice)) : '-' ?></td>
                 <td><?= $item->nm_customer ?></td>
                 <td><?= $item->nm_project ?></td>
                 <td><?= $item->nm_project_leader ?></td>

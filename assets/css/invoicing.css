@@ -25,6 +25,8 @@
 .invoice-workspace .form-group { margin-bottom: 20px; }
 .invoice-workspace .invoice-tabs { display: flex; gap: 24px; margin: 0 0 24px; padding: 0; list-style: none; border-bottom: 1px solid var(--invoice-line); }
 .invoice-workspace .invoice-tabs button { border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--invoice-muted); min-height: 44px; padding: 0 0 13px; font-size: 15px; font-weight: 600; }
+.invoice-workspace .invoice-tab-count { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 10px; background: #edf3f8; color: #344d64; font-size: 12px; line-height: 1.6; text-align: center; }
+.invoice-workspace .invoice-tab-count:empty { display: none; }
 .invoice-workspace .invoice-tabs .active button { color: #205f84; border-bottom-color: var(--invoice-blue); }
 .invoice-workspace .invoice-toolbar { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin: 0 0 24px; padding: 18px; background: #f3f6f9; border-radius: 6px; }
 .invoice-workspace .invoice-filter { flex: 0 1 190px; }
@@ -120,6 +122,7 @@
     .invoice-workspace .invoice-heading { flex-direction: column; padding: 20px 16px; gap: 14px; }
     .invoice-workspace .invoice-heading h2 { font-size: 21px; }
     .invoice-workspace .box-body { padding: 18px 16px; }
+    .invoice-workspace .invoice-tabs { flex-wrap: wrap; gap: 4px 20px; }
     .invoice-workspace .invoice-toolbar { padding: 14px; gap: 14px; }
     .invoice-workspace .invoice-filter { flex: 1 1 140px; }
     .invoice-workspace .invoice-toolbar-actions, .invoice-workspace .invoice-toolbar .invoice-toolbar-end { margin-left: 0; width: 100%; }
@@ -169,6 +172,15 @@
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .form-group { margin-bottom: 0; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) label { margin-bottom: 5px; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .invoice-help { margin-top: 4px; }
+.invoice-workspace .invoice-vat-note[hidden] { display: none; }
+.invoice-workspace .invoice-summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0 0 14px; }
+.invoice-workspace .invoice-summary-card { border: 1px solid var(--invoice-line, #d9dee5); border-radius: 6px; padding: 10px 14px; background: #fff; }
+.invoice-workspace .invoice-summary-card span { display: block; font-size: 12px; color: var(--invoice-muted); }
+.invoice-workspace .invoice-summary-card strong { display: block; font-size: 18px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.invoice-workspace .invoice-summary-card small { display: block; font-size: 12px; color: var(--invoice-muted); }
+.invoice-workspace .invoice-cell-money { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 0 10px; font-variant-numeric: tabular-nums; }
+.invoice-workspace .invoice-cell-money dt { font-weight: 400; color: var(--invoice-muted); font-size: 12px; }
+.invoice-workspace .invoice-cell-money dd { margin: 0; text-align: right; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .invoice-financial-grid { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 24px; margin-bottom: 20px; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) :is(.vuca-billing-main, .invoice-billing-main) { min-width: 0; }
 .invoice-workspace:is(.vuca-invoice, .invoice-compact) .invoice-top-table { min-width: 560px; margin-bottom: 0; }

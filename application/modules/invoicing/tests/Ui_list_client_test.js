@@ -23,14 +23,16 @@ class Query {
     eq(index) { return new Query([this.items[index]]); }
     find() { return new Query([]); }
     each(callback) { this.items.forEach(item => callback.call(item)); return this; }
-    trigger(event) { this.items.forEach(item => { if (event === 'focus') focused = item.selector; if (event === 'click') delegated.get('click ' + (item.selector === '#invoice-tab-other' ? '.tab_2' : '.tab_1')).call(item); }); return this; }
+    trigger(event) { this.items.forEach(item => { if (event === 'focus') focused = item.selector; if (event === 'click') delegated.get('click ' + ({'#invoice-tab-other': '.tab_2', '#invoice-tab-invoiced': '.tab_3'}[item.selector] || '.tab_1')).call(item); }); return this; }
 }
 function $(selector) {
     if (selector === document) return new Query([element('document')]);
-    if (selector === '.invoice-tabs [role="tab"]') return new Query([element('#invoice-tab-consulting'), element('#invoice-tab-other')]);
+    if (selector === '.invoice-tabs [role="tab"]') return new Query([element('#invoice-tab-consulting'), element('#invoice-tab-other'), element('#invoice-tab-invoiced')]);
     return new Query([typeof selector === 'string' ? element(selector) : selector]);
 }
-$.extend = Object.assign;
+$.extend = Object.assign; $.param = obj => new URLSearchParams(obj).toString();
+const ajaxCalls = [];
+$.ajax = options => { ajaxCalls.push(options); const api = {done() { return api; }, fail() { return api; }}; return api; };
 let focused, checks = 0;
 const context = {document, $, siteurl: '/', active_controller: 'invoicing/', window: {}};
 vm.createContext(context); vm.runInContext(script, context); ready.forEach(callback => callback());
@@ -63,8 +65,8 @@ check(consulting.columns[3].render(row.company, 'filter'), row.company, 'Company
 check(consulting.columns[4].render(null, 'filter', row), row.project_leader + ' ' + row.sales, 'Both team members retained');
 check(consulting.columns[6].data, 'option', 'Action HTML contract unchanged');
 check(consulting.language.search, 'Cari:', 'Search control labelled');
-element('#filter_tahun').value = '2025'; element('#filter_status').value = 'uninvoiced'; const request = {}; consulting.ajax.data(request);
-check(request, {filter_tahun: '2025', filter_status: 'uninvoiced'}, 'Filter request contract');
+element('#filter_tahun').value = '2025'; const request = {}; consulting.ajax.data(request);
+check(request, {filter_status: 'uninvoiced', filter_tahun: '2025'}, 'Consulting tab always requests uninvoiced only');
 tableEvent('#table_penawaran', 'preXhr.dt');
 check(element('#invoice-list-status').attributes['data-state'], 'loading', 'Loading state');
 check(element('#table_penawaran').attributes['aria-busy'], 'true', 'Busy table state');
@@ -74,7 +76,7 @@ check(element('#table_penawaran').attributes['aria-busy'], 'false', 'Busy cleare
 tableEvent('#table_penawaran', 'xhr.dt', {data: []});
 check(element('#invoice-list-status').text, '', 'Successful empty response clears failure');
 check(element('#invoice-list-status').attributes['data-state'], undefined, 'State reset on recovery');
-const tabs = ['#invoice-tab-consulting', '#invoice-tab-other'];
+const tabs = ['#invoice-tab-consulting', '#invoice-tab-other', '#invoice-tab-invoiced'];
 function key(selector, value) { let prevented = false; element(selector).handlers.keydown.call(element(selector), {key: value, preventDefault() { prevented = true; }}); return prevented; }
 check(key(tabs[0], 'ArrowRight'), true, 'Arrow key handled');
 check(focused, tabs[1], 'Right arrow focuses second tab');
@@ -86,12 +88,47 @@ const other = tableOptions.get('#table_penawaran_non_konsultasi');
 check(other.ajax.url, '/invoicing/get_data_quotation_non_konsultasi', 'Other endpoint preserved');
 check(other.columns.length, 10, 'All other columns retained');
 assert.match(other.language.emptyTable, /non konsultasi/); checks++;
-check(key(tabs[1], 'ArrowRight'), true, 'Right arrow wraps');
+check(key(tabs[1], 'ArrowRight'), true, 'Right arrow to third tab');
+check(focused, tabs[2], 'Third tab focused');
+check(element('.col_3').visible, true, 'Invoiced panel visible');
+check(element('.col_2').visible, false, 'Other panel hidden when invoiced shown');
+check(element(tabs[2]).attributes['aria-selected'], 'true', 'Invoiced tab selected');
+const invoiced = tableOptions.get('#table_invoiced');
+check(invoiced.ajax.url, '/invoicing/get_data_spk', 'Invoiced tab reuses consulting endpoint');
+check(invoiced.columns.length, 10, 'Invoiced table has ten columns');
+check(invoiced.columns[2].data, 'tanggal_invoice', 'Invoice date column');
+check(invoiced.columns[2].render('05/10/2026', 'display'), '05/10/2026', 'Invoice date displayed');
+check(invoiced.columns[2].render('<b>x</b>', 'display').includes('<b>'), false, 'Invoice date escaped');
+check(invoiced.stateLoadParams({}, {columns: Array(8)}), false, 'Stale eight-column state rejected for invoiced');
+element('#filter_tahun_inv').value = '2026'; element('#filter_bulan_inv').value = '10'; element('#filter_company_inv').value = 'STM'; element('#filter_ppn_inv').value = 'UMKM';
+const invoicedRequest = {}; invoiced.ajax.data(invoicedRequest);
+check(invoicedRequest, {filter_status: 'invoiced', filter_tahun: '2026', filter_bulan: '10', filter_company: 'STM', filter_ppn: 'UMKM'}, 'Invoiced filter request contract');
+check(invoiced.columns[6].data, 'tax_label', 'Perlakuan PPN column');
+const money = invoiced.columns[7].render(null, 'display', {nilai: {sales: 61500000, ppn: 0, gross: 61500000, saldo: 61500000}});
+check(money.includes('615,000.00') && money.includes('Saldo piutang'), true, 'Nilai cell shows sales, PPN, total tagihan and saldo');
+check(invoiced.columns[7].render(null, 'display', {nilai: null}).includes('-'), true, 'Nilai cell for invoice without v3 numbers shows a dash');
+check(invoiced.columns[7].render(null, 'filter', {nilai: {gross: 61500000}}), '61500000', 'Nilai plain text for non-display use');
+ajaxCalls.length = 0; delegated.get('click .btn_filter_invoiced')({});
+const summaryCall = ajaxCalls.find(call => call.url === '/invoicing/invoiced_summary');
+check(summaryCall && summaryCall.type === 'POST', true, 'Terapkan filter reloads the summary card');
+// Pencarian di kotak tabel menggeser card; paging dengan filter sama tidak memuat ulang.
+ajaxCalls.length = 0; tableEvent('#table_invoiced', 'xhr.dt', {data: []});
+check(ajaxCalls.length, 0, 'Paging with unchanged filters does not reload the card');
+element('#table_invoiced_filter input').value = 'JTEKT'; tableEvent('#table_invoiced', 'xhr.dt', {data: []});
+const searchCall = ajaxCalls.find(call => call.url === '/invoicing/invoiced_summary');
+check(searchCall && searchCall.data.filter_search, 'JTEKT', 'Table search reloads the card with the search term');
+check(JSON.parse(JSON.stringify(summaryCall.data)), {filter_tahun: '2026', filter_bulan: '10', filter_company: 'STM', filter_ppn: 'UMKM', filter_search: ''}, 'Summary card requests the same filters as the table');
+let opened; context.window.open = url => { opened = url; };
+delegated.get('click .btn_download_excel_invoiced')({preventDefault() {}});
+check(opened.startsWith('/invoicing/download_invoiced?') && opened.includes('filter_tahun=2026') && opened.includes('filter_bulan=10') && opened.includes('filter_company=STM') && opened.includes('filter_ppn=UMKM'), true, 'Invoiced export is the .xlsx endpoint and carries all filters');
+delegated.get('click .btn_download_excel')({preventDefault() {}});
+check(opened, '/invoicing/download_excel?filter_status=uninvoiced&filter_tahun=2025', 'Consulting export is uninvoiced only');
+check(key(tabs[2], 'ArrowRight'), true, 'Right arrow wraps');
 check(focused, tabs[0], 'Wrapped to first tab');
-key(tabs[0], 'ArrowLeft'); check(focused, tabs[1], 'Left arrow wraps');
-key(tabs[1], 'Home'); check(focused, tabs[0], 'Home selects first');
-key(tabs[0], 'End'); check(focused, tabs[1], 'End selects last');
-check(key(tabs[1], 'Tab'), false, 'Tab key keeps native focus behavior');
+key(tabs[0], 'ArrowLeft'); check(focused, tabs[2], 'Left arrow wraps');
+key(tabs[2], 'Home'); check(focused, tabs[0], 'Home selects first');
+key(tabs[0], 'End'); check(focused, tabs[2], 'End selects last');
+check(key(tabs[2], 'Tab'), false, 'Tab key keeps native focus behavior');
 tableEvent('#table_penawaran_non_konsultasi', 'preXhr.dt');
 check(element('#invoice-other-status').attributes['data-state'], 'loading', 'Other list independent loading state');
 check(element('#table_penawaran_non_konsultasi').attributes['aria-busy'], 'true', 'Other list busy table state');
@@ -109,6 +146,6 @@ const consultingActionCell = element('consulting-action-cell'), otherActionCell 
 consulting.columns[6].createdCell(consultingActionCell);
 other.columns[9].createdCell(otherActionCell);
 check(enhancedCells, [consultingActionCell, otherActionCell], 'Both action columns enhance existing server actions into dropdowns');
-delegated.get('preDraw.dt #table_penawaran, #table_penawaran_non_konsultasi')();
-check(menuCloses, 1, 'Delegated redraw lifecycle closes open menus for both tables');
+delegated.get('preDraw.dt #table_penawaran, #table_penawaran_non_konsultasi, #table_invoiced')();
+check(menuCloses, 1, 'Delegated redraw lifecycle closes open menus for all tables');
 console.log('UI list client PASS: ' + checks + ' checks');

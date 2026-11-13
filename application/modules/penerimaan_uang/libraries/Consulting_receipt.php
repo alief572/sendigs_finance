@@ -5,7 +5,20 @@ require_once __DIR__ . '/Penerimaan_calculation.php';
 
 class Consulting_receipt
 {
+    // COA PPh Final belum ada di master accounting: dikosongkan (INV-R-12). Isi kedua nomor COA setelah akun dibuat;
+    // sampai itu jurnal penerimaan UMKM tersimpan sebagai draf dan posting ditolak (Consulting_posting::receipt).
+    const PPH_FINAL_EXPENSE_COA = ''; const PPH_FINAL_EXPENSE_NAME = 'Beban PPh Final';
+    const PPH_FINAL_PAYABLE_COA = ''; const PPH_FINAL_PAYABLE_NAME = 'Hutang PPh Final';
+
     private $s;
+
+    private static function pph_final_accounts()
+    {
+        return array(
+            'pph_final_expense' => array('code' => self::PPH_FINAL_EXPENSE_COA, 'name' => self::PPH_FINAL_EXPENSE_NAME),
+            'pph_final_payable' => array('code' => self::PPH_FINAL_PAYABLE_COA, 'name' => self::PPH_FINAL_PAYABLE_NAME)
+        );
+    }
     public function __construct($ci) { $this->s = new Invoice_consulting_service($ci); }
 
     public function contains_new($ids)
@@ -70,6 +83,10 @@ class Consulting_receipt
             foreach (array('pph', 'cash', 'admin', 'reduction') as $key) {
                 if (!is_int($snap[$key]) || $snap[$key] < 0) throw new RuntimeException('Snapshot penerimaan tidak valid; perlu rekonsiliasi.');
             }
+            // PPh Final setor sendiri (UMKM) tidak mengurangi piutang, tetapi memakai batas 0,5% dan dijurnal ke Beban PPh Final.
+            $umkm = ($snap['tax_treatment'] ?? '') === 'UMKM';
+            $self = $snap['pph_final_self'] ?? 0;
+            if (!is_int($self) || $self < 0 || ($self > 0 && !$umkm)) throw new RuntimeException('Snapshot PPh Final tidak valid; perlu rekonsiliasi.');
             $remaining = Penerimaan_calculation::cents($row['sisa_piutang']);
             if ($snap['pph'] !== Penerimaan_calculation::cents($row['pph23'])
                 || $snap['admin'] !== Penerimaan_calculation::cents($row['biaya_admin'])
@@ -79,9 +96,9 @@ class Consulting_receipt
                 || (isset($snap['balance']) && $snap['balance'] !== $remaining + $snap['reduction'])) {
                 throw new RuntimeException('Riwayat saldo/PPh berbeda dari snapshot; perlu rekonsiliasi.');
             }
-            if ($snap['pph'] > 0) {
-                $account = $snap['accounts']['pph'] ?? null;
-                if (!$account || empty($account['code']) || empty($account['name'])) throw new RuntimeException('Snapshot akun PPh tidak lengkap; perlu rekonsiliasi.');
+            if ($snap['pph'] + $self > 0) {
+                $account = $snap['accounts'][$umkm ? 'pph_final_expense' : 'pph'] ?? null;
+                if (!$account || (empty($account['code']) && !$umkm) || empty($account['name'])) throw new RuntimeException('Snapshot akun PPh tidak lengkap; perlu rekonsiliasi.');
                 $journals = $s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Penerimaan Piutang'", array($row['receipt_no']));
                 $prefix = $account['name'] . ' - ' . $invoice['no_invoice']; $actual = 0;
                 foreach ($journals as $journal) {
@@ -90,9 +107,9 @@ class Consulting_receipt
                         $actual += Penerimaan_calculation::cents($journal['debit']) - Penerimaan_calculation::cents($journal['kredit']);
                     }
                 }
-                if ($actual !== $snap['pph']) throw new RuntimeException('Jurnal PPh berbeda dari riwayat penerimaan; perlu rekonsiliasi.');
+                if ($actual !== $snap['pph'] + $self) throw new RuntimeException('Jurnal PPh berbeda dari riwayat penerimaan; perlu rekonsiliasi.');
             }
-            $used += $snap['pph']; $previous = $remaining;
+            $used += $snap['pph'] + $self; $previous = $remaining;
         }
         if ($used > $limit || $previous !== Penerimaan_calculation::cents($invoice['saldo_piutang'])) {
             throw new RuntimeException('Riwayat PPh/saldo invoice tidak konsisten; perlu rekonsiliasi.');
@@ -110,7 +127,7 @@ class Consulting_receipt
         if (Invoice_consulting::is_new($invoice)) {
             $snapshot = Invoice_consulting::snapshot($invoice);
             $taxTreatment = !empty($invoice['tax_treatment']) ? $invoice['tax_treatment'] : (!empty($snapshot['type']) ? $snapshot['type'] : ((float)$invoice['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU'));
-            if (!in_array($taxTreatment, array('PKP', 'WAPU', 'KB', 'DEP'), true)) {
+            if (!in_array($taxTreatment, array('PKP', 'WAPU', 'KB', 'UMKM', 'DEP'), true)) {
                 throw new RuntimeException('TAX Code invoice tidak valid; perlu rekonsiliasi.');
             }
             $salesCents = Penerimaan_calculation::cents($invoice['total_nominal_jurnal']);
@@ -128,6 +145,7 @@ class Consulting_receipt
                 'owner' => $snapshot['owner'],
                 'accounts' => $snapshot['accounts'],
                 'tax_treatment' => $taxTreatment,
+                'pph_label' => Penerimaan_calculation::pph_label($taxTreatment),
                 'tax_calc' => $taxCalc,
                 'default_pph' => $defaultPph,
                 'spk' => $spkNo,
@@ -169,6 +187,7 @@ class Consulting_receipt
             $context['accounts']['bank'] = $this->account($context['owner']['id'], $bank['coa_bank']);
             $context['accounts']['admin'] = $this->account($context['owner']['id'], '7201-01-04');
             $context['accounts']['deposit'] = $this->account($context['owner']['id'], '2102-01-02', 'Deposit Customer');
+            if ($context['tax_treatment'] === 'UMKM') $context['accounts'] += self::pph_final_accounts();
             $context['fingerprint'] = Invoice_calculation::fingerprint(array('invoice' => $invoice, 'history' => $context['history_fingerprint']));
             $rows[] = $context;
         }
@@ -573,11 +592,14 @@ class Consulting_receipt
 
                 if (min($allocated, $admin, $pph, $sisa, $dep, $lebih) < 0) throw new InvalidArgumentException('Nilai tidak boleh negatif.');
                 if ($admin > Penerimaan_calculation::MAX_ADMIN_CENTS) throw new InvalidArgumentException('Total biaya admin melebihi batas maksimal Rp 10.000.');
-                if ($pph > $balance) throw new InvalidArgumentException('PPh 23 melebihi piutang dagang invoice ' . $invoice['no_invoice'] . '.');
+                $pphLabel = Penerimaan_calculation::pph_label($context['tax_treatment']);
+                if ($pph > $balance) throw new InvalidArgumentException($pphLabel . ' melebihi piutang dagang invoice ' . $invoice['no_invoice'] . '.');
                 if ($sisa > $balance) throw new InvalidArgumentException('Sisa piutang melebihi piutang dagang invoice ' . $invoice['no_invoice'] . '.');
 
                 if ($allocated + $sisa !== $balance || $allocated <= 0) throw new InvalidArgumentException('Alokasi penerimaan + sisa piutang harus sama dengan saldo invoice ' . $invoice['no_invoice'] . '.');
-                if ($pph > $context['remaining_pph']) throw new InvalidArgumentException('PPh 23 melebihi sisa batas 2% Penjualan invoice ' . $invoice['no_invoice'] . '.');
+                if ($pph > $context['remaining_pph']) throw new InvalidArgumentException(($context['tax_treatment'] === 'UMKM' ? 'PPh Final 0,5% melebihi sisa batas' : 'PPh 23 melebihi sisa batas 2%') . ' Penjualan invoice ' . $invoice['no_invoice'] . '.');
+                // UMKM setor sendiri: sisa batas PPh Final dijurnal penuh pada penerimaan pertama (sesuai Excel), bukan dari input user.
+                $pphFinalSelf = ($context['tax_treatment'] === 'UMKM' && $preview['choice'] === 'N') ? (int)$context['remaining_pph'] : 0;
                 $reduction = $allocated;
                 $bankCash = $balance - $pph - $admin - $sisa - $dep + $lebih;
                 if ($bankCash < 0) throw new InvalidArgumentException('Penerimaan bank tidak boleh bernilai minus pada ' . $invoice['no_invoice'] . '.');
@@ -613,6 +635,7 @@ class Consulting_receipt
                     'reduction' => $reduction,
                     'tax_treatment' => $context['tax_treatment'] ?? 'PKP'
                 );
+                if ($context['tax_treatment'] === 'UMKM') $receiptSnapshot['pph_final_self'] = $pphFinalSelf;
 
                 $details[] = array(
                     'id_header' => $number,

@@ -24,6 +24,92 @@ class Invoicing extends Admin_Controller
         ));
     }
 
+    // =========================================================================
+    // AUDIT TRAIL
+    // =========================================================================
+
+    private $auditKeys = array('id', 'id_invoicing', 'id_penawaran', 'invoice_type', 'row_count', 'filter_status', 'reason', 'outcome');
+
+    private function beginAudit($method, $data = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('invoicing', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $this->auditKeys)));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData($data), 'sql' => null));
+        }
+        return false;
+    }
+
+    // Hanya scalar; ID dan filter dibuang bila bentuknya tidak wajar. ID asli berformat 00001-INV-XI-26.
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            if (($key === 'id' || strpos($key, 'id_') === 0) && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9\/_.:-]{1,100}$/', (string) $value))) { continue; }
+            if ($key === 'filter_status' && (!is_scalar($value) || !preg_match('/^[A-Za-z0-9_]{1,20}$/', (string) $value))) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (!has_permission($permission)) {
+            $this->completeAudit('Akses invoicing ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
+    // Halaman/unduhan: $ok=false dengan $reason 'not_found' dicatat sebagai not_found, selain itu error.
+    private function auditPage($message, $ok, $type = null, $data = array(), $reason = 'load_failed')
+    {
+        if ($type !== null) { $data['invoice_type'] = $type; }
+        $data['reason'] = $ok ? null : $reason;
+        $data['outcome'] = $ok ? 'rendered' : ($reason === 'not_found' ? 'not_found' : 'error');
+        return $this->completeAudit($ok ? $message : $message . ' gagal', $ok ? 1 : 0, $data);
+    }
+
+    // Endpoint tulis yang hasilnya dari service/writer (commit dibaca di sana): status 1 = committed.
+    private function auditMutation($message, $result, $type, $data = array())
+    {
+        $ok = is_array($result) && !empty($result['status']);
+        $data['invoice_type'] = $type;
+        if (is_array($result) && isset($result['id'])) { $data['id_invoicing'] = $result['id']; }
+        $data['reason'] = $ok ? null : 'rejected';
+        $data['outcome'] = $ok ? 'committed' : 'rejected';
+        return $this->completeAudit($ok ? $message : $message . ' gagal', $ok ? 1 : 0, $data);
+    }
+
+    // Wrapper legacy_consulting_boundary menolak/menelan request tanpa menjalankan endpoint: catat sebagai ditolak.
+    private function auditFinish($message)
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'is_active') && $this->module_audit_recorder->is_active()) {
+            $this->completeAudit($message, 0, array('reason' => 'rejected', 'outcome' => 'rejected'));
+        }
+    }
+
+    private function auditConsulting($mode, $data)
+    {
+        $messages = array('add' => 'Membuka form tambah invoice konsultasi', 'edit' => 'Membuka form edit invoice konsultasi',
+            'view' => 'Melihat invoice konsultasi', 'print' => 'Mencetak invoice konsultasi');
+        return $this->auditPage($messages[$mode], empty($data['error']), 'consulting');
+    }
+
     private function legacy_consulting_boundary($method,$idField=null)
     {
         require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
@@ -43,7 +129,7 @@ class Invoicing extends Admin_Controller
 
     private function consulting_form($invoice, $planId, $mode)
     {
-        $this->auth->restrict($mode==='add' ? $this->addPermission : ($mode==='edit' ? $this->managePermission : $this->viewPermission));
+        $this->auditRestrict($mode==='add' ? $this->addPermission : ($mode==='edit' ? $this->managePermission : $this->viewPermission));
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $service = new Invoice_consulting_service($this);
         try {
@@ -76,19 +162,22 @@ class Invoicing extends Admin_Controller
                 : 'Form invoice tidak dapat dimuat.';
             $data = array('error' => $message, 'mode' => $mode);
         }
-        if ($mode==='print') { $this->load->view('consulting_print', $data); return; }
+        if ($mode==='print') { $this->auditConsulting($mode, $data); $this->load->view('consulting_print', $data); return; }
         $this->template->set($data);
         $this->template->title($mode==='add'?'Add Invoicing':'Invoice Konsultasi');
         $this->template->render('consulting_invoice');
+        $this->auditConsulting($mode, $data);
     }
 
     public function coa_settings()
     {
+        $this->beginAudit(__FUNCTION__);
         if (!$this->auth->is_admin()) {
+            $this->completeAudit('Akses pengaturan COA invoicing ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
             show_error('Pengaturan COA hanya dapat diakses oleh admin.', 403);
             return;
         }
-        $this->auth->restrict('Invoicing.Configure');
+        $this->auditRestrict('Invoicing.Configure');
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $service=new Invoice_consulting_service($this);
         try {
@@ -119,18 +208,24 @@ class Invoicing extends Admin_Controller
             $data = array('error' => $message);
         }
         $this->template->set($data); $this->template->title('Pengaturan COA Invoicing'); $this->template->render('consulting_settings');
+        $this->auditPage('Membuka pengaturan COA invoicing', empty($data['error']), 'consulting');
     }
 
     public function save_coa_mapping()
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $service=new Invoice_consulting_service($this);
-        echo json_encode($service->save_mapping($this->input->post()));
+        $result=$service->save_mapping($this->input->post());
+        echo json_encode($result);
+        $this->auditMutation('Menyimpan mapping COA invoicing', $result, 'consulting');
     }
+
 
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $this->consultant->select('a.*');
         $this->consultant->from('kons_tr_company a');
@@ -139,27 +234,32 @@ class Invoicing extends Admin_Controller
         $this->template->set('data_company', $get_company);
         $this->template->title('Invoicing');
         $this->template->render('index');
+        $this->auditPage('Membuka daftar invoicing', true);
     }
 
     public function add_invoice($id_plan_tagih_detail)
     {
+        $this->beginAudit(__FUNCTION__);
         return $this->consulting_form(null, $id_plan_tagih_detail, 'add');
     }
 
     public function add_invoice_non_konsultasi($id_penawaran)
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->addPermission);
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
 
         $this->template->set('data_penawaran', $get_penawaran);
         $this->template->title('Add Invoicing Non Konsultasi');
         $this->template->render('add_invoice_non_konsultasi');
+        $this->auditPage('Membuka form tambah invoice non konsultasi', !empty($get_penawaran), 'non_kons', array('id_penawaran' => $id_penawaran), 'not_found');
     }
 
     public function add_invoice_vuca($id_plan_tagih_detail)
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->addPermission);
         require_once __DIR__.'/../libraries/Invoice_vuca.php';
         $dbDebug=$this->db->db_debug; $accountingDebug=$this->accounting_vuca->db_debug;
         $this->db->db_debug=false; $this->accounting_vuca->db_debug=false;
@@ -203,6 +303,7 @@ class Invoicing extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Add Invoicing Vuca');
         $this->template->render('add_invoice_vuca');
+        $this->auditPage('Membuka form tambah invoice Vuca', empty($data['error']), 'vuca');
     }
 
     /** Isi nama/alamat customer invoice lama dari SPK-nya (lihat Invoice_calculation::fill_customer). */
@@ -216,6 +317,7 @@ class Invoicing extends Admin_Controller
 
     public function view_invoicing($id_invoicing)
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
@@ -236,7 +338,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         // Invoice lama tanpa baris plan tagih: tampilan memakai baris pengganti; perhitungan jurnal di bawah tetap memakai $get_actual_plan_tagih apa adanya.
         $plan_view = Invoice_calculation::plan_or_invoice($get_actual_plan_tagih, $get_invoicing);
@@ -344,10 +446,12 @@ class Invoicing extends Admin_Controller
         $this->template->title('View Invoice');
         $this->template->set($data);
         $this->template->render('view_invoice');
+        $this->auditPage('Melihat invoice', !empty($get_invoicing), 'legacy', array('id_invoicing' => $id_invoicing), 'not_found');
     }
 
     public function view_invoicing_vuca($id_invoicing)
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -363,7 +467,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_detail_plan_tagih);
         $get_plan_tagih = $this->db->get()->row();
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         require_once __DIR__.'/../libraries/Invoice_vuca.php';
         $journals=$this->db->query("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id",array($id_invoicing))->result_array();
@@ -383,10 +487,12 @@ class Invoicing extends Admin_Controller
         $this->template->title('View Invoice Vuca');
         $this->template->set($data);
         $this->template->render('view_invoice_vuca');
+        $this->auditPage('Melihat invoice Vuca', !empty($get_invoicing), 'vuca', array('id_invoicing' => $id_invoicing), 'not_found');
     }
 
     public function edit_invoicing($id_invoicing)
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'edit'); }
@@ -405,7 +511,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         $arr_coa_jurnal = ['1102-01-01', '2104-01-07', '1106-01-02', '4101-01-01'];
 
@@ -511,10 +617,12 @@ class Invoicing extends Admin_Controller
         $this->template->title('Edit Invoice');
         $this->template->set($data);
         $this->template->render('edit_invoice');
+        $this->auditPage('Membuka form edit invoice', !empty($get_invoicing), 'legacy', array('id_invoicing' => $id_invoicing), 'not_found');
     }
 
     public function edit_invoicing_vuca($id_invoicing)
     {
+        $this->beginAudit(__FUNCTION__);
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -529,7 +637,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = $this->db->get()->row();
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         require_once __DIR__.'/../libraries/Invoice_vuca.php';
         $journals=$this->db->query("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id",array($id_invoicing))->result_array();
@@ -549,10 +657,12 @@ class Invoicing extends Admin_Controller
         $this->template->title('Edit Invoice');
         $this->template->set($data);
         $this->template->render('edit_invoice_vuca');
+        $this->auditPage('Membuka form edit invoice Vuca', !empty($get_invoicing), 'vuca', array('id_invoicing' => $id_invoicing), 'not_found');
     }
 
     public function print_invoicing($id_invoicing, $id_company = 1)
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
@@ -569,7 +679,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         $data = [
             'id_invoicing' => $id_invoicing,
@@ -583,12 +693,14 @@ class Invoicing extends Admin_Controller
         // $this->template->set($data);
         // $this->template->render('edit_invoice');
 
+        $this->auditPage('Mencetak invoice', !empty($get_invoicing), 'legacy', array('id_invoicing' => $id_invoicing), 'not_found');
         $this->load->view('print_invoice', $data);
     }
 
     public function print_invoice_non_kons($id_invoicing, $id_company = 1)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -618,11 +730,13 @@ class Invoicing extends Admin_Controller
         // $this->template->set($data);
         // $this->template->render('edit_invoice');
 
+        $this->auditPage('Mencetak invoice non konsultasi', !empty($get_invoicing), 'non_kons', array('id_invoicing' => $id_invoicing), 'not_found');
         $this->load->view('print_invoice_non_konsultasi', $data);
     }
 
     public function print_invoicing_vuca($id_invoicing, $id_company = 1)
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -635,7 +749,7 @@ class Invoicing extends Admin_Controller
         $this->db->where('a.id', $get_invoicing->id_actual_plan_tagih);
         $get_actual_plan_tagih = Invoice_calculation::plan_or_invoice($this->db->get()->row(), $get_invoicing);
 
-        $this->auth->restrict($this->viewPermission);
+        $this->auditRestrict($this->viewPermission);
 
         $data = [
             'id_invoicing' => $id_invoicing,
@@ -644,12 +758,14 @@ class Invoicing extends Admin_Controller
             'id_company' => $id_company
         ];
 
+        $this->auditPage('Mencetak invoice Vuca', !empty($get_invoicing), 'vuca', array('id_invoicing' => $id_invoicing), 'not_found');
         $this->load->view('print_invoice_vuca', $data);
     }
 
     public function print_kwitansi($id, $id_company = 1)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -661,12 +777,14 @@ class Invoicing extends Admin_Controller
             'id_company' => $id_company
         ];
 
+        $this->auditPage('Mencetak kwitansi', !empty($get_invoicing), 'legacy', array('id_invoicing' => $id), 'not_found');
         $this->load->view('print_kwitansi', $data);
     }
 
     public function print_kwitansi_vuca($id, $id_company = 4)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -678,15 +796,20 @@ class Invoicing extends Admin_Controller
             'id_company' => $id_company
         ];
 
+        $this->auditPage('Mencetak kwitansi Vuca', !empty($get_invoicing), 'vuca', array('id_invoicing' => $id), 'not_found');
         $this->load->view('print_kwitansi_vuca', $data);
     }
 
     public function save_invoice()
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $service = new Invoice_consulting_service($this);
-        echo json_encode($service->save_invoice($this->input->post()));
+        $result = $service->save_invoice($this->input->post());
+        echo json_encode($result);
+        $this->auditMutation('Menyimpan invoice konsultasi', $result, 'consulting');
     }
+
 
     public function save_invoice_vuca()
     {
@@ -695,7 +818,6 @@ class Invoicing extends Admin_Controller
 
     private function write_vuca($edit)
     {
-        $this->auth->restrict($edit?$this->managePermission:$this->addPermission);
         require_once __DIR__.'/../libraries/Invoice_writer.php';
         $action=$edit?'update_invoice_vuca':'save_invoice_vuca';
         $recorder=null; $owns=false;
@@ -703,8 +825,13 @@ class Invoicing extends Admin_Controller
             $this->load->library('Module_audit_recorder');
             $ci =& get_instance();
             $recorder=$ci->module_audit_recorder;
-            $owns=$recorder->begin('invoicing',$action,array('data'=>array('invoice_type'=>'vuca')),array('invoice_type','outcome'));
+            $owns=$recorder->begin('invoicing',$action,array('data'=>array('invoice_type'=>'vuca')),array('invoice_type','reason','outcome'));
         } catch (Throwable $error) { log_message('error','Vuca audit unavailable.'); }
+        // Penolakan akses dicatat sebelum restrict() mengalihkan/menghentikan request.
+        if ($owns && !has_permission($edit?$this->managePermission:$this->addPermission)) {
+            $recorder->complete('Akses invoice Vuca ditolak',0,array('data'=>array('invoice_type'=>'vuca','reason'=>'permission_denied','outcome'=>'denied'),'sql'=>null));
+        }
+        $this->auth->restrict($edit?$this->managePermission:$this->addPermission);
         try {
             $writer=new Invoice_writer($this->db,$this->accounting_vuca,$this->Invoicing_model,$this->auth,DBCNL);
             $result=$writer->save('vuca',$edit,$this->input->post());
@@ -713,25 +840,34 @@ class Invoicing extends Admin_Controller
         }
         try {
             if ($owns) $recorder->complete('Invoice Vuca: '.$action,$result['status'],
-                array('data'=>array('outcome'=>$result['status']?'committed':'rejected'),'sql'=>null));
+                array('data'=>array('outcome'=>$result['status']?'committed':'rejected','reason'=>$result['status']?null:'rejected'),'sql'=>null));
         } catch (Throwable $error) { log_message('error','Vuca audit completion unavailable.'); }
         echo json_encode($result);
     }
 
     public function update_invoice()
     {
+        $this->beginAudit(__FUNCTION__);
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $consultingId = $this->input->post('id_invoicing');
-        if (!is_scalar($consultingId)) { echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.')); return; }
+        if (!is_scalar($consultingId)) {
+            echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.'));
+            $this->completeAudit('Update invoice gagal', 0, array('reason' => 'invalid_id', 'outcome' => 'rejected'));
+            return;
+        }
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$consultingId))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) {
             $service = new Invoice_consulting_service($this);
-            echo json_encode($service->save_invoice($this->input->post(), true));
+            $result = $service->save_invoice($this->input->post(), true);
+            echo json_encode($result);
+            $this->auditMutation('Menyimpan perubahan invoice konsultasi', $result, 'consulting', array('id_invoicing' => $consultingId));
             return;
         }
 
-        return $this->legacy_consulting_boundary('legacy_update_invoice','id_invoicing');
+        $this->legacy_consulting_boundary('legacy_update_invoice','id_invoicing');
+        $this->auditFinish('Update invoice tidak diproses');
     }
+
 
     private function legacy_update_invoice()
     {
@@ -805,6 +941,7 @@ class Invoicing extends Admin_Controller
                 'status' => 0,
                 'msg' => 'Invoice tidak dapat diupdate karena jurnal sudah diposting!'
             ]);
+            $this->completeAudit('Update invoice ditolak: jurnal sudah diposting', 0, array('id_invoicing' => $id, 'invoice_type' => 'legacy', 'reason' => 'journal_posted', 'outcome' => 'rejected'));
             return;
         }
 
@@ -812,6 +949,7 @@ class Invoicing extends Admin_Controller
 
         $valid = 1;
         $msg = '';
+        $auditReason = null;
         $update_invoice = $this->db->update('tr_invoicing', $arr_update, ['id' => $post['id_invoicing']]);
 
         $insert_jurnal = $this->db->insert_batch('tr_jurnal', $arr_insert_jurnal);
@@ -821,25 +959,34 @@ class Invoicing extends Admin_Controller
 
             $valid = 0;
             $msg = $this->db->error()['message'] ?: 'Gagal menghapus jurnal lama';
+            $auditReason = 'delete_failed';
         } else if (!$update_invoice) {
             $this->db->trans_rollback();
 
             $valid = 0;
             $msg = $this->db->error($update_invoice)['message'];
+            $auditReason = 'update_failed';
         } else if (!$insert_jurnal) {
             $this->db->trans_rollback();
 
             $valid = 0;
             $msg = $this->db->error($insert_jurnal)['message'];
+            $auditReason = 'insert_failed';
         } else {
             if ($this->db->trans_status() === false) {
                 $this->db->trans_rollback();
 
                 $valid = 0;
                 $msg = 'Please try again later !';
-            } else {
-                $this->db->trans_commit();
+                $auditReason = 'transaction_failed';
+            } elseif ($this->db->trans_commit() === false) {
+                // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+                $this->db->trans_rollback();
 
+                $valid = 0;
+                $msg = 'Please try again later !';
+                $auditReason = 'commit_failed';
+            } else {
                 $valid = 1;
                 $msg = 'Data has been updated !';
             }
@@ -849,6 +996,8 @@ class Invoicing extends Admin_Controller
             'status' => $valid,
             'msg' => $msg
         ]);
+        $this->completeAudit($valid ? 'Menyimpan perubahan invoice' : 'Menyimpan perubahan invoice gagal', $valid,
+            array('id_invoicing' => $id, 'invoice_type' => 'legacy', 'reason' => $valid ? null : $auditReason, 'outcome' => $valid ? 'committed' : 'rejected'));
     }
 
     public function update_invoice_vuca()
@@ -860,9 +1009,11 @@ class Invoicing extends Admin_Controller
 
     public function save_keterangan_print()
     {
+        $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $post['id']])->row();
@@ -876,9 +1027,17 @@ class Invoicing extends Admin_Controller
                 $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
 
                 $update_jurnal_company = $this->db->update('tr_jurnal', ['id_company' => $id_company, 'nm_company' => $nm_company], ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']]);
+                if ($update_jurnal_company === false) {
+                    $auditReason = 'update_failed';
+                    throw new Exception('Gagal memperbarui jurnal invoice.');
+                }
             }
 
             $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+            if ($update_inv === false) {
+                $auditReason = 'update_failed';
+                throw new Exception('Gagal menyimpan keterangan print.');
+            }
 
 
             // if ($this->db->trans_status() === false) {
@@ -893,7 +1052,11 @@ class Invoicing extends Admin_Controller
             //     $msg = 'Data has been updated !';
             // }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan data, silakan coba lagi.');
+            }
 
             http_response_code(200);
 
@@ -901,6 +1064,7 @@ class Invoicing extends Admin_Controller
                 'status' => 1,
                 'msg' => 'Data has been saved !'
             ]);
+            $this->completeAudit('Menyimpan keterangan print invoice', 1, array('id_invoicing' => $post['id'], 'invoice_type' => 'legacy', 'outcome' => 'saved'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -912,11 +1076,13 @@ class Invoicing extends Admin_Controller
             ];
 
             echo json_encode($response);
+            $this->completeAudit('Menyimpan keterangan print invoice gagal', 0, array('id_invoicing' => isset($post['id']) ? $post['id'] : null, 'invoice_type' => 'legacy', 'reason' => $auditReason, 'outcome' => 'failed'));
         }
     }
 
     public function save_keterangan_print_vuca()
     {
+        $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
 
         $this->db->trans_begin();
@@ -925,18 +1091,27 @@ class Invoicing extends Admin_Controller
         if (!$update_inv) {
             $this->db->trans_rollback();
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Menyimpan keterangan print invoice Vuca gagal', 0, array('id_invoicing' => $post['id'], 'invoice_type' => 'vuca', 'reason' => 'update_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
             exit;
         }
 
+        $auditReason = null;
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
+            $auditReason = 'transaction_failed';
+            $valid = 0;
+            $msg = 'Please try again later !';
+        } elseif ($this->db->trans_commit() === false) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+
+            $auditReason = 'commit_failed';
             $valid = 0;
             $msg = 'Please try again later !';
         } else {
-            $this->db->trans_commit();
-
             $valid = 1;
             $msg = 'Data has been updated !';
         }
@@ -945,13 +1120,17 @@ class Invoicing extends Admin_Controller
             'status' => $valid,
             'msg' => $msg
         ]);
+        $this->completeAudit($valid ? 'Menyimpan keterangan print invoice Vuca' : 'Menyimpan keterangan print invoice Vuca gagal', $valid,
+            array('id_invoicing' => $post['id'], 'invoice_type' => 'vuca', 'reason' => $valid ? null : $auditReason, 'outcome' => $valid ? 'saved' : 'failed'));
     }
 
     public function save_keterangan_print_non_kons()
     {
+        $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $post['id']])->row();
@@ -965,9 +1144,17 @@ class Invoicing extends Admin_Controller
                 $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
 
                 $update_jurnal_company = $this->db->update('tr_jurnal', ['id_company' => $id_company, 'nm_company' => $nm_company], ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']]);
+                if ($update_jurnal_company === false) {
+                    $auditReason = 'update_failed';
+                    throw new Exception('Gagal memperbarui jurnal invoice.');
+                }
             }
 
             $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+            if ($update_inv === false) {
+                $auditReason = 'update_failed';
+                throw new Exception('Gagal menyimpan keterangan print.');
+            }
 
 
             // if ($this->db->trans_status() === false) {
@@ -982,7 +1169,11 @@ class Invoicing extends Admin_Controller
             //     $msg = 'Data has been updated !';
             // }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan data, silakan coba lagi.');
+            }
 
             http_response_code(200);
 
@@ -990,6 +1181,7 @@ class Invoicing extends Admin_Controller
                 'status' => 1,
                 'msg' => 'Data has been saved !'
             ]);
+            $this->completeAudit('Menyimpan keterangan print invoice non konsultasi', 1, array('id_invoicing' => $post['id'], 'invoice_type' => 'non_kons', 'outcome' => 'saved'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -1001,14 +1193,17 @@ class Invoicing extends Admin_Controller
             ];
 
             echo json_encode($response);
+            $this->completeAudit('Menyimpan keterangan print invoice non konsultasi gagal', 0, array('id_invoicing' => isset($post['id']) ? $post['id'] : null, 'invoice_type' => 'non_kons', 'reason' => $auditReason, 'outcome' => 'failed'));
         }
     }
 
     public function save_keterangan_print_kwitansi()
     {
+        $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $post['id']])->row();
@@ -1022,11 +1217,23 @@ class Invoicing extends Admin_Controller
                 $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
 
                 $update_jurnal_company = $this->db->update('tr_jurnal', ['id_company' => $id_company, 'nm_company' => $nm_company], ['jenis_transaksi' => 'Invoicing', 'no_transaksi' => $post['id']]);
+                if ($update_jurnal_company === false) {
+                    $auditReason = 'update_failed';
+                    throw new Exception('Gagal memperbarui jurnal invoice.');
+                }
             }
 
             $update_inv = $this->db->update('tr_invoicing', ['print_keterangan' => $post['keterangan_print']], ['id' => $post['id']]);
+            if ($update_inv === false) {
+                $auditReason = 'update_failed';
+                throw new Exception('Gagal menyimpan keterangan print.');
+            }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan data, silakan coba lagi.');
+            }
 
             http_response_code(200);
 
@@ -1034,6 +1241,7 @@ class Invoicing extends Admin_Controller
                 'status' => 1,
                 'msg' => 'Data has been saved !'
             ]);
+            $this->completeAudit('Menyimpan keterangan print kwitansi', 1, array('id_invoicing' => $post['id'], 'invoice_type' => 'legacy', 'outcome' => 'saved'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -1045,11 +1253,13 @@ class Invoicing extends Admin_Controller
             ];
 
             echo json_encode($response);
+            $this->completeAudit('Menyimpan keterangan print kwitansi gagal', 0, array('id_invoicing' => isset($post['id']) ? $post['id'] : null, 'invoice_type' => 'legacy', 'reason' => $auditReason, 'outcome' => 'failed'));
         }
     }
 
     public function save_keterangan_print_kwitansi_vuca()
     {
+        $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
 
         $this->db->trans_begin();
@@ -1058,18 +1268,27 @@ class Invoicing extends Admin_Controller
         if (!$update_inv) {
             $this->db->trans_rollback();
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Menyimpan keterangan print kwitansi Vuca gagal', 0, array('id_invoicing' => $post['id'], 'invoice_type' => 'vuca', 'reason' => 'update_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
             exit;
         }
 
+        $auditReason = null;
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
 
+            $auditReason = 'transaction_failed';
+            $valid = 0;
+            $msg = 'Please try again later !';
+        } elseif ($this->db->trans_commit() === false) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+
+            $auditReason = 'commit_failed';
             $valid = 0;
             $msg = 'Please try again later !';
         } else {
-            $this->db->trans_commit();
-
             $valid = 1;
             $msg = 'Data has been updated !';
         }
@@ -1078,26 +1297,88 @@ class Invoicing extends Admin_Controller
             'status' => $valid,
             'msg' => $msg
         ]);
+        $this->completeAudit($valid ? 'Menyimpan keterangan print kwitansi Vuca' : 'Menyimpan keterangan print kwitansi Vuca gagal', $valid,
+            array('id_invoicing' => $post['id'], 'invoice_type' => 'vuca', 'reason' => $valid ? null : $auditReason, 'outcome' => $valid ? 'saved' : 'failed'));
     }
 
     public function get_data_spk()
     {
+        $this->beginAudit(__FUNCTION__);
         $this->Invoicing_model->get_data_spk();
+        $this->auditPage('Data SPK invoicing diambil', true);
+    }
+
+    private function invoiced_filters($src)
+    {
+        $pick = function ($k) use ($src) { $v = $src($k); return is_scalar($v) ? trim((string)$v) : ''; };
+        return ['tahun' => $pick('filter_tahun'), 'bulan' => $pick('filter_bulan'), 'company' => $pick('filter_company'),
+            'ppn' => $pick('filter_ppn'), 'search' => $pick('filter_search')];
+    }
+
+    /** Card Total Invoiced (UMKM-FR-07): query yang sama dengan ekspor. */
+    public function invoiced_summary()
+    {
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
+        $rows = $this->Invoicing_model->invoiced_rows($this->invoiced_filters(function ($k) { return $this->input->post($k); }));
+        $t = $this->Invoicing_model->invoiced_totals($rows);
+        $this->output->set_content_type('application/json')->set_output(json_encode($t));
+        $this->completeAudit('Ringkasan invoiced diambil', 1, array('row_count' => $t['count'], 'outcome' => 'rendered'));
+    }
+
+    /** Ekspor .xlsx tab Invoiced; baris Total memakai rumus SUM. Tanpa baris -> ditolak. */
+    public function download_invoiced()
+    {
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
+        $f = $this->invoiced_filters(function ($k) { return $this->input->get($k); });
+        $rows = $this->Invoicing_model->invoiced_rows($f);
+        if (!$rows) {
+            $this->completeAudit('Ekspor invoiced ditolak: tidak ada baris', 0, array('row_count' => 0, 'reason' => 'empty', 'outcome' => 'rejected'));
+            show_error('Tidak ada invoice pada filter ini, ekspor dibatalkan.', 404);
+            return;
+        }
+        $out = [];
+        foreach ($rows as $item) {
+            $m = $this->Invoicing_model->money_for($item);
+            $date = (!empty($item->tanggal_invoice) && strpos((string)$item->tanggal_invoice, '0000-00-00') !== 0) ? substr((string)$item->tanggal_invoice, 0, 10) : '';
+            $out[] = ['no_invoice' => (string)$item->no_invoice, 'tanggal' => $date, 'no_spk' => (string)$item->id_spk_penawaran, 'no_po' => (string)$item->no_po,
+                'no_faktur' => (string)$item->no_faktur, 'customer' => (string)$item->nm_customer, 'project' => (string)$item->nm_project, 'leader' => (string)$item->nm_project_leader,
+                'sales_name' => (string)$item->nm_sales, 'company' => (string)$item->company_name, 'top' => (string)$item->term_payment, 'persen_top' => (string)$item->persen_payment,
+                'tax_label' => $this->Invoicing_model->tax_label_for($item->tax_treatment ?? ''), 'sales' => $m['sales'] ?? null, 'dpp' => $m === null ? null : Invoice_calculation::cents(number_format((float)$item->dpp_nilai_lain, 2, '.', '')),
+                'ppn' => $m['ppn'] ?? null, 'gross' => $m['gross'] ?? null, 'saldo' => $m['saldo'] ?? null, 'status' => 'Invoiced'];
+        }
+        $label = function ($v, $all) { return $v === '' ? $all : $v; };
+        $bulanNama = Xlsx_export::MONTHS_ID;
+        $bulan = ($f['bulan'] !== '' && isset($bulanNama[(int)$f['bulan']])) ? $bulanNama[(int)$f['bulan']] : 'Semua bulan';
+        $text = 'Tahun: ' . ($f['tahun'] === 'all' ? 'Semua' : ($f['tahun'] === '' ? date('Y') : $f['tahun'])) . ' | Bulan: ' . $bulan . ' | Company: ' . $label($f['company'], 'Semua')
+            . ' | Perlakuan PPN: ' . ($f['ppn'] === '' ? 'Semua' : $this->Invoicing_model->tax_label_for($f['ppn'])) . ($f['search'] !== '' ? ' | Cari: ' . $f['search'] : '');
+        $slug = function ($v) { return $v === '' ? 'Semua' : preg_replace('/[^A-Za-z0-9]+/', '', $v); };
+        $name = 'Invoiced_' . $slug($f['tahun'] === 'all' ? 'Semua' : $f['tahun']) . '_' . $slug($bulan === 'Semua bulan' ? '' : $bulan) . '_' . $slug($f['company']) . '_' . $slug($f['ppn']) . '.xlsx';
+        $this->completeAudit('Mengunduh excel invoiced', 1, array('row_count' => count($out), 'outcome' => 'generated'));
+        require_once APPPATH . 'libraries/Xlsx_export.php';
+        Xlsx_export::download(Xlsx_export::invoiced_spec($out, $text, $name), $name);
     }
 
     public function download_excel()
     {
+        $this->beginAudit(__FUNCTION__);
         $filter_status = $this->input->get('filter_status');
+        $filter_tahun = $this->input->get('filter_tahun');
+        $filter_bulan = $this->input->get('filter_bulan');
+        $filter_company = $this->input->get('filter_company');
 
         if ($this->db->field_exists('consulting_version','tr_invoicing')) {
             $this->db->select('f.consulting_version,f.tax_treatment,f.total_nominal,f.dpp_nilai_lain,f.ppn_jurnal,f.tagihan_ppn_jurnal,f.total_akhir_jurnal,f.saldo_piutang');
         }
-        $this->db->select('a.*, e.nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice');
+        // Company mengikuti daftar: kons_tr_penawaran.company, cadangan kons_tr_spk_penawaran.id_company.
+        $this->db->select('a.*, COALESCE(e.nm_company, g.nm_company) as nm_company, c.nm_customer, d.nm_paket as nm_project, c.nm_project_leader, c.nm_sales, f.no_invoice, f.tanggal_invoice');
         $this->db->from('kons_tr_plan_tagih_detail a');
         $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
         $this->db->join(DBCNL . '.kons_tr_spk_penawaran c', 'c.id_spk_penawaran = a.id_spk_penawaran');
         $this->db->join(DBCNL . '.kons_master_konsultasi_header d', 'd.id_konsultasi_h = c.id_project');
         $this->db->join(DBCNL . '.kons_tr_company e', 'e.id = b.company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company g', 'g.id = c.id_company', 'left');
         $this->db->join('tr_invoicing f', 'f.id_detail_plan_tagih = a.id', 'left');
         $this->db->where('a.status_terakhir', '1');
 
@@ -1106,11 +1387,23 @@ class Invoicing extends Admin_Controller
         } elseif ($filter_status == 'invoiced') {
             $this->db->where('a.sts_invoice', '1');
         }
+        // Filter opsional (UI selalu mengirim tahun); tanpa filter, ekspor lama tidak berubah. Nilai tidak valid diabaikan.
+        if (is_scalar($filter_tahun) && preg_match('/^\d{4}$/', (string)$filter_tahun)) {
+            $this->db->where("(IF(a.sts_invoice = '1', YEAR(f.tanggal_invoice), YEAR(a.tgl_aktual_plan_tagih)) = " . (int)$filter_tahun . ")", null, false);
+        }
+        if (is_scalar($filter_bulan) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$filter_bulan)) {
+            $this->db->where('MONTH(f.tanggal_invoice) =', (int)$filter_bulan, false);
+        }
+        if (is_scalar($filter_company) && preg_match('/^\d{1,10}$/', (string)$filter_company)) {
+            $this->db->where('COALESCE(e.id, g.id) =', (int)$filter_company, false);
+        }
 
         $this->db->group_by('a.id');
         $this->db->order_by('a.id', 'desc');
         $get_data = $this->db->get()->result();
 
+        // Dicatat sebelum view karena view langsung mengirim header dan isi file.
+        $this->completeAudit('Mengunduh excel invoicing', 1, array('filter_status' => $filter_status, 'row_count' => is_array($get_data) ? count($get_data) : 0, 'outcome' => 'generated'));
         $this->load->view('download_excel', ['list_data' => $get_data]);
     }
 
@@ -1180,6 +1473,7 @@ class Invoicing extends Admin_Controller
 
     public function get_data_quotation_non_konsultasi()
     {
+        $this->beginAudit(__FUNCTION__);
         $draw = $this->input->post('draw', true);
         $length = $this->input->post('length', true);
         $start = $this->input->post('start', true);
@@ -1261,11 +1555,13 @@ class Invoicing extends Admin_Controller
         ];
 
         echo json_encode($response);
+        $this->completeAudit('Data invoice non konsultasi diambil', 1, array('invoice_type' => 'non_kons', 'row_count' => count($hasil), 'outcome' => 'rendered'));
     }
 
     public function create_invoice_non_konsultasi($id_penawaran)
     {
-        $this->auth->restrict($this->addPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->addPermission);
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
         $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
@@ -1288,29 +1584,34 @@ class Invoicing extends Admin_Controller
         ];
 
         if (empty($get_penawaran)) {
+            $this->auditPage('Membuka form buat invoice non konsultasi', false, 'non_kons', array('id_penawaran' => $id_penawaran), 'not_found');
             redirect('invoicing');
         } else {
             $this->template->title('Create Invoice Non Konsultasi');
             $this->template->set($data);
             $this->template->render('add_invoice_non_konsultasi');
+            $this->auditPage('Membuka form buat invoice non konsultasi', true, 'non_kons', array('id_penawaran' => $id_penawaran));
         }
     }
 
     public function edit_invoice_non_kons($id)
     {
-        $this->auth->restrict($this->managePermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->managePermission);
 
         $data_invoicing = $this->Invoicing_model->get_invoice($id);
 
         // IDOR prevention: verify invoice exists and references a valid penawaran
         if (empty($data_invoicing)) {
             $this->session->set_flashdata('error', 'Data invoice tidak ditemukan.');
+            $this->auditPage('Membuka form edit invoice non konsultasi', false, 'non_kons', array('id_invoicing' => $id), 'not_found');
             redirect('invoicing');
         }
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($data_invoicing->id_penawaran);
         if (empty($get_penawaran)) {
             $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->auditPage('Membuka form edit invoice non konsultasi', false, 'non_kons', array('id_invoicing' => $id), 'not_found');
             redirect('invoicing');
         }
 
@@ -1324,10 +1625,12 @@ class Invoicing extends Admin_Controller
         $this->template->title('Edit Invoice Non Konsultasi');
         $this->template->set($data);
         $this->template->render('edit_invoice_non_konsultasi');
+        $this->auditPage('Membuka form edit invoice non konsultasi', true, 'non_kons', array('id_invoicing' => $id));
     }
 
     public function view_invoicing_non_kons($id_invoicing)
     {
+        $this->beginAudit(__FUNCTION__);
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -1350,29 +1653,35 @@ class Invoicing extends Admin_Controller
         ];
 
         if (empty($get_penawaran) || empty($get_invoicing)) {
+            $this->auditPage('Melihat invoice non konsultasi', false, 'non_kons', array('id_invoicing' => $id_invoicing), 'not_found');
             redirect('invoicing');
         } else {
             $this->template->title('View Invoice Non Konsultasi');
             $this->template->set($data);
             $this->template->render('view_invoice_non_konsultasi');
+            $this->auditPage('Melihat invoice non konsultasi', true, 'non_kons', array('id_invoicing' => $id_invoicing));
         }
     }
 
 
     public function save_invoice_non_konsultasi()
     {
-        return $this->legacy_consulting_boundary('legacy_save_invoice_non_konsultasi', null);
+        $this->beginAudit(__FUNCTION__);
+        $this->legacy_consulting_boundary('legacy_save_invoice_non_konsultasi', null);
+        $this->auditFinish('Simpan invoice non konsultasi tidak diproses');
     }
+
 
     private function legacy_save_invoice_non_konsultasi()
     {
-        $this->auth->restrict($this->addPermission);
+        $this->auditRestrict($this->addPermission);
 
         $id_penawaran = $this->input->post('id_penawaran', true);
 
         // Validasi duplikat manual dihapus karena auto-generate
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
@@ -1419,6 +1728,9 @@ class Invoicing extends Admin_Controller
                     'status' => 0,
                     'msg' => 'Total DPP melebihi outstanding invoice'
                 ]);
+                // Transaksi sebelumnya dibiarkan terbuka di jalur ini; tidak ada data yang ditulis.
+                $this->db->trans_rollback();
+                $this->completeAudit('Simpan invoice non konsultasi ditolak: melebihi outstanding', 0, array('id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'reason' => 'over_outstanding', 'outcome' => 'rejected'));
                 return;
             }
 
@@ -1558,7 +1870,11 @@ class Invoicing extends Admin_Controller
                 throw new Exception('Gagal insert batch jurnal: ' . $error['message']);
             }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan data, silakan coba lagi.');
+            }
             $valid = 1;
             $msg = 'Data has been saved !';
 
@@ -1567,6 +1883,7 @@ class Invoicing extends Admin_Controller
                 'status' => $valid,
                 'msg' => $msg
             ]);
+            $this->completeAudit('Menyimpan invoice non konsultasi', 1, array('id_invoicing' => $id, 'id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'outcome' => 'committed'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
             $response = [
@@ -1576,18 +1893,22 @@ class Invoicing extends Admin_Controller
 
             http_response_code(500);
             echo json_encode($response);
+            $this->completeAudit('Menyimpan invoice non konsultasi gagal', 0, array('id_invoicing' => isset($id) ? $id : null, 'id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'reason' => $auditReason, 'outcome' => 'rejected'));
         }
     }
 
 
     public function update_invoice_non_konsultasi()
     {
-        return $this->legacy_consulting_boundary('legacy_update_invoice_non_konsultasi', 'id');
+        $this->beginAudit(__FUNCTION__);
+        $this->legacy_consulting_boundary('legacy_update_invoice_non_konsultasi', 'id');
+        $this->auditFinish('Update invoice non konsultasi tidak diproses');
     }
+
 
     private function legacy_update_invoice_non_konsultasi()
     {
-        $this->auth->restrict($this->managePermission);
+        $this->auditRestrict($this->managePermission);
 
         $id = $this->input->post('id', true);
         $id_penawaran = $this->input->post('id_penawaran', true);
@@ -1596,6 +1917,7 @@ class Invoicing extends Admin_Controller
         $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $id])->row();
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             // Server-side DPP calculation from submitted items
@@ -1739,6 +2061,7 @@ class Invoicing extends Admin_Controller
 
             $check_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing', 'sts' => '1'])->num_rows();
             if ($check_jurnal > 0) {
+                $auditReason = 'journal_posted';
                 throw new Exception('Invoice tidak dapat diupdate karena jurnal sudah diposting!');
             }
 
@@ -1763,10 +2086,15 @@ class Invoicing extends Admin_Controller
                 throw new Exception('Gagal insert batch jurnal: ' . $error['message']);
             }
             if ($this->db->trans_status() === FALSE) {
+                $auditReason = 'transaction_failed';
                 throw new Exception("Transaksi database gagal (status false).");
             }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan data, silakan coba lagi.');
+            }
             $valid = 1;
             $msg = 'Data has been updated!';
 
@@ -1775,6 +2103,7 @@ class Invoicing extends Admin_Controller
                 'msg' => $msg
             ];
             echo json_encode($response);
+            $this->completeAudit('Menyimpan perubahan invoice non konsultasi', 1, array('id_invoicing' => $id, 'id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'outcome' => 'committed'));
         } catch (Exception $e) {
             $this->db->trans_rollback();
             $response = [
@@ -1784,12 +2113,14 @@ class Invoicing extends Admin_Controller
 
             http_response_code(500);
             echo json_encode($response);
+            $this->completeAudit('Menyimpan perubahan invoice non konsultasi gagal', 0, array('id_invoicing' => $id, 'id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'reason' => $auditReason, 'outcome' => 'rejected'));
         }
     }
 
     public function list_penawaran_non_kons()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $list_penawaran_non_kons = $this->Invoicing_model->get_list_penawaran_non_kons();
 
@@ -1831,11 +2162,13 @@ class Invoicing extends Admin_Controller
         $this->template->title('List Penawaran Non Konsultasi');
         $this->template->set($data);
         $this->template->render('list_penawaran_non_kons');
+        $this->auditPage('Membuka daftar penawaran non konsultasi', true, 'non_kons', array('row_count' => is_array($list_penawaran_non_kons) ? count($list_penawaran_non_kons) : 0));
     }
 
     public function hitung_jurnal()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $get = $this->input->get();
 
@@ -1986,10 +2319,12 @@ class Invoicing extends Admin_Controller
         ];
 
         echo json_encode($response);
+        $this->auditPage('Menghitung jurnal invoice non konsultasi', true, 'non_kons');
     }
 
     public function change_jurnal_invoice()
     {
+        $this->beginAudit(__FUNCTION__);
         $no = $this->input->get('no', true);
         $no_coa = $this->input->get('no_coa', true);
 
@@ -2014,30 +2349,35 @@ class Invoicing extends Admin_Controller
             echo json_encode([
                 'hasil' => $hasil_jurnal
             ]);
+            $this->auditPage('Mengganti COA jurnal invoice', true, 'non_kons');
         } catch (Exception $e) {
             http_response_code(500);
 
             echo json_encode([
                 'msg' => $e->getMessage()
             ]);
+            $this->auditPage('Mengganti COA jurnal invoice', false, 'non_kons', array(), 'not_found');
         }
     }
 
     public function view_invoice_non_kons($id)
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->viewPermission);
 
         $data_invoice = $this->Invoicing_model->get_invoice($id);
 
         // IDOR prevention: verify invoice exists and references a valid penawaran
         if (empty($data_invoice)) {
             $this->session->set_flashdata('error', 'Data invoice tidak ditemukan.');
+            $this->auditPage('Melihat invoice non konsultasi', false, 'non_kons', array('id_invoicing' => $id), 'not_found');
             redirect('invoicing');
         }
 
         $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($data_invoice->id_penawaran);
         if (empty($get_penawaran)) {
             $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->auditPage('Melihat invoice non konsultasi', false, 'non_kons', array('id_invoicing' => $id), 'not_found');
             redirect('invoicing');
         }
 
@@ -2055,27 +2395,39 @@ class Invoicing extends Admin_Controller
         $this->template->title('View Invoice Non Konsultasi');
         $this->template->set($data);
         $this->template->render('view_invoice_non_konsultasi');
+        $this->auditPage('Melihat invoice non konsultasi', true, 'non_kons', array('id_invoicing' => $id));
     }
 
     public function save_close_invoice()
     {
-        $this->auth->restrict($this->managePermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->managePermission);
 
         $id_invoicing   = $this->input->post('id_invoicing', true);
         $alasan_closing = $this->input->post('alasan_closing', true);
 
         // Validasi input awal
         if (empty($id_invoicing)) {
+            $this->completeAudit('Menutup invoice ditolak', 0, array('reason' => 'invalid_id', 'outcome' => 'rejected'));
             return $this->_send_response(400, 'Data invoice tidak ditemukan. Silakan muat ulang halaman.');
         }
 
         if (empty($alasan_closing)) {
+            $this->completeAudit('Menutup invoice ditolak', 0, array('id_invoicing' => $id_invoicing, 'reason' => 'reason_required', 'outcome' => 'rejected'));
             return $this->_send_response(400, 'Mohon isi alasan penutupan invoice terlebih dahulu.');
         }
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
+            // Close hanya bila lunas: sisa piutang 0 persis (INV-FR-10)
+            $inv = $this->db->query('SELECT saldo_piutang FROM tr_invoicing WHERE id = ? FOR UPDATE', [$id_invoicing])->row();
+            if ($inv && (int) round($inv->saldo_piutang * 100) !== 0) {
+                $auditReason = 'not_settled';
+                throw new Exception('Invoice belum lunas, tidak bisa di-close. Selesaikan sisa piutang di Penerimaan Uang dulu.');
+            }
+
             $arr_update = [
                 'sts_close'    => '1',
                 'close_by'     => $this->auth->user_id(),
@@ -2083,20 +2435,29 @@ class Invoicing extends Admin_Controller
                 'close_reason' => $alasan_closing
             ];
 
+            // Cek lunas diulang di dalam UPDATE supaya aman dari penerimaan yang masuk bersamaan
             $this->db->where('id', $id_invoicing);
+            $this->db->where('ROUND(saldo_piutang * 100) = 0', null, false);
             $this->db->update('tr_invoicing', $arr_update);
 
             // Cek apakah ada baris yang benar-benar terupdate
             if ($this->db->affected_rows() === 0) {
-                throw new Exception('Gagal memperbarui status. Invoice mungkin sudah ditutup sebelumnya.');
+                $auditReason = 'no_rows_updated';
+                throw new Exception('Gagal memperbarui status. Invoice mungkin sudah ditutup atau belum lunas.');
             }
 
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan penutupan invoice. Silakan coba lagi.');
+            }
+            $this->completeAudit('Menutup invoice', 1, array('id_invoicing' => $id_invoicing, 'outcome' => 'closed'));
             return $this->_send_response(200, 'Invoice telah berhasil ditutup dan tersimpan di sistem.');
         } catch (Exception $e) {
             $this->db->trans_rollback();
             // Ambil pesan dari exception atau pakai pesan default jika terjadi error database
             $msg = $e->getMessage() ?: 'Terjadi kendala teknis saat memproses permintaan Anda. Silakan coba beberapa saat lagi.';
+            $this->completeAudit('Menutup invoice gagal', 0, array('id_invoicing' => $id_invoicing, 'reason' => $auditReason, 'outcome' => 'rejected'));
             return $this->_send_response(500, $msg);
         }
     }
@@ -2105,17 +2466,20 @@ class Invoicing extends Admin_Controller
 
     public function close_penawaran_non_kons()
     {
-        $this->auth->restrict($this->managePermission);
+        $this->beginAudit(__FUNCTION__);
+        $this->auditRestrict($this->managePermission);
 
         // 1. Ambil data input
         $id_penawaran = $this->input->post('id_penawaran', true);
 
         // Validasi awal: pastiin ID gak kosong
         if (empty($id_penawaran)) {
+            $this->completeAudit('Menutup penawaran non konsultasi ditolak', 0, array('reason' => 'invalid_id', 'outcome' => 'rejected'));
             return $this->_send_response(400, 'ID Penawaran tidak valid atau tidak terbaca.');
         }
 
         $this->db->trans_begin();
+        $auditReason = 'failed';
 
         try {
             // 2. Data yang mau diupdate
@@ -2132,16 +2496,23 @@ class Invoicing extends Admin_Controller
             // Cek apakah ada perubahan (biar gak update yang sudah diclose)
             if ($this->db->affected_rows() === 0) {
                 // Bisa jadi karena ID salah atau status memang sudah '1'
+                $auditReason = 'no_rows_updated';
                 throw new Exception('Data tidak ditemukan atau penawaran ini sebenarnya sudah ditutup.');
             }
 
             // 4. Jika lancar, simpan permanen
-            $this->db->trans_commit();
+            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
+            if ($this->db->trans_commit() === false) {
+                $auditReason = 'commit_failed';
+                throw new Exception('Gagal menyimpan penutupan penawaran. Silakan coba lagi.');
+            }
+            $this->completeAudit('Menutup penawaran non konsultasi', 1, array('id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'outcome' => 'closed'));
             return $this->_send_response(200, 'Penawaran berhasil ditutup dengan sukses.');
         } catch (Exception $e) {
             // 5. Jika ada error, batalin semua perubahan database
             $this->db->trans_rollback();
             $msg = $e->getMessage() ?: 'Terjadi kesalahan sistem saat menutup penawaran.';
+            $this->completeAudit('Menutup penawaran non konsultasi gagal', 0, array('id_penawaran' => $id_penawaran, 'invoice_type' => 'non_kons', 'reason' => $auditReason, 'outcome' => 'rejected'));
             return $this->_send_response(500, $msg);
         }
     }

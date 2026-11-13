@@ -114,6 +114,7 @@ class Consulting_posting
             if(!$header)throw new RuntimeException('Penerimaan bukan batch konsultasi baru.');
             $rows=$s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Penerimaan Piutang' ORDER BY id FOR UPDATE",array($header['no_surat']));
             $details=$s->rows('SELECT * FROM tr_penerimaan_piutang_detail WHERE id_header=? ORDER BY id FOR UPDATE',array($header['no_surat']));
+            foreach($rows as $row)if(trim((string)$row['coa'])==='')throw new RuntimeException('Akun '.$row['nm_coa'].' belum memiliki nomor COA; lengkapi COA sebelum posting.');
             $expected=array();$actual=array();
             foreach($details as $detail){
                 $snapshot=json_decode($detail['consulting_snapshot']??'',true);

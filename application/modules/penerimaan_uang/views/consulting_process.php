@@ -6,6 +6,14 @@ $escape = function ($v) {
 $availableCents = $allocation['capacity'] - $allocation['used'];
 $availableDecimal = $availableCents / 100;
 $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
+$hasUmkm = false; $umkmMissingCoa = array();
+foreach ($rows as $umkmRow) {
+    if (($umkmRow['tax_treatment'] ?? '') !== 'UMKM') continue;
+    $hasUmkm = true;
+    foreach (array('pph_final_expense', 'pph_final_payable') as $umkmKey) {
+        if (empty($umkmRow['accounts'][$umkmKey]['code'])) $umkmMissingCoa[$umkmKey] = $umkmRow['accounts'][$umkmKey]['name'];
+    }
+}
 ?>
 
 <style>
@@ -34,6 +42,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
 <div class="mk" id="consulting-receipt-container">
     <input type="hidden" name="id_customer" value="<?= $escape($rows[0]['invoice']['id_customer']) ?>">
     <input type="hidden" name="id_company" value="<?= $escape($rows[0]['owner']['id']) ?>">
+    <?php if ($umkmMissingCoa): ?><div class="alert alert-warning" data-umkm-coa-warning>Akun <?= $escape(implode(' dan ', $umkmMissingCoa)) ?> belum memiliki nomor COA di master. Penerimaan tetap bisa disimpan sebagai jurnal draf, tetapi posting ke accounting akan ditolak sampai nomor COA diisi.</div><?php endif; ?>
     <?php if (!empty($deposit_error)): ?><div class="alert alert-warning"><?= $escape($deposit_error) ?> Penerimaan tanpa deposit tetap dapat diproses.</div><?php endif; ?>
     <input type="hidden" name="no_inv" value="<?= count($rows) ?>">
     <input type="hidden" name="id_alokasi" value="<?= $escape($id_alokasi) ?>">
@@ -131,9 +140,9 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                         <th class="r" style="width: 100px;">DPP</th>
                         <th class="r" style="width: 90px;">PPN</th>
                         <th class="r" style="width: 120px;">
-                            PPH 23
+                            PPH 23<?= $hasUmkm ? ' / PPh Final' : '' ?>
                             <?php if ($choice === 'Y') : ?>
-                                <br><small class="muted font-normal">default 2% Penjualan, bisa diedit</small>
+                                <br><small class="muted font-normal">default 2% Penjualan<?= $hasUmkm ? ' (UMKM 0,5%)' : '' ?>, bisa diedit</small>
                             <?php endif; ?>
                         </th>
                         <th class="r" style="width: 115px;">Total Tagihan<br>(Penjualan + PPN)</th>
@@ -197,6 +206,11 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                 <?php else : ?>
                                     <input type="text" class="num cell-in" readonly value="0.00">
                                     <input type="hidden" name="pph_actual_<?= $n ?>" value="0.00">
+                                <?php endif; ?>
+                                <?php if ($taxCode === 'UMKM') : ?>
+                                    <div class="muted small" data-umkm-pph-note="<?= $n ?>" style="font-size: 12px; margin-top: 2px; white-space: nowrap;">
+                                        <?= $choice === 'Y' ? 'PPh Final 0,5% dipotong customer' : 'PPh Final 0,5% setor sendiri: ' . mk_en($context['remaining_pph'] / 100) ?>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <td class="r"><?= mk_en($tax['tagihan'] / 100) ?></td>
@@ -342,6 +356,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                                 'tagihan' => $r['tax_calc']['tagihan'],
                                 'default_pph' => $r['default_pph'],
                                 'remaining_pph' => $r['remaining_pph'],
+                                'pph_label' => $r['pph_label'] ?? 'PPh 23',
                                 'spk' => $r['spk'] ?? '',
                                 'owner' => $r['owner']['nm_company'],
                                 'accounts' => $r['accounts'],
@@ -436,10 +451,10 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                     errors.push('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan pada ' + meta.invoice + '.');
                 }
                 if (pph > meta.remaining_pph) {
-                    errors.push('PPh 23 melebihi sisa batas 2% Penjualan invoice ' + meta.invoice + '.');
+                    errors.push(meta.tax_treatment === 'UMKM' ? 'PPh Final 0,5% melebihi sisa batas Penjualan invoice ' + meta.invoice + '.' : 'PPh 23 melebihi sisa batas 2% Penjualan invoice ' + meta.invoice + '.');
                 }
                 if (pph > piutang) {
-                    errors.push('PPh 23 ' + meta.invoice + ' melebihi piutang dagang invoice.');
+                    errors.push(meta.pph_label + ' ' + meta.invoice + ' melebihi piutang dagang invoice.');
                 }
                 if (sisa > piutang) {
                     errors.push('Sisa piutang melebihi piutang dagang invoice ' + meta.invoice + '.');
@@ -484,7 +499,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                 totalBankDebit += bankCash;
 
                 // Build journal lines
-                var sfx = ' - ' + meta.invoice + (meta.spk ? ' - ' + meta.spk : '') + (meta.tax_treatment === 'KB' ? ' - Kawasan Berikat' : '');
+                var sfx = ' - ' + meta.invoice + (meta.spk ? ' - ' + meta.spk : '') + ({KB: ' - Kawasan Berikat', UMKM: ' - UMKM Non-PKP'}[meta.tax_treatment] || '');
 
                 if (isDepositMode) {
                     // Jurnal Kwitansi Deposit:
@@ -537,14 +552,17 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                             cr: 0
                         });
                     }
-                    if (pph > 0) {
+                    // UMKM: PPh Final dipotong -> Beban PPh Final (D); setor sendiri -> Beban (D) / Hutang PPh Final (K) = sisa batas 0,5%.
+                    var umkmSelf = (meta.tax_treatment === 'UMKM' && choice === 'N') ? meta.remaining_pph : 0;
+                    var pphAcc = meta.tax_treatment === 'UMKM' ? meta.accounts.pph_final_expense : meta.accounts.pph;
+                    if (pph + umkmSelf > 0) {
                         journals.push({
                             d: meta.transDate,
-                            coa: meta.accounts.pph.code,
+                            coa: pphAcc.code,
                             co: meta.owner,
-                            acc: meta.accounts.pph.name,
-                            desc: meta.accounts.pph.name + sfx,
-                            dr: pph,
+                            acc: pphAcc.name,
+                            desc: pphAcc.name + sfx,
+                            dr: pph + umkmSelf,
                             cr: 0
                         });
                     }
@@ -611,6 +629,17 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                             cr: lebih
                         });
                     }
+                    if (umkmSelf > 0) {
+                        journals.push({
+                            d: meta.transDate,
+                            coa: meta.accounts.pph_final_payable.code,
+                            co: meta.owner,
+                            acc: meta.accounts.pph_final_payable.name,
+                            desc: meta.accounts.pph_final_payable.name + sfx,
+                            dr: 0,
+                            cr: umkmSelf
+                        });
+                    }
                 }
             }
 
@@ -645,7 +674,7 @@ $isDeposit = (($receipt_kind ?? 'invoice') === 'deposit');
                     'Uang masuk melebihi nilai kwitansi sebesar ' + fmtMoney(-kontrol) + '. Kwitansi deposit tidak punya Lebih Bayar: periksa kwitansi yang dicentang, atau pecah transfernya di Alokasi.');
             } else if (kontrol !== 0) {
                 if (kontrol > 0) {
-                    errors.push('Masih ada selisih kurang ' + fmtMoney(kontrol) + '. Alokasikan ke PPh 23, Biaya Admin, atau Sisa Piutang pada invoice yang sesuai' + (depositChoice === 'Y' ? ', atau ubah Nominal Deposit Dipakai di form (klik Batal)' : '') + '.');
+                    errors.push('Masih ada selisih kurang ' + fmtMoney(kontrol) + '. Alokasikan ke PPh 23/PPh Final, Biaya Admin, atau Sisa Piutang pada invoice yang sesuai' + (depositChoice === 'Y' ? ', atau ubah Nominal Deposit Dipakai di form (klik Batal)' : '') + '.');
                 } else {
                     errors.push('Ada kelebihan ' + fmtMoney(-kontrol) + '. Alokasikan ke Lebih Bayar (masuk ke saldo deposit customer).');
                 }

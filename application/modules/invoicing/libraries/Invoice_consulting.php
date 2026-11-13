@@ -35,13 +35,25 @@ class Invoice_consulting
         return (string)($invoice['tipe_invoice'] ?? '0') === '1' || ($companyIsVuca && !self::is_new($invoice));
     }
 
+    public static function tax_treatments()
+    {
+        return array('PKP'=>'PKP', 'WAPU'=>'WAPU', 'KB'=>'Kawasan Berikat', 'UMKM'=>'UMKM Non-PKP');
+    }
+
+    /** Akhiran deskripsi jurnal; hanya KB dan UMKM yang diberi penanda. */
+    public static function tax_suffix($type)
+    {
+        return is_string($type) && in_array($type, array('KB','UMKM'), true) ? ' - ' . self::tax_treatments()[$type] : '';
+    }
+
     public static function totals($amount, $type)
     {
-        if (!is_string($type) || !in_array($type, array('PKP','WAPU','KB'), true)) throw new InvalidArgumentException('Perlakuan PPN wajib dipilih.');
+        if (!is_string($type) || !isset(self::tax_treatments()[$type])) throw new InvalidArgumentException('Perlakuan PPN wajib dipilih.');
         $sales = Invoice_calculation::cents($amount);
         if ($sales <= 0 || $sales > 999999999999999) throw new InvalidArgumentException('Nominal TOP tidak valid.');
         $other = Invoice_calculation::ratio($sales, 11, 12);
-        $vat = Invoice_calculation::ratio($other, 12, 100);
+        // UMKM Non-PKP tidak memungut PPN: DPP tetap dihitung, PPN 0, tagihan = piutang = penjualan.
+        $vat = $type === 'UMKM' ? 0 : Invoice_calculation::ratio($other, 12, 100);
         return array('sales'=>$sales, 'other'=>$other, 'ppn'=>$vat, 'gross'=>$sales+$vat,
             'receivable'=>$type === 'PKP' ? $sales+$vat : $sales, 'type'=>$type);
     }
@@ -70,7 +82,7 @@ class Invoice_consulting
             if (empty($accounts[$line[0]]['code']) || empty($accounts[$line[0]]['name'])) throw new RuntimeException('Mapping COA belum lengkap.');
             $account = $accounts[$line[0]];
             $rows[] = array('coa'=>$account['code'], 'name'=>$account['name'], 'debit'=>$line[1], 'credit'=>$line[2],
-                'description'=>$account['name'].' - '.$invoiceNo.' - '.$spkNo.($t['type']==='KB' ? ' - Kawasan Berikat' : ''));
+                'description'=>$account['name'].' - '.$invoiceNo.' - '.$spkNo.self::tax_suffix($t['type']));
         }
         return $rows;
     }
@@ -103,26 +115,34 @@ class Invoice_consulting
             $lebih = (int)($snapshot['lebih'] ?? 0);
             if (!isset($snapshot['balance'], $snapshot['sisa']) || $snapshot['balance'] - $snapshot['sisa'] !== $snapshot['reduction']
                 || $snapshot['cash'] + $snapshot['pph'] + $snapshot['admin'] + $dep !== $snapshot['reduction'] + $lebih) throw new RuntimeException('Snapshot pelunasan piutang tidak konsisten.');
+            // UMKM Non-PKP: PPh Final 0,5% dipotong customer -> Beban PPh Final (D); setor sendiri -> Beban (D) / Hutang PPh Final (K).
+            // Setor sendiri tidak mengurangi piutang, jadi tidak ikut kontrol cash+pph+admin+dep = reduction+lebih.
+            $umkm = ($snapshot['tax_treatment'] ?? '') === 'UMKM';
+            $self = $snapshot['pph_final_self'] ?? 0;
+            if (!is_int($self) || $self < 0 || ($self > 0 && !$umkm) || ($self > 0 && $snapshot['pph'] > 0)) throw new RuntimeException('Snapshot PPh Final tidak valid.');
             $entries = array(
                 array('bank', max(0, $snapshot['cash']), max(0, -$snapshot['cash'])),
-                array('pph', $snapshot['pph'], 0),
+                $umkm ? array('pph_final_expense', $snapshot['pph'] + $self, 0) : array('pph', $snapshot['pph'], 0),
                 array('admin', $snapshot['admin'], 0),
                 array('deposit', $dep, $lebih),
                 array('receivable', 0, $snapshot['balance']),
-                array('receivable', $snapshot['sisa'], 0)
+                array('receivable', $snapshot['sisa'], 0),
+                array('pph_final_payable', 0, $self)
             );
         } else {
             $entries = array(array('bank',$snapshot['cash'],0),array('admin',$snapshot['admin'],0),array('pph',$snapshot['pph'],$snapshot['adjustment']),array('receivable',0,$snapshot['reduction']));
         }
         $suffix = ' - ' . $snapshot['invoice_no'];
-        if ($concept) $suffix .= (!empty($snapshot['spk']) ? ' - ' . $snapshot['spk'] : '') . (($snapshot['tax_treatment'] ?? '') === 'KB' ? ' - Kawasan Berikat' : '');
+        if ($concept) $suffix .= (!empty($snapshot['spk']) ? ' - ' . $snapshot['spk'] : '') . self::tax_suffix($snapshot['tax_treatment'] ?? '');
         $lines=array();
         foreach($entries as $line){
             if(!$line[1]&&!$line[2])continue;
             $account=$snapshot['accounts'][$line[0]]??null;
-            if(!$account || empty($account['code']) || empty($account['name']) || min($line[1],$line[2])<0)throw new RuntimeException('Snapshot akun penerimaan tidak lengkap.');
+            // Hanya dua akun PPh Final yang boleh tanpa nomor COA (belum ada di master); posting menolaknya.
+            $codeOptional = in_array($line[0], array('pph_final_expense','pph_final_payable'), true);
+            if(!$account || (empty($account['code']) && !$codeOptional) || empty($account['name']) || min($line[1],$line[2])<0)throw new RuntimeException('Snapshot akun penerimaan tidak lengkap.');
             $lines[]=array('date'=>$snapshot['date'],'owner'=>(string)$snapshot['owner']['id'],'company'=>$snapshot['owner']['nm_company'],
-                'coa'=>$account['code'],'name'=>$account['name'],'debit'=>$line[1],'credit'=>$line[2],'description'=>$account['name'].$suffix);
+                'coa'=>(string)$account['code'],'name'=>$account['name'],'debit'=>$line[1],'credit'=>$line[2],'description'=>$account['name'].$suffix);
         }
         if(array_sum(array_column($lines,'debit'))!==array_sum(array_column($lines,'credit')))throw new RuntimeException('Snapshot jurnal penerimaan tidak seimbang.');
         return $lines;

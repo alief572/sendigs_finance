@@ -25,6 +25,7 @@ class Penerimaan_uang extends Admin_Controller
     private function deny_without($permission, $json = true)
     {
         if (has_permission($permission)) return false;
+        $this->completeAudit('Akses penerimaan uang ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
         http_response_code(403);
         if ($json) {
             echo json_encode(array('status' => 0, 'msg' => 'Tidak memiliki izin.', 'message' => 'Tidak memiliki izin.'));
@@ -35,6 +36,72 @@ class Penerimaan_uang extends Admin_Controller
     }
 
 
+
+    // =========================================================================
+    // AUDIT TRAIL
+    // =========================================================================
+
+    // Konteks yang ikut ke setiap completeAudit() (mode, jumlah invoice, dst.); diisi begitu endpoint mengetahuinya.
+    private $auditCtx = array();
+
+    private function beginAudit($method, $data = array(), $keys = array())
+    {
+        if (isset($this->load) && method_exists($this->load, 'library')) {
+            $this->load->library('Module_audit_recorder');
+        }
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'begin')) {
+            return $this->module_audit_recorder->begin('penerimaan_uang', $method,
+                array('data' => $this->auditSafeData($data)),
+                array_unique(array_merge(array_keys($data), $keys, array('reason', 'outcome'))));
+        }
+        return false;
+    }
+
+    private function completeAudit($message, $status, $data = array())
+    {
+        if (isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'complete')) {
+            return $this->module_audit_recorder->complete($message, $status,
+                array('data' => $this->auditSafeData(array_merge($this->auditCtx, $data)), 'sql' => null));
+        }
+        return false;
+    }
+
+    // Hanya scalar; ID dibuang bila bentuknya tidak wajar. Nama customer, nominal, dan isi form tidak dicatat.
+    private function auditSafeData($data)
+    {
+        $safe = array();
+        foreach ($data as $key => $value) {
+            if (in_array($key, array('id_alokasi', 'id_penerimaan', 'id_customer', 'id_company', 'id_invoice', 'no_surat'), true)
+                && (!is_scalar($value) || !preg_match($key === 'no_surat' ? '/^[A-Za-z0-9\/_.-]{1,100}$/' : '/^[A-Za-z0-9:_.-]{1,100}$/', (string) $value))) { continue; }
+            if (is_scalar($value) || $value === null) {
+                $safe[$key] = is_string($value) ? mb_substr($value, 0, 512, 'UTF-8') : $value;
+            }
+        }
+        return $safe;
+    }
+
+    // Catat penolakan akses sebelum restrict() mengalihkan/menghentikan request.
+    private function auditRestrict($permission)
+    {
+        if (function_exists('has_permission') && !has_permission($permission)) {
+            $this->completeAudit('Akses penerimaan uang ditolak', 0, array('reason' => 'permission_denied', 'outcome' => 'denied'));
+        }
+        $this->auth->restrict($permission);
+    }
+
+    private function auditOpen()
+    {
+        return isset($this->module_audit_recorder) && method_exists($this->module_audit_recorder, 'is_active') && $this->module_audit_recorder->is_active();
+    }
+
+    // Hasil jalur konsultasi v3 (Consulting_receipt::save/rollback): status 1 hanya bila transaksinya sudah commit.
+    private function auditReceiptResult($message, $result, $okOutcome, $failReason, $extra = array())
+    {
+        $ok = is_array($result) && !empty($result['status']);
+        $this->completeAudit($ok ? $message : $message . ' gagal', $ok ? 1 : 0, $extra + array(
+            'no_surat' => ($ok && isset($result['no_surat'])) ? $result['no_surat'] : null,
+            'reason' => $ok ? null : $failReason, 'outcome' => $ok ? $okOutcome : 'rejected'));
+    }
 
     protected $consultant;
 
@@ -65,7 +132,8 @@ class Penerimaan_uang extends Admin_Controller
 
     public function index()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
 
         $list_bank = $this->Penerimaan_uang_model->getListBank();
         $list_years = $this->Penerimaan_uang_model->getDistinctYears();
@@ -81,10 +149,12 @@ class Penerimaan_uang extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Penerimaan Piutang');
         $this->template->render('index');
+        $this->completeAudit('Membuka daftar penerimaan piutang', 1, array('outcome' => 'rendered'));
     }
 
     public function get_report_penerimaan()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'outcome'));
         if ($this->deny_without($this->viewPermission)) return;
         $searchDt = $this->input->post('search');
         $searchVal = is_array($searchDt) ? trim((string)($searchDt['value'] ?? '')) : '';
@@ -149,11 +219,13 @@ class Penerimaan_uang extends Admin_Controller
             'total_nominal' => mk_en($result['total_nominal']),
             'counts' => $this->Penerimaan_uang_model->get_tab_counts()
         ));
+        $this->completeAudit('Melihat report penerimaan piutang', 1, array('row_count' => count($data), 'outcome' => 'listed'));
     }
 
     public function export_excel()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
         $year = $this->input->get('year');
         $month = $this->input->get('month');
         $company = $this->input->get('company');
@@ -163,6 +235,8 @@ class Penerimaan_uang extends Admin_Controller
 
         require_once APPPATH . 'libraries/Xlsx_export.php';
         $spec = Xlsx_export::report_spec($report_data, $year, $month, $company);
+        // Dicatat sebelum unduhan: download() langsung mengirim file lalu exit.
+        $this->completeAudit('Mengunduh report penerimaan piutang (Excel)', 1, array('outcome' => 'exported'));
         Xlsx_export::download($spec, $spec['filename']);
     }
 
@@ -172,7 +246,8 @@ class Penerimaan_uang extends Admin_Controller
 
     {
 
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('id_alokasi', 'receipt_kind', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
 
 
 
@@ -194,6 +269,7 @@ class Penerimaan_uang extends Admin_Controller
 
             $this->session->set_flashdata('error', 'Data alokasi split tidak ditemukan.');
 
+            $this->completeAudit('Form penerimaan: alokasi tidak ditemukan', 0, array('id_alokasi' => $id, 'reason' => 'allocation_not_found', 'outcome' => 'not_found'));
             redirect('penerimaan_uang');
 
             return;
@@ -246,6 +322,7 @@ class Penerimaan_uang extends Admin_Controller
         $this->template->set('results', $data);
         $this->template->title($receiptKind === 'deposit' ? 'Penerimaan Piutang Kwitansi Deposit' : 'Penerimaan Piutang Invoice');
         $this->template->render('add');
+        $this->completeAudit('Membuka form penerimaan piutang', 1, array('id_alokasi' => $result['id'], 'receipt_kind' => $receiptKind, 'outcome' => 'rendered'));
     }
 
     /** True bila request hanya membawa customer (tanpa company/invoice): saldo & kartu dilihat per customer. */
@@ -287,10 +364,12 @@ class Penerimaan_uang extends Admin_Controller
 
     public function get_receipt_companies()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'receipt_kind', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
+        $auditReason = null;
         try {
             $customer = $this->input->post('id_customer');
-            if (!is_scalar($customer) || trim((string)$customer) === '') throw new InvalidArgumentException('Pilih customer.');
+            if (!is_scalar($customer) || trim((string)$customer) === '') { $auditReason = 'invalid_customer'; throw new InvalidArgumentException('Pilih customer.'); }
             $invoices = $this->db->get_where('tr_invoicing', array('id_customer'=>$customer, 'saldo_piutang >'=>0))->result_array();
             $companies = array(); $deposit = $this->input->post('receipt_kind') === 'deposit';
             foreach ($invoices as $invoice) {
@@ -303,14 +382,20 @@ class Penerimaan_uang extends Admin_Controller
             $result = array('status'=>1, 'companies'=>array_values($companies));
         } catch (Throwable $e) { $result = array('status'=>0, 'message'=>$e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Company tidak dapat dimuat.', 'companies'=>array()); }
         echo json_encode($result);
+        $this->completeAudit('Memuat company penerimaan piutang', $result['status'] ? 1 : 0, array(
+            'row_count' => count($result['companies']), 'receipt_kind' => $this->input->post('receipt_kind') === 'deposit' ? 'deposit' : 'invoice',
+            'reason' => $result['status'] ? null : ($auditReason ?: 'load_failed'), 'outcome' => $result['status'] ? 'listed' : 'failed'));
     }
 
     public function get_customer_deposit()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('scope', 'id_customer', 'id_company', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
         $result = array('status'=>0, 'saldo'=>null, 'formatted'=>'Belum tersedia', 'id_customer'=>null, 'id_company'=>null, 'id_invoice'=>null);
+        $auditScope = 'company';
         try {
             if ($this->customer_only_context()) {
+                $auditScope = 'customer';
                 // Form tidak memilih company: saldo ditampilkan per customer, dengan rincian per company
                 // supaya jelas berapa yang bisa dipakai untuk invoice dari company tertentu.
                 require_once __DIR__.'/../libraries/Consulting_receipt.php';
@@ -327,7 +412,9 @@ class Penerimaan_uang extends Admin_Controller
                 foreach ($summary['by_company'] as $row) {
                     $result['by_company'][] = array('id'=>$row['id'], 'name'=>$row['name'], 'saldo'=>Penerimaan_calculation::decimal($row['saldo']), 'formatted'=>'Rp '.number_format($row['saldo']/100,2,',','.'));
                 }
-                header('Content-Type: application/json'); echo json_encode($result); return;
+                header('Content-Type: application/json'); echo json_encode($result);
+                $this->completeAudit('Memuat saldo deposit customer', 1, array('scope' => 'customer', 'id_customer' => $customer, 'outcome' => 'loaded'));
+                return;
             }
             list($customer, $company, $invoiceId) = $this->deposit_context();
             require_once __DIR__.'/../libraries/Consulting_receipt.php';
@@ -336,18 +423,26 @@ class Penerimaan_uang extends Admin_Controller
                 'id_customer'=>$customer, 'id_company'=>$company, 'id_invoice'=>$invoiceId, 'error'=>null);
         } catch (Throwable $e) { $result['error'] = $e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Saldo deposit tidak dapat dimuat.'; $result['message'] = $result['error']; }
         header('Content-Type: application/json'); echo json_encode($result);
+        $this->completeAudit('Memuat saldo deposit customer', $result['status'] ? 1 : 0, array(
+            'scope' => $auditScope, 'id_customer' => $result['id_customer'], 'id_company' => $result['id_company'],
+            'reason' => $result['status'] ? null : 'deposit_unavailable', 'outcome' => $result['status'] ? 'loaded' : 'failed'));
     }
 
     public function get_customer_deposit_ledger()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('scope', 'row_count', 'id_customer', 'id_company', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
         $customerOnly = false;
         try {
             $customerOnly = $this->customer_only_context();
             if ($customerOnly) { $customerId = (string)$this->input->post('id_customer'); $companyId = null; }
             else list($customerId, $companyId) = $this->deposit_context();
         }
-        catch (Throwable $e) { echo json_encode(array('status'=>0, 'message'=>$e instanceof InvalidArgumentException ? $e->getMessage() : 'Konteks deposit tidak valid.')); return; }
+        catch (Throwable $e) {
+            echo json_encode(array('status'=>0, 'message'=>$e instanceof InvalidArgumentException ? $e->getMessage() : 'Konteks deposit tidak valid.'));
+            $this->completeAudit('Memuat kartu deposit customer gagal', 0, array('reason' => 'invalid_context', 'outcome' => 'failed'));
+            return;
+        }
         $this->load->model('deposit_customer/Deposit_customer_model');
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
         $depositError = null;
@@ -397,11 +492,15 @@ class Penerimaan_uang extends Admin_Controller
             'error' => $depositError, 'id_customer'=>$customerId, 'id_company'=>$companyId,
             'ledger' => $rows
         ));
+        // Saldo yang gagal dibaca tetap menjawab status 1 dengan daftar mutasi (perilaku lama), jadi dicatat berhasil.
+        $this->completeAudit('Memuat kartu deposit customer', 1, array(
+            'scope' => $customerOnly ? 'customer' : 'company', 'row_count' => count($rows), 'id_customer' => $customerId, 'id_company' => $companyId, 'outcome' => 'listed'));
     }
 
     public function get_inv_by_cust()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'receipt_kind', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
         $post = $this->input->post();
 
         $nm_customer = is_array($post) && isset($post['nm_customer']) ? $post['nm_customer'] : '';
@@ -415,7 +514,11 @@ class Penerimaan_uang extends Admin_Controller
         $this->db->from('tr_invoicing a');
 
         $customerId = $this->input->post('id_customer');
-        if ($customerId !== null && !is_scalar($customerId)) { echo '<tr><td colspan="11">Identitas customer tidak valid.</td></tr>'; return; }
+        if ($customerId !== null && !is_scalar($customerId)) {
+            echo '<tr><td colspan="11">Identitas customer tidak valid.</td></tr>';
+            $this->completeAudit('Memuat invoice customer gagal', 0, array('reason' => 'invalid_customer', 'outcome' => 'failed'));
+            return;
+        }
         if (is_scalar($customerId) && strpos((string)$customerId, 'nm:') === 0) {
             $this->db->where('a.nm_customer', substr((string)$customerId, 3));
             $this->db->where("(a.id_customer IS NULL OR a.id_customer = '')", null, false);
@@ -481,7 +584,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 $ppn = (float)$item['ppn_jurnal'];
 
-                if ($taxTreatment === 'WAPU' || $taxTreatment === 'KB') {
+                if ($taxTreatment === 'WAPU' || $taxTreatment === 'KB' || $taxTreatment === 'UMKM') {
 
                     $ppn = 0;
 
@@ -571,6 +674,8 @@ class Penerimaan_uang extends Admin_Controller
 
         if ($hasil === '') $hasil = '<tr><td colspan="11" class="empty">' . (($this->input->post('receipt_kind') === 'deposit') ? 'Customer ini tidak punya Kwitansi Deposit yang masih terbuka.' : 'No Data Found') . '</td></tr>';
         echo $hasil;
+        $this->completeAudit('Memuat invoice customer untuk penerimaan', 1, array(
+            'row_count' => count($get_invoice), 'receipt_kind' => $this->input->post('receipt_kind') === 'deposit' ? 'deposit' : 'invoice', 'outcome' => 'listed'));
 
     }
 
@@ -579,23 +684,34 @@ class Penerimaan_uang extends Admin_Controller
     public function process_alokasi()
 
     {
+        $this->beginAudit(__FUNCTION__, array(), array('mode', 'invoice_count', 'deposit_used', 'id_alokasi', 'outcome'));
         if ($this->deny_without($this->addPermission, false)) return;
 
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
 
         $consulting=new Consulting_receipt($this);
 
+        $auditInvoices = $this->input->post('choose_inv');
+        $auditCount = is_array($auditInvoices) ? count($auditInvoices) : 0;
+        $auditAlokasi = $this->input->post('id_alokasi');
+        $auditDeposit = ($this->input->post('deposit_choice') === 'Y');
+
         if ($consulting->contains_new($this->input->post('choose_inv'))) {
 
+            $auditOk = false;
             try {
 
                 $post=$this->input->post(); $post['receipt_kind']='invoice';
                 $data=$consulting->preview($post);
 
                 $this->template->set($data);$this->template->render('consulting_process');
+                $auditOk = true;
 
             } catch (Throwable $error) { echo '<div class="alert alert-danger" role="alert">'.htmlspecialchars($error instanceof RuntimeException || $error instanceof InvalidArgumentException?$error->getMessage():'Preview tidak dapat dimuat.',ENT_QUOTES,'UTF-8').'</div>'; }
 
+            $this->completeAudit($auditOk ? 'Preview penerimaan piutang (konsultasi)' : 'Preview penerimaan piutang (konsultasi) ditolak', $auditOk ? 1 : 0, array(
+                'mode' => 'consulting', 'invoice_count' => $auditCount, 'deposit_used' => $auditDeposit, 'id_alokasi' => $auditAlokasi,
+                'reason' => $auditOk ? null : 'preview_rejected', 'outcome' => $auditOk ? 'previewed' : 'rejected'));
             return;
 
         }
@@ -609,6 +725,7 @@ class Penerimaan_uang extends Admin_Controller
         $depCents = $useDep ? $this->legacy_cents($post['deposit_amount'] ?? '') : 0;
         if ($useDep && $depCents <= 0) {
             echo '<div class="alert alert-danger" role="alert">Nominal deposit dipakai harus lebih besar dari 0.</div>';
+            $this->auditPreviewRejected('invalid_deposit_amount', $auditCount, $auditDeposit, $auditAlokasi);
             return;
         }
 
@@ -672,6 +789,7 @@ class Penerimaan_uang extends Admin_Controller
 
             if ($useDep && $this->db->where('id_inv', $item)->count_all_results('tr_penerimaan_piutang_detail') > 0) {
                 echo '<div class="alert alert-danger" role="alert">Deposit hanya bisa dipakai untuk invoice lama yang belum pernah diproses penerimaannya (' . htmlspecialchars((string)$get_inv['no_invoice'], ENT_QUOTES, 'UTF-8') . ').</div>';
+                $this->auditPreviewRejected('deposit_invoice_processed', $auditCount, $auditDeposit, $auditAlokasi);
                 return;
             }
 
@@ -686,6 +804,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 echo '<div class="alert alert-danger">' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
 
+                $this->auditPreviewRejected('preview_rejected', $auditCount, $auditDeposit, $auditAlokasi);
                 return;
 
             }
@@ -1165,12 +1284,18 @@ class Penerimaan_uang extends Admin_Controller
             $depCustomers = array_unique(array_map(function ($id) { return (string)($this->db->select('id_customer')->get_where('tr_invoicing', ['id' => $id])->row()->id_customer ?? ''); }, $post['choose_inv']));
             if (!$lebihEligible || count($depCustomers) !== 1 || $depCustomers[0] === '') {
                 echo '<div class="alert alert-danger" role="alert">Deposit hanya untuk invoice satu customer dari satu company pemilik jurnal (STM, Sustain, atau Vuca).</div>';
+                $this->auditPreviewRejected('deposit_scope_invalid', $auditCount, $auditDeposit, $auditAlokasi);
                 return;
             }
             try { $depSaldo = $consulting->get_customer_active_deposit($depCustomers[0]); }
-            catch (Throwable $error) { echo '<div class="alert alert-danger" role="alert">' . htmlspecialchars($error->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>'; return; }
+            catch (Throwable $error) {
+                echo '<div class="alert alert-danger" role="alert">' . htmlspecialchars($error->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
+                $this->auditPreviewRejected('deposit_unavailable', $auditCount, $auditDeposit, $auditAlokasi);
+                return;
+            }
             if ($depCents > $depSaldo) {
                 echo '<div class="alert alert-danger" role="alert">Deposit dipakai (' . number_format($depCents / 100, 2) . ') melebihi saldo deposit customer (' . number_format($depSaldo / 100, 2) . ').</div>';
+                $this->auditPreviewRejected('deposit_exceeds_balance', $auditCount, $auditDeposit, $auditAlokasi);
                 return;
             }
         }
@@ -1236,35 +1361,58 @@ class Penerimaan_uang extends Admin_Controller
 
         $this->template->render('process');
 
+        $this->completeAudit('Preview penerimaan piutang (invoice lama)', 1, array(
+            'mode' => 'legacy', 'invoice_count' => $auditCount, 'deposit_used' => $auditDeposit, 'id_alokasi' => $auditAlokasi, 'outcome' => 'previewed'));
+
+    }
+
+    // Penolakan preview invoice lama: pesan error sudah dikirim ke browser; hanya alasan singkat yang dicatat.
+    private function auditPreviewRejected($reason, $count, $depositUsed, $idAlokasi)
+    {
+        $this->completeAudit('Preview penerimaan piutang (invoice lama) ditolak', 0, array(
+            'mode' => 'legacy', 'invoice_count' => $count, 'deposit_used' => $depositUsed, 'id_alokasi' => $idAlokasi,
+            'reason' => $reason, 'outcome' => 'rejected'));
     }
 
 
 
     public function process_kwitansi_deposit()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('invoice_count', 'outcome'));
         if ($this->deny_without($this->addPermission, false)) return;
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
+        $auditInvoices = $this->input->post('choose_inv');
+        $auditOk = false;
         try {
             $post = $this->input->post(); $post['receipt_kind'] = 'deposit';
             $data = (new Consulting_receipt($this))->preview($post);
             $this->template->set($data); $this->template->render('consulting_process');
+            $auditOk = true;
         } catch (Throwable $e) {
             log_message('error', 'process_kwitansi_deposit: ' . get_class($e) . ': ' . $e->getMessage());
             echo '<div class="alert alert-danger">'.htmlspecialchars($e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Preview gagal.', ENT_QUOTES, 'UTF-8').'</div>';
         }
+        $this->completeAudit($auditOk ? 'Preview kwitansi deposit' : 'Preview kwitansi deposit ditolak', $auditOk ? 1 : 0, array(
+            'invoice_count' => is_array($auditInvoices) ? count($auditInvoices) : 0,
+            'reason' => $auditOk ? null : 'preview_rejected', 'outcome' => $auditOk ? 'previewed' : 'rejected'));
     }
 
     public function save_kwitansi_deposit()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('receipt_kind', 'no_surat', 'outcome'));
+        $this->auditCtx['receipt_kind'] = 'deposit';
         if ($this->deny_without($this->addPermission)) return;
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
         $post = $this->input->post(); $post['receipt_kind'] = 'deposit';
-        echo json_encode((new Consulting_receipt($this))->save($post));
+        $result = (new Consulting_receipt($this))->save($post);
+        echo json_encode($result);
+        $this->auditReceiptResult('Menyimpan kwitansi deposit', $result, 'committed', 'save_rejected');
     }
 
     public function save_penerimaan_piutang()
 
     {
+        $this->beginAudit(__FUNCTION__, array(), array('mode', 'invoice_count', 'receipt_kind', 'id_alokasi', 'no_surat', 'deposit_used', 'lebih_used', 'outcome'));
         if ($this->deny_without($this->addPermission)) return;
 
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
@@ -1273,24 +1421,36 @@ class Penerimaan_uang extends Admin_Controller
 
         $count=is_scalar($post['no_inv']??null)?(int)$post['no_inv']:0;
 
-        if($count<1 || $count>100){echo json_encode(array('status'=>0,'msg'=>'Jumlah invoice tidak valid.','message'=>'Jumlah invoice tidak valid.'));return;}
+        if($count<1 || $count>100){echo json_encode(array('status'=>0,'msg'=>'Jumlah invoice tidak valid.','message'=>'Jumlah invoice tidak valid.'));$this->completeAudit('Simpan penerimaan piutang: jumlah invoice tidak valid',0,array('reason'=>'invalid_invoice_count','outcome'=>'rejected'));return;}
 
         for($n=1;$n<=$count;$n++)$ids[]=$post['id_inv_'.$n]??'';
 
-        if($consulting->contains_new($ids)){$post['receipt_kind']='invoice';echo json_encode($consulting->save($post));return;}
+        $this->auditCtx['invoice_count']=$count;$this->auditCtx['id_alokasi']=$post['id_alokasi']??null;
+
+        if($consulting->contains_new($ids)){
+            $post['receipt_kind']='invoice';$this->auditCtx['mode']='consulting';
+            $result=$consulting->save($post);echo json_encode($result);
+            $this->auditReceiptResult('Menyimpan penerimaan piutang (konsultasi)',$result,'committed','save_rejected',array('receipt_kind'=>'invoice'));return;
+        }
 
 
         $service=new Invoice_consulting_service($this);
 
-        return $service->serialized(function()use($consulting,$post){
+        $this->auditCtx['mode']='legacy';
+
+        $auditResult=$service->serialized(function()use($consulting,$post){
 
             try { $consulting->guard_legacy_allocation($post['id_alokasi']??''); }
 
-            catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage(),'message'=>$error->getMessage()));return;}
+            catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage(),'message'=>$error->getMessage()));$this->completeAudit('Simpan penerimaan piutang ditolak (guard alokasi)',0,array('reason'=>'allocation_guard','outcome'=>'rejected'));return;}
 
             $this->save_legacy_penerimaan_piutang();
 
         });
+
+        // Lock gagal atau error tak terduga di dalam serialized() sudah dijawab dengan JSON gagal; scope masih terbuka.
+        if ($this->auditOpen()) $this->completeAudit('Simpan penerimaan piutang gagal diproses', 0, array('reason' => 'serialized_failed', 'outcome' => 'failed'));
+        return $auditResult;
 
     }
 
@@ -1312,9 +1472,10 @@ class Penerimaan_uang extends Admin_Controller
         return $map[(string)$companyId] ?? '';
     }
 
-    private function legacy_fail($message)
+    private function legacy_fail($message, $reason = 'invalid_input')
     {
         echo json_encode(array('status' => 0, 'msg' => $message, 'message' => $message));
+        $this->completeAudit('Simpan penerimaan piutang ditolak', 0, array('reason' => $reason, 'outcome' => 'rejected'));
     }
 
     private function save_legacy_penerimaan_piutang()
@@ -1324,7 +1485,8 @@ class Penerimaan_uang extends Admin_Controller
         $post = $this->input->post();
         $useDep = ($post['deposit_choice'] ?? 'N') === 'Y';
         $depCents = $useDep ? $this->legacy_cents($post['deposit_amount'] ?? '') : 0;
-        if ($useDep && $depCents <= 0) { $this->legacy_fail('Nominal deposit dipakai harus lebih besar dari 0.'); return; }
+        $this->auditCtx['deposit_used'] = $useDep;
+        if ($useDep && $depCents <= 0) { $this->legacy_fail('Nominal deposit dipakai harus lebih besar dari 0.', 'invalid_deposit_amount'); return; }
         $id = $this->Penerimaan_uang_model->generate_id();
         $nm_customer = $post['nm_customer'];
 
@@ -1510,7 +1672,7 @@ class Penerimaan_uang extends Admin_Controller
 
             } catch (InvalidArgumentException $e) {
 
-                echo json_encode(array('status'=>0, 'msg'=>$e->getMessage(), 'message'=>$e->getMessage()));
+                $this->legacy_fail($e->getMessage());
 
                 return;
 
@@ -1785,16 +1947,17 @@ class Penerimaan_uang extends Admin_Controller
         $total_lebih_cents = 0;
         $total_dep_cents = 0;
         foreach ($lebihRows as $lr) { $total_lebih_cents += $lr['lebih']; $total_dep_cents += $lr['dep']; }
-        if ($useDep && $total_dep_cents !== $depCents) { $this->legacy_fail('Total Deposit Dipakai per invoice (' . Penerimaan_calculation::decimal($total_dep_cents) . ') harus sama dengan Nominal Deposit Dipakai di form (' . Penerimaan_calculation::decimal($depCents) . ').'); return; }
-        if ($total_dep_cents > 0 && $total_lebih_cents > 0) { $this->legacy_fail('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan.'); return; }
+        $this->auditCtx['lebih_used'] = $total_lebih_cents > 0;
+        if ($useDep && $total_dep_cents !== $depCents) { $this->legacy_fail('Total Deposit Dipakai per invoice (' . Penerimaan_calculation::decimal($total_dep_cents) . ') harus sama dengan Nominal Deposit Dipakai di form (' . Penerimaan_calculation::decimal($depCents) . ').', 'deposit_total_mismatch'); return; }
+        if ($total_dep_cents > 0 && $total_lebih_cents > 0) { $this->legacy_fail('Deposit Dipakai dan Lebih Bayar tidak boleh terisi bersamaan.', 'deposit_with_lebih'); return; }
         if ($total_lebih_cents > 0 || $total_dep_cents > 0) {
             $lebihCompanyIds = array_unique(array_column($lebihRows, 'company'));
             $lebihCustomerIds = array_unique(array_column($lebihRows, 'customer'));
             $allocNominal = !empty($split) ? $split['nominal'] : ($detail['nominal_kredit'] ?? 0);
-            if (count($lebihCompanyIds) !== 1 || !Invoice_consulting_service::is_journal_owner($lebihCompanyIds[0])) { $this->legacy_fail('Lebih Bayar/Deposit hanya untuk invoice dari satu company pemilik jurnal (STM, Sustain, atau Vuca).'); return; }
-            if (count($lebihCustomerIds) !== 1 || trim($lebihCustomerIds[0]) === '') { $this->legacy_fail('Lebih Bayar/Deposit membutuhkan invoice dari satu customer.'); return; }
-            if ($total_penerimaan_cents + $total_lebih_cents !== Penerimaan_calculation::cents($allocNominal)) { $this->legacy_fail('Penerimaan + Lebih Bayar harus sama dengan uang masuk alokasi bank.'); return; }
-            if (!$this->db->field_exists('consulting_snapshot', 'tr_penerimaan_piutang_detail') || !$this->db->table_exists('tr_customer_deposit')) { $this->legacy_fail('Skema deposit belum tersedia; terapkan migration deposit.'); return; }
+            if (count($lebihCompanyIds) !== 1 || !Invoice_consulting_service::is_journal_owner($lebihCompanyIds[0])) { $this->legacy_fail('Lebih Bayar/Deposit hanya untuk invoice dari satu company pemilik jurnal (STM, Sustain, atau Vuca).', 'lebih_scope_invalid'); return; }
+            if (count($lebihCustomerIds) !== 1 || trim($lebihCustomerIds[0]) === '') { $this->legacy_fail('Lebih Bayar/Deposit membutuhkan invoice dari satu customer.', 'lebih_scope_invalid'); return; }
+            if ($total_penerimaan_cents + $total_lebih_cents !== Penerimaan_calculation::cents($allocNominal)) { $this->legacy_fail('Penerimaan + Lebih Bayar harus sama dengan uang masuk alokasi bank.', 'lebih_sum_mismatch'); return; }
+            if (!$this->db->field_exists('consulting_snapshot', 'tr_penerimaan_piutang_detail') || !$this->db->table_exists('tr_customer_deposit')) { $this->legacy_fail('Skema deposit belum tersedia; terapkan migration deposit.', 'deposit_schema_missing'); return; }
             // Snapshot ringkas (sen) agar Consulting_receipt::deposit_receipt dapat memverifikasi sumber voucher invoice lama.
             foreach ($lebihRows as $lr) {
                 $arr_insert_detail[$lr['detail']]['id_customer'] = $lr['customer'];
@@ -1845,6 +2008,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'insert_header_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
 
             exit;
@@ -1861,6 +2026,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'insert_detail_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
 
             exit;
@@ -1877,6 +2044,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'insert_journal_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
 
             exit;
@@ -1893,6 +2062,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'update_invoice_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
 
             exit;
@@ -1911,6 +2082,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+            // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'update_allocation_failed', 'outcome' => 'failed'));
             print_r($this->db->last_query());
 
             exit;
@@ -1931,7 +2104,9 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-                print_r($this->db->last_query());
+                // Perilaku lama (print_r + exit) dipertahankan; hasil dicatat sebelum keluar.
+            $this->completeAudit('Simpan penerimaan piutang gagal', 0, array('reason' => 'update_split_failed', 'outcome' => 'failed'));
+            print_r($this->db->last_query());
 
                 exit;
 
@@ -1946,7 +2121,7 @@ class Penerimaan_uang extends Admin_Controller
                 (new Consulting_receipt($this))->consume_deposit($lebihRows[0]['customer'], $total_dep_cents, $id, $detail['tanggal_transaksi'], implode(', ', array_column($lebihRows, 'no_invoice')));
             } catch (Throwable $e) {
                 $this->db->trans_rollback();
-                $this->legacy_fail($e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Pemakaian deposit gagal; penerimaan dibatalkan.');
+                $this->legacy_fail($e instanceof RuntimeException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Pemakaian deposit gagal; penerimaan dibatalkan.', 'deposit_consume_failed');
                 return;
             }
         }
@@ -1955,30 +2130,25 @@ class Penerimaan_uang extends Admin_Controller
                 (new Consulting_receipt($this))->create_lebih_bayar_voucher($id, $lebihRows[0]['customer'], $lebihRows[0]['nm_customer'], $lebihRows[0]['company'], '', $detail['tanggal_transaksi'], $total_lebih_cents, implode(', ', array_column($lebihRows, 'no_invoice')));
             } catch (Throwable $e) {
                 $this->db->trans_rollback();
-                $this->legacy_fail('Voucher deposit lebih bayar gagal dibuat; penerimaan dibatalkan.');
+                $this->legacy_fail('Voucher deposit lebih bayar gagal dibuat; penerimaan dibatalkan.', 'lebih_voucher_failed');
                 return;
             }
         }
+        $auditReason = null;
         if ($this->db->trans_status() === false) {
-
             $this->db->trans_rollback();
-
-
-
             $valid = 0;
-
             $msg = 'Please try again later !';
-
+            $auditReason = 'transaction_failed';
+        } elseif ($this->db->trans_commit() === false) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+            $valid = 0;
+            $msg = 'Please try again later !';
+            $auditReason = 'commit_failed';
         } else {
-
-            $this->db->trans_commit();
-
-
-
             $valid = 1;
-
             $msg = 'Save penerimaan berhasil !';
-
         }
 
 
@@ -1993,6 +2163,8 @@ class Penerimaan_uang extends Admin_Controller
 
 
         echo json_encode($response);
+        $this->completeAudit($valid ? 'Menyimpan penerimaan piutang (invoice lama)' : 'Menyimpan penerimaan piutang (invoice lama) gagal', $valid ? 1 : 0, array(
+            'no_surat' => $valid ? (string)$id : null, 'reason' => $auditReason, 'outcome' => $valid ? 'committed' : 'failed'));
 
     }
 
@@ -2000,6 +2172,7 @@ class Penerimaan_uang extends Admin_Controller
 
     public function detail()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('id_penerimaan', 'outcome'));
         if ($this->deny_without($this->viewPermission, false)) return;
 
         $post = $this->input->post();
@@ -2007,19 +2180,23 @@ class Penerimaan_uang extends Admin_Controller
         $data = $this->build_detail_data($id);
         if ($data === null) {
             echo '<div class="alert alert-danger" role="alert">Penerimaan tidak ditemukan.</div>';
+            $this->completeAudit('Detail penerimaan tidak ditemukan', 0, array('id_penerimaan' => $id, 'reason' => 'not_found', 'outcome' => 'not_found'));
             return;
         }
         $this->template->set($data);
         $this->template->render('detail');
+        $this->completeAudit('Melihat detail penerimaan', 1, array('id_penerimaan' => $id, 'outcome' => 'rendered'));
     }
 
     /** Halaman detail penerimaan (mockup: halaman penuh, bukan modal). */
     public function view($id = '')
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('id_penerimaan', 'outcome'));
+        $this->auditRestrict($this->viewPermission);
         $data = $this->build_detail_data(is_scalar($id) ? $id : '');
         if ($data === null) {
             $this->session->set_flashdata('error', 'Penerimaan tidak ditemukan.');
+            $this->completeAudit('Halaman penerimaan tidak ditemukan', 0, array('id_penerimaan' => $id, 'reason' => 'not_found', 'outcome' => 'not_found'));
             redirect('penerimaan_uang');
             return;
         }
@@ -2029,14 +2206,18 @@ class Penerimaan_uang extends Admin_Controller
         $this->template->set($data);
         $this->template->title('Penerimaan Piutang');
         $this->template->render('detail_page');
+        $this->completeAudit('Melihat halaman penerimaan', 1, array('id_penerimaan' => $id, 'outcome' => 'rendered'));
     }
 
     /** Tautan dari modul lain (nomor surat mengandung '/'): cari id penerimaan lalu buka halaman detail. */
     public function view_surat()
     {
-        $this->auth->restrict($this->viewPermission);
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
+        $this->auditRestrict($this->viewPermission);
         $no = $this->input->get('no');
         $row = is_scalar($no) && trim((string)$no) !== '' ? $this->db->select('id')->get_where('tr_penerimaan_piutang', ['no_surat' => $no])->row_array() : null;
+        // Nomor surat tidak dicatat; dicatat sebelum redirect.
+        $this->completeAudit($row ? 'Membuka penerimaan dari nomor surat' : 'Nomor surat penerimaan tidak ditemukan', $row ? 1 : 0, array('reason' => $row ? null : 'not_found', 'outcome' => $row ? 'redirected' : 'not_found'));
         redirect($row ? 'penerimaan_uang/view/' . (int)$row['id'] : 'penerimaan_uang#tab_report');
     }
 
@@ -2109,6 +2290,7 @@ class Penerimaan_uang extends Admin_Controller
     /** JSON daftar draft untuk tab Invoice / Kwitansi Deposit (render di browser seperti mockup). */
     public function draft_rows()
     {
+        $this->beginAudit(__FUNCTION__, array(), array('row_count', 'receipt_kind', 'outcome'));
         if ($this->deny_without($this->viewPermission)) return;
         $kind = $this->input->post('receipt_kind') === 'deposit' ? 'deposit' : 'invoice';
         $search = $this->input->post('search');
@@ -2129,14 +2311,17 @@ class Penerimaan_uang extends Admin_Controller
             'data' => $result['rows'],
             'counts' => $this->Penerimaan_uang_model->get_tab_counts()
         ));
+        $this->completeAudit('Memuat draft penerimaan', 1, array('row_count' => count($result['rows']), 'receipt_kind' => $kind, 'outcome' => 'listed'));
     }
 
     public function get_alokasi_penerimaan()
 
     {
+        $this->beginAudit(__FUNCTION__, array(), array('outcome'));
         if ($this->deny_without($this->viewPermission)) return;
 
         $this->Penerimaan_uang_model->get_alokasi_penerimaan();
+        $this->completeAudit('Memuat daftar alokasi penerimaan', 1, array('outcome' => 'listed'));
 
     }
 
@@ -2145,16 +2330,18 @@ class Penerimaan_uang extends Admin_Controller
     public function rollback_penerimaan()
 
     {
+        $this->beginAudit(__FUNCTION__, array(), array('mode', 'id_penerimaan', 'outcome'));
+        $this->auditCtx['id_penerimaan'] = $this->input->post('id_penerimaan');
 
         require_once __DIR__.'/../libraries/Consulting_receipt.php';
 
         $service=new Invoice_consulting_service($this);
 
-        return $service->serialized(function(){
+        $auditResult=$service->serialized(function(){
 
             $id=$this->input->post('id_penerimaan');
 
-            if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));return;}
+            if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));$this->completeAudit('Rollback penerimaan ditolak (ID tidak valid)',0,array('reason'=>'invalid_id','outcome'=>'rejected'));return;}
 
             $header=$this->db->get_where('tr_penerimaan_piutang',array('id'=>$id))->row_array();
 
@@ -2164,7 +2351,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 try {
 
-                    $consulting->guard_legacy_allocation($header['id_alokasi']);
+                    $auditReason='allocation_guard';$consulting->guard_legacy_allocation($header['id_alokasi']);
 
                     if($this->db->field_exists('consulting_reduction','tr_penerimaan_piutang_detail')){
 
@@ -2174,19 +2361,23 @@ class Penerimaan_uang extends Admin_Controller
 
                             $later=$this->db->query('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=? AND id>? AND consulting_reduction IS NOT NULL LIMIT 1',array($detail['id_inv'],$detail['id']))->row_array();
 
-                            if($later)throw new RuntimeException('Rollback penerimaan terbaru terlebih dahulu.');
+                            if($later){$auditReason='later_receipt_exists';throw new RuntimeException('Rollback penerimaan terbaru terlebih dahulu.');}
 
                         }
 
                     }
 
-                }catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage()));return;}
+                }catch(RuntimeException $error){echo json_encode(array('status'=>0,'msg'=>$error->getMessage()));$this->completeAudit('Rollback penerimaan ditolak',0,array('reason'=>$auditReason,'outcome'=>'rejected'));return;}
 
             }
 
             return $this->rollback_legacy_penerimaan();
 
         });
+
+        // Lock gagal atau error tak terduga di dalam serialized() sudah dijawab dengan JSON gagal; scope masih terbuka.
+        if ($this->auditOpen()) $this->completeAudit('Rollback penerimaan gagal diproses', 0, array('reason' => 'serialized_failed', 'outcome' => 'failed'));
+        return $auditResult;
 
     }
 
@@ -2196,7 +2387,7 @@ class Penerimaan_uang extends Admin_Controller
 
     {
 
-        $this->auth->restrict($this->deletePermission);
+        $this->auditRestrict($this->deletePermission);
 
 
 
@@ -2210,15 +2401,22 @@ class Penerimaan_uang extends Admin_Controller
 
         if ((int)($consultingHeader['consulting_batch']??0)===3) {
 
-            $consulting=new Consulting_receipt($this);echo json_encode($consulting->rollback($id_penerimaan));return;
+            $consulting=new Consulting_receipt($this);$this->auditCtx['mode']='consulting';
+
+            $result=$consulting->rollback($id_penerimaan);echo json_encode($result);
+
+            $this->auditReceiptResult('Rollback penerimaan (konsultasi)',$result,'rolled_back','rollback_rejected');return;
 
         }
 
 
 
+        $this->auditCtx['mode'] = 'legacy';
+
         if (empty($id_penerimaan)) {
 
             echo json_encode(['status' => 0, 'msg' => 'ID Penerimaan tidak valid.']);
+            $this->completeAudit('Rollback penerimaan ditolak (ID tidak valid)', 0, array('reason' => 'invalid_id', 'outcome' => 'rejected'));
 
             return;
 
@@ -2233,6 +2431,7 @@ class Penerimaan_uang extends Admin_Controller
         if (empty($get_penerimaan)) {
 
             echo json_encode(['status' => 0, 'msg' => 'Data penerimaan tidak ditemukan.']);
+            $this->completeAudit('Rollback penerimaan: data tidak ditemukan', 0, array('reason' => 'not_found', 'outcome' => 'rejected'));
 
             return;
 
@@ -2251,6 +2450,7 @@ class Penerimaan_uang extends Admin_Controller
         if ($check_posted > 0) {
 
             echo json_encode(['status' => 0, 'msg' => 'Penerimaan tidak bisa di-rollback karena jurnal sudah di-posting.']);
+            $this->completeAudit('Rollback penerimaan ditolak (jurnal sudah diposting)', 0, array('reason' => 'journal_posted', 'outcome' => 'rejected'));
 
             return;
 
@@ -2264,6 +2464,7 @@ class Penerimaan_uang extends Admin_Controller
                 || count($voucherMutations) !== 1 || $voucherMutations[0]['jenis_mutasi'] !== 'IN';
             if ($voucherUsed) {
                 echo json_encode(['status' => 0, 'msg' => 'Deposit hasil lebih bayar sudah dipakai; rollback penerimaan yang memakainya terlebih dahulu.']);
+            $this->completeAudit('Rollback penerimaan ditolak (deposit sudah dipakai)', 0, array('reason' => 'deposit_used', 'outcome' => 'rejected'));
                 return;
             }
         }
@@ -2282,6 +2483,7 @@ class Penerimaan_uang extends Admin_Controller
         catch (Throwable $e) {
             $this->db->trans_rollback();
             echo json_encode(['status' => 0, 'msg' => 'Pengembalian deposit gagal; rollback dibatalkan.']);
+            $this->completeAudit('Rollback penerimaan gagal (pengembalian deposit)', 0, array('reason' => 'deposit_restore_failed', 'outcome' => 'failed'));
             return;
         }
 
@@ -2439,22 +2641,21 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
+        $auditReason = null;
         if ($this->db->trans_status() === FALSE) {
-
             $this->db->trans_rollback();
-
             $valid = 0;
-
             $msg = 'Gagal melakukan rollback, coba lagi.';
-
+            $auditReason = 'transaction_failed';
+        } elseif ($this->db->trans_commit() === FALSE) {
+            // Sukses ditentukan dari nilai balik commit (CI3), bukan trans_status().
+            $this->db->trans_rollback();
+            $valid = 0;
+            $msg = 'Gagal melakukan rollback, coba lagi.';
+            $auditReason = 'commit_failed';
         } else {
-
-            $this->db->trans_commit();
-
             $valid = 1;
-
             $msg = 'Rollback penerimaan berhasil dilakukan.';
-
         }
 
 
@@ -2466,6 +2667,9 @@ class Penerimaan_uang extends Admin_Controller
             'msg' => $msg
 
         ]);
+
+        $this->completeAudit($valid ? 'Rollback penerimaan piutang (invoice lama)' : 'Rollback penerimaan piutang (invoice lama) gagal', $valid ? 1 : 0, array(
+            'reason' => $auditReason, 'outcome' => $valid ? 'rolled_back' : 'failed'));
 
     }
 
