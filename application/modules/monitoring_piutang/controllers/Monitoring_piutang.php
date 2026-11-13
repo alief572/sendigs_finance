@@ -74,9 +74,56 @@ class Monitoring_piutang extends Admin_Controller
         } catch (InvalidArgumentException $e) {
             return $this->json(['status' => 'error', 'msg' => $e->getMessage()], 400);
         }
-        return $this->json(['status' => 'success', 'summary' => Piutang_aging::summary($base, $today), 'rows' => $rows,
-            'rekap' => Piutang_aging::rekap_customer($base, $today),
+        // Rekap per customer kini lewat rekap_data (server-side); di sini hanya nama customer untuk datalist filter.
+        return $this->json(['status' => 'success', 'summary' => Piutang_aging::summary($base, $today),
+            'customers' => array_column(Piutang_aging::rekap_customer($base, $today), 'customer'),
             'companies' => Piutang_aging::company_options()]);
+    }
+
+    /** Respons DataTables server-side: urut (daftar putih $keys) dan potong halaman dikerjakan di server. */
+    private function dt_json(array $rows, array $keys, array $extra = [])
+    {
+        $dir = $this->input->get('dir', true) === 'desc' ? 'desc' : 'asc';
+        $page = Piutang_aging::page_rows($rows, (string) $this->input->get('sort', true), $dir, (int) $this->input->get('start'),
+            min((int) $this->input->get('length') ?: 10, 500), $keys);
+        return $this->json(['draw' => (int) $this->input->get('draw'), 'recordsTotal' => count($rows), 'recordsFiltered' => count($rows), 'data' => $page] + $extra);
+    }
+
+    private function dt_error($msg)
+    {
+        return $this->json(['draw' => (int) $this->input->get('draw'), 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => [], 'error' => $msg], 400);
+    }
+
+    /** Sumber DataTables server-side tab "List Piutang per Invoice": filter sama dengan data(). */
+    public function list_data()
+    {
+        $this->auth->restrict($this->viewPermission);
+        try {
+            $f = $this->filters();
+            list($base, $today) = $this->base($f);
+            $rows = $this->list_rows($base, $f['kategori'], $today);
+        } catch (InvalidArgumentException $e) {
+            return $this->dt_error($e->getMessage());
+        }
+        $t = ['nilai' => 0.0, 'terbayar' => 0.0, 'saldo' => 0.0];
+        foreach ($rows as $r) {
+            foreach ($t as $k => $_) {
+                $t[$k] += (float) $r[$k];
+            }
+        }
+        return $this->dt_json($rows, Piutang_aging::PAGE_SORT_KEYS, ['totals' => $t]);
+    }
+
+    /** Sumber DataTables server-side tab "Rekap per Customer": filter sama dengan data(); nominal dalam sen. */
+    public function rekap_data()
+    {
+        $this->auth->restrict($this->viewPermission);
+        try {
+            list($base, $today) = $this->base($this->filters());
+        } catch (InvalidArgumentException $e) {
+            return $this->dt_error($e->getMessage());
+        }
+        return $this->dt_json(Piutang_aging::rekap_customer($base, $today), Piutang_aging::REKAP_SORT_KEYS);
     }
 
     public function detail($id = '')
