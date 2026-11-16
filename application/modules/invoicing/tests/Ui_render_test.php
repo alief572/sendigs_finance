@@ -115,10 +115,10 @@ $kwitansiInvoice=(object)[
     'print_keterangan'=>'Pembayaran TOP 1', 'consulting_version'=>3, 'tanggal_invoice'=>'2026-03-05'
 ];
 $kwitansiHtml=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'7']);
-verifyUi(strpos($kwitansiHtml,'1,000.55')!==false,'Kwitansi v3 2-decimal nominal');
-verifyUi(strpos($kwitansiHtml,'917.17')!==false,'Kwitansi v3 2-decimal DPP');
-verifyUi(strpos($kwitansiHtml,'110.06')!==false,'Kwitansi v3 2-decimal PPN');
-verifyUi(strpos($kwitansiHtml,'1,110.61')!==false,'Kwitansi v3 2-decimal total');
+verifyUi(strpos($kwitansiHtml,'>1,001<')!==false && strpos($kwitansiHtml,'1,000.55')===false,'Kwitansi v3 nominal tanpa desimal');
+verifyUi(strpos($kwitansiHtml,'>917<')!==false && strpos($kwitansiHtml,'917.17')===false,'Kwitansi v3 DPP tanpa desimal');
+verifyUi(strpos($kwitansiHtml,'>110<')!==false && strpos($kwitansiHtml,'110.06')===false,'Kwitansi v3 PPN tanpa desimal');
+verifyUi(substr_count($kwitansiHtml,'1,111')===2 && strpos($kwitansiHtml,'1,110.61')===false,'Kwitansi v3 total dan jumlah Rp tanpa desimal');
 verifyUi(strpos($kwitansiHtml,'Jakarta, 05 March 2026')!==false,'Kwitansi tanggal ikut tanggal_invoice');
 verifyUi(strpos($kwitansiHtml,'PT. Sentral Tehnologi Managemen')!==false,'Kwitansi STM company footer');
 $kwitansiSustain=$renderer->render('print_kwitansi',['data_invoice'=>$kwitansiInvoice,'id_company'=>'3']);
