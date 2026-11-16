@@ -22,6 +22,7 @@ class MaterialDb extends FixtureDb {
         if ($name === 'escape_like_str') { return $args[0]; }
         if ($name === 'from') { $this->table = $args[0]; return $this; }
         if (in_array($name, array('get', 'get_where', 'query', 'count_all_results'), true)) {
+            if ($name === 'query' && strpos($args[0], 'SELECT RELEASE_LOCK(') === 0) { return true; }
             $this->queryNumber++;
             if (($scenario['abort_query'] ?? 0) === $this->queryNumber) { exit; }
             $sql = $args[0] ?? $this->table;
@@ -31,6 +32,12 @@ class MaterialDb extends FixtureDb {
             }
             if ($name === 'query') { preg_match('/from\s+([\w.]+)/i', $sql, $match); $sql = $match[1] ?? ''; }
             $this->queryError = ($scenario['fail_query'] ?? 0) === $this->queryNumber ? 999 : 0;
+            if ($name === 'query' && strpos($args[0], 'SELECT GET_LOCK(') === 0) {
+                return $this->queryError ? false : new MaterialReferenceResult(true);
+            }
+            if ($name === 'get_where' && $sql === 'tr_jurnal' && isset($args[1]['no_transaksi'])) {
+                return $this->queryError ? false : new MaterialReferenceResult(false);
+            }
             if ($name === 'count_all_results') { return !empty($scenario['all_petty']) || !empty($scenario['empty']) ? 0 : 1; }
             if ($this->queryError && !empty($scenario['query_returns_false'])) { return false; }
             return new MaterialResult($sql);
@@ -54,6 +61,12 @@ class MaterialDb extends FixtureDb {
     }
     public function last_query() { return 'SELECT fixture'; }
 }
+class MaterialReferenceResult {
+    private $locked;
+    public function __construct($locked) { $this->locked=$locked; }
+    public function row() { return $this->locked ? (object)['acquired'=>1] : null; }
+    public function result_array() { return []; }
+}
 class MaterialResult {
     private $table;
     public function __construct($table) { $this->table = $table; }
@@ -63,6 +76,7 @@ class MaterialResult {
         $values = array(
             'id' => 'PAY-1', 'id_payment' => 'VOUCHER-1', 'no_doc' => 'DOC-1', 'no_po' => 'PO-1', 'total' => 1,
             'tgl_bayar' => '2026-10-13', 'link_doc' => '', 'payment_bank' => 100, 'jumlah' => 100,
+            'total_ppn' => 0, 'total_pph' => 0, 'tipe_pph' => '',
             'keterangan_pembayaran' => 'PRIVATE', 'created_by' => 'PRIVATE', 'nm_supplier' => 'PRIVATE',
             'tipe' => $scenario['payment_type'] ?? 'TR-02', 'modul' => $scenario['payment_module'] ?? 'PO',
             'curs_header' => $scenario['currency'] ?? 'IDR', 'nilai_po_invoice' => 100, 'invoice_ppn' => 10,
@@ -110,13 +124,15 @@ function material_run($method, $options = array(), $post = array(), $args = arra
     $ci->master_model = new MaterialMaster();
     $ci->pembayaran_material_model = $ci->Pembayaran_material_model = new MaterialModel($ci->db, $ci->input);
     $ci->Pembayaran_material_model->auth = $ci->auth;
-    $ci->input->values = array_merge(array('id_req' => array('REQ-1'), 'payment_date' => '2026-10-13', 'bank_coa' => '1101-01',
+    $journal = array('nama_account'=>'Kas','coa'=>'1101-01','tanggal_jurnal'=>'2026-10-13','company'=>'STM',
+        'debit'=>100,'kredit'=>0,'keterangan'=>'PRIVATE','id_company'=>7,'nm_company'=>'STM','nm_coa'=>'Kas','id_divisi'=>5,'nm_divisi'=>'Finance');
+    $ci->input->values = array_merge(array('jurnal_ls'=>array(array_merge($journal,array('coa'=>'6207-00-00')),array_merge($journal,array('debit'=>0,'kredit'=>105)),array_merge($journal,array('coa'=>'7201-01-04','debit'=>5))), 'id_req' => array('REQ-1'), 'payment_date' => '2026-10-13', 'bank_coa' => '1101-01',
         'bank_nilai' => 100, 'curs' => 1, 'id_supplier' => 'SUP-1', 'curs_header' => $options['currency'] ?? 'IDR',
         'biaya_admin_forex' => 0, 'biaya_admin' => 5, 'curs_admin' => 1, 'biaya_admin_forex2' => 0, 'biaya_admin2' => 0,
         'curs_admin2' => 1, 'bank_coa_admin' => '1101-02', 'nilai_bayar_bank' => 100, 'admin_charge_bearer' => 'company',
         'payfor' => array('ITEM-1'), 'no_request' => 'RP-1', 'tipetrans' => 1, 'search' => array('value' => 'PRIVATE'), 'password' => 'PRIVATE',
         'start' => 0, 'length' => 25, 'draw' => 1, 'jenis_payment' => 1, 'id' => 'PAY-1', 'checked' => 1,
-        'bank' => '1101-01', 'tgl_bayar' => '2026-10-13', 'keterangan_pembayaran' => 'PRIVATE', 'payment_bank' => '100',
+        'bank' => '1101-01', 'tgl_bayar' => '2026-10-13', 'keterangan_pembayaran' => 'PRIVATE', 'payment_bank' => '105',
         'total_payment' => '100', 'id_payment' => 'PAY-1', 'bank_charge' => '5', 'supplier_input' => 'SUP-1', 'nm_supplier_input' => 'PRIVATE'), $post);
     $_FILES = $options['files'] ?? array();
     $_GET = array_merge(array('id_payment' => 'PAY-1', 'jenis_payment' => 'pr', 'admin_charge_bearer' => 'company'), $options['get'] ?? array());

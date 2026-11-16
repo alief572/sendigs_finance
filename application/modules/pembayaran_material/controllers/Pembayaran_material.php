@@ -1581,6 +1581,43 @@ class Pembayaran_material extends Admin_Controller
 			if (!$this->db->trans_begin()) { throw new RuntimeException('Payment transaction unavailable'); }
 			$this->Pembayaran_material_model->lock_payment_selection($this->auth->user_id());
 			$this->Pembayaran_material_model->validate_payment_selection($selectedIds);
+			$payments = $this->auditQuery($this->db->where_in('id', $selectedIds)->get('payment_approve'))->result();
+			$details = [];
+			if (isset($post['dt']) && !is_array($post['dt'])) { throw new DomainException('Detail payment tidak valid.'); }
+			foreach (($post['dt'] ?? []) as $detail) {
+				if (!is_array($detail) || !isset($detail['id_payment']) || !is_scalar($detail['id_payment']) || isset($details[$detail['id_payment']])) {
+					throw new DomainException('Detail payment tidak valid atau duplikat.');
+				}
+				if (!isset($detail['tipe_pph']) || !is_scalar($detail['tipe_pph']) || !in_array((string) $detail['tipe_pph'], ['', '1', '2', '21', '23'], true)) {
+					throw new DomainException('Tipe PPh payment tidak valid.');
+				}
+				$details[$detail['id_payment']] = $detail;
+			}
+			$totals = $this->Pembayaran_material_model->payment_totals($payments, $details, ($post['bank_charge'] ?? '') === '' ? '0' : $post['bank_charge'], $admin_charge_bearer);
+			if ($totals !== null) {
+				if ($this->Pembayaran_material_model->payment_cents($post['total_payment']) !== $totals['total']) {
+					throw new DomainException('Total payment berubah atau tidak sesuai detail dokumen. Muat ulang form.');
+				}
+				if (!$totals['bank'] || $this->Pembayaran_material_model->payment_cents($post['payment_bank']) !== $totals['bank']) {
+					throw new DomainException('Payment Bank harus sesuai total setelah PPh: Rp '.$this->Pembayaran_material_model->payment_decimal($totals['bank']).'.');
+				}
+				if (!is_scalar($post['bank'])) { throw new DomainException('Bank payment tidak valid.'); }
+				$bank = $this->auditQuery($this->db->get_where('ms_bank', ['id' => $post['bank'], 'deleted' => '0']))->row();
+				if (!$bank || empty($bank->coa_bank)) { throw new DomainException('COA bank payment tidak ditemukan.'); }
+				$post['bank'] = $bank->coa_bank;
+				// Validasi balance tetap lebih dahulu agar alasan jurnal lama yang gagal tidak berubah.
+				$journalCheck = [];
+				foreach (($post['jurnal_ls'] ?? []) as $row) {
+					if (!is_array($row)) { throw new Invalid_payment_journal('Baris jurnal pembayaran tidak valid.'); }
+					$journalCheck[] = array_merge($row, ['no_transaksi' => 'payment', 'jenis_transaksi' => 'Payment']);
+				}
+				Payment_journal_validator::validate($journalCheck);
+				$this->Pembayaran_material_model->validate_payment_journal($post['jurnal_ls'], $totals, $post['bank']);
+				$post['dt'] = array_values($totals['details']);
+				$post['total_payment'] = $this->Pembayaran_material_model->payment_decimal($totals['total']);
+				$post['payment_bank'] = $this->Pembayaran_material_model->payment_decimal($totals['bank']);
+				$post['bank_charge'] = $this->Pembayaran_material_model->payment_decimal($totals['admin']);
+			}
 			$get_coa_bank = $this->auditQuery($this->db->get_where(DBACC . '.coa_master', ['no_perkiraan' => $post['bank']]))->row();
 			$nm_coa_bank = '';
 			$kode_bank = '';
@@ -1682,7 +1719,8 @@ class Pembayaran_material extends Admin_Controller
 
 			if (!empty($post['dt'])) {
 				foreach ($post['dt'] as $detail) {
-					$tipe_pph = ($detail['tipe_pph'] == 1) ? 'PPH 23' : 'PPH 22';
+					$pph_type = (string) $detail['tipe_pph'];
+					$tipe_pph = $pph_type === '' ? '' : 'PPH '.(['1' => '23', '2' => '22'][$pph_type] ?? $pph_type);
 
 					$this->db->where('id', $detail['id_payment']);
 					$update_payment_detail = $this->auditWrite($this->db->update('payment_approve', [
@@ -1691,7 +1729,7 @@ class Pembayaran_material extends Admin_Controller
 						'tipe_pph' => $tipe_pph
 					]));
 
-					$kurs_invoice = $detail['kurs_invoice'];
+					$kurs_invoice = $detail['kurs_invoice'] ?? 1;
 					$last_detail_ppn = str_replace(',', '', $detail['nilai_ppn']);
 					if (!$update_payment_detail) {
 						throw new Exception($this->db->error($update_payment_detail));
@@ -1992,6 +2030,19 @@ class Pembayaran_material extends Admin_Controller
 						}
 					}
 				}
+				if ($totals !== null) {
+					// Jurnal accounting memakai pajak dan bank yang sudah tervalidasi pada staging.
+					$det_Jurnaltes1 = [];
+					foreach ($arr_jurnal as $line) {
+						if ($line['jenis_transaksi'] !== 'Payment') { continue; }
+						$det_Jurnaltes1[] = [
+							'nomor' => $nomor_jurnal, 'tanggal' => $payment_date, 'tipe' => 'BUK',
+							'no_perkiraan' => $line['coa'], 'keterangan' => $line['keterangan'],
+							'no_request' => $id_payment_paid, 'no_reff' => $no_request, 'jenis_jurnal' => $jenis_jurnal,
+							'nocust' => $id_supplier, 'stspos' => '1', 'kredit' => $line['kredit'], 'debet' => $line['debit']
+						];
+					}
+				}
 				$insert_jurnal_tras = $this->auditWrite($this->db->insert_batch('jurnaltras', $det_Jurnaltes1));
 				if (!$insert_jurnal_tras) {
 					throw new Exception('Input JurnalTras gagal !');
@@ -2153,7 +2204,14 @@ class Pembayaran_material extends Admin_Controller
 		$ids = is_string($selection) ? explode(',', $selection) : array();
 		$this->beginAudit(__FUNCTION__, array_merge($this->auditFilters(), array('payment_ids' => $ids, 'document_count' => count($ids))), array('row_count', 'document_count', 'payment_ids'));
 		$summary = array();
-		$this->Pembayaran_material_model->set_jurnal($summary);
+		try {
+			$this->Pembayaran_material_model->set_jurnal($summary);
+		} catch (Throwable $e) {
+			$summary['queries_ok'] = false;
+			echo json_encode(['hasil_jurnal' => '', 'hasil_jurnal_refill' => '', 'ttl_debit' => 0, 'ttl_kredit' => 0,
+				'preview_error' => $e instanceof DomainException ? $e->getMessage() : 'Preview jurnal gagal dimuat.',
+				'is_all_petty_cash_hutang' => false, 'is_refill_pettycash' => false]);
+		}
 		$this->completeAudit('Menyiapkan set_jurnal', !empty($summary['queries_ok']) && !empty($summary['row_count']) && empty($summary['source_missing']) ? 1 : 0, array('row_count' => $summary['row_count'] ?? 0, 'outcome' => empty($summary['row_count']) || !empty($summary['source_missing']) ? 'not_found' : (!empty($summary['queries_ok']) ? 'prepared' : 'failed')));
 	}
 

@@ -142,3 +142,17 @@ Acuan: `specs/docs/review-monitoring-piutang/` (fr-nfr.md, use-case.md, mockup, 
 5. Fase 4: Surat Konfirmasi (profil STM), regresi, dokumentasi.
 
 Di luar cakupan: write-off, invoice internal, profil surat non-STM, notifikasi, tab Invoiced di Invoicing (INV-FR-02: saat ini hanya tab Konsultasi + Non Konsultasi dengan filter status).
+
+## Pembulatan PPh per item — 16 November 2026
+
+Menggantikan rancangan pembulatan bank. PPh 23 = ceil((request + PPN) × 2%); PPh 21 = ceil((request + PPN) × 2,5%), per item ke rupiah penuh. Hitung ulang dari jenis saat load, perubahan jenis/PPN, preview, dan simpan; PPh tetap readonly. Pilihan kosong = 0. Parser integer sen dipakai ulang agar batas rupiah tepat; komponen lain tidak dibulatkan.
+
+1. Fondasi: helper hitung PPh integer dan total payment server, tes per jenis/pecahan/bulat/invalid. Selesai bila perhitungan tepat dan payload PPh berbeda ditolak; kompatibilitas kode legacy dan petty cash dijaga.
+2. Integrasi: sinkronkan form/preview/writer/jurnal; hapus ceiling bank, baris Pembulatan, konfigurasi COA dan field respons khususnya. Pertahankan guard preview, normalisasi bank, deduplikasi bank/admin, balance, commit dan audit. Selesai bila preview sampai accounting memakai PPh/bank identik tanpa COA pembulatan.
+3. Verifikasi: adaptasi tes pembulatan PHP/JS, regresi pembayaran/jurnal/selection dan kegagalan tulis/query/commit/audit, lint/whitespace. Perbarui checkpoint tiap fase. Tanpa browser, DB live, migrasi, perubahan historis, commit/push atau perubahan workspace lain.
+
+Kriteria: request 1.000.028 + PPN 0, PPh 23 20.001, payment 980.027 sebelum admin. Multi-item dibulatkan per item. Payment masih bisa pecahan bila request/PPN/admin pecahan; kontrol tetap harus nol tanpa toleransi selisih.
+
+Status: fase 1–3 selesai. PPh form/preview/simpan dan jurnal tersinkron; konfigurasi serta jurnal pembulatan bank dilepas. Tidak perlu pengisian COA pembulatan untuk memakai aturan PPh ini. Bukti tes dan keterbatasan: checkpoint bagian Pembulatan PPh per item.
+
+Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru development dan main, sertakan hanya kode/tes/dokumen PPh dan fixture yang dibutuhkan; jangan ikutkan konfigurasi DB lokal atau perubahan task lain. Verifikasi paket masing-masing branch, lalu push fast-forward tanpa force dan cek hash remote.

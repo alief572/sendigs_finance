@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__).'/libraries/Payment_journal_validator.php';
 class Pembayaran_material_model extends BF_Model
 {
 
@@ -442,6 +443,125 @@ class Pembayaran_material_model extends BF_Model
 		]);
 	}
 
+	public static function payment_cents($value)
+	{
+		if (!is_scalar($value) || is_bool($value)) { throw new DomainException('Nominal payment tidak valid.'); }
+		$value = trim((string) $value);
+		if (strpos($value, ',') !== false && !preg_match('/^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/D', $value)) {
+			throw new DomainException('Format nominal payment tidak valid.');
+		}
+		$value = str_replace(',', '', $value);
+		if (strpos($value, '.') !== false) { $value = rtrim(rtrim($value, '0'), '.'); }
+		return Payment_journal_validator::cents($value, 'payment');
+	}
+
+	public static function payment_decimal($cents)
+	{
+		return intdiv($cents, 100).'.'.str_pad((string) ($cents % 100), 2, '0', STR_PAD_LEFT);
+	}
+
+	public static function payment_pph_type($type)
+	{
+		if (!is_scalar($type) || is_bool($type)) { throw new DomainException('Tipe PPh payment tidak valid.'); }
+		$type = strtoupper(trim((string) $type));
+		$type = ['PPH 21' => '21', 'PPH 23' => '23', 'PPH 22' => '2', '1' => '23'][$type] ?? $type;
+		if (!in_array($type, ['', '21', '23', '2'], true)) { throw new DomainException('Tipe PPh payment tidak valid.'); }
+		return $type;
+	}
+
+	public static function payment_pph($type, $requestPayment, $ppn, $legacyPph = 0)
+	{
+		$type = self::payment_pph_type($type);
+		$amount = self::payment_cents($requestPayment);
+		$ppn = self::payment_cents($ppn);
+		if ($amount > PHP_INT_MAX - $ppn) { throw new DomainException('Dasar PPh melampaui batas aman.'); }
+		// Kode legacy 2 adalah PPh 22; tarifnya tidak diubah oleh aturan PPh 21/23.
+		if ($type === '2') { return self::payment_cents($legacyPph); }
+		if ($type === '') { return 0; }
+		$base = $amount + $ppn;
+		$divisor = $type === '23' ? 5000 : 4000;
+		return (intdiv($base, $divisor) + ($base % $divisor ? 1 : 0)) * 100;
+	}
+
+	public function payment_totals($payments, $details, $bankCharge, $bearer)
+	{
+		if (!is_array($payments) || !$payments || !is_array($details) || !in_array($bearer, ['company', 'recipient'], true)) {
+			throw new DomainException('Data payment tidak valid.');
+		}
+		$allPetty = true;
+		foreach ($payments as $payment) {
+			if ($payment->tipe === 'refill_pettycash' || strpos($payment->no_doc, 'RPC') === 0) { return null; }
+			if ($payment->tipe !== 'petty_cash_hutang') { $allPetty = false; }
+		}
+		if ($allPetty) { return null; }
+		$total = 0;
+		$normalized = [];
+		foreach ($payments as $payment) {
+			$id = (string) $payment->id;
+			$detail = $details[$id] ?? [];
+			if (!is_array($detail) || ($details && (!isset($details[$id], $detail['nilai_ppn'], $detail['nilai_pph'], $detail['tipe_pph'])))) {
+				throw new DomainException('Detail payment tidak lengkap.');
+			}
+			$amount = self::payment_cents($payment->jumlah);
+			$ppn = self::payment_cents($detail['nilai_ppn'] ?? ($payment->total_ppn ?? 0));
+			$type = self::payment_pph_type($detail['tipe_pph'] ?? ($payment->tipe_pph ?? ''));
+			$pph = self::payment_pph($type, $payment->jumlah, self::payment_decimal($ppn), $detail['nilai_pph'] ?? ($payment->total_pph ?? 0));
+			if ($detail && self::payment_cents($detail['nilai_pph']) !== $pph) {
+				throw new DomainException('PPh payment tidak sesuai perhitungan otomatis. Muat ulang form.');
+			}
+			if ($pph > $amount + $ppn || $total > PHP_INT_MAX - ($amount + $ppn - $pph)) {
+				throw new DomainException('Total payment tidak valid atau melampaui batas aman.');
+			}
+			$total += $amount + $ppn - $pph;
+			$normalized[$id] = array_merge($detail, ['id_payment' => $id, 'tipe_pph' => $type,
+				'nilai_ppn' => self::payment_decimal($ppn), 'nilai_pph' => self::payment_decimal($pph),
+				'pph_coa' => in_array($payment->tipe, ['transport', 'transportasi'], true) ? '1106-01-01' : ($type === '23' ? '2104-01-03' : '2104-01-02')]);
+		}
+		if (array_diff(array_keys($details), array_keys($normalized))) { throw new DomainException('Detail payment di luar pilihan.'); }
+		$admin = self::payment_cents($bankCharge);
+		if ($total > PHP_INT_MAX - $admin) { throw new DomainException('Total payment melampaui batas aman.'); }
+		return ['total' => $total, 'admin' => $admin, 'bank' => $total + ($bearer === 'company' ? $admin : 0), 'details' => $normalized];
+	}
+
+	public function validate_payment_journal($rows, $totals, $bankCoa)
+	{
+		if (!is_array($rows) || !$rows) { throw new Invalid_payment_journal('Jurnal pembayaran kosong.'); }
+		$bankTotal = 0;
+		$taxes = [];
+		foreach ($rows as $row) {
+			if (!is_array($row)) { throw new Invalid_payment_journal('Baris jurnal pembayaran tidak valid.'); }
+			$coa = $row['coa'] ?? '';
+			$debit = self::payment_cents($row['debit'] ?? null);
+			$credit = self::payment_cents($row['kredit'] ?? null);
+			if ($coa === $bankCoa) {
+				if ($debit !== 0 || $credit > $totals['bank'] - $bankTotal) { throw new Invalid_payment_journal('Nominal jurnal bank tidak valid.'); }
+				$bankTotal += $credit;
+			}
+			if (in_array($coa, ['2104-01-02', '2104-01-03', '1106-01-01', '1106-01-06'], true)) {
+				$id = $row['id_payment_ref'] ?? '';
+				if (!is_scalar($id) || !isset($totals['details'][$id])) { throw new Invalid_payment_journal('Referensi jurnal pajak tidak sesuai pilihan.'); }
+				$detail = $totals['details'][$id];
+				$field = $coa === '1106-01-06' ? 'nilai_ppn' : 'nilai_pph';
+				$expectedCoa = $field === 'nilai_ppn' ? '1106-01-06' : $detail['pph_coa'];
+				$amount = $field === 'nilai_ppn' ? $debit : $credit;
+				$opposite = $field === 'nilai_ppn' ? $credit : $debit;
+				$previous = $taxes[$id][$field] ?? 0;
+				if ($coa !== $expectedCoa || $opposite !== 0 || $amount > self::payment_cents($detail[$field]) - $previous) {
+					throw new Invalid_payment_journal('COA atau nominal jurnal pajak tidak sesuai detail payment.');
+				}
+				$taxes[$id][$field] = $previous + $amount;
+			}
+		}
+		if ($bankTotal !== $totals['bank']) { throw new Invalid_payment_journal('Kredit bank tidak sesuai nominal payment.'); }
+		foreach ($totals['details'] as $id => $detail) {
+			foreach (['nilai_ppn', 'nilai_pph'] as $field) {
+				if (($taxes[$id][$field] ?? 0) !== self::payment_cents($detail[$field])) {
+					throw new Invalid_payment_journal('Nominal jurnal pajak tidak sesuai detail payment.');
+				}
+			}
+		}
+	}
+
 	public function set_jurnal(&$auditSummary = null)
 	{
 		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
@@ -449,6 +569,9 @@ class Pembayaran_material_model extends BF_Model
 		$post = $this->input->post();
 
 		$id_payment = $post['id_payment'];
+		foreach (['id_payment', 'payment_bank', 'bank_charge', 'bank', 'total_payment', 'admin_charge_bearer'] as $field) {
+			if (isset($post[$field]) && (!is_scalar($post[$field]) || is_bool($post[$field]))) { throw new DomainException('Input payment tidak valid.'); }
+		}
 		$payment_bank = str_replace(',', '', $post['payment_bank'] ?? '');
 		$bank_charge = str_replace(',', '', $post['bank_charge'] ?? '');
 		$bank = $post['bank'] ?? '';
@@ -495,8 +618,36 @@ class Pembayaran_material_model extends BF_Model
 			}
 		}
 
-		$nilai_pph = $this->input->post('nilai_pph', true);
-		$nilai_ppn = $this->input->post('nilai_ppn', true);
+		$item_ppn_arr = $post['item_ppn'] ?? [];
+		$item_pph_arr = $post['item_pph'] ?? [];
+		$pph_data = $post['pph_data'] ?? [];
+		$totals = null;
+		$nilai_pph = $post['nilai_pph'] ?? 0;
+		$nilai_ppn = $post['nilai_ppn'] ?? 0;
+		if (!$is_all_petty_cash_hutang && !$is_refill_pettycash) {
+			self::payment_cents(($post['payment_bank'] ?? '') === '' ? '0' : $post['payment_bank']);
+			$ids = array_map(function ($payment) { return (string) $payment->id; }, $get_payment);
+			foreach ([$item_ppn_arr, $item_pph_arr, $pph_data] as $values) {
+				if (!is_array($values) || array_diff(array_keys($values), $ids)) { throw new DomainException('Detail payment di luar pilihan.'); }
+			}
+			$details = [];
+			foreach ($get_payment as $payment) {
+				$type = self::payment_pph_type($pph_data[$payment->id] ?? ($payment->tipe_pph ?? ''));
+				$ppn = $item_ppn_arr[$payment->id] ?? ($payment->total_ppn ?? 0);
+				$details[$payment->id] = ['tipe_pph' => $type, 'nilai_ppn' => $ppn,
+					'nilai_pph' => $item_pph_arr[$payment->id] ?? self::payment_decimal(self::payment_pph($type, $payment->jumlah, $ppn, $payment->total_pph ?? 0))];
+			}
+			$totals = $this->payment_totals($get_payment, $details, ($post['bank_charge'] ?? '') === '' ? '0' : $post['bank_charge'], $admin_charge_bearer);
+			$total_payment = self::payment_decimal($totals['total']);
+			$bank_charge = self::payment_decimal($totals['admin']);
+			foreach ($totals['details'] as $id => $detail) {
+				$item_ppn_arr[$id] = $detail['nilai_ppn'];
+				$item_pph_arr[$id] = $detail['nilai_pph'];
+				$pph_data[$id] = $detail['tipe_pph'];
+			}
+			$nilai_pph = array_sum($item_pph_arr);
+			$nilai_ppn = array_sum($item_ppn_arr);
+		}
 
 		// Cache arrays to reduce duplicate database lookups
 		$company_cache = [];
@@ -569,16 +720,21 @@ class Pembayaran_material_model extends BF_Model
 		};
 
 		// Helper closure to generate HTML rows
-		$generate_tr = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use (&$ttl_debit, &$ttl_kredit, $coa_bank) {
+		$consolidated = false;
+		$generate_tr = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use (&$ttl_debit, &$ttl_kredit, $coa_bank, $totals, &$consolidated) {
 			$is_bank_coa = (!empty($coa_bank) && $coa == $coa_bank) || in_array($coa, ['1101-02-01', '1101-02-09']);
+			if ($totals !== null && !$consolidated && ($is_bank_coa || $coa === '7201-01-04')) { return ''; }
+			if ($totals !== null) {
+				$debit = self::payment_decimal(self::payment_cents($debit));
+				$kredit = self::payment_decimal(self::payment_cents($kredit));
+			}
 			if ($id_payment_ref !== null && !empty($id_payment_ref) && !$is_bank_coa) {
 				if (strpos($keterangan, ' - ' . $id_payment_ref) === false) {
 					$keterangan = $keterangan . ' - ' . $id_payment_ref;
 				}
 			}
 
-			$tr = '<tr>';
-			$tr .= '<td class="text-center">';
+			$tr = '<tr><td class="text-center">';
 			$tr .= $tgl_bayar_display;
 			if ($id_payment_ref !== null && !$is_bank_coa) {
 				$tr .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][id_payment_ref]" value="' . $id_payment_ref . '">';
@@ -614,12 +770,12 @@ class Pembayaran_material_model extends BF_Model
 			$tr .= '</td>';
 
 			$tr .= '<td class="text-right">';
-			$tr .= number_format($debit);
+			$tr .= number_format($debit, 2);
 			$tr .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][debit]" value="' . $debit . '">';
 			$tr .= '</td>';
 
 			$tr .= '<td class="text-right">';
-			$tr .= number_format($kredit);
+			$tr .= number_format($kredit, 2);
 			$tr .= '<input type="hidden" name="jurnal_ls[' . $no_jurnal . '][kredit]" value="' . $kredit . '">';
 			$tr .= '</td>';
 			$tr .= '</tr>';
@@ -772,12 +928,9 @@ class Pembayaran_material_model extends BF_Model
 				$nm_company = $comp_resolved['nm_company'];
 				$id_kasbon_consultant = (!empty($get_kasbon->no_kasbon_consultant)) ? $get_kasbon->no_kasbon_consultant : '';
 
-				$pph_data = $this->input->post('pph_data');
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-				$item_ppn_arr = $this->input->post('item_ppn');
-				$item_pph_arr = $this->input->post('item_pph');
 				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -980,8 +1133,6 @@ class Pembayaran_material_model extends BF_Model
 					$nm_divisi = (!empty($get_title)) ? $get_title->name : '';
 				}
 
-				$item_ppn_arr = $this->input->post('item_ppn');
-				$item_pph_arr = $this->input->post('item_pph');
 				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1118,12 +1269,9 @@ class Pembayaran_material_model extends BF_Model
 							$nm_department = $get_department->nm_depart ?? '';
 						}
 
-						$pph_data = $this->input->post('pph_data');
 						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-						$item_ppn_arr = $this->input->post('item_ppn');
-						$item_pph_arr = $this->input->post('item_pph');
 						$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 						$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1252,13 +1400,10 @@ class Pembayaran_material_model extends BF_Model
 						}
 
 						// 2. Data PPh & PPN
-						$pph_data = $this->input->post('pph_data');
 						$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 						$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 						$nm_pph = ($row_tipe_pph == '23') ? 'PPh 23' : 'PPh 21';
 
-						$item_ppn_arr = $this->input->post('item_ppn');
-						$item_pph_arr = $this->input->post('item_pph');
 						$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 						$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1334,12 +1479,9 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $no_coa, $nm_coa, $nm_biaya, $debit, $kredit);
 				endforeach;
 
-				$pph_data = $this->input->post('pph_data');
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-				$item_ppn_arr = $this->input->post('item_ppn');
-				$item_pph_arr = $this->input->post('item_pph');
 				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1412,7 +1554,6 @@ class Pembayaran_material_model extends BF_Model
 						$hasil_jurnal .= $generate_tr($no_jurnal, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, '1101-01-02', 'Kas Kecil', 'Kas Kecil', 0, $jumlah);
 
 						if ($nilai_ppn > 0) {
-							$item_ppn_arr = $this->input->post('item_ppn');
 							$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 							if ($nilai_ppn_item > 0) {
 								$no_jurnal++;
@@ -1420,7 +1561,6 @@ class Pembayaran_material_model extends BF_Model
 							}
 						}
 						if ($nilai_pph > 0) {
-							$item_pph_arr = $this->input->post('item_pph');
 							$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 							if ($nilai_pph_item > 0) {
 								$no_jurnal++;
@@ -1545,12 +1685,9 @@ class Pembayaran_material_model extends BF_Model
 					$hasil_jurnal .= $generate_tr($no_jurnal++, $item_ref_id, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $no_coa, $nm_coa, $keterangan, $debit, $kredit);
 				}
 
-				$pph_data = $this->input->post('pph_data');
 				$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 				$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-				$item_ppn_arr = $this->input->post('item_ppn');
-				$item_pph_arr = $this->input->post('item_pph');
 				$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 				$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1629,12 +1766,9 @@ class Pembayaran_material_model extends BF_Model
 					}
 
 					// Tambahkan jurnal PPN & PPh
-					$pph_data = $this->input->post('pph_data');
 					$row_tipe_pph = isset($pph_data[$item_payment->id]) ? $pph_data[$item_payment->id] : '';
 					$coa_pph = ($row_tipe_pph == '23') ? '2104-01-03' : '2104-01-02';
 
-					$item_ppn_arr = $this->input->post('item_ppn');
-					$item_pph_arr = $this->input->post('item_pph');
 					$nilai_ppn_item = isset($item_ppn_arr[$item_payment->id]) ? $item_ppn_arr[$item_payment->id] : $nilai_ppn;
 					$nilai_pph_item = isset($item_pph_arr[$item_payment->id]) ? $item_pph_arr[$item_payment->id] : $nilai_pph;
 
@@ -1690,6 +1824,7 @@ class Pembayaran_material_model extends BF_Model
 			$no++;
 		endforeach;
 
+		$consolidated = true;
 		if (!$is_refill_pettycash && $is_all_petty_cash_hutang === false) {
 			$debit_admin = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
 			if ($debit_admin > 0) {
@@ -1697,7 +1832,7 @@ class Pembayaran_material_model extends BF_Model
 			}
 			if (!empty($coa_bank) && $payment_bank > 0) {
 				if ($bank_charge > 0) {
-					$nominal_bank_utama = ($admin_charge_bearer === 'recipient') ? ($total_payment - $bank_charge) : $total_payment;
+					$nominal_bank_utama = ($totals !== null) ? self::payment_decimal(max(0, self::payment_cents($payment_bank) - $totals['admin'])) : (($admin_charge_bearer === 'recipient') ? ($total_payment - $bank_charge) : $total_payment);
 					if ($nominal_bank_utama > 0) {
 						$hasil_jurnal .= $generate_tr($no_jurnal++, null, $tgl_bayar_display, $tgl_bayar_value, $first_id_company, $first_nm_company, $first_id_divisi, $first_nm_divisi, $coa_bank, $nm_coa_bank, $nm_bank, 0, $nominal_bank_utama);
 					}
@@ -1713,6 +1848,7 @@ class Pembayaran_material_model extends BF_Model
 		}
 
 		$response = [
+			'preview_error' => !empty($auditSummary['queries_ok']) && empty($auditSummary['source_missing']) ? '' : 'Preview jurnal gagal dimuat atau data sumber tidak tersedia.',
 			'hasil_jurnal' => $hasil_jurnal,
 			'hasil_jurnal_refill' => $hasil_jurnal_refill,
 			'ttl_debit' => $ttl_debit,
