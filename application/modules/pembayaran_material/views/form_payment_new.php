@@ -400,6 +400,7 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			<input type="hidden" name="total_ppn" class="total_ppn" value="<?= $total_ppn ?>">
 			<input type="hidden" name="total_payment_bank" class="total_payment_bank" value="<?= $total_payment_bank ?>">
 			<input type="hidden" name="kontrol" class="kontrol" value="0">
+			<div class="alert alert-danger payment-preview-warning d-none" role="alert"></div>
 
 			<br><br>
 			<div class="col-md-6">
@@ -745,9 +746,11 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 
 <script>
 	var is_all_petty_cash_hutang = <?= $is_all_petty_cash_hutang ? 'true' : 'false' ?>;
-
-	set_jurnal();
-	set_jurnal_refill();
+	var is_refill_pettycash = <?= $is_refill_pettycash ? 'true' : 'false' ?>;
+	var journalRequest = 0;
+	var journalReady = false;
+	var journalError = '';
+	var journalSnapshot = '';
 
 	$(document).ready(function() {
 		// $('.supplier').chosen();
@@ -758,14 +761,8 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 
 		$('.auto_num').autoNumeric();
 
-		// AUTO-FILL Request Payment: setelah nilai PPH/PPN ter-prefill dari payment_approve,
-		// jalankan ulang perhitungan sekali saat load agar total_pph, total_payment, kontrol,
-		// dan jurnal langsung sinkron tanpa user harus menyentuh field.
-		setTimeout(function() {
-			$('.change_nilai_pph').each(function() {
-				$(this).trigger('change');
-			});
-		}, 300);
+		recalculatePayment();
+		set_jurnal_refill();
 
 		// $.ajax({
 		// 	type: "POST",
@@ -808,30 +805,40 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 		return s.join(dec);
 	}
 
+	function paymentCents(value) {
+		var text = String(value).trim();
+		if (text.indexOf(',') !== -1 && !/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) return NaN;
+		text = text.replace(/,/g, '');
+		if (text.indexOf('.') !== -1) text = text.replace(/0+$/, '').replace(/\.$/, '');
+		var match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(text);
+		if (!match) return NaN;
+		var cents = Number(match[1] + ((match[2] || '') + '00').slice(0, 2));
+		return Number.isSafeInteger(cents) ? cents : NaN;
+	}
+
+	function paymentPreviewKey() {
+		return $('.input_payment_bank, .bank_charge, .bank, .tgl_bayar, .nilai_pph, .nilai_ppn, .tipe_pph, .total_payment').serialize();
+	}
+
 	function hitung_kontrol() {
 		var bearer = $('input[name="admin_charge_bearer"]').val();
-		var total_payment = parseFloat($('.total_payment').val());
+		var total_payment = paymentCents($('.total_payment').val());
 		var total_payment_bank = $('.input_payment_bank').val();
 		if (total_payment_bank !== '') {
-			total_payment_bank = total_payment_bank.split(',').join('');
-			total_payment_bank = parseFloat(total_payment_bank);
+			total_payment_bank = paymentCents(total_payment_bank);
 		} else {
 			total_payment_bank = 0;
 		}
 		var bank_charge = $('.bank_charge').val();
 		if (bank_charge !== '') {
-			bank_charge = bank_charge.split(',').join('');
-			bank_charge = parseFloat(bank_charge);
+			bank_charge = paymentCents(bank_charge);
 		} else {
 			bank_charge = 0;
 		}
 
-		var kontrol;
-		if (bearer === 'recipient') {
-			kontrol = total_payment_bank - total_payment;
-		} else {
-			kontrol = total_payment_bank - total_payment - bank_charge;
-		}
+		var base = total_payment + (bearer === 'company' ? bank_charge : 0);
+		var kontrol = Number.isSafeInteger(base) ? (total_payment_bank - base) / 100 : NaN;
+		$('.payment-preview-warning').text(journalError).toggleClass('d-none', !journalError);
 
 		$('.kontrol_col').html(number_format(kontrol, 2));
 		$('.kontrol').val(kontrol);
@@ -845,7 +852,9 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 		}
 
 		// Disable submit button if kontrol != 0
-		if (Math.abs(kontrol) > 0.001) {
+		var hasEmptyCoa = false;
+		$('.tbody_jurnal input[name*="[coa]"]').each(function() { if (!$(this).val().trim()) hasEmptyCoa = true; });
+		if (!Number.isFinite(kontrol) || kontrol !== 0 || !journalReady || journalError || hasEmptyCoa || journalSnapshot !== paymentPreviewKey()) {
 			$('#simpan-com').prop('disabled', true);
 		} else {
 			// Only re-enable if bearer is valid
@@ -856,6 +865,10 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 	}
 
 	function set_jurnal() {
+		var request = ++journalRequest;
+		journalReady = false;
+		var snapshot = paymentPreviewKey();
+		$('#simpan-com').prop('disabled', true);
 		var id_payment = $('.id_payment').val();
 		var payment_bank = $('.input_payment_bank').val()
 		var bank_charge = $('.bank_charge').val();
@@ -913,10 +926,15 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			cache: false,
 			dataType: 'json',
 			success: function(result) {
+				if (request !== journalRequest) return;
+				journalReady = typeof result.hasil_jurnal === 'string' && (result.hasil_jurnal.length > 0 || result.is_all_petty_cash_hutang || result.is_refill_pettycash);
+				journalError = result.preview_error || '';
+				journalSnapshot = snapshot;
 				$('.tbody_jurnal').html(result.hasil_jurnal);
 
 				// Update flag global
 				is_all_petty_cash_hutang = result.is_all_petty_cash_hutang;
+				is_refill_pettycash = result.is_refill_pettycash;
 
 				// Hide jurnal utama jika semua pembayaran bertipe petty_cash_hutang atau refill_pettycash
 				if (result.is_all_petty_cash_hutang || result.is_refill_pettycash) {
@@ -932,9 +950,15 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 					$('.ttl_kredit_refill').html(number_format(result.ttl_kredit_refill));
 				}
 
-				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit));
-				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit));
+				$('.th_ttl_debit_jurnal').html(number_format(result.ttl_debit, 2));
+				$('.th_ttl_kredit_jurnal').html(number_format(result.ttl_kredit, 2));
 				check_jurnal_coa();
+			},
+			error: function() {
+				if (request !== journalRequest) return;
+				journalReady = false;
+				journalError = 'Preview jurnal gagal dimuat. Ubah kembali input untuk mencoba ulang.';
+				hitung_kontrol();
 			}
 		})
 	}
@@ -988,148 +1012,54 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 	}
 
 	function calculatePPh(tipe, requestPayment, ppn) {
-		if (tipe === '23') return (requestPayment + ppn) * 0.02;
-		if (tipe === '21') return (requestPayment + ppn) * 0.025;
-		return 0;
+		var amount = paymentCents(requestPayment);
+		var tax = paymentCents(ppn === '' ? '0' : ppn);
+		var base = amount + tax;
+		if (!Number.isSafeInteger(base) || !Number.isFinite(amount) || !Number.isFinite(tax)) return NaN;
+		if (tipe === '') return 0;
+		if (tipe !== '23' && tipe !== '21') return NaN;
+		var divisor = tipe === '23' ? 5000 : 4000;
+		return Math.floor(base / divisor) + (base % divisor ? 1 : 0);
 	}
 
-	$(document).on('change', '.tipe_pph', function() {
-		var id = $(this).data('id');
-		var tipe = $(this).val();
-		var requestPayment = parseFloat($('.payment_bank_' + id).val()) || 0;
-		var nilai_ppn = $('.nilai_ppn_' + id).val();
-		if (nilai_ppn !== '') {
-			nilai_ppn = nilai_ppn.split(',').join('');
-			nilai_ppn = parseFloat(nilai_ppn);
-		} else {
-			nilai_ppn = 0;
-		}
-
-		var pph = calculatePPh(tipe, requestPayment, nilai_ppn);
-
-		// Update nilai_pph field
-		var pphField = $('.nilai_pph_' + id);
-		if (pphField.data('autoNumeric')) {
-			pphField.autoNumeric('set', pph.toFixed(2));
-		} else {
-			pphField.val(pph.toFixed(2));
-		}
-
-		// Trigger the existing change_nilai_pph logic to recalculate DPP, totals, kontrol, jurnal
-		pphField.trigger('change');
-	});
-
-	$(document).on('change', '.change_nilai_pph', function() {
-		var id = $(this).data('id');
-		var payment_bank = $('.payment_bank_' + id).val();
-		var nilai_ppn = $('.nilai_ppn_' + id).val();
-		if (nilai_ppn !== '') {
-			nilai_ppn = nilai_ppn.split(',').join('');
-			nilai_ppn = parseFloat(nilai_ppn);
-		} else {
-			nilai_ppn = 0;
-		}
-
-		var nilai_pph = $(this).val();
-		if (nilai_pph !== '') {
-			nilai_pph = nilai_pph.split(',').join('');
-			nilai_pph = parseFloat(nilai_pph);
-		} else {
-			nilai_pph = 0;
-		}
-
-		var ttl_pph = 0;
+	function recalculatePayment() {
+		var total = 0, totalPPh = 0, totalPPN = 0;
+		var valid = true;
 		$('.nilai_pph').each(function() {
-			var pph = $(this).val();
-			if (pph !== '') {
-				pph = pph.split(',').join('');
-				pph = parseFloat(pph);
-			} else {
-				pph = 0;
+			var field = $(this);
+			var id = field.data('id');
+			var amount = paymentCents($('.payment_bank_' + id).val());
+			var ppnValue = $('.nilai_ppn_' + id).val();
+			var ppn = paymentCents(ppnValue === '' ? '0' : ppnValue);
+			var pph = (is_all_petty_cash_hutang || is_refill_pettycash)
+				? paymentCents(field.val() === '' ? '0' : field.val())
+				: calculatePPh($('.tipe_pph[data-id="' + id + '"]').val(), $('.payment_bank_' + id).val(), ppnValue) * 100;
+			var payment = amount + ppn - pph;
+			if (![amount, ppn, pph, payment, total + payment, totalPPh + pph, totalPPN + ppn].every(Number.isSafeInteger) || payment < 0) {
+				valid = false;
+				return;
 			}
-
-			ttl_pph += pph;
+			if (field.data('autoNumeric')) field.autoNumeric('set', (pph / 100).toFixed(2));
+			else field.val((pph / 100).toFixed(2));
+			$('.payment_col_' + id).html(number_format(payment / 100, 2));
+			total += payment;
+			totalPPh += pph;
+			totalPPN += ppn;
 		});
-		$('.total_pph').val(ttl_pph);
-		$('.total_pph_col').html(number_format(ttl_pph, 2));
-
-		var nilai_payment = (payment_bank - nilai_pph + nilai_ppn);
-
-		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
-
-		// Recalculate total_payment (sum of all DPP)
-		var new_total_payment = 0;
-		$('.nilai_pph').each(function() {
-			var row_id = $(this).data('id');
-			var row_payment_bank = parseFloat($('.payment_bank_' + row_id).val()) || 0;
-			var row_pph = $(this).val();
-			row_pph = row_pph !== '' ? parseFloat(row_pph.split(',').join('')) : 0;
-			var row_ppn = $('.nilai_ppn_' + row_id).val();
-			row_ppn = row_ppn !== '' ? parseFloat(row_ppn.split(',').join('')) : 0;
-			new_total_payment += (row_payment_bank - row_pph + row_ppn);
-		});
-		$('.total_payment').val(new_total_payment);
-		$('.total_payment_col').html(number_format(new_total_payment, 2));
-
+		journalReady = false;
+		journalError = valid ? '' : 'Nominal request, PPN, atau PPh tidak valid.';
+		if (!valid) { ++journalRequest; hitung_kontrol(); return; }
+		$('.total_payment').val((total / 100).toFixed(2));
+		$('.total_payment_col').html(number_format(total / 100, 2));
+		$('.total_pph').val((totalPPh / 100).toFixed(2));
+		$('.total_pph_col').html(number_format(totalPPh / 100, 2));
+		$('.total_ppn').val((totalPPN / 100).toFixed(2));
+		$('.total_ppn_col').html(number_format(totalPPN / 100, 2));
 		hitung_kontrol();
 		set_jurnal();
-	});
+	}
 
-	$(document).on('change', '.change_nilai_ppn', function() {
-		var id = $(this).data('id');
-		var payment_bank = $('.payment_bank_' + id).val();
-		var nilai_pph = $('.nilai_pph_' + id).val();
-		if (nilai_pph !== '') {
-			nilai_pph = nilai_pph.split(',').join('');
-			nilai_pph = parseFloat(nilai_pph);
-		} else {
-			nilai_pph = 0;
-		}
-
-		var nilai_ppn = $(this).val();
-		if (nilai_ppn !== '') {
-			nilai_ppn = nilai_ppn.split(',').join('');
-			nilai_ppn = parseFloat(nilai_ppn);
-		} else {
-			nilai_ppn = 0;
-		}
-
-		var ttl_ppn = 0;
-		$('.nilai_ppn').each(function() {
-			var ppn = $(this).val();
-			if (ppn !== '') {
-				ppn = ppn.split(',').join('');
-				ppn = parseFloat(ppn);
-			} else {
-				ppn = 0;
-			}
-
-			ttl_ppn += ppn;
-		});
-		$('.total_ppn').val(ttl_ppn);
-		$('.total_ppn_col').html(number_format(ttl_ppn, 2));
-
-		var nilai_payment = (payment_bank - nilai_pph + nilai_ppn);
-
-		$('.payment_col_' + id).html(number_format(nilai_payment, 2));
-
-		// Recalculate total_payment (sum of all DPP)
-		var new_total_payment = 0;
-		$('.nilai_pph').each(function() {
-			var row_id = $(this).data('id');
-			var row_payment_bank = parseFloat($('.payment_bank_' + row_id).val()) || 0;
-			var row_pph = $(this).val();
-			row_pph = row_pph !== '' ? parseFloat(row_pph.split(',').join('')) : 0;
-			var row_ppn = $('.nilai_ppn_' + row_id).val();
-			row_ppn = row_ppn !== '' ? parseFloat(row_ppn.split(',').join('')) : 0;
-			new_total_payment += (row_payment_bank - row_pph + row_ppn);
-		});
-		$('.total_payment').val(new_total_payment);
-		$('.total_payment_col').html(number_format(new_total_payment, 2));
-
-		hitung_kontrol();
-		set_jurnal();
-	});
+	$(document).on('change', '.tipe_pph, .change_nilai_ppn', recalculatePayment);
 
 	$(document).on('change', '.input_payment_bank', function() {
 		var nilai_payment_bank = $(this).val();
@@ -1158,6 +1088,11 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 
 	$(document).on('submit', '#frm-data', function(e) {
 		e.preventDefault();
+		hitung_kontrol();
+		if (!is_all_petty_cash_hutang && $('#simpan-com').prop('disabled')) {
+			swal({ title: 'Warning !', text: journalError || 'Pastikan kontrol 0 dan preview jurnal terbaru berhasil sebelum menyimpan.', type: 'warning' });
+			return false;
+		}
 		var kontrol = $('.kontrol').val();
 		if (kontrol == '') {
 			kontrol = 0;
