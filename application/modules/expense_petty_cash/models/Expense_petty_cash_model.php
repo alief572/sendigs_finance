@@ -541,11 +541,7 @@ class Expense_petty_cash_model extends BF_Model
         foreach ($details as $item) {
             $coa_code = $item['coa_code'];
             if (!isset($coa_names[$coa_code])) {
-                $coa_q = $this->db->query(
-                    "SELECT nama FROM " . DBACC_STM . ".coa_master WHERE no_perkiraan = ?",
-                    [$coa_code]
-                );
-                $coa_names[$coa_code] = ($coa_q->num_rows() > 0) ? $coa_q->row()->nama : $coa_code;
+                $coa_names[$coa_code] = $this->_coa_name($coa_code, DBACC_STM);
             }
         }
         // COA Kas Kecil name
@@ -637,6 +633,18 @@ class Expense_petty_cash_model extends BF_Model
      * @param array $details Pencatatan detail items, each with: coa_code, pengeluaran, total
      * @return bool
      */
+    /** Nama COA: DB company dulu, lalu DBACC (GL pusat), terakhir kode COA. */
+    private function _coa_name($coa_code, $db_company)
+    {
+        foreach (array_unique([$db_company, DBACC]) as $db) {
+            $q = $this->db->query("SELECT nama FROM " . $db . ".coa_master WHERE no_perkiraan = ? LIMIT 1", [$coa_code]);
+            if ($q->num_rows() > 0 && trim((string) $q->row()->nama) !== '') {
+                return $q->row()->nama;
+            }
+        }
+        return $coa_code;
+    }
+
     public function create_journal_intercompany($pencatatan_id, $header, $details)
     {
         // Extract header values
@@ -699,11 +707,7 @@ class Expense_petty_cash_model extends BF_Model
         foreach ($details as $item) {
             $coa_code = is_array($item) ? $item['coa_code'] : $item->coa_code;
             if (!isset($coa_names[$coa_code])) {
-                $coa_q = $this->db->query(
-                    "SELECT nama FROM " . $db_company . ".coa_master WHERE no_perkiraan = ?",
-                    [$coa_code]
-                );
-                $coa_names[$coa_code] = ($coa_q->num_rows() > 0) ? $coa_q->row()->nama : $coa_code;
+                $coa_names[$coa_code] = $this->_coa_name($coa_code, $db_company);
             }
         }
 
