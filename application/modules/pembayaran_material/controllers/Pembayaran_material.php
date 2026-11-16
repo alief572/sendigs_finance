@@ -1623,7 +1623,8 @@ class Pembayaran_material extends Admin_Controller
 			$kode_bank = '';
 			if (!empty($get_coa_bank)) {
 				$nm_coa_bank = $get_coa_bank->nama;
-				$kode_bank = $get_coa_bank->kode_bank;
+				// DBACC (GL) tidak punya kolom kode_bank (hanya DB company); fallback kosong agar tidak Notice.
+				$kode_bank = $get_coa_bank->kode_bank ?? '';
 			}
 
 			$id_payment_paid = $this->Pembayaran_material_model->generate_id_payment_paid($kode_bank, $post['tgl_bayar']);
