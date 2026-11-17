@@ -35,9 +35,7 @@ $shortTitles = ['INV' => 'Invoicing', 'RCV' => 'Penerimaan', 'PAY' => 'Pembayara
                 <label>Bulan<select name="month" class="form-control">
                         <option value="">Semua Bulan</option><?php foreach (['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'] as $i => $month): ?><option value="<?= $i + 1 ?>"><?= $month ?></option><?php endforeach; ?>
                     </select></label>
-                <label>Company<select name="company" class="form-control">
-                        <option value="">Semua Company</option>
-                    </select></label>
+                <label>Company<select name="company" class="form-control" multiple></select></label>
                 <label id="ja-category">Kategori Transaksi<select name="category" class="form-control">
                         <option value="">Semua Kategori</option>
                     </select></label>
@@ -80,4 +78,5 @@ $shortTitles = ['INV' => 'Invoicing', 'RCV' => 'Penerimaan', 'PAY' => 'Pembayara
     </div>
 </section>
 <script src="<?= base_url('assets/dist/sweetalert2.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/js/jurnal-all.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/jurnal-all.js') ?>"></script>

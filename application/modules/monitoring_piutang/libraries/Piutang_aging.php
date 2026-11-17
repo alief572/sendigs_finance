@@ -68,17 +68,118 @@ class Piutang_aging
         return $out;
     }
 
-    /** Cocok bila $wanted kosong, kunci grup (STM/VUCA/SUSTAIN) berisi id $actual, atau id company sama persis (kompatibel mundur untuk pemakai lain). */
+    /**
+     * Dropdown company memakai kunci grup STM/VUCA/SUSTAIN, tetapi ATURAN pemetaan ke id mengikuti aturan asli tiap modul:
+     * - 'alias' (jurnal_expense, jurnal_payment, report_jurnal_expense, request_payment): STM=7, VUCA=4+1 (STM-Vuca), SUSTAIN=3+6 (STM-Sustain)
+     *   plus alias nm_company untuk jurnal lama.
+     * - 'exact' (modul yang dulu cocok id persis): STM=7, VUCA=4, SUSTAIN=3.
+     * Follow Up/Monitoring Piutang dan Invoicing tetap memakai COMPANY_GROUPS sendiri.
+     */
+    const ALIAS_GROUPS = ['STM' => ['7'], 'VUCA' => ['4', '1'], 'SUSTAIN' => ['3', '6']];
+    const EXACT_GROUPS = ['STM' => ['7'], 'VUCA' => ['4'], 'SUSTAIN' => ['3']];
+    const COMPANY_NAMES = ['STM' => ['STM'], 'VUCA' => ['Vuca', 'STM-Vuca'], 'SUSTAIN' => ['Sustain', 'STM-Sustain', 'SENTRAL SUSTAINABILITY CONSULTING']];
+    /** Id lama dari dropdown versi sebelumnya (7/4/3) tetap dibaca sebagai grupnya. */
+    const LEGACY_GROUP_IDS = ['7' => 'STM', '4' => 'VUCA', '3' => 'SUSTAIN'];
+
+    /** Pecah nilai filter company (string "STM,VUCA" atau array dari Select2 multiple) jadi daftar unik, tanpa kosong; maks 10. */
+    public static function company_list($value)
+    {
+        $items = is_array($value) ? $value : explode(',', (string) $value);
+        $out = [];
+        foreach ($items as $item) {
+            if (!is_scalar($item)) {
+                continue;
+            }
+            $item = trim((string) $item);
+            if ($item !== '' && !in_array($item, $out, true)) {
+                $out[] = $item;
+            }
+        }
+        return array_slice($out, 0, 10);
+    }
+
+    /** Kunci grup dari satu nilai (kunci grup, atau id lama 7/4/3); null bila bukan grup. */
+    public static function jurnal_group($value)
+    {
+        $value = trim((string) $value);
+        if (isset(self::ALIAS_GROUPS[$value])) {
+            return $value;
+        }
+        return self::LEGACY_GROUP_IDS[$value] ?? null;
+    }
+
+    /** Gabungan id semua grup dalam $value menurut $rule ('alias' | 'exact'); item bukan grup diabaikan. */
+    public static function company_ids($value, $rule = 'alias')
+    {
+        $ids = [];
+        foreach (self::company_list($value) as $item) {
+            $g = self::jurnal_group($item);
+            if ($g) {
+                $ids = array_merge($ids, $rule === 'exact' ? self::EXACT_GROUPS[$g] : self::ALIAS_GROUPS[$g]);
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    /** Seperti company_ids, tetapi item bukan grup ikut sebagai id persis (kompatibel mundur). */
+    public static function company_values($value, $rule = 'alias')
+    {
+        $ids = [];
+        foreach (self::company_list($value) as $item) {
+            $g = self::jurnal_group($item);
+            $ids = array_merge($ids, $g ? ($rule === 'exact' ? self::EXACT_GROUPS[$g] : self::ALIAS_GROUPS[$g]) : [$item]);
+        }
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Terapkan filter company (satu atau banyak, digabung ATAU) ke query builder CI. Grup -> id IN (...) menurut $rule
+     * [OR nm IN (...) bila $nameCol diisi dan rule alias]; item lain -> id persis. Beberapa kolom id digabung OR.
+     * Kosong = tanpa filter. Dibungkus group_start/end.
+     */
+    public static function apply_company_filter($db, $idCol, $value, $nameCol = null, $rule = 'alias')
+    {
+        $list = self::company_list($value);
+        if (!$list) {
+            return;
+        }
+        $ids = self::company_values($list, $rule);
+        $single = count($ids) === 1 && !self::company_ids($list, $rule);
+        $names = [];
+        foreach ($list as $item) {
+            $g = self::jurnal_group($item);
+            if ($g && $nameCol && $rule !== 'exact') {
+                $names = array_merge($names, self::COMPANY_NAMES[$g]);
+            }
+        }
+        $db->group_start();
+        foreach ((array) $idCol as $i => $col) {
+            $f = ($i === 0 ? '' : 'or_') . ($single ? 'where' : 'where_in');
+            $db->$f($col, $single ? $ids[0] : $ids);
+        }
+        if ($names) {
+            $db->or_where_in($nameCol, array_values(array_unique($names)));
+        }
+        $db->group_end();
+    }
+
+    /** Cocok bila $wanted kosong, atau $actual cocok ke salah satu item (kunci grup COMPANY_GROUPS atau id persis). */
     public static function company_match($actual, $wanted)
     {
-        if (!self::filled($wanted)) {
+        $list = self::company_list($wanted);
+        if (!$list) {
             return true;
         }
-        $wanted = (string) $wanted;
-        if (isset(self::COMPANY_GROUPS[$wanted])) {
-            return in_array((string) $actual, self::COMPANY_GROUPS[$wanted], true);
+        foreach ($list as $item) {
+            if (isset(self::COMPANY_GROUPS[$item])) {
+                if (in_array((string) $actual, self::COMPANY_GROUPS[$item], true)) {
+                    return true;
+                }
+            } elseif ((string) $actual === $item) {
+                return true;
+            }
         }
-        return (string) $actual === $wanted;
+        return false;
     }
 
     public static function cents($v)

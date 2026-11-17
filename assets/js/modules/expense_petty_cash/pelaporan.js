@@ -4,6 +4,7 @@
  * DataTables initialization, filter handling, submit pelaporan action.
  */
 $(document).ready(function () {
+  CompanyMulti.init("#filter-company");
   // =========================================================================
   // Helper: Format date to "dd Mon YYYY"
   // =========================================================================
@@ -75,7 +76,7 @@ $(document).ready(function () {
       type: "POST",
       cache: false,
       data: function (d) {
-        d.filter_company = $("#filter-company").val();
+        d.filter_company = CompanyMulti.val("#filter-company");
         d.filter_status = $("#filter-status").val();
       },
       error: function () {
@@ -204,7 +205,7 @@ $(document).ready(function () {
 
   // Reset filter button — clear dropdowns and reload
   $("#btn-reset-filter").on("click", function () {
-    $("#filter-company").val("");
+    CompanyMulti.set("#filter-company", []);
     $("#filter-status").val("");
     table.ajax.reload(null, true);
   });

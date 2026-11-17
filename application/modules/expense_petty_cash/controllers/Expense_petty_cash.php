@@ -331,8 +331,8 @@ class Expense_petty_cash extends Admin_Controller
         $this->auditRestrict($this->viewPermission);
 
         $filters = [
-            'company' => $this->input->post('company'),
-            'status'  => $this->input->post('status'),
+            'company' => $this->input->post('company') ?: $this->input->post('filter_company'),
+            'status'  => $this->input->post('status') ?: $this->input->post('filter_status'),
         ];
 
         $result = $this->Expense_petty_cash_pelaporan_model->get_server_side_data($this->input->post(), $filters);

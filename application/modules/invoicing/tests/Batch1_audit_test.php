@@ -145,6 +145,7 @@ class IvModel {
     public function invoiced_totals(array $items) { return Invoicing_model::invoiced_totals($items); }
     public function money_for($item) { return Invoicing_model::money_for($item); }
     public function tax_label_for($code) { return Invoicing_model::tax_label_for($code); }
+    public function company_ids($c) { return Invoicing_model::company_ids($c); }
 }
 
 require dirname(__DIR__) . '/controllers/Invoicing.php';

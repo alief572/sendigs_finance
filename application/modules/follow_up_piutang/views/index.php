@@ -97,7 +97,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     <p class="fu-tabhint" id="fu-hint"><i class="fa fa-info-circle" aria-hidden="true"></i> <span></span></p>
 
     <div class="fu-filters">
-        <label class="fl">Company<select id="f-company"><option value="">Semua Company</option></select></label>
+        <label class="fl">Company<select id="f-company" multiple></select></label>
         <label class="fl">Customer<input type="text" id="f-customer" list="dl-customer" autocomplete="off" placeholder="Pilih dari daftar"></label><datalist id="dl-customer"></datalist>
         <label class="fl">Tahun Invoice
             <select id="f-inv-tahun"><option value="">Semua Tahun</option><?php foreach ($inv_years as $y) echo '<option>' . $y . '</option>'; ?></select>
@@ -166,6 +166,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 </div>
 
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script>
 (function () {
@@ -194,7 +195,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 
     function params() {
         return $.extend({}, f, {
-            company: $('#f-company').val(), customer: $('#f-customer').val(), fu: $('#f-fu').val(),
+            company: CompanyMulti.val('#f-company'), customer: $('#f-customer').val(), fu: $('#f-fu').val(),
             plan_bulan: $('#f-plan-bulan').val(), plan_tahun: $('#f-plan-tahun').val(), close_tahun: $('#f-close-tahun').val(),
             inv_tahun: $('#f-inv-tahun').val(), inv_bulan: $('#f-inv-bulan').val()
         });
@@ -277,8 +278,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             if (json.error) { say(json.error, 'danger'); } // filter tidak valid: server membalas 200 + error
             if (json.customers && !$('#dl-customer option').length) { json.customers.sort().forEach(function (c) { $('#dl-customer').append($('<option>').val(c)); }); }
             $.each(json.counts || {}, function (k, v) { $('[data-c="' + k + '"]').text(v); });
-            if (json.companies && $('#f-company option').length === 1) {
+            if (json.companies && !$('#f-company option').length) {
                 json.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); });
+                CompanyMulti.init('#f-company');
             }
         });
     }

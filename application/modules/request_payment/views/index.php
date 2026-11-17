@@ -86,8 +86,7 @@ $default_date_to   = date('Y-m-d');
 				<div class="col-md-3">
 					<div class="form-group">
 						<label>Company</label>
-						<select id="filter_company" class="form-control select2-filter" style="width: 100%;">
-							<option value="">Semua Entitas</option>
+						<select id="filter_company" class="form-control" multiple style="width: 100%;">
 							<?php if (!empty($companies)): ?>
 								<?php foreach ($companies as $company): ?>
 									<option value="<?= $company->id; ?>"><?= $company->nama; ?></option>
@@ -152,7 +151,7 @@ $default_date_to   = date('Y-m-d');
 				<div class="col-md-12">
 					<span class="active-filter-badge" id="active_filter_badge">
 						<i class="fa fa-info-circle"></i>
-						Periode: <?= date('d/m/Y', strtotime($default_date_from)); ?> - <?= date('d/m/Y', strtotime($default_date_to)); ?> | Semua Entitas
+						Periode: <?= date('d/m/Y', strtotime($default_date_from)); ?> - <?= date('d/m/Y', strtotime($default_date_to)); ?> | Semua Company
 					</span>
 				</div>
 			</div>
@@ -431,6 +430,7 @@ $default_date_to   = date('Y-m-d');
 </div><!-- /.box -->
 
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="https://cdn.datatables.net/1.13.11/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.11/js/dataTables.bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
@@ -455,6 +455,7 @@ $default_date_to   = date('Y-m-d');
 				minimumResultsForSearch: -1,
 				width: '100%'
 			});
+			CompanyMulti.init('#filter_company');
 
 			// Init datepicker for filter dates
 			$('.datepicker-filter').datepicker({
@@ -467,7 +468,7 @@ $default_date_to   = date('Y-m-d');
 			// Set defaults
 			$('#filter_date_from').datepicker('update', defaultDateFrom);
 			$('#filter_date_to').datepicker('update', defaultDateTo);
-			$('#filter_company').val('').trigger('change.select2');
+			CompanyMulti.set('#filter_company', []);
 			$('#filter_kategori').val('').trigger('change.select2');
 		}
 
@@ -491,7 +492,7 @@ $default_date_to   = date('Y-m-d');
 			}
 
 			return {
-				company_id: $('#filter_company').val(),
+				company_id: CompanyMulti.val('#filter_company'),
 				date_from: dateFrom,
 				date_to: dateTo,
 				kategori: $('#filter_kategori').val()
@@ -522,8 +523,8 @@ $default_date_to   = date('Y-m-d');
 			}
 
 			// Update active filter badge text
-			var companyText = $('#filter_company option:selected').text() || 'Semua Entitas';
-			if (!filters.company_id) companyText = 'Semua Entitas';
+			var companyText = $('#filter_company option:selected').map(function() { return $(this).text(); }).get().join(' + ') || 'Semua Company';
+			if (!filters.company_id) companyText = 'Semua Company';
 			var badgeText = 'Periode: ' + ($('#filter_date_from').val() || '-') + ' - ' + ($('#filter_date_to').val() || '-') + ' | ' + companyText;
 			$('#active_filter_badge').html('<i class="fa fa-info-circle"></i> ' + badgeText);
 
@@ -540,7 +541,7 @@ $default_date_to   = date('Y-m-d');
 		// RESET FILTER
 		// ========================================
 		window.resetFilter = function() {
-			$('#filter_company').val('').trigger('change.select2');
+			CompanyMulti.set('#filter_company', []);
 			$('#filter_date_from').datepicker('update', defaultDateFrom);
 			$('#filter_date_to').datepicker('update', defaultDateTo);
 			$('#filter_kategori').val('').trigger('change.select2');

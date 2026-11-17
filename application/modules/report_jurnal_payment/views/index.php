@@ -204,8 +204,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
             <div class="col-md-3 col-sm-6">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="company"><i class="fa fa-building-o text-muted" style="margin-right: 4px;"></i> Company</label>
-                    <select name="company" id="company" class="form-control select2">
-                        <option value="">- Semua Company -</option>
+                    <select name="company" id="company" class="form-control" multiple>
                         <?php
                         if (!empty($list_company)) {
                             foreach ($list_company as $row) {
@@ -277,6 +276,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <!-- Page Script -->
 <script type="text/javascript">
     $(document).ready(function() {
@@ -373,7 +373,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
     function search_jurnal() {
         var tgl_jurnal   = $('#tgl_jurnal').val();
         var no_transaksi = $('#no_transaksi').val();
-        var company      = $('#company').val();
+        var company      = CompanyMulti.val('#company');
 
         DataTables(tgl_jurnal, no_transaksi, company);
     }
@@ -384,7 +384,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
         if (fp) fp.clear();
 
         $('#no_transaksi').val('').trigger('change');
-        $('#company').val('').trigger('change');
+        CompanyMulti.set('#company', []);
 
         DataTables();
     }
@@ -392,7 +392,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
     function export_jurnal() {
         var tgl_jurnal   = $('#tgl_jurnal').val();
         var no_transaksi = $('#no_transaksi').val();
-        var company      = $('#company').val();
+        var company      = CompanyMulti.val('#company');
 
         window.open(siteurl + active_controller + 'export_excel?tgl_jurnal=' + encodeURIComponent(tgl_jurnal) + '&no_transaksi=' + encodeURIComponent(no_transaksi) + '&company=' + encodeURIComponent(company), '_blank');
     }
@@ -401,6 +401,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Payment.Delete');
         $('.select2').select2({
             width: '100%'
         });
+        CompanyMulti.init('#company');
     }
 </script>
 <script src="<?= base_url('assets/js/basic.js') ?>"></script>

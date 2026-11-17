@@ -60,7 +60,7 @@
     <div class="pb-panel">
         <div class="pb-filters">
             <label class="fl">Tahun Plan Bayar<select id="f-tahun"><?php foreach ($years as $y) echo '<option' . ($y == date('Y') ? ' selected' : '') . '>' . $y . '</option>'; ?></select></label>
-            <label class="fl">Company<select id="f-company"><option value="">Semua Company</option></select></label>
+            <label class="fl">Company<select id="f-company" multiple></select></label>
             <div class="sp"></div>
             <button type="button" class="pb-btn" id="btn-export"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Export Excel <span id="exp-label"></span></button>
         </div>
@@ -88,6 +88,7 @@
 </div>
 
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script>
 (function () {
@@ -98,7 +99,7 @@
     function rp(c) { return Number(c / 100).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
     function nf(v) { return rp(Number(v || 0) * 100); }
     function dmy(d) { return d ? String(d).substr(8, 2) + '-' + String(d).substr(5, 2) + '-' + String(d).substr(0, 4) : ''; }
-    function q() { return {tahun: $('#f-tahun').val(), company: $('#f-company').val()}; }
+    function q() { return {tahun: $('#f-tahun').val(), company: CompanyMulti.val('#f-company')}; }
     function umurCell(x) { return x.kategori && x.umur != null ? '<span class="umur ' + x.kategori + '">' + x.umur + ' hari</span> <span class="pb-pill ' + x.kategori + '">' + (KAT[x.kategori] || x.kategori) + '</span>' : '<span class="sub">–</span>'; }
 
     // Bulan sebelum batas mulai (Jan-Sep 2026) tidak ada datanya: tidak ditampilkan.
@@ -197,7 +198,7 @@
         $('#pb-msg').hide();
         $.getJSON(BASE + '/data', q()).done(function (r) {
             if (r.status !== 'success') { $('#pb-msg').text(r.msg || 'Data plan bayar tidak dapat dimuat.').show(); return; }
-            if ($('#f-company option').length === 1) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); }
+            if (!$('#f-company option').length) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); CompanyMulti.init('#f-company'); }
             D = r; cards(); titles();
         }).fail(function (x) {
             $('#pb-cards').empty(); $('#pb-msg').text((x.responseJSON || {}).msg || 'Data plan bayar gagal dimuat. Ganti tahun atau company untuk mencoba lagi, atau muat ulang halaman.').show();

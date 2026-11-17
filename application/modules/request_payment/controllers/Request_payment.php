@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Harboens
@@ -78,12 +79,19 @@ class Request_payment extends Admin_Controller
 		$rows = $this->Request_payment_model->fetch_request_rows($filter);
 
 		// label periode & entitas untuk header file
-		$company_label = 'Semua Entitas';
-		if (!empty($filter['company_id'])) {
+		$company_label = 'Semua Company';
+		$company_items = Piutang_aging::company_list($filter['company_id']);
+		if ($company_items) {
 			$names = $this->Request_payment_model->get_company_names_lookup();
-			if (isset($names[$filter['company_id']])) {
-				$company_label = $names[$filter['company_id']];
+			$labels = [];
+			foreach ($company_items as $item) {
+				if (Piutang_aging::jurnal_group($item) || !isset($names[$item])) {
+					$labels[] = Piutang_aging::jurnal_group($item) ?: $item;
+				} else {
+					$labels[] = $names[$item];
+				}
 			}
+			$company_label = implode(', ', array_unique($labels));
 		}
 
 		$this->load->view('rp_export_excel', [

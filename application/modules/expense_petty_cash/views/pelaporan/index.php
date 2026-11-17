@@ -12,8 +12,7 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label for="filter-company">Company</label>
-                    <select id="filter-company" class="form-control input-sm">
-                        <option value="">Semua company</option>
+                    <select id="filter-company" class="form-control input-sm" multiple>
                         <option value="STM">STM</option>
                         <option value="VUCA">VUCA</option>
                         <option value="SUSTAIN">SUSTAIN</option>
@@ -82,4 +81,5 @@
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/js/modules/expense_petty_cash/pelaporan.js') ?>"></script>

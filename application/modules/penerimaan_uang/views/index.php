@@ -40,7 +40,7 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
             <div class="f"><label for="rep_month">Bulan</label>
                 <select id="rep_month"><option value="">Semua</option><?php foreach ($monthsId as $i => $mn) : ?><option value="<?= $i + 1 ?>"><?= $mn ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_company">Company</label>
-                <select id="rep_company"><option value="">Semua</option><?php foreach ($list_companies as $cmp) : ?><option><?= $cmp ?></option><?php endforeach; ?></select></div>
+                <select id="rep_company" multiple data-placeholder="Semua"><?php foreach ($list_companies as $cmp) : ?><option><?= $cmp ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_kind">Jenis</label>
                 <select id="rep_kind"><option value="">Semua</option><option value="invoice">Penerimaan Piutang Invoice</option><option value="deposit">Penerimaan Piutang Kwitansi Deposit</option></select></div>
             <div class="f" style="margin-left:auto"><button class="btn btn-success" id="btn_export_excel" disabled>Export to Excel</button></div>
@@ -60,7 +60,7 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
 <script>
 (function () {
     var U = MockupUI, esc = U.esc, en = U.en, fdate = U.fdate, jq = window.jQuery;
-    if (jq.fn.select2) jq('.mk select').not('[name="table_report_length"]').select2({width: 'resolve'});
+    if (jq.fn.select2) jq('.mk select').not('[name="table_report_length"]').select2({width: 'resolve', placeholder: 'Semua', allowClear: false});
     var URL_ADD = <?= json_encode(base_url('penerimaan_uang/add_penerimaan_uang/')) ?>;
     var URL_DRAFT = <?= json_encode(site_url('penerimaan_uang/draft_rows')) ?>;
     var URL_REPORT = <?= json_encode(site_url('penerimaan_uang/get_report_penerimaan')) ?>;
@@ -70,6 +70,8 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
     var TABLES = {};
 
     function $(id) { return document.getElementById(id); }
+    // Company boleh lebih dari satu: string dipisah koma ("STM,VUCA"), kosong = semua.
+    function repCompany() { var v = jq('#rep_company').val() || []; return (Array.isArray(v) ? v : [v]).filter(Boolean).join(','); }
     function xhr(method, url, data, cb) {
         var r = new XMLHttpRequest();
         r.open(method, url);
@@ -116,7 +118,7 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
         TABLES.report = jq('#table_report').DataTable({
             processing: true, serverSide: true, pageLength: 25, lengthMenu: [10, 25, 50, 100], order: [[1, 'desc']],
             ajax: {url: URL_REPORT, type: 'POST', data: function (d) {
-                d.year = $('rep_year').value; d.month = $('rep_month').value; d.company = $('rep_company').value; d.receipt_kind = $('rep_kind').value; d.id_customer = '';
+                d.year = $('rep_year').value; d.month = $('rep_month').value; d.company = repCompany(); d.receipt_kind = $('rep_kind').value; d.id_customer = '';
             }},
             columns: [
                 {data: 'no', orderable: false},
@@ -132,10 +134,11 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
             ],
             language: {emptyTable: 'Tidak ada penerimaan yang sudah diproses untuk filter ini.'}
         });
-        ['rep_year', 'rep_month', 'rep_company', 'rep_kind'].forEach(function (id) { $(id).onchange = function () { TABLES.report.ajax.reload(); }; });
+        ['rep_year', 'rep_month', 'rep_kind'].forEach(function (id) { $(id).onchange = function () { TABLES.report.ajax.reload(); }; });
+        jq('#rep_company').on('change', function () { TABLES.report.ajax.reload(); });
     }
     function exportUrl() {
-        return URL_EXPORT + '?year=' + encodeURIComponent($('rep_year').value) + '&month=' + encodeURIComponent($('rep_month').value) + '&company=' + encodeURIComponent($('rep_company').value) +
+        return URL_EXPORT + '?year=' + encodeURIComponent($('rep_year').value) + '&month=' + encodeURIComponent($('rep_month').value) + '&company=' + encodeURIComponent(repCompany()) +
             '&search=' + encodeURIComponent(TABLES.report.search()) + '&receipt_kind=' + encodeURIComponent($('rep_kind').value) + '&id_customer=';
     }
     // Export (M:651): "Menyiapkan…" saat unduh, toast sesudahnya.

@@ -1394,8 +1394,9 @@ class Invoicing extends Admin_Controller
         if (is_scalar($filter_bulan) && preg_match('/^(?:[1-9]|1[0-2])$/', (string)$filter_bulan)) {
             $this->db->where('MONTH(f.tanggal_invoice) =', (int)$filter_bulan, false);
         }
-        if (is_scalar($filter_company) && preg_match('/^\d{1,10}$/', (string)$filter_company)) {
-            $this->db->where('COALESCE(e.id, g.id) =', (int)$filter_company, false);
+        $company_ids = $this->Invoicing_model->company_ids($filter_company);
+        if ($company_ids) {
+            $this->db->where('COALESCE(e.id, g.id) IN (' . implode(',', $company_ids) . ')', null, false);
         }
 
         $this->db->group_by('a.id');

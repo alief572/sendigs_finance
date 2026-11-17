@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Yunas Handra
@@ -401,13 +402,7 @@ class Jurnal_invoicing_model extends BF_Model
         if (!empty($filter['b.no_invoice'])) {
             $this->db->where('b.no_invoice', $filter['b.no_invoice']);
         }
-        if (!empty($filter['company'])) {
-            $this->db->group_start();
-            $this->db->where('d.id', $filter['company']);
-            $this->db->or_where('f.id', $filter['company']);
-            $this->db->or_where('j.id', $filter['company']);
-            $this->db->group_end();
-        }
+        Piutang_aging::apply_company_filter($this->db, ['d.id', 'f.id', 'j.id'], $filter['company'] ?? '', null, 'exact');
     }
 
     /**
@@ -473,12 +468,7 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function get_company_jurnal()
     {
-        $get_company_jurnal = $this->consultant->select('a.id as id_company, a.nm_company')
-            ->from('kons_tr_company a')
-            ->get()
-            ->result_array();
-
-        return $get_company_jurnal;
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
     public function get_jurnal_invoicing_excel($klien = null, $no_invoice = null, $company = null)

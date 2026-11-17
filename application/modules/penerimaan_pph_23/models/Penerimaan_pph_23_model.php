@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 class Penerimaan_pph_23_model extends BF_Model
 {
@@ -138,22 +139,21 @@ class Penerimaan_pph_23_model extends BF_Model
 
         $spk_ids_for_company = [];
         $penawaran_ids_for_company = [];
-        if (!empty($filter_company)) {
-            $spk_rows = $this->consultant->select('id_spk_penawaran')->where('id_company', $filter_company)->get('kons_tr_spk_penawaran')->result_array();
-            $spk_ids_for_company = array_column($spk_rows, 'id_spk_penawaran');
-
-            $penawaran_rows = $this->consultant->select('id_quotation')->where('company', $filter_company)->get('kons_tr_penawaran')->result_array();
-            $penawaran_ids_for_company = array_column($penawaran_rows, 'id_quotation');
-
-            $penawaran_non_kons_rows = $this->consultant->select('id_penawaran')->where('id_company', $filter_company)->get('kons_tr_penawaran_non_konsultasi')->result_array();
-            $penawaran_non_kons_ids = array_column($penawaran_non_kons_rows, 'id_penawaran');
-
-            $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, $penawaran_non_kons_ids);
-        }
-
         $penawaran_ids_other_company = [];
         if (!empty($filter_company)) {
-            $other_rows = $this->consultant->select('id_quotation')->where('company <>', $filter_company)->get('kons_tr_penawaran')->result_array();
+            // Nilai grup (STM/VUCA/SUSTAIN) -> daftar id; id numerik lama tetap dipakai apa adanya.
+            $company_ids = Piutang_aging::company_values($filter_company, 'exact');
+
+            $spk_rows = $this->consultant->select('id_spk_penawaran')->where_in('id_company', $company_ids)->get('kons_tr_spk_penawaran')->result_array();
+            $spk_ids_for_company = array_column($spk_rows, 'id_spk_penawaran');
+
+            $penawaran_rows = $this->consultant->select('id_quotation')->where_in('company', $company_ids)->get('kons_tr_penawaran')->result_array();
+            $penawaran_ids_for_company = array_column($penawaran_rows, 'id_quotation');
+
+            $penawaran_non_kons_rows = $this->consultant->select('id_penawaran')->where_in('id_company', $company_ids)->get('kons_tr_penawaran_non_konsultasi')->result_array();
+            $penawaran_ids_for_company = array_merge($penawaran_ids_for_company, array_column($penawaran_non_kons_rows, 'id_penawaran'));
+
+            $other_rows = $this->consultant->select('id_quotation')->where_not_in('company', $company_ids)->get('kons_tr_penawaran')->result_array();
             $penawaran_ids_other_company = array_column($other_rows, 'id_quotation');
         }
 

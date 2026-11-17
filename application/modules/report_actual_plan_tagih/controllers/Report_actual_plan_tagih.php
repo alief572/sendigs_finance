@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -179,9 +180,21 @@ class Report_actual_plan_tagih extends Admin_Controller
         }
 
         $nm_company = '';
-        if (!empty($get['company'])) {
-            $get_company = $this->db->get_where('view_rekap_actual_plan_tagih_dev', ['id_company' => $get['company']])->row();
-            $nm_company = (!empty($get_company->nm_company)) ? $get_company->nm_company : '';
+        $company_list = Piutang_aging::company_list($get['company'] ?? '');
+        if ($company_list) {
+            // Satu atau banyak company: grup ditampilkan namanya, id angka dicari namanya di view rekap.
+            $names = [];
+            foreach ($company_list as $item) {
+                if (Piutang_aging::jurnal_group($item)) {
+                    $names[] = Piutang_aging::jurnal_group($item);
+                    continue;
+                }
+                $get_company = $this->db->get_where('view_rekap_actual_plan_tagih_dev', ['id_company' => $item])->row();
+                if (!empty($get_company->nm_company)) {
+                    $names[] = $get_company->nm_company;
+                }
+            }
+            $nm_company = implode(', ', array_unique($names));
         }
 
         // Load PHPExcel
@@ -366,7 +379,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         $this->db->where('a.tahun_data >=', 2000);
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
+            Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, null, 'exact');
         } else {
             $this->db->where_in('a.id_company', [1, 3, 4, 6, 7]);
         }
@@ -402,7 +415,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
+            Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, null, 'exact');
         } else {
             $this->db->where_in('a.id_company', [1, 3, 4, 6, 7]);
         }
@@ -462,7 +475,7 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
+            Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, null, 'exact');
         } else {
             $this->db->where_in('a.id_company', [1, 3, 4, 6, 7]);
         }
@@ -585,9 +598,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         $this->db->group_by('a.id_spk_penawaran');
 
         $count_all = $this->db->count_all_results();
@@ -601,9 +612,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('c.nm_company', $search, 'both');
@@ -662,9 +671,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('c.nm_company', $search, 'both');
@@ -954,9 +961,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         $this->db->group_by('p.id_spk_penawaran');
         $count_all = $this->db->get()->num_rows();
 
@@ -985,9 +990,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('p.id_spk_penawaran', $search, 'both');
@@ -1045,9 +1048,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('p.id_spk_penawaran', $search, 'both');
@@ -1205,9 +1206,7 @@ class Report_actual_plan_tagih extends Admin_Controller
         if (!empty($client)) {
             $this->db->where('a.id_customer', $client);
         }
-        if (!empty($company)) {
-            $this->db->where('b.company', $company);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'b.company', $company, null, 'exact');
         $this->db->group_by('p.id_spk_penawaran');
         $this->db->order_by('nominal_macet', 'DESC');
         $data = $this->db->get()->result();

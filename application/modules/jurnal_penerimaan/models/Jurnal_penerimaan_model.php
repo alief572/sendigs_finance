@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Yunas Handra
@@ -45,22 +46,21 @@ class Jurnal_penerimaan_model extends BF_Model
 
         $filter = [
             'b.id_customer' => $klien,
-            'b.no_invoice' => $no_invoice,
-            'd.id' => $company
+            'b.no_invoice' => $no_invoice
         ];
 
         // 1. Count Total Records (tanpa search)
-        $this->_query_jurnal($filter);
+        $this->_query_jurnal($filter, null, $company);
         $sql_total = $this->db->get_compiled_select();
         $totalData = $this->db->query("SELECT COUNT(*) AS num FROM ($sql_total) AS temp")->row()->num;
 
         // 2. Count Filtered Records (dengan search)
-        $this->_query_jurnal($filter, $search);
+        $this->_query_jurnal($filter, $search, $company);
         $sql_filtered = $this->db->get_compiled_select();
         $totalFiltered = $this->db->query("SELECT COUNT(*) AS num FROM ($sql_filtered) AS temp")->row()->num;
 
         // 3. Get Data (dengan search + order + limit)
-        $this->_query_jurnal($filter, $search);
+        $this->_query_jurnal($filter, $search, $company);
         $this->db->order_by('a.created_date', 'desc');
         if ($length != -1) {
             $this->db->limit($length, $start);
@@ -101,7 +101,7 @@ class Jurnal_penerimaan_model extends BF_Model
         ]);
     }
 
-    private function _query_jurnal($filter = null, $search = null)
+    private function _query_jurnal($filter = null, $search = null, $company = '')
     {
         $this->db->select('a.id, a.tgl_jurnal, a.no_transaksi, a.coa, a.nm_coa, a.debit, a.kredit, SUM(a.debit) as total_debit, a.kredit as total_kredit, b.nm_customer, COALESCE(b.nm_project, spk.nm_project) as nm_project, b.no_invoice, b.id_spk_penawaran, COALESCE(COALESCE(d.id, j.id), g.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), g.nm_company) as nm_company, COALESCE(e.name, h.name) as nm_divisi', FALSE)
             ->from('tr_jurnal a')
@@ -119,6 +119,8 @@ class Jurnal_penerimaan_model extends BF_Model
             ->where_not_in('a.coa', ['1102-01-01', '1106-01-02', '7201-01-04', '1106-01-05'])
             ->where('a.sts <>', '1')
             ->where('b.no_invoice IS NOT NULL');
+
+        Piutang_aging::apply_company_filter($this->db, ['d.id', 'g.id', 'j.id'], $company, null, 'exact');
 
         if (!empty($filter)) {
             foreach ($filter as $key => $value) {
@@ -225,11 +227,6 @@ class Jurnal_penerimaan_model extends BF_Model
 
     public function get_company_jurnal()
     {
-        $get_company_jurnal = $this->consultant->select('a.id as id_company, a.nm_company')
-            ->from('kons_tr_company a')
-            ->get()
-            ->result_array();
-
-        return $get_company_jurnal;
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 }

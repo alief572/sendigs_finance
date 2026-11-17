@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 
 class Jurnal_expense_model extends BF_Model
@@ -69,7 +70,7 @@ class Jurnal_expense_model extends BF_Model
 
     public function get_company()
     {
-        return [['id_company'=>'7','nm_company'=>'STM'], ['id_company'=>'3','nm_company'=>'Sustain'], ['id_company'=>'4','nm_company'=>'Vuca']];
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
     public function filters($values)
@@ -112,10 +113,7 @@ class Jurnal_expense_model extends BF_Model
         if (!empty($filter['tgl_to'])) { $this->db->where('a.tgl_jurnal <=', $filter['tgl_to']); }
         if (!empty($filter['no_transaksi'])) { $this->db->where('a.no_transaksi', $filter['no_transaksi']); }
         $company = $filter['company'] ?? '';
-        $aliases = ['3'=>[['3','6'],['Sustain','STM-Sustain','SENTRAL SUSTAINABILITY CONSULTING']], '4'=>[['4','1'],['Vuca','STM-Vuca']], '7'=>[['7'],['STM']]];
-        if (isset($aliases[$company])) {
-            $this->db->group_start()->where_in('a.id_company', $aliases[$company][0])->or_where_in('a.nm_company', $aliases[$company][1])->group_end();
-        } elseif ($company !== '') { $this->db->where('a.id_company', $company); }
+        Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, 'a.nm_company');
         if ($search !== '') {
             $this->db->group_start()->like('a.no_transaksi', $search)->or_like('a.jenis_transaksi', $search)->or_like('a.nm_company', $search)->group_end();
         }
