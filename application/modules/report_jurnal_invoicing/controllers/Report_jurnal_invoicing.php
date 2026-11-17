@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -38,12 +39,7 @@ class Report_jurnal_invoicing extends Admin_Controller
         $this->consultant->where('a.deleted', 'N');
         $get_customer = $this->consultant->get()->result();
 
-        $this->db->select('a.id_company, a.nm_company');
-        $this->db->from('tr_jurnal a');
-        $this->db->where('a.jenis_transaksi', 'Invoicing');
-        $this->db->where('a.sts', '1');
-        $this->db->group_by('a.id_company');
-        $get_company = $this->db->get()->result();
+        $get_company = array_map(function ($g) { return (object) ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
 
         // $this->db->select('a.id_divisi, a.nm_divisi');
         // $this->db->from('tr_jurnal a');

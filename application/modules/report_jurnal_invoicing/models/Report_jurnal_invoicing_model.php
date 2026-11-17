@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Yunas Handra
@@ -419,13 +420,7 @@ class Report_jurnal_invoicing_model extends BF_Model
         if (!empty($filter['client'])) {
             $this->db->where('b.id_customer', $filter['client']);
         }
-        if (!empty($filter['company'])) {
-            $this->db->group_start();
-            $this->db->where('d.id', $filter['company']);
-            $this->db->or_where('f.id', $filter['company']);
-            $this->db->or_where('j.id', $filter['company']);
-            $this->db->group_end();
-        }
+        Piutang_aging::apply_company_filter($this->db, ['d.id', 'f.id', 'j.id'], $filter['company'] ?? '', null, 'exact');
         if (!empty($filter['divisi'])) {
             $this->db->group_start();
             $this->db->where('g.id', $filter['divisi']);

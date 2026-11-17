@@ -372,8 +372,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			<div class="row">
 				<div class="col-md-3 col-sm-6">
 					<label class="rp-filter-label">COMPANY</label>
-					<select id="rp_f_company" class="form-control input-sm">
-						<option value="">Semua Entitas</option>
+					<select id="rp_f_company" class="form-control input-sm" multiple>
 						<?php if (!empty($companies)) : foreach ($companies as $c) : ?>
 							<option value="<?= $c->id; ?>"><?= $c->nama; ?></option>
 						<?php endforeach;
@@ -540,6 +539,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 </div>
 
 <script src="https://cdn.datatables.net/1.13.11/js/jquery.dataTables.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="https://cdn.datatables.net/1.13.11/js/dataTables.bootstrap.min.js"></script>
 
 <script>
@@ -557,7 +557,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	// baca nilai filter aktif dari form
 	function rpGetFilters() {
 		return {
-			company_id: $('#rp_f_company').val() || '',
+			company_id: CompanyMulti.val('#rp_f_company'),
 			date_from: $('#rp_f_from').val() || '',
 			date_to: $('#rp_f_to').val() || '',
 			kategori: $('#rp_f_kategori').val() || ''
@@ -568,8 +568,8 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	function rpUpdateFilterChip() {
 		var f = rpGetFilters();
 		var parts = [];
-		var compTxt = $('#rp_f_company option:selected').text();
-		parts.push(compTxt || 'Semua Entitas');
+		var compTxt = $('#rp_f_company option:selected').map(function() { return $(this).text(); }).get().join(' + ');
+		parts.push(compTxt || 'Semua Company');
 		if (f.date_from || f.date_to) {
 			parts.push('Periode: ' + (f.date_from || '...') + ' s/d ' + (f.date_to || '...'));
 		}
@@ -697,6 +697,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 	}
 
 	$(document).ready(function() {
+		CompanyMulti.init('#rp_f_company');
 
 		rpTable = $('#table_rp').DataTable({
 			processing: true,
@@ -907,7 +908,7 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 
 		// reset filter: kosongkan semua input lalu reload
 		$('#rp_btn_reset').on('click', function() {
-			$('#rp_f_company').val('');
+			CompanyMulti.set('#rp_f_company', []);
 			$('#rp_f_from').val('');
 			$('#rp_f_to').val('');
 			$('#rp_f_kategori').val('');

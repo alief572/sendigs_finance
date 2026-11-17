@@ -330,4 +330,27 @@ same(array_column($A::page_rows($rkp, 'total', 'desc', 0, 10, $A::REKAP_SORT_KEY
 same(array_column($A::page_rows($rkp, 'count', 'asc', 0, 2, $A::REKAP_SORT_KEYS), 'customer'), ['C', 'B'], 'rekap urut invoice asc + paging');
 same(array_column($A::page_rows($rkp, 'saldo', 'asc', 0, 10, $A::REKAP_SORT_KEYS), 'customer'), ['B', 'A', 'C'], 'kunci list tidak berlaku di rekap (urutan asli)');
 
+// helper filter company untuk modul jurnal/report
+same($A::company_ids('STM'), ['7'], 'aturan jurnal STM'); same($A::company_ids('VUCA'), ['4', '1'], 'aturan jurnal VUCA'); same($A::company_ids('SUSTAIN'), ['3', '6'], 'aturan jurnal SUSTAIN');
+same($A::company_ids('3'), ['3', '6'], 'id lama 3 = grup SUSTAIN'); same($A::company_ids('SUSTAIN', 'exact'), ['3'], 'aturan exact SUSTAIN = id 3 saja'); same($A::company_ids('VUCA', 'exact'), ['4'], 'aturan exact VUCA = id 4 saja'); same($A::company_ids('6'), [], 'id 6 bukan kunci grup, tetap id persis');
+same($A::COMPANY_GROUPS['STM'], ['7', '6', '1'], 'aturan Follow Up/Monitoring tidak berubah');
+class FakeDb { public $c = []; function __call($m, $a) { $this->c[] = $m . ':' . json_encode($a); return $this; } }
+$d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', 'VUCA', 'a.nm_company');
+same($d->c, ['group_start:[]', 'where_in:["a.id_company",["4","1"]]', 'or_where_in:["a.nm_company",["Vuca","STM-Vuca"]]', 'group_end:[]'], 'filter grup + alias nama');
+$d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', '6');
+same($d->c, ['group_start:[]', 'where:["a.id_company","6"]', 'group_end:[]'], 'id selain 7/4/3 = id persis');
+$d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', ' '); same($d->c, [], 'kosong = tanpa filter');
+$d = new FakeDb(); $A::apply_company_filter($d, ['d.id', 'f.id'], 'SUSTAIN', null, 'exact');
+same($d->c, ['group_start:[]', 'where_in:["d.id",["3"]]', 'or_where_in:["f.id",["3"]]', 'group_end:[]'], 'beberapa kolom id = OR dalam satu grup');
+// multi-company (gabungan ATAU)
+same($A::company_list('STM, VUCA,STM,,'), ['STM', 'VUCA'], 'company_list unik, trim, tanpa kosong'); same($A::company_list(['STM', ['x'], 'VUCA']), ['STM', 'VUCA'], 'company_list array, item non-skalar dibuang');
+same($A::company_list(''), [], 'company_list kosong'); same(count($A::company_list('1,2,3,4,5,6,7,8,9,10,11,12')), 10, 'company_list maksimal 10');
+same($A::company_ids('STM,VUCA'), ['7', '4', '1'], 'company_ids gabungan alias'); same($A::company_ids('VUCA,SUSTAIN', 'exact'), ['4', '3'], 'company_ids gabungan exact');
+same($A::company_ids('STM,9'), ['7'], 'company_ids abaikan non-grup'); same($A::company_values('STM,9'), ['7', '9'], 'company_values sertakan id persis');
+$d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', 'STM,SUSTAIN', 'a.nm_company');
+same($d->c, ['group_start:[]', 'where_in:["a.id_company",["7","3","6"]]', 'or_where_in:["a.nm_company",["STM","Sustain","STM-Sustain","SENTRAL SUSTAINABILITY CONSULTING"]]', 'group_end:[]'], 'filter dua grup = gabungan id dan alias');
+$d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', ['VUCA'], null, 'exact');
+same($d->c, ['group_start:[]', 'where_in:["a.id_company",["4"]]', 'group_end:[]'], 'array satu grup exact');
+same($A::company_match('7', 'STM,VUCA'), true, 'company_match salah satu'); same($A::company_match('3', 'STM,VUCA'), false, 'company_match tidak ada yang cocok');
+same($A::company_match('6', 'VUCA,STM'), true, 'company_match id 6 masuk STM (COMPANY_GROUPS)'); same($A::company_match('4', ' , '), true, 'company_match daftar kosong = semua');
 echo "PASS: $n assertions\n";

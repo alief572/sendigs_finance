@@ -131,8 +131,7 @@
     <div class="box-header">
         <div class="row">
             <div class="col-md-3">
-                <select id="filter_company" class="form-control form-control-sm select2">
-                    <option value="">- Semua Company -</option>
+                <select id="filter_company" class="form-control form-control-sm" multiple>
                     <?php foreach ($list_company as $item): ?>
                         <option value="<?= $item->id ?>"><?= $item->nm_company ?></option>
                     <?php endforeach; ?>
@@ -200,6 +199,7 @@
 </div>
 
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     $(document).ready(function() {
@@ -214,6 +214,7 @@
         $('.select2').chosen({
             width: '100%'
         });
+        CompanyMulti.init('#filter_company');
 
         $(document).on('change', '#filter_company, #filter_year, #filter_status', function() {
             $('#table_list').DataTable().ajax.reload();
@@ -236,7 +237,7 @@
                 type: 'POST',
                 url: siteurl + active_controller + 'get_alokasi_penerimaan_pph23',
                 data: function(d) {
-                    d.filter_company = $('#filter_company').val();
+                    d.filter_company = CompanyMulti.val('#filter_company');
                     d.filter_year = $('#filter_year').val();
                     d.filter_status = $('#filter_status').val();
                 },

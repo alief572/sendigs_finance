@@ -441,6 +441,24 @@ class Penerimaan_uang_model extends BF_Model
         return "COALESCE(p.jenis_penerimaan, CASE WHEN $dep AND NOT $ordinary THEN 'deposit' WHEN NOT $dep THEN 'invoice' ELSE 'mixed' END)";
     }
 
+    /** Daftar company (STM/VUCA/SUSTAIN) dari filter: string "STM,VUCA" atau array; unik, tanpa kosong, maksimal 3. */
+    private function company_wanted($company)
+    {
+        $out = array();
+        foreach (is_array($company) ? $company : explode(',', is_scalar($company) ? (string)$company : '') as $c) {
+            $c = strtoupper(trim((string)$c));
+            if (in_array($c, array('STM', 'VUCA', 'SUSTAIN'), true) && !in_array($c, $out, true)) $out[] = $c;
+        }
+        return $out;
+    }
+
+    /** Nama company baris cocok ke salah satu company terpilih (gabungan ATAU). */
+    private function company_hit($coName, $company)
+    {
+        foreach ($this->company_wanted($company) as $c) if (stripos((string)$coName, $c) !== false) return true;
+        return false;
+    }
+
     public function get_report_data($year = '', $month = '', $company = '', $search = '', $kind = '', $customer = '')
     {
         $this->db->select('p.id, p.no_surat, p.id_alokasi, p.id_customer, p.nm_customer, p.nominal_penerimaan_bank, p.pph23_dipotong, p.created_date, ' .
@@ -503,7 +521,7 @@ class Penerimaan_uang_model extends BF_Model
                 else $coName = 'STM';
             }
 
-            if (!empty($company) && stripos($coName, $company) === false) {
+            if ($this->company_wanted($company) && !$this->company_hit($coName, $company)) {
                 continue;
             }
 
@@ -574,20 +592,20 @@ class Penerimaan_uang_model extends BF_Model
             $params[] = (int)$month;
             $params[] = (int)$month;
         }
-        if (!empty($company)) {
-            $legacyCompany = '';
-            if ($company === 'VUCA') {
-                $legacyCompany = "b.nama LIKE '%VUCA%'";
-            } elseif ($company === 'SUSTAIN') {
-                $legacyCompany = "b.nama LIKE '%SUSTAIN%'";
-            } elseif ($company === 'STM') {
-                $legacyCompany = "(b.nama LIKE '%Sentral Tehnologi Managemen%' OR (b.nama NOT LIKE '%VUCA%' AND b.nama NOT LIKE '%SUSTAIN%'))";
-            }
-            if ($legacyCompany !== '') {
-                $ownerId = array('STM'=>'7','SUSTAIN'=>'3','VUCA'=>'4')[$company];
-                $whereClauses[] = "((p.consulting_batch=3 AND EXISTS (SELECT 1 FROM tr_penerimaan_piutang_detail dc WHERE dc.id_header=p.no_surat AND JSON_VALID(dc.consulting_snapshot) AND JSON_UNQUOTE(JSON_EXTRACT(dc.consulting_snapshot,'$.owner.id'))=?)) OR (COALESCE(p.consulting_batch,0)<>3 AND $legacyCompany))";
-                $params[]=$ownerId;
-            }
+        $wantedCompanies = $this->company_wanted($company);
+        if ($wantedCompanies) {
+            $ownerIds = array('STM' => '7', 'SUSTAIN' => '3', 'VUCA' => '4');
+            $legacyBy = array(
+                'VUCA' => "b.nama LIKE '%VUCA%'",
+                'SUSTAIN' => "b.nama LIKE '%SUSTAIN%'",
+                'STM' => "(b.nama LIKE '%Sentral Tehnologi Managemen%' OR (b.nama NOT LIKE '%VUCA%' AND b.nama NOT LIKE '%SUSTAIN%'))",
+            );
+            $legacyParts = array(); $owners = array();
+            foreach ($wantedCompanies as $c) { $legacyParts[] = $legacyBy[$c]; $owners[] = $ownerIds[$c]; }
+            $legacyCompany = '(' . implode(' OR ', $legacyParts) . ')';
+            $ph = implode(',', array_fill(0, count($owners), '?'));
+            $whereClauses[] = "((p.consulting_batch=3 AND EXISTS (SELECT 1 FROM tr_penerimaan_piutang_detail dc WHERE dc.id_header=p.no_surat AND JSON_VALID(dc.consulting_snapshot) AND JSON_UNQUOTE(JSON_EXTRACT(dc.consulting_snapshot,'$.owner.id')) IN ($ph))) OR (COALESCE(p.consulting_batch,0)<>3 AND $legacyCompany))";
+            foreach ($owners as $o) $params[] = $o;
         }
         if (!empty($search)) {
             // Seperti mockup (hayOf/matchQ): setiap kata harus cocok di salah satu kolom: no, tanggal (beberapa format), bank, keterangan, customer,

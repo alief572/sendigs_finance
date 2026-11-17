@@ -175,7 +175,7 @@ check($sorted['data'][0]['display_no_transaksi']==='AAA/1'&&$sorted['data'][0]['
 check(count($model->groups(['tab'=>'INV','year'=>'']))===3,'all years returns each invoice once');
 check(count($model->groups(['tab'=>'INV','year'=>'','month'=>'12']))===1,'all years with month matches historical lines');
 check($model->listing(['tab'=>'INV','year'=>2026])['recordsFiltered']===3&&$model->summary(['INV'=>['year'=>2026]])['INV']['count']===3,'listing and summary share inclusive invoice period selection');
-check(isset($model->options(['tab'=>'INV','year'=>''])['companies']['4']),'all years filter options retain source companies');
+check(array_keys($model->options(['tab'=>'INV','year'=>''])['companies'])===['STM','VUCA','SUSTAIN'],'company options are the three groups');
 foreach(['EXP','RCV','PAY','PCS'] as $tab) check($model->filters(['tab'=>$tab,'year'=>''])['year']==='', 'all years accepted '.$tab);
 foreach(['2026 OR 1=1','0000',[]] as $year){try{$model->filters(['tab'=>'INV','year'=>$year]);check(false,'invalid year');}catch(InvalidArgumentException $e){check(true,'invalid year rejected');}}
 $db->insert('tr_invoicing',['id'=>'GAP','no_invoice'=>'GAP/1','id_penawaran'=>'Q1']);

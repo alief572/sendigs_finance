@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Yunas Handra
@@ -84,26 +85,7 @@ class Jurnal_payment_model extends BF_Model
             $this->db->where('a.no_transaksi', $filter['no_transaksi']);
         }
 
-        if (!empty($company)) {
-            if ($company == '3') {
-                $this->db->group_start()
-                    ->where_in('a.id_company', ['3', '6'])
-                    ->or_where_in('a.nm_company', ['Sustain', 'STM-Sustain', 'SENTRAL SUSTAINABILITY CONSULTING'])
-                    ->group_end();
-            } elseif ($company == '4') {
-                $this->db->group_start()
-                    ->where_in('a.id_company', ['4', '1'])
-                    ->or_where_in('a.nm_company', ['Vuca', 'STM-Vuca'])
-                    ->group_end();
-            } elseif ($company == '7') {
-                $this->db->group_start()
-                    ->where('a.id_company', '7')
-                    ->or_where('a.nm_company', 'STM')
-                    ->group_end();
-            } else {
-                $this->db->where('a.id_company', $company);
-            }
-        }
+        Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, 'a.nm_company');
 
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
 
@@ -327,10 +309,6 @@ class Jurnal_payment_model extends BF_Model
 
     public function get_company()
     {
-        return [
-            ['id_company' => '7', 'nm_company' => 'STM'],
-            ['id_company' => '3', 'nm_company' => 'Sustain'],
-            ['id_company' => '4', 'nm_company' => 'Vuca'],
-        ];
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 }

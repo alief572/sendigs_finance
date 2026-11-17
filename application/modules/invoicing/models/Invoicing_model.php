@@ -48,14 +48,27 @@ class Invoicing_model extends BF_Model
     /** Pilihan company tab Invoiced: hanya STM, VUCA, SUSTAIN (INV-R-23); kunci grup dipetakan ke id kons_tr_company. */
     const COMPANY_GROUPS = ['STM' => [7, 6, 1], 'VUCA' => [4], 'SUSTAIN' => [3]];
 
+    /** Id company dari filter: satu atau banyak (string "STM,VUCA"), kunci grup atau id angka; nilai tidak valid diabaikan; digabung ATAU. */
+    public static function company_ids($company)
+    {
+        $ids = [];
+        foreach (array_slice(explode(',', is_scalar($company) ? (string)$company : ''), 0, 10) as $item) {
+            $item = strtoupper(trim($item));
+            if (isset(self::COMPANY_GROUPS[$item])) {
+                $ids = array_merge($ids, array_map('intval', self::COMPANY_GROUPS[$item]));
+            } elseif (preg_match('/^\d{1,10}$/', $item)) {
+                $ids[] = (int)$item;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
     /** Filter company (id angka atau kunci grup) dan Perlakuan PPN; nilai tidak valid diabaikan. Dipakai get_data_spk, card, dan ekspor. */
     public function filter_company_ppn($company, $ppn)
     {
-        if (is_scalar($company) && isset(self::COMPANY_GROUPS[strtoupper((string)$company)])) {
-            $ids = implode(',', array_map('intval', self::COMPANY_GROUPS[strtoupper((string)$company)]));
-            $this->db->where('COALESCE(e.id, g.id) IN (' . $ids . ')', null, false);
-        } elseif (is_scalar($company) && preg_match('/^\d{1,10}$/', (string)$company)) {
-            $this->db->where('COALESCE(e.id, g.id) =', (int)$company, false);
+        $ids = $this->company_ids($company);
+        if ($ids) {
+            $this->db->where('COALESCE(e.id, g.id) IN (' . implode(',', $ids) . ')', null, false);
         }
         if (is_scalar($ppn) && in_array((string)$ppn, ['PKP', 'WAPU', 'KB', 'UMKM'], true)) {
             $this->db->where('f.tax_treatment', (string)$ppn);

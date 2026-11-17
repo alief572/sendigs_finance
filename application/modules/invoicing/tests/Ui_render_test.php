@@ -99,7 +99,7 @@ verifyUi($xpath->query('//*[contains(@class,"btn_download_excel_invoiced")]')->l
 verifyUi(strpos($html,'invoicing/coa_settings')!==false,'Configure navigation visible with permission');
 $companyHtml=$renderer->render('index',['data_company'=>[(object)['id'=>4,'nm_company'=>'Vuca <b>x</b>']]]);$companyXpath=htmlQuery($companyHtml);
 $companyValues=[];foreach($companyXpath->query('//select[@id="filter_company_inv"]/option') as $option)$companyValues[]=$option->getAttribute('value');
-verifyUi($companyValues===['','STM','VUCA','SUSTAIN']&&$companyXpath->query('//select[@id="filter_company_inv"]//b')->length===0,'Invoiced company filter is fixed to STM, VUCA, SUSTAIN (INV-R-23), not the kons_tr_company rows');
+verifyUi($companyValues===['STM','VUCA','SUSTAIN']&&$companyXpath->query('//select[@id="filter_company_inv"]//b')->length===0,'Invoiced company filter is multi-select fixed to STM, VUCA, SUSTAIN (INV-R-23), no empty option (kosong = semua), not the kons_tr_company rows');
 $renderer->auth->admin=false;
 $nonAdminHtml=$renderer->render('index',['data_company'=>[]]);
 verifyUi(strpos($nonAdminHtml,'invoicing/coa_settings')===false,'Non-admin cannot see COA settings even with Configure permission');

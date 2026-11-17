@@ -489,8 +489,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
             </select>
           </div>
           <div class="filter-select-company">
-            <select class="form-control select2" name="company">
-              <option value="">- Select Company -</option>
+            <select class="form-control" name="company" multiple>
               <?php foreach ($list_company as $item_company) : ?>
                 <option value="<?= $item_company->id_company ?>"><?= strtoupper($item_company->nm_company) ?></option>
               <?php endforeach; ?>
@@ -607,8 +606,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
             </select>
           </div>
           <div class="filter-select-company">
-            <select class="form-control select2-macet" name="company_macet">
-              <option value="">- Select Company -</option>
+            <select class="form-control" name="company_macet" multiple>
               <?php foreach ($list_company as $item_company) : ?>
                 <option value="<?= $item_company->id_company ?>"><?= strtoupper($item_company->nm_company) ?></option>
               <?php endforeach; ?>
@@ -791,6 +789,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 
 <script type="text/javascript">
   var is_macet_loaded = false;
@@ -826,12 +825,14 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
     $('.select2').select2({
       width: '100%'
     });
+    CompanyMulti.init('select[name="company"]');
   }
 
   function init_select2_macet() {
     $('.select2-macet').select2({
       width: '100%'
     });
+    CompanyMulti.init('select[name="company_macet"]');
   }
 
   function autoNum() {
@@ -850,7 +851,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
   // --- TAB 1 (ANNUAL) FUNCTIONS ---
   function reset() {
     $('select[name="client"]').val('').trigger('change');
-    $('select[name="company"]').val('').trigger('change');
+    CompanyMulti.set('select[name="company"]', []);
     $('select[name="tahun"]').val('<?= date('Y') ?>').trigger('change');
 
     datatables('', '', '<?= date('Y') ?>');
@@ -858,7 +859,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
 
   function search_data() {
     var client = $('select[name="client"]').val();
-    var company = $('select[name="company"]').val();
+    var company = CompanyMulti.val('select[name="company"]');
     var tahun = $('select[name="tahun"]').val();
 
     datatables(client, company, tahun);
@@ -866,7 +867,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
 
   function download_excel() {
     var client = $('select[name="client"]').val();
-    var company = $('select[name="company"]').val();
+    var company = CompanyMulti.val('select[name="company"]');
     var tahun = $('select[name="tahun"]').val();
 
     if (!tahun || tahun.length <= 1) {
@@ -883,7 +884,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
       return false;
     }
 
-    window.open(siteurl + active_controller + 'download_excel?client=' + client + '&company=' + company + '&tahun=' + tahun);
+    window.open(siteurl + active_controller + 'download_excel?client=' + client + '&company=' + encodeURIComponent(company) + '&tahun=' + tahun);
   }
 
   function datatables(client, company, tahun) {
@@ -975,20 +976,20 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Penerimaan.Delete');
   // --- TAB 2 (MACET ALL-TIME) FUNCTIONS ---
   function reset_macet() {
     $('select[name="client_macet"]').val('').trigger('change');
-    $('select[name="company_macet"]').val('').trigger('change');
+    CompanyMulti.set('select[name="company_macet"]', []);
     datatables_macet('', '');
   }
 
   function search_data_macet() {
     var client = $('select[name="client_macet"]').val();
-    var company = $('select[name="company_macet"]').val();
+    var company = CompanyMulti.val('select[name="company_macet"]');
     datatables_macet(client, company);
   }
 
   function download_excel_macet() {
     var client = $('select[name="client_macet"]').val() || '';
-    var company = $('select[name="company_macet"]').val() || '';
-    window.open(siteurl + active_controller + 'download_excel_macet?client=' + client + '&company=' + company);
+    var company = CompanyMulti.val('select[name="company_macet"]');
+    window.open(siteurl + active_controller + 'download_excel_macet?client=' + client + '&company=' + encodeURIComponent(company));
   }
 
   function datatables_macet(client, company) {

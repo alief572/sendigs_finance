@@ -41,7 +41,7 @@ $row = function ($over = array()) { return (object) ($over + array('id' => 5, 's
 // Bulan + company valid -> ikut menyaring; angka dipaksa int, tidak disisipkan sebagai teks.
 list($db) = run(array('filter_status' => 'invoiced', 'filter_tahun' => '2026', 'filter_bulan' => '10', 'filter_company' => '4'));
 ok(in_array(array('MONTH(f.tanggal_invoice) =', 10, false), $db->wheres, true), 'bulan 10 disaring sebagai int');
-ok(in_array(array('COALESCE(e.id, g.id) =', 4, false), $db->wheres, true), 'company 4 disaring sebagai int');
+ok(in_array(array('COALESCE(e.id, g.id) IN (4)', null, false), $db->wheres, true), 'company 4 disaring sebagai int (IN)');
 ok(in_array(array('a.sts_invoice', '1', null), $db->wheres, true), 'status invoiced tetap disaring');
 ok($db->orders[0] === 'f.tanggal_invoice desc', 'tab Invoiced: tanggal invoice terbaru dulu');
 

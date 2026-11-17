@@ -155,7 +155,7 @@ class Xlsx_export
         }
         $m = !empty($month) ? (self::MONTHS_ID[(int)$month] ?? $month) : 'Semua';
         $y = !empty($year) ? $year : 'Semua';
-        $c = !empty($company) ? $company : 'Semua';
+        $c = trim((string)$company) !== '' ? implode(', ', array_filter(array_map('trim', explode(',', (string)$company)), 'strlen')) : 'Semua';
         return array('sheet' => 'Report Penerimaan', 'title' => 'Report Penerimaan Piutang', 'nobold' => true,
             'widths' => array(5, 14, 40, 50, 32, 18, 10, 10, 15, 14, 16, 15, 18, 15, 12, 12, 12),
             'subtitle' => 'Tahun: ' . $y . ' | Bulan: ' . $m . ' | Company: ' . $c,

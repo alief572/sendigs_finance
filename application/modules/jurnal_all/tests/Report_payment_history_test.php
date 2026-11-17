@@ -27,7 +27,7 @@ foreach ($cases as $c) {
     $detail=$model->detail($anchors[$native],true);$h=$detail['header'];
     check($h['display_no_transaksi']===$voucher,'verified history displays voucher: '.$native);
     check($h['no_referensi']===$doc&&$h['category']===$category,'verified voucher supplies reference and category: '.$native);
-    check($h['keterangan']==='Pembayaran '.$category.' - '.$voucher,'history description uses resolved voucher');
+    check($h['keterangan']==='Pembayaran '.$category.' - '.$doc,'history description uses No. Referensi');
     check($h['no_transaksi']===$native&&$h['debit']===$amount&&$h['kredit']===$amount,'native identity and amounts remain unchanged');
     check(count($detail['rows'])===2&&$detail['is_balance'],'history COA detail remains balanced');
     check(count($model->groups($filters+['q'=>$voucher],true))===1,'voucher is searchable');

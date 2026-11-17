@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 class Penerimaan_pph_23 extends Admin_Controller
 {
@@ -25,7 +26,7 @@ class Penerimaan_pph_23 extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
 
-        $list_company = $this->consultant->get('kons_tr_company')->result();
+        $list_company = array_map(function ($g) { return (object) ['id' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
         $this->template->set('list_company', $list_company);
 
         $this->template->title('Penerimaan PPH 23');

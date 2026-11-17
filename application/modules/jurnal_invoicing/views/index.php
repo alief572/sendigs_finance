@@ -51,8 +51,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         <div class="col-md-3">
             <div class="form-group">
                 <label for="">Company</label>
-                <select class="form-control form-control-sm select2" name="company">
-                    <option value="">- Pilih Company -</option>
+                <select class="form-control form-control-sm" name="company" multiple>
                     <?php
                     foreach ($list_company as $item) {
                         echo '<option value="' . $item['id_company'] . '">' . $item['nm_company'] . '</option>';
@@ -128,6 +127,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
@@ -249,9 +249,9 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     $(document).on('click', '.download_excel', function() {
         var klien = $('select[name="klien"]').val();
         var no_invoice = $('select[name="no_invoice"]').val();
-        var company = $('select[name="company"]').val();
+        var company = CompanyMulti.val('select[name="company"]');
 
-        window.open(siteurl + active_controller + 'download_excel?klien=' + klien + '&no_invoice=' + no_invoice + '&company=' + company, '_blank');
+        window.open(siteurl + active_controller + 'download_excel?klien=' + klien + '&no_invoice=' + no_invoice + '&company=' + encodeURIComponent(company), '_blank');
     })
 
     function revisi_jurnal() {
@@ -335,6 +335,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
         $('.select2').select2({
             width: '100%'
         });
+        CompanyMulti.init('select[name="company"]');
     }
 
     function autoNum() {
@@ -404,7 +405,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     function search_jurnal() {
         var klien = $('select[name="klien"]').val();
         var no_invoice = $('select[name="no_invoice"]').val();
-        var company = $('select[name="company"]').val();
+        var company = CompanyMulti.val('select[name="company"]');
 
         DataTables(klien, no_invoice, company);
     }
@@ -412,7 +413,7 @@ $ENABLE_DELETE  = has_permission('Jurnal.Delete');
     function reset_search_jurnal() {
         var klien = $('select[name="klien"]').val('').trigger('change');
         var no_invoice = $('select[name="no_invoice"]').val('').trigger('change');
-        var company = $('select[name="company"]').val('').trigger('change');
+        var company = CompanyMulti.set('select[name="company"]', []);
 
         DataTables();
     }

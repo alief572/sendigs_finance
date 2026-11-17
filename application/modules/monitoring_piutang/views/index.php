@@ -23,7 +23,7 @@
 </style>
 <div class="box box-primary"><div class="box-body">
     <div class="row" style="margin-bottom:10px">
-        <div class="col-sm-3"><select id="f-company" class="form-control"><option value="">Semua Company</option></select></div>
+        <div class="col-sm-3"><select id="f-company" class="form-control" multiple></select></div>
         <div class="col-sm-3"><input type="text" id="f-customer" class="form-control" list="dl-customer" autocomplete="off" placeholder="Customer (pilih dari daftar)" aria-label="Filter customer"><datalist id="dl-customer"></datalist></div>
         <div class="col-sm-4"><input type="text" id="f-cari" class="form-control" placeholder="Cari no invoice, customer, tanggal, nominal..."></div>
         <div class="col-sm-2 text-right"><button class="btn btn-default btn-sm" id="btn-clear">Reset filter</button></div>
@@ -59,6 +59,7 @@
 </div></div></div>
 
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script>
 (function () {
     var BASE = '<?= $base ?>', FU = '<?= site_url('follow_up_piutang') ?>', kat = 'all', tbl, rkTbl;
@@ -67,7 +68,7 @@
     function rp(c) { return Number(c / 100).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
     function nf(v) { return rp(Number(v || 0) * 100); }
     function dmy(d) { return d ? String(d).substr(8, 2) + '-' + String(d).substr(5, 2) + '-' + String(d).substr(0, 4) : ''; }
-    function params() { return {company: $('#f-company').val(), customer: $('#f-customer').val(), cari: $('#f-cari').val(), kategori: kat}; }
+    function params() { return {company: CompanyMulti.val('#f-company'), customer: $('#f-customer').val(), cari: $('#f-cari').val(), kategori: kat}; }
 
     function card(id, key, s) {
         var x = s[key], extra = key === 'all' ? '' : '<small>' + x.pct + '% dari total</small>';
@@ -139,7 +140,7 @@
         if (skipTable !== true) { tbl.ajax.reload(null, true); if (rkTbl) { rkTbl.ajax.reload(null, true); } }
         $.getJSON(BASE + '/data', params()).done(function (r) {
             if (r.status !== 'success') { $('#mp-err').text(r.msg || 'Gagal memuat data piutang.').show(); return; }
-            if ($('#f-company option').length === 1) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); }
+            if (!$('#f-company option').length) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); CompanyMulti.init('#f-company'); }
             var s = r.summary;
             $('#mp-grand').html('Total keseluruhan sisa piutang: <b>' + rp(s.grand_cents) + '</b> <small class="text-muted">(sudah diterima + belum diterima, hanya invoice tanggal 1 Oktober 2026 ke atas, sama dengan Follow Up Piutang)</small>');
             card('all', 'all', {all: s.semua});
@@ -161,7 +162,7 @@
     $('.mp-card[data-kat]').on('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target === this) { e.preventDefault(); $(this).click(); } });
     $('#f-customer').on('change', function () { clearTimeout(window.__mpT); window.__mpT = setTimeout(load, 350); });
     $('#f-cari').on('input', function () { clearTimeout(window.__mpT); window.__mpT = setTimeout(load, 350); });
-    $('#btn-clear').on('click', function () { $('#f-company, #f-customer, #f-cari').val(''); kat = 'all'; load(); });
+    $('#btn-clear').on('click', function () { CompanyMulti.set('#f-company', []); $('#f-customer, #f-cari').val(''); kat = 'all'; load(); });
     $('#mp-tabs').on('click', 'a', function (e) { e.preventDefault(); $('#mp-tabs li').removeClass('active'); $(this).parent().addClass('active'); var p = $(this).data('pane'); $('#pane-list').toggle(p === 'list'); $('#pane-rekap').toggle(p === 'rekap'); if (p === 'rekap' && !rkTbl) { initRekap(); } });
     $('#mp-rekap tbody').on('click', '[data-cust]', function (e) {
         e.preventDefault(); $('#f-customer').val($(this).data('cust')); $('#mp-tabs a[data-pane=list]').click(); load();

@@ -122,8 +122,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                 </div>
                 <div class="invoice-filter">
                     <label for="filter_company_inv">Company</label>
-                    <select name="filter_company_inv" id="filter_company_inv" class="form-control form-control-sm">
-                        <option value="">Semua company</option>
+                    <select name="filter_company_inv" id="filter_company_inv" class="form-control form-control-sm" multiple>
                         <?php foreach (array('STM', 'VUCA', 'SUSTAIN') as $group) : ?>
                             <option value="<?= $group ?>"><?= $group ?></option>
                         <?php endforeach; ?>
@@ -347,6 +346,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
 
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/js/invoicing/action-menu.js?v='.filemtime(FCPATH.'assets/js/invoicing/action-menu.js')) ?>"></script>
 <!-- page script -->
 <script type="text/javascript">
@@ -836,9 +836,11 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         return type === 'display' ? invoiceCellText(data) : data;
     }
 
+    $(function() { CompanyMulti.init('#filter_company_inv'); });
+
     function invoicedFilters(withSearch) {
         var f = {filter_tahun: $('#filter_tahun_inv').val(), filter_bulan: $('#filter_bulan_inv').val(),
-            filter_company: $('#filter_company_inv').val(), filter_ppn: $('#filter_ppn_inv').val()};
+            filter_company: CompanyMulti.val('#filter_company_inv'), filter_ppn: $('#filter_ppn_inv').val()};
         if (withSearch) f.filter_search = ($('#table_invoiced_filter input').val() || '');
         return f;
     }
@@ -857,7 +859,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
             ['gross', 'sales', 'ppn', 'saldo'].forEach(function(k) { box.find('[data-sum="' + k + '"]').text(invoiceMoney(t[k])); });
             box.find('[data-sum="count"]').text(t.count + ' invoice');
             var parts = [$('#filter_tahun_inv option:selected').text(), $('#filter_bulan_inv').val() ? $('#filter_bulan_inv option:selected').text() : 'Semua bulan',
-                $('#filter_company_inv').val() || 'Semua company', $('#filter_ppn_inv').val() ? $('#filter_ppn_inv option:selected').text() : 'Semua perlakuan'];
+                CompanyMulti.val('#filter_company_inv').split(',').join(' + ') || 'Semua company', $('#filter_ppn_inv').val() ? $('#filter_ppn_inv option:selected').text() : 'Semua perlakuan'];
             box.find('[data-sum="filter"]').text(parts.join(' · '));
         }).fail(function() { box.find('strong').text('-'); box.find('[data-sum="count"]').text('Ringkasan tidak dapat dimuat.'); });
     }
@@ -881,7 +883,7 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
                     d.filter_status = 'invoiced';
                     d.filter_tahun = $('#filter_tahun_inv').val();
                     d.filter_bulan = $('#filter_bulan_inv').val();
-                    d.filter_company = $('#filter_company_inv').val();
+                    d.filter_company = CompanyMulti.val('#filter_company_inv');
                     d.filter_ppn = $('#filter_ppn_inv').val();
                 }
             },

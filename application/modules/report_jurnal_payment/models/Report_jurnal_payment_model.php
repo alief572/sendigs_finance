@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 class Report_jurnal_payment_model extends BF_Model
 {
@@ -77,9 +78,7 @@ class Report_jurnal_payment_model extends BF_Model
             $this->db->where('a.no_transaksi', $filter['no_transaksi']);
         }
 
-        if (!empty($company)) {
-            $this->db->where('a.id_company', $filter['company']);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'a.id_company', $filter['company'] ?? '', null, 'exact');
 
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
 
@@ -231,9 +230,7 @@ class Report_jurnal_payment_model extends BF_Model
             $this->db->where('a.no_transaksi', $filter['no_transaksi']);
         }
 
-        if (!empty($filter['company'])) {
-            $this->db->where('a.id_company', $filter['company']);
-        }
+        Piutang_aging::apply_company_filter($this->db, 'a.id_company', $filter['company'] ?? '', null, 'exact');
 
         $this->db->group_by(['a.no_transaksi', 'a.jenis_transaksi']);
         $this->db->order_by('a.tgl_jurnal', 'desc');
@@ -307,12 +304,6 @@ class Report_jurnal_payment_model extends BF_Model
 
     public function get_company()
     {
-        $get_company = $this->consultant->select('a.id as id_company, a.nm_company')
-            ->from('kons_tr_company a')
-            ->order_by('a.nm_company', 'asc')
-            ->get()
-            ->result_array();
-
-        return $get_company;
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 }

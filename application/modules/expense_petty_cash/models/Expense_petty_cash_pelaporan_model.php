@@ -103,8 +103,12 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         // Build filter conditions as a closure
         $apply_filters = function () use ($filters, $search) {
             // Apply company filter
-            if (!empty($filters['company']) && strtolower($filters['company']) !== 'all') {
-                $this->db->where('a.company', $filters['company']);
+            // Satu atau banyak company (string "STM,VUCA", digabung ATAU); kolom a.company berisi nama company.
+            $company_list = array_values(array_filter(array_map('trim', explode(',', is_scalar($filters['company'] ?? null) ? (string) $filters['company'] : '')), function ($c) {
+                return $c !== '' && strtolower($c) !== 'all';
+            }));
+            if ($company_list) {
+                $this->db->where_in('a.company', array_slice(array_unique($company_list), 0, 10));
             }
             // Apply status filter
             if (!empty($filters['status']) && strtolower($filters['status']) !== 'all') {

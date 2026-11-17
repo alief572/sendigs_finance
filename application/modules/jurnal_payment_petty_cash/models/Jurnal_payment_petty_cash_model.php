@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /**
  * Jurnal Payment Petty Cash Model
@@ -159,8 +160,25 @@ class Jurnal_payment_petty_cash_model extends BF_Model
     {
         // Build WHERE conditions for company and search filters
         $where_company = '';
-        if (!empty($company)) {
-            $where_company = " AND a.id_company = " . $this->db->escape($company);
+        // Satu atau banyak company (digabung ATAU). Aturan asli = id persis dari data; jurnal petty cash memakai id 5/4/6,
+        // jadi grup juga dicocokkan lewat nama company.
+        $list = Piutang_aging::company_list($company);
+        if ($list) {
+            $ids = Piutang_aging::company_values($list, 'exact');
+            $names = [];
+            foreach ($list as $item) {
+                if (Piutang_aging::jurnal_group($item)) {
+                    $names[] = Piutang_aging::jurnal_group($item);
+                }
+            }
+            $conds = [];
+            if ($ids) {
+                $conds[] = "a.id_company IN (" . implode(',', array_map([$this->db, 'escape'], $ids)) . ")";
+            }
+            if ($names) {
+                $conds[] = "UPPER(a.nm_company) IN (" . implode(',', array_map([$this->db, 'escape'], array_unique($names))) . ")";
+            }
+            $where_company = " AND (" . implode(' OR ', $conds) . ")";
         }
 
         $where_search = '';
@@ -640,13 +658,7 @@ class Jurnal_payment_petty_cash_model extends BF_Model
      */
     public function get_company_filter()
     {
-        $this->db->distinct();
-        $this->db->select('id_company, nm_company');
-        $this->db->from('tr_jurnal');
-        $this->db->where_in('jenis_transaksi', ['Petty Cash', 'Payment', 'Refill Pettycash', 'Payment Hutang Petty Cash']);
-        $this->db->where_in('sts', ['', '0']);
-        $this->db->order_by('nm_company', 'ASC');
-        return $this->db->get()->result_array();
+        return array_map(function ($g) { return ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 
 class Report_actual_plan_tagih_model extends Admin_Controller
@@ -19,15 +20,7 @@ class Report_actual_plan_tagih_model extends Admin_Controller
 
     public function list_company()
     {
-        $this->db->select('b.company as id_company, c.nm_company');
-        $this->db->from(DBCNL . '.kons_tr_spk_penawaran a');
-        $this->db->join(DBCNL . '.kons_tr_penawaran b', 'b.id_quotation = a.id_penawaran');
-        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.company');
-        $this->db->group_by('b.company');
-        $this->db->order_by('b.company', 'asc');
-        $get_data = $this->db->get()->result();
-
-        return $get_data;
+        return array_map(function ($g) { return (object) ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
     public function list_report_filterable($client = null, $company = null, $tahun)
@@ -50,7 +43,7 @@ class Report_actual_plan_tagih_model extends Admin_Controller
 
         if (!empty($client))  $this->db->where('a.id_customer', $client);
         if (!empty($company)) {
-            $this->db->where('a.id_company', $company);
+            Piutang_aging::apply_company_filter($this->db, 'a.id_company', $company, null, 'exact');
         } else {
             $this->db->where_in('a.id_company', [1, 3, 4, 6, 7]);
         }

@@ -44,8 +44,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
                 </select>
             </div>
             <div class="col-md-2">
-                <select class="form-control form-control-sm select2" name="company">
-                    <option value="">- Select Company -</option>
+                <select class="form-control form-control-sm" name="company" multiple>
                     <?php
                     foreach ($list_company as $item) {
                         echo '<option value="' . $item->id_company . '">' . $item->nm_company . '</option>';
@@ -124,6 +123,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
 <script src="https://cdn.datatables.net/2.1.7/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
@@ -168,7 +168,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
         var tgl_from = $('input[name="tgl_from"]').val();
         var tgl_to = $('input[name="tgl_to"]').val();
         var client = $('select[name="klien"]').val();
-        var company = $('select[name="company"]').val();
+        var company = CompanyMulti.val('select[name="company"]');
         var divisi = $('select[name="divisi"]').val();
 
         DataTables(tgl_from, tgl_to, client, company, divisi);
@@ -178,7 +178,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
         $('input[name="tgl_from"]').val('');
         $('input[name="tgl_to"]').val('');
         $('select[name="klien"]').val('').trigger('change');
-        $('select[name="company"]').val('').trigger('change');
+        CompanyMulti.set('select[name="company"]', []);
         $('select[name="divisi"]').val('').trigger('change');
 
         DataTables();
@@ -188,6 +188,7 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
         $('.select2').select2({
             width: '100%'
         });
+        CompanyMulti.init('select[name="company"]');
     }
 
     function autoNum() {
@@ -198,10 +199,10 @@ $ENABLE_DELETE  = has_permission('Report_Jurnal_Invoicing.Delete');
         var tgl_from = $('input[name="tgl_from"]').val();
         var tgl_to = $('input[name="tgl_to"]').val();
         var client = $('select[name="klien"]').val();
-        var company = $('select[name="company"]').val();
+        var company = CompanyMulti.val('select[name="company"]');
         var divisi = $('select[name="divisi"]').val();
 
-        window.open(siteurl + active_controller + 'export_excel/?tgl_from=' + tgl_from + '&tgl_to=' + tgl_to + '&client=' + client + '&company=' + company + '&divisi=' + divisi);
+        window.open(siteurl + active_controller + 'export_excel/?tgl_from=' + tgl_from + '&tgl_to=' + tgl_to + '&client=' + client + '&company=' + encodeURIComponent(company) + '&divisi=' + divisi);
     }
 
     function DataTables(tgl_from = null, tgl_to = null, client = null, company = null, divisi = null) {

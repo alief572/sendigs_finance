@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 require_once dirname(__DIR__, 2).'/expense/libraries/Expense_company.php';
 require_once dirname(__DIR__).'/libraries/Jurnal_debt_groups.php';
 require_once dirname(__DIR__).'/libraries/Payment_reference.php';
@@ -195,10 +196,9 @@ class Jurnal_all_model extends BF_Model
         $f=$this->filters($values); $f['company']=''; $f['category']=''; $f['q']='';
         $rows=$this->groups($f,$posted,false); $companies=[]; $categories=[];
         foreach ($rows as $row) {
-            foreach ($row['companies'] as $company) $companies[$company['id']]=$company['name'];
             foreach ($row['categories'] as $category) $categories[$category]=$category;
         }
-        asort($companies); asort($categories);
+        asort($categories); $companies=array_column(Piutang_aging::company_options(),'nm_company','id');
         $years=$this->read($this->db->select('MIN(tgl_jurnal) AS first_date, MAX(tgl_jurnal) AS last_date')->get('tr_jurnal'))->row_array();
         $first=max(1900,(int)substr($years['first_date'] ?? date('Y'),0,4));
         $last=min(9998,max((int)date('Y'),(int)substr($years['last_date'] ?? date('Y'),0,4)));
@@ -1632,7 +1632,14 @@ class Jurnal_all_model extends BF_Model
 
     private function companyMatches($row,$value)
     {
-        foreach ($row['companies'] as $company) if ($company['id']===$value) return true;
+        $list=Piutang_aging::company_list($value);
+        if (!$list) return true;
+        $ids=Piutang_aging::company_values($list,'exact'); $groups=[];
+        foreach ($list as $item) if (($g=Piutang_aging::jurnal_group($item))!==null) $groups[$g]=true;
+        foreach ($row['companies'] as $company) {
+            if (in_array((string)$company['id'],$ids,true)) return true;
+            if ($groups && isset($groups[strtoupper(trim((string)($company['name'] ?? '')))])) return true;
+        }
         return false;
     }
 

@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 /*
  * @author Yunas Handra
@@ -311,13 +312,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         if (isset($post['client']) && !empty($post['client'])) {
             $db_clone->where('b.id_customer', $post['client']);
         }
-        if (isset($post['company']) && !empty($post['company'])) {
-            $db_clone->group_start();
-            $db_clone->where('d.id', $post['company']);
-            $db_clone->or_where('f.id', $post['company']);
-            $db_clone->or_where('j.id', $post['company']);
-            $db_clone->group_end();
-        }
+        Piutang_aging::apply_company_filter($db_clone, ['d.id', 'f.id', 'j.id'], $post['company'] ?? '', null, 'exact');
         if (isset($post['divisi']) && !empty($post['divisi'])) {
             $db_clone->group_start();
             $db_clone->where('g.id', $post['divisi']);
@@ -357,13 +352,7 @@ class Report_jurnal_penerimaan_model extends BF_Model
         if (isset($post['client']) && !empty($post['client'])) {
             $db_clone->where('b.id_customer', $post['client']);
         }
-        if (isset($post['company']) && !empty($post['company'])) {
-            $db_clone->group_start();
-            $db_clone->where('d.id', $post['company']);
-            $db_clone->or_where('f.id', $post['company']);
-            $db_clone->or_where('j.id', $post['company']);
-            $db_clone->group_end();
-        }
+        Piutang_aging::apply_company_filter($db_clone, ['d.id', 'f.id', 'j.id'], $post['company'] ?? '', null, 'exact');
         if (isset($post['divisi']) && !empty($post['divisi'])) {
             $db_clone->group_start();
             $db_clone->where('g.id', $post['divisi']);

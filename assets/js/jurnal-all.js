@@ -46,7 +46,15 @@
             return payload;
         }
         const values = () => ({ ...state[active], tab: active });
-        function saveFilters() { ['year', 'month', 'company', 'category'].forEach(key => { state[active][key] = form.elements[key].value; }); }
+        // Company boleh lebih dari satu: <select multiple> -> string "STM,VUCA" ('' = semua).
+        const readField = select => select.multiple ? Array.from(select.options).filter(option => option.selected).map(option => option.value).filter(Boolean).join(',') : select.value;
+        function saveFilters() { ['year', 'month', 'company', 'category'].forEach(key => { state[active][key] = readField(form.elements[key]); }); }
+        function fillMulti(select, options, selectedValue) {
+            const wanted = String(selectedValue || '').split(',').map(item => item.trim()).filter(Boolean);
+            select.replaceChildren();
+            Object.entries(options).forEach(([value, label]) => { const option = new Option(label, value); option.selected = wanted.includes(value); select.add(option); });
+            if (root.jQuery && root.jQuery.fn && root.jQuery.fn.select2 && root.CompanyMulti) root.CompanyMulti.init(select);
+        }
         function fill(select, options, first, selectedValue) {
             select.replaceChildren();
             if (first) select.add(new Option(first, ''));
@@ -77,7 +85,7 @@
                 const [options, page] = await Promise.all([request('get_filters', filter), request('get_data_jurnal', filter)]);
                 if (token !== generation) return;
                 fill(form.elements.year, Object.fromEntries(options.years.map(year => [year, year])), 'Semua Tahun', state[tab].year);
-                fill(form.elements.company, options.companies, 'Semua Company', state[tab].company);
+                if (form.elements.company.multiple) fillMulti(form.elements.company, options.companies, state[tab].company); else fill(form.elements.company, options.companies, 'Semua Company', state[tab].company);
                 fill(form.elements.category, Object.fromEntries(options.categories.map(category => [category, category])), 'Semua Kategori', state[tab].category);
                 form.elements.month.value = state[tab].month;
                 find('#ja-search').value = state[tab].q; find('#ja-length').value = String(state[tab].length);

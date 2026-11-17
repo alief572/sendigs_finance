@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -43,10 +44,7 @@ class Report_jurnal_penerimaan extends Admin_Controller
         $this->consultant->order_by('a.nm_customer', 'ASC');
         $get_customer = $this->consultant->get()->result();
 
-        $this->consultant->select('a.id as id_company, a.nm_company');
-        $this->consultant->from('kons_tr_company a');
-        $this->consultant->order_by('a.nm_company', 'ASC');
-        $get_company = $this->consultant->get()->result();
+        $get_company = array_map(function ($g) { return (object) ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
 
         $this->hris->select('a.id as id_divisi, a.name as nm_divisi');
         $this->hris->from('divisions a');

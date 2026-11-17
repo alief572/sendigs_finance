@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
 
 // Define cross-database constants if not already defined
 if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
@@ -669,24 +670,27 @@ class Request_payment_model extends BF_Model
      */
     public function _apply_company_filter($company_id)
     {
-        if (empty($company_id)) {
+        // Satu atau banyak company (string "STM,VUCA", digabung ATAU). Grup -> semua id konsultan grup; id utama grup
+        // (7/4/3, id pertama aturan alias) dipakai untuk peta hris & nama petty cash. Id numerik lama diterima apa adanya.
+        $list = Piutang_aging::company_list($company_id);
+        if (!$list) {
             return;
         }
 
-        $safe_comp_id = $this->db->escape_str($company_id);
-
-        // Mapped IDs for the 3 consultant project types:
-        // Sustain (3) matches both 3 and 6 (STM-Sustain)
-        // Vuca (4) matches both 4 and 1 (STM-Vuca)
-        // STM (7) matches 7
-        $consultant_comp_ids = [$safe_comp_id];
-        if ($company_id == '3') {
-            $consultant_comp_ids = ['3', '6'];
-        } elseif ($company_id == '4') {
-            $consultant_comp_ids = ['4', '1'];
-        } elseif ($company_id == '7') {
-            $consultant_comp_ids = ['7'];
+        $consultant_comp_ids = [];
+        $primary_ids = [];
+        foreach ($list as $item) {
+            $group_ids = Piutang_aging::company_ids($item);
+            if ($group_ids) {
+                $consultant_comp_ids = array_merge($consultant_comp_ids, $group_ids);
+                $primary_ids[] = $group_ids[0];
+            } else {
+                $consultant_comp_ids[] = $this->db->escape_str($item);
+                $primary_ids[] = $item;
+            }
         }
+        $consultant_comp_ids = array_values(array_unique($consultant_comp_ids));
+        $primary_ids = array_values(array_unique($primary_ids));
         $in_consultant_ids = "'" . implode("','", $consultant_comp_ids) . "'";
 
         $sql_kasbon = "SELECT kb.no_doc FROM tr_kasbon kb 
@@ -710,16 +714,29 @@ class Request_payment_model extends BF_Model
             WHERE COALESCE(NULLIF(p.company, ''), spk.id_company) IN ({$in_consultant_ids})";
 
         $reverse_map = ['7' => 'COM003', '3' => 'COM006', '4' => 'COM012'];
-        $hris_cond = isset($reverse_map[$company_id]) ? "d.id = '" . $reverse_map[$company_id] . "'" : "1=0";
+        $hris_ids = [];
+        foreach ($primary_ids as $pid) {
+            if (isset($reverse_map[$pid])) {
+                $hris_ids[] = "'" . $reverse_map[$pid] . "'";
+            }
+        }
+        $hris_cond = $hris_ids ? "d.id IN (" . implode(',', $hris_ids) . ")" : "1=0";
 
         // Check if company name matches petty cash records
         $company_names = $this->get_company_names_lookup();
-        $comp_name = isset($company_names[$company_id]) ? $this->db->escape_str($company_names[$company_id]) : '';
+        $comp_names = [];
+        foreach ($primary_ids as $pid) {
+            if (!empty($company_names[$pid])) {
+                $comp_names[] = $this->db->escape_str($company_names[$pid]);
+            }
+        }
+        $comp_names = array_values(array_unique($comp_names));
         $petty_cond = "";
-        if (!empty($comp_name)) {
-            $petty_cond = " OR a.no_dokumen IN (SELECT no_payment_hutang FROM tr_petty_cash_vuca_sustain WHERE company = '{$comp_name}')
-                           OR a.no_dokumen IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company = '{$comp_name}')";
-            if ($comp_name === 'STM') {
+        if ($comp_names) {
+            $in_names = "'" . implode("','", $comp_names) . "'";
+            $petty_cond = " OR a.no_dokumen IN (SELECT no_payment_hutang FROM tr_petty_cash_vuca_sustain WHERE company IN ({$in_names}))
+                           OR a.no_dokumen IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company IN ({$in_names}))";
+            if (in_array('STM', $comp_names, true)) {
                 $petty_cond .= " OR (a.no_dokumen LIKE 'RPC-%' AND a.no_dokumen NOT IN (SELECT no_pelaporan FROM tr_pelaporan_petty_cash WHERE company IS NOT NULL AND company <> ''))";
             }
         }
@@ -2088,15 +2105,7 @@ class Request_payment_model extends BF_Model
      */
     public function get_companies_list()
     {
-        $this->db->select('id, nm_company as nama');
-        $this->db->from(DBCNL . '.kons_tr_company');
-        $this->db->where_in('id', ['3', '4', '7']);
-        $this->db->order_by('nama', 'asc');
-        $query = $this->db->get();
-        if (!$query) {
-            return [];
-        }
-        return $query->result();
+        return array_map(function ($g) { return (object) ['id' => $g['id'], 'nama' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
     /* =====================================================================
