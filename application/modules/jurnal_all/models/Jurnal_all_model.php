@@ -976,7 +976,7 @@ class Jurnal_all_model extends BF_Model
                 if ($categories) $row['categories']=array_values(array_unique($categories));
                 if ($row['jenis_transaksi']==='Payment') {
                     $headerCategories=$row['categories'];sort($headerCategories,SORT_NATURAL|SORT_FLAG_CASE);
-                    $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.$row['display_no_transaksi'];
+                    $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.(trim((string)($row['no_referensi'] ?? ''))!==''?$row['no_referensi']:$row['display_no_transaksi']);
                 }
                 $row['extra_search']=implode(' ',array_merge(array_column($matches,'id'),$vouchers));
                 $row['payment_available']=(bool)$matches;
@@ -995,7 +995,7 @@ class Jurnal_all_model extends BF_Model
                         $headerCategories=$row['categories'];sort($headerCategories,SORT_NATURAL|SORT_FLAG_CASE);
                         $row['extra_search']=implode(' ',array_column($reference['approvals'],'id'));
                         $row['payment_available']=true;
-                        $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.$reference['voucher'];
+                        $row['keterangan']='Pembayaran '.implode(', ',$headerCategories).' - '.(trim((string)$row['no_referensi'])!==''?$row['no_referensi']:$reference['voucher']);
                     } catch (Throwable $error) {
                         $row['display_no_transaksi']='-';
                         $row['payment_reference_error']=$error instanceof DomainException?$error->getMessage():'Relasi nomor pembayaran belum dapat diverifikasi.';
