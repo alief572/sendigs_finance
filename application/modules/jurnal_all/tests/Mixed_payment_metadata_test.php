@@ -12,7 +12,7 @@ $model=new Jurnal_all_model();$model->db=$db;
 $header=$model->detail($payment,false)['header'];
 check($header['category']==='Cash, Periodik','Payment must exclude category owned by refill sibling');
 check($header['no_referensi']==='DPM-81, PERIODIK-181, PERIODIK-177, DPM-83, DPM-82','Payment metadata contains only its five source documents');
-check($header['keterangan']==='Pembayaran Cash, Periodik - BK--1026-0002','Payment header is deterministic instead of MAX line description');
+check($header['keterangan']==='Pembayaran Cash, Periodik - DPM-81, PERIODIK-181, PERIODIK-177, DPM-83, DPM-82','Payment header is deterministic instead of MAX line description');
 check($header['debit']==='8713202.00'&&$header['kredit']==='0.00'&&!$model->detail($payment,false)['is_balance'],'metadata does not conceal or repair the native imbalance');
 $refillHeader=$model->detail($refill,false)['header'];
 check($refillHeader['no_referensi']==='RPC-29'&&$refillHeader['category']==='Refill Petty Cash','refill retains its strict source');
@@ -21,7 +21,7 @@ check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'R1']))===2,'native k
 check(count($model->groups(['tab'=>'PAY','year'=>2026,'category'=>'Refill Petty Cash']))===1,'category filter uses partitioned metadata');
 foreach($model->export_rows(['tab'=>'PAY','year'=>2026]) as $line) {
     check($line['line']['keterangan']==='Detail aman {REF:REF-1}','COA export text is unchanged');
-    if($line['header']['jenis_transaksi']==='Payment')check($line['header']['keterangan']==='Pembayaran Cash, Periodik - BK--1026-0002','Excel header matches detail');
+    if($line['header']['jenis_transaksi']==='Payment')check($line['header']['keterangan']==='Pembayaran Cash, Periodik - DPM-81, PERIODIK-181, PERIODIK-177, DPM-83, DPM-82','Excel header matches detail');
 }
 $db->where('jenis_transaksi','Refill Pettycash')->update('tr_jurnal',['sts'=>'1']);
 $model=new Jurnal_all_model();$model->db=$db;
@@ -35,7 +35,7 @@ check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BK--1026-0002'],true
 $db->where('no_transaksi',$key)->update('tr_jurnal',['no_transaksi'=>'BK--1026-0002']);
 $key='BK--1026-0002';
 $model=new Jurnal_all_model();$model->db=$db;
-check($model->detail($payment,true)['header']['keterangan']==='Pembayaran Cash, Periodik - BK--1026-0002','posted Payment uses deterministic header');
+check($model->detail($payment,true)['header']['keterangan']==='Pembayaran Cash, Periodik - DPM-81, PERIODIK-181, PERIODIK-177, DPM-83, DPM-82','posted Payment uses deterministic header');
 
 $db->where('jenis_transaksi','Refill Pettycash')->delete('tr_jurnal');
 $model=new Jurnal_all_model();$model->db=$db;
