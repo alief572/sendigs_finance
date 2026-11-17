@@ -478,7 +478,7 @@ class Pembayaran_material_model extends BF_Model
 		// Kode legacy 2 adalah PPh 22; tarifnya tidak diubah oleh aturan PPh 21/23.
 		if ($type === '2') { return self::payment_cents($legacyPph); }
 		if ($type === '') { return 0; }
-		$base = $amount + $ppn;
+		$base = $amount;
 		$divisor = $type === '23' ? 5000 : 4000;
 		return (intdiv($base, $divisor) + ($base % $divisor ? 1 : 0)) * 100;
 	}

@@ -123,7 +123,7 @@ foreach (['company', 'recipient'] as $bearer) {
     check(json_decode($output, true)['status'] === 1, 'Admin preview saves for '.$bearer.': '.$output);
 }
 foreach ([['21', '0', '25001.00', '975027.00'], ['', '0', '0.00', '1000028.00'],
-    ['23', '110003.08', '22201.00', '1087830.08']] as $case) {
+    ['23', '110003.08', '20001.00', '1090030.08'], ['21', '110003.08', '25001.00', '1085030.08']] as $case) {
     $taxPost = $post;
     $taxPost['pph_data']['PAY-1'] = $taxPost['dt'][0]['tipe_pph'] = $case[0];
     $taxPost['item_ppn']['PAY-1'] = $taxPost['dt'][0]['nilai_ppn'] = $taxPost['nilai_ppn'] = $case[1];
@@ -145,7 +145,9 @@ foreach ([['21', '0', '25001.00', '975027.00'], ['', '0', '0.00', '1000028.00'],
     check($detailWritten, 'Rounded PPh persisted');
 }
 foreach ([['item_pph' => ['PAY-1' => '20000.56']], ['pph_data' => ['PAY-1' => '21']],
-    ['item_ppn' => ['PAY-1' => '110003.08']], ['item_pph' => ['OTHER' => '20001']], ['item_ppn' => 'bad']] as $invalid) {
+    ['item_ppn' => ['PAY-1' => 'bad']], ['item_pph' => ['OTHER' => '20001']], ['item_ppn' => 'bad'],
+    ['item_ppn' => ['PAY-1' => '110003.08'], 'item_pph' => ['PAY-1' => '22201.00']],
+    ['pph_data' => ['PAY-1' => '21'], 'item_ppn' => ['PAY-1' => '110003.08'], 'item_pph' => ['PAY-1' => '27751.00']]] as $invalid) {
     list($event, $output) = material_run('set_jurnal', $options, array_replace($post, $invalid));
     $failedPreview = json_decode($output, true);
     check($event['status'] === 0 && $failedPreview['hasil_jurnal'] === '' && $failedPreview['preview_error'] !== '', 'Reject inconsistent preview details');

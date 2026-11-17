@@ -55,15 +55,15 @@ foreach (array(false, true) as $petty) {
     foreach (array('company', 'recipient') as $bearer) {
         $balancedJournal = array(array_merge($journal,array('coa'=>'6207-00-00','debit'=>100)),
             array_merge($journal,array('coa'=>'1106-01-06','debit'=>10,'id_payment_ref'=>'PAY-1')),
-            array_merge($journal,array('coa'=>'2104-01-03','debit'=>0,'kredit'=>3,'id_payment_ref'=>'PAY-1')),
-            array_merge($journal,array('debit'=>0,'kredit'=>107)));
-        $specialJournal = array(array_merge($journal,array('coa'=>'6207-00-00','debit'=>107)),array_merge($journal,array('debit'=>0,'kredit'=>107)));
+            array_merge($journal,array('coa'=>'2104-01-03','debit'=>0,'kredit'=>2,'id_payment_ref'=>'PAY-1')),
+            array_merge($journal,array('debit'=>0,'kredit'=>108)));
+        $specialJournal = array(array_merge($journal,array('coa'=>'6207-00-00','debit'=>108)),array_merge($journal,array('debit'=>0,'kredit'=>108)));
         $post = array('admin_charge_bearer' => $bearer, 'jurnal_ls' => $balancedJournal, 'jurnal_refill_pettycash' => $specialJournal,
-            'bank_charge' => 0, 'total_payment' => 107, 'payment_bank' => 107,
+            'bank_charge' => 0, 'total_payment' => 108, 'payment_bank' => 108,
             'jurnal_hutang_1' => $specialJournal, 'jurnal_hutang_2' => $specialJournal,
-            'dt' => array(array('id_payment' => 'PAY-1', 'tipe_pph' => 1, 'nilai_ppn' => 10, 'nilai_pph' => 3, 'kurs_invoice' => 1)));
+            'dt' => array(array('id_payment' => 'PAY-1', 'tipe_pph' => 1, 'nilai_ppn' => 10, 'nilai_pph' => 2, 'kurs_invoice' => 1)));
         list($event, $output, $controller) = material_run('save_payment', array('all_petty' => $petty), $post);
-        check($event['status'] === 1 && json_decode($output, true)['status'] === 1 && in_array('trans_commit', $event['calls_at_write'], true), 'Branch payment success: ' . ($GLOBALS['lastMaterialFixtureError'] ?? 'no PHP warning'));
+        check($event['status'] === 1 && json_decode($output, true)['status'] === 1 && in_array('trans_commit', $event['calls_at_write'], true), 'Branch payment success: ' . $output . ' ' . ($GLOBALS['lastMaterialFixtureError'] ?? 'no PHP warning'));
         $refillLines = 0;
         foreach ($controller->db->writes as $write) {
             if ($write[0] === 'insert_batch' && $write[1][0] === 'tr_jurnal') foreach ($write[1][1] as $line) {

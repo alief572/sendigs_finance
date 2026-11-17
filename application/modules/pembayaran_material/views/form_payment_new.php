@@ -1014,7 +1014,7 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 	function calculatePPh(tipe, requestPayment, ppn) {
 		var amount = paymentCents(requestPayment);
 		var tax = paymentCents(ppn === '' ? '0' : ppn);
-		var base = amount + tax;
+		var base = amount;
 		if (!Number.isSafeInteger(base) || !Number.isFinite(amount) || !Number.isFinite(tax)) return NaN;
 		if (tipe === '') return 0;
 		if (tipe !== '23' && tipe !== '21') return NaN;
