@@ -81,11 +81,26 @@ class Xlsx_export
     public static function download(array $spec, $filename)
     {
         $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename);
+        // Tulis ke file temp dulu: notice/warning PHP tidak boleh ikut masuk ke stream zip (file jadi korup).
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        $prev = ini_set('display_errors', '0');
+        try {
+            self::save($spec, $tmp);
+        } finally {
+            ini_set('display_errors', $prev === false ? '0' : $prev);
+        }
+        if (!is_file($tmp) || filesize($tmp) < 4 || file_get_contents($tmp, false, null, 0, 2) !== 'PK') {
+            @unlink($tmp);
+            show_error('Gagal membuat file Excel.', 500);
+            return;
+        }
         while (ob_get_level() > 0) { ob_end_clean(); }
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($tmp));
         header('Cache-Control: max-age=0');
-        PHPExcel_IOFactory::createWriter(self::build($spec), 'Excel2007')->save('php://output');
+        readfile($tmp);
+        @unlink($tmp);
         exit;
     }
 
