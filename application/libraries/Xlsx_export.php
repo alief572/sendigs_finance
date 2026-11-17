@@ -75,7 +75,10 @@ class Xlsx_export
 
     public static function save(array $spec, $path)
     {
-        PHPExcel_IOFactory::createWriter(self::build($spec), 'Excel2007')->save($path);
+        // Pra-hitung rumus agar nilai cache terisi; tanpa ini Protected View Excel menampilkan 0 pada baris Total.
+        $writer = PHPExcel_IOFactory::createWriter(self::build($spec), 'Excel2007');
+        $writer->setPreCalculateFormulas(true);
+        $writer->save($path);
     }
 
     public static function download(array $spec, $filename)
