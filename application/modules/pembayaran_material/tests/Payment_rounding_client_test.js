@@ -69,6 +69,9 @@ for (const [type, amount, ppn, expected] of [
   ['23', '1000000.50', '0', 20001], ['23', '1000049.50', '0', 20001],
   ['21', '1000000.40', '0', 25001], ['21', '1000039.60', '0', 25001],
   ['23', '999999.99', '0.01', 20000], ['21', '999999.99', '0.01', 25000],
+  ['23', '1000028', '110003.08', 20001], ['21', '1000028', '110003.08', 25001],
+  ['21', '1000000', '0.01', 25000], ['21', '0', '110003.08', 0],
+  ['23', '1000000', '0.01', 20000], ['23', '0', '110003.08', 0],
   ['', '1000028', '', 0], ['23', '0', '0', 0]
 ]) assert.equal(context.calculatePPh(type, amount, ppn), expected);
 assert.ok(Number.isNaN(context.calculatePPh('23', 'bad', '0')));
@@ -84,13 +87,16 @@ const changed = handlers.get('change:.tipe_pph, .change_nilai_ppn');
 useAutoNumeric = true;
 values.set('.nilai_ppn_PAY-1', '110003.08');
 changed();
-assert.equal(values.get('.nilai_pph_PAY-1'), '22201.00', 'PPN change recalculates PPh');
+assert.equal(values.get('.nilai_pph_PAY-1'), '20001.00', 'PPN change leaves PPh 23 unchanged');
 assert.equal(values.get('.total_ppn'), '110003.08');
-assert.equal(values.get('.total_payment'), '1087830.08', 'Fractional PPN remains fractional');
-values.set('.nilai_ppn_PAY-1', '0');
+assert.equal(values.get('.total_payment'), '1090030.08', 'PPN increases payment without increasing PPh 23');
 values.set('.tipe_pph_PAY-1', '21');
 changed();
 assert.equal(values.get('.nilai_pph_PAY-1'), '25001.00', 'Type change recalculates PPh');
+assert.equal(values.get('.total_payment'), '1085030.08', 'PPh 21 excludes PPN from base');
+values.set('.nilai_ppn_PAY-1', '0');
+changed();
+assert.equal(values.get('.nilai_pph_PAY-1'), '25001.00', 'PPN change leaves PPh 21 unchanged');
 assert.equal(values.get('.total_payment'), '975027.00');
 values.set('.tipe_pph_PAY-1', '');
 changed();
