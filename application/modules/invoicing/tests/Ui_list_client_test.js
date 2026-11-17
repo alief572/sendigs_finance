@@ -106,7 +106,7 @@ check(invoicedRequest, {filter_status: 'invoiced', filter_tahun: '2026', filter_
 check(invoiced.columns[6].data, 'tax_label', 'Perlakuan PPN column');
 const money = invoiced.columns[7].render(null, 'display', {nilai: {sales: 61500000, ppn: 0, gross: 61500000, saldo: 61500000}});
 check(money.includes('615,000.00') && money.includes('Saldo piutang'), true, 'Nilai cell shows sales, PPN, total tagihan and saldo');
-check(invoiced.columns[7].render(null, 'display', {nilai: null}).includes('-'), true, 'Nilai cell for invoice without v3 numbers shows a dash');
+check(invoiced.columns[7].render(null, 'display', {nilai: null}).includes('-'), true, 'Nilai cell without nilai data shows a dash');
 check(invoiced.columns[7].render(null, 'filter', {nilai: {gross: 61500000}}), '61500000', 'Nilai plain text for non-display use');
 ajaxCalls.length = 0; delegated.get('click .btn_filter_invoiced')({});
 const summaryCall = ajaxCalls.find(call => call.url === '/invoicing/invoiced_summary');
