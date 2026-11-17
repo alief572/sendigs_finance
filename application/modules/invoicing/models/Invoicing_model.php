@@ -119,10 +119,9 @@ class Invoicing_model extends BF_Model
         return $code === '' ? '-' : ($map[$code] ?? $code);
     }
 
-    /** Nilai invoice dalam sen; hanya invoice konsultasi v3 yang punya angka (null untuk invoice lama). */
+    /** Nilai invoice dalam sen, dari kolom tersimpan di tr_invoicing (semua versi: v3, Vuca, lama). */
     public static function money_for($item)
     {
-        if ((int)($item->consulting_version ?? 0) !== 3) return null;
         $c = function ($v) { return Invoice_calculation::cents(number_format((float)$v, 2, '.', '')); };
         return ['sales' => $c($item->total_nominal_jurnal), 'ppn' => $c($item->ppn_jurnal), 'gross' => $c($item->tagihan_ppn_jurnal), 'saldo' => $c($item->saldo_piutang)];
     }

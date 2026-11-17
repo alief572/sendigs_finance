@@ -35,7 +35,7 @@ xe($ws->getCell('N5')->getValue() === 'UMKM Non-PKP' && $ws->getCell('N6')->getV
 xe($ws->getCell('E5')->getValue() === '=CMD()' && $ws->getCell('E5')->getDataType() === 's', 'input user yang berawalan = tetap teks, bukan rumus');
 xe(abs($ws->getCell('O5')->getValue() - 615000) < 0.001 && abs($ws->getCell('Q5')->getValue() - 0) < 0.001 && abs($ws->getCell('R5')->getValue() - 615000) < 0.001, 'UMKM: penjualan 615.000, PPN 0, tagihan 615.000');
 xe(abs($ws->getCell('P5')->getValue() - 563750) < 0.001, 'UMKM: DPP 11/12 = 563.750');
-xe($ws->getCell('O8')->getValue() === null && $ws->getCell('R8')->getValue() === null, 'invoice lama: sel nominal kosong');
+xe(abs($ws->getCell('O8')->getValue() - 9) < 0.001 && abs($ws->getCell('R8')->getValue() - 9) < 0.001, 'invoice lama/Vuca: nominal tersimpan tetap terisi');
 xe($ws->getStyle('O5')->getNumberFormat()->getFormatCode() === '#,##0.00' && $ws->getStyle('C5')->getNumberFormat()->getFormatCode() === 'dd-mmm-yyyy', 'format angka dan tanggal');
 
 // Baris Total = rumus SUM atas data baris 5..8, dan nilainya = card.
