@@ -146,6 +146,14 @@ function get_tanggal_approval_tagihan($item, $CI)
                     }
                 }
 
+                // Cash: request by = pembuat PR asal, bukan pembuat dokumen Cash (Finance)
+                if ($item->kategori == 'Cash' && isset($CI->Request_payment_model)) {
+                    $pr_maker = $CI->Request_payment_model->resolve_cash_pr_maker($item->no_dokumen);
+                    if (!empty($pr_maker)) {
+                        $nmuser = $pr_maker;
+                    }
+                }
+
                 // Tanggal Pengajuan
                 $tanggal_pengajuan = format_tanggal_indo($item->tanggal, $bulan_indonesia);
 

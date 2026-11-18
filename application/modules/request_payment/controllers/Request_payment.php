@@ -4424,6 +4424,16 @@ class Request_payment extends Admin_Controller
 					}
 				}
 
+				if ($item->kategori == 'Cash') {
+					// Cash: request by = pembuat PR asal, bukan pembuat dokumen Cash (Finance)
+					$this->Request_payment_model->resetAuditQueriesOk();
+					$pr_maker = $this->Request_payment_model->resolve_cash_pr_maker($item->no_dokumen);
+					$queriesOk = $this->Request_payment_model->auditQueriesOk() && $queriesOk;
+					if (!empty($pr_maker)) {
+						$nmuser = $pr_maker;
+					}
+				}
+
 				// Company display - resolved via central resolve_row_company
 				$this->Request_payment_model->resetAuditQueriesOk();
 				$res_comp = $this->Request_payment_model->resolve_row_company($item);
