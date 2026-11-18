@@ -523,9 +523,25 @@ class Pembayaran_material_model extends BF_Model
 		return ['total' => $total, 'admin' => $admin, 'bank' => $total + ($bearer === 'company' ? $admin : 0), 'details' => $normalized];
 	}
 
-	public function validate_payment_journal($rows, $totals, $bankCoa)
+	public function validate_payment_journal($rows, $totals, $bankCoa, $payments)
 	{
 		if (!is_array($rows) || !$rows) { throw new Invalid_payment_journal('Jurnal pembayaran kosong.'); }
+		$principal = [];
+		foreach ($payments as $payment) {
+			if ($payment->tipe !== 'periodik') { continue; }
+			$key = periodik_doc_key($payment->no_doc);
+			$source = $this->selectionQuery($this->db->query('SELECT coa, nilai FROM tr_pengajuan_rutin_detail WHERE '.$key['col'].' = ? FOR UPDATE', [$key['val']]))->result();
+			$sourceTotal = 0;
+			foreach ($source as $item) {
+				if (!in_array($item->coa, ['2104-01-02', '2104-01-03'], true)) { continue; }
+				$amount = self::payment_cents($item->nilai);
+				if ($amount > self::payment_cents($payment->jumlah) - $sourceTotal) {
+					throw new Invalid_payment_journal('Pokok pelunasan pajak melebihi nilai payment. Muat ulang form.');
+				}
+				$sourceTotal += $amount;
+				$principal[$payment->id][$item->coa] = ($principal[$payment->id][$item->coa] ?? 0) + $amount;
+			}
+		}
 		$bankTotal = 0;
 		$taxes = [];
 		foreach ($rows as $row) {
@@ -541,6 +557,12 @@ class Pembayaran_material_model extends BF_Model
 				$id = $row['id_payment_ref'] ?? '';
 				if (!is_scalar($id) || !isset($totals['details'][$id])) { throw new Invalid_payment_journal('Referensi jurnal pajak tidak sesuai pilihan.'); }
 				$detail = $totals['details'][$id];
+				// Debit pelunasan utang pajak harus cocok sumber periodik, terpisah dari kredit potongan PPh.
+				if ($debit > 0 && $credit === 0 && isset($principal[$id][$coa])) {
+					if ($debit > $principal[$id][$coa]) { throw new Invalid_payment_journal('Debit pelunasan pajak tidak sesuai sumber pengajuan periodik. Muat ulang form.'); }
+					$principal[$id][$coa] -= $debit;
+					continue;
+				}
 				$field = $coa === '1106-01-06' ? 'nilai_ppn' : 'nilai_pph';
 				$expectedCoa = $field === 'nilai_ppn' ? '1106-01-06' : $detail['pph_coa'];
 				$amount = $field === 'nilai_ppn' ? $debit : $credit;
@@ -553,6 +575,11 @@ class Pembayaran_material_model extends BF_Model
 			}
 		}
 		if ($bankTotal !== $totals['bank']) { throw new Invalid_payment_journal('Kredit bank tidak sesuai nominal payment.'); }
+		foreach ($principal as $accounts) {
+			foreach ($accounts as $remaining) {
+				if ($remaining !== 0) { throw new Invalid_payment_journal('Debit pelunasan pajak tidak sesuai sumber pengajuan periodik. Muat ulang form.'); }
+			}
+		}
 		foreach ($totals['details'] as $id => $detail) {
 			foreach (['nilai_ppn', 'nilai_pph'] as $field) {
 				if (($taxes[$id][$field] ?? 0) !== self::payment_cents($detail[$field])) {
