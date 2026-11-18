@@ -494,10 +494,16 @@ class Record_request_payment_model extends BF_Model
 				$btn_aksi .= ' <a href="' . base_url('assets/expense/' . $r->doc_file) . '" target="_blank" class="mini-btn view" title="Lihat Lampiran"><i class="fa fa-file"></i> File</a>';
 			}
 
+			// Cash: nama = pembuat PR asal (bukan pembuat dokumen Cash/Finance)
+			$nama_row = $r->nama;
+			if ($tipe_clean === 'Cash') {
+				$nama_row = $this->resolve_request_by($r->no_doc, 'Cash', $r->nama);
+			}
+
 			$data[] = [
 				'no_doc'        => $r->no_doc,
 				'kategori'      => $tipe_clean,
-				'nama'          => $r->nama ? $r->nama : '-',
+				'nama'          => $nama_row ? $nama_row : '-',
 				'keperluan'     => $r->keperluan ? $r->keperluan : '-',
 				'tgl_doc'       => !empty($r->tgl_doc) && $r->tgl_doc != '0000-00-00' ? date('d-M-Y', strtotime($r->tgl_doc)) : '-',
 				'tgl_bayar'     => !empty($r->tgl_bayar) && $r->tgl_bayar != '0000-00-00' ? date('d-M-Y', strtotime($r->tgl_bayar)) : '-',

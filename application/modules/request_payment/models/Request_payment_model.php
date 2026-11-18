@@ -2512,6 +2512,13 @@ class Request_payment_model extends BF_Model
                     }
                 }
             }
+            // Cash: request by = pembuat PR asal, bukan pembuat dokumen Cash (Finance)
+            if ($r->kategori == 'Cash') {
+                $pr_maker = $this->resolve_cash_pr_maker($r->no_dokumen);
+                if (!empty($pr_maker)) {
+                    $request_by = $pr_maker;
+                }
+            }
 
             $out[] = [
                 'id'           => $r->id,
