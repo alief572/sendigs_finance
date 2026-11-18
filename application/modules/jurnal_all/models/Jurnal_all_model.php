@@ -1647,6 +1647,12 @@ class Jurnal_all_model extends BF_Model
     {
         $words=preg_split('/\s+/u',mb_strtolower(trim($query),'UTF-8'),-1,PREG_SPLIT_NO_EMPTY);
         if (!$words||!$headers) return $headers;
+        if ($posted && preg_match('/^BK-[A-Z0-9-]*-\d{4}-\d{4,}$/iD',trim($query))) {
+            $headers=array_values(array_filter($headers,function($row)use($words){
+                return $this->tab($row['jenis_transaksi'])!=='PAY'
+                    || in_array($words[0],array_map('trim',explode(',',mb_strtolower($row['display_no_transaksi'],'UTF-8'))),true);
+            }));
+        }
         $numbers=[];$matches=[];
         foreach($headers as $header){
             if(!empty($header['debt_group']))foreach($this->debt_groups()->find($header['id'])['rows'] as $line)$matches[$this->key($header)][]=mb_strtolower(implode(' ',[$line['coa'],$line['nm_coa'],$line['keterangan']]),'UTF-8');
