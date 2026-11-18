@@ -53,6 +53,8 @@ check(count($model->groups(['tab'=>'PAY','year'=>2026]))===1&&count($model->grou
 $db->where('jenis_transaksi',Jurnal_debt_groups::TYPE)->update('tr_jurnal',['sts'=>'1']);
 $model=new Jurnal_all_model();$model->db=$db;
 check(count($model->groups(['tab'=>'PAY','year'=>2026],true))===1&&count($model->export_rows(['tab'=>'PAY','year'=>2026],true))===4,'posted report/Excel retain one business transaction and all accounting rows');
+check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BK--0926-0015'],true))===1&&count($model->export_rows(['tab'=>'PAY','year'=>2026,'q'=>'BK--0926-0015'],true))===4,'full voucher search/export retain canonical debt group across both company keys');
+check(count($model->groups(['tab'=>'PAY','year'=>2026,'q'=>'BK--1026-0055'],true))===0,'full approval number cannot match a different displayed debt voucher');
 $db->where('jenis_transaksi',Jurnal_debt_groups::TYPE)->update('tr_jurnal',['sts'=>'0']);
 $db->query('DELETE FROM tr_petty_cash_vuca_sustain');$model=new Jurnal_all_model();$model->db=$db;
 check(count($model->groups(['tab'=>'PAY','year'=>2026]))===2&&!$model->detail($stm,false)['can_post'],'unverified source remains visible separately and blocked');

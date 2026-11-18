@@ -32,7 +32,8 @@ foreach ($cases as $c) {
     check(count($detail['rows'])===2&&$detail['is_balance'],'history COA detail remains balanced');
     check(count($model->groups($filters+['q'=>$voucher],true))===1,'voucher is searchable');
     check(count($model->groups($filters+['q'=>$doc],true))===1,'document is searchable');
-    check(count($model->groups($filters+['q'=>$native],true))===1,'native accounting key remains searchable');
+    check(count($model->groups($filters+['q'=>$native],true))===0,'full legacy approval number cannot match a different displayed voucher');
+    check(count($model->groups($filters+['q'=>substr($native,4)],true))===1,'partial legacy key retains ordinary search compatibility');
     check(count($model->groups($filters+['category'=>$category],true))===1,'resolved category filters history');
 }
 $export=$model->export_rows($filters,true);

@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/Query_test.php';
 $db->query('CREATE TABLE ms_budget_rutin (id INTEGER,departement TEXT)');
-$db->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER,no_doc TEXT,id_budget INTEGER,coa TEXT,nama TEXT,nilai DECIMAL(20,2))');
+$db->query('CREATE TABLE tr_pengajuan_rutin_detail (id INTEGER,no_doc TEXT,no_item TEXT,id_budget INTEGER,coa TEXT,nama TEXT,nilai DECIMAL(20,2))');
 $db->data_cache=[];
 $model=new Invoice_department_fixture_model();$model->db=$db;
 $model->departmentDb=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false],true);
