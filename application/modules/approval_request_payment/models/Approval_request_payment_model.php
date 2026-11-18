@@ -136,12 +136,34 @@ class Approval_request_payment_model extends BF_Model
 
 		foreach ($items as $it) {
 			$kat = strtolower(trim((string)$it->kategori));
-			if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($it->no_dokumen, 'DPM') === 0 || strpos($it->no_dokumen, 'DP-') === 0) {
-				$is_cash = ($kat === 'cash');
-				if (!$is_cash) {
-					$cashQ = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $it->no_dokumen]);
-					$this->trackAuditDbError();
-					$is_cash = $cashQ && ($cashQ->num_rows() > 0);
+			if ($kat === 'cash' || $kat === 'direct payment' || $kat === 'direct_payment' || strpos($it->no_dokumen, 'DPM') === 0 || strpos($it->no_dokumen, 'DP-') === 0) {
+				$cashQ = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $it->no_dokumen]);
+				$this->trackAuditDbError();
+				$cashRow = ($cashQ && $cashQ->num_rows() > 0) ? $cashQ->row() : null;
+				$is_cash = ($kat === 'cash') || !empty($cashRow);
+				// Cash: request by = created_by PR asal (bukan pembuat dokumen Cash/Finance)
+				if ($is_cash && !empty($cashRow)) {
+					$prTable = [
+						'pr stok'       => 'material_planning_base_on_produksi',
+						'pr departemen' => 'rutin_non_planning_header',
+						'pr asset'      => 'tran_pr_header',
+					];
+					$jp = strtolower(trim((string) $cashRow->jenis_pr));
+					if (isset($prTable[$jp]) && !empty($cashRow->no_pr)) {
+						$prQ = $this->db->select('created_by')->limit(1)->get_where($prTable[$jp], ['no_pr' => $cashRow->no_pr]);
+						$this->trackAuditDbError();
+						$pr = $prQ ? $prQ->row() : null;
+						if (!empty($pr) && !empty($pr->created_by)) {
+							$uQ = $this->db->query("SELECT nm_lengkap, username FROM users WHERE id_user = ? OR username = ? LIMIT 1", [$pr->created_by, $pr->created_by]);
+							$this->trackAuditDbError();
+							$u = $uQ ? $uQ->row() : null;
+							if (!empty($u) && !empty($u->nm_lengkap)) {
+								$it->request_by = $u->nm_lengkap;
+							} elseif (!empty($u) && !empty($u->username)) {
+								$it->request_by = $u->username;
+							}
+						}
+					}
 				}
 				if (!$is_cash && $this->consultant) {
 					$konsQ = $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $it->no_dokumen]);

@@ -70,6 +70,9 @@ class Record_request_payment_model extends BF_Model
 		$data = [];
 		foreach ($rows as $row) {
 			$item = (array) $row;
+			if (strtolower(trim((string) $row->kategori)) === 'cash') {
+				$item['request_by'] = $this->resolve_request_by($row->no_dokumen, $row->kategori, $row->request_by);
+			}
 			foreach (['id', 'id_pengajuan', 'flag_ppn', 'flag_pph23', 'flag_pph21', 'admin'] as $key) {
 				$item[$key] = (int) $item[$key];
 			}
@@ -205,16 +208,30 @@ class Record_request_payment_model extends BF_Model
 		}
 
 		$kat = strtolower(trim((string)$kategori));
-		if ($kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
-			// Cash tidak termasuk aturan ini
-			if ($kat === 'cash') {
-				return $current_request_by;
-			}
+		if ($kat === 'cash' || $kat === 'direct payment' || $kat === 'direct_payment' || strpos($no_dokumen, 'DPM') === 0 || strpos($no_dokumen, 'DP-') === 0) {
 			$cashQuery = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $no_dokumen]);
 			$this->trackAuditDbError($this->db);
 			if (!is_object($cashQuery)) {
 				$this->auditQueriesOk = false;
-			} elseif ($cashQuery->num_rows() > 0) {
+			}
+			if ($kat === 'cash' || (is_object($cashQuery) && $cashQuery->num_rows() > 0)) {
+				// Cash: request by = created_by PR asal (bukan pembuat dokumen Cash/Finance)
+				$cash = is_object($cashQuery) ? $cashQuery->row() : null;
+				$tables = [
+					'pr departemen' => 'rutin_non_planning_header',
+					'pr stok'       => 'material_planning_base_on_produksi',
+					'pr asset'      => 'tran_pr_header',
+				];
+				if (!empty($cash) && !empty($cash->no_pr) && isset($tables[$cash->jenis_pr])) {
+					$maker = $this->queryRow($this->db, $this->db->select('u.nm_lengkap')
+						->from($tables[$cash->jenis_pr] . ' h')
+						->join('users u', 'u.id_user = h.created_by', 'left')
+						->where('h.no_pr', $cash->no_pr)
+						->limit(1)->get());
+					if (!empty($maker) && !empty($maker->nm_lengkap)) {
+						return $maker->nm_lengkap;
+					}
+				}
 				return $current_request_by;
 			}
 
