@@ -151,6 +151,17 @@ class Jurnal_payment extends Admin_Controller
             if (!$get_jurnal) {
                 throw new Exception('Data Jurnal_payment tidak ditemukan');
             }
+            if ($get_jurnal->jenis_transaksi === 'Payment') {
+                $this->db->trans_rollback();
+                if ($this->input->method(true) !== 'POST' || !(has_permission($this->managePermission) || has_permission('Jurnal_All.Manage'))) {
+                    throw new RuntimeException('Anda tidak memiliki akses untuk aksi jurnal ini.');
+                }
+                require_once dirname(__DIR__, 2).'/jurnal_all/libraries/Payment_posting.php';
+                try { $result = (new Payment_posting($this))->execute($post['id'] ?? 0); }
+                catch (Throwable $error) { $result = ['save'=>0,'msg'=>$error->getMessage()]; }
+                echo json_encode($result);
+                return;
+            }
 
             $id_company = $get_jurnal->id_company;
             $acc = $this->_get_acc_db($id_company, $get_jurnal->jenis_transaksi);
