@@ -248,8 +248,15 @@ class Request_payment extends Admin_Controller
 			// Resolusi nama pembuat (request_by) dari database konsultan khusus Direct Payment (bukan Cash)
 			$req_by = $src->request_by;
 			$kat_check = strtolower(trim((string)$src->kategori));
-			if ($kat_check === 'direct payment' || $kat_check === 'direct_payment' || strpos($nd, 'DPM') === 0 || strpos($nd, 'DP-') === 0) {
+			if ($kat_check === 'cash' || $kat_check === 'direct payment' || $kat_check === 'direct_payment' || strpos($nd, 'DPM') === 0 || strpos($nd, 'DP-') === 0) {
 				$is_cash = ($kat_check === 'cash') || ($this->db->get_where('tr_pr_non_po', ['no_non_po' => $nd])->num_rows() > 0);
+				if ($is_cash) {
+					// Cash: request by = pembuat PR asal, bukan pembuat dokumen Cash (Finance)
+					$pr_maker = $this->Request_payment_model->resolve_cash_pr_maker($nd);
+					if (!empty($pr_maker)) {
+						$req_by = $pr_maker;
+					}
+				}
 				if (!$is_cash && $this->consultant) {
 					$kons = $this->consultant->select('created_by')->get_where('kons_tr_kasbon_project_header', ['id' => $nd])->row();
 					if (!empty($kons) && !empty($kons->created_by)) {

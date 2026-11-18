@@ -2853,6 +2853,35 @@ class Request_payment_model extends BF_Model
     }
 
     /**
+     * Nama pembuat PR asal dokumen Cash (tr_pr_non_po.no_non_po), atau null bila tidak ketemu.
+     * created_by di ketiga tabel PR = users.id_user.
+     */
+    public function resolve_cash_pr_maker($no_non_po)
+    {
+        $cash = $this->db->get_where('tr_pr_non_po', ['no_non_po' => $no_non_po])->row();
+        $this->trackAuditDbError();
+        if (empty($cash) || empty($cash->no_pr)) {
+            return null;
+        }
+        $tables = [
+            'pr departemen' => 'rutin_non_planning_header',
+            'pr stok'       => 'material_planning_base_on_produksi',
+            'pr asset'      => 'tran_pr_header',
+        ];
+        $tbl = isset($tables[$cash->jenis_pr]) ? $tables[$cash->jenis_pr] : null;
+        if (!$tbl) {
+            return null;
+        }
+        $maker = $this->db->select('u.nm_lengkap')
+            ->from($tbl . ' h')
+            ->join('users u', 'u.id_user = h.created_by', 'left')
+            ->where('h.no_pr', $cash->no_pr)
+            ->limit(1)->get()->row();
+        $this->trackAuditDbError();
+        return (!empty($maker) && !empty($maker->nm_lengkap)) ? $maker->nm_lengkap : null;
+    }
+
+    /**
      * Resolve company dari department_id lewat HRIS, dipakai sebagai fallback saat
      * departemen user belum tersalin ke db_sendigs_ss.departments (salinan lokal
      * bisa ketinggalan dari master di hr_sentral). HRIS = source of truth.
