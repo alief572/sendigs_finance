@@ -24,6 +24,20 @@ class Payment_reference_cli extends CI_Controller
         $this->execute($mode,$path,true);
     }
 
+    public function repair_identity($mode='dry-run',$path=null)
+    {
+        try{
+            if(!in_array($mode,['dry-run','apply','verify','rollback','verify-rollback'],true))throw new DomainException('Mode CLI tidak valid.');
+            require_once dirname(__DIR__).'/libraries/Payment_identity_repair.php';
+            $path=$this->manifestPath(getenv('PAYMENT_MANIFEST') ?: $path);
+            $repair=new Payment_identity_repair($this);
+            if($mode==='dry-run')$result=$repair->prepare($path);
+            elseif($mode==='verify'||$mode==='verify-rollback')$result=$repair->verify($path,$mode==='verify-rollback');
+            else $result=$repair->run($path,$mode==='rollback');
+            echo json_encode(['status'=>1,'result'=>$result],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;
+        }catch(Throwable $error){fwrite(STDERR,'Payment identity: '.$error->getMessage().PHP_EOL);exit(1);}
+    }
+
     /** Posted Payment journals still keyed by approval id (whitelist in Payment_posted_repair). */
     public function repair_posted($mode='dry-run', $path=null)
     {

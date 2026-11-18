@@ -2,7 +2,7 @@ param(
     [string]$PhpPath = 'C:\xampp74\php\php.exe',
     [string]$MysqlBin = 'C:\xampp74\mysql\bin',
     [int]$Port = 33317,
-    [ValidateSet('Mysql_test.php','Payment_reference_mysql_test.php','Debt_posting_test.php')]
+    [ValidateSet('Mysql_test.php','Payment_reference_mysql_test.php','Debt_posting_test.php','Payment_identity_mysql_test.php')]
     [string]$TestScript = 'Mysql_test.php'
 )
 $ErrorActionPreference = 'Stop'
