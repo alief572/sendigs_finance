@@ -1612,7 +1612,7 @@ class Pembayaran_material extends Admin_Controller
 					$journalCheck[] = array_merge($row, ['no_transaksi' => 'payment', 'jenis_transaksi' => 'Payment']);
 				}
 				Payment_journal_validator::validate($journalCheck);
-				$this->Pembayaran_material_model->validate_payment_journal($post['jurnal_ls'], $totals, $post['bank']);
+				$this->Pembayaran_material_model->validate_payment_journal($post['jurnal_ls'], $totals, $post['bank'], $payments);
 				$post['dt'] = array_values($totals['details']);
 				$post['total_payment'] = $this->Pembayaran_material_model->payment_decimal($totals['total']);
 				$post['payment_bank'] = $this->Pembayaran_material_model->payment_decimal($totals['bank']);
