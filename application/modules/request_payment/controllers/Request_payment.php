@@ -188,8 +188,11 @@ class Request_payment extends Admin_Controller
 		$companies_found = [];
 		foreach ($no_dokumen_list as $nd) {
 			$cid = isset($company_info[$nd]) ? $company_info[$nd]['company_id'] : null;
-			if (!empty($cid)) {
-				$companies_found[$cid] = isset($company_info[$nd]['company_nama']) ? $company_info[$nd]['company_nama'] : $cid;
+			$cnm = isset($company_info[$nd]['company_nama']) ? $company_info[$nd]['company_nama'] : '';
+			// fallback ke nama bila id tidak ter-resolve, supaya nama company tidak terbuang
+			$ckey = !empty($cid) ? $cid : $cnm;
+			if (!empty($ckey)) {
+				$companies_found[$ckey] = $cnm !== '' ? $cnm : $cid;
 			}
 		}
 		if (count($companies_found) > 1) {
