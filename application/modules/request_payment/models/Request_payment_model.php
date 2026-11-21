@@ -2309,8 +2309,12 @@ class Request_payment_model extends BF_Model
                 }
             }
             if (!empty($company_nama)) {
-                $comp_id = array_search($company_nama, $company_names);
-                $company_id_kons = ($comp_id !== false) ? (string) $comp_id : null;
+                // Sumber petty cash simpan 'SUSTAIN'/'VUCA', lookup kons 'Sustain'/'Vuca': cocokkan case-insensitive.
+                $comp_id = array_search(strtolower($company_nama), array_map('strtolower', $company_names));
+                if ($comp_id !== false) {
+                    $company_id_kons = (string) $comp_id;
+                    $company_nama    = $company_names[$comp_id];
+                }
                 return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
             }
         }
