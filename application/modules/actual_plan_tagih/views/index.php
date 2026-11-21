@@ -173,7 +173,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     $(document).ready(function() {
         try {
             var saved = sessionStorage.getItem('apt_bulan');
-            var $tab = saved ? $('.tab_pin[data-no="' + saved + '"]') : $();
+            var $tab = /^(?:[1-9]|1[0-2]|macet)$/.test(saved) ? $('.tab_pin[data-no="' + saved + '"]') : $();
             if ($tab.length) {
                 $('.tab_pin').removeClass('active');
                 $tab.addClass('active');
@@ -181,25 +181,18 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             }
         } catch (e) {}
 
-        var bulan = $('#bulan').val();
-        var tahun = $('.inp_tahun').val();
-        var status = $('#status').val();
-
-        DataTables(bulan, tahun, status);
+        DataTables();
     });
 
     $(document).on('click', '.tab_pin', function() {
         var bulan = $(this).data('no');
-        var tahun = $('.inp_tahun').val();
-        var status = $('#status').val();
-
         $('.tab_pin').removeClass('active');
-        $('.tab_' + bulan).addClass('active');
+        $(this).addClass('active');
         $('#bulan').val(bulan);
         try {
             sessionStorage.setItem('apt_bulan', bulan);
         } catch (e) {}
-        DataTables(bulan, tahun, status);
+        DataTables();
     });
 
     $(document).on('click', '.aktual_tagihan', function() {
@@ -357,7 +350,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             }).then(() => {
                                 Swal.close();
                                 $('#dialog-popup').modal('hide');
-                                DataTables($('#bulan').val(), $('.inp_tahun').val(), $('#status').val());
+                                DataTables();
                             });
 
                         } else {
@@ -426,7 +419,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                                 text: result.msg
                             }).then(() => {
                                 $('#dialog-popup-macet').modal('hide');
-                                DataTables($('#bulan').val(), $('.inp_tahun').val(), $('#status').val());
+                                DataTables();
                             });
                         } else {
                             Swal.fire({
@@ -449,19 +442,11 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
     });
 
     $(document).on('change', '.inp_tahun', function() {
-        var bulan = $('#bulan').val();
-        var tahun = $(this).val();
-        var status = $('#status').val();
-
-        DataTables(bulan, tahun, status);
+        DataTables();
     });
 
     $(document).on('change', '#status', function() {
-        var bulan = $('#bulan').val();
-        var tahun = $('.inp_tahun').val();
-        var status = $(this).val();
-
-        DataTables(bulan, tahun, status);
+        DataTables();
     });
 
     $(document).on('click', '.download_excel', function() {
@@ -492,7 +477,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                                 title: 'Success !',
                                 text: result.msg
                             }).then(() => {
-                                location.reload();
+                                DataTables();
                             });
                         } else {
                             Swal.fire({
@@ -545,10 +530,7 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
                             title: 'Batch Process Selesai',
                             html: 'Total ditemukan: ' + response.total_found + '<br>Berhasil diproses: ' + response.total_success + '<br>Gagal: ' + response.total_failed + '<br>Durasi: ' + response.duration_seconds + ' detik'
                         }).then(function() {
-                            var bulan = $('#bulan').val();
-                            var tahun = $('.inp_tahun').val();
-                            var status = $('#status').val();
-                            DataTables(bulan, tahun, status);
+                            DataTables();
                         });
                     },
                     error: function() {
@@ -591,16 +573,21 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
         });
     });
 
-    function DataTables(bulan, tahun, status = null) {
-        var dataTables = $('#table_penawaran').dataTable({
+    function DataTables() {
+        if ($.fn.dataTable.isDataTable('#table_penawaran')) {
+            $('#table_penawaran').DataTable().ajax.reload(null, false);
+            return;
+        }
+
+        $('#table_penawaran').DataTable({
             ajax: {
                 url: siteurl + active_controller + 'get_actual_plan_tagih',
                 type: "POST",
                 dataType: "JSON",
                 data: function(d) {
-                    d.bulan = bulan;
-                    d.tahun = tahun;
-                    d.status = status;
+                    d.bulan = $('#bulan').val();
+                    d.tahun = $('.inp_tahun').val();
+                    d.status = $('#status').val();
                 }
             },
             columns: [{
@@ -640,7 +627,8 @@ $ENABLE_DELETE  = has_permission('Actual_Plan_Tagih.Delete');
             responsive: true,
             processing: true,
             serverSide: true,
-            destroy: true,
+            stateSave: true,
+            stateDuration: -1,
             paging: true
         });
     }
