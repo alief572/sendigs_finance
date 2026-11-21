@@ -27,7 +27,16 @@ $format=function($value){$parts=explode('.',(string)$value);return preg_replace(
     <?php endif; ?>
 </dl>
 <?php $sections=$perCompany ? $detail['company_sections'] : [['rows'=>$detail['rows'],'debit'=>$h['debit'],'kredit'=>$h['kredit']]];
-foreach($sections as $index=>$section): ?>
+foreach($sections as $index=>$section):
+    if(!$posted && $h['source']==='PAY'){
+        $ordered=[[],[],[]];
+        foreach($section['rows'] as $line){
+            $group=strpos((string)$line['coa'],'1101-02-')===0 ? 2 : ((float)$line['debit']>0 ? 0 : 1);
+            $ordered[$group][]=$line;
+        }
+        $section['rows']=array_merge(...$ordered);
+    }
+?>
 <?php if($perCompany): ?><section class="ja-company-section" aria-labelledby="ja-company-<?= $index ?>">
     <h3 id="ja-company-<?= $index ?>">Sisi <?= $e($section['nm_company']) ?></h3>
     <?php if($debt): ?><p><?= $e($section['status']) ?> | Accounting: <?= $e($section['accounting_status'] ?? '-') ?> | No. Accounting: <?= $e($section['accounting_number'] ?? '-') ?></p><?php endif; ?>
