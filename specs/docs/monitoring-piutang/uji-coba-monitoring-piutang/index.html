@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="lib/xlsx.full.min.js"></script>
+<script src="lib/ag-grid-community.min.js"></script>
+<link rel="stylesheet" href="lib/driver/driver.css">
+<script src="lib/driver/driver.js.iife.js"></script>
 <style>
 :root{
   --bg:#ecf0f5; --panel:#ffffff; --text:#333a40; --muted:#6c757d; --line:#dfe3e8; --row:#f7f9fb;
@@ -185,6 +188,17 @@ fieldset.plain{border:0;padding:0;margin:0;min-width:0}
 .card.tot{border-top-color:var(--blue)}
 .card.nb{border-top-color:#95a5a6;cursor:default;background:#fafbfc}.card.nb .cv{color:var(--muted)}
 .card.L{border-top-color:var(--green)}.card.P{border-top-color:var(--orange)}.card.M{border-top-color:var(--red)}
+/* MP-R-29: card ringkasan Follow Up (klik = buka tab) */
+.fucards .card.k1{border-top-color:#8a949c}.fucards .card.k2{border-top-color:var(--blue)}.fucards .card.k3{border-top-color:var(--orange)}.fucards .card.k4{border-top-color:var(--red)}.fucards .card.k5{border-top-color:#555}
+.fucards .card.k3 .cv{color:var(--orange)}.fucards .card.k4 .cv{color:var(--red)}
+.fucards .card.k6{border-top-color:var(--green)}.fucards .card.k7{border-top-color:var(--red)}.fucards .card.k7 .cv{color:var(--red)}
+/* MP-R-31: tab utama + tab anak */
+.tabs.fumain{border-bottom:2px solid var(--blue);margin-bottom:6px}
+.tabs.fumain button{font-size:16px!important;font-weight:700;padding:9px 22px}
+.tabs.fumain button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tabs.fusub{margin-top:4px}
+.grphint{margin:0 0 10px}
+.fucards:empty{display:none}
 .card .ct{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
 .card .cv{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;word-break:break-word}
 .card.L .cv{color:var(--green)}.card.P .cv{color:var(--orange)}.card.M .cv{color:var(--red)}
@@ -275,6 +289,91 @@ tr.baru > td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
 .funext label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);max-width:200px}
 .linkbtn{background:none;border:0;padding:0;color:var(--blue);cursor:pointer;font-size:13px;font-weight:600}
 @media (max-width:760px){.frow{grid-template-columns:1fr}}
+/* MP-R-15: font Follow Up Piutang diperbesar (hanya menu Follow Up) */
+body.pg-fu #main{font-size:16px}
+body.pg-fu #main th,body.pg-fu #mForm th{font-size:15px}
+body.pg-fu #main .sub,body.pg-fu #mForm .sub,body.pg-fu #main .asof,body.pg-fu #mForm .asof{font-size:14px}
+body.pg-fu #main .pill,body.pg-fu #mForm .pill{font-size:13px}
+body.pg-fu #main .btn,body.pg-fu #mForm .btn{font-size:14.5px}
+body.pg-fu #main .btn.sm,body.pg-fu #mForm .btn.sm{font-size:14px}
+body.pg-fu .tabhint,body.pg-fu #main .hint,body.pg-fu #mForm .hint,body.pg-fu .okmsg,body.pg-fu #mForm .warn{font-size:14.5px}
+body.pg-fu .tabs button{font-size:15px}
+body.pg-fu #main details.cases{font-size:15px}
+body.pg-fu #mForm{font-size:16px}
+body.pg-fu #mForm .frow label{font-size:14px}
+body.pg-fu #mForm h3{font-size:17px}
+body.pg-fu .filters label.fl{font-size:14px}
+/* MP-R-16: status FU */
+.frow.f4{grid-template-columns:180px 230px 250px 1fr}
+@media (max-width:900px){.frow.f4{grid-template-columns:1fr 1fr}}
+@media (max-width:760px){.frow.f4{grid-template-columns:1fr}}
+.pill.st-batal{background:var(--red)}
+.pill.fs{background:var(--blue)}.pill.fs.ok{background:var(--green)}.pill.fs.w{background:var(--orange)}.pill.fs.bad{background:var(--red)}
+.fust{display:block;margin-bottom:3px}
+tr.bad > td{background:rgba(221,75,57,.08)}
+tr.bad > td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+details.rounds{border:1px solid var(--orange);border-radius:3px;padding:6px 10px;margin:0 0 10px}
+details.rounds summary{cursor:pointer;font-weight:600}
+/* MP-R-18: tab Semua seperti Visual Control (tabel lebar, kolom kiri tetap) */
+table.vc{width:max-content;min-width:100%}
+.vc th,.vc td{white-space:nowrap}
+.vc td.wrap{white-space:normal;min-width:200px;max-width:300px}
+.vc thead tr.grp th{text-align:center}
+.vc .gl{border-left:1px solid var(--line)}
+.vc .stk{position:sticky;background:var(--panel);z-index:1}
+.vc tbody tr:nth-child(odd) td.stk{background:var(--row)}
+.vc tr.bad td.stk,.vc tr.baru td.stk{background:var(--panel)}
+.vc .stk1{left:0;width:48px;min-width:48px;max-width:48px}
+.vc .stk2{left:48px;width:300px;min-width:300px;max-width:300px;white-space:normal;box-shadow:2px 0 0 var(--line)}
+/* MP-R-20: kolom gabungan (Invoice, Tanggal, Pengiriman) */
+.vc-inv .no{font-size:1.05em}
+.vc-inv .pill.co{background:#6c7a86;margin-left:4px;vertical-align:1px}
+.vc-inv .pill.baru{margin-left:4px}
+.vc-cust{font-weight:600;margin-top:2px;line-height:1.3}
+.vc-dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;min-width:190px}
+.vc-dl dt{color:var(--muted);font-size:.86em;padding-top:1px}
+.vc-dl dd{margin:0;white-space:nowrap}
+.vc-dl dd.w{white-space:normal;max-width:240px}
+/* MP-R-23: Status · Keterangan FU, keterangan bisa dibuka / diringkas */
+.vc td.fuket{white-space:normal;min-width:230px;max-width:280px}
+.vc .ket{margin-top:4px;line-height:1.35}
+.vc .ket.clamp{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vc .ket.open,.vc.ket-all .ket{display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible}
+.vc.ket-all [data-ketx]{display:none}
+.vc .ketx{font-size:.86em;margin-top:2px}
+.vcbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+/* MP-R-25: AG Grid (Community) untuk tabel utama */
+.mp-grid{--ag-font-family:inherit;--ag-font-size:13px;--ag-grid-size:5px;--ag-wrapper-border-radius:3px;--ag-header-font-weight:700;width:100%}
+body.pg-fu .mp-grid{--ag-font-size:15px}
+.mp-grid .ag-cell{line-height:1.4;padding-top:6px;padding-bottom:6px}
+.mp-grid .ag-cell .sub{display:block;font-size:.88em;color:var(--muted);font-weight:400}
+.mp-grid .ag-cell .pill{line-height:1.5}
+.mp-grid .ag-cell.num{text-align:right}
+.mp-grid .ag-cell.b{font-weight:700}
+.mp-grid .ag-row.bad{background:rgba(221,75,57,.09)}
+.mp-grid .ag-row.bad .ag-cell:first-child{box-shadow:inset 3px 0 0 var(--red)}
+.mp-grid .ag-row.baru{background:rgba(243,156,18,.12)}
+.mp-grid .ag-row-pinned{font-weight:700}
+.mp-grid .ag-header-group-cell-label{justify-content:center}
+.gridhost{width:100%}
+.mp-grid .ag-layout-auto-height .ag-center-cols-viewport,.mp-grid .ag-layout-auto-height .ag-center-cols-container{min-height:0!important}
+/* MP-R-25: skeleton loading untuk card dan tabel */
+.sk{display:block;border-radius:4px;height:12px;margin:6px 0;background:linear-gradient(90deg,var(--row) 25%,var(--line) 37%,var(--row) 63%);background-size:400% 100%;animation:skmove 1.2s ease infinite}
+.sk.lg{height:22px;width:70%}
+.skrow{height:34px;margin:6px 0}
+.skcard{min-height:110px;padding:12px}
+@keyframes skmove{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+/* MP-R-21: bukti terima (upload / Ctrl+V / seret) */
+.bkbox{margin-top:10px}
+.bkdrop{border:2px dashed var(--line);border-radius:4px;padding:12px;text-align:center;cursor:pointer;color:var(--muted)}
+.bkdrop:focus,.bkdrop.on{border-color:var(--blue);background:rgba(47,127,184,.08);outline:none;color:var(--text)}
+.bkdrop[aria-disabled="true"]{cursor:not-allowed;opacity:.6}
+.bklist{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.bklist li{border:1px solid var(--line);border-radius:4px;padding:6px;width:160px;font-size:13px;background:var(--panel)}
+.bklist .th{height:84px;border-radius:2px;background:var(--row);display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;cursor:pointer}
+.bklist .th img{width:100%;height:100%;object-fit:cover}
+.bklist .nm{display:block;margin-top:4px;word-break:break-all;line-height:1.25}
 /* ===== Invoicing (dari input/Monitoring Piutang/Invoice Consulting.html, di-scope ke .invpg) ===== */
 .invpg .hidden{display:none!important}
 .invpg .box{background:var(--panel);border-top:3px solid var(--line);border-radius:3px;box-shadow:0 1px 1px rgba(0,0,0,.1);margin-bottom:20px;padding:10px}
@@ -370,6 +469,23 @@ tr.baru > td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
 .invpg .s2-drop li.nores{color:#888;cursor:default;background:var(--panel)}
 .invpg .actions{display:flex;gap:4px;padding:0 5px}
 @media (max-width:900px){.invpg .form-grid{grid-template-columns:1fr}.invpg .frow{grid-template-columns:1fr}.invpg .frow > label{padding-top:0}}
+
+/* ===== Tutorial v2: tombol di baris atas konten (tidak menutupi Simpan), menu halaman ini + alur proses ===== */
+.tour-bar{float:right;position:relative;z-index:20;margin:0 0 8px 12px}
+.tour-btn{display:inline-flex;align-items:center;gap:7px;background:#00a65a;color:#fff;border:0;border-radius:18px;padding:7px 16px 7px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.tour-btn:hover{background:#008d4c}.tour-btn .tb-ic{font-size:16px;line-height:1}
+.tour-menu{position:absolute;right:0;top:calc(100% + 6px);width:380px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:13px;text-align:left}
+.tour-menu[hidden]{display:none}
+.tour-menu h4{margin:0;padding:8px 14px;font-size:12px;letter-spacing:.3px;text-transform:uppercase;color:#666;background:#f4f4f4;border-bottom:1px solid #e3e3e3}
+.tour-menu button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;background:#fff;padding:9px 14px;cursor:pointer;font:inherit;color:#333}
+.tour-menu button:hover,.tour-menu button:focus{background:#eef6fb;outline:none}
+.tour-menu button small{display:block;color:#777;margin-top:2px;font-size:12px}
+.tour-pg{display:inline-block;background:#3c8dbc;color:#fff;border-radius:3px;padding:1px 7px;font-size:11px;font-weight:600;margin-bottom:6px}
+.driver-popover.tour-pop{max-width:400px;min-width:340px}
+.driver-popover.tour-pop .driver-popover-navigation-btns button{white-space:nowrap}
+.driver-popover.tour-pop .driver-popover-footer{gap:10px}
+.tour-fl{font-size:11.5px;color:#888;margin-bottom:3px}
+.driver-popover.tour-pop .driver-popover-progress-text{font-size:11.5px}
 </style>
 </head>
 <body class="show-chg">
@@ -420,6 +536,17 @@ const GAP = [3, 7, 14, 14];
 const EXTRA_GAP = 14;
 const gapOf = i => GAP[i] ?? EXTRA_GAP;
 const fuName = i => 'FU ' + (i + 1) + (i >= 4 ? ' (tambahan)' : '');
+// MP-R-16: pilihan status per FU (FU 5 dst. = sama dengan FU 4). Status FU terakhir yang dilakukan menentukan efeknya.
+// MP-R-25: BATAL, REVISI INVOICE dan BERMASALAH digabung jadi INVOICE BERMASALAH (keterangan wajib menjelaskan kenapa); follow up berhenti.
+const MASALAH = 'INVOICE BERMASALAH';
+const FU_ST = [
+  ['SUDAH DI TERIMA DI KEUANGAN', 'BELUM DI TERIMA DI KEUANGAN'],
+  ['SEDANG DALAM PROSES', MASALAH],
+  ['BELUM PLAN BAYAR', 'MASIH MENUNGGU JAWABAN', MASALAH],
+  ['BELUM PLAN BAYAR', 'MASIH MENUNGGU JAWABAN', MASALAH]];
+const stList = i => FU_ST[Math.min(i, 3)];
+const STOP_ST = [MASALAH]; // status yang menghentikan follow up
+const ST_DEF = ['SUDAH DI TERIMA DI KEUANGAN', 'SEDANG DALAM PROSES', 'MASIH MENUNGGU JAWABAN', 'BELUM PLAN BAYAR'];
 // Invoice contoh dari sheet "Data Invoice" (2026 - Visual Control Invoice Konsultan.xlsx); data kirim/terima/FU adalah contoh.
 const BASE = [
   {no:'239/STM/2023', tgl:'2023-07-05', cust:'PT. INTI PERMATA INDONESIA', comp:'STM', prog:'Inhouse Training Kalibrasi Scope Massa & Dimensi', nilai:22200000, bayar:[]},
@@ -443,9 +570,13 @@ const BASE = [
   {no:'062/SSC/2026', tgl:'2026-10-26', cust:'PT. IRON WIRE WORKS INDONESIA', comp:'SUSTAIN', prog:'Konsultasi Sustainability', nilai:26640000, bayar:[], noKirim:1},
   {no:'245/STM/2026', tgl:'2026-09-01', cust:'PT. HEINZ ABC INDONESIA', comp:'STM', prog:'Inhouse Training', nilai:9990000, bayar:[{tgl:'2026-10-28',no:'PNR-2610-047',nom:9990000}], plan:'2026-10-28'},
   {no:'201/STM/2026', tgl:'2026-08-03', cust:'PT. GAJAH TUNGGAL TBK', comp:'STM', prog:'Public Training', nilai:5550000, bayar:[{tgl:'2026-09-15',no:'PNR-2609-021',nom:5550000}], plan:'2026-09-10', closed:{tgl:'2026-09-16', ket:'Lunas sesuai PNR-2609-021'}},
+  // MP-R-25: invoice bulan berjalan (November 2026) supaya Follow Up (default bulan berjalan) langsung berisi.
+  {no:'276/STM/2026', tgl:'2026-11-01', cust:'PT. HEINZ ABC INDONESIA', comp:'STM', prog:'Konsultasi ISO 9001:2015', nilai:18870000, bayar:[], noKirim:1},
+  {no:'064/SSC/2026', tgl:'2026-11-02', cust:'PT. IRON WIRE WORKS INDONESIA', comp:'SUSTAIN', prog:'Konsultasi Sustainability - Termin 2', nilai:26640000, bayar:[], noKirim:1},
+  {no:'036/VSB/2026', tgl:'2026-11-02', cust:'PT. SURYA BANGUN FAJAR', comp:'VUCA', prog:'Jasa Konsultan', nilai:41625000, bayar:[], noKirim:1},
 ];
 const CAT = {L:{nm:'Lancar', age:'Umur 0 – 60 hari'}, P:{nm:'Potensi Macet', age:'Umur 61 – 90 hari'}, M:{nm:'Macet', age:'Umur > 90 hari'}};
-const ST = {belum_kirim:'Belum dikirim', dikirim:'Menunggu diterima', diterima:'Proses follow up', plan_bayar:'Menunggu pembayaran', close:'Close'};
+const ST = {belum_kirim:'Belum dikirim', dikirim:'Menunggu diterima', diterima:'Proses follow up', plan_bayar:'Menunggu pembayaran', batal:'Invoice bermasalah', close:'Close'};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -462,53 +593,90 @@ function fuPlan(terima, given){
   return out;
 }
 function seed(){
-  return BASE.map((b, idx) => {
+  return seedScn(BASE.map((b, idx) => {
     const kirim = b.noKirim ? null : addDays(b.tgl, 2);
     const terima = b.noKirim || b.noTerima ? null : addDays(b.tgl, 4);
     const plans = fuPlan(terima);
     const fu = plans.map((p, i) => {
       const done = !!(p && p <= TODAY_ISO && !b.late && !(b.plan === undefined && i === 3 && b.tgl < '2025-01-01'));
-      return {plan:p, aktual: done ? p : null, ket: done ? (b.plan && i === 0 ? 'Customer konfirmasi jadwal bayar' : 'Sudah dihubungi via email') : ''};
+      return {plan:p, aktual: done ? p : null, ket: done ? (b.plan && i === 0 ? 'Customer konfirmasi jadwal bayar' : 'Sudah dihubungi via email') : '', st: done ? ST_DEF[i] : ''};
     });
-    fu.forEach((x, i) => { if (i > 0 && !fu[i - 1].aktual) { x.plan = null; x.aktual = null; x.ket = ''; } });
+    fu.forEach((x, i) => { if (i > 0 && !fu[i - 1].aktual) { x.plan = null; x.aktual = null; x.ket = ''; x.st = ''; } });
     // FU tambahan contoh (di luar standar FU 1 - 4): FU 5 sudah dilakukan, FU 6 terjadwal.
     if (b.extra && fu[3].aktual){
       const f5 = addDays(fu[3].aktual, EXTRA_GAP);
-      fu.push({plan: f5, aktual: f5, ket: 'Customer minta waktu, dihubungi lagi 2 minggu'}, {plan: addDays(f5, EXTRA_GAP), aktual: null, ket: ''});
+      fu.push({plan: f5, aktual: f5, ket: 'Customer minta waktu, dihubungi lagi 2 minggu', st: 'MASIH MENUNGGU JAWABAN'}, {plan: addDays(f5, EXTRA_GAP), aktual: null, ket: '', st: ''});
     }
     const via = kirim ? (b.comp === 'STM' ? 'JNE' : 'Driver') : '';
     const topKe = b.prog.includes('Termin 2') ? 2 : (idx % 3) + 1;
-    return {...b, spk: 'SPK/' + b.comp + '/' + b.tgl.slice(2, 4) + '/' + String(100 + idx).padStart(3, '0'), topKe, top: 'TOP ' + topKe,
+    const dpp = Math.round(b.nilai / 1.11); // contoh: nilai invoice = DPP + PPN 11%
+    return {...b, faktur: '010.00' + (idx % 3 + 3) + '-' + b.tgl.slice(2, 4) + '.' + (55060600 + idx * 137), po: idx % 3 === 1 ? '' : 'PO-' + b.tgl.slice(2, 4) + '-' + (1200 + idx * 7),
+      dpp, ppn: b.nilai - dpp, konsultan: ['Cahyadi', 'Hammam', 'Syabani', 'Imanuel Iman'][idx % 4],
+      divisi: /Training/.test(b.prog) ? 'Inhouse Training' : b.comp === 'STM' ? 'HSE' : 'Konsultan', rounds: [], terimaAwal: null,
+      bukti: terima && idx % 3 === 0 ? [{name: 'tanda-terima-' + b.no.replace(/\//g, '-') + '.jpg', type: 'image/jpeg', size: 245000, contoh: true}] : [],
+      spk: 'SPK/' + b.comp + '/' + b.tgl.slice(2, 4) + '/' + String(100 + idx).padStart(3, '0'), topKe, top: 'TOP ' + topKe,
       kirim, via, ketKirim: via === 'JNE' ? 'JNE Reguler' : via ? 'Pak Budi (driver)' : '',
       resi: via === 'JNE' && !b.noTerima && idx % 2 === 0 ? 'JNE' + (8800120000 + idx * 37) : '', terima, ketTerima: terima ? 'Diterima bagian finance' : '',
       pic: fu[0].aktual ? (idx % 2 ? 'Bapak Hendra (Purchasing)' : 'Ibu Rina (Finance)') : '', picTelp: fu[0].aktual ? (idx % 2 ? '0821-9876-5432' : '0812-3456-7890') : '',
       fu, planBayar: b.plan || null, ketPlan: b.plan ? 'Sesuai jawaban customer' : '', closed: b.closed || null,
       statusFrom: b.baru ? b.baru[0] : null, changed: b.baru ? b.baru[1] : null,
       log: terima ? [{wkt: addDays(b.tgl, 4) + ' 10:15', user:'Finance AR', aksi:'simpan', isi:'Tgl terima ' + fdate(terima)}] : []};
-  });
+  }));
+}
+// Contoh kasus status FU: BELUM DI TERIMA DI KEUANGAN dan INVOICE BERMASALAH (MP-R-25; dulu BATAL / REVISI INVOICE / BERMASALAH).
+function seedScn(L){
+  const by = no => L.find(r => r.no === no);
+  let r = by('256/STM/2026'); Object.assign(r.fu[0], {st: 'BELUM DI TERIMA DI KEUANGAN', ket: 'Invoice masih di bagian purchasing, belum diteruskan ke keuangan'});
+  // MP-R-25: contoh INVOICE BERMASALAH dengan keterangan kenapa (batal / revisi / masalah lain); FU sesudahnya dikosongkan.
+  r = by('239/STM/2023'); Object.assign(r.fu[2], {st: MASALAH, ket: 'Batal: customer menyatakan tidak mau bayar (pekerjaan dianggap belum selesai). Diajukan pembatalan invoice.'});
+  r.fu[3] = {plan: null, aktual: null, ket: '', st: ''};
+  r = by('050/SSC/2025'); Object.assign(r.fu[4], {st: MASALAH, ket: 'PIC finance customer resign, customer sedang restrukturisasi; pembayaran belum ada kepastian'}); r.fu.length = 5;
+  r = by('261/STM/2026'); Object.assign(r.fu[1], {st: MASALAH, ket: 'Revisi invoice: customer minta nilai DPP disesuaikan BAST termin 1'});
+  r.fu[2] = {plan: null, aktual: null, ket: '', st: ''};
+  return L;
 }
 let DATA = seed();
-const state = {page:'mp', comp:'', cust:'', q:'', cat:'', tab:'inv', sort:{k:'umur', d:'desc'}, fuTab:'open', fuStatus:'', fuCust:'', fuQ:'', fuFu:'', fuBulan:'', fuThn:'', fuYear:'2026', editNo:null, flash:null, pbYear:'2026', pbMonth:0};
+// MP-R-25: filter periode. Monitoring (tanggal invoice) default Semua supaya aging utuh; Follow Up (tanggal invoice) dan Plan Bayar default bulan berjalan.
+const CUR_Y = TODAY_ISO.slice(0, 4), CUR_M = String(+TODAY_ISO.slice(5, 7));
+const PER_DEF = () => ({mpPY:'', mpPM:'', mpPD1:'', mpPD2:'', fuPY:CUR_Y, fuPM:CUR_M, fuPD1:'', fuPD2:'', pbD1:'', pbD2:''});
+const state = Object.assign({page:'mp', comp:'', cust:'', q:'', cat:'', tab:'inv', sort:{k:'umur', d:'desc'}, fuTab:'open', fuStatus:'belum_kirim', fuCust:'', fuQ:'', fuFu:'', fuBulan:'', fuThn:'', fuYear:'2026', editNo:null, flash:null, pbYear:CUR_Y, pbMonth:+CUR_M}, PER_DEF());
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 // Tab Follow Up Piutang berurutan sesuai alur kerja: [kunci, label tab (tugas), petunjuk].
 const FU_TABS = [
-  ['', 'Semua', 'Semua invoice yang belum close, dari semua langkah.'],
+  ['', 'Semua', 'Semua invoice yang belum close, lengkap seperti Visual Control: invoice, faktur, tanggal, nilai, pengiriman, PIC, FU 1 - 4 (plan, aktual, status, keterangan), plan bayar dan status. Geser tabel ke samping; kolom No dan Invoice · Customer tetap terlihat.'],
   ['belum_kirim', '1. Kirim Invoice', 'Invoice belum dikirim ke customer. Klik Update, isi tanggal kirim dan dikirim via (JNE / Driver).'],
-  ['dikirim', '2. Konfirmasi Diterima', 'Invoice sudah dikirim. Isi no resi bila sudah ada, lalu isi tanggal diterima setelah customer konfirmasi menerima invoice.'],
+  ['dikirim', '2. Konfirmasi Diterima', 'Invoice sudah dikirim (data kirim terkunci). Setelah customer konfirmasi menerima invoice, isi tanggal terima, no resi (hanya via JNE, wajib) dan cek no faktur.'],
   ['diterima', '3. Follow Up Customer', 'Invoice sudah diterima customer. Isi PIC penerima follow up, lakukan FU 1 - 4 sesuai jadwal sampai customer memberi rencana tanggal bayar. Bila perlu, tambah FU 5 dst. setelah FU 4.'],
   ['plan_bayar', '4. Tunggu Bayar & Close', 'Customer sudah memberi rencana tanggal bayar, follow up berhenti dan data tidak bisa diubah lagi. Setelah pembayaran diterima, klik Close.'],
   ['lewat', 'FU Terlambat', 'Follow up yang jadwalnya sudah lewat dan belum ada rencana bayar. Segera lakukan follow up.'],
+  ['masalah', 'Invoice Bermasalah', 'Status FU terakhir INVOICE BERMASALAH (mis. batal, revisi invoice, customer menolak; alasannya di keterangan FU). Follow up berhenti dan piutang tetap dihitung di Monitoring sampai ada penyelesaian.'],
   ['close', 'Invoice Close (Laporan)', 'Invoice yang sudah close, per tahun close.']];
 const tabLabel = k => (FU_TABS.find(t => t[0] === k) || [k, k])[1];
+/* MP-R-31: tab utama (Proses / Monitoring / Perlu Perhatian & Selesai), masing-masing berisi tab anak */
+const FU_GROUPS = [
+  ['proses', 'Proses', ['belum_kirim', 'dikirim', 'diterima', 'plan_bayar'], 'Tempat bekerja: kirim invoice, konfirmasi diterima, follow up customer, sampai tunggu bayar & close.'],
+  ['mon', 'Monitoring', [''], 'Hanya untuk melihat seluruh invoice yang belum close dari awal sampai akhir, lengkap seperti Visual Control: invoice, faktur, tanggal, nilai, pengiriman, PIC, FU 1 - 4, plan bayar dan status. Geser tabel ke samping. Untuk mengubah data, klik Buka di Proses.'],
+  ['hasil', 'Perlu Perhatian & Selesai', ['lewat', 'masalah', 'close'], 'Yang tersendat (FU terlambat, invoice bermasalah) dan hasil akhirnya (invoice close).']];
+const fuKey = () => state.fuTab === 'close' ? 'close' : state.fuStatus;
+const fuGrp = (k = fuKey()) => FU_GROUPS.find(g => g[2].includes(k)) || FU_GROUPS[1];
+const fuLastSub = {proses: 'belum_kirim', hasil: 'lewat'};
+const fuRowKey = r => r.closed ? 'close' : r.batal ? 'masalah' : (FU_GROUPS[0][2].includes(r.status) ? r.status : '');
 
 function calc(r){
   const terbayar = r.bayar.reduce((a, b) => a + b.nom, 0), sisa = r.nilai - terbayar;
-  const umur = r.terima ? days(r.terima) : null;
-  const next = r.planBayar ? -1 : r.fu.findIndex(f => f.plan && !f.aktual); // ada rencana bayar = follow up berhenti
-  const status = r.closed ? 'close' : r.planBayar ? 'plan_bayar' : r.terima ? 'diterima' : r.kirim ? 'dikirim' : 'belum_kirim';
+  // MP-R-16: setelah REVISI INVOICE, umur tetap dihitung dari tanggal terima invoice pertama (terimaAwal).
+  const tAging = r.terimaAwal || r.terima, umur = tAging ? days(tAging) : null;
+  const lastFu = lastDoneIdx(r.fu), lastSt = lastFu >= 0 ? (r.fu[lastFu].st || '') : '';
+  // MP-R-25: batal = status FU terakhir INVOICE BERMASALAH (follow up berhenti). masalah (lama: FU lanjut) tidak dipakai lagi.
+  const batal = lastSt === MASALAH, masalah = false;
+  const next = r.planBayar || batal ? -1 : r.fu.findIndex(f => f.plan && !f.aktual); // ada rencana bayar / INVOICE BERMASALAH = follow up berhenti
+  const status = r.closed ? 'close' : batal ? 'batal' : r.planBayar ? 'plan_bayar' : r.terima ? 'diterima' : r.kirim ? 'dikirim' : 'belum_kirim';
+  const dpp = r.dpp != null ? r.dpp : Math.round(r.nilai / 1.11);
   // INV-R-08: nilai plan = sisa piutang saat plan bayar disimpan. Data contoh lama: nilai - pembayaran sebelum tanggal terima.
   const planNom = r.planNominal != null ? r.planNominal : r.nilai - r.bayar.filter(b => r.terima && b.tgl < r.terima).reduce((a, b) => a + b.nom, 0);
-  return {...r, terbayar, sisa, umur, cat: umur === null ? null : catOf(umur), planNom,
+  return {...r, dpp, ppn: r.ppn != null ? r.ppn : r.nilai - dpp, rounds: r.rounds || [], bukti: r.bukti || [],
+    tAging, lastFu, lastSt, batal, masalah, revisiKe: (r.rounds || []).length,
+    terbayar, sisa, umur, cat: umur === null ? null : catOf(umur), planNom,
     next: next < 0 ? null : {ke: next + 1, tgl: r.fu[next].plan}, status,
     fuTahap: r.planBayar ? 'selesai' : r.fu[3].aktual ? (next < 0 ? 'selesai' : 'tambahan') : next < 0 ? null : String(next + 1),
     baru: isBaru(r, status)};
@@ -520,11 +688,73 @@ const all = () => DATA.map(calc);
 const spkTop = r => (r.spk || r.top) ? `<span class="sub chg">SPK ${esc(r.spk || '–')} · ${esc(r.top || '–')}</span>` : '';
 const canSurat = r => !r.closed && r.sisa > 0 && (r.cat === 'P' || r.cat === 'M');
 const fuLate = r => !!(r.next && !r.planBayar && r.next.tgl < TODAY_ISO);
+/* ================= Status FU (MP-R-16) ================= */
+function lastDoneIdx(fu){ let k = -1; fu.forEach((f, i) => { if (f.aktual) k = i; }); return k; }
+const stCls = st => st === MASALAH ? 'bad' : st === 'BELUM DI TERIMA DI KEUANGAN' ? 'w' : st === 'SUDAH DI TERIMA DI KEUANGAN' ? 'ok' : '';
+const stPill = st => st ? `<span class="pill fs ${stCls(st)}">${esc(st)}</span>` : '<span class="asof">–</span>';
+const stOpts = (i, val) => '<option value="">- Pilih status -</option>' + stList(i).map(x => `<option ${x === val ? 'selected' : ''}>${x}</option>`).join('');
+function stEffectHtml(st){
+  return st === MASALAH ? `<div class="warn chg">⏹ <b>INVOICE BERMASALAH</b>: tulis di keterangan <b>kenapa</b> (mis. batal, revisi invoice, customer menolak). Setelah disimpan status terkunci, follow up berhenti, plan bayar tidak bisa diisi, invoice pindah ke tab <b>Invoice Bermasalah</b> dan ditandai merah di Monitoring Piutang.</div>` : '';
+}
+const lastStTag = r => r.lastSt ? `<span class="fust chg">${stPill(r.lastSt)}<span class="sub">status ${fuName(r.lastFu)}</span></span>` : '';
+const flagPills = r => (r.batal ? '<span class="pill R chg">Invoice bermasalah</span><span class="sub">FU berhenti, lihat keterangan</span>' : r.masalah ? '<span class="pill R chg">Bermasalah</span>' : '')
+  + '';
+// MP-R-27: Close hanya satu jalur: Follow Up tab 4. Tunggu Bayar & Close (ada plan bayar + lunas). Tab lain tanpa tombol Close.
+const closeHere = () => state.fuTab === 'open' && state.fuStatus === 'plan_bayar';
+const closeBtn = r => closeHere() ? ` <button type="button" class="btn r sm" data-close-inv="${esc(r.no)}" ${closeBlock(r) ? 'disabled title="' + closeBlock(r) + '"' : ''}>Close</button>` : '';
+// MP-R-31: Monitoring hanya untuk melihat; tombol membuka invoice di tab kerjanya
+const monBtn = r => `<button type="button" class="btn g sm" data-fuproc="${esc(r.no)}" title="Buka di tab ${esc(tabLabel(fuRowKey(r)))}">Buka di ${fuRowKey(r) === 'masalah' ? 'Perlu Perhatian & Selesai' : 'Proses'}</button>`;
+const actBtns = r => `${r.planBayar ? `<button type="button" class="btn g sm chg" data-edit="${esc(r.no)}">Lihat</button>` : `<button type="button" class="btn bl sm" data-edit="${esc(r.no)}">Update</button>`}${closeBtn(r)}`;
+/* ================= Tab Semua seperti Visual Control (MP-R-18) ================= */
+function renderVC(list){
+  // MP-R-23: per FU dua kolom: Plan · Aktual (berlabel) dan Status · Keterangan (keterangan panjang diringkas, bisa dibuka).
+  const fuHead = [0, 1, 2, 3].map(i => `<th colspan="2" class="gl">FU ${i + 1}</th>`).join('');
+  const fuSub = [0, 1, 2, 3].map(() => '<th class="gl">Plan · Aktual</th><th>Status · Keterangan</th>').join('');
+  const ketBox = k => !k ? '' : `<div class="ket${k.length > KET_MAX ? ' clamp' : ''}">${esc(k)}</div>${k.length > KET_MAX ? '<button type="button" class="linkbtn ketx" data-ketx>selengkapnya ▾</button>' : ''}`;
+  const dash = '<span class="asof">–</span>';
+  const fuCells = r => [0, 1, 2, 3].map(i => { const f = r.fu[i] || {}; const late = f.plan && !f.aktual && !r.planBayar && !r.batal && f.plan < TODAY_ISO;
+    return `<td class="gl">${f.plan || f.aktual ? dl([['Plan', f.plan ? `<span class="${late ? 'late' : ''}">${fdate(f.plan)}</span>${late ? '<span class="sub late">lewat jadwal</span>' : ''}` : dash], ['Aktual', f.aktual ? fdate(f.aktual) : dash]]) : dash}</td><td class="fuket">${f.st || f.ket ? stPill(f.st) + ketBox(f.ket) : dash}</td>`; }).join('');
+  const extra = r => r.fu.slice(4).map((x, n) => `<span class="sub">FU ${n + 5}: ${x.aktual ? fdate(x.aktual) + ' · ' + esc(x.st) + (x.ket ? ' · ' + esc(x.ket) : '') : 'jadwal ' + fdate(x.plan)}</span>`).join('') || dash;
+  const dl = rows => `<dl class="vc-dl">${rows.map(([k, v, w]) => `<dt>${k}</dt><dd${w ? ' class="w"' : ''}>${v}</dd>`).join('')}</dl>`;
+  // Satu kolom: no invoice + company, customer, SPK · TOP.
+  const invCell = r => `<div class="vc-inv"><b class="no">${esc(r.no)}</b><span class="pill co">${esc(r.comp)}</span>${r.baru ? '<span class="pill baru chg">★ Baru</span>' : ''}
+    <div class="vc-cust">${esc(r.cust)}</div><span class="sub">SPK ${esc(r.spk || '–')}${r.top ? ' · ' + esc(r.top) : ''}</span></div>`;
+  // Satu kolom tanggal, masing-masing diberi keterangan.
+  const tglCell = r => dl([['Invoice', fdate(r.tgl)], ['Kirim', r.kirim ? fdate(r.kirim) : dash], ['Terima', r.terima ? fdate(r.terima) : dash],
+    ...(r.terimaAwal && r.terimaAwal !== r.terima ? [['Terima pertama', fdate(r.terimaAwal)]] : []), ['Plan bayar', r.planBayar ? fdate(r.planBayar) : dash]]);
+  // Satu kolom pengiriman: cara kirim + keterangan, no resi (hanya JNE), penerima.
+  const kirimCell = r => !r.kirim ? '<span class="asof">Belum dikirim</span>' : dl([['Via', esc(r.via || '–') + (r.ketKirim ? ' · ' + esc(r.ketKirim) : ''), 1],
+    ...(r.via === 'JNE' ? [['Resi', r.resi ? `<span class="mono">${esc(r.resi)}</span>` : '<span class="late">belum diisi</span>']] : []),
+    ['Penerima', r.terima ? esc(r.ketTerima || '–') : '<span class="asof">belum diterima</span>', 1],
+    ...(r.terima ? [['Bukti', r.bukti.length ? '📎 ' + r.bukti.length + ' file' : '<span class="asof">–</span>']] : [])]);
+  const T = k => list.reduce((a, r) => a + (r[k] || 0), 0);
+  return `<div class="vcbar chg"><button type="button" class="btn g sm" data-ketall>Tampilkan semua keterangan</button><span class="asof">Keterangan FU yang panjang diringkas 2 baris; klik <b>selengkapnya</b> untuk membuka satu, atau tombol ini untuk membuka semua.</span></div><div class="scroll"><table class="vc">
+   <thead><tr class="grp"><th rowspan="2" class="stk stk1">No</th><th rowspan="2" class="stk stk2">Invoice · Customer<span class="sub">No SPK · TOP · Company</span></th>
+     <th colspan="4" class="gl">Invoice &amp; Pajak</th><th rowspan="2" class="gl">Tanggal</th><th colspan="5" class="gl">Nilai</th><th rowspan="2" class="gl">Pengiriman</th><th colspan="2" class="gl">PIC Follow Up</th>${fuHead}<th rowspan="2" class="gl">FU 5 dst.</th><th rowspan="2" class="gl">Ket Plan Bayar</th><th colspan="2" class="gl">Status</th><th rowspan="2" class="gl"></th></tr>
+   <tr><th class="gl">No Faktur</th><th>PO</th><th>Program</th><th>Konsultan · Divisi</th>
+     <th class="gl num">DPP</th><th class="num">PPN</th><th class="num">Total Invoice</th><th class="num">Terbayar</th><th class="num">Sisa Piutang</th>
+     <th class="gl">Nama</th><th>No WA / Telp</th>${fuSub}<th class="gl">Umur</th><th>Status Invoice</th></tr></thead>
+   <tbody>${list.map((r, i) => `<tr data-row="${esc(r.no)}" class="${state.flash === r.no ? 'flash' : ''} ${r.baru ? 'baru' : ''} ${r.batal || r.masalah ? 'bad' : ''}">
+     <td class="stk stk1">${i + 1}</td>
+     <td class="stk stk2">${invCell(r)}</td>
+     <td class="gl mono">${esc(r.faktur || '–')}</td><td>${esc(r.po || '–')}</td><td class="wrap">${esc(r.prog)}</td><td>${esc(r.konsultan || '–')}<span class="sub">${esc(r.divisi || '')}</span></td>
+     <td class="gl">${tglCell(r)}</td>
+     <td class="gl num mono">${rp(r.dpp)}</td><td class="num mono">${rp(r.ppn)}</td><td class="num mono">${rp(r.nilai)}</td><td class="num mono">${r.terbayar ? rp(r.terbayar) : '–'}</td><td class="num mono"><b>${rp(r.sisa)}</b></td>
+     <td class="gl">${kirimCell(r)}</td>
+     <td class="gl">${esc(r.pic || '–')}</td><td>${esc(r.picTelp || '–')}</td>
+     ${fuCells(r)}<td class="gl">${extra(r)}</td>
+     <td class="gl wrap">${esc(r.ketPlan || '') || dash}</td>
+     <td class="gl">${r.umur !== null ? `<span class="umur ${r.cat}">${r.umur} hari</span><span class="sub">${CAT[r.cat].nm}</span>` : '<span class="asof">Belum diterima</span>'}</td>
+     <td><span class="pill st-${r.status}">${ST[r.status]}</span>${r.masalah ? ' <span class="pill R">Bermasalah</span>' : ''}</td>
+     <td class="gl" style="white-space:nowrap">${monBtn(r)}</td></tr>`).join('')}</tbody>
+   <tfoot><tr><td class="stk stk1"></td><td class="stk stk2">Total ${list.length} invoice</td><td colspan="5" class="gl"></td><td class="gl num mono">${rp(T('dpp'))}</td><td class="num mono">${rp(T('ppn'))}</td><td class="num mono">${rp(T('nilai'))}</td><td class="num mono">${rp(T('terbayar'))}</td><td class="num mono">${rp(T('sisa'))}</td><td colspan="16" class="gl"></td></tr></tfoot>
+  </table></div>`;
+}
 
 /* ================= Kotak Cari: semua kolom tabel ================= */
 // Sama dengan Piutang_aging::search_text di server (dipakai Export Excel). Beberapa kata = semua kata harus cocok.
 function searchText(r){
-  const parts = [r.no, r.cust, r.prog, r.comp, r.spk, r.top, r.via, r.ketKirim, r.resi, r.closed && r.closed.ket].filter(Boolean).map(String);
+  const parts = [r.no, r.cust, r.prog, r.comp, r.spk, r.top, r.via, r.ketKirim, r.resi, r.closed && r.closed.ket, r.faktur, r.po, r.konsultan, r.divisi, r.pic, ...r.fu.map(f => f.st), r.masalah && 'Bermasalah', r.revisiKe && 'Revisi invoice'].filter(Boolean).map(String);
   if (r.topKe) parts.push('TOP ' + r.topKe);
   [r.tgl, r.kirim, r.terima, r.planBayar, r.closed && r.closed.tgl].forEach(d => {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
@@ -540,20 +770,38 @@ function searchText(r){
 const searchMatch = (r, q) => { const hay = searchText(r); return q.toLowerCase().split(/\s+/).every(w => !w || hay.includes(w)); };
 
 /* ================= Monitoring Piutang ================= */
-function mpBase(){ return all().filter(r => !r.closed && r.sisa > 0 && (!state.comp || r.comp === state.comp)); }
+function mpBase(){ return all().filter(r => !r.closed && r.sisa > 0 && (!state.comp || r.comp === state.comp) && perOk(r.tgl, 'mpP')); }
+/* ===== Filter periode Tahun / Bulan / Tanggal (MP-R-25) ===== */
+function perOk(iso, px){
+  const y = state[px + 'Y'], m = state[px + 'M'], d1 = state[px + 'D1'], d2 = state[px + 'D2'];
+  if (!y && !m && !d1 && !d2) return true;
+  if (!iso) return false;
+  if (y && iso.slice(0, 4) !== y) return false;
+  if (m && +iso.slice(5, 7) !== +m) return false;
+  if (d1 && iso < d1) return false;
+  if (d2 && iso > d2) return false;
+  return true;
+}
+function perUI(px, label){
+  const years = [...new Set([CUR_Y, ...DATA.map(r => r.tgl.slice(0, 4))])].sort().reverse();
+  return `<label class="fl chg">Tahun<select id="${px}Y" style="min-width:95px"><option value="">Semua</option>${years.map(y => `<option ${state[px + 'Y'] === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+    <label class="fl chg">Bulan<select id="${px}M" style="min-width:130px"><option value="">Semua</option>${BULAN.map((b, i) => `<option value="${i + 1}" ${String(state[px + 'M']) === String(i + 1) ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
+    <label class="fl chg">${label} dari<input type="date" id="${px}D1" value="${state[px + 'D1']}" style="min-width:140px"></label>
+    <label class="fl chg">sampai<input type="date" id="${px}D2" value="${state[px + 'D2']}" style="min-width:140px"></label>`;
+}
 function mpPiutang(){
   const q = state.q.trim();
-  return mpBase().filter(r => r.terima && (!state.cust || r.cust === state.cust) && (!q || searchMatch(r, q)));
+  return mpBase().filter(r => r.umur !== null && (!state.cust || r.cust === state.cust) && (!q || searchMatch(r, q)));
 }
 // INV-R-09: invoice belum diterima customer (ikut filter Customer / Cari), untuk card Belum Diterima dan Total Keseluruhan.
 function mpBelum(){
   const q = state.q.trim();
-  return mpBase().filter(r => !r.terima && (!state.cust || r.cust === state.cust) && (!q || searchMatch(r, q)));
+  return mpBase().filter(r => r.umur === null && (!state.cust || r.cust === state.cust) && (!q || searchMatch(r, q)));
 }
 const sum = list => list.reduce((a, r) => a + r.sisa, 0);
 
 function pageMP(){
-  const custs = [...new Set(mpBase().filter(r => r.terima).map(r => r.cust))].sort();
+  const custs = [...new Set(mpBase().filter(r => r.umur !== null).map(r => r.cust))].sort();
   if (state.cust && !custs.includes(state.cust)) state.cust = '';
   return `<h1>Monitoring Piutang <small>posisi per ${fdate(TODAY_ISO)}</small></h1>
     <p class="legend">Garis putus-putus ungu = bagian baru / berubah setelah jawaban klarifikasi (Jawaban pertanyaan monitoring piutang.xlsx).</p>
@@ -562,6 +810,8 @@ function pageMP(){
       <li><b>Lancar</b> 0&ndash;60 hari, <b>Potensi Macet</b> 61&ndash;90 hari, <b>Macet</b> &gt; 90 hari. Kategori murni dari umur.</li>
       <li class="chg">Invoice yang <b>belum diterima customer</b> tidak masuk kategori umur, tapi tampil di card abu-abu <b>Belum Diterima Customer</b>. Di atas card ada <b>Total keseluruhan sisa piutang</b> = Total Piutang + belum diterima, untuk dicocokkan dengan saldo piutang di buku besar. <span class="chg">Invoice internal antar-company belum ada di sistem, jadi tidak dibedakan dulu.</span></li>
       <li>Invoice yang sudah <b>close</b> atau sisa piutangnya 0 tidak tampil.</li>
+      <li class="chg"><b>Filter Tahun / Bulan / Tgl invoice dari-sampai</b> (tanggal invoice). Default <b>Semua</b> supaya umur piutang (termasuk Macet lama) tetap utuh.</li>
+      <li class="chg"><b>Tabel memakai AG Grid</b>: klik judul kolom untuk urut, ikon ☰ untuk filter per kolom, tarik batas judul untuk melebarkan, seret judul untuk memindah kolom. Kolom No dan Invoice tetap di kiri saat digeser; baris total di bawah. Saat data dimuat ulang tampil <b>skeleton loading</b> sebentar.</li>
       <li>Klik card &rarr; daftar tersaring ke kategori itu. Pilih <b>Company</b> / <b>Customer</b> &rarr; card dan daftar dihitung ulang.</li>
       <li class="chg">Tombol <b>Download Excel</b> di setiap card mengunduh Excel kategori card itu saja (mis. hanya Macet), mengikuti filter company / customer / cari, tanpa harus memilih card dulu. Tombol Download Excel di atas mengikuti kategori yang sedang dipilih.</li>
       <li><i>Export di mockup:</i> file .xlsx dibuat langsung di browser memakai library di folder <code>lib</code> (tidak perlu internet). Di sistem, file dibuat oleh server.</li>
@@ -575,6 +825,7 @@ function pageMP(){
         <label class="fl">Company
           <select id="fCompany"><option value="">Semua Company</option>${['STM','VUCA','SUSTAIN'].map(c => `<option ${state.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
         </label>
+        ${perUI('mpP', 'Tgl invoice')}
         <label class="fl chg">Customer
           <select id="fCust"><option value="">Semua Customer</option>${custs.map(c => `<option ${state.cust === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
         </label>
@@ -643,6 +894,10 @@ function th(k, label, num){
   return `<th class="${num ? 'num' : ''}"><button type="button" class="sortbtn ${s}" data-sort="${k}">${label}</button></th>`;
 }
 function fuCell(r){
+  if (r.batal) return `<span class="pill R chg">INVOICE BERMASALAH</span><span class="sub">${esc(r.fu[r.lastFu].ket)}</span>`;
+  return lastStTag(r) + fuCell0(r);
+}
+function fuCell0(r){
   if (r.planBayar) return `<span class="pill A">Plan bayar ${fdate(r.planBayar)}</span>`;
   if (!r.next) return '<span class="asof">–</span>';
   const late = r.next.tgl < TODAY_ISO;
@@ -655,9 +910,9 @@ function renderInv(){
   if (!list.length) return '<div class="empty">Tidak ada piutang untuk filter ini.</div>';
   return `<div class="scroll"><table>
     <thead><tr><th>No</th>${th('no','No Invoice')}${th('cust','Customer')}<th>Company</th>${th('nilai','Nilai Invoice',1)}${th('terbayar','Terbayar',1)}${th('sisa','Sisa Piutang',1)}${th('umur','Umur',1)}<th>Kategori</th><th class="chg">Follow Up</th><th class="chg">Action</th></tr></thead>
-    <tbody>${list.map((r, i) => `<tr class="click" data-inv="${esc(r.no)}" tabindex="0">
+    <tbody>${list.map((r, i) => `<tr class="click${r.batal || r.masalah ? ' bad' : ''}" data-inv="${esc(r.no)}" tabindex="0">
       <td>${i + 1}</td>
-      <td class="no">${esc(r.no)}<span class="sub">Inv ${fdate(r.tgl)}</span><span class="sub chg">Diterima ${fdate(r.terima)}</span></td>
+      <td class="no">${esc(r.no)}<span class="sub">Inv ${fdate(r.tgl)}</span><span class="sub chg">Diterima ${fdate(r.tAging)}</span>${flagPills(r)}</td>
       <td>${esc(r.cust)}<span class="sub">${esc(r.prog)}</span>${spkTop(r)}</td>
       <td>${esc(r.comp)}</td>
       <td class="num mono">${rp(r.nilai)}</td>
@@ -693,14 +948,165 @@ function renderCust(){
   </table></div>`;
 }
 function renderMP(){
-  renderExcl(); renderCards(); renderChips();
+  renderChips();
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === state.tab));
-  $('#tabBody').innerHTML = state.tab === 'inv' ? renderInv() : renderCust();
+  skel([['#cards', 'cards5'], ['#tabBody', 'table']], () => {
+    renderExcl(); renderCards();
+    if (AG()) state.tab === 'inv' ? gridInv($('#tabBody')) : gridCust($('#tabBody'));
+    else $('#tabBody').innerHTML = state.tab === 'inv' ? renderInv() : renderCust();
+  });
+}
+/* ================= Skeleton loading (MP-R-25): card dan tabel, bukan komponen kecil ================= */
+let SKT = 0;
+const SKEL = {
+  table: () => `<div aria-busy="true">${'<span class="sk skrow"></span>'.repeat(7)}</div>`,
+  card: () => '<div class="card skcard" aria-hidden="true"><span class="sk" style="width:55%"></span><span class="sk lg"></span><span class="sk" style="width:40%"></span></div>',
+  cards5: () => SKEL.card().repeat(5),
+  pbcards: () => '<div class="pbcard skcard" aria-hidden="true"><span class="sk" style="width:50%"></span><span class="sk lg"></span><span class="sk" style="width:35%"></span></div>'.repeat(13)
+};
+// Tampilkan skeleton di target, lalu render sungguhan. window.SKELETON_MS = 0 (smoke test) -> langsung render.
+function skel(targets, fn){
+  const ms = window.SKELETON_MS == null ? 350 : window.SKELETON_MS;
+  if (!ms) return fn();
+  const tk = ++SKT;
+  targets.forEach(([sel, kind]) => { const el = $(sel); if (el) el.innerHTML = SKEL[kind](); });
+  setTimeout(() => { if (tk === SKT) fn(); }, ms);
+}
+/* ================= AG Grid Community (MP-R-25) ================= */
+// Tanpa library (offline / smoke test tanpa agGrid) tabel HTML biasa tetap dipakai.
+const AG = () => !!(window.agGrid && window.agGrid.createGrid);
+const GRID = {};
+const gHtml = fn => p => !p.data ? '' : p.node.rowPinned ? (p.colDef.context && p.colDef.context.tot ? p.colDef.context.tot(p.data) : '') : fn(p.data, p);
+const gNo = (o) => Object.assign({headerName: 'No', valueGetter: p => p.node.rowPinned ? '' : p.node.rowIndex + 1, width: 66, sortable: false, filter: false, resizable: false}, o || {});
+const gC = (headerName, html, o) => { const {tot, ...rest} = o || {}; return Object.assign({headerName, cellRenderer: gHtml(html)}, tot ? {context: {tot}} : {}, rest); }; // tot = isi baris total (pinned bawah)
+const gN = (headerName, get, o) => Object.assign({headerName, valueGetter: p => p.data ? get(p.data) : null, valueFormatter: p => p.value == null || p.value === '' ? '' : rp(p.value),
+  type: 'numericColumn', filter: 'agNumberColumnFilter', cellClass: 'num mono', width: 140}, o || {});
+function mountGrid(host, key, columnDefs, rowData, opt){
+  if (GRID[key]) { try { GRID[key].destroy(); } catch (e) {} }
+  const dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  host.innerHTML = `<div class="mp-grid ${dark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'} ${opt && opt.cls || ''}"></div>`;
+  const o = Object.assign({}, opt || {}); delete o.cls;
+  GRID[key] = agGrid.createGrid(host.firstChild, Object.assign({
+    columnDefs, rowData, domLayout: 'autoHeight', suppressColumnVirtualisation: true, suppressRowVirtualisation: true, suppressCellFocus: true, enableCellTextSelection: true,
+    defaultColDef: {sortable: true, resizable: true, filter: true, wrapText: true, autoHeight: true, wrapHeaderText: true, autoHeaderHeight: true, minWidth: 70},
+    rowClassRules: {bad: p => !!(p.data && p.data.batal), baru: p => !!(p.data && p.data.baru && state.fuTab === 'open'), flash: p => !!(p.data && state.flash === p.data.no)},
+    pagination: rowData.length > 50, paginationPageSize: 50, paginationPageSizeSelector: [25, 50, 100],
+    overlayNoRowsTemplate: '<span class="empty">Tidak ada data untuk filter ini.</span>',
+    // tinggi baris (autoHeight) dihitung ulang setelah isi sel (HTML) selesai dirender, supaya baris tidak terpotong
+    onFirstDataRendered: e => { [30, 250].forEach(ms => setTimeout(() => { try { e.api.resetRowHeights(); } catch (x) {} }, ms)); }
+  }, o));
+  return GRID[key];
+}
+const notBtn = p => !(p.event && p.event.target && p.event.target.closest && p.event.target.closest('button,a,input,label'));
+// ---- Monitoring Piutang ----
+function gridInv(el){
+  const list = mpPiutang().filter(r => !state.cat || r.cat === state.cat);
+  const T = {n: list.length, nilai: list.reduce((a, r) => a + r.nilai, 0), terbayar: list.reduce((a, r) => a + r.terbayar, 0), sisa: sum(list)};
+  mountGrid(el, 'mp', [
+    gNo({pinned: 'left'}),
+    gC('No Invoice', r => `<b>${esc(r.no)}</b><span class="sub">Inv ${fdate(r.tgl)}</span><span class="sub chg">Diterima ${fdate(r.tAging)}</span>${flagPills(r)}`, {valueGetter: p => p.data && p.data.no, pinned: 'left', width: 175, tot: d => 'Total ' + d.n + ' invoice'}),
+    gC('Customer', r => `${esc(r.cust)}<span class="sub">${esc(r.prog)}</span>${spkTop(r)}`, {valueGetter: p => p.data && p.data.cust, flex: 1, minWidth: 240}),
+    {headerName: 'Company', field: 'comp', width: 110},
+    gN('Nilai Invoice', r => r.nilai), gN('Terbayar', r => r.terbayar || 0, {width: 130}), gN('Sisa Piutang', r => r.sisa, {cellClass: 'num mono b'}),
+    gC('Umur', r => `<span class="umur ${r.cat}">${r.umur} hari</span>`, {valueGetter: p => p.data && p.data.umur, sort: 'desc', width: 100, filter: 'agNumberColumnFilter', cellClass: 'num'}),
+    gC('Kategori', r => `<span class="pill ${r.cat}">${CAT[r.cat].nm}</span>`, {valueGetter: p => p.data && p.data.cat ? CAT[p.data.cat].nm : '', width: 130}),
+    gC('Follow Up', r => fuCell(r), {valueGetter: p => p.data && (p.data.lastSt || (p.data.next ? 'FU ' + p.data.next.ke : '')), width: 210}),
+    gC('Action', r => `<button type="button" class="btn c sm" data-inv="${esc(r.no)}">Detail</button>${canSurat(r) ? ` <button type="button" class="btn sm chg" data-surat="${esc(r.no)}">Surat Konfirmasi</button>` : ''}`, {sortable: false, filter: false, width: 200})
+  ], list, {pinnedBottomRowData: list.length ? [T] : [], onCellClicked: p => { if (p.data && !p.node.rowPinned && notBtn(p)) openDetail(p.data.no); }});
+}
+function gridCust(el){
+  const map = new Map();
+  mpPiutang().filter(r => !state.cat || r.cat === state.cat).forEach(r => {
+    const g = map.get(r.cust) || {cust: r.cust, comp: new Set(), n: 0, L: 0, P: 0, M: 0, tot: 0, umur: 0};
+    g.comp.add(r.comp); g.n++; g[r.cat] += r.sisa; g.tot += r.sisa; g.umur = Math.max(g.umur, r.umur); map.set(r.cust, g);
+  });
+  const list = [...map.values()].map(g => Object.assign(g, {comp: [...g.comp].join(', ')}));
+  const T = {cust: 'Total ' + list.length + ' customer', n: list.reduce((a, g) => a + g.n, 0), L: 0, P: 0, M: 0, tot: 0}; list.forEach(g => ['L', 'P', 'M', 'tot'].forEach(k => T[k] += g[k]));
+  mountGrid(el, 'mp', [
+    gC('Customer', g => `<b>${esc(g.cust)}</b>`, {valueGetter: p => p.data && p.data.cust, pinned: 'left', flex: 1, minWidth: 240, tot: d => d.cust}),
+    {headerName: 'Company', field: 'comp', width: 140}, {headerName: 'Invoice', field: 'n', width: 100, type: 'numericColumn'},
+    gN('Lancar (0–60 hari)', g => g.L), gN('Potensi Macet (61–90 hari)', g => g.P, {width: 160}), gN('Macet (> 90 hari)', g => g.M),
+    gN('Total Sisa Piutang', g => g.tot, {sort: 'desc', cellClass: 'num mono b', width: 160}),
+    gC('Umur tertua', g => `<span class="umur ${catOf(g.umur)}">${g.umur} hari</span>`, {valueGetter: p => p.data && p.data.umur, width: 120, cellClass: 'num'})
+  ], list, {pinnedBottomRowData: list.length ? [T] : [], onRowClicked: p => { if (p.data && !p.node.rowPinned) { state.tab = 'inv'; state.cust = p.data.cust; show(); } }});
+}
+// ---- Follow Up Piutang ----
+function gridFU(el, list, spec){
+  mountGrid(el, 'fu', [gNo({pinned: 'left'}), ...spec.map(c => gC(c.h, c.html, Object.assign(
+    {valueGetter: p => p.data && c.val ? c.val(p.data) : '', width: c.w || 150},
+    c.num ? {filter: 'agNumberColumnFilter', cellClass: 'num mono'} : {},
+    c.pin ? {pinned: 'left'} : {}, c.flex ? {flex: 1, minWidth: c.w || 220} : {}, c.nosort ? {sortable: false, filter: false} : {})))], list);
+}
+function gridVC(el, list){
+  const dash = '<span class="asof">–</span>';
+  const dl = rows => `<dl class="vc-dl">${rows.map(([k, v, w]) => `<dt>${k}</dt><dd${w ? ' class="w"' : ''}>${v}</dd>`).join('')}</dl>`;
+  const ketBox = k => !k ? '' : `<div class="ket${k.length > KET_MAX ? ' clamp' : ''}">${esc(k)}</div>${k.length > KET_MAX ? '<button type="button" class="linkbtn ketx" data-ketx>selengkapnya ▾</button>' : ''}`;
+  const fuGrp = i => ({headerName: 'FU ' + (i + 1), children: [
+    gC('Plan · Aktual', r => { const f = r.fu[i] || {}; const late = f.plan && !f.aktual && !r.planBayar && !r.batal && f.plan < TODAY_ISO;
+      return f.plan || f.aktual ? dl([['Plan', f.plan ? `<span class="${late ? 'late' : ''}">${fdate(f.plan)}</span>${late ? '<span class="sub late">lewat jadwal</span>' : ''}` : dash], ['Aktual', f.aktual ? fdate(f.aktual) : dash]]) : dash; },
+      {valueGetter: p => p.data && p.data.fu && p.data.fu[i] && (p.data.fu[i].aktual || p.data.fu[i].plan), width: 175}),
+    gC('Status · Keterangan', r => { const f = r.fu[i] || {}; return f.st || f.ket ? stPill(f.st) + ketBox(f.ket) : dash; },
+      {valueGetter: p => p.data && p.data.fu && p.data.fu[i] && ((p.data.fu[i].st || '') + ' ' + (p.data.fu[i].ket || '')), width: 250})]});
+  const T = {n: list.length}; ['dpp', 'ppn', 'nilai', 'terbayar', 'sisa'].forEach(k => T[k] = list.reduce((a, r) => a + (r[k] || 0), 0));
+  el.innerHTML = `<div class="vcbar chg"><button type="button" class="btn g sm" data-ketall>Tampilkan semua keterangan</button><span class="asof">Keterangan FU yang panjang diringkas 2 baris; klik <b>selengkapnya</b> untuk membuka satu, atau tombol ini untuk membuka semua. Kolom bisa digeser, dilebarkan, diurutkan, dan difilter.</span></div><div class="gridhost"></div>`;
+  mountGrid(el.querySelector('.gridhost'), 'fu', [
+    gNo({pinned: 'left'}),
+    gC('Invoice · Customer', r => `<div class="vc-inv"><b class="no">${esc(r.no)}</b><span class="pill co">${esc(r.comp)}</span>${r.baru ? '<span class="pill baru chg">★ Baru</span>' : ''}<div class="vc-cust">${esc(r.cust)}</div><span class="sub">SPK ${esc(r.spk || '–')}${r.top ? ' · ' + esc(r.top) : ''}</span></div>`,
+      {valueGetter: p => p.data && p.data.no ? p.data.no + ' ' + p.data.cust : '', pinned: 'left', width: 280, tot: d => 'Total ' + d.n + ' invoice'}),
+    {headerName: 'Invoice & Pajak', children: [
+      {headerName: 'No Faktur', field: 'faktur', width: 170, cellClass: 'mono'}, {headerName: 'PO', valueGetter: p => p.data && p.data.no ? (p.data.po || '–') : '', width: 110},
+      {headerName: 'Program', field: 'prog', width: 210}, gC('Konsultan · Divisi', r => `${esc(r.konsultan || '–')}<span class="sub">${esc(r.divisi || '')}</span>`, {valueGetter: p => p.data && p.data.konsultan, width: 150})]},
+    gC('Tanggal', r => dl([['Invoice', fdate(r.tgl)], ['Kirim', r.kirim ? fdate(r.kirim) : dash], ['Terima', r.terima ? fdate(r.terima) : dash], ['Plan bayar', r.planBayar ? fdate(r.planBayar) : dash]]), {valueGetter: p => p.data && p.data.tgl, width: 200}),
+    {headerName: 'Nilai', children: [gN('DPP', r => r.dpp), gN('PPN', r => r.ppn, {width: 120}), gN('Total Invoice', r => r.nilai), gN('Terbayar', r => r.terbayar || 0, {width: 125}), gN('Sisa Piutang', r => r.sisa, {cellClass: 'num mono b'})]},
+    gC('Pengiriman', r => !r.kirim ? '<span class="asof">Belum dikirim</span>' : dl([['Via', esc(r.via || '–') + (r.ketKirim ? ' · ' + esc(r.ketKirim) : ''), 1],
+      ...(r.via === 'JNE' ? [['Resi', r.resi ? `<span class="mono">${esc(r.resi)}</span>` : '<span class="late">belum diisi</span>']] : []),
+      ['Penerima', r.terima ? esc(r.ketTerima || '–') : '<span class="asof">belum diterima</span>', 1], ...(r.terima ? [['Bukti', r.bukti.length ? '📎 ' + r.bukti.length + ' file' : dash]] : [])]), {valueGetter: p => p.data && p.data.via, width: 250}),
+    {headerName: 'PIC Follow Up', children: [{headerName: 'Nama', valueGetter: p => p.data && p.data.no ? (p.data.pic || '–') : '', width: 170}, {headerName: 'No WA / Telp', valueGetter: p => p.data && p.data.no ? (p.data.picTelp || '–') : '', width: 140}]},
+    fuGrp(0), fuGrp(1), fuGrp(2), fuGrp(3),
+    gC('FU 5 dst.', r => r.fu.slice(4).map((x, n) => `<span class="sub">FU ${n + 5}: ${x.aktual ? fdate(x.aktual) + ' · ' + esc(x.st) + (x.ket ? ' · ' + esc(x.ket) : '') : 'jadwal ' + fdate(x.plan)}</span>`).join('') || dash, {valueGetter: p => p.data && p.data.fu && p.data.fu.length > 4 ? p.data.fu.length - 4 : 0, width: 200}),
+    {headerName: 'Ket Plan Bayar', valueGetter: p => p.data && p.data.no ? (p.data.ketPlan || '–') : '', width: 180},
+    {headerName: 'Status', children: [
+      gC('Umur', r => r.umur !== null ? `<span class="umur ${r.cat}">${r.umur} hari</span><span class="sub">${CAT[r.cat].nm}</span>` : '<span class="asof">Belum diterima</span>', {valueGetter: p => p.data && p.data.umur, width: 120, filter: 'agNumberColumnFilter'}),
+      gC('Status Invoice', r => `<span class="pill st-${r.status}">${ST[r.status]}</span>`, {valueGetter: p => p.data && ST[p.data.status], width: 170})]},
+    gC('', r => monBtn(r), {sortable: false, filter: false, width: 165})
+  ], list, {cls: 'vc', pinnedBottomRowData: list.length ? [T] : []});
+}
+// ---- Dashboard Plan Bayar ----
+function gridPB(list, rl){
+  const T = {n: list.length, nilai: list.reduce((a, r) => a + r.nilai, 0), planNom: psum(list)};
+  if (list.length){
+    const hint = $('#pbBody').querySelector('p.hint');
+    $('#pbBody').innerHTML = '<div class="gridhost"></div>' + (hint ? hint.outerHTML : '');
+    mountGrid($('#pbBody .gridhost'), 'pb', [gNo(),
+      gC('Plan Bayar', r => `<b>${fdate(r.planBayar)}</b><span class="sub">${esc(r.ketPlan)}</span>`, {valueGetter: p => p.data && p.data.planBayar, sort: 'asc', width: 170, tot: d => 'Total ' + d.n + ' invoice'}),
+      gC('Invoice', r => `<b>${esc(r.no)}</b><span class="sub">${fdate(r.tgl)}</span>`, {valueGetter: p => p.data && p.data.no, width: 150}),
+      gC('Customer', r => `${esc(r.cust)}<span class="sub">${esc(r.prog)}</span>`, {valueGetter: p => p.data && p.data.cust, flex: 1, minWidth: 230}),
+      {headerName: 'Company', field: 'comp', width: 110}, gN('Nilai Invoice', r => r.nilai), gN('Nilai Plan', r => r.planNom, {cellClass: 'num mono b'}),
+      gC('Umur', r => r.cat ? `<span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span>` : '<span class="asof">–</span>', {valueGetter: p => p.data && p.data.umur, width: 190})
+    ], list, {pinnedBottomRowData: [T], onCellClicked: p => { if (p.data && !p.node.rowPinned && notBtn(p)) openDetail(p.data.no); }});
+  }
+  if (rl.length){
+    const ri = rl.map(reaInfo), lead = [...$('#pbReaBody').querySelectorAll(':scope > p')].map(x => x.outerHTML).join('');
+    $('#pbReaBody').innerHTML = lead + '<div class="gridhost"></div>';
+    const rows = rl.map((p, i) => Object.assign({}, p, {x: ri[i]}));
+    mountGrid($('#pbReaBody .gridhost'), 'rea', [gNo(),
+      gC('Invoice', p => `<b>${esc(p.r.no)}</b><span class="sub">${fdate(p.r.tgl)}</span>`, {valueGetter: p => p.data && p.data.r && p.data.r.no, width: 150, tot: d => 'Total ' + d.n + ' pembayaran'}),
+      gC('Customer / Project', p => `${esc(p.r.cust)}<span class="sub">${esc(p.r.prog)} · ${esc(p.r.comp)}</span>`, {valueGetter: p => p.data && p.data.r && p.data.r.cust, flex: 1, minWidth: 230}),
+      {headerName: 'Plan vs Bayar', children: [
+        gC('Plan Bayar', p => fdate(p.r.planBayar), {valueGetter: p => p.data && p.data.r && p.data.r.planBayar, width: 130}),
+        gC('Tanggal Bayar', p => `<b>${fdate(p.tgl)}</b><span class="sub">${esc(p.no)}</span>`, {valueGetter: p => p.data && p.data.tgl, sort: 'asc', width: 150}),
+        gC('Ketepatan', p => p.x.sel === null ? '<span class="asof">–</span>' : p.x.sel === 0 ? '<span class="pill L">Sesuai plan</span>' : p.x.sel < 0 ? `<span class="pill C">Lebih cepat ${-p.x.sel} hari</span>` : `<span class="pill M">Telat ${p.x.sel} hari</span>`, {valueGetter: p => p.data && p.data.x ? ketLbl(p.data.x.sel) : '', width: 170})]},
+      gN('Jumlah Dibayar', p => p.nom, {cellClass: 'num mono b'}),
+      {headerName: 'Posisi Invoice Sekarang', children: [
+        gC('Sisa Tagihan', p => `${rp(p.r.sisa)}<span class="sub">dari ${rp(p.r.nilai)}</span>`, {valueGetter: p => p.data && p.data.r && p.data.r.sisa, cellClass: 'num mono', width: 150}),
+        gC('Status', p => `<span class="pill ${p.x.st === 'close' ? 'st-close' : p.x.st === 'lunas' ? 'L' : 'P'}">${REA_ST[p.x.st]}</span>`, {valueGetter: p => p.data && p.data.x ? REA_ST[p.data.x.st] : '', width: 160})]}
+    ], rows, {pinnedBottomRowData: [{n: rl.length, nom: rl.reduce((a, p) => a + p.nom, 0)}]});
+  }
 }
 
 function fuTable(r){
-  return `<table class="futbl"><thead><tr><th></th><th>Plan</th><th>Aktual</th><th>Keterangan</th></tr></thead><tbody>${r.fu.map((f, i) =>
-    `<tr><td><b>FU ${i + 1}</b>${i >= 4 ? '<span class="sub chg">tambahan</span>' : ''}</td><td>${fdate(f.plan)}</td><td>${f.aktual ? '✓ ' + fdate(f.aktual) : !f.plan ? '<span class="asof">Belum dijadwalkan</span>' : `<span class="${f.plan < TODAY_ISO ? 'late' : 'asof'}">Belum dilakukan</span>`}</td><td>${esc(f.ket)}</td></tr>`).join('')}</tbody></table>`;
+  return `<table class="futbl"><thead><tr><th></th><th>Plan</th><th>Aktual</th><th class="chg">Status</th><th>Keterangan</th></tr></thead><tbody>${r.fu.map((f, i) =>
+    `<tr><td><b>FU ${i + 1}</b>${i >= 4 ? '<span class="sub chg">tambahan</span>' : ''}</td><td>${fdate(f.plan)}</td><td>${f.aktual ? '✓ ' + fdate(f.aktual) : !f.plan ? '<span class="asof">Belum dijadwalkan</span>' : `<span class="${f.plan < TODAY_ISO ? 'late' : 'asof'}">Belum dilakukan</span>`}</td><td>${stPill(f.st)}</td><td>${esc(f.ket)}</td></tr>`).join('')}</tbody></table>`;
 }
 function openDetail(no){
   const r = all().find(x => x.no === no); if (!r) return;
@@ -710,11 +1116,13 @@ function openDetail(no){
       <div><span>Customer</span><b>${esc(r.cust)}</b></div>
       <div><span>Company</span>${esc(r.comp)}</div>
       <div><span>Tanggal Invoice</span>${fdate(r.tgl)}</div>
+      <div class="chg"><span>No Faktur</span>${esc(r.faktur || '–')}</div>
       <div><span>Program / Project</span>${esc(r.prog)}</div>
       <div class="chg"><span>No SPK</span>${esc(r.spk || '–')}</div>
       <div class="chg"><span>Term of Payment</span>${esc(r.top || '–')}${r.topKe ? ' (TOP ke-' + r.topKe + ')' : ''}</div>
       <div><span>Umur Piutang</span>${r.cat ? `<span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span>` : '<span class="asof">Belum diterima customer</span>'}</div>
     </div>
+    ${r.batal || r.masalah || r.revisiKe ? `<p class="chg">${flagPills(r)} ${r.lastSt ? 'Status ' + fuName(r.lastFu) + ': ' + esc(r.lastSt) + ' · ' + esc(r.fu[r.lastFu].ket) : ''}</p>` : ''}
     <div class="kpi"><div>Nilai Invoice<b class="mono">${rp(r.nilai)}</b></div><div>Terbayar<b class="mono">${rp(r.terbayar)}</b></div><div>Sisa Piutang<b class="mono" style="color:var(--red)">${rp(r.sisa)}</b></div></div>
     <div class="chg" style="padding:6px">
       <h3 style="font-size:14px;margin:0 0 8px">Pengiriman &amp; Follow Up</h3>
@@ -722,6 +1130,7 @@ function openDetail(no){
         <div><span>Dikirim</span>${fdate(r.kirim)}${r.via ? ' via ' + esc(r.via) : ''}${r.ketKirim ? '<span>' + esc(r.ketKirim) + '</span>' : ''}</div>
         <div class="chg"><span>No Resi</span>${esc(r.resi || '–')}</div>
         <div><span>Diterima customer</span>${fdate(r.terima)}</div>
+        <div class="chg"><span>Bukti terima</span>${r.bukti.length ? r.bukti.map(b => '📎 ' + esc(b.name)).join('<br>') : '–'}</div>
         <div class="chg"><span>PIC penerima FU</span>${r.pic ? esc(r.pic) + (r.picTelp ? ' · ' + esc(r.picTelp) : '') : '–'}</div>
         <div><span>Plan bayar</span>${fdate(r.planBayar)}${r.ketPlan ? '<span>' + esc(r.ketPlan) + '</span>' : ''}</div>
       </div>
@@ -820,7 +1229,7 @@ function printSurat(no){
 function fuBase(){
   const q = state.fuQ.trim();
   // INV-R-08: invoice lunas yang belum pernah diproses (belum ada tanggal kirim), mis. invoice lama, tidak tampil.
-  return all().filter(r => (state.fuTab === 'open' ? !r.closed && (r.sisa > 0 || !!r.kirim) : (r.closed && r.closed.tgl.slice(0, 4) === state.fuYear))
+  return all().filter(r => (state.fuTab === 'open' ? !r.closed && (r.sisa > 0 || !!r.kirim) && perOk(r.tgl, 'fuP') : (r.closed && r.closed.tgl.slice(0, 4) === state.fuYear))
     && (!state.comp || r.comp === state.comp) && (!state.fuCust || r.cust === state.fuCust)
     && (!q || searchMatch(r, q)));
 }
@@ -830,34 +1239,48 @@ function pageFU(){
     <p class="legend">Seluruh halaman ini menu baru (Catatan Tambahan Request di Jawaban pertanyaan monitoring piutang.xlsx).</p>
     <details class="cases"><summary>Aturan &amp; skenario uji</summary><ol>
       <li>Berisi <b>semua invoice yang belum close</b>, termasuk yang belum dikirim. <span class="chg">Invoice yang <b>sudah lunas tapi belum pernah diproses</b> (belum ada tanggal kirim, mis. invoice lama) <b>tidak ditampilkan</b>.</span></li>
-      <li>Klik <b>Update</b>: form terbuka <b>bertahap</b> sesuai status &mdash; tahap kirim hanya menampilkan pengiriman (<span class="chg">via dipilih <b>JNE</b> / <b>Driver</b>, lalu muncul keterangan sesuai pilihan</span>); bagian <b>Diterima Customer</b> muncul setelah tanggal kirim diisi; <b>Follow Up</b> &amp; <b>Plan Bayar</b> muncul setelah tanggal terima diisi; Follow up <b>berjalan satu per satu</b>: hanya FU yang sedang berjalan yang tampil (jadwal + tanggal dilakukan + keterangan). Mengisi tanggal dilakukan <b>tidak langsung menyimpan</b>: FU tetap terbuka (label "belum disimpan") dan muncul usulan jadwal FU berikutnya (formula otomatis +7 / +14 / +14 hari dari tanggal dilakukan, bisa diedit). FU baru pindah ke daftar selesai dan FU berikutnya mulai berjalan setelah klik <b>Simpan</b>. Simpan &rarr; Monitoring Piutang ikut berubah.</li>
-      <li>Jadwal FU otomatis: <b>FU1 = terima + 3 hari</b>, <b>FU2 = FU1 dilakukan + 7</b>, <b>FU3 = FU2 dilakukan + 14</b>, <b>FU4 = FU3 dilakukan + 14</b>. Jadwal boleh diubah; FU4 boleh diundur terus. <b>Keterangan / jawaban customer wajib diisi</b> sebelum tanggal dilakukan bisa diisi &mdash; tanpa keterangan FU berikutnya tidak terbuka. <span class="chg">Juga wajib: <b>PIC penerima follow up</b> (nama + nomor WA / telepon) &mdash; <b>satu per invoice</b>, diisi sekali di awal bagian Follow Up dan berlaku untuk FU 1&ndash;4.</span> Tombol <b>Hari ini</b> mengisi tanggal dilakukan.</li>
+      <li><span class="chg">Tab <b>Semua</b>: per FU dua kolom, <b>Plan · Aktual</b> dan <b>Status · Keterangan</b>. Keterangan panjang diringkas 2 baris; klik <b>selengkapnya</b> (per sel) atau <b>Tampilkan semua keterangan</b> (semua sel).</span></li>
+      <li>Klik <b>Update</b>: form terbuka <b>bertahap</b> sesuai status &mdash; tahap kirim hanya menampilkan pengiriman (<span class="chg">via dipilih <b>JNE</b> / <b>Driver</b>, lalu muncul keterangan sesuai pilihan</span>); <span class="chg">bagian <b>Diterima Customer</b> baru muncul setelah pengiriman <b>disimpan</b> (tab 2); <b>Follow Up</b> &amp; <b>Plan Bayar</b> baru muncul setelah tanggal terima <b>disimpan</b> (tab 3)</span>; Follow up <b>berjalan satu per satu</b>: hanya FU yang sedang berjalan yang tampil (jadwal + tanggal dilakukan + keterangan). Mengisi tanggal dilakukan <b>tidak langsung menyimpan</b>: FU tetap terbuka (label "belum disimpan") dan muncul usulan jadwal FU berikutnya (formula otomatis +7 / +14 / +14 hari dari tanggal dilakukan, bisa diedit). FU baru pindah ke daftar selesai (terkunci) dan FU berikutnya mulai berjalan setelah klik <b>Simpan</b>. <span class="chg">Jadwal dan tanggal dilakukan boleh diisi bersamaan, atau jadwal dulu dan tanggal dilakukan menyusul.</span> Simpan &rarr; Monitoring Piutang ikut berubah.</li>
+      <li>Jadwal FU otomatis: <b>FU1 = terima + 3 hari</b>, <b>FU2 = FU1 dilakukan + 7</b>, <b>FU3 = FU2 dilakukan + 14</b>, <b>FU4 = FU3 dilakukan + 14</b>. Jadwal boleh diubah; FU4 boleh diundur terus. <b>Status dan keterangan / jawaban customer wajib diisi</b> bila tanggal dilakukan diisi; dicek saat Simpan &mdash; tanpa keduanya FU berikutnya tidak terbuka. <span class="chg"><b>PIC penerima follow up</b> (nama + nomor WA / telepon) <b>tidak wajib</b> &mdash; satu per invoice, berlaku untuk semua FU; nomor yang diisi harus valid.</span> Tombol <b>Hari ini</b> mengisi tanggal dilakukan.</li>
       <li class="chg"><b>FU tambahan</b>: standar follow up 4 kali, tapi setelah FU 4 dilakukan dan customer belum memberi rencana bayar, klik <b>+ Tambah FU 5</b> (lalu FU 6, dst., tanpa batas). Jadwal otomatis <b>tanggal dilakukan FU sebelumnya + 14 hari</b> (bisa diubah). FU tambahan yang belum dilakukan bisa dihapus; yang sudah dilakukan mengikuti aturan kunci FU 1&ndash;4. Coba: <b>050/SSC/2025</b> (FU 5 sudah dilakukan, FU 6 berjalan).</li>
       <li class="chg"><b>Kunci step: step yang sudah disimpan masih bisa dikoreksi sampai step berikutnya disimpan, lalu terkunci</b> (label 🔒):<br>
-        &bull; data pengiriman terkunci setelah <b>tanggal terima</b> disimpan;<br>
-        &bull; tanggal terima, keterangannya, dan no resi (bila sudah terisi) terkunci setelah <b>FU 1</b> disimpan sebagai dilakukan; no resi yang masih kosong boleh diisi belakangan;<br>
-        &bull; FU yang sudah disimpan tampil sebagai baris yang bisa <b>dibuka / diminimize</b>; <b>FU terakhir</b> masih bisa dikoreksi (label "bisa dikoreksi") sampai FU berikutnya disimpan, FU sebelumnya terkunci; tanggal dilakukan tidak bisa dikosongkan;<br>
-        &bull; PIC bisa dikoreksi (tidak bisa dikosongkan) sampai plan bayar disimpan.<br>
-        Coba: tab 2 &rarr; <b>270/STM/2026</b> &rarr; tanggal kirim masih bisa diubah &rarr; isi tanggal terima &rarr; Simpan &rarr; buka lagi: data kirim terkunci.</li>
+        &bull; data pengiriman (tanggal kirim, via, keterangan) <b>terkunci begitu disimpan</b>;<br>
+        &bull; <b>no resi</b> hanya untuk via <b>JNE</b> (via Driver tidak ada no resi), diisi di bagian Diterima Customer dan <b>wajib</b> saat menyimpan tanggal terima;<br>
+        &bull; tanggal terima, keterangannya, no resi, dan no faktur terkunci setelah <b>FU 1</b> disimpan sebagai dilakukan;<br>
+        &bull; FU yang sudah disimpan tampil sebagai baris yang bisa <b>dibuka / diminimize</b>; <span class="chg">FU yang disimpan dengan <b>tanggal dilakukan + status + keterangan langsung terkunci</b>, lalu FU berikutnya berjalan. Boleh juga simpan <b>jadwal saja</b> dulu, tanggal dilakukan menyusul</span>;<br>
+        &bull; PIC tidak wajib dan bisa diubah sampai plan bayar disimpan.<br>
+        Coba: tab 2 &rarr; <b>270/STM/2026</b> (JNE) &rarr; data kirim terkunci &rarr; isi tanggal terima tanpa no resi &rarr; Simpan ditolak &rarr; isi no resi &rarr; Simpan. Bandingkan <b>011/VSB/2026</b> atau invoice via Driver: tidak ada no resi.</li>
+      <li class="chg"><b>Bukti terima</b> (JPG / PNG / PDF, maks 5 MB per file, boleh lebih dari 1, opsional) di bagian Diterima Customer: copy screenshot / gambar lalu tekan <b>Ctrl+V</b> di form, seret file ke kotak, atau klik <b>Pilih file</b>. File lain ditolak. Bisa dihapus / ditambah sampai FU 1 disimpan, lalu terkunci. Tampil di kolom Pengiriman tab Semua, Detail invoice di Monitoring, dan Export Excel. Coba: tab 2 &rarr; <b>270/STM/2026</b>.</li>
       <li class="chg">Kolom Customer menampilkan <b>Project</b>, <b>No SPK</b> dan <b>TOP</b> dari detail SPK.</li>
       <li class="chg">Kotak <b>Cari</b> ada di kanan, sebelah kiri Export Excel, dan mencari di <b>semua kolom</b>: no invoice, tanggal, customer, project, <b>no SPK</b>, TOP, company, via kirim, no resi, tanggal kirim / terima / plan bayar, nominal, umur, kategori, status, FU. Beberapa kata = semua kata harus cocok (mis. <code>ori 2026</code>). Export Excel mengikuti hasil cari. Berlaku juga di Monitoring Piutang. Coba: ketik <code>SPK/STM/26/109</code>.</li>
       <li class="chg">Invoice yang <b>baru pindah tahap</b> (mis. dari 1. Kirim Invoice &rarr; 2. Konfirmasi Diterima) dalam 3 hari terakhir tampil <b>paling atas</b> di tab tujuannya, baris berwarna kuning dan diberi label <b>★ Baru · dari &lt;tab sebelumnya&gt;</b>. Setelah simpan yang memindahkan tab, muncul pesan dengan tombol <b>Lihat di tab &hellip;</b>. Coba: tab <b>2. Konfirmasi Diterima</b> (270/STM/2026) dan <b>4. Tunggu Bayar &amp; Close</b> (255/STM/2026); atau buka tab 1. Kirim Invoice &rarr; Update &rarr; isi tanggal kirim + via &rarr; Simpan.</li>
       <li class="chg">Setelah <b>rencana bayar disimpan</b>, follow up <b>berhenti</b>: invoice pindah ke tab <b>4. Tunggu Bayar &amp; Close</b>, kolom Follow Up Berikutnya tidak ditampilkan, dan tombol Update berubah jadi <b>Lihat</b> (data terkunci). Aksinya hanya <b>Close</b> setelah pembayaran diterima. Coba: tab 4 &rarr; Lihat <b>255/STM/2026</b>.</li>
       <li class="chg"><b>Close</b> hanya aktif bila <b>sudah ada plan bayar dan sudah lunas</b> (sisa piutang 0); invoice yang belum lunas tidak bisa di-close. Wajib isi keterangan. Invoice close pindah ke tab <b>Invoice Close (Laporan)</b>.</li>
       <li class="chg"><b>Tab disusun sesuai alur kerja</b>: Semua &rarr; <b>1. Kirim Invoice</b> (isi tanggal kirim) &rarr; <b>2. Konfirmasi Diterima</b> (isi no resi + tanggal diterima) &rarr; <b>3. Follow Up Customer</b> (PIC + FU 1&ndash;4) &rarr; <b>4. Tunggu Bayar &amp; Close</b> &rarr; <b>FU Terlambat</b> &rarr; <b>Invoice Close (Laporan)</b>, dengan jumlah invoice. Di bawah tab ada petunjuk singkat apa yang dikerjakan di tab itu. Kolom Status memakai keadaan invoice: Belum dikirim / Menunggu diterima / Proses follow up / Menunggu pembayaran. <b>Filter ada di bawah tab.</b> Tab <b>4. Tunggu Bayar &amp; Close</b> punya filter <b>Bulan</b> dan <b>Tahun</b> plan bayar. <b>Export Excel</b> mengikuti tab dan filter yang aktif.</li>
+      <li class="chg"><b>Filter Tahun / Bulan / Tgl invoice dari-sampai</b> (tanggal invoice), default <b>bulan berjalan</b> (November 2026). Pilih Semua untuk melihat invoice bulan lain.</li>
+      <li class="chg">Status <b>INVOICE BERMASALAH</b> (menggantikan BATAL, REVISI INVOICE, BERMASALAH) di FU 2 dst.: keterangan wajib menjelaskan kenapa (batal, revisi, dll.). Setelah disimpan follow up berhenti, invoice pindah ke tab <b>Invoice Bermasalah</b> dan ditandai merah di Monitoring. Contoh: 239/STM/2023 (batal), 261/STM/2026 (revisi), 050/SSC/2025.</li>
+      <li class="chg"><b>Tabel memakai AG Grid</b>: klik judul kolom untuk urut, ikon ☰ untuk filter per kolom, tarik batas judul untuk melebarkan, seret judul untuk memindah kolom. Kolom No dan Invoice tetap di kiri saat digeser; baris total di bawah. Saat data dimuat ulang tampil <b>skeleton loading</b> sebentar.</li>
       <li class="chg">Filter <b>Follow Up</b>: tampilkan invoice per tahap FU (FU 1 / 2 / 3 / 4 berjalan, belum ada FU, atau FU 1&ndash;4 selesai).</li>
-      <li>Coba: buka <b>270/STM/2026</b> (belum diterima) &rarr; isi tanggal terima &rarr; simpan &rarr; cek Monitoring Piutang. Coba close <b>245/STM/2026</b> (sudah lunas).</li>
+      <li class="chg"><b>Tab utama dan tab anak</b>: <b>Proses</b> (1. Kirim Invoice, 2. Konfirmasi Diterima, 3. Follow Up Customer, 4. Tunggu Bayar &amp; Close) untuk bekerja; <b>Monitoring</b> (dulu tab Semua) hanya untuk melihat, tombol <b>Buka di Proses</b> membuka invoice di tab kerjanya; <b>Perlu Perhatian &amp; Selesai</b> (FU Terlambat, Invoice Bermasalah, Invoice Close). Card ringkasan tampil sesuai tab utama: Proses = Belum dikirim, Belum diterima, Belum di-follow up, Tunggu bayar; Perlu Perhatian &amp; Selesai = FU terlambat, Invoice bermasalah, Closed. Membuka Follow Up langsung ke Proses &rarr; 1. Kirim Invoice; pindah tab utama kembali ke tab anak terakhir yang dibuka. <i>Nama tab ketiga, letak FU Terlambat, dan Monitoring tanpa card dikonfirmasi user 23-Nov-2026 (MP-R-33).</i></li>
+      <li class="chg">Tab <b>tidak menampilkan angka</b> lagi; jumlah invoice dan nominal dilihat dari card ringkasan.</li>
+      <li class="chg"><b>Card ringkasan</b> di atas tab: Belum dikirim, Belum diterima, Belum di-follow up (sudah diterima, FU 1 belum dilakukan), Invoice bermasalah, Closed (di-close pada periode filter). Tiap card berisi jumlah invoice dan total nominal (sisa piutang; Closed = nilai invoice), ikut filter Company, Customer, periode, dan Cari. Klik card untuk membuka daftarnya.</li>
+      <li class="chg"><b>Close hanya satu jalur</b>: tombol Close hanya ada di tab <b>4. Tunggu Bayar &amp; Close</b> (ada plan bayar + lunas). Tab lain dan menu Invoicing tidak punya tombol Close. Invoice bermasalah belum bisa di-close (prosedur invoice batal / revisi menyusul).</li>
+      <li>Coba: buka <b>270/STM/2026</b> (belum diterima) &rarr; isi tanggal terima &rarr; simpan &rarr; cek Monitoring Piutang. Coba close <b>245/STM/2026</b> (sudah lunas) di tab 4.</li>
     </ol></details>
     <div class="panel hl chg">
-      <div class="tabs" role="tablist">${FU_TABS.map(([k, l]) => {
+      <div class="tabs fumain" role="tablist">${FU_GROUPS.map(([g, l]) => `<button type="button" role="tab" data-fumain="${g}" class="${fuGrp()[0] === g ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <p class="tabhint grphint">${esc(fuGrp()[3])}</p>
+      <div class="cards fucards" id="fuCards"></div>
+      ${fuGrp()[2].length > 1 ? `<div class="tabs fusub" role="tablist">${FU_TABS.filter(([k]) => fuGrp()[2].includes(k)).map(([k, l]) => {
         const on = k === 'close' ? state.fuTab === 'close' : (state.fuTab === 'open' && state.fuStatus === k);
-        return `<button type="button" role="tab" data-fuview="${k}" class="${on ? 'on' : ''}">${l}${k === 'close' ? '' : ` <span class="cnt${k === 'lewat' ? ' red' : ''}" data-cnt="${k}"></span>`}</button>`;
-      }).join('')}</div>
-      <p class="tabhint chg">ⓘ ${esc((FU_TABS.find(t => t[0] === (state.fuTab === 'close' ? 'close' : state.fuStatus)) || FU_TABS[0])[2])}</p>
+        return `<button type="button" role="tab" data-fuview="${k}" class="${on ? 'on' : ''}">${l}</button>`; // MP-R-30: tanpa angka di tab (jumlah ada di card ringkasan)
+      }).join('')}</div>` : ''}
+      ${fuGrp()[0] === 'mon' ? '' : `<p class="tabhint chg">ⓘ ${esc((FU_TABS.find(t => t[0] === (state.fuTab === 'close' ? 'close' : state.fuStatus)) || FU_TABS[0])[2])}</p>`}
       <div class="filters" style="align-items:flex-end;margin-bottom:12px">
         <label class="fl">Company
           <select id="fCompany"><option value="">Semua Company</option>${['STM','VUCA','SUSTAIN'].map(c => `<option ${state.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
         </label>
+        ${state.fuTab === 'open' ? perUI('fuP', 'Tgl invoice') : ''}
         <label class="fl">Customer
           <select id="fuCust"><option value="">Semua Customer</option>${custs.map(c => `<option ${state.fuCust === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
         </label>
@@ -885,6 +1308,7 @@ function fuFilter(base){
     if (!fuOk(r)) return false;
     if (state.fuTab !== 'open' || !state.fuStatus) return true;
     if (state.fuStatus === 'lewat') return fuLate(r);
+    if (state.fuStatus === 'masalah') return r.status === 'batal' || r.masalah;
     if (r.status !== state.fuStatus) return false;
     if (state.fuStatus === 'plan_bayar'){
       if (state.fuThn && r.planBayar.slice(0, 4) !== state.fuThn) return false;
@@ -893,74 +1317,128 @@ function fuFilter(base){
     return true;
   });
 }
-function renderFU(){
+function renderFU(){ skel([['#fuCards', 'cards5'], ['#fuBody', 'table']], () => { renderFuCards(); renderFU0(); }); }
+/* ===== Card ringkasan Follow Up (MP-R-29): ikut filter company / customer / periode / cari; klik = buka tab ===== */
+function fuCardsData(){
+  const q = state.fuQ.trim();
+  const base = all().filter(r => (!state.comp || r.comp === state.comp) && (!state.fuCust || r.cust === state.fuCust) && (!q || searchMatch(r, q)));
+  const open = base.filter(r => !r.closed && (r.sisa > 0 || !!r.kirim) && perOk(r.tgl, 'fuP'));
+  return [
+    {k: 'belum_kirim', c: 'k1', nm: 'Belum dikirim', ket: 'invoice belum dikirim ke customer', list: open.filter(r => r.status === 'belum_kirim'), nom: 'sisa'},
+    {k: 'dikirim', c: 'k2', nm: 'Belum diterima', ket: 'sudah dikirim, belum ada tanggal terima', list: open.filter(r => r.status === 'dikirim'), nom: 'sisa'},
+    {k: 'belum_fu', c: 'k3', nm: 'Belum di-follow up', ket: 'sudah diterima, FU 1 belum dilakukan', list: open.filter(r => r.status === 'diterima' && !r.fu[0].aktual), nom: 'sisa'},
+    {k: 'plan_bayar', c: 'k6', nm: 'Tunggu bayar', ket: 'ada plan bayar, menunggu pembayaran / close', list: open.filter(r => r.status === 'plan_bayar' && !r.batal), nom: 'sisa'},
+    {k: 'lewat', c: 'k7', nm: 'FU terlambat', ket: 'jadwal FU sudah lewat, belum ada plan bayar', list: open.filter(r => fuLate(r)), nom: 'sisa'},
+    {k: 'masalah', c: 'k4', nm: 'Invoice bermasalah', ket: 'follow up berhenti, lihat keterangan', list: open.filter(r => r.batal), nom: 'sisa'},
+    {k: 'close', c: 'k5', nm: 'Closed', ket: 'di-close pada periode filter', list: base.filter(r => r.closed && perOk(r.closed.tgl, 'fuP')), nom: 'nilai'}];
+}
+const fuCardOn = k => k === 'close' ? state.fuTab === 'close' : state.fuTab === 'open' && (k === 'belum_fu' ? state.fuStatus === 'diterima' && state.fuFu === '1' : state.fuStatus === k && !(k === 'diterima'));
+function renderFuCards(){
+  const el = $('#fuCards'); if (!el) return;
+  const G = {belum_kirim: 'proses', dikirim: 'proses', belum_fu: 'proses', plan_bayar: 'proses', lewat: 'hasil', masalah: 'hasil', close: 'hasil'};
+  el.innerHTML = fuCardsData().filter(d => G[d.k] === fuGrp()[0]).map(d => { const tot = d.list.reduce((a, r) => a + (r[d.nom] || 0), 0);
+    return `<div role="button" tabindex="0" class="card ${d.c} ${fuCardOn(d.k) ? 'on' : ''}" data-fucard="${d.k}" title="Buka daftarnya">
+      <span class="ct">${d.nm}</span><span class="cv">${d.list.length} <span style="font-size:13px;font-weight:600;color:var(--muted)">invoice</span></span>
+      <span class="cm">${d.nom === 'nilai' ? 'Nilai invoice' : 'Sisa piutang'} <b>${rp(tot)}</b></span><span class="cm">${d.ket}</span></div>`; }).join('');
+}
+function renderFU0(){
   const base = fuBase();
-  const fuOk = r => !state.fuFu || state.fuTab !== 'open' || (state.fuFu === 'belum' ? !r.fuTahap : r.fuTahap === state.fuFu);
-  const cnt = {'': 0, lewat: 0};
-  if (state.fuTab === 'open') base.filter(fuOk).forEach(r => { cnt[''] = cnt[''] + 1; cnt[r.status] = (cnt[r.status] || 0) + 1; if (fuLate(r)) cnt.lewat++; });
-  document.querySelectorAll('#main [data-cnt]').forEach(el => { el.textContent = state.fuTab === 'open' ? (cnt[el.dataset.cnt] || 0) : ''; });
   const list = fuList(base);
   if (!list.length){ $('#fuBody').innerHTML = '<div class="empty">Tidak ada invoice untuk filter ini.</div>'; return; }
-  const open = state.fuTab === 'open', noFu = open && state.fuStatus === 'plan_bayar'; // tab 4: follow up berhenti, kolom FU tidak ditampilkan
+  if (state.fuTab === 'open' && !state.fuStatus){ if (AG()) gridVC($('#fuBody'), list); else $('#fuBody').innerHTML = renderVC(list); state.flash = null; return; } // MP-R-18
+  const spec = fuCols(state.fuTab === 'close' ? 'close' : state.fuStatus), open = state.fuTab === 'open';
+  if (AG()){ gridFU($('#fuBody'), list, spec); state.flash = null; return; } // MP-R-25
   $('#fuBody').innerHTML = `<div class="scroll"><table>
-    <thead><tr><th>No</th><th>Invoice</th><th>Customer</th><th class="num">Sisa Piutang</th><th>Dikirim</th><th>Diterima / Umur</th>${open ? (noFu ? '' : '<th>Follow Up Berikutnya</th>') + (noFu ? '<th class="chg">Rencana Bayar</th>' : '<th>Plan Bayar</th>') + '<th>Status</th><th></th>' : '<th>Plan Bayar</th><th>Close</th><th></th>'}</tr></thead>
-    <tbody>${list.map((r, i) => `<tr data-row="${esc(r.no)}" class="${state.flash === r.no ? 'flash' : ''} ${r.baru && open ? 'baru' : ''}">
-      <td>${i + 1}</td>
-      <td class="no">${esc(r.no)}<span class="sub">${fdate(r.tgl)}</span>${r.baru && open ? `<span class="pill baru chg" title="Pindah ke ${ST[r.status]} ${esc(r.changed)}">★ Baru · dari ${ST[r.statusFrom]}</span><span class="sub">pindah ${fdate(r.changed.slice(0, 10))}</span>` : ''}</td>
-      <td>${esc(r.cust)}<span class="sub">${esc(r.prog)} · ${esc(r.comp)}</span>${spkTop(r)}</td>
-      <td class="num mono"><b>${rp(r.sisa)}</b><span class="sub">dari ${rp(r.nilai)}</span></td>
-      <td>${r.kirim ? fdate(r.kirim) + '<span class="sub">' + esc(r.via) + '</span>' + (r.resi ? '<span class="sub chg">Resi ' + esc(r.resi) + '</span>' : '') : '<span class="asof">Belum</span>'}</td>
-      <td>${r.terima ? fdate(r.terima) + (r.cat && r.sisa > 0 ? `<span class="sub"><span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span></span>` : '') : '<span class="asof">Belum diterima</span>'}</td>
-      ${open ? `${noFu ? '' : `<td>${r.planBayar ? '<span class="asof chg">Selesai (ada rencana bayar)</span>' : r.next ? `<span class="${fuLate(r) ? 'late' : ''}"><b>FU ${r.next.ke}${r.next.ke > 4 ? ' (tambahan)' : ''}</b> · ${fdate(r.next.tgl)}${fuLate(r) ? '<span class="sub late">lewat jadwal</span>' : ''}</span>` : '<span class="asof">–</span>'}</td>`}
-        <td>${r.planBayar ? fdate(r.planBayar) : '<span class="asof">–</span>'}</td>
-        <td><span class="pill st-${r.status}">${ST[r.status]}</span></td>
-        <td style="white-space:nowrap">${r.planBayar ? `<button type="button" class="btn g sm chg" data-edit="${esc(r.no)}">Lihat</button>` : `<button type="button" class="btn bl sm" data-edit="${esc(r.no)}">Update</button>`}
-          <button type="button" class="btn r sm" data-close-inv="${esc(r.no)}" ${closeBlock(r) ? 'disabled title="' + closeBlock(r) + '"' : ''}>Close</button></td>`
-      : `<td>${fdate(r.planBayar)}</td><td>${fdate(r.closed.tgl)}<span class="sub">${esc(r.closed.ket)}</span></td><td><button type="button" class="btn g sm" data-edit="${esc(r.no)}">Lihat</button></td>`}
-    </tr>`).join('')}</tbody></table></div>`;
+    <thead><tr><th>No</th>${spec.map(c => `<th class="${c.num ? 'num' : ''}">${c.h}</th>`).join('')}</tr></thead>
+    <tbody>${list.map((r, i) => `<tr data-row="${esc(r.no)}" class="${state.flash === r.no ? 'flash' : ''} ${r.baru && open ? 'baru' : ''} ${r.batal ? 'bad' : ''}">
+      <td>${i + 1}</td>${spec.map(c => `<td class="${c.num ? 'num mono' : ''} ${c.cls || ''}">${c.html(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   state.flash = null;
+}
+/* ===== Kolom per tab Follow Up (MP-R-28): tiap tab hanya kolom yang dibutuhkan; info lengkap di tab Semua ===== */
+function fuCols(tab){
+  const open = tab !== 'close', dash = '<span class="asof">–</span>';
+  const C = {
+    inv: {h: 'Invoice', pin: 1, w: 190, cls: 'no', val: r => r.no, html: r => `<b>${esc(r.no)}</b><span class="sub">${fdate(r.tgl)}</span>${flagPills(r)}${r.baru && open ? `<span class="pill baru chg" title="Pindah ke ${ST[r.status]} ${esc(r.changed)}">★ Baru · dari ${ST[r.statusFrom]}</span>` : ''}`},
+    cust: {h: 'Customer', flex: 1, w: 230, val: r => r.cust, html: r => `${esc(r.cust)}<span class="sub">${esc(r.prog)} · ${esc(r.comp)}</span>${spkTop(r)}`},
+    nilai: {h: 'Nilai Invoice', num: 1, val: r => r.nilai, html: r => `<b>${rp(r.nilai)}</b>`},
+    sisa: {h: 'Sisa Piutang', num: 1, val: r => r.sisa, html: r => `<b>${rp(r.sisa)}</b><span class="sub">dari ${rp(r.nilai)}</span>`},
+    kirim: {h: 'Dikirim', w: 190, val: r => r.kirim, html: r => `${fdate(r.kirim)}<span class="sub">via ${esc(r.via || '–')}${r.ketKirim ? ' · ' + esc(r.ketKirim) : ''}</span>`},
+    resi: {h: 'No Resi', w: 170, val: r => r.resi, html: r => r.via === 'JNE' ? (r.resi ? `<span class="mono">${esc(r.resi)}</span>` : '<span class="late">belum diisi</span>') : `<span class="asof">tidak perlu (via ${esc(r.via || '–')})</span>`},
+    terima: {h: 'Diterima / Umur', w: 175, val: r => r.terima, html: r => r.terima ? fdate(r.terima) + (r.cat && r.sisa > 0 ? `<span class="sub"><span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span></span>` : '') : '<span class="asof">Belum diterima</span>'},
+    pic: {h: 'PIC', w: 190, val: r => r.pic, html: r => r.pic ? `${esc(r.pic)}<span class="sub">${esc(r.picTelp || '')}</span>` : dash},
+    next: {h: 'Follow Up Berikutnya', w: 230, val: r => r.next ? r.next.tgl : '', html: r => `${lastStTag(r)}${r.next ? `<span class="${fuLate(r) ? 'late' : ''}"><b>FU ${r.next.ke}${r.next.ke > 4 ? ' (tambahan)' : ''}</b> · ${fdate(r.next.tgl)}${fuLate(r) ? '<span class="sub late">lewat jadwal</span>' : ''}</span>` : dash}`},
+    plan: {h: 'Rencana Bayar', w: 200, val: r => r.planBayar, html: r => `<b>${fdate(r.planBayar)}</b><span class="sub">${esc(r.ketPlan || '')}</span>`},
+    bayar: {h: 'Pembayaran', w: 190, val: r => r.sisa, html: r => r.sisa <= 0 ? '<span class="pill L">Lunas</span><span class="sub">siap di-close</span>' : `Sisa <b>${rp(r.sisa)}</b><span class="sub">terbayar ${rp(r.terbayar)}</span>`},
+    late: {h: 'FU Terjadwal', w: 210, val: r => r.next ? r.next.tgl : '', html: r => r.next ? `<b>FU ${r.next.ke}</b> · ${fdate(r.next.tgl)}<span class="sub late">terlambat ${days(r.next.tgl)} hari</span>` : dash},
+    umur: {h: 'Umur', w: 150, val: r => r.umur, html: r => r.umur !== null ? `<span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span>` : '<span class="asof">Belum diterima</span>'},
+    stfu: {h: 'Status FU', w: 210, val: r => r.lastSt, html: r => r.lastFu >= 0 ? `${stPill(r.lastSt)}<span class="sub">${fuName(r.lastFu)} · ${fdate(r.fu[r.lastFu].aktual)}</span>` : dash},
+    ket: {h: 'Keterangan', w: 300, val: r => r.lastFu >= 0 ? r.fu[r.lastFu].ket : '', html: r => r.lastFu >= 0 ? esc(r.fu[r.lastFu].ket) : dash},
+    cplan: {h: 'Plan Bayar', w: 130, val: r => r.planBayar, html: r => fdate(r.planBayar)},
+    close: {h: 'Close', w: 240, val: r => r.closed && r.closed.tgl, html: r => `${fdate(r.closed.tgl)}<span class="sub">${esc(r.closed.ket)}</span>`},
+    act: {h: '', w: 165, nosort: 1, html: r => actBtns(r)},
+    lihat: {h: '', w: 90, nosort: 1, html: r => `<button type="button" class="btn g sm" data-edit="${esc(r.no)}">Lihat</button>`}
+  };
+  const T = {
+    belum_kirim: ['inv', 'cust', 'nilai', 'act'],
+    dikirim: ['inv', 'cust', 'kirim', 'resi', 'act'],
+    diterima: ['inv', 'cust', 'sisa', 'terima', 'pic', 'next', 'act'],
+    plan_bayar: ['inv', 'cust', 'plan', 'bayar', 'act'],
+    lewat: ['inv', 'cust', 'sisa', 'pic', 'late', 'act'],
+    masalah: ['inv', 'cust', 'sisa', 'umur', 'stfu', 'ket', 'act'],
+    close: ['inv', 'cust', 'nilai', 'cplan', 'close', 'lihat']
+  };
+  return (T[tab] || T.diterima).map(k => C[k]);
 }
 
 const viaLabel = v => v === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)';
 function openForm(no){
   const r = all().find(x => x.no === no); if (!r) return;
   // INV-R-04 + INV-R-08: step tersimpan masih bisa dikoreksi sampai step BERIKUTNYA disimpan, lalu terkunci.
-  const ro = !!r.closed || !!r.planBayar, kirimLock = !!r.kirim && !!r.terima, terimaLock = !!r.fu[0].aktual;
+  // MP-R-19: data pengiriman terkunci begitu tersimpan; bagian berikutnya baru muncul setelah step sebelumnya DISIMPAN.
+  const ro = !!r.closed || !!r.planBayar, kirimLock = !!r.kirim, terimaLock = !!r.fu[0].aktual, jne = r.via === 'JNE';
   const resiLock = terimaLock && !!(r.resi || '').trim();
   const LOCK = ' disabled'; // ada rencana bayar: hanya Lihat, aksinya Close
-  FU_STOP = !!r.planBayar;
+  const rc = calc(r);
+  FU_STOP = !!r.planBayar || rc.batal; FU_BATAL = rc.batal;
   state.editNo = no;
   $('#mfTitle').textContent = (ro ? 'Follow Up ' : 'Update Follow Up ') + r.no;
   $('#fuForm').innerHTML = `<fieldset class="plain" ${ro ? 'disabled' : ''}>
     <p class="hint">${esc(r.cust)} · sisa piutang <b>${rp(r.sisa)}</b> dari ${rp(r.nilai)}</p>
-    ${FU_STOP && !r.closed ? `<div class="okmsg chg lock-note">🔒 Customer sudah memberi rencana bayar <b>${fdate(r.planBayar)}</b>. Data tidak bisa diubah lagi; klik <b>Close</b> di daftar setelah pembayaran diterima.</div>` : ''}
+    ${rc.batal ? `<div class="warn chg" style="margin:0 0 10px">⏹ Status ${fuName(rc.lastFu)} = <b>INVOICE BERMASALAH</b>: ${esc(rc.fu[rc.lastFu].ket)}. Follow up berhenti, status sudah terkunci.</div>` : ''}
+    ${r.planBayar && !r.closed ? `<div class="okmsg chg lock-note">🔒 Customer sudah memberi rencana bayar <b>${fdate(r.planBayar)}</b>. Data tidak bisa diubah lagi; klik <b>Close</b> di daftar setelah pembayaran diterima.</div>` : ''}
     <div class="err" id="fErr" role="alert"></div>
-    <p class="hint chg">ⓘ Form diisi step by step. Step yang sudah disimpan masih bisa dikoreksi sampai step berikutnya disimpan, setelah itu terkunci supaya data tidak berubah-ubah.</p>
+    <p class="hint chg">ⓘ Form diisi step by step; bagian berikutnya muncul setelah step sebelumnya disimpan. Data pengiriman terkunci begitu disimpan. Diterima Customer (tanggal terima, no resi, no faktur) dan FU masih bisa dikoreksi sampai step berikutnya disimpan, setelah itu terkunci.</p>
     <h3>1. Pengiriman Invoice</h3>
     <div class="frow chg"><label>Tanggal kirim<input type="date" name="kirim" value="${r.kirim || ''}" ${kirimLock ? 'disabled' : ''}></label>
       <label>Dikirim via<select name="via" ${kirimLock ? 'disabled' : ''}><option value="">- Pilih -</option>${['JNE', 'Driver'].concat(r.via && !['JNE', 'Driver'].includes(r.via) ? [r.via] : []).map(v => `<option ${r.via === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
       <label id="ketKirimWrap" ${r.via ? '' : 'hidden'}><span id="ketKirimLbl">${viaLabel(r.via)}</span><input type="text" name="ketKirim" value="${esc(r.ketKirim)}" ${kirimLock ? 'disabled' : ''}></label></div>
-    ${r.kirim ? `<p class="hint chg" style="margin-top:6px">${kirimLock ? '🔒 Data pengiriman terkunci karena tanggal terima sudah disimpan.' : '✎ Data pengiriman sudah tersimpan dan masih bisa dikoreksi sampai tanggal terima disimpan.'}</p>
-    <div class="frow chg" style="margin-top:8px"><label>No resi<input type="text" name="resi" maxlength="100" value="${esc(r.resi)}"${resiLock ? LOCK : ''}></label>
-      <p class="hint" style="grid-column:span 2;align-self:end">${resiLock ? '🔒 No resi terkunci karena FU 1 sudah disimpan.' : 'No resi bisa diisi belakangan (baru diketahui setelah kirim). Terkunci setelah terisi dan FU 1 disimpan.'}</p></div>` : ''}
-    <div class="step chg" data-step="terima">
+    ${r.kirim ? `<p class="hint chg" style="margin-top:6px">🔒 Data pengiriman terkunci karena invoice sudah dikirim.${jne ? ' No resi diisi di bagian Diterima Customer.' : ''}</p>` : ''}
+    ${r.kirim ? `<div class="step chg" data-step="terima">
     <h3>2. Diterima Customer</h3>
     <div class="frow"><label>Tanggal terima<input type="date" name="terima" value="${r.terima || ''}"${terimaLock ? LOCK : ''}></label>
       <label style="grid-column:span 2">Keterangan<input type="text" name="ketTerima" placeholder="Nama penerima" value="${esc(r.ketTerima)}"${terimaLock ? LOCK : ''}></label></div>
+    <div class="frow chg" style="margin-top:8px">${jne ? `<label><span>No resi JNE <b style="color:var(--red)">*</b></span><input type="text" name="resi" maxlength="100" value="${esc(r.resi)}"${resiLock ? LOCK : ''}></label>` : ''}
+      <label><span>No faktur <b style="color:var(--red)">*</b></span><input type="text" name="faktur" maxlength="40" value="${esc(r.faktur)}"${terimaLock ? LOCK : ''}></label>
+      <p class="hint" style="align-self:end${jne ? '' : ';grid-column:span 2'}">${jne ? (resiLock ? '🔒 No resi terkunci karena FU 1 sudah disimpan.' : 'No resi wajib untuk pengiriman via JNE, diisi saat menyimpan tanggal terima (biasanya baru diketahui belakangan).') : 'Dikirim via ' + esc(r.via || '–') + ': tidak perlu no resi.'}<br>${terimaLock ? '🔒 No faktur terkunci karena FU 1 sudah disimpan.' : 'No faktur dari Invoicing (wajib saat buat invoice). Cocokkan dengan faktur yang dikirim; koreksi di sini ikut mengubah No faktur di Invoicing.'}</p></div>
+    <div class="bkbox chg"><label style="display:block;font-size:14px;color:var(--muted)">Bukti terima <span class="asof">(JPG / PNG / PDF, maks 5 MB per file, boleh lebih dari 1, opsional)</span></label>
+      ${terimaLock ? '' : `<div class="bkdrop" id="bkDrop" tabindex="0" role="button" aria-label="Tempel atau pilih bukti terima">📎 Tekan <b>Ctrl+V</b> untuk menempel screenshot / gambar yang di-copy, seret file ke sini, atau <button type="button" class="btn g sm" id="bkPick">Pilih file</button>
+        <input type="file" id="bkFile" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" multiple hidden></div>`}
+      <ul class="bklist" id="bkList"></ul><div class="err" id="bkErr" role="alert"></div>
+      <p class="hint" style="margin:4px 0 0">${terimaLock ? '🔒 Bukti terima terkunci karena FU 1 sudah disimpan.' : 'Ctrl+V bisa di mana saja di form ini (kecuali saat mengetik di kotak isian). Bukti bisa ditambah / dihapus sampai FU 1 disimpan.'}</p></div>
     ${r.terima ? `<p class="hint chg" style="margin-top:6px">${terimaLock ? '🔒 Data diterima customer terkunci karena FU 1 sudah disimpan.' : '✎ Data diterima customer sudah tersimpan dan masih bisa dikoreksi sampai FU 1 disimpan.'}</p>` : ''}
     <p class="hint" style="margin-top:6px">Umur piutang dihitung dari tanggal terima. Tanpa tanggal terima, invoice belum masuk Monitoring Piutang.</p>
-    </div>
+    </div>` : ''}
     <div class="step chg" data-step="fu">
     <h3>3. Follow Up</h3>
     <div class="picbox chg">
-      <div class="frow"><label>Nama PIC penerima follow up <b style="color:var(--red)">*</b><input type="text" name="pic" maxlength="100" placeholder="Nama orang yang dihubungi" value="${esc(r.pic)}"></label>
-        <label>No WA / Telepon PIC <b style="color:var(--red)">*</b><input type="tel" name="picTelp" maxlength="30" placeholder="0812xxxxxxxx" value="${esc(r.picTelp)}"></label></div>
-      <p class="hint" style="margin:6px 0 0">Diisi sekali untuk invoice ini dan berlaku untuk semua FU. Wajib diisi sebelum FU pertama ditandai dilakukan. Bisa dikoreksi (tidak bisa dikosongkan) sampai plan bayar disimpan.</p>
+      <div class="frow"><label><span>Nama PIC penerima follow up <span class="asof">(opsional)</span></span><input type="text" name="pic" maxlength="100" placeholder="Nama orang yang dihubungi" value="${esc(r.pic)}"></label>
+        <label><span>No WA / Telepon PIC <span class="asof">(opsional)</span></span><input type="tel" name="picTelp" maxlength="30" placeholder="0812xxxxxxxx" value="${esc(r.picTelp)}"></label></div>
+      <p class="hint" style="margin:6px 0 0">Diisi sekali untuk invoice ini dan berlaku untuk semua FU. Tidak wajib; bila nomor diisi harus valid (8 – 20 digit). Bisa diubah sampai plan bayar disimpan.</p>
     </div>
     <p class="hint">Follow up berjalan satu per satu. Isi <b>tanggal dilakukan</b> setelah follow up benar-benar dilakukan, lalu FU berikutnya dijadwalkan otomatis.</p>
     <ul class="fudone" id="fuDone"></ul>
     <div id="fuActive"></div>
-    <span id="fuHidden">${r.fu.map((f, i) => `<input type="hidden" name="plan${i}" value="${f.plan || ''}"><input type="hidden" name="akt${i}" value="${f.aktual || ''}"><input type="hidden" name="ket${i}" value="${esc(f.ket)}">`).join('')}</span>
+    <span id="fuHidden">${r.fu.map((f, i) => `<input type="hidden" name="plan${i}" value="${f.plan || ''}"><input type="hidden" name="akt${i}" value="${f.aktual || ''}"><input type="hidden" name="ket${i}" value="${esc(f.ket)}"><input type="hidden" name="st${i}" value="${esc(f.st || '')}">`).join('')}</span>
     </div>
     <div class="step chg" data-step="bayar">
     <h3>4. Plan Bayar Customer</h3>
@@ -974,38 +1452,69 @@ function openForm(no){
       <button type="button" class="btn g" data-close>Batal</button>${ro ? '' : '<button type="submit" class="btn bl">Simpan</button>'}</div>
     <div id="logBox"></div>`;
   $('#mForm').classList.add('show');
+  BK = (r.bukti || []).map(x => ({...x})); BK_LOCK = ro || terimaLock; bkRender();
   FU_RO = ro;
   FU_ACT = activeFu();
-  FU_LAST = FU_ACT >= 0 ? FU_ACT - 1 : FN() - 1;
-  FU_OPEN = {}; if (FU_LAST >= 0 && !ro) FU_OPEN[FU_LAST] = true;
+  FU_LAST = -1; // MP-R-22: FU yang sudah disimpan (aktual + status + keterangan) langsung terkunci
+  const lastDone = FU_ACT >= 0 ? FU_ACT - 1 : FN() - 1;
+  FU_OPEN = {}; if (lastDone >= 0 && !ro) FU_OPEN[lastDone] = true;
   steps(); fuRender();
 }
 const F = n => $('#fuForm [name="' + n + '"]');
 // Bagian form muncul berurutan: kirim -> terima -> follow up & plan bayar; FU n muncul setelah FU n-1 dilakukan.
 function steps(){
-  const kirim = !!F('kirim').value, terima = kirim && !!F('terima').value;
+  // MP-R-19: bagian berikutnya muncul setelah step sebelumnya disimpan (bukan saat tanggal baru diketik).
+  const r = DATA.find(x => x.no === state.editNo) || {}, kirim = !!r.kirim, terima = kirim && !!r.terima;
   const show = (sel, on) => document.querySelectorAll('#fuForm ' + sel).forEach(el => { el.hidden = !on; });
-  show('[data-step="terima"]', kirim);
-  show('[data-step="fu"], [data-step="bayar"]', terima);
-  $('#nextStep').textContent = !kirim ? 'ⓘ Isi tanggal kirim dulu. Bagian "Diterima Customer" muncul setelah tanggal kirim diisi.'
-    : !terima ? 'ⓘ Isi tanggal terima setelah customer menerima invoice. Follow up dan plan bayar muncul setelah itu.' : '';
+  show('[data-step="fu"]', terima);
+  show('[data-step="bayar"]', terima && !FU_BATAL); // INVOICE BERMASALAH: plan bayar tidak bisa diisi
+  $('#nextStep').textContent = !kirim ? 'ⓘ Isi tanggal kirim dan dikirim via, lalu Simpan. Bagian "Diterima Customer" muncul setelah pengiriman disimpan (tab 2. Konfirmasi Diterima).'
+    : !terima ? 'ⓘ Isi tanggal terima' + (r.via === 'JNE' ? ' dan no resi JNE' : '') + ' setelah customer menerima invoice, lalu Simpan. Follow up dan plan bayar muncul setelah tanggal terima disimpan.' : '';
 }
 // Jadwal: FU1 = terima + 3; FU n = tanggal dilakukan FU n-1 + 7 / 14 / 14 hari. Jadwal boleh diubah / diundur.
 let FU_RO = false;
+/* ===== Bukti terima (MP-R-21): pilih file, seret, atau Ctrl+V; JPG / PNG / PDF, lebih dari 1 ===== */
+let BK = [], BK_LOCK = false;
+const KET_MAX = 60; // MP-R-23: keterangan FU lebih dari ini diringkas 2 baris di tab Semua
+const BK_OK = /^(image\/jpeg|image\/png|application\/pdf)$/;
+const BK_EXT = /\.(jpe?g|png|pdf)$/i;
+const BK_MAX = 5 * 1024 * 1024; // MP-R-33: maks 5 MB per file (sama dengan upload evidence Petty Cash), jumlah file bebas
+function bkAdd(files, via){
+  if (BK_LOCK || !$('#bkList')) return 0;
+  const bad = [], big = [], stamp = TODAY_ISO.replace(/-/g, '') + '-' + new Date().toTimeString().slice(0, 5).replace(':', '');
+  let n = 0;
+  [...files].forEach((f, i) => {
+    if (!BK_OK.test(f.type || '') && !BK_EXT.test(f.name || '')){ bad.push(f.name || f.type || 'file'); return; }
+    if ((f.size || 0) > BK_MAX){ big.push(f.name || 'file'); return; }
+    const pdf = /pdf/i.test(f.type) || /\.pdf$/i.test(f.name || '');
+    const name = f.name && f.name !== 'image.png' ? f.name : 'tempel-' + stamp + '-' + (BK.length + 1) + (pdf ? '.pdf' : '.png'); // screenshot dari clipboard tanpa nama
+    let url = ''; try { url = URL.createObjectURL(f); } catch (e) {}
+    BK.push({name, type: f.type || (pdf ? 'application/pdf' : 'image/png'), size: f.size || 0, url, via}); n++;
+  });
+  $('#bkErr').textContent = [bad.length ? 'Ditolak (hanya JPG / PNG / PDF): ' + bad.join(', ') : '', big.length ? 'Ditolak (lebih dari 5 MB): ' + big.join(', ') : ''].filter(Boolean).join(' · ');
+  bkRender();
+  return n;
+}
+function bkRender(){
+  const ul = $('#bkList'); if (!ul) return;
+  ul.innerHTML = BK.map((b, i) => `<li><div class="th" data-bkview="${i}" title="Lihat">${/pdf/.test(b.type) ? '📄' : b.url ? `<img src="${b.url}" alt="">` : '🖼️'}</div>
+    <span class="nm">${esc(b.name)}</span><span class="sub">${b.size ? Math.max(1, Math.round(b.size / 1024)) + ' KB' : ''}${b.via === 'tempel' ? ' · ditempel' : ''}${b.contoh ? ' · contoh' : ''}</span>
+    ${BK_LOCK ? '' : `<button type="button" class="linkbtn" data-bkdel="${i}">Hapus</button>`}</li>`).join('') || (BK_LOCK ? '<li class="asof" style="border:0;width:auto">Tidak ada bukti terima.</li>' : '');
+}
 // Jumlah FU di form (4 standar + FU tambahan); FU tambahan = hidden input plan/akt/ket index 4 dst.
 const FN = () => document.querySelectorAll('#fuHidden [name^="akt"]').length;
 const activeFu = () => { for (let i = 0; i < FN(); i++) if (!F('akt' + i).value) return i; return -1; };
 const bisaTambah = () => !FU_RO && !F('planBayar').value;
 function addExtra(){
   const n = FN(), base = F('akt' + (n - 1)).value;
-  $('#fuHidden').insertAdjacentHTML('beforeend', `<input type="hidden" name="plan${n}" value="${base ? addDays(base, EXTRA_GAP) : ''}"><input type="hidden" name="akt${n}" value=""><input type="hidden" name="ket${n}" value="">`);
+  $('#fuHidden').insertAdjacentHTML('beforeend', `<input type="hidden" name="plan${n}" value="${base ? addDays(base, EXTRA_GAP) : ''}"><input type="hidden" name="akt${n}" value=""><input type="hidden" name="ket${n}" value=""><input type="hidden" name="st${n}" value="">`);
 }
 // Hapus FU tambahan mulai index k (yang belum disimpan / belum dilakukan).
 function dropExtraFrom(k){
-  for (let i = FN() - 1; i >= Math.max(4, k); i--) ['plan', 'akt', 'ket'].forEach(n => F(n + i).remove());
+  for (let i = FN() - 1; i >= Math.max(4, k); i--) ['plan', 'akt', 'ket', 'st'].forEach(n => F(n + i).remove());
 }
 function fuPlans(){
-  let base = F('terima').value;
+  let base = F('terima') ? F('terima').value : '';
   for (let i = 0; i < 4; i++){
     if (!base){ F('plan' + i).value = ''; continue; }
     if (!F('plan' + i).value) F('plan' + i).value = addDays(base, GAP[i]);
@@ -1015,8 +1524,8 @@ function fuPlans(){
 }
 // Mengisi tanggal dilakukan TIDAK langsung memindahkan FU ke daftar selesai: FU tetap terbuka untuk dikoreksi,
 // jadwal FU berikutnya tampil sebagai usulan (formula otomatis, bisa diedit) dan baru berlaku setelah klik Simpan.
-let FU_ACT = 0, FU_OPEN = {}, FU_STOP = false; // FU_STOP: sudah ada rencana bayar tersimpan
-let FU_LAST = -1; // FU terakhir yang tersimpan sebagai dilakukan: masih bisa dikoreksi sampai FU berikutnya disimpan (INV-R-08)
+let FU_ACT = 0, FU_OPEN = {}, FU_STOP = false, FU_BATAL = false; // FU_STOP: sudah ada rencana bayar tersimpan
+let FU_LAST = -1; // MP-R-22: selalu -1 (FU tersimpan langsung terkunci); dulu FU terakhir bisa dikoreksi (INV-R-08)
 function fuRender(){
   fuPlans();
   const a = FU_ACT, done = [];
@@ -1024,17 +1533,19 @@ function fuRender(){
   for (let i = 0; i < FN() && (a < 0 || i < a); i++){
     const op = !!FU_OPEN[i], edit = i === FU_LAST && !FU_RO && !(a >= 0 && F('akt' + a).value);
     done.push(`<li class="chg">
-      <button type="button" class="fuhead" data-fuopen="${i}" aria-expanded="${op}"><span class="chev">${op ? '▾' : '▸'}</span> ✓ <b>${fuName(i)}</b> dilakukan ${fdate(F('akt' + i).value)} ${edit ? '<span class="pill C">bisa dikoreksi</span>' : '<span class="pill st-close">🔒 terkunci</span>'}</button>
-      <div class="fubody" ${op ? '' : 'hidden'}><div class="frow">
+      <button type="button" class="fuhead" data-fuopen="${i}" aria-expanded="${op}"><span class="chev">${op ? '▾' : '▸'}</span> ✓ <b>${fuName(i)}</b> dilakukan ${fdate(F('akt' + i).value)} · ${esc(F('st' + i).value || '–')} ${edit ? '<span class="pill C">bisa dikoreksi</span>' : '<span class="pill st-close">🔒 terkunci</span>'}</button>
+      <div class="fubody" ${op ? '' : 'hidden'}><div class="frow f4">
         <div><span class="asof">Jadwal follow up</span><br>${fdate(F('plan' + i).value)}</div>
         ${edit ? `<label>Tanggal dilakukan<input type="date" class="fu-last" data-k="akt" value="${F('akt' + i).value}"></label>
-        <label>Keterangan / jawaban customer <b style="color:var(--red)">*</b><input type="text" class="fu-last" data-k="ket" value="${esc(F('ket' + i).value)}"></label>`
+        <label class="chg"><span>Status <b style="color:var(--red)">*</b></span><select class="fu-last" data-k="st">${stOpts(i, F('st' + i).value)}</select></label>
+        <label><span>Keterangan / jawaban customer <b style="color:var(--red)">*</b></span><input type="text" class="fu-last" data-k="ket" value="${esc(F('ket' + i).value)}"></label>`
         : `<div><span class="asof">Tanggal dilakukan</span><br>${fdate(F('akt' + i).value)}</div>
+        <div class="chg"><span class="asof">Status</span><br>${stPill(F('st' + i).value)}</div>
         <div><span class="asof">Keterangan / jawaban customer</span><br>${esc(F('ket' + i).value) || '–'}</div>`}
-      </div>${edit ? `<p class="hint" style="margin:4px 0 0">✎ Masih bisa dikoreksi sampai ${fuName(i + 1)} disimpan sebagai dilakukan. Tanggal dilakukan tidak bisa dikosongkan.</p>` : ''}</div></li>`);
+      </div>${edit ? `<p class="hint" style="margin:4px 0 0">✎ Masih bisa dikoreksi sampai ${fuName(i + 1)} disimpan sebagai dilakukan. Tanggal dilakukan tidak bisa dikosongkan.</p>${stEffectHtml(F('st' + i).value)}` : ''}</div></li>`);
   }
   $('#fuDone').innerHTML = done.join('');
-  if (FU_STOP){ $('#fuActive').innerHTML = '<p class="hint chg">⏹ Follow up berhenti karena customer sudah memberi rencana tanggal bayar.</p>'; return; }
+  if (FU_STOP){ $('#fuActive').innerHTML = FU_BATAL ? '<p class="hint chg">⏹ Follow up berhenti karena status FU terakhir INVOICE BERMASALAH.</p>' : '<p class="hint chg">⏹ Follow up berhenti karena customer sudah memberi rencana tanggal bayar.</p>'; return; }
   const tambahBtn = n => `<div class="funext chg"><button type="button" class="btn g sm" data-fuadd>+ Tambah FU ${n}</button><span class="asof">Bila customer belum memberi rencana bayar. Jadwal otomatis ${EXTRA_GAP} hari setelah FU ${n - 1} dilakukan.</span></div>`;
   if (a < 0){ $('#fuActive').innerHTML = `<p class="hint" style="color:var(--green)">✓ Semua follow up (FU 1 – ${FN()}) sudah dilakukan.</p>${bisaTambah() ? tambahBtn(FN() + 1) : ''}`; return; }
   const dis = FU_RO ? 'disabled' : '', akt = F('akt' + a).value;
@@ -1049,34 +1560,31 @@ function fuRender(){
     ? `<div class="funext chg"><label>Jadwal FU ${a + 2}<input type="date" class="fu-next" value="${F('plan' + (a + 1)).value}" ${dis}></label><span class="asof">Otomatis: tanggal dilakukan FU ${a + 1} + ${GAP[a + 1]} hari. Boleh diubah. FU ${a + 2} mulai berjalan setelah klik <b>Simpan</b>.</span></div>`
     : `<p class="hint" style="margin:6px 0 0">${a < 3 ? `Setelah tanggal dilakukan diisi, jadwal FU ${a + 2} diusulkan otomatis (${GAP[a + 1]} hari setelahnya) dan masih bisa diubah sebelum disimpan.` : 'FU terakhir. Jadwal boleh diundur terus sampai ada plan bayar.'}</p>`;
   $('#fuActive').innerHTML = `<div class="fuact"><div class="fuact-t">${fuName(a)} <span class="pill st-diterima">berjalan</span>${akt ? ' <span class="pill W">belum disimpan</span>' : ''}</div><div class="err chg" id="fuActErr" role="alert"></div>
-    <div class="frow"><label>Jadwal follow up<input type="date" class="fu-in" data-k="plan" value="${F('plan' + a).value}" ${dis}><span class="asof">Otomatis: ${dasar}. Boleh diubah / diundur.</span></label>
-      <label>Tanggal dilakukan<span class="ingrp"><input type="date" class="fu-in" data-k="akt" value="${akt}" ${dis}><button type="button" class="btn g sm" data-today ${dis}>Hari ini</button></span><span class="asof">Kosongkan bila belum dilakukan.</span></label>
-      <label>Keterangan / jawaban customer <b style="color:var(--red)">*</b><input type="text" class="fu-in" data-k="ket" value="${esc(F('ket' + a).value)}" ${dis}></label></div>
-    ${next}</div>`;
+    <div class="frow f4"><label>Jadwal follow up<input type="date" class="fu-in" data-k="plan" value="${F('plan' + a).value}" ${dis}><span class="asof">Otomatis: ${dasar}. Boleh diubah / diundur.</span></label>
+      <label>Tanggal dilakukan<span class="ingrp"><input type="date" class="fu-in" data-k="akt" value="${akt}" ${dis}><button type="button" class="btn g sm" data-today ${dis}>Hari ini</button></span><span class="asof">Boleh diisi sekarang bersama jadwal, atau dikosongkan dulu dan diisi menyusul.</span></label>
+      <label class="chg"><span>Status ${fuName(a)} <b style="color:var(--red)">*</b></span><select class="fu-in" data-k="st" ${dis}>${stOpts(a, F('st' + a).value)}</select></label>
+      <label><span>Keterangan / jawaban customer <b style="color:var(--red)">*</b></span><input type="text" class="fu-in" data-k="ket" value="${esc(F('ket' + a).value)}" ${dis}></label></div>
+    <div id="stHint">${stEffectHtml(F('st' + a).value)}</div>
+    ${akt && STOP_ST.includes(F('st' + a).value) ? '' : next}</div>`;
 }
 const validPhone = v => { v = v.trim(); const dg = v.replace(/\D/g, '').length; return /^\+?[0-9 ().-]+$/.test(v) && dg >= 8 && dg <= 20; };
 // PIC penerima follow up: satu per invoice, diisi sekali di awal follow up.
-function picMissing(){
-  if (!F('pic').value.trim()) return {el: F('pic'), m:'Isi nama PIC penerima follow up dulu'};
-  if (!F('picTelp').value.trim()) return {el: F('picTelp'), m:'Isi nomor WA / telepon PIC penerima follow up dulu'};
-  if (!validPhone(F('picTelp').value)) return {el: F('picTelp'), m:'Nomor WA / telepon PIC tidak valid (8 – 20 digit). Perbaiki dulu'};
+function picMissing(){ // MP-R-19: PIC tidak wajib; nomor yang diisi tetap harus valid
+  if (F('picTelp').value.trim() && !validPhone(F('picTelp').value)) return {el: F('picTelp'), m:'Nomor WA / telepon PIC tidak valid (8 – 20 digit). Perbaiki dulu'};
   return null;
 }
 // Syarat FU ditandai dilakukan: keterangan FU + PIC penerima follow up.
 function fuMissing(i){
+  if (!F('st' + i).value) return {el: $('#fuActive .fu-in[data-k="st"]'), k:'st', m:'Pilih status FU ' + (i + 1) + ' dulu'};
   if (!F('ket' + i).value.trim()) return {el: $('#fuActive .fu-in[data-k="ket"]'), k:'ket', m:'Isi keterangan / jawaban customer FU ' + (i + 1) + ' dulu'};
   return picMissing();
 }
 // FU baru boleh ditandai dilakukan (dan FU berikutnya dibuka) setelah keterangan dan PIC diisi.
+// MP-R-22: tanggal dilakukan boleh diisi bersama jadwal (tidak dikosongkan lagi). Status + keterangan wajib saat Simpan.
 function tryDone(i, val, input){
-  const miss = fuMissing(i);
-  if (miss){
-    if (input) input.value = F('akt' + i).value;
-    $('#fuActErr').textContent = miss.m + ' sebelum mengisi tanggal dilakukan.';
-    miss.el.focus();
-    return;
-  }
   setAkt(i, val);
+  const miss = val ? fuMissing(i) : null;
+  if (miss) $('#fuActErr').textContent = miss.m + ' sebelum Simpan.';
 }
 function setAkt(i, val){
   F('akt' + i).value = val;
@@ -1088,15 +1596,20 @@ function setAkt(i, val){
 function saveForm(){
   const r = DATA.find(x => x.no === state.editNo), err = [];
   const v = n => F(n) ? F(n).value.trim() : '';
-  // INV-R-08: kirim terkunci setelah terima tersimpan; terima & no resi terkunci setelah FU 1 tersimpan.
-  const kirimLock = !!r.kirim && !!r.terima, terimaLock = !!r.fu[0].aktual;
+  // MP-R-19: kirim terkunci setelah tersimpan; terima, no resi & no faktur terkunci setelah FU 1 tersimpan.
+  const kirimLock = !!r.kirim, terimaLock = !!r.fu[0].aktual; // MP-R-19: kirim terkunci begitu tersimpan
   if (!kirimLock && v('kirim') && !v('via')) err.push('Pilih dikirim via (JNE / Driver).');
   if (v('terima') && !v('kirim')) err.push('Isi tanggal kirim dulu sebelum tanggal terima.');
   if (v('kirim') && v('terima') && v('terima') < v('kirim')) err.push('Tanggal terima tidak boleh sebelum tanggal kirim.');
   const idx = Array.from({length: FN()}, (_, i) => i);
   if (!v('terima') && (idx.some(i => v('plan' + i) || v('akt' + i) || v('ket' + i)) || v('planBayar'))) err.push('Follow up dan plan bayar baru bisa diisi setelah tanggal terima customer.');
+  for (const i of idx) if (v('akt' + i) && !v('st' + i)) err.push('Pilih status FU ' + (i + 1) + ' dulu sebelum menandai sudah dilakukan.');
   for (const i of idx) if (v('akt' + i) && !v('ket' + i)) err.push('Isi keterangan FU ' + (i + 1) + ' dulu sebelum menandai sudah dilakukan.');
-  if (FU_ACT >= 0 && v('akt' + FU_ACT)){ const miss = fuMissing(FU_ACT); if (miss && miss.k !== 'ket') err.push(miss.m + ' sebelum menyimpan.'); }
+  if (FU_ACT >= 0 && v('akt' + FU_ACT)){ const miss = fuMissing(FU_ACT); if (miss && miss.k !== 'ket' && miss.k !== 'st') err.push(miss.m + ' sebelum menyimpan.'); }
+  if (F('faktur') && !F('faktur').disabled && !v('faktur')) err.push('No faktur tidak boleh kosong.');
+  if (F('resi') && !terimaLock && v('terima') && !v('resi')) err.push('No resi JNE wajib diisi saat menyimpan tanggal terima.');
+  const Ld = idx.filter(i => v('akt' + i)).pop(), stL = Ld === undefined ? '' : v('st' + Ld);
+  if (STOP_ST.includes(stL) && v('planBayar')) err.push('Status ' + stL + ' tidak bisa disimpan bersama plan bayar. Kosongkan plan bayar atau ubah status ' + fuName(Ld) + '.');
   else if (v('picTelp') && !validPhone(v('picTelp'))) err.push('Nomor WA / telepon PIC tidak valid (8 – 20 digit).');
   if (!v('terima') && (v('pic') || v('picTelp'))) err.push('PIC penerima follow up baru bisa diisi setelah tanggal terima customer.');
   for (const i of idx.slice(1)) if ((i < 4 ? v('akt' + i) : v('plan' + i)) && !v('akt' + (i - 1))) err.push('FU ' + (i + 1) + ' baru bisa diisi setelah FU ' + i + ' dilakukan.');
@@ -1105,18 +1618,23 @@ function saveForm(){
   if (err.length){ $('#fErr').textContent = err.join(' '); return; }
   const before = calc(r).status, sisaNow = calc(r).sisa;
   if (!kirimLock) Object.assign(r, {kirim: v('kirim') || r.kirim || null, via: v('via'), ketKirim: v('ketKirim')});
-  if (r.kirim && !(terimaLock && (r.resi || '').trim())) r.resi = v('resi');
+  if (r.kirim && F('resi') && !(terimaLock && (r.resi || '').trim())) r.resi = v('resi');
+  if (F('faktur') && !F('faktur').disabled && v('faktur') !== r.faktur){ r.log.unshift({wkt: TODAY_ISO + ' ' + new Date().toTimeString().slice(0, 5), user:'Finance AR', aksi:'koreksi faktur', isi:'No faktur ' + (r.faktur || '–') + ' → ' + v('faktur') + ' (ikut terupdate di Invoicing)'}); r.faktur = v('faktur'); }
   if (!terimaLock) Object.assign(r, {terima: v('terima') || r.terima || null, ketTerima: v('ketTerima')});
-  if (v('planBayar') && !r.planBayar) r.planNominal = sisaNow; // nilai plan = sisa saat plan dibuat
+  if (!terimaLock && $('#bkList')){ const b0 = (r.bukti || []).map(x => x.name).join('|'); r.bukti = BK.map(x => ({...x})); if (r.bukti.map(x => x.name).join('|') !== b0) r.log.unshift({wkt: TODAY_ISO + ' ' + new Date().toTimeString().slice(0, 5), user:'Finance AR', aksi:'bukti terima', isi: r.bukti.length + ' file: ' + (r.bukti.map(x => x.name).join(', ') || '–')}); }
+  // Nilai plan = sisa saat plan dibuat. MP-R-24: bila invoice sudah lunas saat plan diisi, nilai plan = tagihan sejak diterima (tidak 0).
+  if (v('planBayar') && !r.planBayar) r.planNominal = sisaNow > 0 ? sisaNow : calc(r).nilai - r.bayar.filter(b => r.terima && b.tgl < r.terima).reduce((a, b) => a + b.nom, 0);
   Object.assign(r, {
-    fu: idx.map(i => ({plan: v('plan' + i) || null, aktual: v('akt' + i) || null, ket: v('ket' + i)})), pic: v('pic') || r.pic, picTelp: v('picTelp') || r.picTelp, planBayar: v('planBayar') || null, ketPlan: v('ketPlan')});
+    fu: idx.map(i => ({plan: v('plan' + i) || null, aktual: v('akt' + i) || null, ket: v('ket' + i), st: v('st' + i)})), pic: F('pic') ? v('pic') : r.pic, picTelp: F('picTelp') ? v('picTelp') : r.picTelp, planBayar: v('planBayar') || null, ketPlan: v('ketPlan')});
+  // INVOICE BERMASALAH: FU setelahnya dikosongkan (follow up berhenti).
+  if (stL === MASALAH) r.fu = r.fu.slice(0, Math.max(4, Ld + 1)).map((f, i) => i > Ld ? {plan: null, aktual: null, ket: '', st: ''} : f);
   r.log.unshift({wkt: TODAY_ISO + ' ' + new Date().toTimeString().slice(0, 5), user:'Finance AR', aksi:'simpan',
-    isi: [r.terima && 'Tgl terima ' + fdate(r.terima), r.fu.map((f, i) => f.aktual ? 'FU' + (i + 1) + ' ✓' : '').filter(Boolean).join(', '), r.planBayar && 'Plan bayar ' + fdate(r.planBayar)].filter(Boolean).join(' · ') || 'Data pengiriman'});
-  const after = calc(r).status, moved = after !== before;
+    isi: [r.terima && 'Tgl terima ' + fdate(r.terima), r.fu.map((f, i) => f.aktual ? 'FU' + (i + 1) + ' ✓ ' + (f.st || '') : '').filter(Boolean).join(', '), r.planBayar && 'Plan bayar ' + fdate(r.planBayar)].filter(Boolean).join(' · ') || 'Data pengiriman'});
+  const after = calc(r).status, moved = after !== before, tabAfter = after === 'batal' ? 'masalah' : after;
   if (moved){ r.statusFrom = before; r.changed = TODAY_ISO + ' ' + new Date().toTimeString().slice(0, 5); }
   closeModal(); state.flash = r.no; renderFU();
-  const pindah = moved && state.fuStatus && state.fuStatus !== after;
-  showMsg('Data follow up ' + r.no + ' tersimpan.' + (pindah ? ' Invoice pindah ke tab ' + tabLabel(after) + '.' : ''), pindah ? after : null);
+  const pindah = moved && state.fuStatus && state.fuStatus !== tabAfter;
+  showMsg('Data follow up ' + r.no + ' tersimpan.' + (pindah ? ' Invoice pindah ke tab ' + tabLabel(tabAfter) + '.' : ''), pindah ? tabAfter : null);
 }
 // Pesan setelah simpan; bila invoice pindah tab, ada tombol untuk langsung melihatnya (paling atas di tab tujuan).
 function showMsg(text, goto){
@@ -1124,9 +1642,9 @@ function showMsg(text, goto){
   el.innerHTML = `<div class="okmsg chg" role="status">✓ ${esc(text)}${goto ? ` <button type="button" class="linkbtn" data-fuview="${goto}">Lihat di tab ${esc(tabLabel(goto))} →</button>` : ''} <button type="button" class="linkbtn" data-closemsg style="float:right">×</button></div>`;
 }
 // INV-R-08: close hanya bila sudah ada plan bayar dan sudah lunas (sisa piutang 0).
-const closeBlock = r => !r.planBayar ? 'Isi plan tanggal bayar dulu' : r.sisa > 0 ? 'Belum lunas, sisa piutang ' + rp(r.sisa) : '';
+const closeBlock = r => r.batal ? 'Invoice bermasalah: follow up berhenti, selesaikan masalahnya dulu' : !r.planBayar ? 'Isi plan tanggal bayar dulu' : r.sisa > 0 ? 'Belum lunas, sisa piutang ' + rp(r.sisa) : '';
 function openClose(no){
-  const r = all().find(x => x.no === no); if (!r || closeBlock(r)) return;
+  const r = all().find(x => x.no === no); if (!r || closeBlock(r) || !r.planBayar) return; // hanya dari tab 4
   state.editNo = no;
   $('#mcTitle').textContent = 'Close Invoice ' + r.no;
   $('#mcBody').innerHTML = `<p>${esc(r.cust)} · plan bayar <b>${fdate(r.planBayar)}</b></p>
@@ -1153,16 +1671,16 @@ function doClose(){
 function pbReal(){
   // INV-R-09: semua penerimaan piutang, termasuk invoice yang belum punya plan bayar.
   return all().filter(r => !state.comp || r.comp === state.comp)
-    .flatMap(r => r.bayar.filter(b => b.tgl.slice(0, 4) === state.pbYear).map(b => ({...b, r})))
+    .flatMap(r => r.bayar.filter(b => b.tgl.slice(0, 4) === state.pbYear && (!state.pbD1 || b.tgl >= state.pbD1) && (!state.pbD2 || b.tgl <= state.pbD2)).map(b => ({...b, r})))
     .sort((a, b) => a.tgl < b.tgl ? -1 : a.tgl > b.tgl ? 1 : 0);
 }
-// Ketepatan bayar: selisih hari tanggal bayar - janji bayar (0 = sesuai, negatif = lebih cepat, positif = telat).
+// Ketepatan bayar: selisih hari tanggal bayar - plan bayar (0 = sesuai, negatif = lebih cepat, positif = telat).
 const REA_ST = {close:'Lunas & close', lunas:'Lunas, belum close', sebagian:'Bayar sebagian'};
 const reaInfo = p => ({sel: p.r.planBayar ? Math.round((new Date(p.tgl + 'T00:00:00') - new Date(p.r.planBayar + 'T00:00:00')) / 864e5) : null,
   st: p.r.closed ? 'close' : p.r.sisa <= 0 ? 'lunas' : 'sebagian'});
-const ketLbl = s => s === null ? '-' : s === 0 ? 'Sesuai janji' : (s < 0 ? 'Lebih cepat ' + (-s) : 'Telat ' + s) + ' hari';
+const ketLbl = s => s === null ? '-' : s === 0 ? 'Sesuai plan' : (s < 0 ? 'Lebih cepat ' + (-s) : 'Telat ' + s) + ' hari';
 // INV-R-08: plan tetap dihitung walau invoice sudah close; nominal = sisa piutang saat plan dibuat (planNom).
-function pbRows(){ return all().filter(r => r.planBayar && r.planBayar.slice(0, 4) === state.pbYear && (!state.comp || r.comp === state.comp)); }
+function pbRows(){ return all().filter(r => r.planBayar && r.planBayar.slice(0, 4) === state.pbYear && (!state.pbD1 || r.planBayar >= state.pbD1) && (!state.pbD2 || r.planBayar <= state.pbD2) && (!state.comp || r.comp === state.comp)); }
 const psum = list => list.reduce((a, r) => a + r.planNom, 0);
 function pagePB(){
   const years = [...new Set(['2026', ...all().filter(r => r.planBayar).map(r => r.planBayar.slice(0, 4))])].sort().reverse();
@@ -1170,16 +1688,21 @@ function pagePB(){
     <p class="legend">Seluruh halaman ini menu baru: total plan bayar per bulan dengan rincian invoicenya.</p>
     <details class="cases"><summary>Aturan &amp; skenario uji</summary><ol>
       <li>12 card = Januari &ndash; Desember tahun yang dipilih. Isi card: <b>Plan</b> = total nilai plan invoice yang plan bayarnya jatuh di bulan itu dan jumlah invoice; <b class="chg">Realisasi</b> = <span class="chg">semua penerimaan</span> dari modul Penerimaan Uang (termasuk invoice yang belum punya plan bayar dan yang sudah close; ketepatan tampil "–" bila tanpa plan), dihitung di bulan tanggal penerimaannya (tanggal transaksi bank).</li>
-      <li class="chg">Plan tetap menghitung invoice yang <b>sudah lunas / close</b>, dengan nilai = <b>sisa piutang saat plan bayar disimpan</b>, supaya plan bisa dibandingkan dengan realisasi. Plan bayar diisi di menu Follow Up Piutang.</li>
+      <li class="chg">Plan tetap menghitung invoice yang <b>sudah lunas / close</b>, dengan nilai = <b>sisa piutang saat plan bayar disimpan</b>, supaya plan bisa dibandingkan dengan realisasi. <b>Nilai card dan tabel plan tidak berkurang / jadi 0 walau invoice sudah dibayar</b>; bila plan baru diisi setelah lunas, nilainya = tagihan sejak diterima. Info sudah dibayar ada di <b>Realisasi bayar</b>. Plan bayar diisi di menu Follow Up Piutang.</li>
       <li>Card hijau = ada plan bayar; <b>merah = bulan sudah lewat</b> dan masih ada invoice yang belum close; bulan berjalan diberi tanda "Bulan ini".</li>
       <li class="chg">Card <b>All</b> = total setahun (Januari&ndash;Desember) dan menjadi pilihan awal. Klik card bulan &rarr; rincian invoice bulan itu; klik card yang sama lagi atau card All &rarr; rincian semua bulan.</li>
       <li class="chg"><b>Export Excel</b> mengikuti card yang dipilih: All = sheet <b>Ringkasan</b> (12 bulan) + sheet <b>Rincian</b>; card bulan = sheet Rincian bulan itu saja. Contoh hasil: <code>docs/contoh-export-dashboard-plan-bayar.xlsx</code>.</li>
       <li>Filter <b>Company</b> dan <b>Tahun</b> menghitung ulang semua card.</li>
-      <li class="chg">Tabel <b>Realisasi bayar</b> disusun ulang supaya mudah dibaca: setiap baris = satu pembayaran. Kolom <b>Janji vs Bayar</b> membandingkan plan bayar dengan tanggal bayar sebenarnya dan menampilkan <b>Ketepatan</b> (Sesuai janji / Lebih cepat n hari / Telat n hari). Kolom <b>Posisi Invoice Sekarang</b> menampilkan sisa tagihan dan status (Bayar sebagian / Lunas, belum close / Lunas &amp; close). Di atas tabel ada ringkasan jumlah pembayaran tepat waktu vs telat. Coba: card <b>September</b> (telat 5 hari) dan <b>November</b> (bayar sebagian, lebih cepat).</li>
+      <li class="chg"><b>Bulan</b> default <b>bulan berjalan</b> (sama dengan klik card bulan; pilih Semua = card All). <b>Tgl plan / bayar dari-sampai</b> menyaring plan (tanggal plan bayar) dan realisasi (tanggal bayar).</li>
+      <li class="chg"><b>Tabel memakai AG Grid</b>: klik judul kolom untuk urut, ikon ☰ untuk filter per kolom, tarik batas judul untuk melebarkan, seret judul untuk memindah kolom. Kolom No dan Invoice tetap di kiri saat digeser; baris total di bawah. Saat data dimuat ulang tampil <b>skeleton loading</b> sebentar.</li>
+      <li class="chg">Tabel <b>Realisasi bayar</b> disusun ulang supaya mudah dibaca: setiap baris = satu pembayaran. Kolom <b>Plan vs Bayar</b> membandingkan plan bayar dengan tanggal bayar sebenarnya dan menampilkan <b>Ketepatan</b> (Sesuai plan / Lebih cepat n hari / Telat n hari). Kolom <b>Posisi Invoice Sekarang</b> menampilkan sisa tagihan dan status (Bayar sebagian / Lunas, belum close / Lunas &amp; close). Di atas tabel ada ringkasan jumlah pembayaran tepat waktu vs telat. Coba: card <b>September</b> (telat 5 hari) dan <b>November</b> (bayar sebagian, lebih cepat).</li>
     </ol></details>
     <div class="panel hl">
       <div class="filters" style="align-items:flex-end">
         <label class="fl">Tahun Plan Bayar<select id="pbYear">${years.map(y => `<option ${state.pbYear === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+        <label class="fl chg">Bulan<select id="pbMonthSel" style="min-width:130px"><option value="0">Semua (All)</option>${BULAN.map((b, i) => `<option value="${i + 1}" ${state.pbMonth === i + 1 ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
+        <label class="fl chg">Tgl plan / bayar dari<input type="date" id="pbD1" value="${state.pbD1}" style="min-width:140px"></label>
+        <label class="fl chg">sampai<input type="date" id="pbD2" value="${state.pbD2}" style="min-width:140px"></label>
         <label class="fl">Company<select id="fCompany"><option value="">Semua Company</option>${['STM','VUCA','SUSTAIN'].map(c => `<option ${state.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         <div class="sp" style="flex:1"></div>
         <button class="btn chg" type="button" id="btnPbExport">Export Excel</button>
@@ -1189,7 +1712,8 @@ function pagePB(){
     <div class="panel hl"><h2 id="pbTitle" style="font-size:16px;margin:0 0 10px;font-weight:600"></h2><div id="pbBody"></div></div>
     <div class="panel hl chg"><h2 id="pbReaTitle" style="font-size:16px;margin:0 0 10px;font-weight:600"></h2><div id="pbReaBody"></div></div>`;
 }
-function renderPB(){
+function renderPB(){ const ms = $('#pbMonthSel'); if (ms) ms.value = state.pbMonth; skel([['#pbCards', 'pbcards'], ['#pbBody', 'table'], ['#pbReaBody', 'table']], renderPB0); }
+function renderPB0(){
   const rows = pbRows(), curY = TODAY_ISO.slice(0, 4), curM = +TODAY_ISO.slice(5, 7);
   const now = state.pbYear === curY ? curM : 0;
   const by = Array.from({length: 12}, () => []);
@@ -1213,30 +1737,31 @@ function renderPB(){
   $('#pbReaTitle').textContent = 'Realisasi bayar ' + (m ? BULAN[m - 1] + ' ' + state.pbYear : state.pbYear + ' (semua bulan)');
   const ri = rl.map(reaInfo), tepat = ri.filter(x => x.sel !== null && x.sel <= 0).length, telat = ri.filter(x => x.sel > 0).length;
   $('#pbReaBody').innerHTML = !rl.length ? `<div class="empty">Belum ada pembayaran${m ? ' di bulan ini' : ''}.</div>` : `
-    <p class="hint" style="margin:-4px 0 6px">Setiap baris = satu pembayaran customer. Bandingkan <b>janji bayar</b> (plan) dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
-    <p style="margin:0 0 10px">Total dibayar <b>${rp(rsum(rl))}</b> dari ${rl.length} pembayaran · <span style="color:var(--green)"><b>${tepat}</b> tepat waktu / lebih cepat</span> · <span class="late"><b>${telat}</b> telat dari janji</span></p>
+    <p class="hint" style="margin:-4px 0 6px">Setiap baris = satu pembayaran customer. Bandingkan <b>plan bayar</b> dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
+    <p style="margin:0 0 10px">Total dibayar <b>${rp(rsum(rl))}</b> dari ${rl.length} pembayaran · <span style="color:var(--green)"><b>${tepat}</b> tepat waktu / lebih cepat</span> · <span class="late"><b>${telat}</b> telat dari plan</span></p>
     <div class="scroll"><table class="reatbl">
-    <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp">Janji vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
-      <tr><th>Janji Bayar<span class="sub">plan bayar</span></th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
+    <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp chg">Plan vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
+      <tr><th class="chg">Plan Bayar</th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
     <tbody>${rl.map((p, i) => { const x = ri[i]; return `<tr><td>${i + 1}</td><td class="no">${esc(p.r.no)}<span class="sub">${fdate(p.r.tgl)}</span></td>
       <td>${esc(p.r.cust)}<span class="sub">${esc(p.r.prog)} · ${esc(p.r.comp)}</span></td>
       <td>${fdate(p.r.planBayar)}</td><td><b>${fdate(p.tgl)}</b><span class="sub">${esc(p.no)}</span></td>
-      <td>${x.sel === null ? '<span class="asof">–</span>' : x.sel === 0 ? '<span class="pill L">Sesuai janji</span>' : x.sel < 0 ? `<span class="pill C">Lebih cepat ${-x.sel} hari</span>` : `<span class="pill M">Telat ${x.sel} hari</span>`}</td>
+      <td>${x.sel === null ? '<span class="asof">–</span>' : x.sel === 0 ? '<span class="pill L">Sesuai plan</span>' : x.sel < 0 ? `<span class="pill C">Lebih cepat ${-x.sel} hari</span>` : `<span class="pill M">Telat ${x.sel} hari</span>`}</td>
       <td class="num mono"><b>${rp(p.nom)}</b></td>
       <td class="num mono">${rp(p.r.sisa)}<span class="sub">dari ${rp(p.r.nilai)}</span></td>
       <td><span class="pill ${x.st === 'close' ? 'st-close' : x.st === 'lunas' ? 'L' : 'P'}">${REA_ST[x.st]}</span></td></tr>`; }).join('')}</tbody>
     <tfoot><tr><td colspan="6">Total ${rl.length} pembayaran</td><td class="num mono">${rp(rsum(rl))}</td><td colspan="2"></td></tr></tfoot></table></div>`;
   $('#pbTitle').innerHTML = 'Plan bayar ' + (m ? BULAN[m - 1] + ' ' + state.pbYear + ' <button type="button" class="linkbtn" data-pball>tampilkan All</button>' : 'All ' + state.pbYear + ' (Januari – Desember)');
   $('#pbBody').innerHTML = !list.length ? `<div class="empty">Tidak ada plan bayar${m ? ' di bulan ini' : ''}.</div>` : `<div class="scroll"><table>
-    <thead><tr><th>No</th><th>Plan Bayar</th><th>Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num chg">Nilai Plan<span class="sub">sisa saat plan dibuat</span></th><th class="num">Sisa Sekarang</th><th>Umur</th></tr></thead>
+    <thead><tr><th>No</th><th>Plan Bayar</th><th>Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num chg">Nilai Plan<span class="sub">tidak berkurang walau sudah dibayar</span></th><th>Umur</th></tr></thead>
     <tbody>${list.map((r, i) => `<tr class="click" data-inv="${esc(r.no)}" tabindex="0"><td>${i + 1}</td>
       <td><b>${fdate(r.planBayar)}</b><span class="sub">${esc(r.ketPlan)}</span></td>
       <td class="no">${esc(r.no)}<span class="sub">${fdate(r.tgl)}</span></td>
       <td>${esc(r.cust)}<span class="sub">${esc(r.prog)}</span></td><td>${esc(r.comp)}</td>
       <td class="num mono">${rp(r.nilai)}</td><td class="num mono"><b>${rp(r.planNom)}</b></td>
-      <td class="num mono">${rp(r.sisa)}${r.closed ? ' <span class="pill st-close">Close</span>' : r.sisa <= 0 ? ' <span class="pill L">Lunas</span>' : ''}</td>
       <td>${r.cat ? `<span class="umur ${r.cat}">${r.umur} hari</span> <span class="pill ${r.cat}">${CAT[r.cat].nm}</span>` : '<span class="asof">–</span>'}</td></tr>`).join('')}</tbody>
-    <tfoot><tr><td colspan="5">Total ${list.length} invoice</td><td class="num mono">${rp(list.reduce((a, r) => a + r.nilai, 0))}</td><td class="num mono">${rp(psum(list))}</td><td class="num mono">${rp(sum(list))}</td><td></td></tr></tfoot></table></div>`;
+    <tfoot><tr><td colspan="5">Total ${list.length} invoice</td><td class="num mono">${rp(list.reduce((a, r) => a + r.nilai, 0))}</td><td class="num mono">${rp(psum(list))}</td><td></td></tr></tfoot></table></div>
+    <p class="hint chg" style="margin-top:8px">Nilai plan tetap seperti saat plan dibuat walau invoice sudah dibayar / close. Info sudah dibayar ada di <b>Realisasi bayar</b> di bawah.</p>`;
+  if (AG()) gridPB(list, rl); // MP-R-25
 }
 
 /* ================= Export Excel (mockup: file dibuat di browser, format sama dengan export server) ================= */
@@ -1265,18 +1790,18 @@ function exportPB(){
   const m = state.pbMonth, all = pbRows().slice().sort((a, b) => a.planBayar < b.planBayar ? -1 : a.planBayar > b.planBayar ? 1 : a.no.localeCompare(b.no));
   const rows = m ? all.filter(r => +r.planBayar.slice(5, 7) === m) : all;
   const judul = 'Dashboard Plan Bayar ' + (m ? BULAN[m - 1] + ' ' : '') + state.pbYear;
-  const info = 'Company: ' + (state.comp || 'Semua Company') + ' | Posisi per ' + TODAY_ISO.split('-').reverse().join('-') + ' | Plan = sisa piutang saat plan dibuat, termasuk invoice yang sudah close; Realisasi = penerimaan invoice yang punya plan bayar';
+  const info = 'Company: ' + (state.comp || 'Semua Company') + ' | Posisi per ' + TODAY_ISO.split('-').reverse().join('-') + ' | Plan = nilai saat plan dibuat, tidak berkurang walau sudah dibayar / close; Realisasi = semua penerimaan (sheet Realisasi)';
   const reals = pbReal().filter(p => !m || +p.tgl.slice(5, 7) === m), rlast = Math.max(5, reals.length + 4);
   const rea = [[judul + ' - Realisasi Bayar (Penerimaan)'], [info], [],
-    ['No', 'Bulan Bayar', 'No Invoice', 'Tgl Invoice', 'Customer', 'Project', 'Company', 'Janji Bayar (Plan)', 'Tanggal Bayar', 'Ketepatan', 'Jumlah Dibayar', 'No Penerimaan', 'Sisa Tagihan Sekarang', 'Nilai Invoice', 'Status Invoice'],
+    ['No', 'Bulan Bayar', 'No Invoice', 'Tgl Invoice', 'Customer', 'Project', 'Company', 'Plan Bayar', 'Tanggal Bayar', 'Ketepatan', 'Jumlah Dibayar', 'No Penerimaan', 'Sisa Tagihan Sekarang', 'Nilai Invoice', 'Status Invoice'],
     ...reals.map((p, i) => { const x = reaInfo(p); return [i + 1, BULAN[+p.tgl.slice(5, 7) - 1], p.r.no, xd(p.r.tgl), p.r.cust, p.r.prog, p.r.comp, xd(p.r.planBayar), xd(p.tgl), ketLbl(x.sel), p.nom, p.no, p.r.sisa, p.r.nilai, REA_ST[x.st]]; }),
     ...(reals.length ? [['', '', '', '', '', '', '', '', '', 'Total', F_(`SUM(K5:K${rlast})`)]] : [])];
   const last = Math.max(5, rows.length + 4);
   const rin = [[judul + ' - Rincian Invoice'], [info], [],
-    ['No', 'Bulan', 'Tgl Plan Bayar', 'Ket Plan Bayar', 'No Invoice', 'Tgl Invoice', 'Customer', 'Project', 'Company', 'Nilai Invoice', 'Nilai Plan', 'Sisa Piutang Sekarang', 'Umur (hari)', 'Kategori', 'Status Invoice'],
-    ...rows.map((r, i) => [i + 1, BULAN[+r.planBayar.slice(5, 7) - 1], xd(r.planBayar), r.ketPlan, r.no, xd(r.tgl), r.cust, r.prog, r.comp, r.nilai, r.planNom, r.sisa, r.umur === null ? '' : r.umur, r.cat ? CAT[r.cat].nm : '', r.closed ? 'Close' : r.sisa <= 0 ? 'Lunas, belum close' : 'Belum lunas']),
-    ...(rows.length ? [['', '', '', '', '', '', '', '', 'Total', F_(`SUM(J5:J${last})`), F_(`SUM(K5:K${last})`), F_(`SUM(L5:L${last})`)]] : [])];
-  const sheets = [{name: 'Rincian', aoa: rin, from: 5, fmt: {C: 'dd-mm-yyyy', F: 'dd-mm-yyyy', J: NUM, K: NUM, L: NUM}, widths: [5, 11, 14, 28, 14, 12, 34, 32, 10, 16, 16, 16, 11, 14, 18]},
+    ['No', 'Bulan', 'Tgl Plan Bayar', 'Ket Plan Bayar', 'No Invoice', 'Tgl Invoice', 'Customer', 'Project', 'Company', 'Nilai Invoice', 'Nilai Plan', 'Umur (hari)', 'Kategori'],
+    ...rows.map((r, i) => [i + 1, BULAN[+r.planBayar.slice(5, 7) - 1], xd(r.planBayar), r.ketPlan, r.no, xd(r.tgl), r.cust, r.prog, r.comp, r.nilai, r.planNom, r.umur === null ? '' : r.umur, r.cat ? CAT[r.cat].nm : '']),
+    ...(rows.length ? [['', '', '', '', '', '', '', '', 'Total', F_(`SUM(J5:J${last})`), F_(`SUM(K5:K${last})`)]] : [])];
+  const sheets = [{name: 'Rincian', aoa: rin, from: 5, fmt: {C: 'dd-mm-yyyy', F: 'dd-mm-yyyy', J: NUM, K: NUM}, widths: [5, 11, 14, 28, 14, 12, 34, 32, 10, 16, 16, 11, 14]},
     {name: 'Realisasi', aoa: rea, from: 5, fmt: {D: 'dd-mm-yyyy', H: 'dd-mm-yyyy', I: 'dd-mm-yyyy', K: NUM, M: NUM, N: NUM}, widths: [5, 11, 14, 12, 34, 30, 10, 14, 13, 18, 16, 15, 16, 16, 18]}];
   if (!m){
     const sum = [[judul + ' - Ringkasan per Bulan'], [info], [], ['Bulan', 'Jumlah Invoice', 'Total Plan Bayar', 'Jumlah Penerimaan', 'Total Realisasi'],
@@ -1292,24 +1817,28 @@ function exportPB(){
 function exportFU(){
   const rows = fuList(fuBase()), closed = state.fuTab === 'close';
   const tab = FU_TABS.find(([k]) => k === (closed ? 'close' : state.fuStatus))[1];
-  const head = ['No', 'No Invoice', 'Tgl Invoice', 'Customer', 'Company', 'Project', 'Nilai Invoice', 'Sisa Piutang', 'Tgl Kirim', 'Dikirim Via', 'Ket Kirim', 'No Resi', 'Tgl Terima', 'Ket Terima', 'PIC Penerima FU', 'No WA / Telp PIC', 'Umur (hari)', 'Kategori'];
-  for (let i = 1; i <= 4; i++) head.push('FU' + i + ' Jadwal', 'FU' + i + ' Dilakukan', 'FU' + i + ' Keterangan');
-  head.push('FU Tambahan (FU 5 dst.)', 'Plan Bayar', 'Ket Plan Bayar', 'Status'); if (closed) head.push('Tgl Close', 'Ket Close');
+  // MP-R-18: kolom mengikuti tab Semua (Visual Control): faktur, pajak, pengiriman, PIC, FU 1 - 4 (plan, aktual, status, keterangan).
+  const head = ['No', 'No Invoice', 'Tgl Invoice', 'No Faktur', 'No SPK', 'TOP', 'PO', 'Customer', 'Company', 'Project', 'Konsultan', 'Divisi',
+    'DPP', 'PPN', 'Nilai Invoice', 'Terbayar', 'Sisa Piutang', 'Tgl Kirim', 'Dikirim Via', 'Ket Kirim', 'No Resi', 'Tgl Terima', 'Nama Penerima', 'Bukti Terima', 'PIC Penerima FU', 'No WA / Telp PIC'];
+  for (let i = 1; i <= 4; i++) head.push('FU' + i + ' Plan', 'FU' + i + ' Aktual', 'FU' + i + ' Status', 'FU' + i + ' Keterangan');
+  head.push('FU Tambahan (FU 5 dst.)', 'Plan Bayar', 'Ket Plan Bayar', 'Umur (hari)', 'Kategori', 'Status Invoice'); if (closed) head.push('Tgl Close', 'Ket Close');
   const data = rows.map((r, i) => {
-    const v = [i + 1, r.no, xd(r.tgl), r.cust, r.comp, r.prog, r.nilai, r.sisa, xd(r.kirim), r.via, r.ketKirim, r.resi, xd(r.terima), r.ketTerima, r.pic, r.picTelp, r.umur === null ? '' : r.umur, r.cat && r.sisa > 0 ? CAT[r.cat].nm : ''];
-    r.fu.slice(0, 4).forEach(x => v.push(xd(x.plan), xd(x.aktual), x.ket));
-    v.push(r.fu.slice(4).map((x, n) => 'FU' + (n + 5) + (x.aktual ? ' dilakukan ' + fdate(x.aktual) + (x.ket ? ' (' + x.ket + ')' : '') : ' jadwal ' + fdate(x.plan))).join('; '));
-    v.push(xd(r.planBayar), r.ketPlan, ST[r.status]); if (closed) v.push(xd(r.closed.tgl), r.closed.ket);
+    const v = [i + 1, r.no, xd(r.tgl), r.faktur || '', r.spk || '', r.top || '', r.po || '', r.cust, r.comp, r.prog, r.konsultan || '', r.divisi || '',
+      r.dpp, r.ppn, r.nilai, r.terbayar, r.sisa, xd(r.kirim), r.via, r.ketKirim, r.resi, xd(r.terima), r.ketTerima, r.bukti.map(b => b.name).join('; '), r.pic, r.picTelp];
+    [0, 1, 2, 3].forEach(k => { const x = r.fu[k] || {}; v.push(xd(x.plan), xd(x.aktual), x.st || '', x.ket || ''); });
+    v.push(r.fu.slice(4).map((x, n) => 'FU' + (n + 5) + (x.aktual ? ' dilakukan ' + fdate(x.aktual) + ' ' + (x.st || '') + (x.ket ? ' (' + x.ket + ')' : '') : ' jadwal ' + fdate(x.plan))).join('; '));
+    v.push(xd(r.planBayar), r.ketPlan, r.umur === null ? '' : r.umur, r.cat && r.sisa > 0 ? CAT[r.cat].nm : '', ST[r.status] + (r.batal ? ': ' + (r.fu[r.lastFu].ket || '') : ''));
+    if (closed) v.push(xd(r.closed.tgl), r.closed.ket);
     return v;
   });
-  const last = Math.max(5, rows.length + 4);
-  const aoa = [['Follow Up Piutang - ' + tab + (closed ? ' ' + state.fuYear : '')], ['Posisi per ' + TODAY_ISO.split('-').reverse().join('-') + ' - ' + rows.length + ' invoice'], [], head, ...data,
-    ...(rows.length ? [['', '', '', '', '', 'Total', F_(`SUM(G5:G${last})`), F_(`SUM(H5:H${last})`)]] : [])];
   const col = n => { let s = ''; for (n++; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; };
-  const dateCols = ['C', 'I', 'M'].concat([0, 1, 2, 3].flatMap(i => [col(18 + i * 3), col(19 + i * 3)]), [col(31)], closed ? [col(34)] : []);
-  const fmt = {G: NUM, H: NUM}; dateCols.forEach(c => fmt[c] = 'dd-mm-yyyy');
+  const last = Math.max(5, rows.length + 4), numIdx = [12, 13, 14, 15, 16];
+  const tot = head.map((h, k) => k === 11 ? 'Total' : numIdx.includes(k) ? F_(`SUM(${col(k)}5:${col(k)}${last})`) : '');
+  const aoa = [['Follow Up Piutang - ' + tab + (closed ? ' ' + state.fuYear : '')], ['Posisi per ' + TODAY_ISO.split('-').reverse().join('-') + ' - ' + rows.length + ' invoice'], [], head, ...data, ...(rows.length ? [tot] : [])];
+  const fmt = {}; numIdx.forEach(k => fmt[col(k)] = NUM);
+  head.forEach((h, k) => { if (/^Tgl |Plan$|Aktual$|^Plan Bayar$/.test(h)) fmt[col(k)] = 'dd-mm-yyyy'; });
   const file = 'Follow_Up_Piutang_' + (closed ? 'close' : state.fuStatus || 'semua') + '_' + TODAY_ISO + '.xlsx';
-  if (xlsxDownload(file, [{name: 'Follow Up Piutang', aoa, from: 5, fmt, widths: head.map((h, i) => i === 0 ? 5 : /Customer|Project|Ket/.test(h) ? 24 : 13)}]))
+  if (xlsxDownload(file, [{name: 'Follow Up Piutang', aoa, from: 5, fmt, widths: head.map((h, i) => i === 0 ? 5 : /Customer|Project|Ket|Keterangan|Revisi|Tambahan/.test(h) ? 26 : /Status/.test(h) ? 22 : 14)}]))
     toast('Excel terunduh: ' + file + ' (tab ' + tab + ', ' + rows.length + ' invoice).');
 }
 
@@ -1422,7 +1951,7 @@ const INV = (() => {
       <li class="chg">Tab <b>Invoiced</b> (baru): semua invoice yang sudah dibuat, urut <b>Tanggal Invoice terbaru</b>. Filter Tahun, Bulan, dan Company dari tanggal invoice. Nomor invoice yang sudah ada di Follow Up Piutang bisa diklik untuk membukanya.</li>
       <li class="chg">Setelah Save, termin hilang dari tab Konsultasi, invoice masuk tab Invoiced (filter diarahkan ke tahun invoice), dan muncul di <b>Follow Up Piutang</b> tab <b>1. Kirim Invoice</b>.</li>
       <li class="chg"><b>Ekspor Excel</b> di tiap tab mengikuti filter yang sedang aktif.</li>
-      <li class="chg">Tab <b>Invoiced</b>: status <b>Invoiced</b> (+ <b>Journaled</b> bila jurnal invoice sudah diposting) atau <b>Close</b>. Aksi <b>Lihat</b>, <b>Cetak invoice</b>, <b>Cetak kwitansi</b>, dan <b>Close</b>. Close hanya aktif bila invoice <b>sudah lunas</b> (sisa piutang 0 persis), alasan wajib; aturan yang sama dengan Close di Follow Up Piutang. Coba: close <b>250/STM/2026</b> (lunas); <b>258/STM/2026</b> tidak bisa (masih ada sisa).</li>
+      <li class="chg">Tab <b>Invoiced</b>: status <b>Invoiced</b> (+ <b>Journaled</b> bila jurnal invoice sudah diposting) atau <b>Close</b>. Aksi <b>Lihat</b>, <b>Cetak invoice</b>, <b>Cetak kwitansi</b>. <span class="chg">Tidak ada tombol Close di Invoicing: close invoice hanya satu jalur, di <b>Follow Up Piutang &rarr; 4. Tunggu Bayar &amp; Close</b> (ada plan bayar + lunas).</span></li>
       <li>Coba: buat invoice SPK <b>052/STM/MKT-SPK/V/26</b> (WAPU) &rarr; Save &rarr; cek tab Invoiced &rarr; klik nomornya &rarr; isi tanggal kirim dan terima di Follow Up Piutang &rarr; cek Monitoring Piutang.</li>
     </ol></details>
     <div class="tabs" role="tablist">${[['kons','Konsultasi'],['non','Non Konsultasi'],['inv','Invoiced']].map(([k, l]) =>
@@ -1568,8 +2097,7 @@ const INV = (() => {
       <td class="act chg">${(() => { const st = invState(r), blk = invCloseBlock(st);
         return `<div class="inv-acts"><button type="button" class="btn btn-xs" data-ivact="lihat" data-no="${esc(r.no)}">Lihat</button>
         <button type="button" class="btn btn-xs" data-ivact="invoice" data-no="${esc(r.no)}">Cetak invoice</button>
-        <button type="button" class="btn btn-xs" data-ivact="kwitansi" data-no="${esc(r.no)}">Cetak kwitansi</button>
-        <button type="button" class="btn btn-xs btn-danger" data-ivact="close" data-no="${esc(r.no)}" ${blk ? 'disabled title="' + esc(blk) + '"' : 'title="Close invoice (sudah lunas)"'}>Close</button></div>`; })()}</td></tr>`;
+        <button type="button" class="btn btn-xs" data-ivact="kwitansi" data-no="${esc(r.no)}">Cetak kwitansi</button></div>`; })()}</td></tr>`; // MP-R-27: Close hanya di Follow Up tab 4
     }).join('') : '<tr><td class="empty" colspan="8">Tidak ada invoice untuk filter ini.</td></tr>';
     if (state.flash && rows.some(r => r.no === state.flash)) state.flash = null;
   }
@@ -1711,9 +2239,9 @@ const INV = (() => {
     if (!salesPick){ toast('COA Penjualan wajib dipilih di tabel jurnal.'); return; }
     const ti = visibleIdx[0], t = cur.top[ti], no = currentInvoiceNo;
     DATA.push({no, tgl: TODAY_ISO, cust: cur.customer, comp: COMP_BY_CODE[no.split('/')[1]] || 'STM', prog: cur.project + ' - ' + t.nama,
-      spk: cur.noSpk, top: t.nama, topKe: ti + 1, resi: '',
+      spk: cur.noSpk, top: t.nama, topKe: ti + 1, resi: '', faktur: fk.value.trim(), po: po.value.trim(), konsultan: cur.leader || '', divisi: '', rounds: [], terimaAwal: null,
       nilai: lastPiutang, bayar: [], kirim: null, via: '', ketKirim: '', terima: null, ketTerima: '', pic: '', picTelp: '',
-      fu: [0, 1, 2, 3].map(() => ({plan: null, aktual: null, ket: ''})), planBayar: null, ketPlan: '', closed: null,
+      fu: [0, 1, 2, 3].map(() => ({plan: null, aktual: null, ket: '', st: ''})), planBayar: null, ketPlan: '', closed: null,
       log: [{wkt: TODAY_ISO + ' ' + new Date().toTimeString().slice(0, 5), user: 'Finance', aksi: 'buat invoice', isi: 'Dari menu Invoicing: ' + t.nama + ' SPK ' + cur.noSpk + ' (PO ' + po.value.trim() + ', Faktur ' + fk.value.trim() + ')'}]});
     cur.doneIdx.push(ti); cur.issued.push(no);
     if (cur.top.every((_, i) => cur.doneIdx.includes(i))) cur.status = 'Invoiced';
@@ -1757,6 +2285,7 @@ const INV = (() => {
 /* ================= Navigasi & event ================= */
 function show(){
   document.querySelectorAll('.side a[data-go]').forEach(a => a.classList.toggle('on', a.dataset.go === state.page));
+  document.body.classList.toggle('pg-fu', state.page === 'fu'); // MP-R-15: font besar hanya di Follow Up
   if (state.page === 'inv'){ $('#main').innerHTML = INV.html(); INV.mount(); return; }
   $('#main').innerHTML = state.page === 'mp' ? pageMP() : state.page === 'pb' ? pagePB() : pageFU();
   state.page === 'mp' ? renderMP() : state.page === 'pb' ? renderPB() : renderFU();
@@ -1774,6 +2303,10 @@ function bindInputs(){
   on('#fuFu', 'change', e => { state.fuFu = e.target.value; renderFU(); });
   on('#fuBulan', 'change', e => { state.fuBulan = e.target.value; renderFU(); });
   on('#fuThn', 'change', e => { state.fuThn = e.target.value; renderFU(); });
+  // MP-R-25: filter periode
+  ['mpPY', 'mpPM', 'mpPD1', 'mpPD2', 'fuPY', 'fuPM', 'fuPD1', 'fuPD2'].forEach(k => on('#' + k, 'change', e => { state[k] = e.target.value; show(); }));
+  on('#pbMonthSel', 'change', e => { state.pbMonth = +e.target.value; renderPB(); });
+  ['pbD1', 'pbD2'].forEach(k => on('#' + k, 'change', e => { state[k] = e.target.value; renderPB(); }));
 }
 function closeModal(){ document.querySelectorAll('.modal').forEach(m => m.classList.remove('show')); }
 function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2400); }
@@ -1784,15 +2317,28 @@ document.addEventListener('click', e => {
   if (go){ if (go.dataset.go === 'x'){ toast('Menu lain tidak termasuk mockup ini.'); return; }
     state.page = go.dataset.go; if (go.dataset.fustatus !== undefined){ state.fuTab = 'open'; state.fuStatus = go.dataset.fustatus; } closeModal(); show(); return; }
   const ge = t.closest('[data-goedit]');
-  if (ge){ closeModal(); state.page = 'fu'; state.fuTab = 'open'; state.fuStatus = ''; show(); openForm(ge.dataset.goedit); return; }
+  if (ge){ closeModal(); const gr = all().find(x => x.no === ge.dataset.goedit); state.page = 'fu'; { const k = gr ? fuRowKey(gr) : ''; state.fuTab = k === 'close' ? 'close' : 'open'; state.fuStatus = k === 'close' ? '' : k; } state.fuFu = ''; state.fuBulan = ''; state.fuThn = ''; show(); openForm(ge.dataset.goedit); return; }
   if (t.matches('[data-close]') || t.classList.contains('modal')){ closeModal(); return; }
   const pbc = t.closest('[data-pbm]'); if (pbc){ const m = +pbc.dataset.pbm; state.pbMonth = state.pbMonth === m ? 0 : m; renderPB(); return; }
   if (t.id === 'btnPbExport'){ exportPB(); return; }
   if (t.matches('[data-pball]')){ state.pbMonth = 0; renderPB(); return; }
   const cx = t.closest('[data-cardxl]'); if (cx){ exportMP(cx.dataset.cardxl); return; }
+  const fc = t.closest('[data-fucard]');
+  if (fc){ const k = fc.dataset.fucard;
+    if (k === 'close'){ state.fuTab = 'close'; state.fuStatus = ''; state.fuYear = state.fuPY || CUR_Y; }
+    else { state.fuTab = 'open'; state.fuStatus = k === 'belum_fu' ? 'diterima' : k; state.fuFu = k === 'belum_fu' ? '1' : ''; state.fuBulan = ''; state.fuThn = ''; }
+    show(); return; }
   const card = t.closest('.card:not(.nb)');
   if (card){ const c = card.dataset.cat; state.cat = state.cat === c ? '' : c; renderMP(); return; }
   const tab = t.closest('[data-tab]'); if (tab){ state.tab = tab.dataset.tab; renderMP(); return; }
+  const fm = t.closest('[data-fumain]');
+  if (fm){ const cur = fuGrp()[0]; if (cur !== 'mon') fuLastSub[cur] = fuKey();
+    const g = FU_GROUPS.find(x => x[0] === fm.dataset.fumain), k = g[0] === 'mon' ? '' : fuLastSub[g[0]];
+    state.fuTab = k === 'close' ? 'close' : 'open'; state.fuStatus = k === 'close' ? '' : k;
+    if (k !== 'plan_bayar'){ state.fuBulan = ''; state.fuThn = ''; } if (k === 'close' || k === 'plan_bayar') state.fuFu = ''; show(); return; }
+  const fp = t.closest('[data-fuproc]');
+  if (fp){ const r = all().find(x => x.no === fp.dataset.fuproc); const k = fuRowKey(r);
+    state.fuTab = k === 'close' ? 'close' : 'open'; state.fuStatus = k === 'close' ? '' : k; state.fuFu = ''; state.fuBulan = ''; state.fuThn = ''; state.flash = r.no; show(); if (k !== 'masalah') openForm(r.no); return; }
   const fv = t.closest('[data-fuview]');
   if (fv){ const k = fv.dataset.fuview; state.fuTab = k === 'close' ? 'close' : 'open'; state.fuStatus = k === 'close' ? '' : k;
     if (k !== 'plan_bayar'){ state.fuBulan = ''; state.fuThn = ''; } if (k === 'close' || k === 'plan_bayar') state.fuFu = ''; show(); return; }
@@ -1819,7 +2365,7 @@ document.addEventListener('click', e => {
   if (t.id === 'btnLog'){ const r = DATA.find(x => x.no === state.editNo);
     $('#logBox').innerHTML = r.log.length ? `<div class="scroll" style="margin-top:10px"><table class="futbl"><thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>Isi</th></tr></thead><tbody>${r.log.map(l => `<tr><td>${esc(l.wkt)}</td><td>${esc(l.user)}</td><td>${esc(l.aksi)}</td><td>${esc(l.isi)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="hint" style="margin-top:10px">Belum ada riwayat.</p>'; return; }
   if (t.id === 'btnExport'){ exportMP(); return; }
-  if (t.id === 'resetBtn'){ DATA = seed(); INV.reset();Object.assign(state, {comp:'', cust:'', q:'', cat:'', tab:'inv', sort:{k:'umur', d:'desc'}, fuTab:'open', fuStatus:'', fuCust:'', fuQ:'', fuFu:'', fuBulan:'', fuThn:'', pbYear:'2026', pbMonth:0}); closeModal(); show(); toast('Data contoh dikembalikan.'); return; }
+  if (t.id === 'resetBtn'){ DATA = seed(); INV.reset();Object.assign(state, {comp:'', cust:'', q:'', cat:'', tab:'inv', sort:{k:'umur', d:'desc'}, fuTab:'open', fuStatus:'belum_kirim', fuCust:'', fuQ:'', fuFu:'', fuBulan:'', fuThn:'', pbYear:CUR_Y, pbMonth:+CUR_M}, PER_DEF()); closeModal(); show(); toast('Data contoh dikembalikan.'); return; }
 });
 document.addEventListener('change', e => {
   if (!e.target.closest('#fuForm')) return;
@@ -1832,6 +2378,7 @@ document.addEventListener('change', e => {
     if (!e.target.value.trim()){ e.target.value = F(k + i).value; return; } // tidak bisa dikosongkan
     F(k + i).value = e.target.value;
     if (k === 'akt'){ if (FU_ACT === i + 1) F('plan' + FU_ACT).value = addDays(e.target.value, gapOf(FU_ACT)); fuRender(); }
+    if (k === 'st') fuRender();
     return;
   }
   if (e.target.matches('.fu-in[data-k="akt"]')){
@@ -1844,10 +2391,35 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (!e.target.closest('#fuForm')) return;
   if (e.target.matches('.fu-in[data-k="plan"], .fu-in[data-k="ket"]')) F(e.target.dataset.k + FU_ACT).value = e.target.value;
+  if (e.target.matches('.fu-in[data-k="st"]') && F('st' + FU_ACT).value !== e.target.value){
+    F('st' + FU_ACT).value = e.target.value; $('#fuActErr').textContent = '';
+    if (F('akt' + FU_ACT).value) fuRender(); else $('#stHint').innerHTML = stEffectHtml(e.target.value);
+  }
   if (e.target.matches('.fu-next')) F('plan' + (FU_ACT + 1)).value = e.target.value;
   steps();
 });
 document.addEventListener('submit', e => { if (e.target.id === 'fuForm'){ e.preventDefault(); saveForm(); } });
+// MP-R-21: Ctrl+V di form Update (bukan saat mengetik teks biasa) menempel file / screenshot ke bukti terima.
+document.addEventListener('paste', e => {
+  if (!$('#mForm').classList.contains('show') || !$('#bkDrop')) return;
+  const files = e.clipboardData && e.clipboardData.files ? [...e.clipboardData.files] : [];
+  if (!files.length) return; // teks biasa: biarkan masuk ke kotak isian
+  e.preventDefault();
+  if (bkAdd(files, 'tempel')) toast(files.length + ' file ditempel ke bukti terima.');
+});
+document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('#bkDrop'); if (d){ e.preventDefault(); d.classList.add('on'); } });
+document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('#bkDrop'); if (d) d.classList.remove('on'); });
+document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#bkDrop'); if (!d) return; e.preventDefault(); d.classList.remove('on'); bkAdd(e.dataTransfer.files, 'seret'); });
+document.addEventListener('change', e => { if (e.target.id === 'bkFile'){ bkAdd(e.target.files, 'pilih'); e.target.value = ''; } });
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.id === 'bkPick'){ e.stopPropagation(); $('#bkFile').click(); return; }
+  if (t.closest('#bkDrop') && t.id !== 'bkFile'){ $('#bkDrop').focus(); return; }
+  const del = t.closest('[data-bkdel]'); if (del && !BK_LOCK){ BK.splice(+del.dataset.bkdel, 1); bkRender(); return; }
+  const kx = t.closest('[data-ketx]'); if (kx){ const k = kx.previousElementSibling, op = k.classList.toggle('open'); kx.textContent = op ? 'ringkas ▴' : 'selengkapnya ▾'; return; }
+  const ka = t.closest('[data-ketall]'); if (ka){ const tb = $('#fuBody .vc'), on = tb.classList.toggle('ket-all'); ka.textContent = on ? 'Ringkas semua keterangan' : 'Tampilkan semua keterangan'; return; }
+  const vw = t.closest('[data-bkview]'); if (vw){ const b = BK[+vw.dataset.bkview]; if (b && b.url) window.open(b.url, '_blank'); else toast('File contoh, tidak ada isi di mockup.'); }
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.card[role="button"]')){ e.preventDefault(); e.target.click(); }
@@ -1855,6 +2427,91 @@ document.addEventListener('keydown', e => {
 });
 $('#chgToggle').addEventListener('change', e => document.body.classList.toggle('show-chg', e.target.checked));
 show();
+const TOUR_BAR='<div class="tour-bar" id="tourBar"><button type="button" class="tour-btn" id="tourBtn" aria-haspopup="true" aria-expanded="false"><span class="tb-ic">&#10067;</span> Tutorial</button><div class="tour-menu" id="tourMenu" hidden></div></div>';
+
+const TOUR_CFG={wait:450,
+ msg:t=>{const el=document.getElementById('toast');if(el&&typeof toast==='function')toast(t);else alert(t);},
+ cleanup:()=>{closeModal();},
+ page:()=>{const F=TOUR_CFG.flows();return state.page==='mp'?F[1].steps:state.page==='pb'?F[2].steps:state.page==='inv'?F[0].steps.slice(0,7):F[0].steps.slice(7);},
+ flows:()=>{
+  const P=(page,o)=>()=>{closeModal();Object.assign(state,{page},o||{});show();};
+  const FU=k=>P('fu',{fuTab:k==='close'?'close':'open',fuStatus:k==='close'?'':k,fuFu:'',fuBulan:'',fuThn:'',fuPY:'',fuPM:'',fuPD1:'',fuPD2:''});
+  const openF=k=>()=>{FU(k)();const r=all().find(x=>!x.closed&&!x.batal&&x.status===k);if(r)openForm(r.no);};
+  const inv=t=>()=>{P('inv')();const b=document.querySelector('[data-invtab="'+t+'"]');if(b)b.click();};
+  const addInv=()=>{inv('kons')();const b=document.querySelector('#invBody [data-addinv]');if(b)b.click();};
+  return [
+  {title:'Invoice sampai Close',desc:'Invoicing → Follow Up Piutang (Proses, Perlu Perhatian & Selesai, Monitoring)',steps:[
+   {pg:'Penerimaan → Invoicing',go:inv('kons'),el:'[data-invtab="kons"]',t:'1. Invoicing',d:'Tab Konsultasi berisi termin SPK yang siap ditagih; tab Invoiced berisi invoice yang sudah dibuat.'},
+   {el:'#invBody [data-addinv]',t:'2. Buat invoice',d:'Klik pensil oranye di termin yang mau ditagih.'},
+   {pg:'Form Add Invoicing',go:addInv,el:'#nomorPo',t:'3. Nomor PO',d:'Wajib diisi.'},
+   {el:'#nomorFaktur',t:'4. Nomor Faktur',d:'Wajib diisi.'},
+   {el:'#journalBody',t:'5. COA Penjualan',d:'Pilih COA Penjualan di tabel jurnal (wajib).'},
+   {el:'#btnSave',t:'6. Save',d:'Invoice masuk tab Invoiced dan langsung muncul di Follow Up Piutang → Proses → 1. Kirim Invoice. Tutorial tidak menyimpan apa pun.'},
+   {pg:'Invoicing · Invoiced',go:inv('inv'),el:'#ivTable',t:'7. Invoiced',d:'Klik nomor invoice untuk membukanya di Follow Up Piutang.'},
+   {pg:'Report → Follow Up Piutang',go:FU('belum_kirim'),el:'.tabs.fumain',t:'8. Tiga tab utama',d:'<b>Proses</b> (bekerja, tab 1 - 4), <b>Monitoring</b> (hanya melihat), <b>Perlu Perhatian &amp; Selesai</b> (FU terlambat, bermasalah, close). Tutorial memilih periode Semua supaya contoh tampil.'},
+   {el:'#fuCards',t:'9. Card ringkasan',d:'Jumlah invoice dan nominal per tahap. Klik card untuk membuka daftarnya.'},
+   {el:'#fuBody [data-edit]',t:'10. Update',d:'Klik <b>Update</b> untuk mengisi tahap invoice.'},
+   {pg:'Proses → 1. Kirim Invoice',go:openF('belum_kirim'),el:'#fuForm',t:'11. Kirim invoice',d:'Isi tanggal kirim dan dikirim via (JNE / Driver). Data kirim terkunci setelah disimpan, lalu invoice pindah ke tab 2.'},
+   {el:'#fuForm button[type=submit]',t:'12. Simpan',d:'Simpan di setiap tahap. Tutorial tidak menyimpan apa pun.'},
+   {pg:'Proses → 2. Konfirmasi Diterima',go:openF('dikirim'),el:'#fuForm',t:'13. Konfirmasi diterima',d:'Isi tanggal terima, no resi (wajib bila via JNE), no faktur, dan bukti terima (bisa Ctrl+V screenshot). Lalu pindah ke tab 3.'},
+   {pg:'Proses → 3. Follow Up Customer',go:openF('diterima'),el:'#fuForm',t:'14. Follow up customer',d:'FU 1 - 4 terjadwal otomatis. Isi status, keterangan, dan tanggal dilakukan; FU yang disimpan terkunci. Status INVOICE BERMASALAH menghentikan follow up. Plan bayar memindahkan invoice ke tab 4.'},
+   {pg:'Proses → 4. Tunggu Bayar & Close',go:FU('plan_bayar'),el:'#fuBody',t:'15. Tunggu bayar & close',d:'Satu-satunya tempat <b>Close</b>: aktif bila sudah ada plan bayar dan sudah lunas. Keterangan close wajib.'},
+   {pg:'Perlu Perhatian & Selesai → FU Terlambat',go:FU('lewat'),el:'#fuCards',t:'16. Perlu Perhatian & Selesai',d:'Card FU terlambat, Invoice bermasalah, Closed. Tab FU Terlambat berisi follow up yang jadwalnya sudah lewat.'},
+   {pg:'Perlu Perhatian & Selesai → Invoice Bermasalah',go:FU('masalah'),el:'#fuBody',t:'17. Invoice bermasalah',d:'Follow up berhenti; keterangan menjelaskan kenapa (batal, revisi, dll.). Penyelesaiannya menunggu prosedur.'},
+   {pg:'Perlu Perhatian & Selesai → Invoice Close',go:FU('close'),el:'#fuBody',t:'18. Invoice close',d:'Invoice yang sudah close, per tahun close.'},
+   {pg:'Monitoring',go:FU(''),el:'#fuBody',t:'19. Monitoring',d:'Semua invoice yang belum close, lengkap seperti Visual Control. Tombol <b>Buka di Proses</b> membuka invoice di tab kerjanya.'}]},
+  {title:'Monitoring Piutang',desc:'Card umur piutang, daftar, detail, export',steps:[
+   {pg:'Report → Monitoring Piutang',go:P('mp',{cat:'',tab:'inv'}),el:'#cards',t:'1. Card umur piutang',d:'Total, Lancar (0-60 hari), Potensi Macet (61-90), Macet (> 90), dan Belum Diterima Customer. Klik card untuk menyaring daftar.'},
+   {el:'#fCompany',t:'2. Filter',d:'Company, Tahun / Bulan / Tanggal invoice (default Semua), Customer, dan Cari.'},
+   {el:'#cards [data-cardxl]',t:'3. Download per card',d:'Unduh Excel invoice di kategori itu saja.'},
+   {el:'#tabBody',t:'4. List piutang per invoice',d:'Urut, saring, dan geser kolom seperti Excel. Invoice bermasalah ditandai merah beserta keterangannya.'},
+   {pg:'Detail invoice',go:()=>{P('mp',{cat:'',tab:'inv'})();const b=document.querySelector('#tabBody [data-inv]');if(b)b.click();},el:'#mdBody',t:'5. Detail invoice',d:'Data invoice, pengiriman, follow up, dan riwayat penerimaan.'},
+   {pg:'Rekap per Customer',go:P('mp',{tab:'cust'}),el:'#tabBody',t:'6. Rekap per customer',d:'Total sisa piutang per customer per kategori umur.'},
+   {el:'#btnExport',t:'7. Download Excel',d:'Unduh daftar sesuai filter.'}]},
+  {title:'Dashboard Plan Bayar',desc:'Plan bayar dan realisasi per bulan',steps:[
+   {pg:'Report → Dashboard Plan Bayar',go:P('pb'),el:'#pbYear',t:'1. Company & Tahun',d:'Pilih company dan tahun plan bayar.'},
+   {el:'#pbCards',t:'2. Card bulan',d:'Card All = total setahun; 12 card berisi plan bayar dan realisasi per bulan. Klik card untuk menyaring.'},
+   {el:'#pbBody',t:'3. Rincian plan bayar',d:'Invoice yang dijanjikan dibayar pada bulan terpilih.'},
+   {el:'#pbReaBody',t:'4. Realisasi',d:'Penerimaan yang sudah masuk dibandingkan dengan plan bayarnya.'},
+   {el:'#btnPbExport',t:'5. Export Excel',d:'All: sheet Ringkasan + Rincian + Realisasi; bulan: Rincian + Realisasi bulan itu.'}]}];}};
+const _tourShow=show;show=function(){_tourShow.apply(this,arguments);tourBarIns();};
+function tourBarIns(){const m=document.getElementById('main');if(m&&!document.getElementById('tourBar'))m.insertAdjacentHTML('afterbegin',TOUR_BAR);}
+setTimeout(tourBarIns,0);
+
+/* ===== TUTORIAL v2 (driver.js 1.3.1) =====
+   Tombol "Tutorial" di baris atas konten (bukan mengambang di bawah, supaya tidak menutupi Simpan / action lain).
+   Menu: "Halaman ini" (bagian-bagian halaman yang sedang dibuka) dan "Alur proses": langkah demi langkah lintas halaman;
+   sebelum langkah tampil, halaman / form yang dibutuhkan dibuka otomatis. Tutorial tidak menyimpan data. */
+const TOUR_ID=id=>document.getElementById(id);
+let TOUR_ON=null;
+function tourVisible(sel){const el=document.querySelector(sel);return !!(el&&el.getClientRects().length);}
+function tourNorm(st){let lp='';return st.map(s=>{const o=s.element?{el:s.element,t:s.popover.title,d:s.popover.description}:Object.assign({},s);if(o.pg)lp=o.pg;else o.pg=lp;return o;});}
+function tourRun(title,steps){
+  tourMenuClose();
+  if(!(window.driver&&window.driver.js)){TOUR_CFG.msg('Tutorial belum termuat (driver.js). Buka dengan koneksi internet, atau pastikan folder lib ikut diekstrak.');return;}
+  if(TOUR_ON){try{TOUR_ON.destroy();}catch(e){}}
+  steps=tourNorm(steps);const n=steps.length;if(!n){TOUR_CFG.msg('Belum ada tutorial untuk halaman ini.');return;}
+  const run=(i,cb)=>{let j=i;while(j>0&&!steps[j].go)j--;const s=steps[j];
+    if(s&&s.go){try{s.go();}catch(e){console.warn('tutorial',e);}setTimeout(cb,s.wait!=null?s.wait:TOUR_CFG.wait);}else cb();};
+  const drv=window.driver.js.driver({showProgress:true,progressText:'{{current}} dari {{total}}',nextBtnText:'Lanjut &rarr;',prevBtnText:'&larr; Kembali',doneBtnText:'Selesai',
+    allowKeyboardControl:false,overlayOpacity:.45,stagePadding:6,popoverClass:'tour-pop',
+    steps:steps.map(s=>({element:s.el,popover:{title:s.t,description:'<div class="tour-fl">'+title+'</div>'+(s.pg?'<span class="tour-pg">'+s.pg+'</span><br>':'')+s.d,side:s.side,align:s.align}})),
+    onNextClick:()=>{const i=drv.getActiveIndex();if(i>=n-1){drv.destroy();return;}const go=steps[i+1].go;if(go)run(i+1,()=>drv.moveNext());else drv.moveNext();},
+    onPrevClick:()=>{const i=drv.getActiveIndex();if(!i)return;run(i-1,()=>drv.movePrevious());},
+    onDestroyed:()=>{TOUR_ON=null;try{TOUR_CFG.cleanup();}catch(e){}}});
+  TOUR_ON=drv;run(0,()=>drv.drive());}
+function tourPageRun(){const st=tourNorm(TOUR_CFG.page()||[]).filter(s=>s.go||tourVisible(s.el));tourRun('Halaman ini',st);}
+function tourMenuClose(){const m=TOUR_ID('tourMenu');if(m)m.hidden=true;const b=TOUR_ID('tourBtn');if(b)b.setAttribute('aria-expanded','false');}
+function tourMenuOpen(){const m=TOUR_ID('tourMenu');const F=TOUR_CFG.flows();
+  m.innerHTML='<h4>Halaman ini</h4><button type="button" data-tour="page"><b>Tutorial halaman ini</b><small>Penjelasan bagian-bagian halaman yang sedang dibuka.</small></button>'
+    +'<h4>Alur proses (pindah halaman otomatis)</h4>'+F.map((f,i)=>'<button type="button" data-tour="'+i+'"><b>'+f.title+'</b><small>'+f.desc+' · '+f.steps.length+' langkah</small></button>').join('');
+  m.hidden=false;TOUR_ID('tourBtn').setAttribute('aria-expanded','true');}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#tourBtn')){const m=TOUR_ID('tourMenu');if(m.hidden)tourMenuOpen();else tourMenuClose();return;}
+  const it=e.target.closest('#tourMenu [data-tour]');
+  if(it){const k=it.dataset.tour;tourMenuClose();if(k==='page')tourPageRun();else{const f=TOUR_CFG.flows()[+k];tourRun(f.title,f.steps);}return;}
+  if(!e.target.closest('#tourMenu'))tourMenuClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')tourMenuClose();});
 </script>
 </body>
 </html>
