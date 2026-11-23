@@ -35,7 +35,7 @@ class Monitoring_piutang_model extends BF_Model
                 LEFT JOIN " . DBCNL . ".kons_tr_spk_penawaran s ON s.id_spk_penawaran = i.id_spk_penawaran AND i.non_kons <> '1'
                 LEFT JOIN " . DBCNL . ".kons_master_konsultasi_header mk ON mk.id_konsultasi_h = s.id_project
                 LEFT JOIN " . DBCNL . ".kons_tr_penawaran_non_konsultasi nk ON nk.id_penawaran = i.id_penawaran AND i.non_kons = '1'
-                LEFT JOIN " . DBCNL . ".kons_tr_company c ON c.id = IF(i.non_kons = '1', nk.id_company, COALESCE(p.company, s.id_company))";
+                LEFT JOIN " . DBCNL . ".kons_tr_company c ON c.id = CASE WHEN i.non_kons = '1' AND i.consulting_version = 3 THEN i.consulting_company_id ELSE IF(i.non_kons = '1', nk.id_company, COALESCE(p.company, s.id_company)) END";
     }
 
     private function attach_extra(array $rows)

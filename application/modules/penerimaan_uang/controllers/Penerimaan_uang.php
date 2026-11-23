@@ -274,7 +274,7 @@ class Penerimaan_uang extends Admin_Controller
         foreach (array($customer, $company, $id) as $value) if ($value !== null && !is_scalar($value)) throw new InvalidArgumentException('Identitas deposit tidak valid.');
         if ($id !== null && $id !== '') {
             $invoice = $this->db->get_where('tr_invoicing', array('id'=>$id))->row_array();
-            if (!$invoice || !Invoice_consulting::is_new($invoice)) throw new InvalidArgumentException('Invoice Consultant baru tidak ditemukan.');
+            if (!$invoice || !Invoice_consulting::is_snapshot_invoice($invoice)) throw new InvalidArgumentException('Invoice Consultant baru tidak ditemukan.');
             $snapshot = Invoice_consulting::snapshot($invoice);
             if (($customer !== null && $customer !== '' && (string)$customer !== (string)$invoice['id_customer'])
                 || ($company !== null && $company !== '' && (string)$company !== (string)$snapshot['owner']['id'])) throw new InvalidArgumentException('Customer/company tidak sesuai invoice.');
@@ -295,7 +295,7 @@ class Penerimaan_uang extends Admin_Controller
             $companies = array(); $deposit = $this->input->post('receipt_kind') === 'deposit';
             foreach ($invoices as $invoice) {
                 if ((($invoice['tax_treatment'] ?? '') === 'DEP') !== $deposit) continue;
-                if (Invoice_consulting::is_new($invoice)) {
+                if (Invoice_consulting::is_snapshot_invoice($invoice)) {
                     $snapshot = Invoice_consulting::snapshot($invoice);
                     $companies[(string)$snapshot['owner']['id']] = array('id'=>(string)$snapshot['owner']['id'], 'name'=>$snapshot['owner']['nm_company']);
                 } elseif (!$deposit) $companies['legacy'] = array('id'=>'legacy', 'name'=>'Invoice lama / Vuca (alur existing)');
@@ -410,7 +410,7 @@ class Penerimaan_uang extends Admin_Controller
 
 
 
-        $this->db->select('a.id_customer, a.tanggal_invoice, a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons, a.tipe_invoice, a.tax_treatment, a.consulting_version, a.consulting_snapshot');
+        $this->db->select('a.id_customer, a.tanggal_invoice, a.created_date, a.id as no_inv, a.nm_customer, a.total_nominal_jurnal, a.dpp_lain_lain_jurnal, a.ppn_jurnal, a.pph_jurnal, a.total_akhir_jurnal, a.tagihan_ppn_jurnal, a.saldo_piutang, a.no_invoice, a.non_kons, a.tipe_invoice, a.tax_treatment, a.consulting_version, a.consulting_snapshot, a.id_penawaran, a.id_spk_penawaran');
 
         $this->db->from('tr_invoicing a');
 
@@ -445,7 +445,7 @@ class Penerimaan_uang extends Admin_Controller
 
                 // Company tidak lagi dipilih di form: setiap baris membawa grupnya (id company, atau 'legacy')
                 // supaya satu penerimaan hanya memuat invoice dari satu company.
-                $isNew = Invoice_consulting::is_new($item);
+                $isNew = Invoice_consulting::is_snapshot_invoice($item);
                 $group = 'legacy'; $groupName = 'Invoice lama';
                 if ($isNew) {
                     try { $ownerSnapshot = Invoice_consulting::snapshot($item); }
@@ -527,7 +527,7 @@ class Penerimaan_uang extends Admin_Controller
                 $isDepositKind = ($this->input->post('receipt_kind') === 'deposit');
                 if ($isDepositKind) {
                     $snapshot = json_decode($item['consulting_snapshot'] ?? '', true);
-                    $noSpk = $snapshot['spk'] ?? (!empty($item['id_spk_penawaran']) ? $item['id_spk_penawaran'] : '-');
+                    $noSpk = $snapshot['spk'] ?? (Invoice_consulting::reference($item) ?: '-');
                     $nmCompany = $snapshot['owner']['nm_company'] ?? 'STM';
 
                     $hasil .= '<tr>';

@@ -14,7 +14,7 @@ require APPPATH . 'modules/jurnal_all/models/Jurnal_all_model.php';
 $db = DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false], true);
 $db->query('CREATE TABLE tr_jurnal (id INTEGER PRIMARY KEY, no_jurnal TEXT, no_transaksi TEXT, jenis_transaksi TEXT, sts TEXT, id_company TEXT, nm_company TEXT, tgl_jurnal TEXT, coa TEXT, nm_coa TEXT, debit DECIMAL(20,2), kredit DECIMAL(20,2), keterangan TEXT, nm_divisi TEXT)');
 $db->query("ATTACH DATABASE ':memory:' AS consultant");
-$db->query('CREATE TABLE tr_invoicing (id TEXT PRIMARY KEY, no_invoice TEXT, nm_customer TEXT, nm_project TEXT, id_penawaran TEXT, id_spk_penawaran TEXT, no_po TEXT, non_kons TEXT)');
+$db->query('CREATE TABLE tr_invoicing (id TEXT PRIMARY KEY, no_invoice TEXT, nm_customer TEXT, nm_project TEXT, id_penawaran TEXT, id_spk_penawaran TEXT, no_po TEXT, non_kons TEXT, consulting_version INTEGER, consulting_company_id TEXT)');
 $db->query('CREATE TABLE tr_penerimaan_piutang_detail (id_header TEXT,id_inv TEXT)');
 $db->query('CREATE TABLE payment_approve (id TEXT,id_payment TEXT,no_doc TEXT,tipe TEXT)');
 $db->query('CREATE TABLE tr_payment_paid (id TEXT PRIMARY KEY)');

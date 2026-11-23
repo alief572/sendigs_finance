@@ -61,7 +61,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $get_invoice = $this->db->get_where('tr_invoicing', ['id' => $id_invoice])->row();
 
         require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting.php';
-        if(Invoice_consulting::is_new($get_invoice))return false;
+        if(Invoice_consulting::is_snapshot_invoice($get_invoice))return false;
 
         $tipe_invoice = (!empty($get_invoice)) ? $get_invoice->tipe_invoice : '';
         $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';

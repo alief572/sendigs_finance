@@ -1,4 +1,20 @@
-# Perlakuan PPN UMKM Non-PKP dan tab Invoiced — 10 November 2026
+# Invoice Non Konsultasi versi 3 ? 23 November 2026
+
+Invoice non konsultasi baru mengikuti perlakuan PKP/WAPU/KB/UMKM, mapping sembilan COA dan empat kategori pendapatan konsultasi. PPh diakui saat penerimaan. Item, qty pecahan, dan batas outstanding penawaran dipertahankan; biaya kirim mengikuti sumber. Invoice lama tetap memakai aturan historis.
+
+Tidak ada migration/backfill baru. Terapkan schema 003_consulting_v3 dan lengkapi mapping company sebelum memakai form baru. Deploy controller, service, shared helpers, view/JS, konsumen penerimaan/PPh/jurnal, serta query company bersama. Jangan merilis hanya form. Rincian endpoint, file dan validasi: `docs/invoice-non-consulting-v3-2026-11-23.md`.
+
+Tes fokus tanpa browser atau database bisnis:
+
+```
+php application/modules/invoicing/tests/Consulting_integration_test.php --non-consulting
+php application/modules/invoicing/tests/Non_consulting_render_test.php
+node application/modules/invoicing/tests/Non_consulting_client_test.js
+```
+
+Mode `--non-consulting` menjalankan regresi inti konsultasi, Vuca, dan kasus non konsultasi pada database acak lokal yang dibersihkan setelah selesai. Suite default tetap tersedia; kegagalan historis dicatat dalam laporan.
+
+# Perlakuan PPN UMKM Non-PKP dan tab Invoiced â€” 10 November 2026
 
 - Perlakuan PPN keempat `UMKM` ("UMKM Non-PKP", Omzet <= Rp4,8 M): `Invoice_consulting::tax_treatments()` dan `tax_suffix()`. `totals()` UMKM: DPP = penjualan x 11/12 tetap dihitung, PPN 0, total tagihan = piutang awal = penjualan. Jurnal hanya Piutang Dagang Usaha (D) dan COA Penjualan (K), deskripsi berakhiran ` - UMKM Non-PKP`. Parity PHP = JS: `assets/js/invoicing/consulting.js`. Tanpa migrasi (`tr_invoicing.tax_treatment` VARCHAR(8) sudah ada).
 - `Consulting_posting::receipt` menolak posting jurnal penerimaan yang punya baris tanpa nomor COA (COA Beban/Hutang PPh Final UMKM belum ada di master).
@@ -6,13 +22,13 @@
 - Uji: `tests/Consulting_calculation_test.php` dan `.js`, `Ui_render_test.php`, `Ui_client_test.js`, `Ui_list_client_test.js`, `Print_invoice_test.php`, `List_filter_test.php`, `Invoiced_export_test.php`, `Posting_coa_guard_test.php`, `Batch1_audit_test.php` (40 endpoint). Spec, FR/NFR, dan serah terima: `specs/docs/mockup-invoicing/`.
 - Belum diuji terhadap MySQL dan browser: SQL `invoiced_rows`, `Consulting_integration_test.php --isolated-local-db` (butuh DB uji terisolasi).
 
-# Invoice konsultasi reguler versi 3 — 18 Oktober 2026
+# Invoice konsultasi reguler versi 3 â€” 18 Oktober 2026
 
 Endpoint reguler baru sekarang memakai Invoice_consulting_service untuk PKP/WAPU/Kawasan Berikat, snapshot mapping/owner, transaksi dan jurnal tanpa PPh saat invoice. Invoice lama, Vuca dan Non Konsultasi mempertahankan formula lama; mutex dan allocator nomor bersama melindungi interaksi antarjalur. Invoice_writer yang disebut dalam bagian historis di bawah bukan entrypoint aktif untuk semua enam endpoint.
 
 Rilis memerlukan migration003 dan mapping admin sembilan COA. Laporan implementasi, manifest, pengujian dan batas: docs/invoicing-consulting-v3-2026-10-18.md dan docs/invoicing-consulting-manifest.json. Jangan menjalankan integration_test.php v2 historis sebagai bukti integrasi controller aktif; gunakan tests/Consulting_integration_test.php --isolated-local-db.
 
-# Pencegahan piutang minus — 6 Oktober 2026
+# Pencegahan piutang minus â€” 6 Oktober 2026
 
 Enam endpoint save/update regular, Vuca, dan nonkonsultasi sekarang memakai
 Invoice_writer. Invoice_calculation menghasilkan angka dalam sen dengan

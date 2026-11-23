@@ -44,7 +44,7 @@ class Jurnal_invoicing_model extends BF_Model
         if (!$consultingAnchor) { echo json_encode(array('save'=>0,'msg'=>'Jurnal berubah; muat ulang daftar.')); return; }
         if(($consultingAnchor['jenis_transaksi'] ?? '')==='Payment Hutang Petty Cash'){echo json_encode(['save'=>0,'msg'=>'Gunakan posting hutang gabungan pada Jurnal All.']);return;}
         $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$consultingAnchor['no_transaksi']))->row_array();
-        if (Invoice_consulting::is_new($consultingInvoice)) {
+        if (Invoice_consulting::is_snapshot_invoice($consultingInvoice)) {
             $posting=new Consulting_posting($this);
             echo json_encode($posting->invoice($consultingAnchor['id']));
             return;
@@ -370,7 +370,7 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function base_query_jurnal($filter)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, CASE WHEN b.non_kons=\'1\' AND b.consulting_version=3 THEN b.consulting_company_id ELSE COALESCE(COALESCE(d.id, j.id), f.id) END as id_company, CASE WHEN b.non_kons=\'1\' AND b.consulting_version=3 THEN a.nm_company ELSE COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) END as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
 
         $this->db->select($select_fields, FALSE)
             ->from('tr_jurnal a')
@@ -402,7 +402,13 @@ class Jurnal_invoicing_model extends BF_Model
         if (!empty($filter['b.no_invoice'])) {
             $this->db->where('b.no_invoice', $filter['b.no_invoice']);
         }
-        Piutang_aging::apply_company_filter($this->db, ['d.id', 'f.id', 'j.id'], $filter['company'] ?? '', null, 'exact');
+        if (Piutang_aging::company_list($filter['company'] ?? '')) {
+            $this->db->group_start()->group_start()->where("b.non_kons='1' AND b.consulting_version=3",null,false);
+            Piutang_aging::apply_company_filter($this->db,'b.consulting_company_id',$filter['company'],null,'exact');
+            $this->db->group_end()->or_group_start()->where("(COALESCE(b.non_kons,'0')<>'1' OR COALESCE(b.consulting_version,0)<>3)",null,false);
+            Piutang_aging::apply_company_filter($this->db,['d.id','f.id','j.id'],$filter['company'],null,'exact');
+            $this->db->group_end()->group_end();
+        }
     }
 
     /**

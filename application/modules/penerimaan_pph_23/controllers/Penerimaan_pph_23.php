@@ -128,7 +128,7 @@ class Penerimaan_pph_23 extends Admin_Controller
         if(!is_scalar($consultingId)||!is_scalar($invoiceId)){echo json_encode(array('status'=>0,'msg'=>'ID penerimaan tidak valid.'));return;}
         $consultingDetail=$this->db->get_where('tr_penerimaan_piutang_detail',array('id'=>$consultingId))->row_array();
         $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$invoiceId))->row_array();
-        if((int)($consultingDetail['consulting_version']??0)===3 || Invoice_consulting::is_new($consultingInvoice)){
+        if((int)($consultingDetail['consulting_version']??0)===3 || Invoice_consulting::is_snapshot_invoice($consultingInvoice)){
             echo json_encode(array('status'=>0,'msg'=>'PPh aktual sudah dicatat pada jurnal penerimaan; jurnal pengakuan kedua tidak diperbolehkan.'));return;
         }
 

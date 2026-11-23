@@ -28,7 +28,7 @@
     "pending": "Admin must complete actual company and COA mappings before issuing new invoices; GL prerequisites subsequently verified in local_posting_prerequisites"
   },
   "branch": "development",
-  "scope": "new regular consulting invoices only; legacy/vuca/non formulas unchanged",
+  "scope": "new regular consulting and new non-consulting snapshot v3 invoices; historical invoices and Vuca formulas unchanged",
   "runtime_files": [
     "application/modules/invoicing/controllers/Invoicing.php",
     "application/modules/invoicing/models/Invoicing_model.php",
@@ -55,7 +55,13 @@
     "assets/css/invoicing.css",
     "assets/js/invoicing/consulting-form.js",
     "assets/js/invoicing/save-feedback.js",
-    "assets/js/invoicing/action-menu.js"
+    "assets/js/invoicing/action-menu.js",
+    "application/modules/invoicing/views/non_consulting_items.php",
+    "application/modules/invoicing/views/non_consulting_print.php",
+    "assets/js/invoicing/non-consulting-form.js",
+    "application/modules/jurnal_all/models/Jurnal_all_model.php",
+    "application/modules/monitoring_piutang/models/Monitoring_piutang_model.php",
+    "application/modules/report_jurnal_invoicing/models/Report_jurnal_invoicing_model.php"
   ],
   "migration_files": [
     "application/modules/invoicing/migrations/003_consulting_v3.sql",
@@ -265,5 +271,52 @@
       "candidate_tree": "9c66c68506ed35aa7bb66638fb5c8de96d98b4eb",
       "isolated_unique_checks": 1247
     }
+  },
+  "non_consulting_v3": {
+    "date": "2026-11-23",
+    "status": "complete_local_verification_with_known_baseline_failures",
+    "report": "docs/invoice-non-consulting-v3-2026-11-23.md",
+    "schema_changes": false,
+    "historical_conversion": false,
+    "marker": {
+      "consulting_version": 3,
+      "non_kons": "1",
+      "snapshot.invoice_kind": "non_consulting",
+      "consulting_top_key": null
+    },
+    "endpoints": {
+      "add_invoice_non_konsultasi": "modern form alias",
+      "create_invoice_non_konsultasi": "modern item form",
+      "save_invoice_non_konsultasi": "modern create only",
+      "update_invoice_non_konsultasi": "stored-version dispatch, legacy retained",
+      "edit_invoice_non_kons": "stored-version dispatch",
+      "view_invoice_non_kons": "stored-version dispatch",
+      "view_invoicing_non_kons": "stored-version dispatch alias",
+      "print_invoice_non_kons": "saved snapshot owner, item print",
+      "save_keterangan_print_non_kons": "modern notes cannot reassign journal owner"
+    },
+    "integration_command": "php application/modules/invoicing/tests/Consulting_integration_test.php --non-consulting",
+    "publication": {
+      "branch": "development",
+      "base": "ebb5255901362f7e77f7e3c2f7acd3fbbe3ad9fe",
+      "scope": "29 task files only; unrelated local receipt audit excluded",
+      "main": "unchanged",
+      "application_deployment": false
+    },
+    "checks": {
+      "disposable_integration": 1050,
+      "combined_ui_render": 487,
+      "invoicing_audit_scenarios": 162,
+      "receipt_audit_scenarios": [
+        36,
+        61
+      ],
+      "php_lint_files": 23
+    },
+    "known_baseline_failures": [
+      "default integration: Concept_integration_cases.php:112 company-vs-customer deposit expectation",
+      "List_filter_test.php: fixture missing total_nominal_jurnal",
+      "Ui_list_client_test.js: fixture missing CompanyMulti"
+    ]
   }
 }

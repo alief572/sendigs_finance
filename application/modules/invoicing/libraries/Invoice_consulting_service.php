@@ -200,6 +200,92 @@ class Invoice_consulting_service
         return array('plan'=>$plan,'actual'=>$actual,'spk'=>$spk,'quote'=>$quote,'source_company_id'=>$source);
     }
 
+    public function non_consulting_source($id, $lock=false)
+    {
+        $quote=$this->one('SELECT * FROM '.DBCNL.'.kons_tr_penawaran_non_konsultasi WHERE id_penawaran=?'.($lock?' FOR UPDATE':''),array($id));
+        if (!$quote || (string)($quote['sts_close']??'0')==='1' || !empty($quote['deleted_by'])) throw new RuntimeException('Penawaran tidak tersedia atau sudah ditutup.');
+        $this->required($quote,'id_customer',100);
+        $details=$this->rows('SELECT id,id_header,nm_item,qty,harga,total FROM '.DBCNL.'.kons_tr_detail_penawaran_non_konsultasi WHERE id_header=? ORDER BY id'.($lock?' FOR UPDATE':''),array($id));
+        $issued=$this->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=?',array($id));
+        return array('quote'=>$quote,'details'=>$details,'source_company_id'=>$quote['id_company'],'invoiced'=>$issued['total']);
+    }
+
+    public function save_non_consulting($post, $edit=false)
+    {
+        return $this->mutate($edit?'update_non_consulting':'save_non_consulting',function()use($post,$edit){
+            if (!has_permission($edit?'Invoicing.Manage':'Invoicing.Add')) throw new RuntimeException('Tidak memiliki izin menyimpan invoice.');
+            $this->transactional(array('tr_invoicing','tr_invoice_detail_non_kons','tr_jurnal','tr_penerimaan_piutang_detail','ms_invoice_sequence','ms_invoice_coa_mapping'));
+            foreach (array('kons_tr_penawaran_non_konsultasi','kons_tr_detail_penawaran_non_konsultasi') as $table) {
+                $engine=$this->one('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?',array(DBCNL,$table));
+                if (!$engine || strtoupper($engine['ENGINE'])!=='INNODB') throw new RuntimeException('Tabel penawaran harus memakai InnoDB.');
+            }
+            $date=$this->required($post,'tanggal_invoice',10); $parsed=DateTime::createFromFormat('!Y-m-d',$date);
+            if (!$parsed || $parsed->format('Y-m-d')!==$date) throw new InvalidArgumentException('Tanggal invoice tidak valid.');
+            $po=$this->required($post,'nomor_po'); $faktur=$this->required($post,'nomor_faktur');
+            $existing=null;
+            if ($edit) {
+                $id=$this->required($post,'id',100);
+                $existing=$this->one('SELECT * FROM tr_invoicing WHERE id=? FOR UPDATE',array($id));
+                if (!Invoice_consulting::is_non_consulting($existing)) throw new RuntimeException('Invoice bukan non konsultasi versi baru.');
+                $details=$this->rows('SELECT * FROM tr_invoice_detail_non_kons WHERE id_header=? ORDER BY id FOR UPDATE',array($id));
+                if (!hash_equals(Invoice_calculation::fingerprint(array('invoice'=>$existing,'items'=>$details)),$this->required($post,'invoice_fingerprint',64))) throw new RuntimeException('Invoice berubah; buka ulang form.');
+                $receipts=$this->rows('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=? FOR UPDATE',array($id));
+                $journals=$this->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' FOR UPDATE",array($id));
+                if ($receipts || !$journals || $this->one("SELECT id FROM tr_jurnal WHERE jenis_transaksi='Penerimaan Piutang' AND keterangan LIKE ?",array('% - '.$existing['no_invoice'].'%'))) throw new RuntimeException('Invoice memiliki penerimaan atau jurnal tidak lengkap; tidak dapat diedit.');
+                foreach ($journals as $j) if (!in_array((string)$j['sts'],array('0','9'),true)) throw new RuntimeException('Jurnal invoice sudah diposting.');
+                if ((string)($existing['sts_close']??'0')==='1' || Invoice_calculation::cents($existing['saldo_piutang'])!==Invoice_calculation::cents($existing['total_akhir_jurnal'])) throw new RuntimeException('Invoice ditutup atau saldo berubah; perlu rekonsiliasi.');
+                $snapshot=Invoice_consulting::snapshot($existing);
+                $quoteId=$existing['id_penawaran']; $number=$existing['no_invoice'];
+                if (isset($post['id_penawaran']) && $post['id_penawaran']!==$quoteId) throw new InvalidArgumentException('Penawaran invoice tidak boleh berubah.');
+            } else $quoteId=$this->required($post,'id_penawaran',100);
+            $source=$this->non_consulting_source($quoteId,true); $quote=$source['quote'];
+            if (!$edit) {
+                $snapshot=$this->mapping($source['source_company_id'],true);
+                if (!hash_equals(Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$snapshot)),$this->required($post,'source_fingerprint',64))) throw new RuntimeException('Penawaran atau mapping berubah; buka ulang form.');
+            }
+            $shipping=$edit?$existing['biaya_kirim']:($quote['biaya_kirim']??'0');
+            if (!isset($post['item']) || !is_array($post['item'])) throw new InvalidArgumentException('Item invoice wajib diisi.');
+            foreach ($post['item'] as $item) if (!is_array($item) || !isset($item['nama'],$item['qty'],$item['harga']) || !is_string($item['nama'])
+                || !is_scalar($item['qty']) || !is_scalar($item['harga']) || strlen($item['nama'])>1000) throw new InvalidArgumentException('Item invoice tidak valid.');
+            $items=Invoice_calculation::items($post['item']??null,$shipping);
+            $issued=$this->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($quoteId,$edit?$id:''));
+            if ($items['dpp']>Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total'])) throw new RuntimeException('Total penjualan melebihi outstanding invoice.');
+            $type=$this->required($post,'tax_treatment',8); $role=$this->required($post,'sales_role',40);
+            $totals=Invoice_consulting::totals(Invoice_calculation::decimal($items['dpp']),$type);
+            if (!$edit) {
+                $number=$this->ci->Invoicing_model->generate_no_invoice($snapshot['owner']['id'],'0');
+                if ($this->one('SELECT id FROM tr_invoicing WHERE no_invoice=? FOR UPDATE',array($number))) throw new RuntimeException('Nomor invoice sudah digunakan; periksa sequence.');
+                $id=$this->ci->Invoicing_model->generate_id();
+            }
+            $lines=Invoice_consulting::journal($totals,$snapshot['accounts'],$role,$number,$quoteId);
+            $snapshot['invoice_kind']='non_consulting'; $snapshot['sales_role']=$role;
+            $fields=Invoice_consulting::fields($totals)+array('tanggal_invoice'=>$date,'no_invoice'=>$number,'no_po'=>$po,'no_faktur'=>$faktur,
+                'consulting_version'=>3,'tax_treatment'=>$type,'consulting_company_id'=>$snapshot['owner']['id'],'consulting_snapshot'=>json_encode($snapshot),
+                'consulting_top_key'=>null,'biaya_kirim'=>$shipping);
+            if ($edit) {
+                $this->checked($this->db->delete('tr_jurnal',array('no_transaksi'=>$id,'jenis_transaksi'=>'Invoicing')));
+                $this->checked($this->db->delete('tr_invoice_detail_non_kons',array('id_header'=>$id)));
+                $this->checked($this->db->update('tr_invoicing',$fields,array('id'=>$id)));
+            } else {
+                $fields+=array('id'=>$id,'id_actual_plan_tagih'=>'0','id_detail_plan_tagih'=>0,'id_spk_penawaran'=>'','id_penawaran'=>$quoteId,
+                    'id_customer'=>$quote['id_customer'],'nm_customer'=>$quote['nm_customer'],'address'=>$quote['address']??'',
+                    'nm_project'=>$quote['keterangan_penawaran']??'','nm_sales'=>$quote['nm_pic_penawaran']??'',
+                    'tipe_invoice'=>'0','non_kons'=>'1','created_by'=>$this->ci->auth->user_id(),'created_date'=>date('Y-m-d H:i:s'));
+                $this->checked($this->db->insert('tr_invoicing',$fields));
+            }
+            $details=array();
+            foreach ($items['details'] as $item) $details[]=$item+array('id_header'=>$id,'input_by'=>$this->ci->auth->user_id(),'input_at'=>date('Y-m-d H:i:s'));
+            $this->checked($this->db->insert_batch('tr_invoice_detail_non_kons',$details));
+            $journals=array();
+            foreach ($lines as $offset=>$line) $journals[]=array('no_jurnal'=>Invoice_calculation::journal_number($this->db,$offset+1),
+                'tgl_jurnal'=>$date,'coa'=>$line['coa'],'nm_coa'=>$line['name'],'id_company'=>$snapshot['owner']['id'],'nm_company'=>$snapshot['owner']['nm_company'],
+                'debit'=>Invoice_calculation::decimal($line['debit']),'kredit'=>Invoice_calculation::decimal($line['credit']),'keterangan'=>$line['description'],
+                'sts'=>'0','no_transaksi'=>$id,'jenis_transaksi'=>'Invoicing','created_by'=>$this->ci->auth->user_id(),'created_date'=>date('Y-m-d H:i:s'));
+            $this->checked($this->db->insert_batch('tr_jurnal',$journals));
+            return array('id'=>$id);
+        });
+    }
+
     public function save_invoice($post, $edit=false)
     {
         return $this->mutate($edit?'update_invoice':'save_invoice',function()use($post,$edit){
