@@ -17,8 +17,27 @@ class Piutang_aging
     const BARU_HARI = 3;
     const FU_OFFSET = [1 => 3, 2 => 7, 3 => 14, 4 => 14]; // FU1 dari tgl terima, sisanya dari FU sebelumnya dilakukan
     const FU_EXTRA_OFFSET = 14;
-    /** Batas tegas mulai Follow Up Piutang dan Dashboard Plan Bayar: tanggal invoice (Follow Up) atau bulan plan/bayar (Plan Bayar) >= ini. */
+    /** Batas umum Follow Up/Monitoring dan periode Plan Bayar; FOLLOW_UP_INVOICES dikecualikan. */
     const TANGGAL_MULAI_FOLLOW_UP = '2026-10-01';
+    // ponytail: pengecualian tetap untuk 20 invoice; gunakan master terkelola bila cakupan menjadi dinamis.
+    const FOLLOW_UP_INVOICES = [
+        '239/STM/2023', '020/VSB/2024', '003/VSB/2025', '005/VSB/2025',
+        '008/VSB/2025', '011/VSB/2025', '013/VSB/2025', '050/SSC/2025',
+        '010/VSB/2026', '011/VSB/2026', '127/STM/2026', '031/VSB/2026',
+        '170/STM/2026', '228/STM/2026', '229/STM/2026', '230/STM/2026',
+        '235/STM/2026', '204/STM/2026', '240/STM/2026', '018/VSB/2025',
+    ];
+
+    public static function is_follow_up_target($r)
+    {
+        return in_array($r['no_invoice'] ?? '', self::FOLLOW_UP_INVOICES, true);
+    }
+
+    public static function eligible_invoice_date($r)
+    {
+        $tgl = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
+        return self::is_date($tgl) && ($tgl >= self::TANGGAL_MULAI_FOLLOW_UP || self::is_follow_up_target($r));
+    }
     const TABS = ['all', '1', '2', '3', '4', 'late', 'close'];
     const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai'];
     // Filter company grup: id kons_tr_company (STM 7, STM-Sustain 6, STM-Vuca 1, Vuca 4, Sustain 3; sama dengan modul Request Payment/Jurnal).
@@ -748,7 +767,7 @@ class Piutang_aging
 
     /**
      * Basis Monitoring: invoice belum close (termasuk yang sudah lunas, agar jumlah card sama dengan Follow Up Piutang) dan
-     * tanggal invoice >= TANGGAL_MULAI_FOLLOW_UP, disaring Company, Customer (persis), Cari. List, rekap, dan nominal
+     * tanggal invoice memenuhi batas mulai atau termasuk target, disaring Company, Customer (persis), Cari. List, rekap, dan nominal
      * hanya memakai yang bersisa (is_aged / is_unreceived).
      * Card, list, rekap, dan Excel semuanya mulai dari basis ini. Filter tidak valid melempar InvalidArgumentException.
      */
@@ -764,8 +783,7 @@ class Piutang_aging
             if (self::is_closed($r)) {
                 continue;
             }
-            $tglInv = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
-            if (!self::is_date($tglInv) || $tglInv < self::TANGGAL_MULAI_FOLLOW_UP) {
+            if (!self::eligible_invoice_date($r)) {
                 continue;
             }
             if (!self::company_match($r['company'] ?? null, $f['company'] ?? null)) {
@@ -947,10 +965,10 @@ class Piutang_aging
         return array_values($m);
     }
 
-    /** Periode (tahun, bulan) jatuh pada atau setelah TANGGAL_MULAI_FOLLOW_UP. */
-    public static function dari_mulai($year, $bulan)
+    /** Periode memenuhi batas umum atau berasal dari invoice target. */
+    public static function dari_mulai($year, $bulan, $r = [])
     {
-        return (int) $year * 100 + (int) $bulan >= (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 0, 4) * 100 + (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 5, 2);
+        return self::is_follow_up_target($r) || (int) $year * 100 + (int) $bulan >= (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 0, 4) * 100 + (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 5, 2);
     }
 
     /** Saring baris plan/realisasi ke satu bulan (1-12); selain itu semua bulan. */

@@ -142,7 +142,7 @@
             if (r.status !== 'success') { $('#mp-err').text(r.msg || 'Gagal memuat data piutang.').show(); return; }
             if (!$('#f-company option').length) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); CompanyMulti.init('#f-company'); }
             var s = r.summary;
-            $('#mp-grand').html('Total keseluruhan sisa piutang: <b>' + rp(s.grand_cents) + '</b> <small class="text-muted">(sudah diterima + belum diterima, hanya invoice tanggal 1 Oktober 2026 ke atas, sama dengan Follow Up Piutang)</small>');
+            $('#mp-grand').html('Total keseluruhan sisa piutang: <b>' + rp(s.grand_cents) + '</b> <small class="text-muted">(sudah diterima + belum diterima, invoice tanggal 1 Oktober 2026 ke atas dan 20 invoice pengecualian, sama dengan Follow Up Piutang)</small>');
             card('all', 'all', {all: s.semua});
             ['lancar', 'potensi', 'macet'].forEach(function (k) { card(k, k, s); });
             $('#card-belum').html('<h5>Belum Diterima Customer</h5><div class="amt">' + rp(s.belum.cents) + '</div><small>' + s.belum.count + ' invoice belum ada tanggal terima · <a href="' + FU + '">buka Follow Up Piutang</a></small>');

@@ -92,7 +92,7 @@
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', bulan = 'all', D = null, pt = null, rt = null, MULAI_TAHUN = <?= (int) $mulai_tahun ?>, MULAI_BULAN = <?= (int) $mulai_bulan ?>;
+    var BASE = '<?= $base ?>', bulan = 'all', D = null, pt = null, rt = null;
     var NAMA = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     var KAT = {lancar: 'Lancar', potensi: 'Potensi', macet: 'Macet'};
     function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
@@ -102,9 +102,7 @@
     function q() { return {tahun: $('#f-tahun').val(), company: CompanyMulti.val('#f-company')}; }
     function umurCell(x) { return x.kategori && x.umur != null ? '<span class="umur ' + x.kategori + '">' + x.umur + ' hari</span> <span class="pb-pill ' + x.kategori + '">' + (KAT[x.kategori] || x.kategori) + '</span>' : '<span class="sub">–</span>'; }
 
-    // Bulan sebelum batas mulai (Jan-Sep 2026) tidak ada datanya: tidak ditampilkan.
-    function bulanAda(m) { return !(+D.year === MULAI_TAHUN && m < MULAI_BULAN) && +D.year >= MULAI_TAHUN; }
-    function rentang() { return +D.year === MULAI_TAHUN ? NAMA[MULAI_BULAN - 1] + ' – Desember' : 'Januari – Desember'; }
+    function rentang() { return 'Januari – Desember'; }
 
     function cards() {
         var tp = {c: 0, n: 0, rc: 0, rn: 0}, h = '';
@@ -113,7 +111,6 @@
             '<span><span class="ct">All · ' + esc(D.year) + '</span><span class="lbl">Plan bayar</span><span class="cv">' + rp(tp.n) + '</span><span class="cm"><b>' + tp.c + '</b> invoice (' + rentang() + ')</span></span>' +
             '<span><span class="ct">&nbsp;</span><span class="lbl">Realisasi bayar</span><span class="cv rea">' + rp(tp.rn) + '</span><span class="cm"><b>' + tp.rc + '</b> penerimaan</span></span></button>';
         D.summary.forEach(function (m) {
-            if (!bulanAda(m.bulan)) { return; }
             var cls = m.plan_count ? (m.lewat ? 'lewat' : 'has') : '';
             h += '<button type="button" class="pbcard ' + cls + (m.current ? ' now' : '') + (bulan === m.bulan ? ' on' : '') + '" data-b="' + m.bulan + '" aria-pressed="' + (bulan === m.bulan) + '">' +
                 '<span class="ct">' + esc(m.nama) + (m.current ? '<span class="pb-pill C">Bulan ini</span>' : (m.lewat ? '<span class="pb-pill M">Lewat</span>' : '')) + '</span>' +
