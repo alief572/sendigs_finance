@@ -26,10 +26,8 @@ class Follow_up_piutang extends Admin_Controller
         $this->auth->restrict($this->viewPermission);
         $this->template->set('can_manage', has_permission($this->managePermission));
         $this->template->set('years', range((int) date('Y') + 1, (int) date('Y') - 5));
-        $mulaiTahun = (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 0, 4);
+        $mulaiTahun = min(array_map(function ($no) { return (int) substr($no, -4); }, Piutang_aging::FOLLOW_UP_INVOICES));
         $this->template->set('inv_years', range(max((int) date('Y'), $mulaiTahun), $mulaiTahun));
-        $this->template->set('inv_mulai_tahun', $mulaiTahun);
-        $this->template->set('inv_mulai_bulan', (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 5, 2));
         $this->template->render('index');
     }
 
@@ -71,8 +69,7 @@ class Follow_up_piutang extends Admin_Controller
         $today = Piutang_aging::today();
         $golive = $this->golive();
         $all = array_values(array_filter($this->Monitoring_piutang_model->get_rows((int) $f['close_tahun']), function ($r) {
-            $tgl = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
-            return Piutang_aging::is_date($tgl) && $tgl >= Piutang_aging::TANGGAL_MULAI_FOLLOW_UP;
+            return Piutang_aging::eligible_invoice_date($r);
         }));
         $counts = Piutang_aging::tab_counts($all, $f, $today, $golive);
         // recordsTotal DataTables = isi tab tanpa filter dan pencarian

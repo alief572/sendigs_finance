@@ -11,7 +11,8 @@ Spec: `specs/docs/review-monitoring-piutang/` (`fr-nfr.md`, `use-case.md`, mocku
 ## Struktur
 - `libraries/Piutang_aging.php`: **satu-satunya** tempat aturan (umur, kategori, tahap, jadwal FU, validasi, kunci step, syarat close, filter, plan vs realisasi). PHP murni tanpa CI/DB; layar dan Excel memanggil fungsi yang sama.
 - Tab "List Piutang per Invoice" memakai DataTables server-side (`Monitoring_piutang::list_data`, DataTables 2.3.2 dari CDN seperti modul lain). Filter sama dengan `data()`/Excel; paging dan urutan (`Piutang_aging::page_rows`, kunci urut di daftar putih `PAGE_SORT_KEYS`) dikerjakan di server, maks 500 baris per halaman, baris TOTAL = seluruh hasil filter. Tab "Rekap per Customer" juga server-side (`Monitoring_piutang::rekap_data`, urut lewat `Piutang_aging::REKAP_SORT_KEYS`; tabel dibuat saat tab pertama dibuka, nominal dalam sen). `data()` hanya mengirim ringkasan, daftar nama customer (datalist filter), dan opsi company (tanpa `rows`/`rekap`).
-- Batas mulai Monitoring: `Piutang_aging::monitoring_base()` hanya memuat invoice belum close dengan `tgl_invoice >= TANGGAL_MULAI_FOLLOW_UP` (2026-10-01), sama dengan Follow Up Piutang. Kartu, list, rekap, dan Excel ikut. Total keseluruhan tidak lagi mencakup invoice sebelum batas, jadi tidak otomatis sama dengan buku besar.
+- Batas mulai Monitoring: `Piutang_aging::eligible_invoice_date()` memuat tanggal invoice valid sejak 2026-10-01 atau salah satu dari 20 nomor `FOLLOW_UP_INVOICES`, sama dengan Follow Up Piutang. Status close dan filter lain tetap berlaku; kartu, list, rekap, dan Excel mengikuti basis ini. Nomor target boleh memiliki beberapa baris invoice; setiap ID tetap diproses sendiri.
+- Dashboard Plan Bayar juga mengecualikan 20 nomor tersebut dari batas periode Oktober 2026, termasuk realisasi. Pilihan tahun mengikuti tanggal plan/penerimaan target paling awal; seluruh bulan dapat dipilih. Tanpa plan tersimpan, invoice tidak masuk tabel plan. Tujuh nomor yang belum diinput tidak dibuat otomatis; rincian verifikasi: `docs/invoice-follow-up-targets-2026-11-19.json`.
 - Card Total Piutang (`summary()['semua']`) = diterima + belum diterima + lunas belum close, jadi jumlah invoice sama dengan tab Semua Follow Up Piutang; nominal hanya dari yang bersisa. Lancar/Potensi/Macet tetap hanya yang sudah diterima dan persennya terhadap card Total Piutang. List, rekap, dan Excel tetap hanya invoice bersisa yang sudah diterima.
 - `libraries/Piutang_export.php`: pembuat `.xlsx` bersama (PHPExcel).
 - `libraries/Surat_konfirmasi.php`: aturan dan HTML Surat Konfirmasi. Profil kop per company di `profiles()` (kunci = id company; baru STM id 7).
@@ -26,6 +27,7 @@ Spec: `specs/docs/review-monitoring-piutang/` (`fr-nfr.md`, `use-case.md`, mocku
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piutang_aging_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piutang_export_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Surat_konfirmasi_test.php
+scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Follow_up_targets_test.php
 ```
 
 ## Belum ada / diketahui

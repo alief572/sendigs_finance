@@ -77,6 +77,28 @@ class Monitoring_piutang_model extends BF_Model
         return $this->attach_extra($this->db->query($sql, $bind)->result_array());
     }
 
+    public function get_dashboard_start_year()
+    {
+        $targets = Piutang_aging::FOLLOW_UP_INVOICES;
+        $in = implode(',', array_fill(0, count($targets), '?'));
+        $where = "i.no_invoice IN ($in) AND COALESCE(i.tax_treatment, '') <> 'DEP' AND i.id NOT LIKE 'KD-%'";
+        $row = $this->db->query(
+            "SELECT MIN(YEAR(t.tanggal)) AS tahun FROM (
+                SELECT ar.plan_bayar AS tanggal FROM tr_invoicing i
+                JOIN tr_invoice_ar ar ON ar.id_invoice = i.id WHERE $where
+                UNION ALL
+                SELECT COALESCE(ad.tanggal_transaksi, DATE(pph.created_date)) AS tanggal
+                FROM tr_invoicing i JOIN tr_penerimaan_piutang_detail ppd ON ppd.id_inv = i.id
+                LEFT JOIN tr_penerimaan_piutang pph ON pph.no_surat = ppd.id_header
+                LEFT JOIN tr_alokasi_split sp ON sp.id = pph.id_alokasi
+                LEFT JOIN tr_alokasi_detail ad ON ad.id = COALESCE(sp.id_alokasi_detail, pph.id_alokasi)
+                WHERE $where
+             ) t WHERE t.tanggal >= '2000-01-01'",
+            array_merge($targets, $targets)
+        )->row_array();
+        return min((int) date('Y'), (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 0, 4), (int) ($row['tahun'] ?? date('Y')));
+    }
+
     public function get_row($id)
     {
         $rows = $this->attach_extra($this->db->query($this->base_sql() . ' WHERE i.id = ?', [$id])->result_array());
