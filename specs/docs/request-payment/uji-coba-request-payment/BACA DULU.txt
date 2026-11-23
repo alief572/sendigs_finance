@@ -1,0 +1,61 @@
+UJI COBA MOCKUP - REQUEST PAYMENT SAMPAI PAYMENT
+================================================
+
+CARA MEMBUKA
+1. Ekstrak dulu file ZIP ini ke sebuah folder
+   (klik kanan > Extract All / Extract Here).
+   Jangan membuka index.html langsung dari dalam jendela ZIP,
+   karena file pendukung di folder "lib" tidak ikut terbaca.
+2. Buka file "index.html" dengan Google Chrome atau Microsoft Edge
+   (klik kanan > Open with > Chrome / Edge).
+3. Tidak perlu internet. Ikon, tutorial, dan Export Excel memakai
+   file di folder "lib".
+
+PENTING
+- Ini MOCKUP (contoh tampilan), bukan sistem sebenarnya. Tidak ada data
+  yang masuk ke sistem SENDIGS. "Hari ini" di mockup = 17 November 2026.
+- Data yang tampil adalah DATA UJI dari Plan Cash Flow minggu 1 - 3
+  November 2026 dan beberapa kasus nyata (real case). Pilihan data ada di
+  kanan atas: "Data: Test case Finance (Plan Cash Flow)".
+- Isian dan pengajuan yang dibuat TIDAK TERSIMPAN. Tekan F5 (refresh) atau
+  tombol "Reset data" di kanan atas untuk kembali ke data awal.
+- Garis putus-putus oranye dan label "BARU" = bagian baru / berubah
+  dibanding sistem sekarang. Bisa dimatikan lewat centang
+  "Tandai perubahan" di kanan atas.
+- Tombol hijau "Tutorial" (kanan atas, di atas judul halaman) membuka menu:
+  "Tutorial halaman ini" (isi halaman yang sedang dibuka) dan "Alur proses"
+  (Request Payment sampai Approval & Record; Payment sampai Record Payment).
+  Alur proses pindah halaman dan membuka form sendiri; klik Lanjut / Kembali.
+  Tutorial tidak menyimpan data.
+- Tombol Export Excel / Print / Cetak ke Excel mengunduh file .xlsx
+  sungguhan ke folder Downloads.
+
+ALUR YANG BISA DICOBA (menu "Pengeluaran Non Pembelian" di sidebar kiri)
+1. Request Payment
+   Centang dokumen (satu company), atur PPN / PPh, klik "Atur Pembayaran
+   & Ajukan". Di Atur Pembayaran: gabungkan beberapa dokumen jadi 1
+   transfer bila perlu, isi rekening tujuan, nominal admin (bebas) dan
+   siapa yang menanggung admin, lalu "Ajukan untuk Approval".
+2. Approval Request Payment
+   Buka pengajuan (PGJ-...), approve / reject per dokumen, simpan
+   keputusan. Rekening tujuan masih bisa dikoreksi di sini.
+3. Record Request Payment
+   Riwayat pengajuan yang sudah diputuskan. Print per PGJ atau
+   "Export Excel Beberapa PGJ" (format Plan Cash Flow, ada ringkasan
+   Saldo per company di bagian bawah).
+4. Payment List
+   Klik "Payment" > Pembayaran Non PR > pilih 1 transfer > Proses.
+   Isi bank, admin aktual (mis. bank tidak memotong admin), bukti bayar,
+   lalu Submit.
+5. Record Payment
+   Perbandingan Request Payment dengan Payment yang sebenarnya dibayar,
+   beserta perbedaan dan keterangannya.
+
+CATATAN HASIL UJI
+Mohon catat setiap kasus yang tidak bisa dilakukan atau hasilnya tidak
+sesuai, beserta nomor dokumennya, lalu kirim ke tim Improvement.
+
+LISENSI LIBRARY (folder lib)
+- SheetJS Community Edition (Apache 2.0) - LICENSE-SheetJS.txt
+- driver.js (MIT) - driver/LICENSE-driver.js.txt
+- Font Awesome 4.7 (font: SIL OFL 1.1, CSS: MIT) - font-awesome/LICENSE-font-awesome.txt
