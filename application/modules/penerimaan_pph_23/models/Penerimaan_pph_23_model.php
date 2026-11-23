@@ -60,6 +60,9 @@ class Penerimaan_pph_23_model extends BF_Model
         $id_invoice = (!empty($get_penerimaan_pph23)) ? $get_penerimaan_pph23->id_inv : '';
         $get_invoice = $this->db->get_where('tr_invoicing', ['id' => $id_invoice])->row();
 
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting.php';
+        if(Invoice_consulting::is_snapshot_invoice($get_invoice))return false;
+
         $tipe_invoice = (!empty($get_invoice)) ? $get_invoice->tipe_invoice : '';
         $coa_pph = ($tipe_invoice == '1') ? '1106-01-05' : '1106-01-02';
         $arr_coa_jurnal = [$coa_pph, '1102-01-01'];
@@ -192,6 +195,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
+        if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
         $apply_filters($this->db);
         $records_total = $this->db->get()->row()->total;
 
@@ -201,6 +205,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
+        if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
         $apply_filters($this->db);
 
         if ($search_value !== '') {
@@ -220,6 +225,7 @@ class Penerimaan_pph_23_model extends BF_Model
         $this->db->join('tr_invoicing b', 'b.id = a.id_inv');
         $this->db->join('tr_penerimaan_piutang c', 'c.no_surat = a.id_header');
         $this->db->where('c.pph23_dipotong', 'Y');
+        if($this->db->field_exists('consulting_version','tr_penerimaan_piutang_detail'))$this->db->group_start()->where('a.consulting_version IS NULL',null,false)->or_where('a.consulting_version <>',3)->group_end();
         $apply_filters($this->db);
 
         if ($search_value !== '') {

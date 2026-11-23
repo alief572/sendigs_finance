@@ -32,6 +32,24 @@ class Jurnal_invoicing_model extends BF_Model
 
     public function save_posting_jurnal()
     {
+        require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
+        $service=new Invoice_consulting_service($this);
+        return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
+    }
+
+    private function serialized_save_posting_jurnal()
+    {
+        require_once dirname(__DIR__, 2).'/invoicing/libraries/Consulting_posting.php';
+        $consultingAnchor=$this->db->get_where('tr_jurnal',array('id'=>$this->input->post('id')))->row_array();
+        if (!$consultingAnchor) { echo json_encode(array('save'=>0,'msg'=>'Jurnal berubah; muat ulang daftar.')); return; }
+        if(($consultingAnchor['jenis_transaksi'] ?? '')==='Payment Hutang Petty Cash'){echo json_encode(['save'=>0,'msg'=>'Gunakan posting hutang gabungan pada Jurnal All.']);return;}
+        $consultingInvoice=$this->db->get_where('tr_invoicing',array('id'=>$consultingAnchor['no_transaksi']))->row_array();
+        if (Invoice_consulting::is_snapshot_invoice($consultingInvoice)) {
+            $posting=new Consulting_posting($this);
+            echo json_encode($posting->invoice($consultingAnchor['id']));
+            return;
+        }
+
         $post = $this->input->post();
 
         $get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
@@ -82,7 +100,7 @@ class Jurnal_invoicing_model extends BF_Model
         // Pilih koneksi DB accounting berdasarkan id_company
         $acc_db = $this->_get_accounting_db($id_company);
 
-        $this->db->trans_begin();
+        if ($this->db->trans_begin() === false) { echo json_encode(['save'=>0,'msg'=>'Gagal memulai transaksi jurnal.']); return; }
 
         try {
             // Insert jurnal header — sekali saja
@@ -170,9 +188,9 @@ class Jurnal_invoicing_model extends BF_Model
                 throw new Exception('Gagal insert kartu piutang: ' . $this->db->error()['message']);
             }
 
-            $this->db->trans_commit();
+            if ($this->db->trans_commit() === false) { throw new RuntimeException('Commit jurnal gagal. Periksa status sebelum mencoba kembali.'); }
 
-            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!']);
+            echo json_encode(['save' => 1, 'msg' => 'SUKSES, simpan data..!!!', 'accounting_numbers'=>[['company'=>(string)$id_company,'number'=>$Nomor_JV]]]);
         } catch (Exception $e) {
             $this->db->trans_rollback();
 
@@ -231,10 +249,14 @@ class Jurnal_invoicing_model extends BF_Model
                 $msg = 'Please try again later !';
             }
         } else {
-            $this->db->trans_commit();
-
-            $valid = 1;
-            $msg = 'Status data berhasil di update !';
+            if ($this->db->trans_commit() === false) {
+                $this->db->trans_rollback();
+                $valid = 0;
+                $msg = 'Commit revisi gagal. Periksa status jurnal.';
+            } else {
+                $valid = 1;
+                $msg = 'Status data berhasil di update !';
+            }
         }
 
         $response = [
@@ -348,7 +370,7 @@ class Jurnal_invoicing_model extends BF_Model
      */
     private function base_query_jurnal($filter)
     {
-        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, COALESCE(COALESCE(d.id, j.id), f.id) as id_company, COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
+        $select_fields = 'a.no_transaksi, a.id, a.tgl_jurnal, a.coa, a.nm_coa, a.debit, a.kredit, a.jenis_transaksi, a.sts, b.nm_customer, b.nm_project, b.no_invoice, b.id_spk_penawaran, b.non_kons, e.id_penawaran as id_penawaran_non_kons, e.keterangan_penawaran, CASE WHEN b.non_kons=\'1\' AND b.consulting_version=3 THEN b.consulting_company_id ELSE COALESCE(COALESCE(d.id, j.id), f.id) END as id_company, CASE WHEN b.non_kons=\'1\' AND b.consulting_version=3 THEN a.nm_company ELSE COALESCE(COALESCE(d.nm_company, j.nm_company), f.nm_company) END as nm_company, COALESCE(c.id_divisi, e.id_divisi) as id_divisi, COALESCE(g.name, h.name) as nm_divisi';
 
         $this->db->select($select_fields, FALSE)
             ->from('tr_jurnal a')
@@ -380,7 +402,13 @@ class Jurnal_invoicing_model extends BF_Model
         if (!empty($filter['b.no_invoice'])) {
             $this->db->where('b.no_invoice', $filter['b.no_invoice']);
         }
-        Piutang_aging::apply_company_filter($this->db, ['d.id', 'f.id', 'j.id'], $filter['company'] ?? '', null, 'exact');
+        if (Piutang_aging::company_list($filter['company'] ?? '')) {
+            $this->db->group_start()->group_start()->where("b.non_kons='1' AND b.consulting_version=3",null,false);
+            Piutang_aging::apply_company_filter($this->db,'b.consulting_company_id',$filter['company'],null,'exact');
+            $this->db->group_end()->or_group_start()->where("(COALESCE(b.non_kons,'0')<>'1' OR COALESCE(b.consulting_version,0)<>3)",null,false);
+            Piutang_aging::apply_company_filter($this->db,['d.id','f.id','j.id'],$filter['company'],null,'exact');
+            $this->db->group_end()->group_end();
+        }
     }
 
     /**

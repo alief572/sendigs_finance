@@ -253,9 +253,9 @@ check(iv_data($e)['invoice_type'] === 'consulting' && $e['status'] === 0 && iv_d
 
 // add_invoice_non_konsultasi
 list($e, $out) = iv_run('add_invoice_non_konsultasi', array(), array(), array('PN1'));
-check($e['status'] === 1 && iv_data($e)['id_penawaran'] === 'PN1' && iv_data($e)['invoice_type'] === 'non_kons' && strpos($out, 'rendered add_invoice_non_konsultasi') !== false, 'add_invoice_non_konsultasi: rendered');
+check($e['status'] === 0 && iv_data($e)['id_penawaran'] === 'PN1' && iv_data($e)['invoice_type'] === 'non_kons' && iv_data($e)['outcome'] === 'error' && strpos($out, 'rendered consulting_invoice') !== false, 'add_invoice_non_konsultasi: missing modern schema renders safe error');
 list($e, $out) = iv_run('add_invoice_non_konsultasi', array('penawaran_missing' => true), array(), array('PN1'));
-check($e['status'] === 0 && iv_data($e)['outcome'] === 'not_found' && strpos($out, 'rendered add_invoice_non_konsultasi') !== false, 'add_invoice_non_konsultasi: not_found');
+check($e['status'] === 0 && iv_data($e)['outcome'] === 'error' && strpos($out, 'rendered consulting_invoice') !== false, 'add_invoice_non_konsultasi: unavailable source renders modern error');
 list($e, , $stopped) = iv_run('add_invoice_non_konsultasi', array('deny_perm' => true), array(), array('PN1'));
 check($stopped && iv_data($e)['outcome'] === 'denied', 'add_invoice_non_konsultasi: denied');
 
@@ -417,9 +417,9 @@ list($e, $out) = iv_run('get_data_quotation_non_konsultasi');
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'rendered' && iv_data($e)['invoice_type'] === 'non_kons' && is_array(iv_json($out)), 'get_data_quotation_non_konsultasi: rendered');
 
 list($e, $out) = iv_run('create_invoice_non_konsultasi', array(), array(), array('PN1'));
-check($e['status'] === 1 && iv_data($e)['outcome'] === 'rendered' && strpos($out, 'rendered add_invoice_non_konsultasi') !== false, 'create_invoice_non_konsultasi: rendered');
+check($e['status'] === 0 && iv_data($e)['outcome'] === 'error' && strpos($out, 'rendered consulting_invoice') !== false, 'create_invoice_non_konsultasi: unavailable modern schema renders error');
 list($e) = iv_run('create_invoice_non_konsultasi', array('penawaran_missing' => true), array(), array('PN1'));
-check($e['status'] === 0 && iv_data($e)['outcome'] === 'not_found' && $GLOBALS['redirectTarget'] === 'invoicing', 'create_invoice_non_konsultasi: not_found + redirect');
+check($e['status'] === 0 && iv_data($e)['outcome'] === 'error', 'create_invoice_non_konsultasi: unavailable source renders error');
 list($e, , $stopped) = iv_run('create_invoice_non_konsultasi', array('deny_perm' => true), array(), array('PN1'));
 check($stopped && iv_data($e)['outcome'] === 'denied', 'create_invoice_non_konsultasi: denied');
 
@@ -482,14 +482,18 @@ foreach (array('commit_fail' => 'commit_failed', 'status_fail' => 'transaction_f
 list($e, $out) = iv_private_event('update_invoice_non_konsultasi', array('delete_fail' => true), array('nomor_invoice' => 'INV-1'));
 check($e['status'] === 0 && iv_data($e)['outcome'] === 'rejected', 'legacy_update_non_kons: hapus data lama gagal');
 
-// wrapper publik save/update non konsultasi (lewat legacy_consulting_boundary + lock)
-foreach (array('save_invoice_non_konsultasi' => 'Menyimpan invoice non konsultasi', 'update_invoice_non_konsultasi' => 'Menyimpan perubahan invoice non konsultasi') as $m => $msg) {
-    list($e, $out, , $c) = iv_run($m, array(), array('nomor_invoice' => 'INV-1'));
-    check($e['status'] === 1 && iv_data($e)['outcome'] === 'committed' && iv_json($out)['status'] === 1 && in_array('trans_commit', $e['calls_at_write'], true), "$m: lewat boundary, committed sesudah commit");
-    // lock tidak didapat -> boundary menelan, tidak menjalankan endpoint -> satu event rejected (bukan interrupted)
-    list($e, $out, , $c) = iv_run($m, array('lock_fail' => true), array('nomor_invoice' => 'INV-1'));
-    check($e['status'] === 0 && iv_data($e)['outcome'] === 'rejected' && iv_data($e)['reason'] === 'rejected' && iv_json($out)['status'] === 0 && !$c->db->writes, "$m: lock gagal -> rejected, tidak menulis");
+// New creation uses the modern service; missing schema is rejected without writes.
+list($e,$out,,$c)=iv_run('save_invoice_non_konsultasi');
+check($e['status']===0 && iv_data($e)['outcome']==='rejected' && iv_json($out)['status']===0 && !$c->db->writes,'Modern non consulting creation rejects unavailable schema');
+foreach(array('writer_failure','writer_exception') as $w){
+    list($e,$out)=iv_run('save_invoice_non_konsultasi',array($w=>true));
+    check(iv_json($out)['status']===0,'Modern non consulting rejection survives '.$w);
 }
+// Existing invoices still update through their historical boundary.
+list($e,$out,,$c)=iv_run('update_invoice_non_konsultasi',array(),array('nomor_invoice'=>'INV-1'));
+check($e['status']===1 && iv_data($e)['outcome']==='committed' && iv_json($out)['status']===1 && in_array('trans_commit',$e['calls_at_write'],true),'Legacy non consulting update commits before audit');
+list($e,$out,,$c)=iv_run('update_invoice_non_konsultasi',array('lock_fail'=>true),array('nomor_invoice'=>'INV-1'));
+check($e['status']===0 && iv_data($e)['outcome']==='rejected' && iv_json($out)['status']===0 && !$c->db->writes,'Legacy update lock failure leaves data untouched');
 // update_invoice lewat boundary (invoice lama): jalur sukses dan lock gagal
 list($e, $out, , $c) = iv_run('update_invoice', array(), array('nomor_invoice' => 'INV-1', 'no_po' => 'PO', 'nomor_faktur' => 'F', 'tgl_jurnal_1' => '2026-11-01', 'coa_jurnal_1' => '1102-01-01', 'id_company_1' => 3, 'nm_company_1' => 'PRIVATE', 'nm_coa_1' => 'Piutang', 'debit_1' => 1, 'kredit_1' => 0));
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'committed' && iv_data($e)['invoice_type'] === 'legacy', 'update_invoice: lewat boundary, committed');

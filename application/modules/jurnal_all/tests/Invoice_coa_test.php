@@ -38,4 +38,12 @@ $db->insert('tr_invoicing',['id'=>'INV-LEG','no_invoice'=>'INV/LEG/1','nm_custom
 $legacy=journal('Invoicing','0','INV-LEG','7','500.00','500.00'); // $inv dari Query_test sudah diubah/diposting; pakai jurnal pending baru
 check($model->detail($legacy,false)['can_post'],'legacy Invoicing is not checked against coa_master');
 
+$db->insert('tr_invoicing',['id'=>'INV-NC-V3','no_invoice'=>'NC/2026','id_penawaran'=>'Q1','non_kons'=>'1','consulting_version'=>3,'consulting_company_id'=>'4']);
+$modern=journal('Invoicing','0','INV-NC-V3','4','500.00','500.00');
+$glDbs->setValue($model,['accounting_vuca'=>$stub]);$stub->rows=[];
+check(!$model->detail($modern,false)['can_post'],'modern non consulting requires valid COA in owner ledger');
+$stub->rows=[['no_perkiraan'=>'5101-01','nama'=>'Biaya khusus']];
+check($model->detail($modern,false)['can_post'],'modern non consulting validates owner ledger instead of source company');
+check($model->detail($modern,false)['header']['id_company']==='4','modern non consulting uses saved owner in metadata');
+
 echo "PASS Jurnal All invoice COA checks\n";

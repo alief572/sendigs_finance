@@ -33,7 +33,7 @@ class Consulting_posting
             $invoice=$s->one('SELECT * FROM tr_invoicing WHERE id=? FOR UPDATE',array($anchor['no_transaksi']));
             $snapshot=Invoice_consulting::snapshot($invoice);$owner=$snapshot['owner'];
             $rows=$s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id FOR UPDATE",array($invoice['id']));
-            $expected=Invoice_consulting::journal(Invoice_consulting::totals($invoice['total_nominal'],$invoice['tax_treatment']),$snapshot['accounts'],$snapshot['sales_role'],$invoice['no_invoice'],$invoice['id_spk_penawaran']);
+            $expected=Invoice_consulting::journal(Invoice_consulting::totals($invoice['total_nominal'],$invoice['tax_treatment']),$snapshot['accounts'],$snapshot['sales_role'],$invoice['no_invoice'],Invoice_consulting::reference($invoice));
             if(count($rows)!==count($expected))throw new RuntimeException('Jurnal invoice tidak sesuai snapshot.');
             foreach($rows as $i=>$row){
                 $line=$expected[$i];

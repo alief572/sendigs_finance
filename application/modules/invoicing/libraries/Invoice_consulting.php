@@ -25,6 +25,24 @@ class Invoice_consulting
             && (string)($invoice['tipe_invoice'] ?? '0') !== '1' && (string)($invoice['non_kons'] ?? '0') !== '1';
     }
 
+    public static function is_non_consulting($invoice)
+    {
+        $invoice = (array)$invoice;
+        return (int)($invoice['consulting_version'] ?? 0) === self::VERSION
+            && (string)($invoice['tipe_invoice'] ?? '0') !== '1' && (string)($invoice['non_kons'] ?? '0') === '1';
+    }
+
+    public static function is_snapshot_invoice($invoice)
+    {
+        return self::is_new($invoice) || self::is_non_consulting($invoice);
+    }
+
+    public static function reference($invoice)
+    {
+        $invoice = (array)$invoice;
+        return (string)($invoice[self::is_non_consulting($invoice) ? 'id_penawaran' : 'id_spk_penawaran'] ?? '');
+    }
+
     /**
      * Cetak memakai layout Vuca (print_invoicing_vuca): invoice Vuca (tipe_invoice 1), atau invoice lama milik company Vuca.
      * Invoice alur konsultasi v3 tetap memakai layout konsultasi dengan kop pemiliknya, termasuk bila pemiliknya Vuca.
@@ -32,7 +50,7 @@ class Invoice_consulting
     public static function print_as_vuca($invoice, $companyIsVuca)
     {
         $invoice = (array)$invoice;
-        return (string)($invoice['tipe_invoice'] ?? '0') === '1' || ($companyIsVuca && !self::is_new($invoice));
+        return (string)($invoice['tipe_invoice'] ?? '0') === '1' || ($companyIsVuca && !self::is_snapshot_invoice($invoice));
     }
 
     public static function tax_treatments()
@@ -99,7 +117,8 @@ class Invoice_consulting
     {
         $invoice = (array)$invoice;
         $snapshot = json_decode($invoice['consulting_snapshot'] ?? '', true);
-        if (!self::is_new($invoice) || !is_array($snapshot) || empty($snapshot['owner']['id']) || empty($snapshot['accounts']['receivable']['code']))
+        if (!self::is_snapshot_invoice($invoice) || !is_array($snapshot) || empty($snapshot['owner']['id']) || empty($snapshot['accounts']['receivable']['code'])
+            || (self::is_non_consulting($invoice) && ($snapshot['invoice_kind'] ?? '') !== 'non_consulting'))
             throw new RuntimeException('Snapshot invoice tidak lengkap; perlu rekonsiliasi.');
         return $snapshot;
     }

@@ -1,8 +1,8 @@
 <?php
 // Never loads application credentials; all schema writes use a random disposable database.
 $mode = $argv[1] ?? '--isolated-local-db';
-if (!in_array($mode, array('--isolated-local-db', '--worker'), true)) {
-    fwrite(STDERR, "Usage: php Consulting_integration_test.php [--isolated-local-db]\n");
+if (!in_array($mode, array('--isolated-local-db', '--non-consulting', '--worker'), true)) {
+    fwrite(STDERR, "Usage: php Consulting_integration_test.php [--isolated-local-db|--non-consulting]\n");
     exit(1);
 }
 define('BASEPATH',dirname(__DIR__,4).'/system/'); define('APPPATH',dirname(__DIR__,3).'/'); define('FCPATH',dirname(__DIR__,4).'/');
@@ -19,6 +19,7 @@ class Admin_Controller {} class BF_Model {}
 require BASEPATH.'database/DB.php';
 require APPPATH.'libraries/Module_audit_recorder.php';
 require APPPATH.'helpers/json_helper.php';
+require APPPATH.'helpers/mockup_format_helper.php';
 require dirname(__DIR__).'/controllers/Invoicing.php';
 require dirname(__DIR__).'/models/Invoicing_model.php';
 require dirname(__DIR__).'/libraries/Invoice_consulting_service.php';
@@ -87,17 +88,18 @@ if($mode==='--worker'){
         $kw=(new ReflectionClass('Kwitansi_deposit_model'))->newInstanceWithoutConstructor();$kw->db=$db;
         echo json_encode((new Kwitansi_deposit_service($ci))->create($payload['post'],$kw));
     }
+    elseif($payload['operation']==='non_create') echo json_encode(controllerCall($ci,'save_invoice_non_konsultasi',$payload['post']));
     elseif($payload['operation']==='post'){ $posting=new Consulting_posting($ci);echo json_encode($posting->invoice($payload['journal_id'])); }
     else echo json_encode(controllerCall($ci,$payload['operation']==='edit'?'update_invoice':'save_invoice',$payload['post']));
     exit;
 }
 function workerStart($payload){
     $extDir = realpath(ini_get('extension_dir')) ?: realpath(dirname(PHP_BINARY) . '/ext') ?: ini_get('extension_dir');
-    $command=array(PHP_BINARY,'-n','-d','extension_dir='.$extDir,'-d','extension=mysqli',__FILE__,'--worker');
+    $command=array(PHP_BINARY,'-n','-d','extension_dir='.$extDir,'-d','extension=mysqli','-d','extension=mbstring',__FILE__,'--worker');
     $process=proc_open($command,array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','w')),$pipes);
     if(!is_resource($process))throw new RuntimeException('Worker launch failed.');fwrite($pipes[0],json_encode($payload));fclose($pipes[0]);return array($process,$pipes);
 }
-function workerFinish($worker){list($process,$pipes)=$worker;$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($process);verify($exit===0,'Worker exit '.$err);$r=json_decode($out,true);verify(is_array($r),'Worker JSON '.$out);return $r;}
+function workerFinish($worker){list($process,$pipes)=$worker;$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($process);verify($exit===0,'Worker exit '.$exit.': '.$err.' '.$out);$r=json_decode($out,true);verify(is_array($r),'Worker JSON '.$out);return $r;}
 $admin=@new mysqli('127.0.0.1','root','consulting_test_local','',33319);
 $started_server_proc=null;
 if($admin->connect_errno){
@@ -130,7 +132,7 @@ class ConsultingFaultDb extends CI_DB_mysqli_driver {
         return parent::query($sql,$binds,$return_override);
     }
     public function insert($table='', $set=null, $escape=null){$this->kwWrites[]=$table;if(($this->fault==='kw_header' && $table==='tr_kwitansi_deposit') || ($this->fault==='kw_invoice' && $table==='tr_invoicing')){$this->fault='';return false;}if(($this->fault==='deposit_insert' && $table==='tr_customer_deposit') || ($this->fault==='mutation_insert' && $table==='tr_customer_deposit_mutasi')){$this->fault='';return false;}if(($this->fault==='header' && $table==='tr_invoicing') || ($this->fault==='receipt_header' && $table==='tr_penerimaan_piutang')){$this->fault='';return false;}return parent::insert($table,$set,$escape);}
-    public function insert_batch($table,$set=null,$escape=null,$batch_size=100){$this->kwWrites[]=$table;if(($this->fault==='journal' && $table==='tr_jurnal') || ($this->fault==='receipt_detail' && $table==='tr_penerimaan_piutang_detail')){$this->fault='';return false;}return parent::insert_batch($table,$set,$escape,$batch_size);}
+    public function insert_batch($table,$set=null,$escape=null,$batch_size=100){$this->kwWrites[]=$table;if(($this->fault==='journal' && $table==='tr_jurnal') || ($this->fault==='receipt_detail' && $table==='tr_penerimaan_piutang_detail') || ($this->fault==='non_detail' && $table==='tr_invoice_detail_non_kons')){$this->fault='';return false;}return parent::insert_batch($table,$set,$escape,$batch_size);}
     public function update($table='', $set=null, $where=null, $limit=null){if(($this->fault==='deposit_update' && $table==='tr_customer_deposit') || ($this->fault==='kw_update' && $table==='tr_kwitansi_deposit')){$this->fault='';return false;}if(($this->fault==='top' && $table==='kons_tr_plan_tagih_detail') || ($this->fault==='invoice_update' && $table==='tr_invoicing') || ($this->fault==='receipt_allocation' && $table==='tr_alokasi_split')){$this->fault='';return false;}return parent::update($table,$set,$where,$limit);}
     public function delete($table='', $where='', $limit=null, $reset_data=true){if($this->fault==='delete_journal' && $table==='tr_jurnal'){$this->fault='';return false;}return parent::delete($table,$where,$limit,$reset_data);}
     public function trans_commit(){if($this->fault==='commit'){$this->fault='';return false;}return parent::trans_commit();}
@@ -316,7 +318,7 @@ try {
     $beforeGl=$service->one('SELECT COUNT(*) n FROM jurnal');$counterBefore=$service->one("SELECT nomorJC FROM pastibisa_tb_cabang WHERE nocab='101'");$db->fault='commit';$poster=new Consulting_posting($ci);verify($poster->invoice($anchor['id'])['status']===0,'GL commit failure');
     verify($service->one('SELECT COUNT(*) n FROM jurnal')===$beforeGl && $service->one("SELECT nomorJC FROM pastibisa_tb_cabang WHERE nocab='101'")===$counterBefore,'GL journal and counter rollback together');
     $beforeAudit=count($GLOBALS['audit']);$GLOBALS['denied']=array('Invoicing.Add');verify(controllerCall($ci,'save_invoice',invoiceRequest($service,60))['status']===0,'Invoice add permission');$GLOBALS['denied']=array();verify(count($GLOBALS['audit'])===$beforeAudit+1,'Exactly one safe audit event per failed write');
-    foreach($GLOBALS['audit']as $event){verify(!isset($event[2]['sql']) && empty(array_diff(array_keys($event[2]['data']),array('version','outcome','legacy_event_count'))),'Audit safe allowlist');}
+    foreach($GLOBALS['audit']as $event){verify(!isset($event[2]['sql']) && empty(array_diff(array_keys($event[2]['data']),array('version','outcome','legacy_event_count','reason','invoice_type','id_invoicing','id_penawaran','row_count','id_customer','id_company','invoice_count','id_alokasi','id_penerimaan','no_surat','mode'))),'Audit safe allowlist: '.json_encode($event[2]));}
 
     // Actual report SQL must use the new receivable/reduction, not the display-only gross.
     define('DBERP',$database);
@@ -335,7 +337,7 @@ try {
     $anchor=$service->one('SELECT id FROM tr_jurnal WHERE no_transaksi=? ORDER BY id LIMIT 1',array($received['no_surat']));$db->query('UPDATE tr_jurnal SET id_company=3 WHERE no_transaksi=?',array($received['no_surat']));$poster=new Consulting_posting($receiptCi);verify($poster->receipt($anchor['id'])['status']===0,'Posting rejects altered company despite balanced totals');
     $GLOBALS['test_ci']=$ci;
 
-    $html=$renderer->render(dirname(__DIR__).'/views/consulting_print.php',array('invoice'=>$viewInvoice,'snapshot'=>$savedSnapshot,'error'=>null));verify(strpos($html,'<script>alert(1)</script>')===false && strpos($html,number_format((float)$viewInvoice['tagihan_ppn_jurnal'],2))!==false,'Print escaped and uses saved gross');
+    $html=$renderer->render(dirname(__DIR__).'/views/consulting_print.php',array('invoice'=>$viewInvoice,'snapshot'=>$savedSnapshot,'error'=>null));verify(strpos($html,'<script>alert(1)</script>')===false && strpos($html,number_format((float)$viewInvoice['tagihan_ppn_jurnal'],0))!==false,'Print escaped and uses saved gross');
     $legacySave=array('no_inv'=>'1','id_inv_1'=>'LEGACY','id_alokasi'=>'200');$GLOBALS['test_ci']=$receiptCi;
     verify(controllerCall($receiptCi,'save_penerimaan_piutang',$legacySave)['status']===0,'Legacy-only cannot overwrite allocation used by v3');
     $db->query('INSERT INTO tr_alokasi_split VALUES (201,100,1000,0,1)');
@@ -359,11 +361,14 @@ try {
     $invalid['accounts']['vat_wapu_prepaid']='9999-99-99';verify(controllerCall($ci,'save_coa_mapping',$invalid)['status']===0,'Missing COA rejected');
     $db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=MyISAM');verify(controllerCall($ci,'save_invoice',invoiceRequest($service,60))['status']===0,'Nontransactional prerequisite rejected');$db->query('ALTER TABLE ms_invoice_coa_mapping ENGINE=InnoDB');
     $db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN consulting_snapshot TO missing_snapshot');verify(controllerCall($ci,'save_invoice',array())['status']===0,'Incomplete migration rejected');$db->query('ALTER TABLE tr_penerimaan_piutang_detail RENAME COLUMN missing_snapshot TO consulting_snapshot');
-    require dirname(__DIR__,2).'/penerimaan_uang/tests/Concept_integration_cases.php';
-    require dirname(__DIR__,2).'/penerimaan_uang/tests/Deposit_closure_cases.php';
-    require dirname(__DIR__,2).'/kwitansi_deposit/tests/Save_integrity_cases.php';
+    if ($mode!=='--non-consulting') {
+        require dirname(__DIR__,2).'/penerimaan_uang/tests/Concept_integration_cases.php';
+        require dirname(__DIR__,2).'/penerimaan_uang/tests/Deposit_closure_cases.php';
+        require dirname(__DIR__,2).'/kwitansi_deposit/tests/Save_integrity_cases.php';
+    }
     require __DIR__.'/Vuca_integration_cases.php';
-    echo 'PASS: '.$GLOBALS['checks']." consulting and Vuca integration checks against disposable MariaDB\n";
+    require __DIR__.'/Non_consulting_integration_cases.php';
+    echo 'PASS: '.$GLOBALS['checks']." invoice/receipt integration checks against disposable MariaDB\n";
 } finally {
     if(isset($db))$db->close();
     if(isset($admin)&&!$admin->connect_errno){

@@ -27,7 +27,7 @@ class Consulting_receipt
         foreach ($ids as $id) {
             if (!is_scalar($id)) continue;
             $invoice = $this->s->db->get_where('tr_invoicing', array('id' => $id))->row_array();
-            if ($invoice && Invoice_consulting::is_new($invoice)) return true;
+            if ($invoice && Invoice_consulting::is_snapshot_invoice($invoice)) return true;
         }
         return false;
     }
@@ -124,7 +124,7 @@ class Consulting_receipt
 
     private function invoice_context($invoice, $choice)
     {
-        if (Invoice_consulting::is_new($invoice)) {
+        if (Invoice_consulting::is_snapshot_invoice($invoice)) {
             $snapshot = Invoice_consulting::snapshot($invoice);
             $taxTreatment = !empty($invoice['tax_treatment']) ? $invoice['tax_treatment'] : (!empty($snapshot['type']) ? $snapshot['type'] : ((float)$invoice['ppn_jurnal'] > 0 ? 'PKP' : 'WAPU'));
             if (!in_array($taxTreatment, array('PKP', 'WAPU', 'KB', 'UMKM', 'DEP'), true)) {
@@ -136,8 +136,8 @@ class Consulting_receipt
             $remainingPph = $taxCalc['pph_default'] - $history['used'];
             $defaultPph = $choice === 'Y' ? $remainingPph : 0;
 
-            // Nomor SPK = id_spk_penawaran (kons_tr_spk_penawaran tidak punya kolom no_spk); sama dengan yang dipakai jurnal Invoicing.
-            $spkNo = !empty($invoice['id_spk_penawaran']) ? (string)$invoice['id_spk_penawaran'] : '';
+            // Referensi mengikuti jurnal invoice: SPK konsultasi, nomor penawaran non konsultasi.
+            $spkNo = Invoice_consulting::reference($invoice);
 
             return array(
                 'invoice' => $invoice,
@@ -171,7 +171,7 @@ class Consulting_receipt
         foreach ($ids as $id) {
             if (!is_scalar($id)) throw new InvalidArgumentException('ID invoice tidak valid.');
             $invoice = $s->one('SELECT * FROM tr_invoicing WHERE id=?', array($id));
-            if ($invoice && !Invoice_consulting::is_new($invoice)) throw new InvalidArgumentException('Proses invoice lama dan invoice konsultasi baru secara terpisah.');
+            if ($invoice && !Invoice_consulting::is_snapshot_invoice($invoice)) throw new InvalidArgumentException('Proses invoice lama dan invoice konsultasi baru secara terpisah.');
             if (!$invoice || Penerimaan_calculation::cents($invoice['saldo_piutang']) <= 0) throw new RuntimeException('Invoice tidak ditemukan atau sudah lunas.');
             if ($customer !== null && $customer !== (string)$invoice['id_customer']) throw new RuntimeException('Invoice harus berasal dari customer yang sama.');
             $customer = (string)$invoice['id_customer'];
@@ -727,7 +727,9 @@ class Consulting_receipt
             }
 
             if ($totLebih > 0) {
-                $this->create_lebih_bayar_voucher($number, $customerId, $preview['rows'][0]['invoice']['nm_customer'], $preview['rows'][0]['owner']['id'] ?? '1', $preview['rows'][0]['spk'] ?? '', $allocation['detail']['tanggal_transaksi'], $totLebih, $invNosStr);
+                $first=$preview['rows'][0];
+                $poCustomer=Invoice_consulting::is_non_consulting($first['invoice']) ? ($first['invoice']['no_po']??'') : ($first['spk']??'');
+                $this->create_lebih_bayar_voucher($number, $customerId, $first['invoice']['nm_customer'], $first['owner']['id'] ?? '1', $poCustomer, $allocation['detail']['tanggal_transaksi'], $totLebih, $invNosStr);
             }
 
             if ($s->db->table_exists('tr_kwitansi_deposit')) {

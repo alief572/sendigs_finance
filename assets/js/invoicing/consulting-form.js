@@ -33,9 +33,9 @@
                 form.querySelector('[data-total="' + key + '"]').textContent = '-';
             });
             try {
-                form.querySelector('[data-total="sales"]').textContent = money(calculator.cents(data.amount));
+                form.querySelector('[data-total="sales"]').textContent = money(calculator.cents(options.amount ? options.amount() : data.amount));
                 if (!tax.value) { emptyJournal('Pilih perlakuan PPN dan COA penjualan untuk menampilkan jurnal.'); return; }
-                var totals = calculator.totals(data.amount, tax.value);
+                var totals = calculator.totals(options.amount ? options.amount() : data.amount, tax.value);
                 ['sales', 'other', 'ppn', 'gross', 'receivable'].forEach(function (key) {
                     form.querySelector('[data-total="' + key + '"]').textContent = money(totals[key]);
                 });
@@ -73,6 +73,7 @@
                 }
             });
         });
+        if (options.onChange) options.onChange(render);
         render();
     }
     return {mount: mount};

@@ -322,7 +322,7 @@ class Jurnal_all_model extends BF_Model
     {
         if ($header['jenis_transaksi'] === 'Invoicing') {
             $invoice = $this->read($this->db->get_where('tr_invoicing', ['id'=>$header['no_transaksi']]))->row_array();
-            if (!$invoice || !Invoice_consulting::is_new($invoice)) return;
+            if (!$invoice || !Invoice_consulting::is_snapshot_invoice($invoice)) return;
         }
         $codes = [];
         foreach ($rows as $row) if ($this->cents($row['debit']) > 0 || $this->cents($row['kredit']) > 0) $codes[(string)$row['coa']] = true;
@@ -1470,7 +1470,7 @@ class Jurnal_all_model extends BF_Model
     private function invoiceMap($ids)
     {
         if (!$ids) return [];
-        $company="COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company)";
+        $company="CASE WHEN b.non_kons='1' AND b.consulting_version=3 THEN b.consulting_company_id ELSE COALESCE(NULLIF(c.company,''),NULLIF(s.id_company,''),n.id_company) END";
         $division="CASE WHEN n.id_penawaran IS NOT NULL THEN COALESCE(NULLIF(TRIM(n.id_divisi),''),NULLIF(TRIM(n.nm_divisi),'')) ELSE COALESCE(NULLIF(TRIM(s.nm_divisi),''),NULLIF(TRIM(c.nm_divisi),''),NULLIF(TRIM(s.id_divisi),''),NULLIF(TRIM(c.id_divisi),'')) END";
         $rows=$this->read($this->db->select("b.id,b.no_invoice,b.nm_customer,COALESCE(NULLIF(TRIM(b.nm_project),''),s.nm_project) AS nm_project,b.id_spk_penawaran,b.id_penawaran,b.no_po,b.non_kons, ".$company.' AS company_id,co.nm_company AS company_name, '.$division.' AS division_code',false)
             ->from('tr_invoicing b')->join(DBCNL.'.kons_tr_penawaran c','c.id_quotation=b.id_penawaran','left')

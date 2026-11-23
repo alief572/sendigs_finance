@@ -63,7 +63,7 @@ newSource($db,230,'1000000.00');$GLOBALS['audit_failure']=true;
 verify(controllerCall($ci,'save_invoice_vuca',$vucaPost(230))['status']===1,'Audit writer failure does not invalidate committed Vuca invoice');
 $GLOBALS['audit_failure']=false;
 foreach($GLOBALS['audit'] as $event)if(($event[2]['module']??'')==='invoicing' && strpos($event[2]['methode']??'','_vuca')!==false){
-    verify(!isset($event[2]['sql']) && empty(array_diff(array_keys($event[2]['data']),array('invoice_type','outcome','legacy_event_count'))),'Safe Vuca audit metadata');
+    verify(!isset($event[2]['sql']) && empty(array_diff(array_keys($event[2]['data']),array('id_invoicing','invoice_type','reason','outcome','legacy_event_count'))),'Safe Vuca audit metadata: '.json_encode($event[2]));
 }
 $posted=$service->one('SELECT * FROM tr_invoicing WHERE id=?',array($vucaIds[0]));
 $db->update('tr_jurnal',array('sts'=>'1'),array('no_transaksi'=>$posted['id']));

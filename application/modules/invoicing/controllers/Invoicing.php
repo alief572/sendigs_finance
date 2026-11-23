@@ -119,7 +119,7 @@ class Invoicing extends Admin_Controller
                 $id=$this->input->post($idField);
                 if(!is_scalar($id)){echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.'));return;}
                 $invoice=$this->db->get_where('tr_invoicing',array('id'=>$id))->row_array();
-                if(Invoice_consulting::is_new($invoice)){echo json_encode(array('status'=>0,'msg'=>'Gunakan form invoice konsultasi baru.'));return;}
+                if(Invoice_consulting::is_snapshot_invoice($invoice)){echo json_encode(array('status'=>0,'msg'=>'Gunakan form invoice versi baru.'));return;}
                 $details=$this->db->get_where('tr_penerimaan_piutang_detail',array('id_inv'=>$id))->result_array();
                 foreach($details as $detail)if(isset($detail['consulting_reduction'])){echo json_encode(array('status'=>0,'msg'=>'Invoice sudah memiliki penerimaan batch konsultasi.'));return;}
             }
@@ -167,6 +167,68 @@ class Invoicing extends Admin_Controller
         $this->template->title($mode==='add'?'Add Invoicing':'Invoice Konsultasi');
         $this->template->render('consulting_invoice');
         $this->auditConsulting($mode, $data);
+    }
+
+    private function non_consulting_form($invoice, $quoteId, $mode)
+    {
+        $this->auditRestrict($mode==='add'?$this->addPermission:($mode==='edit'?$this->managePermission:$this->viewPermission));
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $s=new Invoice_consulting_service($this);
+        try {
+            $s->schema(); $source=null; $fingerprint='';
+            if ($invoice) {
+                if (!Invoice_consulting::is_non_consulting($invoice)) throw new RuntimeException('Jenis invoice tidak sesuai.');
+                $snapshot=Invoice_consulting::snapshot($invoice);
+                $items=$s->rows('SELECT * FROM tr_invoice_detail_non_kons WHERE id_header=? ORDER BY id',array($invoice['id']));
+                $journals=$s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id",array($invoice['id']));
+                $fingerprint=Invoice_calculation::fingerprint(array('invoice'=>$invoice,'items'=>$items));
+                if ($mode==='edit') {
+                    if (!$journals || $s->one('SELECT id FROM tr_penerimaan_piutang_detail WHERE id_inv=?',array($invoice['id']))
+                        || (string)($invoice['sts_close']??'0')==='1' || Invoice_calculation::cents($invoice['saldo_piutang'])!==Invoice_calculation::cents($invoice['total_akhir_jurnal'])) throw new RuntimeException('Invoice tidak dapat diedit; periksa jurnal, penerimaan, atau saldo.');
+                    foreach ($journals as $line) if (!in_array((string)$line['sts'],array('0','9'),true)) throw new RuntimeException('Jurnal sudah diposting; invoice tidak dapat diedit.');
+                }
+            } else {
+                $source=$s->non_consulting_source($quoteId); $quote=$source['quote'];
+                $snapshot=$s->mapping($source['source_company_id']); $items=$source['details']; $journals=array();
+                $amount=Invoice_calculation::items(array_map(function($item){return array('nama'=>$item['nm_item'],'qty'=>$item['qty'],'harga'=>$item['harga']);},$items),$quote['biaya_kirim']??'0');
+                $invoice=array('id_penawaran'=>$quoteId,'id_spk_penawaran'=>'','id_detail_plan_tagih'=>0,'nm_customer'=>$quote['nm_customer'],'address'=>$quote['address']??'',
+                    'tanggal_invoice'=>date('Y-m-d'),'no_invoice'=>$this->Invoicing_model->preview_no_invoice($snapshot['owner']['id'],'0'),
+                    'no_po'=>'','no_faktur'=>'','total_nominal'=>Invoice_calculation::decimal($amount['dpp']),'biaya_kirim'=>$quote['biaya_kirim']??'0','tax_treatment'=>'');
+            }
+            $outstanding=null;
+            if ($mode==='add' || $mode==='edit') {
+                $quote=$source ? $source['quote'] : $s->non_consulting_source($invoice['id_penawaran'])['quote'];
+                $issued=$s->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($invoice['id_penawaran'],$invoice['id']??''));
+                $outstanding=Invoice_calculation::decimal(Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total']));
+                if (Invoice_calculation::cents($quote['grand_total'])<=Invoice_calculation::cents($issued['total']) && $mode==='add') throw new RuntimeException('Outstanding penawaran sudah habis.');
+            }
+            $data=array('invoice'=>$invoice,'snapshot'=>$snapshot,'items'=>$items,'mode'=>$mode,'journals'=>$journals,'non_consulting'=>true,'outstanding'=>$outstanding,
+                'source_fingerprint'=>$source?Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$snapshot)):'','invoice_fingerprint'=>$fingerprint,'error'=>null);
+        } catch (Throwable $e) {
+            $data=array('mode'=>$mode,'error'=>$e instanceof RuntimeException || $e instanceof InvalidArgumentException?$e->getMessage():'Form invoice tidak dapat dimuat.');
+        }
+        $this->auditPage('Invoice non konsultasi: '.$mode,empty($data['error']),'non_kons',array('id_penawaran'=>$quoteId,'id_invoicing'=>$invoice['id']??null));
+        if ($mode==='print') { $this->load->view('non_consulting_print',$data); return; }
+        $this->template->set($data); $this->template->title('Invoice Non Konsultasi'); $this->template->render('consulting_invoice');
+    }
+
+    private function non_consulting_print_note($post)
+    {
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $s=new Invoice_consulting_service($this);
+        if (!is_array($post) || !isset($post['id']) || !is_scalar($post['id'])) return false;
+        $invoice=$s->one('SELECT * FROM tr_invoicing WHERE id=?',array($post['id']));
+        if (!Invoice_consulting::is_non_consulting($invoice)) return false;
+        $result=$s->mutate('non_consulting_print_note',function()use($s,$post){
+            if (!has_permission('Invoicing.Manage')) throw new RuntimeException('Tidak memiliki izin mengubah keterangan invoice.');
+            $s->transactional(array('tr_invoicing'));
+            $invoice=$s->one('SELECT * FROM tr_invoicing WHERE id=? FOR UPDATE',array($post['id']));
+            Invoice_consulting::snapshot($invoice);
+            $note=$post['keterangan_print']??'';
+            if (!is_string($note) || strlen($note)>5000) throw new InvalidArgumentException('Keterangan print tidak valid.');
+            $s->checked($s->db->update('tr_invoicing',array('print_keterangan'=>$note),array('id'=>$invoice['id'])));
+        });
+        echo json_encode($result);$this->auditMutation('Menyimpan keterangan invoice non konsultasi',$result,'non_kons');return true;
     }
 
     public function coa_settings()
@@ -246,14 +308,7 @@ class Invoicing extends Admin_Controller
     public function add_invoice_non_konsultasi($id_penawaran)
     {
         $this->beginAudit(__FUNCTION__);
-        $this->auditRestrict($this->addPermission);
-
-        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
-
-        $this->template->set('data_penawaran', $get_penawaran);
-        $this->template->title('Add Invoicing Non Konsultasi');
-        $this->template->render('add_invoice_non_konsultasi');
-        $this->auditPage('Membuka form tambah invoice non konsultasi', !empty($get_penawaran), 'non_kons', array('id_penawaran' => $id_penawaran), 'not_found');
+        return $this->create_invoice_non_konsultasi($id_penawaran);
     }
 
     public function add_invoice_vuca($id_plan_tagih_detail)
@@ -322,6 +377,7 @@ class Invoicing extends Admin_Controller
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'view'); }
+        if (Invoice_consulting::is_non_consulting($consultingInvoice)) return $this->non_consulting_form($consultingInvoice,null,'view');
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -496,6 +552,7 @@ class Invoicing extends Admin_Controller
         require_once __DIR__ . '/../libraries/Invoice_consulting_service.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'edit'); }
+        if (Invoice_consulting::is_non_consulting($consultingInvoice)) return $this->non_consulting_form($consultingInvoice,null,'edit');
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -667,6 +724,7 @@ class Invoicing extends Admin_Controller
         require_once __DIR__ . '/../libraries/Invoice_calculation.php';
         $consultingInvoice = $this->db->get_where('tr_invoicing', array('id'=>$id_invoicing))->row_array();
         if (Invoice_consulting::is_new($consultingInvoice)) { return $this->consulting_form($consultingInvoice, null, 'print'); }
+        if (Invoice_consulting::is_non_consulting($consultingInvoice)) return $this->non_consulting_form($consultingInvoice,null,'print');
 
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
@@ -700,6 +758,9 @@ class Invoicing extends Admin_Controller
     public function print_invoice_non_kons($id_invoicing, $id_company = 1)
     {
         $this->beginAudit(__FUNCTION__);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $modern=$this->db->get_where('tr_invoicing',array('id'=>$id_invoicing))->row_array();
+        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'print');
         $this->auditRestrict($this->viewPermission);
 
         $this->db->select('a.*');
@@ -1011,6 +1072,7 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
+        if ($this->non_consulting_print_note($post)) return;
 
         $this->db->trans_begin();
         $auditReason = 'failed';
@@ -1084,6 +1146,7 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
+        if ($this->non_consulting_print_note($post)) return;
 
         $this->db->trans_begin();
 
@@ -1128,6 +1191,7 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
+        if ($this->non_consulting_print_note($post)) return;
 
         $this->db->trans_begin();
         $auditReason = 'failed';
@@ -1201,6 +1265,7 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
+        if ($this->non_consulting_print_note($post)) return;
 
         $this->db->trans_begin();
         $auditReason = 'failed';
@@ -1261,6 +1326,7 @@ class Invoicing extends Admin_Controller
     {
         $this->beginAudit(__FUNCTION__);
         $post = $this->input->post();
+        if ($this->non_consulting_print_note($post)) return;
 
         $this->db->trans_begin();
 
@@ -1466,8 +1532,11 @@ class Invoicing extends Admin_Controller
 
         $btn_print_kwitansi = '<a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" data-id_inv="' . $id . '" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi"><i class="fa fa-file-pdf-o"></i></a>';
 
-        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_print_kwitansi;
 
+        require_once __DIR__.'/../libraries/Invoice_consulting.php';
+        if (Invoice_consulting::is_non_consulting($data_invoice)) $btn_print='<a class="btn btn-sm btn-primary" href="'.base_url('invoicing/print_invoice_non_kons/'.$id).'" title="Print Invoice Non Konsultasi"><i class="fa fa-print"></i></a>';
+
+        $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_print_kwitansi;
         return $buttons;
     }
 
@@ -1483,14 +1552,14 @@ class Invoicing extends Admin_Controller
         // Count all records (tanpa filter search)
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', "c.id = CASE WHEN a.consulting_version=3 THEN a.consulting_company_id ELSE b.id_company END", 'left', false);
         $this->db->where('a.non_kons', '1');
         $count_all = $this->db->count_all_results();
 
         // Count filtered records (dengan filter search)
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', "c.id = CASE WHEN a.consulting_version=3 THEN a.consulting_company_id ELSE b.id_company END", 'left', false);
         $this->db->where('a.non_kons', '1');
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -1505,10 +1574,10 @@ class Invoicing extends Admin_Controller
         $count_filtered = $this->db->count_all_results();
 
         // Query data
-        $this->db->select('a.*, b.id_company, c.nm_company, b.keterangan_penawaran as penjualan, b.pic as pic');
+        $this->db->select('a.*, c.id AS id_company, c.nm_company, b.keterangan_penawaran as penjualan, b.pic as pic');
         $this->db->from('tr_invoicing a');
         $this->db->join(DBCNL . '.kons_tr_penawaran_non_konsultasi b', 'b.id_penawaran = a.id_penawaran', 'left');
-        $this->db->join(DBCNL . '.kons_tr_company c', 'c.id = b.id_company', 'left');
+        $this->db->join(DBCNL . '.kons_tr_company c', "c.id = CASE WHEN a.consulting_version=3 THEN a.consulting_company_id ELSE b.id_company END", 'left', false);
         $this->db->where('a.non_kons', '1');
         if (!empty($search['value'])) {
             $this->db->group_start();
@@ -1562,42 +1631,15 @@ class Invoicing extends Admin_Controller
     public function create_invoice_non_konsultasi($id_penawaran)
     {
         $this->beginAudit(__FUNCTION__);
-        $this->auditRestrict($this->addPermission);
-
-        $get_penawaran = $this->Invoicing_model->get_penawaran_non_konsultasi($id_penawaran);
-        $get_penawaran_detail = $this->Invoicing_model->get_detail_penawaran_non_konsultasi($id_penawaran);
-        $total_invoiced = $this->Invoicing_model->total_invoiced_non_kons($id_penawaran);
-
-        $get_jurnal = $this->Invoicing_model->jurnal_invoicing_non_konsultasi($id_penawaran);
-
-        // Preview nomor invoice berikutnya
-        $id_company_gen = (!empty($get_penawaran->id_company)) ? $get_penawaran->id_company : '1';
-        $preview_no_invoice = $this->Invoicing_model->preview_no_invoice($id_company_gen, '0');
-
-        $data = [
-            'data_penawaran' => $get_penawaran,
-            'data_penawaran_detail' => $get_penawaran_detail,
-            'total_invoiced' => $total_invoiced,
-            'hasil_jurnal' => $get_jurnal['hasil_jurnal'],
-            'total_debit' => $get_jurnal['total_debit'],
-            'total_kredit' => $get_jurnal['total_kredit'],
-            'preview_no_invoice' => $preview_no_invoice
-        ];
-
-        if (empty($get_penawaran)) {
-            $this->auditPage('Membuka form buat invoice non konsultasi', false, 'non_kons', array('id_penawaran' => $id_penawaran), 'not_found');
-            redirect('invoicing');
-        } else {
-            $this->template->title('Create Invoice Non Konsultasi');
-            $this->template->set($data);
-            $this->template->render('add_invoice_non_konsultasi');
-            $this->auditPage('Membuka form buat invoice non konsultasi', true, 'non_kons', array('id_penawaran' => $id_penawaran));
-        }
+        return $this->non_consulting_form(null,$id_penawaran,'add');
     }
 
     public function edit_invoice_non_kons($id)
     {
         $this->beginAudit(__FUNCTION__);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $modern=$this->db->get_where('tr_invoicing',array('id'=>$id))->row_array();
+        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'edit');
         $this->auditRestrict($this->managePermission);
 
         $data_invoicing = $this->Invoicing_model->get_invoice($id);
@@ -1632,6 +1674,9 @@ class Invoicing extends Admin_Controller
     public function view_invoicing_non_kons($id_invoicing)
     {
         $this->beginAudit(__FUNCTION__);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $modern=$this->db->get_where('tr_invoicing',array('id'=>$id_invoicing))->row_array();
+        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'view');
         $this->db->select('a.*');
         $this->db->from('tr_invoicing a');
         $this->db->where('a.id', $id_invoicing);
@@ -1668,7 +1713,10 @@ class Invoicing extends Admin_Controller
     public function save_invoice_non_konsultasi()
     {
         $this->beginAudit(__FUNCTION__);
-        $this->legacy_consulting_boundary('legacy_save_invoice_non_konsultasi', null);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $result=(new Invoice_consulting_service($this))->save_non_consulting($this->input->post());
+        echo json_encode($result);
+        $this->auditMutation('Menyimpan invoice non konsultasi',$result,'non_kons');
         $this->auditFinish('Simpan invoice non konsultasi tidak diproses');
     }
 
@@ -1902,6 +1950,14 @@ class Invoicing extends Admin_Controller
     public function update_invoice_non_konsultasi()
     {
         $this->beginAudit(__FUNCTION__);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $id=$this->input->post('id');
+        if (!is_scalar($id)) { echo json_encode(array('status'=>0,'msg'=>'ID invoice tidak valid.')); $this->auditFinish('Update invoice ditolak'); return; }
+        $invoice=$this->db->get_where('tr_invoicing',array('id'=>$id))->row_array();
+        if (Invoice_consulting::is_non_consulting($invoice)) {
+            $result=(new Invoice_consulting_service($this))->save_non_consulting($this->input->post(),true);
+            echo json_encode($result); $this->auditMutation('Mengubah invoice non konsultasi',$result,'non_kons'); return;
+        }
         $this->legacy_consulting_boundary('legacy_update_invoice_non_konsultasi', 'id');
         $this->auditFinish('Update invoice non konsultasi tidak diproses');
     }
@@ -2364,6 +2420,9 @@ class Invoicing extends Admin_Controller
     public function view_invoice_non_kons($id)
     {
         $this->beginAudit(__FUNCTION__);
+        require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
+        $modern=$this->db->get_where('tr_invoicing',array('id'=>$id))->row_array();
+        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'view');
         $this->auditRestrict($this->viewPermission);
 
         $data_invoice = $this->Invoicing_model->get_invoice($id);
