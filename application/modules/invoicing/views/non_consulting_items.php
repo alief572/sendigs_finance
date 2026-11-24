@@ -6,8 +6,8 @@
         <tbody data-invoice-items>
         <?php foreach ($items as $index=>$item): ?><tr data-item>
             <td><?php if ($editable): ?><textarea class="form-control" name="item[<?= $index ?>][nama]" maxlength="1000" required aria-label="Deskripsi item <?= $index+1 ?>"><?= $escape($item['nm_item']) ?></textarea><?php else: ?><?= nl2br($escape($item['nm_item'])) ?><?php endif; ?></td>
-            <td><?php if ($editable): ?><input class="form-control" type="number" min="0.01" max="999999.99" step="0.01" name="item[<?= $index ?>][qty]" value="<?= $escape($item['qty']) ?>" required aria-label="Qty item <?= $index+1 ?>"><?php else: ?><?= $escape($item['qty']) ?><?php endif; ?></td>
-            <td><?php if ($editable): ?><input class="form-control" type="number" min="0" step="0.01" name="item[<?= $index ?>][harga]" value="<?= $escape($item['harga']) ?>" required aria-label="Harga item <?= $index+1 ?>"><?php else: ?><?= number_format((float)$item['harga'],2) ?><?php endif; ?></td>
+            <td><?php if ($editable): ?><input class="form-control" type="number" min="1" max="999999" step="1" name="item[<?= $index ?>][qty]" value="<?= $escape(fmod((float)$item['qty'],1)==0.0?(string)(int)$item['qty']:$item['qty']) ?>" required aria-label="Qty item <?= $index+1 ?>"><?php else: ?><?= $escape($item['qty']) ?><?php endif; ?></td>
+            <td><?php if ($editable): ?><input class="form-control text-right" type="text" inputmode="decimal" data-money autocomplete="off" name="item[<?= $index ?>][harga]" value="<?= $escape(number_format((float)$item['harga'],2,'.',',')) ?>" required aria-label="Harga item <?= $index+1 ?>"><?php else: ?><?= number_format((float)$item['harga'],2) ?><?php endif; ?></td>
             <td class="text-right" data-item-total><?= number_format((float)$item['total'],2) ?></td>
             <?php if ($editable): ?><td><button type="button" class="btn btn-default" data-remove-item aria-label="Hapus item <?= $index+1 ?>">Hapus</button></td><?php endif; ?>
         </tr><?php endforeach; ?>

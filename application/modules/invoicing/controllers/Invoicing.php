@@ -169,7 +169,7 @@ class Invoicing extends Admin_Controller
         $this->auditConsulting($mode, $data);
     }
 
-    private function non_consulting_form($invoice, $quoteId, $mode)
+    private function non_consulting_form($invoice, $quoteId, $mode, $printCompany=null)
     {
         $this->auditRestrict($mode==='add'?$this->addPermission:($mode==='edit'?$this->managePermission:$this->viewPermission));
         require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
@@ -209,7 +209,13 @@ class Invoicing extends Admin_Controller
             $data=array('mode'=>$mode,'error'=>$e instanceof RuntimeException || $e instanceof InvalidArgumentException?$e->getMessage():'Form invoice tidak dapat dimuat.');
         }
         $this->auditPage('Invoice non konsultasi: '.$mode,empty($data['error']),'non_kons',array('id_penawaran'=>$quoteId,'id_invoicing'=>$invoice['id']??null));
-        if ($mode==='print') { $this->load->view('non_consulting_print',$data); return; }
+        if ($mode==='print') {
+            if (!empty($data['error'])) { $this->load->view('non_consulting_print',$data); return; }
+            // Pakai template cetak non konsultasi yang sama dengan invoice lama agar format tidak berubah.
+            $this->load->view('print_invoice_non_konsultasi',array('id_invoicing'=>$data['invoice']['id'],'data_invoice'=>(object)$data['invoice'],
+                'data_invoice_detail'=>array_map(function($row){return (object)$row;},$data['items']),'id_company'=>(string)($printCompany!==null?$printCompany:$data['snapshot']['owner']['id'])));
+            return;
+        }
         $this->template->set($data); $this->template->title('Invoice Non Konsultasi'); $this->template->render('consulting_invoice');
     }
 
@@ -761,7 +767,7 @@ class Invoicing extends Admin_Controller
         $this->beginAudit(__FUNCTION__);
         require_once __DIR__.'/../libraries/Invoice_consulting_service.php';
         $modern=$this->db->get_where('tr_invoicing',array('id'=>$id_invoicing))->row_array();
-        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'print');
+        if (Invoice_consulting::is_non_consulting($modern)) return $this->non_consulting_form($modern,null,'print',$id_company);
         $this->auditRestrict($this->viewPermission);
 
         $this->db->select('a.*');
@@ -1534,8 +1540,6 @@ class Invoicing extends Admin_Controller
         $btn_print_kwitansi = '<a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" data-id_inv="' . $id . '" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi"><i class="fa fa-file-pdf-o"></i></a>';
 
 
-        require_once __DIR__.'/../libraries/Invoice_consulting.php';
-        if (Invoice_consulting::is_non_consulting($data_invoice)) $btn_print='<a class="btn btn-sm btn-primary" href="'.base_url('invoicing/print_invoice_non_kons/'.$id).'" title="Print Invoice Non Konsultasi"><i class="fa fa-print"></i></a>';
 
         $buttons = $btn_view . ' ' . $btn_revisi . ' ' . $btn_print . ' ' . $btn_print_kwitansi;
         return $buttons;
