@@ -551,7 +551,10 @@ class Jurnal_payment_nomor_model extends CI_Model
         else {
             $ambil     = "SELECT nocab,subcab,nobuk from " . DBACC_SUST . ".pastibisa_tb_cabang where nocab='$cabang' order by id";
         }
-        $q         = ($connection ?: $this->db)->query($ambil);
+        // The supplied connection holds the lock in the destination database.
+        $q = $connection
+            ? $connection->query('SELECT nocab,subcab,nobuk FROM pastibisa_tb_cabang WHERE nocab=? ORDER BY id', [$cabang])
+            : $this->db->query($ambil);
 
         if ($q->num_rows() > 0) {
             $ret =  $q->result();
