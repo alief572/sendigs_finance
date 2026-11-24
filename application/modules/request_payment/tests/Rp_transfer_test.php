@@ -149,4 +149,20 @@ try {
     unlink($file);
 }
 
+$originalFlag = getenv('RP_TRANSFER_ENABLED');
+putenv('RP_TRANSFER_ENABLED');
+check(!function_exists('config_item') && !Rp_transfer::enabled(), 'Transfer mode off without env or CodeIgniter config');
+putenv('RP_TRANSFER_ENABLED=1');
+check(Rp_transfer::enabled(), 'Env flag enables transfer mode');
+putenv('RP_TRANSFER_ENABLED');
+$rpConfig = null;
+if (!function_exists('config_item')) { // conditional so it is not hoisted before the no-config check above
+    function config_item($item) { return $item === 'rp_transfer_enabled' ? $GLOBALS['rpConfig'] : null; }
+}
+foreach ([[null, false], [false, false], ['0', false], ['yes', false], [true, true], [1, true], ['1', true]] as [$value, $expected]) {
+    $rpConfig = $value;
+    check(Rp_transfer::enabled() === $expected, 'Server config rp_transfer_enabled=' . var_export($value, true));
+}
+$originalFlag === false ? putenv('RP_TRANSFER_ENABLED') : putenv('RP_TRANSFER_ENABLED=' . $originalFlag);
+
 echo "PASS Request Payment transfer: {$checks} checks\n";

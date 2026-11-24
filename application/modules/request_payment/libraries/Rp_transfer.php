@@ -7,7 +7,9 @@ final class Rp_transfer
 
     public static function enabled()
     {
-        return getenv('RP_TRANSFER_ENABLED') === '1';
+        // Env (docker/Apache/FPM) or a per-server, git-ignored config/<ENVIRONMENT>/config.php: $config['rp_transfer_enabled'] = true;
+        return getenv('RP_TRANSFER_ENABLED') === '1'
+            || (function_exists('config_item') && in_array(config_item('rp_transfer_enabled'), [true, 1, '1'], true));
     }
 
     public static function installed($db)
