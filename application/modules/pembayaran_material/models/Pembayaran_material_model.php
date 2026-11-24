@@ -1488,7 +1488,7 @@ class Pembayaran_material_model extends BF_Model
 					} else if ($get_kasbon_cons->tipe == '3') {
 						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_others a')->join('kons_master_biaya b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '4') {
-						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_lab a')->join('kons_master_lab b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
+						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.isu_lingkungan as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_lab a')->join('kons_master_lab b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else if ($get_kasbon_cons->tipe == '5') {
 						$get_kasbon_cons_detail = $this->auditTrackQuery($this->consultant->select('a.*, b.nm_biaya as nm_biaya, b.no_coa, b.nm_coa')->from('kons_tr_kasbon_project_subcont_tenaga_ahli a')->join('kons_master_tenaga_ahli b', 'b.id = a.id_item', 'left')->where('a.id_header', $get_direct_payment->ids)->get(), $this->consultant)->result();
 					} else {
