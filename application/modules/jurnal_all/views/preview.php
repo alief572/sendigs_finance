@@ -2,7 +2,8 @@
 $e=function($value){return htmlspecialchars((string)$value,ENT_QUOTES,'UTF-8');};
 $h=$detail['header'];
 $debt=!empty($h['debt_group']);
-$pendingPayment=!$posted&&$h['source']==='PAY';
+$payment=$h['source']==='PAY';
+$pendingPayment=!$posted&&$payment;
 $perCompany=$debt||($h['source']==='PCS'&&($h['jenis_transaksi'] ?? '')==='Petty Cash');
 $format=function($value){$parts=explode('.',(string)$value);return preg_replace('/\B(?=(\d{3})+(?!\d))/',',',$parts[0]).'.'.str_pad($parts[1] ?? '',2,'0');};
 ?>
@@ -43,7 +44,7 @@ foreach($sections as $index=>$section):
     <?php if($debt): ?><p><?= $e($section['status']) ?> | Accounting: <?= $e($section['accounting_status'] ?? '-') ?> | No. Accounting: <?= $e($section['accounting_number'] ?? '-') ?></p><?php endif; ?>
 <?php endif; ?>
 <div class="table-responsive"><table class="table table-bordered ja-lines"><thead><tr>
-    <th>Tanggal</th><th>Tipe</th><?php if($h['source']==='PCS'): ?><th>Company</th><?php endif; ?><th>No. COA</th><th>Nama COA</th><th>Keterangan</th><th><?= $pendingPayment?'No. Referensi':'No. Reff' ?></th><th>Debit</th><th>Kredit</th>
+    <th>Tanggal</th><th>Tipe</th><?php if($h['source']==='PCS'): ?><th>Company</th><?php endif; ?><th>No. COA</th><th>Nama COA</th><th>Keterangan</th><th><?= $payment?'No. Referensi':'No. Reff' ?></th><th>Debit</th><th>Kredit</th>
 </tr></thead><tbody>
 <?php foreach($section['rows'] as $line):
     if((float)$line['debit']==0&&(float)$line['kredit']==0) continue;
@@ -56,7 +57,7 @@ foreach($sections as $index=>$section):
 ?>
 <tr><td><?= $e($line['tgl_jurnal']) ?></td><td><?= $e($line['jenis_transaksi']) ?></td><?php if($h['source']==='PCS'): ?><td><?= $e($line['nm_company']) ?></td><?php endif; ?><td><?= $e($line['coa']) ?></td><td><?= $e($line['nm_coa']) ?></td>
 <td><?php if($pendingPayment): ?><textarea class="form-control" name="jurnal[<?= (int)$line['id'] ?>][keterangan]" rows="2"><?= $e($description) ?></textarea><?php else: ?><?= nl2br($e($description)) ?><?php endif; ?></td>
-<td><?= $e($pendingPayment?$h['no_referensi']:$reference) ?></td><td class="ja-money"><?= $e($format($line['debit'])) ?></td><td class="ja-money"><?= $e($format($line['kredit'])) ?></td></tr>
+<td><?= $e($payment?$h['no_referensi']:$reference) ?></td><td class="ja-money"><?= $e($format($line['debit'])) ?></td><td class="ja-money"><?= $e($format($line['kredit'])) ?></td></tr>
 <?php endforeach; ?>
 </tbody><tfoot><tr><th colspan="<?= $h['source']==='PCS'?7:6 ?>"><?= $perCompany?'TOTAL COMPANY':'GRAND TOTAL' ?></th><th class="ja-money"><?= $e($format($section['debit'])) ?></th><th class="ja-money"><?= $e($format($section['kredit'])) ?></th></tr></tfoot></table></div>
 <?php if($perCompany): ?>

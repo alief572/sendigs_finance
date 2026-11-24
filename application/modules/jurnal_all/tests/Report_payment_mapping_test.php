@@ -19,12 +19,17 @@ $missing=journal('Payment','1','MISSING');
 $typed=journal('Transport','1','VOUCHER');
 $pending=journal('Payment','0','PENDING-ID');
 $model=new Jurnal_all_model();$model->db=$db;
-$header=$model->detail($collision,true)['header'];
+$posted=true;
+$detail=$model->detail($collision,$posted);
+$header=$detail['header'];
 check($header['display_no_transaksi']==='VOUCHER','report resolves voucher before colliding approval ID');
 check($header['no_referensi']==='DOC-A, DOC-B','report includes all voucher approvals and deduplicates documents');
 check($header['category']==='Periodik, Transport','report categories exclude colliding approval');
 check($header['no_transaksi']==='VOUCHER'&&$header['debit']==='100.25'&&$header['kredit']==='100.25','source identity and totals remain intact');
 check($header['posted_at']===null&&$header['posted_by']===null,'report does not invent posting metadata');
+ob_start();require dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();
+check(strpos($html,'<th>No. Referensi</th>')!==false&&strpos($html,'<dt>No. Referensi</dt><dd>DOC-A, DOC-B</dd>')!==false&&substr_count($html,'<td>DOC-A, DOC-B</td>')===2,'posted payment lines display the same references as the header');
+check(strpos($html,'<dt>No. Transaksi</dt><dd>VOUCHER</dd>')!==false&&strpos($html,'<td>VOUCHER</td>')===false&&strpos($html,'<textarea')===false,'posted preview keeps voucher in the header and descriptions read-only');
 $h=$model->detail($legacy,true)['header'];
 check($h['display_no_transaksi']==='LEGACY-VOUCHER'&&$h['no_referensi']==='LEGACY-DOC'&&$h['category']==='Expense','approval-ID-only journal resolves to its voucher via id');
 foreach ([$document,$missing] as $anchor) {
